@@ -7,7 +7,9 @@ import base64
 import inspect
 import json
 import platform
+import random
 from pathlib import Path
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from time import monotonic, time
 from typing import Any, Awaitable, Callable
@@ -735,13 +737,42 @@ class OpenClawGatewayWebSocketClient:
             return str(message)
         return str(error) if error else "Gateway request failed"
 
-    def _connect(self):
+    @asynccontextmanager
+    async def _connect(self):
         if not self._ws_url:
             raise OpenClawConfigurationError("OpenClaw Gateway WS URL is not configured")
-        return websockets.connect(
-            self._ws_url,
-            ping_interval=15,
-            ping_timeout=30,
-            close_timeout=5,
-            max_size=2**22,
-        )
+        connection = None
+        websocket = None
+        last_error: Exception | None = None
+        for attempt in range(5):
+            try:
+                connection = websockets.connect(
+                    self._ws_url,
+                    ping_interval=15,
+                    ping_timeout=30,
+                    close_timeout=5,
+                    max_size=2**22,
+                )
+                websocket = await connection.__aenter__()
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt >= 4:
+                    raise
+                base_delay = min(30.0, float(2**attempt))
+                delay = max(0.25, base_delay * random.uniform(0.8, 1.2))
+                logger.warning(
+                    "OpenClaw Gateway WS connect attempt {}/5 failed: {}. Retrying in {:.2f}s",
+                    attempt + 1,
+                    exc,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+
+        if websocket is None or connection is None:
+            raise OpenClawConfigurationError(str(last_error or "OpenClaw Gateway WS connection failed"))
+
+        try:
+            yield websocket
+        finally:
+            await connection.__aexit__(None, None, None)

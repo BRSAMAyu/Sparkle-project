@@ -273,6 +273,66 @@ class _AbruptContinueSimulationRepository implements SimulationRepository {
       throw UnimplementedError();
 }
 
+class _InputRequiredSimulationRepository implements SimulationRepository {
+  @override
+  Future<List<SimulationSeedModel>> getRecommendedSeeds({
+    String? scenarioKey,
+    int limit = 3,
+  }) async =>
+      const <SimulationSeedModel>[
+        SimulationSeedModel(
+          topic: '',
+          context: '你还没有足够的学习数据来推荐模拟主题。请输入你想要探讨的具体学习问题。',
+          tensionPoint: '',
+          sourceType: 'user_input_required',
+          sourceIds: <String>[],
+          relevanceScore: 0,
+          suggestedScenario: 'study_group',
+          suggestedExperts: <String>[],
+        ),
+      ];
+
+  @override
+  Future<SimulationSessionModel> runSimulation({
+    required String topic,
+    required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Stream<SimulationStreamEventModel> streamSimulation({
+    required String topic,
+    required String scenarioKey,
+    int? plannedRoundCount,
+    List<String>? participantNames,
+    String facilitationStyle = 'balanced',
+  }) =>
+      const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> continueSimulation({
+    required String sessionId,
+    required String userResponse,
+    int? plannedRoundCount,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Stream<SimulationStreamEventModel> continueSimulationStream({
+    required String sessionId,
+    required String userResponse,
+    int? plannedRoundCount,
+  }) =>
+      const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> getSession(String sessionId) async =>
+      throw UnimplementedError();
+}
+
 class _FakeRef implements Ref {
   final _fakeAppEventStreamService = _FakeAppEventStreamService();
 
@@ -474,6 +534,39 @@ void main() {
     expect(notifier.replies, <String>['我会先画依赖图，再做一道题验证。']);
     expect(find.text('继续当前模拟'), findsNothing);
     expect(find.text('提交我的判断'), findsOneWidget);
+  });
+
+  testWidgets('simulation shows input field when seeds require user input',
+      (tester) async {
+    final notifier = SimulationNotifier(
+      _InputRequiredSimulationRepository(),
+      _FakeRef(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          simulationProvider.overrideWith((ref) => notifier),
+        ],
+        child: const MaterialApp(
+          home: SimulationScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+
+    expect(find.text('推荐场景'), findsOneWidget);
+    expect(find.text('输入你想要讨论的学习主题或问题'), findsOneWidget);
+    expect(
+      find.text('完成更多学习任务后，系统将基于你的真实学习数据推荐讨论主题'),
+      findsOneWidget,
+    );
+    expect(find.text('开始围绕这个问题模拟'), findsOneWidget);
+    expect(find.textContaining('来自 Galaxy 的推荐种子'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   test('streamed simulation keeps backend round plan and facilitation style',

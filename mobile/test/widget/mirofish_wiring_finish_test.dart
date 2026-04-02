@@ -62,19 +62,19 @@ void main() {
                         'highlights': ['行列式', '特征值'],
                         'action_cards': [
                           {
-                            'id': 'open-theater',
-                            'title': '先推演 行列式',
-                            'summary': '先拆路径再决定顺序。',
-                            'cta_label': '打开推演剧场',
-                            'deep_link':
-                                '/theater?topic=%E8%A1%8C%E5%88%97%E5%BC%8F',
-                            'kind': 'theater',
+                            'id': 'attack-weakest',
+                            'title': '专项攻克：行列式',
+                            'summary': '当前掌握度较低，建议用 25 分钟做一组针对性练习。',
+                            'cta_label': '开始练习',
+                            'deep_link': '/galaxy/node/node-1',
+                            'kind': 'immediate_action',
                           },
                         ],
                         'trigger_summary': {
                           'mode': 'baseline_ready',
-                          'title': '已建立第一版学习基线',
+                          'title': '以下是基于聊天推断的方向，需要你确认',
                           'summary': '当前报告会先聚焦最值得先收口的部分。',
+                          'data_status': 'partial',
                         },
                       },
                       'deep_link':

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_connection_panel.dart';
+import 'package:sparkle/features/settings/presentation/widgets/openclaw_execution_preferences_card.dart';
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 
@@ -39,7 +40,6 @@ class _OpenClawSettingsScreenState
     setState(() => _retryingQueue = false);
     _showSnackBar(
       dispatched > 0 ? '已重新提交 $dispatched 个排队任务' : '当前没有可重试的排队任务',
-      isError: false,
     );
   }
 
@@ -84,6 +84,8 @@ class _OpenClawSettingsScreenState
               ),
               const SizedBox(height: DS.spacing16),
               const OpenClawConnectionPanel(),
+              const SizedBox(height: DS.spacing16),
+              const OpenClawExecutionPreferencesCard(),
               if (queuedRequests.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing16),
                 GraphiteCardSurface(

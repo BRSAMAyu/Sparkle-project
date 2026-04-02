@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+import json
 from typing import Any
 from uuid import UUID
 
@@ -21,6 +22,7 @@ from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.services.insight_copy import present_pattern_description, present_pattern_name, present_pattern_solution
 from app.services.llm_fallback_utils import analysis_llm
+from app.services.system_update_service import SystemUpdateService
 
 
 @dataclass(frozen=True)
@@ -155,6 +157,7 @@ class SeedExtractor:
         allow_llm_refine: bool = True,
     ) -> list[SimulationSeed]:
         seeds: list[SimulationSeed] = []
+        seeds.extend(await self._simulation_gap_seeds(user_id))
         seeds.extend(await self._galaxy_seeds(user_id))
         seeds.extend(await self._error_seeds(user_id))
         seeds.extend(await self._sprint_seeds(user_id))
@@ -179,6 +182,85 @@ class SeedExtractor:
     def _cache_key(self, user_id: UUID, *, scenario_key: str | None, limit: int) -> str:
         scenario_part = scenario_key or "default"
         return f"{self.CACHE_PREFIX}{user_id}:{scenario_part}:{max(limit, 1)}"
+
+    @staticmethod
+    def _parse_insight_summary(payload: Any) -> dict[str, Any] | None:
+        if isinstance(payload, dict):
+            return payload
+        if not isinstance(payload, str):
+            return None
+        with suppress(Exception):
+            parsed = json.loads(payload)
+            if isinstance(parsed, dict):
+                return parsed
+        return None
+
+    async def _resolved_simulation_gaps(self, user_id: UUID) -> set[str]:
+        try:
+            result = await self.db.execute(
+                select(UserNodeStatus.learning_path_snapshot).where(UserNodeStatus.user_id == user_id)
+            )
+            rows = result.scalars().all()
+        except Exception as exc:
+            logger.warning("Failed to load resolved simulation gaps for {}: {}", user_id, exc)
+            return set()
+
+        resolved: set[str] = set()
+        for snapshot in rows:
+            if not isinstance(snapshot, dict):
+                continue
+            for gap in list(snapshot.get("known_gaps") or []):
+                if not isinstance(gap, dict):
+                    continue
+                description = str(gap.get("gap_description") or "").strip()
+                status = str(gap.get("status") or "open").strip().lower()
+                if description and status in {"resolved", "closed"}:
+                    resolved.add(description.casefold())
+        return resolved
+
+    async def _simulation_gap_seeds(self, user_id: UUID) -> list[SimulationSeed]:
+        updates = await SystemUpdateService().list_updates(user_id, limit=40)
+        if not updates:
+            return []
+
+        resolved = await self._resolved_simulation_gaps(user_id)
+        seeds: list[SimulationSeed] = []
+        seen: set[str] = set()
+        sessions_seen = 0
+        for update in updates:
+            if sessions_seen >= 5:
+                break
+            if not isinstance(update, dict) or str(update.get("type") or "") != "simulation_session_ready":
+                continue
+            metadata = update.get("metadata")
+            if not isinstance(metadata, dict):
+                continue
+            session_payload = metadata.get("session_payload")
+            if not isinstance(session_payload, dict):
+                continue
+            sessions_seen += 1
+            session_topic = str(session_payload.get("topic") or "").strip()
+            insight_summary = self._parse_insight_summary(session_payload.get("insight_summary"))
+            if not insight_summary:
+                continue
+            for gap in [str(item).strip() for item in list(insight_summary.get("knowledge_gaps_revealed") or []) if str(item).strip()]:
+                lowered_gap = gap.casefold()
+                if lowered_gap in resolved or lowered_gap in seen:
+                    continue
+                seen.add(lowered_gap)
+                seeds.append(
+                    SimulationSeed(
+                        topic=gap,
+                        context=f"在上次关于「{session_topic or '当前主题'}」的模拟中暴露了这个理解盲区",
+                        tension_point="上次模拟未能解决的问题",
+                        source_type="simulation_gap",
+                        source_ids=[str(session_payload.get("id") or "")] if str(session_payload.get("id") or "").strip() else [],
+                        relevance_score=0.85,
+                        suggested_scenario="study_group",
+                        suggested_experts=[],
+                    )
+                )
+        return seeds
 
     async def _galaxy_seeds(self, user_id: UUID) -> list[SimulationSeed]:
         source_node = aliased(KnowledgeNode)
@@ -547,40 +629,19 @@ class SeedExtractor:
         return selected_topics
 
     def _fallback_seeds(self, *, scenario_key: str | None, limit: int) -> list[SimulationSeed]:
-        defaults = [
+        del scenario_key, limit
+        return [
             SimulationSeed(
-                topic="从一个卡住的知识点开始圆桌讨论",
-                context="如果你最近有一个总觉得会但讲不清的问题，这就是最适合启动模拟的入口。",
-                tension_point="目标不是立刻答对，而是找出为什么它总在关键时刻变模糊。",
-                source_type="fallback",
+                topic="",
+                context="你还没有足够的学习数据来推荐模拟主题。请输入你想要探讨的具体学习问题。",
+                tension_point="",
+                source_type="user_input_required",
                 source_ids=[],
-                relevance_score=0.5,
+                relevance_score=0.0,
                 suggested_scenario="study_group",
-                suggested_experts=["学伴", "深度分析"],
-            ),
-            SimulationSeed(
-                topic="用一场知识辩论检验前置概念",
-                context="把一个核心概念放到正反论证里，最容易看出你是真的理解还是只记住表面结论。",
-                tension_point="一旦论证链条断掉，真正的前置薄弱点就会暴露出来。",
-                source_type="fallback",
-                source_ids=[],
-                relevance_score=0.48,
-                suggested_scenario="knowledge_debate",
-                suggested_experts=["星图导航", "深度分析"],
-            ),
-            SimulationSeed(
-                topic="用苏格拉底式追问拆出卡点",
-                context="适合在你说不清、但又隐约知道哪里不对的时候使用。",
-                tension_point="关键不是给答案，而是用连续追问把思路里的空白处显出来。",
-                source_type="fallback",
-                source_ids=[],
-                relevance_score=0.46,
-                suggested_scenario="socratic_dialogue",
-                suggested_experts=["学伴"],
-            ),
+                suggested_experts=[],
+            )
         ]
-        ranked = self._rank_by_scenario(defaults, scenario_key=scenario_key)
-        return ranked[: max(limit, 1)]
 
     async def _cold_start_seeds(
         self,

@@ -15,6 +15,7 @@ from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
 from app.orchestration.dual_core_router import AdaptationRecord
+from app.services.cognitive_service import CognitiveService
 from app.services.galaxy_service import GalaxyService
 from app.services.galaxy.graph_evolution_service import GraphEvolutionService
 from app.services.plan_state_service import PlanStateService
@@ -69,6 +70,8 @@ class GalaxyEventConsumer:
             await self._handle_task_completed(event)
         elif event_type == "node_mastery_updated":
             await self._handle_mastery_updated(event)
+        elif event_type == "SimulationGapRevealed":
+            await self._handle_simulation_gap_revealed(event)
 
     async def _handle_error_created(self, event: dict):
         """处理错题创建事件 - 降低关联节点掌握度"""
@@ -232,6 +235,92 @@ class GalaxyEventConsumer:
             logger.info("Processed node_mastery_updated graph evolution for node {}", event.get("node_id"))
         except Exception as e:
             logger.error(f"Failed to handle node_mastery_updated: {e}")
+
+    async def _handle_simulation_gap_revealed(self, event: dict):
+        try:
+            user_id = event.get("user_id")
+            topic = str(event.get("topic") or "").strip()
+            gap_description = str(event.get("gap_description") or "").strip()
+            simulation_session_id = str(event.get("simulation_session_id") or "").strip()
+            if not user_id or not gap_description:
+                return
+
+            user_uuid = UUID(str(user_id))
+            async with AsyncSessionLocal() as db:
+                galaxy_service = GalaxyService(db)
+                matched_nodes = await galaxy_service.semantic_search_nodes(gap_description, limit=3, threshold=0.16)
+                target_node = matched_nodes[0] if matched_nodes else await self._fallback_gap_node(db=db, user_id=user_uuid, topic=topic)
+
+                if target_node is not None:
+                    status = await db.get(UserNodeStatus, (user_uuid, target_node.id))
+                    if status is None:
+                        status = UserNodeStatus(
+                            user_id=user_uuid,
+                            node_id=target_node.id,
+                            mastery_score=0,
+                            total_minutes=0,
+                            total_study_minutes=0,
+                            study_count=0,
+                            is_unlocked=True,
+                            learning_path_snapshot=None,
+                        )
+                        db.add(status)
+                    snapshot = dict(status.learning_path_snapshot or {})
+                    known_gaps = [item for item in list(snapshot.get("known_gaps") or []) if isinstance(item, dict)]
+                    if not any(str(item.get("gap_description") or "").strip() == gap_description for item in known_gaps):
+                        known_gaps.insert(
+                            0,
+                            {
+                                "gap_description": gap_description,
+                                "has_known_gap": True,
+                                "status": "open",
+                                "source": "simulation",
+                                "simulation_session_id": simulation_session_id or None,
+                                "recorded_at": _utcnow().isoformat(),
+                            },
+                        )
+                    snapshot["known_gaps"] = known_gaps[:8]
+                    status.learning_path_snapshot = snapshot
+                    await db.commit()
+                else:
+                    fragment = await CognitiveService(db).create_fragment(
+                        user_uuid,
+                        content=f"学习模拟暴露的理解盲区：{gap_description}",
+                        source_type="simulation_gap",
+                        resource_type="text",
+                        context_tags={
+                            "topic": topic,
+                            "simulation_session_id": simulation_session_id or None,
+                            "gap_description": gap_description,
+                        },
+                        source_event_id=f"simulation-gap:{simulation_session_id}:{gap_description}",
+                    )
+                    logger.info("Persisted simulation gap fragment {}", fragment.id)
+
+                await SeedExtractor(db).prewarm_for_scenarios(user_uuid)
+            logger.info("Processed SimulationGapRevealed for user {}", user_id)
+        except Exception as e:
+            logger.error(f"Failed to handle SimulationGapRevealed: {e}")
+
+    async def _fallback_gap_node(self, *, db, user_id: UUID, topic: str):
+        normalized_topic = str(topic or "").strip()
+        if not normalized_topic:
+            return None
+        try:
+            galaxy_service = GalaxyService(db)
+            related = await galaxy_service.semantic_search_nodes(normalized_topic, limit=1, threshold=0.08)
+            if related:
+                return related[0]
+        except Exception:
+            pass
+        result = await db.execute(
+            select(UserNodeStatus)
+            .where(UserNodeStatus.user_id == user_id)
+            .order_by(UserNodeStatus.last_study_at.desc().nullslast(), UserNodeStatus.updated_at.desc())
+            .limit(1)
+        )
+        fallback_status = result.scalar_one_or_none()
+        return fallback_status.node if fallback_status is not None else None
 
     def stop(self):
         """停止消费者"""

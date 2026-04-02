@@ -66,9 +66,21 @@ class ApiEndpoints {
   static const String executionHealth = '/executions/health';
   static const String executionConnectionStatus =
       '/executions/connection/status';
+  static const String executionConnectionDiagnose =
+      '/executions/connection/diagnose';
   static const String executionConnectionProfile =
       '/executions/connection/profile';
+  static const String executionNodes = '/executions/nodes';
+  static const String executionPreferences = '/executions/preferences';
   static const String executionProfileSummary = '/executions/profile/summary';
+  static const String executionTaskBatchHandoff = '/executions/tasks/handoff/batch';
+  static const String executionSchedules = '/executions/schedules';
+  static String executionSchedulePause(String scheduleId) =>
+      '/executions/schedules/$scheduleId/pause';
+  static String executionScheduleResume(String scheduleId) =>
+      '/executions/schedules/$scheduleId/resume';
+  static String executionScheduleDelete(String scheduleId) =>
+      '/executions/schedules/$scheduleId';
   static String classifyTaskExecution(String taskId) =>
       '/executions/tasks/$taskId/classify';
   static String executionTemplates(String taskId) =>
@@ -80,6 +92,7 @@ class ApiEndpoints {
   static String execution(String intentId) => '/executions/$intentId';
   static String executionRecord(String intentId) =>
       '/executions/$intentId/record';
+  static String retryExecution(String intentId) => '/executions/$intentId/retry';
   static String confirmExecutionResult(String recordId) =>
       '/executions/records/$recordId/confirm';
   static String rejectExecutionResult(String recordId) =>

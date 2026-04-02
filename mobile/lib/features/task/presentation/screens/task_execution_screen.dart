@@ -1438,6 +1438,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         return DS.neutral500;
       case ExecutionIntentStatus.draft:
       case ExecutionIntentStatus.ready:
+      case ExecutionIntentStatus.queued:
       case ExecutionIntentStatus.dispatched:
       case ExecutionIntentStatus.running:
       case ExecutionIntentStatus.unknown:
@@ -1527,6 +1528,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         return '等待确认';
       case ExecutionIntentStatus.draft:
       case ExecutionIntentStatus.ready:
+      case ExecutionIntentStatus.queued:
       case ExecutionIntentStatus.dispatched:
       case ExecutionIntentStatus.running:
         return 'AI 执行中';

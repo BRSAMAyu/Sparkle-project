@@ -232,3 +232,124 @@ async def test_maybe_short_circuit_openclaw_chat_control_emits_tool_result(orche
     assert responses is not None
     assert any(response.HasField("tool_result") for response in responses)
     service_instance.handoff_chat_control.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_stream_openclaw_chat_control_emits_live_status_updates(orchestrator, monkeypatch):
+    intent = MagicMock(
+        id="intent-1",
+        status=ExecutionIntentStatus.SUCCEEDED,
+        error_message=None,
+        target_env=None,
+    )
+    record = MagicMock(
+        id="record-1",
+        error_message=None,
+        parsed_output={"summary": "workspace clean"},
+        approval_requested=0,
+        raw_response={
+            "output": [
+                {
+                    "type": "message",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": '{"summary":"workspace clean"}',
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+
+    async def _handoff_chat_control(**kwargs):
+        stream_sink = kwargs["stream_sink"]
+        await stream_sink(
+            "execution_lifecycle",
+            {"message": "正在连接你的 OpenClaw 并启动执行", "progress_hint": 0.35},
+        )
+        await stream_sink(
+            "execution_tool_call",
+            {"message": "正在访问目标网页（https://example.com）", "progress_hint": 0.55},
+        )
+        await stream_sink(
+            "execution_delta",
+            {"text": "页面标题：Example Domain", "progress_hint": 0.7},
+        )
+        return intent, record
+
+    service_instance = MagicMock()
+    service_instance.handoff_chat_control = AsyncMock(side_effect=_handoff_chat_control)
+
+    monkeypatch.setattr(
+        "app.orchestration.execution_engine.ExecutionService",
+        MagicMock(return_value=service_instance),
+    )
+
+    responses = [
+        response
+        async for response in orchestrator._stream_openclaw_chat_control(
+            active_tools=[],
+            user_message="在我的电脑上打开浏览器访问 example.com",
+            request_extra_context={"openclaw_chat_control": True},
+            user_id="3b3f4d7e-7544-41d2-b17a-f3cd0ba8f2a1",
+            session_id="session-1",
+            response_id="resp-1",
+            request_id="req-1",
+            trace_id="trace-1",
+            workflow_id="workflow-1",
+            prompt_version="v1",
+            active_db=MagicMock(),
+        )
+    ]
+
+    status_details = [
+        response.status_update.details
+        for response in responses
+        if response.HasField("status_update")
+    ]
+    assert any("正在连接你的 OpenClaw" in details for details in status_details)
+    assert any("正在访问目标网页" in details for details in status_details)
+    assert any("页面标题：Example Domain" in details for details in status_details)
+    assert any(response.HasField("tool_result") for response in responses)
+
+
+@pytest.mark.asyncio
+async def test_stream_openclaw_chat_control_gracefully_degrades_to_manual_steps(orchestrator, monkeypatch):
+    service_instance = MagicMock()
+    service_instance.handoff_chat_control = AsyncMock(side_effect=ValueError("pairing required"))
+    service_instance._infer_chat_control_target_env.return_value = None
+    service_instance.build_manual_fallback = AsyncMock(
+        return_value={
+            "suggestion": "当前连接不可用，我先给你一份手动步骤。",
+            "manual_only": True,
+            "manual_steps": [
+                {"title": "打开终端", "description": "在你的电脑上先打开终端。"},
+            ],
+        }
+    )
+
+    monkeypatch.setattr(
+        "app.orchestration.execution_engine.ExecutionService",
+        MagicMock(return_value=service_instance),
+    )
+
+    responses = [
+        response
+        async for response in orchestrator._stream_openclaw_chat_control(
+            active_tools=[],
+            user_message="在我的电脑上运行 git status",
+            request_extra_context={"openclaw_chat_control": True},
+            user_id="3b3f4d7e-7544-41d2-b17a-f3cd0ba8f2a1",
+            session_id="session-1",
+            response_id="resp-1",
+            request_id="req-1",
+            trace_id="trace-1",
+            workflow_id="workflow-1",
+            prompt_version="v1",
+            active_db=MagicMock(),
+        )
+    ]
+
+    tool_result = next(response.tool_result for response in responses if response.HasField("tool_result"))
+    assert tool_result.data.fields["status"].string_value == "degraded"

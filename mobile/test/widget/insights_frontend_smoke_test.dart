@@ -7,6 +7,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/screens/learning_report_screen.dart';
+import 'package:sparkle/features/report/presentation/widgets/mastery_radar_chart.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
@@ -254,7 +255,7 @@ void main() {
       expect(find.text('open-theater'), findsOneWidget);
     });
 
-    testWidgets('learning report screen renders animated dashboard sections',
+    testWidgets('learning report screen renders partial-data report without feature routing',
         (tester) async {
       const report = LearningReport(
         reportId: 'report-1',
@@ -272,24 +273,24 @@ void main() {
             title: '优先补强',
             headline: '行列式 58%',
             summary: '这是当前最值得先收口的薄弱点。',
-            evidence: <String>['当前掌握度偏低', '建议先回到定义和例题'],
+            evidence: <String>['掌握度：58%（来自知识图谱实际数据）', '上次学习此主题：2026-03-24'],
             severity: 'high',
           ),
         ],
         actionCards: <LearningReportActionCard>[
           LearningReportActionCard(
-            id: 'open-theater',
-            title: '先推演 行列式',
-            summary: '先拆路径再决定练习顺序。',
-            ctaLabel: '打开推演剧场',
-            deepLink: '/theater?topic=%E8%A1%8C%E5%88%97%E5%BC%8F',
-            kind: 'theater',
+            id: 'attack-weakest',
+            title: '专项攻克：行列式',
+            summary: '当前掌握度 58%。建议用 25 分钟做一组针对性练习。',
+            ctaLabel: '开始练习',
+            deepLink: '/galaxy/node/node-1',
+            kind: 'immediate_action',
             badge: '优先',
           ),
         ],
         trendOverview: LearningReportTrendOverview(
           headline: '最近一轮掌握度约 72%',
-          summary: '掌握度整体稳中有升。',
+          summary: '当前只覆盖到部分真实学习记录，请先以方向判断为主。',
           historyPoints: <LearningTrendPoint>[
             LearningTrendPoint(label: '上周', averageMastery: 66),
             LearningTrendPoint(label: '本周', averageMastery: 72),
@@ -305,9 +306,11 @@ void main() {
         ),
         triggerSummary: LearningReportTriggerSummary(
           mode: 'baseline_ready',
-          title: '已建立第一版学习基线',
-          summary: '系统已经整理出一版可执行的诊断仪表盘。',
+          title: '以下是基于聊天推断的方向，需要你确认',
+          summary: '当前报告基于部分真实学习记录与聊天线索整理。',
+          dataStatus: 'partial',
         ),
+        dataStatus: 'partial',
       );
 
       await tester.pumpWidget(
@@ -321,7 +324,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('学习分析报告'), findsOneWidget);
-      expect(find.text('已建立第一版学习基线'), findsOneWidget);
+      expect(find.text('以下是基于聊天推断的方向，需要你确认'), findsOneWidget);
+      expect(find.text('部分数据，仅供参考'), findsWidgets);
       expect(find.text('诊断摘要'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('下一步行动'),
@@ -329,7 +333,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('下一步行动'), findsOneWidget);
-      expect(find.text('先推演 行列式'), findsOneWidget);
+      expect(find.text('专项攻克：行列式'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('掌握度趋势'),
         120,
@@ -358,6 +362,65 @@ void main() {
       await tester.ensureVisible(analysisTile);
       await tester.tap(analysisTile, warnIfMissed: false);
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('learning report screen shows empty state when data is insufficient',
+        (tester) async {
+      const report = LearningReport(
+        reportId: 'report-empty',
+        markdown: '# 学习分析报告\n\n当前还没有足够学习记录。',
+        sections: <String>['summary'],
+        mastery: <LearningMasteryDatum>[],
+        diagnosisCards: <LearningReportDiagnosticCard>[
+          LearningReportDiagnosticCard(
+            id: 'data-collection-guide',
+            title: '需要更多学习记录',
+            headline: '先开始一次真实学习',
+            summary: '完成一个学习任务、练习或复盘后，这里才会出现可信的掌握度分析。',
+            evidence: <String>['当前没有可用的掌握度或趋势数据'],
+            severity: 'info',
+          ),
+        ],
+        actionCards: <LearningReportActionCard>[
+          LearningReportActionCard(
+            id: 'start-first-learning-task',
+            title: '开始你的第一个学习任务',
+            summary: '先完成一次真实学习，再回来查看报告。',
+            ctaLabel: '去创建计划',
+            deepLink: '/plan',
+            kind: 'immediate_action',
+          ),
+        ],
+        trendOverview: LearningReportTrendOverview(
+          headline: '',
+          summary: '',
+          status: 'no_data',
+          message: '暂无足够学习记录生成趋势',
+        ),
+        triggerSummary: LearningReportTriggerSummary(
+          mode: 'baseline_ready',
+          title: '以下是基于聊天推断的方向，需要你确认',
+          summary: '当前缺少真实学习记录。',
+          dataStatus: 'insufficient',
+        ),
+        dataStatus: 'insufficient',
+      );
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: LearningReportScreen(report: report),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MasteryRadarChart), findsNothing);
+      expect(find.text('需要更多学习记录'), findsOneWidget);
+      expect(find.textContaining('推演剧场'), findsNothing);
+      expect(find.textContaining('模拟'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

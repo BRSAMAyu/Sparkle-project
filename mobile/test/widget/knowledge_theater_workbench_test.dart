@@ -342,4 +342,82 @@ void main() {
     expect(find.text('调整推演目标'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('knowledge theater shows disclaimer and low-quality range labels',
+      (tester) async {
+    const route = TheaterPathOption(
+      id: 'path-low-quality',
+      title: '约束优先路径',
+      summary: '先收紧范围，再快速验证。',
+      strategyType: 'constraint_first',
+      expertIds: <String>['galaxy-guide'],
+      estimatedCompletionRate: 0,
+      estimatedMastery: 0,
+      dailyMinutes: 30,
+      risks: <String>['当前历史样本不足'],
+      dataSufficiencyScore: 0.42,
+      dataQuality: 'low',
+      completionRangeLow: 0.64,
+      completionRangeHigh: 0.82,
+      masteryRangeLow: 58,
+      masteryRangeHigh: 76,
+      steps: <TheaterPathStep>[
+        TheaterPathStep(
+          index: 1,
+          nodeId: 'node-1',
+          nodeName: '特征值的几何意义',
+          rationale: '先澄清概念直觉。',
+          currentMastery: 0,
+          predictedMastery: 0,
+          riskLevel: 'high',
+          estimatedMinutes: 30,
+          dayLabel: '第 1 天',
+        ),
+      ],
+    );
+
+    const prediction = TheaterPrediction(
+      predictionId: 'prediction-low-quality',
+      topic: '特征值与特征向量',
+      targetNodeId: '',
+      targetName: '特征值与特征向量',
+      horizonDays: 7,
+      paths: <TheaterPathOption>[route],
+      discussionTurns: <TheaterDiscussionTurn>[],
+      graphNodes: <TheaterGraphNode>[],
+      graphEdges: <TheaterGraphEdge>[],
+      timeline: <TheaterTimelineFrame>[],
+      recommendedRouteId: 'path-low-quality',
+      targetResolutionMode: 'freeform_only',
+      disclaimer: '此推演基于 AI 对主题的通用理解，未经你的实际学习数据验证。预测数字仅供参考，不代表真实准确度。',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          simulationProvider.overrideWith(
+            (ref) => _StaticSimulationNotifier(const SimulationState()),
+          ),
+          theaterProvider.overrideWith(
+            (ref) => _StaticTheaterNotifier(
+              const TheaterState(
+                prediction: prediction,
+                selectedRouteId: 'path-low-quality',
+              ),
+              ref,
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: KnowledgeTheaterScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.textContaining('未经你的实际学习数据验证'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

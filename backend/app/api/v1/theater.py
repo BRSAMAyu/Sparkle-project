@@ -18,6 +18,11 @@ class TheaterGenerateRequest(BaseModel):
     target_node_id: UUID | None = Field(default=None, description="可选的目标节点 ID")
     horizon_days: int = Field(default=14, ge=7, le=30, description="推演周期天数")
     simulation_session_id: str | None = Field(default=None, description="来源学习模拟会话 ID")
+    context: str | None = Field(default=None, description="用户对学习目标的补充说明")
+    available_time_per_day: int | None = Field(default=None, ge=1, le=24 * 60, description="每天可用时间（分钟）")
+    current_level: str | None = Field(default=None, description="beginner / intermediate / advanced")
+    materials: str | None = Field(default=None, description="正在使用的学习材料")
+    goal_type: str | None = Field(default=None, description="exam / project / interest / work")
 
 
 class TheaterWhatIfRequest(BaseModel):
@@ -56,12 +61,25 @@ async def generate_theater_prediction(
 ):
     service = PredictionTheaterService(db)
     try:
+        payload = {
+            "user_id": UUID(user_id),
+            "topic": request.topic,
+            "target_node_id": request.target_node_id,
+            "horizon_days": request.horizon_days,
+            "simulation_session_id": request.simulation_session_id,
+        }
+        if request.context is not None:
+            payload["context"] = request.context
+        if request.available_time_per_day is not None:
+            payload["available_time_per_day"] = request.available_time_per_day
+        if request.current_level is not None:
+            payload["current_level"] = request.current_level
+        if request.materials is not None:
+            payload["materials"] = request.materials
+        if request.goal_type is not None:
+            payload["goal_type"] = request.goal_type
         return await service.generate_prediction(
-            user_id=UUID(user_id),
-            topic=request.topic,
-            target_node_id=request.target_node_id,
-            horizon_days=request.horizon_days,
-            simulation_session_id=request.simulation_session_id,
+            **payload,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

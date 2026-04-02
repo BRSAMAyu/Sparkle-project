@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_connection_panel.dart';
@@ -12,7 +13,7 @@ class _FakeOpenClawConnectionService extends OpenClawConnectionService {
   _FakeOpenClawConnectionService({
     OpenClawConnectionConfig? config,
     OpenClawConnectionInfo? info,
-  })  : _config = config ?? const OpenClawConnectionConfig(gatewayUrl: ''),
+  })  : _config = config ?? OpenClawConnectionConfig.empty,
         _info = info ?? const OpenClawConnectionInfo();
 
   OpenClawConnectionConfig _config;
@@ -42,7 +43,7 @@ class _FakeOpenClawConnectionService extends OpenClawConnectionService {
   Future<OpenClawPairingSession> startPairing() async {
     _pairingSession = OpenClawPairingSession(
       code: '123456',
-      createdAt: DateTime(2026, 1, 1),
+      createdAt: DateTime(2026),
       expiresAt: DateTime(2026, 1, 1, 0, 10),
     );
     notifyListeners();
@@ -53,7 +54,7 @@ class _FakeOpenClawConnectionService extends OpenClawConnectionService {
   Future<void> completePairing(String deviceToken) async {
     _config = _config.copyWith(
       deviceToken: deviceToken,
-      pairedAt: DateTime(2026, 1, 1),
+      pairedAt: DateTime(2026),
     );
     _pairingSession = null;
     notifyListeners();
@@ -86,7 +87,7 @@ class _FakeOpenClawConnectionService extends OpenClawConnectionService {
 
   @override
   Future<void> disconnect() async {
-    _config = const OpenClawConnectionConfig(gatewayUrl: '');
+    _config = OpenClawConnectionConfig.empty;
     _info = const OpenClawConnectionInfo();
     notifyListeners();
   }
@@ -113,7 +114,6 @@ void main() {
         const OpenClawConnectionConfig(
           gatewayUrl: 'http://127.0.0.1:18789',
           authToken: 'd1c836b87e26db7e164522b01bf346a2d7226b17',
-          transport: 'responses_http',
         ),
       );
 
@@ -130,7 +130,6 @@ void main() {
         config: const OpenClawConnectionConfig(
           gatewayUrl: 'http://localhost:8080',
           authToken: 'seed-token',
-          transport: 'responses_http',
         ),
       );
 
@@ -139,7 +138,7 @@ void main() {
           overrides: [
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             locale: Locale('zh'),
             supportedLocales: <Locale>[Locale('zh')],
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -244,7 +243,8 @@ void main() {
 
       await tester.tap(find.text('设备配对'), warnIfMissed: false);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('生成配对码'));
+      await tester.ensureVisible(find.text('生成配对码'));
+      await tester.tap(find.text('生成配对码'), warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(find.textContaining('完成配对'), findsWidgets);
 
@@ -257,6 +257,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('配置已保存'), findsWidgets);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     },
   );
 
@@ -267,7 +270,6 @@ void main() {
         config: const OpenClawConnectionConfig(
           gatewayUrl: 'http://127.0.0.1:18789',
           authToken: 'seed-token',
-          transport: 'responses_http',
         ),
         info: const OpenClawConnectionInfo(
           status: OpenClawConnectionStatus.error,
@@ -301,6 +303,54 @@ void main() {
       expect(find.text('网关在线，但没有执行权限'), findsOneWidget);
       expect(find.textContaining('operator.write'), findsWidgets);
       expect(find.textContaining('设备配对 + WebSocket'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'OpenClaw connection panel imports pairing payload from clipboard',
+    (tester) async {
+      final service = _FakeOpenClawConnectionService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            openClawConnectionProvider.overrideWith((ref) => service),
+          ],
+          child: const MaterialApp(
+            locale: Locale('zh'),
+            supportedLocales: <Locale>[Locale('zh')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 640,
+                  child: OpenClawConnectionPanel(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await Clipboard.setData(
+        const ClipboardData(
+          text:
+              '{"gateway_url":"ws://demo.openclaw.local:18789","pair_token":"pair-secret","device_name":"Demo MacBook"}',
+        ),
+      );
+
+      await tester.ensureVisible(find.text('从剪贴板导入'));
+      await tester.tap(find.text('从剪贴板导入'));
+      await tester.pumpAndSettle();
+
+      expect(service.config.gatewayUrl, 'http://demo.openclaw.local:18789');
+      expect(service.config.wsUrl, 'ws://demo.openclaw.local:18789');
+      expect(service.config.authToken, 'pair-secret');
+      expect(service.config.transport, 'gateway_ws');
+      expect(find.textContaining('已连接到 Demo MacBook'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     },
   );
 }

@@ -137,6 +137,7 @@ from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter  # noqa: F401
 from app.services.chat_signal_collector import ChatSignalCollector
 from app.services.custom_expert_service import CustomExpertService, is_custom_expert_id
+from app.services.execution_preference_service import ExecutionPreferenceService
 from app.services.focus_service import focus_service  # noqa: F401
 from app.services.llm_service import llm_service  # noqa: F401
 from app.services.plan_progress_service import PlanProgressService  # noqa: F401
@@ -726,10 +727,14 @@ class ChatOrchestrator(
         self,
         *,
         user_message: str,
+        assistant_response: str,
         task_context: dict[str, Any] | None,
         cognitive_context: dict[str, Any] | None,
+        user_id: str,
+        session_id: str,
+        active_db: AsyncSession | None,
     ) -> dict[str, Any] | None:
-        if not settings.OPENCLAW_ENABLED or not task_context:
+        if not settings.OPENCLAW_ENABLED or not task_context or active_db is None:
             return None
 
         task_id = task_context.get("active_task_id")
@@ -752,7 +757,19 @@ class ChatOrchestrator(
             "summarize this",
         ]
         message_lower = (user_message or "").lower()
-        if not any(signal in message_lower for signal in delegation_signals):
+        assistant_lower = (assistant_response or "").lower()
+        suggestion_markers = (
+            "你可以",
+            "建议你",
+            "下一步可以",
+            "可以先去",
+            "you can",
+            "you should",
+            "next step",
+        )
+        if not any(signal in message_lower for signal in delegation_signals) and not any(
+            marker in assistant_lower for marker in suggestion_markers
+        ):
             return None
 
         delegate_preference = 0.5
@@ -765,6 +782,13 @@ class ChatOrchestrator(
                     delegate_preference = 0.5
 
         try:
+            preference_service = ExecutionPreferenceService(active_db, self.redis)
+            user_uuid = uuid.UUID(str(user_id))
+            if await preference_service.should_suppress_delegation_suggestion(
+                user_id=user_uuid,
+                session_id=session_id,
+            ):
+                return None
             router = ExecutionRouter(openclaw_enabled=True)
             decision = router.classify(
                 task_type=str(task_context.get("task_type") or "general"),
@@ -775,6 +799,10 @@ class ChatOrchestrator(
             )
             if decision.execution_mode.value not in {"agent", "hybrid"}:
                 return None
+            await preference_service.record_delegation_suggestion_shown(
+                user_id=user_uuid,
+                session_id=session_id,
+            )
             return {
                 "type": "execution_suggestion",
                 "task_id": str(task_id),
@@ -784,6 +812,7 @@ class ChatOrchestrator(
                 "suggested_action": "handoff",
                 "tone": "detailed_guidance" if delegate_preference < 0.45 else "brief_handoff",
                 "delegate_preference": round(delegate_preference, 2),
+                "source": "execution_suggestion",
             }
         except Exception as exc:
             logger.debug("Execution suggestion detection failed: {}", exc)
@@ -901,7 +930,8 @@ class ChatOrchestrator(
                         ).inc()
                         return
 
-                    openclaw_responses = await self._maybe_short_circuit_openclaw_chat_control(
+                    saw_openclaw_short_circuit = False
+                    async for openclaw_response in self._stream_openclaw_chat_control(
                         active_tools=resolved_active_tools,
                         user_message=user_message,
                         request_extra_context=request_extra_context,
@@ -913,10 +943,10 @@ class ChatOrchestrator(
                         workflow_id=workflow_id,
                         prompt_version=prompt_version,
                         active_db=active_db,
-                    )
-                    if openclaw_responses:
-                        for openclaw_response in openclaw_responses:
-                            yield openclaw_response
+                    ):
+                        saw_openclaw_short_circuit = True
+                        yield openclaw_response
+                    if saw_openclaw_short_circuit:
                         await self._update_state(session_id, STATE_DONE, "OpenClaw chat control short-circuit completed")
                         REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
                         COLLABORATION_SUCCESS.labels(

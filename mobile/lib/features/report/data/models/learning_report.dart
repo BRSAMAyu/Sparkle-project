@@ -52,7 +52,7 @@ class LearningTimelineDatum {
   const LearningTimelineDatum({
     required this.nodeName,
     this.studyMinutes = 0,
-    this.masteryDelta = 0,
+    this.masteryDelta,
     this.createdAt,
   });
 
@@ -62,19 +62,19 @@ class LearningTimelineDatum {
         studyMinutes: (json['study_minutes'] as num?)?.toInt() ??
             (json['minutes'] as num?)?.toInt() ??
             0,
-        masteryDelta: (json['mastery_delta'] as num?)?.toDouble() ?? 0,
+        masteryDelta: (json['mastery_delta'] as num?)?.toDouble(),
         createdAt: json['created_at']?.toString(),
       );
 
   final String nodeName;
   final int studyMinutes;
-  final double masteryDelta;
+  final double? masteryDelta;
   final String? createdAt;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'node_name': nodeName,
         'study_minutes': studyMinutes,
-        'mastery_delta': masteryDelta,
+        if (masteryDelta != null) 'mastery_delta': masteryDelta,
         if (createdAt != null) 'created_at': createdAt,
       };
 }
@@ -241,12 +241,16 @@ class LearningReportTrendOverview {
   const LearningReportTrendOverview({
     required this.headline,
     required this.summary,
+    this.status = 'ready',
+    this.message,
     this.historyPoints = const <LearningTrendPoint>[],
     this.comparisons = const <LearningTrendComparison>[],
   });
 
   factory LearningReportTrendOverview.fromJson(Map<String, dynamic> json) =>
       LearningReportTrendOverview(
+        status: json['status']?.toString() ?? 'ready',
+        message: json['message']?.toString(),
         headline: json['headline']?.toString() ?? '',
         summary: json['summary']?.toString() ?? '',
         historyPoints: (json['history_points'] as List<dynamic>? ?? const [])
@@ -259,12 +263,16 @@ class LearningReportTrendOverview {
             .toList(),
       );
 
+  final String status;
+  final String? message;
   final String headline;
   final String summary;
   final List<LearningTrendPoint> historyPoints;
   final List<LearningTrendComparison> comparisons;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
+        'status': status,
+        if (message != null) 'message': message,
         'headline': headline,
         'summary': summary,
         'history_points': historyPoints.map((item) => item.toJson()).toList(),
@@ -277,6 +285,7 @@ class LearningReportTriggerSummary {
     required this.mode,
     required this.title,
     required this.summary,
+    this.dataStatus,
   });
 
   factory LearningReportTriggerSummary.fromJson(Map<String, dynamic> json) =>
@@ -284,16 +293,19 @@ class LearningReportTriggerSummary {
         mode: json['mode']?.toString() ?? 'manual',
         title: json['title']?.toString() ?? '',
         summary: json['summary']?.toString() ?? '',
+        dataStatus: json['data_status']?.toString(),
       );
 
   final String mode;
   final String title;
   final String summary;
+  final String? dataStatus;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'mode': mode,
         'title': title,
         'summary': summary,
+        if (dataStatus != null) 'data_status': dataStatus,
       };
 }
 
@@ -309,6 +321,7 @@ class LearningReport {
     this.actionCards = const <LearningReportActionCard>[],
     this.trendOverview,
     this.triggerSummary,
+    this.dataStatus,
   });
 
   factory LearningReport.fromJson(Map<String, dynamic> json) => LearningReport(
@@ -347,6 +360,10 @@ class LearningReport {
                 json['trigger_summary'] as Map<String, dynamic>,
               )
             : null,
+        dataStatus: json['trigger_summary'] is Map<String, dynamic>
+            ? (json['trigger_summary'] as Map<String, dynamic>)['data_status']
+                ?.toString()
+            : null,
       );
 
   final String reportId;
@@ -359,6 +376,7 @@ class LearningReport {
   final List<LearningReportActionCard> actionCards;
   final LearningReportTrendOverview? trendOverview;
   final LearningReportTriggerSummary? triggerSummary;
+  final String? dataStatus;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'report_id': reportId,
@@ -371,5 +389,6 @@ class LearningReport {
         'action_cards': actionCards.map((item) => item.toJson()).toList(),
         if (trendOverview != null) 'trend_overview': trendOverview!.toJson(),
         if (triggerSummary != null) 'trigger_summary': triggerSummary!.toJson(),
+        if (dataStatus != null) 'data_status': dataStatus,
       };
 }

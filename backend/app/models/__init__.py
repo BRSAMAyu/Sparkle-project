@@ -68,6 +68,8 @@ from app.models.execution_intent import (
     ExecutorType,
     TrustLevel,
 )
+from app.models.execution_audit_log import ExecutionAuditLog
+from app.models.execution_schedule import ExecutionSchedule
 from app.models.execution_record import ExecutionRecord
 from app.models.experiment import (
     ABExperiment,
@@ -251,6 +253,8 @@ __all__ = [
     "UserIRTAbility",
     "TrackingEvent",
     "ExecutionIntent",
+    "ExecutionAuditLog",
+    "ExecutionSchedule",
     "ExecutionIntentStatus",
     "ExecutionMode",
     "ExecutorType",

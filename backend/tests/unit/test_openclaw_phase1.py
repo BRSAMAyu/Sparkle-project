@@ -105,6 +105,30 @@ def test_intent_translator_includes_shell_workdir_instruction() -> None:
     assert "working directory: /tmp/project-demo" in payload["message"]
 
 
+def test_intent_translator_blocks_irreversible_shell_payloads() -> None:
+    translator = IntentTranslator()
+    intent = ExecutionIntent(
+        id=uuid4(),
+        task_id=uuid4(),
+        user_id=uuid4(),
+        execution_mode=ExecutionMode.AGENT,
+        executor=ExecutorType.OPENCLAW,
+        goal="在终端里执行 rm -rf /Users/demo/tmp-cache",
+        instructions=["直接删除旧目录"],
+        target_env=ExecutionTargetEnv.SHELL,
+        policy={"allow_exec": True, "allowed_tools": ["exec"]},
+        success_criteria={"type": "structured_output", "required_fields": ["summary"]},
+        result_contract={"artifact_types": ["text"]},
+        timeout_seconds=120,
+        status=ExecutionIntentStatus.READY,
+        trust_level=TrustLevel.RAW,
+        idempotency_key="guarded",
+    )
+
+    with pytest.raises(ValueError, match="已被 Sparkle 拦截"):
+        translator.translate_gateway_request(intent, agent_id="worker")
+
+
 def test_result_parser_parses_text_and_json() -> None:
     parser = ResultParser()
 

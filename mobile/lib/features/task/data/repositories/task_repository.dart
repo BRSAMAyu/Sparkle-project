@@ -114,6 +114,7 @@ class TaskRepository {
     String? goal,
     List<String>? instructions,
     String? templateId,
+    String? source,
   }) async {
     if (DemoDataService.isDemoMode) {
       return ExecutionIntentModel.fromJson({
@@ -137,6 +138,7 @@ class TaskRepository {
           'instructions': instructions,
         if (templateId != null && templateId.trim().isNotEmpty)
           'template_id': templateId.trim(),
+        if (source != null && source.trim().isNotEmpty) 'source': source.trim(),
       };
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.handoffTaskExecution(taskId),
@@ -230,6 +232,34 @@ class TaskRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return null;
       return _handleDioError(e, 'getExecutionRecord');
+    }
+  }
+
+  Future<ExecutionIntentModel> retryExecution(String intentId) async {
+    if (DemoDataService.isDemoMode) {
+      return ExecutionIntentModel.fromJson({
+        'id': 'demo_retry_${DateTime.now().millisecondsSinceEpoch}',
+        'task_id': 'demo_task',
+        'execution_mode': 'agent',
+        'executor': 'openclaw',
+        'status': 'running',
+        'trust_level': 'raw',
+        'goal': 'Demo retry',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.retryExecution(intentId),
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'retryExecution',
+      );
+      return ExecutionIntentModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'retryExecution');
     }
   }
 
@@ -565,7 +595,8 @@ class TaskRepository {
     }
   }
 
-  String _demoGuide(String title) => '''# $title
+  String _demoGuide(String title) => '''
+# $title
 
 ## 🎯 任务目标
 明确任务的核心产出和完成标准。

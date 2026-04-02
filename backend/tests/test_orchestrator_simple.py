@@ -5,6 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from app.orchestration.orchestrator import ChatOrchestrator, STATE_DONE
 from app.gen.agent.v1 import agent_service_pb2
 
+
+async def _yield_responses(responses):
+    for response in responses:
+        yield response
+
+
 @pytest.mark.asyncio
 async def test_orchestrator_basic_flow():
     # Mock dependencies
@@ -144,13 +150,13 @@ async def test_openclaw_chat_control_short_circuit_skips_session_start_updates()
     )
     orchestrator._resolve_active_tools = MagicMock(return_value=[])
     orchestrator._maybe_short_circuit_bridge_tool = AsyncMock(return_value=None)
-    orchestrator._maybe_short_circuit_openclaw_chat_control = AsyncMock(
-        return_value=[
+    orchestrator._stream_openclaw_chat_control = MagicMock(
+        return_value=_yield_responses([
             agent_service_pb2.ChatResponse(
                 full_text="OpenClaw 已执行",
                 finish_reason=agent_service_pb2.STOP,
             )
-        ]
+        ])
     )
     orchestrator._maybe_enqueue_perceptible_insight = AsyncMock(
         side_effect=AssertionError("openclaw short circuit should bypass perceptible insight updates")
@@ -175,7 +181,7 @@ async def test_openclaw_chat_control_short_circuit_skips_session_start_updates()
         responses.append(resp)
 
     assert any(resp.full_text == "OpenClaw 已执行" for resp in responses)
-    orchestrator._maybe_short_circuit_openclaw_chat_control.assert_awaited_once()
+    orchestrator._stream_openclaw_chat_control.assert_called_once()
     orchestrator._build_full_context.assert_not_awaited()
     orchestrator._maybe_enqueue_perceptible_insight.assert_not_awaited()
     orchestrator._maybe_enqueue_understanding_depth.assert_not_awaited()

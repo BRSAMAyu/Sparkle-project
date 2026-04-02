@@ -153,6 +153,9 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
   Widget build(BuildContext context) {
     final report = _resolveActiveReport(widget.report);
     final chartData = report.mastery.take(6).toList();
+    final reportDataStatus = (report.dataStatus ?? 'sufficient').trim();
+    final isInsufficientData = reportDataStatus == 'insufficient';
+    final isPartialData = reportDataStatus == 'partial';
     final averageMastery = _averageMastery(report);
     final strongCount =
         report.mastery.where((item) => item.masteryScore >= 80).length;
@@ -232,6 +235,16 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 delay: 0,
                 child: _ReportTriggerBanner(
                   triggerSummary: report.triggerSummary!,
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (isPartialData) ...[
+              _AnimatedReportSection(
+                delay: 20,
+                child: _ReportDataStatusBanner(
+                  label: '部分数据，仅供参考',
+                  message: '当前报告只覆盖到部分真实学习记录，请先以方向判断为主，再继续补充学习样本。',
                 ),
               ),
               const SizedBox(height: 14),
@@ -353,6 +366,10 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     ),
                     const SizedBox(height: 8),
                     if ((report.trendOverview?.headline ?? '').isNotEmpty) ...[
+                      if (isPartialData) ...[
+                        const _InlineStatusPill(label: '部分数据，仅供参考'),
+                        const SizedBox(height: 8),
+                      ],
                       Text(
                         report.trendOverview!.headline,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -384,7 +401,19 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       ] else
                         const SizedBox(height: 12),
                     ],
-                    if (trendPoints.length > 1)
+                    if (isInsufficientData)
+                      const _ReportEmptyPanel(
+                        title: '完成更多学习后将在此展示趋势分析',
+                        message: '当前还没有足够的真实学习记录来生成趋势，请先完成学习任务、练习或复盘。',
+                      )
+                    else if ((report.trendOverview?.status ?? 'ready') ==
+                        'no_data')
+                      _TrendHistoryEmptyState(
+                        historyCacheLoaded: _historyCacheLoaded,
+                        title: '完成更多学习后将在此展示趋势分析',
+                        message: report.trendOverview?.message,
+                      )
+                    else if (trendPoints.length > 1)
                       SizedBox(
                         height: 236,
                         child: _MasteryTrendChart(
@@ -422,35 +451,51 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 ),
                 title: const Text('掌握度雷达图'),
                 subtitle: Text(
-                  previousReport == null
-                      ? '点击任一维度查看更细的掌握情况'
-                      : '当前报告已叠加上次轮廓，可点击维度查看详情',
+                  isInsufficientData
+                      ? '完成更多学习后将在此展示掌握度分析'
+                      : previousReport == null
+                          ? '点击任一维度查看更细的掌握情况'
+                          : '当前报告已叠加上次轮廓，可点击维度查看详情',
                 ),
                 childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 children: [
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: 1),
-                    duration: DS.durationSlow,
-                    curve: Curves.easeOutCubic,
-                    builder: (context, progress, child) => MasteryRadarChart(
-                      labels: chartData.map((item) => item.nodeName).toList(),
-                      values: chartData
-                          .map(
-                            (item) => ((item.masteryScore / 100) * progress)
-                                .clamp(0.0, 1.0),
-                          )
-                          .toList(),
-                      secondaryValues: _comparisonValuesFor(
-                        chartData,
-                        previousReport,
+                  if (isInsufficientData)
+                    const _ReportEmptyPanel(
+                      title: '完成更多学习后将在此展示掌握度分析',
+                      message: '掌握度雷达图需要真实学习记录支撑，先开始一次学习并留下结果。',
+                    )
+                  else ...[
+                    if (isPartialData) ...[
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: _InlineStatusPill(label: '部分数据，仅供参考'),
                       ),
-                      selectedIndex: _selectedMasteryIndex,
-                      onValueTap: (index) {
-                        setState(() => _selectedMasteryIndex = index);
-                        unawaited(_showMasteryDetail(chartData[index]));
-                      },
+                      const SizedBox(height: 12),
+                    ],
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: DS.durationSlow,
+                      curve: Curves.easeOutCubic,
+                      builder: (context, progress, child) => MasteryRadarChart(
+                        labels: chartData.map((item) => item.nodeName).toList(),
+                        values: chartData
+                            .map(
+                              (item) => ((item.masteryScore / 100) * progress)
+                                  .clamp(0.0, 1.0),
+                            )
+                            .toList(),
+                        secondaryValues: _comparisonValuesFor(
+                          chartData,
+                          previousReport,
+                        ),
+                        selectedIndex: _selectedMasteryIndex,
+                        onValueTap: (index) {
+                          setState(() => _selectedMasteryIndex = index);
+                          unawaited(_showMasteryDetail(chartData[index]));
+                        },
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -710,7 +755,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     if (strongestNode != null) {
       return '你的稳定区已经开始成形';
     }
-    return '学习基线已经建立';
+    return '先用真实学习记录建立分析基础';
   }
 
   String _reportHeroSubtitle({
@@ -1866,6 +1911,74 @@ class _ReportTriggerBanner extends StatelessWidget {
   }
 }
 
+class _ReportDataStatusBanner extends StatelessWidget {
+  const _ReportDataStatusBanner({
+    required this.label,
+    required this.message,
+  });
+
+  final String label;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        borderColor: DS.warning.withValues(alpha: 0.2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline_rounded, color: DS.warning),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    message,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.45,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _InlineStatusPill extends StatelessWidget {
+  const _InlineStatusPill({
+    required this.label,
+  });
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: DS.warning,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      );
+}
+
 class _ReportActionCard extends StatelessWidget {
   const _ReportActionCard({
     required this.actionCards,
@@ -2103,9 +2216,13 @@ class _TrendComparisonChip extends StatelessWidget {
 class _TrendHistoryEmptyState extends StatelessWidget {
   const _TrendHistoryEmptyState({
     required this.historyCacheLoaded,
+    this.title,
+    this.message,
   });
 
   final bool historyCacheLoaded;
+  final String? title;
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
@@ -2131,7 +2248,7 @@ class _TrendHistoryEmptyState extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                '趋势会随着更多报告自动补全',
+                title ?? '趋势会随着更多报告自动补全',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -2140,9 +2257,55 @@ class _TrendHistoryEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            historyCacheLoaded
-                ? '第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。'
-                : '正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。',
+            message ??
+                (historyCacheLoaded
+                    ? '第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。'
+                    : '正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。'),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.5,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportEmptyPanel extends StatelessWidget {
+  const _ReportEmptyPanel({
+    required this.title,
+    required this.message,
+  });
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                   height: 1.5,

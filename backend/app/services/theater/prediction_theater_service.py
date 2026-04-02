@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 import logging
 import json
 import re
@@ -19,6 +20,7 @@ from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError, SparkleException
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import BehaviorPattern
+from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.plan import PlanType
 from app.models.task import TaskType
@@ -46,6 +48,13 @@ def _utcnow() -> datetime:
 
 def _clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
+
+
+async def _result_all(result: Any) -> list[Any]:
+    rows = result.all()
+    if inspect.isawaitable(rows):
+        rows = await rows
+    return list(rows)
 
 
 def _normalized_topic_terms(topic: str) -> list[str]:
@@ -101,6 +110,10 @@ def _normalized_topic_terms(topic: str) -> list[str]:
     return terms
 
 
+def _topic_key(topic: str) -> str:
+    return " ".join(str(topic or "").strip().casefold().split())
+
+
 class TheaterTimeoutError(SparkleException):
     def __init__(self):
         super().__init__(
@@ -124,13 +137,14 @@ class TheaterPathStep:
     node_id: str
     node_name: str
     rationale: str
-    current_mastery: float
-    predicted_mastery: float
+    current_mastery: float | None
+    predicted_mastery: float | None
     risk_level: str
     estimated_minutes: int
     day_label: str
     checkpoint_label: str | None = None
     mapped_galaxy_node_id: str | None = None
+    source_type: str = "graph_verified"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -138,13 +152,14 @@ class TheaterPathStep:
             "node_id": self.node_id,
             "node_name": self.node_name,
             "rationale": self.rationale,
-            "current_mastery": round(self.current_mastery, 2),
-            "predicted_mastery": round(self.predicted_mastery, 2),
+            "current_mastery": round(self.current_mastery, 2) if self.current_mastery is not None else None,
+            "predicted_mastery": round(self.predicted_mastery, 2) if self.predicted_mastery is not None else None,
             "risk_level": self.risk_level,
             "estimated_minutes": self.estimated_minutes,
             "day_label": self.day_label,
             "checkpoint_label": self.checkpoint_label,
             "mapped_galaxy_node_id": self.mapped_galaxy_node_id,
+            "source_type": self.source_type,
         }
 
 
@@ -155,15 +170,16 @@ class TheaterPathOption:
     summary: str
     strategy_type: str
     expert_ids: list[str]
-    estimated_completion_rate: float
-    estimated_mastery: float
+    estimated_completion_rate: float | None
+    estimated_mastery: float | None
     daily_minutes: int
     risks: list[str]
     steps: list[TheaterPathStep]
     route_score: float = 0.0
     checkpoint_days: list[int] | None = None
     week_one_tasks: list[dict[str, Any]] | None = None
-    confidence_score: float = 0.0
+    data_sufficiency_score: float = 0.0
+    data_quality: str = "low"
     completion_range_low: float = 0.0
     completion_range_high: float = 0.0
     mastery_range_low: float = 0.0
@@ -177,18 +193,24 @@ class TheaterPathOption:
             "summary": self.summary,
             "strategy_type": self.strategy_type,
             "expert_ids": self.expert_ids,
-            "estimated_completion_rate": round(self.estimated_completion_rate, 4),
-            "estimated_mastery": round(self.estimated_mastery, 2),
+            "estimated_completion_rate": (
+                round(self.estimated_completion_rate, 4)
+                if self.estimated_completion_rate is not None
+                else None
+            ),
+            "estimated_mastery": round(self.estimated_mastery, 2) if self.estimated_mastery is not None else None,
             "daily_minutes": self.daily_minutes,
             "risks": self.risks,
             "route_score": round(self.route_score, 2),
             "checkpoint_days": list(self.checkpoint_days or []),
             "week_one_tasks": list(self.week_one_tasks or []),
-            "confidence_score": round(self.confidence_score, 4),
-            "completion_range_low": round(self.completion_range_low, 4),
-            "completion_range_high": round(self.completion_range_high, 4),
-            "mastery_range_low": round(self.mastery_range_low, 2),
-            "mastery_range_high": round(self.mastery_range_high, 2),
+            "data_sufficiency_score": round(self.data_sufficiency_score, 4),
+            "confidence_score": round(self.data_sufficiency_score, 4),
+            "data_quality": self.data_quality,
+            "completion_range_low": round(self.completion_range_low, 4) if self.completion_range_low else 0.0,
+            "completion_range_high": round(self.completion_range_high, 4) if self.completion_range_high else 0.0,
+            "mastery_range_low": round(self.mastery_range_low, 2) if self.mastery_range_low else 0.0,
+            "mastery_range_high": round(self.mastery_range_high, 2) if self.mastery_range_high else 0.0,
             "calibration_basis": self.calibration_basis,
             "steps": [step.to_dict() for step in self.steps],
         }
@@ -202,6 +224,7 @@ class TheaterTargetContext:
     resolution_mode: str
     backbone: list[dict[str, Any]]
     semantic_matches: list[dict[str, Any]]
+    disclaimer: str | None = None
 
 
 class PredictionAccuracyTracker:
@@ -257,6 +280,8 @@ class PredictionAccuracyTracker:
 
         summary = {
             "prediction_id": prediction_id,
+            "topic": str(cached.get("topic") or ""),
+            "date": str(cached.get("generated_at") or _utcnow().date().isoformat())[:10],
             "predicted_completion_rate": round(predicted_completion, 4),
             "predicted_mastery": round(predicted_mastery, 2),
             "actual_completion_rate": round(actual_completion_rate, 4),
@@ -300,6 +325,11 @@ class PredictionTheaterService:
         horizon_days: int = 14,
         preview_mode: bool = False,
         simulation_session_id: str | None = None,
+        context: str | None = None,
+        available_time_per_day: int | None = None,
+        current_level: str | None = None,
+        materials: str | None = None,
+        goal_type: str | None = None,
     ) -> dict[str, Any]:
         try:
             return await asyncio.wait_for(
@@ -310,6 +340,11 @@ class PredictionTheaterService:
                     horizon_days=horizon_days,
                     preview_mode=preview_mode,
                     simulation_session_id=simulation_session_id,
+                    context=context,
+                    available_time_per_day=available_time_per_day,
+                    current_level=current_level,
+                    materials=materials,
+                    goal_type=goal_type,
                 ),
                 timeout=self.PREDICTION_TIMEOUT_SECONDS,
             )
@@ -325,21 +360,58 @@ class PredictionTheaterService:
         horizon_days: int = 14,
         preview_mode: bool = False,
         simulation_session_id: str | None = None,
+        context: str | None = None,
+        available_time_per_day: int | None = None,
+        current_level: str | None = None,
+        materials: str | None = None,
+        goal_type: str | None = None,
     ) -> dict[str, Any]:
+        request_context = {
+            "context": str(context or "").strip() or None,
+            "available_time_per_day": available_time_per_day,
+            "current_level": str(current_level or "").strip() or None,
+            "materials": str(materials or "").strip() or None,
+            "goal_type": str(goal_type or "").strip() or None,
+        }
+        if (
+            target_node_id is None
+            and not preview_mode
+            and await self._requires_clarification(
+            user_id=user_id,
+            topic=topic,
+            request_context=request_context,
+        )
+        ):
+            return self._build_clarification_response(topic=topic)
         target_context = await self._resolve_target_context(
             user_id=user_id,
             topic=topic,
             target_node_id=target_node_id,
+            context=request_context["context"],
         )
         backbone = list(target_context.backbone)
         if not backbone:
             raise ValueError("Unable to generate a learning backbone for the selected topic")
 
         mastery_map = await self._get_mastery_map(user_id)
-        study_preferences = await self._build_user_learning_profile(user_id)
+        study_preferences = await self._build_user_learning_profile(
+            user_id,
+            available_time_per_day=available_time_per_day,
+        )
         pattern_names = await self._top_pattern_names(user_id)
+        error_evidence = await self._related_error_evidence(
+            user_id=user_id,
+            topic=topic,
+            backbone=backbone,
+        )
+        mastery_evidence = self._related_mastery_evidence(
+            backbone=backbone,
+            mastery_map=mastery_map,
+        )
         calibration_profile = await self._build_prediction_calibration(user_id)
-        options = self._build_path_options(
+        topic_calibration = await self._topic_calibration_signal(user_id=user_id, topic=topic)
+        options = await self._build_path_options(
+            topic=topic,
             target_name=target_context.name,
             backbone=backbone,
             mastery_map=mastery_map,
@@ -347,6 +419,11 @@ class PredictionTheaterService:
             study_preferences=study_preferences,
             pattern_names=pattern_names,
             calibration_profile=calibration_profile,
+            has_graph_context=target_context.resolution_mode != "freeform_only",
+            request_context=request_context,
+            mastery_evidence=mastery_evidence,
+            error_evidence=error_evidence,
+            topic_calibration=topic_calibration,
             risk_overrides=(
                 await self._assess_step_risks(backbone, mastery_map)
                 if target_context.resolution_mode != "graph_explicit"
@@ -383,9 +460,10 @@ class PredictionTheaterService:
         timeline = self._build_timeline(
             options,
             discussion,
-            horizon_days=max(7, min(horizon_days, 30)),
+            available_time_per_day=int(study_preferences.get("average_session_minutes") or 40),
         )
         payload = {
+            "status": "ready",
             "prediction_id": prediction_id,
             "user_id": str(user_id),
             "topic": topic,
@@ -402,6 +480,22 @@ class PredictionTheaterService:
             "selected_prediction": selected_prediction,
             "recommended_route_id": options[0].id if options else "",
             "target_resolution_mode": target_context.resolution_mode,
+            "disclaimer": (
+                target_context.disclaimer
+                if target_context.resolution_mode in {"freeform_only", "hybrid_semantic"}
+                and int(calibration_profile.get("sample_count") or 0) < 3
+                else None
+            ),
+            "calibration_prompt": (
+                self._build_calibration_prompt(
+                    topic=topic,
+                    age_days=topic_calibration.get("latest_pending_age_days"),
+                )
+                if int(topic_calibration.get("sample_count") or 0) < 3
+                and bool(options)
+                and str(options[0].data_quality) == "low"
+                else None
+            ),
             "accuracy_tracking": self._build_accuracy_tracking(
                 prediction_id=prediction_id,
                 generated_at=generated_at,
@@ -413,6 +507,10 @@ class PredictionTheaterService:
                 "target_resolution_mode": target_context.resolution_mode,
                 "semantic_matches": target_context.semantic_matches,
                 "calibration_profile": calibration_profile,
+                "request_context": request_context,
+                "mastery_evidence": mastery_evidence,
+                "error_evidence": error_evidence,
+                "topic_calibration": topic_calibration,
             },
             "preview_mode": preview_mode,
         }
@@ -467,6 +565,7 @@ class PredictionTheaterService:
         user_id: UUID,
         topic: str,
         target_node_id: UUID | None,
+        context: str | None = None,
     ) -> TheaterTargetContext:
         if target_node_id is not None:
             target_node = await self._resolve_target_node_for_user(
@@ -475,7 +574,34 @@ class PredictionTheaterService:
                 target_node_id=target_node_id,
             )
             return await self._build_target_context_from_node(user_id=user_id, target_node=target_node)
-        return await self._build_free_mode_target_context(topic)
+        return await self._build_free_mode_target_context(topic, context=context)
+
+    async def _requires_clarification(
+        self,
+        *,
+        user_id: UUID,
+        topic: str,
+        request_context: dict[str, Any],
+    ) -> bool:
+        if len(str(topic or "").strip()) > 20:
+            return False
+        if str(request_context.get("context") or "").strip():
+            return False
+        semantic_matches = await self._topic_graph_candidates(user_id=user_id, topic=topic)
+        return not bool(semantic_matches)
+
+    def _build_clarification_response(self, *, topic: str) -> dict[str, Any]:
+        return {
+            "status": "clarification_needed",
+            "topic": topic,
+            "questions": [
+                "你学这个是为了什么？（考试/项目/兴趣）",
+                "你目前对这个主题了解多少？（完全没接触/学过基础/有一定经验）",
+                "你有多少时间可以投入？（每天/每周的大概时长）",
+                "你有在用什么学习材料？（教材名/课程名/无）",
+            ],
+            "prediction": None,
+        }
 
     async def _build_target_context_from_node(
         self,
@@ -518,9 +644,10 @@ class PredictionTheaterService:
             resolution_mode="graph_explicit",
             backbone=backbone,
             semantic_matches=[],
+            disclaimer=None,
         )
 
-    async def _build_free_mode_target_context(self, topic: str) -> TheaterTargetContext:
+    async def _build_free_mode_target_context(self, topic: str, *, context: str | None = None) -> TheaterTargetContext:
         fallback = self._fallback_free_mode_target(topic)
         payload = await analysis_llm.json_call(
             [
@@ -537,6 +664,7 @@ class PredictionTheaterService:
                     "role": "user",
                     "content": (
                         f"学习主题：{topic}\n"
+                        f"补充说明：{str(context or '').strip() or '无'}\n"
                         "请把它理解为一个需要自由推演的学习目标，输出：\n"
                         "1. 一个清晰的目标名称。\n"
                         "2. 一段中文描述。\n"
@@ -596,6 +724,7 @@ class PredictionTheaterService:
             resolution_mode="hybrid_semantic" if semantic_matches else "freeform_only",
             backbone=enriched_backbone,
             semantic_matches=semantic_matches,
+            disclaimer="此推演基于AI对主题的通用理解，未经你的实际学习数据验证。预测数字仅供参考，不代表真实准确度。",
         )
 
     def _default_free_mode_field(
@@ -811,6 +940,31 @@ class PredictionTheaterService:
                 semantic_matches.append(best_match)
             enriched.append(updated)
         return enriched, semantic_matches
+
+    async def _topic_graph_candidates(
+        self,
+        *,
+        user_id: UUID,
+        topic: str,
+        limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        del user_id
+        if self.db is None or not str(topic or "").strip():
+            return []
+        galaxy = GalaxyService(self.db)
+        try:
+            results = await galaxy.semantic_search_nodes(topic, limit=limit, threshold=0.22)
+        except Exception:
+            return []
+        return [
+            {
+                "node_id": str(item.id),
+                "node_name": str(item.name or ""),
+                "description": str(item.description or ""),
+            }
+            for item in results
+            if str(item.name or "").strip()
+        ]
 
     @staticmethod
     def _semantic_match_confidence(
@@ -1393,7 +1547,10 @@ class PredictionTheaterService:
         await self._get_prediction_for_user_or_raise(prediction_id, user_id=user_id)
         cached = await self.accuracy.get_summary(prediction_id)
         if cached is not None:
-            return cached
+            return {
+                **cached,
+                "comparison_pairs": await self._recent_comparison_pairs(user_id=user_id, limit=10),
+            }
         # DB fallback
         if self.db is None:
             return None
@@ -1406,7 +1563,12 @@ class PredictionTheaterService:
                 )
             )
             row = result.scalar_one_or_none()
-            return row if isinstance(row, dict) else None
+            if not isinstance(row, dict):
+                return None
+            return {
+                **row,
+                "comparison_pairs": await self._recent_comparison_pairs(user_id=user_id, limit=10),
+            }
         except Exception:
             return None
 
@@ -1431,7 +1593,22 @@ class PredictionTheaterService:
             "completion_mae": round(float(calibration.get("completion_mae") or 0.0), 4),
             "mastery_mae": round(float(calibration.get("mastery_mae") or 0.0), 2),
             "coverage_rate": round(float(coverage_rate), 4) if coverage_rate is not None else None,
-            "confidence_score": round(float(calibration.get("confidence_score") or 0.0), 4),
+            "data_sufficiency_score": round(
+                float(
+                    calibration.get("data_sufficiency_score")
+                    or calibration.get("confidence_score")
+                    or 0.0
+                ),
+                4,
+            ),
+            "confidence_score": round(
+                float(
+                    calibration.get("data_sufficiency_score")
+                    or calibration.get("confidence_score")
+                    or 0.0
+                ),
+                4,
+            ),
             "data_status": str(calibration.get("data_status") or "cold_start"),
             "trend": trend,
         }
@@ -1511,6 +1688,133 @@ class PredictionTheaterService:
             except Exception as exc:
                 logger.warning("DB fallback for pending predictions failed: %s", exc)
         return results
+
+    async def _recent_comparison_pairs(self, *, user_id: UUID, limit: int = 10) -> list[dict[str, Any]]:
+        if self.db is None:
+            return []
+        try:
+            result = await self.db.execute(
+                select(
+                    TheaterPrediction.topic,
+                    TheaterPrediction.generated_at,
+                    TheaterPrediction.accuracy_summary,
+                )
+                .where(
+                    TheaterPrediction.user_id == user_id,
+                    TheaterPrediction.accuracy_summary.is_not(None),
+                    TheaterPrediction.deleted_at.is_(None),
+                )
+                .order_by(desc(TheaterPrediction.generated_at))
+                .limit(max(limit, 1))
+            )
+            rows = await _result_all(result)
+        except Exception as exc:
+            logger.warning("Failed to fetch comparison pairs for %s: %s", user_id, exc)
+            return []
+
+        pairs: list[dict[str, Any]] = []
+        for topic, generated_at, accuracy_summary in rows:
+            if not isinstance(accuracy_summary, dict):
+                continue
+            pairs.append(
+                {
+                    "predicted_completion": round(float(accuracy_summary.get("predicted_completion_rate") or 0.0), 4),
+                    "actual_completion": round(float(accuracy_summary.get("actual_completion_rate") or 0.0), 4),
+                    "predicted_mastery": round(float(accuracy_summary.get("predicted_mastery") or 0.0), 2),
+                    "actual_mastery": round(float(accuracy_summary.get("actual_mastery") or 0.0), 2),
+                    "topic": str(topic or ""),
+                    "date": (
+                        generated_at.date().isoformat()
+                        if isinstance(generated_at, datetime)
+                        else str(accuracy_summary.get("date") or "")[:10]
+                    ),
+                }
+            )
+        return pairs
+
+    async def _topic_calibration_signal(self, *, user_id: UUID, topic: str) -> dict[str, Any]:
+        default_signal = {
+            "sample_count": 0,
+            "force_low_quality": False,
+            "latest_pending_age_days": None,
+        }
+        if self.db is None:
+            return default_signal
+
+        normalized_topic = _topic_key(topic)
+        if not normalized_topic:
+            return default_signal
+
+        try:
+            result = await self.db.execute(
+                select(
+                    TheaterPrediction.topic,
+                    TheaterPrediction.generated_at,
+                    TheaterPrediction.accuracy_summary,
+                    TheaterPrediction.accuracy_status,
+                )
+                .where(
+                    TheaterPrediction.user_id == user_id,
+                    TheaterPrediction.deleted_at.is_(None),
+                )
+                .order_by(desc(TheaterPrediction.generated_at))
+                .limit(30)
+            )
+            rows = await _result_all(result)
+        except Exception as exc:
+            logger.warning("Failed to build topical calibration signal for %s / %s: %s", user_id, topic, exc)
+            return default_signal
+
+        matching_rows = [row for row in rows if _topic_key(str(row[0] or "")) == normalized_topic]
+        calibrated_rows = [row for row in matching_rows if isinstance(row[2], dict)]
+        directional_biases: list[int] = []
+        for _, _, accuracy_summary, _ in calibrated_rows[:3]:
+            completion_delta = float(accuracy_summary.get("actual_completion_rate") or 0.0) - float(
+                accuracy_summary.get("predicted_completion_rate") or 0.0
+            )
+            mastery_delta = float(accuracy_summary.get("actual_mastery") or 0.0) - float(
+                accuracy_summary.get("predicted_mastery") or 0.0
+            )
+            direction = 0
+            if abs(completion_delta) > 0.15:
+                direction = 1 if completion_delta > 0 else -1
+            elif abs(mastery_delta) > 15.0:
+                direction = 1 if mastery_delta > 0 else -1
+            if direction:
+                directional_biases.append(direction)
+
+        latest_pending_age_days: int | None = None
+        for _, generated_at, accuracy_summary, accuracy_status in matching_rows:
+            if isinstance(accuracy_summary, dict) or str(accuracy_status or "") == "recorded":
+                continue
+            if isinstance(generated_at, datetime):
+                latest_pending_age_days = max((_utcnow().date() - generated_at.date()).days, 0)
+                break
+
+        return {
+            "sample_count": len(calibrated_rows),
+            "force_low_quality": len(directional_biases) >= 3 and len(set(directional_biases[:3])) == 1,
+            "latest_pending_age_days": latest_pending_age_days,
+        }
+
+    @staticmethod
+    def _apply_calibration_bias(
+        value: float | None,
+        *,
+        bias_mean: float | None,
+        weight: float = 0.75,
+        lower: float,
+        upper: float,
+    ) -> float | None:
+        if value is None or bias_mean is None:
+            return value
+        return _clamp(float(value) + (float(bias_mean) * weight), lower, upper)
+
+    @staticmethod
+    def _build_calibration_prompt(*, topic: str, age_days: int | None) -> str | None:
+        if age_days is None:
+            return None
+        return f"你之前的推演“{topic}”已过去 {age_days} 天，是否已完成？回填真实数据可以让未来的推演更准确。"
 
     async def _compute_actual_from_prediction(
         self,
@@ -1763,25 +2067,111 @@ class PredictionTheaterService:
         result = await self.db.execute(
             select(UserNodeStatus.node_id, UserNodeStatus.mastery_score).where(UserNodeStatus.user_id == user_id)
         )
-        return {str(node_id): float(score or 0.0) for node_id, score in result.all()}
+        return {str(node_id): float(score or 0.0) for node_id, score in await _result_all(result)}
 
-    async def _build_user_learning_profile(self, user_id: UUID) -> dict[str, Any]:
-        recent_records = (
-            await self.db.execute(
-                select(StudyRecord.study_minutes)
-                .where(StudyRecord.user_id == user_id)
-                .order_by(desc(StudyRecord.created_at))
-                .limit(20)
-            )
-        ).all()
+    async def _build_user_learning_profile(
+        self,
+        user_id: UUID,
+        *,
+        available_time_per_day: int | None = None,
+    ) -> dict[str, Any]:
+        recent_result = await self.db.execute(
+            select(StudyRecord.study_minutes)
+            .where(StudyRecord.user_id == user_id)
+            .order_by(desc(StudyRecord.created_at))
+            .limit(20)
+        )
+        recent_records = await _result_all(recent_result)
         average_minutes = 40
         if recent_records:
             average_minutes = int(
                 sum(int(item[0] or 0) for item in recent_records) / max(len(recent_records), 1)
             ) or 40
+        if available_time_per_day is not None:
+            average_minutes = int(available_time_per_day)
         return {
             "average_session_minutes": int(_clamp(float(average_minutes), 25, 90)),
         }
+
+    def _related_mastery_evidence(
+        self,
+        *,
+        backbone: list[dict[str, Any]],
+        mastery_map: dict[str, float],
+    ) -> list[dict[str, Any]]:
+        evidence: list[dict[str, Any]] = []
+        for item in backbone:
+            mapped_id = str(item.get("mapped_galaxy_node_id") or item.get("id") or "")
+            mastery_score = mastery_map.get(mapped_id)
+            evidence.append(
+                {
+                    "node_name": str(item.get("name") or ""),
+                    "node_id": mapped_id or None,
+                    "mastery_score": mastery_score if mastery_score is not None else None,
+                    "source_type": "graph_verified" if mapped_id and mastery_score is not None else "ai_suggested",
+                }
+            )
+        return evidence
+
+    async def _related_error_evidence(
+        self,
+        *,
+        user_id: UUID,
+        topic: str,
+        backbone: list[dict[str, Any]],
+        limit: int = 6,
+    ) -> list[dict[str, Any]]:
+        topic_terms = {
+            term.casefold()
+            for term in [topic, *[str(item.get("name") or "") for item in backbone]]
+            if str(term).strip()
+        }
+        if not topic_terms:
+            return []
+        result = await self.db.execute(
+            select(
+                ErrorRecord.id,
+                ErrorRecord.chapter,
+                ErrorRecord.question_text,
+                ErrorRecord.user_answer,
+                ErrorRecord.correct_answer,
+                ErrorRecord.latest_analysis,
+                ErrorRecord.linked_knowledge_node_ids,
+            )
+            .where(ErrorRecord.user_id == user_id, ErrorRecord.is_deleted.is_(False))
+            .order_by(desc(ErrorRecord.updated_at), desc(ErrorRecord.created_at))
+            .limit(50)
+        )
+        rows = await _result_all(result)
+        evidence: list[dict[str, Any]] = []
+        for error_id, chapter, question_text, user_answer, correct_answer, latest_analysis, linked_node_ids in rows:
+            haystack = " ".join(
+                [
+                    str(chapter or ""),
+                    str(question_text or ""),
+                    json.dumps(latest_analysis, ensure_ascii=False) if isinstance(latest_analysis, dict) else str(latest_analysis or ""),
+                    " ".join(str(node_id) for node_id in list(linked_node_ids or [])),
+                ]
+            ).casefold()
+            if not any(term in haystack for term in topic_terms):
+                continue
+            evidence.append(
+                {
+                    "error_id": str(error_id),
+                    "chapter": str(chapter or "").strip(),
+                    "question_text": str(question_text or "").strip(),
+                    "user_answer": str(user_answer or "").strip(),
+                    "correct_answer": str(correct_answer or "").strip(),
+                    "root_cause": (
+                        str((latest_analysis or {}).get("root_cause") or "").strip()
+                        if isinstance(latest_analysis, dict)
+                        else str(latest_analysis or "").strip()
+                    ),
+                }
+            )
+            if len(evidence) >= limit:
+                break
+        return evidence
 
     async def _top_pattern_names(self, user_id: UUID) -> list[str]:
         result = await self.db.execute(
@@ -1793,7 +2183,7 @@ class PredictionTheaterService:
             .order_by(desc(BehaviorPattern.confidence_score), desc(BehaviorPattern.updated_at))
             .limit(3)
         )
-        return [present_pattern_name(str(item[0])) for item in result.all() if str(item[0]).strip()]
+        return [present_pattern_name(str(item[0])) for item in await _result_all(result) if str(item[0]).strip()]
 
     async def _build_graph_bundle(
         self,
@@ -1822,14 +2212,14 @@ class PredictionTheaterService:
             select(KnowledgeNode.id, KnowledgeNode.name, KnowledgeNode.description, KnowledgeNode.sector_weights)
             .where(KnowledgeNode.id.in_(node_ids))
         )
-        rows = result.all()
+        rows = await _result_all(result)
         nodes_by_id = {
             str(node_id): {
                 "id": str(node_id),
                 "name": name,
                 "description": description or "",
                 "current_mastery": round(mastery_map.get(str(node_id), 0.0), 2),
-                "predicted_mastery": round(_clamp(mastery_map.get(str(node_id), 0.0) + 18, 8, 100), 2),
+                "predicted_mastery": round(mastery_map.get(str(node_id), 0.0), 2),
                 "risk_level": "high" if mastery_map.get(str(node_id), 0.0) < 45 else ("medium" if mastery_map.get(str(node_id), 0.0) < 70 else "low"),
                 "source_type": "graph_explicit",
                 "mapped_galaxy_node_id": str(node_id),
@@ -1843,15 +2233,14 @@ class PredictionTheaterService:
             }
             for node_id, name, description, sector_weights in rows
         }
-        edge_rows = (
-            await self.db.execute(
-                select(NodeRelation.source_node_id, NodeRelation.target_node_id, NodeRelation.relation_type, NodeRelation.strength)
-                .where(
-                    NodeRelation.source_node_id.in_(node_ids),
-                    NodeRelation.target_node_id.in_(node_ids),
-                )
+        edge_result = await self.db.execute(
+            select(NodeRelation.source_node_id, NodeRelation.target_node_id, NodeRelation.relation_type, NodeRelation.strength)
+            .where(
+                NodeRelation.source_node_id.in_(node_ids),
+                NodeRelation.target_node_id.in_(node_ids),
             )
-        ).all()
+        )
+        edge_rows = await _result_all(edge_result)
         edges = [
             {
                 "id": f"{source_id}_{target_id}_{relation_type}",
@@ -2259,9 +2648,11 @@ class PredictionTheaterService:
             "mastery_bias_mean": 0.0,
             "completion_mae": 0.12,
             "mastery_mae": 12.0,
+            "completion_mean_actual": None,
+            "mastery_mean_actual": None,
             "avg_accuracy_score": 0.0,
             "coverage_rate": None,
-            "confidence_score": 0.42,
+            "data_sufficiency_score": 0.42,
             "data_status": "cold_start",
             "strategy_profiles": {},
         }
@@ -2280,7 +2671,7 @@ class PredictionTheaterService:
                     desc(TheaterPrediction.generated_at),
                 ).limit(40)
             )
-            rows = result.all()
+            rows = await _result_all(result)
         except Exception as exc:
             logger.warning("Failed to build theater calibration profile for %s: %s", user_id, exc)
             return default_profile
@@ -2293,6 +2684,8 @@ class PredictionTheaterService:
         completion_errors: list[float] = []
         mastery_errors: list[float] = []
         accuracy_scores: list[float] = []
+        actual_completion_rates: list[float] = []
+        actual_mastery_scores: list[float] = []
         coverage_hits = 0
         coverage_total = 0
         strategy_samples: dict[str, dict[str, list[float] | int]] = {}
@@ -2323,6 +2716,8 @@ class PredictionTheaterService:
             completion_errors.append(completion_error)
             mastery_errors.append(mastery_error)
             accuracy_scores.append(float(accuracy_summary.get("accuracy_score") or 0.0))
+            actual_completion_rates.append(actual_completion)
+            actual_mastery_scores.append(actual_mastery)
 
             strategy_bucket = strategy_samples.setdefault(
                 strategy_type,
@@ -2372,16 +2767,19 @@ class PredictionTheaterService:
             "mastery_bias_mean": round(statistics.mean(mastery_biases), 2),
             "completion_mae": round(statistics.mean(completion_errors), 4),
             "mastery_mae": round(statistics.mean(mastery_errors), 2),
+            "completion_mean_actual": round(statistics.mean(actual_completion_rates), 4),
+            "mastery_mean_actual": round(statistics.mean(actual_mastery_scores), 2),
             "avg_accuracy_score": round(statistics.mean(accuracy_scores), 4),
             "coverage_rate": round((coverage_hits / coverage_total), 4) if coverage_total else None,
-            "confidence_score": round(_clamp(0.45 + min(sample_count, 20) * 0.02, 0.45, 0.9), 4),
+            "data_sufficiency_score": round(_clamp(0.45 + min(sample_count, 20) * 0.02, 0.45, 0.9), 4),
             "data_status": "calibrated" if sample_count >= 5 else "blended_history",
             "strategy_profiles": strategy_profiles,
         }
 
-    def _build_path_options(
+    async def _build_path_options(
         self,
         *,
+        topic: str,
         target_name: str,
         backbone: list[dict[str, Any]],
         mastery_map: dict[str, float],
@@ -2389,201 +2787,175 @@ class PredictionTheaterService:
         study_preferences: dict[str, Any],
         pattern_names: list[str],
         calibration_profile: dict[str, Any],
+        has_graph_context: bool,
+        request_context: dict[str, Any],
+        mastery_evidence: list[dict[str, Any]],
+        error_evidence: list[dict[str, Any]],
+        topic_calibration: dict[str, Any],
         risk_overrides: list[str] | None = None,
     ) -> list[TheaterPathOption]:
+        session_minutes = int(study_preferences.get("average_session_minutes") or 40)
         node_names = [str(item.get("name") or "") for item in backbone]
         average_mastery = sum(
-            mastery_map.get(
-                str(item.get("mapped_galaxy_node_id") or item.get("id") or ""),
-                0.0,
+            mastery_score
+            for mastery_score in (
+                mastery_map.get(str(item.get("mapped_galaxy_node_id") or item.get("id") or ""))
+                for item in backbone
             )
-            for item in backbone
-        ) / max(len(backbone), 1)
-        session_minutes = int(study_preferences.get("average_session_minutes") or 40)
-        strategies = [
-            {
-                "id": "path_foundation",
-                "title": "稳扎稳打",
-                "strategy_type": "foundation",
-                "expert_ids": ["galaxy_guide", "time_tutor"],
-                "summary": f"先顺着 {target_name} 的前置链路补齐基础，再进入目标节点和应用练习。",
-                "order": list(backbone),
-                "completion_bias": 0.10,
-                "mastery_bias": -2.0,
-                "risk_bias": "节奏稳，但后半段会更密集。",
-            },
-            {
-                "id": "path_breakthrough",
-                "title": "重点突破",
-                "strategy_type": "breakthrough",
-                "expert_ids": ["exam_oracle", "deep_analyst"],
-                "summary": f"先切入 {target_name} 的核心概念，再按暴露出的缺口回补关键前置。",
-                "order": [backbone[-1], *backbone[:-1]] if backbone else [],
-                "completion_bias": -0.08,
-                "mastery_bias": 5.0,
-                "risk_bias": "上手快，但如果前置薄弱，后面会频繁回补。",
-            },
-            {
-                "id": "path_personalized",
-                "title": "你的历史最优模式",
-                "strategy_type": "personalized",
-                "expert_ids": ["study_buddy", "galaxy_guide"],
-                "summary": f"根据你最近的学习时长和认知模式，把 {target_name} 切成更容易连续坚持的小步。",
-                "order": list(backbone),
-                "completion_bias": 0.03,
-                "mastery_bias": 1.5,
-                "risk_bias": f"需要保持每天约 {session_minutes} 分钟的连续性。",
-            },
-        ]
-
+            if mastery_score is not None
+        ) / max(
+            1,
+            len(
+                [
+                    item
+                    for item in backbone
+                    if mastery_map.get(str(item.get("mapped_galaxy_node_id") or item.get("id") or "")) is not None
+                ]
+            ),
+        )
+        fallback_plans = self._dynamic_path_plan_fallback(
+            target_name=target_name,
+            backbone=backbone,
+            available_time_per_day=session_minutes,
+            goal_type=str(request_context.get("goal_type") or "").strip() or None,
+        )
+        dynamic_plans = await self._generate_dynamic_path_plans(
+            topic=topic,
+            target_name=target_name,
+            request_context=request_context,
+            mastery_evidence=mastery_evidence,
+            error_evidence=error_evidence,
+            backbone=backbone,
+            fallback=fallback_plans,
+        )
         options: list[TheaterPathOption] = []
-        for idx, strategy in enumerate(strategies):
-            ordered_backbone = [item for item in strategy["order"] if isinstance(item, dict)]
-            steps: list[TheaterPathStep] = []
-            total_steps = max(len(ordered_backbone), 1)
-            checkpoint_days = self._checkpoint_days_for_horizon(horizon_days)
-            for step_index, item in enumerate(ordered_backbone, start=1):
-                node_id = str(item.get("id") or "")
-                current_mastery = mastery_map.get(
-                    str(item.get("mapped_galaxy_node_id") or node_id),
-                    0.0,
-                )
-                predicted_mastery = _clamp(current_mastery + (18 - step_index * 1.5) + float(strategy["mastery_bias"]), 8, 100)
-                risk_level = (
-                    str(risk_overrides[step_index - 1]).strip().lower()
-                    if risk_overrides and step_index - 1 < len(risk_overrides)
-                    else self._risk_level_for_step(
-                        current_mastery=current_mastery,
-                        index=step_index - 1,
-                        total=total_steps,
-                    )
-                )
-                if strategy["strategy_type"] == "breakthrough" and step_index == 1:
-                    risk_level = "medium" if risk_level == "high" else risk_level
-                estimated_minutes = int(_clamp(session_minutes + (6 if step_index == total_steps else 0), 25, 95))
-                day_slot = max(1, round((step_index / total_steps) * horizon_days))
-                rationale = self._step_rationale(
-                    strategy_type=str(strategy["strategy_type"]),
-                    node_name=str(item.get("name") or "当前节点"),
-                    is_target=bool(item.get("is_target")),
-                )
-                checkpoint_label = (
-                    f"检查点 · 第 {day_slot} 天"
-                    if day_slot in checkpoint_days or step_index == total_steps
-                    else None
-                )
-                steps.append(
-                    TheaterPathStep(
-                        index=step_index,
-                        node_id=node_id,
-                        node_name=str(item.get("name") or "当前节点"),
-                        rationale=rationale,
-                        current_mastery=current_mastery,
-                        predicted_mastery=predicted_mastery,
-                        risk_level=risk_level,
-                        estimated_minutes=estimated_minutes,
-                        day_label=f"第 {day_slot} 天",
-                        checkpoint_label=checkpoint_label,
-                        mapped_galaxy_node_id=(
-                            str(item.get("mapped_galaxy_node_id") or "") or None
-                        ),
-                    )
-                )
-
-            strategy_type = str(strategy["strategy_type"])
-            strategy_stats = dict(
-                (calibration_profile.get("strategy_profiles") or {}).get(
-                    strategy_type,
-                )
-                or {},
+        checkpoint_days = self._checkpoint_days_for_horizon(horizon_days)
+        sample_count = int(calibration_profile.get("sample_count") or 0)
+        data_sufficiency_score = _clamp(
+            float(
+                calibration_profile.get("data_sufficiency_score")
+                or calibration_profile.get("confidence_score")
+                or 0.42
+            ),
+            0.36,
+            0.92,
+        )
+        data_quality = (
+            "low"
+            if bool(topic_calibration.get("force_low_quality"))
+            else (
+                "high"
+                if has_graph_context and sample_count >= 5
+                else ("medium" if has_graph_context else "low")
             )
+        )
+        for idx, strategy in enumerate(dynamic_plans):
+            steps = self._materialize_dynamic_steps(
+                plan=strategy,
+                backbone=backbone,
+                mastery_map=mastery_map,
+                checkpoint_days=checkpoint_days,
+                available_time_per_day=session_minutes,
+                risk_overrides=risk_overrides,
+            )
+            strategy_type = str(strategy.get("strategy_type") or f"path_{idx + 1}")
             sample_count = int(calibration_profile.get("sample_count") or 0)
-            session_fit = _clamp((session_minutes - 35) / 30.0, -0.3, 0.35)
-            density_penalty = max(0.0, (len(steps) - 4) * 0.038)
-            pattern_penalty = min(len(pattern_names) * 0.018, 0.12)
-            readiness = _clamp(average_mastery / 100.0, 0.0, 1.0)
-            completion_bias = float(calibration_profile.get("completion_bias_mean") or 0.0)
-            mastery_bias = float(calibration_profile.get("mastery_bias_mean") or 0.0)
-            completion_bias += float(strategy_stats.get("completion_bias_mean") or 0.0) * 0.35
-            mastery_bias += float(strategy_stats.get("mastery_bias_mean") or 0.0) * 0.35
-            completion_rate = _clamp(
-                0.42
-                + (readiness * 0.31)
-                + (session_fit * 0.12)
-                + float(strategy["completion_bias"])
-                + completion_bias
-                - density_penalty
-                - pattern_penalty,
-                0.28,
-                0.95,
+            strategy_profile = (
+                calibration_profile.get("strategy_profiles", {}).get(strategy_type)
+                if isinstance(calibration_profile.get("strategy_profiles"), dict)
+                else None
             )
-            mastery_gain = (
-                6.0
-                + ((100.0 - average_mastery) * 0.22)
-                + (session_fit * 10.0)
-                + float(strategy["mastery_bias"])
-                + mastery_bias
-                - (len(pattern_names) * 0.9)
+            completion_rate = self._completion_rate_from_history(
+                calibration_profile=calibration_profile,
+                steps=steps,
             )
-            estimated_mastery = _clamp(
-                average_mastery + mastery_gain,
-                20,
-                97,
+            completion_rate = self._apply_calibration_bias(
+                completion_rate,
+                bias_mean=(
+                    strategy_profile.get("completion_bias_mean")
+                    if isinstance(strategy_profile, dict)
+                    else calibration_profile.get("completion_bias_mean")
+                ),
+                weight=0.75,
+                lower=0.05,
+                upper=0.95,
             )
-            base_completion_mae = float(calibration_profile.get("completion_mae") or 0.12)
-            base_mastery_mae = float(calibration_profile.get("mastery_mae") or 13.0)
-            strategy_completion_mae = float(strategy_stats.get("completion_mae") or base_completion_mae)
-            strategy_mastery_mae = float(strategy_stats.get("mastery_mae") or base_mastery_mae)
-            cold_start_penalty = max(0.0, (8 - min(sample_count, 8)) / 8.0)
-            completion_margin = _clamp(
-                (strategy_completion_mae * 1.12)
-                + 0.03
-                + (len(steps) * 0.008)
-                + (cold_start_penalty * 0.08),
-                0.06,
-                0.24,
+            completion_margin = (
+                _clamp(float(calibration_profile.get("completion_mae") or 0.12) + (len(steps) * 0.008), 0.06, 0.24)
+                if completion_rate is not None and sample_count >= 5
+                else None
             )
-            mastery_margin = _clamp(
-                (strategy_mastery_mae * 1.08)
-                + 3.0
-                + (len(steps) * 0.75)
-                + (cold_start_penalty * 5.0),
-                6.0,
-                24.0,
+            predicted_values = [step.predicted_mastery for step in steps if step.predicted_mastery is not None]
+            current_values = [step.current_mastery for step in steps if step.current_mastery is not None]
+            estimated_mastery = (
+                round(sum(predicted_values) / len(predicted_values), 2)
+                if predicted_values
+                else (round(sum(current_values) / len(current_values), 2) if current_values else None)
             )
-            confidence_score = _clamp(
-                float(calibration_profile.get("confidence_score") or 0.42)
-                + min(sample_count, 12) * 0.012
-                + min(int(strategy_stats.get("sample_count") or 0), 6) * 0.008
-                - (len(steps) * 0.01)
-                - (cold_start_penalty * 0.12),
-                0.36,
-                0.92,
+            estimated_mastery = self._apply_calibration_bias(
+                estimated_mastery,
+                bias_mean=(
+                    strategy_profile.get("mastery_bias_mean")
+                    if isinstance(strategy_profile, dict)
+                    else calibration_profile.get("mastery_bias_mean")
+                ),
+                weight=0.75,
+                lower=0.0,
+                upper=100.0,
             )
-            completion_range_low = _clamp(completion_rate - completion_margin, 0.0, 1.0)
-            completion_range_high = _clamp(completion_rate + completion_margin, 0.0, 1.0)
-            mastery_range_low = _clamp(estimated_mastery - mastery_margin, 0.0, 100.0)
-            mastery_range_high = _clamp(estimated_mastery + mastery_margin, 0.0, 100.0)
-            risks = [str(strategy["risk_bias"])]
+            if estimated_mastery is not None:
+                estimated_mastery = round(float(estimated_mastery), 2)
+            mastery_margin = (
+                _clamp(float(calibration_profile.get("mastery_mae") or 12.0) + (len(steps) * 0.75), 6.0, 24.0)
+                if estimated_mastery is not None and sample_count >= 5
+                else None
+            )
+            completion_range_low = (
+                _clamp(completion_rate - float(completion_margin or 0.0), 0.0, 1.0)
+                if completion_rate is not None and completion_margin is not None
+                else 0.0
+            )
+            completion_range_high = (
+                _clamp(completion_rate + float(completion_margin or 0.0), 0.0, 1.0)
+                if completion_rate is not None and completion_margin is not None
+                else 0.0
+            )
+            mastery_range_low = (
+                _clamp(float(estimated_mastery) - float(mastery_margin or 0.0), 0.0, 100.0)
+                if estimated_mastery is not None and mastery_margin is not None
+                else 0.0
+            )
+            mastery_range_high = (
+                _clamp(float(estimated_mastery) + float(mastery_margin or 0.0), 0.0, 100.0)
+                if estimated_mastery is not None and mastery_margin is not None
+                else 0.0
+            )
+            risks = [
+                str(strategy.get("not_for") or "").strip()
+                or "这条路径更依赖你按步骤执行。"
+            ]
             if pattern_names:
                 risks.append(f"近期行为模式提示：{pattern_names[0]} 可能影响这条路径的稳定执行。")
             if node_names:
                 risks.append(f"{node_names[min(len(node_names) - 1, 0)]} 的掌握情况会决定后续理解是否顺滑。")
             if sample_count < 5:
-                risks.append("这条预测仍处于冷启动阶段，建议把区间而不是单点估计当作主要参考。")
+                risks.append("当前历史校准样本不足，完成率数字不会作为主结论提供。")
             route_score = self._route_score(
-                completion_rate=completion_rate,
-                estimated_mastery=estimated_mastery,
+                completion_rate=completion_rate or 0.0,
+                estimated_mastery=float(estimated_mastery or average_mastery or 0.0),
                 risks=risks,
                 strategy_type=strategy_type,
             )
             options.append(
                 TheaterPathOption(
-                    id=str(strategy["id"]),
-                    title=str(strategy["title"]),
-                    summary=str(strategy["summary"]),
+                    id=str(strategy.get("id") or f"path_dynamic_{idx + 1}"),
+                    title=str(strategy.get("title") or f"路径 {idx + 1}"),
+                    summary=(
+                        str(strategy.get("summary") or "").strip()
+                        or f"适合：{str(strategy.get('fit_for') or '需要更明确的目标约束')}；不适合：{str(strategy.get('not_for') or '缺少执行空间的情况')}。"
+                    ),
                     strategy_type=strategy_type,
-                    expert_ids=list(strategy["expert_ids"]),
+                    expert_ids=[str(item).strip() for item in list(strategy.get("expert_ids") or []) if str(item).strip()],
                     estimated_completion_rate=completion_rate,
                     estimated_mastery=estimated_mastery,
                     daily_minutes=session_minutes,
@@ -2591,7 +2963,8 @@ class PredictionTheaterService:
                     route_score=route_score,
                     checkpoint_days=checkpoint_days,
                     week_one_tasks=self._week_one_task_blueprints(steps=steps, target_name=target_name),
-                    confidence_score=confidence_score,
+                    data_sufficiency_score=data_sufficiency_score,
+                    data_quality=data_quality,
                     completion_range_low=completion_range_low,
                     completion_range_high=completion_range_high,
                     mastery_range_low=mastery_range_low,
@@ -2605,6 +2978,190 @@ class PredictionTheaterService:
                 )
             )
         return options
+
+    def _dynamic_path_plan_fallback(
+        self,
+        *,
+        target_name: str,
+        backbone: list[dict[str, Any]],
+        available_time_per_day: int,
+        goal_type: str | None,
+    ) -> list[dict[str, Any]]:
+        ordered = [dict(item) for item in backbone if isinstance(item, dict)]
+        reversed_order = list(reversed(ordered))
+        quick_steps = ordered[: max(2, min(len(ordered), 3))]
+        return [
+            {
+                "id": "path_constraint_first",
+                "title": "约束优先路径",
+                "strategy_type": "constraint_first",
+                "summary": f"先围绕 {target_name} 最核心的前置与目标节点压缩成小步，适合时间有限时执行。",
+                "fit_for": "适合每天时间有限、需要先建立最小闭环的情况",
+                "not_for": "不适合希望一次性铺开全部相关内容的情况",
+                "expert_ids": ["galaxy_guide", "time_tutor"],
+                "steps": quick_steps,
+            },
+            {
+                "id": "path_full_chain",
+                "title": "完整链路路径",
+                "strategy_type": "full_chain",
+                "summary": f"沿着 {target_name} 的前置关系完整推进，适合系统建立理解。",
+                "fit_for": "适合想系统掌握概念依赖和完整链路的情况",
+                "not_for": "不适合只想快速过一遍重点的情况",
+                "expert_ids": ["deep_analyst", "galaxy_guide"],
+                "steps": ordered,
+            },
+            {
+                "id": "path_target_backtrack",
+                "title": "目标回溯路径",
+                "strategy_type": "target_backtrack",
+                "summary": f"先接触 {target_name} 的目标问题，再回补暴露出的前置缺口。",
+                "fit_for": "适合有明确项目或考试牵引，需要先看目标长什么样的情况",
+                "not_for": "不适合完全零基础且容易被高难度内容打断的情况",
+                "expert_ids": ["exam_oracle", "study_buddy"] if goal_type == "exam" else ["study_buddy", "deep_analyst"],
+                "steps": reversed_order[: len(ordered)],
+            },
+        ][: 2 if available_time_per_day <= 30 else 3]
+
+    async def _generate_dynamic_path_plans(
+        self,
+        *,
+        topic: str,
+        target_name: str,
+        request_context: dict[str, Any],
+        mastery_evidence: list[dict[str, Any]],
+        error_evidence: list[dict[str, Any]],
+        backbone: list[dict[str, Any]],
+        fallback: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        payload = await analysis_llm.json_call(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "你是学习路径规划专家。请只返回严格 JSON，对象包含 paths 数组。"
+                        "每条路径必须包含 id, title, strategy_type, summary, fit_for, not_for, expert_ids, steps。"
+                        "steps 数组中的每一项必须包含 node_name, rationale, estimated_minutes, risk_level, "
+                        "source_type, mapped_galaxy_node_id, predicted_mastery。"
+                        "不要编造已有掌握度；没有数据的 predicted_mastery 可以为 null。"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        "你是学习路径规划专家。根据以下信息，设计 2-3 条差异化的学习路径：\n\n"
+                        f"学习主题：{topic}\n"
+                        f"学习目标：{request_context.get('goal_type') or '[未提供]'}\n"
+                        f"当前水平：{request_context.get('current_level') or '[未提供]'}\n"
+                        f"每日可用时间：{request_context.get('available_time_per_day') or '[未提供]'} 分钟\n"
+                        f"学习材料：{request_context.get('materials') or '[未提供]'}\n"
+                        f"补充说明：{request_context.get('context') or '[未提供]'}\n\n"
+                        f"已掌握的相关知识节点：{json.dumps(mastery_evidence, ensure_ascii=False)}\n\n"
+                        f"错题本中相关的错误：{json.dumps(error_evidence, ensure_ascii=False)}\n\n"
+                        f"候选知识骨架：{json.dumps(backbone, ensure_ascii=False)}\n\n"
+                        "要求：\n"
+                        "1. 每条路径必须有明确的适用场景。\n"
+                        "2. 每条路径的步骤必须基于上述已掌握和未掌握的知识节点。\n"
+                        "3. 如果某个步骤涉及用户知识图谱中的节点，标注 mapped_galaxy_node_id。\n"
+                        "4. 对于用户知识图谱中不存在的步骤，明确标注 source_type: ai_suggested。\n"
+                        "5. 不要编造掌握度数字；已有数据的用真实 mastery_score，没有数据的 predicted_mastery 允许为 null。\n"
+                        "6. 时间估算基于用户的 available_time_per_day，不要硬编码。\n"
+                        f"7. 目标名称统一围绕 {target_name}。\n"
+                    ),
+                },
+            ],
+            fallback={"paths": fallback},
+            temperature=0.25,
+        )
+        if not isinstance(payload, dict):
+            return fallback
+        plans = [item for item in list(payload.get("paths") or []) if isinstance(item, dict)]
+        return plans[:3] or fallback
+
+    def _materialize_dynamic_steps(
+        self,
+        *,
+        plan: dict[str, Any],
+        backbone: list[dict[str, Any]],
+        mastery_map: dict[str, float],
+        checkpoint_days: list[int],
+        available_time_per_day: int,
+        risk_overrides: list[str] | None,
+    ) -> list[TheaterPathStep]:
+        backbone_by_name = {str(item.get("name") or "").strip(): item for item in backbone}
+        raw_steps = [item for item in list(plan.get("steps") or []) if isinstance(item, dict)]
+        steps: list[TheaterPathStep] = []
+        cumulative_minutes = 0
+        for step_index, raw in enumerate(raw_steps or backbone, start=1):
+            raw_name = str(raw.get("node_name") or raw.get("name") or "当前节点").strip() or "当前节点"
+            matched = backbone_by_name.get(raw_name)
+            node_id = str((matched or raw).get("id") or f"ai-step-{step_index}")
+            mapped_galaxy_node_id = str((matched or raw).get("mapped_galaxy_node_id") or "").strip() or None
+            mastery_key = mapped_galaxy_node_id or node_id
+            current_mastery = mastery_map.get(mastery_key)
+            predicted_mastery = raw.get("predicted_mastery")
+            if predicted_mastery is not None:
+                try:
+                    predicted_mastery = _clamp(float(predicted_mastery), 0.0, 100.0)
+                except (TypeError, ValueError):
+                    predicted_mastery = None
+            estimated_minutes = int(
+                _clamp(float(raw.get("estimated_minutes") or available_time_per_day), 10.0, 180.0)
+            )
+            cumulative_minutes += estimated_minutes
+            day_slot = max(1, int((cumulative_minutes - 1) / max(available_time_per_day, 1)) + 1)
+            risk_level = (
+                str(risk_overrides[step_index - 1]).strip().lower()
+                if risk_overrides and step_index - 1 < len(risk_overrides)
+                else str(raw.get("risk_level") or self._risk_level_for_step(
+                    current_mastery=float(current_mastery or 0.0),
+                    index=step_index - 1,
+                    total=max(len(raw_steps), 1),
+                )).strip().lower()
+            )
+            steps.append(
+                TheaterPathStep(
+                    index=step_index,
+                    node_id=node_id,
+                    node_name=raw_name,
+                    rationale=str(raw.get("rationale") or self._step_rationale(
+                        strategy_type=str(plan.get("strategy_type") or "custom"),
+                        node_name=raw_name,
+                        is_target=bool((matched or raw).get("is_target")),
+                    )),
+                    current_mastery=float(current_mastery) if current_mastery is not None else None,
+                    predicted_mastery=float(predicted_mastery) if predicted_mastery is not None else None,
+                    risk_level=risk_level or "medium",
+                    estimated_minutes=estimated_minutes,
+                    day_label=f"第 {day_slot} 天",
+                    checkpoint_label=(
+                        f"检查点 · 第 {day_slot} 天"
+                        if day_slot in checkpoint_days or step_index == len(raw_steps or backbone)
+                        else None
+                    ),
+                    mapped_galaxy_node_id=mapped_galaxy_node_id,
+                    source_type=(
+                        str(raw.get("source_type") or "")
+                        or ("graph_verified" if mapped_galaxy_node_id else "ai_suggested")
+                    ),
+                )
+            )
+        return steps
+
+    def _completion_rate_from_history(
+        self,
+        *,
+        calibration_profile: dict[str, Any],
+        steps: list[TheaterPathStep],
+    ) -> float | None:
+        sample_count = int(calibration_profile.get("sample_count") or 0)
+        baseline = calibration_profile.get("completion_mean_actual")
+        if sample_count < 5 or baseline is None:
+            return None
+        ai_suggested_count = len([step for step in steps if step.source_type == "ai_suggested"])
+        hard_risk_count = len([step for step in steps if step.risk_level == "high"])
+        adjustment = ((len(steps) - 3) * 0.03) + (hard_risk_count * 0.04) + (ai_suggested_count * 0.03)
+        return _clamp(float(baseline) - adjustment, 0.05, 0.95)
 
     @staticmethod
     def _risk_level_for_step(
@@ -2681,58 +3238,34 @@ class PredictionTheaterService:
         options: list[TheaterPathOption],
         discussion: list[dict[str, Any]],
         *,
-        horizon_days: int,
+        available_time_per_day: int,
     ) -> list[dict[str, Any]]:
         frames: list[dict[str, Any]] = []
-        baseline = options[0] if options else None
         for option in options:
-            start_mastery = (
-                sum(step.current_mastery for step in option.steps) / max(len(option.steps), 1)
-            )
-            for day in range(1, max(horizon_days, 1) + 1):
-                progress_ratio = day / max(horizon_days, 1)
-                step_index = min(
-                    len(option.steps) - 1,
-                    max(0, int(progress_ratio * max(len(option.steps), 1)) - 1),
-                )
-                active_step = option.steps[step_index] if option.steps else None
-                projected_mastery = _clamp(
-                    start_mastery + ((option.estimated_mastery - start_mastery) * (progress_ratio ** 0.86)),
-                    0,
-                    100,
-                )
-                projected_completion = _clamp(
-                    option.estimated_completion_rate * (progress_ratio ** 0.94),
-                    0.02,
-                    option.estimated_completion_rate,
-                )
-                focus_node_ids = [
-                    step.node_id
-                    for step in option.steps[max(0, step_index - 1): step_index + 2]
-                ]
-                comparison_delta = (
-                    option.estimated_mastery - baseline.estimated_mastery
-                    if baseline is not None
-                    else 0.0
+            cumulative_minutes = 0
+            for step_index, active_step in enumerate(option.steps, start=1):
+                cumulative_minutes += int(active_step.estimated_minutes or 0)
+                day_index = max(1, int((cumulative_minutes - 1) / max(available_time_per_day, 1)) + 1)
+                projected_mastery = float(active_step.predicted_mastery or active_step.current_mastery or 0.0)
+                projected_completion = (
+                    round(float(option.estimated_completion_rate), 4)
+                    if option.estimated_completion_rate is not None
+                    else None
                 )
                 frames.append(
                     {
                         "index": len(frames),
-                        "label": f"第 {day} 天",
-                        "day_index": day,
+                        "label": f"第 {day_index} 天 · 步骤 {step_index}",
+                        "day_index": day_index,
                         "route_id": option.id,
-                        "focus_node_ids": focus_node_ids,
-                        "discussion_turn_index": min(day - 1, max(len(discussion) - 1, 0)),
+                        "focus_node_ids": [active_step.node_id],
+                        "discussion_turn_index": min(step_index - 1, max(len(discussion) - 1, 0)),
                         "projected_mastery": round(projected_mastery, 2),
-                        "projected_completion_rate": round(projected_completion, 4),
-                        "active_step_node_id": active_step.node_id if active_step else "",
-                        "active_step_title": active_step.node_name if active_step else option.title,
-                        "compare_label": (
-                            "推荐基线"
-                            if baseline is not None and option.id == baseline.id
-                            else f"相对推荐 {comparison_delta:+.0f}%"
-                        ),
-                        "branch_type": "baseline",
+                        "projected_completion_rate": projected_completion,
+                        "active_step_node_id": active_step.node_id,
+                        "active_step_title": active_step.node_name,
+                        "compare_label": "推荐基线" if option.id == options[0].id else None,
+                        "branch_type": "baseline" if option.id == options[0].id else "alternative",
                     }
                 )
         return frames
@@ -2750,8 +3283,10 @@ class PredictionTheaterService:
         strategy_type: str,
     ) -> float:
         penalty = len(risks) * 2.5
-        if strategy_type == "breakthrough":
+        if strategy_type == "target_backtrack":
             penalty += 2
+        elif strategy_type == "full_chain":
+            penalty += 1
         return _clamp((completion_rate * 100 * 0.46) + (estimated_mastery * 0.54) - penalty, 0, 100)
 
     def _week_one_task_blueprints(
@@ -2909,7 +3444,11 @@ class PredictionTheaterService:
         due_on = (generated_at.date() + timedelta(days=7)).isoformat()
         sample_count = int(calibration_profile.get("sample_count") or 0)
         avg_accuracy_score = float(calibration_profile.get("avg_accuracy_score") or 0.0)
-        model_confidence = float(calibration_profile.get("confidence_score") or 0.0)
+        model_confidence = float(
+            calibration_profile.get("data_sufficiency_score")
+            or calibration_profile.get("confidence_score")
+            or 0.0
+        )
         coverage_rate = calibration_profile.get("coverage_rate")
         data_status = str(calibration_profile.get("data_status") or "cold_start")
         if sample_count >= 5:
@@ -3112,10 +3651,12 @@ class PredictionTheaterService:
     def _step_rationale(*, strategy_type: str, node_name: str, is_target: bool) -> str:
         if is_target:
             return f"这是目标节点 {node_name}，需要把概念、计算和表达三件事一起打通。"
-        if strategy_type == "breakthrough":
+        if strategy_type == "target_backtrack":
             return f"{node_name} 作为回补节点出现，作用是在暴露出卡点后快速止损。"
-        if strategy_type == "personalized":
+        if strategy_type == "constraint_first":
             return f"{node_name} 被切进小步节奏里，目的是降低启动阻力并提高连续完成率。"
+        if strategy_type == "full_chain":
+            return f"{node_name} 被放回完整依赖链中，作用是让后续理解建立在稳定前置之上。"
         return f"{node_name} 是前置链的一环，先补齐它能减少后续推导中的理解断层。"
 
     # ------------------------------------------------------------------

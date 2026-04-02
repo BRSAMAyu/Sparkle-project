@@ -1,4 +1,6 @@
 PODS:
+  - app_links (6.4.1):
+    - Flutter
   - AppAuth (1.7.6):
     - AppAuth/Core (= 1.7.6)
     - AppAuth/ExternalUserAgent (= 1.7.6)
@@ -198,6 +200,7 @@ PODS:
   - WechatOpenSDK-XCFramework (2.0.5)
 
 DEPENDENCIES:
+  - app_links (from `.symlinks/plugins/app_links/ios`)
   - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
@@ -255,6 +258,8 @@ SPEC REPOS:
     - WechatOpenSDK-XCFramework
 
 EXTERNAL SOURCES:
+  app_links:
+    :path: ".symlinks/plugins/app_links/ios"
   audioplayers_darwin:
     :path: ".symlinks/plugins/audioplayers_darwin/darwin"
   connectivity_plus:
@@ -313,6 +318,7 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
 
 SPEC CHECKSUMS:
+  app_links: 3dbc685f76b1693c66a6d9dd1e9ab6f73d97dc0a
   AppAuth: d4f13a8fe0baf391b2108511793e4b479691fb73
   AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
   audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5

@@ -546,6 +546,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<ExecutionIntentModel?> handoffTaskToAi(
     String taskId, {
     String? goal,
+    String? source,
   }) async {
     if (!isServerTaskId(taskId)) {
       state = state.copyWith(error: '本地任务暂不支持 AI 执行');
@@ -594,6 +595,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         taskId,
         goal: goal,
         templateId: selectedTemplateId,
+        source: source,
       );
       if (!mounted) return intent;
 
@@ -646,6 +648,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           request.taskId,
           goal: request.goal,
           templateId: request.templateId,
+          source: request.source,
         );
         if (!mounted) return dispatched;
         _setTaskExecution(request.taskId, intent);
@@ -665,6 +668,26 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       }
     }
     return dispatched;
+  }
+
+  Future<ExecutionIntentModel?> retryExecutionIntent(String intentId) async {
+    try {
+      final intent = await _taskRepository.retryExecution(intentId);
+      if (!mounted) return intent;
+      if (intent.taskId.isNotEmpty) {
+        _setTaskExecution(intent.taskId, intent);
+        final record = await _taskRepository.getExecutionRecord(intent.id);
+        if (mounted) {
+          _setTaskExecutionRecord(intent.taskId, record);
+        }
+      }
+      return intent;
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(error: _normalizeErrorMessage(e));
+      }
+      return null;
+    }
   }
 
   String _normalizeErrorMessage(Object error) =>
@@ -879,9 +902,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<TaskFeedbackResponse?> submitTaskFeedbackWithResponse(
     String taskId,
     TaskFeedbackSubmission feedback,
-  ) async {
-    return _taskRepository.submitTaskFeedbackWithResponse(taskId, feedback);
-  }
+  ) => _taskRepository.submitTaskFeedbackWithResponse(taskId, feedback);
 
   /// Record user interaction with a next action suggestion
   Future<void> recordNextActionSelection(

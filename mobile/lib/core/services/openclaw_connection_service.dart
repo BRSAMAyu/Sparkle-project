@@ -11,6 +11,7 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 
 typedef OpenClawBackendStatusLoader = Future<Map<String, dynamic>?> Function();
+typedef OpenClawBackendDiagnosticsLoader = Future<Map<String, dynamic>?> Function();
 typedef OpenClawBackendProfileLoader = Future<Map<String, dynamic>?> Function();
 typedef OpenClawBackendProfileSaver = Future<Map<String, dynamic>?> Function(
   Map<String, dynamic> payload,
@@ -160,6 +161,156 @@ class OpenClawConnectionInfo {
       );
 }
 
+enum OpenClawDiagnosticCheckStatus {
+  passed,
+  warning,
+  failed,
+  skipped;
+
+  static OpenClawDiagnosticCheckStatus fromValue(String? raw) {
+    switch ((raw ?? '').trim().toLowerCase()) {
+      case 'passed':
+        return OpenClawDiagnosticCheckStatus.passed;
+      case 'warning':
+        return OpenClawDiagnosticCheckStatus.warning;
+      case 'skipped':
+        return OpenClawDiagnosticCheckStatus.skipped;
+      default:
+        return OpenClawDiagnosticCheckStatus.failed;
+    }
+  }
+}
+
+class OpenClawConnectionDiagnosticCheck {
+  const OpenClawConnectionDiagnosticCheck({
+    required this.key,
+    required this.label,
+    required this.status,
+    required this.message,
+    this.suggestion,
+    this.details = const <String, dynamic>{},
+  });
+
+  factory OpenClawConnectionDiagnosticCheck.fromJson(
+    Map<String, dynamic> json,
+  ) =>
+      OpenClawConnectionDiagnosticCheck(
+        key: json['key']?.toString() ?? '',
+        label: json['label']?.toString() ?? '',
+        status: OpenClawDiagnosticCheckStatus.fromValue(
+          json['status']?.toString(),
+        ),
+        message: json['message']?.toString() ?? '',
+        suggestion: json['suggestion']?.toString(),
+        details: (json['details'] as Map?)?.map(
+              (key, value) => MapEntry('$key', value),
+            ) ??
+            const <String, dynamic>{},
+      );
+
+  final String key;
+  final String label;
+  final OpenClawDiagnosticCheckStatus status;
+  final String message;
+  final String? suggestion;
+  final Map<String, dynamic> details;
+}
+
+class OpenClawConnectionDiagnosticReport {
+  const OpenClawConnectionDiagnosticReport({
+    required this.reachable,
+    required this.overallStatus,
+    required this.summary,
+    required this.generatedAt,
+    required this.transport,
+    required this.connectionSource,
+    required this.gatewayUrl,
+    required this.wsUrl,
+    required this.checks,
+  });
+
+  factory OpenClawConnectionDiagnosticReport.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final checks = (json['checks'] as List?)
+            ?.whereType<Map<dynamic, dynamic>>()
+            .map(
+              (item) => OpenClawConnectionDiagnosticCheck.fromJson(
+                item.map((key, value) => MapEntry('$key', value)),
+              ),
+            )
+            .toList(growable: false) ??
+        const <OpenClawConnectionDiagnosticCheck>[];
+    return OpenClawConnectionDiagnosticReport(
+      reachable: json['reachable'] == true,
+      overallStatus: OpenClawDiagnosticCheckStatus.fromValue(
+        json['overall_status']?.toString(),
+      ),
+      summary: json['summary']?.toString() ?? '',
+      generatedAt:
+          DateTime.tryParse(json['generated_at']?.toString() ?? '') ??
+              DateTime.now(),
+      transport: json['transport']?.toString(),
+      connectionSource: json['connection_source']?.toString(),
+      gatewayUrl: json['gateway_url']?.toString(),
+      wsUrl: json['ws_url']?.toString(),
+      checks: checks,
+    );
+  }
+
+  factory OpenClawConnectionDiagnosticReport.fallback({
+    required OpenClawConnectionConfig config,
+    required OpenClawConnectionInfo info,
+    String? summary,
+  }) {
+    final reachable = info.status == OpenClawConnectionStatus.connected;
+    final message = summary ??
+        (reachable
+            ? '本地探测显示连接正常，但后端尚未返回更细的诊断报告。'
+            : (info.errorMessage?.trim().isNotEmpty ?? false)
+                ? info.errorMessage!.trim()
+                : '暂时无法获取后端诊断报告');
+    final overall = reachable
+        ? OpenClawDiagnosticCheckStatus.passed
+        : OpenClawDiagnosticCheckStatus.warning;
+    return OpenClawConnectionDiagnosticReport(
+      reachable: reachable,
+      overallStatus: overall,
+      summary: message,
+      generatedAt: DateTime.now(),
+      transport: config.transport,
+      connectionSource: null,
+      gatewayUrl: config.normalizedGatewayUrl.isEmpty
+          ? null
+          : config.normalizedGatewayUrl,
+      wsUrl: config.resolvedWsUrl.isEmpty ? null : config.resolvedWsUrl,
+      checks: <OpenClawConnectionDiagnosticCheck>[
+        OpenClawConnectionDiagnosticCheck(
+          key: 'local_probe',
+          label: '本地探测',
+          status: overall,
+          message: message,
+          details: <String, dynamic>{
+            'latency_ms': info.latencyMs,
+            'node_count': info.nodeCount,
+            'capabilities': info.capabilities,
+          },
+        ),
+      ],
+    );
+  }
+
+  final bool reachable;
+  final OpenClawDiagnosticCheckStatus overallStatus;
+  final String summary;
+  final DateTime generatedAt;
+  final String? transport;
+  final String? connectionSource;
+  final String? gatewayUrl;
+  final String? wsUrl;
+  final List<OpenClawConnectionDiagnosticCheck> checks;
+}
+
 class OpenClawPairingSession {
   const OpenClawPairingSession({
     required this.code,
@@ -187,6 +338,140 @@ class OpenClawPairingSession {
         'created_at': createdAt.toIso8601String(),
         'expires_at': expiresAt.toIso8601String(),
       };
+}
+
+class OpenClawPairingPayload {
+  const OpenClawPairingPayload({
+    required this.gatewayUrl,
+    this.pairToken,
+    this.authToken,
+    this.deviceToken,
+    this.transport,
+    this.wsUrl,
+    this.deviceName,
+    this.expiresAt,
+  });
+
+  factory OpenClawPairingPayload.fromJson(Map<String, dynamic> json) =>
+      OpenClawPairingPayload(
+        gatewayUrl:
+            (json['gateway_url'] ?? json['gatewayUrl'] ?? '').toString(),
+        pairToken: (json['pair_token'] ?? json['pairToken'])?.toString(),
+        authToken: (json['auth_token'] ?? json['authToken'])?.toString(),
+        deviceToken: (json['device_token'] ?? json['deviceToken'])?.toString(),
+        transport: json['transport']?.toString(),
+        wsUrl: (json['ws_url'] ?? json['wsUrl'])?.toString(),
+        deviceName: (json['device_name'] ?? json['deviceName'])?.toString(),
+        expiresAt: DateTime.tryParse(
+          (json['expires_at'] ?? json['expiresAt'] ?? '').toString(),
+        ),
+      );
+
+  final String gatewayUrl;
+  final String? pairToken;
+  final String? authToken;
+  final String? deviceToken;
+  final String? transport;
+  final String? wsUrl;
+  final String? deviceName;
+  final DateTime? expiresAt;
+
+  String get resolvedAuthToken {
+    final direct = authToken?.trim() ?? '';
+    if (direct.isNotEmpty) return direct;
+    return pairToken?.trim() ?? '';
+  }
+
+  String get resolvedTransport {
+    final explicit = (transport ?? '').trim();
+    if (explicit.isNotEmpty) return explicit;
+    final source = (wsUrl ?? gatewayUrl).trim().toLowerCase();
+    if (source.startsWith('ws://') || source.startsWith('wss://')) {
+      return 'gateway_ws';
+    }
+    return 'responses_http';
+  }
+
+  bool get isValid {
+    final hasAddress =
+        gatewayUrl.trim().isNotEmpty || (wsUrl ?? '').trim().isNotEmpty;
+    final hasCredential =
+        resolvedAuthToken.isNotEmpty || (deviceToken ?? '').trim().isNotEmpty;
+    return hasAddress && hasCredential;
+  }
+
+  OpenClawConnectionConfig toConfig() {
+    final rawGateway =
+        gatewayUrl.trim().isNotEmpty ? gatewayUrl.trim() : (wsUrl ?? '').trim();
+    final explicitWsUrl = (wsUrl ?? '').trim();
+    final rawWsUrl = explicitWsUrl.isNotEmpty
+        ? explicitWsUrl
+        : (rawGateway.startsWith('ws://') || rawGateway.startsWith('wss://'))
+            ? rawGateway
+            : '';
+    final effectiveTransport = resolvedTransport;
+    final normalizedConfig = OpenClawConnectionConfig(
+      gatewayUrl: rawGateway,
+      authToken: resolvedAuthToken.isEmpty ? null : resolvedAuthToken,
+      deviceToken:
+          (deviceToken ?? '').trim().isEmpty ? null : deviceToken!.trim(),
+      transport: effectiveTransport,
+      wsUrl: rawWsUrl.isEmpty ? null : rawWsUrl,
+      pairedAt: (deviceToken ?? '').trim().isEmpty ? null : DateTime.now(),
+    );
+    final normalizedGatewayUrl = normalizedConfig.httpGatewayUrl;
+    final derivedWsUrl = rawWsUrl.isNotEmpty
+        ? rawWsUrl
+        : effectiveTransport == 'gateway_ws'
+            ? OpenClawConnectionConfig(
+                gatewayUrl: normalizedGatewayUrl,
+              ).resolvedWsUrl
+            : null;
+    return normalizedConfig.copyWith(
+      wsUrl: derivedWsUrl,
+      gatewayUrl: normalizedConfig.httpGatewayUrl,
+    );
+  }
+
+  static OpenClawPairingPayload? tryParse(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+
+    Map<String, dynamic>? payload;
+    if (trimmed.startsWith('{')) {
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is Map<String, dynamic>) {
+          payload = decoded;
+        }
+      } catch (_) {}
+    } else {
+      final uri = Uri.tryParse(trimmed);
+      if (uri != null) {
+        final params = <String, dynamic>{...uri.queryParameters};
+        if (uri.scheme == 'openclaw' || uri.scheme == 'sparkle-openclaw') {
+          params['gateway_url'] = params['gateway_url'] ??
+              params['gatewayUrl'] ??
+              '${uri.host}${uri.path}';
+        }
+        if (uri.scheme == 'http' ||
+            uri.scheme == 'https' ||
+            uri.scheme == 'ws' ||
+            uri.scheme == 'wss') {
+          params['gateway_url'] =
+              params['gateway_url'] ?? uri.replace(query: '').toString();
+        }
+        payload = params;
+      }
+    }
+
+    if (payload == null) {
+      return null;
+    }
+
+    final parsed = OpenClawPairingPayload.fromJson(payload);
+    return parsed.isValid ? parsed : null;
+  }
 }
 
 class OpenClawQueuedRequest {
@@ -234,10 +519,12 @@ class OpenClawQueuedRequest {
 class OpenClawConnectionService extends ChangeNotifier {
   OpenClawConnectionService({
     OpenClawBackendStatusLoader? backendStatusLoader,
+    OpenClawBackendDiagnosticsLoader? backendDiagnosticsLoader,
     OpenClawBackendProfileLoader? backendProfileLoader,
     OpenClawBackendProfileSaver? backendProfileSaver,
     OpenClawBackendProfileDeleter? backendProfileDeleter,
   })  : _backendStatusLoader = backendStatusLoader,
+        _backendDiagnosticsLoader = backendDiagnosticsLoader,
         _backendProfileLoader = backendProfileLoader,
         _backendProfileSaver = backendProfileSaver,
         _backendProfileDeleter = backendProfileDeleter;
@@ -247,7 +534,11 @@ class OpenClawConnectionService extends ChangeNotifier {
   static const _queueKey = 'openclaw_execution_queue';
   static const _healthCheckInterval = Duration(seconds: 30);
 
+  static OpenClawPairingPayload? parsePairingPayload(String raw) =>
+      OpenClawPairingPayload.tryParse(raw);
+
   final OpenClawBackendStatusLoader? _backendStatusLoader;
+  final OpenClawBackendDiagnosticsLoader? _backendDiagnosticsLoader;
   final OpenClawBackendProfileLoader? _backendProfileLoader;
   final OpenClawBackendProfileSaver? _backendProfileSaver;
   final OpenClawBackendProfileDeleter? _backendProfileDeleter;
@@ -428,6 +719,14 @@ class OpenClawConnectionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> importPairingPayload(String raw) async {
+    final payload = parsePairingPayload(raw);
+    if (payload == null) {
+      return false;
+    }
+    return configure(payload.toConfig());
+  }
+
   Future<void> cancelPairing() async {
     _pairingSession = null;
     final prefs = await SharedPreferences.getInstance();
@@ -489,6 +788,28 @@ class OpenClawConnectionService extends ChangeNotifier {
     return probe.status == OpenClawConnectionStatus.connected;
   }
 
+  Future<OpenClawConnectionDiagnosticReport> diagnoseConnection() async {
+    final loader = _backendDiagnosticsLoader;
+    if (loader != null) {
+      try {
+        final payload = await loader();
+        if (payload != null) {
+          return OpenClawConnectionDiagnosticReport.fromJson(payload);
+        }
+      } catch (e) {
+        return OpenClawConnectionDiagnosticReport.fallback(
+          config: _config,
+          info: _info,
+          summary: '后端诊断接口暂时不可用：$e',
+        );
+      }
+    }
+    return OpenClawConnectionDiagnosticReport.fallback(
+      config: _config,
+      info: _info,
+    );
+  }
+
   Future<void> disconnect() async {
     _healthTimer?.cancel();
     _healthTimer = null;
@@ -512,7 +833,7 @@ class OpenClawConnectionService extends ChangeNotifier {
     OpenClawConnectionConfig config,
   ) async {
     if (!config.isConfigured) {
-      return await _preferBackendAvailability(
+      return _preferBackendAvailability(
         const OpenClawConnectionInfo(),
       );
     }
@@ -538,22 +859,22 @@ class OpenClawConnectionService extends ChangeNotifier {
             : null;
         if (executionProbe != null &&
             executionProbe.status != OpenClawConnectionStatus.connected) {
-          return await _preferBackendAvailability(executionProbe);
+          return _preferBackendAvailability(executionProbe);
         }
         return OpenClawConnectionInfo(
           status: OpenClawConnectionStatus.connected,
           latencyMs: stopwatch.elapsedMilliseconds,
           nodeCount: (body?['node_count'] as num?)?.toInt() ??
               (body?['connected_nodes'] as num?)?.toInt(),
-          capabilities: <String>[
+          capabilities: {
             ..._extractCapabilities(body),
             if (config.transport == 'responses_http') '执行写权限',
-          ].toSet().toList(),
+          }.toList(),
           lastCheckedAt: DateTime.now(),
         );
       }
 
-      return await _preferBackendAvailability(
+      return _preferBackendAvailability(
         OpenClawConnectionInfo(
           status: OpenClawConnectionStatus.error,
           latencyMs: stopwatch.elapsedMilliseconds,
@@ -562,7 +883,7 @@ class OpenClawConnectionService extends ChangeNotifier {
         ),
       );
     } catch (e) {
-      return await _preferBackendAvailability(
+      return _preferBackendAvailability(
         OpenClawConnectionInfo(
           status: OpenClawConnectionStatus.error,
           errorMessage: e.toString(),
@@ -593,10 +914,10 @@ class OpenClawConnectionService extends ChangeNotifier {
       if (payload == null || payload['reachable'] != true) {
         return null;
       }
-      final capabilities = <String>[
+      final capabilities = {
         ..._extractCapabilities(payload),
         'Sparkle 后端代连',
-      ].toSet().toList();
+      }.toList();
       return OpenClawConnectionInfo(
         status: OpenClawConnectionStatus.connected,
         latencyMs: (payload['latency_ms'] as num?)?.toInt(),
@@ -723,7 +1044,8 @@ class OpenClawConnectionService extends ChangeNotifier {
     final rawCaps = body['capabilities'];
     if (rawCaps is List) {
       capabilities.addAll(
-          rawCaps.map((item) => '$item').where((item) => item.isNotEmpty));
+        rawCaps.map((item) => '$item').where((item) => item.isNotEmpty),
+      );
     }
     if (body['supports_nodes'] == true) {
       capabilities.add('节点发现');
@@ -803,6 +1125,15 @@ final openClawConnectionProvider =
       return ApiResponseParser.unwrapMap(
         response.data,
         action: 'executionConnectionStatus',
+      );
+    },
+    backendDiagnosticsLoader: () async {
+      final response = await apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.executionConnectionDiagnose,
+      );
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'executionConnectionDiagnose',
       );
     },
     backendProfileLoader: () async {

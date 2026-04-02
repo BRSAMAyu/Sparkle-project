@@ -38,6 +38,7 @@ from app.orchestration.summarization_worker import create_summarization_worker
 from app.services.achievement_event_consumer import AchievementEventConsumer
 from app.services.billing_worker import BillingWorker
 from app.services.capsule_event_consumer import CapsuleEventConsumer
+from app.services.execution_event_consumer import ExecutionEventConsumer
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
 from app.services.preference_event_consumer import PreferenceEventConsumer
@@ -131,6 +132,12 @@ async def lifespan(app: FastAPI):
         achievement_consumer = AchievementEventConsumer(event_bus=event_bus)
         achievement_consumer_task = asyncio.create_task(achievement_consumer.start())
         app.state.achievement_consumer_task = achievement_consumer_task
+
+    execution_consumer_task = None
+    if cache_service.redis:
+        execution_consumer = ExecutionEventConsumer(event_bus=event_bus)
+        execution_consumer_task = asyncio.create_task(execution_consumer.start())
+        app.state.execution_consumer_task = execution_consumer_task
 
     profile_consumer_task = None
     if cache_service.redis:
@@ -288,6 +295,12 @@ async def lifespan(app: FastAPI):
         achievement_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await achievement_consumer_task
+
+    execution_consumer_task = getattr(app.state, "execution_consumer_task", None)
+    if execution_consumer_task:
+        execution_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await execution_consumer_task
 
     profile_consumer_task = getattr(app.state, "profile_consumer_task", None)
     if profile_consumer_task:

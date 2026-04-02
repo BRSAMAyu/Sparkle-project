@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 import re
 from typing import Any
 from uuid import UUID
@@ -23,13 +24,37 @@ class LearningReportTools:
 
     async def query_mastery_scores(self, user_id: UUID, limit: int = 8) -> list[dict[str, Any]]:
         result = await self.db.execute(
-            select(KnowledgeNode.name, UserNodeStatus.mastery_score)
+            select(KnowledgeNode.id, KnowledgeNode.name, UserNodeStatus.mastery_score)
             .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
             .where(UserNodeStatus.user_id == user_id)
             .order_by(UserNodeStatus.mastery_score.asc())
             .limit(limit)
         )
-        rows = [{"node_name": name, "mastery_score": float(score or 0.0)} for name, score in result.all()]
+        raw_rows = result.all()
+        related_error_counts = await self._derive_related_error_counts(
+            user_id=user_id,
+            node_refs=[
+                {
+                    "node_id": str(node_id),
+                    "node_name": str(name or "").strip(),
+                }
+                for node_id, name, _score in raw_rows
+                if str(name or "").strip()
+            ],
+        )
+        rows = [
+            {
+                "node_id": str(node_id),
+                "node_name": str(name or "").strip(),
+                "mastery_score": float(score or 0.0),
+                "related_error_count": related_error_counts.get(
+                    str(node_id),
+                    related_error_counts.get(str(name or "").strip(), 0),
+                ),
+            }
+            for node_id, name, score in raw_rows
+            if str(name or "").strip()
+        ]
         if rows:
             return rows
 
@@ -71,10 +96,16 @@ class LearningReportTools:
         )
         rows = [
             {
+                "node_id": str(record.node_id) if getattr(record, "node_id", None) else None,
                 "node_name": node_name,
                 "study_minutes": int(record.study_minutes or 0),
                 "mastery_delta": float(record.mastery_delta or 0.0),
                 "created_at": record.created_at.isoformat() if record.created_at else None,
+                "days_since_last": (
+                    max(0, (datetime.now(UTC) - record.created_at.replace(tzinfo=UTC)).days)
+                    if record.created_at
+                    else None
+                ),
             }
             for record, node_name in result.all()
         ]
@@ -320,14 +351,82 @@ class LearningReportTools:
         )
         return [
             {
+                "node_id": None,
                 "node_name": str(node_name or title or "").strip(),
                 "study_minutes": int(actual_minutes or estimated_minutes or 25),
-                "mastery_delta": 6.0,
+                "mastery_delta": None,
                 "created_at": completed_at.isoformat() if completed_at else None,
+                "days_since_last": (
+                    max(0, (datetime.now(UTC) - completed_at.replace(tzinfo=UTC)).days)
+                    if completed_at
+                    else None
+                ),
             }
             for title, actual_minutes, estimated_minutes, completed_at, node_name in result.all()
             if str(node_name or title or "").strip()
         ]
+
+    async def _derive_related_error_counts(
+        self,
+        *,
+        user_id: UUID,
+        node_refs: list[dict[str, str]],
+    ) -> dict[str, int]:
+        if not node_refs:
+            return {}
+        rows = (
+            await self.db.execute(
+                select(
+                    ErrorRecord.chapter,
+                    ErrorRecord.suggested_concepts,
+                    ErrorRecord.linked_knowledge_node_ids,
+                    ErrorRecord.latest_analysis,
+                )
+                .where(ErrorRecord.user_id == user_id, ErrorRecord.is_deleted.is_(False))
+                .order_by(desc(ErrorRecord.updated_at), desc(ErrorRecord.created_at))
+                .limit(120)
+            )
+        ).all()
+        if not rows:
+            return {}
+        counts: dict[str, int] = {}
+        refs_by_id = {
+            str(item.get("node_id") or "").strip(): str(item.get("node_name") or "").strip()
+            for item in node_refs
+            if str(item.get("node_id") or "").strip()
+        }
+        refs_by_name = {
+            str(item.get("node_name") or "").strip(): str(item.get("node_id") or "").strip()
+            for item in node_refs
+            if str(item.get("node_name") or "").strip()
+        }
+        for chapter, suggested_concepts, linked_node_ids, latest_analysis in rows:
+            candidate_names: set[str] = set()
+            if str(chapter or "").strip():
+                candidate_names.add(str(chapter).strip())
+            for concept in list(suggested_concepts or []):
+                if str(concept).strip():
+                    candidate_names.add(str(concept).strip())
+            if isinstance(latest_analysis, dict):
+                for concept in list(latest_analysis.get("recommended_knowledge") or []):
+                    if str(concept).strip():
+                        candidate_names.add(str(concept).strip())
+            matched = False
+            for node_id in list(linked_node_ids or []):
+                normalized_id = str(node_id).strip()
+                if normalized_id and normalized_id in refs_by_id:
+                    counts[normalized_id] = counts.get(normalized_id, 0) + 1
+                    counts[refs_by_id[normalized_id]] = counts.get(refs_by_id[normalized_id], 0) + 1
+                    matched = True
+            if matched:
+                continue
+            lowered_candidates = {name.casefold() for name in candidate_names if name}
+            for node_name, node_id in refs_by_name.items():
+                if node_name and node_name.casefold() in lowered_candidates:
+                    counts[node_name] = counts.get(node_name, 0) + 1
+                    if node_id:
+                        counts[node_id] = counts.get(node_id, 0) + 1
+        return counts
 
     async def _derive_patterns_from_learning_state(self, *, user_id: UUID, limit: int) -> list[dict[str, Any]]:
         pending_tasks = await self.db.scalar(

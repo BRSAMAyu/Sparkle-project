@@ -340,10 +340,32 @@ class ExecutionIngestor:
         record.executor_type = intent.executor.value
         record.external_run_id = raw_response.get("id") or record.external_run_id
         enriched_raw_response = dict(raw_response)
-        enriched_raw_response["_sparkle_quality_warnings"] = self._result_validator.validate(
+        quality_warnings = self._result_validator.validate(
             parsed=parsed,
             result_contract=intent.result_contract or {},
         )
+        if (intent.policy or {}).get("contains_sensitive_data") is True and all(
+            str(item.get("code") or "") != "contains_sensitive_data"
+            for item in quality_warnings
+            if isinstance(item, dict)
+        ):
+            risk = (intent.policy or {}).get("_risk_assessment")
+            matches = []
+            if isinstance(risk, dict):
+                matches = [
+                    item.get("label")
+                    for item in list(risk.get("sensitive_signals") or [])
+                    if isinstance(item, dict) and str(item.get("label") or "").strip()
+                ]
+            label_suffix = f"（{', '.join(matches[:3])}）" if matches else ""
+            quality_warnings.append(
+                {
+                    "code": "contains_sensitive_data",
+                    "severity": "warning",
+                    "message": f"本次执行涉及敏感数据{label_suffix}，请确认执行环境和结果回传链路是安全的。",
+                }
+            )
+        enriched_raw_response["_sparkle_quality_warnings"] = quality_warnings
         record.raw_response = enriched_raw_response
         record.parsed_output = parsed.get("parsed_output")
         record.artifacts = parsed.get("artifacts", [])

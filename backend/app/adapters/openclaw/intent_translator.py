@@ -5,10 +5,63 @@ from __future__ import annotations
 from typing import Any
 
 from app.models.execution_intent import ExecutionIntent
+from app.services.execution_risk_assessor import ExecutionRiskAssessor
+
+_TOOL_STAGE_DESCRIPTIONS = {
+    "browser_navigate": "正在访问目标网页",
+    "browser_click": "正在点击页面元素",
+    "browser_screenshot": "正在截取页面截图",
+    "browser_extract": "正在提取页面内容",
+    "browser_read": "正在读取页面内容",
+    "browser_write": "正在填写页面内容",
+    "shell_exec": "正在执行终端命令",
+    "system.run": "正在执行终端命令",
+    "file_read": "正在读取文件",
+    "file_write": "正在保存文件",
+    "file_delete": "正在删除文件",
+    "web_search": "正在搜索信息",
+    "web_fetch": "正在获取网页内容",
+    "code_execute": "正在运行代码",
+}
+
+
+def summarize_tool_input(raw_input: Any, *, limit: int = 60) -> str:
+    """Build a compact human-readable summary for tool inputs."""
+    if isinstance(raw_input, str):
+        normalized = " ".join(raw_input.split()).strip()
+        return normalized[:limit].rstrip() + ("…" if len(normalized) > limit else "")
+    if isinstance(raw_input, dict):
+        for key in ("url", "path", "file", "cwd", "command", "query", "selector", "text"):
+            value = raw_input.get(key)
+            if isinstance(value, str) and value.strip():
+                return summarize_tool_input(value, limit=limit)
+        compact = " ".join(f"{key}={value}" for key, value in raw_input.items() if isinstance(value, (str, int, float, bool)))
+        if compact:
+            return summarize_tool_input(compact, limit=limit)
+    if isinstance(raw_input, list):
+        compact = ", ".join(
+            summarize_tool_input(item, limit=max(12, limit // max(len(raw_input), 1)))
+            for item in raw_input[:3]
+        ).strip(", ")
+        return summarize_tool_input(compact, limit=limit) if compact else ""
+    return ""
+
+
+def describe_tool_call(tool_name: str, input_summary: str | None = None) -> str:
+    """Translate raw tool calls into user-facing stage text."""
+    normalized = str(tool_name or "").strip()
+    base = _TOOL_STAGE_DESCRIPTIONS.get(normalized, f"正在执行操作：{normalized or 'unknown'}")
+    summary = str(input_summary or "").strip()
+    if summary:
+        return f"{base}（{summary}）"
+    return base
 
 
 class IntentTranslator:
     """Translate ExecutionIntent to OpenClaw `/v1/responses` requests."""
+
+    def __init__(self, risk_assessor: ExecutionRiskAssessor | None = None):
+        self._risk_assessor = risk_assessor or ExecutionRiskAssessor()
 
     def build_session_key(self, intent: ExecutionIntent, *, agent_id: str = "") -> str:
         policy = intent.policy or {}
@@ -25,6 +78,7 @@ class IntentTranslator:
         agent_id: str = "",
         model_override: str | None = None,
     ) -> dict[str, Any]:
+        self._enforce_safety_guards(intent)
         model = model_override
         if not model:
             model = f"openclaw/{agent_id}" if agent_id else "openclaw"
@@ -43,6 +97,7 @@ class IntentTranslator:
         *,
         agent_id: str = "",
     ) -> dict[str, Any]:
+        self._enforce_safety_guards(intent)
         return {
             "agentId": agent_id or "main",
             "sessionKey": self.build_session_key(intent, agent_id=agent_id),
@@ -56,6 +111,25 @@ class IntentTranslator:
             ),
             "idempotencyKey": intent.idempotency_key,
         }
+
+    def _enforce_safety_guards(self, intent: ExecutionIntent) -> None:
+        policy = intent.policy or {}
+        cached_risk = policy.get("_risk_assessment")
+        if isinstance(cached_risk, dict) and cached_risk.get("blocked"):
+            raise IntentTranslationSafetyError(
+                str(cached_risk.get("blocked_reason") or "该执行因安全策略被阻止")
+            )
+
+        assessment = self._risk_assessor.assess(
+            intent_goal=intent.goal,
+            instructions=list(intent.instructions or []),
+            policy=policy,
+            target_env=intent.target_env.value if intent.target_env else None,
+        )
+        if assessment.blocked:
+            raise IntentTranslationSafetyError(
+                assessment.blocked_reason or "该执行因安全策略被阻止"
+            )
 
     def _build_user_message(self, intent: ExecutionIntent) -> str:
         parts = [f"## Task Goal\n{intent.goal}"]
@@ -139,3 +213,7 @@ class IntentTranslator:
             ]
         )
         return "\n".join(lines)
+
+
+class IntentTranslationSafetyError(ValueError):
+    """Raised when Sparkle blocks a payload during final translation."""

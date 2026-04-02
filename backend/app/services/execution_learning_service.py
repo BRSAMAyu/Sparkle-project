@@ -11,6 +11,7 @@ from loguru import logger
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.event_bus import event_bus
 from app.core.event_types import PROFILE_COGNITIVE_UPDATED
 from app.models.cognitive import BehaviorPattern
@@ -35,12 +36,161 @@ class ExecutionLearningService:
     AVERSION_THRESHOLD = 0.6
     DURATION_WINDOW = 5
     DURATION_RATIO_DELTA = 0.3
+    ERROR_SUGGESTION_WINDOW = 30
 
     def __init__(self, db: AsyncSession, redis=None):
         self.db = db
         self.redis = redis
         self.cognitive_service = CognitiveService(db)
         self.profile_write_service = ProfileWriteService(db, redis)
+
+    async def get_category_trust_stats(self, *, user_id: UUID) -> dict[str, dict[str, float | int | str]]:
+        stmt = (
+            select(
+                ExecutionIntent.target_env,
+                ExecutionIntent.status,
+                ExecutionIntent.trust_level,
+                func.count(ExecutionIntent.id).label("cnt"),
+            )
+            .where(
+                ExecutionIntent.user_id == user_id,
+                ExecutionIntent.deleted_at.is_(None),
+                ExecutionIntent.target_env.is_not(None),
+            )
+            .group_by(
+                ExecutionIntent.target_env,
+                ExecutionIntent.status,
+                ExecutionIntent.trust_level,
+            )
+        )
+        rows = (await self.db.execute(stmt)).all()
+        stats: dict[str, dict[str, float | int | str]] = {}
+        for row in rows:
+            target_env = row.target_env.value if row.target_env else "general"
+            bucket = stats.setdefault(
+                target_env,
+                {
+                    "total": 0,
+                    "succeeded": 0,
+                    "trusted_runs": 0,
+                    "success_rate": 0.0,
+                    "current_trust": "raw",
+                },
+            )
+            count = int(row.cnt or 0)
+            bucket["total"] = int(bucket["total"]) + count
+            if row.status == ExecutionIntentStatus.SUCCEEDED:
+                bucket["succeeded"] = int(bucket["succeeded"]) + count
+            if row.trust_level == TrustLevel.TRUSTED:
+                bucket["trusted_runs"] = int(bucket["trusted_runs"]) + count
+
+        for bucket in stats.values():
+            total = int(bucket["total"])
+            succeeded = int(bucket["succeeded"])
+            success_rate = round(succeeded / total, 2) if total > 0 else 0.0
+            bucket["success_rate"] = success_rate
+            if (
+                total >= settings.OPENCLAW_TRUST_AUTO_PROMOTE_MIN_HISTORY
+                and success_rate >= settings.OPENCLAW_TRUST_AUTO_PROMOTE_SUCCESS_RATE
+                and int(bucket["trusted_runs"]) >= max(2, total // 2)
+            ):
+                bucket["current_trust"] = "trusted"
+            elif total >= 3 and success_rate >= 0.6:
+                bucket["current_trust"] = "validated"
+            else:
+                bucket["current_trust"] = "raw"
+        return stats
+
+    async def estimate_duration(
+        self,
+        *,
+        user_id: UUID,
+        target_env: str | None,
+        goal_keywords: list[str] | None = None,
+    ) -> int | None:
+        del goal_keywords
+        if not target_env:
+            return None
+
+        stmt = (
+            select(ExecutionRecord.duration_ms)
+            .join(
+                ExecutionIntent,
+                ExecutionRecord.execution_intent_id == ExecutionIntent.id,
+            )
+            .where(
+                ExecutionIntent.user_id == user_id,
+                ExecutionIntent.deleted_at.is_(None),
+                ExecutionIntent.target_env == target_env,
+                ExecutionIntent.status.in_(
+                    [
+                        ExecutionIntentStatus.SUCCEEDED,
+                        ExecutionIntentStatus.PARTIAL,
+                    ]
+                ),
+                ExecutionRecord.deleted_at.is_(None),
+                ExecutionRecord.duration_ms.is_not(None),
+                ExecutionRecord.duration_ms > 0,
+            )
+            .order_by(desc(ExecutionRecord.created_at))
+            .limit(20)
+        )
+        rows = (await self.db.execute(stmt)).scalars().all()
+        durations_ms = [int(item) for item in rows if item]
+        if not durations_ms:
+            return None
+        return max(1, round(median(durations_ms) / 1000))
+
+    async def get_error_suggestion(
+        self,
+        *,
+        user_id: UUID,
+        error_category: str | None,
+        target_env: str | None,
+    ) -> dict[str, object] | None:
+        normalized_error = str(error_category or "").strip().lower()
+        if not normalized_error:
+            return None
+
+        recent_stmt = (
+            select(ExecutionIntent)
+            .where(
+                ExecutionIntent.user_id == user_id,
+                ExecutionIntent.deleted_at.is_(None),
+                ExecutionIntent.error_category.is_not(None),
+                ExecutionIntent.target_env == target_env if target_env else True,
+            )
+            .order_by(desc(ExecutionIntent.completed_at), desc(ExecutionIntent.created_at))
+            .limit(self.ERROR_SUGGESTION_WINDOW)
+        )
+        recent_intents = list((await self.db.execute(recent_stmt)).scalars().all())
+        matched = [
+            intent
+            for intent in recent_intents
+            if str(intent.error_category or "").strip().lower() == normalized_error
+        ]
+
+        retry_attempts = len(matched)
+        retry_successes = sum(
+            1
+            for intent in matched
+            if intent.status in {ExecutionIntentStatus.SUCCEEDED, ExecutionIntentStatus.PARTIAL}
+        )
+        retry_success_rate = (
+            round(retry_successes / retry_attempts, 2)
+            if retry_attempts > 0
+            else self._default_retry_success_rate(normalized_error)
+        )
+
+        suggestion = self._default_error_suggestion(
+            error_category=normalized_error,
+            target_env=target_env,
+            retry_success_rate=retry_success_rate,
+        )
+        if suggestion is None:
+            return None
+        suggestion["history_samples"] = retry_attempts
+        return suggestion
 
     async def handle_trusted_execution(
         self,
@@ -468,6 +618,60 @@ class ExecutionLearningService:
         if abs(multiplier - 1.0) < self.DURATION_RATIO_DELTA:
             return None
         return multiplier
+
+    @staticmethod
+    def _default_retry_success_rate(error_category: str) -> float:
+        if error_category in {"timeout", "network_timeout"}:
+            return 0.68
+        if error_category in {"adapter_error", "gateway_unreachable", "connection_unavailable"}:
+            return 0.31
+        if error_category in {"security_policy", "blocked"}:
+            return 0.0
+        return 0.42
+
+    @staticmethod
+    def _default_error_suggestion(
+        *,
+        error_category: str,
+        target_env: str | None,
+        retry_success_rate: float,
+    ) -> dict[str, object] | None:
+        env_label = {
+            "browser": "网页访问",
+            "shell": "终端执行",
+            "api": "接口调用",
+            "document": "文档处理",
+        }.get(str(target_env or "").lower(), "执行链路")
+
+        if error_category in {"timeout", "network_timeout"}:
+            return {
+                "suggestion": f"{env_label}这次超时了，通常是网络波动或目标响应偏慢。",
+                "retry_success_rate": retry_success_rate,
+                "recommended_action": "retry",
+            }
+        if error_category in {"adapter_error", "gateway_unreachable", "connection_unavailable"}:
+            return {
+                "suggestion": "当前更像是 OpenClaw 连接或网关不可达，先恢复连接再执行会更稳。",
+                "retry_success_rate": retry_success_rate,
+                "recommended_action": "manual" if retry_success_rate < 0.35 else "retry",
+            }
+        if error_category in {"security_policy", "blocked"}:
+            return {
+                "suggestion": "这条指令触发了安全策略，建议改成更小范围、更可逆的操作再试。",
+                "retry_success_rate": retry_success_rate,
+                "recommended_action": "alternative",
+            }
+        if error_category in {"execution_failed", "unexpected_error"}:
+            return {
+                "suggestion": f"{env_label}执行过程中出现异常，建议先重试一次；如果连续失败，改走人工步骤更稳。",
+                "retry_success_rate": retry_success_rate,
+                "recommended_action": "retry" if retry_success_rate >= 0.45 else "manual",
+            }
+        return {
+            "suggestion": "这次执行没有成功完成，我建议先检查环境状态，再决定是重试还是人工接管。",
+            "retry_success_rate": retry_success_rate,
+            "recommended_action": "retry" if retry_success_rate >= 0.5 else "manual",
+        }
 
     async def _upsert_pattern(
         self,

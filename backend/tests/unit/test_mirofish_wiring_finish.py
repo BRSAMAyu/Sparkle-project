@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -19,7 +20,7 @@ from app.tools.report_tool import GenerateLearningReportParams, GenerateLearning
 from app.services.report.learning_report_agent import LearningReportAgent
 from app.services.simulation.simulation_engine import ModeratorDecision, SimulationEngine
 from app.services.theater.prediction_theater_service import TheaterNodeAccessError
-from app.services.simulation.seed_extractor import SimulationSeed
+from app.services.simulation.seed_extractor import SeedExtractor, SimulationSeed
 from app.services.theater.prediction_theater_service import PredictionTheaterService
 from app.tools.simulation_tool import QuickSimulationParams, QuickSimulationTool
 from app.tools.theater_tool import LaunchPredictionParams, LaunchPredictionTool
@@ -385,7 +386,7 @@ async def test_learning_report_agent_reuses_cached_payload(monkeypatch):
     assert first["report_preview"] == second["report_preview"]
 
 
-def test_simulation_engine_builds_interaction_point():
+async def test_simulation_engine_builds_interaction_point():
     engine = SimulationEngine()
     participants = [
         {"name": "优等生"},
@@ -415,7 +416,7 @@ def test_simulation_engine_builds_interaction_point():
         participants=participant_objects,
         planned_round_count=4,
     )
-    interaction = engine._build_user_interaction_point(
+    interaction = await engine._build_user_interaction_point(
         topic="特征值与特征向量",
         participants=participant_objects,
         rounds=rounds,
@@ -432,11 +433,163 @@ def test_simulation_engine_builds_interaction_point():
             interaction_options=list(moderator_payload["interaction_options"]),
             suggested_replies=list(moderator_payload["suggested_replies"]),
         ),
+        anchor_material="特征值与特征向量的定义与一个矩阵例子",
     )
 
     assert interaction is not None
     assert len(interaction.suggested_replies) == 3
     assert "你会更支持哪一边" in interaction.prompt
+
+
+@pytest.mark.asyncio
+async def test_simulation_engine_persists_gap_events(monkeypatch):
+    engine = SimulationEngine()
+    publish = AsyncMock(return_value="evt-1")
+    monkeypatch.setattr(engine.event_bus, "publish", publish)
+
+    session = engine._session_from_payload(
+        {
+            "id": "session-gap-1",
+            "scenario_key": "study_group",
+            "state": "COMPLETED",
+            "topic": "特征值与特征向量",
+            "participants": [],
+            "rounds": [],
+            "insight_summary": json.dumps(
+                {
+                    "knowledge_gaps_revealed": [
+                        "把特征值和对角线元素直接等同",
+                        "不知道特征向量为什么表示不变方向",
+                    ]
+                },
+                ensure_ascii=False,
+            ),
+        },
+        fallback_topic="特征值与特征向量",
+        fallback_scenario="study_group",
+    )
+
+    await engine._persist_simulation_insights(session=session, user_id=str(uuid4()))
+
+    assert publish.await_count == 2
+    first_call = publish.await_args_list[0]
+    assert first_call.args[0] == "SimulationGapRevealed"
+    assert first_call.args[1]["gap_description"] == "把特征值和对角线元素直接等同"
+
+
+@pytest.mark.asyncio
+async def test_simulation_engine_summarize_rounds_returns_structured_payload(monkeypatch):
+    engine = SimulationEngine()
+    monkeypatch.setattr(
+        "app.services.simulation.simulation_engine.analysis_llm.json_call",
+        AsyncMock(
+            return_value={
+                "key_arguments": ["先区分特征值和对角线元素。"],
+                "unresolved_disagreements": ["几何直觉是否要先于计算练习。"],
+                "user_contributions": "用户在第 2 轮提出了几何意义的疑问。",
+                "knowledge_gaps_revealed": ["不知道特征向量为什么表示不变方向。"],
+                "suggested_next_steps": ["先用一个 2x2 矩阵验证几何解释。"],
+            }
+        ),
+    )
+
+    summary = await engine._summarize_rounds(
+        "特征值与特征向量",
+        [
+            {"round": 1, "speaker": "优等生", "message": "先澄清对角化和特征值的关系。"},
+            {"round": 2, "speaker": "你", "message": "我还是不懂特征向量为什么表示不变方向。"},
+        ],
+    )
+
+    payload = json.loads(summary)
+    assert payload["key_arguments"]
+    assert payload["knowledge_gaps_revealed"] == ["不知道特征向量为什么表示不变方向。"]
+    assert "用户在第 2 轮" in payload["user_contributions"]
+
+
+@pytest.mark.asyncio
+async def test_generate_agent_round_references_anchor_material(monkeypatch):
+    engine = SimulationEngine()
+    monkeypatch.setattr(
+        "app.services.simulation.simulation_engine.analysis_llm.json_call",
+        AsyncMock(
+            return_value={
+                "message": "题目里是 5kg 和 10N，不可能直接得出 50 m/s²。先回到 F=ma，看单位怎么约束计算。",
+                "reply_to_speaker": "",
+                "turn_goal": "probe",
+            }
+        ),
+    )
+
+    round_payload = await engine._generate_agent_round(
+        topic="牛顿第二定律",
+        scenario_key="error_diagnosis",
+        participants=[
+            SimpleNamespace(
+                name="错因教练",
+                role_hint="专门拆错误思路",
+                persona={},
+                stance="challenging",
+                source="template",
+                strategy="using_misconception",
+                response_policy="reply_when_addressed",
+                memory=[],
+                context_anchor="学生答：50 m/s²",
+            )
+        ],
+        rounds=[],
+        moderator_decision=ModeratorDecision(
+            speaker="错因教练",
+            reply_target="",
+            turn_goal="probe",
+            real_time_insight="先检查用户是否把力和加速度直接相乘。",
+            round_target=3,
+        ),
+        facilitation_style="practical",
+        anchor_material="一个 5kg 的物体受到 10N 的力，求加速度。学生答：50 m/s²",
+        learning_objective="识别错因",
+    )
+
+    assert any(keyword in round_payload["message"] for keyword in ["5kg", "10N", "50 m/s²", "F=ma"])
+
+
+@pytest.mark.asyncio
+async def test_seed_extractor_builds_simulation_gap_seeds(monkeypatch):
+    extractor = SeedExtractor(db=AsyncMock())
+    user_id = uuid4()
+
+    monkeypatch.setattr(
+        "app.services.simulation.seed_extractor.SystemUpdateService.list_updates",
+        AsyncMock(
+            return_value=[
+                {
+                    "type": "simulation_session_ready",
+                    "metadata": {
+                        "session_payload": {
+                            "id": "sim-1",
+                            "topic": "线性代数",
+                            "insight_summary": json.dumps(
+                                {
+                                    "knowledge_gaps_revealed": [
+                                        "不知道特征向量为什么表示不变方向",
+                                    ]
+                                },
+                                ensure_ascii=False,
+                            ),
+                        }
+                    },
+                }
+            ]
+        ),
+    )
+    monkeypatch.setattr(extractor, "_resolved_simulation_gaps", AsyncMock(return_value=set()))
+
+    seeds = await extractor._simulation_gap_seeds(user_id)
+
+    assert len(seeds) == 1
+    assert seeds[0].source_type == "simulation_gap"
+    assert "上次关于" in seeds[0].context
+    assert seeds[0].topic == "不知道特征向量为什么表示不变方向"
 
 
 @pytest.mark.asyncio
@@ -873,11 +1026,76 @@ async def test_learning_report_generate_uses_starter_focus_for_cold_start(monkey
 
     assert payload["starter_focus"][0]["topic"] == "把 特征值 变成第一轮可执行练习"
     assert payload["trigger_summary"]["mode"] == "baseline_ready"
-    assert payload["mastery"][0]["node_name"] == "把 特征值 变成第一轮可执行练习"
-    assert payload["patterns"][0]["pattern_name"] == "学习基线尚在建立"
+    assert payload["trigger_summary"]["data_status"] == "insufficient"
+    assert payload["mastery"] == []
+    assert payload["patterns"] == []
+    assert payload["trend_overview"]["status"] == "no_data"
+    assert payload["action_cards"][0]["id"] == "start-first-learning-task"
+    assert all("/theater" not in card["deep_link"] for card in payload["action_cards"])
+    assert all("/simulation" not in card["deep_link"] for card in payload["action_cards"])
 
 
-def test_learning_report_builds_structured_dashboard_payload():
+@pytest.mark.asyncio
+async def test_learning_report_uses_actual_mastery_values_without_fabrication(monkeypatch):
+    agent = LearningReportAgent(db=AsyncMock())
+    user_id = uuid4()
+    mastery_rows = [
+        {"node_name": "行列式", "mastery_score": 38.0, "node_id": "node-1"},
+        {"node_name": "特征值", "mastery_score": 72.0, "node_id": "node-2"},
+    ]
+    timeline_rows = [
+        {
+            "node_name": "行列式",
+            "node_id": "node-1",
+            "study_minutes": 25,
+            "mastery_delta": None,
+            "created_at": "2026-03-30T08:00:00+00:00",
+            "days_since_last": 3,
+        }
+    ]
+    monkeypatch.setattr(agent.tools, "query_mastery_scores", AsyncMock(return_value=mastery_rows))
+    monkeypatch.setattr(agent.tools, "query_error_patterns", AsyncMock(return_value=[]))
+    monkeypatch.setattr(agent.tools, "query_study_timeline", AsyncMock(return_value=timeline_rows))
+    monkeypatch.setattr(
+        agent.tools,
+        "interview_learner",
+        AsyncMock(return_value={"learner_voice": "我现在更怕把行列式展开搞错。"}),
+    )
+    monkeypatch.setattr(
+        agent.tools,
+        "infer_learning_state_from_chat",
+        AsyncMock(return_value={}),
+    )
+    monkeypatch.setattr(agent, "_compose_markdown", AsyncMock(return_value="# 学习分析报告"))
+    monkeypatch.setattr(
+        agent,
+        "_reflect_on_markdown",
+        AsyncMock(
+            return_value={
+                "needs_revision": False,
+                "missing_sections": [],
+                "focus_areas": [],
+                "revision_brief": "",
+                "query_expansion": [],
+            }
+        ),
+    )
+    monkeypatch.setattr(agent, "_expand_context", AsyncMock(return_value={}))
+    monkeypatch.setattr(
+        "app.services.report.learning_report_agent.SystemUpdateService.enqueue",
+        AsyncMock(return_value=True),
+    )
+    agent.logger.log_jsonl = lambda *args, **kwargs: None
+    agent.logger.log_text = lambda *args, **kwargs: None
+
+    payload = await agent.generate_report(user_id)
+
+    mastery_by_name = {item["node_name"]: item["mastery_score"] for item in payload["mastery"]}
+    assert mastery_by_name == {"行列式": 38.0, "特征值": 72.0}
+    assert payload["timeline"][0]["mastery_delta"] is None
+
+
+async def test_learning_report_builds_structured_dashboard_payload():
     agent = LearningReportAgent(db=AsyncMock())
 
     diagnosis_cards = agent._build_diagnosis_cards(
@@ -928,21 +1146,33 @@ def test_learning_report_builds_structured_dashboard_payload():
             },
         ],
     )
-    action_cards = agent._build_action_cards(
+    action_cards = await agent._build_action_cards(
         mastery=[
-            {"node_name": "行列式", "mastery_score": 52},
-            {"node_name": "特征值", "mastery_score": 81},
+            {"node_name": "行列式", "mastery_score": 52, "node_id": "node-1"},
+            {"node_name": "特征值", "mastery_score": 81, "node_id": "node-2"},
         ],
-        patterns=[{"pattern_name": "夜间能量错配循环"}],
-        starter_focus=[],
-        chat_inference={"topics": ["行列式"]},
+        patterns=[{"pattern_name": "中途放弃倾向"}],
+        timeline=[
+            {
+                "node_name": "行列式",
+                "node_id": "node-1",
+                "study_minutes": 30,
+                "mastery_delta": 3,
+                "days_since_last": 10,
+                "created_at": "2026-03-26T08:00:00+00:00",
+            }
+        ],
+        user_id=uuid4(),
     )
 
     assert diagnosis_cards[0]["tag"] == "weak_spot"
     assert any(card["tag"] == "pattern" for card in diagnosis_cards)
     assert trend_overview["history_points"]
     assert trend_overview["comparisons"]
-    assert action_cards[0]["kind"] == "theater"
+    assert action_cards[0]["kind"] == "immediate_action"
+    assert action_cards[0]["deep_link"] == "/galaxy/node/node-1"
+    assert any(card["kind"] == "behavior_change" for card in action_cards)
+    assert any(card["kind"] == "spaced_review" for card in action_cards)
 
 
 def test_build_trend_overview_handles_sparse_week_buckets():
@@ -972,6 +1202,35 @@ def test_build_trend_overview_handles_sparse_week_buckets():
     labels = [point["label"] for point in trend_overview["history_points"]]
     assert labels == ["上上周", "本周"]
     assert trend_overview["comparisons"]
+
+
+def test_build_trend_overview_returns_no_data_without_timeline():
+    agent = LearningReportAgent(db=AsyncMock())
+
+    trend_overview = agent._build_trend_overview(
+        mastery=[],
+        timeline=[],
+    )
+
+    assert trend_overview["status"] == "no_data"
+    assert "暂无足够学习记录生成趋势" in trend_overview["message"]
+
+
+def test_learning_report_extracts_simulation_blindspots_from_explicit_trigger_source():
+    payload = {
+        "source": "simulation",
+        "knowledge_gaps_revealed": [
+            "不知道特征向量为什么表示不变方向",
+            "把特征值和对角线元素直接等同",
+        ],
+    }
+
+    blindspots = LearningReportAgent._simulation_blindspots_from_trigger_source(payload)
+
+    assert blindspots == [
+        "不知道特征向量为什么表示不变方向",
+        "把特征值和对角线元素直接等同",
+    ]
 
 
 def test_infer_bridge_tool_names_matches_prediction_and_simulation_intents():

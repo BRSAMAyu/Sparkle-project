@@ -49,6 +49,7 @@ class ExecutionIntentStatus(str, enum.Enum):
 
     DRAFT = "draft"
     READY = "ready"
+    QUEUED = "queued"
     DISPATCHED = "dispatched"
     RUNNING = "running"
     WAITING_APPROVAL = "waiting_approval"

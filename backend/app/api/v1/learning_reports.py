@@ -15,7 +15,7 @@ router = APIRouter(prefix="/learning-reports", tags=["learning-reports"])
 
 class LearningReportRequest(BaseModel):
     section_limit: int = Field(default=5, ge=2, le=5)
-    trigger_source: str = Field(default="api", min_length=1, max_length=32)
+    trigger_source: str = Field(default="api", min_length=1)
 
 
 @router.post("/generate")

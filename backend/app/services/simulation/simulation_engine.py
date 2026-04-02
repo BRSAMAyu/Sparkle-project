@@ -4,6 +4,7 @@ from collections import Counter
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+import json
 from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
@@ -12,6 +13,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.core.event_bus import event_bus
+from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.predictive_service import PredictiveService
@@ -126,6 +129,11 @@ class SimulationSession:
     participants: list[dict[str, Any]]
     rounds: list[dict[str, Any]]
     insight_summary: str
+    anchor_material: str = ""
+    anchor_type: str | None = None
+    anchor_id: str | None = None
+    anchor_status: str = "resolved"
+    learning_objective: str | None = None
     interaction_prompt: str = ""
     suggested_replies: list[str] | None = None
     interaction_type: str = "choice"
@@ -143,6 +151,11 @@ class SimulationSession:
             "participants": self.participants,
             "rounds": self.rounds,
             "insight_summary": self.insight_summary,
+            "anchor_material": self.anchor_material,
+            "anchor_type": self.anchor_type,
+            "anchor_id": self.anchor_id,
+            "anchor_status": self.anchor_status,
+            "learning_objective": self.learning_objective,
             "interaction_prompt": self.interaction_prompt,
             "suggested_replies": list(self.suggested_replies or []),
             "interaction_type": self.interaction_type,
@@ -160,6 +173,7 @@ class SimulationEngine:
 
     def __init__(self, db: AsyncSession | None = None):
         self.db = db
+        self.event_bus = event_bus
 
     async def get_session(
         self,
@@ -185,6 +199,10 @@ class SimulationEngine:
         planned_round_count: int | None = None,
         participant_names: list[str] | None = None,
         facilitation_style: str = "balanced",
+        anchor_material: str | None = None,
+        anchor_type: str | None = None,
+        anchor_id: str | None = None,
+        learning_objective: str | None = None,
         user_id: UUID | None = None,
         user_context: dict[str, Any] | None = None,
     ) -> SimulationSession:
@@ -195,6 +213,10 @@ class SimulationEngine:
             planned_round_count=planned_round_count,
             participant_names=participant_names,
             facilitation_style=facilitation_style,
+            anchor_material=anchor_material,
+            anchor_type=anchor_type,
+            anchor_id=anchor_id,
+            learning_objective=learning_objective,
             user_id=user_id,
             user_context=user_context,
             await_user_input=False,
@@ -216,16 +238,29 @@ class SimulationEngine:
         *,
         topic: str,
         scenario_key: str,
+        anchor_material: str | None = None,
+        anchor_type: str | None = None,
+        anchor_id: str | None = None,
+        learning_objective: str | None = None,
         user_id: UUID | None = None,
         user_context: dict[str, Any] | None = None,
         max_rounds: int = 3,
     ) -> SimulationSession:
         normalized_scenario_key = scenario_key if scenario_key in SCENARIOS else "study_group"
         template = dict(SCENARIOS.get(normalized_scenario_key) or SCENARIOS["study_group"])
+        anchor_context = await self._resolve_anchor_context(
+            user_id=user_id,
+            topic=topic,
+            anchor_material=anchor_material,
+            anchor_type=anchor_type,
+            anchor_id=anchor_id,
+        )
         raw_participants = await generate_participants(
             scenario_key=normalized_scenario_key,
             participant_names=list(template.get("participants") or ["学习伙伴"]),
             user_context=user_context,
+            anchor_material=anchor_context["anchor_material"],
+            anchor_type=anchor_context["anchor_type"],
             db=self.db,
             user_id=user_id,
             topic=topic,
@@ -288,7 +323,12 @@ class SimulationEngine:
             topic=topic,
             participants=[participant.to_public_dict() for participant in participants],
             rounds=rounds,
-            insight_summary=self._summarize_rounds(topic, rounds),
+            insight_summary=await self._summarize_rounds(topic, rounds),
+            anchor_material=anchor_context["anchor_material"],
+            anchor_type=anchor_context["anchor_type"],
+            anchor_id=anchor_context["anchor_id"],
+            anchor_status=anchor_context["anchor_status"],
+            learning_objective=learning_objective,
             planned_round_count=planned_round_count,
             interaction_prompt="",
             suggested_replies=[],
@@ -324,6 +364,145 @@ class SimulationEngine:
             raise RuntimeError("Simulation continue stream completed without a final session payload")
         return final_session
 
+    async def _resolve_anchor_context(
+        self,
+        *,
+        user_id: UUID | None,
+        topic: str,
+        anchor_material: str | None,
+        anchor_type: str | None,
+        anchor_id: str | None,
+    ) -> dict[str, Any]:
+        explicit_anchor = str(anchor_material or "").strip()
+        if explicit_anchor:
+            return {
+                "anchor_material": explicit_anchor,
+                "anchor_type": str(anchor_type or "concept").strip() or "concept",
+                "anchor_id": str(anchor_id or "").strip() or None,
+                "anchor_status": "provided",
+            }
+        if self.db is None or user_id is None or not str(topic or "").strip():
+            return {
+                "anchor_material": "",
+                "anchor_type": str(anchor_type or "").strip() or None,
+                "anchor_id": str(anchor_id or "").strip() or None,
+                "anchor_status": "no_anchor",
+            }
+        error_rows = await self._find_related_error_anchors(user_id=user_id, topic=topic, limit=3)
+        if error_rows:
+            return {
+                "anchor_material": "\n\n".join(error_rows),
+                "anchor_type": str(anchor_type or "error_record").strip() or "error_record",
+                "anchor_id": str(anchor_id or "").strip() or None,
+                "anchor_status": "resolved",
+            }
+        concept_rows = await self._find_related_concept_anchors(user_id=user_id, topic=topic, limit=3)
+        if concept_rows:
+            return {
+                "anchor_material": "\n\n".join(concept_rows),
+                "anchor_type": str(anchor_type or "concept").strip() or "concept",
+                "anchor_id": str(anchor_id or "").strip() or None,
+                "anchor_status": "resolved",
+            }
+        return {
+            "anchor_material": "",
+            "anchor_type": str(anchor_type or "").strip() or None,
+            "anchor_id": str(anchor_id or "").strip() or None,
+            "anchor_status": "no_anchor",
+        }
+
+    async def _find_related_error_anchors(
+        self,
+        *,
+        user_id: UUID,
+        topic: str,
+        limit: int,
+    ) -> list[str]:
+        topic_lower = str(topic or "").strip().lower()
+        if not topic_lower:
+            return []
+        rows = (
+            await self.db.execute(
+                select(
+                    ErrorRecord.id,
+                    ErrorRecord.chapter,
+                    ErrorRecord.question_text,
+                    ErrorRecord.user_answer,
+                    ErrorRecord.correct_answer,
+                    ErrorRecord.latest_analysis,
+                )
+                .where(ErrorRecord.user_id == user_id, ErrorRecord.is_deleted.is_(False))
+                .order_by(ErrorRecord.updated_at.desc(), ErrorRecord.created_at.desc())
+                .limit(40)
+            )
+        ).all()
+        anchors: list[str] = []
+        for error_id, chapter, question_text, user_answer, correct_answer, latest_analysis in rows:
+            haystack = " ".join(
+                [
+                    str(chapter or ""),
+                    str(question_text or ""),
+                    str(user_answer or ""),
+                    str(correct_answer or ""),
+                    json.dumps(latest_analysis, ensure_ascii=False) if isinstance(latest_analysis, dict) else str(latest_analysis or ""),
+                ]
+            ).lower()
+            if topic_lower not in haystack:
+                continue
+            anchors.append(
+                (
+                    f"错题锚点 {error_id}："
+                    f"题目={str(question_text or chapter or '').strip()}；"
+                    f"你的答案={str(user_answer or '未记录').strip()}；"
+                    f"正确答案={str(correct_answer or '未记录').strip()}；"
+                    f"分析={str((latest_analysis or {}).get('root_cause') if isinstance(latest_analysis, dict) else latest_analysis or '').strip() or '未记录'}"
+                )
+            )
+            if len(anchors) >= limit:
+                break
+        return anchors
+
+    async def _find_related_concept_anchors(
+        self,
+        *,
+        user_id: UUID,
+        topic: str,
+        limit: int,
+    ) -> list[str]:
+        topic_lower = str(topic or "").strip().lower()
+        if not topic_lower:
+            return []
+        rows = (
+            await self.db.execute(
+                select(
+                    KnowledgeNode.id,
+                    KnowledgeNode.name,
+                    KnowledgeNode.description,
+                    UserNodeStatus.mastery_score,
+                )
+                .outerjoin(
+                    UserNodeStatus,
+                    (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id),
+                )
+                .where(
+                    (KnowledgeNode.name.ilike(f"%{topic_lower}%"))
+                    | (KnowledgeNode.description.ilike(f"%{topic_lower}%"))
+                )
+                .order_by(UserNodeStatus.mastery_score.asc().nullsfirst(), KnowledgeNode.created_at.desc())
+                .limit(limit)
+            )
+        ).all()
+        return [
+            (
+                f"概念锚点 {node_id}："
+                f"{str(name or '').strip()}；"
+                f"说明={str(description or '').strip() or '暂无描述'}；"
+                f"掌握度={('[数据不足]' if mastery_score is None else f'{round(float(mastery_score or 0.0))}%')}"
+            )
+            for node_id, name, description, mastery_score in rows
+            if str(name or '').strip()
+        ]
+
     async def stream(
         self,
         *,
@@ -332,6 +511,10 @@ class SimulationEngine:
         planned_round_count: int | None = None,
         participant_names: list[str] | None = None,
         facilitation_style: str = "balanced",
+        anchor_material: str | None = None,
+        anchor_type: str | None = None,
+        anchor_id: str | None = None,
+        learning_objective: str | None = None,
         user_id: UUID | None = None,
         user_context: dict[str, Any] | None = None,
         await_user_input: bool = True,
@@ -340,6 +523,13 @@ class SimulationEngine:
         normalized_scenario_key = scenario_key if scenario_key in SCENARIOS else "study_group"
         template = dict(SCENARIOS.get(normalized_scenario_key) or SCENARIOS["study_group"])
         normalized_facilitation_style = self._normalize_facilitation_style(facilitation_style)
+        anchor_context = await self._resolve_anchor_context(
+            user_id=user_id,
+            topic=topic,
+            anchor_material=anchor_material,
+            anchor_type=anchor_type,
+            anchor_id=anchor_id,
+        )
         resolved_participant_names = self._resolve_participant_names(
             participant_names=participant_names,
             template=template,
@@ -353,12 +543,15 @@ class SimulationEngine:
             "scenario_key": normalized_scenario_key,
             "planned_round_count": planned_round_count,
             "facilitation_style": normalized_facilitation_style,
+            "anchor_status": anchor_context["anchor_status"],
         }
 
         raw_participants = await generate_participants(
             scenario_key=normalized_scenario_key,
             participant_names=resolved_participant_names,
             user_context=user_context,
+            anchor_material=anchor_context["anchor_material"],
+            anchor_type=anchor_context["anchor_type"],
             db=self.db,
             user_id=user_id,
             topic=topic,
@@ -384,6 +577,11 @@ class SimulationEngine:
                 scenario_key=normalized_scenario_key,
             ),
             facilitation_style=normalized_facilitation_style,
+            anchor_material=anchor_context["anchor_material"],
+            anchor_type=anchor_context["anchor_type"],
+            anchor_id=anchor_context["anchor_id"],
+            anchor_status=anchor_context["anchor_status"],
+            learning_objective=learning_objective,
             user_id=user_id,
             await_user_input=await_user_input,
         ):
@@ -420,6 +618,11 @@ class SimulationEngine:
         facilitation_style = self._normalize_facilitation_style(
             str(checkpoint.get("facilitation_style") or "balanced"),
         )
+        anchor_material = str(checkpoint.get("anchor_material") or "")
+        anchor_type = str(checkpoint.get("anchor_type") or "").strip() or None
+        anchor_id = str(checkpoint.get("anchor_id") or "").strip() or None
+        anchor_status = str(checkpoint.get("anchor_status") or "resolved")
+        learning_objective = str(checkpoint.get("learning_objective") or "").strip() or None
 
         if user_response.strip():
             user_round = {
@@ -452,6 +655,11 @@ class SimulationEngine:
             rounds=rounds,
             planned_round_count=max(planned_round_count, len(rounds) + 2),
             facilitation_style=facilitation_style,
+            anchor_material=anchor_material,
+            anchor_type=anchor_type,
+            anchor_id=anchor_id,
+            anchor_status=anchor_status,
+            learning_objective=learning_objective,
             user_id=user_id,
             await_user_input=await_user_input,
         ):
@@ -467,6 +675,11 @@ class SimulationEngine:
         rounds: list[dict[str, Any]],
         planned_round_count: int,
         facilitation_style: str,
+        anchor_material: str,
+        anchor_type: str | None,
+        anchor_id: str | None,
+        anchor_status: str,
+        learning_objective: str | None,
         user_id: UUID | None,
         await_user_input: bool,
     ) -> AsyncIterator[tuple[str, dict[str, Any]]]:
@@ -494,6 +707,9 @@ class SimulationEngine:
                 rounds=rounds,
                 planned_round_count=planned_round_count,
                 facilitation_style=facilitation_style,
+                anchor_material=anchor_material,
+                anchor_type=anchor_type,
+                learning_objective=learning_objective,
                 behavioral_context=behavioral_context,
             )
             planned_round_count = self._normalize_round_target(
@@ -508,6 +724,8 @@ class SimulationEngine:
                 rounds=rounds,
                 moderator_decision=moderator_decision,
                 facilitation_style=facilitation_style,
+                anchor_material=anchor_material,
+                learning_objective=learning_objective,
             )
             rounds.append(round_item)
             self._update_memories_after_round(
@@ -530,29 +748,35 @@ class SimulationEngine:
                 "message": moderator_decision.real_time_insight,
             }
 
-            interaction = self._build_user_interaction_point(
+            interaction = await self._build_user_interaction_point(
                 topic=topic,
                 participants=participants,
                 rounds=rounds,
                 moderator_decision=moderator_decision,
+                anchor_material=anchor_material,
             )
             if await_user_input and interaction is not None and not moderator_decision.should_end:
                 session = SimulationSession(
                     id=session_id,
                     scenario_key=scenario_key,
-                state=LearningSimulationState.WAITING_FOR_USER,
-                topic=topic,
-                participants=[participant.to_public_dict() for participant in participants],
-                rounds=rounds,
-                insight_summary=moderator_decision.real_time_insight,
+                    state=LearningSimulationState.WAITING_FOR_USER,
+                    topic=topic,
+                    participants=[participant.to_public_dict() for participant in participants],
+                    rounds=rounds,
+                    insight_summary=moderator_decision.real_time_insight,
+                    anchor_material=anchor_material,
+                    anchor_type=anchor_type,
+                    anchor_id=anchor_id,
+                    anchor_status=anchor_status,
+                    learning_objective=learning_objective,
                     interaction_prompt=interaction.prompt,
                     suggested_replies=interaction.suggested_replies,
                     interaction_type=interaction.interaction_type,
-                interaction_options=interaction.options,
-                planned_round_count=planned_round_count,
-                pending_interaction=interaction.to_dict(),
-                facilitation_style=facilitation_style,
-            )
+                    interaction_options=interaction.options,
+                    planned_round_count=planned_round_count,
+                    pending_interaction=interaction.to_dict(),
+                    facilitation_style=facilitation_style,
+                )
                 await self._persist_checkpoint(
                     user_id=user_id,
                     session=session,
@@ -577,7 +801,7 @@ class SimulationEngine:
             if moderator_decision.should_end and len(rounds) >= 2:
                 break
 
-        insight_summary = self._summarize_rounds(topic, rounds)
+        insight_summary = await self._summarize_rounds(topic, rounds)
         session = SimulationSession(
             id=session_id,
             scenario_key=scenario_key,
@@ -586,11 +810,17 @@ class SimulationEngine:
             participants=[participant.to_public_dict() for participant in participants],
             rounds=rounds,
             insight_summary=insight_summary,
+            anchor_material=anchor_material,
+            anchor_type=anchor_type,
+            anchor_id=anchor_id,
+            anchor_status=anchor_status,
+            learning_objective=learning_objective,
             planned_round_count=planned_round_count,
             facilitation_style=facilitation_style,
         )
         await cache_service.delete(f"{self.SESSION_KEY_PREFIX}{session_id}")
         if user_id is not None:
+            await self._persist_simulation_insights(session=session, user_id=str(user_id))
             await self._persist_session_update(user_id=user_id, session=session)
         yield "complete", {
             "session_id": session_id,
@@ -608,7 +838,11 @@ class SimulationEngine:
         participants: list[AgentParticipant] = []
         for index, item in enumerate(raw_participants):
             participant = AgentParticipant.from_public_dict(item)
-            participant.strategy = self._resolve_strategy(scenario_key=scenario_key, participant=participant, index=index)
+            participant.strategy = participant.strategy or self._resolve_strategy(
+                scenario_key=scenario_key,
+                participant=participant,
+                index=index,
+            )
             participant.response_policy = self._resolve_response_policy(
                 scenario_key=scenario_key,
                 participant=participant,
@@ -672,6 +906,9 @@ class SimulationEngine:
         rounds: list[dict[str, Any]],
         planned_round_count: int,
         facilitation_style: str,
+        anchor_material: str,
+        anchor_type: str | None = None,
+        learning_objective: str | None = None,
         behavioral_context: dict[str, Any] | None = None,
     ) -> ModeratorDecision:
         fallback = self._fallback_moderator_decision(
@@ -700,12 +937,19 @@ class SimulationEngine:
                     "role": "system",
                     "content": (
                         "你是一场多 Agent 学习仿真的主持人。\n"
-                        "你的任务是让讨论有推进感、有分歧、有收束，并且对中文用户自然友好。\n\n"
+                        "你的目标不是让讨论好看，而是帮助用户发现自己的理解盲区。\n\n"
+                        "你是苏格拉底式学习引导者。请围绕锚点材料设计下一步认知探测。\n\n"
                         "## 决策标准\n"
-                        "- speaker: 选择当前最适合接棒的角色，避免连续重复由同一角色主导。\n"
-                        "- should_pause_for_user: 当讨论来到关键判断点、出现明显分歧，或已经连续两轮以上没有用户参与时设为 true。\n"
-                        "- should_end: 当讨论已经形成清晰洞察、用户已经有效参与，或该话题的主要分歧已经被说透时设为 true。\n"
-                        "- interaction_type: open_question 用于开放反思，forced_choice 用于具体判断，challenge 用于邀请用户回应尖锐观点。\n\n"
+                        "- speaker: 选择当前最适合暴露理解偏差的角色。\n"
+                        "- should_pause_for_user: 当需要检测用户理解深度、验证用户是否识别误解时设为 true。\n"
+                        "- should_end: 只有在已经清楚暴露出盲区或用户已经完成一次有效的深度解释时才设为 true。\n"
+                        "- interaction_type: 优先选择能检测理解深度的提问方式。\n\n"
+                        "## 认知探测原则\n"
+                        "- 提出与锚点相关的不同角度或解释。\n"
+                        "- 可以故意引入常见误解，看用户是否能识别。\n"
+                        "- 用户发言后优先追问“为什么”，而不是追求讨论流畅。\n"
+                        "- 如果用户理解有偏差，不直接纠正，而是通过反例、迁移或追问让用户自己发现。\n"
+                        "- 如果用户理解较扎实，就提高难度，引入边界案例或迁移场景。\n\n"
                         "## 场景适配\n"
                         "- study_group: 更强调协作式整合\n"
                         "- knowledge_debate: 放大分歧并要求依据\n"
@@ -715,10 +959,10 @@ class SimulationEngine:
                         "- concept_map_build: 重点说清概念依赖与连接\n"
                         "- error_diagnosis: 优先锁定根因与修补动作\n\n"
                         "## 展开风格\n"
-                        "- balanced: 保持多方平衡推进，不让单一角色压住全场\n"
-                        "- debate: 主动放大冲突、追问证据与边界条件\n"
-                        "- guided: 更像导师带讨论，强调拆解、澄清和用户可跟上\n"
-                        "- practical: 更强调落地动作、验证路径和现实约束\n\n"
+                        "- balanced: 平衡不同角度，但仍以检测理解为优先\n"
+                        "- debate: 放大冲突与误解，用反例逼近真实理解边界\n"
+                        "- guided: 更像导师拆解概念，连续追问用户的依据\n"
+                        "- practical: 优先把概念应用到具体情境或题目上\n\n"
                         "## 语言要求\n"
                         "- real_time_insight、interaction_prompt、interaction_options、suggested_replies 必须使用自然、简体中文。\n"
                         "- speaker、reply_target、turn_goal、interaction_type 保持机器可读格式，不要翻译成中文键值。\n"
@@ -732,6 +976,9 @@ class SimulationEngine:
                     "role": "user",
                     "content": (
                         f"主题：{topic}\n"
+                        f"当前学习锚点：{anchor_material or '[暂无锚点]'}\n"
+                        f"锚点类型：{anchor_type or 'unknown'}\n"
+                        f"学习目标：{learning_objective or '未提供'}\n"
                         f"场景：{scenario_key}\n"
                         f"展开风格：{facilitation_style}\n"
                         f"当前轮次：{len(rounds)}\n"
@@ -855,6 +1102,8 @@ class SimulationEngine:
         rounds: list[dict[str, Any]],
         moderator_decision: ModeratorDecision,
         facilitation_style: str = "balanced",
+        anchor_material: str = "",
+        learning_objective: str | None = None,
     ) -> dict[str, Any]:
         speaker = next((participant for participant in participants if participant.name == moderator_decision.speaker), None)
         if speaker is None:
@@ -866,6 +1115,7 @@ class SimulationEngine:
             reply_target=moderator_decision.reply_target,
             turn_goal=moderator_decision.turn_goal,
             rounds=rounds,
+            anchor_material=anchor_material,
         )
         room_state = "\n".join(
             f"- {participant.name}: memory={participant.memory[-5:]}"
@@ -885,12 +1135,14 @@ class SimulationEngine:
                         "请只返回严格 JSON，包含 message, reply_to_speaker, turn_goal 三个键。"
                         "其中 message 必须使用自然、简体中文，语气像真实讨论，不要写成英文或翻译腔。"
                         "reply_to_speaker 保持参与者名字；turn_goal 保持机器可读的内部标识。"
-                        "你的发言要短而有推进感，能体现角色记忆、立场和策略。"
+                        "你的发言必须围绕锚点材料，2-4 句话，每句话都要有信息量。"
                     ),
                 },
                 {
                     "role": "user",
                     "content": (
+                        f"讨论锚点（所有发言必须围绕此材料）：{anchor_material or speaker.context_anchor or '暂无锚点'}\n"
+                        f"学习目标：{learning_objective or '未提供'}\n"
                         f"主题：{topic}\n"
                         f"场景：{scenario_key}\n"
                         f"展开风格：{facilitation_style}\n"
@@ -906,7 +1158,7 @@ class SimulationEngine:
                         f"最近讨论：\n{transcript}\n"
                         f"回应对象：{moderator_decision.reply_target or '全场'}\n"
                         f"本轮目标：{moderator_decision.turn_goal}\n"
-                        "请生成一句简洁但有推进感的中文发言。"
+                        "请生成直接回应锚点材料的中文发言。"
                     ),
                 },
             ],
@@ -936,46 +1188,77 @@ class SimulationEngine:
         reply_target: str,
         turn_goal: str,
         rounds: list[dict[str, Any]],
+        anchor_material: str = "",
     ) -> str:
+        anchor_hint = f"锚点材料是：{anchor_material[:80]}。" if anchor_material else ""
         if reply_target:
             if speaker.strategy in {"challenge", "diagnose", "defend"}:
                 return (
-                    f"我想回应 {reply_target} 刚才关于“{topic}”的说法。"
+                    f"{anchor_hint}我想回应 {reply_target} 刚才关于“{topic}”的说法。"
                     f" 如果只停在那个结论上，还没有解释清楚它为什么成立，或者何时会失效。"
                 )
             if speaker.strategy == "probe":
-                return f"顺着 {reply_target} 的说法，我会继续追问：在“{topic}”里最不能默认成立的前提是什么？"
+                return f"{anchor_hint}顺着 {reply_target} 的说法，我会继续追问：在“{topic}”里最不能默认成立的前提是什么？"
         if turn_goal == "synthesize":
-            return f"如果先把围绕“{topic}”已经形成的共识收束一下，下一步最值得验证的就是哪条解释真正能落到题目里。"
+            return f"{anchor_hint}如果先把围绕“{topic}”已经形成的共识收束一下，下一步最值得验证的就是哪条解释真正能落到题目里。"
         if scenario_key == "what_if_path":
-            return f"如果把“{topic}”换一条走法，我会先比较节奏、风险和最先见效的环节。"
+            return f"{anchor_hint}如果把“{topic}”换一条走法，我会先比较节奏、风险和最先见效的环节。"
         if scenario_key == "concept_map_build":
-            return f"围绕“{topic}”，我想先指出一个前置依赖和一个最容易断掉的连接。"
+            return f"{anchor_hint}围绕“{topic}”，我想先指出一个前置依赖和一个最容易断掉的连接。"
         if scenario_key == "error_diagnosis":
-            return f"我会先把“{topic}”里最像表面错误的现象拆开，看看真正根因是不是前置概念没有稳住。"
+            return f"{anchor_hint}我会先把“{topic}”里最像表面错误的现象拆开，看看真正根因是不是前置概念没有稳住。"
         if scenario_key == "historical_roleplay" and speaker.context_anchor:
-            return f"把“{topic}”放回 {speaker.context_anchor} 这个语境里，你会更容易看清它为什么重要。"
+            return f"{anchor_hint}把“{topic}”放回 {speaker.context_anchor} 这个语境里，你会更容易看清它为什么重要。"
         if rounds:
-            return f"基于前面已经出现的分歧，我想从 {speaker.role_hint or speaker.name} 的角度继续推进“{topic}”。"
-        return f"围绕“{topic}”，我想先从 {speaker.role_hint or speaker.name} 的角度解释最关键的一步。"
+            return f"{anchor_hint}基于前面已经出现的分歧，我想从 {speaker.role_hint or speaker.name} 的角度继续检验“{topic}”的理解。"
+        return f"{anchor_hint}围绕“{topic}”，我想先从 {speaker.role_hint or speaker.name} 的角度解释最关键的一步。"
 
-    def _build_user_interaction_point(
+    async def _build_user_interaction_point(
         self,
         *,
         topic: str,
         participants: list[AgentParticipant],
         rounds: list[dict[str, Any]],
         moderator_decision: ModeratorDecision,
+        anchor_material: str = "",
     ) -> UserInteractionPoint | None:
         if not moderator_decision.should_pause_for_user:
             return None
-        prompt = moderator_decision.interaction_prompt.strip()
-        if not prompt:
-            prompt = f"围绕“{topic}”，现在轮到你加入：你会先支持谁、追问谁，还是给出第三种解释？"
+        transcript_summary = self._latest_exchange(rounds, limit=4)
+        fallback_prompt = moderator_decision.interaction_prompt.strip() or (
+            f"把“{topic}”应用到一个新情境里：如果关键条件变了，你觉得结论还成立吗？为什么？"
+        )
+        data = await analysis_llm.json_call(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "你要设计一个能检测用户理解深度的问题。只返回严格 JSON，包含 prompt, suggested_replies。"
+                        "问题不能只靠回忆回答，必须要求用户做迁移、比较、解释反直觉现象，或预测条件变化。"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"当前讨论锚点：{anchor_material or '[暂无锚点]'}\n"
+                        f"主题：{topic}\n"
+                        f"到目前的讨论进展：\n{transcript_summary}\n"
+                        "请设计一个诊断性提问，优先暴露用户可能没真正理解的地方。"
+                    ),
+                },
+            ],
+            fallback={
+                "prompt": fallback_prompt,
+                "suggested_replies": moderator_decision.suggested_replies,
+            },
+            temperature=0.2,
+        )
+        payload = data if isinstance(data, dict) else {}
+        prompt = str(payload.get("prompt") or fallback_prompt).strip() or fallback_prompt
         options = moderator_decision.interaction_options or [participant.name for participant in participants[:3]]
-        suggested = moderator_decision.suggested_replies or [
-            f"我想先追问“{topic}”里最容易被忽略的前提。",
-            f"我会先给出一个具体例子，验证刚才的判断。",
+        suggested = self._string_list(payload.get("suggested_replies")) or moderator_decision.suggested_replies or [
+            f"我会先说明这个结论在什么条件下成立。",
+            f"我会用一个新例子测试这条解释能不能迁移。",
         ]
         return UserInteractionPoint(
             id=str(uuid4()),
@@ -1104,13 +1387,82 @@ class SimulationEngine:
         }.get(str(scenario_key or "study_group"), 10)
         return max(current_rounds + 1, min(max(requested_int, 3), scenario_max))
 
-    def _summarize_rounds(self, topic: str, rounds: list[dict[str, Any]]) -> str:
+    async def _summarize_rounds(self, topic: str, rounds: list[dict[str, Any]]) -> str:
         if not rounds:
             return f"围绕 {topic} 的模拟还没有形成有效洞察。"
-        speakers = "、".join(dict.fromkeys(str(item.get("speaker") or "") for item in rounds if item.get("speaker")))
-        return (
-            f"本次模拟围绕“{topic}”由 {speakers} 共同推进。"
-            " 当前已经暴露出关键分歧、可采纳建议和下一步可执行动作。"
+        transcript = "\n".join(
+            f"第 {int(item.get('round') or index + 1)} 轮 | "
+            f"{str(item.get('speaker') or '未知角色').strip() or '未知角色'}: "
+            f"{str(item.get('message') or '').strip()}"
+            for index, item in enumerate(rounds)
+            if str(item.get("message") or "").strip()
+        )
+        fallback_summary = self._fallback_round_summary(rounds)
+        data = await analysis_llm.json_call(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "你是一名学习模拟记录员。请基于完整讨论记录提炼结构化总结。"
+                        "只返回严格 JSON，不要输出 Markdown。"
+                        "JSON 必须包含 key_arguments, unresolved_disagreements, user_contributions, "
+                        "knowledge_gaps_revealed, suggested_next_steps 五个键。"
+                        "其中 key_arguments, unresolved_disagreements, knowledge_gaps_revealed, suggested_next_steps "
+                        "必须是字符串数组；user_contributions 必须是字符串。"
+                        "内容必须使用自然、简体中文，且只总结轮次中实际出现的信息，不要臆造。"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"主题：{topic}\n"
+                        "完整轮次记录如下：\n"
+                        f"{transcript}\n"
+                        "请提炼核心论点、尚未解决的分歧、用户贡献、暴露出的知识盲区，以及建议下一步。"
+                    ),
+                },
+            ],
+            fallback={},
+            temperature=0.2,
+        )
+        if isinstance(data, dict) and any(
+            data.get(key)
+            for key in (
+                "key_arguments",
+                "unresolved_disagreements",
+                "user_contributions",
+                "knowledge_gaps_revealed",
+                "suggested_next_steps",
+            )
+        ):
+            summary = {
+                "key_arguments": self._string_list(data.get("key_arguments")),
+                "unresolved_disagreements": self._string_list(
+                    data.get("unresolved_disagreements"),
+                ),
+                "user_contributions": str(data.get("user_contributions") or "").strip(),
+                "knowledge_gaps_revealed": self._string_list(
+                    data.get("knowledge_gaps_revealed"),
+                ),
+                "suggested_next_steps": self._string_list(
+                    data.get("suggested_next_steps"),
+                ),
+            }
+            return json.dumps(summary, ensure_ascii=False)
+        return fallback_summary
+
+    def _fallback_round_summary(self, rounds: list[dict[str, Any]]) -> str:
+        last_messages: dict[str, str] = {}
+        for item in rounds:
+            speaker = str(item.get("speaker") or "").strip()
+            message = str(item.get("message") or "").strip()
+            if speaker and message:
+                last_messages[speaker] = message
+        if not last_messages:
+            return "本次模拟暂未形成可复用的总结。"
+        return "；".join(
+            f"{speaker}最后强调：{message}"
+            for speaker, message in last_messages.items()
         )
 
     @staticmethod
@@ -1256,6 +1608,43 @@ class SimulationEngine:
                 participant["response_policy"] = runtime.get("response_policy")
         return payload
 
+    @staticmethod
+    def _insight_summary_payload(insight_summary: Any) -> dict[str, Any] | None:
+        if isinstance(insight_summary, dict):
+            return insight_summary
+        if not isinstance(insight_summary, str):
+            return None
+        try:
+            parsed = json.loads(insight_summary)
+        except (TypeError, ValueError):
+            return None
+        return parsed if isinstance(parsed, dict) else None
+
+    async def _persist_simulation_insights(self, *, session: SimulationSession, user_id: str) -> None:
+        payload = self._insight_summary_payload(session.insight_summary)
+        if not payload:
+            return
+
+        knowledge_gaps = self._string_list(payload.get("knowledge_gaps_revealed"))
+        if not knowledge_gaps:
+            return
+
+        for gap in knowledge_gaps:
+            try:
+                await self.event_bus.publish(
+                    "SimulationGapRevealed",
+                    {
+                        "event_type": "SimulationGapRevealed",
+                        "user_id": user_id,
+                        "topic": session.topic,
+                        "gap_description": gap,
+                        "simulation_session_id": session.id,
+                        "source": "simulation",
+                    },
+                )
+            except Exception:
+                continue
+
     async def _persist_session_update(self, *, user_id: UUID, session: SimulationSession) -> None:
         await SystemUpdateService().enqueue(
             user_id,
@@ -1292,6 +1681,11 @@ class SimulationEngine:
             participants=list(payload.get("participants") or []),
             rounds=list(payload.get("rounds") or []),
             insight_summary=str(payload.get("insight_summary") or ""),
+            anchor_material=str(payload.get("anchor_material") or ""),
+            anchor_type=str(payload.get("anchor_type") or "").strip() or None,
+            anchor_id=str(payload.get("anchor_id") or "").strip() or None,
+            anchor_status=str(payload.get("anchor_status") or "resolved"),
+            learning_objective=str(payload.get("learning_objective") or "").strip() or None,
             interaction_prompt=str(payload.get("interaction_prompt") or ""),
             suggested_replies=list(payload.get("suggested_replies") or []),
             interaction_type=str(payload.get("interaction_type") or "choice"),
