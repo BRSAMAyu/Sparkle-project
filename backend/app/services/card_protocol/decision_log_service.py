@@ -9,6 +9,7 @@ Phase 3 of the Card Protocol.
 """
 from __future__ import annotations
 
+from copy import deepcopy
 import uuid
 from datetime import datetime
 
@@ -63,7 +64,7 @@ class DecisionLogService:
 
         if artifact:
             # Append to existing
-            payload = dict(artifact.payload or {})
+            payload = deepcopy(artifact.payload or {})
             entries = list(payload.get("entries", []))
             entries.append(entry)
             payload["entries"] = entries
@@ -126,7 +127,7 @@ class DecisionLogService:
         )
         if not artifact:
             return []
-        entries = list((artifact.payload or {}).get("entries", []))
+        entries = list(deepcopy((artifact.payload or {}).get("entries", [])))
         return [e for e in entries if e.get("confirmation_status") == "PENDING"]
 
     async def get_all_entries(
@@ -138,7 +139,7 @@ class DecisionLogService:
         )
         if not artifact:
             return []
-        entries = list((artifact.payload or {}).get("entries", []))
+        entries = list(deepcopy((artifact.payload or {}).get("entries", [])))
         return entries[-limit:]
 
     async def find_entry_by_intervention(
@@ -169,7 +170,7 @@ class DecisionLogService:
         if not artifact:
             return False
 
-        payload = dict(artifact.payload or {})
+        payload = deepcopy(artifact.payload or {})
         entries = list(payload.get("entries", []))
         found = False
         for entry in entries:

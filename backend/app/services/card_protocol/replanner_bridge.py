@@ -133,6 +133,17 @@ class ReplannerCardBridge:
             summary["occurrences_adjusted"],
             summary["evidence_writebacks"],
         )
+
+        try:
+            from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
+
+            service = MainChainArtifactService(self.db, self.event_bus)
+            await service.refresh_active_phase_pack(
+                plan_card_id=plan_card.id,
+                generated_reason=f"replanner_incremental:{trigger}",
+            )
+        except Exception as exc:
+            logger.warning("Phase4 active phase pack refresh failed (non-fatal): {}", exc)
         return summary
 
     async def on_full_replan(
@@ -180,6 +191,17 @@ class ReplannerCardBridge:
             summary["cards_updated"],
             summary["occurrences_rescheduled"],
         )
+
+        try:
+            from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
+
+            service = MainChainArtifactService(self.db, self.event_bus)
+            await service.refresh_active_phase_pack(
+                plan_card_id=plan_card.id,
+                generated_reason=f"replanner_full:{severity}",
+            )
+        except Exception as exc:
+            logger.warning("Phase4 active phase pack refresh failed (non-fatal): {}", exc)
         return summary
 
     # ------------------------------------------------------------------

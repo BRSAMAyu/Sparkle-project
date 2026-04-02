@@ -291,6 +291,11 @@ class UnifiedNotificationCard extends StatelessWidget {
   }
 
   void _showDetailDialog(BuildContext context) {
+    final interactionState = notification.interactionState;
+    final outcomeStatus = notification.outcomeStatus;
+    final evidence = notification.outcomeEvidence;
+    final parameterCompilation = notification.parameterCompilation;
+
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -301,6 +306,22 @@ class UnifiedNotificationCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(notification.content),
+              if (notification.isIntervention && interactionState != null) ...[
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  context,
+                  '当前状态',
+                  _labelForInteractionState(interactionState),
+                ),
+              ],
+              if (notification.isIntervention && outcomeStatus != null) ...[
+                const SizedBox(height: 8),
+                _buildDetailRow(
+                  context,
+                  '验证结果',
+                  _labelForOutcomeStatus(outcomeStatus),
+                ),
+              ],
               if (notification.isIntervention &&
                   notification.suggestedStep != null &&
                   notification.suggestedStep!.isNotEmpty) ...[
@@ -310,6 +331,23 @@ class UnifiedNotificationCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
+                ),
+              ],
+              if (notification.isIntervention &&
+                  parameterCompilation.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  context,
+                  '参数调整',
+                  _buildParameterCompilationSummary(parameterCompilation),
+                ),
+              ],
+              if (notification.isIntervention && evidence.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  context,
+                  '验证证据',
+                  _buildEvidenceSummary(evidence),
                 ),
               ],
               const SizedBox(height: 16),
@@ -331,5 +369,86 @@ class UnifiedNotificationCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(value),
+        ],
+      );
+
+  String _labelForInteractionState(String state) {
+    switch (state) {
+      case 'seen':
+        return '已看到';
+      case 'accepted':
+        return '已接受建议';
+      case 'acted':
+        return '已开始执行';
+      case 'dismissed':
+        return '已忽略';
+      case 'snoozed':
+        return '稍后再看';
+      case 'approved':
+        return '已确认';
+      default:
+        return state;
+    }
+  }
+
+  String _labelForOutcomeStatus(String status) {
+    switch (status) {
+      case 'EFFECTIVE':
+      case 'effective':
+        return '已验证有效';
+      case 'INEFFECTIVE':
+      case 'ineffective':
+        return '暂未见效';
+      case 'UNKNOWN':
+      case 'unknown':
+        return '仍在观察';
+      case 'PENDING':
+      case 'pending':
+        return '等待验证';
+      default:
+        return status;
+    }
+  }
+
+  String _buildParameterCompilationSummary(Map<String, dynamic> compilation) {
+    final result = compilation['result'] as String? ?? 'unknown';
+    final affected = compilation['affected_task_count'] as int? ?? 0;
+    final inserted = compilation['inserted_task_count'] as int? ?? 0;
+    final hidden = compilation['hidden_task_count'] as int? ?? 0;
+    return '结果：$result，影响任务 $affected 个，新增 $inserted 个，收起 $hidden 个';
+  }
+
+  String _buildEvidenceSummary(Map<String, dynamic> evidence) {
+    final improvement = evidence['improvement'];
+    if (improvement is Map) {
+      final map = Map<String, dynamic>.from(improvement);
+      final recovered = map['plan_health_recovered'] == true;
+      final masteryImproved = map['mastery_improved'] == true;
+      final negativeFeedback =
+          map['post_intervention_negative_feedback_count'] as int? ?? 0;
+      final feedbackCount =
+          map['post_intervention_feedback_count'] as int? ?? 0;
+      return [
+        if (recovered) '计划健康已恢复',
+        if (masteryImproved) '掌握度已提升',
+        if (feedbackCount > 0) '后续反馈 $feedbackCount 条',
+        if (negativeFeedback > 0) '其中负反馈 $negativeFeedback 条',
+      ].where((item) => item.isNotEmpty).join('，');
+    }
+    return '系统已记录本次干预的后续证据';
   }
 }

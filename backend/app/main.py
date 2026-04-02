@@ -46,6 +46,7 @@ from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.services.profile_event_consumer import ProfileEventConsumer
 from app.services.plan_health_event_consumer import PlanHealthEventConsumer
 from app.services.intervention_event_consumer import InterventionEventConsumer
+from app.services.main_chain_artifact_consumer import MainChainArtifactConsumer
 from app.services.cognitive_event_consumer import CognitiveEventConsumer
 from app.services.nudge_event_consumer import NudgeEventConsumer
 from app.services.scheduler_service import scheduler_service
@@ -203,6 +204,12 @@ async def lifespan(app: FastAPI):
         intervention_consumer = InterventionEventConsumer(event_bus=event_bus)
         intervention_consumer_task = asyncio.create_task(intervention_consumer.start())
         app.state.intervention_consumer_task = intervention_consumer_task
+
+    main_chain_artifact_consumer_task = None
+    if cache_service.redis and event_bus is not None:
+        main_chain_consumer = MainChainArtifactConsumer(event_bus=event_bus)
+        main_chain_artifact_consumer_task = asyncio.create_task(main_chain_consumer.start())
+        app.state.main_chain_artifact_consumer_task = main_chain_artifact_consumer_task
 
     intervention_outcome_verifier_task = None
     if event_bus is not None:
@@ -388,6 +395,12 @@ async def lifespan(app: FastAPI):
         intervention_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await intervention_consumer_task
+
+    main_chain_artifact_consumer_task = getattr(app.state, "main_chain_artifact_consumer_task", None)
+    if main_chain_artifact_consumer_task:
+        main_chain_artifact_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await main_chain_artifact_consumer_task
 
     intervention_outcome_verifier_task = getattr(app.state, "intervention_outcome_verifier_task", None)
     if intervention_outcome_verifier_task:

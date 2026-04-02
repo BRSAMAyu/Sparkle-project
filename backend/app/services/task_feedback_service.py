@@ -145,6 +145,7 @@ class TaskFeedbackService:
             {
                 "event_type": "task.feedback_submitted",
                 "user_id": str(user_id),
+                "feedback_id": str(feedback.id),
                 "task_id": str(task_id),
                 "plan_id": str(task.plan_id) if task.plan_id else "",
                 "category": feedback.category or "",

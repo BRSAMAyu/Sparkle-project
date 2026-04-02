@@ -173,6 +173,30 @@ class UnifiedNotification {
       metadata['acceptance_status'] as String? ??
       metadata['status'] as String?;
 
+  String? get outcomeStatus => metadata['outcome_status'] as String?;
+
+  Map<String, dynamic> get outcomeEvidence {
+    final raw = metadata['outcome_evidence'];
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {};
+  }
+
+  Map<String, dynamic> get parameterCompilation {
+    final raw = metadata['parameter_compilation'];
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {};
+  }
+
   bool get canAcceptIntervention =>
       isIntervention &&
       interactionState != 'accepted' &&

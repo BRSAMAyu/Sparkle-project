@@ -177,16 +177,10 @@ class NotificationAnalyticsService:
         result = await self.db.execute(intervention_viewed_stmt)
         intervention_viewed = result.scalar() or 0
 
-        # Count interactions (clicks)
-        clicks_stmt = select(func.count(NotificationInteraction.id)).where(
-            and_(
-                NotificationInteraction.user_id == user_id,
-                NotificationInteraction.action_time >= start_date,
-                NotificationInteraction.action_type == 'clicked'
-            )
-        )
-        result = await self.db.execute(clicks_stmt)
-        total_clicked = result.scalar() or 0
+        interaction_counts = await self._interaction_counts(user_id, start_date)
+        total_clicked = interaction_counts.get('clicked', 0)
+        total_accepted = interaction_counts.get('accepted', 0)
+        total_acted = interaction_counts.get('acted', 0)
 
         # Calculate totals
         total_sent = system_sent + intervention_notification_sent + intervention_sent
@@ -195,6 +189,8 @@ class NotificationAnalyticsService:
         # Calculate rates
         view_rate = (total_viewed / total_sent * 100) if total_sent > 0 else 0.0
         click_rate = (total_clicked / total_viewed * 100) if total_viewed > 0 else 0.0
+        acceptance_rate = (total_accepted / total_viewed * 100) if total_viewed > 0 else 0.0
+        action_rate = (total_acted / total_accepted * 100) if total_accepted > 0 else 0.0
 
         # Calculate average time to action
         avg_time_stmt = select(func.avg(NotificationInteraction.time_to_action)).where(
@@ -211,8 +207,12 @@ class NotificationAnalyticsService:
             total_sent=total_sent,
             total_viewed=total_viewed,
             total_clicked=total_clicked,
+            total_accepted=total_accepted,
+            total_acted=total_acted,
             view_rate=round(view_rate, 2),
             click_rate=round(click_rate, 2),
+            acceptance_rate=round(acceptance_rate, 2),
+            action_rate=round(action_rate, 2),
             avg_time_to_action=round(avg_time_to_action, 2)
         )
 
@@ -312,29 +312,37 @@ class NotificationAnalyticsService:
         intervention_viewed = result.scalar() or 0
 
         # Interactions for interventions
-        intervention_clicks_stmt = select(func.count(NotificationInteraction.id)).where(
-            and_(
-                NotificationInteraction.user_id == user_id,
-                NotificationInteraction.action_time >= start_date,
-                NotificationInteraction.notification_type == 'intervention',
-                NotificationInteraction.action_type == 'clicked'
-            )
+        intervention_counts = await self._interaction_counts(
+            user_id,
+            start_date,
+            notification_type='intervention',
         )
-        result = await self.db.execute(intervention_clicks_stmt)
-        intervention_clicked = result.scalar() or 0
+        intervention_clicked = intervention_counts.get('clicked', 0)
+        intervention_accepted = intervention_counts.get('accepted', 0)
+        intervention_acted = intervention_counts.get('acted', 0)
 
         intervention_sent_total = intervention_notification_sent + intervention_sent
         intervention_viewed_total = intervention_notification_viewed + intervention_viewed
         intervention_view_rate = (intervention_viewed_total / intervention_sent_total * 100) if intervention_sent_total > 0 else 0.0
         intervention_click_rate = (intervention_clicked / intervention_viewed_total * 100) if intervention_viewed_total > 0 else 0.0
+        intervention_acceptance_rate = (
+            intervention_accepted / intervention_viewed_total * 100
+        ) if intervention_viewed_total > 0 else 0.0
+        intervention_action_rate = (
+            intervention_acted / intervention_accepted * 100
+        ) if intervention_accepted > 0 else 0.0
 
         stats['intervention'] = NotificationTypeStats(
             type='intervention',
             sent=intervention_sent_total,
             viewed=intervention_viewed_total,
             clicked=intervention_clicked,
+            accepted=intervention_accepted,
+            acted=intervention_acted,
             view_rate=round(intervention_view_rate, 2),
-            click_rate=round(intervention_click_rate, 2)
+            click_rate=round(intervention_click_rate, 2),
+            acceptance_rate=round(intervention_acceptance_rate, 2),
+            action_rate=round(intervention_action_rate, 2),
         )
 
         return stats
@@ -426,23 +434,22 @@ class NotificationAnalyticsService:
             result = await self.db.execute(intervention_viewed_stmt)
             intervention_viewed = result.scalar() or 0
 
-            # Count interactions (clicks) this day
-            clicks_stmt = select(func.count(NotificationInteraction.id)).where(
-                and_(
-                    NotificationInteraction.user_id == user_id,
-                    NotificationInteraction.action_time >= day_start,
-                    NotificationInteraction.action_time <= day_end,
-                    NotificationInteraction.action_type == 'clicked'
-                )
+            interaction_counts = await self._interaction_counts(
+                user_id,
+                day_start,
+                end_date=day_end,
             )
-            result = await self.db.execute(clicks_stmt)
-            clicked = result.scalar() or 0
+            clicked = interaction_counts.get('clicked', 0)
+            accepted = interaction_counts.get('accepted', 0)
+            acted = interaction_counts.get('acted', 0)
 
             trends.append(NotificationTrendData(
                 date=current_date.isoformat(),
                 sent=system_sent + intervention_notification_sent + intervention_sent,
                 viewed=system_viewed + intervention_notification_viewed + intervention_viewed,
-                clicked=clicked
+                clicked=clicked,
+                accepted=accepted,
+                acted=acted,
             ))
 
             current_date += timedelta(days=1)
@@ -501,3 +508,27 @@ class NotificationAnalyticsService:
     @staticmethod
     def _is_intervention_notification():
         return Notification.type.in_(("intervention", "intervention_push"))
+
+    async def _interaction_counts(
+        self,
+        user_id: UUID,
+        start_date: datetime,
+        *,
+        notification_type: str | None = None,
+        end_date: datetime | None = None,
+    ) -> dict[str, int]:
+        stmt = select(
+            NotificationInteraction.action_type,
+            func.count(NotificationInteraction.id),
+        ).where(
+            NotificationInteraction.user_id == user_id,
+            NotificationInteraction.action_time >= start_date,
+        )
+        if end_date is not None:
+            stmt = stmt.where(NotificationInteraction.action_time <= end_date)
+        if notification_type is not None:
+            stmt = stmt.where(NotificationInteraction.notification_type == notification_type)
+
+        stmt = stmt.group_by(NotificationInteraction.action_type)
+        result = await self.db.execute(stmt)
+        return {str(action_type): int(count) for action_type, count in result.all()}

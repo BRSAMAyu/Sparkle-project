@@ -153,9 +153,29 @@ class _NotificationAnalyticsScreenState
                   Icons.touch_app,
                 ),
                 _buildStatCard(
+                  '接受建议',
+                  '${summary.totalAccepted}',
+                  Icons.check_circle_outline,
+                ),
+                _buildStatCard(
+                  '开始执行',
+                  '${summary.totalActed}',
+                  Icons.play_circle_outline,
+                ),
+                _buildStatCard(
                   context.l10n.notificationAnalyticsViewRate,
                   '${summary.viewRate.toStringAsFixed(1)}%',
                   Icons.pie_chart,
+                ),
+                _buildStatCard(
+                  '接受率',
+                  '${summary.acceptanceRate.toStringAsFixed(1)}%',
+                  Icons.trending_up,
+                ),
+                _buildStatCard(
+                  '行动率',
+                  '${summary.actionRate.toStringAsFixed(1)}%',
+                  Icons.directions_run,
                 ),
               ];
 
@@ -179,27 +199,26 @@ class _NotificationAnalyticsScreenState
 
               return Column(
                 children: [
-                  SparkleStaggerItem(
-                    index: 0,
-                    child: Row(
-                      children: [
-                        Expanded(child: cards[0]),
-                        const SizedBox(width: DS.spacing12),
-                        Expanded(child: cards[1]),
-                      ],
+                  for (var rowIndex = 0;
+                      rowIndex < cards.length;
+                      rowIndex += 2) ...[
+                    SparkleStaggerItem(
+                      index: rowIndex ~/ 2,
+                      child: Row(
+                        children: [
+                          Expanded(child: cards[rowIndex]),
+                          const SizedBox(width: DS.spacing12),
+                          Expanded(
+                            child: rowIndex + 1 < cards.length
+                                ? cards[rowIndex + 1]
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: DS.spacing12),
-                  SparkleStaggerItem(
-                    index: 1,
-                    child: Row(
-                      children: [
-                        Expanded(child: cards[2]),
-                        const SizedBox(width: DS.spacing12),
-                        Expanded(child: cards[3]),
-                      ],
-                    ),
-                  ),
+                    if (rowIndex + 2 < cards.length)
+                      const SizedBox(height: DS.spacing12),
+                  ],
                 ],
               );
             },
@@ -271,9 +290,7 @@ class _NotificationAnalyticsScreenState
               typeKey == 'system'
                   ? context.l10n.notificationSourceSystem
                   : context.l10n.notificationSourceIntervention,
-              stats.sent,
-              stats.viewed,
-              stats.viewRate,
+              stats,
             );
           }),
         ],
@@ -281,12 +298,10 @@ class _NotificationAnalyticsScreenState
 
   Widget _buildTypeStatCard(
     String title,
-    int sent,
-    int viewed,
-    double viewRate,
+    NotificationTypeStats stats,
   ) =>
       SparkleStaggerItem(
-        index: sent,
+        index: stats.sent,
         child: GraphiteCardSurface(
           surfaceRole: SparkleSurfaceRole.card,
           margin: const EdgeInsets.only(bottom: DS.spacing12),
@@ -304,8 +319,8 @@ class _NotificationAnalyticsScreenState
                   Expanded(
                     child: _buildProgressBar(
                       context.l10n.notificationAnalyticsSent,
-                      sent,
-                      sent.toDouble(),
+                      stats.sent,
+                      stats.sent.toDouble(),
                     ),
                   ),
                 ],
@@ -316,15 +331,43 @@ class _NotificationAnalyticsScreenState
                   Expanded(
                     child: _buildProgressBar(
                       context.l10n.notificationAnalyticsViewed,
-                      viewed,
-                      sent.toDouble(),
+                      stats.viewed,
+                      stats.sent.toDouble(),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: DS.spacing8),
+              if (title == context.l10n.notificationSourceIntervention) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildProgressBar(
+                        '已接受',
+                        stats.accepted,
+                        stats.viewed.toDouble(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildProgressBar(
+                        '已开始',
+                        stats.acted,
+                        stats.accepted.toDouble(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing8),
+              ],
               Text(
-                '${context.l10n.notificationAnalyticsViewRate}: ${viewRate.toStringAsFixed(1)}%',
+                title == context.l10n.notificationSourceIntervention
+                    ? '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}% · 接受率: ${stats.acceptanceRate.toStringAsFixed(1)}% · 行动率: ${stats.actionRate.toStringAsFixed(1)}%'
+                    : '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}%',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -382,6 +425,19 @@ class _NotificationAnalyticsScreenState
               child: _buildTrendChart(trends),
             ),
           ),
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _buildTrendMetricChip(
+                  '查看', trends.fold(0, (sum, item) => sum + item.viewed)),
+              _buildTrendMetricChip(
+                  '接受', trends.fold(0, (sum, item) => sum + item.accepted)),
+              _buildTrendMetricChip(
+                  '开始', trends.fold(0, (sum, item) => sum + item.acted)),
+            ],
+          ),
         ],
       );
 
@@ -416,6 +472,15 @@ class _NotificationAnalyticsScreenState
             ),
           ),
         ],
+      );
+
+  Widget _buildTrendMetricChip(String label, int value) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: DS.surfaceTertiary,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text('$label $value'),
       );
 
   Widget _buildHourlyChart(List<int> distribution) {

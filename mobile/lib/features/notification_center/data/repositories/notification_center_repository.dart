@@ -293,8 +293,30 @@ class NotificationCenterRepository {
           totalSent: totalSent,
           totalViewed: totalViewed,
           totalClicked: totalClicked,
+          totalAccepted: notifications
+              .where((item) => item.interactionState == 'accepted')
+              .length,
+          totalActed: notifications
+              .where((item) => item.interactionState == 'acted')
+              .length,
           viewRate: totalSent == 0 ? 0 : totalViewed / totalSent,
           clickRate: totalSent == 0 ? 0 : totalClicked / totalSent,
+          acceptanceRate: totalViewed == 0
+              ? 0
+              : notifications
+                      .where((item) => item.interactionState == 'accepted')
+                      .length /
+                  totalViewed,
+          actionRate: notifications
+                  .where((item) => item.interactionState == 'accepted')
+                  .isEmpty
+              ? 0
+              : notifications
+                      .where((item) => item.interactionState == 'acted')
+                      .length /
+                  notifications
+                      .where((item) => item.interactionState == 'accepted')
+                      .length,
           avgTimeToAction: 240.0,
         ),
         byType: {
@@ -310,8 +332,12 @@ class NotificationCenterRepository {
                 .where((item) =>
                     item.sourceType == 'system' && item.priority == 'high')
                 .length,
+            accepted: 0,
+            acted: 0,
             viewRate: 0.9,
             clickRate: 0.55,
+            acceptanceRate: 0,
+            actionRate: 0,
           ),
           'intervention': NotificationTypeStats(
             type: 'intervention',
@@ -327,8 +353,20 @@ class NotificationCenterRepository {
                     item.sourceType == 'intervention' &&
                     item.priority == 'high')
                 .length,
+            accepted: notifications
+                .where((item) =>
+                    item.sourceType == 'intervention' &&
+                    item.interactionState == 'accepted')
+                .length,
+            acted: notifications
+                .where((item) =>
+                    item.sourceType == 'intervention' &&
+                    item.interactionState == 'acted')
+                .length,
             viewRate: 0.88,
             clickRate: 0.62,
+            acceptanceRate: 0.5,
+            actionRate: 0.7,
           ),
         },
         trends: [
@@ -341,6 +379,8 @@ class NotificationCenterRepository {
             sent: 7,
             viewed: 6,
             clicked: 4,
+            accepted: 3,
+            acted: 2,
           ),
           NotificationTrendData(
             date: DateTime.now()
@@ -351,12 +391,16 @@ class NotificationCenterRepository {
             sent: 8,
             viewed: 7,
             clicked: 5,
+            accepted: 4,
+            acted: 3,
           ),
           NotificationTrendData(
             date: DateTime.now().toIso8601String().split('T').first,
             sent: 5,
             viewed: 4,
             clicked: 2,
+            accepted: 2,
+            acted: 1,
           ),
         ],
         hourlyDistribution: hourlyDistribution,

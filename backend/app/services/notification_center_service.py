@@ -89,9 +89,17 @@ class NotificationCenterService:
             intervention_notif_stmt = intervention_notif_stmt.order_by(desc(Notification.created_at)).offset(skip).limit(limit)
             intervention_notif_result = await self.db.execute(intervention_notif_stmt)
             intervention_notifications = intervention_notif_result.scalars().all()
+            enriched_intervention_records = await self._load_intervention_records_for_notifications(
+                intervention_notifications
+            )
 
             for notif in intervention_notifications:
-                notifications.append(self._system_to_unified(notif))
+                notifications.append(
+                    self._system_to_unified(
+                        notif,
+                        intervention_record=enriched_intervention_records.get(notif.id),
+                    )
+                )
 
             # Determine status filter for "unread"
             # Intervention status: pending, approved, rejected, acknowledged, superseded
@@ -590,9 +598,17 @@ class NotificationCenterService:
             intervention_notification_stmt = intervention_notification_stmt.order_by(desc(Notification.created_at)).offset(offset).limit(page_size)
             intervention_notification_result = await self.db.execute(intervention_notification_stmt)
             intervention_notifications = intervention_notification_result.scalars().all()
+            enriched_intervention_records = await self._load_intervention_records_for_notifications(
+                intervention_notifications
+            )
 
             for notif in intervention_notifications:
-                notifications.append(self._system_to_unified(notif))
+                notifications.append(
+                    self._system_to_unified(
+                        notif,
+                        intervention_record=enriched_intervention_records.get(notif.id),
+                    )
+                )
 
             intervention_stmt = select(InterventionRequest).where(InterventionRequest.user_id == user_id)
 
@@ -788,10 +804,32 @@ class NotificationCenterService:
             "snoozed": "snoozed",
         }.get(action, action)
 
-    def _system_to_unified(self, notification: Notification) -> UnifiedNotificationResponse:
+    def _system_to_unified(
+        self,
+        notification: Notification,
+        intervention_record: InterventionRecord | None = None,
+    ) -> UnifiedNotificationResponse:
         """Convert Notification model to UnifiedNotificationResponse"""
         source_type = "intervention" if self._notification_is_intervention(notification) else "system"
         priority = "high" if source_type == "intervention" and notification.type == "intervention_push" else "medium"
+        metadata = dict(notification.data or {})
+        if intervention_record:
+            metadata.update(
+                {
+                    "acceptance_status": intervention_record.acceptance_status.value,
+                    "outcome_status": intervention_record.outcome_status.value,
+                    "outcome_window_days": intervention_record.outcome_window_days,
+                }
+            )
+            if intervention_record.evidence_payload:
+                metadata["outcome_evidence"] = intervention_record.evidence_payload
+            if intervention_record.action_payload:
+                if intervention_record.action_payload.get("acted_at"):
+                    metadata["acted_at"] = intervention_record.action_payload.get("acted_at")
+                if intervention_record.action_payload.get("parameter_compilation"):
+                    metadata["parameter_compilation"] = intervention_record.action_payload.get(
+                        "parameter_compilation"
+                    )
         return UnifiedNotificationResponse(
             id=str(notification.id),
             source_type=source_type,
@@ -802,7 +840,7 @@ class NotificationCenterService:
             is_read=notification.is_read,
             created_at=notification.created_at,
             read_at=notification.read_at,
-            metadata=notification.data or {}
+            metadata=metadata,
         )
 
     def _intervention_to_unified(self, intervention: InterventionRequest) -> UnifiedNotificationResponse:
@@ -880,6 +918,31 @@ class NotificationCenterService:
     @staticmethod
     def _notification_is_intervention(notification: Notification) -> bool:
         return str(notification.type or "").strip().lower() in {"intervention", "intervention_push"}
+
+    async def _load_intervention_records_for_notifications(
+        self,
+        notifications: list[Notification],
+    ) -> dict[UUID, InterventionRecord]:
+        record_ids_by_notification: dict[UUID, UUID] = {}
+        for notification in notifications:
+            record_id = self._extract_notification_record_id(notification)
+            if record_id:
+                record_ids_by_notification[notification.id] = record_id
+
+        if not record_ids_by_notification:
+            return {}
+
+        result = await self.db.execute(
+            select(InterventionRecord).where(
+                InterventionRecord.id.in_(list(record_ids_by_notification.values()))
+            )
+        )
+        records = {record.id: record for record in result.scalars().all()}
+        return {
+            notification_id: records[record_id]
+            for notification_id, record_id in record_ids_by_notification.items()
+            if record_id in records
+        }
 
     @staticmethod
     def _is_intervention_notification():

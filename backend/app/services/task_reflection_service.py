@@ -193,6 +193,20 @@ class TaskReflectionService:
             source_event_id=f"reflection_auto:{feedback.id}",
         )
         await cognitive_service.analyze_behavior(user_id, fragment.id)
+
+        if task.plan_id:
+            try:
+                from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
+
+                artifact_service = MainChainArtifactService(self.db)
+                await artifact_service.refresh_for_legacy_plan(
+                    legacy_plan_id=task.plan_id,
+                    generated_reason="task_reflection_submitted",
+                    include_reflection=True,
+                    linked_feedback_id=str(feedback.id),
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to refresh Phase4 reflection report: {exc}")
         return payload
 
     def _build_prompt(

@@ -136,6 +136,7 @@ class PlanAdapter:
 
         # Phase 3: Auto-initialize GLOBAL_COMPASS + STRATEGY_MAP artifacts
         await self._ensure_phase3_artifacts(plan, card)
+        await self._ensure_phase4_active_pack(plan, card)
 
         return card
 
@@ -259,6 +260,20 @@ class PlanAdapter:
             from loguru import logger
             logger.warning("Phase3 artifact auto-init failed (non-fatal): {}", exc)
 
+    async def _ensure_phase4_active_pack(self, plan: Plan, plan_card: Card) -> None:
+        try:
+            from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
+
+            service = MainChainArtifactService(self.db, self.event_bus)
+            await service.refresh_active_phase_pack(
+                plan_card_id=plan_card.id,
+                generated_reason="plan_projection_bootstrap",
+            )
+        except Exception as exc:
+            from loguru import logger
+
+            logger.warning("Phase4 active phase pack bootstrap failed (non-fatal): {}", exc)
+
 
 # ---------------------------------------------------------------------------
 # Legacy Task → Card Protocol mapping
@@ -283,6 +298,7 @@ class TaskAdapter:
 
     def __init__(self, db: AsyncSession, event_bus: EventBus | None = None):
         self.db = db
+        self.event_bus = event_bus
         self.card_service = CardService(db, event_bus)
         self.edge_service = CardEdgeService(db, event_bus)
 
@@ -333,6 +349,7 @@ class TaskAdapter:
 
         await self._sync_task_containment(task, task_card=card)
         await self._sync_task_knowledge_references(task, task_card=card)
+        await self._refresh_phase4_artifacts(task)
         return card
 
     async def _find_card_by_legacy_task(self, task_id: uuid.UUID) -> Card | None:
@@ -468,3 +485,20 @@ class TaskAdapter:
             binding_mode=BindingMode.REFERENCE,
             metadata={"source": "legacy_task_adapter"},
         )
+
+    async def _refresh_phase4_artifacts(self, task: Task) -> None:
+        if not task.plan_id:
+            return
+        try:
+            from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
+
+            service = MainChainArtifactService(self.db, self.event_bus)
+            await service.refresh_for_legacy_plan(
+                legacy_plan_id=task.plan_id,
+                generated_reason="task_projection_updated",
+                include_reflection=False,
+            )
+        except Exception as exc:
+            from loguru import logger
+
+            logger.warning("Phase4 artifact refresh after task projection failed (non-fatal): {}", exc)

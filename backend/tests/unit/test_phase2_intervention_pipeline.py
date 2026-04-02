@@ -18,6 +18,7 @@ from app.models.card_protocol import (
     InterventionTriggerType,
 )
 from app.models.notification import Notification, PushHistory
+from app.models.notification_interaction import NotificationInteraction
 from app.models.user import PushPreference
 from app.services.behavior_signal_collector import BehaviorSignalCollector
 from app.services.card_protocol.behavior_intervention_bridge import BehaviorInterventionBridge
@@ -26,6 +27,7 @@ from app.services.card_service import CardService
 from app.services.intervention_event_consumer import InterventionEventConsumer
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.notification_center_service import NotificationCenterService
+from app.services.notification_analytics_service import NotificationAnalyticsService
 from app.services.plan_health_event_consumer import PlanHealthEventConsumer
 from app.services.plan_adjustment_applier import PlanAdjustmentResult
 from app.services.plan_state_service import PlanStateService
@@ -603,3 +605,106 @@ async def test_outcome_verifier_treats_parameter_compilation_with_positive_feedb
     assert summary["effective"] == 1
     assert record.outcome_status == InterventionOutcomeStatus.EFFECTIVE
     assert record.evidence_payload["improvement"]["parameter_strategy_effective"] is True
+
+
+@pytest.mark.asyncio
+async def test_unified_notifications_include_intervention_status_and_outcome_metadata(
+    db_session,
+    test_user,
+):
+    record_service = InterventionRecordService(db_session, FakeEventBus())
+    record = await record_service.create_record(
+        user_id=test_user.id,
+        trigger_type=InterventionTriggerType.PLAN_RISK,
+        delivery_strategy=DeliveryStrategy.SUPPORTIVE,
+        delivery_channel=DeliveryChannel.CHAT,
+        outcome_window_days=1,
+    )
+    await record_service.mark_delivered(record.id)
+    await record_service.mark_accepted(record.id)
+    await record_service.mark_acted(record.id, action_payload={"cta": "start_now"})
+    await record_service.resolve_outcome(
+        record.id,
+        InterventionOutcomeStatus.EFFECTIVE,
+        evidence_payload={"improvement": {"parameter_strategy_effective": True}},
+    )
+    db_session.add(
+        Notification(
+            user_id=test_user.id,
+            title="节奏已经帮你放缓",
+            content="现在可以继续往下走了",
+            type="intervention",
+            data={"record_id": str(record.id)},
+        )
+    )
+    await db_session.commit()
+
+    service = NotificationCenterService(db_session)
+    notifications = await service.get_unified_notifications(
+        user_id=test_user.id,
+        source_type="intervention",
+    )
+
+    assert len(notifications) == 1
+    assert notifications[0].metadata["acceptance_status"] == "ACTED"
+    assert notifications[0].metadata["outcome_status"] == "EFFECTIVE"
+    assert notifications[0].metadata["outcome_evidence"]["improvement"]["parameter_strategy_effective"] is True
+
+
+@pytest.mark.asyncio
+async def test_notification_analytics_counts_intervention_acceptance_and_action(
+    db_session,
+    test_user,
+):
+    notification = Notification(
+        user_id=test_user.id,
+        title="先把这一步收下",
+        content="只做最小入口",
+        type="intervention",
+        is_read=True,
+    )
+    db_session.add(notification)
+    await db_session.flush()
+    now = datetime.utcnow()
+    db_session.add_all(
+        [
+            NotificationInteraction(
+                id=uuid4(),
+                user_id=test_user.id,
+                notification_type='intervention',
+                notification_id=notification.id,
+                action_type='viewed',
+                action_time=now,
+                time_to_action=20,
+            ),
+            NotificationInteraction(
+                id=uuid4(),
+                user_id=test_user.id,
+                notification_type='intervention',
+                notification_id=notification.id,
+                action_type='accepted',
+                action_time=now,
+                time_to_action=45,
+            ),
+            NotificationInteraction(
+                id=uuid4(),
+                user_id=test_user.id,
+                notification_type='intervention',
+                notification_id=notification.id,
+                action_type='acted',
+                action_time=now,
+                time_to_action=90,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    service = NotificationAnalyticsService(db_session)
+    analytics = await service.get_analytics(test_user.id, period='7d')
+
+    assert analytics.summary.total_accepted == 1
+    assert analytics.summary.total_acted == 1
+    assert analytics.by_type['intervention'].accepted == 1
+    assert analytics.by_type['intervention'].acted == 1
+    assert analytics.trends[-1].accepted >= 1
+    assert analytics.trends[-1].acted >= 1

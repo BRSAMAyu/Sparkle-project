@@ -105,8 +105,12 @@ class NotificationAnalyticsSummary(BaseModel):
     total_sent: int = 0
     total_viewed: int = 0
     total_clicked: int = 0
+    total_accepted: int = 0
+    total_acted: int = 0
     view_rate: float = 0.0
     click_rate: float = 0.0
+    acceptance_rate: float = 0.0
+    action_rate: float = 0.0
     avg_time_to_action: float = 0.0
 
 
@@ -116,8 +120,12 @@ class NotificationTypeStats(BaseModel):
     sent: int
     viewed: int
     clicked: int
+    accepted: int = 0
+    acted: int = 0
     view_rate: float
     click_rate: float
+    acceptance_rate: float = 0.0
+    action_rate: float = 0.0
 
 
 class NotificationTrendData(BaseModel):
@@ -126,6 +134,8 @@ class NotificationTrendData(BaseModel):
     sent: int
     viewed: int
     clicked: int
+    accepted: int = 0
+    acted: int = 0
 
 
 class NotificationAnalyticsResponse(BaseModel):

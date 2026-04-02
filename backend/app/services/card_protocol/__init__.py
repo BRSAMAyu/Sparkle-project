@@ -10,6 +10,7 @@ from app.services.card_protocol.decision_log_service import DecisionLogService
 from app.services.card_protocol.global_compass_manager import GlobalCompassManager
 from app.services.card_protocol.health_intervention_bridge import PlanHealthInterventionBridge
 from app.services.card_protocol.legacy_adapter import PlanAdapter, TaskAdapter
+from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
 from app.services.card_protocol.mastery_bridge import ErrorMasteryBridge
 from app.services.card_protocol.outcome_verifier import InterventionOutcomeVerifier
 from app.services.card_protocol.parameter_compiler import ParameterCompiler
@@ -23,6 +24,7 @@ __all__ = [
     "ErrorMasteryBridge",
     "GlobalCompassManager",
     "InterventionOutcomeVerifier",
+    "MainChainArtifactService",
     "ParameterCompiler",
     "PlanAdapter",
     "PlanHealthInterventionBridge",

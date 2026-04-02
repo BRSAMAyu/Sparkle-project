@@ -313,6 +313,23 @@ class InterventionOutcomeVerifier:
         # 3. Strategy learning feedback
         await self._strategy_learning_feedback(record, effective)
 
+        # 4. Phase 4: materialize the latest main-chain reflection state
+        try:
+            from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
+
+            artifact_service = MainChainArtifactService(self.db, self.event_bus)
+            await artifact_service.refresh_active_phase_pack(
+                plan_card_id=record.plan_card_id,
+                generated_reason=f"intervention_outcome:{outcome.value.lower()}",
+            )
+            await artifact_service.refresh_reflection_report(
+                plan_card_id=record.plan_card_id,
+                generated_reason=f"intervention_outcome:{outcome.value.lower()}",
+                linked_intervention_id=str(record.id),
+            )
+        except Exception as exc:
+            logger.debug("Phase4 reflection materialization failed (non-fatal): {}", exc)
+
     async def _update_decision_log(
         self,
         record: InterventionRecord,

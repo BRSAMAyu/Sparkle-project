@@ -9,6 +9,7 @@ Phase 3 of the Card Protocol.
 """
 from __future__ import annotations
 
+from copy import deepcopy
 import uuid
 from datetime import datetime
 
@@ -65,7 +66,7 @@ class RiskRegisterService:
         )
 
         if artifact:
-            payload = dict(artifact.payload or {})
+            payload = deepcopy(artifact.payload or {})
             risks = list(payload.get("risks", []))
             # Check for duplicate description
             for existing in risks:
@@ -114,7 +115,7 @@ class RiskRegisterService:
         if not artifact:
             return False
 
-        payload = dict(artifact.payload or {})
+        payload = deepcopy(artifact.payload or {})
         risks = list(payload.get("risks", []))
         found = False
         for risk in risks:
@@ -150,7 +151,7 @@ class RiskRegisterService:
         )
         if not artifact:
             return []
-        risks = list((artifact.payload or {}).get("risks", []))
+        risks = list(deepcopy((artifact.payload or {}).get("risks", [])))
         return [r for r in risks if r.get("status") == "ACTIVE"]
 
     async def get_all_risks(
@@ -162,7 +163,7 @@ class RiskRegisterService:
         )
         if not artifact:
             return []
-        risks = list((artifact.payload or {}).get("risks", []))
+        risks = list(deepcopy((artifact.payload or {}).get("risks", [])))
         return risks[-limit:]
 
     async def auto_register_from_pattern(
