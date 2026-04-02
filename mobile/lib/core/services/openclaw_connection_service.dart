@@ -6,6 +6,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
+
+typedef OpenClawBackendStatusLoader = Future<Map<String, dynamic>?> Function();
+typedef OpenClawBackendProfileLoader = Future<Map<String, dynamic>?> Function();
+typedef OpenClawBackendProfileSaver = Future<Map<String, dynamic>?> Function(
+  Map<String, dynamic> payload,
+);
+typedef OpenClawBackendProfileDeleter = Future<void> Function();
 
 enum OpenClawConnectionStatus {
   disconnected,
@@ -20,6 +30,7 @@ class OpenClawConnectionConfig {
     this.authToken,
     this.deviceToken,
     this.transport = 'responses_http',
+    this.wsUrl,
     this.pairedAt,
   });
 
@@ -29,6 +40,7 @@ class OpenClawConnectionConfig {
         authToken: json['auth_token'] as String?,
         deviceToken: json['device_token'] as String?,
         transport: json['transport'] as String? ?? 'responses_http',
+        wsUrl: json['ws_url'] as String?,
         pairedAt: json['paired_at'] != null
             ? DateTime.tryParse(json['paired_at'] as String)
             : null,
@@ -40,18 +52,58 @@ class OpenClawConnectionConfig {
   final String? authToken;
   final String? deviceToken;
   final String transport;
+  final String? wsUrl;
   final DateTime? pairedAt;
 
-  bool get isConfigured => normalizedGatewayUrl.isNotEmpty;
+  bool get isConfigured =>
+      normalizedGatewayUrl.isNotEmpty || normalizedWsUrl.isNotEmpty;
   bool get isPaired => (deviceToken ?? '').trim().isNotEmpty;
   String get normalizedGatewayUrl =>
       gatewayUrl.trim().replaceAll(RegExp(r'/+$'), '');
+  String get normalizedWsUrl =>
+      (wsUrl ?? '').trim().replaceAll(RegExp(r'/+$'), '');
+
+  String get httpGatewayUrl {
+    final source = normalizedGatewayUrl.isNotEmpty
+        ? normalizedGatewayUrl
+        : normalizedWsUrl;
+    if (source.isEmpty) return '';
+    final uri = Uri.tryParse(source);
+    if (uri == null) return source;
+    final scheme = uri.scheme.toLowerCase();
+    if (scheme == 'ws') {
+      return uri.replace(scheme: 'http').toString();
+    }
+    if (scheme == 'wss') {
+      return uri.replace(scheme: 'https').toString();
+    }
+    return source;
+  }
+
+  String get resolvedWsUrl {
+    if (normalizedWsUrl.isNotEmpty) {
+      return normalizedWsUrl;
+    }
+    final source = normalizedGatewayUrl;
+    if (source.isEmpty) return '';
+    final uri = Uri.tryParse(source);
+    if (uri == null) return '';
+    final scheme = uri.scheme.toLowerCase();
+    if (scheme == 'http') {
+      return uri.replace(scheme: 'ws').toString();
+    }
+    if (scheme == 'https') {
+      return uri.replace(scheme: 'wss').toString();
+    }
+    return source;
+  }
 
   Map<String, dynamic> toJson() => {
-        'gateway_url': normalizedGatewayUrl,
+        'gateway_url': httpGatewayUrl,
         'auth_token': authToken,
         'device_token': deviceToken,
         'transport': transport,
+        'ws_url': resolvedWsUrl.isEmpty ? null : resolvedWsUrl,
         'paired_at': pairedAt?.toIso8601String(),
       };
 
@@ -60,6 +112,7 @@ class OpenClawConnectionConfig {
     String? authToken,
     String? deviceToken,
     String? transport,
+    String? wsUrl,
     DateTime? pairedAt,
   }) =>
       OpenClawConnectionConfig(
@@ -67,6 +120,7 @@ class OpenClawConnectionConfig {
         authToken: authToken ?? this.authToken,
         deviceToken: deviceToken ?? this.deviceToken,
         transport: transport ?? this.transport,
+        wsUrl: wsUrl ?? this.wsUrl,
         pairedAt: pairedAt ?? this.pairedAt,
       );
 }
@@ -178,11 +232,25 @@ class OpenClawQueuedRequest {
 }
 
 class OpenClawConnectionService extends ChangeNotifier {
+  OpenClawConnectionService({
+    OpenClawBackendStatusLoader? backendStatusLoader,
+    OpenClawBackendProfileLoader? backendProfileLoader,
+    OpenClawBackendProfileSaver? backendProfileSaver,
+    OpenClawBackendProfileDeleter? backendProfileDeleter,
+  })  : _backendStatusLoader = backendStatusLoader,
+        _backendProfileLoader = backendProfileLoader,
+        _backendProfileSaver = backendProfileSaver,
+        _backendProfileDeleter = backendProfileDeleter;
+
   static const _configKey = 'openclaw_connection_config';
   static const _pairingKey = 'openclaw_pairing_session';
   static const _queueKey = 'openclaw_execution_queue';
   static const _healthCheckInterval = Duration(seconds: 30);
 
+  final OpenClawBackendStatusLoader? _backendStatusLoader;
+  final OpenClawBackendProfileLoader? _backendProfileLoader;
+  final OpenClawBackendProfileSaver? _backendProfileSaver;
+  final OpenClawBackendProfileDeleter? _backendProfileDeleter;
   OpenClawConnectionConfig _config = OpenClawConnectionConfig.empty;
   OpenClawConnectionInfo _info = const OpenClawConnectionInfo();
   OpenClawPairingSession? _pairingSession;
@@ -268,6 +336,7 @@ class OpenClawConnectionService extends ChangeNotifier {
             });
         }
       }
+      await _syncConfigFromBackend(prefs);
       notifyListeners();
       if (_config.isConfigured) {
         unawaited(checkHealth());
@@ -352,6 +421,8 @@ class OpenClawConnectionService extends ChangeNotifier {
     );
     _pairingSession = null;
     final prefs = await SharedPreferences.getInstance();
+    final syncedConfig = await _syncConfigToBackend(_config) ?? _config;
+    _config = syncedConfig;
     await prefs.setString(_configKey, jsonEncode(_config.toJson()));
     await prefs.remove(_pairingKey);
     notifyListeners();
@@ -365,8 +436,19 @@ class OpenClawConnectionService extends ChangeNotifier {
   }
 
   Future<bool> configure(OpenClawConnectionConfig newConfig) async {
-    _config = newConfig.copyWith(gatewayUrl: newConfig.normalizedGatewayUrl);
+    _config = newConfig.copyWith(gatewayUrl: newConfig.httpGatewayUrl);
     final prefs = await SharedPreferences.getInstance();
+    final syncedConfig = await _syncConfigToBackend(_config);
+    if (syncedConfig == null && _backendProfileSaver != null) {
+      _info = OpenClawConnectionInfo(
+        status: OpenClawConnectionStatus.error,
+        errorMessage: 'Sparkle 后端未能保存当前 OpenClaw 远程连接配置',
+        lastCheckedAt: DateTime.now(),
+      );
+      notifyListeners();
+      return false;
+    }
+    _config = syncedConfig ?? _config;
     await prefs.setString(_configKey, jsonEncode(_config.toJson()));
     final ok = await checkHealth();
     if (ok) {
@@ -417,6 +499,12 @@ class OpenClawConnectionService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_configKey);
     await prefs.remove(_pairingKey);
+    final deleteProfile = _backendProfileDeleter;
+    if (deleteProfile != null) {
+      try {
+        await deleteProfile();
+      } catch (_) {}
+    }
     notifyListeners();
   }
 
@@ -424,14 +512,16 @@ class OpenClawConnectionService extends ChangeNotifier {
     OpenClawConnectionConfig config,
   ) async {
     if (!config.isConfigured) {
-      return const OpenClawConnectionInfo();
+      return await _preferBackendAvailability(
+        const OpenClawConnectionInfo(),
+      );
     }
 
     try {
       final stopwatch = Stopwatch()..start();
       final response = await http
           .get(
-            Uri.parse('${config.normalizedGatewayUrl}/health'),
+            Uri.parse('${config.httpGatewayUrl}/health'),
             headers: _buildHeaders(config),
           )
           .timeout(const Duration(seconds: 8));
@@ -448,7 +538,7 @@ class OpenClawConnectionService extends ChangeNotifier {
             : null;
         if (executionProbe != null &&
             executionProbe.status != OpenClawConnectionStatus.connected) {
-          return executionProbe;
+          return await _preferBackendAvailability(executionProbe);
         }
         return OpenClawConnectionInfo(
           status: OpenClawConnectionStatus.connected,
@@ -463,18 +553,59 @@ class OpenClawConnectionService extends ChangeNotifier {
         );
       }
 
-      return OpenClawConnectionInfo(
-        status: OpenClawConnectionStatus.error,
-        latencyMs: stopwatch.elapsedMilliseconds,
-        errorMessage: 'HTTP ${response.statusCode}',
-        lastCheckedAt: DateTime.now(),
+      return await _preferBackendAvailability(
+        OpenClawConnectionInfo(
+          status: OpenClawConnectionStatus.error,
+          latencyMs: stopwatch.elapsedMilliseconds,
+          errorMessage: 'HTTP ${response.statusCode}',
+          lastCheckedAt: DateTime.now(),
+        ),
       );
     } catch (e) {
+      return await _preferBackendAvailability(
+        OpenClawConnectionInfo(
+          status: OpenClawConnectionStatus.error,
+          errorMessage: e.toString(),
+          lastCheckedAt: DateTime.now(),
+        ),
+      );
+    }
+  }
+
+  Future<OpenClawConnectionInfo> _preferBackendAvailability(
+    OpenClawConnectionInfo localInfo,
+  ) async {
+    if (localInfo.status == OpenClawConnectionStatus.connected) {
+      return localInfo;
+    }
+    final backendInfo = await _probeBackendExecutionAvailability();
+    return backendInfo ?? localInfo;
+  }
+
+  Future<OpenClawConnectionInfo?> _probeBackendExecutionAvailability() async {
+    final loader = _backendStatusLoader;
+    if (loader == null) {
+      return null;
+    }
+
+    try {
+      final payload = await loader();
+      if (payload == null || payload['reachable'] != true) {
+        return null;
+      }
+      final capabilities = <String>[
+        ..._extractCapabilities(payload),
+        'Sparkle 后端代连',
+      ].toSet().toList();
       return OpenClawConnectionInfo(
-        status: OpenClawConnectionStatus.error,
-        errorMessage: e.toString(),
+        status: OpenClawConnectionStatus.connected,
+        latencyMs: (payload['latency_ms'] as num?)?.toInt(),
+        nodeCount: (payload['connected_nodes'] as num?)?.toInt(),
+        capabilities: capabilities,
         lastCheckedAt: DateTime.now(),
       );
+    } catch (_) {
+      return null;
     }
   }
 
@@ -484,7 +615,7 @@ class OpenClawConnectionService extends ChangeNotifier {
     try {
       final response = await http
           .post(
-            Uri.parse('${config.normalizedGatewayUrl}/v1/responses'),
+            Uri.parse('${config.httpGatewayUrl}/v1/responses'),
             headers: <String, String>{
               ..._buildHeaders(config),
               'Content-Type': 'application/json',
@@ -532,6 +663,44 @@ class OpenClawConnectionService extends ChangeNotifier {
         errorMessage: e.toString(),
         lastCheckedAt: DateTime.now(),
       );
+    }
+  }
+
+  Future<void> _syncConfigFromBackend(SharedPreferences prefs) async {
+    final loader = _backendProfileLoader;
+    if (loader == null) {
+      return;
+    }
+    try {
+      final payload = await loader();
+      if (payload == null) {
+        return;
+      }
+      if (payload['configured'] != true) {
+        _config = OpenClawConnectionConfig.empty;
+        await prefs.remove(_configKey);
+        return;
+      }
+      _config = OpenClawConnectionConfig.fromJson(payload);
+      await prefs.setString(_configKey, jsonEncode(_config.toJson()));
+    } catch (_) {}
+  }
+
+  Future<OpenClawConnectionConfig?> _syncConfigToBackend(
+    OpenClawConnectionConfig config,
+  ) async {
+    final saver = _backendProfileSaver;
+    if (saver == null) {
+      return config;
+    }
+    try {
+      final payload = await saver(config.toJson());
+      if (payload == null) {
+        return null;
+      }
+      return OpenClawConnectionConfig.fromJson(payload);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -625,7 +794,42 @@ class OpenClawConnectionService extends ChangeNotifier {
 
 final openClawConnectionProvider =
     ChangeNotifierProvider<OpenClawConnectionService>((ref) {
-  final service = OpenClawConnectionService();
+  final apiClient = ref.read(apiClientProvider);
+  final service = OpenClawConnectionService(
+    backendStatusLoader: () async {
+      final response = await apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.executionConnectionStatus,
+      );
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'executionConnectionStatus',
+      );
+    },
+    backendProfileLoader: () async {
+      final response = await apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.executionConnectionProfile,
+      );
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'executionConnectionProfile',
+      );
+    },
+    backendProfileSaver: (payload) async {
+      final response = await apiClient.put<Map<String, dynamic>>(
+        ApiEndpoints.executionConnectionProfile,
+        data: payload,
+      );
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'saveExecutionConnectionProfile',
+      );
+    },
+    backendProfileDeleter: () async {
+      await apiClient.delete<Map<String, dynamic>>(
+        ApiEndpoints.executionConnectionProfile,
+      );
+    },
+  );
   unawaited(service.initialize());
   return service;
 });

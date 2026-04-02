@@ -43,6 +43,7 @@ class _FakeSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> continueSimulation({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) async =>
       throw UnimplementedError();
 
@@ -50,8 +51,13 @@ class _FakeSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> continueSimulationStream({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> getSession(String sessionId) async =>
+      throw UnimplementedError();
 }
 
 class _FakeRef implements Ref {
@@ -300,7 +306,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('先定目标，再看清多条路径'), findsNothing);
-    expect(find.text('调整目标'), findsOneWidget);
+    expect(find.byTooltip('调整目标'), findsOneWidget);
     expect(find.text('关系图谱主舞台'), findsOneWidget);
     expect(find.text('模式 · 智能混合'), findsWidgets);
     expect(find.textContaining('自由节点与星图参考'), findsOneWidget);
@@ -330,7 +336,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('校准与落地'), findsOneWidget);
 
-    await tester.tap(find.text('调整目标'));
+    await tester.tap(find.byTooltip('调整目标'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('调整推演目标'), findsOneWidget);

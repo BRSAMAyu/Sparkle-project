@@ -318,6 +318,58 @@ void main() {
       await tester.pump();
       harness.container.dispose();
     });
+
+    testWidgets('profile logout returns users to login screen', (tester) async {
+      final authNotifier = _MutableFakeAuthNotifier(
+        AuthState(
+          isAuthenticated: true,
+          user: _buildUser(),
+        ),
+      );
+      final harness = await _pumpRouter(
+        tester,
+        authState: authNotifier.state,
+        onboardingCompleted: true,
+        authNotifierOverride: authNotifier,
+      );
+
+      harness.router.go('/profile');
+      await _pumpFrames(tester);
+
+      final logoutTile = find.byWidgetPredicate((widget) {
+        if (widget is! ListTile) return false;
+        final title = widget.title;
+        return title is Row &&
+            title.children.any(
+              (child) =>
+                  child is Expanded &&
+                  child.child is Text &&
+                  (((child.child as Text).data == 'Logout') ||
+                      ((child.child as Text).data == '退出登录')),
+            );
+      });
+      await tester.scrollUntilVisible(
+        logoutTile,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(logoutTile);
+      await _pumpFrames(tester);
+
+      await tester.tap(
+        find.text('Confirm').evaluate().isNotEmpty
+            ? find.text('Confirm')
+            : find.text('确定'),
+      );
+      await _pumpFrames(tester);
+
+      expect(harness.router.routeInformationProvider.value.uri.path, '/login');
+      expect(find.byType(LoginScreen), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      harness.container.dispose();
+    });
   });
 }
 
@@ -325,6 +377,7 @@ Future<_RouterHarness> _pumpRouter(
   WidgetTester tester, {
   required AuthState authState,
   required bool onboardingCompleted,
+  AuthNotifier? authNotifierOverride,
 }) async {
   tester.view.devicePixelRatio = 2.0;
   tester.view.physicalSize = const Size(1440, 2960);
@@ -340,7 +393,9 @@ Future<_RouterHarness> _pumpRouter(
 
   final container = ProviderContainer(
     overrides: [
-      authProvider.overrideWith((ref) => _FakeAuthNotifier(authState)),
+      authProvider.overrideWith(
+        (ref) => authNotifierOverride ?? _FakeAuthNotifier(authState),
+      ),
       onboardingCompletedProvider.overrideWith(
         (ref) => _FakeOnboardingCompletedNotifier(onboardingCompleted, ref),
       ),
@@ -410,6 +465,15 @@ class _FakeAuthNotifier extends AuthNotifier {
 
   @override
   Future<void> checkAuthStatus() async {}
+}
+
+class _MutableFakeAuthNotifier extends _FakeAuthNotifier {
+  _MutableFakeAuthNotifier(super.authState);
+
+  @override
+  Future<void> logout() async {
+    state = AuthState();
+  }
 }
 
 class _UnusedRef implements Ref<Object?> {

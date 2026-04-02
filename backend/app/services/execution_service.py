@@ -39,10 +39,11 @@ from app.models.execution_intent import (
     TrustLevel,
 )
 from app.models.execution_record import ExecutionRecord
-from app.models.task import Task, TaskStatus
+from app.models.task import Task, TaskStatus, TaskType
 from app.services.execution_ingestor import ExecutionIngestor
 from app.services.execution_learning_service import ExecutionLearningService
 from app.services.execution_node_service import ExecutionNodeService
+from app.services.openclaw_connection_profile_service import OpenClawConnectionProfileService
 from app.services.execution_quality_service import ExecutionQualityService
 from app.services.execution_result_validator import ExecutionResultValidator
 from app.services.execution_template_service import ExecutionTemplateService
@@ -66,7 +67,9 @@ class ExecutionService:
     def __init__(self, db: AsyncSession, redis=None):
         self._db = db
         self._redis = redis
-        self._config = OpenClawConfig.from_settings()
+        self._base_config = OpenClawConfig.from_settings()
+        self._config = self._base_config
+        self._config_source = "global"
         self._router = ExecutionRouter(openclaw_enabled=self._config.enabled)
         self._trust_engine = ExecutionTrustEngine(
             auto_trust_min_history=settings.OPENCLAW_TRUST_AUTO_PROMOTE_MIN_HISTORY,
@@ -78,6 +81,7 @@ class ExecutionService:
         self._plan_record_service = PlanExecutionRecordService(db)
         self._ingestor = ExecutionIngestor(db=db, redis=redis)
         self._learning_service = ExecutionLearningService(db=db, redis=redis)
+        self._connection_profile_service = OpenClawConnectionProfileService(db, redis)
         self._template_service = ExecutionTemplateService()
         self._node_service = ExecutionNodeService(self._client)
         self._quality_service = ExecutionQualityService(db)
@@ -85,9 +89,33 @@ class ExecutionService:
         self._classify_cache = self.__class__._shared_classify_cache
         self._classify_cache_ttl = self.__class__._classify_cache_ttl_seconds
 
-    async def get_health(self) -> dict[str, Any]:
+    async def _ensure_runtime(self, *, user_id: UUID | None = None) -> OpenClawConfig:
+        resolved_config, source = await self._connection_profile_service.resolve_config(
+            user_id=user_id,
+            fallback_config=self._base_config,
+        )
+        self._config = resolved_config
+        self._config_source = source
+        self._router = ExecutionRouter(openclaw_enabled=self._config.enabled)
+        self._client = OpenClawClient(self._config) if self._config.enabled else None
+        self._node_service = ExecutionNodeService(self._client)
+        return self._config
+
+    async def get_health(self, *, user_id: UUID | None = None) -> dict[str, Any]:
+        await self._ensure_runtime(user_id=user_id)
         health_snapshot = await self._client.health_snapshot() if self._client else {"reachable": False}
-        nodes = await self._node_service.list_nodes(connected_only=True) if self._client else []
+        nodes = []
+        if self._client:
+            try:
+                nodes = await self._node_service.list_nodes(connected_only=True)
+            except OpenClawError as exc:
+                health_snapshot["reachable"] = False
+                health_snapshot["message"] = str(exc)
+                logger.warning("OpenClaw node listing failed during health check: {}", exc)
+            except Exception as exc:
+                health_snapshot["reachable"] = False
+                health_snapshot["message"] = str(exc)
+                logger.exception("Unexpected OpenClaw node listing failure during health check")
         degradation = self.get_degradation_snapshot()
         return {
             "openclaw_enabled": self._config.enabled,
@@ -99,6 +127,7 @@ class ExecutionService:
             "message": health_snapshot.get("message"),
             "supports_approvals": True,
             "ingestion_layer": "execution_ingestor",
+            "connection_source": self._config_source,
             "connected_nodes": len(nodes),
             "supports_nodes": self._config.transport == "gateway_ws",
             "supports_templates": True,
@@ -109,6 +138,7 @@ class ExecutionService:
         }
 
     async def classify_task(self, *, task_id: UUID, user_id: UUID) -> RoutingDecision:
+        await self._ensure_runtime(user_id=user_id)
         task = await self._get_user_task(task_id=task_id, user_id=user_id)
         if self._is_user_degraded(user_id):
             return RoutingDecision(
@@ -160,6 +190,7 @@ class ExecutionService:
         template_id: str | None = None,
         preferred_node_id: str | None = None,
     ) -> ExecutionIntent:
+        await self._ensure_runtime(user_id=user_id)
         task = await self._get_user_task(task_id=task_id, user_id=user_id)
         if self._is_user_degraded(user_id):
             task.execution_mode = ExecutionMode.HUMAN.value
@@ -215,6 +246,8 @@ class ExecutionService:
             (template_payload or {}).get("policy"),
             policy or {},
         )
+        if decision.target_env == ExecutionTargetEnv.SHELL and self._config.default_workdir:
+            intent_policy.setdefault("working_directory", self._config.default_workdir)
         intent_success = self._merge_dicts(
             (template_payload or {}).get("success_criteria"),
             success_criteria or {"type": "non_empty"},
@@ -251,6 +284,9 @@ class ExecutionService:
                 required_command=required_node_command,
                 target_env=decision.target_env,
             )
+        except OpenClawError as exc:
+            logger.warning("Execution node discovery failed for task {}: {}", task.id, exc)
+            raise ValueError(str(exc)) from exc
         except ValueError:
             raise
         except Exception as exc:
@@ -348,6 +384,7 @@ class ExecutionService:
         return intent
 
     async def dispatch(self, *, intent_id: UUID, user_id: UUID) -> ExecutionIntent:
+        await self._ensure_runtime(user_id=user_id)
         intent = await self._get_user_intent(intent_id=intent_id, user_id=user_id)
         if intent.status not in {ExecutionIntentStatus.DRAFT, ExecutionIntentStatus.READY}:
             raise ValueError(f"Intent {intent_id} is in status {intent.status.value}, cannot dispatch")
@@ -443,6 +480,41 @@ class ExecutionService:
         )
         return await self.dispatch(intent_id=intent.id, user_id=user_id)
 
+    async def handoff_chat_control(
+        self,
+        *,
+        session_id: str,
+        user_id: UUID,
+        message: str,
+        request_id: str | None = None,
+        preferred_node_id: str | None = None,
+    ) -> tuple[ExecutionIntent, ExecutionRecord | None]:
+        await self._ensure_runtime(user_id=user_id)
+        normalized_message = str(message or "").strip()
+        normalized_session_id = str(session_id or "").strip()
+        if not normalized_message:
+            raise ValueError("Chat control message cannot be empty")
+        if not normalized_session_id:
+            raise ValueError("Chat control session_id is required")
+        if self._is_user_degraded(user_id):
+            raise ValueError("AI execution is temporarily degraded after consecutive failures")
+
+        hidden_task = await self._create_hidden_chat_control_task(
+            user_id=user_id,
+            message=normalized_message,
+        )
+        intent = await self._create_chat_control_intent(
+            task=hidden_task,
+            user_id=user_id,
+            session_id=normalized_session_id,
+            message=normalized_message,
+            request_id=request_id,
+            preferred_node_id=preferred_node_id,
+        )
+        dispatched_intent = await self.dispatch(intent_id=intent.id, user_id=user_id)
+        record = await self.get_execution_record(intent_id=dispatched_intent.id, user_id=user_id)
+        return dispatched_intent, record
+
     async def get_intent(self, *, intent_id: UUID, user_id: UUID) -> ExecutionIntent:
         return await self._get_user_intent(intent_id=intent_id, user_id=user_id)
 
@@ -467,9 +539,11 @@ class ExecutionService:
     async def list_nodes(
         self,
         *,
+        user_id: UUID | None = None,
         connected_only: bool = True,
         last_connected: str | None = None,
     ) -> list[dict[str, Any]]:
+        await self._ensure_runtime(user_id=user_id)
         nodes = await self._node_service.list_nodes(
             connected_only=connected_only,
             last_connected=last_connected,
@@ -479,12 +553,14 @@ class ExecutionService:
     async def invoke_node(
         self,
         *,
+        user_id: UUID | None = None,
         node_id: str,
         command: str,
         params: dict[str, Any] | None = None,
         invoke_timeout_ms: int | None = None,
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
+        await self._ensure_runtime(user_id=user_id)
         return await self._node_service.invoke_node(
             node_id=node_id,
             command=command,
@@ -508,6 +584,7 @@ class ExecutionService:
         return result.scalar_one_or_none()
 
     async def confirm_result(self, *, record_id: UUID, user_id: UUID) -> ExecutionRecord:
+        await self._ensure_runtime(user_id=user_id)
         record = await self._ingestor._get_user_record(record_id=record_id, user_id=user_id)
         intent = await self._get_user_intent(intent_id=record.execution_intent_id, user_id=user_id)
         approval_id = self._extract_approval_id(record.raw_response or {})
@@ -546,6 +623,7 @@ class ExecutionService:
         user_id: UUID,
         reason: str | None = None,
     ) -> ExecutionRecord:
+        await self._ensure_runtime(user_id=user_id)
         record = await self._ingestor._get_user_record(record_id=record_id, user_id=user_id)
         intent = await self._get_user_intent(intent_id=record.execution_intent_id, user_id=user_id)
         approval_id = self._extract_approval_id(record.raw_response or {})
@@ -572,6 +650,7 @@ class ExecutionService:
         return await self._ingestor.reject_result(record_id=record_id, user_id=user_id, reason=reason)
 
     async def cancel(self, *, intent_id: UUID, user_id: UUID) -> ExecutionIntent:
+        await self._ensure_runtime(user_id=user_id)
         intent = await self._get_user_intent(intent_id=intent_id, user_id=user_id)
         if intent.status in self._terminal_statuses():
             raise ValueError("Execution is already terminal")
@@ -777,6 +856,10 @@ class ExecutionService:
             raise ValueError("Task not found")
         return task
 
+    @staticmethod
+    def _should_skip_task_sync(intent: ExecutionIntent) -> bool:
+        return bool((intent.policy or {}).get("chat_control"))
+
     async def _get_user_intent(self, *, intent_id: UUID, user_id: UUID) -> ExecutionIntent:
         intent = await self._db.get(ExecutionIntent, intent_id)
         if not intent or intent.user_id != user_id or intent.deleted_at is not None:
@@ -802,6 +885,163 @@ class ExecutionService:
     def _build_idempotency_key(self, task: Task) -> str:
         plan_id = str(task.plan_id) if task.plan_id else "noplan"
         return f"{plan_id}:{task.id}:{uuid.uuid4().hex[:8]}"
+
+    async def _create_hidden_chat_control_task(
+        self,
+        *,
+        user_id: UUID,
+        message: str,
+    ) -> Task:
+        task = Task(
+            user_id=user_id,
+            plan_id=None,
+            title=self._build_chat_control_title(message),
+            type=TaskType.PLANNING,
+            tags=["openclaw", "chat_control", "hidden"],
+            estimated_minutes=5,
+            difficulty=1,
+            energy_cost=1,
+            guide_content=message,
+            status=TaskStatus.PENDING,
+            execution_mode=ExecutionMode.AGENT.value,
+            priority=0,
+            order_index=0,
+        )
+        task.deleted_at = _utcnow()
+        self._db.add(task)
+        await self._db.commit()
+        await self._db.refresh(task)
+        return task
+
+    async def _create_chat_control_intent(
+        self,
+        *,
+        task: Task,
+        user_id: UUID,
+        session_id: str,
+        message: str,
+        request_id: str | None,
+        preferred_node_id: str | None,
+    ) -> ExecutionIntent:
+        target_env = self._infer_chat_control_target_env(message)
+        instructions = [
+            "Treat this as a direct OpenClaw remote-control request from the user's Sparkle chat.",
+            "Prefer taking action on the user's connected device instead of answering abstractly.",
+            "If the request is ambiguous, unsafe, or blocked, explain the blocker clearly instead of guessing.",
+        ]
+        policy = self._default_policy(target_env)
+        policy["allow_exec"] = True
+        policy["allowed_tools"] = self._chat_control_allowed_tools(target_env)
+        policy["approval_policy"] = "require_for_side_effects"
+        policy["session_key"] = self._chat_control_session_key(user_id=user_id, session_id=session_id)
+        policy["source_chat_session_id"] = session_id
+        policy["chat_control"] = True
+        policy["template_metadata"] = {
+            "template_id": "chat_remote_control",
+            "template_name": "Chat Remote Control",
+        }
+        if target_env == ExecutionTargetEnv.SHELL and self._config.default_workdir:
+            policy.setdefault("working_directory", self._config.default_workdir)
+
+        strategy = await self._quality_service.assign_strategy(
+            user_id=user_id,
+            target_env=target_env.value if target_env else "general",
+            execution_mode=ExecutionMode.AGENT,
+            template_id="chat_remote_control",
+        )
+        policy["quality_strategy"] = strategy.to_policy_payload()
+        self._apply_strategy_to_payload(
+            strategy=strategy,
+            instructions=instructions,
+            policy=policy,
+            result_contract={},
+        )
+
+        required_node_command = "system.run" if target_env == ExecutionTargetEnv.SHELL else None
+        selected_node = None
+        if self._config.transport == "gateway_ws":
+            try:
+                selected_node = await self._node_service.select_node(
+                    preferred_node_id=preferred_node_id,
+                    required_command=required_node_command,
+                    target_env=target_env,
+                )
+            except OpenClawError as exc:
+                raise ValueError(str(exc)) from exc
+            if selected_node is None:
+                raise ValueError("No connected OpenClaw nodes are available for chat control")
+            policy = self._merge_dicts(
+                policy,
+                self._node_service.build_policy_patch(
+                    node=selected_node,
+                    required_command=required_node_command,
+                ),
+            )
+
+        intent = ExecutionIntent(
+            plan_id=None,
+            task_id=task.id,
+            user_id=user_id,
+            execution_mode=ExecutionMode.AGENT,
+            executor=ExecutorType.OPENCLAW,
+            goal=message,
+            instructions=instructions,
+            target_env=target_env,
+            policy=policy,
+            success_criteria={"type": "non_empty"},
+            result_contract={},
+            timeout_seconds=self._config.default_timeout_seconds,
+            status=ExecutionIntentStatus.READY,
+            trust_level=TrustLevel.RAW,
+            idempotency_key=self._build_chat_control_idempotency_key(
+                session_id=session_id,
+                message=message,
+                request_id=request_id,
+            ),
+        )
+        self._db.add(intent)
+        await self._db.commit()
+        await self._db.refresh(intent)
+
+        await self._publish_status_event(intent, old_status=None)
+        await event_bus.publish(
+            EXECUTION_DELEGATED,
+            {
+                "event_type": EXECUTION_DELEGATED,
+                "user_id": str(user_id),
+                "task_id": str(task.id),
+                "plan_id": None,
+                "execution_intent_id": str(intent.id),
+                "execution_mode": intent.execution_mode.value,
+                "executor": intent.executor.value,
+                "target_env": intent.target_env.value if intent.target_env else None,
+                "timestamp": _utcnow().isoformat(),
+                "source": "chat_control",
+                "chat_session_id": session_id,
+            },
+        )
+        if selected_node is not None:
+            await event_bus.publish(
+                EXECUTION_NODE_SELECTED,
+                {
+                    "event_type": EXECUTION_NODE_SELECTED,
+                    "user_id": str(user_id),
+                    "task_id": str(task.id),
+                    "execution_intent_id": str(intent.id),
+                    "node_id": selected_node.node_id,
+                    "node_name": selected_node.name,
+                    "node_platform": selected_node.platform,
+                    "timestamp": _utcnow().isoformat(),
+                    "source": "chat_control",
+                },
+            )
+        await self._publish_monitor_progress(
+            intent=intent,
+            status=BackgroundTaskStatus.PENDING,
+            progress=0.0,
+            progress_message="Chat control intent created",
+        )
+        return intent
 
     def _build_instructions(
         self,
@@ -841,6 +1081,79 @@ class ExecutionService:
             "allowed_domains": [],
             "approval_policy": "deny",
         }
+
+    @staticmethod
+    def _build_chat_control_title(message: str) -> str:
+        normalized = " ".join(str(message or "").split()).strip()
+        if not normalized:
+            return "OpenClaw Chat Control"
+        if len(normalized) <= 72:
+            return normalized
+        return f"{normalized[:69].rstrip()}..."
+
+    def _build_chat_control_idempotency_key(
+        self,
+        *,
+        session_id: str,
+        message: str,
+        request_id: str | None,
+    ) -> str:
+        seed = str(request_id or "").strip()
+        if seed:
+            return f"chatctl:{seed}"
+        digest = hashlib.md5(f"{session_id}|{message}|{time.time()}".encode("utf-8")).hexdigest()
+        return f"chatctl:{digest}"
+
+    def _chat_control_session_key(self, *, user_id: UUID, session_id: str) -> str:
+        agent_suffix = self._config.default_agent_id or "main"
+        return f"sparkle:chat:{agent_suffix}:{user_id}:{session_id}"
+
+    def _infer_chat_control_target_env(self, message: str) -> ExecutionTargetEnv | None:
+        lowered = str(message or "").lower()
+        browser_keywords = (
+            "browser",
+            "website",
+            "web site",
+            "网页",
+            "网站",
+            "浏览器",
+            "打开页面",
+            "open page",
+            "open website",
+            "search the web",
+            "google",
+        )
+        shell_keywords = (
+            "terminal",
+            "shell",
+            "command line",
+            "命令行",
+            "终端",
+            "repo",
+            "repository",
+            "git",
+            "pwd",
+            "ls ",
+            "cd ",
+            "npm ",
+            "python ",
+            "pip ",
+            "brew ",
+            "文件夹",
+            "目录",
+        )
+        if any(keyword in lowered for keyword in browser_keywords):
+            return ExecutionTargetEnv.BROWSER
+        if any(keyword in lowered for keyword in shell_keywords):
+            return ExecutionTargetEnv.SHELL
+        return None
+
+    def _chat_control_allowed_tools(self, target_env: ExecutionTargetEnv | None) -> list[str]:
+        if target_env == ExecutionTargetEnv.BROWSER:
+            return ["browser", "read"]
+        if target_env == ExecutionTargetEnv.SHELL:
+            return ["exec", "read"]
+        return ["browser", "exec", "read", "http"]
 
     def _infer_side_effects(self, goal: str) -> bool:
         side_effect_keywords = {"更新", "修改", "提交", "发送", "发布", "删除", "创建", "写入"}
@@ -1076,10 +1389,11 @@ class ExecutionService:
         )
         degraded = self._record_failure(intent.user_id)
         if degraded:
-            task = await self._get_user_task(task_id=intent.task_id, user_id=intent.user_id)
-            task.execution_mode = ExecutionMode.HUMAN.value
-            self._db.add(task)
-            await self._db.commit()
+            if not self._should_skip_task_sync(intent):
+                task = await self._get_user_task(task_id=intent.task_id, user_id=intent.user_id)
+                task.execution_mode = ExecutionMode.HUMAN.value
+                self._db.add(task)
+                await self._db.commit()
 
     async def _publish_status_event(
         self,

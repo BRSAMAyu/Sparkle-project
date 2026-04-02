@@ -67,6 +67,7 @@ class _FakeSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> continueSimulation({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) async =>
       const SimulationSessionModel(
         id: 's-1',
@@ -82,8 +83,21 @@ class _FakeSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> continueSimulationStream({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> getSession(String sessionId) async =>
+      const SimulationSessionModel(
+        id: 's-1',
+        scenarioKey: 'study_group',
+        state: 'COMPLETED',
+        topic: '特征值与特征向量',
+        participants: <SimulationParticipantModel>[],
+        rounds: <SimulationRoundModel>[],
+        insightSummary: '已完成模拟',
+      );
 }
 
 class _StaticSimulationNotifier extends SimulationNotifier {

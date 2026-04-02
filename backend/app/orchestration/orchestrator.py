@@ -870,6 +870,12 @@ class ChatOrchestrator(
                 await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
                 chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
                 user_message = request.message or ""
+                request_extra_context = {}
+                if request.HasField("extra_context"):
+                    try:
+                        request_extra_context = MessageToDict(request.extra_context)
+                    except Exception as exc:
+                        logger.warning(f"Failed to parse request extra_context in process_stream: {exc}")
                 resolved_active_tools = self._resolve_active_tools(request, user_message)
 
                 if chat_mode == CHAT_MODE_STANDARD and not request.HasField("tool_result"):
@@ -892,6 +898,29 @@ class ChatOrchestrator(
                         REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
                         COLLABORATION_SUCCESS.labels(
                             workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
+                        ).inc()
+                        return
+
+                    openclaw_responses = await self._maybe_short_circuit_openclaw_chat_control(
+                        active_tools=resolved_active_tools,
+                        user_message=user_message,
+                        request_extra_context=request_extra_context,
+                        user_id=user_id,
+                        session_id=session_id,
+                        response_id=response_id,
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        active_db=active_db,
+                    )
+                    if openclaw_responses:
+                        for openclaw_response in openclaw_responses:
+                            yield openclaw_response
+                        await self._update_state(session_id, STATE_DONE, "OpenClaw chat control short-circuit completed")
+                        REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+                        COLLABORATION_SUCCESS.labels(
+                            workflow_type="standard_chat", agents_used="openclaw", outcome="success"
                         ).inc()
                         return
 

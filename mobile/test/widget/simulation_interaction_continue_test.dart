@@ -39,6 +39,7 @@ class _FakeSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> continueSimulation({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) async =>
       throw UnimplementedError();
 
@@ -46,8 +47,13 @@ class _FakeSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> continueSimulationStream({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> getSession(String sessionId) async =>
+      throw UnimplementedError();
 }
 
 class _StreamingSimulationRepository implements SimulationRepository {
@@ -125,6 +131,7 @@ class _StreamingSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> continueSimulation({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) async =>
       throw UnimplementedError();
 
@@ -132,8 +139,13 @@ class _StreamingSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> continueSimulationStream({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> getSession(String sessionId) async =>
+      throw UnimplementedError();
 }
 
 class _AbruptStreamSimulationRepository implements SimulationRepository {
@@ -182,6 +194,7 @@ class _AbruptStreamSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> continueSimulation({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) async =>
       throw UnimplementedError();
 
@@ -189,8 +202,13 @@ class _AbruptStreamSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> continueSimulationStream({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> getSession(String sessionId) async =>
+      throw UnimplementedError();
 }
 
 class _AbruptContinueSimulationRepository implements SimulationRepository {
@@ -225,6 +243,7 @@ class _AbruptContinueSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> continueSimulation({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) async =>
       throw UnimplementedError(
           'existing session should prevent fallback rerun');
@@ -233,6 +252,7 @@ class _AbruptContinueSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> continueSimulationStream({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) =>
       Stream<SimulationStreamEventModel>.fromIterable(
         <SimulationStreamEventModel>[
@@ -247,6 +267,10 @@ class _AbruptContinueSimulationRepository implements SimulationRepository {
           }),
         ],
       );
+
+  @override
+  Future<SimulationSessionModel> getSession(String sessionId) async =>
+      throw UnimplementedError();
 }
 
 class _FakeRef implements Ref {
@@ -284,7 +308,10 @@ class _RecordingSimulationNotifier extends SimulationNotifier {
   }) async {}
 
   @override
-  Future<bool> continueSimulation(String userResponse) async {
+  Future<bool> continueSimulation(
+    String userResponse, {
+    int? plannedRoundCount,
+  }) async {
     replies.add(userResponse);
     state = state.copyWith(
       isLoading: false,
@@ -309,7 +336,10 @@ class _FailingContinueNotifier extends SimulationNotifier {
   }) async {}
 
   @override
-  Future<bool> continueSimulation(String userResponse) async {
+  Future<bool> continueSimulation(
+    String userResponse, {
+    int? plannedRoundCount,
+  }) async {
     state = state.copyWith(
       isLoading: false,
       isContinuing: false,

@@ -18,6 +18,7 @@ import (
 
 type actionStatusSender interface {
 	SendActionStatus(actionID, status string, data map[string]interface{})
+	SendToolResult(payload map[string]interface{})
 }
 
 type updateNodeResponder interface {
@@ -77,6 +78,16 @@ func (s legacyActionStatusSender) SendActionStatus(actionID, status string, data
 		log.Printf("Failed to send action status: %v", err)
 	} else {
 		log.Printf("✅ Action status sent: status=%s, action_id=%s", status, actionID)
+	}
+}
+
+func (s legacyActionStatusSender) SendToolResult(payload map[string]interface{}) {
+	if err := s.writer.WriteJSON(map[string]interface{}{
+		"type":        "tool_result",
+		"tool_result": payload,
+		"timestamp":   time.Now().Unix(),
+	}); err != nil {
+		log.Printf("Failed to send tool result payload: %v", err)
 	}
 }
 
@@ -272,6 +283,9 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(sender actionStatus
 			})
 		}
 
+	case "execution_summary":
+		h.handleExecutionSummaryActionWithResponder(sender, toolResultID, action, widgetType, authToken)
+
 	default:
 		log.Printf("Unknown widget type in action feedback: %s", widgetType)
 	}
@@ -302,6 +316,176 @@ func normalizeActionType(widgetType string) string {
 	default:
 		return "review"
 	}
+}
+
+func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
+	sender actionStatusSender,
+	recordID string,
+	action string,
+	widgetType string,
+	authToken string,
+) {
+	if h.backendURL == "" || authToken == "" || recordID == "" {
+		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
+			"message":     "缺少执行结果回传所需的连接信息",
+			"widget_type": widgetType,
+		})
+		return
+	}
+
+	statusPath := "confirm"
+	var body []byte
+	if strings.EqualFold(action, "dismiss") {
+		statusPath = "reject"
+		payload, err := json.Marshal(map[string]interface{}{
+			"reason": "Rejected from chat execution summary",
+		})
+		if err != nil {
+			sender.SendActionStatus(recordID, "failed", map[string]interface{}{
+				"message":     "无法构造拒绝请求",
+				"widget_type": widgetType,
+			})
+			return
+		}
+		body = payload
+	}
+
+	endpoint := fmt.Sprintf("%s/api/v1/executions/records/%s/%s", h.backendURL, recordID, statusPath)
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
+			"message":     "无法创建执行回传请求",
+			"widget_type": widgetType,
+		})
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+authToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
+			"message":     fmt.Sprintf("执行回传失败: %v", err),
+			"widget_type": widgetType,
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	var payload map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
+			"message":     "无法解析执行回传结果",
+			"widget_type": widgetType,
+		})
+		return
+	}
+	if resp.StatusCode >= 300 {
+		message := extractErrorMessage(payload)
+		if message == "" {
+			message = fmt.Sprintf("执行回传失败，status=%d", resp.StatusCode)
+		}
+		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
+			"message":     message,
+			"widget_type": widgetType,
+		})
+		return
+	}
+
+	status := "confirmed"
+	message := "执行结果已更新"
+	if strings.EqualFold(action, "dismiss") {
+		status = "dismissed"
+		message = "已拒绝这次执行"
+	}
+	sender.SendActionStatus(recordID, status, map[string]interface{}{
+		"message":     message,
+		"widget_type": widgetType,
+	})
+	sender.SendToolResult(buildExecutionSummaryToolResultPayload(payload))
+}
+
+func buildExecutionSummaryToolResultPayload(record map[string]interface{}) map[string]interface{} {
+	recordID, _ := record["id"].(string)
+	executionID, _ := record["execution_intent_id"].(string)
+	executionStatus, _ := record["execution_status"].(string)
+	errorMessage, _ := record["error_message"].(string)
+	requiresConfirmation, _ := record["requires_confirmation"].(bool)
+	resultPreview, _ := record["result_preview"].(map[string]interface{})
+	parsedOutput, _ := record["parsed_output"].(map[string]interface{})
+
+	summary := extractExecutionSummaryText(resultPreview, errorMessage)
+	title := "OpenClaw 执行结果"
+	nextAction := "继续查看结果，或直接发送下一条控制指令"
+	if requiresConfirmation {
+		title = "OpenClaw 仍在等待确认"
+		nextAction = "继续确认以完成执行"
+	} else if executionStatus == "failed" || executionStatus == "timed_out" || errorMessage != "" {
+		title = "OpenClaw 执行未完成"
+		nextAction = "补充更明确的指令，或稍后重试"
+	}
+
+	return map[string]interface{}{
+		"tool_name": "openclaw.chat_control",
+		"success":   !requiresConfirmation && errorMessage == "" && executionStatus != "failed" && executionStatus != "timed_out",
+		"data": map[string]interface{}{
+			"record_id":             recordID,
+			"execution_intent_id":   executionID,
+			"status":                executionStatus,
+			"requires_confirmation": requiresConfirmation,
+			"parsed_output":         parsedOutput,
+			"result_preview":        resultPreview,
+			"approval_requested":    record["approval_requested"],
+		},
+		"error_message": errorMessage,
+		"suggestion":    nextAction,
+		"widget_type":   "execution_summary",
+		"widget_data": map[string]interface{}{
+			"title":                 title,
+			"summary":               summary,
+			"status":                executionStatus,
+			"tool_result_id":        recordID,
+			"execution_id":          executionID,
+			"record_id":             recordID,
+			"executor":              "openclaw",
+			"next_action":           nextAction,
+			"error_message":         errorMessage,
+			"requires_confirmation": requiresConfirmation,
+			"result_preview":        resultPreview,
+			"impact_summary":        "这次结果来自用户自己的 OpenClaw 远程执行链路。",
+		},
+		"tool_call_id": recordID,
+	}
+}
+
+func extractExecutionSummaryText(resultPreview map[string]interface{}, errorMessage string) string {
+	if errorMessage != "" {
+		return errorMessage
+	}
+	if resultPreview != nil {
+		if summary, ok := resultPreview["summary"].(string); ok && strings.TrimSpace(summary) != "" {
+			return summary
+		}
+		if text, ok := resultPreview["text"].(string); ok && strings.TrimSpace(text) != "" {
+			return text
+		}
+		if command, ok := resultPreview["command"].(string); ok && strings.TrimSpace(command) != "" {
+			return command
+		}
+	}
+	return "OpenClaw 已返回最新执行状态。"
+}
+
+func extractErrorMessage(payload map[string]interface{}) string {
+	if detail, ok := payload["detail"].(string); ok {
+		return detail
+	}
+	if errorBody, ok := payload["error"].(map[string]interface{}); ok {
+		if message, ok := errorBody["message"].(string); ok {
+			return message
+		}
+	}
+	return ""
 }
 
 func (h *ChatOrchestrator) persistActionFeedback(authToken, toolResultID, widgetType, action string) error {

@@ -28,10 +28,9 @@ const _openClawGuestPresets = <_OpenClawConnectionPreset>[
   _OpenClawConnectionPreset(
     id: 'guest_local_main',
     label: '访客模式默认引擎',
-    description: '为本机演示环境准备好的默认地址与协议；若令牌具备执行写权限可直接体验，否则建议改用设备配对。',
+    description: '为本机演示环境准备好的默认地址与协议；任务委派会优先复用 Sparkle 后端链路，如需直连再补充可执行令牌或设备配对。',
     config: OpenClawConnectionConfig(
       gatewayUrl: 'http://127.0.0.1:18789',
-      authToken: 'd1c836b87e26db7e164522b01bf346a2d7226b17',
       transport: 'responses_http',
     ),
   ),
@@ -91,6 +90,7 @@ class _OpenClawConnectionPanelState
         config.authToken ?? '',
         config.deviceToken ?? '',
         config.transport,
+        config.wsUrl ?? '',
         config.pairedAt?.toIso8601String() ?? '',
       ].join('|');
 
@@ -187,15 +187,16 @@ class _OpenClawConnectionPanelState
   }
 
   OpenClawConnectionConfig? _buildConfig() {
-    final gatewayUrl = _gatewayController.text.trim();
-    if (gatewayUrl.isEmpty ||
-        (!gatewayUrl.startsWith('http://') &&
-            !gatewayUrl.startsWith('https://'))) {
+    final rawUrl = _gatewayController.text.trim();
+    final isHttpLike =
+        rawUrl.startsWith('http://') || rawUrl.startsWith('https://');
+    final isWsLike = rawUrl.startsWith('ws://') || rawUrl.startsWith('wss://');
+    if (rawUrl.isEmpty || (!isHttpLike && !isWsLike)) {
       return null;
     }
 
     return OpenClawConnectionConfig(
-      gatewayUrl: gatewayUrl,
+      gatewayUrl: rawUrl,
       authToken: _authMode == 'token' && _tokenController.text.trim().isNotEmpty
           ? _tokenController.text.trim()
           : null,
@@ -204,6 +205,7 @@ class _OpenClawConnectionPanelState
               ? _deviceTokenController.text.trim()
               : null,
       transport: _transport,
+      wsUrl: _transport == 'gateway_ws' && isWsLike ? rawUrl : null,
       pairedAt: _authMode == 'device' ? DateTime.now() : null,
     );
   }
@@ -212,7 +214,7 @@ class _OpenClawConnectionPanelState
     final copy = ExecutionCopy.of(context);
     final config = _buildConfig();
     if (config == null) {
-      _showSnackBar('请输入以 http:// 或 https:// 开头的网关地址', isError: true);
+      _showSnackBar('请输入以 http://、https://、ws:// 或 wss:// 开头的地址', isError: true);
       return;
     }
 
@@ -237,7 +239,7 @@ class _OpenClawConnectionPanelState
     final copy = ExecutionCopy.of(context);
     final config = _buildConfig();
     if (config == null) {
-      _showSnackBar('请输入有效的网关地址', isError: true);
+      _showSnackBar('请输入有效的 OpenClaw 地址', isError: true);
       return;
     }
 

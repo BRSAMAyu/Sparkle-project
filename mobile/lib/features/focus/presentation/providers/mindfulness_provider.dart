@@ -13,6 +13,7 @@ import 'package:sparkle/features/focus/data/services/context_service.dart';
 import 'package:sparkle/features/focus/data/services/prediction_service.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/features/visual_elements/data/repositories/visual_element_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -151,7 +152,7 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
     _lastPauseTime = null;
 
     // Call backend to start task if it's pending
-    if (task.status == TaskStatus.pending) {
+    if (task.status == TaskStatus.pending && isServerTaskId(task.id)) {
       unawaited(
         _taskRepository.startTask(task.id).then((_) {
           debugPrint('✅ Task started in backend: ${task.id}');

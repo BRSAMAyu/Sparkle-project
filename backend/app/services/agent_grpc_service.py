@@ -33,6 +33,7 @@ from app.orchestration.chat_modes import (
     CHAT_MODE_EXPERT_PREFIX,
     CHAT_MODE_STANDARD,
     CHAT_MODE_STUDY_PLAN,
+    CHAT_MODE_TEAM_PREFIX,
     normalize_chat_mode,
 )
 from app.orchestration.orchestrator import ChatOrchestrator
@@ -73,6 +74,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         if mode.startswith(CHAT_MODE_EXPERT_PREFIX):
             expert_id = mode[len(CHAT_MODE_EXPERT_PREFIX) :].strip() or "unknown"
             return f"expert_{expert_id}_workflow"
+        if mode.startswith(CHAT_MODE_TEAM_PREFIX):
+            return "expert_team_workflow"
         return "standard_chat"
 
     @staticmethod

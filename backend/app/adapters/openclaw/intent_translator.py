@@ -11,6 +11,10 @@ class IntentTranslator:
     """Translate ExecutionIntent to OpenClaw `/v1/responses` requests."""
 
     def build_session_key(self, intent: ExecutionIntent, *, agent_id: str = "") -> str:
+        policy = intent.policy or {}
+        override = str(policy.get("session_key") or policy.get("chat_session_key") or "").strip()
+        if override:
+            return override
         agent_suffix = agent_id or "main"
         return f"sparkle:{agent_suffix}:{intent.user_id}:{intent.task_id}"
 
@@ -97,6 +101,10 @@ class IntentTranslator:
         approval_policy = policy.get("approval_policy")
         if approval_policy:
             lines.append(f"Approval policy: {approval_policy}")
+
+        working_directory = str(policy.get("working_directory") or "").strip()
+        if working_directory:
+            lines.append(f"When executing shell commands, use working directory: {working_directory}")
 
         template_metadata = policy.get("template_metadata") or {}
         if template_metadata.get("template_name"):

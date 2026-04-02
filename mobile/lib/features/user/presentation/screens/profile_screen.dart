@@ -624,9 +624,11 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(width: DS.sm),
                   Expanded(
                     child: SparkleButton.destructive(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.pop(context);
-                        ref.read(authProvider.notifier).logout();
+                        await ref.read(authProvider.notifier).logout();
+                        if (!context.mounted) return;
+                        context.go('/login');
                       },
                       label: l10n.confirm,
                     ),

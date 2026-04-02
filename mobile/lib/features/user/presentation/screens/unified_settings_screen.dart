@@ -323,9 +323,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final isCompact = MediaQuery.sizeOf(context).width < 380;
     final enterToSend = ref.watch(enterToSendProvider);
     final transparentMode = ref.watch(transparentModeProvider);
-    final transparencyLevel = ref.watch(transparencyLevelProvider);
-    final systemUpdateLevel = ref.watch(systemUpdateLevelProvider);
-    final aiReasoningMode = ref.watch(aiReasoningModeProvider);
+    final transparencyLevel = normalizeTransparencyLevelSetting(
+      ref.watch(transparencyLevelProvider),
+    );
+    final systemUpdateLevel = normalizeSystemUpdateLevelSetting(
+      ref.watch(systemUpdateLevelProvider),
+    );
+    final aiReasoningMode = normalizeAiReasoningModeSetting(
+      ref.watch(aiReasoningModeProvider),
+    );
     final showChatContextToggle = ref.watch(showChatContextToggleProvider);
     final showChatPredictionDock = ref.watch(showChatPredictionDockProvider);
     final showChatTransparencyCapsule =
@@ -338,6 +344,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final learningPrefs = ref.watch(learningPreferencesProvider);
     final pushPrefs = ref.watch(pushPreferencesProvider);
     final notificationPrefs = ref.watch(notificationPreferenceSettingsProvider);
+    final notificationLevel = normalizeNotificationLevelSetting(
+      notificationPrefs.notificationLevel,
+    );
     final taskReminderConfig = ref.watch(taskReminderConfigProvider);
     final weeklyAgenda = ref.watch(weeklyAgendaProvider);
 
@@ -1133,12 +1142,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         title: const Text('通知级别'),
                         subtitle: Text(
                           _notificationLevelDescription(
-                            notificationPrefs.notificationLevel,
+                            notificationLevel,
                           ),
                         ),
                       ),
                       _buildSettingsDropdownField<String>(
-                        value: notificationPrefs.notificationLevel,
+                        value: notificationLevel,
                         items: [
                           DropdownMenuItem(
                             value: 'minimal',
@@ -1177,9 +1186,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       _buildSelectionPreviewCard(
                         icon: Icons.notifications_active_outlined,
                         title:
-                            '${_notificationLevelLabel(notificationPrefs.notificationLevel)}通知',
+                            '${_notificationLevelLabel(notificationLevel)}通知',
                         description: _notificationLevelPreview(
-                          notificationPrefs.notificationLevel,
+                          notificationLevel,
                         ),
                       ),
                       const Divider(height: DS.spacing24),

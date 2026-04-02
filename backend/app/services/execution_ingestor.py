@@ -198,9 +198,10 @@ class ExecutionIngestor:
     ) -> ExecutionRecord:
         record = await self._get_user_record(record_id=record_id, user_id=user_id)
         intent = await self._get_user_intent(intent_id=record.execution_intent_id, user_id=user_id)
-        task = await self._get_user_task(task_id=intent.task_id, user_id=user_id)
-
-        await self._rollback_task_if_needed(task)
+        task = None
+        if not self._should_skip_task_sync(intent):
+            task = await self._get_user_task(task_id=intent.task_id, user_id=user_id)
+            await self._rollback_task_if_needed(task)
 
         old_status = intent.status
         intent.status = ExecutionIntentStatus.HANDED_BACK
@@ -208,13 +209,15 @@ class ExecutionIngestor:
         intent.error_category = "user_rejected"
         intent.error_message = reason or "Rejected by user"
         intent.trust_level = TrustLevel.RAW
-        task.execution_mode = "human"
+        if task is not None:
+            task.execution_mode = "human"
 
         record.trust_level = TrustLevel.RAW.value
         record.error_category = "user_rejected"
         record.error_message = reason or "Rejected by user"
 
-        self._db.add(task)
+        if task is not None:
+            self._db.add(task)
         self._db.add(intent)
         self._db.add(record)
         await self._db.commit()
@@ -243,7 +246,7 @@ class ExecutionIngestor:
                 "execution_intent_id": str(intent.id),
                 "task_id": str(intent.task_id),
                 "reason": reason,
-                "progress_at_handback": 1.0 if task.status == TaskStatus.IN_PROGRESS else 0.0,
+                "progress_at_handback": 1.0 if task is not None and task.status == TaskStatus.IN_PROGRESS else 0.0,
                 "timestamp": _utcnow().isoformat(),
             },
         )
@@ -439,20 +442,22 @@ class ExecutionIngestor:
             intent.error_category = "execution_failed"
             intent.error_message = parsed.get("error_message")
 
-        task = await self._get_user_task(task_id=intent.task_id, user_id=intent.user_id)
-        task.execution_mode = intent.execution_mode.value
+        task = None
+        if not self._should_skip_task_sync(intent):
+            task = await self._get_user_task(task_id=intent.task_id, user_id=intent.user_id)
+            task.execution_mode = intent.execution_mode.value
 
-        if (evaluation.can_update_task or user_confirmed) and parsed.get("success"):
-            await self._complete_task_safely(task=task)
-            if intent.plan_id:
-                await self._create_plan_execution_record(
-                    intent=intent,
-                    parsed=parsed,
-                    evaluation=evaluation,
-                    trust_level=intent.trust_level,
-                )
-        else:
-            self._db.add(task)
+            if (evaluation.can_update_task or user_confirmed) and parsed.get("success"):
+                await self._complete_task_safely(task=task)
+                if intent.plan_id:
+                    await self._create_plan_execution_record(
+                        intent=intent,
+                        parsed=parsed,
+                        evaluation=evaluation,
+                        trust_level=intent.trust_level,
+                    )
+            else:
+                self._db.add(task)
 
         record.trust_level = intent.trust_level.value
         self._db.add(record)
@@ -579,6 +584,10 @@ class ExecutionIngestor:
             raise ValueError("Task not found")
         return task
 
+    @staticmethod
+    def _should_skip_task_sync(intent: ExecutionIntent) -> bool:
+        return bool((intent.policy or {}).get("chat_control"))
+
     async def _get_user_record(self, *, record_id: UUID, user_id: UUID) -> ExecutionRecord:
         result = await self._db.execute(
             select(ExecutionRecord)
@@ -676,9 +685,22 @@ class ExecutionIngestor:
                 continue
             if field_name not in parsed_output or parsed_output[field_name] is None:
                 continue
-            expected_type = type_map.get(field_schema.get("type"))
-            if expected_type and not isinstance(parsed_output[field_name], expected_type):
-                errors.append(f"type:{field_name}:{field_schema.get('type')}")
+            schema_type = field_schema.get("type")
+            expected_labels: list[str] = []
+            expected_types: list[type[Any] | tuple[type[Any], ...]] = []
+            if isinstance(schema_type, list):
+                for item in schema_type:
+                    python_type = type_map.get(item)
+                    if python_type:
+                        expected_labels.append(str(item))
+                        expected_types.append(python_type)
+            else:
+                python_type = type_map.get(schema_type)
+                if python_type:
+                    expected_labels.append(str(schema_type))
+                    expected_types.append(python_type)
+            if expected_types and not isinstance(parsed_output[field_name], tuple(expected_types)):
+                errors.append(f"type:{field_name}:{'|'.join(expected_labels)}")
 
         if not errors:
             return parsed

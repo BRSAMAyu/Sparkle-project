@@ -54,6 +54,7 @@ enum _SimulationViewMode { setup, active, review }
 enum _SimulationBottomTrayMode { hidden, peek, expanded }
 
 class _SimulationScreenState extends ConsumerState<SimulationScreen> {
+  static const double _immersiveAutoScrollFollowThreshold = 160;
   static const Map<String, String> _scenarioLabels = simulationScenarioLabels;
   static const Map<String, List<String>> _scenarioParticipantOptions = {
     'study_group': ['优等生', '中等生', '提问者', '总结者', '练习教练'],
@@ -1081,16 +1082,17 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       ),
     );
     if (!_isPlaybackPaused) {
-      _scrollToLatestRound();
+      _scrollToLatestRound(forceImmersive: true);
     }
   }
 
-  void _scrollToLatestRound() {
+  void _scrollToLatestRound({bool forceImmersive = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
-      if (_immersiveScrollController.hasClients) {
+      if (_immersiveScrollController.hasClients &&
+          (forceImmersive || _shouldFollowImmersiveFeed())) {
         unawaited(
           _immersiveScrollController.animateTo(
             _immersiveScrollController.position.maxScrollExtent,
@@ -1109,6 +1111,21 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         );
       }
     });
+  }
+
+  bool _shouldFollowImmersiveFeed() {
+    if (!_immersiveScrollController.hasClients) {
+      return false;
+    }
+    final position = _immersiveScrollController.position;
+    if (!position.hasContentDimensions) {
+      return false;
+    }
+    if (position.maxScrollExtent <= 0) {
+      return true;
+    }
+    final distanceToBottom = position.maxScrollExtent - position.pixels;
+    return distanceToBottom <= _immersiveAutoScrollFollowThreshold;
   }
 
   bool _hasPendingUserInteraction(SimulationState state) =>

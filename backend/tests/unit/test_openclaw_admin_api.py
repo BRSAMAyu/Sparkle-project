@@ -61,12 +61,13 @@ async def test_user_execution_connection_status_is_available(db_session, monkeyp
             is_active=True,
         )
 
-    async def fake_health(self):
+    async def fake_health(self, *, user_id=None):
         return {
             "openclaw_enabled": True,
             "gateway_url": "http://openclaw.local",
             "transport": "gateway_ws",
             "ws_url": "ws://openclaw.local",
+            "connection_source": "global",
             "reachable": True,
             "latency_ms": 42,
             "message": "gateway_ws",
@@ -98,6 +99,54 @@ async def test_user_execution_connection_status_is_available(db_session, monkeyp
     assert payload["capabilities"]
     assert payload["degraded_user_count"] == 1
     assert payload["connected_nodes"] == 2
+    assert payload["connection_source"] == "global"
+    app.dependency_overrides = {}
+
+
+@pytest.mark.asyncio
+async def test_user_execution_connection_profile_crud(db_session):
+    user = User(
+        id=uuid4(),
+        username="exec_profile_user",
+        email="exec_profile_user@example.com",
+        hashed_password="hashed",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    async def override_get_db():
+        yield db_session
+
+    async def override_user():
+        return user
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_user
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as ac:
+        put_resp = await ac.put(
+            "/api/v1/executions/connection/profile",
+            json={
+                "gateway_url": "https://remote.openclaw.example",
+                "auth_token": "secret-token",
+                "transport": "gateway_ws",
+            },
+        )
+        get_resp = await ac.get("/api/v1/executions/connection/profile")
+        delete_resp = await ac.delete("/api/v1/executions/connection/profile")
+
+    assert put_resp.status_code == 200
+    assert get_resp.status_code == 200
+    assert delete_resp.status_code == 200
+    assert put_resp.json()["configured"] is True
+    assert put_resp.json()["gateway_url"] == "https://remote.openclaw.example"
+    assert put_resp.json()["ws_url"] == "wss://remote.openclaw.example"
+    assert get_resp.json()["auth_token"] == "secret-token"
+    assert delete_resp.json()["configured"] is False
     app.dependency_overrides = {}
 
 

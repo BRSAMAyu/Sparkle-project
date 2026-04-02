@@ -31,6 +31,7 @@ def openclaw_settings():
         "OPENCLAW_TRANSPORT": settings.OPENCLAW_TRANSPORT,
         "OPENCLAW_WS_URL": settings.OPENCLAW_WS_URL,
         "OPENCLAW_WS_ALLOW_INSECURE_AUTH": settings.OPENCLAW_WS_ALLOW_INSECURE_AUTH,
+        "OPENCLAW_DEFAULT_WORKDIR": settings.OPENCLAW_DEFAULT_WORKDIR,
     }
     settings.OPENCLAW_ENABLED = True
     settings.OPENCLAW_GATEWAY_URL = "http://openclaw.local"
@@ -39,6 +40,7 @@ def openclaw_settings():
     settings.OPENCLAW_TRANSPORT = "responses_http"
     settings.OPENCLAW_WS_URL = "ws://openclaw.local"
     settings.OPENCLAW_WS_ALLOW_INSECURE_AUTH = True
+    settings.OPENCLAW_DEFAULT_WORKDIR = ""
     try:
         yield settings
     finally:
@@ -49,6 +51,7 @@ def openclaw_settings():
         settings.OPENCLAW_TRANSPORT = original["OPENCLAW_TRANSPORT"]
         settings.OPENCLAW_WS_URL = original["OPENCLAW_WS_URL"]
         settings.OPENCLAW_WS_ALLOW_INSECURE_AUTH = original["OPENCLAW_WS_ALLOW_INSECURE_AUTH"]
+        settings.OPENCLAW_DEFAULT_WORKDIR = original["OPENCLAW_DEFAULT_WORKDIR"]
 
 
 @pytest.fixture
@@ -147,6 +150,180 @@ async def test_create_intent_applies_template_strategy_and_node_policy(
     assert intent.policy["quality_strategy"]["variant_name"]
     assert intent.policy["target_node_id"] == "node-shell"
     assert intent.policy["target_node_command"] == "system.run"
+
+
+@pytest.mark.asyncio
+async def test_create_intent_applies_default_shell_workdir(
+    db_session,
+    openclaw_settings,
+    mute_execution_side_effects,
+    monkeypatch,
+) -> None:
+    from app.config import settings
+
+    settings.OPENCLAW_DEFAULT_WORKDIR = "/tmp/sparkle-demo"
+
+    async def _list_nodes(self, *, connected_only=True, last_connected=None):
+        return {
+            "items": [
+                {
+                    "nodeId": "node-shell",
+                    "name": "Mac Mini",
+                    "platform": "macos",
+                    "connected": True,
+                    "commands": ["system.run"],
+                    "caps": ["system.run"],
+                }
+            ]
+        }
+
+    monkeypatch.setattr("app.adapters.openclaw.client.OpenClawClient.list_nodes", _list_nodes)
+
+    user = User(username="phase4workdir", email="phase4workdir@example.com", hashed_password="hashed", photon_balance=0)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(
+        user_id=user.id,
+        title="运行终端诊断检查仓库状态",
+        type=TaskType.PLANNING,
+        tags=["shell", "ops"],
+        estimated_minutes=15,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    service = ExecutionService(db=db_session)
+    intent = await service.create_intent(
+        task_id=task.id,
+        user_id=user.id,
+        template_id="shell_diagnostics",
+    )
+
+    assert intent.policy["working_directory"] == "/tmp/sparkle-demo"
+
+
+@pytest.mark.asyncio
+async def test_handoff_chat_control_creates_hidden_task_and_stable_session_key(
+    db_session,
+    openclaw_settings,
+    mute_execution_side_effects,
+    monkeypatch,
+) -> None:
+    from app.config import settings
+
+    settings.OPENCLAW_TRANSPORT = "gateway_ws"
+    settings.OPENCLAW_DEFAULT_WORKDIR = "/tmp/sparkle-demo"
+
+    async def _list_nodes(self, *, connected_only=True, last_connected=None):
+        return {
+            "items": [
+                {
+                    "nodeId": "node-shell",
+                    "name": "Mac Mini",
+                    "platform": "macos",
+                    "connected": True,
+                    "commands": ["system.run"],
+                    "caps": ["system.run"],
+                }
+            ]
+        }
+
+    async def _execute(self, request_body, *, timeout_seconds=None, event_callback=None):
+        return {
+            "id": "resp_chat_control_1",
+            "status": "completed",
+            "output": [
+                {
+                    "type": "message",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": '{"summary":"workspace clean"}',
+                        }
+                    ],
+                }
+            ],
+        }
+
+    monkeypatch.setattr("app.adapters.openclaw.client.OpenClawClient.list_nodes", _list_nodes)
+    monkeypatch.setattr("app.adapters.openclaw.client.OpenClawClient.execute", _execute)
+
+    user = User(
+        username="phase4chatcontrol",
+        email="phase4chatcontrol@example.com",
+        hashed_password="hashed",
+        photon_balance=0,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    service = ExecutionService(db=db_session)
+    intent, record = await service.handoff_chat_control(
+        session_id="chat-session-1",
+        user_id=user.id,
+        message="在我的电脑上运行 git status",
+        request_id="chat-req-1",
+    )
+
+    hidden_task = await db_session.get(Task, intent.task_id)
+
+    assert hidden_task is not None
+    assert hidden_task.deleted_at is not None
+    assert intent.status == ExecutionIntentStatus.SUCCEEDED
+    assert intent.error_message is None
+    assert intent.policy["session_key"] == f"sparkle:chat:default:{user.id}:chat-session-1"
+    assert intent.policy["working_directory"] == "/tmp/sparkle-demo"
+    assert intent.policy["chat_control"] is True
+    assert record is not None
+    assert record.parsed_output == {"summary": "workspace clean"}
+    assert record.error_message is None
+
+
+@pytest.mark.asyncio
+async def test_handoff_surfaces_pairing_required_when_node_discovery_fails(
+    db_session,
+    openclaw_settings,
+    mute_execution_side_effects,
+    monkeypatch,
+) -> None:
+    async def _list_nodes(self, *, connected_only=True, last_connected=None):
+        raise OpenClawError("pairing required")
+
+    monkeypatch.setattr("app.adapters.openclaw.client.OpenClawClient.list_nodes", _list_nodes)
+
+    user = User(username="phase4pairing", email="phase4pairing@example.com", hashed_password="hashed", photon_balance=0)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(
+        user_id=user.id,
+        title="运行终端诊断检查仓库状态",
+        type=TaskType.PLANNING,
+        tags=["shell", "ops"],
+        estimated_minutes=15,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    service = ExecutionService(db=db_session)
+    with pytest.raises(ValueError, match="pairing required"):
+        await service.handoff_to_openclaw(
+            task_id=task.id,
+            user_id=user.id,
+            template_id="shell_diagnostics",
+        )
 
 
 @pytest.mark.asyncio

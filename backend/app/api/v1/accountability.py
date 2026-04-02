@@ -13,6 +13,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
@@ -594,6 +595,16 @@ async def _build_recent_shares_payload(
 ) -> list[dict]:
     result = await db.execute(
         select(SharedResource)
+        .options(
+            selectinload(SharedResource.plan),
+            selectinload(SharedResource.task),
+            selectinload(SharedResource.knowledge_node),
+            selectinload(SharedResource.seed_library),
+            selectinload(SharedResource.seed_item),
+            selectinload(SharedResource.cognitive_fragment),
+            selectinload(SharedResource.curiosity_capsule),
+            selectinload(SharedResource.behavior_pattern),
+        )
         .where(
             and_(
                 SharedResource.target_user_id.in_([current_user_id, partner_id]),

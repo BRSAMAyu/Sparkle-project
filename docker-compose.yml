@@ -106,12 +106,20 @@ services:
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432
       - REDIS_HOST=sparkle_redis
+      # OpenClaw runs on the host machine, not inside this container.
+      - OPENCLAW_GATEWAY_URL=http://host.docker.internal:18789
+      - OPENCLAW_WS_URL=ws://host.docker.internal:18789
+      - OPENCLAW_WS_DEVICE_IDENTITY_PATH=/app/.openclaw/device.json
+      - OPENCLAW_DEFAULT_WORKDIR=${PWD}
       - SERVICE_ROLE=api
       - RUN_MIGRATIONS=true
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     volumes:
       - ./backend:/app
       - ./data/dictionaries:/app/data/dictionaries:ro
+      - ${HOME}/.openclaw/sparkle-backend:/app/.openclaw:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       sparkle_db:
         condition: service_healthy
@@ -150,11 +158,18 @@ services:
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432
       - REDIS_HOST=sparkle_redis
+      - OPENCLAW_GATEWAY_URL=http://host.docker.internal:18789
+      - OPENCLAW_WS_URL=ws://host.docker.internal:18789
+      - OPENCLAW_WS_DEVICE_IDENTITY_PATH=/app/.openclaw/device.json
+      - OPENCLAW_DEFAULT_WORKDIR=${PWD}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - SERVICE_ROLE=grpc
     volumes:
       - ./backend:/app
+      - ${HOME}/.openclaw/sparkle-backend:/app/.openclaw:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       sparkle_db:
         condition: service_healthy

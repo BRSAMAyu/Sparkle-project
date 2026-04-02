@@ -501,6 +501,48 @@ async def test_overview_dashboard_nudge_friend_profile_and_context_are_populated
 
 
 @pytest.mark.asyncio
+async def test_dashboard_returns_recent_shares_without_lazy_load_errors(
+    accountability_app,
+    db_session,
+):
+    app, state = accountability_app
+    owner = _make_user(username="owner")
+    partner = _make_user(username="partner")
+    await _commit_all(db_session, owner, partner)
+
+    friendship = await _create_friendship(db_session, owner, partner)
+    partnership = await _create_partnership(
+        db_session,
+        initiator=owner,
+        partner=partner,
+        friendship=friendship,
+        status=AccountabilityStatus.ACTIVE,
+    )
+    shared_task = await _create_task(db_session, user=owner, title="一起完成演示彩排")
+    shared_resource = SharedResource(
+        shared_by=owner.id,
+        target_user_id=partner.id,
+        task_id=shared_task.id,
+        comment="今晚一起过一遍",
+    )
+    await _commit_all(db_session, shared_resource)
+
+    state["current_user"] = owner
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        dashboard = await client.get(f"/accountability/{partnership.id}/dashboard")
+
+    assert dashboard.status_code == 200
+    payload = dashboard.json()
+    assert len(payload["recent_shares"]) == 1
+    assert payload["recent_shares"][0]["resource_type"] == "task"
+    assert payload["recent_shares"][0]["title"] == "一起完成演示彩排"
+    assert payload["recent_shares"][0]["comment"] == "今晚一起过一遍"
+
+
+@pytest.mark.asyncio
 async def test_send_friend_request_creates_notification_for_target(
     accountability_app,
     db_session,

@@ -663,10 +663,12 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	{
 		theater.POST("/predictions/generate", h.proxyWithHeaders)
 		theater.POST("/predictions/what-if", h.proxyWithHeaders)
+		theater.GET("/predictions/:id", h.proxyWithHeaders)
 		theater.POST("/predictions/:id/adopt", h.proxyWithHeaders)
 		theater.POST("/predictions/:id/actuals", h.proxyWithHeaders)
 		theater.POST("/predictions/:id/promote-node", h.proxyWithHeaders)
 		theater.GET("/predictions/:id/accuracy", h.proxyWithHeaders)
+		theater.GET("/accuracy/overview", h.proxyWithHeaders)
 		theater.POST("/snapshots", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered theater proxy routes")

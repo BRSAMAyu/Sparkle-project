@@ -10,6 +10,8 @@ func TestIsLongRunningRoute(t *testing.T) {
 		{path: "/api/v1/stt/transcribe", want: true},
 		{path: "/api/v1/capsules/generate", want: true},
 		{path: "/api/v1/capsules/generate/batch", want: true},
+		{path: "/api/v1/theater/predictions/generate", want: true},
+		{path: "/api/v1/theater/predictions/what-if", want: true},
 		{path: "/api/v1/learning-paths/node-1/full-plan", want: true},
 		{path: "/api/v1/plans/123/generate-tasks", want: true},
 		{path: "/api/v1/plans/123", want: false},

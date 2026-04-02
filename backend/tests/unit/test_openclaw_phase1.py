@@ -33,12 +33,14 @@ def openclaw_settings():
         "OPENCLAW_AUTH_TOKEN": settings.OPENCLAW_AUTH_TOKEN,
         "OPENCLAW_DEFAULT_AGENT_ID": settings.OPENCLAW_DEFAULT_AGENT_ID,
         "OPENCLAW_TRANSPORT": settings.OPENCLAW_TRANSPORT,
+        "OPENCLAW_DEFAULT_WORKDIR": settings.OPENCLAW_DEFAULT_WORKDIR,
     }
     settings.OPENCLAW_ENABLED = True
     settings.OPENCLAW_GATEWAY_URL = "http://openclaw.local"
     settings.OPENCLAW_AUTH_TOKEN = "token"
     settings.OPENCLAW_DEFAULT_AGENT_ID = "default"
     settings.OPENCLAW_TRANSPORT = "responses_http"
+    settings.OPENCLAW_DEFAULT_WORKDIR = ""
     try:
         yield settings
     finally:
@@ -47,6 +49,7 @@ def openclaw_settings():
         settings.OPENCLAW_AUTH_TOKEN = original["OPENCLAW_AUTH_TOKEN"]
         settings.OPENCLAW_DEFAULT_AGENT_ID = original["OPENCLAW_DEFAULT_AGENT_ID"]
         settings.OPENCLAW_TRANSPORT = original["OPENCLAW_TRANSPORT"]
+        settings.OPENCLAW_DEFAULT_WORKDIR = original["OPENCLAW_DEFAULT_WORKDIR"]
 
 
 def test_intent_translator_builds_response_request() -> None:
@@ -75,6 +78,31 @@ def test_intent_translator_builds_response_request() -> None:
     assert "Task Goal" in payload["input"]
     assert "ONLY use these tools: browser" in payload["instructions"]
     assert payload["stream"] is False
+
+
+def test_intent_translator_includes_shell_workdir_instruction() -> None:
+    translator = IntentTranslator()
+    intent = ExecutionIntent(
+        id=uuid4(),
+        task_id=uuid4(),
+        user_id=uuid4(),
+        execution_mode=ExecutionMode.AGENT,
+        executor=ExecutorType.OPENCLAW,
+        goal="输出当前项目目录",
+        instructions=["优先使用只读命令"],
+        target_env=ExecutionTargetEnv.SHELL,
+        policy={"allow_exec": True, "allowed_tools": ["exec"], "working_directory": "/tmp/project-demo"},
+        success_criteria={"type": "structured_output", "required_fields": ["summary"]},
+        result_contract={"artifact_types": ["text"]},
+        timeout_seconds=120,
+        status=ExecutionIntentStatus.READY,
+        trust_level=TrustLevel.RAW,
+        idempotency_key="y",
+    )
+
+    payload = translator.translate_gateway_request(intent, agent_id="worker")
+
+    assert "working directory: /tmp/project-demo" in payload["message"]
 
 
 def test_result_parser_parses_text_and_json() -> None:

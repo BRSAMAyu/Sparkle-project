@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.models.execution_intent import ExecutionIntentStatus
 from app.orchestration.execution_engine import ExecutionEngineMixin
 
 
@@ -157,3 +158,77 @@ async def test_maybe_short_circuit_bridge_tool_generate_learning_report_builds_a
     assert call_args.kwargs["arguments"]["delivery_mode"] == "chat_bridge"
     assert call_args.kwargs["arguments"]["source_chat_session_id"] == "session-1"
     assert result is not None
+
+
+@pytest.mark.asyncio
+async def test_maybe_short_circuit_openclaw_chat_control_returns_none_for_explanatory_prompt(orchestrator):
+    result = await orchestrator._maybe_short_circuit_openclaw_chat_control(
+        active_tools=[],
+        user_message="解释一下 git rebase 是什么",
+        request_extra_context={},
+        user_id="3b3f4d7e-7544-41d2-b17a-f3cd0ba8f2a1",
+        session_id="session-1",
+        response_id="resp-1",
+        request_id="req-1",
+        trace_id="trace-1",
+        workflow_id="workflow-1",
+        prompt_version="v1",
+        active_db=MagicMock(),
+    )
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_maybe_short_circuit_openclaw_chat_control_emits_tool_result(orchestrator, monkeypatch):
+    intent = MagicMock(
+        id="intent-1",
+        status=ExecutionIntentStatus.SUCCEEDED,
+        error_message=None,
+        target_env=None,
+    )
+    record = MagicMock(
+        id="record-1",
+        error_message=None,
+        parsed_output={"summary": "workspace clean"},
+        approval_requested=0,
+        raw_response={
+            "output": [
+                {
+                    "type": "message",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": '{"summary":"workspace clean"}',
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+
+    service_instance = MagicMock()
+    service_instance.handoff_chat_control = AsyncMock(return_value=(intent, record))
+
+    monkeypatch.setattr(
+        "app.orchestration.execution_engine.ExecutionService",
+        MagicMock(return_value=service_instance),
+    )
+
+    responses = await orchestrator._maybe_short_circuit_openclaw_chat_control(
+        active_tools=[],
+        user_message="在我的电脑上运行 git status",
+        request_extra_context={},
+        user_id="3b3f4d7e-7544-41d2-b17a-f3cd0ba8f2a1",
+        session_id="session-1",
+        response_id="resp-1",
+        request_id="req-1",
+        trace_id="trace-1",
+        workflow_id="workflow-1",
+        prompt_version="v1",
+        active_db=MagicMock(),
+    )
+
+    assert responses is not None
+    assert any(response.HasField("tool_result") for response in responses)
+    service_instance.handoff_chat_control.assert_awaited_once()

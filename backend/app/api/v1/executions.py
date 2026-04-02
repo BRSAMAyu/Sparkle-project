@@ -10,15 +10,15 @@ from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
-from app.config import settings
+from app.api.deps import get_current_user, get_optional_current_user
 from app.db.session import get_db
-from app.models.execution_intent import ExecutionIntent
+from app.models.execution_intent import ExecutionIntent, ExecutionIntentStatus
 from app.models.execution_record import ExecutionRecord
 from app.models.user import User
 from app.services.execution_profile_service import ExecutionProfileService
 from app.services.execution_result_validator import ExecutionResultValidator
 from app.services.execution_service import ExecutionService
+from app.services.openclaw_connection_profile_service import OpenClawConnectionProfileService
 
 router = APIRouter(prefix="/executions", tags=["executions"])
 
@@ -133,6 +133,7 @@ class ExecutionConnectionStatusResponse(BaseModel):
     gateway_url: str | None = None
     transport: str | None = None
     ws_url: str | None = None
+    connection_source: str | None = None
     latency_ms: int | None = None
     message: str | None = None
     capabilities: list[str] = Field(default_factory=list)
@@ -142,6 +143,25 @@ class ExecutionConnectionStatusResponse(BaseModel):
     supports_quality_loop: bool
     degraded_user_count: int = 0
     degradation_threshold: int = 0
+
+
+class ExecutionConnectionProfileRequest(BaseModel):
+    gateway_url: str = ""
+    auth_token: str | None = None
+    device_token: str | None = None
+    transport: str = "responses_http"
+    ws_url: str | None = None
+    paired_at: str | None = None
+
+
+class ExecutionConnectionProfileResponse(BaseModel):
+    configured: bool
+    gateway_url: str = ""
+    auth_token: str | None = None
+    device_token: str | None = None
+    transport: str = "responses_http"
+    ws_url: str | None = None
+    paired_at: str | None = None
 
 
 class ExecutionProfileTypeSummaryResponse(BaseModel):
@@ -165,6 +185,8 @@ class ExecutionProfileSummaryResponse(BaseModel):
 class ExecutionRecordResponse(BaseModel):
     id: str
     execution_intent_id: str
+    execution_status: str | None = None
+    requires_confirmation: bool = False
     trust_level: str
     quality_score: float | None
     parsed_output: dict | None
@@ -251,6 +273,8 @@ async def _record_to_response(
     return ExecutionRecordResponse(
         id=payload["id"],
         execution_intent_id=payload["execution_intent_id"],
+        execution_status=intent.status.value if intent and intent.status else None,
+        requires_confirmation=bool(intent and intent.status == ExecutionIntentStatus.WAITING_APPROVAL),
         trust_level=payload["trust_level"],
         quality_score=payload["quality_score"],
         parsed_output=payload["parsed_output"],
@@ -280,24 +304,27 @@ async def _record_to_response(
 
 @router.get("/health")
 async def execution_health(
+    current_user: User | None = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = ExecutionService(db=db)
-    return await service.get_health()
+    return await service.get_health(user_id=current_user.id if current_user else None)
 
 
 @router.get("/connection/status", response_model=ExecutionConnectionStatusResponse)
 async def execution_connection_status(
+    current_user: User | None = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = ExecutionService(db=db)
-    health = await service.get_health()
+    health = await service.get_health(user_id=current_user.id if current_user else None)
     return ExecutionConnectionStatusResponse(
         openclaw_enabled=bool(health.get("openclaw_enabled")),
         reachable=bool(health.get("reachable")),
         gateway_url=health.get("gateway_url"),
         transport=health.get("transport"),
         ws_url=health.get("ws_url"),
+        connection_source=health.get("connection_source"),
         latency_ms=health.get("latency_ms"),
         message=health.get("message"),
         capabilities=list(health.get("capabilities") or []),
@@ -308,6 +335,38 @@ async def execution_connection_status(
         degraded_user_count=int(health.get("degraded_user_count", 0)),
         degradation_threshold=int(health.get("degradation_threshold", 0)),
     )
+
+
+@router.get("/connection/profile", response_model=ExecutionConnectionProfileResponse)
+async def get_execution_connection_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    profile = await OpenClawConnectionProfileService(db).get_profile(user_id=current_user.id)
+    payload = profile.to_payload() if profile is not None else {"configured": False}
+    return ExecutionConnectionProfileResponse(**payload)
+
+
+@router.put("/connection/profile", response_model=ExecutionConnectionProfileResponse)
+async def update_execution_connection_profile(
+    request: ExecutionConnectionProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    profile = await OpenClawConnectionProfileService(db).save_profile(
+        user_id=current_user.id,
+        payload=request.model_dump(),
+    )
+    return ExecutionConnectionProfileResponse(**profile.to_payload())
+
+
+@router.delete("/connection/profile", response_model=ExecutionConnectionProfileResponse)
+async def delete_execution_connection_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await OpenClawConnectionProfileService(db).clear_profile(user_id=current_user.id)
+    return ExecutionConnectionProfileResponse(configured=False)
 
 
 @router.get("/profile/summary", response_model=ExecutionProfileSummaryResponse)
@@ -351,9 +410,6 @@ async def handoff_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not settings.OPENCLAW_ENABLED:
-        raise HTTPException(status_code=503, detail="OpenClaw integration is not enabled")
-
     service = ExecutionService(db=db)
     try:
         intent = await service.handoff_to_openclaw(

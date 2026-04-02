@@ -20,6 +20,28 @@ Sparkle App  ──[委派任务]──▶  Sparkle 后端  ──[HTTP/WS]─�
 
 Sparkle 后端是唯一与 OpenClaw 通信的一方。手机 App 不直接连接 OpenClaw；App 通过 Sparkle 后端感知连接状态。
 
+### 1.1 本仓库推荐入口
+
+如果你当前就是在这个仓库里做本机联调，优先直接使用：
+
+```bash
+make openclaw-ready
+```
+
+它会完成以下事情：
+
+- 校正 OpenClaw gateway 暴露方式（默认优先同局域网可配对）
+- 确保本机 headless node 服务处于运行态
+- 自动批准 pending pairing request
+- 校验 `8000` 后端直连与 `8080` 网关代理的真实 handoff
+- 验证默认 shell 执行目录落在当前 Sparkle 仓库
+
+如果只想做回归验收，不改 OpenClaw 运行配置：
+
+```bash
+make openclaw-smoke
+```
+
 ---
 
 ## 二、OpenClaw 侧需要实现的接口
@@ -207,6 +229,9 @@ OPENCLAW_TRUST_AUTO_PROMOTE_MIN_HISTORY=5
 
 # 信任自动提级：成功率阈值（达到后从 VALIDATED 晋升到 TRUSTED）
 OPENCLAW_TRUST_AUTO_PROMOTE_SUCCESS_RATE=0.85
+
+# Shell 委派默认工作目录（建议指向 Sparkle 仓库根目录）
+OPENCLAW_DEFAULT_WORKDIR=/absolute/path/to/Sparkle-project
 ```
 
 ---
@@ -261,6 +286,20 @@ curl http://localhost:<sparkle_backend_port>/api/v1/executions/connection/status
   "supports_templates": true
 }
 ```
+
+### Step 2.5：仓库级一键验收
+
+```bash
+make openclaw-ready
+```
+
+期望结果：
+
+- OpenClaw gateway 可生成 setup code，不再是 loopback-only
+- `GET /api/v1/executions/connection/status` 返回 `reachable=true`
+- `connected_nodes >= 1`
+- 真实 handoff 成功
+- `pwd` 的结果目录为当前 Sparkle 仓库
 
 如果 `reachable: false`，检查：
 - `OPENCLAW_GATEWAY_URL` 是否正确

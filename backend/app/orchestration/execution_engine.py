@@ -10,6 +10,7 @@ from collections.abc import AsyncGenerator
 from datetime import datetime
 from typing import Any
 
+from google.protobuf import struct_pb2
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +34,7 @@ from app.core.metrics import (
 from app.core.pending_actions import pending_actions_store
 from app.core.task_manager import task_manager
 from app.gen.agent.v1 import agent_service_pb2
+from app.models.execution_intent import ExecutionIntentStatus
 from app.models.galaxy import KnowledgeNode
 from app.orchestration.agent_memory import AgentMemoryService
 from app.orchestration.agent_scoring import AgentScoringService
@@ -53,11 +55,82 @@ from app.orchestration.session_feedback import (
 from app.orchestration.statechart_engine import WorkflowState
 from app.orchestration.transparency_data_generator import StepType, TransparencyDataGenerator
 from app.orchestration.ux_envelope import ux_envelope_builder
+from app.services.execution_service import ExecutionService
 from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 
 _LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0
+_OPENCLAW_CHAT_CONTROL_EXPLICIT_HINTS = (
+    "openclaw",
+    "通过 openclaw",
+    "用 openclaw",
+    "在我的电脑上",
+    "在我电脑上",
+    "在我的设备上",
+    "on my computer",
+    "on my device",
+)
+_OPENCLAW_CHAT_CONTROL_ACTION_HINTS = (
+    "打开",
+    "运行",
+    "执行",
+    "检查",
+    "查看",
+    "搜索",
+    "读取",
+    "列出",
+    "打开一下",
+    "帮我打开",
+    "帮我运行",
+    "帮我执行",
+    "帮我检查",
+    "帮我查看",
+    "帮我搜索",
+    "open ",
+    "run ",
+    "execute ",
+    "check ",
+    "inspect ",
+    "search ",
+    "list ",
+    "show ",
+)
+_OPENCLAW_CHAT_CONTROL_DEVICE_HINTS = (
+    "电脑",
+    "设备",
+    "本机",
+    "本地",
+    "浏览器",
+    "网页",
+    "网站",
+    "终端",
+    "命令行",
+    "仓库",
+    "repo",
+    "repository",
+    "git",
+    "workspace",
+    "文件",
+    "文件夹",
+    "目录",
+    "shell",
+    "terminal",
+    "browser",
+)
+_OPENCLAW_CHAT_CONTROL_EXPLANATION_HINTS = (
+    "什么是",
+    "什么意思",
+    "解释",
+    "介绍",
+    "讲讲",
+    "为什么",
+    "怎么",
+    "what is",
+    "explain",
+    "why ",
+    "how ",
+)
 
 
 class ExecutionEngineMixin:
@@ -254,6 +327,377 @@ class ExecutionEngineMixin:
         if payload.get("source_chat_session_id"):
             metadata["source_chat_session_id"] = str(payload["source_chat_session_id"])
         return metadata
+
+    async def _maybe_short_circuit_openclaw_chat_control(
+        self,
+        *,
+        active_tools: list[str],
+        user_message: str,
+        request_extra_context: dict[str, Any] | None,
+        user_id: str,
+        session_id: str,
+        response_id: str,
+        request_id: str,
+        trace_id: str,
+        workflow_id: str,
+        prompt_version: str,
+        active_db: AsyncSession | None,
+    ) -> list[agent_service_pb2.ChatResponse] | None:
+        del active_tools
+        if active_db is None:
+            return None
+
+        normalized_message = str(user_message or "").strip()
+        if not normalized_message:
+            return None
+        if not self._looks_like_openclaw_chat_control_request(
+            message=normalized_message,
+            request_extra_context=request_extra_context or {},
+        ):
+            return None
+
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except Exception:
+            logger.debug("Skipping OpenClaw chat control short-circuit due to invalid user_id: {}", user_id)
+            return None
+
+        service = ExecutionService(db=active_db, redis=self.redis)
+        try:
+            intent, record = await service.handoff_chat_control(
+                session_id=session_id,
+                user_id=user_uuid,
+                message=normalized_message,
+                request_id=request_id,
+            )
+            assistant_text, tool_payload = self._build_openclaw_chat_control_payload(
+                message=normalized_message,
+                intent=intent,
+                record=record,
+            )
+            metadata = {
+                "response_id": response_id,
+                "trace_id": trace_id,
+                "session_id": session_id,
+                "openclaw_chat_control": "true",
+                "openclaw_intent_id": str(intent.id),
+                "openclaw_record_id": str(record.id) if record else "",
+                "openclaw_status": intent.status.value,
+            }
+            await self._persist_assistant_message(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                full_response=assistant_text,
+            )
+            await self._cache_response(
+                session_id,
+                request_id,
+                {
+                    "message": assistant_text,
+                    "full_text": assistant_text,
+                    "tool_results": [tool_payload],
+                    "metadata": metadata,
+                },
+            )
+            return self._openclaw_chat_control_responses(
+                response_id=response_id,
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                metadata=metadata,
+                assistant_text=assistant_text,
+                tool_payload=tool_payload,
+            )
+        except Exception as exc:
+            logger.warning("OpenClaw chat control short-circuit failed: {}", exc)
+            assistant_text, tool_payload = self._build_openclaw_chat_control_error_payload(
+                message=normalized_message,
+                error_message=str(exc),
+            )
+            metadata = {
+                "response_id": response_id,
+                "trace_id": trace_id,
+                "session_id": session_id,
+                "openclaw_chat_control": "true",
+                "openclaw_status": "failed",
+            }
+            await self._persist_assistant_message(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                full_response=assistant_text,
+            )
+            await self._cache_response(
+                session_id,
+                request_id,
+                {
+                    "message": assistant_text,
+                    "full_text": assistant_text,
+                    "tool_results": [tool_payload],
+                    "metadata": metadata,
+                },
+            )
+            return self._openclaw_chat_control_responses(
+                response_id=response_id,
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                metadata=metadata,
+                assistant_text=assistant_text,
+                tool_payload=tool_payload,
+            )
+
+    def _looks_like_openclaw_chat_control_request(
+        self,
+        *,
+        message: str,
+        request_extra_context: dict[str, Any],
+    ) -> bool:
+        if bool(request_extra_context.get("openclaw_chat_control")):
+            return True
+
+        normalized = str(message or "").strip().lower()
+        if not normalized:
+            return False
+        if any(hint in normalized for hint in _OPENCLAW_CHAT_CONTROL_EXPLICIT_HINTS):
+            return True
+        if any(hint in normalized for hint in _OPENCLAW_CHAT_CONTROL_EXPLANATION_HINTS):
+            return False
+
+        has_action = any(hint in normalized for hint in _OPENCLAW_CHAT_CONTROL_ACTION_HINTS)
+        has_device = any(hint in normalized for hint in _OPENCLAW_CHAT_CONTROL_DEVICE_HINTS)
+        return has_action and has_device
+
+    def _build_openclaw_chat_control_payload(
+        self,
+        *,
+        message: str,
+        intent,
+        record,
+    ) -> tuple[str, dict[str, Any]]:
+        status = intent.status.value if intent and intent.status else "unknown"
+        error_message = str(
+            (record.error_message if record else None)
+            or (intent.error_message if intent else None)
+            or ""
+        ).strip()
+        parsed_output = record.parsed_output if record and isinstance(record.parsed_output, dict) else None
+        output_text = self._extract_openclaw_output_text(record.raw_response if record else {})
+        approval = (record.raw_response or {}).get("approval") if record and isinstance(record.raw_response, dict) else {}
+        approval = approval if isinstance(approval, dict) else {}
+        result_preview = parsed_output or self._build_openclaw_preview(
+            output_text=output_text,
+            approval=approval,
+            error_message=error_message,
+        )
+        waiting_approval = intent.status == ExecutionIntentStatus.WAITING_APPROVAL
+
+        if waiting_approval:
+            assistant_text = "我已经把这条请求交给你的 OpenClaw 了，当前在等待你确认后继续执行。"
+            summary = "OpenClaw 已接手这条请求，确认后会继续在你的设备上执行。"
+            next_action = "确认以继续执行，或忽略这次请求"
+        elif intent.status in {ExecutionIntentStatus.SUCCEEDED, ExecutionIntentStatus.PARTIAL}:
+            assistant_text = "我已经通过你的 OpenClaw 执行了这条请求，结果卡片里可以直接展开查看。"
+            summary = self._truncate_openclaw_summary(output_text) or "OpenClaw 已返回结果。"
+            next_action = "继续查看结果，或直接发下一条控制指令"
+        else:
+            assistant_text = f"我尝试调用你的 OpenClaw，但这次执行没有成功：{error_message or '请稍后再试。'}"
+            summary = error_message or "这次执行没有成功完成。"
+            next_action = "补充更明确的指令，或稍后重试"
+
+        tool_result_id = str(record.id) if record else str(intent.id)
+        widget_data = {
+            "title": "OpenClaw 正等待确认" if waiting_approval else "OpenClaw 执行结果",
+            "summary": summary,
+            "status": status,
+            "tool_result_id": tool_result_id,
+            "execution_id": str(intent.id),
+            "record_id": str(record.id) if record else None,
+            "executor": "openclaw",
+            "target_env": intent.target_env.value if intent.target_env else "general",
+            "next_action": next_action,
+            "error_message": error_message or None,
+            "requires_confirmation": waiting_approval,
+            "approval_requested": int(record.approval_requested or 0) if record else 0,
+            "source_message": message,
+            "result_preview": result_preview,
+            "impact_summary": "这次结果来自用户自己的 OpenClaw 远程执行链路。",
+        }
+        tool_data = {
+            "intent_id": str(intent.id),
+            "record_id": str(record.id) if record else None,
+            "status": status,
+            "requires_confirmation": waiting_approval,
+            "parsed_output": parsed_output,
+            "output_text": output_text,
+            "approval": approval or None,
+        }
+        return assistant_text, {
+            "tool_name": "openclaw.chat_control",
+            "success": intent.status in {
+                ExecutionIntentStatus.WAITING_APPROVAL,
+                ExecutionIntentStatus.SUCCEEDED,
+                ExecutionIntentStatus.PARTIAL,
+            },
+            "data": tool_data,
+            "error_message": error_message,
+            "suggestion": next_action,
+            "widget_type": "execution_summary",
+            "widget_data": widget_data,
+            "tool_call_id": tool_result_id,
+        }
+
+    def _build_openclaw_chat_control_error_payload(
+        self,
+        *,
+        message: str,
+        error_message: str,
+    ) -> tuple[str, dict[str, Any]]:
+        error_id = f"openclaw-error-{uuid.uuid4().hex[:12]}"
+        assistant_text = f"这条请求更像是 OpenClaw 远程控制，但当前没有执行成功：{error_message}"
+        tool_payload = {
+            "tool_name": "openclaw.chat_control",
+            "success": False,
+            "data": {
+                "status": "failed",
+                "requires_confirmation": False,
+                "source_message": message,
+            },
+            "error_message": error_message,
+            "suggestion": "先检查 OpenClaw 连接状态，再重试这条请求",
+            "widget_type": "execution_summary",
+            "widget_data": {
+                "title": "OpenClaw 远程控制未完成",
+                "summary": error_message,
+                "status": "failed",
+                "tool_result_id": error_id,
+                "executor": "openclaw",
+                "next_action": "确认连接状态后重试",
+                "error_message": error_message,
+                "requires_confirmation": False,
+                "source_message": message,
+            },
+            "tool_call_id": error_id,
+        }
+        return assistant_text, tool_payload
+
+    def _openclaw_chat_control_responses(
+        self,
+        *,
+        response_id: str,
+        request_id: str,
+        trace_id: str,
+        workflow_id: str,
+        prompt_version: str,
+        metadata: dict[str, Any],
+        assistant_text: str,
+        tool_payload: dict[str, Any],
+    ) -> list[agent_service_pb2.ChatResponse]:
+        now = int(datetime.now().timestamp())
+        data_struct = struct_pb2.Struct()
+        if isinstance(tool_payload.get("data"), dict):
+            data_struct.update(tool_payload["data"])
+        widget_struct = struct_pb2.Struct()
+        if isinstance(tool_payload.get("widget_data"), dict):
+            widget_struct.update(tool_payload["widget_data"])
+        return [
+            agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=now,
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                status_update=agent_service_pb2.AgentStatus(
+                    state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
+                    details="正在连接用户的 OpenClaw",
+                    current_agent_name="Sparkle AI",
+                ),
+            ),
+            agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=now,
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                tool_result=agent_service_pb2.ToolResultPayload(
+                    tool_name=str(tool_payload.get("tool_name") or "openclaw.chat_control"),
+                    success=bool(tool_payload.get("success")),
+                    data=data_struct,
+                    error_message=str(tool_payload.get("error_message") or ""),
+                    suggestion=str(tool_payload.get("suggestion") or ""),
+                    widget_type=str(tool_payload.get("widget_type") or "execution_summary"),
+                    widget_data=widget_struct,
+                    tool_call_id=str(tool_payload.get("tool_call_id") or ""),
+                ),
+            ),
+            agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=now,
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                metadata={str(k): str(v) for k, v in metadata.items()},
+                full_text=assistant_text,
+                finish_reason=agent_service_pb2.STOP,
+            ),
+        ]
+
+    @staticmethod
+    def _extract_openclaw_output_text(raw_response: dict[str, Any]) -> str:
+        if not isinstance(raw_response, dict):
+            return ""
+        output = raw_response.get("output") or []
+        if isinstance(output, str):
+            return output.strip()
+        parts: list[str] = []
+        for item in output:
+            if not isinstance(item, dict):
+                continue
+            if item.get("type") != "message":
+                continue
+            for block in item.get("content") or []:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "output_text" and str(block.get("text") or "").strip():
+                    parts.append(str(block["text"]).strip())
+        return "\n".join(parts).strip()
+
+    @staticmethod
+    def _build_openclaw_preview(
+        *,
+        output_text: str,
+        approval: dict[str, Any],
+        error_message: str,
+    ) -> dict[str, Any]:
+        if output_text:
+            return {"text": output_text}
+        command = str(approval.get("command") or "").strip()
+        cwd = str(approval.get("cwd") or "").strip()
+        if command or cwd:
+            preview = {}
+            if command:
+                preview["command"] = command
+            if cwd:
+                preview["cwd"] = cwd
+            return preview
+        if error_message:
+            return {"text": error_message}
+        return {"text": "OpenClaw 已接手，但暂时没有返回可展示的文本结果。"}
+
+    @staticmethod
+    def _truncate_openclaw_summary(output_text: str, limit: int = 160) -> str:
+        normalized = " ".join(str(output_text or "").split()).strip()
+        if not normalized:
+            return ""
+        if len(normalized) <= limit:
+            return normalized
+        return f"{normalized[: limit - 1].rstrip()}…"
 
     async def _emit_roundtable_preview(
         self,
@@ -914,7 +1358,7 @@ class ExecutionEngineMixin:
                 response.created_at = int(datetime.now().timestamp())
                 response.request_id = request_id
                 response.trace_id = response.trace_id or trace_id
-                response.workflow_id = f"multi_agent_{chat_mode}"
+                response.workflow_id = response.workflow_id or workflow_id
                 response.prompt_version = response.prompt_version or prompt_version
                 response_count += 1
                 content_type = response.WhichOneof("content")

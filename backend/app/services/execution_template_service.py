@@ -282,8 +282,8 @@ class ExecutionTemplateService:
                         "required": ["summary", "key_output", "next_steps"],
                         "properties": {
                             "summary": {"type": "string"},
-                            "key_output": {"type": "array"},
-                            "next_steps": {"type": "array"},
+                            "key_output": {"type": ["array", "string"]},
+                            "next_steps": {"type": ["array", "string"]},
                         },
                     },
                 },
