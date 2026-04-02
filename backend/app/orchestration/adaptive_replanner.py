@@ -20,9 +20,11 @@ from app.models.task_feedback import TaskFeedback
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_review_service import plan_review_service
 from app.services.personalization.preference_service import PreferenceService
+from app.services.plan_adjustment_applier import PlanAdjustmentApplier
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_state_service import PlanStateService
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.services.card_protocol.replanner_bridge import ReplannerCardBridge
 
 if TYPE_CHECKING:
     from app.orchestration.step_feedback_collector import PlanExecutionFeedback
@@ -263,7 +265,9 @@ class AdaptiveReplanner:
         self.redis = redis
         self.progress_service = progress_service or PlanProgressService(db, redis)
         self.plan_state_service = PlanStateService(db, redis)
+        self.plan_adjustment_applier = PlanAdjustmentApplier(db, redis)
         self.cognitive_pattern_trigger = CognitivePatternTrigger(db, redis)
+        self._card_bridge: ReplannerCardBridge | None = None
 
     async def on_task_completed(
         self,
@@ -553,7 +557,15 @@ class AdaptiveReplanner:
                 feedback_category=feedback_category,
             )
 
-    async def _apply_incremental_adjustment(
+    @property
+    def card_bridge(self) -> ReplannerCardBridge | None:
+        """Lazy-init the card protocol bridge (graceful if protocol not yet migrated)."""
+        if self._card_bridge is None:
+            try:
+                self._card_bridge = ReplannerCardBridge(self.db, self.redis)
+            except Exception:
+                logger.debug("Card protocol bridge not available (pre-migration)")
+        return self._card_bridge
         self,
         report: PlanHealthReport,
         trigger: str,
@@ -624,6 +636,49 @@ class AdaptiveReplanner:
             report.plan_id,
             adjustments,
         )
+
+        # Apply adjustments to actual task entities (the critical bridge)
+        try:
+            patch_result = await self.plan_adjustment_applier.apply_incremental_changes(
+                user_id=report.user_id,
+                plan_id=report.plan_id,
+                trigger=trigger,
+            )
+            if patch_result.applied and (patch_result.affected_task_ids or patch_result.inserted_task_ids):
+                logger.info(
+                    "PlanAdjustmentApplier patched {} tasks, inserted {} reviews for plan {}",
+                    len(patch_result.affected_task_ids),
+                    len(patch_result.inserted_task_ids),
+                    report.plan_id,
+                )
+                # Enhance the adaptation record with task-level outcome
+                record = AdaptationRecord(
+                    what_changed=f"{record.what_changed}; tasks patched: {len(patch_result.affected_task_ids)}",
+                    why=record.why,
+                    expected_effect=record.expected_effect,
+                    user_facing_message=patch_result.user_facing_summary or record.user_facing_message,
+                    source="adaptive_replanner+plan_adjustment_applier",
+                )
+        except Exception as exc:
+            logger.warning("PlanAdjustmentApplier failed (non-fatal): {}", exc)
+
+        # --- Card protocol writeback (breakpoint fix 1) ---
+        try:
+            bridge = self.card_bridge
+            if bridge:
+                affected_ids = patch_result.affected_task_ids if 'patch_result' in dir() else None
+                inserted_ids = patch_result.inserted_task_ids if 'patch_result' in dir() else None
+                await bridge.on_incremental_adjustment(
+                    user_id=report.user_id,
+                    plan_id=report.plan_id,
+                    adjustments=adjustments,
+                    trigger=trigger,
+                    affected_task_ids=affected_ids,
+                    inserted_task_ids=inserted_ids,
+                )
+        except Exception as exc:
+            logger.warning("Card protocol writeback failed (non-fatal): {}", exc)
+
         await self._enqueue_adaptation_update(report.user_id, record, update_type="plan_adaptation")
         return [record]
 
@@ -672,6 +727,20 @@ class AdaptiveReplanner:
         )
 
         logger.info("Triggered auto-replan for plan {}", report.plan_id)
+
+        # --- Card protocol writeback (breakpoint fix for full replan) ---
+        try:
+            bridge = self.card_bridge
+            if bridge:
+                await bridge.on_full_replan(
+                    user_id=report.user_id,
+                    plan_id=report.plan_id,
+                    reasons=report.reasons,
+                    severity=report.severity,
+                )
+        except Exception as exc:
+            logger.warning("Card protocol writeback (full replan) failed (non-fatal): {}", exc)
+
         await self._enqueue_adaptation_update(report.user_id, record, update_type="plan_adaptation")
         return [record]
 

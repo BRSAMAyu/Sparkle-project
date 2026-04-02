@@ -3,7 +3,7 @@ Galaxy 事件消费者 - 处理错题创建事件
 """
 import asyncio
 from datetime import timezone, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from loguru import logger
 from sqlalchemy import select
@@ -74,20 +74,43 @@ class GalaxyEventConsumer:
             await self._handle_simulation_gap_revealed(event)
 
     async def _handle_error_created(self, event: dict):
-        """处理错题创建事件 - 降低关联节点掌握度"""
+        """处理错题创建事件 - 图演化和种子预热
+
+        Note: 节点掌握度更新已迁移到 ErrorBookMasterySyncService (断点2)，
+        该服务在 analyze_and_link() 完成后直接调用，使用基于 error_type 的
+        精确权重而非旧的粗糙 -10% 逻辑。
+        """
         try:
             user_id = event.get("user_id")
             linked_node_ids = event.get("linked_node_ids", [])
+            error_id = event.get("error_id")
 
             if not user_id or not linked_node_ids:
                 return
 
             async with AsyncSessionLocal() as db:
-                galaxy_service = GalaxyService(db)
-                await galaxy_service.handle_error_created(event)
+                # 掌握度更新: 由 ErrorBookMasterySyncService 在 analyze_and_link() 后直接处理
+                # 不再调用 galaxy_service.handle_error_created()（旧逻辑为粗糙 -10%）
                 evolution = GraphEvolutionService(db)
                 await evolution.handle_error_created(event)
                 await SeedExtractor(db).prewarm_for_scenarios(UUID(str(user_id)))
+
+                # --- Card protocol writeback: error → evidence edge ---
+                try:
+                    from app.services.card_protocol.mastery_bridge import ErrorMasteryBridge
+                    bridge = ErrorMasteryBridge(db)
+                    await bridge.on_error_created(
+                        user_id=UUID(str(user_id)),
+                        error_id=UUID(str(error_id)) if error_id else uuid4(),
+                        linked_node_ids=[UUID(str(nid)) for nid in linked_node_ids],
+                        analysis=event.get("analysis"),
+                        subject=event.get("subject"),
+                        chapter=event.get("chapter"),
+                        error_type=event.get("error_type"),
+                        root_cause=event.get("root_cause"),
+                    )
+                except Exception as card_exc:
+                    logger.warning("Card protocol error-mastery bridge failed (non-fatal): {}", card_exc)
 
             logger.info(f"Processed error_created for user {user_id}")
 

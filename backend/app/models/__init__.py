@@ -22,6 +22,28 @@ from app.models.analytics import UserDailyMetric
 from app.models.auth_security import AuthAuditAction, AuthAuditLog, UserSession
 from app.models.audit_log import ComplianceCheckLog, DataAccessLog, SecurityAuditLog, SystemConfigChangeLog
 from app.models.base import GUID, BaseModel
+from app.models.card_protocol import (
+    ArtifactStatus,
+    ArtifactType,
+    BindingMode,
+    Card,
+    CardCreatedBy,
+    CardEdge,
+    CardLifecycleStatus,
+    CardSourceType,
+    CardType,
+    CardVisibility,
+    DeliveryChannel,
+    DeliveryStrategy,
+    EdgeType,
+    InterventionAcceptanceStatus,
+    InterventionOutcomeStatus,
+    InterventionRecord,
+    InterventionTriggerType,
+    OccurrenceStatus,
+    PlanningArtifact,
+    TaskOccurrence,
+)
 from app.models.capsule_favorite import CapsuleFavorite
 from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
 from app.models.capsule_generation_job import CapsuleGenerationJob, GenerationType
@@ -364,4 +386,25 @@ __all__ = [
     # Calendar Events
     "CalendarEvent",
     "EventSource",
+    # Card Protocol
+    "Card",
+    "CardType",
+    "CardLifecycleStatus",
+    "CardVisibility",
+    "CardSourceType",
+    "CardCreatedBy",
+    "CardEdge",
+    "EdgeType",
+    "BindingMode",
+    "TaskOccurrence",
+    "OccurrenceStatus",
+    "PlanningArtifact",
+    "ArtifactType",
+    "ArtifactStatus",
+    "InterventionRecord",
+    "InterventionTriggerType",
+    "DeliveryStrategy",
+    "DeliveryChannel",
+    "InterventionAcceptanceStatus",
+    "InterventionOutcomeStatus",
 ]

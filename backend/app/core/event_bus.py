@@ -300,6 +300,182 @@ class CalendarEventDeleted(Event):
         }
 
 
+# ---------------------------------------------------------------------------
+# Card Protocol Events (Phase 1)
+# Aligned with: docs/product/SPARKLE_CARD_PROTOCOL_TAXONOMY_2026-04-02.md
+# ---------------------------------------------------------------------------
+
+
+class CardCreatedEvent(Event):
+    """Fired when a new canonical card is created."""
+
+    def __init__(self, card_id: str, card_type: str, owner_id: str):
+        self.card_id = card_id
+        self.card_type = card_type
+        self.owner_id = owner_id
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "card.created",
+            "card_id": self.card_id,
+            "card_type": self.card_type,
+            "owner_id": self.owner_id,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class CardUpdatedEvent(Event):
+    """Fired when a card's metadata or version is updated."""
+
+    def __init__(self, card_id: str, card_type: str, version: int, changes: dict | None = None):
+        self.card_id = card_id
+        self.card_type = card_type
+        self.version = version
+        self.changes = changes or {}
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "card.updated",
+            "card_id": self.card_id,
+            "card_type": self.card_type,
+            "version": self.version,
+            "changes": self.changes,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class CardLifecycleChangedEvent(Event):
+    """Fired when a card's lifecycle status changes."""
+
+    def __init__(self, card_id: str, card_type: str, old_status: str, new_status: str):
+        self.card_id = card_id
+        self.card_type = card_type
+        self.old_status = old_status
+        self.new_status = new_status
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "card.lifecycle_changed",
+            "card_id": self.card_id,
+            "card_type": self.card_type,
+            "old_status": self.old_status,
+            "new_status": self.new_status,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class CardEdgeCreatedEvent(Event):
+    """Fired when a new edge is created between cards."""
+
+    def __init__(self, edge_id: str, from_card_id: str, to_card_id: str, edge_type: str):
+        self.edge_id = edge_id
+        self.from_card_id = from_card_id
+        self.to_card_id = to_card_id
+        self.edge_type = edge_type
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "card_edge.created",
+            "edge_id": self.edge_id,
+            "from_card_id": self.from_card_id,
+            "to_card_id": self.to_card_id,
+            "edge_type": self.edge_type,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class OccurrenceStatusChangedEvent(Event):
+    """Fired when a TaskOccurrence changes status."""
+
+    def __init__(self, occurrence_id: str, series_card_id: str, new_status: str):
+        self.occurrence_id = occurrence_id
+        self.series_card_id = series_card_id
+        self.new_status = new_status
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "occurrence.status_changed",
+            "occurrence_id": self.occurrence_id,
+            "series_card_id": self.series_card_id,
+            "new_status": self.new_status,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class OccurrenceCompletedEvent(Event):
+    """Fired when a TaskOccurrence is completed."""
+
+    def __init__(
+        self,
+        occurrence_id: str,
+        series_card_id: str,
+        actual_minutes: int | None = None,
+        completion_quality: int | None = None,
+    ):
+        self.occurrence_id = occurrence_id
+        self.series_card_id = series_card_id
+        self.actual_minutes = actual_minutes
+        self.completion_quality = completion_quality
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "occurrence.completed",
+            "occurrence_id": self.occurrence_id,
+            "series_card_id": self.series_card_id,
+            "actual_minutes": self.actual_minutes,
+            "completion_quality": self.completion_quality,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class InterventionRecordCreatedEvent(Event):
+    """Fired when a new InterventionRecord is created."""
+
+    def __init__(self, record_id: str, user_id: str, trigger_type: str, delivery_channel: str):
+        self.record_id = record_id
+        self.user_id = user_id
+        self.trigger_type = trigger_type
+        self.delivery_channel = delivery_channel
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "intervention_record.created",
+            "record_id": self.record_id,
+            "user_id": self.user_id,
+            "trigger_type": self.trigger_type,
+            "delivery_channel": self.delivery_channel,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class InterventionStatusChangedEvent(Event):
+    """Fired when an InterventionRecord's acceptance or outcome status changes."""
+
+    def __init__(self, record_id: str, user_id: str, acceptance_status: str, outcome_status: str):
+        self.record_id = record_id
+        self.user_id = user_id
+        self.acceptance_status = acceptance_status
+        self.outcome_status = outcome_status
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "intervention_record.status_changed",
+            "record_id": self.record_id,
+            "user_id": self.user_id,
+            "acceptance_status": self.acceptance_status,
+            "outcome_status": self.outcome_status,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class EventBus:
     """
     Event Bus - Redis Streams Implementation

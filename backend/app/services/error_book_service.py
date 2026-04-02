@@ -253,6 +253,15 @@ class ErrorBookService:
             except Exception as e:
                 logger.warning(f"Error book preference sync failed: {e}")
 
+            # --- Mastery sync: error diagnosis → knowledge node mastery ---
+            try:
+                from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
+                mastery_sync = ErrorBookMasterySyncService(self.db)
+                await mastery_sync.apply_error_diagnosis(user_id, error)
+                await self.db.commit()
+            except Exception as e:
+                logger.warning(f"Error book mastery sync (diagnosis) failed: {e}")
+
             # Publish Error Created Event
             try:
                 event = ErrorCreated(
@@ -671,6 +680,15 @@ class ErrorBookService:
             await processor.process_error_created(user_id)
         except Exception as e:
             logger.warning(f"Error book preference refresh after review failed: {e}")
+
+        # --- Mastery sync: review feedback → knowledge node mastery ---
+        try:
+            from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
+            mastery_sync = ErrorBookMasterySyncService(self.db)
+            await mastery_sync.apply_review_feedback(user_id, error, data.performance.value)
+            await self.db.commit()
+        except Exception as e:
+            logger.warning(f"Error book mastery sync (review) failed: {e}")
 
         return error
 
