@@ -7,11 +7,32 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.event_bus import event_bus
 from app.models.plan import Plan, PlanPriority, PlanStage
 from app.models.task import Task, TaskStatus
 from app.schemas.plan import PlanCreate, PlanUpdate
+
+
+async def _sync_plan_card_projection(db: AsyncSession, plan: Plan) -> None:
+    plan_id = str(plan.id)
+    if db.bind is None:
+        return
+
+    try:
+        from app.services.card_protocol.legacy_adapter import PlanAdapter
+
+        session_factory = async_sessionmaker(db.bind, class_=AsyncSession, expire_on_commit=False)
+        async with session_factory() as shadow_db:
+            shadow_plan = await shadow_db.get(Plan, plan.id)
+            if shadow_plan is None:
+                return
+            adapter = PlanAdapter(shadow_db, event_bus)
+            await adapter.plan_to_card(shadow_plan)
+            await shadow_db.commit()
+    except Exception as exc:
+        logger.warning("Plan card dual-write failed for {}: {}", plan_id, exc)
 
 
 class PlanService:
@@ -79,6 +100,7 @@ class PlanService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+        await _sync_plan_card_projection(db, db_obj)
 
         logger.info(
             f"Plan created: {db_obj.id} for user {user_id}, "
@@ -97,6 +119,7 @@ class PlanService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+        await _sync_plan_card_projection(db, db_obj)
         return db_obj
 
     @staticmethod
@@ -150,6 +173,7 @@ class PlanService:
         db.add(plan)
         await db.commit()
         await db.refresh(plan)
+        await _sync_plan_card_projection(db, plan)
 
         return new_progress
 
@@ -188,6 +212,7 @@ class PlanService:
         db.add(plan)
         await db.commit()
         await db.refresh(plan)
+        await _sync_plan_card_projection(db, plan)
 
         logger.info(f"Plan archived: {plan_id} for user {user_id}")
 
@@ -250,6 +275,7 @@ class PlanService:
         db.add(plan)
         await db.commit()
         await db.refresh(plan)
+        await _sync_plan_card_projection(db, plan)
 
         logger.info(f"Plan restored: {plan_id} for user {user_id}")
 

@@ -14,6 +14,7 @@ from loguru import logger
 from sqlalchemy import desc, select
 
 from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIVE_ROLLBACK_TOTAL
+from app.core.event_bus import event_bus
 from app.models.cognitive import BehaviorPattern
 from app.models.task import Task
 from app.models.task_feedback import TaskFeedback
@@ -21,6 +22,7 @@ from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_review_service import plan_review_service
 from app.services.personalization.preference_service import PreferenceService
 from app.services.plan_adjustment_applier import PlanAdjustmentApplier
+from app.services.plan_health_signal_service import PlanHealthSignalService
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_state_service import PlanStateService
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -266,6 +268,7 @@ class AdaptiveReplanner:
         self.progress_service = progress_service or PlanProgressService(db, redis)
         self.plan_state_service = PlanStateService(db, redis)
         self.plan_adjustment_applier = PlanAdjustmentApplier(db, redis)
+        self.plan_health_signal_service = PlanHealthSignalService(db, redis)
         self.cognitive_pattern_trigger = CognitivePatternTrigger(db, redis)
         self._card_bridge: ReplannerCardBridge | None = None
 
@@ -535,37 +538,62 @@ class AdaptiveReplanner:
         if not state:
             return cognitive_records
 
+        action_taken = "none"
+        action_records: list[AdaptationRecord] = []
+
         if report.recommended_action == "replan":
             if self._recently_triggered(state.facts, "last_replan_at", self.AUTO_REPLAN_COOLDOWN):
-                return cognitive_records
-            return cognitive_records + await self._trigger_full_replan(
-                report,
-                trigger=trigger,
-                task_id=task_id,
-                completion_rate=completion_rate,
-                feedback_category=feedback_category,
-            )
+                action_taken = "replan_cooldown_active"
+            else:
+                action_records = await self._trigger_full_replan(
+                    report,
+                    trigger=trigger,
+                    task_id=task_id,
+                    completion_rate=completion_rate,
+                    feedback_category=feedback_category,
+                )
+                action_taken = "full_replan_triggered"
         else:
             if self._recently_triggered(state.facts, "last_adjustment_at", self.AUTO_ADJUSTMENT_COOLDOWN):
-                return cognitive_records
-            return cognitive_records + await self._apply_incremental_adjustment(
-                report,
+                action_taken = "adjustment_cooldown_active"
+            else:
+                action_records = await self._apply_incremental_adjustment(
+                    report,
+                    trigger=trigger,
+                    task_id=task_id,
+                    completion_rate=completion_rate,
+                    difficulty_delta=difficulty_delta,
+                    feedback_category=feedback_category,
+                )
+                action_taken = "incremental_adjustment_applied"
+
+        # ---断点3: emit plan health signal ---
+        try:
+            await self.plan_health_signal_service.maybe_publish(
+                report=report,
                 trigger=trigger,
                 task_id=task_id,
-                completion_rate=completion_rate,
-                difficulty_delta=difficulty_delta,
                 feedback_category=feedback_category,
+                action_taken=action_taken,
+                adaptation_records=action_records,
+                existing_facts=state.facts or {},
             )
+        except Exception as exc:
+            logger.warning("PlanHealthSignal emit failed (non-fatal): {}", exc)
+
+        return cognitive_records + action_records
 
     @property
     def card_bridge(self) -> ReplannerCardBridge | None:
         """Lazy-init the card protocol bridge (graceful if protocol not yet migrated)."""
         if self._card_bridge is None:
             try:
-                self._card_bridge = ReplannerCardBridge(self.db, self.redis)
+                self._card_bridge = ReplannerCardBridge(self.db, event_bus)
             except Exception:
                 logger.debug("Card protocol bridge not available (pre-migration)")
         return self._card_bridge
+
+    async def _apply_incremental_adjustment(
         self,
         report: PlanHealthReport,
         trigger: str,

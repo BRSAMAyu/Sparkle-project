@@ -17,7 +17,7 @@ Phase 1-2 governance exception applies:
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy import select
@@ -68,7 +68,7 @@ class ReplannerCardBridge:
 
         Returns a summary of card protocol changes.
         """
-        summary = {"cards_updated": 0, "occurrences_adjusted": 0, "edges_created": 0}
+        summary = {"cards_updated": 0, "occurrences_adjusted": 0, "evidence_writebacks": 0}
 
         # 1. Find or create the plan card
         plan_card = await self._find_plan_card(plan_id)
@@ -105,8 +105,8 @@ class ReplannerCardBridge:
                 # Reschedule upcoming occurrences based on adjustment
                 time_multiplier = adjustments.get("adaptive_adjustments", {}).get("time_multiplier", 1.0)
                 if time_multiplier != 1.0:
-                    await self._adjust_occurrence_durations(task_card.id, time_multiplier)
-                    summary["occurrences_adjusted"] += 1
+                    adjusted_count = await self._adjust_occurrence_durations(task_card.id, time_multiplier)
+                    summary["occurrences_adjusted"] += adjusted_count
 
         # 4. Create evidence edges for the adjustment
         # The adjustment itself is evidence that the system detected a blockage
@@ -123,7 +123,7 @@ class ReplannerCardBridge:
                 plan_card.id,
                 metadata={"latest_adjustment_evidence": evidence_meta},
             )
-            summary["edges_created"] += 1
+            summary["evidence_writebacks"] += 1
 
         logger.info(
             "ReplannerCardBridge: projected incremental adjustment to card protocol. "
@@ -131,7 +131,7 @@ class ReplannerCardBridge:
             plan_card.id,
             summary["cards_updated"],
             summary["occurrences_adjusted"],
-            summary["edges_created"],
+            summary["evidence_writebacks"],
         )
         return summary
 
@@ -213,11 +213,9 @@ class ReplannerCardBridge:
     async def _adjust_occurrence_durations(
         self, series_card_id: uuid.UUID, time_multiplier: float
     ) -> int:
-        """Adjust window_start/window_end for upcoming PLANNED/READY occurrences."""
-        from sqlalchemy import update
-
+        """Adjust upcoming occurrence windows and preserve prior feedback payload."""
         stmt = (
-            update(TaskOccurrence)
+            select(TaskOccurrence)
             .where(
                 TaskOccurrence.series_card_id == series_card_id,
                 TaskOccurrence.occurrence_status.in_([
@@ -225,30 +223,42 @@ class ReplannerCardBridge:
                     OccurrenceStatus.READY,
                 ]),
             )
-            .values(
-                feedback_payload={
-                    "time_multiplier_applied": time_multiplier,
-                    "adjusted_by": "replanner_card_bridge",
-                }
-            )
         )
         result = await self.db.execute(stmt)
+        occurrences = list(result.scalars().all())
+
+        adjusted = 0
+        for occurrence in occurrences:
+            payload = dict(occurrence.feedback_payload or {})
+            payload["time_multiplier_applied"] = time_multiplier
+            payload["adjusted_by"] = "replanner_card_bridge"
+
+            if occurrence.window_start and occurrence.window_end:
+                current_duration = occurrence.window_end - occurrence.window_start
+                adjusted_seconds = max(int(current_duration.total_seconds() * time_multiplier), 60)
+                occurrence.window_end = occurrence.window_start + timedelta(seconds=adjusted_seconds)
+
+            occurrence.feedback_payload = payload
+            adjusted += 1
+
         await self.db.flush()
-        return result.rowcount
+        return adjusted
 
     async def _cancel_upcoming_planned_occurrences(self, plan_card_id: uuid.UUID) -> int:
-        """Cancel PLANNED occurrences for all task series in this plan."""
-        from sqlalchemy import update
-
+        """Cancel PLANNED occurrences for all task series in this plan via the service layer."""
         stmt = (
-            update(TaskOccurrence)
+            select(TaskOccurrence)
             .where(
                 TaskOccurrence.plan_card_id == plan_card_id,
                 TaskOccurrence.occurrence_status == OccurrenceStatus.PLANNED,
                 TaskOccurrence.scheduled_for >= date.today(),
             )
-            .values(occurrence_status=OccurrenceStatus.CANCELLED)
         )
         result = await self.db.execute(stmt)
-        await self.db.flush()
-        return result.rowcount
+        occurrences = list(result.scalars().all())
+        cancelled = 0
+        for occurrence in occurrences:
+            updated = await self.occurrence_service.cancel(occurrence.id)
+            if updated:
+                cancelled += 1
+        return cancelled

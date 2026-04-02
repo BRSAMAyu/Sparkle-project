@@ -135,16 +135,20 @@ class CardService:
         if not card:
             return None
 
+        changes: dict[str, object] = {}
         if metadata is not None:
             # Merge metadata rather than replace
-            existing = card.metadata_ or {}
+            existing = dict(card.metadata_ or {})
             existing.update(metadata)
             card.metadata_ = existing
+            changes["metadata"] = metadata
         if tags is not None:
             card.tags = tags
+            changes["tags"] = tags
         for key, value in kwargs.items():
             if hasattr(card, key) and key not in ("id", "created_at"):
                 setattr(card, key, value)
+                changes[key] = value
 
         card.version += 1
         card.updated_by = updated_by
@@ -157,6 +161,7 @@ class CardService:
                     "card_id": str(card.id),
                     "card_type": card.card_type.value,
                     "version": card.version,
+                    "changes": changes,
                 },
             )
         return card
@@ -175,20 +180,7 @@ class CardService:
         return await self._transition(card_id, CardLifecycleStatus.COMPLETED)
 
     async def archive(self, card_id: uuid.UUID) -> Card | None:
-        card = await self.get_card(card_id)
-        if not card:
-            return None
-        card.lifecycle_status = CardLifecycleStatus.ARCHIVED
-        card.archived_at = datetime.utcnow()
-        card.version += 1
-        await self.db.flush()
-
-        if self.event_bus:
-            await self.event_bus.publish(
-                "card.archived",
-                {"card_id": str(card.id), "card_type": card.card_type.value},
-            )
-        return card
+        return await self._transition(card_id, CardLifecycleStatus.ARCHIVED)
 
     async def cancel(self, card_id: uuid.UUID) -> Card | None:
         return await self._transition(card_id, CardLifecycleStatus.CANCELLED)
@@ -197,7 +189,12 @@ class CardService:
         card = await self.get_card(card_id)
         if not card:
             return None
+        old_status = card.lifecycle_status
+        if old_status == target:
+            return card
         card.lifecycle_status = target
+        if target == CardLifecycleStatus.ARCHIVED:
+            card.archived_at = datetime.utcnow()
         card.version += 1
         await self.db.flush()
 
@@ -207,6 +204,7 @@ class CardService:
                 {
                     "card_id": str(card.id),
                     "card_type": card.card_type.value,
+                    "old_status": old_status.value,
                     "new_status": target.value,
                 },
             )

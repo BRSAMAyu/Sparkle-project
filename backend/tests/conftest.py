@@ -24,6 +24,7 @@ from app.models.event import TrackingEvent  # noqa: F401
 from app.models.plan_execution_record import PlanExecutionRecord  # noqa: F401
 from app.models.execution_audit_log import ExecutionAuditLog  # noqa: F401
 from app.models.execution_schedule import ExecutionSchedule  # noqa: F401
+from app.models.card_protocol import Card, CardEdge, TaskOccurrence, PlanningArtifact, InterventionRecord  # noqa: F401
 from app.models.user_preferences import UserPreferencesCenter  # noqa: F401
 from app.models.recommendation import RecommendationCache, UserItemInteraction  # noqa: F401
 from app.models.intervention_adaptive import (  # noqa: F401

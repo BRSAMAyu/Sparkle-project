@@ -388,23 +388,54 @@ class CardEdgeCreatedEvent(Event):
         }
 
 
-class OccurrenceStatusChangedEvent(Event):
-    """Fired when a TaskOccurrence changes status."""
+class CardEdgeDeactivatedEvent(Event):
+    """Fired when an existing edge is deactivated."""
 
-    def __init__(self, occurrence_id: str, series_card_id: str, new_status: str):
-        self.occurrence_id = occurrence_id
-        self.series_card_id = series_card_id
-        self.new_status = new_status
+    def __init__(self, edge_id: str, from_card_id: str, to_card_id: str, edge_type: str):
+        self.edge_id = edge_id
+        self.from_card_id = from_card_id
+        self.to_card_id = to_card_id
+        self.edge_type = edge_type
         self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
+            "event_type": "card_edge.deactivated",
+            "edge_id": self.edge_id,
+            "from_card_id": self.from_card_id,
+            "to_card_id": self.to_card_id,
+            "edge_type": self.edge_type,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class OccurrenceStatusChangedEvent(Event):
+    """Fired when a TaskOccurrence changes status."""
+
+    def __init__(
+        self,
+        occurrence_id: str,
+        series_card_id: str,
+        new_status: str,
+        old_status: str | None = None,
+    ):
+        self.occurrence_id = occurrence_id
+        self.series_card_id = series_card_id
+        self.old_status = old_status
+        self.new_status = new_status
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        payload = {
             "event_type": "occurrence.status_changed",
             "occurrence_id": self.occurrence_id,
             "series_card_id": self.series_card_id,
             "new_status": self.new_status,
             "timestamp": self.timestamp.isoformat(),
         }
+        if self.old_status is not None:
+            payload["old_status"] = self.old_status
+        return payload
 
 
 class OccurrenceCompletedEvent(Event):

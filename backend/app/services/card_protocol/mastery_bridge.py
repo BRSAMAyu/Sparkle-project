@@ -9,8 +9,8 @@ Missing: No EVIDENCE_FOR edge connecting the error to the knowledge gap.
 
 This bridge:
   1. Creates a KNOWLEDGE card for the error's root cause (if not existing)
-  2. Creates an EVIDENCE_FOR edge from the error card to the knowledge node card
-  3. Enriches the edge metadata with diagnosis details
+  2. Creates an EVIDENCE_FOR edge only if a canonical error card exists
+  3. Otherwise writes structured evidence metadata onto the knowledge card
 
 The existing mastery penalty flow (via GalaxyService.handle_error_created)
 continues unchanged. This bridge adds the card graph layer on top.
@@ -33,7 +33,6 @@ from app.models.card_protocol import (
     CardVisibility,
     CardEdge,
     EdgeType,
-    BindingMode,
 )
 from app.services.card_service import CardService
 from app.services.card_edge_service import CardEdgeService
@@ -71,28 +70,24 @@ class ErrorMasteryBridge:
 
         Returns a summary of what was created.
         """
-        summary = {"knowledge_cards": 0, "evidence_edges": 0, "errors": []}
+        summary = {"knowledge_cards": 0, "evidence_edges": 0, "metadata_writebacks": 0, "errors": []}
 
         if not linked_node_ids:
             return summary
 
+        error_card = await self._find_error_card(user_id=user_id, error_id=error_id)
+
         # 1. For each linked knowledge node, ensure a KNOWLEDGE card exists
-        #    and create an EVIDENCE_FOR edge
+        #    and write evidence in a taxonomy-safe way.
         for node_id in linked_node_ids:
             try:
-                knowledge_card = await self._ensure_knowledge_card(user_id, node_id)
+                knowledge_card, created = await self._ensure_knowledge_card(user_id, node_id)
                 if not knowledge_card:
                     continue
+                if created:
+                    summary["knowledge_cards"] += 1
 
-                # 2. Check if an evidence edge already exists for this error → node
-                existing_edge = await self._find_evidence_edge(
-                    knowledge_card.id, error_id
-                )
-                if existing_edge:
-                    continue  # Idempotent — don't duplicate edges
-
-                # 3. Create EVIDENCE_FOR edge with diagnosis metadata
-                edge_meta = {
+                evidence_payload = {
                     "source_type": "error_record",
                     "source_id": str(error_id),
                     "error_type": error_type,
@@ -102,13 +97,24 @@ class ErrorMasteryBridge:
                     "diagnosis": analysis or {},
                     "recorded_at": datetime.utcnow().isoformat(),
                 }
-                await self.edge_service.add_evidence(
-                    evidence_card_id=knowledge_card.id,
-                    target_card_id=knowledge_card.id,  # Self-referential: evidence about this knowledge node
-                    metadata=edge_meta,
-                    weight=-0.1,  # Negative weight indicates mastery reduction
-                )
-                summary["evidence_edges"] += 1
+
+                if error_card:
+                    existing_edge = await self._find_evidence_edge(
+                        evidence_card_id=error_card.id,
+                        knowledge_card_id=knowledge_card.id,
+                        error_id=error_id,
+                    )
+                    if not existing_edge:
+                        await self.edge_service.add_evidence(
+                            evidence_card_id=error_card.id,
+                            target_card_id=knowledge_card.id,
+                            metadata=evidence_payload,
+                            weight=-0.1,
+                        )
+                        summary["evidence_edges"] += 1
+
+                await self._record_knowledge_evidence(knowledge_card, evidence_payload)
+                summary["metadata_writebacks"] += 1
 
             except Exception as exc:
                 err_msg = f"Failed to create evidence for node {node_id}: {exc}"
@@ -125,7 +131,7 @@ class ErrorMasteryBridge:
 
     async def _ensure_knowledge_card(
         self, user_id: uuid.UUID, knowledge_node_id: uuid.UUID
-    ) -> Card | None:
+    ) -> tuple[Card | None, bool]:
         """Find or create a KNOWLEDGE card for a galaxy knowledge node."""
         # Look for existing
         stmt = (
@@ -140,7 +146,7 @@ class ErrorMasteryBridge:
         result = await self.db.execute(stmt)
         existing = result.scalar_one_or_none()
         if existing:
-            return existing
+            return existing, False
 
         # Create new
         card = await self.card_service.create_card(
@@ -159,22 +165,33 @@ class ErrorMasteryBridge:
             visibility=CardVisibility.PRIVATE,
             lifecycle_status=CardLifecycleStatus.ACTIVE,
         )
+        return card, True
 
-        # Update error count
-        card_meta = dict(card.metadata_)
-        card_meta["error_count"] = card_meta.get("error_count", 0) + 1
-        await self.card_service.update_card(card.id, metadata=card_meta)
-
-        return card
+    async def _find_error_card(self, *, user_id: uuid.UUID, error_id: uuid.UUID) -> Card | None:
+        stmt = (
+            select(Card)
+            .where(
+                Card.owner_id == user_id,
+                Card.metadata_["error_id"].as_string() == str(error_id),
+                Card.not_deleted_filter(),
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def _find_evidence_edge(
-        self, card_id: uuid.UUID, error_id: uuid.UUID
+        self,
+        *,
+        evidence_card_id: uuid.UUID,
+        knowledge_card_id: uuid.UUID,
+        error_id: uuid.UUID,
     ) -> CardEdge | None:
         """Find an existing evidence edge for this error on this card."""
         stmt = (
             select(CardEdge)
             .where(
-                CardEdge.to_card_id == card_id,
+                CardEdge.from_card_id == evidence_card_id,
+                CardEdge.to_card_id == knowledge_card_id,
                 CardEdge.edge_type == EdgeType.EVIDENCE_FOR,
                 CardEdge.active.is_(True),
                 CardEdge.metadata_["source_id"].as_string() == str(error_id),
@@ -182,3 +199,19 @@ class ErrorMasteryBridge:
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def _record_knowledge_evidence(self, knowledge_card: Card, evidence_payload: dict) -> None:
+        existing_meta = dict(knowledge_card.metadata_ or {})
+        evidence_log = list(existing_meta.get("error_evidence_log") or [])
+        evidence_log.append(evidence_payload)
+        existing_meta["error_evidence_log"] = evidence_log[-20:]
+        existing_meta["last_error_evidence"] = evidence_payload
+        existing_meta["error_count"] = int(existing_meta.get("error_count") or 0) + 1
+        existing_meta["evidence_count"] = int(existing_meta.get("evidence_count") or 0) + 1
+        existing_meta["mastery_state"] = "at_risk"
+
+        await self.card_service.update_card(
+            knowledge_card.id,
+            metadata=existing_meta,
+            updated_by=CardCreatedBy.SYSTEM,
+        )

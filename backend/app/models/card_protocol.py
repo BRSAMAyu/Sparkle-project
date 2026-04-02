@@ -20,6 +20,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     UniqueConstraint,
     event as sa_event,
@@ -28,6 +29,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 # ---------------------------------------------------------------------------
@@ -186,8 +189,8 @@ class Card(BaseModel):
         nullable=False,
         default=CardVisibility.PRIVATE,
     )
-    tags = Column(JSONB, nullable=False, server_default="[]")
-    metadata_ = Column("metadata", JSONB, nullable=False, server_default="{}")
+    tags = Column(JSONBCompat, nullable=False, server_default="[]")
+    metadata_ = Column("metadata", JSONBCompat, nullable=False, server_default="{}")
     source_type = Column(
         Enum(CardSourceType, name="card_source_type_enum"),
         nullable=False,
@@ -247,9 +250,9 @@ class CardEdge(BaseModel):
     binding_mode = Column(Enum(BindingMode, name="binding_mode_enum"), nullable=False, default=BindingMode.OWNED)
     order_index = Column(Integer, nullable=True)
     weight = Column(Float, nullable=True)
-    temporal_window = Column(JSONB, nullable=True)
-    metadata_ = Column("metadata", JSONB, nullable=False, server_default="{}")
-    active = Column(Boolean, nullable=False, default=True, index=True)
+    temporal_window = Column(JSONBCompat, nullable=True)
+    metadata_ = Column("metadata", JSONBCompat, nullable=False, server_default="{}")
+    active = Column(Boolean, nullable=False, default=True)
     removed_at = Column(DateTime, nullable=True)
 
     # Relationships
@@ -294,7 +297,7 @@ class TaskOccurrence(BaseModel):
     completion_quality = Column(Integer, nullable=True)
     deferral_count = Column(Integer, nullable=False, default=0)
     generated_by_rule_hash = Column(String(128), nullable=False, server_default="")
-    feedback_payload = Column(JSONB, nullable=True)
+    feedback_payload = Column(JSONBCompat, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 
     # Relationships
@@ -333,8 +336,8 @@ class PlanningArtifact(BaseModel):
         default=ArtifactStatus.DRAFT,
         index=True,
     )
-    payload = Column(JSONB, nullable=False, server_default="{}")
-    based_on_versions = Column(JSONB, nullable=False, server_default="{}")
+    payload = Column(JSONBCompat, nullable=False, server_default="{}")
+    based_on_versions = Column(JSONBCompat, nullable=False, server_default="{}")
     created_by_agent = Column(String(64), nullable=True)
     approved_by_user_id = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     approved_at = Column(DateTime, nullable=True)
@@ -375,7 +378,7 @@ class InterventionRecord(BaseModel):
         index=True,
     )
     trigger_source_ref = Column(String(128), nullable=True)
-    diagnosis_payload = Column(JSONB, nullable=False, server_default="{}")
+    diagnosis_payload = Column(JSONBCompat, nullable=False, server_default="{}")
     delivery_strategy = Column(
         Enum(DeliveryStrategy, name="delivery_strategy_enum"), nullable=False
     )
@@ -389,14 +392,14 @@ class InterventionRecord(BaseModel):
         default=InterventionAcceptanceStatus.CREATED,
         index=True,
     )
-    action_payload = Column(JSONB, nullable=True)
+    action_payload = Column(JSONBCompat, nullable=True)
     outcome_window_days = Column(Integer, nullable=False, default=7)
     outcome_status = Column(
         Enum(InterventionOutcomeStatus, name="intervention_outcome_enum"),
         nullable=False,
         default=InterventionOutcomeStatus.PENDING,
     )
-    evidence_payload = Column(JSONB, nullable=True)
+    evidence_payload = Column(JSONBCompat, nullable=True)
 
     # Relationships
     user = relationship("User", foreign_keys=[user_id])

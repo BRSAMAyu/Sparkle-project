@@ -13,9 +13,10 @@ from google.protobuf import json_format
 from google.api import annotations_pb2  # noqa: F401
 from loguru import logger
 from sqlalchemy import and_, desc, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.cache import cache_service
+from app.core.event_bus import event_bus
 from app.gen.sparkle.inference.v1 import inference_pb2
 from app.gen.sparkle.signals.v1 import signals_pb2
 from app.models.task import Task, TaskStatus
@@ -28,6 +29,26 @@ from app.services.personalization import get_personalization_engine
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with DB TIMESTAMP columns."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+async def _sync_task_card_projection(db: AsyncSession, task: Task) -> None:
+    task_id = str(task.id)
+    if db.bind is None:
+        return
+
+    try:
+        from app.services.card_protocol.legacy_adapter import TaskAdapter
+
+        session_factory = async_sessionmaker(db.bind, class_=AsyncSession, expire_on_commit=False)
+        async with session_factory() as shadow_db:
+            shadow_task = await shadow_db.get(Task, task.id)
+            if shadow_task is None:
+                return
+            adapter = TaskAdapter(shadow_db, event_bus)
+            await adapter.task_to_card(shadow_task)
+            await shadow_db.commit()
+    except Exception as exc:
+        logger.warning("Task card dual-write failed for {}: {}", task_id, exc)
 
 
 class TaskService:
@@ -84,6 +105,7 @@ class TaskService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
 
         # Sync with PlanState if task belongs to a plan
         if db_obj.plan_id:
@@ -167,6 +189,7 @@ class TaskService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
 
         # Sync with PlanState if task belongs to a plan and status changed
         if db_obj.plan_id and status_changed:
@@ -189,6 +212,7 @@ class TaskService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
 
         # Sync with PlanState if task belongs to a plan
         if db_obj.plan_id:
@@ -274,6 +298,7 @@ class TaskService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
 
         # P0.2: Auto-update plan progress when task is completed
         if db_obj.plan_id:
@@ -319,7 +344,7 @@ class TaskService:
                 logger.warning("Failed to spark node for task {}: {}", db_obj.id, exc)
 
         # Publish task completion event for cognitive analysis
-        from app.core.event_bus import TaskCompleted, event_bus
+        from app.core.event_bus import TaskCompleted
         from app.models.community import GroupTaskClaim
 
         estimated = db_obj.estimated_minutes or 0
@@ -406,6 +431,7 @@ class TaskService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
 
         # Sync with PlanState if task belongs to a plan
         if db_obj.plan_id:
@@ -417,7 +443,7 @@ class TaskService:
                 logger.warning(f"Failed to sync task abandonment with plan state: {e}")
 
         # Publish task abandonment event for cognitive analysis
-        from app.core.event_bus import TaskAbandoned, event_bus
+        from app.core.event_bus import TaskAbandoned
 
         time_spent = None
         if db_obj.started_at:

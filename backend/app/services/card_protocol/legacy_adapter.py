@@ -20,7 +20,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.plan import Plan, PlanType, PlanStatus
+from app.models.plan import Plan, PlanType, PlanStage
 from app.models.task import Task, TaskStatus
 from app.models.card_protocol import (
     Card,
@@ -42,20 +42,21 @@ from app.core.event_bus import EventBus
 # Legacy Plan → Card Protocol mapping
 # ---------------------------------------------------------------------------
 
-_PLAN_STATUS_TO_LIFECYCLE: dict[PlanStatus, CardLifecycleStatus] = {
-    PlanStatus.DRAFT: CardLifecycleStatus.DRAFT,
-    PlanStatus.PENDING_REVIEW: CardLifecycleStatus.DRAFT,
-    PlanStatus.ACTIVE: CardLifecycleStatus.ACTIVE,
-    PlanStatus.PAUSED: CardLifecycleStatus.PAUSED,
-    PlanStatus.COMPLETED: CardLifecycleStatus.COMPLETED,
-    PlanStatus.ARCHIVED: CardLifecycleStatus.ARCHIVED,
-    PlanStatus.CANCELLED: CardLifecycleStatus.CANCELLED,
-}
-
 _PLAN_TYPE_TO_KIND = {
     PlanType.SPRINT: "SPRINT",
     PlanType.GROWTH: "GROWTH",
 }
+
+
+def _plan_to_lifecycle(plan: Plan) -> CardLifecycleStatus:
+    """Map the legacy plan model to card lifecycle without inventing missing states."""
+    if not plan.is_active:
+        return CardLifecycleStatus.ARCHIVED
+    if plan.plan_stage == PlanStage.PAUSED:
+        return CardLifecycleStatus.PAUSED
+    if float(plan.progress or 0.0) >= 1.0:
+        return CardLifecycleStatus.COMPLETED
+    return CardLifecycleStatus.ACTIVE
 
 
 class PlanAdapter:
@@ -88,36 +89,50 @@ class PlanAdapter:
             "plan_kind": _PLAN_TYPE_TO_KIND.get(plan.type, "GROWTH"),
             "target_date": plan.target_date.isoformat() if plan.target_date else None,
             "subject": plan.subject,
-            "mastery_level": float(plan.mastery_level) if plan.mastery_level else None,
-            "progress": float(plan.progress) if plan.progress else None,
+            "mastery_level": float(plan.mastery_level) if plan.mastery_level is not None else None,
+            "progress": float(plan.progress) if plan.progress is not None else None,
             "daily_available_minutes": plan.daily_available_minutes,
             "priority": plan.priority.value if plan.priority else None,
             "is_primary": plan.is_primary,
+            "legacy_plan_stage": plan.plan_stage.value if plan.plan_stage else None,
+            "legacy_is_active": plan.is_active,
         }
 
-        lifecycle = _PLAN_STATUS_TO_LIFECYCLE.get(plan.plan_stage, CardLifecycleStatus.DRAFT)
+        lifecycle = _plan_to_lifecycle(plan)
 
         if existing:
             # Update existing card
-            existing.metadata_ = card_metadata
+            existing_meta = dict(existing.metadata_ or {})
+            existing_meta.update(card_metadata)
+            existing.metadata_ = existing_meta
             existing.lifecycle_status = lifecycle
             existing.version += 1
             existing.updated_by = CardCreatedBy.SYSTEM
             await self.db.flush()
-            return existing
+            card = existing
+        else:
+            # Create new card
+            card = await self.card_service.create_card(
+                card_type=CardType.PLAN,
+                owner_id=plan.user_id,
+                holder_id=plan.user_id,
+                metadata=card_metadata,
+                tags=[plan.type.value] if plan.type else [],
+                source_type=CardSourceType.ORIGINAL,
+                created_by=CardCreatedBy.SYSTEM,
+                visibility=CardVisibility.PRIVATE,
+                lifecycle_status=lifecycle,
+            )
 
-        # Create new card
-        card = await self.card_service.create_card(
-            card_type=CardType.PLAN,
-            owner_id=plan.user_id,
-            holder_id=plan.user_id,
-            metadata=card_metadata,
-            tags=[plan.type.value] if plan.type else [],
-            source_type=CardSourceType.ORIGINAL,
-            created_by=CardCreatedBy.SYSTEM,
-            visibility=CardVisibility.PRIVATE,
-            lifecycle_status=lifecycle,
-        )
+        phase_card = await self._ensure_default_phase_card(plan, plan_card=card, lifecycle=lifecycle)
+        if phase_card and card.metadata_.get("current_phase_card_id") != str(phase_card.id):
+            plan_meta = dict(card.metadata_ or {})
+            plan_meta["current_phase_card_id"] = str(phase_card.id)
+            card.metadata_ = plan_meta
+            card.version += 1
+            card.updated_by = CardCreatedBy.SYSTEM
+            await self.db.flush()
+
         return card
 
     async def _find_card_by_legacy_plan(self, plan_id: uuid.UUID) -> Card | None:
@@ -132,6 +147,69 @@ class PlanAdapter:
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def _ensure_default_phase_card(
+        self,
+        plan: Plan,
+        *,
+        plan_card: Card,
+        lifecycle: CardLifecycleStatus,
+    ) -> Card:
+        phase = await self._find_default_phase_card(plan.id)
+        phase_metadata = {
+            "legacy_plan_id": str(plan.id),
+            "synthetic_phase": True,
+            "legacy_phase_role": "ACTIVE_EXECUTION_SLICE",
+            "title": f"{plan.name} Execution Phase",
+            "objective": plan.description or plan.name,
+            "phase_index": 1,
+        }
+
+        if phase:
+            phase_meta = dict(phase.metadata_ or {})
+            phase_meta.update(phase_metadata)
+            phase.metadata_ = phase_meta
+            phase.lifecycle_status = lifecycle
+            phase.version += 1
+            phase.updated_by = CardCreatedBy.SYSTEM
+            await self.db.flush()
+        else:
+            phase = await self.card_service.create_card(
+                card_type=CardType.PHASE,
+                owner_id=plan.user_id,
+                holder_id=plan.user_id,
+                metadata=phase_metadata,
+                tags=["legacy", "synthetic-phase"],
+                source_type=CardSourceType.GENERATED,
+                created_by=CardCreatedBy.SYSTEM,
+                visibility=CardVisibility.PRIVATE,
+                lifecycle_status=lifecycle,
+            )
+
+        await self.edge_service.create_edge(
+            from_card_id=plan_card.id,
+            to_card_id=phase.id,
+            edge_type=EdgeType.CONTAINS,
+            binding_mode=BindingMode.OWNED,
+            order_index=0,
+            metadata={"synthetic": True, "source": "legacy_plan_adapter"},
+        )
+        return phase
+
+    async def _find_default_phase_card(self, plan_id: uuid.UUID) -> Card | None:
+        stmt = (
+            select(Card)
+            .where(
+                Card.card_type == CardType.PHASE,
+                Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
+                Card.not_deleted_filter(),
+            )
+        )
+        result = await self.db.execute(stmt)
+        for card in result.scalars().all():
+            if (card.metadata_ or {}).get("synthetic_phase") is True:
+                return card
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +229,7 @@ class TaskAdapter:
 
     For each legacy task:
     1. Creates a TASK card (canonical definition)
-    2. If task has a plan_id, creates a CONTAINS edge from plan card to task card
+    2. If task has a plan_id, creates a CONTAINS edge from the plan's synthetic PHASE to the task card
     3. If task has a knowledge_node_id, creates a REFERENCES edge to a KNOWLEDGE card
     """
 
@@ -184,49 +262,29 @@ class TaskAdapter:
         lifecycle = _TASK_STATUS_MAP.get(task.status, CardLifecycleStatus.ACTIVE)
 
         if existing:
-            existing.metadata_ = card_metadata
+            existing_meta = dict(existing.metadata_ or {})
+            existing_meta.update(card_metadata)
+            existing.metadata_ = existing_meta
             existing.lifecycle_status = lifecycle
             existing.version += 1
             existing.updated_by = CardCreatedBy.SYSTEM
             await self.db.flush()
-            return existing
-
-        card = await self.card_service.create_card(
-            card_type=CardType.TASK,
-            owner_id=task.user_id,
-            holder_id=task.user_id,
-            metadata=card_metadata,
-            tags=task.tags if isinstance(task.tags, list) else [],
-            source_type=CardSourceType.ORIGINAL,
-            created_by=CardCreatedBy.SYSTEM,
-            visibility=CardVisibility.PRIVATE,
-            lifecycle_status=lifecycle,
-        )
-
-        # Create edges
-        if task.plan_id:
-            plan_card = await self._find_plan_card(task.plan_id)
-            if plan_card:
-                await self.edge_service.create_edge(
-                    from_card_id=plan_card.id,
-                    to_card_id=card.id,
-                    edge_type=EdgeType.CONTAINS,
-                    binding_mode=BindingMode.OWNED,
-                    order_index=task.order_index,
-                )
-
-        if task.knowledge_node_id:
-            knowledge_card = await self._find_or_create_knowledge_card(
-                task.knowledge_node_id, task.user_id
+            card = existing
+        else:
+            card = await self.card_service.create_card(
+                card_type=CardType.TASK,
+                owner_id=task.user_id,
+                holder_id=task.user_id,
+                metadata=card_metadata,
+                tags=task.tags if isinstance(task.tags, list) else [],
+                source_type=CardSourceType.ORIGINAL,
+                created_by=CardCreatedBy.SYSTEM,
+                visibility=CardVisibility.PRIVATE,
+                lifecycle_status=lifecycle,
             )
-            if knowledge_card:
-                await self.edge_service.create_edge(
-                    from_card_id=card.id,
-                    to_card_id=knowledge_card.id,
-                    edge_type=EdgeType.REFERENCES,
-                    binding_mode=BindingMode.REFERENCE,
-                )
 
+        await self._sync_task_containment(task, task_card=card)
+        await self._sync_task_knowledge_references(task, task_card=card)
         return card
 
     async def _find_card_by_legacy_task(self, task_id: uuid.UUID) -> Card | None:
@@ -252,6 +310,21 @@ class TaskAdapter:
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def _find_plan_phase_card(self, plan_id: uuid.UUID) -> Card | None:
+        stmt = (
+            select(Card)
+            .where(
+                Card.card_type == CardType.PHASE,
+                Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
+                Card.not_deleted_filter(),
+            )
+        )
+        result = await self.db.execute(stmt)
+        for card in result.scalars().all():
+            if (card.metadata_ or {}).get("synthetic_phase") is True:
+                return card
+        return None
 
     async def _find_or_create_knowledge_card(
         self, knowledge_node_id: uuid.UUID, user_id: uuid.UUID
@@ -280,3 +353,70 @@ class TaskAdapter:
             lifecycle_status=CardLifecycleStatus.ACTIVE,
         )
         return card
+
+    async def _sync_task_containment(self, task: Task, *, task_card: Card) -> None:
+        incoming_stmt = select(CardEdge).where(
+            CardEdge.to_card_id == task_card.id,
+            CardEdge.edge_type == EdgeType.CONTAINS,
+            CardEdge.active.is_(True),
+        )
+        incoming_result = await self.db.execute(incoming_stmt)
+        for edge in incoming_result.scalars().all():
+            edge.active = False
+            edge.removed_at = datetime.utcnow()
+
+        if not task.plan_id:
+            await self.db.flush()
+            return
+
+        phase_card = await self._find_plan_phase_card(task.plan_id)
+        if not phase_card:
+            plan_stmt = select(Plan).where(Plan.id == task.plan_id)
+            plan_result = await self.db.execute(plan_stmt)
+            plan = plan_result.scalar_one_or_none()
+            if not plan:
+                await self.db.flush()
+                return
+            plan_adapter = PlanAdapter(self.db, self.card_service.event_bus)
+            await plan_adapter.plan_to_card(plan)
+            phase_card = await self._find_plan_phase_card(task.plan_id)
+            if not phase_card:
+                await self.db.flush()
+                return
+
+        await self.edge_service.create_edge(
+            from_card_id=phase_card.id,
+            to_card_id=task_card.id,
+            edge_type=EdgeType.CONTAINS,
+            binding_mode=BindingMode.OWNED,
+            order_index=task.order_index,
+            metadata={"synthetic": True, "source": "legacy_task_adapter"},
+        )
+
+    async def _sync_task_knowledge_references(self, task: Task, *, task_card: Card) -> None:
+        existing_refs_stmt = select(CardEdge).where(
+            CardEdge.from_card_id == task_card.id,
+            CardEdge.edge_type == EdgeType.REFERENCES,
+            CardEdge.active.is_(True),
+        )
+        existing_refs_result = await self.db.execute(existing_refs_stmt)
+        for edge in existing_refs_result.scalars().all():
+            edge.active = False
+            edge.removed_at = datetime.utcnow()
+
+        if not task.knowledge_node_id:
+            await self.db.flush()
+            return
+
+        knowledge_card = await self._find_or_create_knowledge_card(task.knowledge_node_id, task.user_id)
+        if not knowledge_card:
+            await self.db.flush()
+            return
+
+        await self.edge_service.create_edge(
+            from_card_id=task_card.id,
+            to_card_id=knowledge_card.id,
+            edge_type=EdgeType.REFERENCES,
+            binding_mode=BindingMode.REFERENCE,
+            metadata={"source": "legacy_task_adapter"},
+        )

@@ -44,6 +44,23 @@ class CardEdgeService:
         temporal_window: dict | None = None,
         metadata: dict | None = None,
     ) -> CardEdge:
+        existing = await self._find_edge_by_identity(
+            from_card_id=from_card_id,
+            to_card_id=to_card_id,
+            edge_type=edge_type,
+        )
+        if existing:
+            existing.binding_mode = binding_mode
+            existing.order_index = order_index
+            existing.weight = weight
+            existing.temporal_window = temporal_window
+            existing.metadata_ = metadata or {}
+            if not existing.active:
+                existing.active = True
+                existing.removed_at = None
+            await self.db.flush()
+            return existing
+
         edge = CardEdge(
             from_card_id=from_card_id,
             to_card_id=to_card_id,
@@ -69,6 +86,21 @@ class CardEdgeService:
                 },
             )
         return edge
+
+    async def _find_edge_by_identity(
+        self,
+        *,
+        from_card_id: uuid.UUID,
+        to_card_id: uuid.UUID,
+        edge_type: EdgeType,
+    ) -> CardEdge | None:
+        stmt = select(CardEdge).where(
+            CardEdge.from_card_id == from_card_id,
+            CardEdge.to_card_id == to_card_id,
+            CardEdge.edge_type == edge_type,
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     # ------------------------------------------------------------------
     # Read edges

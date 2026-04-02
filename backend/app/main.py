@@ -44,6 +44,7 @@ from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
 from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.services.profile_event_consumer import ProfileEventConsumer
+from app.services.plan_health_event_consumer import PlanHealthEventConsumer
 from app.services.cognitive_event_consumer import CognitiveEventConsumer
 from app.services.nudge_event_consumer import NudgeEventConsumer
 from app.services.scheduler_service import scheduler_service
@@ -166,6 +167,13 @@ async def lifespan(app: FastAPI):
         nudge_consumer = NudgeEventConsumer(event_bus=event_bus)
         nudge_consumer_task = asyncio.create_task(nudge_consumer.start())
         app.state.nudge_consumer_task = nudge_consumer_task
+
+    # Start plan health event consumer
+    plan_health_consumer_task = None
+    if cache_service.redis and event_bus is not None:
+        plan_health_consumer = PlanHealthEventConsumer(event_bus=event_bus)
+        plan_health_consumer_task = asyncio.create_task(plan_health_consumer.start())
+        app.state.plan_health_consumer_task = plan_health_consumer_task
 
     summarization_worker_task = None
     summarization_worker = None
@@ -332,6 +340,13 @@ async def lifespan(app: FastAPI):
         nudge_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await nudge_consumer_task
+
+    # Stop plan health event consumer
+    plan_health_consumer_task = getattr(app.state, "plan_health_consumer_task", None)
+    if plan_health_consumer_task:
+        plan_health_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await plan_health_consumer_task
 
     # Stop summarization worker
     summarization_worker = getattr(app.state, "summarization_worker", None)

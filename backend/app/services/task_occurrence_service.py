@@ -54,16 +54,6 @@ class TaskOccurrenceService:
         )
         self.db.add(occ)
         await self.db.flush()
-
-        if self.event_bus:
-            await self.event_bus.publish(
-                "occurrence.created",
-                {
-                    "occurrence_id": str(occ.id),
-                    "series_card_id": str(series_card_id),
-                    "scheduled_for": scheduled_for.isoformat() if scheduled_for else None,
-                },
-            )
         return occ
 
     async def create_batch(
@@ -155,6 +145,7 @@ class TaskOccurrenceService:
         occ = await self.get_occurrence(occurrence_id)
         if not occ:
             return None
+        old_status = occ.occurrence_status
         occ.occurrence_status = OccurrenceStatus.COMPLETED
         occ.actual_minutes = actual_minutes
         occ.completion_quality = completion_quality
@@ -163,6 +154,7 @@ class TaskOccurrenceService:
         await self.db.flush()
 
         if self.event_bus:
+            await self._publish_status_changed(occ, old_status=old_status)
             await self.event_bus.publish(
                 "occurrence.completed",
                 {
@@ -181,6 +173,7 @@ class TaskOccurrenceService:
         occ = await self.get_occurrence(occurrence_id)
         if not occ:
             return None
+        old_status = occ.occurrence_status
         occ.occurrence_status = OccurrenceStatus.DEFERRED
         occ.deferral_count += 1
         if new_date:
@@ -188,12 +181,12 @@ class TaskOccurrenceService:
         await self.db.flush()
 
         if self.event_bus:
-            await self.event_bus.publish(
-                "occurrence.deferred",
-                {
-                    "occurrence_id": str(occ.id),
-                    "series_card_id": str(occ.series_card_id),
+            await self._publish_status_changed(
+                occ,
+                old_status=old_status,
+                extra_payload={
                     "deferral_count": occ.deferral_count,
+                    "scheduled_for": occ.scheduled_for.isoformat() if occ.scheduled_for else None,
                 },
             )
         return occ
@@ -205,19 +198,36 @@ class TaskOccurrenceService:
         occ = await self.get_occurrence(occurrence_id)
         if not occ:
             return None
+        old_status = occ.occurrence_status
+        if old_status == target:
+            return occ
         occ.occurrence_status = target
         await self.db.flush()
 
         if self.event_bus:
-            await self.event_bus.publish(
-                "occurrence.status_changed",
-                {
-                    "occurrence_id": str(occ.id),
-                    "series_card_id": str(occ.series_card_id),
-                    "new_status": target.value,
-                },
-            )
+            await self._publish_status_changed(occ, old_status=old_status)
         return occ
+
+    async def _publish_status_changed(
+        self,
+        occurrence: TaskOccurrence,
+        *,
+        old_status: OccurrenceStatus,
+        extra_payload: dict | None = None,
+    ) -> None:
+        if not self.event_bus:
+            return
+
+        payload = {
+            "occurrence_id": str(occurrence.id),
+            "series_card_id": str(occurrence.series_card_id),
+            "old_status": old_status.value,
+            "new_status": occurrence.occurrence_status.value,
+        }
+        if extra_payload:
+            payload.update(extra_payload)
+
+        await self.event_bus.publish("occurrence.status_changed", payload)
 
     # ------------------------------------------------------------------
     # Batch operations
