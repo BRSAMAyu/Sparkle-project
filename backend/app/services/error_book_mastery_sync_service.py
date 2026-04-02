@@ -24,7 +24,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
-from app.core.event_bus import NodeMasteryUpdatedEvent, event_bus
+from app.core.event_bus import NodeMasteryUpdatedEvent
 from app.models.galaxy import StudyRecord, UserNodeStatus
 from app.services.galaxy.stats_service import GalaxyStatsService
 
@@ -57,6 +57,10 @@ REVIEW_PERFORMANCE_IMPACT: dict[str, int] = {
 MAX_SINGLE_ERROR_IMPACT = 10   # 单次错题最多对单节点扣10分
 MIN_MASTERY_SCORE = 0
 MAX_MASTERY_SCORE = 100
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class ErrorBookMasterySyncService:
@@ -185,28 +189,51 @@ class ErrorBookMasterySyncService:
         error_id: UUID | None = None,
     ) -> dict | None:
         """Update a single node's mastery and record the change."""
-        # 1. Get or create UserNodeStatus
-        status = await self._get_or_create_node_status(user_id, node_id)
-        if not status:
-            logger.warning(
-                "ErrorBookMasterySync: could not get/create status for user={}/node={}",
-                user_id, node_id,
-            )
+        status = await self._get_or_create_node_status(
+            user_id,
+            node_id,
+            create_if_missing=False,
+        )
+        old_mastery = int(status.mastery_score or 0) if status else 0
+        new_mastery = self._clamp_mastery(old_mastery + delta)
+
+        if status is None and new_mastery == old_mastery:
             return None
 
-        old_mastery = int(status.mastery_score or 0)
-        new_mastery = self._clamp_mastery(old_mastery + delta)
+        if status is None:
+            status = await self._get_or_create_node_status(
+                user_id,
+                node_id,
+                create_if_missing=True,
+            )
+            if not status:
+                logger.warning(
+                    "ErrorBookMasterySync: could not create status for user={}/node={}",
+                    user_id, node_id,
+                )
+                return None
 
         if new_mastery == old_mastery:
             return None
 
         # 2. Update mastery
+        now = _utcnow()
+        was_unlocked = bool(status.is_unlocked)
         status.mastery_score = new_mastery
         status.study_count = (status.study_count or 0) + 1
-        status.last_study_at = datetime.now(timezone.utc)
-        status.is_unlocked = True
+        status.last_study_at = now
 
-        # 3. Write StudyRecord
+        # 3. Update BKT mastery probability & next_review_at (fix #3)
+        # Scale mastery_score (0-100) → bkt_mastery_prob (0.0-1.0)
+        status.bkt_mastery_prob = max(0.0, min(new_mastery / 100.0, 1.0))
+        status.bkt_last_updated_at = now
+        status.next_review_at = self.stats_service._calculate_next_review(float(new_mastery))
+        if new_mastery > 0:
+            status.is_unlocked = True
+            if not was_unlocked and getattr(status, "first_unlock_at", None) is None:
+                status.first_unlock_at = now
+
+        # 4. Write StudyRecord
         study_record = StudyRecord(
             user_id=user_id,
             node_id=node_id,
@@ -217,20 +244,17 @@ class ErrorBookMasterySyncService:
         )
         self.db.add(study_record)
 
-        # 4. Publish event
-        try:
-            await event_bus.publish(
-                "node_mastery_updated",
-                NodeMasteryUpdatedEvent(
-                    user_id=str(user_id),
-                    node_id=str(node_id),
-                    old_mastery=old_mastery,
-                    new_mastery=new_mastery,
-                    reason=reason,
-                ).to_dict(),
-            )
-        except Exception as exc:
-            logger.warning("ErrorBookMasterySync: event publish failed: {}", exc)
+        # 5. Defer event publish — caller commits then flushes pending events (fix #1)
+        pending_event = {
+            "topic": "node_mastery_updated",
+            "payload": NodeMasteryUpdatedEvent(
+                user_id=str(user_id),
+                node_id=str(node_id),
+                old_mastery=old_mastery,
+                new_mastery=new_mastery,
+                reason=reason,
+            ).to_dict(),
+        }
 
         return {
             "node_id": str(node_id),
@@ -239,6 +263,7 @@ class ErrorBookMasterySyncService:
             "new_mastery": new_mastery,
             "delta": new_mastery - old_mastery,
             "record_type": record_type,
+            "_pending_event": pending_event,
         }
 
     # -----------------------------------------------------------------------
@@ -249,6 +274,8 @@ class ErrorBookMasterySyncService:
         self,
         user_id: UUID,
         node_id: UUID,
+        *,
+        create_if_missing: bool = True,
     ) -> UserNodeStatus | None:
         """Get existing UserNodeStatus or create a new one."""
         try:
@@ -261,14 +288,20 @@ class ErrorBookMasterySyncService:
             status = result.scalar_one_or_none()
             if status:
                 return status
+            if not create_if_missing:
+                return None
 
-            # Create new
+            # Create new — but do NOT auto-unlock (fix #2):
+            # A node linked via error diagnosis with 0 mastery has no evidence yet.
+            # It enters the user's awareness via the StudyRecord but stays locked
+            # until positive evidence (task completion or review recovery) unlocks it.
             status = UserNodeStatus(
                 user_id=user_id,
                 node_id=node_id,
                 mastery_score=0,
-                is_unlocked=True,
+                is_unlocked=False,
                 study_count=0,
+                bkt_mastery_prob=0.0,
             )
             self.db.add(status)
             # Flush to get the object into session

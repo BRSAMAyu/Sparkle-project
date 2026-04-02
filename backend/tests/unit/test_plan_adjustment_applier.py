@@ -47,6 +47,15 @@ def _make_task(
     )
 
 
+def _db_result_for_tasks(tasks: list):
+    scalars_mock = MagicMock()
+    scalars_mock.all.return_value = tasks
+    scalars_mock.__iter__.return_value = iter(tasks)
+    db_result = MagicMock()
+    db_result.scalars.return_value = scalars_mock
+    return db_result
+
+
 def _make_applier(
     tasks: list | None = None,
     facts: dict | None = None,
@@ -68,11 +77,7 @@ def _make_applier(
 
     # --- task query mock ---
     if tasks is not None:
-        scalars_mock = MagicMock()
-        scalars_mock.all.return_value = tasks
-        db_result = MagicMock()
-        db_result.scalars.return_value = scalars_mock
-        db.execute = AsyncMock(return_value=db_result)
+        db.execute = AsyncMock(return_value=_db_result_for_tasks(tasks))
 
     db.commit = AsyncMock()
     db.add = MagicMock()
@@ -373,6 +378,89 @@ async def test_rollback_returns_false_when_no_snapshots():
 
     ok = await applier.rollback_last_patch(uuid4(), uuid4())
     assert ok is False
+
+
+@pytest.mark.asyncio
+async def test_rollback_preserves_existing_adaptive_meta_keys():
+    task = _make_task()
+    snapshot_id = str(uuid4())
+    user_id = uuid4()
+    plan_id = uuid4()
+
+    applier, db = _make_applier(
+        facts={
+            "adaptive_meta": {
+                "task_patch_snapshots": [
+                    {
+                        "id": snapshot_id,
+                        "inserted_task_ids": [],
+                        "hidden_task_ids": [str(task.id)],
+                        "task_state_snapshots": {
+                            str(task.id): {
+                                "estimated_minutes": task.estimated_minutes,
+                                "difficulty": task.difficulty,
+                                "order_index": task.order_index,
+                                "tags": ["kept"],
+                            }
+                        },
+                    }
+                ],
+                "last_adjustment_at": "2026-04-02T10:00:00+00:00",
+                "active_snapshot_id": "snap-current",
+                "rollback_monitor": {"negative_feedback_streak": 1},
+            }
+        }
+    )
+    db.execute = AsyncMock(return_value=_db_result_for_tasks([task]))
+
+    ok = await applier.rollback_last_patch(user_id, plan_id)
+
+    assert ok is True
+    patch = applier.plan_state_service.upsert_plan_state.await_args.kwargs["patch"]
+    meta = patch["facts"]["adaptive_meta"]
+    assert meta["task_patch_snapshots"] == []
+    assert meta["last_adjustment_at"] == "2026-04-02T10:00:00+00:00"
+    assert meta["active_snapshot_id"] == "snap-current"
+    assert meta["rollback_monitor"] == {"negative_feedback_streak": 1}
+
+
+@pytest.mark.asyncio
+async def test_rollback_restores_task_fields_and_tags():
+    task = _make_task(estimated_minutes=45, difficulty=4, order_index=3)
+    original_tags = ["focus"]
+    task.tags = list(original_tags)
+
+    # Simulate already-patched state.
+    task.estimated_minutes = 60
+    task.difficulty = 3
+    task.order_index = 4
+    task.tags = ["focus", "adaptive_adjusted", "adaptive_hidden"]
+
+    snapshot = {
+        "id": str(uuid4()),
+        "inserted_task_ids": [],
+        "hidden_task_ids": [str(task.id)],
+        "task_state_snapshots": {
+            str(task.id): {
+                "estimated_minutes": 45,
+                "difficulty": 4,
+                "order_index": 3,
+                "tags": original_tags,
+            }
+        },
+    }
+    applier, db = _make_applier(
+        facts={"adaptive_meta": {"task_patch_snapshots": [snapshot]}},
+    )
+    db.execute = AsyncMock(return_value=_db_result_for_tasks([task]))
+
+    ok = await applier.rollback_last_patch(uuid4(), uuid4())
+
+    assert ok is True
+    assert task.estimated_minutes == 45
+    assert task.difficulty == 4
+    assert task.order_index == 3
+    assert task.tags == original_tags
 
 
 # ===========================================================================

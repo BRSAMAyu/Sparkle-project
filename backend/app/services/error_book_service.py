@@ -122,6 +122,19 @@ class ErrorBookService:
         self.db = db
         self.review_scheduler = ReviewSchedulerService()
 
+    async def _flush_pending_mastery_events(self, results: list[dict]) -> None:
+        """Publish deferred node mastery events after the surrounding DB commit succeeds."""
+        for item in results or []:
+            pending = item.get("_pending_event") or {}
+            topic = pending.get("topic")
+            payload = pending.get("payload")
+            if not topic or not payload:
+                continue
+            try:
+                await event_bus.publish(topic, payload)
+            except Exception as exc:
+                logger.warning(f"Failed to publish deferred mastery event: {exc}")
+
     async def create_error(self, user_id: UUID, data: ErrorRecordCreate) -> ErrorRecord:
         error = ErrorRecord(
             user_id=user_id,
@@ -257,8 +270,9 @@ class ErrorBookService:
             try:
                 from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
                 mastery_sync = ErrorBookMasterySyncService(self.db)
-                await mastery_sync.apply_error_diagnosis(user_id, error)
+                mastery_results = await mastery_sync.apply_error_diagnosis(user_id, error)
                 await self.db.commit()
+                await self._flush_pending_mastery_events(mastery_results)
             except Exception as e:
                 logger.warning(f"Error book mastery sync (diagnosis) failed: {e}")
 
@@ -685,8 +699,9 @@ class ErrorBookService:
         try:
             from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
             mastery_sync = ErrorBookMasterySyncService(self.db)
-            await mastery_sync.apply_review_feedback(user_id, error, data.performance.value)
+            mastery_results = await mastery_sync.apply_review_feedback(user_id, error, data.performance.value)
             await self.db.commit()
+            await self._flush_pending_mastery_events(mastery_results)
         except Exception as e:
             logger.warning(f"Error book mastery sync (review) failed: {e}")
 

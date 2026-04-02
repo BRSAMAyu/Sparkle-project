@@ -62,6 +62,28 @@ logger.add(
     serialize=not settings.DEBUG, # JSON format in production
 )
 
+INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS = int(
+    os.getenv("INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS", "900")
+)
+
+
+async def _run_intervention_outcome_verifier_loop() -> None:
+    """Periodically resolve pending InterventionRecord outcomes."""
+    from app.core.event_bus import event_bus
+    from app.services.card_protocol.outcome_verifier import InterventionOutcomeVerifier
+
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                verifier = InterventionOutcomeVerifier(db, event_bus)
+                await verifier.verify_all_pending()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning("InterventionOutcomeVerifier loop failed (non-fatal): {}", exc)
+
+        await asyncio.sleep(INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -174,6 +196,13 @@ async def lifespan(app: FastAPI):
         plan_health_consumer = PlanHealthEventConsumer(event_bus=event_bus)
         plan_health_consumer_task = asyncio.create_task(plan_health_consumer.start())
         app.state.plan_health_consumer_task = plan_health_consumer_task
+
+    intervention_outcome_verifier_task = None
+    if event_bus is not None:
+        intervention_outcome_verifier_task = asyncio.create_task(
+            _run_intervention_outcome_verifier_loop()
+        )
+        app.state.intervention_outcome_verifier_task = intervention_outcome_verifier_task
 
     summarization_worker_task = None
     summarization_worker = None
@@ -347,6 +376,12 @@ async def lifespan(app: FastAPI):
         plan_health_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await plan_health_consumer_task
+
+    intervention_outcome_verifier_task = getattr(app.state, "intervention_outcome_verifier_task", None)
+    if intervention_outcome_verifier_task:
+        intervention_outcome_verifier_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await intervention_outcome_verifier_task
 
     # Stop summarization worker
     summarization_worker = getattr(app.state, "summarization_worker", None)

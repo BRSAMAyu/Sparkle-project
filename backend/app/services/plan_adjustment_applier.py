@@ -44,6 +44,7 @@ class PlanAdjustmentResult:
     hidden_task_ids: list[UUID] = field(default_factory=list)
     user_facing_summary: str = ""
     rollback_snapshot_id: str | None = None
+    task_state_snapshots: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -121,8 +122,8 @@ class PlanAdjustmentApplier:
             upcoming, constraints, result
         )
 
-        # Record snapshot for rollback
-        if result.affected_task_ids or result.inserted_task_ids:
+        # Record snapshot for rollback (断点1 Fix #3: include hidden_task_ids)
+        if result.affected_task_ids or result.inserted_task_ids or result.hidden_task_ids:
             await self._record_snapshot(
                 user_id, plan_id, snapshot_id, trigger, result
             )
@@ -162,6 +163,7 @@ class PlanAdjustmentApplier:
                 MAX_ESTIMATED_MINUTES,
             )
             if new_minutes != old_minutes:
+                self._capture_task_state(result, task)
                 task.estimated_minutes = new_minutes
                 # Mark as adaptively adjusted
                 tags = list(task.tags) if task.tags else []
@@ -213,6 +215,7 @@ class PlanAdjustmentApplier:
 
             new_diff = self._clamp(old_diff + step, MIN_DIFFICULTY, MAX_DIFFICULTY)
             if new_diff != old_diff:
+                self._capture_task_state(result, task)
                 task.difficulty = new_diff
                 tags = list(task.tags) if task.tags else []
                 if "adaptive_adjusted" not in tags:
@@ -272,6 +275,7 @@ class PlanAdjustmentApplier:
             inserted_count += 1
 
             # Push the original task order back
+            self._capture_task_state(result, task)
             task.order_index += 1
 
         if inserted_count:
@@ -303,6 +307,7 @@ class PlanAdjustmentApplier:
             for task in sorted_tasks[max_concurrent:]:
                 tags = list(task.tags) if task.tags else []
                 if "adaptive_hidden" not in tags:
+                    self._capture_task_state(result, task)
                     tags.append("adaptive_hidden")
                     task.tags = tags
                     result.hidden_task_ids.append(task.id)
@@ -334,16 +339,25 @@ class PlanAdjustmentApplier:
             "affected_task_ids": [str(tid) for tid in result.affected_task_ids],
             "inserted_task_ids": [str(tid) for tid in result.inserted_task_ids],
             "hidden_task_ids": [str(tid) for tid in result.hidden_task_ids],
+            "task_state_snapshots": dict(result.task_state_snapshots),
         }
+
+        #断点1 Fix #2: Deep-merge — read existing adaptive_meta first to avoid
+        # destroying replanner's cooldown/evolution/rollback metadata.
+        state = await self.plan_state_service.get_plan_state(user_id, plan_id)
+        existing_meta = dict((state.facts or {}).get("adaptive_meta") or {}) if state else {}
+        existing_snapshots = list(existing_meta.get("task_patch_snapshots") or [])
+        existing_snapshots.append(snapshot)
+
+        merged_meta = dict(existing_meta)
+        merged_meta["task_patch_snapshots"] = existing_snapshots
 
         await self.plan_state_service.upsert_plan_state(
             user_id=user_id,
             plan_id=plan_id,
             patch={
                 "facts": {
-                    "adaptive_meta": {
-                        "task_patch_snapshots": [snapshot],
-                    },
+                    "adaptive_meta": merged_meta,
                 },
             },
             bump_version=False,  # Don't bump for snapshot metadata
@@ -380,26 +394,47 @@ class PlanAdjustmentApplier:
             )
             await self.db.execute(stmt)
 
-        # Unhide hidden tasks
-        hidden_ids = last.get("hidden_task_ids", [])
-        if hidden_ids:
+        # Restore original task state (minutes / difficulty / order / tags)
+        task_state_snapshots = dict(last.get("task_state_snapshots") or {})
+        if task_state_snapshots:
             tasks = await self.db.execute(
                 select(Task).where(
-                    Task.id.in_([UUID(tid) for tid in hidden_ids])
+                    Task.id.in_([UUID(tid) for tid in task_state_snapshots.keys()])
                 )
             )
             for task in tasks.scalars():
-                tags = list(task.tags) if task.tags else []
-                if "adaptive_hidden" in tags:
-                    tags.remove("adaptive_hidden")
-                    task.tags = tags
+                original = task_state_snapshots.get(str(task.id)) or {}
+                if "estimated_minutes" in original:
+                    task.estimated_minutes = original["estimated_minutes"]
+                if "difficulty" in original:
+                    task.difficulty = original["difficulty"]
+                if "order_index" in original:
+                    task.order_index = original["order_index"]
+                if "tags" in original:
+                    task.tags = list(original["tags"] or [])
+        else:
+            # Backward-compatible fallback for older snapshots that only track hidden ids.
+            hidden_ids = last.get("hidden_task_ids", [])
+            if hidden_ids:
+                tasks = await self.db.execute(
+                    select(Task).where(
+                        Task.id.in_([UUID(tid) for tid in hidden_ids])
+                    )
+                )
+                for task in tasks.scalars():
+                    tags = list(task.tags) if task.tags else []
+                    if "adaptive_hidden" in tags:
+                        tags.remove("adaptive_hidden")
+                        task.tags = tags
 
         # Remove the rolled-back snapshot
         snapshots.pop()
+        current_meta = dict(meta)
+        current_meta["task_patch_snapshots"] = snapshots
         await self.plan_state_service.upsert_plan_state(
             user_id=user_id,
             plan_id=plan_id,
-            patch={"facts": {"adaptive_meta": {"task_patch_snapshots": snapshots}}},
+            patch={"facts": {"adaptive_meta": current_meta}},
             bump_version=True,
         )
 
@@ -465,6 +500,22 @@ class PlanAdjustmentApplier:
             return ""
 
         return " ".join(parts) + " 你可以随时切回原来的安排。"
+
+    def _capture_task_state(
+        self,
+        result: PlanAdjustmentResult,
+        task: Task,
+    ) -> None:
+        """Capture a task's original state once so rollback can fully restore it."""
+        key = str(task.id)
+        if key in result.task_state_snapshots:
+            return
+        result.task_state_snapshots[key] = {
+            "estimated_minutes": task.estimated_minutes,
+            "difficulty": task.difficulty,
+            "order_index": task.order_index,
+            "tags": list(task.tags) if task.tags else [],
+        }
 
     async def _fetch_upcoming_tasks(
         self,

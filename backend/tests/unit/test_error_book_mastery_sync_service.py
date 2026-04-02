@@ -40,7 +40,11 @@ def _make_node_status(*, mastery_score: float = 50.0, study_count: int = 5):
         mastery_score=mastery_score,
         study_count=study_count,
         last_study_at=None,
+        next_review_at=None,
         is_unlocked=True,
+        bkt_mastery_prob=max(0.0, min(float(mastery_score) / 100.0, 1.0)),
+        bkt_last_updated_at=None,
+        first_unlock_at=None,
     )
     return status
 
@@ -88,11 +92,14 @@ def _make_service(node_statuses: dict | None = None):
     if node_statuses is not None:
         original_get_or_create = service._get_or_create_node_status
 
-        async def _mock_get_or_create(user_id, node_id):
+        async def _mock_get_or_create(user_id, node_id, create_if_missing=True):
             if node_id in _statuses:
                 return _statuses[node_id]
+            if not create_if_missing:
+                return None
             # Simulate creating a new status
             new_status = _make_node_status(mastery_score=0)
+            new_status.is_unlocked = False
             _statuses[node_id] = new_status
             return new_status
 
@@ -321,7 +328,8 @@ async def test_mastery_does_not_exceed_100():
 # ===========================================================================
 
 @pytest.mark.asyncio
-async def test_diagnosis_publishes_node_mastery_updated_event():
+async def test_diagnosis_defers_node_mastery_updated_event():
+    """Events are deferred via _pending_event, not published inline (fix #1)."""
     node_id = uuid4()
     service, _, _ = _make_service(node_statuses={node_id: 50.0})
     error = _make_error_record(
@@ -329,39 +337,44 @@ async def test_diagnosis_publishes_node_mastery_updated_event():
         error_type="concept_confusion",
     )
 
-    with patch("app.services.error_book_mastery_sync_service.event_bus") as mock_bus:
-        mock_bus.publish = AsyncMock()
-        await service.apply_error_diagnosis(uuid4(), error)
+    results = await service.apply_error_diagnosis(uuid4(), error)
 
-        assert mock_bus.publish.called
-        call_args = mock_bus.publish.call_args
-        assert call_args[0][0] == "node_mastery_updated"
+    assert len(results) == 1
+    assert "_pending_event" in results[0]
+    assert results[0]["_pending_event"]["topic"] == "node_mastery_updated"
+    payload = results[0]["_pending_event"]["payload"]
+    assert payload["old_mastery"] == 50
+    assert payload["new_mastery"] == 42
 
 
 @pytest.mark.asyncio
-async def test_review_publishes_node_mastery_updated_event():
+async def test_review_defers_node_mastery_updated_event():
+    """Events are deferred via _pending_event, not published inline (fix #1)."""
+    node_id = uuid4()
+    service, _, _ = _make_service(node_statuses={node_id: 47.0})
+    error = _make_error_record(linked_node_ids=[node_id])
+
+    results = await service.apply_review_feedback(uuid4(), error, "remembered")
+
+    assert len(results) == 1
+    assert "_pending_event" in results[0]
+    assert results[0]["_pending_event"]["topic"] == "node_mastery_updated"
+
+
+@pytest.mark.asyncio
+async def test_deferred_event_survives_publish_failure():
+    """With deferred events, the sync itself never crashes even if publish later fails."""
     node_id = uuid4()
     service, _, _ = _make_service(node_statuses={node_id: 50.0})
     error = _make_error_record(linked_node_ids=[node_id])
 
-    with patch("app.services.error_book_mastery_sync_service.event_bus") as mock_bus:
-        mock_bus.publish = AsyncMock()
-        await service.apply_review_feedback(uuid4(), error, "remembered")
+    # Event is deferred, not published inline — so Redis failure is irrelevant here
+    results = await service.apply_review_feedback(uuid4(), error, "remembered")
+    assert len(results) == 1
+    assert "_pending_event" in results[0]
 
-        assert mock_bus.publish.called
-
-
-@pytest.mark.asyncio
-async def test_event_publish_failure_does_not_crash():
-    node_id = uuid4()
-    service, _, _ = _make_service(node_statuses={node_id: 50.0})
-    error = _make_error_record(linked_node_ids=[node_id])
-
-    with patch("app.services.error_book_mastery_sync_service.event_bus") as mock_bus:
-        mock_bus.publish = AsyncMock(side_effect=Exception("Redis down"))
-        # Should not raise
-        results = await service.apply_review_feedback(uuid4(), error, "remembered")
-        assert len(results) == 1
+    # Simulating later publish failure at the caller side would not affect this result
+    # The caller catches the exception when flushing pending events
 
 
 # ===========================================================================
@@ -428,7 +441,7 @@ async def test_diagnosis_increments_study_count():
 @pytest.mark.asyncio
 async def test_diagnosis_creates_status_for_new_node():
     node_id = uuid4()
-    service, _, _ = _make_service(node_statuses={})  # No existing statuses
+    service, _, statuses = _make_service(node_statuses={})  # No existing statuses
     error = _make_error_record(
         linked_node_ids=[node_id],
         error_type="concept_confusion",
@@ -439,6 +452,7 @@ async def test_diagnosis_creates_status_for_new_node():
     # New node starts at 0, -8 clamped to 0 → no change → no result
     # This is correct behavior: you can't go below 0
     assert results == []
+    assert node_id not in statuses  # no zero-evidence node should be materialized
 
 
 @pytest.mark.asyncio
@@ -455,6 +469,34 @@ async def test_diagnosis_creates_status_positive_node():
     assert len(results) == 1
     assert results[0]["old_mastery"] == 0
     assert results[0]["new_mastery"] == 4
+
+
+@pytest.mark.asyncio
+async def test_mastery_update_refreshes_bkt_and_review_fields():
+    node_id = uuid4()
+    service, _, statuses = _make_service(node_statuses={node_id: 47.0})
+    error = _make_error_record(linked_node_ids=[node_id], error_type="concept_confusion")
+
+    results = await service.apply_error_diagnosis(uuid4(), error)
+
+    assert len(results) == 1
+    status = statuses[node_id]
+    assert status.bkt_mastery_prob == pytest.approx(0.39)
+    assert status.bkt_last_updated_at is not None
+    assert status.next_review_at is not None
+    assert status.last_study_at is not None
+
+
+@pytest.mark.asyncio
+async def test_positive_new_node_unlocks_on_first_real_evidence():
+    node_id = uuid4()
+    service, _, statuses = _make_service(node_statuses={})
+    error = _make_error_record(linked_node_ids=[node_id])
+
+    await service.apply_review_feedback(uuid4(), error, "remembered")
+
+    assert statuses[node_id].is_unlocked is True
+    assert statuses[node_id].first_unlock_at is not None
 
 
 # ===========================================================================

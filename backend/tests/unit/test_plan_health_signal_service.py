@@ -303,3 +303,54 @@ async def test_publish_failure_returns_false():
         )
 
     assert emitted is False
+
+
+# ===========================================================================
+# 15. No adjustment produced → event does not claim "applied"
+# ===========================================================================
+
+@pytest.mark.asyncio
+async def test_no_adjustment_produced_action_reflects_reality():
+    service, _ = _make_service()
+    report = _make_report(severity="warning")
+
+    with patch("app.services.plan_health_signal_service.event_bus") as mock_bus:
+        mock_bus.publish = AsyncMock()
+        with patch.object(service, "_persist_signal_meta", new_callable=AsyncMock):
+            emitted = await service.maybe_publish(
+                report=report,
+                trigger="task_feedback",
+                action_taken="no_adjustment_produced",
+                existing_facts={},
+            )
+
+    assert emitted is True
+    payload = mock_bus.publish.call_args[0][1]
+    assert payload["action_taken"] == "no_adjustment_produced"
+    assert "applied" not in payload["action_taken"]
+
+
+# ===========================================================================
+# 16. Cooldown event → system update contains title/description/created_at
+# ===========================================================================
+
+def test_cooldown_system_update_has_visible_contract():
+    from app.services.system_update_service import build_system_update
+
+    message = "学习节奏有波动，系统在观察中。"
+    update = build_system_update(
+        update_type="plan_health_signal",
+        category="plan_health",
+        title="计划状态观察中",
+        description=message,
+        priority="low",
+        metadata={"plan_id": "test-plan", "severity": "warning", "silent": True},
+    )
+
+    assert "title" in update
+    assert "description" in update
+    assert "created_at" in update
+    assert update["title"] == "计划状态观察中"
+    assert update["description"] == message
+    assert isinstance(update["created_at"], int)
+    assert update["category"] == "plan_health"

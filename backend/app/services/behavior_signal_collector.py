@@ -16,6 +16,7 @@ from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
+from app.core.event_bus import EventBus
 from app.services.cognitive_service import CognitiveService
 from app.services.plan_state_service import PlanStateService
 from app.services.profile_write_service import ProfileWriteService
@@ -43,9 +44,10 @@ class BehaviorSignalCollector:
     INFERRED_WINDOW_DAYS = 14
     INFERRED_AGGREGATION_STEP = 5
 
-    def __init__(self, db: AsyncSession, redis=None):
+    def __init__(self, db: AsyncSession, redis=None, event_bus: EventBus | None = None):
         self.db = db
         self.redis = redis
+        self.event_bus = event_bus
         self.cognitive_service = CognitiveService(db)
         self.plan_state_service = PlanStateService(db, redis)
         self.profile_write_service = ProfileWriteService(db, redis)
@@ -111,6 +113,7 @@ class BehaviorSignalCollector:
         if confidence < 0.7:
             return
 
+        intervention_created = False
         states = await self.plan_state_service.get_active_plan_states(user_id, limit=3)
         for state in states:
             if state.status != PlanStateStatus.ACTIVE.value:
@@ -121,6 +124,30 @@ class BehaviorSignalCollector:
                 plan_id=state.plan_id,
                 pattern_name=str(event.get("pattern_name") or ""),
             )
+
+            # --- Card protocol: behavior → intervention record (breakpoint 4 fix) ---
+            try:
+                from app.services.card_protocol.behavior_intervention_bridge import BehaviorInterventionBridge
+                bridge = BehaviorInterventionBridge(self.db, self.event_bus)
+                record = await bridge.on_behavior_pattern(
+                    user_id=user_id,
+                    pattern_name=str(event.get("pattern_name") or ""),
+                    pattern_type=str(event.get("pattern_type") or "execution"),
+                    confidence=confidence,
+                    plan_id=state.plan_id,
+                    description=event.get("description"),
+                    solution_text=event.get("solution_text"),
+                    frequency=int(event.get("frequency") or 1),
+                    evidence_ids=event.get("evidence_ids"),
+                )
+                if record:
+                    intervention_created = True
+            except Exception as bridge_exc:
+                await self.db.rollback()
+                logger.warning("Behavior→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)
+
+        if intervention_created:
+            await self.db.commit()
 
     async def _maybe_emit_too_difficult_streak(self, user_id: UUID) -> None:
         signal_key = "too_difficult_streak"

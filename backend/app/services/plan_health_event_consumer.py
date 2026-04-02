@@ -20,7 +20,7 @@ from loguru import logger
 
 from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
-from app.services.system_update_service import SystemUpdateService
+from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 # Actions where断点1 already handles user-facing notification
@@ -87,34 +87,52 @@ class PlanHealthEventConsumer:
                 user_id, plan_id, severity, action_taken,
             )
 
-            # If断点1 already notified the user, skip duplicate visible update
-            if action_taken in _ALREADY_NOTIFIED_ACTIONS:
-                logger.debug(
-                    "PlanHealthAlert: skipping visible update (action={} already notified by断点1)",
-                    action_taken,
-                )
-                return
-
-            # For cooldown or other states: generate a lightweight system update
             async with AsyncSessionLocal() as db:
-                from app.services.plan_state_service import PlanStateService
-                ps = PlanStateService(db)
-                state = await ps.get_plan_state(UUID(user_id), UUID(plan_id)) if plan_id else None
+                should_generate_visible_update = action_taken not in _ALREADY_NOTIFIED_ACTIONS
+                if not should_generate_visible_update:
+                    logger.debug(
+                        "PlanHealthAlert: skipping visible update (action={} already notified by断点1)",
+                        action_taken,
+                    )
 
                 # Only generate visible update for cooldown situations
-                if action_taken.endswith("_cooldown_active"):
+                if should_generate_visible_update and action_taken.endswith("_cooldown_active"):
                     message = self._build_cooldown_message(severity, event.get("reasons", []))
-                    await SystemUpdateService().enqueue(
-                        user_id=UUID(user_id),
-                        payload={
-                            "type": "plan_health_signal",
+                    update = build_system_update(
+                        update_type="plan_health_signal",
+                        category="plan_health",
+                        title="计划状态观察中",
+                        description=message,
+                        priority="low" if severity == "warning" else "medium",
+                        metadata={
                             "plan_id": plan_id,
                             "severity": severity,
                             "action_taken": action_taken,
-                            "message": message,
-                            "silent": True,  # Don't actively push to user
+                            "silent": True,
                         },
                     )
+                    await SystemUpdateService().enqueue(
+                        user_id=UUID(user_id),
+                        payload=update,
+                    )
+
+                # --- Card protocol: create InterventionRecord (breakpoint 3 fix) ---
+                try:
+                    from app.services.card_protocol.health_intervention_bridge import PlanHealthInterventionBridge
+                    bridge = PlanHealthInterventionBridge(db, self.event_bus)
+                    record = await bridge.on_plan_health_signal(
+                        user_id=UUID(user_id),
+                        plan_id=UUID(plan_id),
+                        severity=severity,
+                        reasons=event.get("reasons", []),
+                        action_taken=action_taken,
+                        context=event.get("context"),
+                    )
+                    if record:
+                        await db.commit()
+                except Exception as bridge_exc:
+                    await db.rollback()
+                    logger.warning("PlanHealth→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)
 
         except Exception as e:
             logger.error(f"PlanHealthEventConsumer failed: {e}")

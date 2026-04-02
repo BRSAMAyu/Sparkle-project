@@ -31,6 +31,7 @@ async def test_behavior_signal_collector_creates_fragment_for_too_difficult_stre
     collector.cognitive_service.analyze_behavior = AsyncMock()
     collector._maybe_emit_inactivity_signal = AsyncMock()
     collector._maybe_emit_pattern_adjustment = AsyncMock()
+    collector._maybe_update_task_inferred_preferences = AsyncMock()
     collector._mark_signal_emitted = AsyncMock()
 
     await collector.handle_task_feedback_event(
@@ -63,6 +64,10 @@ async def test_behavior_signal_collector_reacts_to_high_confidence_pattern_event
     monkeypatch.setattr(
         "app.services.behavior_signal_collector.AdaptiveReplanner.on_behavior_pattern_detected",
         on_detected,
+    )
+    monkeypatch.setattr(
+        "app.services.card_protocol.behavior_intervention_bridge.BehaviorInterventionBridge.on_behavior_pattern",
+        AsyncMock(return_value=None),
     )
 
     await collector.handle_behavior_pattern_event(

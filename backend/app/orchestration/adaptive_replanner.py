@@ -552,7 +552,7 @@ class AdaptiveReplanner:
                     completion_rate=completion_rate,
                     feedback_category=feedback_category,
                 )
-                action_taken = "full_replan_triggered"
+                action_taken = "full_replan_triggered" if action_records else "no_replan_produced"
         else:
             if self._recently_triggered(state.facts, "last_adjustment_at", self.AUTO_ADJUSTMENT_COOLDOWN):
                 action_taken = "adjustment_cooldown_active"
@@ -565,7 +565,7 @@ class AdaptiveReplanner:
                     difficulty_delta=difficulty_delta,
                     feedback_category=feedback_category,
                 )
-                action_taken = "incremental_adjustment_applied"
+                action_taken = "incremental_adjustment_applied" if action_records else "no_adjustment_produced"
 
         # ---断点3: emit plan health signal ---
         try:
@@ -666,17 +666,27 @@ class AdaptiveReplanner:
         )
 
         # Apply adjustments to actual task entities (the critical bridge)
+        patch_result = None
         try:
             patch_result = await self.plan_adjustment_applier.apply_incremental_changes(
                 user_id=report.user_id,
                 plan_id=report.plan_id,
                 trigger=trigger,
             )
-            if patch_result.applied and (patch_result.affected_task_ids or patch_result.inserted_task_ids):
+            task_level_change = bool(
+                patch_result.applied
+                and (
+                    patch_result.affected_task_ids
+                    or patch_result.inserted_task_ids
+                    or patch_result.hidden_task_ids
+                )
+            )
+            if task_level_change:
                 logger.info(
-                    "PlanAdjustmentApplier patched {} tasks, inserted {} reviews for plan {}",
+                    "PlanAdjustmentApplier patched {} tasks, inserted {} reviews, hid {} tasks for plan {}",
                     len(patch_result.affected_task_ids),
                     len(patch_result.inserted_task_ids),
+                    len(patch_result.hidden_task_ids),
                     report.plan_id,
                 )
                 # Enhance the adaptation record with task-level outcome
@@ -687,6 +697,11 @@ class AdaptiveReplanner:
                     user_facing_message=patch_result.user_facing_summary or record.user_facing_message,
                     source="adaptive_replanner+plan_adjustment_applier",
                 )
+            else:
+                logger.info(
+                    "PlanAdjustmentApplier produced no task-level changes for plan {} despite parameter update",
+                    report.plan_id,
+                )
         except Exception as exc:
             logger.warning("PlanAdjustmentApplier failed (non-fatal): {}", exc)
 
@@ -694,8 +709,8 @@ class AdaptiveReplanner:
         try:
             bridge = self.card_bridge
             if bridge:
-                affected_ids = patch_result.affected_task_ids if 'patch_result' in dir() else None
-                inserted_ids = patch_result.inserted_task_ids if 'patch_result' in dir() else None
+                affected_ids = patch_result.affected_task_ids if patch_result else None
+                inserted_ids = patch_result.inserted_task_ids if patch_result else None
                 await bridge.on_incremental_adjustment(
                     user_id=report.user_id,
                     plan_id=report.plan_id,
@@ -706,6 +721,13 @@ class AdaptiveReplanner:
                 )
         except Exception as exc:
             logger.warning("Card protocol writeback failed (non-fatal): {}", exc)
+
+        if not patch_result or not (
+            patch_result.affected_task_ids
+            or patch_result.inserted_task_ids
+            or patch_result.hidden_task_ids
+        ):
+            return []
 
         await self._enqueue_adaptation_update(report.user_id, record, update_type="plan_adaptation")
         return [record]
@@ -1148,6 +1170,15 @@ class AdaptiveReplanner:
                 "restored_snapshot_id": adaptive_meta["active_snapshot_id"],
             },
         )
+        # ---断点1 Fix #1: Roll back actual Task entities, not just plan state ---
+        try:
+            await self.plan_adjustment_applier.rollback_last_patch(
+                user_id=user_id,
+                plan_id=plan_id,
+            )
+        except Exception as exc:
+            logger.warning("Task-entity rollback failed (non-fatal): {}", exc)
+
         await self.plan_state_service.upsert_plan_state(
             user_id=user_id,
             plan_id=plan_id,
