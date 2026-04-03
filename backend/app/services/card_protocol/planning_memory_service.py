@@ -174,20 +174,23 @@ class PlanningMemoryService:
         for phase in phase_cards:
             metadata = dict(phase.metadata_ or {})
             feedback_gate = dict(metadata.get("feedback_gate") or {})
-            if not feedback_gate:
-                continue
-            archive.append(
-                {
-                    "phase_card_id": str(phase.id),
-                    "title": metadata.get("title") or metadata.get("objective"),
-                    "phase_index": metadata.get("phase_index"),
-                    "feedback_gate": feedback_gate,
-                    "lessons_for_future": self._extract_lessons(
-                        feedback_gate.get("retrospective") or {},
-                        feedback_gate,
-                    ),
-                }
-            )
+            # Include all non-active phases regardless of whether feedback was submitted.
+            # Phases without a feedback_gate are included with partial data so the AI
+            # context never has silent gaps in the plan history.
+            entry: dict[str, Any] = {
+                "phase_card_id": str(phase.id),
+                "title": metadata.get("title") or metadata.get("objective"),
+                "phase_index": metadata.get("phase_index"),
+                "lifecycle_status": phase.lifecycle_status.value,
+                "feedback_submitted": bool(feedback_gate.get("submitted_at")),
+            }
+            if feedback_gate:
+                entry["feedback_gate"] = feedback_gate
+                entry["lessons_for_future"] = self._extract_lessons(
+                    feedback_gate.get("retrospective") or {},
+                    feedback_gate,
+                )
+            archive.append(entry)
         archive.sort(key=lambda item: int(item.get("phase_index") or 0))
         return archive
 

@@ -115,8 +115,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	cards := api.Group("/cards")
 	cards.Use(authMiddleware)
 	{
-		cards.Any("", h.proxyWithHeaders)
-		cards.Any("/*path", h.proxyWithHeaders)
+		// Explicit methods rather than Any() to respect HTTP semantics and
+		// prevent unintended method exposure (HEAD/CONNECT/TRACE).
+		cards.GET("", h.proxyWithHeaders)
+		cards.POST("", h.proxyWithHeaders)
+		cards.GET("/*path", h.proxyWithHeaders)
+		cards.POST("/*path", h.proxyWithHeaders)
+		cards.PUT("/*path", h.proxyWithHeaders)
+		cards.PATCH("/*path", h.proxyWithHeaders)
+		cards.DELETE("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered cards proxy routes")
 

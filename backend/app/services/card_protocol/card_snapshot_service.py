@@ -652,11 +652,13 @@ class CardSnapshotService:
             await phase_service.activate_phase(
                 phase_card_id=ref_to_card[active_phase_ref].id,
                 user_id=user_id,
+                skip_gate_check=True,
             )
         elif phase_refs:
             await phase_service.activate_phase(
                 phase_card_id=ref_to_card[phase_refs[0]].id,
                 user_id=user_id,
+                skip_gate_check=True,
             )
 
         if phase_refs:
@@ -1007,13 +1009,15 @@ class ShareService:
             raise ValueError("Share snapshot is missing")
 
         share.view_count = int(share.view_count or 0) + 1
-        share.adoption_count = int(share.adoption_count or 0) + 1
+        # adoption_count is incremented AFTER a successful import so that a
+        # partial failure mid-import does not inflate the counter.
         result = await self.snapshot_service.import_snapshot(
             snapshot=share.snapshot,
             user_id=user_id,
             import_mode=import_mode,
             modifications=modifications or {},
         )
+        share.adoption_count = int(share.adoption_count or 0) + 1
 
         adoption = CardAdoptionRecord(
             share_record_id=share.id,

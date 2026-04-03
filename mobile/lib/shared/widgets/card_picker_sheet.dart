@@ -106,42 +106,65 @@ class _CardPickerSheetState extends State<CardPickerSheet> {
             ),
             const SizedBox(height: DS.spacing16),
             Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  if (widget.allowEmptySelection)
-                    _PickerTile(
-                      title: widget.emptySelectionLabel,
-                      subtitle: 'Detach from current plan',
-                      icon: Icons.link_off_rounded,
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                  for (final entry in grouped.entries) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        top: DS.spacing8,
-                        bottom: DS.spacing6,
-                      ),
-                      child: Text(
-                        entry.key,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              child: filtered.isEmpty && normalized.isNotEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.search_off_rounded,
+                              size: 48,
                               color: DS.textSecondary,
-                              fontWeight: DS.fontWeightSemiBold,
                             ),
+                            const SizedBox(height: DS.spacing12),
+                            Text(
+                              'No results for "$_query"',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: DS.textSecondary,
+                                  ),
+                            ),
+                          ],
+                        ),
                       ),
+                    )
+                  : ListView(
+                      shrinkWrap: true,
+                      children: [
+                        if (widget.allowEmptySelection)
+                          _PickerTile(
+                            title: widget.emptySelectionLabel,
+                            subtitle: 'Detach from current plan',
+                            icon: Icons.link_off_rounded,
+                            onTap: () => Navigator.of(context).pop(),
+                          ),
+                        for (final entry in grouped.entries) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              top: DS.spacing8,
+                              bottom: DS.spacing6,
+                            ),
+                            child: Text(
+                              entry.key,
+                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: DS.textSecondary,
+                                    fontWeight: DS.fontWeightSemiBold,
+                                  ),
+                            ),
+                          ),
+                          ...entry.value.map(
+                            (option) => _PickerTile(
+                              title: option.title,
+                              subtitle: option.subtitle,
+                              icon: option.icon,
+                              isSelected: option.isSelected,
+                              onTap: () => Navigator.of(context).pop(option.id),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    ...entry.value.map(
-                      (option) => _PickerTile(
-                        title: option.title,
-                        subtitle: option.subtitle,
-                        icon: option.icon,
-                        isSelected: option.isSelected,
-                        onTap: () => Navigator.of(context).pop(option.id),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
             ),
           ],
         ),

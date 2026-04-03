@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.event_bus import event_bus as _event_bus
 from app.db.session import get_db
 from app.models.card_protocol import (
     BindingMode,
@@ -91,7 +92,7 @@ async def move_card(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = CardOperationsService(db)
+    service = CardOperationsService(db, event_bus=_event_bus)
     try:
         result = await service.move_card(
             card_id=card_id,
@@ -112,7 +113,7 @@ async def bulk_move_cards(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = CardOperationsService(db)
+    service = CardOperationsService(db, event_bus=_event_bus)
     try:
         results = await service.bulk_move_cards(
             card_ids=request.card_ids,
@@ -133,7 +134,7 @@ async def link_card(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = CardOperationsService(db)
+    service = CardOperationsService(db, event_bus=_event_bus)
     try:
         edge = await service.link_cards(
             source_card_id=card_id,
@@ -167,7 +168,7 @@ async def unlink_card(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = CardOperationsService(db)
+    service = CardOperationsService(db, event_bus=_event_bus)
     try:
         await service.unlink_cards(
             source_card_id=card_id,
@@ -189,7 +190,7 @@ async def get_card_tree(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = CardOperationsService(db)
+    service = CardOperationsService(db, event_bus=_event_bus)
     try:
         tree = await service.get_card_tree(root_card_id=card_id, max_depth=max_depth)
         return {"success": True, "data": tree}
@@ -211,7 +212,7 @@ async def search_cards(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = CardOperationsService(db)
+    service = CardOperationsService(db, event_bus=_event_bus)
     cards = await service.search_cards(
         user_id=current_user.id,
         card_type=card_type,
@@ -246,7 +247,7 @@ async def set_task_recurrence(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = TemporalEngine(db)
+    service = TemporalEngine(db, event_bus=_event_bus)
     try:
         rule = RecurrenceRule(
             pattern=request.pattern,  # type: ignore[arg-type]
@@ -281,7 +282,7 @@ async def defer_occurrence(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = TemporalEngine(db)
+    service = TemporalEngine(db, event_bus=_event_bus)
     try:
         new_date = None
         if request.new_date:
@@ -317,7 +318,7 @@ async def create_card_snapshot(
 ):
     service = CardSnapshotService(db)
     try:
-        card = await CardOperationsService(db).card_service.get_card(card_id)
+        card = await CardOperationsService(db, event_bus=_event_bus).card_service.get_card(card_id)
         if not card or card.owner_id != current_user.id:
             raise HTTPException(status_code=404, detail="Card not found")
         snapshot = await service.create_snapshot(
@@ -348,7 +349,7 @@ async def share_card(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = ShareService(db)
+    service = ShareService(db, event_bus=_event_bus)
     try:
         share = await service.share_card(
             card_id=card_id,
@@ -384,7 +385,7 @@ async def get_card_share(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = ShareService(db)
+    service = ShareService(db, event_bus=_event_bus)
     share = await service.get_share_record(share_record_id)
     if not share:
         raise HTTPException(status_code=404, detail="Share record not found")
@@ -416,7 +417,7 @@ async def adopt_card_share(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = ShareService(db)
+    service = ShareService(db, event_bus=_event_bus)
     try:
         result = await service.adopt_shared_card(
             share_record_id=share_record_id,

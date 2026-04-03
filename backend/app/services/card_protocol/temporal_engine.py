@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import hashlib
 import json
 from dataclasses import asdict, dataclass
@@ -308,8 +309,10 @@ class TemporalEngine:
                 if current.isoweekday() in valid_days:
                     results.append(current)
             elif pattern == "monthly":
-                day_of_month = rule.day_of_month or from_date.day
-                if current.day == day_of_month:
+                target_dom = rule.day_of_month or from_date.day
+                last_day = calendar.monthrange(current.year, current.month)[1]
+                effective_dom = min(target_dom, last_day)
+                if current.day == effective_dom:
                     results.append(current)
             elif pattern == "custom":
                 interval = max(1, int(rule.interval_days or 2))

@@ -5,7 +5,7 @@ from uuid import UUID
 import pytest
 from sqlalchemy import select
 
-from app.models.card_protocol import CardType, EdgeType, OccurrenceStatus, TaskOccurrence
+from app.models.card_protocol import BindingMode, CardType, EdgeType, OccurrenceStatus, TaskOccurrence
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.services.card_protocol.card_operations_service import CardOperationsService
@@ -305,3 +305,90 @@ async def test_search_cards_supports_legacy_task_lookup(db_session, test_user):
     )
     assert len(results) == 1
     assert results[0].metadata_["legacy_task_id"] == str(task.id)
+
+
+@pytest.mark.asyncio
+async def test_link_and_unlink_cards_creates_and_removes_edge(db_session, test_user):
+    """link_cards creates a typed edge; unlink_cards removes it."""
+    fake_bus = FakeEventBus()
+    svc = CardOperationsService(db_session, fake_bus)
+    card_svc = CardService(db_session)
+
+    source = await card_svc.create_card(
+        card_type=CardType.TASK,
+        owner_id=test_user.id,
+        holder_id=test_user.id,
+        metadata={"title": "Source task"},
+    )
+    target = await card_svc.create_card(
+        card_type=CardType.KNOWLEDGE,
+        owner_id=test_user.id,
+        holder_id=test_user.id,
+        metadata={"name": "Knowledge node"},
+    )
+    await db_session.commit()
+
+    edge = await svc.link_cards(
+        source_card_id=source.id,
+        target_card_id=target.id,
+        link_type=EdgeType.EVIDENCE_FOR,
+        binding_mode=BindingMode.REFERENCE,
+        user_id=test_user.id,
+    )
+    await db_session.commit()
+
+    assert edge.from_card_id == source.id
+    assert edge.to_card_id == target.id
+    assert edge.edge_type == EdgeType.EVIDENCE_FOR
+
+    # Verify the edge is visible via get_children
+    children = await svc.edge_service.get_children(source.id, active_only=True)
+    ev_edges = [(e, c) for e, c in children if e.edge_type == EdgeType.EVIDENCE_FOR]
+    assert len(ev_edges) == 1
+
+    await svc.unlink_cards(
+        source_card_id=source.id,
+        target_card_id=target.id,
+        link_type=EdgeType.EVIDENCE_FOR,
+        user_id=test_user.id,
+    )
+    await db_session.commit()
+
+    remaining = await svc.edge_service.get_children(source.id, active_only=True)
+    evidence_edges = [e for e, _ in remaining if e.edge_type == EdgeType.EVIDENCE_FOR]
+    assert evidence_edges == []
+
+
+@pytest.mark.asyncio
+async def test_move_card_rejects_containment_cycle(db_session, test_user):
+    """Moving a card into one of its own descendants must raise ValueError."""
+    fake_bus = FakeEventBus()
+    svc = CardOperationsService(db_session, fake_bus)
+    card_svc = CardService(db_session)
+
+    grandparent = await card_svc.create_card(
+        card_type=CardType.PLAN,
+        owner_id=test_user.id,
+        holder_id=test_user.id,
+        metadata={"title": "Grandparent"},
+    )
+    child = await card_svc.create_card(
+        card_type=CardType.PHASE,
+        owner_id=test_user.id,
+        holder_id=test_user.id,
+        metadata={"title": "Child"},
+    )
+    await svc.edge_service.create_edge(
+        from_card_id=grandparent.id,
+        to_card_id=child.id,
+        edge_type=EdgeType.CONTAINS,
+    )
+    await db_session.commit()
+
+    # Attempting to move grandparent into child would create a cycle
+    with pytest.raises(ValueError, match="cycle"):
+        await svc.move_card(
+            card_id=grandparent.id,
+            new_parent_card_id=child.id,
+            user_id=test_user.id,
+        )

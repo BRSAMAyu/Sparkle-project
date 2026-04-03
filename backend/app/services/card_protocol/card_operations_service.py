@@ -92,6 +92,13 @@ class CardOperationsService:
         if not card or card.owner_id != user_id:
             raise ValueError("Card not found")
 
+        # Cycle detection: card must not be an ancestor of its proposed new parent.
+        if new_parent_card_id and await self._would_create_cycle(card_id, new_parent_card_id):
+            raise ValueError(
+                f"Cannot move card {card_id} into {new_parent_card_id}: "
+                "that would create a containment cycle in the card graph"
+            )
+
         old_parent_edge, old_parent = await self._get_active_parent(card_id)
         normalized_parent, new_plan_card, new_phase_card = await self._normalize_target_parent(
             card=card,
@@ -293,6 +300,29 @@ class CardOperationsService:
         stmt = stmt.order_by(Card.updated_at.desc()).limit(limit).offset(offset)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def _would_create_cycle(self, card_id: UUID, proposed_parent_id: UUID) -> bool:
+        """Return True if making proposed_parent_id a CONTAINS parent of card_id would form a cycle.
+
+        Traverses the ancestor chain of proposed_parent_id upward; if we reach card_id
+        (or they are the same card) a cycle would be created.
+        """
+        if card_id == proposed_parent_id:
+            return True
+        visited: set[UUID] = set()
+        frontier = [proposed_parent_id]
+        while frontier:
+            current_id = frontier.pop()
+            if current_id in visited:
+                continue
+            visited.add(current_id)
+            parents = await self.edge_service.get_parents(current_id, edge_type=EdgeType.CONTAINS, active_only=True)
+            for _, ancestor in parents:
+                if ancestor.id == card_id:
+                    return True
+                if ancestor.id not in visited:
+                    frontier.append(ancestor.id)
+        return False
 
     async def _get_active_parent(self, card_id: UUID) -> tuple[CardEdge | None, Card | None]:
         parents = await self.edge_service.get_parents(card_id, edge_type=EdgeType.CONTAINS, active_only=True)

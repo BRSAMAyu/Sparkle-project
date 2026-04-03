@@ -143,11 +143,31 @@ class PhaseService:
         *,
         phase_card_id: UUID,
         user_id: UUID,
+        skip_gate_check: bool = False,
     ) -> Card:
         phase_card = await self._get_owned_phase(phase_card_id, user_id)
         plan_card = await self._get_parent_plan(phase_card.id)
         if not plan_card:
             raise ValueError("Phase must belong to a plan")
+
+        # Enforce feedback gate: the preceding phase must have submitted feedback
+        # before the next phase can be activated (unless caller is internal/system).
+        if not skip_gate_check:
+            sibling_phases = await self.get_plan_phases(plan_card.id)
+            phase_index = int((phase_card.metadata_ or {}).get("phase_index") or 0)
+            if phase_index > 1:
+                preceding = next(
+                    (p for p in sibling_phases if int((p.metadata_ or {}).get("phase_index") or 0) == phase_index - 1),
+                    None,
+                )
+                if preceding is not None:
+                    pre_meta = dict(preceding.metadata_ or {})
+                    gate_required = bool(pre_meta.get("feedback_gate_required", True))
+                    gate_submitted = bool((pre_meta.get("feedback_gate") or {}).get("submitted_at"))
+                    if gate_required and not gate_submitted:
+                        raise ValueError(
+                            f"Phase {phase_index - 1} requires a feedback gate submission before phase {phase_index} can be activated"
+                        )
 
         sibling_phases = await self.get_plan_phases(plan_card.id)
         for sibling in sibling_phases:
@@ -196,7 +216,7 @@ class PhaseService:
         plan_card = await self._get_parent_plan(phase_card.id)
         next_phase_id = await self._find_next_phase_id(phase_card.id)
         if plan_card and next_phase_id:
-            await self.activate_phase(phase_card_id=next_phase_id, user_id=user_id)
+            await self.activate_phase(phase_card_id=next_phase_id, user_id=user_id, skip_gate_check=True)
         if plan_card:
             await self._refresh_plan_progress(plan_card, user_id)
 
@@ -242,7 +262,7 @@ class PhaseService:
         next_phase_id = await self._find_next_phase_id(phase_card.id)
         next_phase_activated = False
         if plan_card and next_phase_id and not trigger_compass_review:
-            await self.activate_phase(phase_card_id=next_phase_id, user_id=user_id)
+            await self.activate_phase(phase_card_id=next_phase_id, user_id=user_id, skip_gate_check=True)
             next_phase_activated = True
         if plan_card:
             plan_metadata = dict(plan_card.metadata_ or {})

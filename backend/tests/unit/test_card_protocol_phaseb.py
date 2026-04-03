@@ -287,3 +287,88 @@ async def test_complete_phase_requires_feedback_and_weighted_progress(db_session
 
     assert completion.status == "NEEDS_FEEDBACK"
     assert weighted_progress == pytest.approx(0.25, rel=1e-3)
+
+
+@pytest.mark.asyncio
+async def test_activate_phase_blocked_when_previous_phase_gate_not_submitted(db_session, test_user):
+    """activate_phase must raise ValueError if the preceding phase requires feedback that was not submitted."""
+    fake_bus = FakeEventBus()
+    plan = await _make_plan(db_session, test_user.id, name="Gate Enforcement Plan")
+    plan_card = await PlanAdapter(db_session, fake_bus).plan_to_card(plan)
+    service = PhaseService(db_session, fake_bus)
+
+    phase_one = await service.create_phase(
+        plan_card_id=plan_card.id,
+        name="Phase One",
+        phase_index=1,
+        user_id=test_user.id,
+        feedback_gate_required=True,
+    )
+    phase_two = await service.create_phase(
+        plan_card_id=plan_card.id,
+        name="Phase Two",
+        phase_index=2,
+        user_id=test_user.id,
+    )
+    await db_session.commit()
+
+    # Try to jump straight to phase 2 without submitting phase 1 feedback
+    with pytest.raises(ValueError, match="feedback gate"):
+        await service.activate_phase(phase_card_id=phase_two.id, user_id=test_user.id)
+
+    # After feedback is submitted it must succeed
+    await service.submit_phase_feedback(
+        phase_card_id=phase_one.id,
+        user_id=test_user.id,
+        feedback={"rating": 4, "reflection": "done"},
+    )
+    await db_session.commit()
+    # submit_phase_feedback auto-activates the next phase; no explicit call needed here
+
+
+@pytest.mark.asyncio
+async def test_monthly_recurrence_handles_short_months(db_session, test_user):
+    """Monthly recurrence with day_of_month=31 must still fire in February (clamped to last day)."""
+    fake_bus = FakeEventBus()
+    plan = await _make_plan(db_session, test_user.id, name="Month-End Plan")
+    plan_card = await PlanAdapter(db_session, fake_bus).plan_to_card(plan)
+    phase = await PhaseService(db_session, fake_bus).create_phase(
+        plan_card_id=plan_card.id,
+        name="Feb Phase",
+        phase_index=1,
+        user_id=test_user.id,
+    )
+    task = await _make_task(db_session, user_id=test_user.id, plan_id=plan.id, title="Monthly drill")
+    task_card = await TaskAdapter(db_session, fake_bus).task_to_card(task)
+
+    engine = TemporalEngine(db_session, fake_bus)
+    await engine.set_task_recurrence(
+        task_card_id=task_card.id,
+        rule=RecurrenceRule(pattern="monthly", day_of_month=31),
+        user_id=test_user.id,
+    )
+
+    # Generate over February 2027 (28 days, no 31st)
+    feb_start = date(2027, 2, 1)
+    feb_end = date(2027, 2, 28)
+    created = await engine.generate_occurrences(
+        task_card_id=task_card.id,
+        phase_card_id=phase.id,
+        from_date=feb_start,
+        to_date=feb_end,
+    )
+    # Should fire on Feb 28 (clamped from 31)
+    assert len(created) == 1
+    assert created[0].scheduled_for == date(2027, 2, 28)
+
+    # And on Jan 31 it should fire on the actual 31st
+    jan_start = date(2027, 1, 1)
+    jan_end = date(2027, 1, 31)
+    created_jan = await engine.generate_occurrences(
+        task_card_id=task_card.id,
+        phase_card_id=phase.id,
+        from_date=jan_start,
+        to_date=jan_end,
+    )
+    assert len(created_jan) == 1
+    assert created_jan[0].scheduled_for == date(2027, 1, 31)

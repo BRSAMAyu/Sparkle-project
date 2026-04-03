@@ -77,6 +77,15 @@ class PhaseSketchService:
         if metadata.get("materialized_phase_blueprint_artifact_id") == str(sketch_artifact.id):
             return await self.phase_service.get_plan_phases(plan_card.id)
 
+        # Enforce compass approval gate: a plan must have an approved GlobalCompass
+        # before its phase sketch can be materialized.
+        compass = await self.artifact_service.get_approved(plan_card.id, ArtifactType.GLOBAL_COMPASS)
+        if compass is None:
+            raise ValueError(
+                "Cannot materialize phase sketch: plan has no approved GlobalCompass. "
+                "Complete the discovery conversation and approve the compass first."
+            )
+
         if sketch_artifact.status == ArtifactStatus.DRAFT:
             await self.artifact_service.propose_artifact(sketch_artifact.id)
         if sketch_artifact.status != ArtifactStatus.APPROVED:
@@ -118,6 +127,7 @@ class PhaseSketchService:
             await self.phase_service.activate_phase(
                 phase_card_id=created_phases[0].id,
                 user_id=user_id,
+                skip_gate_check=True,
             )
 
         await self.strategy_map_manager.propose_update(
