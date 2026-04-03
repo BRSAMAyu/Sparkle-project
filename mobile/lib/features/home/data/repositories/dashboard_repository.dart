@@ -5,18 +5,52 @@ import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>(
-    (ref) => DashboardRepository(ref.read(apiClientProvider)),);
+  (ref) => DashboardRepository(ref.read(apiClientProvider)),
+);
 
 class DashboardRepository {
   DashboardRepository(this._apiClient);
   final ApiClient _apiClient;
 
+  static const List<String> _growthDashboardKeys = [
+    'growth_status',
+    'most_important_task',
+    'growth_signal',
+    'active_plan_progress',
+  ];
+
+  Map<String, dynamic> _extractGrowthSnapshot(Map<String, dynamic> payload) {
+    final snapshot = <String, dynamic>{};
+    for (final key in _growthDashboardKeys) {
+      if (payload.containsKey(key)) {
+        snapshot[key] = payload[key];
+      }
+    }
+    return snapshot;
+  }
+
   Future<Map<String, dynamic>> getDashboardStatus() async {
     if (DemoDataService.isDemoMode) {
       return DemoDataService().demoDashboard;
     }
-    final response = await _apiClient.get<dynamic>(ApiEndpoints.dashboardStatus);
-    return ApiResponseParser.unwrapMap(response.data, action: 'getDashboardStatus');
+    final response =
+        await _apiClient.get<dynamic>(ApiEndpoints.dashboardStatus);
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'getDashboardStatus',
+    );
+  }
+
+  Future<Map<String, dynamic>> getGrowthDashboard() async {
+    if (DemoDataService.isDemoMode) {
+      return _extractGrowthSnapshot(DemoDataService().demoDashboard);
+    }
+    final response =
+        await _apiClient.get<dynamic>(ApiEndpoints.growthDashboard);
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'getGrowthDashboard',
+    );
   }
 
   Future<Map<String, dynamic>> getPredictiveDashboard() async {
@@ -102,7 +136,9 @@ class DashboardRepository {
     }
     final response =
         await _apiClient.get<dynamic>(ApiEndpoints.predictiveDashboard);
-    return ApiResponseParser.unwrapMap(response.data,
-        action: 'getPredictiveDashboard',);
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'getPredictiveDashboard',
+    );
   }
 }

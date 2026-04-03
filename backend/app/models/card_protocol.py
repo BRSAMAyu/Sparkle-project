@@ -33,6 +33,15 @@ from app.models.base import GUID, BaseModel
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
+def _string_enum(enum_cls: type[enum.Enum], name: str) -> Enum:
+    return Enum(
+        enum_cls,
+        name=name,
+        native_enum=False,
+        values_callable=lambda members: [member.value for member in members],
+    )
+
+
 # ---------------------------------------------------------------------------
 # Enums — must match frozen taxonomy exactly
 # ---------------------------------------------------------------------------
@@ -347,11 +356,11 @@ class PlanningArtifact(BaseModel):
         GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True
     )
     artifact_type = Column(
-        Enum(ArtifactType, name="artifact_type_enum"), nullable=False, index=True
+        _string_enum(ArtifactType, "artifact_type_enum"), nullable=False, index=True
     )
     version = Column(Integer, nullable=False, default=1)
     status = Column(
-        Enum(ArtifactStatus, name="artifact_status_enum"),
+        _string_enum(ArtifactStatus, "artifact_status_enum"),
         nullable=False,
         default=ArtifactStatus.DRAFT,
         index=True,
@@ -393,21 +402,21 @@ class InterventionRecord(BaseModel):
     )
     knowledge_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
     trigger_type = Column(
-        Enum(InterventionTriggerType, name="intervention_trigger_enum"),
+        _string_enum(InterventionTriggerType, "intervention_trigger_enum"),
         nullable=False,
         index=True,
     )
     trigger_source_ref = Column(String(128), nullable=True)
     diagnosis_payload = Column(JSONBCompat, nullable=False, server_default="{}")
     delivery_strategy = Column(
-        Enum(DeliveryStrategy, name="delivery_strategy_enum"), nullable=False
+        _string_enum(DeliveryStrategy, "delivery_strategy_enum"), nullable=False
     )
     delivery_channel = Column(
-        Enum(DeliveryChannel, name="delivery_channel_enum"), nullable=False
+        _string_enum(DeliveryChannel, "delivery_channel_enum"), nullable=False
     )
     content_version = Column(String(64), nullable=False, server_default="1")
     acceptance_status = Column(
-        Enum(InterventionAcceptanceStatus, name="intervention_acceptance_enum"),
+        _string_enum(InterventionAcceptanceStatus, "intervention_acceptance_enum"),
         nullable=False,
         default=InterventionAcceptanceStatus.CREATED,
         index=True,
@@ -415,7 +424,7 @@ class InterventionRecord(BaseModel):
     action_payload = Column(JSONBCompat, nullable=True)
     outcome_window_days = Column(Integer, nullable=False, default=7)
     outcome_status = Column(
-        Enum(InterventionOutcomeStatus, name="intervention_outcome_enum"),
+        _string_enum(InterventionOutcomeStatus, "intervention_outcome_enum"),
         nullable=False,
         default=InterventionOutcomeStatus.PENDING,
     )

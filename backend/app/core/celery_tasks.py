@@ -7,21 +7,9 @@ Celery 任务模块 - 任务包装器
 创建时间: 2026-01-03
 """
 
-import asyncio
-
 from loguru import logger
 
-from app.core.celery_app import celery_app
-
-_worker_event_loop: asyncio.AbstractEventLoop | None = None
-
-
-def _run_async(coro):
-    global _worker_event_loop
-    if _worker_event_loop is None or _worker_event_loop.is_closed():
-        _worker_event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(_worker_event_loop)
-    return _worker_event_loop.run_until_complete(coro)
+from app.core.celery_app import _run_async, celery_app
 
 
 @celery_app.task(bind=True, name="app.core.celery_tasks.health_check_task")
@@ -443,7 +431,7 @@ def generate_weekly_growth_digests(self, limit: int = 200, deliver: bool = False
             return await service.generate_for_active_users(limit=limit, deliver=deliver)
 
     try:
-        result = asyncio.run(_run())
+        result = _run_async(_run())
         logger.info(f"✅ Weekly growth digests generated: {result}")
         return result
     except Exception as exc:
@@ -466,7 +454,7 @@ def deliver_weekly_growth_digests(self, limit: int = 200):
             return await service.deliver_for_active_users(limit=limit)
 
     try:
-        result = asyncio.run(_run())
+        result = _run_async(_run())
         logger.info(f"✅ Weekly growth digests delivered: {result}")
         return result
     except Exception as exc:

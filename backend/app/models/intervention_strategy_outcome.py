@@ -12,6 +12,7 @@ from app.models.card_protocol import (
     InterventionAcceptanceStatus,
     InterventionOutcomeStatus,
     InterventionTriggerType,
+    _string_enum,
 )
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
@@ -28,25 +29,25 @@ class InterventionStrategyOutcome(BaseModel):
         index=True,
     )
     trigger_type = Column(
-        Enum(InterventionTriggerType, name="intervention_trigger_enum"),
+        _string_enum(InterventionTriggerType, "intervention_trigger_enum"),
         nullable=False,
         index=True,
     )
     delivery_tone = Column(
-        Enum(DeliveryStrategy, name="delivery_strategy_enum"),
+        _string_enum(DeliveryStrategy, "delivery_strategy_enum"),
         nullable=False,
         index=True,
     )
     delivery_channel = Column(
-        Enum(DeliveryChannel, name="delivery_channel_enum"),
+        _string_enum(DeliveryChannel, "delivery_channel_enum"),
         nullable=False,
     )
     acceptance_status = Column(
-        Enum(InterventionAcceptanceStatus, name="intervention_acceptance_enum"),
+        _string_enum(InterventionAcceptanceStatus, "intervention_acceptance_enum"),
         nullable=False,
     )
     outcome = Column(
-        Enum(InterventionOutcomeStatus, name="intervention_outcome_enum"),
+        _string_enum(InterventionOutcomeStatus, "intervention_outcome_enum"),
         nullable=False,
         index=True,
     )

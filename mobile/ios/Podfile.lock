@@ -161,6 +161,9 @@ PODS:
     - Flutter
     - JCore (>= 4.6.2)
     - JPush (= 5.3.0)
+  - mobile_scanner (7.0.0):
+    - Flutter
+    - FlutterMacOS
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -220,6 +223,7 @@ DEPENDENCIES:
   - isar_flutter_libs (from `.symlinks/plugins/isar_flutter_libs/ios`)
   - JCore (= 4.9.0)
   - jpush_flutter (from `.symlinks/plugins/jpush_flutter/ios`)
+  - mobile_scanner (from `.symlinks/plugins/mobile_scanner/darwin`)
   - nanopb (~> 3.30910.0)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
@@ -296,6 +300,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/isar_flutter_libs/ios"
   jpush_flutter:
     :path: ".symlinks/plugins/jpush_flutter/ios"
+  mobile_scanner:
+    :path: ".symlinks/plugins/mobile_scanner/darwin"
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
   path_provider_foundation:
@@ -353,6 +359,7 @@ SPEC CHECKSUMS:
   JCore: 1128d8c6f33f5c3607536a7b87c0e450d2c6ada6
   JPush: b71f497a3c1b825c7843fd97f290b05d5cd75f2e
   jpush_flutter: 81be43c2095cac5c2ac45e673e26c83230304015
+  mobile_scanner: 9157936403f5a0644ca3779a38ff8404c5434a93
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880

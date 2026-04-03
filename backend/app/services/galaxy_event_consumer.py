@@ -95,6 +95,18 @@ class GalaxyEventConsumer:
                 await evolution.handle_error_created(event)
                 await SeedExtractor(db).prewarm_for_scenarios(UUID(str(user_id)))
 
+                try:
+                    from app.services.error_replan_bridge import ErrorReplanBridge
+
+                    error_replan_bridge = ErrorReplanBridge(db)
+                    await error_replan_bridge.on_error_created(
+                        user_id=UUID(str(user_id)),
+                        error_id=UUID(str(error_id)) if error_id else uuid4(),
+                        linked_node_ids=[UUID(str(nid)) for nid in linked_node_ids],
+                    )
+                except Exception as bridge_exc:
+                    logger.warning("ErrorCreated -> replan bridge failed (non-fatal): {}", bridge_exc)
+
                 # --- Card protocol writeback: error → evidence edge ---
                 try:
                     from app.services.card_protocol.mastery_bridge import ErrorMasteryBridge

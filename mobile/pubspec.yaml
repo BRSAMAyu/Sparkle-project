@@ -102,7 +102,7 @@ dependencies:
   crypto: ^3.0.7
   grpc: ^5.1.0
   gal: ^2.3.0
-  mobile_scanner: ^5.2.3
+  mobile_scanner: ^7.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -77,9 +77,35 @@ class NotificationService {
       '@mipmap/ic_launcher',
     ); // Verify icon name
 
-    const initializationSettingsDarwin = DarwinInitializationSettings();
+    final initializationSettingsDarwin = DarwinInitializationSettings(
+      notificationCategories: <DarwinNotificationCategory>[
+        DarwinNotificationCategory(
+          'sparkle_smart_push',
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain(
+              'START_NOW',
+              '⚡ 开始',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+            DarwinNotificationAction.plain(
+              'SNOOZE',
+              '💤 稍后',
+            ),
+            DarwinNotificationAction.plain(
+              'DISMISS',
+              '🔕 勿扰',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.destructive,
+              },
+            ),
+          ],
+        ),
+      ],
+    );
 
-    const initializationSettings = InitializationSettings(
+    final initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
       macOS: initializationSettingsDarwin,
@@ -401,7 +427,18 @@ class NotificationService {
       ],
     );
 
-    const notificationDetails = NotificationDetails(android: androidDetails);
+    const darwinDetails = DarwinNotificationDetails(
+      categoryIdentifier: 'sparkle_smart_push',
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: darwinDetails,
+      macOS: darwinDetails,
+    );
 
     await _notificationsPlugin.show(
       DateTime.now().millisecond, // unique ID

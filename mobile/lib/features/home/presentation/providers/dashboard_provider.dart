@@ -368,6 +368,12 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       state = DashboardState.loading();
 
       final dashboardData = await _repository.getDashboardStatus();
+      var growthDashboardData = <String, dynamic>{};
+      try {
+        growthDashboardData = await _repository.getGrowthDashboard();
+      } catch (e) {
+        debugPrint('Growth dashboard unavailable: $e');
+      }
       var predictiveData = <String, dynamic>{};
       try {
         predictiveData = await _repository.getPredictiveDashboard();
@@ -375,9 +381,13 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         debugPrint('Predictive dashboard unavailable: $e');
       }
       if (!mounted) return;
+      final mergedDashboardData = <String, dynamic>{
+        ...dashboardData,
+        ...growthDashboardData,
+      };
 
       // Parse weather data
-      final weatherRaw = dashboardData['weather'];
+      final weatherRaw = mergedDashboardData['weather'];
       final weatherMap = _asStringKeyedMap(weatherRaw) ?? <String, dynamic>{};
       final weather = WeatherData(
         type: _asString(weatherMap['type'], fallback: 'sunny'),
@@ -385,7 +395,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       );
 
       // Parse flame data
-      final flameRaw = dashboardData['flame'];
+      final flameRaw = mergedDashboardData['flame'];
       final flameMap = _asStringKeyedMap(flameRaw) ?? <String, dynamic>{};
       final flame = FlameData(
         level: _asInt(flameMap['level'], fallback: 1),
@@ -399,7 +409,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       );
 
       // Parse sprint data (nullable)
-      final sprintRaw = dashboardData['sprint'];
+      final sprintRaw = mergedDashboardData['sprint'];
       final sprintMap = _asStringKeyedMap(sprintRaw);
       final sprint = sprintMap != null
           ? SprintData(
@@ -414,7 +424,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
           : null;
 
       // Parse growth data (nullable)
-      final growthRaw = dashboardData['growth'];
+      final growthRaw = mergedDashboardData['growth'];
       final growthMap = _asStringKeyedMap(growthRaw);
       final growth = growthMap != null
           ? GrowthData(
@@ -426,7 +436,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
           : null;
 
       // Parse next actions
-      final nextActionsRaw = dashboardData['next_actions'];
+      final nextActionsRaw = mergedDashboardData['next_actions'];
       final nextActionsList = _asDynamicList(nextActionsRaw);
       final nextActions = nextActionsList.map((item) {
         final map = _asStringKeyedMap(item) ?? <String, dynamic>{};
@@ -454,7 +464,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       }).toList();
 
       // Parse cognitive data
-      final cognitiveRaw = dashboardData['cognitive'];
+      final cognitiveRaw = mergedDashboardData['cognitive'];
       final cognitiveMap = _asStringKeyedMap(cognitiveRaw) ??
           <String, dynamic>{'status': 'stable'};
       final cognitive = CognitiveData(
@@ -477,7 +487,8 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         }
       }
 
-      final growthStatusMap = _asStringKeyedMap(dashboardData['growth_status']);
+      final growthStatusMap =
+          _asStringKeyedMap(mergedDashboardData['growth_status']);
       final growthStatus = growthStatusMap == null
           ? null
           : GrowthStatusData(
@@ -491,7 +502,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
             );
 
       final priorityTaskMap =
-          _asStringKeyedMap(dashboardData['most_important_task']);
+          _asStringKeyedMap(mergedDashboardData['most_important_task']);
       final mostImportantTask = priorityTaskMap == null
           ? null
           : PriorityTaskData(
@@ -508,7 +519,8 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
               riskScore: _asDouble(priorityTaskMap['risk_score']),
             );
 
-      final growthSignalMap = _asStringKeyedMap(dashboardData['growth_signal']);
+      final growthSignalMap =
+          _asStringKeyedMap(mergedDashboardData['growth_signal']);
       final growthSignal = growthSignalMap == null
           ? null
           : GrowthSignalData(
@@ -521,7 +533,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
             );
 
       final activePlanMap =
-          _asStringKeyedMap(dashboardData['active_plan_progress']);
+          _asStringKeyedMap(mergedDashboardData['active_plan_progress']);
       final activePlanProgress = activePlanMap == null
           ? null
           : ActivePlanProgressData(

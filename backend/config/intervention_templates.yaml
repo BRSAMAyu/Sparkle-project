@@ -138,7 +138,7 @@ templates:
         content: "现在更像是还没找到入口。要不要我把第一步缩到5分钟？"
       - id: micro_restart_l4_curious
         tone: CURIOUS
-        content: "我们不谈完成整件事，只先把开始这一下变轻一点。"
+        content: "我发现我们不必先谈完成整件事。要不要先把开始这一下变轻一点？"
       - id: micro_restart_l4_collab
         tone: SUPPORTIVE
         content: "要不要我先把开头替你铺好，你只负责接上去？"
@@ -159,7 +159,7 @@ templates:
     variants:
       - id: overload_lighten_path_l4_observe
         tone: CURIOUS
-        content: "这会儿更重要的不是多做一点，而是把节奏拉回你能承受的位置。"
+        content: "我发现这会儿更重要的不是多做一点，而是把节奏拉回你能承受的位置。"
       - id: overload_lighten_path_l4_curious
         tone: CURIOUS
         content: "我不想把你往前推得更紧。要不要先换成一个更轻的版本？"
@@ -168,7 +168,7 @@ templates:
         content: "先让这条路变得能走，比硬撑更重要。我帮你只保留最关键的三步？"
       - id: overload_lighten_path_l4_gentle
         tone: SUPPORTIVE
-        content: "接下来不会一下压给你那么多。只看眼前这一步就好。"
+        content: "接下来我们不会一下压给你那么多。只看眼前这一步就好。"
       - id: overload_lighten_path_l4_direct
         tone: DIRECT
         content: "根据现在的负荷，我建议先降载，只保留最关键的一件事。"
@@ -183,10 +183,10 @@ templates:
     variants:
       - id: recover_self_efficacy_l3_observe
         tone: CURIOUS
-        content: "你其实已经完成了{completed_count}步。接下来的路，我们一步一步走。"
+        content: "我发现你已经走过了{completed_count}步。要不要一起看看，下一步怎样走会更轻一点？"
       - id: recover_self_efficacy_l3_curious
         tone: CURIOUS
-        content: "前面走过的路不算白走。现在只是需要换一种更合适的走法。"
+        content: "前面走过的路不算白走。要不要一起试试，接下来换一种更顺一点的走法？"
       - id: recover_self_efficacy_l3_collab
         tone: SUPPORTIVE
         content: "我们来试一个更轻的版本，不走全程，只走眼前的这一段。"
