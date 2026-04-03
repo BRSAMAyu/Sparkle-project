@@ -15,8 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.cache import cache_service
+from app.core.event_bus import event_bus
 from app.core.exceptions import QuotaExceededError
 from app.db.session import get_db
+from app.models.card_protocol import ArtifactType
 from app.models.plan import Plan, PlanType
 from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
@@ -32,8 +34,20 @@ from app.schemas.plan import (
 )
 from app.schemas.task import TaskDetail
 from app.services.plan_quota_service import PlanQuotaService
-from app.services.plan_service import PlanService
+from app.services.plan_service import PlanService, _sync_plan_card_projection
 from app.services.plan_state_service import PlanStateService
+from app.services.card_protocol.phase_service import PhaseService
+from app.services.card_protocol.global_compass_manager import GlobalCompassManager
+from app.services.card_protocol.feedback_gate_engine import FeedbackGateEngine
+from app.services.card_protocol.phase_design_service import PhaseDesignService
+from app.services.card_protocol.planning_memory_service import PlanningMemoryService
+from app.services.planning_artifact_service import PlanningArtifactService
+from app.orchestration.discovery_manager import (
+    PHASE_DESIGN_WORKFLOW_STATE,
+    PHASE_SKETCH_REVIEW_WORKFLOW_STATE,
+    DiscoveryManager,
+)
+from app.orchestration.phase_sketch_service import PhaseSketchService
 from app.services.state_notification_service import state_notification_service
 from app.tools.plan_tools import GenerateTasksForPlanTool
 from app.tools.schemas import GenerateTasksForPlanParams
@@ -43,6 +57,66 @@ router = APIRouter()
 
 class GenerateTasksRequest(BaseModel):
     count: int | None = Field(default=None, ge=1, le=20)
+
+
+class PhaseCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+    phase_index: int = Field(ge=1)
+    estimated_start: date | None = None
+    estimated_end: date | None = None
+    entry_criteria: list[str] | None = None
+    exit_criteria: list[str] | None = None
+    feedback_gate_required: bool = True
+    phase_weight: float | None = Field(default=None, gt=0)
+    objective: str | None = None
+
+
+class PhaseReorderRequest(BaseModel):
+    ordered_phase_ids: list[UUID] = Field(min_length=1)
+
+
+class PhaseFeedbackRequest(BaseModel):
+    rating: float | None = Field(default=None, ge=1, le=5)
+    reflection: str | None = None
+    blocked: bool = False
+    life_changed: bool = False
+    request_compass_review: bool = False
+    structured_answers: dict[str, Any] | None = None
+
+
+class PhaseRegenerateScheduleRequest(BaseModel):
+    from_date: date | None = None
+
+
+class DiscoveryStartRequest(BaseModel):
+    initial_message: str = Field(min_length=1, max_length=5000)
+
+
+class DiscoveryTurnRequest(BaseModel):
+    user_message: str = Field(min_length=1, max_length=5000)
+
+
+class DiscoveryFinalizeRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    type: PlanType | None = None
+    description: str | None = None
+    subject: str | None = Field(default=None, max_length=100)
+    target_date: date | None = None
+    daily_available_minutes: int | None = Field(default=None, ge=1)
+    total_estimated_hours: float | None = Field(default=None, ge=0)
+
+
+class CompassApproveRequest(BaseModel):
+    edits: dict[str, Any] | None = None
+
+
+class PhaseSketchGenerateRequest(BaseModel):
+    compass_artifact_id: UUID | None = None
+    dossier_artifact_id: UUID | None = None
+
+
+class FeedbackGateAnswerRequest(BaseModel):
+    user_message: str = Field(min_length=1, max_length=5000)
 
 
 def _utcnow() -> datetime:
@@ -82,6 +156,25 @@ def _serialize_plan(
     if tasks is not None:
         payload["tasks"] = [TaskDetail.model_validate(task).model_dump(mode="json") for task in tasks]
     return payload
+
+
+async def _get_plan_card_or_500(db: AsyncSession, plan: Plan, user_id: UUID):
+    await _sync_plan_card_projection(db, plan)
+    service = PhaseService(db, event_bus)
+    plan_card = await service.get_plan_card_by_legacy_plan(plan.id, user_id)
+    if not plan_card:
+        raise HTTPException(status_code=500, detail="Plan card projection unavailable")
+    return plan_card
+
+
+async def _get_latest_artifact_for_plan(
+    db: AsyncSession,
+    *,
+    plan_card_id: UUID,
+    artifact_type: ArtifactType,
+):
+    history = await PlanningArtifactService(db, event_bus).get_artifact_history(plan_card_id, artifact_type)
+    return history[0] if history else None
 
 
 @router.get("", response_model=dict[str, Any])
@@ -148,6 +241,55 @@ async def list_plans(
     }
 
 
+@router.post("/discovery/start", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
+async def start_plan_discovery(
+    request: DiscoveryStartRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    payload = await DiscoveryManager(db, event_bus).start_discovery(
+        user_id=current_user.id,
+        initial_message=request.initial_message,
+    )
+    return {"success": True, "data": payload}
+
+
+@router.post("/discovery/{session_id}/turn", response_model=dict[str, Any])
+async def continue_plan_discovery(
+    request: DiscoveryTurnRequest,
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        payload = await DiscoveryManager(db, event_bus).process_discovery_turn(
+            user_id=current_user.id,
+            session_id=session_id,
+            user_message=request.user_message,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return {"success": True, "data": payload}
+
+
+@router.post("/discovery/{session_id}/finalize", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
+async def finalize_plan_discovery(
+    request: DiscoveryFinalizeRequest,
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        payload = await DiscoveryManager(db, event_bus).finalize_discovery(
+            user_id=current_user.id,
+            session_id=session_id,
+            plan_overrides=request.model_dump(exclude_none=True),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return {"success": True, "data": payload}
+
+
 @router.post("", response_model=PlanDetail, status_code=status.HTTP_201_CREATED)
 async def create_plan(
     plan_in: PlanCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -183,6 +325,232 @@ async def create_plan(
     )
 
 
+@router.get("/{plan_id:uuid}/compass/review", response_model=dict[str, Any])
+async def get_compass_review(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+    plan_card = await _get_plan_card_or_500(db, plan, current_user.id)
+    try:
+        payload = await GlobalCompassManager(db, event_bus).present_compass_for_review(
+            plan_card_id=plan_card.id,
+            user_id=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return {"success": True, "data": payload}
+
+
+@router.post("/compass/{artifact_id}/approve", response_model=dict[str, Any])
+async def approve_compass(
+    request: CompassApproveRequest,
+    artifact_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        artifact = await GlobalCompassManager(db, event_bus).user_approve_compass(
+            artifact_id=artifact_id,
+            user_id=current_user.id,
+            edits=request.edits,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return {
+        "success": True,
+        "data": {
+            "workflow_state": "COMPASS_APPROVED",
+            "artifact_id": str(artifact.id),
+            "version": artifact.version,
+            "payload": dict(artifact.payload or {}),
+        },
+    }
+
+
+@router.post("/{plan_id:uuid}/phase-sketch/generate", response_model=dict[str, Any])
+async def generate_phase_sketch(
+    request: PhaseSketchGenerateRequest,
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+    plan_card = await _get_plan_card_or_500(db, plan, current_user.id)
+    artifact_service = PlanningArtifactService(db, event_bus)
+    plan_metadata = dict(plan_card.metadata_ or {})
+    if plan_metadata.get("pending_global_compass_artifact_id") and request.compass_artifact_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Compass review is still pending; approve the proposed compass before generating phases",
+        )
+    if request.compass_artifact_id:
+        compass_artifact = await artifact_service.get_artifact(request.compass_artifact_id)
+    else:
+        compass_artifact = await artifact_service.get_approved(plan_card.id, ArtifactType.GLOBAL_COMPASS)
+    dossier_artifact = (
+        await artifact_service.get_artifact(request.dossier_artifact_id)
+        if request.dossier_artifact_id
+        else await _get_latest_artifact_for_plan(
+            db,
+            plan_card_id=plan_card.id,
+            artifact_type=ArtifactType.DISCOVERY_DOSSIER,
+        )
+    )
+    if not compass_artifact or not dossier_artifact:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Compass or discovery dossier artifact missing",
+        )
+    if compass_artifact.status.value != "APPROVED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Phase sketch generation requires an APPROVED compass",
+        )
+
+    artifact = await PhaseSketchService(db, event_bus).generate_sketch(
+        plan_card_id=plan_card.id,
+        compass=compass_artifact,
+        dossier=dossier_artifact,
+        user_id=current_user.id,
+    )
+    return {
+        "success": True,
+        "data": {
+            "workflow_state": PHASE_SKETCH_REVIEW_WORKFLOW_STATE,
+            "artifact_id": str(artifact.id),
+            "version": artifact.version,
+            "payload": dict(artifact.payload or {}),
+        },
+    }
+
+
+@router.post("/{plan_id:uuid}/phase-sketch/{artifact_id}/materialize", response_model=dict[str, Any])
+async def materialize_phase_sketch(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    artifact_id: UUID = Path(..., description="Phase blueprint artifact ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+    plan_card = await _get_plan_card_or_500(db, plan, current_user.id)
+    artifact = await PlanningArtifactService(db, event_bus).get_artifact(artifact_id)
+    if not artifact or artifact.plan_card_id != plan_card.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Phase sketch artifact not found")
+
+    try:
+        phases = await PhaseSketchService(db, event_bus).materialize_sketch(
+            plan_card_id=plan_card.id,
+            sketch=artifact,
+            user_id=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return {
+        "success": True,
+        "data": {
+            "workflow_state": PHASE_DESIGN_WORKFLOW_STATE,
+            "phase_count": len(phases),
+            "phase_ids": [str(phase.id) for phase in phases],
+        },
+    }
+
+
+@router.get("/{plan_id:uuid}/planning-context", response_model=dict[str, Any])
+async def get_planning_context(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+    plan_card = await _get_plan_card_or_500(db, plan, current_user.id)
+    context = await PlanningMemoryService(db, event_bus).load_planning_context(
+        plan_card_id=plan_card.id,
+        user_id=current_user.id,
+    )
+    return {"success": True, "data": context.__dict__}
+
+
+@router.post("/phases/{phase_card_id}/design-tasks", response_model=dict[str, Any])
+async def design_phase_tasks(
+    phase_card_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    phase = await PhaseService(db, event_bus)._get_owned_phase(phase_card_id, current_user.id)
+    plan_card = await PhaseService(db, event_bus)._get_parent_plan(phase.id)
+    if not plan_card:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Phase must belong to a plan")
+    created = await PhaseDesignService(db, event_bus).design_phase_tasks(
+        phase_card_id=phase.id,
+        plan_card_id=plan_card.id,
+        user_id=current_user.id,
+    )
+    return {"success": True, "data": {"phase_card_id": str(phase.id), "tasks": created}}
+
+
+@router.post("/phases/{phase_card_id}/feedback-gate/start", response_model=dict[str, Any])
+async def start_phase_feedback_gate(
+    phase_card_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        payload = await FeedbackGateEngine(db, event_bus).trigger_feedback_gate(
+            phase_card_id=phase_card_id,
+            user_id=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return {"success": True, "data": payload}
+
+
+@router.post("/phases/feedback-gate/{session_id}/respond", response_model=dict[str, Any])
+async def respond_phase_feedback_gate(
+    request: FeedbackGateAnswerRequest,
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        payload = await FeedbackGateEngine(db, event_bus).process_feedback_response(
+            session_id=session_id,
+            user_message=request.user_message,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return {"success": True, "data": payload}
+
+
+@router.post("/{plan_id:uuid}/advance-phase", response_model=dict[str, Any])
+async def advance_plan_phase(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+    plan_card = await _get_plan_card_or_500(db, plan, current_user.id)
+    try:
+        payload = await FeedbackGateEngine(db, event_bus).advance_to_next_phase(
+            plan_card_id=plan_card.id,
+            user_id=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return {"success": True, "data": payload}
+
+
 @router.get("/{plan_id:uuid}", response_model=PlanDetail)
 async def get_plan(
     plan_id: UUID = Path(..., description="Plan ID"),
@@ -214,6 +582,163 @@ async def get_plan(
         completed_task_count=completed_count,
         tasks=list(tasks),
     )
+
+
+@router.get("/{plan_id:uuid}/phases", response_model=dict[str, Any])
+async def get_plan_phases(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+
+    await _sync_plan_card_projection(db, plan)
+    payload = await PhaseService(db, event_bus).get_phase_summaries_for_legacy_plan(
+        legacy_plan_id=plan.id,
+        user_id=current_user.id,
+    )
+    return {"success": True, "data": payload}
+
+
+@router.post("/{plan_id:uuid}/phases", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
+async def create_plan_phase(
+    request: PhaseCreateRequest,
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+
+    await _sync_plan_card_projection(db, plan)
+    service = PhaseService(db, event_bus)
+    plan_card = await service.get_plan_card_by_legacy_plan(plan.id, current_user.id)
+    if not plan_card:
+        raise HTTPException(status_code=500, detail="Plan card projection unavailable")
+
+    phase = await service.create_phase(
+        plan_card_id=plan_card.id,
+        name=request.name,
+        phase_index=request.phase_index,
+        user_id=current_user.id,
+        estimated_start=request.estimated_start,
+        estimated_end=request.estimated_end,
+        entry_criteria=request.entry_criteria,
+        exit_criteria=request.exit_criteria,
+        feedback_gate_required=request.feedback_gate_required,
+        phase_weight=request.phase_weight,
+        objective=request.objective,
+    )
+    await db.commit()
+    payload = await service.get_phase_summaries_for_legacy_plan(
+        legacy_plan_id=plan.id,
+        user_id=current_user.id,
+    )
+    summary = next((item for item in payload["phases"] if item["card_id"] == str(phase.id)), None)
+    return {"success": True, "data": summary}
+
+
+@router.post("/{plan_id:uuid}/phases/reorder", response_model=dict[str, Any])
+async def reorder_plan_phases(
+    request: PhaseReorderRequest,
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+
+    service = PhaseService(db, event_bus)
+    plan_card = await service.get_plan_card_by_legacy_plan(plan.id, current_user.id)
+    if not plan_card:
+        await _sync_plan_card_projection(db, plan)
+        plan_card = await service.get_plan_card_by_legacy_plan(plan.id, current_user.id)
+    if not plan_card:
+        raise HTTPException(status_code=500, detail="Plan card projection unavailable")
+
+    await service.reorder_phases(
+        plan_card_id=plan_card.id,
+        ordered_phase_ids=request.ordered_phase_ids,
+        user_id=current_user.id,
+    )
+    await db.commit()
+    payload = await service.get_phase_summaries_for_legacy_plan(
+        legacy_plan_id=plan.id,
+        user_id=current_user.id,
+    )
+    return {"success": True, "data": payload}
+
+
+@router.post("/phases/{phase_card_id}/activate", response_model=dict[str, Any])
+async def activate_phase(
+    phase_card_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    phase = await PhaseService(db, event_bus).activate_phase(
+        phase_card_id=phase_card_id,
+        user_id=current_user.id,
+    )
+    await db.commit()
+    return {
+        "success": True,
+        "data": {
+            "phase_card_id": str(phase.id),
+            "lifecycle_status": phase.lifecycle_status.value,
+        },
+    }
+
+
+@router.post("/phases/{phase_card_id}/complete", response_model=dict[str, Any])
+async def complete_phase(
+    phase_card_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await PhaseService(db, event_bus).complete_phase(
+        phase_card_id=phase_card_id,
+        user_id=current_user.id,
+    )
+    await db.commit()
+    return {"success": True, "data": result.__dict__}
+
+
+@router.post("/phases/{phase_card_id}/feedback", response_model=dict[str, Any])
+async def submit_phase_feedback(
+    request: PhaseFeedbackRequest,
+    phase_card_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    feedback_payload = request.model_dump(exclude_none=True)
+    result = await PhaseService(db, event_bus).submit_phase_feedback(
+        phase_card_id=phase_card_id,
+        user_id=current_user.id,
+        feedback=feedback_payload,
+    )
+    await db.commit()
+    return {"success": True, "data": result.__dict__}
+
+
+@router.post("/phases/{phase_card_id}/schedule/regenerate", response_model=dict[str, Any])
+async def regenerate_phase_schedule(
+    request: PhaseRegenerateScheduleRequest,
+    phase_card_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = PhaseService(db, event_bus)
+    phase = await service._get_owned_phase(phase_card_id, current_user.id)
+    result = await service.temporal_engine.regenerate_phase_schedule(
+        phase_card_id=phase.id,
+        from_date=request.from_date,
+    )
+    await db.commit()
+    return {"success": True, "data": result}
 
 
 @router.put("/{plan_id:uuid}", response_model=PlanDetail)

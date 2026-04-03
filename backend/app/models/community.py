@@ -495,6 +495,7 @@ class SharedResource(BaseModel):
     cognitive_fragment_id = Column(GUID(), ForeignKey("cognitive_fragments.id"), nullable=True)
     curiosity_capsule_id = Column(GUID(), ForeignKey("curiosity_capsules.id"), nullable=True)
     behavior_pattern_id = Column(GUID(), ForeignKey("behavior_patterns.id"), nullable=True)
+    card_share_record_id = Column(GUID(), ForeignKey("card_share_records.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # 权限与元数据
     permission = Column(String(20), default="view", nullable=False)  # view, comment, edit
@@ -518,6 +519,7 @@ class SharedResource(BaseModel):
     cognitive_fragment = relationship("CognitiveFragment", foreign_keys=[cognitive_fragment_id])
     curiosity_capsule = relationship("CuriosityCapsule", foreign_keys=[curiosity_capsule_id])
     behavior_pattern = relationship("BehaviorPattern", foreign_keys=[behavior_pattern_id])
+    card_share_record = relationship("CardShareRecord", foreign_keys=[card_share_record_id])
 
     __table_args__ = (
         Index('idx_share_group', 'group_id'),
@@ -528,6 +530,7 @@ class SharedResource(BaseModel):
         Index('idx_share_resource_seed_item', 'seed_item_id'),
         Index('idx_share_resource_capsule', 'curiosity_capsule_id'),
         Index('idx_share_resource_pattern', 'behavior_pattern_id'),
+        Index('idx_share_card_share_record', 'card_share_record_id'),
     )
 
 

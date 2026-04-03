@@ -153,6 +153,21 @@ class PlanService:
         if not plan:
             return None
 
+        try:
+            from app.services.card_protocol.phase_service import PhaseService
+
+            weighted_progress = await PhaseService(db, event_bus).sync_legacy_plan_progress(
+                legacy_plan_id=plan_id,
+                user_id=user_id,
+            )
+            if weighted_progress is not None:
+                await db.commit()
+                await db.refresh(plan)
+                await _sync_plan_card_projection(db, plan)
+                return weighted_progress
+        except Exception as exc:
+            logger.warning("Weighted phase progress fallback for {} failed: {}", plan_id, exc)
+
         # Count total tasks for this plan
         total_query = select(func.count(Task.id)).where(Task.plan_id == plan_id)
         total_result = await db.execute(total_query)

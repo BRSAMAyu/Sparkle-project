@@ -165,6 +165,26 @@ class InterventionOutcomeStatus(str, enum.Enum):
     UNKNOWN = "UNKNOWN"
 
 
+class ShareScope(str, enum.Enum):
+    USER = "USER"
+    GROUP = "GROUP"
+    COMMUNITY = "COMMUNITY"
+    PUBLIC = "PUBLIC"
+
+
+class SharePermission(str, enum.Enum):
+    VIEW = "VIEW"
+    ADOPT = "ADOPT"
+    FORK = "FORK"
+    COMMENT = "COMMENT"
+    EDIT = "EDIT"
+
+
+class ImportMode(str, enum.Enum):
+    ADOPT = "ADOPT"
+    FORK = "FORK"
+
+
 # ---------------------------------------------------------------------------
 # Card — canonical semantic entity
 # ---------------------------------------------------------------------------
@@ -416,3 +436,102 @@ class InterventionRecord(BaseModel):
 
     def __repr__(self):
         return f"<InterventionRecord(id={self.id}, trigger={self.trigger_type}, status={self.acceptance_status})>"
+
+
+# ---------------------------------------------------------------------------
+# CardSnapshot — portable card tree serialization for sharing/adoption
+# ---------------------------------------------------------------------------
+
+
+class CardSnapshot(BaseModel):
+    __tablename__ = "card_snapshots"
+
+    root_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
+    source_owner_id = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    source_card_type = Column(Enum(CardType, name="snapshot_card_type_enum"), nullable=False, index=True)
+    schema_version = Column(String(16), nullable=False, server_default="1.0")
+    payload = Column(JSONBCompat, nullable=False, server_default="{}")
+    metadata_ = Column("metadata", JSONBCompat, nullable=False, server_default="{}")
+
+    root_card = relationship("Card", foreign_keys=[root_card_id])
+    source_owner = relationship("User", foreign_keys=[source_owner_id])
+
+    __table_args__ = (
+        Index("ix_card_snapshots_root_type", "root_card_id", "source_card_type"),
+        Index("ix_card_snapshots_owner_type", "source_owner_id", "source_card_type"),
+    )
+
+    def __repr__(self):
+        return f"<CardSnapshot(id={self.id}, root={self.root_card_id}, type={self.source_card_type})>"
+
+
+# ---------------------------------------------------------------------------
+# CardShareRecord — a frozen share offer built from a snapshot
+# ---------------------------------------------------------------------------
+
+
+class CardShareRecord(BaseModel):
+    __tablename__ = "card_share_records"
+
+    snapshot_id = Column(
+        GUID(), ForeignKey("card_snapshots.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    root_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
+    shared_by_user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    target_user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True)
+    scope = Column(Enum(ShareScope, name="share_scope_enum"), nullable=False, index=True)
+    permission = Column(
+        Enum(SharePermission, name="share_permission_enum"),
+        nullable=False,
+        default=SharePermission.ADOPT,
+    )
+    message = Column(String(500), nullable=True)
+    adoption_count = Column(Integer, nullable=False, default=0)
+    view_count = Column(Integer, nullable=False, default=0)
+    revoked_at = Column(DateTime, nullable=True)
+    metadata_ = Column("metadata", JSONBCompat, nullable=False, server_default="{}")
+
+    snapshot = relationship("CardSnapshot", foreign_keys=[snapshot_id])
+    root_card = relationship("Card", foreign_keys=[root_card_id])
+    shared_by_user = relationship("User", foreign_keys=[shared_by_user_id])
+    target_user = relationship("User", foreign_keys=[target_user_id])
+
+    __table_args__ = (
+        Index("ix_card_share_scope_group", "scope", "group_id"),
+        Index("ix_card_share_scope_target", "scope", "target_user_id"),
+        Index("ix_card_share_owner_scope", "shared_by_user_id", "scope"),
+    )
+
+    def __repr__(self):
+        return f"<CardShareRecord(id={self.id}, scope={self.scope}, permission={self.permission})>"
+
+
+# ---------------------------------------------------------------------------
+# CardAdoptionRecord — adoption / fork lineage tracking
+# ---------------------------------------------------------------------------
+
+
+class CardAdoptionRecord(BaseModel):
+    __tablename__ = "card_adoption_records"
+
+    share_record_id = Column(
+        GUID(), ForeignKey("card_share_records.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    adopter_user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    adopted_root_card_id = Column(
+        GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    import_mode = Column(Enum(ImportMode, name="import_mode_enum"), nullable=False, index=True)
+    attribution_payload = Column(JSONBCompat, nullable=False, server_default="{}")
+
+    share_record = relationship("CardShareRecord", foreign_keys=[share_record_id])
+    adopter_user = relationship("User", foreign_keys=[adopter_user_id])
+    adopted_root_card = relationship("Card", foreign_keys=[adopted_root_card_id])
+
+    __table_args__ = (
+        Index("ix_card_adoption_user_mode", "adopter_user_id", "import_mode"),
+    )
+
+    def __repr__(self):
+        return f"<CardAdoptionRecord(id={self.id}, mode={self.import_mode}, adopter={self.adopter_user_id})>"

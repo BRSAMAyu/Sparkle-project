@@ -313,6 +313,9 @@ class InterventionOutcomeVerifier:
         # 3. Strategy learning feedback
         await self._strategy_learning_feedback(record, effective)
 
+        # 3.5 Phase E: compute planning drift and raise a MISALIGNMENT intervention if needed
+        await self._phase_e_drift_check(record)
+
         # 4. Phase 4: materialize the latest main-chain reflection state
         try:
             from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
@@ -329,6 +332,49 @@ class InterventionOutcomeVerifier:
             )
         except Exception as exc:
             logger.debug("Phase4 reflection materialization failed (non-fatal): {}", exc)
+
+    async def _phase_e_drift_check(self, record: InterventionRecord) -> None:
+        """Phase E: detect long-horizon drift and create MISALIGNMENT interventions."""
+        if not record.plan_card_id:
+            return
+        try:
+            from app.models.card_protocol import DeliveryChannel, DeliveryStrategy
+            from app.services.card_protocol.planning_memory_service import PlanningMemoryService
+
+            planning_memory = PlanningMemoryService(self.db, self.event_bus)
+            drift = await planning_memory.compute_drift_score(plan_card_id=record.plan_card_id)
+            if drift.drift_score <= 0.5:
+                return
+
+            # Avoid stacking duplicate unresolved misalignment interventions.
+            stmt = select(InterventionRecord).where(
+                InterventionRecord.plan_card_id == record.plan_card_id,
+                InterventionRecord.trigger_type == InterventionTriggerType.MISALIGNMENT,
+                InterventionRecord.outcome_status == InterventionOutcomeStatus.PENDING,
+                InterventionRecord.not_deleted_filter(),
+            )
+            existing = (await self.db.execute(stmt)).scalars().first()
+            if existing:
+                return
+
+            await self.record_service.create_record(
+                user_id=record.user_id,
+                trigger_type=InterventionTriggerType.MISALIGNMENT,
+                delivery_strategy=DeliveryStrategy.SUPPORTIVE,
+                delivery_channel=DeliveryChannel.IN_APP,
+                plan_card_id=record.plan_card_id,
+                phase_card_id=record.phase_card_id,
+                diagnosis_payload={
+                    "source": "planning_memory_drift_check",
+                    "drift_score": drift.drift_score,
+                    "indicators": drift.drift_indicators,
+                    "recommendation": drift.recommendation,
+                    "supporting_metrics": drift.supporting_metrics,
+                },
+                outcome_window_days=7,
+            )
+        except Exception as exc:
+            logger.debug("PhaseE drift check failed (non-fatal): {}", exc)
 
     async def _update_decision_log(
         self,

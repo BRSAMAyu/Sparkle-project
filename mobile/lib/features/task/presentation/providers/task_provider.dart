@@ -15,6 +15,7 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/execution_template_model.dart';
@@ -467,6 +468,25 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     });
   }
 
+  Future<void> moveTaskToPlan(
+    String taskId,
+    String? targetPlanId, {
+    String? previousPlanId,
+  }) async {
+    await _runWithErrorHandling(() async {
+      await _taskRepository.moveTaskToPlan(taskId, targetPlanId);
+      await refreshTasks();
+      _ref.invalidate(taskDetailProvider(taskId));
+      await _ref.read(planListProvider.notifier).refresh();
+      if (previousPlanId != null && previousPlanId.isNotEmpty) {
+        _ref.invalidate(planDetailProvider(previousPlanId));
+      }
+      if (targetPlanId != null && targetPlanId.isNotEmpty) {
+        _ref.invalidate(planDetailProvider(targetPlanId));
+      }
+    });
+  }
+
   Future<void> refreshTasks() async {
     // This could be smarter by only refreshing the lists that are currently visible
     await loadTasks(filter: state.currentFilter);
@@ -902,7 +922,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<TaskFeedbackResponse?> submitTaskFeedbackWithResponse(
     String taskId,
     TaskFeedbackSubmission feedback,
-  ) => _taskRepository.submitTaskFeedbackWithResponse(taskId, feedback);
+  ) =>
+      _taskRepository.submitTaskFeedbackWithResponse(taskId, feedback);
 
   /// Record user interaction with a next action suggestion
   Future<void> recordNextActionSelection(

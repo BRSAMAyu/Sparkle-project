@@ -6,11 +6,13 @@ import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/plan/data/models/learning_path_progress_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class PlanRepository {
   PlanRepository(this._apiClient);
   final ApiClient _apiClient;
+  static final Map<String, PlanPhaseBundle> _demoPhaseStore = {};
 
   T _handleDioError<T>(DioException e, String functionName) {
     final detail =
@@ -84,7 +86,8 @@ class PlanRepository {
         targetDate: plan.targetDate,
         subject: plan.subject,
         priority: plan.priority,
-        planStage: plan.type == PlanType.growth ? PlanStage.daily : PlanStage.sprint,
+        planStage:
+            plan.type == PlanType.growth ? PlanStage.daily : PlanStage.sprint,
       );
       demoService.demoPlans.add(newPlan);
       return newPlan;
@@ -249,6 +252,158 @@ class PlanRepository {
     }
   }
 
+  Future<PlanPhaseBundle> getPlanPhases(String planId) async {
+    if (DemoDataService.isDemoMode) {
+      return _demoPhaseStore[planId] ??
+          PlanPhaseBundle(
+            planCardId: null,
+            currentPhaseCardId: null,
+            progressMode: 'legacy',
+            weightedProgress: null,
+            phases: const [],
+          );
+    }
+    try {
+      final response =
+          await _apiClient.get<dynamic>(ApiEndpoints.planPhases(planId));
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getPlanPhases');
+      return PlanPhaseBundle.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getPlanPhases');
+    }
+  }
+
+  Future<PlanPhaseModel?> createPhase(
+    String planId, {
+    required String name,
+    required int phaseIndex,
+    DateTime? estimatedStart,
+    DateTime? estimatedEnd,
+    List<String>? entryCriteria,
+    List<String>? exitCriteria,
+    bool feedbackGateRequired = true,
+    double? phaseWeight,
+    String? objective,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final bundle = _demoPhaseStore[planId] ??
+          PlanPhaseBundle(
+            planCardId: 'demo_plan_card_$planId',
+            currentPhaseCardId: null,
+            progressMode: 'weighted_phase',
+            weightedProgress: 0,
+            phases: const [],
+          );
+      final phases = [...bundle.phases];
+      final phase = PlanPhaseModel(
+        cardId: 'demo_phase_${DateTime.now().millisecondsSinceEpoch}',
+        title: name,
+        phaseIndex: phaseIndex,
+        lifecycleStatus: 'DRAFT',
+        progress: 0,
+        taskCount: 0,
+        occurrenceCount: 0,
+        completedOccurrenceCount: 0,
+        objective: objective,
+        estimatedStart: estimatedStart,
+        estimatedEnd: estimatedEnd,
+        entryCriteria: entryCriteria ?? const [],
+        exitCriteria: exitCriteria ?? const [],
+        feedbackGateRequired: feedbackGateRequired,
+        phaseWeight: phaseWeight,
+      );
+      phases.add(phase);
+      final sortedPhases = [...phases]
+        ..sort((a, b) => a.phaseIndex.compareTo(b.phaseIndex));
+      _demoPhaseStore[planId] = PlanPhaseBundle(
+        planCardId: bundle.planCardId,
+        currentPhaseCardId: bundle.currentPhaseCardId ?? phase.cardId,
+        progressMode: 'weighted_phase',
+        weightedProgress: bundle.weightedProgress,
+        phases: sortedPhases,
+      );
+      return phase;
+    }
+    try {
+      final response = await _apiClient.post<dynamic>(
+        ApiEndpoints.planPhases(planId),
+        data: {
+          'name': name,
+          'phase_index': phaseIndex,
+          'estimated_start': estimatedStart?.toIso8601String(),
+          'estimated_end': estimatedEnd?.toIso8601String(),
+          'entry_criteria': entryCriteria,
+          'exit_criteria': exitCriteria,
+          'feedback_gate_required': feedbackGateRequired,
+          'phase_weight': phaseWeight,
+          'objective': objective,
+        },
+      );
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'createPhase');
+      return PlanPhaseModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'createPhase');
+    }
+  }
+
+  Future<void> activatePhase(String phaseCardId) async {
+    if (DemoDataService.isDemoMode) return;
+    try {
+      await _apiClient.post<dynamic>(ApiEndpoints.activatePhase(phaseCardId));
+    } on DioException catch (e) {
+      return _handleDioError(e, 'activatePhase');
+    }
+  }
+
+  Future<Map<String, dynamic>> completePhase(String phaseCardId) async {
+    if (DemoDataService.isDemoMode) {
+      return {'status': 'NEEDS_FEEDBACK'};
+    }
+    try {
+      final response = await _apiClient
+          .post<dynamic>(ApiEndpoints.completePhase(phaseCardId));
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'completePhase',
+      );
+    } on DioException catch (e) {
+      return _handleDioError(e, 'completePhase');
+    }
+  }
+
+  Future<Map<String, dynamic>> submitPhaseFeedback(
+    String phaseCardId, {
+    required double rating,
+    String? reflection,
+    bool blocked = false,
+    bool lifeChanged = false,
+    bool requestCompassReview = false,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return {'next_phase_activated': false};
+    }
+    try {
+      final response = await _apiClient.post<dynamic>(
+        ApiEndpoints.submitPhaseFeedback(phaseCardId),
+        data: {
+          'rating': rating,
+          'reflection': reflection,
+          'blocked': blocked,
+          'life_changed': lifeChanged,
+          'request_compass_review': requestCompassReview,
+        },
+      );
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'submitPhaseFeedback',
+      );
+    } on DioException catch (e) {
+      return _handleDioError(e, 'submitPhaseFeedback');
+    }
+  }
+
   Future<List<TaskModel>> generateTasks(String planId, {int count = 5}) async {
     if (DemoDataService.isDemoMode) {
       final demoService = DemoDataService();
@@ -263,7 +418,7 @@ class PlanRepository {
       final generatedTasks = List.generate(count, (taskIndex) {
         final taskNumber = taskIndex + 1;
         return TaskModel(
-                id: 'demo_plan_task_${planId}_${taskNumber}_${now.millisecondsSinceEpoch}',
+          id: 'demo_plan_task_${planId}_${taskNumber}_${now.millisecondsSinceEpoch}',
           userId: demoService.demoUser.id,
           planId: planId,
           title: '${plan.name} - 第$taskNumber阶段任务',
@@ -395,7 +550,8 @@ class PlanRepository {
   }
 
   Future<LearningPathProgressModel> getLearningPathProgress(
-      String planId,) async {
+    String planId,
+  ) async {
     if (DemoDataService.isDemoMode) {
       return LearningPathProgressModel(
         targetNode: LearningPathNodeProgress(

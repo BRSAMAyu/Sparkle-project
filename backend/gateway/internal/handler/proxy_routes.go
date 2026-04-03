@@ -111,6 +111,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered plans proxy routes")
 
+	// ==================== Cards Routes ====================
+	cards := api.Group("/cards")
+	cards.Use(authMiddleware)
+	{
+		cards.Any("", h.proxyWithHeaders)
+		cards.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered cards proxy routes")
+
 	// ==================== Learning Paths Routes ====================
 	learningPaths := api.Group("/learning-paths")
 	learningPaths.Use(authMiddleware)

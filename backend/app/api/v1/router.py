@@ -10,6 +10,7 @@ from app.api.v1 import (
     achievements,
     agent_stats,
     calendar,
+    cards,
     analytics,
     assets,
     audit,
@@ -105,6 +106,7 @@ api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(client_telemetry.router)
 api_router.include_router(signals.router)
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+api_router.include_router(cards.router, prefix="/cards", tags=["cards"])
 api_router.include_router(executions.router)
 api_router.include_router(executions_admin.router)
 api_router.include_router(subtasks.router, tags=["subtasks"])

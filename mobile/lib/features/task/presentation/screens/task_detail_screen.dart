@@ -18,12 +18,14 @@ import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/shared/widgets/card_picker_sheet.dart';
 
 class TaskDetailScreen extends ConsumerWidget {
   const TaskDetailScreen({required this.taskId, super.key});
@@ -67,7 +69,7 @@ class _TaskDetailView extends ConsumerWidget {
           Expanded(
             child: CustomScrollView(
               slivers: [
-                _buildSliverAppBar(context),
+                _buildSliverAppBar(context, ref),
                 SliverToBoxAdapter(
                   child: ContentConstraint(
                     child: Padding(
@@ -279,7 +281,8 @@ class _TaskDetailView extends ConsumerWidget {
     }
   }
 
-  Widget _buildSliverAppBar(BuildContext context) => SliverAppBar(
+  Widget _buildSliverAppBar(BuildContext context, WidgetRef ref) =>
+      SliverAppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
@@ -288,6 +291,11 @@ class _TaskDetailView extends ConsumerWidget {
         expandedHeight: DS.spacing40 * 5, // 200 = 40 * 5
         pinned: true,
         actions: [
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: const Icon(Icons.drive_file_move_outline),
+            onPressed: () => unawaited(_showMoveToPlanPicker(context, ref)),
+          ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.share_outlined),
@@ -384,6 +392,76 @@ class _TaskDetailView extends ConsumerWidget {
       onGenerateCard: (payload) =>
           SharePosterService().generatePoster(context, payload),
     );
+  }
+
+  Future<void> _showMoveToPlanPicker(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final plans = <PlanModel>[
+      ...ref.read(planListProvider).activePlans,
+      ...ref.read(planListProvider).plans,
+    ];
+    if (plans.isEmpty) {
+      try {
+        plans.addAll(await ref.read(planRepositoryProvider).getPlans());
+      } catch (e) {
+        if (!context.mounted) return;
+        AppFeedback.error(context, 'Failed to load plans: $e');
+        return;
+      }
+    }
+
+    if (!context.mounted) return;
+
+    final deduped = <String, PlanModel>{};
+    for (final plan in plans) {
+      deduped[plan.id] = plan;
+    }
+
+    final selectedPlanId = await CardPickerSheet.show(
+      context,
+      title: 'Move task to plan',
+      allowEmptySelection: true,
+      emptySelectionLabel: 'Detach from current plan',
+      options: deduped.values
+          .map(
+            (plan) => CardPickerOption(
+              id: plan.id,
+              title: plan.name,
+              subtitle: plan.description ?? plan.subject ?? '',
+              group: plan.isActive ? 'Active plans' : 'Archived plans',
+              icon: plan.type == PlanType.growth
+                  ? Icons.alt_route_rounded
+                  : Icons.flag_outlined,
+              isSelected: plan.id == task.planId,
+            ),
+          )
+          .toList()
+        ..sort((a, b) => a.title.compareTo(b.title)),
+    );
+
+    if (!context.mounted) return;
+    if (selectedPlanId == task.planId) return;
+
+    try {
+      await ref.read(taskListProvider.notifier).moveTaskToPlan(
+            task.id,
+            selectedPlanId,
+            previousPlanId: task.planId,
+          );
+      if (!context.mounted) return;
+      ref.invalidate(taskDetailProvider(task.id));
+      AppFeedback.success(
+        context,
+        selectedPlanId == null
+            ? 'Task detached from plan'
+            : 'Task moved successfully',
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, 'Move failed: $e');
+    }
   }
 
   Widget _buildInfoSection(BuildContext context, WidgetRef ref) {
@@ -740,7 +818,8 @@ class _BottomActionBar extends ConsumerWidget {
                     onPressed: () {
                       unawaited(
                         SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.confirm,),
+                          SensoryFeedbackEvent.confirm,
+                        ),
                       );
                       ref.read(activeTaskProvider.notifier).state = task;
                       // P0-1: Auto-switch plan context when starting task
@@ -767,7 +846,8 @@ class _BottomActionBar extends ConsumerWidget {
                     onPressed: () {
                       unawaited(
                         SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.dialogOpen,),
+                          SensoryFeedbackEvent.dialogOpen,
+                        ),
                       );
                       unawaited(
                         showSensoryDialog<void>(

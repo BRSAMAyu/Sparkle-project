@@ -73,7 +73,8 @@ class ApiEndpoints {
   static const String executionNodes = '/executions/nodes';
   static const String executionPreferences = '/executions/preferences';
   static const String executionProfileSummary = '/executions/profile/summary';
-  static const String executionTaskBatchHandoff = '/executions/tasks/handoff/batch';
+  static const String executionTaskBatchHandoff =
+      '/executions/tasks/handoff/batch';
   static const String executionSchedules = '/executions/schedules';
   static String executionSchedulePause(String scheduleId) =>
       '/executions/schedules/$scheduleId/pause';
@@ -92,7 +93,8 @@ class ApiEndpoints {
   static String execution(String intentId) => '/executions/$intentId';
   static String executionRecord(String intentId) =>
       '/executions/$intentId/record';
-  static String retryExecution(String intentId) => '/executions/$intentId/retry';
+  static String retryExecution(String intentId) =>
+      '/executions/$intentId/retry';
   static String confirmExecutionResult(String recordId) =>
       '/executions/records/$recordId/confirm';
   static String rejectExecutionResult(String recordId) =>
@@ -114,6 +116,26 @@ class ApiEndpoints {
   static String planArchive(String id) => '/plans/$id/archive';
   static String planRestore(String id) => '/plans/$id/restore';
   static const String planPrimary = '/plans/primary';
+  static String planPhases(String id) => '/plans/$id/phases';
+  static String reorderPlanPhases(String id) => '/plans/$id/phases/reorder';
+  static String activatePhase(String phaseCardId) =>
+      '/plans/phases/$phaseCardId/activate';
+  static String completePhase(String phaseCardId) =>
+      '/plans/phases/$phaseCardId/complete';
+  static String submitPhaseFeedback(String phaseCardId) =>
+      '/plans/phases/$phaseCardId/feedback';
+  static String regeneratePhaseSchedule(String phaseCardId) =>
+      '/plans/phases/$phaseCardId/schedule/regenerate';
+
+  // Cards
+  static const String cards = '/cards';
+  static const String cardsSearch = '/cards/search';
+  static String cardTree(String id) => '/cards/$id/tree';
+  static String moveCard(String id) => '/cards/$id/move';
+  static String linkCard(String id) => '/cards/$id/link';
+  static String setCardRecurrence(String id) => '/cards/$id/recurrence';
+  static String deferOccurrence(String occurrenceId) =>
+      '/cards/occurrences/$occurrenceId/defer';
 
   // Chat
   static const String chat = '/chat';

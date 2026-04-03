@@ -377,6 +377,26 @@ class TaskAdapter:
         return result.scalar_one_or_none()
 
     async def _find_plan_phase_card(self, plan_id: uuid.UUID) -> Card | None:
+        plan_card = await self._find_plan_card(plan_id)
+        if plan_card:
+            current_phase_id = (plan_card.metadata_ or {}).get("current_phase_card_id")
+            if current_phase_id:
+                try:
+                    current = await self.card_service.get_card(uuid.UUID(str(current_phase_id)))
+                    if current and current.card_type == CardType.PHASE:
+                        return current
+                except (TypeError, ValueError):
+                    pass
+
+            children = await self.edge_service.get_children(
+                plan_card.id,
+                edge_type=EdgeType.CONTAINS,
+                active_only=True,
+            )
+            for _, child in children:
+                if child.card_type == CardType.PHASE and not bool((child.metadata_ or {}).get("synthetic_phase")):
+                    return child
+
         stmt = (
             select(Card)
             .where(
