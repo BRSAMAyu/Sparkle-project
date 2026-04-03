@@ -119,14 +119,20 @@ class UserRepository {
     return items.whereType<Map<String, dynamic>>().toList();
   }
 
-  Future<void> submitOnboarding(Map<String, dynamic> payload) async {
+  Future<String?> submitOnboarding(Map<String, dynamic> payload) async {
     if (DemoDataService.isDemoMode) {
-      return;
+      return null;
     }
-    await _apiClient.post<Map<String, dynamic>>(
+    final response = await _apiClient.post<Map<String, dynamic>>(
       '/profile/onboarding',
       data: payload,
     );
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      final msg = data['first_message'];
+      if (msg is String && msg.trim().isNotEmpty) return msg.trim();
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>> fetchOnboardingPreview(

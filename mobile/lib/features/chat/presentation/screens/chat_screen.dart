@@ -63,11 +63,15 @@ class ChatScreen extends ConsumerStatefulWidget {
     this.initialPrompt,
     this.initialChatMode,
     this.initialConversationId,
+    this.initialAiMessage,
   });
 
   final String? initialPrompt;
   final String? initialChatMode;
   final String? initialConversationId;
+  /// Pre-generated AI opening message shown immediately on first open (no backend call).
+  /// Used after onboarding to make the AI feel present from the very first moment.
+  final String? initialAiMessage;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -239,6 +243,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await ref.read(chatProvider.notifier).loadConversationHistory(sessionId);
     }
     _queueInitialPromptDispatch();
+    _injectWelcomeMessageIfNeeded();
+  }
+
+  void _injectWelcomeMessageIfNeeded() {
+    final msg = widget.initialAiMessage?.trim();
+    if (msg == null || msg.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(chatProvider.notifier).prependWelcomeMessage(msg);
+    });
   }
 
   void _queueInitialPromptDispatch() {

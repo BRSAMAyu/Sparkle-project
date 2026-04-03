@@ -81,6 +81,15 @@ class ErrorReplanBridge:
             )
             triggered_plan_ids.append(str(plan_id))
 
+        # Emit a visible system update so the user knows the plan was adjusted.
+        # This powers "stickiness moment 2": next chat open shows an AI bubble explaining
+        # what changed, making the system feel like it's paying attention.
+        await self._notify_plan_adjusted(
+            user_id=user_id,
+            low_mastery_nodes=low_mastery_nodes,
+            recent_error_count=recent_error_count,
+        )
+
         logger.info(
             "ErrorReplanBridge: triggered immediate plan-health evaluation for user={} error={} plans={} count={}",
             user_id,
@@ -94,6 +103,54 @@ class ErrorReplanBridge:
             "plan_ids": triggered_plan_ids,
             "recent_error_count": recent_error_count,
         }
+
+    async def _notify_plan_adjusted(
+        self,
+        *,
+        user_id: UUID,
+        low_mastery_nodes: list[UUID],
+        recent_error_count: int,
+    ) -> None:
+        """Emit a system update so the user sees the plan was adjusted due to errors."""
+        try:
+            from app.services.system_update_service import SystemUpdateService, build_system_update
+
+            # Resolve a node name for the notification description
+            node_name = ""
+            if low_mastery_nodes:
+                from app.models.galaxy import KnowledgeNode
+                node_result = await self.db.execute(
+                    select(KnowledgeNode).where(KnowledgeNode.id == low_mastery_nodes[0])
+                )
+                node = node_result.scalar_one_or_none()
+                if node:
+                    node_name = str(node.name or "").strip()
+
+            description = (
+                f"我注意到你在「{node_name}」上遇到了{recent_error_count}次相似的问题，"
+                "已经调整了本周计划，把相关任务移到了更早的时间段。"
+                if node_name else
+                f"你最近在同一知识点上遇到了{recent_error_count}次问题，我已经微调了本周计划。"
+            )
+
+            await SystemUpdateService(self.redis).enqueue(
+                user_id,
+                build_system_update(
+                    update_type="plan_adjusted_from_error",
+                    category="evolution",
+                    title="计划已根据你的错题调整",
+                    description=description,
+                    priority="normal",
+                    metadata={
+                        "evolution_kind": "adjustment",
+                        "node_name": node_name,
+                        "error_count": recent_error_count,
+                        "trigger": "error_replan_bridge",
+                    },
+                ),
+            )
+        except Exception as exc:
+            logger.warning("ErrorReplanBridge: failed to enqueue plan_adjusted system update: {}", exc)
 
     @staticmethod
     def _extract_error_type(error: ErrorRecord) -> str:

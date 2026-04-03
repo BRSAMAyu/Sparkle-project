@@ -1399,9 +1399,27 @@ def _format_companion_persona_section(
     if struggling_area:
         lines.append(f"- 正在挣扎的地方: {struggling_area}")
     if top_pattern:
-        lines.append(f"- 你观察到的规律: {top_pattern}")
-    lines.append("- 回答时优先承接这些已知背景，不要反复问“你的目标是什么”。")
-    return "\n" + "\n".join(lines)
+        lines.append(f”- 你观察到的规律: {top_pattern}”)
+
+    # Community peer context — surface sprint progress or peer insights naturally
+    cognitive_ctx = user_context.get(“cognitive_context”) if isinstance(user_context, dict) else None
+    community_ctx = (
+        cognitive_ctx.get(“community_context”)
+        if isinstance(cognitive_ctx, dict)
+        else user_context.get(“community_context”) if isinstance(user_context, dict) else None
+    )
+    if isinstance(community_ctx, dict) and community_ctx.get(“active_group_count”, 0) > 0:
+        sprint_progress = community_ctx.get(“sprint_progress”) or []
+        if sprint_progress:
+            lines.append(f”- 群组进展: {sprint_progress[0]}”)
+        elif community_ctx.get(“recent_interaction”):
+            lines.append(f”- 群组动态: 你最近 {community_ctx['recent_interaction']} 和学习群组有互动。”)
+
+    lines.append(“- 回答时优先承接这些已知背景，不要反复问”你的目标是什么”。”)
+    # If peer context is present, hint that the AI can reference it naturally
+    if isinstance(community_ctx, dict) and community_ctx.get(“active_group_count”, 0) > 0:
+        lines.append(“- 如果适合，可以自然提及同学的进展作为激励或参考，但不要施压。”)
+    return “\n” + “\n”.join(lines)
 
 
 def _resolve_preference_instructions(

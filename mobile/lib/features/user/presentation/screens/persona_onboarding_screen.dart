@@ -391,7 +391,7 @@ class _PersonaOnboardingScreenState
     setState(() => _submitting = true);
     final repo = ref.read(userRepositoryProvider);
     try {
-      await repo.submitOnboarding({
+      final firstMessage = await repo.submitOnboarding({
         'learning_goal_type': _goalType,
         'learning_goal': _goalController.text.trim().isEmpty
             ? null
@@ -411,7 +411,11 @@ class _PersonaOnboardingScreenState
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementRare),
         );
-        context.go('/home');
+        if (firstMessage != null && firstMessage.isNotEmpty) {
+          context.go('/chat', extra: {'initial_ai_message': firstMessage});
+        } else {
+          context.go('/home');
+        }
       }
     } finally {
       if (mounted) {

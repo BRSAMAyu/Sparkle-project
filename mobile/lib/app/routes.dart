@@ -162,18 +162,26 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/chat',
-                pageBuilder: (context, state) => NoTransitionPage<void>(
-                  key: state.pageKey,
-                  child: SceneAudioScope(
-                    policy: ExperienceProfiles.assistantFlow.audioPolicy(),
-                    child: ChatScreen(
-                      initialPrompt: state.uri.queryParameters['prompt'],
-                      initialChatMode: state.uri.queryParameters['chat_mode'],
-                      initialConversationId:
-                          state.uri.queryParameters['session_id'],
+                pageBuilder: (context, state) {
+                  final extra = state.extra;
+                  final initialAiMessage = (extra is Map<String, dynamic>)
+                      ? extra['initial_ai_message'] as String?
+                      : null;
+                  return NoTransitionPage<void>(
+                    key: state.pageKey,
+                    child: SceneAudioScope(
+                      policy: ExperienceProfiles.assistantFlow.audioPolicy(),
+                      child: ChatScreen(
+                        initialPrompt: state.uri.queryParameters['prompt'],
+                        initialChatMode:
+                            state.uri.queryParameters['chat_mode'],
+                        initialConversationId:
+                            state.uri.queryParameters['session_id'],
+                        initialAiMessage: initialAiMessage,
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ],
           ),

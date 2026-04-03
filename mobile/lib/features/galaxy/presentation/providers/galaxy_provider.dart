@@ -308,6 +308,20 @@ final galaxyProvider =
   return GalaxyNotifier(repository, ref);
 });
 
+/// Broadcast when a node crosses a mastery milestone threshold.
+class MasteryMilestoneEvent {
+  const MasteryMilestoneEvent({
+    required this.nodeId,
+    required this.nodeName,
+    required this.newMastery,
+    required this.milestone,
+  });
+  final String nodeId;
+  final String nodeName;
+  final int newMastery;
+  final int milestone; // 30, 60, 85, or 95
+}
+
 class GalaxyNotifier extends StateNotifier<GalaxyState> {
   GalaxyNotifier(this._repository, this._ref) : super(GalaxyState()) {
     // Load persisted view state
@@ -317,6 +331,13 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
   }
   final EnhancedGalaxyRepository _repository;
   final Ref _ref;
+
+  // Mastery milestone broadcast stream
+  final _milestoneController =
+      StreamController<MasteryMilestoneEvent>.broadcast();
+  Stream<MasteryMilestoneEvent> get masteryMilestones =>
+      _milestoneController.stream;
+
   // ignore: cancel_subscriptions
   StreamSubscription<SSEEvent>? _eventsSubscription;
   Timer? _eventsReconnectTimer;
@@ -390,6 +411,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     if (tierListener != null) {
       PerformanceService.instance.currentTier.removeListener(tierListener);
     }
+    unawaited(_milestoneController.close());
     // Do not stop monitoring here as it might be used by other parts or singleton lifecycle
     // But for this screen it's probably fine. Let's keep it running for now or stop it?
     // If GalaxyScreen is the only consumer, we could stop it.
@@ -448,6 +470,8 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     unawaited(loadGalaxy(forceRefresh: true, showLoading: false));
   }
 
+  static const _masteryMilestones = [30, 60, 85, 95];
+
   void _handleNodeUpdated(Map<String, dynamic>? data) {
     if (data == null ||
         data['node_id'] == null ||
@@ -457,6 +481,23 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
     final nodeId = data['node_id'] as String;
     final newMastery = (data['new_mastery'] as num).toInt();
+
+    // Detect milestone crossing before updating state
+    final oldNode = state.nodes.where((n) => n.id == nodeId).firstOrNull;
+    if (oldNode != null && !_milestoneController.isClosed) {
+      final oldMastery = oldNode.masteryScore;
+      for (final milestone in _masteryMilestones) {
+        if (oldMastery < milestone && newMastery >= milestone) {
+          _milestoneController.add(MasteryMilestoneEvent(
+            nodeId: nodeId,
+            nodeName: oldNode.name,
+            newMastery: newMastery,
+            milestone: milestone,
+          ));
+          break; // Only fire the highest milestone crossed
+        }
+      }
+    }
 
     // Optimistic update of local state
     final updatedNodes = state.nodes.map((node) {

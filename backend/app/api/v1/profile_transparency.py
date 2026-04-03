@@ -79,6 +79,84 @@ def _goal_type_label(value: str | None) -> str:
     return mapping.get(str(value or "").strip().lower(), "学习目标")
 
 
+def _build_first_session_message(
+    *,
+    learning_goal: str | None,
+    learning_goal_type: str | None,
+    knowledge_level: str | None,
+    study_time_minutes: int | None,
+) -> str:
+    """Deterministic fallback for the first-session opener message."""
+    if not (learning_goal or "").strip():
+        return "你好！我是 Sparkle。告诉我你现在最想突破的学习难关，我们一起来想办法。"
+    goal = learning_goal.strip()
+    goal_label = _goal_type_label(learning_goal_type)
+    level_map = {
+        "beginner": "刚开始接触",
+        "intermediate": "有一些基础",
+        "advanced": "已经有较深积累",
+    }
+    level_label = level_map.get(str(knowledge_level or "").strip(), "")
+    time_label = f"每天 {study_time_minutes} 分钟" if study_time_minutes else "你的时间"
+    lines = [f"你好！我已经了解你想推进「{goal}」这个{goal_label}目标。"]
+    if level_label:
+        lines.append(f"你目前{level_label}，我会根据这个来调整节奏和难度。")
+    lines.append(f"我们用{time_label}来开始——先告诉我：你现在这个目标里，觉得最卡住的是哪一块？")
+    return "\n".join(lines)
+
+
+async def _generate_first_session_message(
+    *,
+    learning_goal: str | None,
+    learning_goal_type: str | None,
+    knowledge_level: str | None,
+    study_time_minutes: int | None,
+) -> str:
+    """Generate a personalized AI opening message for the user's very first chat session."""
+    fallback = _build_first_session_message(
+        learning_goal=learning_goal,
+        learning_goal_type=learning_goal_type,
+        knowledge_level=knowledge_level,
+        study_time_minutes=study_time_minutes,
+    )
+    goal = (learning_goal or "").strip()
+    if not goal:
+        return fallback
+
+    summary_bits = [f"目标类型：{_goal_type_label(learning_goal_type)}", f"目标：{goal}"]
+    if knowledge_level:
+        summary_bits.append(f"当前基础：{knowledge_level}")
+    if study_time_minutes is not None:
+        summary_bits.append(f"每日学习时间：{study_time_minutes} 分钟")
+
+    llm = await get_configured_llm_service_for_tier(
+        AgentRole.GENERATION,
+        ModelTier.FAST,
+        task_type=TaskType.QUICK_QUERY,
+        reasoning_mode="fast",
+    )
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "你是 Sparkle，一个AI学习成长伙伴。"
+                "用户刚完成画像设置，现在第一次进入对话界面。"
+                "请生成一段自然的开场白，3句话以内：第1句表达你已了解他们的目标；"
+                "第2句（可选）针对他们的基础/时间给出一句个性化观察；"
+                "第3句以开放式问题结尾，邀请他们告诉你现在最卡住的地方。"
+                "语气温暖、直接，像朋友不像客服。总字数80字内。不要markdown，不要列表。"
+            ),
+        },
+        {"role": "user", "content": "\n".join(summary_bits)},
+    ]
+    try:
+        message = await asyncio.wait_for(llm.chat(messages, temperature=0.3), timeout=8.0)
+        message = " ".join((message or "").split())
+        return message if message else fallback
+    except Exception:
+        return fallback
+
+
 def _build_onboarding_preview_fallback(payload: OnboardingRequest) -> str:
     goal = (payload.learning_goal or "").strip()
     goal_label = _goal_type_label(payload.learning_goal_type)
@@ -819,7 +897,29 @@ async def submit_onboarding(
         if record:
             updated["learning_goal"] = payload.learning_goal
 
-    return {"status": "ok", "updated": updated}
+    # Bootstrap galaxy scaffold nodes from goal
+    try:
+        from app.services.galaxy_bootstrap_service import GalaxyBootstrapService
+        bootstrap_service = GalaxyBootstrapService(db)
+        await bootstrap_service.seed_from_goal(
+            user_id=current_user.id,
+            learning_goal=payload.learning_goal,
+            goal_type=payload.learning_goal_type,
+        )
+        await db.commit()
+    except Exception as _exc:
+        import logging
+        logging.getLogger(__name__).warning("Galaxy bootstrap failed during onboarding: %s", _exc)
+
+    # Generate personalized first-session opener for the chat
+    first_message = await _generate_first_session_message(
+        learning_goal=payload.learning_goal,
+        learning_goal_type=payload.learning_goal_type,
+        knowledge_level=payload.knowledge_level,
+        study_time_minutes=payload.study_time_minutes,
+    )
+
+    return {"status": "ok", "updated": updated, "first_message": first_message}
 
 
 @router.post("/onboarding/preview", response_model=OnboardingPreviewResponse)

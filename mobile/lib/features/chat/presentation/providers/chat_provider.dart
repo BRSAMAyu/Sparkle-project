@@ -700,6 +700,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
     return WidgetPayload(type: type, data: data);
   }
 
+  /// Prepend a local AI welcome message (no backend call).
+  /// Used after onboarding to show the AI's personalized opener immediately.
+  void prependWelcomeMessage(String content) {
+    if (content.trim().isEmpty) return;
+    // Don't inject if there are already messages (e.g., returning to chat tab)
+    if (state.messages.isNotEmpty) return;
+    final welcome = ChatMessageModel(
+      id: 'welcome_${DateTime.now().millisecondsSinceEpoch}',
+      conversationId: state.conversationId ?? 'onboarding',
+      role: MessageRole.assistant,
+      content: content.trim(),
+      createdAt: DateTime.now(),
+    );
+    state = state.copyWith(messages: [welcome]);
+  }
+
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
   Future<void> sendMessage(String content, {String? taskId}) async {
     // P0修复: 计划切换期间禁止发送，防止消息关联到错误的计划上下文

@@ -166,6 +166,7 @@ class GalaxyNodeModel {
     required this.isUnlocked,
     required this.masteryScore,
     this.studyCount = 0,
+    this.recentErrorCount = 0,
     this.firstUnlockAt,
     this.parentId,
     this.baseColor,
@@ -216,6 +217,7 @@ class GalaxyNodeModel {
       studyCount: (GalaxyNodeModel._readStudyCount(json, 'study_count') as num?)
               ?.toInt() ??
           0,
+      recentErrorCount: (userStatus?['recent_error_count'] as num?)?.toInt() ?? 0,
       firstUnlockAt: GalaxyNodeModel._readDateTime(
         json['first_unlock_at'] ?? userStatus?['first_unlock_at'],
       ),
@@ -269,6 +271,10 @@ class GalaxyNodeModel {
 
   @JsonKey(name: 'study_count', readValue: _readStudyCount, defaultValue: 0)
   final int studyCount;
+
+  /// Recent error count (last 14 days) — drives error cluster tint in star map
+  @JsonKey(name: 'recent_error_count', defaultValue: 0)
+  final int recentErrorCount;
 
   @JsonKey(name: 'first_unlock_at')
   final DateTime? firstUnlockAt;
@@ -367,6 +373,7 @@ class GalaxyNodeModel {
     bool? isUnlocked,
     int? masteryScore,
     int? studyCount,
+    int? recentErrorCount,
     DateTime? firstUnlockAt,
     List<String>? tags,
     String? description,
@@ -388,6 +395,7 @@ class GalaxyNodeModel {
         isUnlocked: isUnlocked ?? this.isUnlocked,
         masteryScore: masteryScore ?? this.masteryScore,
         studyCount: studyCount ?? this.studyCount,
+        recentErrorCount: recentErrorCount ?? this.recentErrorCount,
         firstUnlockAt: firstUnlockAt ?? this.firstUnlockAt,
         tags: tags ?? this.tags,
         description: description ?? this.description,

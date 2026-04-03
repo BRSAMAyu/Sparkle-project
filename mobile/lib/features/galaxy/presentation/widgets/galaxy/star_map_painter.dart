@@ -1565,6 +1565,24 @@ class StarMapPainter extends CustomPainter {
         );
       }
 
+      // Error cluster indicator: subtle red pulse ring when recent errors exist
+      if (!performanceDegraded &&
+          node.recentErrorCount > 0 &&
+          node.isUnlocked &&
+          lod.index >= GalaxyLod.l2.index) {
+        final errorIntensity = (node.recentErrorCount / 5.0).clamp(0.15, 0.55);
+        final pulseFactor = 1.0 + 0.08 * math.sin(ambientPhase * 1.7 + _nodeSeed(node.id));
+        canvas.drawCircle(
+          nodeCenter,
+          radius * 1.55 * pulseFactor,
+          Paint()
+            ..color = const Color(0xFFFF4444).withValues(alpha: errorIntensity * nodeAlpha)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.2,
+        );
+      }
+
       if (node.importance >= 4 &&
           lod.index >= GalaxyLod.l3.index &&
           (isSpotlighted || camera.scale >= 0.9)) {

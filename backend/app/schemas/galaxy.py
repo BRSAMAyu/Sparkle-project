@@ -174,6 +174,9 @@ class UserStatusInfo(BaseModel):
     next_review_at: datetime | None = None
     decay_paused: bool
 
+    # Evidence-mode: recent errors on this node (last 14 days)
+    recent_error_count: int = 0
+
     # 计算属性
     status: NodeStatus
     brightness: float  # 0-1，用于前端渲染
@@ -191,7 +194,7 @@ class NodeWithStatus(NodeBase):
     position_y: float
 
     @classmethod
-    def from_models(cls, node, status):
+    def from_models(cls, node, status, recent_error_count: int = 0):
         user_status = None
         if status:
             # 计算视觉状态
@@ -209,6 +212,7 @@ class NodeWithStatus(NodeBase):
                 last_study_at=status.last_study_at,
                 next_review_at=status.next_review_at,
                 decay_paused=status.decay_paused,
+                recent_error_count=recent_error_count,
                 status=visual_status,
                 brightness=brightness,
             )

@@ -62,6 +62,7 @@ class DashboardCardIds {
 
   static const List<String> defaultVisible = [
     insights,
+    streak,
     calendar,
     tools,
     curiosity,
