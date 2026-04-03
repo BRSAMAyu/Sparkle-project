@@ -112,6 +112,40 @@ async def test_outcome_verifier_ignores_stale_plan_evidence_and_resolves_deliver
 
 
 @pytest.mark.asyncio
+async def test_outcome_verifier_engaged_sweep_skips_created_only_records(db_session, test_user):
+    record_service = InterventionRecordService(db_session)
+
+    created_only = await record_service.create_record(
+        user_id=test_user.id,
+        trigger_type=InterventionTriggerType.PLAN_RISK,
+        delivery_strategy=DeliveryStrategy.SUPPORTIVE,
+        delivery_channel=DeliveryChannel.CHAT,
+        outcome_window_days=0,
+    )
+    created_only.created_at = datetime.utcnow() - timedelta(hours=25)
+
+    engaged = await record_service.create_record(
+        user_id=test_user.id,
+        trigger_type=InterventionTriggerType.PLAN_RISK,
+        delivery_strategy=DeliveryStrategy.SUPPORTIVE,
+        delivery_channel=DeliveryChannel.CHAT,
+        outcome_window_days=0,
+    )
+    engaged.created_at = datetime.utcnow() - timedelta(hours=25)
+    await record_service.mark_delivered(engaged.id)
+    await db_session.commit()
+
+    verifier = InterventionOutcomeVerifier(db_session)
+    summary = await verifier.verify_engaged_pending()
+    await db_session.refresh(created_only)
+    await db_session.refresh(engaged)
+
+    assert summary["resolved"] == 1
+    assert created_only.outcome_status == InterventionOutcomeStatus.PENDING
+    assert engaged.outcome_status == InterventionOutcomeStatus.INEFFECTIVE
+
+
+@pytest.mark.asyncio
 async def test_behavior_signal_collector_commits_created_interventions(monkeypatch):
     user_id = uuid4()
     plan_id = uuid4()
@@ -544,6 +578,44 @@ async def test_notification_center_can_accept_and_act_on_intervention(
 
 
 @pytest.mark.asyncio
+async def test_notification_center_can_transition_intervention_record_directly(
+    db_session,
+    test_user,
+):
+    record_service = InterventionRecordService(db_session, FakeEventBus())
+    record = await record_service.create_record(
+        user_id=test_user.id,
+        trigger_type=InterventionTriggerType.OVERLOAD,
+        delivery_strategy=DeliveryStrategy.SUPPORTIVE,
+        delivery_channel=DeliveryChannel.FOCUS_MODE,
+    )
+    await record_service.mark_delivered(record.id)
+    notification = Notification(
+        user_id=test_user.id,
+        title="先放轻一点",
+        content="从一件小事开始",
+        type="intervention_push",
+        data={"record_id": str(record.id)},
+    )
+    db_session.add(notification)
+    await db_session.commit()
+
+    service = NotificationCenterService(db_session)
+    transitioned = await service.transition_intervention_record(
+        user_id=test_user.id,
+        record_id=record.id,
+        action="seen",
+        action_payload={"surface": "push_open"},
+    )
+    await db_session.refresh(record)
+    await db_session.refresh(notification)
+
+    assert transitioned is True
+    assert record.acceptance_status == InterventionAcceptanceStatus.SEEN
+    assert notification.is_read is True
+
+
+@pytest.mark.asyncio
 async def test_outcome_verifier_treats_parameter_compilation_with_positive_feedback_as_effective(
     db_session,
     test_user,
@@ -708,3 +780,4 @@ async def test_notification_analytics_counts_intervention_acceptance_and_action(
     assert analytics.by_type['intervention'].acted == 1
     assert analytics.trends[-1].accepted >= 1
     assert analytics.trends[-1].acted >= 1
+    assert analytics.time_to_action_buckets

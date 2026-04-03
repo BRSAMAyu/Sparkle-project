@@ -123,6 +123,10 @@ celery_app.conf.update(
         "tasks.accountability.evaluate_achievements": {"queue": "low_priority"},
         "tasks.accountability.send_milestone_notification": {"queue": "default"},
         "tasks.accountability.notify_partner_checkin": {"queue": "default"},
+        "verify_intervention_outcomes_engaged": {"queue": "low_priority"},
+        "verify_intervention_outcomes_full": {"queue": "low_priority"},
+        "app.core.celery_tasks.generate_weekly_growth_digests": {"queue": "default"},
+        "app.core.celery_tasks.deliver_weekly_growth_digests": {"queue": "default"},
     },
 
     # 监控
@@ -866,6 +870,44 @@ def generate_daily_capsules_for_all(self):
         raise self.retry(exc=exc, countdown=300)
 
 
+@celery_app.task(bind=True, max_retries=3, name="verify_intervention_outcomes_engaged")
+def verify_intervention_outcomes_engaged(self):
+    """Resolve engaged intervention outcomes older than 24 hours."""
+    from app.core.event_bus import event_bus
+    from app.db.session import AsyncSessionLocal
+    from app.services.card_protocol.outcome_verifier import InterventionOutcomeVerifier
+
+    async def _verify():
+        async with AsyncSessionLocal() as session:
+            verifier = InterventionOutcomeVerifier(session, event_bus)
+            return await verifier.verify_engaged_pending()
+
+    try:
+        return _run_async(_verify())
+    except Exception as exc:
+        logger.error(f"Engaged intervention outcome verification failed: {exc}")
+        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+
+
+@celery_app.task(bind=True, max_retries=3, name="verify_intervention_outcomes_full")
+def verify_intervention_outcomes_full(self):
+    """Run the nightly full pending outcome sweep."""
+    from app.core.event_bus import event_bus
+    from app.db.session import AsyncSessionLocal
+    from app.services.card_protocol.outcome_verifier import InterventionOutcomeVerifier
+
+    async def _verify():
+        async with AsyncSessionLocal() as session:
+            verifier = InterventionOutcomeVerifier(session, event_bus)
+            return await verifier.verify_full_pending()
+
+    try:
+        return _run_async(_verify())
+    except Exception as exc:
+        logger.error(f"Full intervention outcome verification failed: {exc}")
+        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+
+
 # =============================================================================
 # 周期任务 (Beat Schedule)
 # =============================================================================
@@ -894,6 +936,18 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "low_priority"}
     },
 
+    "intervention-outcomes-engaged": {
+        "task": "verify_intervention_outcomes_engaged",
+        "schedule": crontab(minute=0, hour="*/4"),
+        "options": {"queue": "low_priority"}
+    },
+
+    "intervention-outcomes-full": {
+        "task": "verify_intervention_outcomes_full",
+        "schedule": crontab(minute=0, hour=2),
+        "options": {"queue": "low_priority"}
+    },
+
     # ========== 胶囊生成任务 ==========
 
     # 每天早上8点生成每日胶囊
@@ -916,6 +970,19 @@ celery_app.conf.beat_schedule = {
     "weekly-learning-report": {
         "task": "app.core.celery_tasks.generate_weekly_learning_reports",
         "schedule": crontab(day_of_week="mon", hour=9, minute=0),
+        "options": {"queue": "default"}
+    },
+
+    "weekly-growth-digest-generation": {
+        "task": "app.core.celery_tasks.generate_weekly_growth_digests",
+        "schedule": crontab(day_of_week="sun", hour=22, minute=0),
+        "args": (200, False),
+        "options": {"queue": "default"}
+    },
+
+    "weekly-growth-digest-delivery": {
+        "task": "app.core.celery_tasks.deliver_weekly_growth_digests",
+        "schedule": crontab(day_of_week="mon", hour=8, minute=0),
         "options": {"queue": "default"}
     },
 

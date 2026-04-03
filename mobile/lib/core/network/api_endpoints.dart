@@ -161,6 +161,8 @@ class ApiEndpoints {
       '/notification-center/analytics';
   static const String notificationCenterHistory =
       '/notification-center/history';
+  static String notificationCenterInterventionRecordAction(String recordId) =>
+      '/notification-center/interventions/$recordId/action';
 
   // Statistics
   static const String statsOverview = '/stats/overview';

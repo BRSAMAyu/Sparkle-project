@@ -138,12 +138,48 @@ class NotificationTrendData(BaseModel):
     acted: int = 0
 
 
+class InterventionFunnelStats(BaseModel):
+    """Lifecycle funnel metrics for one intervention dimension."""
+
+    dimension: str
+    created: int = 0
+    delivered: int = 0
+    seen: int = 0
+    accepted: int = 0
+    acted: int = 0
+    acceptance_rate: float = 0.0
+    action_rate: float = 0.0
+
+
+class InterventionToneEffectiveness(BaseModel):
+    """Outcome and action performance for a strategy/channel pair."""
+
+    tone: str
+    channel: str
+    created: int = 0
+    accepted: int = 0
+    acted: int = 0
+    effective: int = 0
+    acted_rate: float = 0.0
+    effective_rate: float = 0.0
+
+
+class InterventionTimeToActionBucket(BaseModel):
+    """Bucketted action latency for intervention analytics."""
+
+    label: str
+    count: int = 0
+
+
 class NotificationAnalyticsResponse(BaseModel):
     """Complete analytics response"""
     summary: NotificationAnalyticsSummary
     by_type: dict[str, NotificationTypeStats]
     trends: list[NotificationTrendData]
     hourly_distribution: list[int] = Field(..., description="24-hour distribution array")
+    intervention_funnels: list[InterventionFunnelStats] = Field(default_factory=list)
+    tone_effectiveness: list[InterventionToneEffectiveness] = Field(default_factory=list)
+    time_to_action_buckets: list[InterventionTimeToActionBucket] = Field(default_factory=list)
 
 
 # Pagination

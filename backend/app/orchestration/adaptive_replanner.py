@@ -257,6 +257,17 @@ class AdaptiveReplanner:
     AUTO_REPLAN_COOLDOWN = timedelta(hours=12)
     SNAPSHOT_HISTORY_LIMIT = 3
     NEGATIVE_FEEDBACK_CATEGORIES = {"too_difficult", "too_long", "unclear", "irrelevant"}
+    STRONG_COGNITIVE_STRUGGLE_MARKERS = (
+        "不理解",
+        "搞不懂",
+        "看不懂",
+        "不会",
+        "没思路",
+        "concept",
+        "confus",
+        "don't understand",
+        "do not understand",
+    )
 
     def __init__(
         self,
@@ -301,6 +312,7 @@ class AdaptiveReplanner:
         task_id: UUID,
         category: str | None = None,
         difficulty_delta: float | None = None,
+        feedback_text: str | None = None,
     ) -> list[AdaptationRecord]:
         await self._maybe_record_breakdown_feedback(
             user_id=user_id,
@@ -317,14 +329,56 @@ class AdaptiveReplanner:
         )
         if rollback_records:
             return rollback_records
-        report = await self.progress_service.evaluate_progress(user_id, plan_id)
-        return await self._handle_report(
-            report,
-            trigger="task_feedback",
+        trigger = (
+            "task_feedback_struggle"
+            if self.is_strong_cognitive_struggle_feedback(category=category, feedback_text=feedback_text)
+            else "task_feedback"
+        )
+        return await self.evaluate_plan_health_now(
+            user_id=user_id,
+            plan_id=plan_id,
+            trigger=trigger,
             task_id=task_id,
             feedback_category=category,
             difficulty_delta=difficulty_delta,
         )
+
+    async def evaluate_plan_health_now(
+        self,
+        *,
+        user_id: UUID,
+        plan_id: UUID,
+        trigger: str,
+        task_id: UUID | None = None,
+        completion_rate: float | None = None,
+        feedback_category: str | None = None,
+        difficulty_delta: float | None = None,
+    ) -> list[AdaptationRecord]:
+        """Run an immediate plan-health evaluation outside the periodic loop."""
+        report = await self.progress_service.evaluate_progress(user_id, plan_id)
+        return await self._handle_report(
+            report,
+            trigger=trigger,
+            task_id=task_id,
+            completion_rate=completion_rate,
+            feedback_category=feedback_category,
+            difficulty_delta=difficulty_delta,
+        )
+
+    @classmethod
+    def is_strong_cognitive_struggle_feedback(
+        cls,
+        *,
+        category: str | None,
+        feedback_text: str | None,
+    ) -> bool:
+        normalized_category = str(category or "").strip().lower()
+        if normalized_category == "unclear":
+            return True
+        haystack = str(feedback_text or "").strip().lower()
+        if not haystack:
+            return False
+        return any(marker in haystack for marker in cls.STRONG_COGNITIVE_STRUGGLE_MARKERS)
 
     async def _maybe_record_breakdown_feedback(
         self,

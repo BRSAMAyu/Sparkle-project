@@ -11,6 +11,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';

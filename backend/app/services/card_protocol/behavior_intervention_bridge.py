@@ -37,6 +37,7 @@ from app.models.card_protocol import (
 )
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.card_service import CardService
+from app.services.intervention_strategy_learner import InterventionStrategyLearner
 from app.core.event_bus import EventBus
 
 
@@ -79,6 +80,7 @@ class BehaviorInterventionBridge:
         self.event_bus = event_bus
         self.record_service = InterventionRecordService(db, event_bus)
         self.card_service = CardService(db, event_bus)
+        self.strategy_learner = InterventionStrategyLearner(db)
 
     async def on_behavior_pattern(
         self,
@@ -138,13 +140,14 @@ class BehaviorInterventionBridge:
                 return None
 
         # 5. Select delivery strategy
-        delivery_strategy = self._select_strategy(
+        default_strategy = self._select_strategy(
             pattern_name=pattern_name,
             pattern_type=pattern_type,
             confidence=confidence,
             frequency=frequency,
             user_id=user_id,
         )
+        delivery_strategy = await self.strategy_learner.get_best_strategy(user_id, trigger_type) or default_strategy
 
         # 6. Build diagnosis
         diagnosis = {
@@ -156,6 +159,7 @@ class BehaviorInterventionBridge:
             "solution_text": solution_text,
             "evidence_ids": evidence_ids or [],
             "detected_at": datetime.utcnow().isoformat(),
+            "default_delivery_strategy": default_strategy.value,
         }
 
         # 7. Create the record

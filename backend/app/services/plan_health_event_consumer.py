@@ -130,6 +130,33 @@ class PlanHealthEventConsumer:
                     )
                     if record:
                         await db.commit()
+                        
+                        # --- Delivery Step ---
+                        from app.models.card_protocol import DeliveryChannel
+                        if record.delivery_channel == DeliveryChannel.IN_APP:
+                            update = build_system_update(
+                                update_type="intervention_record",
+                                category="plan_health",
+                                title="系统检测到需要调整",
+                                description="您的学习计划存在较大偏差或阻力，系统已生成调整建议。",
+                                priority="high" if severity == "critical" else "medium",
+                                metadata={
+                                    "intervention_id": str(record.id),
+                                    "payload": record.diagnosis_payload
+                                },
+                            )
+                            await SystemUpdateService().enqueue(
+                                user_id=UUID(user_id),
+                                payload=update,
+                            )
+                        elif record.delivery_channel == DeliveryChannel.PUSH:
+                            from app.core.celery_tasks import schedule_push_notification
+                            schedule_push_notification.delay(
+                                user_id=str(user_id),
+                                intervention_id=str(record.id),
+                                payload=record.diagnosis_payload or {}
+                            )
+                            
                 except Exception as bridge_exc:
                     await db.rollback()
                     logger.warning("PlanHealth→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)

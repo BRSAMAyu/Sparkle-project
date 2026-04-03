@@ -363,10 +363,12 @@ class DemoDataService {
       score += 1;
     }
     if (node.name.contains('写作') && task.tags.contains('Writing')) score += 4;
-    if (node.name.contains('摄影') && task.tags.contains('Photography'))
+    if (node.name.contains('摄影') && task.tags.contains('Photography')) {
       score += 4;
-    if (node.name.contains('统计') && task.tags.contains('Statistics'))
+    }
+    if (node.name.contains('统计') && task.tags.contains('Statistics')) {
       score += 4;
+    }
     if (node.name.contains('运动') && task.tags.contains('Recovery')) score += 4;
     return score;
   }
@@ -2147,6 +2149,43 @@ class DemoDataService {
         'solution_text': '下午处理理工与职业任务，晚上保留给语言、反思和轻量恢复动作。',
         'status': 'analyzed',
         'has_new_insight': true,
+      },
+      'growth_status': {
+        'headline': 'Ava，你本周在热力学上进步了 22%',
+        'subtitle': '把证据放在前面，让今天的选择更清楚。',
+        'user_name': 'Ava',
+        'streak_days': 6,
+        'focus_hours_week': 8.5,
+        'tasks_completed_week': 11,
+      },
+      'most_important_task': {
+        'id': tasks.first.id,
+        'title': tasks.first.title,
+        'estimated_minutes': tasks.first.estimatedMinutes,
+        'priority': tasks.first.priority,
+        'type': tasks.first.type.name,
+        'reason': '它同时卡在掌握度缺口和临近截止日上，最值得优先处理。',
+        'plan_name': '热力学冲刺',
+        'days_to_deadline': 2,
+        'risk_score': 1.42,
+      },
+      'growth_signal': {
+        'topic': '可逆过程',
+        'headline': '可逆过程: 0.38 -> 0.61',
+        'summary': '可逆过程掌握度从 0.38 提升到 0.61',
+        'source': '3 次学习记录 / 85 分钟投入',
+        'delta_points': 22,
+        'evidence_count': 3,
+      },
+      'active_plan_progress': {
+        'id': 'demo-plan-growth',
+        'name': '热力学冲刺',
+        'type': 'sprint',
+        'phase': 'daily',
+        'progress': 0.64,
+        'mastery_level': 0.58,
+        'target_date': _now.add(const Duration(days: 5)).toIso8601String(),
+        'days_to_deadline': 5,
       },
     };
     return _demoDashboardCache!;

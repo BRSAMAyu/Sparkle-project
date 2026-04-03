@@ -124,6 +124,30 @@ async def test_handle_report_marks_no_adjustment_produced_when_patch_is_noop() -
     assert kwargs["adaptation_records"] == []
 
 
+@pytest.mark.asyncio
+async def test_on_task_feedback_uses_struggle_trigger_for_unclear_feedback() -> None:
+    user_id = uuid4()
+    plan_id = uuid4()
+    task_id = uuid4()
+    replanner = object.__new__(AdaptiveReplanner)
+    replanner._maybe_record_breakdown_feedback = AsyncMock()
+    replanner._maybe_rollback_after_feedback = AsyncMock(return_value=[])
+    replanner.evaluate_plan_health_now = AsyncMock(return_value=[])
+
+    await replanner.on_task_feedback(
+        user_id=user_id,
+        plan_id=plan_id,
+        task_id=task_id,
+        category="unclear",
+        difficulty_delta=-0.1,
+        feedback_text="这里我还是不理解这个概念",
+    )
+
+    kwargs = replanner.evaluate_plan_health_now.await_args.kwargs
+    assert kwargs["trigger"] == "task_feedback_struggle"
+    assert kwargs["feedback_category"] == "unclear"
+
+
 def test_cognitive_pattern_trigger_skips_previously_failed_adjustment() -> None:
     adjustment = PlanParameterAdjustment(
         parameter="task_duration_multiplier",

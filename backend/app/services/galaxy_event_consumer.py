@@ -112,6 +112,47 @@ class GalaxyEventConsumer:
                 except Exception as card_exc:
                     logger.warning("Card protocol error-mastery bridge failed (non-fatal): {}", card_exc)
 
+                # --- Breakpoint 4 Fix: Flag active tasks with concept_gap signal ---
+                try:
+                    plans_result = await db.execute(
+                        select(Plan.id, Task.title)
+                        .join(Task, Task.plan_id == Plan.id)
+                        .join(
+                            TaskKnowledgeLink,
+                            (TaskKnowledgeLink.task_id == Task.id)
+                            & (TaskKnowledgeLink.relation_type == "prerequisite")
+                        )
+                        .where(
+                            Plan.user_id == UUID(str(user_id)),
+                            Plan.is_active.is_(True),
+                            Task.status != TaskStatus.COMPLETED,
+                            TaskKnowledgeLink.knowledge_node_id.in_([UUID(str(nid)) for nid in linked_node_ids]),
+                        )
+                        .distinct()
+                    )
+                    
+                    plan_issues = {}
+                    for plan_id, task_title in plans_result.all():
+                        if plan_id not in plan_issues:
+                            plan_issues[plan_id] = []
+                        plan_issues[plan_id].append(task_title)
+                    
+                    if plan_issues:
+                        from app.services.card_protocol.health_intervention_bridge import PlanHealthInterventionBridge
+                        health_bridge = PlanHealthInterventionBridge(db, self.event_bus)
+                        for p_id, task_titles in plan_issues.items():
+                            await health_bridge.on_plan_health_signal(
+                                user_id=UUID(str(user_id)),
+                                plan_id=p_id,
+                                severity="warning",
+                                reasons=["concept_gap"],
+                                action_taken="none",
+                                context={"affected_tasks": task_titles},
+                            )
+                        await db.commit()
+                except Exception as concept_exc:
+                    logger.warning("Failed to flag concept_gap for active tasks: {}", concept_exc)
+
             logger.info(f"Processed error_created for user {user_id}")
 
         except Exception as e:

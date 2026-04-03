@@ -11,6 +11,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -65,9 +66,10 @@ final openClawTaskNudgeDismissedProvider = StateProvider<bool>((ref) => false);
 final openClawTaskNudgeExpandedProvider = StateProvider<bool>((ref) => false);
 
 class TaskExecutionScreen extends ConsumerStatefulWidget {
-  const TaskExecutionScreen({super.key, this.origin});
+  const TaskExecutionScreen({super.key, this.origin, this.interventionId});
 
   final String? origin;
+  final String? interventionId;
 
   @override
   ConsumerState<TaskExecutionScreen> createState() =>
@@ -133,6 +135,20 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         },
       );
       if (activeTask != null && isServerTaskId(activeTask.id)) {
+        if (widget.interventionId != null &&
+            widget.interventionId!.isNotEmpty) {
+          unawaited(
+            ref.read(interventionActionServiceProvider).reportAction(
+              recordId: widget.interventionId!,
+              action: 'accepted',
+              actionPayload: {
+                'surface': 'task_execution',
+                'source': 'task_execution_entry',
+                'task_id': activeTask.id,
+              },
+            ),
+          );
+        }
         ref.listenManual<ExecutionIntentStatus?>(
           taskListProvider.select(
             (state) => state.taskExecutions[activeTask.id]?.status,
@@ -288,6 +304,21 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         });
         unawaited(_loadFocusCompletionSummary(minutes));
         if (result != null) {
+          if (widget.interventionId != null &&
+              widget.interventionId!.isNotEmpty) {
+            unawaited(
+              ref.read(interventionActionServiceProvider).reportAction(
+                recordId: widget.interventionId!,
+                action: 'acted',
+                actionPayload: {
+                  'surface': 'task_execution',
+                  'source': 'task_execution_complete',
+                  'task_id': task.id,
+                  'duration_minutes': minutes,
+                },
+              ),
+            );
+          }
           unawaited(_processAchievementUnlocks(result));
         }
         if (result == null) {

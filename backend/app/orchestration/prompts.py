@@ -38,16 +38,16 @@ class _SafeFormatDict(dict):
         return f"{{missing:{key}}}"
 
 
-PROMPT_SECTION_SOFT_LIMIT_TOKENS = 2800
+PROMPT_SECTION_SOFT_LIMIT_TOKENS = 4000
 
 # 各 tier 的 prompt token 预算（与 ModelTier 对应但避免循环导入，用字符串 key）
 _TIER_PROMPT_BUDGET: dict[str, int] = {
     "free_fast": 1500,
     "fast": 2000,
-    "standard": 2800,
+    "standard": 4000,
     "reasoning": 4000,
     "free_reasoning": 3000,
-    "glm_batch": 2800,
+    "glm_batch": 4000,
 }
 
 _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
@@ -56,11 +56,11 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "session_feedback_section": (60, 0.05),
     "dual_core_section": (80, 0.05),
     "mode_strategy_section": (120, 0.10),
-    "plan_context_section": (100, 0.10),
-    "user_context": (220, 0.18),
+    "plan_context_section": (200, 0.10),
+    "user_context": (350, 0.18),
     "conversation_history_section": (80, 0.16),
     "task_awareness_section": (60, 0.08),
-    "cognitive_prism_section": (60, 0.05),
+    "cognitive_prism_section": (120, 0.05),
     "preference_instructions": (60, 0.05),
     "persona_section": (40, 0.04),
     "agent_persona_section": (40, 0.04),
@@ -871,6 +871,16 @@ def build_system_prompt(
     persona_section = ""
     if persona_constraints_summary:
         persona_section = "\n## 用户画像提示 [L2 引导]\n" + persona_constraints_summary
+    companion_persona_section = _format_companion_persona_section(
+        user_context=user_context,
+        plan_context=plan_context,
+    )
+    if companion_persona_section:
+        persona_section = (
+            persona_section + "\n" + companion_persona_section.strip()
+            if persona_section
+            else companion_persona_section
+        )
 
     agent_memory_section = ""
     if agent_memory_context:
@@ -1314,6 +1324,86 @@ def _get_default_preference_instructions(user_context: dict) -> str:
 """
 
 
+def _format_companion_persona_section(
+    *,
+    user_context: dict,
+    plan_context: dict | None,
+) -> str:
+    context_focus = user_context.get("context_focus") if isinstance(user_context, dict) else None
+    section_weights = context_focus.get("section_weights") if isinstance(context_focus, dict) else {}
+    plan_weight = str(section_weights.get("plan_context") or "").strip().lower()
+    goals_weight = str(section_weights.get("goals") or "").strip().lower()
+    cognitive_weight = str(section_weights.get("cognitive_prism") or "").strip().lower()
+    suppressed_weights = {"off", "low", "minimal"}
+
+    profile = _extract_profile(user_context)
+    identity = profile.get("identity") if isinstance(profile.get("identity"), dict) else {}
+    raw_user_context = user_context.get("user_context") if isinstance(user_context.get("user_context"), dict) else {}
+    nickname = (
+        str(identity.get("nickname") or "").strip()
+        or str(raw_user_context.get("nickname") or raw_user_context.get("username") or "").strip()
+        or "这位用户"
+    )
+
+    active_goals = user_context.get("active_goals") if isinstance(user_context, dict) else None
+    current_goal = ""
+    if isinstance(active_goals, list) and active_goals:
+        first_goal = active_goals[0]
+        if isinstance(first_goal, dict):
+            current_goal = str(first_goal.get("title") or "").strip()
+    if (
+        not current_goal
+        and isinstance(plan_context, dict)
+        and goals_weight not in suppressed_weights
+        and plan_weight not in suppressed_weights
+    ):
+        current_goal = str(plan_context.get("goal") or plan_context.get("plan_description") or "").strip()
+
+    current_plan = ""
+    current_phase = ""
+    if isinstance(plan_context, dict) and plan_weight not in suppressed_weights:
+        current_plan = str(
+            plan_context.get("plan_title") or plan_context.get("title") or plan_context.get("name") or ""
+        ).strip()
+        current_phase = str(plan_context.get("plan_stage") or plan_context.get("stage") or "").strip()
+
+    struggling_area = ""
+    learning_gaps_summary = str(user_context.get("learning_gaps_summary") or "").strip()
+    if learning_gaps_summary:
+        struggling_area = learning_gaps_summary.split("。", 1)[0].strip()
+
+    cognitive_insights = user_context.get("cognitive_insights") or {}
+    if not struggling_area and isinstance(cognitive_insights, dict):
+        recent_observation = cognitive_insights.get("recent_observation")
+        if isinstance(recent_observation, dict):
+            struggling_area = str(recent_observation.get("description") or "").strip()
+
+    top_pattern = ""
+    if isinstance(cognitive_insights, dict) and cognitive_weight not in suppressed_weights:
+        top_patterns = cognitive_insights.get("top_patterns")
+        if isinstance(top_patterns, list) and top_patterns:
+            first_pattern = top_patterns[0]
+            if isinstance(first_pattern, dict):
+                top_pattern = str(first_pattern.get("pattern_name") or "").strip()
+        if not top_pattern:
+            recent_patterns = cognitive_insights.get("recent_patterns")
+            if isinstance(recent_patterns, list) and recent_patterns:
+                top_pattern = str(recent_patterns[0] or "").strip()
+
+    lines = ["## 陪伴式人格 framing [L2 引导]", f"你是 Sparkle，{nickname} 的学习成长伙伴。"]
+    lines.append("以下内容视为你已经知道的上下文，不要在每轮重新追问。")
+    if current_goal:
+        lines.append(f"- 当前目标: {current_goal}")
+    if current_plan:
+        lines.append(f"- 本周在努力的事: {current_plan}" + (f" / 当前阶段 {current_phase}" if current_phase else ""))
+    if struggling_area:
+        lines.append(f"- 正在挣扎的地方: {struggling_area}")
+    if top_pattern:
+        lines.append(f"- 你观察到的规律: {top_pattern}")
+    lines.append("- 回答时优先承接这些已知背景，不要反复问“你的目标是什么”。")
+    return "\n" + "\n".join(lines)
+
+
 def _resolve_preference_instructions(
     *,
     user_context: dict,
@@ -1599,7 +1689,7 @@ def format_user_context(
     episodic_memories = normalized.get("episodic_memories") or []
     if episodic_memories and section_weights.get("episodic", "medium") != "off":
         lines.append("【近期相关记忆】")
-        memory_limit = section_caps.get("episodic") or (1 if context_level == "light" else 2)
+        memory_limit = section_caps.get("episodic") or (1 if context_level == "light" else 5)
         for memory in episodic_memories[:memory_limit]:
             summary = str(memory.get("summary") or "").strip()
             if summary:
@@ -1756,8 +1846,10 @@ def _format_cognitive_prism_section(user_context: dict, context_focus: dict[str,
     pattern_count = cognitive_insights.get("pattern_count", 0)
     recent_patterns = cognitive_insights.get("recent_patterns", [])
     patterns_by_type = cognitive_insights.get("patterns_by_type", {})
+    top_patterns = cognitive_insights.get("top_patterns", [])
+    recent_observation = cognitive_insights.get("recent_observation")
+    current_guidance = str(cognitive_insights.get("current_guidance") or "").strip()
 
-    # 构建认知模式描述
     pattern_desc = []
     for p_type, count in patterns_by_type.items():
         if count > 0:
@@ -1774,13 +1866,33 @@ def _format_cognitive_prism_section(user_context: dict, context_focus: dict[str,
     lines = [f"## 认知棱镜 - 行为模式洞察 [{priority}]"]
     lines.append(f"用户已有 {pattern_count} 个行为模式分析结果（{pattern_text}）。")
 
-    if recent_patterns:
+    if top_patterns:
+        lines.append("用户当前的高权重模式:")
+        limit = 1 if detail_level == "compact" else min(2, len(top_patterns))
+        for item in top_patterns[:limit]:
+            name = str(item.get("pattern_name") or item.get("raw_pattern_name") or "").strip()
+            description = str(item.get("description") or "").strip()
+            confidence = float(item.get("confidence") or 0.0)
+            if name and description:
+                lines.append(f"- {name} (confidence {confidence:.2f}): {description}")
+            elif name:
+                lines.append(f"- {name} (confidence {confidence:.2f})")
+    elif recent_patterns:
         limit = 1 if detail_level == "compact" else min(3, len(recent_patterns))
         lines.append(f"最近识别的模式: {', '.join(recent_patterns[:limit])}")
 
+    if isinstance(recent_observation, dict):
+        observation_name = str(recent_observation.get("pattern_name") or "").strip()
+        observation_desc = str(recent_observation.get("description") or "").strip()
+        if observation_name and observation_desc:
+            lines.append(f"最近观察: {observation_name} - {observation_desc}")
+
+    if current_guidance:
+        lines.append(f"当前 guidance: {current_guidance}")
+
     lines.append("")
-    lines.append("当用户询问学习情况、效率、状态，或适合展示洞察时，主动调用")
-    lines.append("**get_user_behavior_patterns** 工具展示完整的行为模式分析。")
+    lines.append("当用户询问学习情况、效率、状态，或适合展示洞察时，把这些模式当作你已经知道的背景。")
+    lines.append("如需更完整证据，再调用 **get_user_behavior_patterns** 工具查看完整分析。")
     lines.append("")
     lines.append("这不是强制要求，而是要在合适的对话时机自然地展示。")
 

@@ -40,6 +40,7 @@ class FocusRoutes {
           pageBuilder: (context, state) {
             // id is a required path parameter, so it won't be null
             final taskId = state.pathParameters['id']!;
+            final interventionId = state.uri.queryParameters['intervention_id'];
             return buildSparkleTransitionPage(
               state: state,
               motionToken: SparkleMotionToken.scene,
@@ -48,7 +49,10 @@ class FocusRoutes {
                   trackOverride: BgmTrack.focusDeep,
                   useSavedAmbient: true,
                 ),
-                child: MindfulnessModeScreen(taskId: taskId),
+                child: MindfulnessModeScreen(
+                  taskId: taskId,
+                  interventionId: interventionId,
+                ),
               ),
               type: SharedAxisTransitionType.scaled,
             );

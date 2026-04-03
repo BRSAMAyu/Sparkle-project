@@ -67,6 +67,9 @@ logger.add(
 INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS = int(
     os.getenv("INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS", "900")
 )
+ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER = (
+    os.getenv("ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER", "false").lower() == "true"
+)
 
 
 async def _run_intervention_outcome_verifier_loop() -> None:
@@ -212,7 +215,7 @@ async def lifespan(app: FastAPI):
         app.state.main_chain_artifact_consumer_task = main_chain_artifact_consumer_task
 
     intervention_outcome_verifier_task = None
-    if event_bus is not None:
+    if event_bus is not None and ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER:
         intervention_outcome_verifier_task = asyncio.create_task(
             _run_intervention_outcome_verifier_loop()
         )

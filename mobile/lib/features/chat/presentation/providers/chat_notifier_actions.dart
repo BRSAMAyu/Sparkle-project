@@ -340,6 +340,17 @@ extension ChatNotifierActions on ChatNotifier {
         action.data['request_id']?.toString() ??
         '';
     if (interventionId.isNotEmpty) {
+      unawaited(
+        _ref.read(interventionActionServiceProvider).reportAction(
+          recordId: interventionId,
+          action: 'accepted',
+          actionPayload: {
+            'surface': 'chat',
+            'source': 'chat_action_card',
+            'widget_type': action.type,
+          },
+        ),
+      );
       _chatRepository.sendInterventionFeedback(
         requestId: interventionId,
         feedbackType: 'accept',
@@ -390,6 +401,17 @@ extension ChatNotifierActions on ChatNotifier {
         action.data['request_id']?.toString() ??
         '';
     if (interventionId.isNotEmpty) {
+      unawaited(
+        _ref.read(interventionActionServiceProvider).reportAction(
+          recordId: interventionId,
+          action: 'dismissed',
+          actionPayload: {
+            'surface': 'chat',
+            'source': 'chat_action_card',
+            'widget_type': action.type,
+          },
+        ),
+      );
       _chatRepository.sendInterventionFeedback(
         requestId: interventionId,
         feedbackType: 'reject',
@@ -539,7 +561,9 @@ extension ChatNotifierActions on ChatNotifier {
 
     // Phase 1B: Trigger close-to-unlock check
     unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
-    unawaited(_ref.read(homeCloseToUnlockProvider.notifier).fetch(forceRefresh: true));
+    unawaited(_ref
+        .read(homeCloseToUnlockProvider.notifier)
+        .fetch(forceRefresh: true));
 
     // Clear after delay
     Future.delayed(const Duration(seconds: 2), () {
@@ -567,9 +591,9 @@ extension ChatNotifierActions on ChatNotifier {
     // 直接将通知添加到通知中心
     try {
       _ref.read(notificationCenterProvider.notifier).handleNewNotification(
-        notificationData: event.fullNotificationData,
-        notificationType: event.notificationType,
-      );
+            notificationData: event.fullNotificationData,
+            notificationType: event.notificationType,
+          );
       debugPrint(
         '✅ Notification added to notification center: ${event.notificationId}',
       );

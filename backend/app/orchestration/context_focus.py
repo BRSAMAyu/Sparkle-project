@@ -136,7 +136,7 @@ FOCUS_PROFILES: dict[str, FocusProfile] = {
             "episodic": "low",
             "task_summary": "medium",
         },
-        section_caps={"goals": 4, "episodic": 2, "next_actions": 3, "active_plans": 2},
+        section_caps={"goals": 4, "episodic": 4, "next_actions": 3, "active_plans": 2},
         memory_budget_weights={"preferences": 0.9, "goals": 1.5, "episodic": 0.6},
     ),
     "task_focus": FocusProfile(
@@ -151,7 +151,7 @@ FOCUS_PROFILES: dict[str, FocusProfile] = {
             "episodic": "low",
             "task_summary": "high",
         },
-        section_caps={"goals": 3, "episodic": 1, "next_actions": 4, "active_plans": 2},
+        section_caps={"goals": 3, "episodic": 3, "next_actions": 4, "active_plans": 2},
         memory_budget_weights={"preferences": 1.0, "goals": 1.2, "episodic": 0.6},
     ),
     "knowledge_focus": FocusProfile(
@@ -166,7 +166,7 @@ FOCUS_PROFILES: dict[str, FocusProfile] = {
             "episodic": "low",
             "task_summary": "off",
         },
-        section_caps={"goals": 2, "episodic": 1, "next_actions": 1, "active_plans": 1},
+        section_caps={"goals": 2, "episodic": 3, "next_actions": 1, "active_plans": 1},
         memory_budget_weights={"preferences": 1.2, "goals": 0.8, "episodic": 0.7},
     ),
     "emotional_focus": FocusProfile(
@@ -181,7 +181,7 @@ FOCUS_PROFILES: dict[str, FocusProfile] = {
             "episodic": "medium",
             "task_summary": "off",
         },
-        section_caps={"goals": 1, "episodic": 2, "next_actions": 0, "active_plans": 1},
+        section_caps={"goals": 1, "episodic": 4, "next_actions": 0, "active_plans": 1},
         memory_budget_weights={"preferences": 0.8, "goals": 0.7, "episodic": 1.5},
     ),
     "cognitive_focus": FocusProfile(
@@ -196,7 +196,7 @@ FOCUS_PROFILES: dict[str, FocusProfile] = {
             "episodic": "medium",
             "task_summary": "off",
         },
-        section_caps={"goals": 2, "episodic": 3, "next_actions": 1, "active_plans": 1},
+        section_caps={"goals": 2, "episodic": 5, "next_actions": 1, "active_plans": 1},
         memory_budget_weights={"preferences": 0.8, "goals": 0.9, "episodic": 1.3},
     ),
     "general_focus": FocusProfile(
@@ -211,7 +211,7 @@ FOCUS_PROFILES: dict[str, FocusProfile] = {
             "episodic": "medium",
             "task_summary": "medium",
         },
-        section_caps={"goals": 3, "episodic": 2, "next_actions": 3, "active_plans": 2},
+        section_caps={"goals": 3, "episodic": 5, "next_actions": 3, "active_plans": 2},
         memory_budget_weights={"preferences": 1.0, "goals": 1.0, "episodic": 1.0},
     ),
 }

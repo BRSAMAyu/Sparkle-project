@@ -477,6 +477,61 @@ class NotificationCenterService:
             await self.db.rollback()
             return False
 
+    async def transition_intervention_record(
+        self,
+        user_id: UUID,
+        record_id: UUID,
+        action: str,
+        action_payload: dict[str, Any] | None = None,
+    ) -> bool:
+        """Apply a lifecycle action directly to an InterventionRecord."""
+        action_payload = dict(action_payload or {})
+        try:
+            record = await self.db.get(InterventionRecord, record_id)
+            if not record or record.user_id != user_id:
+                return False
+
+            notification = await self._find_notification_for_record(user_id, record_id)
+            if (
+                notification
+                and action in {"seen", "accepted", "acted", "dismissed"}
+                and not notification.is_read
+            ):
+                notification.is_read = True
+                notification.read_at = _utcnow()
+
+            await self._apply_intervention_record_action(
+                user_id=user_id,
+                record_id=record_id,
+                action=action,
+                action_payload={
+                    **action_payload,
+                    "record_id": str(record_id),
+                    **(
+                        {
+                            "notification_id": str(notification.id),
+                            "notification_type": notification.type,
+                        }
+                        if notification
+                        else {}
+                    ),
+                },
+            )
+
+            await self._record_interaction(
+                user_id=user_id,
+                notification_type="intervention",
+                notification_id=notification.id if notification else record.id,
+                action_type=self._interaction_action_for_intervention_action(action),
+                created_at=notification.created_at if notification else record.created_at or _utcnow(),
+            )
+            await self.db.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error applying direct intervention action: {e}")
+            await self.db.rollback()
+            return False
+
     async def clear_read_notifications(self, user_id: UUID) -> int:
         """
         Clear all read notifications for a user.
@@ -943,6 +998,23 @@ class NotificationCenterService:
             for notification_id, record_id in record_ids_by_notification.items()
             if record_id in records
         }
+
+    async def _find_notification_for_record(
+        self,
+        user_id: UUID,
+        record_id: UUID,
+    ) -> Notification | None:
+        result = await self.db.execute(
+            select(Notification).where(
+                Notification.user_id == user_id,
+                self._is_intervention_notification(),
+            ).order_by(desc(Notification.created_at))
+        )
+        target = str(record_id)
+        for notification in result.scalars().all():
+            if str((notification.data or {}).get("record_id") or "") == target:
+                return notification
+        return None
 
     @staticmethod
     def _is_intervention_notification():

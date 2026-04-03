@@ -57,3 +57,70 @@ def test_dual_core_router_falls_back_to_balanced_for_mixed_signals() -> None:
     )
 
     assert decision.mode in {"balanced", "cognitive_first"}
+
+
+def test_dual_core_router_shifts_from_execution_to_cognitive_when_procrastination_pattern_is_present() -> None:
+    baseline = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.9,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+        )
+    )
+    shifted = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.9,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+            procrastination_pattern=True,
+            behavior_pattern_details=[
+                {
+                    "pattern_name": "拖延回避",
+                    "canonical_key": "procrastination_avoidance",
+                    "description": "总在真正开始前往后拖。",
+                    "confidence": 0.82,
+                }
+            ],
+        )
+    )
+
+    assert baseline.mode == "execution_first"
+    assert shifted.mode == "cognitive_first"
+    assert shifted.routing_debug["explicit_procrastination_signal"] is True
+
+
+def test_dual_core_router_uses_cognitive_mode_signal_for_concept_confusion() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="knowledge",
+            intent_confidence=0.66,
+            information_sufficient=True,
+            primary_challenge_area="cognitive",
+            recent_sentiment_distribution={"neutral": 2},
+            has_active_plan=True,
+            plan_health_status="warning",
+            recent_task_feedback_distribution={"unclear": 1},
+            cognitive_mode_suggested=True,
+            behavior_pattern_details=[
+                {
+                    "pattern_name": "认知盲点",
+                    "canonical_key": "cognitive_blindspot",
+                    "description": "在相似概念上反复误解。",
+                    "confidence": 0.71,
+                }
+            ],
+        )
+    )
+
+    assert decision.mode == "cognitive_first"
+    assert decision.routing_debug["explicit_cognitive_signal"] is True

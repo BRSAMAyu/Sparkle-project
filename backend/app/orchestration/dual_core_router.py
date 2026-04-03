@@ -45,8 +45,16 @@ class DualCoreRoutingInput:
     recent_task_feedback_distribution: dict[str, int]
     behavior_pattern_names: list[str] = field(default_factory=list)
     behavior_pattern_types: dict[str, int] = field(default_factory=dict)
+    behavior_pattern_details: list[dict[str, Any]] = field(default_factory=list)
     session_length_preference: int | None = None
     difficulty_preference: float | None = None
+    emotional_block_detected: bool = False
+    procrastination_pattern: bool = False
+    cognitive_mode_suggested: bool = False
+    suggested_verbosity: str | None = None
+    current_guidance: str | None = None
+    routing_profile: dict[str, float] = field(default_factory=dict)
+    adaptive_adjustments: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -55,6 +63,7 @@ class DualCoreDecision:
     reason: str
     cognitive_adjustments: list[str]
     execution_constraints: list[str]
+    routing_debug: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -62,6 +71,7 @@ class DualCoreDecision:
             "reason": self.reason,
             "cognitive_adjustments": list(self.cognitive_adjustments),
             "execution_constraints": list(self.execution_constraints),
+            "routing_debug": dict(self.routing_debug or {}),
         }
 
     @property
@@ -89,6 +99,11 @@ class DualCoreDecision:
 
 
 class DualCoreRouter:
+    DEFAULT_ROUTING_PROFILE = {
+        "procrastination_threshold": 0.6,
+        "emotional_sensitivity": 0.5,
+        "directness_preference": 0.5,
+    }
     NEGATIVE_SENTIMENTS = {
         "anxious",
         "burnout",
@@ -129,9 +144,21 @@ class DualCoreRouter:
     }
 
     def route(self, routing_input: DualCoreRoutingInput) -> DualCoreDecision:
-        goal_clear = self._goal_is_clear(routing_input)
-        emotional_block = self._has_emotional_block(routing_input)
-        procrastination_pattern = self._has_procrastination_pattern(routing_input)
+        profile = self._resolved_profile(routing_input)
+        goal_clarity_score = self._goal_clarity_score(routing_input)
+        goal_clear_threshold = self._goal_clear_threshold(profile)
+        low_conf_threshold = self._low_confidence_threshold(profile)
+        emotional_block_score = self._emotional_block_score(routing_input)
+        procrastination_score = self._procrastination_score(routing_input)
+
+        goal_clear = goal_clarity_score >= goal_clear_threshold
+        emotional_block = self._has_emotional_block(routing_input, emotional_block_score, profile)
+        procrastination_pattern = self._has_procrastination_pattern(
+            routing_input,
+            procrastination_score,
+            profile,
+        )
+        cognitive_mode_suggested = bool(routing_input.cognitive_mode_suggested)
         pattern_guidance = self._pattern_guidance(routing_input)
         cognitive_load_present = routing_input.primary_challenge_area in {"cognitive", "execution"}
 
@@ -144,7 +171,11 @@ class DualCoreRouter:
             cognitive_adjustments.append("先帮助用户澄清目标、约束和成功标准，再进入具体方案。")
         if procrastination_pattern:
             cognitive_adjustments.append("先识别最近的执行阻力，并把建议收敛为更容易启动的动作。")
+        if cognitive_mode_suggested:
+            cognitive_adjustments.append("先校准理解偏差或概念卡点，再决定执行方案。")
         cognitive_adjustments.extend(pattern_guidance["cognitive"])
+        if routing_input.suggested_verbosity == "supportive":
+            cognitive_adjustments.append("表达上更支持、更低压力，避免把建议说成必须立刻完成。")
 
         if routing_input.session_length_preference and routing_input.session_length_preference <= 25:
             execution_constraints.append(
@@ -160,25 +191,64 @@ class DualCoreRouter:
         if routing_input.recent_task_feedback_distribution.get("too_long", 0) >= 2:
             execution_constraints.append("近期连续反馈“太长”，优先拆成更短、更容易启动的步骤。")
         execution_constraints.extend(pattern_guidance["execution"])
+        
+        # Translate numeric adaptive adjustments from ParameterCompiler
+        if routing_input.adaptive_adjustments:
+            diff_shift = routing_input.adaptive_adjustments.get("difficulty_shift", 0.0)
+            if diff_shift < 0:
+                cognitive_adjustments.append("建议降低子任务的难度，提供更简单、容易上手的步骤。")
+            elif diff_shift > 0:
+                cognitive_adjustments.append("建议适当提高挑战性，给出更进阶的内容或任务。")
+                
+            time_mult = routing_input.adaptive_adjustments.get("time_multiplier", 1.0)
+            if time_mult > 1.0:
+                extra_pct = int((time_mult - 1.0) * 100)
+                execution_constraints.append(f"执行时间预估应增加 {extra_pct}%，留出更多缓冲时间。")
+            elif time_mult < 1.0:
+                less_pct = int((1.0 - time_mult) * 100)
+                execution_constraints.append(f"执行时间预估可减少 {less_pct}%，建议更紧凑的节奏。")
+                
+            if routing_input.adaptive_adjustments.get("insert_prerequisite_review"):
+                execution_constraints.append("必须插入前置知识的复习步骤。")
+                
+            max_tasks = routing_input.adaptive_adjustments.get("max_concurrent_tasks")
+            if max_tasks is not None and max_tasks < 3:
+                execution_constraints.append(f"控制并发任务数量，单次推进不要超过 {max_tasks} 个任务。")
+
+        routing_debug = {
+            "goal_clarity_score": round(goal_clarity_score, 3),
+            "goal_clear_threshold": round(goal_clear_threshold, 3),
+            "procrastination_score": round(procrastination_score, 3),
+            "procrastination_threshold": round(profile["procrastination_threshold"], 3),
+            "emotional_block_score": round(emotional_block_score, 3),
+            "emotional_sensitivity": round(profile["emotional_sensitivity"], 3),
+            "directness_preference": round(profile["directness_preference"], 3),
+            "explicit_procrastination_signal": bool(routing_input.procrastination_pattern),
+            "explicit_emotional_signal": bool(routing_input.emotional_block_detected),
+            "explicit_cognitive_signal": cognitive_mode_suggested,
+        }
 
         if (
             goal_clear
             and routing_input.information_sufficient
             and not emotional_block
             and not procrastination_pattern
+            and not cognitive_mode_suggested
         ):
             return DualCoreDecision(
                 mode="execution_first",
                 reason="目标清晰、信息充分，且当前没有明显情绪或执行阻塞，适合直接推进执行路径。",
                 cognitive_adjustments=cognitive_adjustments[:2],
                 execution_constraints=execution_constraints[:3],
+                routing_debug=routing_debug,
             )
 
         if (
             not routing_input.information_sufficient
             or emotional_block
             or procrastination_pattern
-            or (not goal_clear and routing_input.intent_confidence < 0.6)
+            or (cognitive_mode_suggested and not goal_clear)
+            or (not goal_clear and routing_input.intent_confidence < low_conf_threshold)
         ):
             return DualCoreDecision(
                 mode="cognitive_first",
@@ -187,9 +257,11 @@ class DualCoreRouter:
                     information_sufficient=routing_input.information_sufficient,
                     emotional_block=emotional_block,
                     procrastination_pattern=procrastination_pattern,
+                    cognitive_mode_suggested=cognitive_mode_suggested,
                 ),
                 cognitive_adjustments=cognitive_adjustments[:3],
                 execution_constraints=execution_constraints[:2],
+                routing_debug=routing_debug,
             )
 
         balanced_reason = "当前同时存在推进任务和理解用户状态的需求，先保持双核心并行。"
@@ -202,13 +274,31 @@ class DualCoreRouter:
             reason=balanced_reason,
             cognitive_adjustments=cognitive_adjustments[:2],
             execution_constraints=execution_constraints[:3],
+            routing_debug=routing_debug,
         )
 
-    def _goal_is_clear(self, routing_input: DualCoreRoutingInput) -> bool:
+    def _goal_clarity_score(self, routing_input: DualCoreRoutingInput) -> float:
         intent = (routing_input.intent or "").strip().lower()
-        return intent in self.CLEAR_INTENTS and routing_input.intent_confidence >= 0.72
+        base = float(routing_input.intent_confidence or 0.0)
+        if intent not in self.CLEAR_INTENTS:
+            base *= 0.7
+        if routing_input.procrastination_pattern:
+            base -= 0.1
+        if routing_input.cognitive_mode_suggested:
+            base -= 0.08
+        return max(0.0, min(base, 1.0))
 
-    def _has_emotional_block(self, routing_input: DualCoreRoutingInput) -> bool:
+    def _has_emotional_block(
+        self,
+        routing_input: DualCoreRoutingInput,
+        emotional_block_score: float,
+        profile: dict[str, float],
+    ) -> bool:
+        if routing_input.emotional_block_detected:
+            return True
+        return emotional_block_score >= profile["emotional_sensitivity"]
+
+    def _emotional_block_score(self, routing_input: DualCoreRoutingInput) -> float:
         sentiments = routing_input.recent_sentiment_distribution or {}
         negative = sum(
             count for sentiment, count in sentiments.items()
@@ -216,13 +306,26 @@ class DualCoreRouter:
         )
         total = sum(sentiments.values())
         ratio = (negative / total) if total else 0.0
-        return (
-            routing_input.primary_challenge_area == "emotional"
-            or negative >= 2
-            or ratio >= 0.5
-        )
+        score = ratio
+        if routing_input.primary_challenge_area == "emotional":
+            score = max(score, 0.75)
+        if negative >= 2:
+            score = max(score, 0.6)
+        if self._pattern_details_include(routing_input, {"overload", "burnout", "anxiety"}):
+            score = max(score, 0.7)
+        return max(0.0, min(score, 1.0))
 
-    def _has_procrastination_pattern(self, routing_input: DualCoreRoutingInput) -> bool:
+    def _has_procrastination_pattern(
+        self,
+        routing_input: DualCoreRoutingInput,
+        procrastination_score: float,
+        profile: dict[str, float],
+    ) -> bool:
+        if routing_input.procrastination_pattern:
+            return True
+        return procrastination_score >= profile["procrastination_threshold"]
+
+    def _procrastination_score(self, routing_input: DualCoreRoutingInput) -> float:
         feedback = routing_input.recent_task_feedback_distribution or {}
         friction_signals = (
             feedback.get("too_long", 0)
@@ -230,12 +333,19 @@ class DualCoreRouter:
             + feedback.get("irrelevant", 0)
         )
         pattern_names = self._normalized_pattern_names(routing_input)
-        return (
-            friction_signals >= 3
-            or feedback.get("too_difficult", 0) >= 3
-            or routing_input.plan_health_status == "critical"
-            or self._contains_any(pattern_names, self.PROCRASTINATION_KEYWORDS)
-        )
+        score = min(0.95, friction_signals * 0.18)
+        if feedback.get("too_difficult", 0) >= 3:
+            score = max(score, 0.72)
+        if routing_input.plan_health_status == "critical":
+            score = max(score, 0.68)
+        if self._contains_any(pattern_names, self.PROCRASTINATION_KEYWORDS):
+            score = max(score, 0.78)
+        if self._pattern_details_include(
+            routing_input,
+            {"procrastination", "avoidance", "focus_decay", "perfectionism_avoidance"},
+        ):
+            score = max(score, 0.8)
+        return max(0.0, min(score, 1.0))
 
     def _pattern_guidance(self, routing_input: DualCoreRoutingInput) -> dict[str, list[str]]:
         pattern_names = self._normalized_pattern_names(routing_input)
@@ -263,11 +373,19 @@ class DualCoreRouter:
         }
 
     def _normalized_pattern_names(self, routing_input: DualCoreRoutingInput) -> list[str]:
-        return [
+        names = [
             str(name).strip().lower()
             for name in (routing_input.behavior_pattern_names or [])
             if str(name).strip()
         ]
+        for item in routing_input.behavior_pattern_details or []:
+            if not isinstance(item, dict):
+                continue
+            for key in ("pattern_name", "raw_pattern_name", "canonical_key"):
+                raw = str(item.get(key) or "").strip().lower()
+                if raw:
+                    names.append(raw)
+        return names
 
     def _contains_any(self, pattern_names: list[str], keywords: set[str]) -> bool:
         if not pattern_names:
@@ -278,6 +396,43 @@ class DualCoreRouter:
             for keyword in keywords
         )
 
+    def _pattern_details_include(
+        self,
+        routing_input: DualCoreRoutingInput,
+        keywords: set[str],
+    ) -> bool:
+        for item in routing_input.behavior_pattern_details or []:
+            if not isinstance(item, dict):
+                continue
+            haystacks = [
+                str(item.get("canonical_key") or "").strip().lower(),
+                str(item.get("raw_pattern_name") or "").strip().lower(),
+                str(item.get("pattern_name") or "").strip().lower(),
+                str(item.get("description") or "").strip().lower(),
+            ]
+            if any(keyword in haystack for haystack in haystacks for keyword in keywords):
+                return True
+        return False
+
+    def _resolved_profile(self, routing_input: DualCoreRoutingInput) -> dict[str, float]:
+        profile = dict(self.DEFAULT_ROUTING_PROFILE)
+        raw = routing_input.routing_profile or {}
+        for key, default in self.DEFAULT_ROUTING_PROFILE.items():
+            value = raw.get(key, default)
+            if isinstance(value, (int, float)):
+                profile[key] = max(0.2, min(0.85, float(value)))
+        return profile
+
+    @staticmethod
+    def _goal_clear_threshold(profile: dict[str, float]) -> float:
+        directness = profile.get("directness_preference", 0.5)
+        return max(0.55, min(0.8, 0.72 - (directness - 0.5) * 0.2))
+
+    @staticmethod
+    def _low_confidence_threshold(profile: dict[str, float]) -> float:
+        directness = profile.get("directness_preference", 0.5)
+        return max(0.35, min(0.7, 0.6 - (directness - 0.5) * 0.2))
+
     def _cognitive_reason(
         self,
         *,
@@ -285,6 +440,7 @@ class DualCoreRouter:
         information_sufficient: bool,
         emotional_block: bool,
         procrastination_pattern: bool,
+        cognitive_mode_suggested: bool,
     ) -> str:
         reasons: list[str] = []
         if not goal_clear:
@@ -295,6 +451,8 @@ class DualCoreRouter:
             reasons.append("当前存在明显情绪阻力")
         if procrastination_pattern:
             reasons.append("最近的执行反馈显示阻力在累积")
+        if cognitive_mode_suggested:
+            reasons.append("当前更像是理解卡点而不是单纯执行问题")
         if not reasons:
             return "当前更适合先做状态澄清，再进入执行路径。"
         return "；".join(reasons) + "，所以这轮先走认知支持路径。"

@@ -20,7 +20,16 @@ except ImportError:
 from app.models.intervention import InterventionRequest
 from app.models.notification import Notification
 from app.models.notification_interaction import NotificationInteraction
+from app.models.card_protocol import (
+    DeliveryStrategy,
+    InterventionAcceptanceStatus,
+    InterventionOutcomeStatus,
+    InterventionRecord,
+)
 from app.schemas.unified_notification import (
+    InterventionFunnelStats,
+    InterventionTimeToActionBucket,
+    InterventionToneEffectiveness,
     NotificationAnalyticsResponse,
     NotificationAnalyticsSummary,
     NotificationTrendData,
@@ -88,12 +97,18 @@ class NotificationAnalyticsService:
         by_type = await self._get_stats_by_type(user_id, start_date)
         trends = await self._get_trends(user_id, start_date)
         hourly_distribution = await self._get_hourly_distribution(user_id)
+        intervention_funnels = await self._get_intervention_funnels(user_id, start_date)
+        tone_effectiveness = await self._get_tone_effectiveness(user_id, start_date)
+        time_to_action_buckets = await self._get_time_to_action_buckets(user_id, start_date)
 
         analytics = NotificationAnalyticsResponse(
             summary=summary,
             by_type=by_type,
             trends=trends,
-            hourly_distribution=hourly_distribution
+            hourly_distribution=hourly_distribution,
+            intervention_funnels=intervention_funnels,
+            tone_effectiveness=tone_effectiveness,
+            time_to_action_buckets=time_to_action_buckets,
         )
 
         # Cache for 1 hour
@@ -480,6 +495,137 @@ class NotificationAnalyticsService:
 
         return distribution
 
+    async def _get_intervention_funnels(
+        self,
+        user_id: UUID,
+        start_date: datetime,
+    ) -> list[InterventionFunnelStats]:
+        records = await self._get_intervention_records(user_id, start_date)
+        stats_by_trigger: dict[str, dict[str, int]] = {}
+
+        for record in records:
+            key = record.trigger_type.value if record.trigger_type else "UNKNOWN"
+            bucket = stats_by_trigger.setdefault(
+                key,
+                {"created": 0, "delivered": 0, "seen": 0, "accepted": 0, "acted": 0},
+            )
+            bucket["created"] += 1
+
+            if record.acceptance_status != InterventionAcceptanceStatus.CREATED:
+                bucket["delivered"] += 1
+            if record.acceptance_status in {
+                InterventionAcceptanceStatus.SEEN,
+                InterventionAcceptanceStatus.ACCEPTED,
+                InterventionAcceptanceStatus.ACTED,
+                InterventionAcceptanceStatus.DISMISSED,
+                InterventionAcceptanceStatus.SNOOZED,
+            }:
+                bucket["seen"] += 1
+            if record.acceptance_status in {
+                InterventionAcceptanceStatus.ACCEPTED,
+                InterventionAcceptanceStatus.ACTED,
+            }:
+                bucket["accepted"] += 1
+            if record.acceptance_status == InterventionAcceptanceStatus.ACTED:
+                bucket["acted"] += 1
+
+        funnels: list[InterventionFunnelStats] = []
+        for dimension, bucket in sorted(stats_by_trigger.items()):
+            seen = bucket["seen"]
+            accepted = bucket["accepted"]
+            funnels.append(
+                InterventionFunnelStats(
+                    dimension=dimension,
+                    created=bucket["created"],
+                    delivered=bucket["delivered"],
+                    seen=seen,
+                    accepted=accepted,
+                    acted=bucket["acted"],
+                    acceptance_rate=round((accepted / seen * 100) if seen > 0 else 0.0, 2),
+                    action_rate=round((bucket["acted"] / accepted * 100) if accepted > 0 else 0.0, 2),
+                )
+            )
+        return funnels
+
+    async def _get_tone_effectiveness(
+        self,
+        user_id: UUID,
+        start_date: datetime,
+    ) -> list[InterventionToneEffectiveness]:
+        records = await self._get_intervention_records(user_id, start_date)
+        stats: dict[tuple[str, str], dict[str, int]] = {}
+
+        for record in records:
+            tone = record.delivery_strategy.value if record.delivery_strategy else DeliveryStrategy.SUPPORTIVE.value
+            channel = record.delivery_channel.value if record.delivery_channel else "UNKNOWN"
+            bucket = stats.setdefault(
+                (tone, channel),
+                {"created": 0, "accepted": 0, "acted": 0, "effective": 0},
+            )
+            bucket["created"] += 1
+            if record.acceptance_status in {
+                InterventionAcceptanceStatus.ACCEPTED,
+                InterventionAcceptanceStatus.ACTED,
+            }:
+                bucket["accepted"] += 1
+            if record.acceptance_status == InterventionAcceptanceStatus.ACTED:
+                bucket["acted"] += 1
+            if record.outcome_status == InterventionOutcomeStatus.EFFECTIVE:
+                bucket["effective"] += 1
+
+        effectiveness: list[InterventionToneEffectiveness] = []
+        for (tone, channel), bucket in sorted(stats.items()):
+            created = bucket["created"]
+            effectiveness.append(
+                InterventionToneEffectiveness(
+                    tone=tone,
+                    channel=channel,
+                    created=created,
+                    accepted=bucket["accepted"],
+                    acted=bucket["acted"],
+                    effective=bucket["effective"],
+                    acted_rate=round((bucket["acted"] / created * 100) if created > 0 else 0.0, 2),
+                    effective_rate=round((bucket["effective"] / created * 100) if created > 0 else 0.0, 2),
+                )
+            )
+        return effectiveness
+
+    async def _get_time_to_action_buckets(
+        self,
+        user_id: UUID,
+        start_date: datetime,
+    ) -> list[InterventionTimeToActionBucket]:
+        result = await self.db.execute(
+            select(NotificationInteraction.time_to_action).where(
+                NotificationInteraction.user_id == user_id,
+                NotificationInteraction.notification_type == "intervention",
+                NotificationInteraction.action_type == "acted",
+                NotificationInteraction.action_time >= start_date,
+                NotificationInteraction.time_to_action.isnot(None),
+            )
+        )
+        buckets = {
+            "under_5m": 0,
+            "5m_to_30m": 0,
+            "30m_to_2h": 0,
+            "over_2h": 0,
+        }
+        for value in result.scalars().all():
+            seconds = int(value or 0)
+            if seconds < 300:
+                buckets["under_5m"] += 1
+            elif seconds < 1800:
+                buckets["5m_to_30m"] += 1
+            elif seconds < 7200:
+                buckets["30m_to_2h"] += 1
+            else:
+                buckets["over_2h"] += 1
+
+        return [
+            InterventionTimeToActionBucket(label=label, count=count)
+            for label, count in buckets.items()
+        ]
+
     def _get_period_start_date(self, period: str) -> datetime:
         """Calculate start date for the given period"""
         now = _utcnow()
@@ -496,6 +642,20 @@ class NotificationAnalyticsService:
         else:
             # Default to 7 days
             return now - timedelta(days=7)
+
+    async def _get_intervention_records(
+        self,
+        user_id: UUID,
+        start_date: datetime,
+    ) -> list[InterventionRecord]:
+        result = await self.db.execute(
+            select(InterventionRecord).where(
+                InterventionRecord.user_id == user_id,
+                InterventionRecord.created_at >= start_date,
+                InterventionRecord.not_deleted_filter(),
+            )
+        )
+        return list(result.scalars().all())
 
     async def close(self):
         """Close Redis connection if exists"""

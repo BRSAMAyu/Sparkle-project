@@ -32,6 +32,7 @@ from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task_feedback import TaskFeedback
 from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.services.focus_service import focus_service
+from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
 from app.services.self_evolution_service import UnderstandingDepthService
 from app.services.perceptible_intelligence_service import (
     PerceptibleInsightService,
@@ -208,12 +209,49 @@ class ContextBuilderMixin:
                     normalized = str(p.pattern_name or "").strip().lower()
                     policy_signals.extend(policy_map.get(normalized, []))
 
+                top_patterns: list[dict[str, Any]] = []
+                for pattern in patterns[:2]:
+                    top_patterns.append(
+                        {
+                            "pattern_name": present_pattern_name(pattern.pattern_name),
+                            "raw_pattern_name": str(pattern.pattern_name or "").strip(),
+                            "canonical_key": canonical_pattern_key(pattern.pattern_name),
+                            "pattern_type": str(pattern.pattern_type or "").strip().lower(),
+                            "confidence": round(float(pattern.confidence_score or 0.0), 2),
+                            "description": present_pattern_description(pattern.pattern_name, pattern.description),
+                            "last_observed_at": (
+                                pattern.last_observed_at.isoformat()
+                                if pattern.last_observed_at
+                                else None
+                            ),
+                        }
+                    )
+
+                recent_observation = None
+                most_recent = max(
+                    patterns,
+                    key=lambda item: item.last_observed_at or item.created_at or datetime.min,
+                )
+                observed_at = most_recent.last_observed_at or most_recent.created_at
+                if observed_at and observed_at >= _utcnow() - timedelta(days=7):
+                    recent_observation = {
+                        "pattern_name": present_pattern_name(most_recent.pattern_name),
+                        "observed_at": observed_at.isoformat(),
+                        "description": present_pattern_description(
+                            most_recent.pattern_name,
+                            most_recent.description,
+                        ),
+                    }
+
                 return {
                     "has_cognitive_patterns": True,
                     "pattern_count": len(patterns),
-                    "recent_patterns": [p.pattern_name for p in patterns[:3]],
+                    "recent_patterns": [present_pattern_name(p.pattern_name) for p in patterns[:3]],
                     "patterns_by_type": {k: len(v) for k, v in by_type.items()},
-                    "policy_signals": list(set(policy_signals))
+                    "policy_signals": list(set(policy_signals)),
+                    "top_patterns": top_patterns,
+                    "recent_observation": recent_observation,
+                    "current_guidance": self._build_cognitive_prompt_guidance(top_patterns),
                 }
         except Exception as e:
             logger.warning(f"Failed to get cognitive insights for {user_id}: {e}")
@@ -954,3 +992,22 @@ class ContextBuilderMixin:
                     await active_db.rollback()
 
         return grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context
+    @staticmethod
+    def _build_cognitive_prompt_guidance(top_patterns: list[dict[str, Any]]) -> str:
+        if not top_patterns:
+            return ""
+
+        haystack = " ".join(
+            str(item.get(key) or "").lower()
+            for item in top_patterns
+            for key in ("canonical_key", "pattern_name", "description")
+        )
+        if any(token in haystack for token in ("procrast", "avoid", "拖延", "回避", "focus_decay")):
+            return "留意这是不是在回避一个概念或启动动作。先搭桥，再给任务。"
+        if any(token in haystack for token in ("perfection", "完美主义")):
+            return "表达上更支持、更低压力，先帮助用户开始，不要把第一步说得过重。"
+        if any(token in haystack for token in ("blindspot", "confusion", "concept", "盲点", "误区", "不理解")):
+            return "优先澄清理解偏差和概念卡点，再推进执行建议。"
+        if any(token in haystack for token in ("overload", "burnout", "anxious", "overwhelmed", "过载", "焦虑")):
+            return "先降低心理负荷和认知摩擦，再推进高要求的任务。"
+        return "结合这些模式，把建议收紧为更容易接受、也更贴近真实阻力的下一步。"

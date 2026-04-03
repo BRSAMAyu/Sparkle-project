@@ -127,6 +127,7 @@ class InterventionEventConsumer:
             intent_type=intent_type,
             support_level=support_level,
             user_id=str(record.user_id),
+            preferred_tone=record.delivery_strategy.value,
         )
         variables = self._build_variables(record)
         context_ids = await self._resolve_context_ids(db, record)
@@ -135,9 +136,11 @@ class InterventionEventConsumer:
 
         payload = {
             "record_id": str(record.id),
+            "intervention_id": str(record.id),
             "intent_type": intent_type,
             "template_id": template.template_id,
             "template_variant_id": template.variant_id,
+            "template_tone": template.tone or record.delivery_strategy.value,
             "delivery_channel": record.delivery_channel.value,
             "delivery_strategy": record.delivery_strategy.value,
             "context_variables": variables,
@@ -264,10 +267,25 @@ class InterventionEventConsumer:
                 legacy_plan_id = plan_card.metadata_.get("legacy_plan_id")
                 if legacy_plan_id:
                     payload["plan_id"] = str(legacy_plan_id)
+                    payload["entity_id"] = str(legacy_plan_id)
+                    payload["destination_route"] = f"/plans/{legacy_plan_id}"
+                    payload["deep_link"] = f"sparkle://plan/{legacy_plan_id}"
         if record.phase_card_id:
             payload["phase_card_id"] = str(record.phase_card_id)
         if record.knowledge_card_id:
             payload["knowledge_card_id"] = str(record.knowledge_card_id)
+        if "destination_route" not in payload:
+            if record.task_occurrence_id:
+                payload["entity_id"] = str(record.task_occurrence_id)
+                payload["destination_route"] = (
+                    f"/tasks/{record.task_occurrence_id}/execute"
+                    f"?origin=notification&intervention_id={record.id}"
+                )
+                payload["deep_link"] = f"sparkle://task/{record.task_occurrence_id}"
+            elif record.delivery_channel == DeliveryChannel.FOCUS_MODE:
+                payload["destination_route"] = f"/focus?intervention_id={record.id}"
+            else:
+                payload["destination_route"] = f"/notification-center?intervention_id={record.id}"
         return payload
 
     async def _apply_parameter_strategy(

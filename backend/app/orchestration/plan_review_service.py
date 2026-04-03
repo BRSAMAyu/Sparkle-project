@@ -1531,6 +1531,13 @@ Please review this plan and provide your assessment."""
                 auto_delegate_tasks=auto_delegate_tasks,
             )
         )
+        asyncio.create_task(
+            self._capture_plan_goal_memory(
+                plan_id=plan_id,
+                user_id=user_id,
+                action_id=action_id,
+            )
+        )
 
         return {
             "status": "success",
@@ -1543,6 +1550,61 @@ Please review this plan and provide your assessment."""
             "task_generation_initiated": True,
             "auto_delegate_tasks": auto_delegate_tasks,
         }
+
+    async def _capture_plan_goal_memory(
+        self,
+        *,
+        plan_id: str,
+        user_id: str,
+        action_id: str,
+    ) -> None:
+        from sqlalchemy import select
+
+        from app.database import get_db_session
+        from app.models.memory import MemoryGoal
+        from app.models.plan import Plan
+        from app.services.memory_service import MemoryService
+
+        try:
+            plan_uuid = UUID(plan_id)
+            user_uuid = UUID(user_id)
+        except ValueError:
+            logger.warning("Skipping plan goal memory capture for invalid ids plan_id={} user_id={}", plan_id, user_id)
+            return
+
+        try:
+            async with get_db_session() as db:
+                plan = await db.get(Plan, plan_uuid)
+                if plan is None or plan.user_id != user_uuid:
+                    return
+
+                existing = await db.execute(
+                    select(MemoryGoal).where(
+                        MemoryGoal.user_id == user_uuid,
+                        MemoryGoal.linked_plan_id == plan_uuid,
+                        MemoryGoal.deleted_at.is_(None),
+                        MemoryGoal.archived_at.is_(None),
+                        MemoryGoal.retracted_at.is_(None),
+                    )
+                )
+                if existing.scalar_one_or_none() is not None:
+                    return
+
+                memory_service = MemoryService(db)
+                await memory_service.create_goal(
+                    user_id=user_uuid,
+                    title=plan.name,
+                    linked_plan_id=plan_uuid,
+                    status="active",
+                    evidence_refs=[{"type": "event", "id": action_id, "schema_version": "event.v1"}],
+                    metadata={
+                        "plan_type": str(plan.type.value) if getattr(plan.type, "value", None) else str(plan.type),
+                        "subject": plan.subject,
+                    },
+                    source_type="event",
+                )
+        except Exception as exc:
+            logger.warning("Plan approval goal memory capture failed for plan {}: {}", plan_id, exc)
 
     async def _generate_tasks_after_approval(
         self,

@@ -189,6 +189,36 @@ async def transition_intervention_notification(
     return {"message": f"Intervention action applied: {request.action}"}
 
 
+@router.post("/interventions/{record_id}/action")
+async def transition_intervention_record(
+    record_id: UUID,
+    request: InterventionNotificationActionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Apply a lifecycle action to an InterventionRecord directly.
+
+    Used by chat, push-open, focus mode, and task execution surfaces when the
+    client only has the card-protocol intervention identifier.
+    """
+    service = NotificationCenterService(db)
+
+    success = await service.transition_intervention_record(
+        user_id=current_user.id,
+        record_id=record_id,
+        action=request.action,
+        action_payload=request.action_payload or {},
+    )
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Intervention record not found: {record_id}",
+        )
+
+    return {"message": f"Intervention record action applied: {request.action}"}
+
+
 @router.delete("/notifications/clear-read")
 async def clear_read_notifications(
     current_user: User = Depends(get_current_user),

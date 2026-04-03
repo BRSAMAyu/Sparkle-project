@@ -13,6 +13,7 @@
 
 import os
 from celery import Celery
+from celery.schedules import crontab
 from kombu import Queue, Exchange
 
 # ==================== 基础配置 ====================
@@ -98,7 +99,6 @@ celery_app.conf.update(
 
     # ====== 监控配置 ======
     worker_send_task_events=True,  # 发送任务事件 (用于监控)
-    task_send_sent_event=True,  # 发送发送事件
 
     # ====== 安全配置 ======
     worker_max_memory_per_child=200 * 1024 * 1024,  # 200MB 内存限制
@@ -107,7 +107,6 @@ celery_app.conf.update(
     # ====== 性能优化 ======
     worker_direct_exchange=False,  # 禁用直接交换 (节省内存)
     worker_distribute_tasks_period=1.0,  # 任务分发周期
-    worker_proc_alive_timeout=60,  # 进程存活检查
 )
 
 # ==================== 监控和指标 ====================
@@ -149,6 +148,9 @@ task_routes = {
     "app.core.celery_tasks.expansion_worker_task": {"queue": "default"},
     "app.core.celery_tasks.visualize_graph": {"queue": "low_priority"},
     "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
+    "app.core.celery_tasks.schedule_push_notification": {"queue": "default"},
+    "app.core.celery_tasks.generate_weekly_growth_digests": {"queue": "default"},
+    "app.core.celery_tasks.deliver_weekly_growth_digests": {"queue": "default"},
 }
 
 celery_app.conf.task_routes = task_routes
@@ -173,6 +175,19 @@ beat_schedule = {
         "task": "app.core.celery_tasks.health_check_task",
         "schedule": 3600.0,
         "options": {"queue": "high_priority"},
+    },
+    # 每周日晚生成成长摘要
+    "weekly-growth-digest-generation": {
+        "task": "app.core.celery_tasks.generate_weekly_growth_digests",
+        "schedule": crontab(day_of_week="sun", hour=22, minute=0),
+        "args": (200, False),
+        "options": {"queue": "default"},
+    },
+    # 每周一早晨投递成长摘要
+    "weekly-growth-digest-delivery": {
+        "task": "app.core.celery_tasks.deliver_weekly_growth_digests",
+        "schedule": crontab(day_of_week="mon", hour=8, minute=0),
+        "options": {"queue": "default"},
     },
 }
 

@@ -33,7 +33,10 @@ from app.models.intervention_adaptive import (  # noqa: F401
     BehavioralOutcome,
     InterventionTemplate,
 )
+from app.models.intervention_strategy_outcome import InterventionStrategyOutcome  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
+from app.models.notification import Notification, PushHistory  # noqa: F401
+from app.models.galaxy import KnowledgeNode, UserNodeStatus, StudyRecord  # noqa: F401
 from app.models.community import (  # noqa: F401
     Group, GroupMember, GroupMessage, PrivateMessage,
     Friendship, GroupType, GroupRole, UserBlock

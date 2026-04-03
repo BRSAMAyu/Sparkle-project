@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/push_token_manager.dart';
 
@@ -59,12 +60,14 @@ class FirebaseMessagingService {
     try {
       // Request permission
       final settings = await _requestPermission();
-      _logger.i('Notification permission status: ${settings.authorizationStatus}');
+      _logger
+          .i('Notification permission status: ${settings.authorizationStatus}');
 
       // Get initial token
       _currentToken = await _messaging.getToken();
       if (_currentToken != null) {
-        _logger.i('📱 FCM token obtained: ${_currentToken!.substring(0, 20)}...');
+        _logger
+            .i('📱 FCM token obtained: ${_currentToken!.substring(0, 20)}...');
         await _registerToken(_currentToken!);
       }
 
@@ -96,9 +99,7 @@ class FirebaseMessagingService {
   }
 
   Future<NotificationSettings> _requestPermission() async {
-    final settings = await _messaging.requestPermission(
-      
-    );
+    final settings = await _messaging.requestPermission();
     return settings;
   }
 
@@ -134,10 +135,26 @@ class FirebaseMessagingService {
     _logger.i('📱 Message opened: ${message.messageId}');
     _logger.d('Data: ${message.data}');
 
-    // Navigate to deep link if present
-    final deepLink = message.data['deep_link'];
-    if (deepLink is String && deepLink.isNotEmpty) {
-      _navigateToDeepLink(deepLink);
+    final payload = Map<String, dynamic>.from(message.data);
+    unawaited(
+      _ref.read(interventionActionServiceProvider).reportActionFromPayload(
+        payload: payload,
+        action: 'seen',
+        surface: 'push_open',
+        extraPayload: const {
+          'source': 'firebase_messaging',
+        },
+      ),
+    );
+
+    final destinationRoute = payload['destination_route'];
+    if (destinationRoute is String && destinationRoute.isNotEmpty) {
+      _navigateToRoute(destinationRoute);
+    } else {
+      final deepLink = payload['deep_link'];
+      if (deepLink is String && deepLink.isNotEmpty) {
+        _navigateToDeepLink(deepLink);
+      }
     }
 
     // Emit event for analytics/tracking
@@ -182,7 +199,8 @@ class FirebaseMessagingService {
       }
 
       final entityType = uri.host;
-      final entityId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+      final entityId =
+          uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
 
       _logger.i('Navigating to deep link: $entityType/$entityId');
 
@@ -237,6 +255,20 @@ class FirebaseMessagingService {
       }
     } catch (e, stack) {
       _logger.e('Failed to navigate to deep link: $e');
+      _logger.d(stack.toString());
+    }
+  }
+
+  void _navigateToRoute(String destinationRoute) {
+    try {
+      final context = navigatorKey.currentContext;
+      if (context == null) {
+        _logger.w('Navigator context not available for route navigation');
+        return;
+      }
+      unawaited(GoRouter.of(context).push(destinationRoute));
+    } catch (e, stack) {
+      _logger.e('Failed to navigate to destination route: $e');
       _logger.d(stack.toString());
     }
   }

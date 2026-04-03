@@ -37,6 +37,7 @@ from app.models.card_protocol import (
 )
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.card_service import CardService
+from app.services.intervention_strategy_learner import InterventionStrategyLearner
 from app.core.event_bus import EventBus
 
 
@@ -65,6 +66,7 @@ class PlanHealthInterventionBridge:
         self.event_bus = event_bus
         self.record_service = InterventionRecordService(db, event_bus)
         self.card_service = CardService(db, event_bus)
+        self.strategy_learner = InterventionStrategyLearner(db)
 
     async def on_plan_health_signal(
         self,
@@ -114,7 +116,8 @@ class PlanHealthInterventionBridge:
         trigger_type = self._classify_trigger(severity, reasons)
 
         # 5. Select delivery strategy
-        delivery_strategy = self.INTERVENTION_THRESHOLDS[severity]
+        default_strategy = self.INTERVENTION_THRESHOLDS[severity]
+        delivery_strategy = await self.strategy_learner.get_best_strategy(user_id, trigger_type) or default_strategy
 
         # 6. Determine delivery channel
         delivery_channel = self._select_channel(action_taken)
@@ -127,6 +130,7 @@ class PlanHealthInterventionBridge:
             "plan_card_id": str(plan_card.id),
             "context": context or {},
             "detected_at": datetime.utcnow().isoformat(),
+            "default_delivery_strategy": default_strategy.value,
         }
 
         # 8. Create the record

@@ -131,6 +131,7 @@ from app.models.intervention_adaptive import (
     PassiveSignal,
     ScaffoldingState,
 )
+from app.models.intervention_strategy_outcome import InterventionStrategyOutcome
 from app.models.irt import IRTItemParameter, UserIRTAbility
 from app.models.job import Job, JobStatus, JobType
 from app.models.ltm_daily_snapshot import LtmDailySnapshot
@@ -419,4 +420,5 @@ __all__ = [
     "DeliveryChannel",
     "InterventionAcceptanceStatus",
     "InterventionOutcomeStatus",
+    "InterventionStrategyOutcome",
 ]

@@ -17,15 +17,20 @@ See: docs/product/implementation/ERROR_BOOK_TO_KNOWLEDGE_MASTERY_IMPLEMENTATION_
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.event_bus import NodeMasteryUpdatedEvent
+from app.models.card_protocol import Card, CardEdge, CardType, EdgeType
+from app.models.error_book import ErrorRecord
 from app.models.galaxy import StudyRecord, UserNodeStatus
+from app.models.plan import Plan
+from app.models.task import Task, TaskStatus
+from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.galaxy.stats_service import GalaxyStatsService
 
 
@@ -57,6 +62,9 @@ REVIEW_PERFORMANCE_IMPACT: dict[str, int] = {
 MAX_SINGLE_ERROR_IMPACT = 10   # 单次错题最多对单节点扣10分
 MIN_MASTERY_SCORE = 0
 MAX_MASTERY_SCORE = 100
+LOW_MASTERY_REPLAN_THRESHOLD = 50
+ERROR_PRESSURE_LOOKBACK_DAYS = 7
+ERROR_PRESSURE_TRIGGER_COUNT = 3
 
 
 def _utcnow() -> datetime:
@@ -100,6 +108,7 @@ class ErrorBookMasterySyncService:
         base_impact = ERROR_TYPE_IMPACT.get(error_type, -3)
 
         results: list[dict] = []
+        impacted_plan_ids: set[UUID] = set()
         for rank, node_id in enumerate(linked_ids[:3]):  # Max 3 nodes
             weight = NODE_RANK_WEIGHTS[rank] if rank < len(NODE_RANK_WEIGHTS) else 0.3
             delta = self._clamp_impact(round(base_impact * weight))
@@ -114,6 +123,13 @@ class ErrorBookMasterySyncService:
             )
             if node_result:
                 results.append(node_result)
+                impacted_plan_ids.update(
+                    await self._identify_error_pressure_impacted_plans(
+                        user_id=user_id,
+                        node_id=node_id,
+                        new_mastery=int(node_result["new_mastery"]),
+                    )
+                )
 
         if results:
             logger.info(
@@ -122,6 +138,14 @@ class ErrorBookMasterySyncService:
                 getattr(error_record, "id", "?"),
                 error_type,
                 len(results),
+            )
+
+        if impacted_plan_ids:
+            await self._evaluate_impacted_plans(
+                user_id=user_id,
+                plan_ids=impacted_plan_ids,
+                trigger="error_pressure",
+                feedback_category="concept_gap_repeated",
             )
 
         return results
@@ -320,6 +344,205 @@ class ErrorBookMasterySyncService:
         if isinstance(analysis, dict):
             return analysis.get("error_type", "other")
         return "other"
+
+    async def _identify_error_pressure_impacted_plans(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        new_mastery: int,
+    ) -> set[UUID]:
+        """Return active plan ids that should be evaluated immediately."""
+        if new_mastery >= LOW_MASTERY_REPLAN_THRESHOLD:
+            return set()
+
+        recent_error_count = await self._count_recent_errors_for_node(
+            user_id=user_id,
+            node_id=node_id,
+            days=ERROR_PRESSURE_LOOKBACK_DAYS,
+        )
+        if recent_error_count < ERROR_PRESSURE_TRIGGER_COUNT:
+            return set()
+
+        impacted_plan_ids = await self._find_impacted_active_plans(user_id=user_id, node_id=node_id)
+        if impacted_plan_ids:
+            logger.info(
+                "ErrorBookMasterySync: node {} crossed repeated-error pressure "
+                "(mastery={}, errors_{}d={}) -> {} impacted plan(s)",
+                node_id,
+                new_mastery,
+                ERROR_PRESSURE_LOOKBACK_DAYS,
+                recent_error_count,
+                len(impacted_plan_ids),
+            )
+        return impacted_plan_ids
+
+    async def _count_recent_errors_for_node(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        days: int,
+    ) -> int:
+        cutoff = _utcnow() - timedelta(days=days)
+        try:
+            stmt = (
+                select(func.count(ErrorRecord.id))
+                .where(ErrorRecord.user_id == user_id)
+                .where(ErrorRecord.is_deleted.is_(False))
+                .where(ErrorRecord.created_at >= cutoff)
+                .where(ErrorRecord.linked_knowledge_node_ids.contains([node_id]))
+            )
+            result = await self.db.execute(stmt)
+            return int(result.scalar() or 0)
+        except Exception:
+            result = await self.db.execute(
+                select(ErrorRecord.created_at, ErrorRecord.linked_knowledge_node_ids)
+                .where(ErrorRecord.user_id == user_id)
+                .where(ErrorRecord.is_deleted.is_(False))
+            )
+            count = 0
+            for created_at, linked_ids in result.all():
+                normalized_created_at = created_at
+                if normalized_created_at and normalized_created_at.tzinfo is not None:
+                    normalized_created_at = normalized_created_at.replace(tzinfo=None)
+                if normalized_created_at and normalized_created_at < cutoff:
+                    continue
+                if str(node_id) in [str(value) for value in (linked_ids or []) if value is not None]:
+                    count += 1
+            return count
+
+    async def _find_impacted_active_plans(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+    ) -> set[UUID]:
+        plan_ids = await self._find_impacted_active_plans_via_cards(user_id=user_id, node_id=node_id)
+        if plan_ids:
+            return plan_ids
+        return await self._find_impacted_active_plans_via_tasks(user_id=user_id, node_id=node_id)
+
+    async def _find_impacted_active_plans_via_cards(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+    ) -> set[UUID]:
+        stmt = (
+            select(Card.id)
+            .where(
+                Card.card_type == CardType.KNOWLEDGE,
+                Card.owner_id == user_id,
+                Card.metadata_["knowledge_node_id"].as_string() == str(node_id),
+                Card.not_deleted_filter(),
+            )
+        )
+        result = await self.db.execute(stmt)
+        knowledge_card_ids = list(result.scalars().all())
+        if not knowledge_card_ids:
+            return set()
+
+        edge_stmt = (
+            select(Card.metadata_["legacy_task_id"].as_string())
+            .select_from(CardEdge)
+            .join(Card, Card.id == CardEdge.from_card_id)
+            .where(
+                CardEdge.edge_type == EdgeType.REFERENCES,
+                CardEdge.active.is_(True),
+                CardEdge.to_card_id.in_(knowledge_card_ids),
+                Card.card_type == CardType.TASK,
+                Card.owner_id == user_id,
+                Card.not_deleted_filter(),
+            )
+        )
+        edge_result = await self.db.execute(edge_stmt)
+        legacy_task_ids = [value for value in edge_result.scalars().all() if value]
+        if not legacy_task_ids:
+            return set()
+
+        return await self._active_plan_ids_for_task_ids(user_id=user_id, legacy_task_ids=legacy_task_ids)
+
+    async def _find_impacted_active_plans_via_tasks(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+    ) -> set[UUID]:
+        today = date.today()
+        stmt = (
+            select(Task.plan_id)
+            .join(Plan, Plan.id == Task.plan_id)
+            .where(
+                Task.user_id == user_id,
+                Task.knowledge_node_id == node_id,
+                Task.plan_id.is_not(None),
+                Task.status.in_((TaskStatus.PENDING, TaskStatus.IN_PROGRESS)),
+                Plan.user_id == user_id,
+                Plan.is_active.is_(True),
+            )
+            .where((Task.due_date.is_(None)) | (Task.due_date >= today))
+        )
+        result = await self.db.execute(stmt)
+        return {plan_id for plan_id in result.scalars().all() if plan_id is not None}
+
+    async def _active_plan_ids_for_task_ids(
+        self,
+        *,
+        user_id: UUID,
+        legacy_task_ids: list[str],
+    ) -> set[UUID]:
+        task_ids: list[UUID] = []
+        for raw_task_id in legacy_task_ids:
+            try:
+                task_ids.append(UUID(str(raw_task_id)))
+            except (TypeError, ValueError):
+                continue
+        if not task_ids:
+            return set()
+
+        today = date.today()
+        stmt = (
+            select(Task.plan_id)
+            .join(Plan, Plan.id == Task.plan_id)
+            .where(
+                Task.id.in_(task_ids),
+                Task.user_id == user_id,
+                Task.plan_id.is_not(None),
+                Task.status.in_((TaskStatus.PENDING, TaskStatus.IN_PROGRESS)),
+                Plan.user_id == user_id,
+                Plan.is_active.is_(True),
+            )
+            .where((Task.due_date.is_(None)) | (Task.due_date >= today))
+        )
+        result = await self.db.execute(stmt)
+        return {plan_id for plan_id in result.scalars().all() if plan_id is not None}
+
+    async def _evaluate_impacted_plans(
+        self,
+        *,
+        user_id: UUID,
+        plan_ids: set[UUID],
+        trigger: str,
+        feedback_category: str | None = None,
+    ) -> None:
+        replanner = AdaptiveReplanner(self.db, self.redis)
+        for plan_id in sorted(plan_ids, key=str):
+            try:
+                await replanner.evaluate_plan_health_now(
+                    user_id=user_id,
+                    plan_id=plan_id,
+                    trigger=trigger,
+                    feedback_category=feedback_category,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "ErrorBookMasterySync: immediate plan health evaluation failed "
+                    "for user={}/plan={}: {}",
+                    user_id,
+                    plan_id,
+                    exc,
+                )
 
     @staticmethod
     def _clamp_impact(value: int) -> int:

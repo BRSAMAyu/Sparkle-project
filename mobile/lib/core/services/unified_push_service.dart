@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/push_config.dart';
+import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/jpush_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 
@@ -232,8 +233,25 @@ class UnifiedPushService {
   void _handleJPushNotificationOpened(JPushMessage message) {
     _logger.i('JPush notification opened: ${message.title}');
 
-    // Navigate to deep link if present
-    final deepLink = message.extras?['deep_link'];
+    final payload = Map<String, dynamic>.from(message.extras ?? const {});
+    unawaited(
+      _ref.read(interventionActionServiceProvider).reportActionFromPayload(
+        payload: payload,
+        action: 'seen',
+        surface: 'push_open',
+        extraPayload: const {
+          'source': 'jpush',
+        },
+      ),
+    );
+
+    final destinationRoute = payload['destination_route'];
+    if (destinationRoute is String && destinationRoute.isNotEmpty) {
+      _navigateToRoute(destinationRoute);
+      return;
+    }
+
+    final deepLink = payload['deep_link'];
     if (deepLink != null) {
       _navigateToDeepLink(deepLink.toString());
     }
@@ -342,6 +360,20 @@ class UnifiedPushService {
       }
     } catch (e, stack) {
       _logger.e('Failed to navigate to deep link: $e');
+      _logger.d(stack.toString());
+    }
+  }
+
+  void _navigateToRoute(String destinationRoute) {
+    try {
+      final context = navigatorKey.currentContext;
+      if (context == null) {
+        _logger.w('Navigator context not available for route navigation');
+        return;
+      }
+      unawaited(GoRouter.of(context).push(destinationRoute));
+    } catch (e, stack) {
+      _logger.e('Failed to navigate to route: $e');
       _logger.d(stack.toString());
     }
   }
@@ -456,7 +488,8 @@ class UnifiedPushService {
 }
 
 /// Provider for UnifiedPushService
-final unifiedPushServiceProvider = Provider<UnifiedPushService>((ref) => UnifiedPushService(ref));
+final unifiedPushServiceProvider =
+    Provider<UnifiedPushService>((ref) => UnifiedPushService(ref));
 
 /// Provider for push service initialization state
 final pushInitializedProvider = StateProvider<bool>((ref) => false);

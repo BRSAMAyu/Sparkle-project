@@ -27,6 +27,7 @@ from app.models.card_protocol import (
 )
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.card_service import CardService
+from app.services.intervention_strategy_learner import InterventionStrategyLearner
 from app.core.event_bus import EventBus
 
 
@@ -42,25 +43,40 @@ class InterventionOutcomeVerifier:
         self.event_bus = event_bus
         self.record_service = InterventionRecordService(db, event_bus)
         self.card_service = CardService(db, event_bus)
+        self.strategy_learner = InterventionStrategyLearner(db)
 
     async def verify_all_pending(self) -> dict:
         """Verify all pending interventions whose outcome window has closed.
 
         Returns summary: {"resolved": N, "effective": N, "ineffective": N, "unknown": N}
         """
+        return await self.verify_pending_due()
+
+    async def verify_pending_due(
+        self,
+        *,
+        eligible_acceptance_statuses: set[InterventionAcceptanceStatus] | None = None,
+        min_record_age: timedelta | None = None,
+    ) -> dict:
+        """Verify pending interventions that match an optional scheduled sweep."""
         now = datetime.utcnow()
         summary = {"resolved": 0, "effective": 0, "ineffective": 0, "unknown": 0}
 
         stmt = select(InterventionRecord).where(
             InterventionRecord.outcome_status == InterventionOutcomeStatus.PENDING,
-            InterventionRecord.acceptance_status != InterventionAcceptanceStatus.CREATED,
             InterventionRecord.not_deleted_filter(),
         )
+        if eligible_acceptance_statuses is not None:
+            stmt = stmt.where(
+                InterventionRecord.acceptance_status.in_(tuple(eligible_acceptance_statuses))
+            )
         result = await self.db.execute(stmt)
         records = list(result.scalars().all())
 
         for record in records:
             if record.created_at is None:
+                continue
+            if min_record_age is not None and (now - record.created_at) < min_record_age:
                 continue
             deadline = record.created_at + timedelta(days=record.outcome_window_days)
             if now < deadline:
@@ -98,6 +114,24 @@ class InterventionOutcomeVerifier:
                 summary["unknown"],
             )
         return summary
+
+    async def verify_engaged_pending(self, *, min_record_age: timedelta | None = None) -> dict:
+        """Verify engaged interventions for the scheduled 4-hour sweep."""
+        return await self.verify_pending_due(
+            eligible_acceptance_statuses={
+                InterventionAcceptanceStatus.DELIVERED,
+                InterventionAcceptanceStatus.SEEN,
+                InterventionAcceptanceStatus.ACCEPTED,
+                InterventionAcceptanceStatus.ACTED,
+                InterventionAcceptanceStatus.DISMISSED,
+                InterventionAcceptanceStatus.SNOOZED,
+            },
+            min_record_age=min_record_age or timedelta(hours=24),
+        )
+
+    async def verify_full_pending(self) -> dict:
+        """Verify all pending interventions for the nightly full sweep."""
+        return await self.verify_pending_due()
 
     async def _evaluate_outcome(
         self, record: InterventionRecord
@@ -299,6 +333,13 @@ class InterventionOutcomeVerifier:
         evidence: dict,
     ) -> None:
         """Phase 3: Update decision log, risk register, and strategy learning."""
+        await self.strategy_learner.record_outcome(
+            user_id=record.user_id,
+            intervention_id=record.id,
+            outcome_status=outcome,
+            context_snapshot=self._strategy_context_snapshot(record, evidence),
+        )
+
         if not record.plan_card_id:
             return
 
@@ -313,7 +354,32 @@ class InterventionOutcomeVerifier:
         # 3. Strategy learning feedback
         await self._strategy_learning_feedback(record, effective)
 
-        # 3.5 Phase E: compute planning drift and raise a MISALIGNMENT intervention if needed
+        # 3.5 Check for pattern of ineffective interventions (3+)
+        if not effective:
+            stmt = select(InterventionRecord).where(
+                InterventionRecord.plan_card_id == record.plan_card_id,
+                InterventionRecord.trigger_type == record.trigger_type,
+                InterventionRecord.outcome_status == InterventionOutcomeStatus.INEFFECTIVE,
+                InterventionRecord.not_deleted_filter(),
+            )
+            ineffective_records = list((await self.db.execute(stmt)).scalars().all())
+            if len(ineffective_records) >= 3:
+                try:
+                    from app.services.card_protocol.strategy_map_manager import StrategyMapManager
+                    strategy = StrategyMapManager(self.db, self.event_bus)
+                    await strategy.propose_update(
+                        record.plan_card_id,
+                        updates={},  # Prompt a strategy learning review by the system
+                        evidence={
+                            "source": "outcome_verifier",
+                            "reason": f"Detected 3+ ineffective interventions for trigger {record.trigger_type.value if record.trigger_type else 'unknown'}",
+                            "ineffective_count": len(ineffective_records)
+                        }
+                    )
+                except Exception as exc:
+                    logger.debug("Phase3 ineffective pattern check failed (non-fatal): {}", exc)
+
+        # 3.6 Phase E: compute planning drift and raise a MISALIGNMENT intervention if needed
         await self._phase_e_drift_check(record)
 
         # 4. Phase 4: materialize the latest main-chain reflection state
@@ -342,8 +408,28 @@ class InterventionOutcomeVerifier:
             from app.services.card_protocol.planning_memory_service import PlanningMemoryService
 
             planning_memory = PlanningMemoryService(self.db, self.event_bus)
+            
+            # Check for 2+ consecutive phases with low alignment score
+            context = await planning_memory.load_planning_context(
+                plan_card_id=record.plan_card_id, user_id=record.user_id
+            )
+            archive = context.phase_archive
+            active_phase = context.active_phase
+            all_phases = archive + ([active_phase] if active_phase else [])
+            low_alignment_count = 0
+            for phase in reversed(all_phases):
+                if not phase: continue
+                alignment = (phase.get("feedback_gate") or {}).get("alignment_score")
+                if alignment is not None and float(alignment) < 0.5:
+                    low_alignment_count += 1
+                else:
+                    if alignment is not None:
+                        break
+            
+            is_consecutive_low_alignment = low_alignment_count >= 2
+            
             drift = await planning_memory.compute_drift_score(plan_card_id=record.plan_card_id)
-            if drift.drift_score <= 0.5:
+            if drift.drift_score <= 0.5 and not is_consecutive_low_alignment:
                 return
 
             # Avoid stacking duplicate unresolved misalignment interventions.
@@ -532,6 +618,27 @@ class InterventionOutcomeVerifier:
         if isinstance(payload, dict):
             return payload
         return {}
+
+    @classmethod
+    def _strategy_context_snapshot(
+        cls,
+        record: InterventionRecord,
+        evidence: dict[str, Any],
+    ) -> dict[str, Any]:
+        improvement = dict(evidence.get("improvement") or {})
+        diagnosis = dict(record.diagnosis_payload or {})
+        context = dict(diagnosis.get("context") or {})
+        return {
+            "evaluation_method": evidence.get("evaluation_method"),
+            "plan_health_recovered": improvement.get("plan_health_recovered"),
+            "mastery_improved": improvement.get("mastery_improved"),
+            "parameter_strategy_effective": improvement.get("parameter_strategy_effective"),
+            "parameter_compilation_result": cls._parameter_compilation_result(record),
+            "pattern_name": diagnosis.get("pattern_name"),
+            "pattern_type": diagnosis.get("pattern_type"),
+            "reasons": diagnosis.get("reasons") or [],
+            "completed_count": context.get("completed_count"),
+        }
 
     @classmethod
     def _parameter_compilation_result(cls, record: InterventionRecord) -> str | None:

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/features/focus/presentation/widgets/exit_confirmation_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/flip_clock.dart';
@@ -17,9 +18,11 @@ import 'package:sparkle/shared/entities/task_model.dart';
 class MindfulnessModeScreen extends ConsumerStatefulWidget {
   const MindfulnessModeScreen({
     required this.taskId,
+    this.interventionId,
     super.key,
   });
   final String taskId;
+  final String? interventionId;
 
   @override
   ConsumerState<MindfulnessModeScreen> createState() =>
@@ -119,6 +122,19 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
     // 启动正念模式
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(mindfulnessProvider.notifier).start(task);
+      if (widget.interventionId != null && widget.interventionId!.isNotEmpty) {
+        unawaited(
+          ref.read(interventionActionServiceProvider).reportAction(
+            recordId: widget.interventionId!,
+            action: 'accepted',
+            actionPayload: {
+              'surface': 'focus_mode',
+              'source': 'mindfulness_start',
+              'task_id': task.id,
+            },
+          ),
+        );
+      }
     });
   }
 
@@ -183,9 +199,27 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
 
     if (confirmed && mounted) {
       _isExiting = true;
+      final elapsedMinutes =
+          ref.read(mindfulnessProvider.notifier).elapsedMinutes;
       final result = await ref.read(mindfulnessProvider.notifier).stop();
 
       if (mounted) {
+        if (widget.interventionId != null &&
+            widget.interventionId!.isNotEmpty &&
+            elapsedMinutes > 0) {
+          unawaited(
+            ref.read(interventionActionServiceProvider).reportAction(
+              recordId: widget.interventionId!,
+              action: 'acted',
+              actionPayload: {
+                'surface': 'focus_mode',
+                'source': 'mindfulness_complete',
+                'task_id': widget.taskId,
+                'duration_minutes': elapsedMinutes,
+              },
+            ),
+          );
+        }
         if (result.message != null) {
           AppFeedback.info(context, result.message!);
         }

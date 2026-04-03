@@ -188,15 +188,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final textScale = MediaQuery.textScalerOf(context).scale(1);
 
     final category = ResponsiveSystem.getCategory(context);
-    final fallbackBottomHeight =
-        52.0 + (predictions.isNotEmpty ? (textScale >= 1.2 ? 48.0 : 36.0) : 0.0);
+    final fallbackBottomHeight = 52.0 +
+        (predictions.isNotEmpty ? (textScale >= 1.2 ? 48.0 : 36.0) : 0.0);
     final overlayReserveHeight =
         _bottomOverlayReserveHeight + ((textScale - 1).clamp(0.0, 0.5) * 56);
-    final totalBottomHeight =
-        (overlayReserveHeight > fallbackBottomHeight
-                ? overlayReserveHeight
-                : fallbackBottomHeight) +
-            DS.spacing16;
+    final totalBottomHeight = (overlayReserveHeight > fallbackBottomHeight
+            ? overlayReserveHeight
+            : fallbackBottomHeight) +
+        DS.spacing16;
 
     // Max width for floating components on larger screens
     final floatingMaxWidth = switch (category) {
@@ -277,47 +276,74 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       _staggeredSection(
                         index: 1,
+                        child:
+                            _GrowthStatusCard(dashboardState: dashboardState),
+                      ),
+                      _staggeredSection(
+                        index: 2,
                         child: MetricsRow(dashboardState: dashboardState),
                       ),
                       if (showFirstGoalEmptyState)
                         _staggeredSection(
-                          index: 2,
+                          index: 3,
                           child: _buildFirstGoalEmptyState(),
                         )
                       else ...[
                         _staggeredSection(
-                          index: 2,
+                          index: 3,
+                          child: _MostImportantThingCard(
+                            task: dashboardState.mostImportantTask,
+                          ),
+                        ),
+                        _staggeredSection(
+                          index: 4,
+                          child: _GrowthSignalCard(
+                            signal: dashboardState.growthSignal,
+                          ),
+                        ),
+                        _staggeredSection(
+                          index: 5,
+                          child: _ActivePlanProgressCard(
+                            plan: dashboardState.activePlanProgress,
+                          ),
+                        ),
+                        _staggeredSection(
+                          index: 6,
+                          child: const _DashboardQuickActionsRow(),
+                        ),
+                        _staggeredSection(
+                          index: 7,
                           child: NextActionsCard(
                             compact: true,
                             onViewAll: () => context.push('/tasks'),
                           ),
                         ),
                         _staggeredSection(
-                          index: 3,
+                          index: 8,
                           child: const PredictedIntentCard(),
                         ),
                         _staggeredSection(
-                          index: 4,
+                          index: 9,
                           child: const HomeNotificationCard(),
                         ),
                         _staggeredSection(
-                          index: 5,
+                          index: 10,
                           child: const RecentInsightsCard(),
                         ),
                         _staggeredSection(
-                          index: 6,
+                          index: 11,
                           child: const NightlyReviewPanel(),
                         ),
                         _staggeredSection(
-                          index: 7,
+                          index: 12,
                           child: const DashboardCardSection(),
                         ),
                         _staggeredSection(
-                          index: 8,
+                          index: 13,
                           child: const AchievementProgressCard(),
                         ),
                         _staggeredSection(
-                          index: 9,
+                          index: 14,
                           child: const TaskBoardCard(),
                         ),
                       ],
@@ -356,4 +382,392 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
   }
+}
+
+class _GrowthStatusCard extends StatelessWidget {
+  const _GrowthStatusCard({required this.dashboardState});
+
+  final DashboardState dashboardState;
+
+  @override
+  Widget build(BuildContext context) {
+    final growthStatus = dashboardState.growthStatus;
+    if (growthStatus == null) {
+      return const SizedBox.shrink();
+    }
+
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
+        child: MaterialStyler(
+          material: AppMaterials.ceramic(context).copyWith(
+            backgroundGradient: LinearGradient(
+              colors: [
+                DS.brandPrimary.withValues(alpha: 0.18),
+                DS.info.withValues(alpha: 0.12),
+                DS.surfacePrimaryElevated,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderColor: DS.brandPrimary.withValues(alpha: 0.18),
+            borderWidth: 1,
+          ),
+          borderRadius: DS.borderRadius20,
+          padding: const EdgeInsets.all(DS.spacing18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Growth Status',
+                style: context.sparkleTypography.labelLarge.copyWith(
+                  color: DS.textSecondary,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                growthStatus.headline,
+                style: context.sparkleTypography.headingMedium.copyWith(
+                  fontWeight: DS.fontWeightBold,
+                  color: DS.textPrimary,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                growthStatus.subtitle,
+                style: context.sparkleTypography.bodyMedium.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MostImportantThingCard extends StatelessWidget {
+  const _MostImportantThingCard({required this.task});
+
+  final PriorityTaskData? task;
+
+  @override
+  Widget build(BuildContext context) {
+    if (task == null) {
+      return const SizedBox.shrink();
+    }
+
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        child: MaterialStyler(
+          material: AppMaterials.ceramic(context),
+          borderRadius: DS.borderRadius20,
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Today's Most Important Thing",
+                style: context.sparkleTypography.labelLarge.copyWith(
+                  color: DS.textSecondary,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                task!.title,
+                style: context.sparkleTypography.titleLarge.copyWith(
+                  fontWeight: DS.fontWeightBold,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                task!.reason,
+                style: context.sparkleTypography.bodyMedium.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
+                  _DashboardChip(
+                    icon: Icons.schedule_rounded,
+                    label: '${task!.estimatedMinutes} min',
+                  ),
+                  if (task!.planName != null && task!.planName!.isNotEmpty)
+                    _DashboardChip(
+                      icon: Icons.flag_rounded,
+                      label: task!.planName!,
+                    ),
+                  if (task!.daysToDeadline != null)
+                    _DashboardChip(
+                      icon: Icons.timelapse_rounded,
+                      label: '${task!.daysToDeadline} days left',
+                    ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
+              Row(
+                children: [
+                  Expanded(
+                    child: SparkleButton.primary(
+                      label: 'Start This',
+                      onPressed: () => context.push('/tasks/${task!.id}'),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing10),
+                  Expanded(
+                    child: SparkleButton.ghost(
+                      label: 'View Tasks',
+                      onPressed: () => context.push('/tasks'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GrowthSignalCard extends StatelessWidget {
+  const _GrowthSignalCard({required this.signal});
+
+  final GrowthSignalData? signal;
+
+  @override
+  Widget build(BuildContext context) {
+    if (signal == null) {
+      return const SizedBox.shrink();
+    }
+
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing10,
+          DS.spacing16,
+          DS.spacing10,
+        ),
+        child: MaterialStyler(
+          material: AppMaterials.ceramic(context).copyWith(
+            backgroundGradient: LinearGradient(
+              colors: [
+                DS.success.withValues(alpha: 0.12),
+                DS.surfaceSecondary,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderColor: DS.success.withValues(alpha: 0.16),
+            borderWidth: 1,
+          ),
+          borderRadius: DS.borderRadius20,
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Growth Signal',
+                style: context.sparkleTypography.labelLarge.copyWith(
+                  color: DS.textSecondary,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                signal!.headline,
+                style: context.sparkleTypography.titleLarge.copyWith(
+                  fontWeight: DS.fontWeightBold,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                signal!.summary,
+                style: context.sparkleTypography.bodyMedium.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: DS.spacing10),
+              Text(
+                'Source: ${signal!.source}',
+                style: context.sparkleTypography.labelSmall.copyWith(
+                  color: DS.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivePlanProgressCard extends StatelessWidget {
+  const _ActivePlanProgressCard({required this.plan});
+
+  final ActivePlanProgressData? plan;
+
+  @override
+  Widget build(BuildContext context) {
+    if (plan == null) {
+      return const SizedBox.shrink();
+    }
+
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        child: MaterialStyler(
+          material: AppMaterials.ceramic(context),
+          borderRadius: DS.borderRadius20,
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Active Plan Progress',
+                style: context.sparkleTypography.labelLarge.copyWith(
+                  color: DS.textSecondary,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                plan!.name,
+                style: context.sparkleTypography.titleLarge.copyWith(
+                  fontWeight: DS.fontWeightBold,
+                ),
+              ),
+              const SizedBox(height: DS.spacing6),
+              Text(
+                'Phase: ${plan!.phase.isEmpty ? 'in progress' : plan!.phase}',
+                style: context.sparkleTypography.bodyMedium.copyWith(
+                  color: DS.textSecondary,
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              ClipRRect(
+                borderRadius: DS.borderRadiusFull,
+                child: LinearProgressIndicator(
+                  minHeight: 10,
+                  value: plan!.progress.clamp(0, 1),
+                  backgroundColor: DS.surfaceOverlay,
+                  valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+                ),
+              ),
+              const SizedBox(height: DS.spacing10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Progress ${(plan!.progress * 100).round()}%',
+                      style: context.sparkleTypography.labelLarge.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ),
+                  if (plan!.daysToDeadline != null)
+                    Text(
+                      '${plan!.daysToDeadline} days to deadline',
+                      style: context.sparkleTypography.labelSmall.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardQuickActionsRow extends StatelessWidget {
+  const _DashboardQuickActionsRow();
+
+  @override
+  Widget build(BuildContext context) => ContentConstraint(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing10,
+            DS.spacing16,
+            DS.spacing8,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: SparkleButton.primary(
+                  label: 'Start Focus',
+                  onPressed: () => context.push('/focus'),
+                ),
+              ),
+              const SizedBox(width: DS.spacing10),
+              Expanded(
+                child: SparkleButton.ghost(
+                  label: "Today's Tasks",
+                  onPressed: () => context.push('/tasks'),
+                ),
+              ),
+              const SizedBox(width: DS.spacing10),
+              Expanded(
+                child: SparkleButton.ghost(
+                  label: 'Chat',
+                  onPressed: () => context.go('/chat'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+class _DashboardChip extends StatelessWidget {
+  const _DashboardChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfaceOverlay,
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: DS.textSecondary),
+            const SizedBox(width: DS.spacing6),
+            Text(
+              label,
+              style: context.sparkleTypography.labelSmall.copyWith(
+                color: DS.textSecondary,
+                fontWeight: DS.fontWeightBold,
+              ),
+            ),
+          ],
+        ),
+      );
 }

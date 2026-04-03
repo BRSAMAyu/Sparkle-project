@@ -658,3 +658,43 @@ def test_safety_limits():
     assert MAX_SINGLE_ERROR_IMPACT == 10
     assert MIN_MASTERY_SCORE == 0
     assert MAX_MASTERY_SCORE == 100
+
+
+# ===========================================================================
+# 19. Phase 3 direct trigger
+# ===========================================================================
+
+@pytest.mark.asyncio
+async def test_diagnosis_triggers_immediate_plan_health_when_error_pressure_crosses_threshold():
+    node_id = uuid4()
+    user_id = uuid4()
+    service, _, _ = _make_service(node_statuses={node_id: 55.0})
+    error = _make_error_record(linked_node_ids=[node_id], error_type="concept_confusion")
+
+    service._count_recent_errors_for_node = AsyncMock(return_value=3)
+    service._find_impacted_active_plans = AsyncMock(return_value={uuid4()})
+    service._evaluate_impacted_plans = AsyncMock()
+
+    results = await service.apply_error_diagnosis(user_id, error)
+
+    assert len(results) == 1
+    service._evaluate_impacted_plans.assert_awaited_once()
+    _, kwargs = service._evaluate_impacted_plans.await_args
+    assert kwargs["user_id"] == user_id
+    assert kwargs["trigger"] == "error_pressure"
+    assert kwargs["feedback_category"] == "concept_gap_repeated"
+
+
+@pytest.mark.asyncio
+async def test_diagnosis_skips_immediate_plan_health_when_mastery_not_low_enough():
+    node_id = uuid4()
+    service, _, _ = _make_service(node_statuses={node_id: 90.0})
+    error = _make_error_record(linked_node_ids=[node_id], error_type="reading_careless")
+
+    service._count_recent_errors_for_node = AsyncMock(return_value=5)
+    service._find_impacted_active_plans = AsyncMock(return_value={uuid4()})
+    service._evaluate_impacted_plans = AsyncMock()
+
+    await service.apply_error_diagnosis(uuid4(), error)
+
+    service._evaluate_impacted_plans.assert_not_awaited()
