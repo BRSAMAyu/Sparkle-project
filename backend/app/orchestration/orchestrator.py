@@ -1141,6 +1141,7 @@ class ChatOrchestrator(
                     evolution_highlights,
                     progress_snapshot,
                     understanding_depth_update,
+                    visible_update_context,
                 ) = await self._drain_system_updates(user_id)
                 if adaptation_records:
                     state.context_data["adaptation_records"] = adaptation_records
@@ -1162,6 +1163,14 @@ class ChatOrchestrator(
                                 else None
                             ),
                         }
+                if isinstance(visible_update_context, dict):
+                    state.context_data["visible_update_context"] = visible_update_context
+                    if isinstance(user_context_payload, dict):
+                        for key, value in visible_update_context.items():
+                            if str(value or "").strip():
+                                user_context_payload[key] = str(value).strip()
+                        if evolution_highlights:
+                            user_context_payload["evolution_highlights"] = evolution_highlights
                 for update_resp in update_responses:
                     yield update_resp
 
@@ -1376,7 +1385,7 @@ class ChatOrchestrator(
                     final_response_data = mode_result.get("final_response_data")
                     if isinstance(final_response_data, dict):
                         await self._cache_response(session_id, request_id, final_response_data)
-                        followup_updates, _, _, _, _, _ = await self._drain_system_updates(user_id)
+                        followup_updates, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
                         for update_resp in followup_updates:
                             yield update_resp
                     return
@@ -1663,7 +1672,7 @@ class ChatOrchestrator(
                         )
                     if transparency_generator is not None and emit_transparency_event is not None:
                         await emit_transparency_event(transparency_generator.get_complete_event())
-                    followup_updates, _, _, _, _, _ = await self._drain_system_updates(user_id)
+                    followup_updates, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
                     for update_resp in followup_updates:
                         yield update_resp
                     await self._update_state(session_id, STATE_DONE, "Response completed")

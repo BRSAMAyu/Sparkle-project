@@ -1,7 +1,7 @@
 from __future__ import annotations
 import asyncio
 import json
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -14,9 +14,13 @@ from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.models.accountability import AccountabilityPartnership, AccountabilitySlotType, AccountabilityStatus
+from app.models.card_protocol import InterventionAcceptanceStatus, InterventionRecord
+from app.models.chat import ChatMessage, ChatSession as ChatSessionModel, MessageRole
 from app.models.user import User
 from app.api.v1.accountability import _build_relationship_summary
+from app.orchestration.session_state_mixin import SessionStateMixin
 from app.services.cognitive_service import CognitiveService
+from app.services.intervention_record_service import InterventionRecordService
 from app.services.llm_service import get_configured_llm_service_for_tier
 from app.services.memory_service import MemoryService
 from app.services.personalization import get_personalization_engine
@@ -43,6 +47,17 @@ def _response_style_from_depth(depth: float) -> str:
         return "concise"
     return "balanced"
 
+
+class ChatOpeningRequest(BaseModel):
+    conversation_id: UUID
+
+
+class ChatOpeningResponse(BaseModel):
+    created: bool
+    conversation_id: UUID
+    message_id: UUID | None = None
+    content: str | None = None
+
 def _source_score(source: str) -> float:
     mapping = {
         "user": 1.0,
@@ -50,6 +65,116 @@ def _source_score(source: str) -> float:
         "system": 0.2,
     }
     return mapping.get(source, 0.5)
+
+
+def _is_chat_opening_update(update: dict[str, Any]) -> bool:
+    if not isinstance(update, dict):
+        return False
+    update_type = str(update.get("type") or "").strip()
+    metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+    evolution_kind = str(metadata.get("evolution_kind") or "").strip()
+    return update_type == "plan_adjusted_from_error" or evolution_kind in {
+        "adjustment",
+        "plan_reasoning",
+        "progress_comparison",
+        "proactive_insight",
+        "weekly_learning_report",
+    }
+
+
+def _compose_chat_opening_content(prompt_context: dict[str, str]) -> str:
+    lines: list[str] = []
+    for key in ("proactive_opening_message", "pending_observation", "post_adaptation_question"):
+        text = str(prompt_context.get(key) or "").strip()
+        if text and text not in lines:
+            lines.append(text)
+    return "\n\n".join(lines).strip()
+
+
+def _extract_intervention_id(updates: list[dict[str, Any]]) -> UUID | None:
+    for update in updates:
+        if not isinstance(update, dict):
+            continue
+        metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+        raw = metadata.get("intervention_id")
+        if not raw:
+            continue
+        try:
+            return UUID(str(raw))
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _build_chat_opening_widgets(
+    *,
+    proactive_opening_message: str,
+    post_adaptation_question: str,
+    intervention_id: UUID | None,
+) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+
+    if proactive_opening_message:
+        actions.append(
+            {
+                "label": "看看我改了什么",
+                "type": "route",
+                "route": "/tasks",
+            }
+        )
+
+    if intervention_id and post_adaptation_question:
+        actions.extend(
+            [
+                {
+                    "label": "这样更合适",
+                    "type": "intervention_feedback",
+                    "intervention_id": str(intervention_id),
+                    "feedback_action": "acted",
+                    "message": "已记住，这次调整对你是有帮助的。",
+                },
+                {
+                    "label": "不太对",
+                    "type": "intervention_feedback",
+                    "intervention_id": str(intervention_id),
+                    "feedback_action": "dismissed",
+                    "message": "收到，我不会继续沿着这个方向强推。",
+                },
+            ]
+        )
+
+    if not actions:
+        return []
+
+    return [
+        {
+            "type": "next_actions",
+            "data": {
+                "title": "你想怎么继续？",
+                "actions": actions,
+            },
+        }
+    ]
+
+
+async def _mark_chat_opening_intervention_seen(
+    *,
+    db: AsyncSession,
+    user_id: UUID,
+    intervention_id: UUID | None,
+) -> None:
+    if intervention_id is None:
+        return
+
+    record = await db.get(InterventionRecord, intervention_id)
+    if record is None or record.user_id != user_id:
+        return
+
+    service = InterventionRecordService(db)
+    if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+        await service.mark_delivered(record.id)
+    if record.acceptance_status == InterventionAcceptanceStatus.DELIVERED:
+        await service.mark_seen(record.id)
 
 
 def _risk_score(risk: str) -> float:
@@ -809,6 +934,80 @@ async def list_system_updates(
     service = SystemUpdateService(cache_service.redis)
     items = await service.list_updates(current_user.id, limit=limit, offset=offset)
     return {"items": items}
+
+
+@router.post("/chat-opening", response_model=ChatOpeningResponse)
+async def create_chat_opening(
+    payload: ChatOpeningRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ChatOpeningResponse:
+    service = SystemUpdateService(cache_service.redis)
+    updates = await service.drain(current_user.id, limit=20)
+    relevant_updates = [update for update in updates if _is_chat_opening_update(update)]
+    deferred_updates = [update for update in updates if update not in relevant_updates]
+
+    if not relevant_updates:
+        for update in reversed(deferred_updates):
+            await service.enqueue(current_user.id, update)
+        return ChatOpeningResponse(created=False, conversation_id=payload.conversation_id)
+
+    prompt_context = SessionStateMixin._build_system_update_prompt_context(relevant_updates)
+    content = _compose_chat_opening_content(prompt_context)
+    if not content:
+        for update in reversed(updates):
+            await service.enqueue(current_user.id, update)
+        return ChatOpeningResponse(created=False, conversation_id=payload.conversation_id)
+
+    intervention_id = _extract_intervention_id(relevant_updates)
+    widgets = _build_chat_opening_widgets(
+        proactive_opening_message=prompt_context.get("proactive_opening_message", ""),
+        post_adaptation_question=prompt_context.get("post_adaptation_question", ""),
+        intervention_id=intervention_id,
+    )
+
+    session_meta = await db.get(ChatSessionModel, payload.conversation_id)
+    now = datetime.utcnow()
+    if session_meta is None:
+        session_meta = ChatSessionModel(
+            id=payload.conversation_id,
+            user_id=current_user.id,
+            is_active=True,
+            last_message_at=now,
+        )
+        db.add(session_meta)
+    elif session_meta.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
+    else:
+        session_meta.is_active = True
+        session_meta.last_message_at = now
+
+    message = ChatMessage(
+        user_id=current_user.id,
+        session_id=payload.conversation_id,
+        role=MessageRole.ASSISTANT,
+        content=content,
+        actions=widgets or None,
+    )
+    db.add(message)
+
+    await _mark_chat_opening_intervention_seen(
+        db=db,
+        user_id=current_user.id,
+        intervention_id=intervention_id,
+    )
+    await db.commit()
+    await db.refresh(message)
+
+    for update in reversed(deferred_updates):
+        await service.enqueue(current_user.id, update)
+
+    return ChatOpeningResponse(
+        created=True,
+        conversation_id=payload.conversation_id,
+        message_id=message.id,
+        content=content,
+    )
 
 
 @router.post("/onboarding")

@@ -248,6 +248,7 @@ class MultiAgentWorkflowAdapter:
             agent_role=synthesis_role,
             plan_context=plan_context,
             session_feedback_instruction=str(context_data.get("session_feedback_instruction") or ""),
+            dual_core_instruction=str(context_data.get("dual_core_prompt_instruction") or ""),
             context_focus=context_data.get("context_focus") or user_context.get("context_focus"),
             context_briefing_note=str(
                 context_data.get("context_briefing_note") or user_context.get("context_briefing_note") or ""
@@ -440,6 +441,7 @@ class MultiAgentWorkflowAdapter:
             agent_role=synthesis_role,
             plan_context=plan_context,
             session_feedback_instruction=str(context_data.get("session_feedback_instruction") or ""),
+            dual_core_instruction=str(context_data.get("dual_core_prompt_instruction") or ""),
             context_focus=context_data.get("context_focus") or user_context.get("context_focus"),
             context_briefing_note=str(
                 context_data.get("context_briefing_note") or user_context.get("context_briefing_note") or ""

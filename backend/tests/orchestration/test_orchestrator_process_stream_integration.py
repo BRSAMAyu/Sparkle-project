@@ -398,7 +398,13 @@ def orchestrator_factory(monkeypatch):
         orchestrator._apply_cohort_to_session_feedback_signal = MagicMock(side_effect=lambda signal, cohort: signal)
         orchestrator._maybe_enqueue_perceptible_insight = AsyncMock(return_value=None)
         orchestrator._maybe_enqueue_understanding_depth = AsyncMock(return_value=None)
-        orchestrator._drain_system_updates = AsyncMock(return_value=([], [], [], [], None, None))
+        orchestrator._drain_system_updates = AsyncMock(
+            return_value=([], [], [], [], None, None, {
+                "proactive_opening_message": "",
+                "pending_observation": "",
+                "post_adaptation_question": "",
+            })
+        )
         orchestrator._check_sufficiency = AsyncMock(return_value=(False, "chat"))
         orchestrator._check_goal_quality = AsyncMock(return_value=False)
         orchestrator._load_context_versions = AsyncMock(return_value={})
@@ -413,6 +419,13 @@ def orchestrator_factory(monkeypatch):
         orchestrator._track_task = MagicMock()
         orchestrator._persist_assistant_message = AsyncMock(return_value=None)
         orchestrator._record_decision = AsyncMock(return_value=None)
+        orchestrator.grounding_validator.validate_plan = AsyncMock(
+            return_value=types.SimpleNamespace(
+                is_valid=True,
+                warnings=[],
+                failure_reason="",
+            )
+        )
         orchestrator.observability.log_route_decision = AsyncMock(return_value=None)
         orchestrator.observability.log_circuit_state_change = AsyncMock(return_value=None)
         orchestrator.observability.log_collaboration_start = AsyncMock(return_value=None)

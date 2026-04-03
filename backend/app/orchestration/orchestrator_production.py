@@ -815,11 +815,21 @@ class ProductionChatOrchestrator:
                             logger.error(f"Keyword fallback failed: {e3}")
 
             # 构建 Prompt
+            if isinstance(user_context_data, dict):
+                visible_update_context = (context_data or {}).get("visible_update_context")
+                if isinstance(visible_update_context, dict):
+                    for key in ("proactive_opening_message", "pending_observation", "post_adaptation_question"):
+                        value = str(visible_update_context.get(key) or "").strip()
+                        if value:
+                            user_context_data[key] = value
+                if (context_data or {}).get("evolution_highlights"):
+                    user_context_data["evolution_highlights"] = list((context_data or {}).get("evolution_highlights") or [])
             base_system_prompt = build_system_prompt(
                 user_context_data,
                 conversation_history=conversation_context,
                 plan_context=plan_context,
                 session_feedback_instruction=str((context_data or {}).get("session_feedback_instruction") or ""),
+                dual_core_instruction=str((context_data or {}).get("dual_core_prompt_instruction") or ""),
             )
 
             if preferred_tools_hint:

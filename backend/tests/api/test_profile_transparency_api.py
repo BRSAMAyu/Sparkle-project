@@ -3,13 +3,17 @@ from uuid import uuid4
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.api.deps import get_current_user
 from app.api.v1 import profile_transparency as profile_api
 from app.api.v1.profile_transparency import router as profile_router
 from app.core.cache import cache_service
 from app.db.session import get_db
+from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionAcceptanceStatus, InterventionTriggerType
+from app.models.chat import ChatMessage, ChatSession as ChatSessionModel
 from app.models.user import User
+from app.services.intervention_record_service import InterventionRecordService
 from app.services.memory_service import MemoryService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_write_service import ProfileWriteService
@@ -167,3 +171,81 @@ async def test_preference_rollback_restores_inferred_backup(profile_client, db_s
     finally:
         cache_service.redis = original_redis
         profile_api.cache_service.redis = original_redis
+
+
+@pytest.mark.asyncio
+async def test_chat_opening_creates_visible_assistant_message(profile_client, db_session):
+    client, state = profile_client
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    state["current_user"] = type("UserStub", (), {"id": user_id})()
+    record = await InterventionRecordService(db_session).create_record(
+        user_id=user_id,
+        trigger_type=InterventionTriggerType.CONCEPT_GAP,
+        delivery_strategy=DeliveryStrategy.SUPPORTIVE,
+        delivery_channel=DeliveryChannel.CHAT,
+    )
+    await db_session.commit()
+
+    drained_updates = [
+        {
+            "type": "plan_adjusted_from_error",
+            "description": "我注意到你最近总在条件句上卡住，所以已经把相关练习提前了。",
+            "metadata": {
+                "evolution_kind": "adjustment",
+                "node_name": "条件句",
+                "intervention_id": str(record.id),
+            },
+        }
+    ]
+
+    class _FakeSystemUpdateService:
+        def __init__(self, _redis) -> None:
+            self.enqueued: list[dict] = []
+
+        async def drain(self, _user_id, limit: int = 20):
+            _ = limit
+            return list(drained_updates)
+
+        async def enqueue(self, _user_id, payload):
+            self.enqueued.append(payload)
+            return True
+
+    fake_service = _FakeSystemUpdateService(None)
+    original_factory = profile_api.SystemUpdateService
+    profile_api.SystemUpdateService = lambda _redis=None: fake_service
+
+    try:
+        conversation_id = uuid4()
+        response = client.post(
+            "/profile/chat-opening",
+            json={"conversation_id": str(conversation_id)},
+        )
+    finally:
+        profile_api.SystemUpdateService = original_factory
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["created"] is True
+    assert payload["conversation_id"] == str(conversation_id)
+    assert "条件句" in payload["content"]
+
+    session = await db_session.get(ChatSessionModel, conversation_id)
+    assert session is not None
+    message = (
+        await db_session.execute(
+            select(ChatMessage).where(ChatMessage.session_id == conversation_id)
+        )
+    ).scalar_one()
+    assert "条件句" in message.content
+    assert message.actions[0]["type"] == "next_actions"
+    await db_session.refresh(record)
+    assert record.acceptance_status == InterventionAcceptanceStatus.SEEN

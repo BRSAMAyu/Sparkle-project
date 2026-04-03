@@ -11,7 +11,9 @@ from app.models.galaxy import UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
+from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionTriggerType
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
+from app.services.intervention_record_service import InterventionRecordService
 
 
 def _utcnow() -> datetime:
@@ -81,6 +83,13 @@ class ErrorReplanBridge:
             )
             triggered_plan_ids.append(str(plan_id))
 
+        intervention_id = await self._create_error_intervention_record(
+            user_id=user_id,
+            low_mastery_nodes=low_mastery_nodes,
+            recent_error_count=recent_error_count,
+            plan_ids=triggered_plan_ids,
+        )
+
         # Emit a visible system update so the user knows the plan was adjusted.
         # This powers "stickiness moment 2": next chat open shows an AI bubble explaining
         # what changed, making the system feel like it's paying attention.
@@ -88,6 +97,7 @@ class ErrorReplanBridge:
             user_id=user_id,
             low_mastery_nodes=low_mastery_nodes,
             recent_error_count=recent_error_count,
+            intervention_id=intervention_id,
         )
 
         logger.info(
@@ -104,27 +114,50 @@ class ErrorReplanBridge:
             "recent_error_count": recent_error_count,
         }
 
+    async def _create_error_intervention_record(
+        self,
+        *,
+        user_id: UUID,
+        low_mastery_nodes: list[UUID],
+        recent_error_count: int,
+        plan_ids: list[str],
+    ) -> str | None:
+        try:
+            node_name = await self._resolve_node_name(low_mastery_nodes)
+            record = await InterventionRecordService(self.db).create_record(
+                user_id=user_id,
+                trigger_type=InterventionTriggerType.CONCEPT_GAP,
+                delivery_strategy=DeliveryStrategy.SUPPORTIVE,
+                delivery_channel=DeliveryChannel.CHAT,
+                trigger_source_ref="error_replan_bridge",
+                diagnosis_payload={
+                    "node_ids": [str(node_id) for node_id in low_mastery_nodes],
+                    "node_name": node_name,
+                    "recent_error_count": recent_error_count,
+                    "plan_ids": plan_ids,
+                    "trigger": "error_replan_bridge",
+                },
+                outcome_window_days=14,
+            )
+            await self.db.flush()
+            return str(record.id)
+        except Exception as exc:
+            logger.warning("ErrorReplanBridge: failed to create intervention record: {}", exc)
+            return None
+
     async def _notify_plan_adjusted(
         self,
         *,
         user_id: UUID,
         low_mastery_nodes: list[UUID],
         recent_error_count: int,
+        intervention_id: str | None = None,
     ) -> None:
         """Emit a system update so the user sees the plan was adjusted due to errors."""
         try:
             from app.services.system_update_service import SystemUpdateService, build_system_update
 
-            # Resolve a node name for the notification description
-            node_name = ""
-            if low_mastery_nodes:
-                from app.models.galaxy import KnowledgeNode
-                node_result = await self.db.execute(
-                    select(KnowledgeNode).where(KnowledgeNode.id == low_mastery_nodes[0])
-                )
-                node = node_result.scalar_one_or_none()
-                if node:
-                    node_name = str(node.name or "").strip()
+            node_name = await self._resolve_node_name(low_mastery_nodes)
 
             description = (
                 f"我注意到你在「{node_name}」上遇到了{recent_error_count}次相似的问题，"
@@ -146,11 +179,26 @@ class ErrorReplanBridge:
                         "node_name": node_name,
                         "error_count": recent_error_count,
                         "trigger": "error_replan_bridge",
+                        "intervention_id": intervention_id,
                     },
                 ),
             )
         except Exception as exc:
             logger.warning("ErrorReplanBridge: failed to enqueue plan_adjusted system update: {}", exc)
+
+    async def _resolve_node_name(self, node_ids: list[UUID]) -> str:
+        if not node_ids:
+            return ""
+
+        from app.models.galaxy import KnowledgeNode
+
+        node_result = await self.db.execute(
+            select(KnowledgeNode).where(KnowledgeNode.id == node_ids[0])
+        )
+        node = node_result.scalar_one_or_none()
+        if node is None:
+            return ""
+        return str(node.name or "").strip()
 
     @staticmethod
     def _extract_error_type(error: ErrorRecord) -> str:

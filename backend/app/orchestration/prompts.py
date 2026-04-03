@@ -54,6 +54,7 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "context_briefing_section": (80, 0.05),
     "intent_section": (100, 0.08),
     "session_feedback_section": (60, 0.05),
+    "visible_intelligence_section": (120, 0.10),
     "dual_core_section": (80, 0.05),
     "mode_strategy_section": (120, 0.10),
     "plan_context_section": (200, 0.10),
@@ -63,6 +64,7 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "cognitive_prism_section": (120, 0.05),
     "preference_instructions": (60, 0.05),
     "persona_section": (40, 0.04),
+    "companion_persona_section": (180, 0.16),
     "agent_persona_section": (40, 0.04),
     "agent_memory_section": (40, 0.03),
     "understanding_depth_section": (60, 0.05),
@@ -235,6 +237,8 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 {persona_section}
 
+{companion_persona_section}
+
 {agent_persona_section}
 
 ## 当前用户上下文
@@ -250,6 +254,8 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 {conversation_history_section}
 
 {context_briefing_section}
+
+{visible_intelligence_section}
 
 {intent_section}
 
@@ -875,12 +881,7 @@ def build_system_prompt(
         user_context=user_context,
         plan_context=plan_context,
     )
-    if companion_persona_section:
-        persona_section = (
-            persona_section + "\n" + companion_persona_section.strip()
-            if persona_section
-            else companion_persona_section
-        )
+    visible_intelligence_section = _format_visible_intelligence_section(user_context=user_context)
 
     agent_memory_section = ""
     if agent_memory_context:
@@ -958,6 +959,16 @@ def build_system_prompt(
                 persona_section,
                 reason="本轮以精简为主；画像信息仅作轻量提示。",
             )
+        if companion_persona_section:
+            companion_persona_section = _soften_section(
+                companion_persona_section,
+                reason="本轮以精简为主；保留陪伴 framing，但不要展开成长背景。",
+            )
+        if visible_intelligence_section:
+            visible_intelligence_section = _soften_section(
+                visible_intelligence_section,
+                reason="本轮以精简为主；只保留最关键的一句已观察到的变化。",
+            )
         if agent_persona_section:
             agent_persona_section = _soften_section(
                 agent_persona_section,
@@ -989,6 +1000,7 @@ def build_system_prompt(
     cognitive_priority = 2 if focus_decision and focus_decision.focus_mode in {"emotional_focus", "cognitive_focus"} else 3
     section_map = {
         "context_briefing_section": context_briefing_section,
+        "visible_intelligence_section": visible_intelligence_section,
         "intent_section": intent_section,
         "session_feedback_section": session_feedback_section,
         "user_context": f"[优先级：L3 背景]\n{formatted_user_context}".strip(),
@@ -1000,6 +1012,7 @@ def build_system_prompt(
         "collaboration_narrative_section": collaboration_narrative_section,
         "mode_strategy_section": mode_strategy_section,
         "persona_section": persona_section,
+        "companion_persona_section": companion_persona_section,
         "agent_persona_section": agent_persona_section,
         "agent_memory_section": agent_memory_section,
         "cognitive_prism_section": cognitive_prism_section,
@@ -1023,6 +1036,7 @@ def build_system_prompt(
         section_map,
         priority_map={
             "context_briefing_section": 0,
+            "visible_intelligence_section": 1,
             "intent_section": 1,
             "session_feedback_section": 1,
             "user_context": 3,
@@ -1034,6 +1048,7 @@ def build_system_prompt(
             "collaboration_narrative_section": 2,
             "mode_strategy_section": 2,
             "persona_section": 2,
+            "companion_persona_section": 1,
             "agent_persona_section": 2,
             "agent_memory_section": 2,
             "cognitive_prism_section": cognitive_priority,
@@ -1044,6 +1059,7 @@ def build_system_prompt(
         budget_tokens=_prompt_budget,
     )
     context_briefing_section = section_map["context_briefing_section"]
+    visible_intelligence_section = section_map["visible_intelligence_section"]
     intent_section = section_map["intent_section"]
     session_feedback_section = section_map["session_feedback_section"]
     formatted_user_context = section_map["user_context"]
@@ -1055,6 +1071,7 @@ def build_system_prompt(
     collaboration_narrative_section = section_map["collaboration_narrative_section"]
     mode_strategy_section = section_map["mode_strategy_section"]
     persona_section = section_map["persona_section"]
+    companion_persona_section = section_map["companion_persona_section"]
     agent_persona_section = section_map["agent_persona_section"]
     agent_memory_section = section_map["agent_memory_section"]
     cognitive_prism_section = section_map["cognitive_prism_section"]
@@ -1074,12 +1091,14 @@ def build_system_prompt(
                 plan_context_section=plan_context_section,
                 intent_section=intent_section,
                 session_feedback_section=session_feedback_section,
+                visible_intelligence_section=visible_intelligence_section,
                 dual_core_section=dual_core_section,
                 understanding_depth_section=understanding_depth_section,
                 orchestration_context_section=orchestration_context_section,
                 collaboration_narrative_section=collaboration_narrative_section,
                 mode_strategy_section=mode_strategy_section,
                 persona_section=persona_section,
+                companion_persona_section=companion_persona_section,
                 agent_persona_section=agent_persona_section,
                 agent_memory_section=agent_memory_section,
                 context_briefing_section=context_briefing_section,
@@ -1093,10 +1112,12 @@ def build_system_prompt(
                 mode_strategy_section,
                 task_awareness_section,
                 persona_section,
+                companion_persona_section,
                 agent_persona_section,
                 plan_context_section,
                 conversation_history_section,
                 context_briefing_section,
+                visible_intelligence_section,
                 intent_section,
                 session_feedback_section,
                 dual_core_section,
@@ -1122,6 +1143,8 @@ def build_system_prompt(
                 user_context=formatted_user_context,
                 query=user_context.get("current_query", ""),
                 context_briefing_section=context_briefing_section,
+                visible_intelligence_section=visible_intelligence_section,
+                companion_persona_section=companion_persona_section,
             )
         )
 
@@ -1129,10 +1152,12 @@ def build_system_prompt(
             mode_strategy_section,
             task_awareness_section,
             persona_section,
+            companion_persona_section,
             agent_persona_section,
             plan_context_section,
             conversation_history_section,
             context_briefing_section,
+            visible_intelligence_section,
             intent_section,
             session_feedback_section,
             dual_core_section,
@@ -1399,27 +1424,56 @@ def _format_companion_persona_section(
     if struggling_area:
         lines.append(f"- 正在挣扎的地方: {struggling_area}")
     if top_pattern:
-        lines.append(f”- 你观察到的规律: {top_pattern}”)
+        lines.append(f"- 你观察到的规律: {top_pattern}")
 
-    # Community peer context — surface sprint progress or peer insights naturally
-    cognitive_ctx = user_context.get(“cognitive_context”) if isinstance(user_context, dict) else None
+    # Community peer context - surface sprint progress or peer insights naturally.
+    cognitive_ctx = user_context.get("cognitive_context") if isinstance(user_context, dict) else None
     community_ctx = (
-        cognitive_ctx.get(“community_context”)
+        cognitive_ctx.get("community_context")
         if isinstance(cognitive_ctx, dict)
-        else user_context.get(“community_context”) if isinstance(user_context, dict) else None
+        else user_context.get("community_context") if isinstance(user_context, dict) else None
     )
-    if isinstance(community_ctx, dict) and community_ctx.get(“active_group_count”, 0) > 0:
-        sprint_progress = community_ctx.get(“sprint_progress”) or []
+    if isinstance(community_ctx, dict) and community_ctx.get("active_group_count", 0) > 0:
+        sprint_progress = community_ctx.get("sprint_progress") or []
         if sprint_progress:
-            lines.append(f”- 群组进展: {sprint_progress[0]}”)
-        elif community_ctx.get(“recent_interaction”):
-            lines.append(f”- 群组动态: 你最近 {community_ctx['recent_interaction']} 和学习群组有互动。”)
+            lines.append(f"- 群组进展: {sprint_progress[0]}")
+        elif community_ctx.get("recent_interaction"):
+            lines.append(f"- 群组动态: 你最近 {community_ctx['recent_interaction']} 和学习群组有互动。")
 
-    lines.append(“- 回答时优先承接这些已知背景，不要反复问”你的目标是什么”。”)
+    lines.append('- 回答时优先承接这些已知背景，不要反复问“你的目标是什么”。')
     # If peer context is present, hint that the AI can reference it naturally
-    if isinstance(community_ctx, dict) and community_ctx.get(“active_group_count”, 0) > 0:
-        lines.append(“- 如果适合，可以自然提及同学的进展作为激励或参考，但不要施压。”)
-    return “\n” + “\n”.join(lines)
+    if isinstance(community_ctx, dict) and community_ctx.get("active_group_count", 0) > 0:
+        lines.append("- 如果适合，可以自然提及同学的进展作为激励或参考，但不要施压。")
+    return "\n" + "\n".join(lines)
+
+
+def _format_visible_intelligence_section(*, user_context: dict) -> str:
+    proactive_opening = str(user_context.get("proactive_opening_message") or "").strip()
+    pending_observation = str(user_context.get("pending_observation") or "").strip()
+    post_adaptation_question = str(user_context.get("post_adaptation_question") or "").strip()
+    evolution_highlights = [
+        str(item).strip()
+        for item in (user_context.get("evolution_highlights") or [])
+        if str(item).strip()
+    ]
+
+    if not proactive_opening and evolution_highlights:
+        proactive_opening = evolution_highlights[0]
+    if not proactive_opening and not pending_observation and not post_adaptation_question:
+        return ""
+
+    lines = [
+        "## 本轮可感知智能 [L1 开场]",
+        "如果这轮回答适合自然开场，请先用 1-2 句话把你观察到的变化说出来，再进入任务或解释。",
+    ]
+    if proactive_opening:
+        lines.append(f"- 已发生的调整或观察: {proactive_opening}")
+    if pending_observation:
+        lines.append(f"- 可自然提起的观察问题: {pending_observation}")
+    if post_adaptation_question:
+        lines.append(f"- 若提到调整，可顺手确认: {post_adaptation_question}")
+    lines.append("- 语气要像一直在关注用户的学习伙伴，不要像系统通知或播报日志。")
+    return "\n" + "\n".join(lines)
 
 
 def _resolve_preference_instructions(

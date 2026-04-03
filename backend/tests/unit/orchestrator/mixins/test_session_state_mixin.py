@@ -32,7 +32,7 @@ async def test_drain_system_updates_returns_empty_when_no_updates(orchestrator):
     with patch("app.orchestration.session_state_mixin.SystemUpdateService") as mock_service:
         mock_service.return_value.drain = AsyncMock(return_value=[])
 
-        responses, adaptations, preferences, highlights, progress, depth = await orchestrator._drain_system_updates(
+        responses, adaptations, preferences, highlights, progress, depth, visible_context = await orchestrator._drain_system_updates(
             user_id="user-1",
         )
 
@@ -42,6 +42,11 @@ async def test_drain_system_updates_returns_empty_when_no_updates(orchestrator):
         assert highlights == []
         assert progress is None
         assert depth is None
+        assert visible_context == {
+            "proactive_opening_message": "",
+            "pending_observation": "",
+            "post_adaptation_question": "",
+        }
 
 
 @pytest.mark.asyncio
@@ -71,7 +76,7 @@ async def test_drain_system_updates_extracts_evolution_kinds(orchestrator):
     with patch("app.orchestration.session_state_mixin.SystemUpdateService") as mock_service:
         mock_service.return_value.drain = AsyncMock(return_value=updates)
 
-        responses, adaptations, preferences, highlights, progress, depth = await orchestrator._drain_system_updates(
+        responses, adaptations, preferences, highlights, progress, depth, visible_context = await orchestrator._drain_system_updates(
             user_id="user-1",
         )
 
@@ -81,6 +86,7 @@ async def test_drain_system_updates_extracts_evolution_kinds(orchestrator):
         assert preferences[0]["key"] == "value"
         assert len(highlights) == 1
         assert highlights[0] == "Important progress!"
+        assert visible_context["proactive_opening_message"] == ""
 
 
 @pytest.mark.asyncio
@@ -98,7 +104,7 @@ async def test_drain_system_updates_extracts_progress_snapshot(orchestrator):
     with patch("app.orchestration.session_state_mixin.SystemUpdateService") as mock_service:
         mock_service.return_value.drain = AsyncMock(return_value=updates)
 
-        responses, adaptations, preferences, highlights, progress, depth = await orchestrator._drain_system_updates(
+        responses, adaptations, preferences, highlights, progress, depth, _ = await orchestrator._drain_system_updates(
             user_id="user-1",
         )
 
@@ -124,7 +130,7 @@ async def test_drain_system_updates_extracts_understanding_depth(orchestrator):
     with patch("app.orchestration.session_state_mixin.SystemUpdateService") as mock_service:
         mock_service.return_value.drain = AsyncMock(return_value=updates)
 
-        responses, adaptations, preferences, highlights, progress, depth = await orchestrator._drain_system_updates(
+        responses, adaptations, preferences, highlights, progress, depth, _ = await orchestrator._drain_system_updates(
             user_id="user-1",
         )
 
@@ -148,9 +154,41 @@ async def test_drain_system_updates_generates_highlight_for_understanding_depth(
     with patch("app.orchestration.session_state_mixin.SystemUpdateService") as mock_service:
         mock_service.return_value.drain = AsyncMock(return_value=updates)
 
-        responses, adaptations, preferences, highlights, progress, depth = await orchestrator._drain_system_updates(
+        responses, adaptations, preferences, highlights, progress, depth, _ = await orchestrator._drain_system_updates(
             user_id="user-1",
         )
 
         # Should generate a highlight about understanding depth
         assert any("理解已提升" in h for h in highlights)
+
+
+@pytest.mark.asyncio
+async def test_drain_system_updates_builds_visible_prompt_context(orchestrator):
+    updates = [
+        {
+            "type": "plan_adjusted_from_error",
+            "description": "我注意到你在条件句上连续卡住了 3 次，已经把相关练习提前。",
+            "metadata": {
+                "evolution_kind": "adjustment",
+                "node_name": "条件句",
+            },
+        },
+        {
+            "metadata": {
+                "evolution_kind": "proactive_insight",
+                "insight_text": "你最近总在周四中断学习。",
+            }
+        },
+    ]
+
+    with patch("app.orchestration.session_state_mixin.SystemUpdateService") as mock_service:
+        mock_service.return_value.drain = AsyncMock(return_value=updates)
+
+        _, _, _, highlights, _, _, visible_context = await orchestrator._drain_system_updates(
+            user_id="user-1",
+        )
+
+        assert any("条件句" in item for item in highlights)
+        assert "条件句" in visible_context["proactive_opening_message"]
+        assert "周四中断学习" in visible_context["pending_observation"]
+        assert "合适吗" in visible_context["post_adaptation_question"]

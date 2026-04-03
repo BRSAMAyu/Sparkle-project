@@ -5,12 +5,16 @@
 ## 推荐阅读顺序
 
 1. [00_项目概览/README.md](./00_项目概览/README.md)
-2. [05_部署与运维/README.md](./05_部署与运维/README.md)
-3. [02_技术设计文档/README.md](./02_技术设计文档/README.md)
-4. [01_核心模块文档/README.md](./01_核心模块文档/README.md)
-5. [03_功能实现指南/README.md](./03_功能实现指南/README.md)
-6. [engineering/README.md](./engineering/README.md)
-7. [verification/README.md](./verification/README.md)
+2. [product/SPARKLE_AI_NATIVE_SYSTEM_CONSENSUS_2026-04-03.md](./product/SPARKLE_AI_NATIVE_SYSTEM_CONSENSUS_2026-04-03.md)
+3. [product/SPARKLE_COMPANION_CONSTITUTION_AND_SELF_GROWTH_PROTOCOL_2026-04-03.md](./product/SPARKLE_COMPANION_CONSTITUTION_AND_SELF_GROWTH_PROTOCOL_2026-04-03.md)
+4. [product/SPARKLE_BRIDGE_IMPLEMENTATION_PLAN_2026-04-03.md](./product/SPARKLE_BRIDGE_IMPLEMENTATION_PLAN_2026-04-03.md)
+5. [product/implementation/SPARKLE_SOUL_RUNTIME_TASK_PACK_2026-04-04.md](./product/implementation/SPARKLE_SOUL_RUNTIME_TASK_PACK_2026-04-04.md)
+6. [05_部署与运维/README.md](./05_部署与运维/README.md)
+7. [02_技术设计文档/README.md](./02_技术设计文档/README.md)
+8. [01_核心模块文档/README.md](./01_核心模块文档/README.md)
+9. [03_功能实现指南/README.md](./03_功能实现指南/README.md)
+10. [engineering/README.md](./engineering/README.md)
+11. [verification/README.md](./verification/README.md)
 
 ## 当前主干目录
 
@@ -20,6 +24,7 @@
 | [01_核心模块文档](./01_核心模块文档/) | 业务模块边界与职责 | 理解功能归属 |
 | [02_技术设计文档](./02_技术设计文档/) | API、协议、数据库、关键设计 | 改接口、协议或数据模型 |
 | [03_功能实现指南](./03_功能实现指南/) | 仍可执行的实施与接入指南 | 做特定功能或联调 |
+| [product](./product/) | 当前产品共识、路线图、AI-native 方向文档 | 做产品优先级、体验和长期方向判断 |
 | [05_部署与运维](./05_部署与运维/) | 本地开发、环境、部署、排障 | 启动环境与上线 |
 | [engineering](./engineering/) | CI 规则、工程门禁、规范 | 改工程基线或质量门禁 |
 | [verification](./verification/) | 当前验收基线与发布检查 | 回归、签收、发布前检查 |

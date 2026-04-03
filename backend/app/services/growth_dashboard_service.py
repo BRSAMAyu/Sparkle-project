@@ -36,6 +36,7 @@ class GrowthDashboardService:
             user=resolved_user,
             active_plan=active_plan,
             growth_signal=growth_signal,
+            most_important_task=most_important_task,
         )
         active_plan_progress = self._serialize_active_plan(active_plan)
 
@@ -74,11 +75,13 @@ class GrowthDashboardService:
         user: User,
         active_plan: Plan | None,
         growth_signal: dict[str, Any] | None,
+        most_important_task: dict[str, Any] | None,
     ) -> dict[str, Any]:
         period_start = _utcnow() - timedelta(days=self.LOOKBACK_DAYS)
         focus_minutes = await self._sum_focus_minutes(user_id, period_start)
         tasks_completed = await self._count_completed_tasks(user_id, period_start)
         streak_days = await self._get_current_streak_days(user_id)
+        weakest_area = await self._get_weakest_area(user_id)
         display_name = str(user.nickname or user.full_name or user.username or "Sparkle").strip()
 
         signal_label = ""
@@ -89,15 +92,38 @@ class GrowthDashboardService:
 
         focus_hours = round(focus_minutes / 60.0, 1)
         plan_label = str(active_plan.subject or active_plan.name) if active_plan else ""
-        headline_label = signal_label or plan_label or "学习节奏"
-        if signal_delta > 0:
-            headline = f"{display_name}，你本周在{headline_label}上进步了 {signal_delta}%"
+        if tasks_completed > 0 and signal_label:
+            headline = f"{display_name}，上周你完成了 {tasks_completed} 个任务，在「{signal_label}」上也看到了真实进展。"
+        elif tasks_completed > 0:
+            headline = f"{display_name}，上周你完成了 {tasks_completed} 个任务，学习节奏正在重新站稳。"
+        elif signal_delta > 0 and signal_label:
+            headline = f"{display_name}，这周你在「{signal_label}」上往前推了 {signal_delta:.0f} 个点。"
         else:
-            headline = f"{display_name}，这周我们继续把重心放在 {headline_label or '最重要的进展'} 上"
+            headline = f"{display_name}，今天我先帮你把真正关键的一步放到前面。"
 
-        subtitle = "把证据放在前面，让今天的选择更清楚。"
-        if active_plan and active_plan.target_date:
-            subtitle = f"当前计划「{active_plan.name}」仍在推进中，离目标日还有 {self._days_until(active_plan.target_date)} 天。"
+        subtitle_parts: list[str] = []
+        if weakest_area:
+            subtitle_parts.append(f"现在最该补的是「{weakest_area}」")
+        elif plan_label:
+            subtitle_parts.append(f"当前最值得盯住的是「{plan_label}」")
+
+        if most_important_task and most_important_task.get("title"):
+            subtitle_parts.append(f"我建议你先做「{most_important_task['title']}」")
+        elif active_plan and active_plan.target_date:
+            subtitle_parts.append(
+                f"当前计划「{active_plan.name}」离目标日还有 {self._days_until(active_plan.target_date)} 天"
+            )
+
+        if streak_days > 0:
+            subtitle_parts.append(f"你已经连续 {streak_days} 天保持推进")
+        elif focus_hours > 0:
+            subtitle_parts.append(f"最近 7 天已经积累了 {focus_hours} 小时专注时间")
+
+        subtitle = "。".join(part.rstrip("。") for part in subtitle_parts if part).strip()
+        if subtitle:
+            subtitle = f"{subtitle}。"
+        else:
+            subtitle = "先把今天最有杠杆的一步做出来，后面的节奏就会顺很多。"
 
         return {
             "headline": headline,
@@ -214,6 +240,21 @@ class GrowthDashboardService:
                 "evidence_count": fallback_tasks,
             }
         return None
+
+    async def _get_weakest_area(self, user_id: UUID) -> str | None:
+        stmt = (
+            select(KnowledgeNode.name, UserNodeStatus.mastery_score)
+            .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
+            .where(UserNodeStatus.user_id == user_id)
+            .order_by(UserNodeStatus.mastery_score.asc(), KnowledgeNode.name.asc())
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        row = result.one_or_none()
+        if row is None:
+            return None
+        name = str(row.name or "").strip()
+        return name or None
 
     async def _get_most_important_task(self, user_id: UUID) -> dict[str, Any] | None:
         stmt = (

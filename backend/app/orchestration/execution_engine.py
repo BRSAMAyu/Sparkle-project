@@ -1470,7 +1470,7 @@ class ExecutionEngineMixin:
             "metadata": response_metadata,
         }
         await self._cache_response(session_id, request_id, final_response_data)
-        update_responses, _, _, _, _, _ = await self._drain_system_updates(user_id)
+        update_responses, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
         for update_resp in update_responses:
             yield update_resp
 

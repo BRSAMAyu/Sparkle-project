@@ -200,6 +200,27 @@ extension ChatNotifierActions on ChatNotifier {
           lastActionMessage: l10n.chatFeedbackThanks,
         );
         return;
+      case 'intervention_feedback':
+        final interventionId = _actionString(payload, 'intervention_id');
+        final feedbackAction = _actionString(payload, 'feedback_action');
+        if (interventionId.isEmpty || feedbackAction.isEmpty) {
+          return;
+        }
+        await _ref.read(interventionActionServiceProvider).reportAction(
+          recordId: interventionId,
+          action: feedbackAction,
+          actionPayload: {
+            'surface': 'chat_opening',
+            'source': 'next_actions_widget',
+          },
+        );
+        state = state.copyWith(
+          lastActionStatus: 'intervention_feedback',
+          lastActionMessage: _actionString(payload, 'message').isNotEmpty
+              ? _actionString(payload, 'message')
+              : l10n.chatFeedbackThanks,
+        );
+        return;
       default:
         debugPrint('ℹ️ Unsupported widget action: $actionType');
     }
@@ -561,9 +582,9 @@ extension ChatNotifierActions on ChatNotifier {
 
     // Phase 1B: Trigger close-to-unlock check
     unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
-    unawaited(_ref
-        .read(homeCloseToUnlockProvider.notifier)
-        .fetch(forceRefresh: true));
+    unawaited(
+      _ref.read(homeCloseToUnlockProvider.notifier).fetch(forceRefresh: true),
+    );
 
     // Clear after delay
     Future.delayed(const Duration(seconds: 2), () {

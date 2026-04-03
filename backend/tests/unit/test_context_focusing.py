@@ -108,11 +108,14 @@ def test_user_context_budget_is_reserved_for_richer_profile_payloads() -> None:
     min_tokens, max_ratio = _SECTION_BUDGET_RATIO["user_context"]
     plan_tokens, _ = _SECTION_BUDGET_RATIO["plan_context_section"]
     cognitive_tokens, _ = _SECTION_BUDGET_RATIO["cognitive_prism_section"]
+    companion_tokens, companion_ratio = _SECTION_BUDGET_RATIO["companion_persona_section"]
 
     assert min_tokens >= 350
     assert plan_tokens >= 200
     assert cognitive_tokens >= 120
     assert max_ratio >= 0.18
+    assert companion_tokens >= 160
+    assert companion_ratio >= 0.14
 
 
 def test_build_system_prompt_defaults_to_five_episodic_memories() -> None:
@@ -218,6 +221,23 @@ def test_build_system_prompt_includes_companion_persona_context() -> None:
     assert "- 本周在努力的事: 热力学冲刺计划 / 当前阶段 冲刺阶段" in prompt
     assert "- 正在挣扎的地方: 热力学第二定律相关概念仍然容易混淆" in prompt
     assert "- 你观察到的规律: 完美主义回避循环" in prompt
+
+
+def test_build_system_prompt_includes_visible_intelligence_opening() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "proactive_opening_message": "我注意到你在条件句上连续卡住了几次，已经把相关练习提前。",
+            "pending_observation": "你最近总在周四掉线，这和你的真实节奏一致吗？",
+            "post_adaptation_question": "我把这周安排放轻了一点，这样对你来说合适吗？",
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "## 本轮可感知智能 [L1 开场]" in prompt
+    assert "已经把相关练习提前" in prompt
+    assert "周四掉线" in prompt
+    assert "这样对你来说合适吗" in prompt
 
 
 @pytest.mark.asyncio

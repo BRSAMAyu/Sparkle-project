@@ -395,6 +395,10 @@ class _GrowthStatusCard extends StatelessWidget {
     if (growthStatus == null) {
       return const SizedBox.shrink();
     }
+    final isChinese = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('zh');
 
     return ContentConstraint(
       child: Padding(
@@ -424,7 +428,7 @@ class _GrowthStatusCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Growth Status',
+                isChinese ? 'Sparkle 的观察' : 'What Sparkle Noticed',
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: DS.textSecondary,
                   letterSpacing: 0.2,
@@ -464,6 +468,10 @@ class _MostImportantThingCard extends StatelessWidget {
     if (task == null) {
       return const SizedBox.shrink();
     }
+    final isChinese = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('zh');
 
     return ContentConstraint(
       child: Padding(
@@ -476,7 +484,7 @@ class _MostImportantThingCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Today's Most Important Thing",
+                isChinese ? '今天最值得先做的一步' : 'Best Next Step',
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -513,7 +521,9 @@ class _MostImportantThingCard extends StatelessWidget {
                   if (task!.daysToDeadline != null)
                     _DashboardChip(
                       icon: Icons.timelapse_rounded,
-                      label: '${task!.daysToDeadline} days left',
+                      label: isChinese
+                          ? '还有 ${task!.daysToDeadline} 天'
+                          : '${task!.daysToDeadline} days left',
                     ),
                 ],
               ),
@@ -522,14 +532,14 @@ class _MostImportantThingCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: SparkleButton.primary(
-                      label: 'Start This',
+                      label: isChinese ? '先做这个' : 'Start Here',
                       onPressed: () => context.push('/tasks/${task!.id}'),
                     ),
                   ),
                   const SizedBox(width: DS.spacing10),
                   Expanded(
                     child: SparkleButton.ghost(
-                      label: 'View Tasks',
+                      label: isChinese ? '查看全部任务' : 'View Tasks',
                       onPressed: () => context.push('/tasks'),
                     ),
                   ),
@@ -553,6 +563,10 @@ class _GrowthSignalCard extends StatelessWidget {
     if (signal == null) {
       return const SizedBox.shrink();
     }
+    final isChinese = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('zh');
 
     return ContentConstraint(
       child: Padding(
@@ -581,7 +595,7 @@ class _GrowthSignalCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Growth Signal',
+                isChinese ? '这段时间最明显的变化' : 'Growth Signal',
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -603,7 +617,9 @@ class _GrowthSignalCard extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing10),
               Text(
-                'Source: ${signal!.source}',
+                isChinese
+                    ? '依据：${signal!.source}'
+                    : 'Source: ${signal!.source}',
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -626,6 +642,10 @@ class _ActivePlanProgressCard extends StatelessWidget {
     if (plan == null) {
       return const SizedBox.shrink();
     }
+    final isChinese = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('zh');
 
     return ContentConstraint(
       child: Padding(
@@ -638,7 +658,7 @@ class _ActivePlanProgressCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Active Plan Progress',
+                isChinese ? '当前主计划进度' : 'Active Plan Progress',
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -652,7 +672,9 @@ class _ActivePlanProgressCard extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing6),
               Text(
-                'Phase: ${plan!.phase.isEmpty ? 'in progress' : plan!.phase}',
+                isChinese
+                    ? '阶段：${plan!.phase.isEmpty ? '进行中' : plan!.phase}'
+                    : 'Phase: ${plan!.phase.isEmpty ? 'in progress' : plan!.phase}',
                 style: context.sparkleTypography.bodyMedium.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -672,7 +694,9 @@ class _ActivePlanProgressCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Progress ${(plan!.progress * 100).round()}%',
+                      isChinese
+                          ? '进度 ${(plan!.progress * 100).round()}%'
+                          : 'Progress ${(plan!.progress * 100).round()}%',
                       style: context.sparkleTypography.labelLarge.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -680,7 +704,9 @@ class _ActivePlanProgressCard extends StatelessWidget {
                   ),
                   if (plan!.daysToDeadline != null)
                     Text(
-                      '${plan!.daysToDeadline} days to deadline',
+                      isChinese
+                          ? '距离截止还有 ${plan!.daysToDeadline} 天'
+                          : '${plan!.daysToDeadline} days to deadline',
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: DS.textSecondary,
                       ),

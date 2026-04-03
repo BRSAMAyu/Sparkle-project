@@ -42,6 +42,57 @@ REALTIME_VERSION_DOMAINS = ("tasks", "plans", "focus", "progress", "prefs")
 class SessionStateMixin:
     """Mixin providing session-state helpers extracted from Orchestrator."""
 
+    @staticmethod
+    def _build_system_update_prompt_context(updates: list[dict[str, Any]]) -> dict[str, str]:
+        proactive_opening_message = ""
+        pending_observation = ""
+        post_adaptation_question = ""
+
+        for update in updates:
+            if not isinstance(update, dict):
+                continue
+            update_type = str(update.get("type") or "").strip()
+            description = str(update.get("description") or "").strip()
+            metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+            evolution_kind = str(metadata.get("evolution_kind") or "").strip()
+
+            if not proactive_opening_message and description and (
+                update_type == "plan_adjusted_from_error"
+                or evolution_kind in {"adjustment", "plan_reasoning", "progress_comparison"}
+            ):
+                proactive_opening_message = description
+
+            if not pending_observation:
+                if evolution_kind == "proactive_insight":
+                    insight_text = str(metadata.get("insight_text") or "").strip()
+                    if insight_text:
+                        pending_observation = (
+                            insight_text if "？" in insight_text or "?" in insight_text else f"{insight_text} 这和你的感受一致吗？"
+                        )
+                elif evolution_kind == "weekly_learning_report":
+                    weekly_summary = str(metadata.get("weekly_summary") or "").strip()
+                    if weekly_summary:
+                        pending_observation = (
+                            weekly_summary
+                            if "？" in weekly_summary or "?" in weekly_summary
+                            else f"{weekly_summary} 你也有这种感觉吗？"
+                        )
+
+            if not post_adaptation_question and (
+                update_type == "plan_adjusted_from_error" or evolution_kind == "adjustment"
+            ):
+                node_name = str(metadata.get("node_name") or "").strip()
+                if node_name:
+                    post_adaptation_question = f"我把和「{node_name}」相关的安排提前了一些，这样调整对你来说合适吗？"
+                else:
+                    post_adaptation_question = "我刚微调了接下来的安排，这样的调整对你来说合适吗？"
+
+        return {
+            "proactive_opening_message": proactive_opening_message,
+            "pending_observation": pending_observation,
+            "post_adaptation_question": post_adaptation_question,
+        }
+
     async def _drain_system_updates(
         self,
         user_id: str,
@@ -52,6 +103,7 @@ class SessionStateMixin:
         list[str],
         dict[str, Any] | None,
         dict[str, Any] | None,
+        dict[str, str],
     ]:
         updates = await SystemUpdateService(getattr(self, "redis", None)).drain(user_id, limit=20)
         responses: list[agent_service_pb2.ChatResponse] = []
@@ -60,7 +112,13 @@ class SessionStateMixin:
         evolution_highlights: list[str] = []
         progress_snapshot: dict[str, Any] | None = None
         understanding_depth_update: dict[str, Any] | None = None
+        visible_prompt_context = self._build_system_update_prompt_context(updates)
         for update in updates:
+            if isinstance(update, dict):
+                metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+                update["seen_in_chat"] = True
+                if isinstance(metadata, dict):
+                    metadata["seen_in_chat"] = True
             metadata = update.get("metadata") if isinstance(update, dict) else None
             if isinstance(metadata, dict):
                 if metadata.get("evolution_kind") == "adaptation_record" and isinstance(metadata.get("adaptation_record"), dict):
@@ -89,6 +147,10 @@ class SessionStateMixin:
                     depth_payload = metadata.get("understanding_depth")
                     if isinstance(depth_payload, dict) and depth_payload.get("level"):
                         evolution_highlights.append(f"我对你的理解已提升到 {depth_payload['level']} 阶段。")
+            if isinstance(update, dict) and str(update.get("description") or "").strip():
+                update_type = str(update.get("type") or "").strip()
+                if update_type == "plan_adjusted_from_error":
+                    evolution_highlights.append(str(update["description"]).strip())
             widget_struct = struct_pb2.Struct()
             widget_struct.update(update)
             responses.append(
@@ -111,6 +173,7 @@ class SessionStateMixin:
             evolution_highlights[:3],
             progress_snapshot,
             understanding_depth_update,
+            visible_prompt_context,
         )
 
     @staticmethod
