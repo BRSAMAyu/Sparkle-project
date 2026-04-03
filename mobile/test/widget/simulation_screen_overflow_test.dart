@@ -47,6 +47,7 @@ class _FakeSimulationRepository implements SimulationRepository {
   Future<SimulationSessionModel> continueSimulation({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) async =>
       const SimulationSessionModel(
         id: 's-overflow',
@@ -62,14 +63,45 @@ class _FakeSimulationRepository implements SimulationRepository {
   Stream<SimulationStreamEventModel> continueSimulationStream({
     required String sessionId,
     required String userResponse,
+    int? plannedRoundCount,
   }) =>
       const Stream<SimulationStreamEventModel>.empty();
+
+  @override
+  Future<SimulationSessionModel> getSession(String sessionId) async =>
+      const SimulationSessionModel(
+        id: 's-overflow',
+        scenarioKey: 'study_group',
+        state: 'COMPLETED',
+        topic: '特征值与特征向量',
+        participants: <SimulationParticipantModel>[],
+        rounds: <SimulationRoundModel>[],
+        insightSummary: '已完成',
+      );
 }
 
 class _StaticSimulationNotifier extends SimulationNotifier {
   _StaticSimulationNotifier(SimulationState initialState)
       : super(_FakeSimulationRepository(), _FakeRef()) {
     state = initialState;
+  }
+
+  @override
+  Future<void> loadRecommendedSeeds({
+    String? scenarioKey,
+    int limit = 3,
+    bool silent = false,
+  }) async {}
+}
+
+class _ControllableSimulationNotifier extends SimulationNotifier {
+  _ControllableSimulationNotifier(SimulationState initialState)
+      : super(_FakeSimulationRepository(), _FakeRef()) {
+    state = initialState;
+  }
+
+  void setSimulationState(SimulationState nextState) {
+    state = nextState;
   }
 
   @override
@@ -184,5 +216,70 @@ void main() {
     expect(find.text('数学专家'), findsWidgets);
     expect(find.text('反方辩手'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('new live session does not yank immersive view to bottom',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final notifier = _ControllableSimulationNotifier(const SimulationState());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          simulationProvider.overrideWith((ref) => notifier),
+        ],
+        child: const MaterialApp(
+          home: SimulationScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    notifier.setSimulationState(
+      SimulationState(
+        session: SimulationSessionModel(
+          id: 'live-session-1',
+          scenarioKey: 'study_group',
+          state: 'RUNNING',
+          topic: '用讨论法梳理二叉树遍历',
+          participants: const <SimulationParticipantModel>[],
+          rounds: List<SimulationRoundModel>.generate(
+            18,
+            (index) => SimulationRoundModel(
+              round: index + 1,
+              speaker: index.isEven ? '数学专家' : '学习伙伴',
+              message: '第 ${index + 1} 轮讨论，围绕遍历顺序、递归心智模型和易错点继续展开。',
+              turnGoal: index == 0 ? 'open' : 'refine',
+            ),
+          ),
+          insightSummary: '这轮重点是把先序、中序、后序和层序放回同一个结构图里理解。',
+        ),
+        liveRounds: List<SimulationRoundModel>.generate(
+          18,
+          (index) => SimulationRoundModel(
+            round: index + 1,
+            speaker: index.isEven ? '数学专家' : '学习伙伴',
+            message: '第 ${index + 1} 轮讨论，围绕遍历顺序、递归心智模型和易错点继续展开。',
+            turnGoal: index == 0 ? 'open' : 'refine',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    final immersiveScrollable = tester.state<ScrollableState>(
+      find.descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      ),
+    );
+
+    expect(immersiveScrollable.position.pixels, 0);
   });
 }

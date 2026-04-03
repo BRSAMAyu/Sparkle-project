@@ -90,6 +90,62 @@ async def test_build_dual_core_input_tolerates_plan_progress_failures(orchestrat
 
 
 @pytest.mark.asyncio
+async def test_build_dual_core_input_includes_cognitive_patterns_and_routing_profile(orchestrator):
+    user_id = str(uuid.uuid4())
+    fake_patterns = [
+        SimpleNamespace(
+            pattern_name="完美主义回避循环",
+            pattern_type="execution",
+            confidence_score=0.78,
+            description="总想准备到完美才开始。",
+        ),
+        SimpleNamespace(
+            pattern_name="认知盲点",
+            pattern_type="cognitive",
+            confidence_score=0.68,
+            description="在相似概念上会重复误解。",
+        ),
+    ]
+
+    with (
+        patch("app.orchestration.routing_engine.PlanProgressService") as progress_service_cls,
+        patch("app.orchestration.routing_engine.RoutingProfileService") as profile_service_cls,
+        patch("app.orchestration.routing_engine.CognitiveService") as cognitive_service_cls,
+    ):
+        progress_service_cls.return_value.evaluate_progress = AsyncMock(
+            return_value=SimpleNamespace(severity="warning")
+        )
+        profile_service_cls.return_value.get_profile = AsyncMock(
+            return_value={
+                "procrastination_threshold": 0.42,
+                "emotional_sensitivity": 0.51,
+                "directness_preference": 0.47,
+            }
+        )
+        cognitive_service_cls.return_value.get_user_patterns = AsyncMock(return_value=fake_patterns)
+
+        routing_input = await orchestrator._build_dual_core_input(
+            active_db=object(),
+            user_id=user_id,
+            plan_id=uuid.uuid4(),
+            user_context_payload=None,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.81,
+            ),
+            information_sufficient=True,
+        )
+
+    assert routing_input.routing_profile["procrastination_threshold"] == pytest.approx(0.42)
+    assert routing_input.procrastination_pattern is True
+    assert routing_input.cognitive_mode_suggested is True
+    assert routing_input.suggested_verbosity == "supportive"
+    assert routing_input.current_guidance
+    assert routing_input.behavior_pattern_details[0]["pattern_name"] == "完美主义回避循环"
+
+
+@pytest.mark.asyncio
 async def test_apply_dual_core_routing_for_cognitive_first_rewrites_langgraph_route(orchestrator):
     decision = DualCoreDecision(
         mode="cognitive_first",
@@ -136,6 +192,61 @@ async def test_apply_dual_core_routing_for_cognitive_first_rewrites_langgraph_ro
     emitted = stream_callback.await_args.args[0]
     assert emitted.metadata
     assert "ux_progress" in emitted.metadata
+
+
+@pytest.mark.asyncio
+async def test_apply_dual_core_routing_persists_current_guidance_in_snapshot(orchestrator):
+    decision = DualCoreDecision(
+        mode="balanced",
+        reason="need a lighter cognitive bridge",
+        cognitive_adjustments=["先降摩擦"],
+        execution_constraints=[],
+        routing_debug={"explicit_procrastination_signal": True},
+    )
+    orchestrator.dual_core_router.route.return_value = decision
+    state = SimpleNamespace(context_data={"plan_metadata": {}})
+
+    with patch.object(
+        orchestrator,
+        "_build_dual_core_input",
+        AsyncMock(
+            return_value=SimpleNamespace(
+                intent="plan",
+                intent_confidence=0.76,
+                primary_challenge_area="execution",
+                recent_sentiment_distribution={"neutral": 2},
+                recent_task_feedback_distribution={"too_long": 1},
+                behavior_pattern_names=["完美主义回避循环"],
+                behavior_pattern_details=[{"pattern_name": "完美主义回避循环"}],
+                behavior_pattern_types={"execution": 1},
+                plan_health_status="warning",
+                routing_profile={"procrastination_threshold": 0.6},
+                current_guidance="优先先搭桥，再给任务。",
+            )
+        ),
+    ):
+        await orchestrator._apply_dual_core_routing(
+            route_decision=RouteDecision(
+                execution_mode="hybrid",
+                reason="needs mixed handling",
+                risk_level="medium",
+                confidence=0.7,
+            ),
+            state=state,
+            active_db=None,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=None,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.76,
+            ),
+            information_sufficient=True,
+            stream_callback=AsyncMock(),
+        )
+
+    assert state.context_data["dual_core_signal_snapshot"]["current_guidance"] == "优先先搭桥，再给任务。"
 
 
 @pytest.mark.asyncio

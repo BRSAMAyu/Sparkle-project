@@ -107,6 +107,9 @@ extension ChatNotifierActions on ChatNotifier {
                   goal: _actionString(payload, 'goal').isNotEmpty
                       ? _actionString(payload, 'goal')
                       : null,
+                  source: _actionString(payload, 'source').isNotEmpty
+                      ? _actionString(payload, 'source')
+                      : null,
                 );
         if (intent == null) {
           final message = _ref.read(taskListProvider).error ?? 'AI 执行发起失败';
@@ -145,6 +148,26 @@ extension ChatNotifierActions on ChatNotifier {
               ? _actionString(payload, 'route')
               : '${TaskRoutes.home}/$taskId/execute?origin=chat',
         );
+        return;
+      case 'retry_execution':
+        final intentId = _actionString(payload, 'intent_id');
+        if (intentId.isEmpty) {
+          return;
+        }
+        final retried = await _ref
+            .read(taskListProvider.notifier)
+            .retryExecutionIntent(intentId);
+        if (retried == null) {
+          state = state.copyWith(
+            lastActionStatus: 'failed',
+            lastActionMessage: '重试没有成功发起',
+          );
+          return;
+        }
+        final taskId = retried.taskId;
+        if (taskId.isNotEmpty) {
+          _queueNavigation('${TaskRoutes.home}/$taskId/execute?origin=chat');
+        }
         return;
       case 'start_focus':
         final taskId = _actionString(payload, 'task_id');
@@ -317,6 +340,17 @@ extension ChatNotifierActions on ChatNotifier {
         action.data['request_id']?.toString() ??
         '';
     if (interventionId.isNotEmpty) {
+      unawaited(
+        _ref.read(interventionActionServiceProvider).reportAction(
+          recordId: interventionId,
+          action: 'accepted',
+          actionPayload: {
+            'surface': 'chat',
+            'source': 'chat_action_card',
+            'widget_type': action.type,
+          },
+        ),
+      );
       _chatRepository.sendInterventionFeedback(
         requestId: interventionId,
         feedbackType: 'accept',
@@ -367,6 +401,17 @@ extension ChatNotifierActions on ChatNotifier {
         action.data['request_id']?.toString() ??
         '';
     if (interventionId.isNotEmpty) {
+      unawaited(
+        _ref.read(interventionActionServiceProvider).reportAction(
+          recordId: interventionId,
+          action: 'dismissed',
+          actionPayload: {
+            'surface': 'chat',
+            'source': 'chat_action_card',
+            'widget_type': action.type,
+          },
+        ),
+      );
       _chatRepository.sendInterventionFeedback(
         requestId: interventionId,
         feedbackType: 'reject',
@@ -424,10 +469,10 @@ extension ChatNotifierActions on ChatNotifier {
       traceId: message.traceId,
       meta: {
         'message_id': message.id,
-        if ((message.meta?.chatMode?.isNotEmpty ?? false))
-          'chat_mode': message.meta!.chatMode!,
-        if ((message.meta?.reasoningMode?.isNotEmpty ?? false))
-          'reasoning_mode': message.meta!.reasoningMode!,
+        if (message.meta?.chatMode?.isNotEmpty ?? false)
+          'chat_mode': message.meta?.chatMode ?? '',
+        if (message.meta?.reasoningMode?.isNotEmpty ?? false)
+          'reasoning_mode': message.meta?.reasoningMode ?? '',
         if (selectedExpertsMeta != null)
           'selected_experts': selectedExpertsMeta,
       },
@@ -515,10 +560,10 @@ extension ChatNotifierActions on ChatNotifier {
     );
 
     // Phase 1B: Trigger close-to-unlock check
-    _ref.read(closeToUnlockProvider.notifier).triggerCheck();
-    unawaited(
-      _ref.read(homeCloseToUnlockProvider.notifier).fetch(forceRefresh: true),
-    );
+    unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
+    unawaited(_ref
+        .read(homeCloseToUnlockProvider.notifier)
+        .fetch(forceRefresh: true));
 
     // Clear after delay
     Future.delayed(const Duration(seconds: 2), () {
@@ -545,11 +590,10 @@ extension ChatNotifierActions on ChatNotifier {
 
     // 直接将通知添加到通知中心
     try {
-      final notificationCenter = _ref.read(notificationCenterProvider.notifier);
-      notificationCenter.handleNewNotification(
-        notificationData: event.fullNotificationData,
-        notificationType: event.notificationType,
-      );
+      _ref.read(notificationCenterProvider.notifier).handleNewNotification(
+            notificationData: event.fullNotificationData,
+            notificationType: event.notificationType,
+          );
       debugPrint(
         '✅ Notification added to notification center: ${event.notificationId}',
       );

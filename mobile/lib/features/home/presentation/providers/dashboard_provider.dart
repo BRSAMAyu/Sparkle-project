@@ -15,6 +15,10 @@ class DashboardState {
     required this.cognitive,
     this.nextIntentForecast,
     this.growth,
+    this.growthStatus,
+    this.mostImportantTask,
+    this.growthSignal,
+    this.activePlanProgress,
     this.isLoading = false,
     this.error,
   });
@@ -27,6 +31,10 @@ class DashboardState {
         nextActions = const [],
         cognitive = CognitiveData(status: 'empty'),
         nextIntentForecast = null,
+        growthStatus = null,
+        mostImportantTask = null,
+        growthSignal = null,
+        activePlanProgress = null,
         isLoading = true,
         error = null;
 
@@ -38,6 +46,10 @@ class DashboardState {
         nextActions = const [],
         cognitive = CognitiveData(status: 'empty'),
         nextIntentForecast = null,
+        growthStatus = null,
+        mostImportantTask = null,
+        growthSignal = null,
+        activePlanProgress = null,
         isLoading = false,
         error = errorMessage;
   final WeatherData weather;
@@ -47,6 +59,10 @@ class DashboardState {
   final List<TaskData> nextActions;
   final CognitiveData cognitive;
   final PredictionInsightData? nextIntentForecast;
+  final GrowthStatusData? growthStatus;
+  final PriorityTaskData? mostImportantTask;
+  final GrowthSignalData? growthSignal;
+  final ActivePlanProgressData? activePlanProgress;
   final bool isLoading;
   final String? error;
 
@@ -58,6 +74,10 @@ class DashboardState {
     List<TaskData>? nextActions,
     CognitiveData? cognitive,
     PredictionInsightData? nextIntentForecast,
+    GrowthStatusData? growthStatus,
+    PriorityTaskData? mostImportantTask,
+    GrowthSignalData? growthSignal,
+    ActivePlanProgressData? activePlanProgress,
     bool? isLoading,
     String? error,
   }) =>
@@ -69,6 +89,10 @@ class DashboardState {
         nextActions: nextActions ?? this.nextActions,
         cognitive: cognitive ?? this.cognitive,
         nextIntentForecast: nextIntentForecast ?? this.nextIntentForecast,
+        growthStatus: growthStatus ?? this.growthStatus,
+        mostImportantTask: mostImportantTask ?? this.mostImportantTask,
+        growthSignal: growthSignal ?? this.growthSignal,
+        activePlanProgress: activePlanProgress ?? this.activePlanProgress,
         isLoading: isLoading ?? this.isLoading,
         error: error ?? this.error,
       );
@@ -153,6 +177,88 @@ class CognitiveData {
   final String? solutionText;
   final String status;
   final bool hasNewInsight;
+}
+
+class GrowthStatusData {
+  GrowthStatusData({
+    required this.headline,
+    required this.subtitle,
+    required this.userName,
+    required this.streakDays,
+    required this.focusHoursWeek,
+    required this.tasksCompletedWeek,
+  });
+
+  final String headline;
+  final String subtitle;
+  final String userName;
+  final int streakDays;
+  final double focusHoursWeek;
+  final int tasksCompletedWeek;
+}
+
+class PriorityTaskData {
+  PriorityTaskData({
+    required this.id,
+    required this.title,
+    required this.estimatedMinutes,
+    required this.priority,
+    required this.type,
+    required this.reason,
+    this.planName,
+    this.daysToDeadline,
+    this.riskScore = 0,
+  });
+
+  final String id;
+  final String title;
+  final int estimatedMinutes;
+  final int priority;
+  final String type;
+  final String reason;
+  final String? planName;
+  final int? daysToDeadline;
+  final double riskScore;
+}
+
+class GrowthSignalData {
+  GrowthSignalData({
+    required this.headline,
+    required this.summary,
+    required this.source,
+    this.topic,
+    this.deltaPoints = 0,
+    this.evidenceCount = 0,
+  });
+
+  final String headline;
+  final String summary;
+  final String source;
+  final String? topic;
+  final double deltaPoints;
+  final int evidenceCount;
+}
+
+class ActivePlanProgressData {
+  ActivePlanProgressData({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.phase,
+    required this.progress,
+    required this.masteryLevel,
+    this.targetDate,
+    this.daysToDeadline,
+  });
+
+  final String id;
+  final String name;
+  final String type;
+  final String phase;
+  final double progress;
+  final double masteryLevel;
+  final String? targetDate;
+  final int? daysToDeadline;
 }
 
 // Provider
@@ -262,6 +368,12 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       state = DashboardState.loading();
 
       final dashboardData = await _repository.getDashboardStatus();
+      var growthDashboardData = <String, dynamic>{};
+      try {
+        growthDashboardData = await _repository.getGrowthDashboard();
+      } catch (e) {
+        debugPrint('Growth dashboard unavailable: $e');
+      }
       var predictiveData = <String, dynamic>{};
       try {
         predictiveData = await _repository.getPredictiveDashboard();
@@ -269,9 +381,13 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         debugPrint('Predictive dashboard unavailable: $e');
       }
       if (!mounted) return;
+      final mergedDashboardData = <String, dynamic>{
+        ...dashboardData,
+        ...growthDashboardData,
+      };
 
       // Parse weather data
-      final weatherRaw = dashboardData['weather'];
+      final weatherRaw = mergedDashboardData['weather'];
       final weatherMap = _asStringKeyedMap(weatherRaw) ?? <String, dynamic>{};
       final weather = WeatherData(
         type: _asString(weatherMap['type'], fallback: 'sunny'),
@@ -279,7 +395,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       );
 
       // Parse flame data
-      final flameRaw = dashboardData['flame'];
+      final flameRaw = mergedDashboardData['flame'];
       final flameMap = _asStringKeyedMap(flameRaw) ?? <String, dynamic>{};
       final flame = FlameData(
         level: _asInt(flameMap['level'], fallback: 1),
@@ -293,7 +409,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       );
 
       // Parse sprint data (nullable)
-      final sprintRaw = dashboardData['sprint'];
+      final sprintRaw = mergedDashboardData['sprint'];
       final sprintMap = _asStringKeyedMap(sprintRaw);
       final sprint = sprintMap != null
           ? SprintData(
@@ -308,7 +424,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
           : null;
 
       // Parse growth data (nullable)
-      final growthRaw = dashboardData['growth'];
+      final growthRaw = mergedDashboardData['growth'];
       final growthMap = _asStringKeyedMap(growthRaw);
       final growth = growthMap != null
           ? GrowthData(
@@ -320,7 +436,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
           : null;
 
       // Parse next actions
-      final nextActionsRaw = dashboardData['next_actions'];
+      final nextActionsRaw = mergedDashboardData['next_actions'];
       final nextActionsList = _asDynamicList(nextActionsRaw);
       final nextActions = nextActionsList.map((item) {
         final map = _asStringKeyedMap(item) ?? <String, dynamic>{};
@@ -348,7 +464,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       }).toList();
 
       // Parse cognitive data
-      final cognitiveRaw = dashboardData['cognitive'];
+      final cognitiveRaw = mergedDashboardData['cognitive'];
       final cognitiveMap = _asStringKeyedMap(cognitiveRaw) ??
           <String, dynamic>{'status': 'stable'};
       final cognitive = CognitiveData(
@@ -371,6 +487,68 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         }
       }
 
+      final growthStatusMap =
+          _asStringKeyedMap(mergedDashboardData['growth_status']);
+      final growthStatus = growthStatusMap == null
+          ? null
+          : GrowthStatusData(
+              headline: _asString(growthStatusMap['headline']),
+              subtitle: _asString(growthStatusMap['subtitle']),
+              userName: _asString(growthStatusMap['user_name']),
+              streakDays: _asInt(growthStatusMap['streak_days']),
+              focusHoursWeek: _asDouble(growthStatusMap['focus_hours_week']),
+              tasksCompletedWeek:
+                  _asInt(growthStatusMap['tasks_completed_week']),
+            );
+
+      final priorityTaskMap =
+          _asStringKeyedMap(mergedDashboardData['most_important_task']);
+      final mostImportantTask = priorityTaskMap == null
+          ? null
+          : PriorityTaskData(
+              id: _asString(priorityTaskMap['id']),
+              title: _asString(priorityTaskMap['title']),
+              estimatedMinutes: _asInt(priorityTaskMap['estimated_minutes']),
+              priority: _asInt(priorityTaskMap['priority']),
+              type: _asString(priorityTaskMap['type'], fallback: 'learning'),
+              reason: _asString(priorityTaskMap['reason']),
+              planName: _asNullableString(priorityTaskMap['plan_name']),
+              daysToDeadline: priorityTaskMap['days_to_deadline'] == null
+                  ? null
+                  : _asInt(priorityTaskMap['days_to_deadline']),
+              riskScore: _asDouble(priorityTaskMap['risk_score']),
+            );
+
+      final growthSignalMap =
+          _asStringKeyedMap(mergedDashboardData['growth_signal']);
+      final growthSignal = growthSignalMap == null
+          ? null
+          : GrowthSignalData(
+              headline: _asString(growthSignalMap['headline']),
+              summary: _asString(growthSignalMap['summary']),
+              source: _asString(growthSignalMap['source']),
+              topic: _asNullableString(growthSignalMap['topic']),
+              deltaPoints: _asDouble(growthSignalMap['delta_points']),
+              evidenceCount: _asInt(growthSignalMap['evidence_count']),
+            );
+
+      final activePlanMap =
+          _asStringKeyedMap(mergedDashboardData['active_plan_progress']);
+      final activePlanProgress = activePlanMap == null
+          ? null
+          : ActivePlanProgressData(
+              id: _asString(activePlanMap['id']),
+              name: _asString(activePlanMap['name']),
+              type: _asString(activePlanMap['type']),
+              phase: _asString(activePlanMap['phase']),
+              progress: _asDouble(activePlanMap['progress']),
+              masteryLevel: _asDouble(activePlanMap['mastery_level']),
+              targetDate: _asNullableString(activePlanMap['target_date']),
+              daysToDeadline: activePlanMap['days_to_deadline'] == null
+                  ? null
+                  : _asInt(activePlanMap['days_to_deadline']),
+            );
+
       state = DashboardState(
         weather: weather,
         flame: flame,
@@ -379,6 +557,10 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         nextActions: nextActions,
         cognitive: cognitive,
         nextIntentForecast: nextIntent,
+        growthStatus: growthStatus,
+        mostImportantTask: mostImportantTask,
+        growthSignal: growthSignal,
+        activePlanProgress: activePlanProgress,
       );
     } catch (e) {
       debugPrint('Error loading dashboard: $e');

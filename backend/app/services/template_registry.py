@@ -12,6 +12,7 @@ import yaml
 class TemplateVariant:
     variant_id: str
     content: str
+    tone: str | None = None
 
 
 @dataclass
@@ -38,7 +39,11 @@ class TemplateRegistry:
         entries: dict[str, list[TemplateEntry]] = {}
         for item in payload.get("templates", []):
             variants = [
-                TemplateVariant(variant_id=v["id"], content=v["content"])
+                TemplateVariant(
+                    variant_id=v["id"],
+                    content=v["content"],
+                    tone=v.get("tone"),
+                )
                 for v in item.get("variants", [])
             ]
             entry = TemplateEntry(

@@ -407,10 +407,14 @@ class ResponseBuilderMixin:
         )
         execution_suggestion = await self._detect_execution_suggestion(
             user_message=self._extract_latest_user_message(final_state.messages),
+            assistant_response=full_response,
             task_context=task_context,
             cognitive_context=(user_context_payload or {}).get("cognitive_context")
             if isinstance(user_context_payload, dict)
             else None,
+            user_id=user_id,
+            session_id=session_id,
+            active_db=active_db,
         )
         if execution_suggestion:
             execution_validation = dict(execution_validation or {})

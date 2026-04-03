@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -54,6 +55,7 @@ enum _SimulationViewMode { setup, active, review }
 enum _SimulationBottomTrayMode { hidden, peek, expanded }
 
 class _SimulationScreenState extends ConsumerState<SimulationScreen> {
+  static const double _immersiveAutoScrollFollowThreshold = 160;
   static const Map<String, String> _scenarioLabels = simulationScenarioLabels;
   static const Map<String, List<String>> _scenarioParticipantOptions = {
     'study_group': ['优等生', '中等生', '提问者', '总结者', '练习教练'],
@@ -652,6 +654,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 seeds: state.recommendedSeeds,
                 isLoading: state.isLoadingRecommendations,
                 scenarioLabels: _scenarioLabels,
+                topicController: _topicController,
                 onRefresh: () => unawaited(
                   ref.read(simulationProvider.notifier).loadRecommendedSeeds(
                         scenarioKey: _selectedScenarioKey,
@@ -661,6 +664,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 onOpenTheater: (seed) => context.push(
                   _buildTheaterRoute(topic: seed.topic),
                 ),
+                onSubmitManualTopic: () => unawaited(_runSimulation()),
               ),
               if (session != null) ...[
                 const SizedBox(height: 14),
@@ -1081,16 +1085,17 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       ),
     );
     if (!_isPlaybackPaused) {
-      _scrollToLatestRound();
+      _scrollToLatestRound(forceImmersive: true);
     }
   }
 
-  void _scrollToLatestRound() {
+  void _scrollToLatestRound({bool forceImmersive = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
-      if (_immersiveScrollController.hasClients) {
+      if (_immersiveScrollController.hasClients &&
+          (forceImmersive || _shouldFollowImmersiveFeed())) {
         unawaited(
           _immersiveScrollController.animateTo(
             _immersiveScrollController.position.maxScrollExtent,
@@ -1109,6 +1114,21 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         );
       }
     });
+  }
+
+  bool _shouldFollowImmersiveFeed() {
+    if (!_immersiveScrollController.hasClients) {
+      return false;
+    }
+    final position = _immersiveScrollController.position;
+    if (!position.hasContentDimensions) {
+      return false;
+    }
+    if (position.maxScrollExtent <= 0) {
+      return true;
+    }
+    final distanceToBottom = position.maxScrollExtent - position.pixels;
+    return distanceToBottom <= _immersiveAutoScrollFollowThreshold;
   }
 
   bool _hasPendingUserInteraction(SimulationState state) =>
@@ -1170,7 +1190,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         ApiEndpoints.learningReportsGenerate,
         data: <String, dynamic>{
           'section_limit': 5,
-          'trigger_source': 'simulation',
+          'trigger_source': jsonEncode(_buildSimulationTriggerSource(session)),
         },
       );
       final data = response.data;
@@ -1209,26 +1229,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     required SimulationSessionModel session,
     required LearningReport report,
   }) {
-    final simulationBridgeMarkdown = [
-      '# 仿真桥接摘要',
-      '',
-      '主题：${session.topic}',
-      '场景：${_scenarioLabels[session.scenarioKey] ?? localizeSimulationScenario(session.scenarioKey)}',
-      '参与者：${session.participants.map((item) => item.name).join('、')}',
-      '总轮次：${session.rounds.length} 轮',
-      '',
-      '## 来自本次模拟的关键洞察',
-      '- ${localizeSimulationText(session.insightSummary)}',
-      '',
-      report.markdown.trim(),
-    ].join('\n');
     return LearningReport(
       reportId: report.reportId,
-      markdown: simulationBridgeMarkdown,
-      sections: <String>[
-        '仿真桥接',
-        ...report.sections.where((item) => item != '仿真桥接'),
-      ],
+      markdown: report.markdown,
+      sections: report.sections,
       mastery: report.mastery,
       patterns: report.patterns,
       timeline: report.timeline,
@@ -1238,10 +1242,50 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       triggerSummary: report.triggerSummary ??
           const LearningReportTriggerSummary(
             mode: 'simulation_bridge',
-            title: '已从学习模拟沉淀为正式报告',
-            summary: '先看模拟里暴露出的分歧，再结合完整报告安排下一步。',
+            title: '这份报告已接收本次模拟中暴露的问题',
+            summary: '你在模拟里暴露出的分歧和知识盲区，已经被带入这份正式报告。',
           ),
+      dataStatus: report.dataStatus,
     );
+  }
+
+  Map<String, dynamic> _buildSimulationTriggerSource(
+    SimulationSessionModel session,
+  ) =>
+      <String, dynamic>{
+        'source': 'simulation',
+        'session_id': session.id,
+        'topic': session.topic,
+        'scenario_key': session.scenarioKey,
+        'participant_names':
+            session.participants.map((item) => item.name).toList(),
+        'round_count': session.rounds.length,
+        'insight_summary': _decodeInsightSummary(session.insightSummary),
+        'knowledge_gaps_revealed': _extractKnowledgeGaps(session.insightSummary),
+      };
+
+  List<String> _extractKnowledgeGaps(String rawSummary) {
+    final decoded = _decodeInsightSummary(rawSummary);
+    if (decoded is! Map<String, dynamic>) {
+      return const <String>[];
+    }
+    final raw = decoded['knowledge_gaps_revealed'];
+    if (raw is! List<dynamic>) {
+      return const <String>[];
+    }
+    return raw.map((item) => item.toString().trim()).where((item) => item.isNotEmpty).toList();
+  }
+
+  dynamic _decodeInsightSummary(String rawSummary) {
+    final trimmed = rawSummary.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+    try {
+      return jsonDecode(trimmed);
+    } catch (_) {
+      return trimmed;
+    }
   }
 
   Future<void> _shareSession(SimulationSessionModel session) async {
@@ -1457,17 +1501,21 @@ class _RecommendedSeedStrip extends StatelessWidget {
     required this.seeds,
     required this.isLoading,
     required this.scenarioLabels,
+    required this.topicController,
     required this.onRefresh,
     required this.onStartSeed,
     required this.onOpenTheater,
+    required this.onSubmitManualTopic,
   });
 
   final List<SimulationSeedModel> seeds;
   final bool isLoading;
   final Map<String, String> scenarioLabels;
+  final TextEditingController topicController;
   final VoidCallback onRefresh;
   final ValueChanged<SimulationSeedModel> onStartSeed;
   final ValueChanged<SimulationSeedModel> onOpenTheater;
+  final VoidCallback onSubmitManualTopic;
 
   @override
   Widget build(BuildContext context) {
@@ -1479,6 +1527,10 @@ class _RecommendedSeedStrip extends StatelessWidget {
         ),
       );
     }
+
+    final requiresUserInput = seeds.any(
+      (seed) => seed.sourceType == 'user_input_required',
+    );
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -1511,15 +1563,43 @@ class _RecommendedSeedStrip extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                seeds.isEmpty
-                    ? '还没有推荐种子，你可以先手动输入主题开始。'
-                    : '先挑一个最顺手的起点，开始后推荐卡会自动收起，不打断正式讨论。',
+                requiresUserInput
+                    ? '现在先从你最想讨论的具体问题开始。等积累更多真实学习记录后，系统会再给出基于数据的推荐主题。'
+                    : seeds.isEmpty
+                        ? '还没有推荐种子，你可以先手动输入主题开始。'
+                        : '先挑一个最顺手的起点，开始后推荐卡会自动收起，不打断正式讨论。',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
                     ),
               ),
-              if (seeds.isNotEmpty) ...[
+              if (requiresUserInput) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: topicController,
+                  decoration: InputDecoration(
+                    hintText: '输入你想要讨论的学习主题或问题',
+                    helperText: '完成更多学习任务后，系统将基于你的真实学习数据推荐讨论主题',
+                    prefixIcon: const Icon(Icons.edit_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  minLines: 1,
+                  maxLines: 3,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => onSubmitManualTopic(),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    onPressed: onSubmitManualTopic,
+                    icon: const Icon(Icons.play_circle_outline_rounded),
+                    label: const Text('开始围绕这个问题模拟'),
+                  ),
+                ),
+              ] else if (seeds.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 194,
@@ -2811,7 +2891,10 @@ class _SimulationInsightTray extends StatelessWidget {
   Widget build(BuildContext context) {
     final bulletPoints =
         session == null ? const <String>[] : _buildBulletPoints(session!);
-    final previewText = summary.isEmpty ? '暂未生成洞察总结。' : summary;
+    final structuredSummary = _parseStructuredSimulationInsight(summary);
+    final previewText = summary.isEmpty
+        ? '暂未生成洞察总结。'
+        : (structuredSummary?.previewText ?? summary);
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -2864,7 +2947,20 @@ class _SimulationInsightTray extends StatelessWidget {
               ),
             ),
           ),
-          if (expanded && bulletPoints.isNotEmpty) ...[
+          if (expanded && structuredSummary != null) ...[
+            const SizedBox(height: 12),
+            ...structuredSummary.sections.map(
+              (section) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _SimulationInsightSection(
+                  icon: section.icon,
+                  accent: section.accent,
+                  title: section.title,
+                  entries: section.entries,
+                ),
+              ),
+            ),
+          ] else if (expanded && bulletPoints.isNotEmpty) ...[
             const SizedBox(height: 12),
             ...bulletPoints.map(
               (point) => Padding(
@@ -2937,6 +3033,171 @@ class _SimulationInsightTray extends StatelessWidget {
     }
     return points.take(3).toList();
   }
+}
+
+class _StructuredSimulationInsight {
+  const _StructuredSimulationInsight({
+    required this.previewText,
+    required this.sections,
+  });
+
+  final String previewText;
+  final List<_StructuredInsightSectionData> sections;
+}
+
+class _StructuredInsightSectionData {
+  const _StructuredInsightSectionData({
+    required this.title,
+    required this.entries,
+    required this.icon,
+    required this.accent,
+  });
+
+  final String title;
+  final List<String> entries;
+  final IconData icon;
+  final Color accent;
+}
+
+_StructuredSimulationInsight? _parseStructuredSimulationInsight(
+    String summary) {
+  final trimmed = summary.trim();
+  if (trimmed.isEmpty) {
+    return null;
+  }
+  dynamic decoded;
+  try {
+    decoded = jsonDecode(trimmed);
+  } catch (_) {
+    return null;
+  }
+  if (decoded is! Map<String, dynamic> ||
+      !decoded.containsKey('key_arguments')) {
+    return null;
+  }
+  List<String> toList(dynamic value) =>
+      (value as List<dynamic>? ?? const <dynamic>[])
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+  final keyArguments = toList(decoded['key_arguments']);
+  final unresolved = toList(decoded['unresolved_disagreements']);
+  final gaps = toList(decoded['knowledge_gaps_revealed']);
+  final nextSteps = toList(decoded['suggested_next_steps']);
+  final userContribution =
+      decoded['user_contributions']?.toString().trim() ?? '';
+  final previewText = keyArguments.isNotEmpty
+      ? keyArguments.first
+      : (userContribution.isNotEmpty ? userContribution : '已生成结构化洞察总结。');
+  final sections = <_StructuredInsightSectionData>[
+    if (keyArguments.isNotEmpty)
+      _StructuredInsightSectionData(
+        title: '核心论点',
+        entries: <String>[],
+        icon: Icons.lightbulb_outline_rounded,
+        accent: DS.info,
+      ).copyWithEntries(keyArguments),
+    if (unresolved.isNotEmpty)
+      _StructuredInsightSectionData(
+        title: '未解决的分歧',
+        entries: <String>[],
+        icon: Icons.call_split_rounded,
+        accent: DS.warning,
+      ).copyWithEntries(unresolved),
+    if (userContribution.isNotEmpty)
+      _StructuredInsightSectionData(
+        title: '你的贡献',
+        entries: <String>[],
+        icon: Icons.person_outline_rounded,
+        accent: DS.success,
+      ).copyWithEntries(<String>[userContribution]),
+    if (gaps.isNotEmpty)
+      _StructuredInsightSectionData(
+        title: '暴露的知识盲区',
+        entries: <String>[],
+        icon: Icons.help_outline_rounded,
+        accent: DS.error,
+      ).copyWithEntries(gaps),
+    if (nextSteps.isNotEmpty)
+      _StructuredInsightSectionData(
+        title: '建议下一步',
+        entries: <String>[],
+        icon: Icons.flag_outlined,
+        accent: DS.success,
+      ).copyWithEntries(nextSteps),
+  ];
+  if (sections.isEmpty) {
+    return null;
+  }
+  return _StructuredSimulationInsight(
+    previewText: previewText,
+    sections: sections,
+  );
+}
+
+extension on _StructuredInsightSectionData {
+  _StructuredInsightSectionData copyWithEntries(List<String> nextEntries) =>
+      _StructuredInsightSectionData(
+        title: title,
+        entries: nextEntries,
+        icon: icon,
+        accent: accent,
+      );
+}
+
+class _SimulationInsightSection extends StatelessWidget {
+  const _SimulationInsightSection({
+    required this.icon,
+    required this.accent,
+    required this.title,
+    required this.entries,
+  });
+
+  final IconData icon;
+  final Color accent;
+  final String title;
+  final List<String> entries;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withValues(alpha: 0.18)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: accent),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...entries.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '• ${localizeSimulationText(entry)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _AnimatedParticipantChip extends StatefulWidget {

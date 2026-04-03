@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/push_config.dart';
 import 'package:sparkle/core/services/jpush_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/services/push_navigation_service.dart';
 
 import 'package:sparkle/core/services/firebase_messaging_service.dart'
     show firebaseMessagingServiceProvider, fcmInitializedProvider;
@@ -232,11 +232,13 @@ class UnifiedPushService {
   void _handleJPushNotificationOpened(JPushMessage message) {
     _logger.i('JPush notification opened: ${message.title}');
 
-    // Navigate to deep link if present
-    final deepLink = message.extras?['deep_link'];
-    if (deepLink != null) {
-      _navigateToDeepLink(deepLink.toString());
-    }
+    final payload = Map<String, dynamic>.from(message.extras ?? const {});
+    unawaited(
+      _ref.read(pushNavigationServiceProvider).handleOpenedPayload(
+            payload: payload,
+            source: 'jpush',
+          ),
+    );
   }
 
   /// Show local notification
@@ -260,89 +262,6 @@ class UnifiedPushService {
       );
     } catch (e) {
       _logger.e('Failed to show local notification: $e');
-    }
-  }
-
-  /// Navigate to deep link
-  void _navigateToDeepLink(String deepLink) {
-    try {
-      final context = navigatorKey.currentContext;
-      if (context == null) {
-        _logger.w('Navigator context not available for deep link navigation');
-        return;
-      }
-
-      final uri = Uri.tryParse(deepLink);
-      if (uri == null || uri.scheme != 'sparkle') {
-        _logger.w('Invalid deep link format: $deepLink');
-        return;
-      }
-
-      final entityType = uri.host;
-      final entityId =
-          uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
-
-      _logger.i('Navigating to deep link: $entityType/$entityId');
-
-      switch (entityType) {
-        case 'task':
-          if (entityId != null) {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'taskExecution',
-                pathParameters: {'id': entityId},
-              ),
-            );
-          }
-        case 'achievement':
-          if (entityId != null) {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'achievementDetail',
-                pathParameters: {'id': entityId},
-              ),
-            );
-          }
-        case 'chat':
-          if (entityId != null) {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'chat',
-                queryParameters: {'session_id': entityId},
-              ),
-            );
-          }
-        case 'plan':
-          if (uri.pathSegments.length > 1 && uri.pathSegments[1] == 'review') {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'planReview',
-                pathParameters: {'id': entityId ?? ''},
-              ),
-            );
-          } else if (entityId != null) {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'planDetail',
-                pathParameters: {'id': entityId},
-              ),
-            );
-          }
-        case 'streak':
-          if (entityId != null) {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'streakDetails',
-                pathParameters: {'id': entityId},
-              ),
-            );
-          }
-        default:
-          _logger.w('Unknown deep link entity type: $entityType');
-      }
-    } catch (e, stack) {
-      _logger.e('Failed to navigate to deep link: $e');
-      _logger.d(stack.toString());
     }
   }
 
@@ -456,7 +375,8 @@ class UnifiedPushService {
 }
 
 /// Provider for UnifiedPushService
-final unifiedPushServiceProvider = Provider<UnifiedPushService>((ref) => UnifiedPushService(ref));
+final unifiedPushServiceProvider =
+    Provider<UnifiedPushService>((ref) => UnifiedPushService(ref));
 
 /// Provider for push service initialization state
 final pushInitializedProvider = StateProvider<bool>((ref) => false);

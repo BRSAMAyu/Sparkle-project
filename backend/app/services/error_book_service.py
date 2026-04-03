@@ -31,6 +31,7 @@ from app.schemas.error_book import (
 )
 from app.schemas.semantic_memory import ConceptBrief, ErrorSemanticSummary, SimilarErrorItem, StrategyNodeResponse
 from app.services.embedding_service import embedding_service
+from app.services.memory_service import MemoryService
 from app.services.ocr_service import ocr_service
 from app.services.semantic_memory_service import SemanticMemoryService
 
@@ -121,6 +122,19 @@ class ErrorBookService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.review_scheduler = ReviewSchedulerService()
+
+    async def _flush_pending_mastery_events(self, results: list[dict]) -> None:
+        """Publish deferred node mastery events after the surrounding DB commit succeeds."""
+        for item in results or []:
+            pending = item.get("_pending_event") or {}
+            topic = pending.get("topic")
+            payload = pending.get("payload")
+            if not topic or not payload:
+                continue
+            try:
+                await event_bus.publish(topic, payload)
+            except Exception as exc:
+                logger.warning(f"Failed to publish deferred mastery event: {exc}")
 
     async def create_error(self, user_id: UUID, data: ErrorRecordCreate) -> ErrorRecord:
         error = ErrorRecord(
@@ -246,12 +260,27 @@ class ErrorBookService:
             logger.info(f"Analysis completed for error {error.id}")
 
             try:
+                await self._write_error_analysis_memory(error=error, linked_nodes=nodes)
+            except Exception as e:
+                logger.warning(f"Error analysis episodic memory write failed: {e}")
+
+            try:
                 from app.services.error_book_signal_processor import ErrorBookSignalProcessor
 
                 processor = ErrorBookSignalProcessor(self.db)
                 await processor.process_error_created(user_id)
             except Exception as e:
                 logger.warning(f"Error book preference sync failed: {e}")
+
+            # --- Mastery sync: error diagnosis → knowledge node mastery ---
+            try:
+                from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
+                mastery_sync = ErrorBookMasterySyncService(self.db)
+                mastery_results = await mastery_sync.apply_error_diagnosis(user_id, error)
+                await self.db.commit()
+                await self._flush_pending_mastery_events(mastery_results)
+            except Exception as e:
+                logger.warning(f"Error book mastery sync (diagnosis) failed: {e}")
 
             # Publish Error Created Event
             try:
@@ -267,6 +296,57 @@ class ErrorBookService:
         except Exception as e:
             logger.error(f"Async analysis failed for error {error_id}: {e}")
             await self.db.rollback()
+
+    async def _write_error_analysis_memory(
+        self,
+        *,
+        error: ErrorRecord,
+        linked_nodes: list[KnowledgeNode],
+    ) -> None:
+        from app.models.memory import EpisodicMemory
+
+        existing = await self.db.execute(
+            select(EpisodicMemory.id).where(
+                EpisodicMemory.user_id == error.user_id,
+                EpisodicMemory.source_type == "error_analysis",
+                EpisodicMemory.source_id == str(error.id),
+                EpisodicMemory.deleted_at.is_(None),
+                EpisodicMemory.archived_at.is_(None),
+                EpisodicMemory.retracted_at.is_(None),
+            )
+        )
+        if existing.scalar_one_or_none() is not None:
+            return
+
+        analysis = error.latest_analysis or {}
+        error_type = str(analysis.get("error_type_label") or analysis.get("error_type") or "错题").strip()
+        primary_node = linked_nodes[0].name if linked_nodes else ""
+        focus_label = primary_node or str(error.chapter or error.subject_code or "当前知识点").strip()
+        occurred_label = (error.created_at or _utcnow()).strftime("%Y-%m-%d")
+        summary = f"{occurred_label} 在 {focus_label} 上出现了{error_type}"
+
+        root_cause = str(analysis.get("root_cause") or "").strip()
+        if root_cause:
+            summary = f"{summary}：{root_cause[:120]}"
+
+        memory_service = MemoryService(self.db)
+        await memory_service.create_episodic_memory(
+            user_id=error.user_id,
+            summary=summary,
+            source_type="error_analysis",
+            source_id=str(error.id),
+            occurred_at=error.created_at or _utcnow(),
+            importance_score=0.75,
+            tags=[tag for tag in [str(error.subject_code or "").strip(), error_type] if tag],
+            evidence_refs=[
+                {"type": "error", "id": str(error.id), "schema_version": "error.v1"},
+                *(
+                    [{"type": "concept", "id": str(linked_nodes[0].id), "schema_version": "concept.v1"}]
+                    if linked_nodes
+                    else []
+                ),
+            ],
+        )
 
     async def _run_ocr(self, image_url: str) -> str:
         """使用 GLM OCR 进行图片文字识别。"""
@@ -671,6 +751,16 @@ class ErrorBookService:
             await processor.process_error_created(user_id)
         except Exception as e:
             logger.warning(f"Error book preference refresh after review failed: {e}")
+
+        # --- Mastery sync: review feedback → knowledge node mastery ---
+        try:
+            from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
+            mastery_sync = ErrorBookMasterySyncService(self.db)
+            mastery_results = await mastery_sync.apply_review_feedback(user_id, error, data.performance.value)
+            await self.db.commit()
+            await self._flush_pending_mastery_events(mastery_results)
+        except Exception as e:
+            logger.warning(f"Error book mastery sync (review) failed: {e}")
 
         return error
 

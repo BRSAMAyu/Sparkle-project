@@ -9,6 +9,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/core/services/app_link_router_service.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/unified_push_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
@@ -39,11 +40,22 @@ final deferredSyncBootstrapProvider = FutureProvider<void>((ref) async {
 });
 
 /// Sparkle Application Root Widget
-class SparkleApp extends ConsumerWidget {
+class SparkleApp extends ConsumerStatefulWidget {
   const SparkleApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SparkleApp> createState() => _SparkleAppState();
+}
+
+class _SparkleAppState extends ConsumerState<SparkleApp> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(AppLinkRouterService.instance.initialize());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final apiClient = ref.watch(apiClientProvider);
     final router = ref.watch(routerProvider);
     ClientObservabilityService.instance.attachDio(apiClient.dio);

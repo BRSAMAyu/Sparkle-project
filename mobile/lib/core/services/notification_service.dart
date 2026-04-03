@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -76,9 +77,35 @@ class NotificationService {
       '@mipmap/ic_launcher',
     ); // Verify icon name
 
-    const initializationSettingsDarwin = DarwinInitializationSettings();
+    final initializationSettingsDarwin = DarwinInitializationSettings(
+      notificationCategories: <DarwinNotificationCategory>[
+        DarwinNotificationCategory(
+          'sparkle_smart_push',
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain(
+              'START_NOW',
+              '⚡ 开始',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+            DarwinNotificationAction.plain(
+              'SNOOZE',
+              '💤 稍后',
+            ),
+            DarwinNotificationAction.plain(
+              'DISMISS',
+              '🔕 勿扰',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.destructive,
+              },
+            ),
+          ],
+        ),
+      ],
+    );
 
-    const initializationSettings = InitializationSettings(
+    final initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
       macOS: initializationSettingsDarwin,
@@ -246,22 +273,28 @@ class NotificationService {
           unawaited(_reportPushInteraction(interactionAction, payload));
         }
 
-        if (actionId == 'START_NOW') {
-          // Navigate to Task Execution
-          // Since we are inside a callback, we might need the context or router
-          // We use the global navigatorKey context if available
-          final context = navigatorKey.currentContext;
-          if (context != null) {
-            // Parse taskId from payload
-            final taskId = payload['taskId'] as String?;
-            if (taskId != null) {
-              unawaited(
-                GoRouter.of(context)
-                    .pushNamed('taskExecution', pathParameters: {'id': taskId}),
-              );
-            }
-          }
-        } else if (actionId == 'SNOOZE') {
+        final interventionAction = _mapInterventionLifecycleAction(actionId);
+        if (interventionAction != null) {
+          unawaited(
+            _ref
+                .read(interventionActionServiceProvider)
+                .reportActionFromPayload(
+              payload: payload,
+              action: interventionAction,
+              surface: 'local_notification',
+              extraPayload: {
+                'source': 'local_notification_response',
+                if (actionId != null) 'action_id': actionId,
+              },
+            ),
+          );
+        }
+
+        if (actionId == null || actionId == 'START_NOW') {
+          _navigateToPayload(payload);
+        }
+
+        if (actionId == 'SNOOZE') {
           // Handle Snooze API call
           _handleSnooze(payload);
         } else if (actionId == 'DISMISS') {
@@ -299,6 +332,22 @@ class NotificationService {
     }
   }
 
+  String? _mapInterventionLifecycleAction(String? actionId) {
+    if (actionId == null) {
+      return 'seen';
+    }
+    switch (actionId) {
+      case 'START_NOW':
+        return 'accepted';
+      case 'SNOOZE':
+        return 'snoozed';
+      case 'DISMISS':
+        return 'dismissed';
+      default:
+        return null;
+    }
+  }
+
   Future<void> _reportPushInteraction(
     String action,
     Map<String, dynamic> payload,
@@ -320,6 +369,32 @@ class NotificationService {
       );
     } catch (e) {
       _logger.w('Failed to report push interaction: $e');
+    }
+  }
+
+  void _navigateToPayload(Map<String, dynamic> payload) {
+    final context = navigatorKey.currentContext;
+    if (context == null) {
+      _logger.w('Navigator context not available for notification navigation');
+      return;
+    }
+
+    final destinationRoute = payload['destination_route'] as String?;
+    if (destinationRoute != null && destinationRoute.isNotEmpty) {
+      unawaited(GoRouter.of(context).push(destinationRoute));
+      return;
+    }
+
+    final taskId =
+        payload['taskId']?.toString() ?? payload['entity_id']?.toString();
+    if (taskId != null && taskId.isNotEmpty) {
+      unawaited(
+        GoRouter.of(context).pushNamed(
+          'taskExecution',
+          pathParameters: {'id': taskId},
+        ),
+      );
+      return;
     }
   }
 
@@ -352,7 +427,18 @@ class NotificationService {
       ],
     );
 
-    const notificationDetails = NotificationDetails(android: androidDetails);
+    const darwinDetails = DarwinNotificationDetails(
+      categoryIdentifier: 'sparkle_smart_push',
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: darwinDetails,
+      macOS: darwinDetails,
+    );
 
     await _notificationsPlugin.show(
       DateTime.now().millisecond, // unique ID

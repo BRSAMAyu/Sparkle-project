@@ -153,3 +153,36 @@ async def test_create_episodic_memory_falls_back_when_vector_runtime_unavailable
     assert record is None
     db.rollback.assert_awaited_once()
     enqueue.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_episodic_memory_retries_without_embedding_when_vector_runtime_unavailable(monkeypatch):
+    db = AsyncMock()
+    db.add = MagicMock()
+    db.commit.side_effect = [RuntimeError("vector.so unavailable"), None]
+
+    enqueue = AsyncMock()
+    monkeypatch.setattr("app.services.memory_service.SystemUpdateService.enqueue", enqueue)
+
+    service = MemoryService(db)
+    monkeypatch.setattr(service, "_allow_write", AsyncMock(return_value=True))
+    monkeypatch.setattr(service, "_advanced_features_enabled", AsyncMock(return_value=False))
+    record = await service.create_episodic_memory(
+        user_id=uuid4(),
+        summary="memory summary",
+        source_type="analysis",
+        source_id="analysis-1",
+        occurred_at=datetime.utcnow(),
+        importance_score=0.7,
+        tags=["analysis"],
+        evidence_refs=[{"type": "event", "id": "evt_1", "schema_version": "event.v1"}],
+        embedding=[0.1, 0.2, 0.3],
+    )
+
+    assert record is not None
+    assert db.commit.await_count == 2
+    assert db.rollback.await_count == 1
+    assert db.add.call_count == 2
+    assert db.add.call_args_list[0].args[0].embedding == [0.1, 0.2, 0.3]
+    assert db.add.call_args_list[1].args[0].embedding is None
+    enqueue.assert_awaited_once()

@@ -78,6 +78,7 @@ class TaskRoutes {
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
             final origin = state.uri.queryParameters['origin'];
+            final interventionId = state.uri.queryParameters['intervention_id'];
             return buildSparkleTransitionPage(
               state: state,
               motionToken: SparkleMotionToken.scene,
@@ -86,7 +87,10 @@ class TaskRoutes {
                   trackOverride: BgmTrack.focusDeep,
                   useSavedAmbient: true,
                 ),
-                child: TaskExecutionScreen(origin: origin),
+                child: TaskExecutionScreen(
+                  origin: origin,
+                  interventionId: interventionId,
+                ),
               ),
               type: SharedAxisTransitionType.scaled,
             );

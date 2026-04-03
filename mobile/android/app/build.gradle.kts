@@ -28,6 +28,39 @@ if (hasReleaseSigning) {
 val applicationIdValue =
     (project.findProperty("APPLICATION_ID") as String?) ?: "com.example.sparkle"
 
+val sanitizeGeneratedPluginRegistrant by tasks.registering {
+    doLast {
+        val registrantFile =
+            file("src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java")
+        if (!registrantFile.exists()) {
+            return@doLast
+        }
+
+        val originalContent = registrantFile.readText()
+        val sanitizedContent =
+            originalContent.replace(
+                Regex(
+                    """\s*try \{\s*flutterEngine\.getPlugins\(\)\.add\(new dev\.flutter\.plugins\.integration_test\.IntegrationTestPlugin\(\)\);\s*\} catch \(Exception e\) \{\s*Log\.e\(TAG, "Error registering plugin integration_test, dev\.flutter\.plugins\.integration_test\.IntegrationTestPlugin", e\);\s*\}\s*""",
+                    setOf(RegexOption.MULTILINE, RegexOption.DOT_MATCHES_ALL)
+                ),
+                "\n"
+            )
+
+        if (sanitizedContent != originalContent) {
+            registrantFile.writeText(sanitizedContent)
+            logger.lifecycle("Sanitized GeneratedPluginRegistrant.java for release build")
+        }
+    }
+}
+
+tasks.matching { it.name.matches(Regex("generate.*PluginRegistrant")) }.configureEach {
+    finalizedBy(sanitizeGeneratedPluginRegistrant)
+}
+
+tasks.matching { it.name == "compileReleaseJavaWithJavac" }.configureEach {
+    dependsOn(sanitizeGeneratedPluginRegistrant)
+}
+
 android {
     namespace = applicationIdValue
     compileSdk = 36  // Updated to support newer Android libraries (required by plugins)
@@ -92,5 +125,5 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

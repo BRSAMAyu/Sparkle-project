@@ -5,9 +5,9 @@ from uuid import UUID
 from app.config import settings
 
 DEFAULT_BUDGETS: dict[str, dict[str, int]] = {
-    "learning": {"preferences": 160, "goals": 220, "episodic": 320},
-    "chat": {"preferences": 120, "goals": 180, "episodic": 260},
-    "planning": {"preferences": 140, "goals": 260, "episodic": 200},
+    "learning": {"preferences": 240, "goals": 320, "episodic": 560},
+    "chat": {"preferences": 220, "goals": 260, "episodic": 500},
+    "planning": {"preferences": 200, "goals": 420, "episodic": 380},
 }
 
 

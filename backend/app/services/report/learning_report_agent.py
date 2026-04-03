@@ -42,12 +42,18 @@ class LearningReportAgent:
         trigger_source: str = "api",
     ) -> dict[str, Any]:
         report_id = str(uuid4())
+        trigger_source_payload = self._parse_trigger_source_payload(trigger_source)
+        simulation_blindspots = self._simulation_blindspots_from_trigger_source(trigger_source_payload)
         mastery = await self.tools.query_mastery_scores(user_id)
         patterns = await self.tools.query_error_patterns(user_id)
         timeline = await self.tools.query_study_timeline(user_id)
         learner_voice = await self.tools.interview_learner(user_id)
         chat_inference = await self.tools.infer_learning_state_from_chat(user_id)
         learner_voice = self._merge_chat_inference_into_learner_voice(learner_voice, chat_inference)
+        learner_voice = self._merge_simulation_blindspots_into_learner_voice(
+            learner_voice,
+            simulation_blindspots,
+        )
         starter_focus = await self._build_starter_focus(
             user_id=user_id,
             mastery=mastery,
@@ -183,16 +189,17 @@ class LearningReportAgent:
             patterns=patterns,
             timeline=timeline,
             chat_inference=chat_inference,
+            simulation_blindspots=simulation_blindspots,
         )
         payload["trend_overview"] = self._build_trend_overview(
             mastery=mastery,
             timeline=timeline,
         )
-        payload["action_cards"] = self._build_action_cards(
+        payload["action_cards"] = await self._build_action_cards(
             mastery=mastery,
             patterns=patterns,
-            starter_focus=starter_focus,
-            chat_inference=chat_inference,
+            timeline=timeline,
+            user_id=user_id,
         )
         payload["trigger_summary"] = self._build_trigger_summary(
             mastery=mastery,
@@ -359,12 +366,18 @@ class LearningReportAgent:
                 {
                     "role": "user",
                     "content": (
+                        "你是一位直接、不废话的学习教练。根据以下真实数据生成学习分析报告。\n\n"
+                        "## 严格规则\n"
+                        "1. 每一句话都必须可以追溯到下面的数据。不能说泛泛的建议，必须指出具体数据依据。\n"
+                        "2. 如果某项数据不存在或不确定，用[数据不足]标注，不要编造。\n"
+                        "3. 不使用以下词汇：建议先复盘、建议先回到、整体较为平稳、稳步提升。\n"
+                        "4. 每条建议必须回答：做什么（具体行动）+ 为什么（基于哪条数据）+ 多久（预估时间）。\n\n"
                         f"Sections: {sections}\n"
-                        f"Mastery: {mastery}\n"
-                        f"Patterns: {patterns}\n"
-                        f"Timeline: {timeline}\n"
-                        f"Learner voice: {learner_voice}\n"
-                        "Write a concise learning analysis report in Markdown."
+                        f"掌握度数据：{mastery}\n"
+                        f"行为模式：{patterns}\n"
+                        f"学习时间线：{timeline}\n"
+                        f"学习者自述：{learner_voice}\n"
+                        "请输出结构清晰、可执行的 Markdown 报告。"
                     ),
                 },
             ],
@@ -558,6 +571,7 @@ class LearningReportAgent:
         patterns: list[dict[str, Any]],
         timeline: list[dict[str, Any]],
         chat_inference: dict[str, Any],
+        simulation_blindspots: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         cards: list[dict[str, Any]] = []
         sorted_mastery = sorted(
@@ -566,18 +580,40 @@ class LearningReportAgent:
         )
         weakest = sorted_mastery[0] if sorted_mastery else None
         strongest = sorted_mastery[-1] if sorted_mastery else None
+        if not mastery:
+            cards.append(
+                {
+                    "id": "data-collection-guide",
+                    "title": "需要更多学习记录",
+                    "headline": "先完成几次真实学习，再回来查看诊断",
+                    "summary": "当前还没有足够的学习记录来定位薄弱点和强项，先开始一个真实学习任务，系统才有依据生成后续分析。",
+                    "evidence": [
+                        "完成学习任务、做题或记录复盘后，这里才会出现掌握度与趋势判断。",
+                    ],
+                    "severity": "info",
+                    "cta_label": "开始第一个学习任务",
+                    "deep_link": "/plan",
+                    "tag": "data_collection",
+                }
+            )
         if weakest and str(weakest.get("node_name") or "").strip():
             topic = str(weakest.get("node_name") or "").strip()
+            last_study_date = self._last_study_date_for_topic(timeline, weakest)
+            related_error_count = int(weakest.get("related_error_count") or 0)
+            evidence: list[str] = []
+            if weakest.get("mastery_score") is not None:
+                evidence.append(f"掌握度：{round(self._mastery_score(weakest))}%（来自知识图谱实际数据）")
+            if related_error_count > 0:
+                evidence.append(f"错题本中有 {related_error_count} 道相关错题")
+            if last_study_date:
+                evidence.append(f"上次学习此主题：{last_study_date}")
             cards.append(
                 {
                     "id": "weak-spot",
                     "title": "优先补强",
                     "headline": f"{topic} {round(self._mastery_score(weakest))}%",
                     "summary": "这是当前最值得先收口的薄弱点，优先补它能最快改善整体推进阻力。",
-                    "evidence": [
-                        f"当前掌握度约 {round(self._mastery_score(weakest))}%",
-                        "建议先回到定义、例题和前置关系，再重新做一轮专项练习。",
-                    ],
+                    "evidence": evidence or ["[数据不足] 当前只有薄弱点排序，缺少更多佐证。"],
                     "severity": "high",
                     "cta_label": "去推演这个薄弱点",
                     "deep_link": self._theater_link(topic),
@@ -586,16 +622,17 @@ class LearningReportAgent:
             )
         if strongest and str(strongest.get("node_name") or "").strip():
             topic = str(strongest.get("node_name") or "").strip()
+            strong_evidence = [f"掌握度：{round(self._mastery_score(strongest))}%（来自知识图谱实际数据）"]
+            strong_last_study = self._last_study_date_for_topic(timeline, strongest)
+            if strong_last_study:
+                strong_evidence.append(f"最近一次学习：{strong_last_study}")
             cards.append(
                 {
                     "id": "strong-spot",
                     "title": "可放大强项",
                     "headline": f"{topic} {round(self._mastery_score(strongest))}%",
                     "summary": "这个知识点已经相对稳定，适合拿来做迁移练习，带动相关节点一起提升。",
-                    "evidence": [
-                        f"当前掌握度约 {round(self._mastery_score(strongest))}%",
-                        "可以优先用它做综合题、迁移题或讲解复述。",
-                    ],
+                    "evidence": strong_evidence,
                     "severity": "low",
                     "cta_label": "去知识星图扩展它",
                     "deep_link": "/galaxy",
@@ -611,7 +648,8 @@ class LearningReportAgent:
                     "headline": str(pattern.get("pattern_name") or "学习节奏待调整").strip(),
                     "summary": str(pattern.get("description") or "最近的学习推进方式里有一个值得先修正的惯性。").strip(),
                     "evidence": [
-                        str(pattern.get("solution_text") or "先做一次低门槛试跑，把行动节奏收敛起来。").strip()
+                        f"模式置信度：{round(float(pattern.get('confidence') or 0.0) * 100)}%",
+                        str(pattern.get("solution_text") or "[数据不足]").strip(),
                     ],
                     "severity": "medium",
                     "cta_label": "去做一场学习仿真",
@@ -641,6 +679,25 @@ class LearningReportAgent:
                     "tag": "trend",
                 }
             )
+        for blindspot in list(simulation_blindspots or [])[:1]:
+            if not str(blindspot).strip():
+                continue
+            cards.append(
+                {
+                    "id": "simulation-blindspot",
+                    "title": "模拟中暴露的盲区",
+                    "headline": str(blindspot).strip(),
+                    "summary": "这是学习模拟里直接暴露出来的理解缺口，适合优先做一次针对性澄清。",
+                    "evidence": [
+                        "来源：学习模拟结构化总结",
+                        str(blindspot).strip(),
+                    ],
+                    "severity": "high",
+                    "cta_label": "围绕这个盲区继续学习",
+                    "deep_link": "/plan",
+                    "tag": "simulation_gap",
+                }
+            )
         return cards[:4]
 
     def _build_trend_overview(
@@ -649,6 +706,15 @@ class LearningReportAgent:
         mastery: list[dict[str, Any]],
         timeline: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        if not timeline:
+            return {
+                "status": "no_data",
+                "message": "暂无足够学习记录生成趋势",
+                "headline": "",
+                "summary": "",
+                "history_points": [],
+                "comparisons": [],
+            }
         current_average = self._average_mastery(mastery)
         dated_rows: list[tuple[datetime, dict[str, Any]]] = []
         for item in timeline:
@@ -728,69 +794,102 @@ class LearningReportAgent:
             else "再积累一到两份报告后，这里会形成更清晰的周趋势对比。"
         )
         return {
+            "status": "ready",
+            "message": "",
             "headline": headline,
             "summary": summary,
             "history_points": history_points,
             "comparisons": comparisons,
         }
 
-    def _build_action_cards(
+    async def _build_action_cards(
         self,
         *,
         mastery: list[dict[str, Any]],
         patterns: list[dict[str, Any]],
-        starter_focus: list[dict[str, Any]],
-        chat_inference: dict[str, Any],
+        timeline: list[dict[str, Any]],
+        user_id: UUID,
     ) -> list[dict[str, Any]]:
-        topic = self._best_action_topic(
-            mastery=mastery,
-            chat_inference=chat_inference,
-            starter_focus=starter_focus,
-        )
-        cards = [
-            {
-                "id": "open-theater",
-                "title": f"先推演 {topic}" if topic else "先做一次推演",
-                "summary": "把当前最薄弱或最想突破的主题先拆成路径，再决定先补哪一块。",
-                "cta_label": "打开推演剧场",
-                "deep_link": self._theater_link(topic),
-                "kind": "theater",
-                "priority": "high",
-                "badge": "优先",
-            },
-            {
-                "id": "run-simulation",
-                "title": "来一场学习仿真",
-                "summary": (
-                    f"围绕 {topic} 模拟一次讨论、质疑和复述过程，快速验证你现在卡在哪一步。"
-                    if topic
-                    else "用一场仿真把概念理解、表达和质疑过程都跑一遍。"
-                ),
-                "cta_label": "打开学习仿真",
-                "deep_link": self._simulation_link(topic),
-                "kind": "simulation",
-                "priority": "medium",
-                "badge": "互动",
-            },
-            {
-                "id": "open-galaxy",
-                "title": "回到知识星图收口",
-                "summary": "先看前置关系和当前掌握梯度，避免继续盲目铺开学习范围。",
-                "cta_label": "打开知识星图",
-                "deep_link": "/galaxy",
-                "kind": "galaxy",
-                "priority": "medium",
-            },
-        ]
-        if patterns:
+        if not mastery and not timeline:
+            return [
+                {
+                    "id": "start-first-learning-task",
+                    "title": "开始你的第一个学习任务",
+                    "summary": "先完成一次真实学习任务或练习，系统才能基于你的实际表现生成更可靠的诊断。",
+                    "cta_label": "去创建学习计划",
+                    "deep_link": "/plan",
+                    "kind": "plan",
+                    "priority": "high",
+                    "badge": "先开始",
+                }
+            ]
+        del user_id
+        cards: list[dict[str, Any]] = []
+        sorted_mastery = sorted(mastery, key=lambda item: self._mastery_score(item))
+        if sorted_mastery:
+            weakest = sorted_mastery[0]
+            weakest_name = str(weakest.get("node_name") or "").strip()
+            weakest_node_id = str(weakest.get("node_id") or "").strip()
             cards.append(
                 {
-                    "id": "review-sprint",
-                    "title": "回看 Sprint 节奏",
-                    "summary": "把这次报告里的行为模式和最近任务推进节奏对照一下，更容易找到真正的阻塞点。",
-                    "cta_label": "查看 Sprint 历史",
-                    "deep_link": "/sprint/history",
-                    "kind": "plan",
+                    "id": "attack-weakest",
+                    "title": f"专项攻克：{weakest_name}" if weakest_name else "专项攻克当前最弱知识点",
+                    "summary": (
+                        f"当前掌握度 {round(self._mastery_score(weakest))}%。建议用 25 分钟做一组针对性练习。"
+                        if weakest_name
+                        else "建议用 25 分钟做一组针对性练习，把当前最薄弱的一环先补起来。"
+                    ),
+                    "cta_label": "开始练习",
+                    "deep_link": f"/galaxy/node/{weakest_node_id}" if weakest_node_id else "/galaxy",
+                    "kind": "immediate_action",
+                    "priority": "high",
+                }
+            )
+        if patterns:
+            top_pattern = patterns[0]
+            pattern_name = str(top_pattern.get("pattern_name") or "")
+            raw_pattern_name = str(top_pattern.get("raw_pattern_name") or "")
+            average_session_minutes = self._average_timeline_minutes(timeline)
+            if any(marker in pattern_name for marker in ("拖延", "放弃")) or "abandon" in raw_pattern_name:
+                cards.append(
+                    {
+                        "id": "break-pattern",
+                        "title": "试试 15 分钟微任务",
+                        "summary": "检测到你的学习模式倾向于中途放弃。试试把任务拆成 15 分钟的小块。",
+                        "cta_label": "创建微任务",
+                        "deep_link": "/plan/quick-task",
+                        "kind": "behavior_change",
+                        "priority": "medium",
+                    }
+                )
+            elif any(marker in pattern_name for marker in ("集中", "高峰", "稳定")) or "burst" in raw_pattern_name:
+                cards.append(
+                    {
+                        "id": "sustain-pattern",
+                        "title": "保持当前节奏",
+                        "summary": f"你最近的学习模式较稳定。继续保持每次 {average_session_minutes} 分钟左右的节奏。",
+                        "cta_label": "继续学习",
+                        "deep_link": "/plan",
+                        "kind": "positive_reinforcement",
+                        "priority": "medium",
+                    }
+                )
+        stale_nodes = [
+            item
+            for item in timeline
+            if item.get("days_since_last") is not None and int(item.get("days_since_last") or 0) > 7
+        ]
+        if stale_nodes:
+            stale = stale_nodes[0]
+            stale_node_id = str(stale.get("node_id") or "").strip()
+            cards.append(
+                {
+                    "id": "review-stale",
+                    "title": f"复习：{stale.get('node_name')}（{int(stale.get('days_since_last') or 0)} 天未学习）",
+                    "summary": "间隔太久会遗忘。花 10 分钟快速回顾。",
+                    "cta_label": "快速复习",
+                    "deep_link": f"/galaxy/node/{stale_node_id}" if stale_node_id else "/galaxy",
+                    "kind": "spaced_review",
                     "priority": "low",
                 }
             )
@@ -805,7 +904,15 @@ class LearningReportAgent:
         starter_focus: list[dict[str, Any]],
         trigger_source: str,
     ) -> dict[str, Any]:
-        normalized_source = str(trigger_source or "api").strip().lower()
+        normalized_source = self._normalize_trigger_source_mode(trigger_source)
+        has_mastery = bool(mastery)
+        has_timeline = bool(timeline)
+        has_patterns = bool(patterns)
+        data_status = (
+            "insufficient"
+            if not has_mastery and not has_timeline
+            else ("sufficient" if has_mastery and has_timeline and has_patterns else "partial")
+        )
         if starter_focus and (
             not mastery
             or any(
@@ -817,8 +924,9 @@ class LearningReportAgent:
         ):
             return {
                 "mode": "baseline_ready",
-                "title": "已建立第一版学习基线",
-                "summary": "虽然历史数据还少，但系统已经根据你最近的主题和起步信号生成了可执行的第一版报告。",
+                "title": "以下是基于聊天推断的方向，需要你确认",
+                "summary": "当前真实学习数据还不够，这里先基于你最近的聊天主题整理出可能方向，后续仍需要用真实学习记录验证。",
+                "data_status": data_status,
             }
         if patterns:
             pattern_name = str(patterns[0].get("pattern_name") or "").strip()
@@ -830,6 +938,7 @@ class LearningReportAgent:
                     if pattern_name
                     else "系统检测到最近学习推进有明显阻塞，这份报告会先聚焦最该收口的地方。"
                 ),
+                "data_status": data_status,
             }
         trend = self._build_trend_overview(mastery=mastery, timeline=timeline)
         comparisons = list(trend.get("comparisons") or [])
@@ -838,12 +947,98 @@ class LearningReportAgent:
                 "mode": "breakthrough",
                 "title": "最近出现了一次可放大的突破",
                 "summary": "系统检测到掌握度正在上升，这份报告会告诉你该如何把这波提升放大成稳定进步。",
+                "data_status": data_status,
             }
         return {
             "mode": "manual" if normalized_source == "api" else normalized_source,
             "title": "学习分析报告已就绪",
             "summary": "这份报告已经整理好当前掌握度、趋势和下一步建议，适合直接开始执行。",
+            "data_status": data_status,
         }
+
+    @staticmethod
+    def _normalize_trigger_source_mode(trigger_source: str) -> str:
+        raw = str(trigger_source or "").strip()
+        if not raw:
+            return "api"
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return raw.lower()
+        if isinstance(parsed, dict):
+            source = (
+                str(parsed.get("source") or "").strip()
+                or str(parsed.get("type") or "").strip()
+                or "api"
+            )
+            return source.lower()
+        return raw.lower()
+
+    @staticmethod
+    def _parse_trigger_source_payload(trigger_source: str) -> dict[str, Any]:
+        raw = str(trigger_source or "").strip()
+        if not raw:
+            return {}
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+
+    @staticmethod
+    def _simulation_blindspots_from_trigger_source(trigger_source_payload: dict[str, Any]) -> list[str]:
+        explicit = trigger_source_payload.get("knowledge_gaps_revealed")
+        if isinstance(explicit, list):
+            return [
+                str(item).strip()
+                for item in explicit
+                if str(item).strip()
+            ]
+        insight = trigger_source_payload.get("insight_summary")
+        if not isinstance(insight, dict):
+            return []
+        return [
+            str(item).strip()
+            for item in list(insight.get("knowledge_gaps_revealed") or [])
+            if str(item).strip()
+        ]
+
+    @staticmethod
+    def _merge_simulation_blindspots_into_learner_voice(
+        learner_voice: dict[str, Any],
+        simulation_blindspots: list[str],
+    ) -> dict[str, Any]:
+        if not simulation_blindspots:
+            return learner_voice
+        merged = dict(learner_voice)
+        existing = str(merged.get("learner_voice") or "").strip()
+        blindspot_text = f" 学习模拟额外暴露出的盲区：{'、'.join(simulation_blindspots[:2])}。"
+        merged["learner_voice"] = (existing + blindspot_text).strip()
+        merged["simulation_blindspots"] = simulation_blindspots[:3]
+        return merged
+
+    @staticmethod
+    def _last_study_date_for_topic(
+        timeline: list[dict[str, Any]],
+        mastery_item: dict[str, Any],
+    ) -> str | None:
+        node_id = str(mastery_item.get("node_id") or "").strip()
+        node_name = str(mastery_item.get("node_name") or "").strip()
+        for item in timeline:
+            timeline_node_id = str(item.get("node_id") or "").strip()
+            timeline_name = str(item.get("node_name") or "").strip()
+            if node_id and timeline_node_id == node_id:
+                return str(item.get("created_at") or "").strip() or None
+            if node_name and timeline_name == node_name:
+                return str(item.get("created_at") or "").strip() or None
+        return None
+
+    @staticmethod
+    def _average_timeline_minutes(timeline: list[dict[str, Any]]) -> int:
+        minutes = [int(item.get("study_minutes") or 0) for item in timeline if int(item.get("study_minutes") or 0) > 0]
+        if not minutes:
+            return 25
+        return max(10, round(sum(minutes) / len(minutes)))
 
     def _build_update_copy(self, trigger_summary: dict[str, Any]) -> tuple[str, str]:
         title = str(trigger_summary.get("title") or "学习分析报告已就绪").strip() or "学习分析报告已就绪"
@@ -859,7 +1054,7 @@ class LearningReportAgent:
 
     def _average_mastery(self, mastery: list[dict[str, Any]]) -> float:
         if not mastery:
-            return 48.0
+            return 0.0
         return sum(self._mastery_score(item) for item in mastery) / len(mastery)
 
     @staticmethod
@@ -1057,9 +1252,10 @@ class LearningReportAgent:
                     "tension_point": friction,
                     "source_type": "chat_inference",
                     "source_ids": [],
-                    "relevance_score": 0.76,
+                    "relevance_score": 0.0,
                     "suggested_scenario": "study_group",
                     "suggested_experts": ["学伴", "深度分析"],
+                    "verified": False,
                 }
                 for topic in chat_topics[:3]
             ]
@@ -1075,109 +1271,8 @@ class LearningReportAgent:
         starter_focus: list[dict[str, Any]],
         chat_inference: dict[str, Any],
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
-        if not starter_focus:
-            if mastery or patterns or timeline:
-                return mastery, patterns, timeline
-
-            inferred_topics = [
-                str(item).strip()
-                for item in list(chat_inference.get("topics") or [])
-                if str(item).strip()
-            ]
-            inferred_frictions = [
-                str(item).strip()
-                for item in list(chat_inference.get("frictions") or [])
-                if str(item).strip()
-            ]
-            fallback_topic = inferred_topics[0] if inferred_topics else "当前学习主题"
-            fallback_mastery = [
-                {
-                    "node_name": topic,
-                    "mastery_score": 45.0 - (index * 4),
-                }
-                for index, topic in enumerate(inferred_topics[:3])
-            ] or [
-                {
-                    "node_name": fallback_topic,
-                    "mastery_score": 45.0,
-                }
-            ]
-            fallback_patterns = [
-                {
-                    "pattern_name": "冷启动阶段：目标仍在收敛",
-                    "raw_pattern_name": "cold_start_goal_refinement",
-                    "confidence": 0.38,
-                    "description": inferred_frictions[0]
-                        if inferred_frictions
-                        else "当前学习记录较少，系统先根据最近表达出来的目标生成起步判断。",
-                    "solution_text": f"先围绕 {fallback_topic} 完成一次 20 分钟试跑，再回来刷新报告。",
-                }
-            ]
-            fallback_timeline = [
-                {
-                    "node_name": fallback_topic,
-                    "study_minutes": 20,
-                    "mastery_delta": 0.0,
-                    "created_at": None,
-                }
-            ]
-            return fallback_mastery, fallback_patterns, fallback_timeline
-
-        hydrated_mastery = list(mastery)
-        if not hydrated_mastery:
-            hydrated_mastery = [
-                {
-                    "node_name": str(item.get("topic") or "").strip(),
-                    "mastery_score": 45.0,
-                }
-                for item in starter_focus
-                if str(item.get("topic") or "").strip()
-            ][:3]
-
-        hydrated_patterns = list(patterns)
-        if not hydrated_patterns:
-            frictions = [
-                str(item).strip()
-                for item in list(chat_inference.get("frictions") or [])
-                if str(item).strip()
-            ]
-            first_focus = starter_focus[0] if starter_focus else {}
-            focus_label = str(first_focus.get("topic") or "当前学习方向").strip() or "当前学习方向"
-            if frictions:
-                hydrated_patterns = [
-                    {
-                        "pattern_name": "对话推断：起步与理解待收敛",
-                        "raw_pattern_name": "chat_inferred_bootstrap_friction",
-                        "confidence": 0.48,
-                        "description": f"最近聊天里反复出现的信号是：{frictions[0]}。",
-                        "solution_text": f"先围绕 {focus_label} 做一次低门槛试跑，把第一步和第一处卡点记录下来。",
-                    }
-                ]
-            else:
-                hydrated_patterns = [
-                    {
-                        "pattern_name": "学习基线尚在建立",
-                        "raw_pattern_name": "baseline_building",
-                        "confidence": 0.42,
-                        "description": "当前历史样本不足，系统先根据你现在最值得启动的方向来生成一份起步期报告。",
-                        "solution_text": f"先围绕 {focus_label} 完成一次 20-30 分钟的试跑，再回来对照这份报告做调整。",
-                    }
-                ]
-
-        hydrated_timeline = list(timeline)
-        if not hydrated_timeline:
-            hydrated_timeline = [
-                {
-                    "node_name": str(item.get("topic") or "").strip(),
-                    "study_minutes": 25,
-                    "mastery_delta": 0.0,
-                    "created_at": None,
-                }
-                for item in starter_focus
-                if str(item.get("topic") or "").strip()
-            ][:3]
-
-        return hydrated_mastery, hydrated_patterns, hydrated_timeline
+        del starter_focus, chat_inference
+        return list(mastery), list(patterns), list(timeline)
 
     def _merge_chat_inference_into_learner_voice(
         self,

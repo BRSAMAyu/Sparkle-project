@@ -236,13 +236,20 @@ class GalaxyRepository {
     }
   }
 
-  Future<List<NodeExpansionCandidate>> applyExpansionCandidates(
+  Future<NodeExpansionApplyResult> applyExpansionCandidates(
     String nodeId, {
     required String promptVersion,
     required List<NodeExpansionCandidate> candidates,
   }) async {
     if (DemoDataService.isDemoMode) {
-      return candidates;
+      return NodeExpansionApplyResult(
+        success: true,
+        requestedCount: candidates.length,
+        appliedCount: candidates.length,
+        createdCount: candidates.length,
+        reusedCount: 0,
+        createdNodes: candidates,
+      );
     }
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -256,36 +263,39 @@ class GalaxyRepository {
       );
       final payload = response.data;
       if (payload == null) {
-        return candidates;
+        return NodeExpansionApplyResult(
+          success: true,
+          requestedCount: candidates.length,
+          appliedCount: candidates.length,
+          createdCount: candidates.length,
+          reusedCount: 0,
+          createdNodes: candidates,
+        );
       }
-      final created = (payload['created_nodes'] as List<dynamic>? ??
-              const <dynamic>[])
-          .whereType<Map<String, dynamic>>()
-          .map(
-            (item) => NodeExpansionCandidate(
-              candidateId: item['id']?.toString() ?? '',
-              name: item['name']?.toString() ?? '',
-              nameEn: item['name_en']?.toString(),
-              description: item['description']?.toString() ?? '',
-              importanceLevel: (item['importance_level'] as num?)?.toInt() ?? 3,
-              relationToTrigger: 'related',
-              relationStrength: 0.7,
-              keywords: ((item['tags'] as List<dynamic>?) ?? const <dynamic>[])
-                  .map((tag) => tag.toString())
-                  .toList(growable: false),
-              sectorWeights:
-                  ((item['sector_weights'] as Map<String, dynamic>?) ??
-                          const <String, dynamic>{})
-                      .map(
-                (key, value) => MapEntry(
-                  key,
-                  (value as num?)?.toDouble() ?? 0,
-                ),
-              ),
-            ),
-          )
-          .toList(growable: false);
-      return _sanitizeCreatedCandidates(created.isEmpty ? candidates : created);
+      final created = _sanitizeCreatedCandidates(
+        _parseAppliedNodes(payload['created_nodes']),
+      );
+      final reused = _sanitizeCreatedCandidates(
+        _parseAppliedNodes(payload['reused_nodes']),
+      );
+      final createdCount =
+          (payload['created_count'] as num?)?.toInt() ?? created.length;
+      final reusedCount =
+          (payload['reused_count'] as num?)?.toInt() ?? reused.length;
+      final appliedCount = (payload['applied_count'] as num?)?.toInt() ??
+          (createdCount + reusedCount);
+      final requestedCount =
+          (payload['requested_count'] as num?)?.toInt() ?? candidates.length;
+
+      return NodeExpansionApplyResult(
+        success: payload['success'] as bool? ?? true,
+        requestedCount: requestedCount,
+        appliedCount: appliedCount,
+        createdCount: createdCount,
+        reusedCount: reusedCount,
+        createdNodes: created,
+        reusedNodes: reused,
+      );
     } on DioException catch (e) {
       throw Exception(
         _extractDetail(
@@ -332,6 +342,34 @@ class GalaxyRepository {
             (candidate) =>
                 _isRenderableNodeName(candidate.name) &&
                 candidate.description.trim().isNotEmpty,
+          )
+          .toList(growable: false);
+
+  List<NodeExpansionCandidate> _parseAppliedNodes(dynamic rawNodes) =>
+      (rawNodes as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (item) => NodeExpansionCandidate(
+              candidateId: item['id']?.toString() ?? '',
+              name: item['name']?.toString() ?? '',
+              nameEn: item['name_en']?.toString(),
+              description: item['description']?.toString() ?? '',
+              importanceLevel: (item['importance_level'] as num?)?.toInt() ?? 3,
+              relationToTrigger: 'related',
+              relationStrength: 0.7,
+              keywords: ((item['tags'] as List<dynamic>?) ?? const <dynamic>[])
+                  .map((tag) => tag.toString())
+                  .toList(growable: false),
+              sectorWeights:
+                  ((item['sector_weights'] as Map<String, dynamic>?) ??
+                          const <String, dynamic>{})
+                      .map(
+                (key, value) => MapEntry(
+                  key,
+                  (value as num?)?.toDouble() ?? 0,
+                ),
+              ),
+            ),
           )
           .toList(growable: false);
 

@@ -46,6 +46,7 @@ dependencies:
 
   # Navigation
   go_router: ^13.0.0
+  app_links: ^6.4.0
 
   # Notifications
   flutter_local_notifications: ^17.0.0
@@ -101,6 +102,7 @@ dependencies:
   crypto: ^3.0.7
   grpc: ^5.1.0
   gal: ^2.3.0
+  mobile_scanner: ^7.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -127,6 +129,23 @@ dev_dependencies:
 
 
   stream_channel: any
+
+dependency_overrides:
+  file_picker:
+    path: third_party_plugins/file_picker
+  fluwx:
+    path: third_party_plugins/fluwx
+  flutter_local_notifications:
+    path: third_party_plugins/flutter_local_notifications
+  flutter_secure_storage:
+    path: third_party_plugins/flutter_secure_storage
+  isar_flutter_libs:
+    path: third_party_plugins/isar_flutter_libs
+  jpush_flutter:
+    path: third_party_plugins/jpush_flutter
+  sentry_flutter:
+    path: third_party_plugins/sentry_flutter
+
 flutter:
   uses-material-design: true
   generate: true

@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/core/services/push_navigation_service.dart';
 import 'package:sparkle/core/services/push_token_manager.dart';
 
 /// Background message handler (must be top-level function)
@@ -59,12 +59,14 @@ class FirebaseMessagingService {
     try {
       // Request permission
       final settings = await _requestPermission();
-      _logger.i('Notification permission status: ${settings.authorizationStatus}');
+      _logger
+          .i('Notification permission status: ${settings.authorizationStatus}');
 
       // Get initial token
       _currentToken = await _messaging.getToken();
       if (_currentToken != null) {
-        _logger.i('📱 FCM token obtained: ${_currentToken!.substring(0, 20)}...');
+        _logger
+            .i('📱 FCM token obtained: ${_currentToken!.substring(0, 20)}...');
         await _registerToken(_currentToken!);
       }
 
@@ -96,9 +98,7 @@ class FirebaseMessagingService {
   }
 
   Future<NotificationSettings> _requestPermission() async {
-    final settings = await _messaging.requestPermission(
-      
-    );
+    final settings = await _messaging.requestPermission();
     return settings;
   }
 
@@ -134,11 +134,13 @@ class FirebaseMessagingService {
     _logger.i('📱 Message opened: ${message.messageId}');
     _logger.d('Data: ${message.data}');
 
-    // Navigate to deep link if present
-    final deepLink = message.data['deep_link'];
-    if (deepLink is String && deepLink.isNotEmpty) {
-      _navigateToDeepLink(deepLink);
-    }
+    final payload = Map<String, dynamic>.from(message.data);
+    unawaited(
+      _ref.read(pushNavigationServiceProvider).handleOpenedPayload(
+            payload: payload,
+            source: 'firebase_messaging',
+          ),
+    );
 
     // Emit event for analytics/tracking
     _emitNotificationEvent(message);
@@ -163,81 +165,6 @@ class FirebaseMessagingService {
       );
     } catch (e) {
       _logger.e('Failed to show local notification: $e');
-    }
-  }
-
-  void _navigateToDeepLink(String deepLink) {
-    try {
-      final context = navigatorKey.currentContext;
-      if (context == null) {
-        _logger.w('Navigator context not available for deep link navigation');
-        return;
-      }
-
-      // Parse deep link: sparkle://entity/id
-      final uri = Uri.tryParse(deepLink);
-      if (uri == null || uri.scheme != 'sparkle') {
-        _logger.w('Invalid deep link format: $deepLink');
-        return;
-      }
-
-      final entityType = uri.host;
-      final entityId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
-
-      _logger.i('Navigating to deep link: $entityType/$entityId');
-
-      switch (entityType) {
-        case 'task':
-          if (entityId != null) {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'taskExecution',
-                pathParameters: {'id': entityId},
-              ),
-            );
-          }
-        case 'achievement':
-          if (entityId != null) {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'achievementDetail',
-                pathParameters: {'id': entityId},
-              ),
-            );
-          }
-        case 'chat':
-          if (entityId != null) {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'chat',
-                queryParameters: {'session_id': entityId},
-              ),
-            );
-          }
-        case 'plan':
-          if (entityId != null &&
-              uri.pathSegments.length > 1 &&
-              uri.pathSegments[1] == 'review') {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'planReview',
-                pathParameters: {'id': entityId},
-              ),
-            );
-          } else if (entityId != null) {
-            unawaited(
-              GoRouter.of(context).pushNamed(
-                'planDetail',
-                pathParameters: {'id': entityId},
-              ),
-            );
-          }
-        default:
-          _logger.w('Unknown deep link entity type: $entityType');
-      }
-    } catch (e, stack) {
-      _logger.e('Failed to navigate to deep link: $e');
-      _logger.d(stack.toString());
     }
   }
 

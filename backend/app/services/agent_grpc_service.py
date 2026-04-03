@@ -33,6 +33,7 @@ from app.orchestration.chat_modes import (
     CHAT_MODE_EXPERT_PREFIX,
     CHAT_MODE_STANDARD,
     CHAT_MODE_STUDY_PLAN,
+    CHAT_MODE_TEAM_PREFIX,
     normalize_chat_mode,
 )
 from app.orchestration.orchestrator import ChatOrchestrator
@@ -73,6 +74,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         if mode.startswith(CHAT_MODE_EXPERT_PREFIX):
             expert_id = mode[len(CHAT_MODE_EXPERT_PREFIX) :].strip() or "unknown"
             return f"expert_{expert_id}_workflow"
+        if mode.startswith(CHAT_MODE_TEAM_PREFIX):
+            return "expert_team_workflow"
         return "standard_chat"
 
     @staticmethod
@@ -665,6 +668,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         plan_id=plan_id,
                         user_id=user_id,
                         db_session=db,
+                        modifications=dict(request.meta) if request.meta else None,
                     )
                 logger.info(
                     f"Plan {plan_id} resumed after approval by {user_id}, task_generation={result.get('task_generation_initiated')}"
@@ -685,6 +689,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     plan_id=plan_id,
                     user_id=user_id,
                     feedback=request.user_comment or "User requested modifications",
+                    modifications=dict(request.meta) if request.meta else None,
                 )
                 updated_plan_id = replan_result.get("new_plan_id", "")
                 logger.info(f"Plan {plan_id} marked for replanning by {user_id}")

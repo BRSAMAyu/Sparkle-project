@@ -57,6 +57,7 @@ class _KnowledgeTheaterScreenState
   bool _showCelebration = false;
   bool _playCelebration = false;
   bool _isTimelinePlaying = false;
+  bool _disclaimerDismissed = false;
   String? _selectedNodeId;
   _TheaterWorkbenchTab _activeWorkbenchTab = _TheaterWorkbenchTab.graph;
 
@@ -103,6 +104,7 @@ class _KnowledgeTheaterScreenState
               ? null
               : nextPrediction.graphNodes.first.id;
           _activeWorkbenchTab = _TheaterWorkbenchTab.graph;
+          _disclaimerDismissed = false;
           unawaited(_celebrateTheaterMilestone(nextPrediction));
         }
       },
@@ -400,6 +402,17 @@ class _KnowledgeTheaterScreenState
                                           : null,
                                 ),
                               ),
+                              if ((prediction.disclaimer ?? '')
+                                      .trim()
+                                      .isNotEmpty &&
+                                  !_disclaimerDismissed) ...[
+                                const SizedBox(height: 12),
+                                _TheaterDisclaimerBanner(
+                                  message: prediction.disclaimer!.trim(),
+                                  onDismiss: () => setState(
+                                      () => _disclaimerDismissed = true),
+                                ),
+                              ],
                               const SizedBox(height: 12),
                               if (constraints.maxWidth < 340 &&
                                   prediction.paths.isNotEmpty) ...[
@@ -3034,6 +3047,70 @@ String _headlineRisk(TheaterPathOption route) {
   return firstRisk;
 }
 
+String _routeCompletionDisplay(TheaterPathOption route,
+    {bool compact = false}) {
+  if (route.dataQuality == 'low') {
+    final low = (route.completionRangeLow * 100).round();
+    final high = (route.completionRangeHigh * 100).round();
+    return compact ? '预估 $low-$high%' : '预估 $low-$high%';
+  }
+  return '${(route.estimatedCompletionRate * 100).round()}%';
+}
+
+String _routeMasteryDisplay(TheaterPathOption route, {bool compact = false}) {
+  if (route.dataQuality == 'low') {
+    final low = route.masteryRangeLow.round();
+    final high = route.masteryRangeHigh.round();
+    return compact ? '预估 $low-$high%' : '预估 $low-$high%';
+  }
+  return '${route.estimatedMastery.round()}%';
+}
+
+String _routeDataBadgeLabel(TheaterPathOption route) {
+  switch (route.dataQuality) {
+    case 'low':
+      return '参考估算';
+    case 'medium':
+      return '基于有限数据';
+    case 'high':
+      return '数据充分度 ${(route.dataSufficiencyScore * 100).round()}%';
+    default:
+      return '数据参考';
+  }
+}
+
+String _routeDataNote(TheaterPathOption route) {
+  switch (route.dataQuality) {
+    case 'low':
+      return '当前缺少该主题的真实学习记录，建议把区间估算当作参考，而不是精确预测。';
+    case 'medium':
+      return '当前只覆盖到部分图谱与校准数据，百分比判断仍需要继续观察。';
+    default:
+      return '';
+  }
+}
+
+Color _routeMetricBackgroundColor(
+    BuildContext context, TheaterPathOption route) {
+  if (route.dataQuality == 'low') {
+    return Theme.of(context).colorScheme.surfaceContainerHighest;
+  }
+  if (route.dataQuality == 'medium') {
+    return DS.warning.withValues(alpha: 0.14);
+  }
+  return Theme.of(context).colorScheme.surface;
+}
+
+Color _routeMetricLabelColor(BuildContext context, TheaterPathOption route) {
+  if (route.dataQuality == 'low') {
+    return DS.textSecondary;
+  }
+  if (route.dataQuality == 'medium') {
+    return DS.warning;
+  }
+  return Theme.of(context).textTheme.labelMedium?.color ?? DS.textPrimary;
+}
+
 String _targetModeLabel(String mode) {
   switch (mode) {
     case 'graph_explicit':
@@ -3211,16 +3288,26 @@ class _RouteListView extends StatelessWidget {
                     children: [
                       _MetricPill(
                         label:
-                            '完成率 ${(route.estimatedCompletionRate * 100).round()}%',
+                            '完成率 ${_routeCompletionDisplay(route, compact: true)}',
+                        backgroundColor:
+                            _routeMetricBackgroundColor(context, route),
+                        labelColor: _routeMetricLabelColor(context, route),
                       ),
                       _MetricPill(
-                        label: '掌握度 ${route.estimatedMastery.round()}%',
+                        label:
+                            '掌握度 ${_routeMasteryDisplay(route, compact: true)}',
+                        backgroundColor:
+                            _routeMetricBackgroundColor(context, route),
+                        labelColor: _routeMetricLabelColor(context, route),
                       ),
                       _MetricPill(label: '日均 ${route.dailyMinutes} 分钟'),
                       _MetricPill(label: '${route.risks.length} 个风险点'),
                       _MetricPill(label: '综合 ${route.routeScore.round()} 分'),
                       _MetricPill(
-                        label: '置信 ${(route.confidenceScore * 100).round()}%',
+                        label: _routeDataBadgeLabel(route),
+                        backgroundColor:
+                            _routeMetricBackgroundColor(context, route),
+                        labelColor: _routeMetricLabelColor(context, route),
                       ),
                     ],
                   ),
@@ -3232,6 +3319,17 @@ class _RouteListView extends StatelessWidget {
                           color: DS.textSecondary,
                         ),
                   ),
+                  if (_routeDataNote(route).isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      _routeDataNote(route),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: route.dataQuality == 'low'
+                                ? DS.textTertiary
+                                : DS.textSecondary,
+                          ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -3320,12 +3418,11 @@ class _RouteComparePager extends StatelessWidget {
                               children: [
                                 _RouteMetricRow(
                                   label: '完成率',
-                                  value:
-                                      '${(route.estimatedCompletionRate * 100).round()}%',
+                                  value: _routeCompletionDisplay(route),
                                 ),
                                 _RouteMetricRow(
                                   label: '掌握度',
-                                  value: '${route.estimatedMastery.round()}%',
+                                  value: _routeMasteryDisplay(route),
                                 ),
                                 _RouteMetricRow(
                                   label: '日均时间',
@@ -3340,9 +3437,8 @@ class _RouteComparePager extends StatelessWidget {
                                   value: '${route.routeScore.round()}',
                                 ),
                                 _RouteMetricRow(
-                                  label: '置信度',
-                                  value:
-                                      '${(route.confidenceScore * 100).round()}%',
+                                  label: '数据说明',
+                                  value: _routeDataBadgeLabel(route),
                                 ),
                               ],
                             ),
@@ -3355,6 +3451,16 @@ class _RouteComparePager extends StatelessWidget {
                                   .bodySmall
                                   ?.copyWith(color: DS.textSecondary),
                             ),
+                            if (_routeDataNote(route).isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                _routeDataNote(route),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: DS.textSecondary),
+                              ),
+                            ],
                             const SizedBox(height: 12),
                             Wrap(
                               spacing: 10,
@@ -3410,12 +3516,11 @@ class _RouteComparePager extends StatelessWidget {
                                   const SizedBox(height: 10),
                                   _RouteMetricRow(
                                     label: '完成率',
-                                    value:
-                                        '${(route.estimatedCompletionRate * 100).round()}%',
+                                    value: _routeCompletionDisplay(route),
                                   ),
                                   _RouteMetricRow(
                                     label: '掌握度',
-                                    value: '${route.estimatedMastery.round()}%',
+                                    value: _routeMasteryDisplay(route),
                                   ),
                                   _RouteMetricRow(
                                     label: '日均时间',
@@ -3430,9 +3535,8 @@ class _RouteComparePager extends StatelessWidget {
                                     value: '${route.routeScore.round()}',
                                   ),
                                   _RouteMetricRow(
-                                    label: '置信度',
-                                    value:
-                                        '${(route.confidenceScore * 100).round()}%',
+                                    label: '数据说明',
+                                    value: _routeDataBadgeLabel(route),
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
@@ -3443,6 +3547,16 @@ class _RouteComparePager extends StatelessWidget {
                                         .bodySmall
                                         ?.copyWith(color: DS.textSecondary),
                                   ),
+                                  if (_routeDataNote(route).isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      _routeDataNote(route),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: DS.textSecondary),
+                                    ),
+                                  ],
                                   const Spacer(),
                                   FilledButton.tonalIcon(
                                     onPressed: safeIndex == index
@@ -3635,20 +3749,73 @@ class _RouteMetricRow extends StatelessWidget {
 }
 
 class _MetricPill extends StatelessWidget {
-  const _MetricPill({required this.label});
+  const _MetricPill({
+    required this.label,
+    this.backgroundColor,
+    this.labelColor,
+  });
 
   final String label;
+  final Color? backgroundColor;
+  final Color? labelColor;
 
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: backgroundColor ?? Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
           label,
-          style: Theme.of(context).textTheme.labelMedium,
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(color: labelColor),
+        ),
+      );
+}
+
+class _TheaterDisclaimerBanner extends StatelessWidget {
+  const _TheaterDisclaimerBanner({
+    required this.message,
+    required this.onDismiss,
+  });
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: DS.info.withValues(alpha: 0.09),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: DS.info.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline_rounded, color: DS.info),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: onDismiss,
+              icon: const Icon(Icons.close_rounded),
+              tooltip: '关闭提示',
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
         ),
       );
 }
@@ -4512,13 +4679,22 @@ class _AccuracyCard extends StatelessWidget {
                         '平均准确度 ${(overview!.avgAccuracyScore * 100).round()}%',
                   ),
                   _MetricPill(
-                    label: '模型置信 ${(overview!.confidenceScore * 100).round()}%',
+                    label:
+                        '数据充分度 ${(overview!.confidenceScore * 100).round()}%',
                   ),
                   if (overview!.coverageRate != null)
                     _MetricPill(
                       label: '区间命中 ${(overview!.coverageRate! * 100).round()}%',
                     ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '数据充分度反映当前预测所依据的数据量和校准次数，不是预测准确度。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.4,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(

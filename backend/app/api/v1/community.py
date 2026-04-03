@@ -23,6 +23,7 @@ from app.core.security import decode_token
 from app.core.websocket import manager
 from app.db.session import AsyncSessionLocal, get_db
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
+from app.models.card_protocol import ImportMode, SharePermission, ShareScope
 from app.models.community import (
     Friendship,
     FriendshipStatus,
@@ -168,6 +169,7 @@ from app.services.community_service import (
     UserBlockService,
     UserSearchService,
 )
+from app.services.card_protocol.share_service import ShareService
 from app.services.plan_service import PlanService
 from app.services.streak_signal_processor import StreakSignalProcessor
 from app.services.task_service import TaskService
@@ -694,6 +696,17 @@ def _share_message_type(resource_type: SharedResourceType) -> MessageTypeEnum:
     if resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
         return MessageTypeEnum.PRISM_SHARE
     return MessageTypeEnum.FRAGMENT_SHARE
+
+
+def _legacy_permission_to_share_permission(permission: str | None) -> SharePermission:
+    normalized = (permission or "view").strip().lower()
+    if normalized == "fork":
+        return SharePermission.FORK
+    if normalized in {"edit", "adopt"}:
+        return SharePermission.ADOPT
+    if normalized == "comment":
+        return SharePermission.COMMENT
+    return SharePermission.VIEW
 
 async def _get_share_resource(
     db: AsyncSession,
@@ -2595,6 +2608,38 @@ async def share_resource(
 
         resource = await _get_share_resource(db, resource_type, data.resource_id, current_user.id)
         brief = _build_share_brief(resource_type, resource)
+        card_share = None
+        if resource_type in {SharedResourceType.PLAN, SharedResourceType.TASK}:
+            try:
+                share_service = ShareService(db)
+                shareable_card = await share_service.resolve_card_from_legacy_resource(
+                    resource_type=resource_type.value,
+                    resource_id=data.resource_id,
+                    owner_id=current_user.id,
+                )
+                if shareable_card is not None:
+                    card_share = await share_service.share_card(
+                        card_id=shareable_card.id,
+                        user_id=current_user.id,
+                        scope=ShareScope.GROUP if data.target_group_id else ShareScope.USER,
+                        target_id=data.target_group_id or data.target_user_id,
+                        permission=_legacy_permission_to_share_permission(data.permission),
+                        message=data.comment,
+                        include_children=resource_type == SharedResourceType.PLAN,
+                        max_depth=4 if resource_type == SharedResourceType.PLAN else 2,
+                        metadata={
+                            "origin": "community.share",
+                            "legacy_resource_type": resource_type.value,
+                            "legacy_resource_id": str(data.resource_id),
+                        },
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "Card share bridge failed for {} {}: {}",
+                    resource_type.value,
+                    data.resource_id,
+                    exc,
+                )
 
         shared = await collaboration_service.share_resource(
             db,
@@ -2606,11 +2651,15 @@ async def share_resource(
             permission=data.permission,
             comment=data.comment
         )
+        if card_share is not None:
+            shared.card_share_record_id = card_share.id
+            db.add(shared)
 
         share_payload = _compact_dict({
             "resource_type": resource_type.value,
             "resource_id": str(data.resource_id),
             "shared_resource_id": str(shared.id),
+            "card_share_record_id": str(card_share.id) if card_share else None,
             "resource_title": brief["title"],
             "resource_summary": brief["summary"],
             "resource_meta": brief["meta"],
@@ -2677,6 +2726,7 @@ async def share_resource(
             cognitive_fragment_id=shared.cognitive_fragment_id,
             curiosity_capsule_id=shared.curiosity_capsule_id,
             behavior_pattern_id=shared.behavior_pattern_id,
+            card_share_record_id=shared.card_share_record_id,
             permission=shared.permission,
             comment=shared.comment,
             view_count=shared.view_count,
@@ -2785,6 +2835,7 @@ async def get_group_resources(
             cognitive_fragment_id=res.cognitive_fragment_id,
             curiosity_capsule_id=res.curiosity_capsule_id,
             behavior_pattern_id=res.behavior_pattern_id,
+            card_share_record_id=res.card_share_record_id,
             permission=res.permission,
             comment=res.comment,
             view_count=res.view_count,
@@ -2952,6 +3003,89 @@ async def adopt_shared_resource(
     if str(shared.shared_by) != str(current_user.id):
         if await UserBlockService.has_block_relationship(db, current_user.id, shared.shared_by):
             raise HTTPException(status_code=403, detail="无权采纳该共享资源")
+
+    if shared.card_share_record_id:
+        try:
+            share_service = ShareService(db)
+            import_mode = ImportMode.FORK if (shared.permission or "").strip().lower() == "fork" else ImportMode.ADOPT
+            result = await share_service.adopt_shared_card(
+                share_record_id=shared.card_share_record_id,
+                user_id=current_user.id,
+                import_mode=import_mode,
+            )
+            shared.save_count = (shared.save_count or 0) + 1
+            db.add(shared)
+            await db.commit()
+
+            if result.imported_root_plan_id:
+                imported_plan = await db.get(Plan, result.imported_root_plan_id)
+                entity_card = build_plan_entity_card(
+                    {
+                        "id": str(imported_plan.id),
+                        "name": imported_plan.name,
+                        "description": imported_plan.description,
+                        "type": imported_plan.type.value if imported_plan.type else None,
+                        "subject": imported_plan.subject,
+                        "source": imported_plan.source,
+                        "is_active": imported_plan.is_active,
+                    },
+                    tool_name="adopt_shared_resource",
+                    source_channel="community_share",
+                )
+                return {
+                    "success": True,
+                    "resource_type": "plan",
+                    "new_resource_id": str(imported_plan.id),
+                    "card_root_id": str(result.root_card.id),
+                    "entity_card": entity_card,
+                }
+
+            if result.imported_root_task_id:
+                imported_task = await db.get(Task, result.imported_root_task_id)
+                entity_card = build_task_entity_card(
+                    {
+                        "id": str(imported_task.id),
+                        "title": imported_task.title,
+                        "type": imported_task.type.value if imported_task.type else None,
+                        "status": imported_task.status.value if imported_task.status else "pending",
+                        "estimated_minutes": imported_task.estimated_minutes,
+                    },
+                    tool_name="adopt_shared_resource",
+                    source_channel="community_share",
+                )
+                return {
+                    "success": True,
+                    "resource_type": "task",
+                    "new_resource_id": str(imported_task.id),
+                    "card_root_id": str(result.root_card.id),
+                    "entity_card": entity_card,
+                }
+
+            card_title = (
+                result.root_card.metadata_.get("name")
+                or result.root_card.metadata_.get("title")
+                or result.root_card.card_type.value.title()
+            )
+            card_summary = (
+                result.root_card.metadata_.get("description")
+                or result.root_card.metadata_.get("objective")
+            )
+            entity_card = _build_adopted_entity_card(
+                resource_type=result.root_card.card_type.value.lower(),
+                resource_id=result.root_card.id,
+                title=card_title,
+                summary=card_summary,
+            )
+            return {
+                "success": True,
+                "resource_type": result.root_card.card_type.value.lower(),
+                "new_resource_id": str(result.root_card.id),
+                "card_root_id": str(result.root_card.id),
+                "entity_card": entity_card,
+            }
+        except ValueError as exc:
+            await db.rollback()
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     new_id: UUID | None = None
     resource_type = ""

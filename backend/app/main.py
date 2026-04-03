@@ -38,10 +38,15 @@ from app.orchestration.summarization_worker import create_summarization_worker
 from app.services.achievement_event_consumer import AchievementEventConsumer
 from app.services.billing_worker import BillingWorker
 from app.services.capsule_event_consumer import CapsuleEventConsumer
+from app.services.execution_event_consumer import ExecutionEventConsumer
+from app.services.galaxy_execution_consumer import GalaxyExecutionConsumer
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
 from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.services.profile_event_consumer import ProfileEventConsumer
+from app.services.plan_health_event_consumer import PlanHealthEventConsumer
+from app.services.intervention_event_consumer import InterventionEventConsumer
+from app.services.main_chain_artifact_consumer import MainChainArtifactConsumer
 from app.services.cognitive_event_consumer import CognitiveEventConsumer
 from app.services.nudge_event_consumer import NudgeEventConsumer
 from app.services.scheduler_service import scheduler_service
@@ -58,6 +63,31 @@ logger.add(
     level=settings.LOG_LEVEL,
     serialize=not settings.DEBUG, # JSON format in production
 )
+
+INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS = int(
+    os.getenv("INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS", "900")
+)
+ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER = (
+    os.getenv("ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER", "false").lower() == "true"
+)
+
+
+async def _run_intervention_outcome_verifier_loop() -> None:
+    """Periodically resolve pending InterventionRecord outcomes."""
+    from app.core.event_bus import event_bus
+    from app.services.card_protocol.outcome_verifier import InterventionOutcomeVerifier
+
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                verifier = InterventionOutcomeVerifier(db, event_bus)
+                await verifier.verify_all_pending()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning("InterventionOutcomeVerifier loop failed (non-fatal): {}", exc)
+
+        await asyncio.sleep(INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -132,6 +162,18 @@ async def lifespan(app: FastAPI):
         achievement_consumer_task = asyncio.create_task(achievement_consumer.start())
         app.state.achievement_consumer_task = achievement_consumer_task
 
+    execution_consumer_task = None
+    if cache_service.redis:
+        execution_consumer = ExecutionEventConsumer(event_bus=event_bus)
+        execution_consumer_task = asyncio.create_task(execution_consumer.start())
+        app.state.execution_consumer_task = execution_consumer_task
+
+    galaxy_execution_consumer_task = None
+    if cache_service.redis:
+        galaxy_execution_consumer = GalaxyExecutionConsumer(event_bus=event_bus)
+        galaxy_execution_consumer_task = asyncio.create_task(galaxy_execution_consumer.start())
+        app.state.galaxy_execution_consumer_task = galaxy_execution_consumer_task
+
     profile_consumer_task = None
     if cache_service.redis:
         profile_consumer = ProfileEventConsumer(event_bus=event_bus, redis_client=cache_service.redis)
@@ -152,6 +194,32 @@ async def lifespan(app: FastAPI):
         nudge_consumer = NudgeEventConsumer(event_bus=event_bus)
         nudge_consumer_task = asyncio.create_task(nudge_consumer.start())
         app.state.nudge_consumer_task = nudge_consumer_task
+
+    # Start plan health event consumer
+    plan_health_consumer_task = None
+    if cache_service.redis and event_bus is not None:
+        plan_health_consumer = PlanHealthEventConsumer(event_bus=event_bus)
+        plan_health_consumer_task = asyncio.create_task(plan_health_consumer.start())
+        app.state.plan_health_consumer_task = plan_health_consumer_task
+
+    intervention_consumer_task = None
+    if cache_service.redis and event_bus is not None:
+        intervention_consumer = InterventionEventConsumer(event_bus=event_bus)
+        intervention_consumer_task = asyncio.create_task(intervention_consumer.start())
+        app.state.intervention_consumer_task = intervention_consumer_task
+
+    main_chain_artifact_consumer_task = None
+    if cache_service.redis and event_bus is not None:
+        main_chain_consumer = MainChainArtifactConsumer(event_bus=event_bus)
+        main_chain_artifact_consumer_task = asyncio.create_task(main_chain_consumer.start())
+        app.state.main_chain_artifact_consumer_task = main_chain_artifact_consumer_task
+
+    intervention_outcome_verifier_task = None
+    if event_bus is not None and ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER:
+        intervention_outcome_verifier_task = asyncio.create_task(
+            _run_intervention_outcome_verifier_loop()
+        )
+        app.state.intervention_outcome_verifier_task = intervention_outcome_verifier_task
 
     summarization_worker_task = None
     summarization_worker = None
@@ -289,6 +357,18 @@ async def lifespan(app: FastAPI):
         with suppress(asyncio.CancelledError):
             await achievement_consumer_task
 
+    execution_consumer_task = getattr(app.state, "execution_consumer_task", None)
+    if execution_consumer_task:
+        execution_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await execution_consumer_task
+
+    galaxy_execution_consumer_task = getattr(app.state, "galaxy_execution_consumer_task", None)
+    if galaxy_execution_consumer_task:
+        galaxy_execution_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await galaxy_execution_consumer_task
+
     profile_consumer_task = getattr(app.state, "profile_consumer_task", None)
     if profile_consumer_task:
         profile_consumer_task.cancel()
@@ -306,6 +386,30 @@ async def lifespan(app: FastAPI):
         nudge_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await nudge_consumer_task
+
+    # Stop plan health event consumer
+    plan_health_consumer_task = getattr(app.state, "plan_health_consumer_task", None)
+    if plan_health_consumer_task:
+        plan_health_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await plan_health_consumer_task
+    intervention_consumer_task = getattr(app.state, "intervention_consumer_task", None)
+    if intervention_consumer_task:
+        intervention_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await intervention_consumer_task
+
+    main_chain_artifact_consumer_task = getattr(app.state, "main_chain_artifact_consumer_task", None)
+    if main_chain_artifact_consumer_task:
+        main_chain_artifact_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await main_chain_artifact_consumer_task
+
+    intervention_outcome_verifier_task = getattr(app.state, "intervention_outcome_verifier_task", None)
+    if intervention_outcome_verifier_task:
+        intervention_outcome_verifier_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await intervention_outcome_verifier_task
 
     # Stop summarization worker
     summarization_worker = getattr(app.state, "summarization_worker", None)

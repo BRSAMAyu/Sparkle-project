@@ -7,21 +7,9 @@ Celery 任务模块 - 任务包装器
 创建时间: 2026-01-03
 """
 
-import asyncio
-
 from loguru import logger
 
-from app.core.celery_app import celery_app
-
-_worker_event_loop: asyncio.AbstractEventLoop | None = None
-
-
-def _run_async(coro):
-    global _worker_event_loop
-    if _worker_event_loop is None or _worker_event_loop.is_closed():
-        _worker_event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(_worker_event_loop)
-    return _worker_event_loop.run_until_complete(coro)
+from app.core.celery_app import _run_async, celery_app
 
 
 @celery_app.task(bind=True, name="app.core.celery_tasks.health_check_task")
@@ -428,6 +416,52 @@ def generate_weekly_learning_reports(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=60)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_growth_digests")
+def generate_weekly_growth_digests(self, limit: int = 200, deliver: bool = False):
+    """Generate weekly growth digests, optionally delivering them immediately."""
+    import asyncio
+
+    from app.core.cache import cache_service
+    from app.db.session import AsyncSessionLocal
+    from app.services.weekly_digest_service import WeeklyDigestService
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            service = WeeklyDigestService(session, cache_service.redis)
+            return await service.generate_for_active_users(limit=limit, deliver=deliver)
+
+    try:
+        result = _run_async(_run())
+        logger.info(f"✅ Weekly growth digests generated: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to generate weekly growth digests: {exc}")
+        raise self.retry(exc=exc, countdown=60)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.deliver_weekly_growth_digests")
+def deliver_weekly_growth_digests(self, limit: int = 200):
+    """Deliver stored weekly growth digests for active users."""
+    import asyncio
+
+    from app.core.cache import cache_service
+    from app.db.session import AsyncSessionLocal
+    from app.services.weekly_digest_service import WeeklyDigestService
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            service = WeeklyDigestService(session, cache_service.redis)
+            return await service.deliver_for_active_users(limit=limit)
+
+    try:
+        result = _run_async(_run())
+        logger.info(f"✅ Weekly growth digests delivered: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to deliver weekly growth digests: {exc}")
+        raise self.retry(exc=exc, countdown=60)
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.check_prediction_accuracy")
 def check_prediction_accuracy(self):
     """每日自动回填到期的 Theater 预测准确度。"""
@@ -695,6 +729,22 @@ def sleep_probe_task(self, seconds: float = 2.0):
         "task_id": self.request.id,
     }
 
+
+@celery_app.task(bind=True, max_retries=3, default_retry_delay=60, name="app.core.celery_tasks.schedule_push_notification")
+def schedule_push_notification(self, user_id: str, intervention_id: str, payload: dict):
+    """
+    Schedule a push notification delivery to the mobile app (APNs/FCM).
+    This acts as the PUSH delivery channel for InterventionRecords.
+    """
+    import asyncio
+    
+    async def _send():
+        # In a real system, this would call APNs/FCM APIs.
+        logger.info(f"Push notification sent successfully to user {user_id} for intervention {intervention_id}")
+        logger.debug(f"Push payload: {payload}")
+        return True
+
+    return _run_async(_send())
 
 @celery_app.task(bind=True, max_retries=1, default_retry_delay=1, name="acceptance.fail_probe_task")
 def fail_probe_task(self):

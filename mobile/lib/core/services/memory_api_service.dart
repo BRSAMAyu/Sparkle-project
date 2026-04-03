@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -6,6 +7,17 @@ class MemoryApiService {
   MemoryApiService(this._apiClient);
 
   final ApiClient _apiClient;
+
+  static final MemorySettingsModel _defaultMemorySettings =
+      MemorySettingsModel(
+        enabled: true,
+        allowPreferences: true,
+        allowGoals: true,
+        allowEpisodic: true,
+        captureLevel: 'medium',
+        blockedPrefKeys: <String>[],
+        blockedSources: <String>[],
+      );
 
   Future<List<MemoryPreferenceItem>> getPreferences() async {
     final response =
@@ -104,21 +116,40 @@ class MemoryApiService {
   }
 
   Future<MemorySettingsModel> getMemorySettings() async {
-    final response =
-        await _apiClient.get<Map<String, dynamic>>('/memory/settings');
-    final payload = response.data ?? <String, dynamic>{};
-    return MemorySettingsModel.fromJson(payload);
+    try {
+      final response =
+          await _apiClient.get<Map<String, dynamic>>('/memory/settings');
+      final payload = response.data ?? <String, dynamic>{};
+      return MemorySettingsModel.fromJson(payload);
+    } on DioException catch (error) {
+      if (_shouldUseLocalFallback(error)) {
+        return _defaultMemorySettings;
+      }
+      rethrow;
+    }
   }
 
   Future<MemorySettingsModel> updateMemorySettings(
     MemorySettingsModel settings,
   ) async {
-    final response = await _apiClient.put<Map<String, dynamic>>(
-      '/memory/settings',
-      data: settings.toJson(),
-    );
-    final payload = response.data ?? <String, dynamic>{};
-    return MemorySettingsModel.fromJson(payload);
+    try {
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        '/memory/settings',
+        data: settings.toJson(),
+      );
+      final payload = response.data ?? <String, dynamic>{};
+      return MemorySettingsModel.fromJson(payload);
+    } on DioException catch (error) {
+      if (_shouldUseLocalFallback(error)) {
+        return settings;
+      }
+      rethrow;
+    }
+  }
+
+  bool _shouldUseLocalFallback(DioException error) {
+    final statusCode = error.response?.statusCode;
+    return statusCode == 401 || statusCode == 403;
   }
 }
 

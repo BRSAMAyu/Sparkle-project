@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/openclaw_automation_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
+import 'package:sparkle/features/home/presentation/widgets/openclaw_automation_panel.dart';
+import 'package:sparkle/features/home/presentation/widgets/openclaw_connection_diagnostics_sheet.dart';
+import 'package:sparkle/features/home/presentation/widgets/openclaw_node_management_panel.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_connection_panel.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
@@ -15,6 +19,7 @@ enum OpenClawHubSection {
   overview,
   connection,
   delegate,
+  automation,
   activity;
 
   static OpenClawHubSection fromQuery(String? value) {
@@ -23,6 +28,8 @@ enum OpenClawHubSection {
         return OpenClawHubSection.connection;
       case 'delegate':
         return OpenClawHubSection.delegate;
+      case 'automation':
+        return OpenClawHubSection.automation;
       case 'activity':
         return OpenClawHubSection.activity;
       default:
@@ -33,6 +40,7 @@ enum OpenClawHubSection {
   String get queryValue => switch (this) {
         OpenClawHubSection.connection => 'connection',
         OpenClawHubSection.delegate => 'delegate',
+        OpenClawHubSection.automation => 'automation',
         OpenClawHubSection.activity => 'activity',
         OpenClawHubSection.overview => 'overview',
       };
@@ -55,11 +63,15 @@ class OpenClawHubScreen extends ConsumerStatefulWidget {
 class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _connectionKey = GlobalKey();
+  final GlobalKey _devicesKey = GlobalKey();
   final GlobalKey _delegateKey = GlobalKey();
+  final GlobalKey _automationKey = GlobalKey();
   final GlobalKey _activityKey = GlobalKey();
   bool _didPrime = false;
   late bool _connectionExpanded;
+  late bool _devicesExpanded;
   late bool _delegateExpanded;
+  late bool _automationExpanded;
   late bool _activityExpanded;
 
   @override
@@ -67,7 +79,10 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
     super.initState();
     _connectionExpanded =
         widget.initialSection == OpenClawHubSection.connection;
+    _devicesExpanded = false;
     _delegateExpanded = widget.initialSection == OpenClawHubSection.delegate;
+    _automationExpanded =
+        widget.initialSection == OpenClawHubSection.automation;
     _activityExpanded = widget.initialSection == OpenClawHubSection.activity;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _primeExecutionState();
@@ -108,6 +123,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
     final key = switch (widget.initialSection) {
       OpenClawHubSection.connection => _connectionKey,
       OpenClawHubSection.delegate => _delegateKey,
+      OpenClawHubSection.automation => _automationKey,
       OpenClawHubSection.activity => _activityKey,
       OpenClawHubSection.overview => null,
     };
@@ -169,9 +185,63 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
     );
   }
 
+  Future<void> _openDiagnostics(OpenClawConnectionService service) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => OpenClawConnectionDiagnosticsSheet(service: service),
+    );
+  }
+
+  Color _statusIndicatorColor(OpenClawConnectionService connection) {
+    if (connection.isConnected) {
+      return DS.semanticSuccess;
+    }
+    if (connection.hasExecutionPermissionIssue ||
+        connection.hasExecutionEndpointIssue ||
+        connection.queuedRequestCount > 0 ||
+        connection.info.status == OpenClawConnectionStatus.connecting) {
+      return DS.semanticWarning;
+    }
+    return DS.textTertiary;
+  }
+
+  IconData _statusIndicatorIcon(OpenClawConnectionService connection) {
+    if (connection.isConnected) {
+      return Icons.wifi_tethering_rounded;
+    }
+    if (connection.hasExecutionPermissionIssue ||
+        connection.hasExecutionEndpointIssue ||
+        connection.queuedRequestCount > 0) {
+      return Icons.network_check_rounded;
+    }
+    if (connection.info.status == OpenClawConnectionStatus.connecting) {
+      return Icons.sync_rounded;
+    }
+    return Icons.portable_wifi_off_rounded;
+  }
+
+  String _statusIndicatorTooltip(OpenClawConnectionService connection) {
+    if (connection.isConnected) {
+      return 'OpenClaw 已连接，点击查看诊断';
+    }
+    if (connection.hasExecutionPermissionIssue) {
+      return '网关可达但缺少执行权限，点击查看诊断';
+    }
+    if (connection.hasExecutionEndpointIssue) {
+      return '网关可达但执行入口异常，点击查看诊断';
+    }
+    if (connection.queuedRequestCount > 0) {
+      return '当前有排队任务，点击查看诊断';
+    }
+    return 'OpenClaw 连接未完成，点击查看诊断';
+  }
+
   @override
   Widget build(BuildContext context) {
     final connection = ref.watch(openClawConnectionProvider);
+    final automation = ref.watch(openClawAutomationProvider);
     final taskState = ref.watch(taskListProvider);
     final info = connection.info;
 
@@ -185,10 +255,13 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
       taskMap.putIfAbsent(task.id, () => task);
     }
 
-    final recentTasks = taskMap.values.where((task) {
-      return taskState.taskExecutions.containsKey(task.id) ||
-          taskState.taskExecutionRecords.containsKey(task.id);
-    }).toList()
+    final recentTasks = taskMap.values
+        .where(
+          (task) =>
+              taskState.taskExecutions.containsKey(task.id) ||
+              taskState.taskExecutionRecords.containsKey(task.id),
+        )
+        .toList()
       ..sort((left, right) {
         final leftAt =
             taskState.taskExecutions[left.id]?.createdAt ?? DateTime(1970);
@@ -273,6 +346,42 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
       role: SparklePageRole.dashboard,
       appBar: AppBar(
         title: const Text('OpenClaw 执行中心'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: DS.spacing12),
+            child: Tooltip(
+              message: _statusIndicatorTooltip(connection),
+              child: IconButton(
+                onPressed: () => _openDiagnostics(connection),
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      _statusIndicatorIcon(connection),
+                      color: _statusIndicatorColor(connection),
+                    ),
+                    Positioned(
+                      right: -1,
+                      top: -1,
+                      child: Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: _statusIndicatorColor(connection),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
@@ -316,7 +425,6 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     OpenClawMetricPill(
                       icon: Icons.hub_rounded,
                       label: '${info.nodeCount} 个节点',
-                      tone: OpenClawVisualTone.active,
                     ),
                   OpenClawMetricPill(
                     icon: connection.config.transport == 'gateway_ws'
@@ -325,7 +433,6 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     label: connection.config.transport == 'gateway_ws'
                         ? 'WebSocket'
                         : 'HTTP',
-                    tone: OpenClawVisualTone.active,
                   ),
                   OpenClawMetricPill(
                     icon: connection.config.isPaired
@@ -363,6 +470,14 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                           icon: const Icon(Icons.schedule_send_rounded),
                           label: const Text('查看队列'),
                         ),
+                        OutlinedButton.icon(
+                          onPressed: () => _focusSection(
+                            _automationKey,
+                            () => setState(() => _automationExpanded = true),
+                          ),
+                          icon: const Icon(Icons.auto_awesome_motion_rounded),
+                          label: const Text('自动化'),
+                        ),
                         TextButton.icon(
                           onPressed: () => context.push('/chat'),
                           icon: const Icon(Icons.chat_bubble_outline_rounded),
@@ -394,7 +509,6 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                               (capability) => OpenClawMetricPill(
                                 icon: Icons.auto_awesome_rounded,
                                 label: capability,
-                                tone: OpenClawVisualTone.active,
                               ),
                             )
                             .toList(growable: false),
@@ -456,7 +570,6 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                           label: connection.config.transport == 'gateway_ws'
                               ? 'WebSocket'
                               : 'HTTP',
-                          tone: OpenClawVisualTone.active,
                         ),
                       ],
                     ),
@@ -479,6 +592,31 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                   ],
                 ),
                 expandedChild: const OpenClawConnectionPanel(compact: true),
+              ),
+              const SizedBox(height: DS.spacing16),
+              OpenClawSectionSurface(
+                key: _devicesKey,
+                icon: Icons.hub_rounded,
+                title: '设备与亲和性',
+                subtitle: '把“哪类任务优先发到哪台设备”显式配置出来，避免每次都让系统猜你的偏好。',
+                tone: (info.nodeCount ?? 0) > 0
+                    ? OpenClawVisualTone.active
+                    : OpenClawVisualTone.offline,
+                expanded: _devicesExpanded,
+                toggleLabel: _devicesExpanded ? '收起设备详情' : '查看设备与偏好',
+                onToggle: () {
+                  setState(() => _devicesExpanded = !_devicesExpanded);
+                },
+                summary: Text(
+                  (info.nodeCount ?? 0) > 0
+                      ? '当前已发现 ${info.nodeCount} 台节点。你可以在这里为浏览器、终端、文档和接口任务指定偏好设备，离线时 Sparkle 会自动找备用节点。'
+                      : '节点列表会在成功接入 OpenClaw 后自动出现。设备越清晰，后面的多节点调度和降级体验就越稳定。',
+                  style: DS.bodySmall.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+                expandedChild: const OpenClawNodeManagementPanel(),
               ),
               const SizedBox(height: DS.spacing16),
               OpenClawSectionSurface(
@@ -517,7 +655,6 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                       const OpenClawMetricPill(
                         icon: Icons.inbox_rounded,
                         label: '等待队列当前为空',
-                        tone: OpenClawVisualTone.active,
                       )
                     else
                       ...connection.queuedRequests.take(3).map(
@@ -591,13 +728,63 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                               (name) => OpenClawMetricPill(
                                 icon: Icons.auto_awesome_rounded,
                                 label: name,
-                                tone: OpenClawVisualTone.active,
                               ),
                             )
                             .toList(growable: false),
                       ),
                   ],
                 ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              OpenClawSectionSurface(
+                key: _automationKey,
+                icon: Icons.auto_awesome_motion_rounded,
+                title: '自动化与批量',
+                subtitle: '把一次性的批量执行和长期的定时/条件执行放进同一个操作台，避免执行能力只停留在单次点击。',
+                tone: automation.schedules.isNotEmpty || automation.latestBatch != null
+                    ? OpenClawVisualTone.connected
+                    : OpenClawVisualTone.active,
+                expanded: _automationExpanded,
+                toggleLabel: _automationExpanded ? '收起自动化详情' : '查看自动化能力',
+                onToggle: () {
+                  setState(() => _automationExpanded = !_automationExpanded);
+                },
+                summary: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      automation.schedules.isEmpty
+                          ? '你还没有任何自动化。展开后可以创建每天定时执行、事件触发或条件轮询，并直接从这里发起批量委派。'
+                          : '当前已有 ${automation.schedules.length} 条自动化在运行。批量委派摘要和定时任务状态也会持续在这里汇总。',
+                      style: DS.bodySmall.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing10),
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: [
+                        OpenClawMetricPill(
+                          icon: Icons.schedule_rounded,
+                          label: '${automation.schedules.length} 条自动化',
+                          tone: automation.schedules.isNotEmpty
+                              ? OpenClawVisualTone.connected
+                              : OpenClawVisualTone.active,
+                        ),
+                        if (automation.latestBatch != null)
+                          OpenClawMetricPill(
+                            icon: Icons.playlist_add_check_circle_rounded,
+                            label:
+                                '最近批量 ${automation.latestBatch!.completedCount}/${automation.latestBatch!.taskIds.length}',
+                            tone: OpenClawVisualTone.attention,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+                expandedChild: const OpenClawAutomationPanel(),
               ),
               const SizedBox(height: DS.spacing16),
               OpenClawSectionSurface(
@@ -658,7 +845,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                       ),
               ),
               if (latestRecord != null &&
-                  (latestRecord.trustLabel).isNotEmpty) ...[
+                  latestRecord.trustLabel.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing4),
                 Padding(
                   padding: const EdgeInsets.only(left: DS.spacing4),
@@ -691,6 +878,7 @@ Color _statusColorForIntent(ExecutionIntentModel? intent) {
       return DS.semanticError;
     case ExecutionIntentStatus.running:
     case ExecutionIntentStatus.dispatched:
+    case ExecutionIntentStatus.queued:
       return DS.info;
     case ExecutionIntentStatus.handedBack:
     case ExecutionIntentStatus.unknown:

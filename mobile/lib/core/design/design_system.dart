@@ -1022,6 +1022,7 @@ class DS {
   static TextStyle get displayLarge => TypographySystem.displayLarge();
   static TextStyle get headingLarge => TypographySystem.headingLarge();
   static TextStyle get titleLarge => TypographySystem.titleLarge();
+  static TextStyle get titleMedium => TypographySystem.titleMedium();
   static TextStyle get bodyLarge => TypographySystem.bodyLarge();
   static TextStyle get bodyMedium => TypographySystem.bodyMedium();
   static TextStyle get bodySmall => TypographySystem.labelSmall();

@@ -578,7 +578,7 @@ class MemoryService:
             resolver = EvidenceHealthService(self.db)
             resolved = await resolver.resolve_evidence_refs(normalized_refs, user_id)
             evidence_snapshot = EvidenceHealthService.build_snapshot(resolved)
-        record = EpisodicMemory(
+        record = self._build_episodic_memory_record(
             user_id=user_id,
             summary=summary,
             source_type=source_type,
@@ -586,11 +586,10 @@ class MemoryService:
             occurred_at=occurred_at,
             importance_score=importance_score,
             tags=tags,
-            evidence_refs=normalized_refs,
+            normalized_refs=normalized_refs,
             evidence_snapshot=evidence_snapshot,
             embedding=embedding,
             evidence_score=evidence_score,
-            correction_count=0,
         )
         self.db.add(record)
         try:
@@ -600,9 +599,39 @@ class MemoryService:
             await self.db.rollback()
             if not self._is_vector_runtime_error(exc):
                 raise
-            logger.warning(f"Skipping episodic memory write because vector runtime is unavailable: {exc}")
-            MEMORY_WRITE_TOTAL.labels(type="episodic", status="degraded").inc()
-            return None
+            if embedding is not None:
+                logger.warning(
+                    "Retrying episodic memory write without embedding because vector runtime is unavailable: {}",
+                    exc,
+                )
+                record = self._build_episodic_memory_record(
+                    user_id=user_id,
+                    summary=summary,
+                    source_type=source_type,
+                    source_id=source_id,
+                    occurred_at=occurred_at,
+                    importance_score=importance_score,
+                    tags=tags,
+                    normalized_refs=normalized_refs,
+                    evidence_snapshot=evidence_snapshot,
+                    embedding=None,
+                    evidence_score=evidence_score,
+                )
+                self.db.add(record)
+                try:
+                    await self.db.commit()
+                    await self.db.refresh(record)
+                except Exception as retry_exc:
+                    await self.db.rollback()
+                    if not self._is_vector_runtime_error(retry_exc):
+                        raise
+                    logger.warning(f"Skipping episodic memory write because vector runtime is unavailable: {retry_exc}")
+                    MEMORY_WRITE_TOTAL.labels(type="episodic", status="degraded").inc()
+                    return None
+            else:
+                logger.warning(f"Skipping episodic memory write because vector runtime is unavailable: {exc}")
+                MEMORY_WRITE_TOTAL.labels(type="episodic", status="degraded").inc()
+                return None
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(
@@ -617,7 +646,38 @@ class MemoryService:
                 },
             ),
         )
+        MEMORY_WRITE_TOTAL.labels(type="episodic", status="ok").inc()
         return record
+
+    @staticmethod
+    def _build_episodic_memory_record(
+        *,
+        user_id: UUID,
+        summary: str,
+        source_type: str,
+        source_id: str | None,
+        occurred_at: datetime,
+        importance_score: float | None,
+        tags: list[str] | None,
+        normalized_refs: list[dict[str, Any]],
+        evidence_snapshot: dict[str, Any] | None,
+        embedding: list[float] | None,
+        evidence_score: float,
+    ) -> EpisodicMemory:
+        return EpisodicMemory(
+            user_id=user_id,
+            summary=summary,
+            source_type=source_type,
+            source_id=source_id,
+            occurred_at=occurred_at,
+            importance_score=importance_score,
+            tags=tags,
+            evidence_refs=normalized_refs,
+            evidence_snapshot=evidence_snapshot,
+            embedding=embedding,
+            evidence_score=evidence_score,
+            correction_count=0,
+        )
 
     async def retract_memory(
         self,

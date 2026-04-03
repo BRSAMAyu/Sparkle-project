@@ -51,6 +51,40 @@ class TaskRepository {
     throw Exception(errorMessage);
   }
 
+  Future<String?> _resolveTaskCardId(String taskId) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.cardsSearch,
+      queryParameters: {
+        'card_type': 'TASK',
+        'legacy_task_id': taskId,
+        'limit': 1,
+      },
+    );
+    final data = ApiResponseParser.unwrapList(
+      response.data,
+      action: 'resolveTaskCardId',
+    );
+    if (data.isEmpty) return null;
+    return (data.first as Map<String, dynamic>)['card_id'] as String?;
+  }
+
+  Future<String?> _resolvePlanCardId(String planId) async {
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.cardsSearch,
+      queryParameters: {
+        'card_type': 'PLAN',
+        'legacy_plan_id': planId,
+        'limit': 1,
+      },
+    );
+    final data = ApiResponseParser.unwrapList(
+      response.data,
+      action: 'resolvePlanCardId',
+    );
+    if (data.isEmpty) return null;
+    return (data.first as Map<String, dynamic>)['card_id'] as String?;
+  }
+
   Future<PaginatedResponse<TaskModel>> getTasks({
     Map<String, dynamic>? filters,
     int page = 1,
@@ -109,11 +143,50 @@ class TaskRepository {
     }
   }
 
+  Future<void> moveTaskToPlan(
+    String taskId,
+    String? targetPlanId,
+  ) async {
+    if (DemoDataService.isDemoMode) {
+      final demoTasks = DemoDataService().demoTasks;
+      final taskIndex = demoTasks.indexWhere((task) => task.id == taskId);
+      if (taskIndex != -1) {
+        demoTasks[taskIndex] =
+            demoTasks[taskIndex].copyWith(planId: targetPlanId);
+      }
+      return;
+    }
+
+    try {
+      final taskCardId = await _resolveTaskCardId(taskId);
+      if (taskCardId == null) {
+        throw Exception('Task card not found');
+      }
+      String? planCardId;
+      if (targetPlanId != null && targetPlanId.isNotEmpty) {
+        planCardId = await _resolvePlanCardId(targetPlanId);
+        if (planCardId == null) {
+          throw Exception('Target plan card not found');
+        }
+      }
+
+      await _apiClient.post<dynamic>(
+        ApiEndpoints.moveCard(taskCardId),
+        data: {
+          'new_parent_card_id': planCardId,
+        },
+      );
+    } on DioException catch (e) {
+      return _handleDioError(e, 'moveTaskToPlan');
+    }
+  }
+
   Future<ExecutionIntentModel> handoffTask(
     String taskId, {
     String? goal,
     List<String>? instructions,
     String? templateId,
+    String? source,
   }) async {
     if (DemoDataService.isDemoMode) {
       return ExecutionIntentModel.fromJson({
@@ -137,6 +210,7 @@ class TaskRepository {
           'instructions': instructions,
         if (templateId != null && templateId.trim().isNotEmpty)
           'template_id': templateId.trim(),
+        if (source != null && source.trim().isNotEmpty) 'source': source.trim(),
       };
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.handoffTaskExecution(taskId),
@@ -230,6 +304,34 @@ class TaskRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return null;
       return _handleDioError(e, 'getExecutionRecord');
+    }
+  }
+
+  Future<ExecutionIntentModel> retryExecution(String intentId) async {
+    if (DemoDataService.isDemoMode) {
+      return ExecutionIntentModel.fromJson({
+        'id': 'demo_retry_${DateTime.now().millisecondsSinceEpoch}',
+        'task_id': 'demo_task',
+        'execution_mode': 'agent',
+        'executor': 'openclaw',
+        'status': 'running',
+        'trust_level': 'raw',
+        'goal': 'Demo retry',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.retryExecution(intentId),
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'retryExecution',
+      );
+      return ExecutionIntentModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'retryExecution');
     }
   }
 
@@ -565,7 +667,8 @@ class TaskRepository {
     }
   }
 
-  String _demoGuide(String title) => '''# $title
+  String _demoGuide(String title) => '''
+# $title
 
 ## 🎯 任务目标
 明确任务的核心产出和完成标准。

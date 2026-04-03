@@ -17,6 +17,7 @@ from app.services.notification_service import NotificationService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.push_service import PushService
 from app.services.community_advanced_service import OfflineQueueService
+from app.services.execution_schedule_service import ExecutionScheduleService
 
 
 def _utcnow() -> datetime:
@@ -64,6 +65,9 @@ class SchedulerService:
 
         # 每周深度胶囊 (每周日早上9点)
         self.scheduler.add_job(self.generate_weekly_deep_capsules, 'cron', day_of_week='sun', hour=9, minute=0)
+
+        # OpenClaw 定时/条件执行轮询（每分钟）
+        self.scheduler.add_job(self.run_execution_schedule_tick, 'interval', minutes=1)
 
         self.scheduler.start()
         logger.info("Scheduler started with smart push cycle, daily decay, capsule generation, and weekly preference inference decay jobs")
@@ -178,6 +182,19 @@ class SchedulerService:
                 service = NightlyReviewService(db)
                 for user in users:
                     await service.generate_for_user(user.id, user.timezone)
+
+    async def run_execution_schedule_tick(self):
+        logger.info("Starting execution schedule tick...")
+        try:
+            async with AsyncSessionLocal() as db:
+                result = await ExecutionScheduleService(db).tick_due_schedules()
+                logger.info(
+                    "Execution schedule tick completed: due=%s dispatched=%s",
+                    result["due_count"],
+                    result["dispatched_count"],
+                )
+        except Exception as e:
+            logger.error(f"Error in execution schedule tick: {e}", exc_info=True)
         except Exception as e:
             logger.error(f"Error in nightly review job: {e}", exc_info=True)
 

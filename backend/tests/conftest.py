@@ -22,6 +22,9 @@ from app.models.user_memory_settings import UserMemorySettings  # noqa: F401
 from app.models.ltm_daily_snapshot import LtmDailySnapshot  # noqa: F401
 from app.models.event import TrackingEvent  # noqa: F401
 from app.models.plan_execution_record import PlanExecutionRecord  # noqa: F401
+from app.models.execution_audit_log import ExecutionAuditLog  # noqa: F401
+from app.models.execution_schedule import ExecutionSchedule  # noqa: F401
+from app.models.card_protocol import Card, CardEdge, TaskOccurrence, PlanningArtifact, InterventionRecord  # noqa: F401
 from app.models.user_preferences import UserPreferencesCenter  # noqa: F401
 from app.models.recommendation import RecommendationCache, UserItemInteraction  # noqa: F401
 from app.models.intervention_adaptive import (  # noqa: F401
@@ -30,7 +33,10 @@ from app.models.intervention_adaptive import (  # noqa: F401
     BehavioralOutcome,
     InterventionTemplate,
 )
+from app.models.intervention_strategy_outcome import InterventionStrategyOutcome  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
+from app.models.notification import Notification, PushHistory  # noqa: F401
+from app.models.galaxy import KnowledgeNode, UserNodeStatus, StudyRecord  # noqa: F401
 from app.models.community import (  # noqa: F401
     Group, GroupMember, GroupMessage, PrivateMessage,
     Friendship, GroupType, GroupRole, UserBlock

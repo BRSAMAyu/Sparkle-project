@@ -22,6 +22,7 @@ class OpenClawConfig:
     ws_device_identity_path: str = ""
     ws_client_id: str = "sparkle-backend"
     ws_client_version: str = "0.1.0"
+    default_workdir: str = ""
     default_timeout_seconds: int = 300
     max_concurrent_runs: int = 3
 
@@ -41,6 +42,7 @@ class OpenClawConfig:
             ws_device_identity_path=settings.OPENCLAW_WS_DEVICE_IDENTITY_PATH,
             ws_client_id=settings.OPENCLAW_WS_CLIENT_ID,
             ws_client_version=settings.APP_VERSION,
+            default_workdir=settings.OPENCLAW_DEFAULT_WORKDIR,
             default_timeout_seconds=settings.OPENCLAW_DEFAULT_TIMEOUT_SECONDS,
             max_concurrent_runs=settings.OPENCLAW_MAX_CONCURRENT_RUNS,
         )

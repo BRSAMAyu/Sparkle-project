@@ -114,6 +114,21 @@ class _NotificationAnalyticsScreenState
 
               const SizedBox(height: DS.spacing24),
 
+              if (analytics.interventionFunnels.isNotEmpty) ...[
+                _buildInterventionFunnelsSection(analytics.interventionFunnels),
+                const SizedBox(height: DS.spacing24),
+              ],
+
+              if (analytics.toneEffectiveness.isNotEmpty) ...[
+                _buildToneEffectivenessSection(analytics.toneEffectiveness),
+                const SizedBox(height: DS.spacing24),
+              ],
+
+              if (analytics.timeToActionBuckets.isNotEmpty) ...[
+                _buildTimeToActionSection(analytics.timeToActionBuckets),
+                const SizedBox(height: DS.spacing24),
+              ],
+
               // Trends
               _buildTrendsSection(analytics.trends),
 
@@ -124,6 +139,139 @@ class _NotificationAnalyticsScreenState
             ],
           ),
         ),
+      );
+
+  Widget _buildInterventionFunnelsSection(
+    List<InterventionFunnelStats> funnels,
+  ) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '干预漏斗（按触发类型）',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: DS.spacing16),
+          ...funnels.map(
+            (funnel) => GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.card,
+              margin: const EdgeInsets.only(bottom: DS.spacing12),
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    funnel.dimension,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  _buildProgressBar(
+                      '创建', funnel.created, funnel.created.toDouble()),
+                  const SizedBox(height: DS.spacing8),
+                  _buildProgressBar(
+                      '送达', funnel.delivered, funnel.created.toDouble()),
+                  const SizedBox(height: DS.spacing8),
+                  _buildProgressBar(
+                      '看见', funnel.seen, funnel.delivered.toDouble()),
+                  const SizedBox(height: DS.spacing8),
+                  _buildProgressBar(
+                      '接受', funnel.accepted, funnel.seen.toDouble()),
+                  const SizedBox(height: DS.spacing8),
+                  _buildProgressBar(
+                      '行动', funnel.acted, funnel.accepted.toDouble()),
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    '接受率 ${funnel.acceptanceRate.toStringAsFixed(1)}% · 行动率 ${funnel.actionRate.toStringAsFixed(1)}%',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+
+  Widget _buildToneEffectivenessSection(
+    List<InterventionToneEffectiveness> items,
+  ) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '语气效果（按 tone / channel）',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: DS.spacing16),
+          Wrap(
+            spacing: DS.spacing12,
+            runSpacing: DS.spacing12,
+            children: items
+                .map(
+                  (item) => SizedBox(
+                    width: 220,
+                    child: GraphiteCardSurface(
+                      surfaceRole: SparkleSurfaceRole.card,
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${item.tone} · ${item.channel}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Text('创建 ${item.created}'),
+                          Text('接受 ${item.accepted}'),
+                          Text('行动 ${item.acted}'),
+                          Text('有效 ${item.effective}'),
+                          const SizedBox(height: DS.spacing8),
+                          Text(
+                            '行动率 ${item.actedRate.toStringAsFixed(1)}% · 有效率 ${item.effectiveRate.toStringAsFixed(1)}%',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: DS.textSecondary,
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      );
+
+  Widget _buildTimeToActionSection(
+    List<InterventionTimeToActionBucket> buckets,
+  ) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '行动耗时分布',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: DS.spacing16),
+          GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Wrap(
+              spacing: DS.spacing12,
+              runSpacing: DS.spacing12,
+              children: buckets
+                  .map(
+                    (bucket) => _buildTrendMetricChip(
+                      '${bucket.label}:',
+                      bucket.count,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
       );
 
   Widget _buildSummarySection(NotificationAnalyticsSummary summary) => Column(
@@ -153,9 +301,29 @@ class _NotificationAnalyticsScreenState
                   Icons.touch_app,
                 ),
                 _buildStatCard(
+                  '接受建议',
+                  '${summary.totalAccepted}',
+                  Icons.check_circle_outline,
+                ),
+                _buildStatCard(
+                  '开始执行',
+                  '${summary.totalActed}',
+                  Icons.play_circle_outline,
+                ),
+                _buildStatCard(
                   context.l10n.notificationAnalyticsViewRate,
                   '${summary.viewRate.toStringAsFixed(1)}%',
                   Icons.pie_chart,
+                ),
+                _buildStatCard(
+                  '接受率',
+                  '${summary.acceptanceRate.toStringAsFixed(1)}%',
+                  Icons.trending_up,
+                ),
+                _buildStatCard(
+                  '行动率',
+                  '${summary.actionRate.toStringAsFixed(1)}%',
+                  Icons.directions_run,
                 ),
               ];
 
@@ -179,27 +347,26 @@ class _NotificationAnalyticsScreenState
 
               return Column(
                 children: [
-                  SparkleStaggerItem(
-                    index: 0,
-                    child: Row(
-                      children: [
-                        Expanded(child: cards[0]),
-                        const SizedBox(width: DS.spacing12),
-                        Expanded(child: cards[1]),
-                      ],
+                  for (var rowIndex = 0;
+                      rowIndex < cards.length;
+                      rowIndex += 2) ...[
+                    SparkleStaggerItem(
+                      index: rowIndex ~/ 2,
+                      child: Row(
+                        children: [
+                          Expanded(child: cards[rowIndex]),
+                          const SizedBox(width: DS.spacing12),
+                          Expanded(
+                            child: rowIndex + 1 < cards.length
+                                ? cards[rowIndex + 1]
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: DS.spacing12),
-                  SparkleStaggerItem(
-                    index: 1,
-                    child: Row(
-                      children: [
-                        Expanded(child: cards[2]),
-                        const SizedBox(width: DS.spacing12),
-                        Expanded(child: cards[3]),
-                      ],
-                    ),
-                  ),
+                    if (rowIndex + 2 < cards.length)
+                      const SizedBox(height: DS.spacing12),
+                  ],
                 ],
               );
             },
@@ -271,9 +438,7 @@ class _NotificationAnalyticsScreenState
               typeKey == 'system'
                   ? context.l10n.notificationSourceSystem
                   : context.l10n.notificationSourceIntervention,
-              stats.sent,
-              stats.viewed,
-              stats.viewRate,
+              stats,
             );
           }),
         ],
@@ -281,12 +446,10 @@ class _NotificationAnalyticsScreenState
 
   Widget _buildTypeStatCard(
     String title,
-    int sent,
-    int viewed,
-    double viewRate,
+    NotificationTypeStats stats,
   ) =>
       SparkleStaggerItem(
-        index: sent,
+        index: stats.sent,
         child: GraphiteCardSurface(
           surfaceRole: SparkleSurfaceRole.card,
           margin: const EdgeInsets.only(bottom: DS.spacing12),
@@ -304,8 +467,8 @@ class _NotificationAnalyticsScreenState
                   Expanded(
                     child: _buildProgressBar(
                       context.l10n.notificationAnalyticsSent,
-                      sent,
-                      sent.toDouble(),
+                      stats.sent,
+                      stats.sent.toDouble(),
                     ),
                   ),
                 ],
@@ -316,15 +479,43 @@ class _NotificationAnalyticsScreenState
                   Expanded(
                     child: _buildProgressBar(
                       context.l10n.notificationAnalyticsViewed,
-                      viewed,
-                      sent.toDouble(),
+                      stats.viewed,
+                      stats.sent.toDouble(),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: DS.spacing8),
+              if (title == context.l10n.notificationSourceIntervention) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildProgressBar(
+                        '已接受',
+                        stats.accepted,
+                        stats.viewed.toDouble(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildProgressBar(
+                        '已开始',
+                        stats.acted,
+                        stats.accepted.toDouble(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing8),
+              ],
               Text(
-                '${context.l10n.notificationAnalyticsViewRate}: ${viewRate.toStringAsFixed(1)}%',
+                title == context.l10n.notificationSourceIntervention
+                    ? '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}% · 接受率: ${stats.acceptanceRate.toStringAsFixed(1)}% · 行动率: ${stats.actionRate.toStringAsFixed(1)}%'
+                    : '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}%',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -382,6 +573,19 @@ class _NotificationAnalyticsScreenState
               child: _buildTrendChart(trends),
             ),
           ),
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _buildTrendMetricChip(
+                  '查看', trends.fold(0, (sum, item) => sum + item.viewed)),
+              _buildTrendMetricChip(
+                  '接受', trends.fold(0, (sum, item) => sum + item.accepted)),
+              _buildTrendMetricChip(
+                  '开始', trends.fold(0, (sum, item) => sum + item.acted)),
+            ],
+          ),
         ],
       );
 
@@ -416,6 +620,15 @@ class _NotificationAnalyticsScreenState
             ),
           ),
         ],
+      );
+
+  Widget _buildTrendMetricChip(String label, int value) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: DS.surfaceTertiary,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text('$label $value'),
       );
 
   Widget _buildHourlyChart(List<int> distribution) {

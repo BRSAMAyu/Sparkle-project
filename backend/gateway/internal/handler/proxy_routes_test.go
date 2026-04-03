@@ -168,7 +168,9 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 
 	expectedAdditionalRoutes := []string{
 		"POST /api/v1/community/shared-resources/:shared_resource_id/adopt",
+		"GET /api/v1/theater/predictions/:id",
 		"POST /api/v1/theater/predictions/:id/promote-node",
+		"GET /api/v1/theater/accuracy/overview",
 		"GET /api/v1/visual-elements",
 		"GET /api/v1/user/*path",
 		"GET /api/v1/achievements/streak/history",

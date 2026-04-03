@@ -22,6 +22,34 @@ from app.models.analytics import UserDailyMetric
 from app.models.auth_security import AuthAuditAction, AuthAuditLog, UserSession
 from app.models.audit_log import ComplianceCheckLog, DataAccessLog, SecurityAuditLog, SystemConfigChangeLog
 from app.models.base import GUID, BaseModel
+from app.models.card_protocol import (
+    ArtifactStatus,
+    ArtifactType,
+    BindingMode,
+    Card,
+    CardAdoptionRecord,
+    CardCreatedBy,
+    CardEdge,
+    CardLifecycleStatus,
+    CardShareRecord,
+    CardSnapshot,
+    CardSourceType,
+    CardType,
+    CardVisibility,
+    DeliveryChannel,
+    DeliveryStrategy,
+    EdgeType,
+    ImportMode,
+    InterventionAcceptanceStatus,
+    InterventionOutcomeStatus,
+    InterventionRecord,
+    InterventionTriggerType,
+    OccurrenceStatus,
+    PlanningArtifact,
+    SharePermission,
+    ShareScope,
+    TaskOccurrence,
+)
 from app.models.capsule_favorite import CapsuleFavorite
 from app.models.capsule_feedback import CapsuleFeedback, FeedbackCategory
 from app.models.capsule_generation_job import CapsuleGenerationJob, GenerationType
@@ -68,6 +96,8 @@ from app.models.execution_intent import (
     ExecutorType,
     TrustLevel,
 )
+from app.models.execution_audit_log import ExecutionAuditLog
+from app.models.execution_schedule import ExecutionSchedule
 from app.models.execution_record import ExecutionRecord
 from app.models.experiment import (
     ABExperiment,
@@ -101,6 +131,7 @@ from app.models.intervention_adaptive import (
     PassiveSignal,
     ScaffoldingState,
 )
+from app.models.intervention_strategy_outcome import InterventionStrategyOutcome
 from app.models.irt import IRTItemParameter, UserIRTAbility
 from app.models.job import Job, JobStatus, JobType
 from app.models.ltm_daily_snapshot import LtmDailySnapshot
@@ -251,6 +282,8 @@ __all__ = [
     "UserIRTAbility",
     "TrackingEvent",
     "ExecutionIntent",
+    "ExecutionAuditLog",
+    "ExecutionSchedule",
     "ExecutionIntentStatus",
     "ExecutionMode",
     "ExecutorType",
@@ -360,4 +393,32 @@ __all__ = [
     # Calendar Events
     "CalendarEvent",
     "EventSource",
+    # Card Protocol
+    "Card",
+    "CardSnapshot",
+    "CardShareRecord",
+    "CardAdoptionRecord",
+    "CardType",
+    "CardLifecycleStatus",
+    "CardVisibility",
+    "CardSourceType",
+    "CardCreatedBy",
+    "CardEdge",
+    "EdgeType",
+    "BindingMode",
+    "TaskOccurrence",
+    "OccurrenceStatus",
+    "PlanningArtifact",
+    "ArtifactType",
+    "ArtifactStatus",
+    "InterventionRecord",
+    "ShareScope",
+    "SharePermission",
+    "ImportMode",
+    "InterventionTriggerType",
+    "DeliveryStrategy",
+    "DeliveryChannel",
+    "InterventionAcceptanceStatus",
+    "InterventionOutcomeStatus",
+    "InterventionStrategyOutcome",
 ]

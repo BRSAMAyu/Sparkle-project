@@ -3,7 +3,7 @@ Galaxy 事件消费者 - 处理错题创建事件
 """
 import asyncio
 from datetime import timezone, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from loguru import logger
 from sqlalchemy import select
@@ -15,6 +15,7 @@ from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
 from app.orchestration.dual_core_router import AdaptationRecord
+from app.services.cognitive_service import CognitiveService
 from app.services.galaxy_service import GalaxyService
 from app.services.galaxy.graph_evolution_service import GraphEvolutionService
 from app.services.plan_state_service import PlanStateService
@@ -69,22 +70,100 @@ class GalaxyEventConsumer:
             await self._handle_task_completed(event)
         elif event_type == "node_mastery_updated":
             await self._handle_mastery_updated(event)
+        elif event_type == "SimulationGapRevealed":
+            await self._handle_simulation_gap_revealed(event)
 
     async def _handle_error_created(self, event: dict):
-        """处理错题创建事件 - 降低关联节点掌握度"""
+        """处理错题创建事件 - 图演化和种子预热
+
+        Note: 节点掌握度更新已迁移到 ErrorBookMasterySyncService (断点2)，
+        该服务在 analyze_and_link() 完成后直接调用，使用基于 error_type 的
+        精确权重而非旧的粗糙 -10% 逻辑。
+        """
         try:
             user_id = event.get("user_id")
             linked_node_ids = event.get("linked_node_ids", [])
+            error_id = event.get("error_id")
 
             if not user_id or not linked_node_ids:
                 return
 
             async with AsyncSessionLocal() as db:
-                galaxy_service = GalaxyService(db)
-                await galaxy_service.handle_error_created(event)
+                # 掌握度更新: 由 ErrorBookMasterySyncService 在 analyze_and_link() 后直接处理
+                # 不再调用 galaxy_service.handle_error_created()（旧逻辑为粗糙 -10%）
                 evolution = GraphEvolutionService(db)
                 await evolution.handle_error_created(event)
                 await SeedExtractor(db).prewarm_for_scenarios(UUID(str(user_id)))
+
+                try:
+                    from app.services.error_replan_bridge import ErrorReplanBridge
+
+                    error_replan_bridge = ErrorReplanBridge(db)
+                    await error_replan_bridge.on_error_created(
+                        user_id=UUID(str(user_id)),
+                        error_id=UUID(str(error_id)) if error_id else uuid4(),
+                        linked_node_ids=[UUID(str(nid)) for nid in linked_node_ids],
+                    )
+                except Exception as bridge_exc:
+                    logger.warning("ErrorCreated -> replan bridge failed (non-fatal): {}", bridge_exc)
+
+                # --- Card protocol writeback: error → evidence edge ---
+                try:
+                    from app.services.card_protocol.mastery_bridge import ErrorMasteryBridge
+                    bridge = ErrorMasteryBridge(db)
+                    await bridge.on_error_created(
+                        user_id=UUID(str(user_id)),
+                        error_id=UUID(str(error_id)) if error_id else uuid4(),
+                        linked_node_ids=[UUID(str(nid)) for nid in linked_node_ids],
+                        analysis=event.get("analysis"),
+                        subject=event.get("subject"),
+                        chapter=event.get("chapter"),
+                        error_type=event.get("error_type"),
+                        root_cause=event.get("root_cause"),
+                    )
+                except Exception as card_exc:
+                    logger.warning("Card protocol error-mastery bridge failed (non-fatal): {}", card_exc)
+
+                # --- Breakpoint 4 Fix: Flag active tasks with concept_gap signal ---
+                try:
+                    plans_result = await db.execute(
+                        select(Plan.id, Task.title)
+                        .join(Task, Task.plan_id == Plan.id)
+                        .join(
+                            TaskKnowledgeLink,
+                            (TaskKnowledgeLink.task_id == Task.id)
+                            & (TaskKnowledgeLink.relation_type == "prerequisite")
+                        )
+                        .where(
+                            Plan.user_id == UUID(str(user_id)),
+                            Plan.is_active.is_(True),
+                            Task.status != TaskStatus.COMPLETED,
+                            TaskKnowledgeLink.knowledge_node_id.in_([UUID(str(nid)) for nid in linked_node_ids]),
+                        )
+                        .distinct()
+                    )
+                    
+                    plan_issues = {}
+                    for plan_id, task_title in plans_result.all():
+                        if plan_id not in plan_issues:
+                            plan_issues[plan_id] = []
+                        plan_issues[plan_id].append(task_title)
+                    
+                    if plan_issues:
+                        from app.services.card_protocol.health_intervention_bridge import PlanHealthInterventionBridge
+                        health_bridge = PlanHealthInterventionBridge(db, self.event_bus)
+                        for p_id, task_titles in plan_issues.items():
+                            await health_bridge.on_plan_health_signal(
+                                user_id=UUID(str(user_id)),
+                                plan_id=p_id,
+                                severity="warning",
+                                reasons=["concept_gap"],
+                                action_taken="none",
+                                context={"affected_tasks": task_titles},
+                            )
+                        await db.commit()
+                except Exception as concept_exc:
+                    logger.warning("Failed to flag concept_gap for active tasks: {}", concept_exc)
 
             logger.info(f"Processed error_created for user {user_id}")
 
@@ -232,6 +311,92 @@ class GalaxyEventConsumer:
             logger.info("Processed node_mastery_updated graph evolution for node {}", event.get("node_id"))
         except Exception as e:
             logger.error(f"Failed to handle node_mastery_updated: {e}")
+
+    async def _handle_simulation_gap_revealed(self, event: dict):
+        try:
+            user_id = event.get("user_id")
+            topic = str(event.get("topic") or "").strip()
+            gap_description = str(event.get("gap_description") or "").strip()
+            simulation_session_id = str(event.get("simulation_session_id") or "").strip()
+            if not user_id or not gap_description:
+                return
+
+            user_uuid = UUID(str(user_id))
+            async with AsyncSessionLocal() as db:
+                galaxy_service = GalaxyService(db)
+                matched_nodes = await galaxy_service.semantic_search_nodes(gap_description, limit=3, threshold=0.16)
+                target_node = matched_nodes[0] if matched_nodes else await self._fallback_gap_node(db=db, user_id=user_uuid, topic=topic)
+
+                if target_node is not None:
+                    status = await db.get(UserNodeStatus, (user_uuid, target_node.id))
+                    if status is None:
+                        status = UserNodeStatus(
+                            user_id=user_uuid,
+                            node_id=target_node.id,
+                            mastery_score=0,
+                            total_minutes=0,
+                            total_study_minutes=0,
+                            study_count=0,
+                            is_unlocked=True,
+                            learning_path_snapshot=None,
+                        )
+                        db.add(status)
+                    snapshot = dict(status.learning_path_snapshot or {})
+                    known_gaps = [item for item in list(snapshot.get("known_gaps") or []) if isinstance(item, dict)]
+                    if not any(str(item.get("gap_description") or "").strip() == gap_description for item in known_gaps):
+                        known_gaps.insert(
+                            0,
+                            {
+                                "gap_description": gap_description,
+                                "has_known_gap": True,
+                                "status": "open",
+                                "source": "simulation",
+                                "simulation_session_id": simulation_session_id or None,
+                                "recorded_at": _utcnow().isoformat(),
+                            },
+                        )
+                    snapshot["known_gaps"] = known_gaps[:8]
+                    status.learning_path_snapshot = snapshot
+                    await db.commit()
+                else:
+                    fragment = await CognitiveService(db).create_fragment(
+                        user_uuid,
+                        content=f"学习模拟暴露的理解盲区：{gap_description}",
+                        source_type="simulation_gap",
+                        resource_type="text",
+                        context_tags={
+                            "topic": topic,
+                            "simulation_session_id": simulation_session_id or None,
+                            "gap_description": gap_description,
+                        },
+                        source_event_id=f"simulation-gap:{simulation_session_id}:{gap_description}",
+                    )
+                    logger.info("Persisted simulation gap fragment {}", fragment.id)
+
+                await SeedExtractor(db).prewarm_for_scenarios(user_uuid)
+            logger.info("Processed SimulationGapRevealed for user {}", user_id)
+        except Exception as e:
+            logger.error(f"Failed to handle SimulationGapRevealed: {e}")
+
+    async def _fallback_gap_node(self, *, db, user_id: UUID, topic: str):
+        normalized_topic = str(topic or "").strip()
+        if not normalized_topic:
+            return None
+        try:
+            galaxy_service = GalaxyService(db)
+            related = await galaxy_service.semantic_search_nodes(normalized_topic, limit=1, threshold=0.08)
+            if related:
+                return related[0]
+        except Exception:
+            pass
+        result = await db.execute(
+            select(UserNodeStatus)
+            .where(UserNodeStatus.user_id == user_id)
+            .order_by(UserNodeStatus.last_study_at.desc().nullslast(), UserNodeStatus.updated_at.desc())
+            .limit(1)
+        )
+        fallback_status = result.scalar_one_or_none()
+        return fallback_status.node if fallback_status is not None else None
 
     def stop(self):
         """停止消费者"""

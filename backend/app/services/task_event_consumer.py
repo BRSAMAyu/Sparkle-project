@@ -77,7 +77,7 @@ class TaskEventConsumer:
             task_id = UUID(event["task_id"])
 
             async with AsyncSessionLocal() as db:
-                collector = BehaviorSignalCollector(db, cache_service.redis)
+                collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
                 bridge = CommunitySignalBridge(db, cache_service.redis)
 
                 estimated = event.get("estimated_minutes", 0)
@@ -127,7 +127,7 @@ class TaskEventConsumer:
         """处理任务放弃。"""
         try:
             async with AsyncSessionLocal() as db:
-                collector = BehaviorSignalCollector(db, cache_service.redis)
+                collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
                 await collector.handle_task_abandoned_event(event)
 
         except Exception as e:
@@ -136,7 +136,7 @@ class TaskEventConsumer:
     async def _handle_task_feedback(self, event: dict):
         try:
             async with AsyncSessionLocal() as db:
-                collector = BehaviorSignalCollector(db, cache_service.redis)
+                collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
                 await collector.handle_task_feedback_event(event)
         except Exception as e:
             logger.error(f"Failed to handle task.feedback_submitted: {e}")
@@ -144,7 +144,7 @@ class TaskEventConsumer:
     async def _handle_plan_replanned(self, event: dict):
         try:
             async with AsyncSessionLocal() as db:
-                collector = BehaviorSignalCollector(db, cache_service.redis)
+                collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
                 await collector.handle_plan_replanned_event(event)
         except Exception as e:
             logger.error(f"Failed to handle plan.replanned: {e}")
@@ -152,7 +152,7 @@ class TaskEventConsumer:
     async def _handle_behavior_pattern(self, event: dict):
         try:
             async with AsyncSessionLocal() as db:
-                collector = BehaviorSignalCollector(db, cache_service.redis)
+                collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
                 await collector.handle_behavior_pattern_event(event)
         except Exception as e:
             logger.error(f"Failed to handle behavior.pattern.updated: {e}")

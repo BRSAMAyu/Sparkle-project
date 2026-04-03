@@ -95,6 +95,90 @@ class NotificationCenter extends _$NotificationCenter {
     }
   }
 
+  Future<void> markInterventionSeen(UnifiedNotification notification) async {
+    if (!notification.isIntervention || notification.isRead) {
+      return;
+    }
+    try {
+      await _repository.sendInterventionAction(
+        notification.id,
+        'seen',
+        actionPayload: {
+          'source': 'notification_center_card',
+          'surface': 'notification_center',
+        },
+      );
+      _updateInterventionLocalState(notification.id, 'seen');
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> acceptIntervention(UnifiedNotification notification) async {
+    if (!notification.isIntervention) {
+      return;
+    }
+    try {
+      await _repository.sendInterventionAction(
+        notification.id,
+        'accepted',
+        actionPayload: {
+          'source': 'notification_center_card',
+          'surface': 'notification_center',
+          'intent_type': notification.intentType,
+        },
+      );
+      _updateInterventionLocalState(notification.id, 'accepted');
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> snoozeIntervention(UnifiedNotification notification) async {
+    if (!notification.isIntervention) {
+      return;
+    }
+    try {
+      await _repository.sendInterventionAction(
+        notification.id,
+        'snoozed',
+        actionPayload: {
+          'source': 'notification_center_card',
+          'surface': 'notification_center',
+          'snooze_hours': 24,
+        },
+      );
+      _updateInterventionLocalState(notification.id, 'snoozed');
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> actOnIntervention(
+    UnifiedNotification notification, {
+    Map<String, dynamic>? actionPayload,
+  }) async {
+    if (!notification.isIntervention) {
+      return;
+    }
+    try {
+      await _repository.sendInterventionAction(
+        notification.id,
+        'acted',
+        actionPayload: {
+          'source': 'notification_center_card',
+          'surface': 'notification_center',
+          'intent_type': notification.intentType,
+          'plan_id': notification.planId,
+          ...?actionPayload,
+        },
+      );
+      _updateInterventionLocalState(notification.id, 'acted');
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
   /// Mark all notifications as read
   Future<void> markAllAsRead() async {
     try {
@@ -164,9 +248,14 @@ class NotificationCenter extends _$NotificationCenter {
     required Map<String, dynamic> notificationData,
     required String notificationType,
   }) {
+    final normalizedSourceType =
+        _resolveRealtimeSourceType(notificationData, notificationType);
     final notification = UnifiedNotification.fromJson({
       ...notificationData,
-      'source_type': notificationType,
+      if (!notificationData.containsKey('metadata') &&
+          notificationData['data'] is Map<String, dynamic>)
+        'metadata': notificationData['data'],
+      'source_type': normalizedSourceType,
     });
 
     // 检查是否已存在相同 ID 的通知，避免重复
@@ -219,6 +308,26 @@ class NotificationCenter extends _$NotificationCenter {
     );
   }
 
+  void _updateInterventionLocalState(String notificationId, String action) {
+    final updatedNotifications = state.notifications.map((n) {
+      if (n.id != notificationId) {
+        return n;
+      }
+      final metadata = Map<String, dynamic>.from(n.metadata)
+        ..['client_intervention_state'] = action;
+      return n.copyWith(
+        isRead: true,
+        metadata: metadata,
+      );
+    }).toList();
+
+    final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
+    state = state.copyWith(
+      notifications: updatedNotifications,
+      unreadCount: unreadCount,
+    );
+  }
+
   List<UnifiedNotification> _dedupeNotifications(
     List<UnifiedNotification> notifications,
   ) {
@@ -253,6 +362,20 @@ class NotificationCenter extends _$NotificationCenter {
       notification.content.trim(),
       createdAtSeconds.toString(),
     ].join('|');
+  }
+
+  String _resolveRealtimeSourceType(
+    Map<String, dynamic> notificationData,
+    String notificationType,
+  ) {
+    if (notificationType == 'intervention') {
+      return 'intervention';
+    }
+    final type = (notificationData['type'] as String? ?? '').toLowerCase();
+    if (type == 'intervention' || type == 'intervention_push') {
+      return 'intervention';
+    }
+    return notificationType;
   }
 }
 

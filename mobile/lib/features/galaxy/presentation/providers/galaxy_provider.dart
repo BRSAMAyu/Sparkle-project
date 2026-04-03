@@ -445,7 +445,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   void _handleNodesExpanded(Map<String, dynamic>? data) {
     if (data == null || data['nodes'] == null) return;
-    unawaited(loadGalaxy(forceRefresh: true));
+    unawaited(loadGalaxy(forceRefresh: true, showLoading: false));
   }
 
   void _handleNodeUpdated(Map<String, dynamic>? data) {
@@ -511,7 +511,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       setEvidenceHighlight(linkedNodeIds);
     }
 
-    unawaited(loadGalaxy(forceRefresh: true));
+    unawaited(loadGalaxy(forceRefresh: true, showLoading: false));
   }
 
   void setFocusNode(String nodeId) {
@@ -561,8 +561,16 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     );
   }
 
-  Future<void> loadGalaxy({bool forceRefresh = false}) async {
-    state = state.copyWith(isLoading: true, lastError: null);
+  Future<void> loadGalaxy({
+    bool forceRefresh = false,
+    bool showLoading = true,
+  }) async {
+    final hadGraph = state.nodes.isNotEmpty || state.edges.isNotEmpty;
+    final shouldShowBlockingLoading = showLoading || !hadGraph;
+    state = state.copyWith(
+      isLoading: shouldShowBlockingLoading,
+      lastError: null,
+    );
     final requestId = ++_layoutRequestId;
     try {
       final result = await _repository.getGraph(forceRefresh: forceRefresh);
@@ -573,6 +581,15 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
         final galaxyError = error is GalaxyError
             ? error
             : GalaxyError.unknown(error.toString());
+        if (hadGraph && !shouldShowBlockingLoading) {
+          state = state.copyWith(
+            isLoading: false,
+            isOptimizing: false,
+            lastError: null,
+          );
+          debugPrint('Background galaxy refresh failed: $galaxyError');
+          return;
+        }
         state = state.copyWith(
           isLoading: false,
           isOptimizing: false,
@@ -620,6 +637,15 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       );
       _recalculateVisibility();
     } catch (e) {
+      if (hadGraph && !shouldShowBlockingLoading) {
+        state = state.copyWith(
+          isLoading: false,
+          isOptimizing: false,
+          lastError: null,
+        );
+        debugPrint('Background galaxy refresh threw: $e');
+        return;
+      }
       state = state.copyWith(
         isLoading: false,
         isOptimizing: false,
@@ -761,7 +787,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       state = state.copyWith(lastError: galaxyError);
       return galaxyError;
     }
-    await loadGalaxy(forceRefresh: true);
+    await loadGalaxy(forceRefresh: true, showLoading: false);
     return null;
   }
 

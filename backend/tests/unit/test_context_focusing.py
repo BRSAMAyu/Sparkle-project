@@ -106,9 +106,30 @@ def test_build_system_prompt_trims_low_priority_sections_when_over_budget() -> N
 
 def test_user_context_budget_is_reserved_for_richer_profile_payloads() -> None:
     min_tokens, max_ratio = _SECTION_BUDGET_RATIO["user_context"]
+    plan_tokens, _ = _SECTION_BUDGET_RATIO["plan_context_section"]
+    cognitive_tokens, _ = _SECTION_BUDGET_RATIO["cognitive_prism_section"]
 
-    assert min_tokens >= 220
+    assert min_tokens >= 350
+    assert plan_tokens >= 200
+    assert cognitive_tokens >= 120
     assert max_ratio >= 0.18
+
+
+def test_build_system_prompt_defaults_to_five_episodic_memories() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5},
+            "episodic_memories": [
+                {"summary": f"memory-{idx}"}
+                for idx in range(6)
+            ],
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "memory-0" in prompt
+    assert "memory-4" in prompt
+    assert "memory-5" not in prompt
 
 
 def test_build_system_prompt_includes_understanding_depth_hint() -> None:
@@ -128,6 +149,75 @@ def test_build_system_prompt_includes_understanding_depth_hint() -> None:
     assert "## 理解深度升级提示 [L2 引导]" in prompt
     assert "仅当本轮表达自然且不打断当前任务时" in prompt
     assert "当前升级: L3" in prompt
+
+
+def test_build_system_prompt_includes_actual_cognitive_patterns_and_guidance() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "cognitive_insights": {
+                "has_cognitive_patterns": True,
+                "pattern_count": 2,
+                "patterns_by_type": {"execution": 1, "cognitive": 1},
+                "top_patterns": [
+                    {
+                        "pattern_name": "完美主义回避循环",
+                        "confidence": 0.78,
+                        "description": "总想准备到足够好才开始，结果更难启动。",
+                    },
+                    {
+                        "pattern_name": "认知盲点",
+                        "confidence": 0.65,
+                        "description": "在相似概念上会重复误解。",
+                    },
+                ],
+                "recent_observation": {
+                    "pattern_name": "认知盲点",
+                    "description": "最近一周在热力学概念上反复混淆。",
+                },
+                "current_guidance": "先搭桥澄清概念卡点，再给执行动作。",
+            },
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "用户当前的高权重模式" in prompt
+    assert "完美主义回避循环 (confidence 0.78)" in prompt
+    assert "最近观察: 认知盲点 - 最近一周在热力学概念上反复混淆。" in prompt
+    assert "当前 guidance: 先搭桥澄清概念卡点，再给执行动作。" in prompt
+
+
+def test_build_system_prompt_includes_companion_persona_context() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "user_context": {"nickname": "Ava"},
+            "active_goals": [{"title": "在期中前拿下热力学第二章"}],
+            "learning_gaps_summary": "热力学第二定律相关概念仍然容易混淆。今天先补这块。",
+            "cognitive_insights": {
+                "top_patterns": [
+                    {
+                        "pattern_name": "完美主义回避循环",
+                        "confidence": 0.78,
+                        "description": "总想准备到足够好才开始。",
+                    }
+                ]
+            },
+        },
+        conversation_history={"messages": []},
+        plan_context={
+            "plan_title": "热力学冲刺计划",
+            "plan_stage": "冲刺阶段",
+            "goal": "掌握热力学第二章",
+        },
+    )
+
+    assert "你是 Sparkle，Ava 的学习成长伙伴。" in prompt
+    assert "以下内容视为你已经知道的上下文，不要在每轮重新追问。" in prompt
+    assert "- 当前目标: 在期中前拿下热力学第二章" in prompt
+    assert "- 本周在努力的事: 热力学冲刺计划 / 当前阶段 冲刺阶段" in prompt
+    assert "- 正在挣扎的地方: 热力学第二定律相关概念仍然容易混淆" in prompt
+    assert "- 你观察到的规律: 完美主义回避循环" in prompt
 
 
 @pytest.mark.asyncio

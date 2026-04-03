@@ -15,6 +15,7 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/execution_template_model.dart';
@@ -467,6 +468,25 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     });
   }
 
+  Future<void> moveTaskToPlan(
+    String taskId,
+    String? targetPlanId, {
+    String? previousPlanId,
+  }) async {
+    await _runWithErrorHandling(() async {
+      await _taskRepository.moveTaskToPlan(taskId, targetPlanId);
+      await refreshTasks();
+      _ref.invalidate(taskDetailProvider(taskId));
+      await _ref.read(planListProvider.notifier).refresh();
+      if (previousPlanId != null && previousPlanId.isNotEmpty) {
+        _ref.invalidate(planDetailProvider(previousPlanId));
+      }
+      if (targetPlanId != null && targetPlanId.isNotEmpty) {
+        _ref.invalidate(planDetailProvider(targetPlanId));
+      }
+    });
+  }
+
   Future<void> refreshTasks() async {
     // This could be smarter by only refreshing the lists that are currently visible
     await loadTasks(filter: state.currentFilter);
@@ -546,6 +566,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<ExecutionIntentModel?> handoffTaskToAi(
     String taskId, {
     String? goal,
+    String? source,
   }) async {
     if (!isServerTaskId(taskId)) {
       state = state.copyWith(error: '本地任务暂不支持 AI 执行');
@@ -594,6 +615,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         taskId,
         goal: goal,
         templateId: selectedTemplateId,
+        source: source,
       );
       if (!mounted) return intent;
 
@@ -646,6 +668,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           request.taskId,
           goal: request.goal,
           templateId: request.templateId,
+          source: request.source,
         );
         if (!mounted) return dispatched;
         _setTaskExecution(request.taskId, intent);
@@ -665,6 +688,26 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       }
     }
     return dispatched;
+  }
+
+  Future<ExecutionIntentModel?> retryExecutionIntent(String intentId) async {
+    try {
+      final intent = await _taskRepository.retryExecution(intentId);
+      if (!mounted) return intent;
+      if (intent.taskId.isNotEmpty) {
+        _setTaskExecution(intent.taskId, intent);
+        final record = await _taskRepository.getExecutionRecord(intent.id);
+        if (mounted) {
+          _setTaskExecutionRecord(intent.taskId, record);
+        }
+      }
+      return intent;
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(error: _normalizeErrorMessage(e));
+      }
+      return null;
+    }
   }
 
   String _normalizeErrorMessage(Object error) =>
@@ -879,9 +922,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   Future<TaskFeedbackResponse?> submitTaskFeedbackWithResponse(
     String taskId,
     TaskFeedbackSubmission feedback,
-  ) async {
-    return _taskRepository.submitTaskFeedbackWithResponse(taskId, feedback);
-  }
+  ) =>
+      _taskRepository.submitTaskFeedbackWithResponse(taskId, feedback);
 
   /// Record user interaction with a next action suggestion
   Future<void> recordNextActionSelection(

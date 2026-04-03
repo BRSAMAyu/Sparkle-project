@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import contextlib
+import inspect
 import json
 import uuid
+from datetime import timezone, datetime
 from typing import Any
 
 from loguru import logger
@@ -18,7 +20,14 @@ from app.orchestration.mode_workflow_config import get_mode_strategy, get_workfl
 from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
 from app.gen.agent.v1 import agent_service_pb2
+from app.services.cognitive_service import CognitiveService
 from app.services.plan_progress_service import PlanProgressService
+from app.services.routing_profile_service import RoutingProfileService
+from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class RoutingEngineMixin:
@@ -156,6 +165,22 @@ class RoutingEngineMixin:
             except Exception as e:
                 logger.warning(f"Failed to evaluate plan health for dual core routing: {e}")
 
+        adaptive_adjustments = {}
+        if isinstance(plan_context, dict) and isinstance(plan_context.get("facts"), dict):
+            adaptive_adjustments = plan_context["facts"].get("adaptive_adjustments", {})
+
+        routing_profile = await self._get_routing_profile(
+            active_db=active_db,
+            user_id=user_id,
+            user_context_payload=user_context_payload,
+            plan_context=plan_context,
+        )
+        cognitive_routing_signals = await self._get_cognitive_routing_signals(
+            active_db=active_db,
+            user_id=user_id,
+            plan_context=plan_context,
+        )
+
         return DualCoreRoutingInput(
             intent=(
                 unified_routing_result.primary_intent.value
@@ -169,10 +194,18 @@ class RoutingEngineMixin:
             has_active_plan=bool(active_plan_id),
             plan_health_status=plan_health_status,
             recent_task_feedback_distribution=await self._get_recent_task_feedback_distribution(user_id, active_db),
-            behavior_pattern_names=self._extract_behavior_pattern_names(plan_context),
-            behavior_pattern_types=self._extract_behavior_pattern_types(plan_context),
+            behavior_pattern_names=cognitive_routing_signals["pattern_names"],
+            behavior_pattern_types=cognitive_routing_signals["pattern_types"],
+            behavior_pattern_details=cognitive_routing_signals["pattern_details"],
             session_length_preference=self._extract_session_length_preference(user_context_payload, plan_context),
             difficulty_preference=self._extract_difficulty_preference(user_context_payload, plan_context),
+            emotional_block_detected=bool(cognitive_routing_signals["emotional_block_detected"]),
+            procrastination_pattern=bool(cognitive_routing_signals["procrastination_pattern"]),
+            cognitive_mode_suggested=bool(cognitive_routing_signals["cognitive_mode_suggested"]),
+            suggested_verbosity=cognitive_routing_signals["suggested_verbosity"],
+            current_guidance=cognitive_routing_signals["current_guidance"],
+            routing_profile=routing_profile,
+            adaptive_adjustments=adaptive_adjustments,
         )
 
     async def _emit_dual_core_status(self, decision, stream_callback) -> None:
@@ -249,9 +282,18 @@ class RoutingEngineMixin:
             "recent_sentiment_distribution": routing_input.recent_sentiment_distribution,
             "recent_task_feedback_distribution": routing_input.recent_task_feedback_distribution,
             "behavior_pattern_names": routing_input.behavior_pattern_names[:5],
+            "behavior_pattern_details": routing_input.behavior_pattern_details[:2],
             "behavior_pattern_types": routing_input.behavior_pattern_types,
             "plan_health_status": routing_input.plan_health_status,
+            "routing_profile": routing_input.routing_profile,
+            "current_guidance": routing_input.current_guidance,
+            "routing_debug": (decision.routing_debug or {}),
         }
+        await self._persist_dual_core_decision_snapshot(
+            user_id=user_id,
+            decision=decision,
+            routing_input=routing_input,
+        )
 
         await self._emit_dual_core_status(decision, stream_callback)
 
@@ -274,6 +316,161 @@ class RoutingEngineMixin:
             state.context_data["plan_metadata"] = plan_meta
 
         return route_decision
+
+    async def _get_routing_profile(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        user_context_payload: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+    ) -> dict[str, float]:
+        if active_db is not None:
+            with contextlib.suppress(Exception):
+                return await RoutingProfileService(active_db, self.redis).get_profile(uuid.UUID(user_id))
+
+        candidates = []
+        if isinstance(user_context_payload, dict):
+            preferences = user_context_payload.get("preferences")
+            if isinstance(preferences, dict):
+                candidates.append(preferences.get("routing_profile"))
+        if isinstance(plan_context, dict):
+            user_profile = plan_context.get("user_profile")
+            if isinstance(user_profile, dict):
+                snapshot = user_profile.get("preferences_snapshot")
+                if isinstance(snapshot, dict):
+                    candidates.append(snapshot.get("routing_profile"))
+        return RoutingProfileService.DEFAULT_PROFILE | next(
+            (candidate for candidate in candidates if isinstance(candidate, dict)),
+            {},
+        )
+
+    async def _get_cognitive_routing_signals(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        plan_context: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        pattern_details: list[dict[str, Any]] = []
+        pattern_names = self._extract_behavior_pattern_names(plan_context)
+        pattern_types = self._extract_behavior_pattern_types(plan_context)
+
+        if active_db is not None:
+            with contextlib.suppress(Exception):
+                patterns = await CognitiveService(active_db).get_user_patterns(uuid.UUID(user_id), min_confidence=0.6)
+                pattern_names = []
+                pattern_types = {}
+                for pattern in patterns[:5]:
+                    confidence = float(pattern.confidence_score or 0.0)
+                    canonical_key = canonical_pattern_key(pattern.pattern_name)
+                    detail = {
+                        "pattern_name": present_pattern_name(pattern.pattern_name),
+                        "raw_pattern_name": str(pattern.pattern_name or "").strip(),
+                        "canonical_key": canonical_key,
+                        "pattern_type": str(pattern.pattern_type or ""),
+                        "confidence": confidence,
+                        "description": present_pattern_description(pattern.pattern_name, pattern.description),
+                    }
+                    pattern_details.append(detail)
+                    if detail["pattern_name"]:
+                        pattern_names.append(detail["pattern_name"])
+                    raw_type = str(pattern.pattern_type or "").strip().lower()
+                    if raw_type:
+                        pattern_types[raw_type] = pattern_types.get(raw_type, 0) + 1
+
+        top_two = pattern_details[:2]
+        cognitive_mode_suggested = any(
+            float(item.get("confidence") or 0.0) >= 0.6
+            and (
+                "cognitive" in str(item.get("pattern_type") or "").lower()
+                or any(
+                    token in " ".join(
+                        [
+                            str(item.get("canonical_key") or "").lower(),
+                            str(item.get("raw_pattern_name") or "").lower(),
+                            str(item.get("description") or "").lower(),
+                        ]
+                    )
+                    for token in ("confusion", "blindspot", "concept", "误区", "不理解", "盲点")
+                )
+            )
+            for item in top_two
+        )
+        emotional_block_detected = any(
+            float(item.get("confidence") or 0.0) >= 0.6
+            and (
+                "overload" in str(item.get("canonical_key") or "")
+                or "burnout" in str(item.get("canonical_key") or "")
+                or str(item.get("pattern_type") or "").lower() == "emotional"
+            )
+            for item in top_two
+        )
+        procrastination_pattern = any(
+            float(item.get("confidence") or 0.0) >= 0.7
+            and any(
+                token in " ".join(
+                    [
+                        str(item.get("canonical_key") or "").lower(),
+                        str(item.get("raw_pattern_name") or "").lower(),
+                        str(item.get("pattern_name") or "").lower(),
+                    ]
+                )
+                for token in ("procrast", "avoid", "拖延", "回避", "focus_decay", "perfectionism")
+            )
+            for item in top_two
+        )
+        suggested_verbosity = "supportive" if any(
+            "perfection" in str(item.get("canonical_key") or "").lower()
+            or "完美主义" in str(item.get("pattern_name") or "")
+            for item in top_two
+        ) else None
+        current_guidance = ""
+        if procrastination_pattern:
+            current_guidance = "优先识别这是不是启动阻力或回避，再把建议压缩成几分钟可开始的动作。"
+        elif cognitive_mode_suggested:
+            current_guidance = "优先澄清概念误区和理解卡点，不要直接把更多任务压上去。"
+        elif emotional_block_detected:
+            current_guidance = "优先降低心理摩擦和负荷，再推进需要高投入的执行建议。"
+
+        return {
+            "pattern_names": pattern_names or self._extract_behavior_pattern_names(plan_context),
+            "pattern_types": pattern_types or self._extract_behavior_pattern_types(plan_context),
+            "pattern_details": top_two,
+            "emotional_block_detected": emotional_block_detected,
+            "procrastination_pattern": procrastination_pattern,
+            "cognitive_mode_suggested": cognitive_mode_suggested,
+            "suggested_verbosity": suggested_verbosity,
+            "current_guidance": current_guidance,
+        }
+
+    async def _persist_dual_core_decision_snapshot(
+        self,
+        *,
+        user_id: str,
+        decision: DualCoreDecision,
+        routing_input: DualCoreRoutingInput,
+    ) -> None:
+        if not self.redis:
+            return
+        payload = {
+            "mode": decision.mode,
+            "reason": decision.reason,
+            "routing_profile": routing_input.routing_profile,
+            "current_guidance": routing_input.current_guidance,
+            "routing_debug": decision.routing_debug,
+            "timestamp": _utcnow().isoformat(),
+        }
+        try:
+            result = self.redis.setex(
+                f"user:routing:last_dual_core:{user_id}",
+                86400,
+                json.dumps(payload, ensure_ascii=False),
+            )
+            if inspect.isawaitable(result):
+                await result
+        except Exception as e:
+            logger.debug(f"Failed to persist dual-core routing snapshot: {e}")
 
     # ------------------------------------------------------------------
     # Unified routing & classification

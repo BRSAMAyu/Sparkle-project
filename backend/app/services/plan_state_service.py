@@ -20,6 +20,7 @@ Usage:
 """
 
 import json
+import copy
 from datetime import timezone, datetime
 from typing import Any
 from uuid import UUID
@@ -232,12 +233,12 @@ class PlanStateService:
 
         # Apply patches to JSON fields
         if "facts" in patch:
-            current_facts = state.facts or {}
+            current_facts = copy.deepcopy(state.facts or {})
             current_facts.update(patch["facts"])
             state.facts = current_facts
 
         if "milestones" in patch:
-            current_milestones = state.milestones or []
+            current_milestones = copy.deepcopy(state.milestones or [])
             if isinstance(patch["milestones"], list):
                 current_milestones.extend(patch["milestones"])
             else:
@@ -245,17 +246,17 @@ class PlanStateService:
             state.milestones = current_milestones
 
         if "task_index" in patch:
-            current_index = state.task_index or {}
+            current_index = copy.deepcopy(state.task_index or {})
             self._deep_merge(current_index, patch["task_index"])
             state.task_index = current_index
 
         if "task_summaries" in patch:
             summaries = patch["task_summaries"]
             if isinstance(summaries, list):
-                state.task_summaries = summaries
+                state.task_summaries = copy.deepcopy(summaries)
 
         if "feedback_log" in patch:
-            current_log = state.feedback_log or []
+            current_log = copy.deepcopy(state.feedback_log or [])
             if isinstance(patch["feedback_log"], list):
                 current_log.extend(patch["feedback_log"])
             else:
@@ -263,7 +264,7 @@ class PlanStateService:
             state.feedback_log = current_log
 
         if "constraints" in patch:
-            current_constraints = state.constraints or {}
+            current_constraints = copy.deepcopy(state.constraints or {})
             current_constraints.update(patch["constraints"])
             state.constraints = current_constraints
 

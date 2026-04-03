@@ -51,6 +51,20 @@ class NotificationInteractionResponse(BaseModel):
         from_attributes = True
 
 
+class InterventionNotificationActionRequest(BaseModel):
+    """Transition a notification-backed intervention record from mobile."""
+
+    action: str = Field(
+        ...,
+        pattern="^(seen|accepted|acted|dismissed|snoozed)$",
+        description="Desired intervention action",
+    )
+    action_payload: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional client-side evidence such as source, route, CTA label, or acted context",
+    )
+
+
 class NotificationPreferencesUpdate(BaseModel):
     """Update notification preferences"""
     enable_system: bool | None = None
@@ -91,8 +105,12 @@ class NotificationAnalyticsSummary(BaseModel):
     total_sent: int = 0
     total_viewed: int = 0
     total_clicked: int = 0
+    total_accepted: int = 0
+    total_acted: int = 0
     view_rate: float = 0.0
     click_rate: float = 0.0
+    acceptance_rate: float = 0.0
+    action_rate: float = 0.0
     avg_time_to_action: float = 0.0
 
 
@@ -102,8 +120,12 @@ class NotificationTypeStats(BaseModel):
     sent: int
     viewed: int
     clicked: int
+    accepted: int = 0
+    acted: int = 0
     view_rate: float
     click_rate: float
+    acceptance_rate: float = 0.0
+    action_rate: float = 0.0
 
 
 class NotificationTrendData(BaseModel):
@@ -112,6 +134,41 @@ class NotificationTrendData(BaseModel):
     sent: int
     viewed: int
     clicked: int
+    accepted: int = 0
+    acted: int = 0
+
+
+class InterventionFunnelStats(BaseModel):
+    """Lifecycle funnel metrics for one intervention dimension."""
+
+    dimension: str
+    created: int = 0
+    delivered: int = 0
+    seen: int = 0
+    accepted: int = 0
+    acted: int = 0
+    acceptance_rate: float = 0.0
+    action_rate: float = 0.0
+
+
+class InterventionToneEffectiveness(BaseModel):
+    """Outcome and action performance for a strategy/channel pair."""
+
+    tone: str
+    channel: str
+    created: int = 0
+    accepted: int = 0
+    acted: int = 0
+    effective: int = 0
+    acted_rate: float = 0.0
+    effective_rate: float = 0.0
+
+
+class InterventionTimeToActionBucket(BaseModel):
+    """Bucketted action latency for intervention analytics."""
+
+    label: str
+    count: int = 0
 
 
 class NotificationAnalyticsResponse(BaseModel):
@@ -120,6 +177,9 @@ class NotificationAnalyticsResponse(BaseModel):
     by_type: dict[str, NotificationTypeStats]
     trends: list[NotificationTrendData]
     hourly_distribution: list[int] = Field(..., description="24-hour distribution array")
+    intervention_funnels: list[InterventionFunnelStats] = Field(default_factory=list)
+    tone_effectiveness: list[InterventionToneEffectiveness] = Field(default_factory=list)
+    time_to_action_buckets: list[InterventionTimeToActionBucket] = Field(default_factory=list)
 
 
 # Pagination

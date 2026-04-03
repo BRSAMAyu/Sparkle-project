@@ -14,15 +14,20 @@ from loguru import logger
 from sqlalchemy import desc, select
 
 from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIVE_ROLLBACK_TOTAL
+from app.core.event_bus import event_bus
+from app.models.card_protocol import Card, CardType
 from app.models.cognitive import BehaviorPattern
 from app.models.task import Task
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_review_service import plan_review_service
 from app.services.personalization.preference_service import PreferenceService
+from app.services.plan_adjustment_applier import PlanAdjustmentApplier
+from app.services.plan_health_signal_service import PlanHealthSignalService
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_state_service import PlanStateService
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.services.card_protocol.replanner_bridge import ReplannerCardBridge
 
 if TYPE_CHECKING:
     from app.orchestration.step_feedback_collector import PlanExecutionFeedback
@@ -252,6 +257,17 @@ class AdaptiveReplanner:
     AUTO_REPLAN_COOLDOWN = timedelta(hours=12)
     SNAPSHOT_HISTORY_LIMIT = 3
     NEGATIVE_FEEDBACK_CATEGORIES = {"too_difficult", "too_long", "unclear", "irrelevant"}
+    STRONG_COGNITIVE_STRUGGLE_MARKERS = (
+        "不理解",
+        "搞不懂",
+        "看不懂",
+        "不会",
+        "没思路",
+        "concept",
+        "confus",
+        "don't understand",
+        "do not understand",
+    )
 
     def __init__(
         self,
@@ -263,7 +279,10 @@ class AdaptiveReplanner:
         self.redis = redis
         self.progress_service = progress_service or PlanProgressService(db, redis)
         self.plan_state_service = PlanStateService(db, redis)
+        self.plan_adjustment_applier = PlanAdjustmentApplier(db, redis)
+        self.plan_health_signal_service = PlanHealthSignalService(db, redis)
         self.cognitive_pattern_trigger = CognitivePatternTrigger(db, redis)
+        self._card_bridge: ReplannerCardBridge | None = None
 
     async def on_task_completed(
         self,
@@ -293,6 +312,7 @@ class AdaptiveReplanner:
         task_id: UUID,
         category: str | None = None,
         difficulty_delta: float | None = None,
+        feedback_text: str | None = None,
     ) -> list[AdaptationRecord]:
         await self._maybe_record_breakdown_feedback(
             user_id=user_id,
@@ -309,14 +329,56 @@ class AdaptiveReplanner:
         )
         if rollback_records:
             return rollback_records
-        report = await self.progress_service.evaluate_progress(user_id, plan_id)
-        return await self._handle_report(
-            report,
-            trigger="task_feedback",
+        trigger = (
+            "task_feedback_struggle"
+            if self.is_strong_cognitive_struggle_feedback(category=category, feedback_text=feedback_text)
+            else "task_feedback"
+        )
+        return await self.evaluate_plan_health_now(
+            user_id=user_id,
+            plan_id=plan_id,
+            trigger=trigger,
             task_id=task_id,
             feedback_category=category,
             difficulty_delta=difficulty_delta,
         )
+
+    async def evaluate_plan_health_now(
+        self,
+        *,
+        user_id: UUID,
+        plan_id: UUID,
+        trigger: str,
+        task_id: UUID | None = None,
+        completion_rate: float | None = None,
+        feedback_category: str | None = None,
+        difficulty_delta: float | None = None,
+    ) -> list[AdaptationRecord]:
+        """Run an immediate plan-health evaluation outside the periodic loop."""
+        report = await self.progress_service.evaluate_progress(user_id, plan_id)
+        return await self._handle_report(
+            report,
+            trigger=trigger,
+            task_id=task_id,
+            completion_rate=completion_rate,
+            feedback_category=feedback_category,
+            difficulty_delta=difficulty_delta,
+        )
+
+    @classmethod
+    def is_strong_cognitive_struggle_feedback(
+        cls,
+        *,
+        category: str | None,
+        feedback_text: str | None,
+    ) -> bool:
+        normalized_category = str(category or "").strip().lower()
+        if normalized_category == "unclear":
+            return True
+        haystack = str(feedback_text or "").strip().lower()
+        if not haystack:
+            return False
+        return any(marker in haystack for marker in cls.STRONG_COGNITIVE_STRUGGLE_MARKERS)
 
     async def _maybe_record_breakdown_feedback(
         self,
@@ -531,27 +593,80 @@ class AdaptiveReplanner:
         if not state:
             return cognitive_records
 
+        action_taken = "none"
+        action_records: list[AdaptationRecord] = []
+
         if report.recommended_action == "replan":
             if self._recently_triggered(state.facts, "last_replan_at", self.AUTO_REPLAN_COOLDOWN):
-                return cognitive_records
-            return cognitive_records + await self._trigger_full_replan(
-                report,
-                trigger=trigger,
-                task_id=task_id,
-                completion_rate=completion_rate,
-                feedback_category=feedback_category,
-            )
+                action_taken = "replan_cooldown_active"
+            else:
+                action_records = await self._trigger_full_replan(
+                    report,
+                    trigger=trigger,
+                    task_id=task_id,
+                    completion_rate=completion_rate,
+                    feedback_category=feedback_category,
+                )
+                action_taken = "full_replan_triggered" if action_records else "no_replan_produced"
         else:
             if self._recently_triggered(state.facts, "last_adjustment_at", self.AUTO_ADJUSTMENT_COOLDOWN):
-                return cognitive_records
-            return cognitive_records + await self._apply_incremental_adjustment(
-                report,
+                action_taken = "adjustment_cooldown_active"
+            else:
+                action_records = await self._apply_incremental_adjustment(
+                    report,
+                    trigger=trigger,
+                    task_id=task_id,
+                    completion_rate=completion_rate,
+                    difficulty_delta=difficulty_delta,
+                    feedback_category=feedback_category,
+                )
+                action_taken = "incremental_adjustment_applied" if action_records else "no_adjustment_produced"
+
+        # ---断点3: emit plan health signal ---
+        try:
+            await self.plan_health_signal_service.maybe_publish(
+                report=report,
                 trigger=trigger,
                 task_id=task_id,
-                completion_rate=completion_rate,
-                difficulty_delta=difficulty_delta,
                 feedback_category=feedback_category,
+                action_taken=action_taken,
+                adaptation_records=action_records,
+                existing_facts=state.facts or {},
             )
+        except Exception as exc:
+            logger.warning("PlanHealthSignal emit failed (non-fatal): {}", exc)
+
+        return cognitive_records + action_records
+
+    @property
+    def card_bridge(self) -> ReplannerCardBridge | None:
+        """Lazy-init the card protocol bridge (graceful if protocol not yet migrated)."""
+        if self._card_bridge is None:
+            try:
+                self._card_bridge = ReplannerCardBridge(self.db, event_bus)
+            except Exception:
+                logger.debug("Card protocol bridge not available (pre-migration)")
+        return self._card_bridge
+
+    async def _find_plan_card_id(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+    ) -> UUID | None:
+        """Resolve the canonical PLAN card id for a legacy plan.
+
+        Phase 3 compilation must target the canonical plan card, but the
+        replanner still operates on legacy plan ids. Keep the lookup local and
+        deterministic instead of reaching through bridge internals.
+        """
+        stmt = select(Card.id).where(
+            Card.card_type == CardType.PLAN,
+            Card.owner_id == user_id,
+            Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
+            Card.not_deleted_filter(),
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def _apply_incremental_adjustment(
         self,
@@ -566,7 +681,34 @@ class AdaptiveReplanner:
         if not state:
             return []
 
-        adjustments = self._calculate_adjustments(state.facts or {}, report, difficulty_delta)
+        # Phase 3: Try ParameterCompiler first (requires GLOBAL_COMPASS + STRATEGY_MAP artifacts)
+        compiled_result = None
+        try:
+            from app.services.card_protocol.parameter_compiler import ParameterCompiler
+
+            compiler = ParameterCompiler(self.db, event_bus)
+            # Find plan card for this legacy plan
+            plan_card_id = await self._find_plan_card_id(report.user_id, report.plan_id)
+            if plan_card_id and await compiler.can_compile(plan_card_id):
+                compiled_result = await compiler.compile(
+                    user_id=report.user_id,
+                    plan_card_id=plan_card_id,
+                    plan_id=report.plan_id,
+                    trigger=trigger,
+                    context={
+                        "health_reasons": report.reasons,
+                        "difficulty_delta": difficulty_delta,
+                        "completion_rate": completion_rate,
+                    },
+                )
+        except Exception as exc:
+            logger.debug("ParameterCompiler skipped (non-fatal): {}", exc)
+
+        if compiled_result and compiled_result.success:
+            adjustments = {"adaptive_adjustments": compiled_result.adaptive_adjustments}
+        else:
+            # Fallback to legacy calculation when no artifacts available
+            adjustments = self._calculate_adjustments(state.facts or {}, report, difficulty_delta)
         if not adjustments:
             return []
 
@@ -624,6 +766,71 @@ class AdaptiveReplanner:
             report.plan_id,
             adjustments,
         )
+
+        # Apply adjustments to actual task entities (the critical bridge)
+        patch_result = None
+        try:
+            patch_result = await self.plan_adjustment_applier.apply_incremental_changes(
+                user_id=report.user_id,
+                plan_id=report.plan_id,
+                trigger=trigger,
+            )
+            task_level_change = bool(
+                patch_result.applied
+                and (
+                    patch_result.affected_task_ids
+                    or patch_result.inserted_task_ids
+                    or patch_result.hidden_task_ids
+                )
+            )
+            if task_level_change:
+                logger.info(
+                    "PlanAdjustmentApplier patched {} tasks, inserted {} reviews, hid {} tasks for plan {}",
+                    len(patch_result.affected_task_ids),
+                    len(patch_result.inserted_task_ids),
+                    len(patch_result.hidden_task_ids),
+                    report.plan_id,
+                )
+                # Enhance the adaptation record with task-level outcome
+                record = AdaptationRecord(
+                    what_changed=f"{record.what_changed}; tasks patched: {len(patch_result.affected_task_ids)}",
+                    why=record.why,
+                    expected_effect=record.expected_effect,
+                    user_facing_message=patch_result.user_facing_summary or record.user_facing_message,
+                    source="adaptive_replanner+plan_adjustment_applier",
+                )
+            else:
+                logger.info(
+                    "PlanAdjustmentApplier produced no task-level changes for plan {} despite parameter update",
+                    report.plan_id,
+                )
+        except Exception as exc:
+            logger.warning("PlanAdjustmentApplier failed (non-fatal): {}", exc)
+
+        # --- Card protocol writeback (breakpoint fix 1) ---
+        try:
+            bridge = self.card_bridge
+            if bridge:
+                affected_ids = patch_result.affected_task_ids if patch_result else None
+                inserted_ids = patch_result.inserted_task_ids if patch_result else None
+                await bridge.on_incremental_adjustment(
+                    user_id=report.user_id,
+                    plan_id=report.plan_id,
+                    adjustments=adjustments,
+                    trigger=trigger,
+                    affected_task_ids=affected_ids,
+                    inserted_task_ids=inserted_ids,
+                )
+        except Exception as exc:
+            logger.warning("Card protocol writeback failed (non-fatal): {}", exc)
+
+        if not patch_result or not (
+            patch_result.affected_task_ids
+            or patch_result.inserted_task_ids
+            or patch_result.hidden_task_ids
+        ):
+            return []
+
         await self._enqueue_adaptation_update(report.user_id, record, update_type="plan_adaptation")
         return [record]
 
@@ -672,6 +879,20 @@ class AdaptiveReplanner:
         )
 
         logger.info("Triggered auto-replan for plan {}", report.plan_id)
+
+        # --- Card protocol writeback (breakpoint fix for full replan) ---
+        try:
+            bridge = self.card_bridge
+            if bridge:
+                await bridge.on_full_replan(
+                    user_id=report.user_id,
+                    plan_id=report.plan_id,
+                    reasons=report.reasons,
+                    severity=report.severity,
+                )
+        except Exception as exc:
+            logger.warning("Card protocol writeback (full replan) failed (non-fatal): {}", exc)
+
         await self._enqueue_adaptation_update(report.user_id, record, update_type="plan_adaptation")
         return [record]
 
@@ -1051,6 +1272,15 @@ class AdaptiveReplanner:
                 "restored_snapshot_id": adaptive_meta["active_snapshot_id"],
             },
         )
+        # ---断点1 Fix #1: Roll back actual Task entities, not just plan state ---
+        try:
+            await self.plan_adjustment_applier.rollback_last_patch(
+                user_id=user_id,
+                plan_id=plan_id,
+            )
+        except Exception as exc:
+            logger.warning("Task-entity rollback failed (non-fatal): {}", exc)
+
         await self.plan_state_service.upsert_plan_state(
             user_id=user_id,
             plan_id=plan_id,

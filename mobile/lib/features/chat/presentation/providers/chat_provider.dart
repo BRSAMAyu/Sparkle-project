@@ -11,6 +11,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
@@ -52,8 +53,6 @@ part 'chat_provider_wiring.dart';
 
 // 2. ChatNotifier Class
 class ChatNotifier extends StateNotifier<ChatState> {
-  static const int historyPageSize = 20;
-
   ChatNotifier(this._chatRepository, this._ref) : super(ChatState()) {
     if (DemoDataService.isDemoMode) {
       // Load demo history
@@ -70,6 +69,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(wsConnectionState: connectionState);
     });
   }
+
+  static const int historyPageSize = 20;
+
   final ChatRepository _chatRepository;
   final Ref _ref;
   StreamSubscription<WsConnectionState>? _connectionStateSubscription;
@@ -276,6 +278,40 @@ class ChatNotifier extends StateNotifier<ChatState> {
       } catch (_) {}
     }
     return null;
+  }
+
+  List<String> _parseStringList(dynamic raw) {
+    if (raw is List) {
+      return raw
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    if (raw is String && raw.isNotEmpty) {
+      return raw
+          .split('\n')
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
+  String? _buildExecutionProgressDetails(dynamic raw) {
+    final progress = _parseJsonMap(raw);
+    if (progress == null || progress.isEmpty) {
+      return null;
+    }
+    final currentStep = progress['current_step']?.toString().trim();
+    final recentOutput = _parseStringList(progress['recent_output']);
+    final lines = <String>[
+      if (currentStep != null && currentStep.isNotEmpty) currentStep,
+      ...recentOutput.take(3),
+    ];
+    if (lines.isEmpty) {
+      return null;
+    }
+    return lines.join('\n');
   }
 
   List<Map<String, dynamic>> _parseJsonMapList(dynamic raw) {
@@ -521,6 +557,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         'execution_mode': executionMode,
         'tone': tone,
         'reason': reason,
+        'source': suggestion['source']?.toString() ?? 'execution_suggestion',
         'delegate_preference': suggestion['delegate_preference'],
         'title': tone == 'detailed_guidance' ? '这一步适合交给 AI 执行' : '我可以直接替你执行这一步',
         'summary':
@@ -1142,9 +1179,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
             unawaited(BgmService.setThinkingActivity(false));
           }
           final uxProgress = event.metadata?['ux_progress'];
+          final executionProgress = _buildExecutionProgressDetails(
+            event.metadata?['execution_progress'],
+          );
           lastAiStatus = event.state;
           pendingAiStatus = event.state;
-          if (uxProgress is Map<String, dynamic>) {
+          if (executionProgress != null && executionProgress.isNotEmpty) {
+            pendingAiStatusDetails = executionProgress;
+          } else if (uxProgress is Map<String, dynamic>) {
             final headline = uxProgress['headline']?.toString();
             final detail = uxProgress['detail']?.toString();
             pendingAiStatusDetails = [headline, detail]

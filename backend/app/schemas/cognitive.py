@@ -3,10 +3,11 @@ Cognitive Prism Schemas
 认知棱镜相关 Schema
 """
 from __future__ import annotations
+import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.cognitive import AnalysisStatus, PatternType
 
@@ -70,6 +71,26 @@ class BehaviorPatternResponse(BaseModel):
     last_decay_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("pattern_type", mode="before")
+    @classmethod
+    def _normalize_pattern_type(cls, value):
+        if isinstance(value, PatternType):
+            return value
+
+        normalized = str(value or "").strip().lower()
+        if not normalized:
+            return PatternType.EXECUTION
+
+        valid_values = {item.value for item in PatternType}
+        if normalized in valid_values:
+            return PatternType(normalized)
+
+        for token in re.split(r"[^a-z]+", normalized):
+            if token in valid_values:
+                return PatternType(token)
+
+        return PatternType.EXECUTION
 
     class Config:
         from_attributes = True

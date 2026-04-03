@@ -598,7 +598,7 @@ class SharedResourceCreate(BaseModel):
     resource_id: UUID = Field(description="资源ID")
     target_group_id: UUID | None = Field(default=None, description="分享给群组ID")
     target_user_id: UUID | None = Field(default=None, description="分享给好友ID")
-    permission: str = Field(default="view", pattern="^(view|comment|edit)$", description="权限")
+    permission: str = Field(default="view", pattern="^(view|comment|edit|adopt|fork)$", description="权限")
     comment: str | None = Field(default=None, max_length=500, description="分享留言")
 
 
@@ -619,6 +619,7 @@ class SharedResourceInfo(BaseSchema):
     cognitive_fragment_id: UUID | None = None
     curiosity_capsule_id: UUID | None = None
     behavior_pattern_id: UUID | None = None
+    card_share_record_id: UUID | None = None
 
     # Metadata
     permission: str

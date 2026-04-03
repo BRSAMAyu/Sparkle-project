@@ -36,6 +36,13 @@ class SimulationRunRequest(BaseModel):
         default="balanced",
         description="讨论展开方式：balanced / debate / guided / practical",
     )
+    anchor_material: str | None = Field(default=None, description="锚点材料：错题、课文、概念定义等")
+    anchor_type: str | None = Field(
+        default=None,
+        description="锚点类型：error_record / concept / textbook_passage / case / historical_source",
+    )
+    anchor_id: str | None = Field(default=None, description="锚点材料的来源 ID")
+    learning_objective: str | None = Field(default=None, description="用户希望通过模拟获得的具体目标")
 
 
 class SimulationContinueRequest(BaseModel):
@@ -131,6 +138,10 @@ async def run_learning_simulation(
         planned_round_count=request.planned_round_count,
         participant_names=request.participant_names,
         facilitation_style=request.facilitation_style,
+        anchor_material=request.anchor_material,
+        anchor_type=request.anchor_type,
+        anchor_id=request.anchor_id,
+        learning_objective=request.learning_objective,
         user_id=UUID(user_id),
     )
     return session.to_dict()
@@ -157,6 +168,10 @@ async def stream_learning_simulation(
                 planned_round_count=request.planned_round_count,
                 participant_names=request.participant_names,
                 facilitation_style=request.facilitation_style,
+                anchor_material=request.anchor_material,
+                anchor_type=request.anchor_type,
+                anchor_id=request.anchor_id,
+                learning_objective=request.learning_objective,
                 user_id=UUID(user_id),
             ):
                 yield f"event: {event_name}\n"

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -144,10 +145,10 @@ class _NotificationCenterScreenState
                           index: entry.key,
                           axis: Axis.horizontal,
                           child: NotificationFilterChip(
-                          label: _getFilterLabel(entry.value),
-                          isSelected: _filter == entry.value,
-                          onTap: () => _setFilter(entry.value),
-                        ),
+                            label: _getFilterLabel(entry.value),
+                            isSelected: _filter == entry.value,
+                            onTap: () => _setFilter(entry.value),
+                          ),
                         ),
                       )
                       .toList(),
@@ -211,6 +212,15 @@ class _NotificationCenterScreenState
               notification: notification,
               onRead: () => _markAsRead(notification),
               onDelete: () => _deleteNotification(notification),
+              onAccept: notification.isIntervention
+                  ? () => _acceptIntervention(notification)
+                  : null,
+              onAct: notification.isIntervention
+                  ? () => _actOnIntervention(notification)
+                  : null,
+              onSnooze: notification.isIntervention
+                  ? () => _snoozeIntervention(notification)
+                  : null,
             ),
           );
         },
@@ -243,8 +253,11 @@ class _NotificationCenterScreenState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.notifications_none,
-                size: DS.spacing64, color: DS.textTertiary,),
+            Icon(
+              Icons.notifications_none,
+              size: DS.spacing64,
+              color: DS.textTertiary,
+            ),
             const SizedBox(height: DS.spacing16),
             Text(
               context.l10n.notificationEmptyTitle,
@@ -262,7 +275,8 @@ class _NotificationCenterScreenState
       );
 
   List<UnifiedNotification> _filterNotifications(
-      List<UnifiedNotification> notifications,) {
+    List<UnifiedNotification> notifications,
+  ) {
     var filtered = notifications;
 
     // Apply status filter
@@ -330,10 +344,54 @@ class _NotificationCenterScreenState
   }
 
   Future<void> _markAsRead(UnifiedNotification notification) async {
+    if (notification.isIntervention) {
+      await ref
+          .read(notificationCenterProvider.notifier)
+          .markInterventionSeen(notification);
+      return;
+    }
     await ref.read(notificationCenterProvider.notifier).markAsRead(
           notification.id,
           notification.sourceType,
         );
+  }
+
+  Future<void> _acceptIntervention(UnifiedNotification notification) async {
+    await ref
+        .read(notificationCenterProvider.notifier)
+        .acceptIntervention(notification);
+    if (mounted) {
+      unawaited(
+        SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+      );
+    }
+  }
+
+  Future<void> _actOnIntervention(UnifiedNotification notification) async {
+    await ref
+        .read(notificationCenterProvider.notifier)
+        .actOnIntervention(notification, actionPayload: {
+      'cta': 'notification_card_start',
+      'suggested_step': notification.suggestedStep,
+    });
+    if (!mounted) {
+      return;
+    }
+    _navigateIntervention(notification);
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+    );
+  }
+
+  Future<void> _snoozeIntervention(UnifiedNotification notification) async {
+    await ref
+        .read(notificationCenterProvider.notifier)
+        .snoozeIntervention(notification);
+    if (mounted) {
+      unawaited(
+        SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+      );
+    }
   }
 
   Future<void> _markAllAsRead() async {
@@ -386,5 +444,13 @@ class _NotificationCenterScreenState
 
   Future<void> _refresh() async {
     await ref.read(notificationCenterProvider.notifier).refresh();
+  }
+
+  void _navigateIntervention(UnifiedNotification notification) {
+    final planId = notification.planId;
+    if (!mounted || planId == null || planId.isEmpty) {
+      return;
+    }
+    context.push('/plans/$planId');
   }
 }

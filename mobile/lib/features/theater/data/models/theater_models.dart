@@ -277,7 +277,8 @@ class TheaterPathOption {
     this.routeScore = 0,
     this.checkpointDays = const [],
     this.weekOneTasks = const [],
-    this.confidenceScore = 0,
+    this.dataSufficiencyScore = 0,
+    this.dataQuality,
     this.completionRangeLow = 0,
     this.completionRangeHigh = 0,
     this.masteryRangeLow = 0,
@@ -302,7 +303,11 @@ class TheaterPathOption {
             .map((item) => item.toString())
             .toList(),
         routeScore: (json['route_score'] as num?)?.toDouble() ?? 0,
-        confidenceScore: (json['confidence_score'] as num?)?.toDouble() ?? 0,
+        dataSufficiencyScore:
+            (json['data_sufficiency_score'] as num?)?.toDouble() ??
+                (json['confidence_score'] as num?)?.toDouble() ??
+                0,
+        dataQuality: json['data_quality']?.toString(),
         completionRangeLow:
             (json['completion_range_low'] as num?)?.toDouble() ?? 0,
         completionRangeHigh:
@@ -335,7 +340,8 @@ class TheaterPathOption {
   final List<String> risks;
   final List<TheaterPathStep> steps;
   final double routeScore;
-  final double confidenceScore;
+  final double dataSufficiencyScore;
+  final String? dataQuality;
   final double completionRangeLow;
   final double completionRangeHigh;
   final double masteryRangeLow;
@@ -359,7 +365,8 @@ class TheaterPathOption {
         risks: risks,
         steps: steps ?? this.steps,
         routeScore: routeScore,
-        confidenceScore: confidenceScore,
+        dataSufficiencyScore: dataSufficiencyScore,
+        dataQuality: dataQuality,
         completionRangeLow: completionRangeLow,
         completionRangeHigh: completionRangeHigh,
         masteryRangeLow: masteryRangeLow,
@@ -476,6 +483,7 @@ class TheaterPrediction {
     this.targetResolutionMode = '',
     this.candidateBundleId = '',
     this.semanticMatches = const <TheaterSemanticMatch>[],
+    this.disclaimer,
     this.accuracyTracking,
   });
 
@@ -525,6 +533,7 @@ class TheaterPrediction {
               .map(TheaterSemanticMatch.fromJson)
               .toList())
           : const <TheaterSemanticMatch>[],
+      disclaimer: json['disclaimer']?.toString(),
       accuracyTracking: json['accuracy_tracking'] is Map<String, dynamic>
           ? TheaterAccuracyTracking.fromJson(
               json['accuracy_tracking'] as Map<String, dynamic>,
@@ -547,6 +556,7 @@ class TheaterPrediction {
   final String targetResolutionMode;
   final String candidateBundleId;
   final List<TheaterSemanticMatch> semanticMatches;
+  final String? disclaimer;
   final TheaterAccuracyTracking? accuracyTracking;
 
   bool get hasMappedGalaxyReferences =>
@@ -576,6 +586,7 @@ class TheaterPrediction {
         targetResolutionMode: targetResolutionMode,
         candidateBundleId: candidateBundleId,
         semanticMatches: semanticMatches,
+        disclaimer: disclaimer,
         accuracyTracking: accuracyTracking,
       );
 }

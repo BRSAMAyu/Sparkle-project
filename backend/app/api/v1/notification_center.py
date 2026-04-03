@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
 from app.schemas.unified_notification import (
+    InterventionNotificationActionRequest,
     NotificationAnalyticsResponse,
     NotificationHistoryFilters,
     NotificationPreferencesResponse,
@@ -152,6 +153,70 @@ async def delete_notification(
         )
 
     return {"message": "Notification deleted"}
+
+
+@router.post("/notifications/{notification_id}/intervention-action")
+async def transition_intervention_notification(
+    notification_id: UUID,
+    request: InterventionNotificationActionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Apply a real lifecycle action to a notification-backed intervention.
+
+    Supported actions:
+    - seen
+    - accepted
+    - acted
+    - dismissed
+    - snoozed
+    """
+    service = NotificationCenterService(db)
+
+    success = await service.transition_intervention_notification(
+        user_id=current_user.id,
+        notification_id=notification_id,
+        action=request.action,
+        action_payload=request.action_payload or {},
+    )
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Intervention notification not found: {notification_id}",
+        )
+
+    return {"message": f"Intervention action applied: {request.action}"}
+
+
+@router.post("/interventions/{record_id}/action")
+async def transition_intervention_record(
+    record_id: UUID,
+    request: InterventionNotificationActionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Apply a lifecycle action to an InterventionRecord directly.
+
+    Used by chat, push-open, focus mode, and task execution surfaces when the
+    client only has the card-protocol intervention identifier.
+    """
+    service = NotificationCenterService(db)
+
+    success = await service.transition_intervention_record(
+        user_id=current_user.id,
+        record_id=record_id,
+        action=request.action,
+        action_payload=request.action_payload or {},
+    )
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Intervention record not found: {record_id}",
+        )
+
+    return {"message": f"Intervention record action applied: {request.action}"}
 
 
 @router.delete("/notifications/clear-read")

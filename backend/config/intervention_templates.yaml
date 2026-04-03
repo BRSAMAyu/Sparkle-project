@@ -73,3 +73,143 @@ templates:
         content: "注意力在游走。{task_name}还在等着,要回去吗?"
       - id: distraction_recovery_l3_v5
         content: "回到{task_name}?"
+
+  # ===================================================================
+  # Plan adjustment scenarios — low-defense language system (§5)
+  # These correspond to the five core intervention types defined in
+  # docs/product/SPARKLE_INTERVENTION_LANGUAGE_SYSTEM_2026-04-02.md
+  # ===================================================================
+
+  # A: Plan deceleration — user's plan is stalling, suggest soft replan
+  - template_id: plan_path_soft_replan_l3
+    intent_type: plan_path_soft_replan
+    support_level: 3
+    variants:
+      - id: plan_path_soft_replan_l3_observe
+        tone: CURIOUS
+        content: "我发现这条路线现在有点挤，我们要不要把接下来的几步重新排得更顺一点？"
+      - id: plan_path_soft_replan_l3_curious
+        tone: CURIOUS
+        content: "这条路对现在的节奏来说好像太满了。要不要我先帮你收紧一点？"
+      - id: plan_path_soft_replan_l3_collab
+        tone: SUPPORTIVE
+        content: "我们可以不动总目标，只把这周改得更能走下去。"
+      - id: plan_path_soft_replan_l3_gentle
+        tone: SUPPORTIVE
+        content: "接下来几步可以走得更轻松一点。要我帮你调整一下节奏吗？"
+      - id: plan_path_soft_replan_l3_direct
+        tone: DIRECT
+        content: "根据目前的情况，我建议先把接下来3天收紧，只保留最关键的路径。"
+      - id: plan_path_soft_replan_l3_restart
+        tone: MICRO_RESTART
+        content: "先不重排整周，只改眼前这一小段。我们先把今天缩成一件最关键的小事。"
+
+  # B: Concept gap detected — user has a knowledge bottleneck
+  - template_id: concept_gap_focus_l4
+    intent_type: concept_gap_focus
+    support_level: 4
+    variants:
+      - id: concept_gap_focus_l4_observe
+        tone: CURIOUS
+        content: "我发现一个挺有意思的现象，你在{concept_a}和{concept_b}之间总会更容易选{concept_a}。我们要不要用10分钟把这两个概念拆开看看？"
+      - id: concept_gap_focus_l4_curious
+        tone: CURIOUS
+        content: "问题可能不在做题量，而在一个小概念没有真正打通。要不要我只带你补{weak_concept}这一点？"
+      - id: concept_gap_focus_l4_collab
+        tone: SUPPORTIVE
+        content: "不是整章都没懂，像是这里有一个结没解开。先拆{weak_concept}这一小段就够了。"
+      - id: concept_gap_focus_l4_gentle
+        tone: SUPPORTIVE
+        content: "这里有个小概念补一下，后面会顺很多。只要{estimated_minutes}分钟。"
+      - id: concept_gap_focus_l4_direct
+        tone: DIRECT
+        content: "根据现在的信号，我建议先补{weak_concept}，再继续后面的任务，这样更省力。"
+      - id: concept_gap_focus_l4_restart
+        tone: MICRO_RESTART
+        content: "先不碰整章。只补{weak_concept}里的一个小点，花{estimated_minutes}分钟就够了。"
+
+  # C: Startup difficulty / procrastination — user can't begin
+  - template_id: micro_restart_l4
+    intent_type: micro_restart
+    support_level: 4
+    variants:
+      - id: micro_restart_l4_observe
+        tone: CURIOUS
+        content: "现在更像是还没找到入口。要不要我把第一步缩到5分钟？"
+      - id: micro_restart_l4_curious
+        tone: CURIOUS
+        content: "我发现我们不必先谈完成整件事。要不要先把开始这一下变轻一点？"
+      - id: micro_restart_l4_collab
+        tone: SUPPORTIVE
+        content: "要不要我先把开头替你铺好，你只负责接上去？"
+      - id: micro_restart_l4_gentle
+        tone: MICRO_RESTART
+        content: "从这里开始就够了:{suggested_step}。只要{estimated_minutes}分钟。"
+      - id: micro_restart_l4_direct
+        tone: DIRECT
+        content: "根据现在的节奏，我建议直接开始这一步:{suggested_step}"
+      - id: micro_restart_l4_restart
+        tone: MICRO_RESTART
+        content: "就做一件小事:{suggested_step}。先走{estimated_minutes}分钟。"
+
+  # D: Overload / anxiety — user has too much on their plate
+  - template_id: overload_lighten_path_l4
+    intent_type: overload_lighten_path
+    support_level: 4
+    variants:
+      - id: overload_lighten_path_l4_observe
+        tone: CURIOUS
+        content: "我发现这会儿更重要的不是多做一点，而是把节奏拉回你能承受的位置。"
+      - id: overload_lighten_path_l4_curious
+        tone: CURIOUS
+        content: "我不想把你往前推得更紧。要不要先换成一个更轻的版本？"
+      - id: overload_lighten_path_l4_collab
+        tone: SUPPORTIVE
+        content: "先让这条路变得能走，比硬撑更重要。我帮你只保留最关键的三步？"
+      - id: overload_lighten_path_l4_gentle
+        tone: SUPPORTIVE
+        content: "接下来我们不会一下压给你那么多。只看眼前这一步就好。"
+      - id: overload_lighten_path_l4_direct
+        tone: DIRECT
+        content: "根据现在的负荷，我建议先降载，只保留最关键的一件事。"
+      - id: overload_lighten_path_l4_restart
+        tone: MICRO_RESTART
+        content: "先别扛整段路。只看眼前这一小步，剩下的我再陪你一起拆。"
+
+  # E: Self-efficacy recovery — user is losing confidence
+  - template_id: recover_self_efficacy_l3
+    intent_type: recover_self_efficacy
+    support_level: 3
+    variants:
+      - id: recover_self_efficacy_l3_observe
+        tone: CURIOUS
+        content: "我发现你已经走过了{completed_count}步。要不要一起看看，下一步怎样走会更轻一点？"
+      - id: recover_self_efficacy_l3_curious
+        tone: CURIOUS
+        content: "前面走过的路不算白走。要不要一起试试，接下来换一种更顺一点的走法？"
+      - id: recover_self_efficacy_l3_collab
+        tone: SUPPORTIVE
+        content: "我们来试一个更轻的版本，不走全程，只走眼前的这一段。"
+      - id: recover_self_efficacy_l3_gentle
+        tone: SUPPORTIVE
+        content: "能走到这里本身就很不容易。接下来我们一起找到节奏。"
+      - id: recover_self_efficacy_l3_direct
+        tone: DIRECT
+        content: "根据现在的情况，我建议先把目标缩到眼前这一段，重新找回稳定节奏。"
+      - id: recover_self_efficacy_l3_restart
+        tone: MICRO_RESTART
+        content: "我们先不谈全程，只把下一步走出来。先完成一个很小的动作就好。"
+
+  # Plan adjustment applied — system notification after auto-adjustment
+  - template_id: plan_adjustment_applied_l2
+    intent_type: plan_adjustment_applied
+    support_level: 2
+    variants:
+      - id: plan_adjustment_applied_l2_v1
+        content: "我把接下来几步收紧了一点，让这条路更好走。你可以随时切回原来的安排。"
+      - id: plan_adjustment_applied_l2_v2
+        content: "接下来不会一下压给你那么多，我先帮你保留最关键的三步。"
+      - id: plan_adjustment_applied_l2_v3
+        content: "我插入了一个很短的前置复习。这个结点补一下，后面会顺很多。"
+      - id: plan_adjustment_applied_l2_v4
+        content: "接下来几步的时间安排更贴近真实节奏了。你可以随时调整。"

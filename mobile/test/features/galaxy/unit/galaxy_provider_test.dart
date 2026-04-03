@@ -222,6 +222,33 @@ void main() {
         expect(state.isLoading, isFalse);
         expect(state.nodes, isEmpty);
       });
+
+      test('keeps current graph during silent refresh failures', () async {
+        final testNodes = _generateMockNodes(4);
+        final testEdges = _generateMockEdges(testNodes);
+
+        mockRepository.graphResult = NetworkResult.success(
+          GalaxyGraphResponse(
+            nodes: testNodes,
+            edges: testEdges,
+            userFlameIntensity: 0.5,
+          ),
+        );
+
+        final notifier = container.read(galaxyProvider.notifier);
+        await notifier.loadGalaxy();
+
+        mockRepository.graphResult =
+            NetworkResult.failure(GalaxyError.unknown('refresh failed'));
+
+        await notifier.loadGalaxy(forceRefresh: true, showLoading: false);
+
+        final state = container.read(galaxyProvider);
+        expect(state.nodes.length, equals(testNodes.length));
+        expect(state.edges.length, equals(testEdges.length));
+        expect(state.lastError, isNull);
+        expect(state.isLoading, isFalse);
+      });
     });
 
     group('Node Selection', () {

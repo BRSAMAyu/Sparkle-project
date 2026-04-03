@@ -118,7 +118,10 @@ void main() {
 
     apiClient.putHandler = (path, {data, queryParameters}) async {
       expect(path, '/users/me/preferences');
-      expect(data, isNotNull);
+      expect(data, <String, dynamic>{
+        'learning_depth': 0.4,
+        'curiosity_level': 0.7,
+      });
       return Response(
         requestOptions: RequestOptions(path: '/users/me/preferences'),
         data: payload,

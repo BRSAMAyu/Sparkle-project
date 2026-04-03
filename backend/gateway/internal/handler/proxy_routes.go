@@ -111,6 +111,22 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered plans proxy routes")
 
+	// ==================== Cards Routes ====================
+	cards := api.Group("/cards")
+	cards.Use(authMiddleware)
+	{
+		// Explicit methods rather than Any() to respect HTTP semantics and
+		// prevent unintended method exposure (HEAD/CONNECT/TRACE).
+		cards.GET("", h.proxyWithHeaders)
+		cards.POST("", h.proxyWithHeaders)
+		cards.GET("/*path", h.proxyWithHeaders)
+		cards.POST("/*path", h.proxyWithHeaders)
+		cards.PUT("/*path", h.proxyWithHeaders)
+		cards.PATCH("/*path", h.proxyWithHeaders)
+		cards.DELETE("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered cards proxy routes")
+
 	// ==================== Learning Paths Routes ====================
 	learningPaths := api.Group("/learning-paths")
 	learningPaths.Use(authMiddleware)
@@ -663,10 +679,12 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	{
 		theater.POST("/predictions/generate", h.proxyWithHeaders)
 		theater.POST("/predictions/what-if", h.proxyWithHeaders)
+		theater.GET("/predictions/:id", h.proxyWithHeaders)
 		theater.POST("/predictions/:id/adopt", h.proxyWithHeaders)
 		theater.POST("/predictions/:id/actuals", h.proxyWithHeaders)
 		theater.POST("/predictions/:id/promote-node", h.proxyWithHeaders)
 		theater.GET("/predictions/:id/accuracy", h.proxyWithHeaders)
+		theater.GET("/accuracy/overview", h.proxyWithHeaders)
 		theater.POST("/snapshots", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered theater proxy routes")

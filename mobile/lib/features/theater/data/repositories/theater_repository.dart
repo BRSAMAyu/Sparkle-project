@@ -251,6 +251,20 @@ class TheaterRepository {
       );
       return TheaterAccuracyOverview.fromJson(response.data ?? const {});
     } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      if (statusCode == 404 || statusCode == 405) {
+        return const TheaterAccuracyOverview(
+          sampleCount: 0,
+          avgAccuracyScore: 0,
+          completionBiasMean: 0,
+          masteryBiasMean: 0,
+          completionMae: 0,
+          masteryMae: 0,
+          confidenceScore: 0,
+          dataStatus: 'cold_start',
+          trend: 'insufficient_data',
+        );
+      }
       throw TheaterRepositoryException.fromDio(
         e,
         fallbackMessage: '读取推演校准概览失败，你可以稍后再试。',

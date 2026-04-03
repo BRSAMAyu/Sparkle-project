@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 import asyncio
+from dataclasses import dataclass, field
 import json
 import re
 from datetime import timezone, datetime, timedelta
@@ -90,6 +91,18 @@ def is_valid_knowledge_node_name(name: str) -> bool:
 def validate_knowledge_node_name(name: str) -> None:
     if not is_valid_knowledge_node_name(name):
         raise ValueError(f"Invalid knowledge node name: {name!r}")
+
+
+@dataclass(slots=True)
+class ExpansionApplyResult:
+    created_nodes: list[KnowledgeNode] = field(default_factory=list)
+    reused_nodes: list[KnowledgeNode] = field(default_factory=list)
+    created_count: int = 0
+    reused_count: int = 0
+
+    @property
+    def applied_count(self) -> int:
+        return self.created_count + self.reused_count
 
 
 class ExpansionService:
@@ -317,7 +330,7 @@ class ExpansionService:
         user_id: UUID,
         *,
         candidates: list[dict],
-    ) -> list[KnowledgeNode]:
+    ) -> ExpansionApplyResult:
         normalized = self._normalize_candidates(
             {"expanded_nodes": candidates},
             count=min(len(candidates), self.MAX_EXPANDED_NODES_PER_REQUEST),
@@ -516,9 +529,9 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
         expanded_data: dict,
         trigger_node_id: UUID,
         user_id: UUID
-    ) -> list[KnowledgeNode]:
+    ) -> ExpansionApplyResult:
         """创建拓展的知识节点"""
-        new_nodes = []
+        result = ExpansionApplyResult()
 
         for item in expanded_data.get('expanded_nodes', [])[:self.MAX_EXPANDED_NODES_PER_REQUEST]:
             if settings.EXPANSION_SEMANTIC_DEDUP_ENABLED:
@@ -526,6 +539,8 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
                 if dedup_candidate:
                     await self._ensure_user_node_status(user_id, dedup_candidate.id)
                     await self._ensure_relation(trigger_node_id, dedup_candidate.id, item)
+                    result.reused_count += 1
+                    self._append_unique_node(result.reused_nodes, dedup_candidate)
                     continue
 
             node, created = await self.upsert_node_from_candidate(
@@ -540,11 +555,21 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
                 invalidate_caches=False,
             )
             if created:
-                new_nodes.append(node)
+                result.created_count += 1
+                result.created_nodes.append(node)
+            else:
+                result.reused_count += 1
+                self._append_unique_node(result.reused_nodes, node)
 
         await self.db.commit()
         await self._invalidate_after_graph_mutation(user_id)
-        return new_nodes
+        return result
+
+    @staticmethod
+    def _append_unique_node(nodes: list[KnowledgeNode], candidate: KnowledgeNode) -> None:
+        if any(existing.id == candidate.id for existing in nodes):
+            return
+        nodes.append(candidate)
 
     async def _find_semantic_duplicate(self, item: dict) -> KnowledgeNode | None:
         """基于向量的语义去重"""

@@ -89,6 +89,20 @@ func (r *envelopeResponder) SendActionStatus(actionID, status string, data map[s
 	}
 }
 
+func (r *envelopeResponder) SendToolResult(payload map[string]interface{}) {
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Failed to encode tool result payload: %v", err)
+		return
+	}
+	envelopePayload := map[string]json.RawMessage{
+		"tool_result": raw,
+	}
+	if err := r.writeEnvelope(envelopePayload, traceparentFromContext(r.ctx)); err != nil {
+		log.Printf("Failed to send tool result payload: %v", err)
+	}
+}
+
 func (r *envelopeResponder) SendInterventionAck(requestID, status, message string) {
 	payload := map[string]json.RawMessage{}
 	ack := map[string]interface{}{
@@ -227,15 +241,15 @@ func (r *envelopeResponder) writeEnvelope(payload map[string]json.RawMessage, tr
 // protobufResponder implements the responder interfaces for Binary/Protobuf protocol
 type protobufResponder struct {
 	writer *wsSafeWriter
-	msg  *pbws.WebSocketMessage
-	ctx  context.Context
+	msg    *pbws.WebSocketMessage
+	ctx    context.Context
 }
 
 func newProtobufResponder(writer *wsSafeWriter, msg *pbws.WebSocketMessage, ctx context.Context) *protobufResponder {
 	return &protobufResponder{
 		writer: writer,
-		msg:  msg,
-		ctx:  ctx,
+		msg:    msg,
+		ctx:    ctx,
 	}
 }
 
@@ -270,6 +284,11 @@ func (r *protobufResponder) SendActionStatus(actionID, status string, data map[s
 	}
 	raw, _ := json.Marshal(statusMsg)
 	r.sendProto("action_status", raw)
+}
+
+func (r *protobufResponder) SendToolResult(payload map[string]interface{}) {
+	raw, _ := json.Marshal(payload)
+	r.sendProto("tool_result", raw)
 }
 
 func (r *protobufResponder) SendInterventionAck(requestID, status, message string) {

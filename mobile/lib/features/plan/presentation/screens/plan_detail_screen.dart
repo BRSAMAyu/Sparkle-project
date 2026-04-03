@@ -14,12 +14,17 @@ import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_phase_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/learning_path_progress_bar.dart';
+import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/shared/widgets/card_picker_sheet.dart';
 
 class PlanDetailScreen extends ConsumerWidget {
   const PlanDetailScreen({required this.planId, super.key});
@@ -217,6 +222,8 @@ class _PlanOverviewTab extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: DS.lg),
+          _PlanPhaseSection(plan: plan),
           if (parsedDescription.hasStructuredSections) ...[
             const SizedBox(height: DS.lg),
             if (parsedDescription.schedule.isNotEmpty)
@@ -259,6 +266,13 @@ class _PlanOverviewTab extends ConsumerWidget {
                 ),
                 icon: const Icon(Icons.add_task_rounded),
                 label: '新增计划任务',
+              ),
+              const SizedBox(width: DS.spacing8),
+              SparkleButton.ghost(
+                onPressed: () =>
+                    unawaited(_showAddExistingTaskPicker(context, ref)),
+                icon: const Icon(Icons.playlist_add_rounded),
+                label: '添加已有任务',
               ),
             ],
           ),
@@ -357,6 +371,75 @@ class _PlanOverviewTab extends ConsumerWidget {
     ref.invalidate(planDetailProvider(plan.id));
     if (context.mounted) {
       AppFeedback.success(context, context.l10n.planArchivedSuccess);
+    }
+  }
+
+  Future<void> _showAddExistingTaskPicker(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final tasks = <TaskModel>[...ref.read(taskListProvider).tasks];
+    if (tasks.isEmpty) {
+      try {
+        final response =
+            await ref.read(taskRepositoryProvider).getTasks(pageSize: 100);
+        tasks.addAll(response.items);
+      } catch (e) {
+        if (!context.mounted) return;
+        AppFeedback.error(context, 'Failed to load tasks: $e');
+        return;
+      }
+    }
+
+    if (!context.mounted) return;
+
+    final candidateTasks = tasks
+        .where((task) => task.planId != plan.id)
+        .toList()
+      ..sort((a, b) => a.title.compareTo(b.title));
+
+    if (candidateTasks.isEmpty) {
+      AppFeedback.info(context, 'No unassigned or external tasks available');
+      return;
+    }
+
+    final selectedTaskId = await CardPickerSheet.show(
+      context,
+      title: 'Add existing task to this plan',
+      options: candidateTasks
+          .map(
+            (task) => CardPickerOption(
+              id: task.id,
+              title: task.title,
+              subtitle: task.planId == null
+                  ? 'Unassigned'
+                  : 'Currently in another plan',
+              group: task.planId == null
+                  ? 'Unassigned tasks'
+                  : 'Tasks from other plans',
+              icon: Icons.task_alt_rounded,
+            ),
+          )
+          .toList(),
+    );
+
+    if (!context.mounted || selectedTaskId == null) return;
+    final selectedTask = candidateTasks.firstWhere(
+      (task) => task.id == selectedTaskId,
+    );
+
+    try {
+      await ref.read(taskListProvider.notifier).moveTaskToPlan(
+            selectedTask.id,
+            plan.id,
+            previousPlanId: selectedTask.planId,
+          );
+      if (!context.mounted) return;
+      ref.invalidate(planDetailProvider(plan.id));
+      AppFeedback.success(context, 'Task added to plan');
+    } catch (e) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, 'Add task failed: $e');
     }
   }
 }
@@ -744,6 +827,402 @@ class _SectionHeader extends StatelessWidget {
           ),
         ],
       );
+}
+
+class _PlanPhaseSection extends ConsumerWidget {
+  const _PlanPhaseSection({required this.plan});
+
+  final PlanModel plan;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phasesAsync = ref.watch(planPhasesProvider(plan.id));
+
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      child: phasesAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: DS.spacing24),
+          child: Center(child: LoadingIndicator()),
+        ),
+        error: (err, _) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(title: '计划阶段'),
+            const SizedBox(height: DS.spacing12),
+            Text(
+              '阶段加载失败: $err',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.semanticError,
+                  ),
+            ),
+          ],
+        ),
+        data: (bundle) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(child: _SectionHeader(title: '计划阶段')),
+                SparkleButton.ghost(
+                  onPressed: () => _showCreatePhaseDialog(context, ref, bundle),
+                  label: '新增阶段',
+                  icon: const Icon(Icons.add_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing12),
+            if (bundle.weightedProgress != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing12),
+                child: Text(
+                  'Weighted progress ${(bundle.weightedProgress! * 100).round()}%',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                ),
+              ),
+            if (bundle.phases.isEmpty)
+              Text(
+                '还没有真实阶段，先创建第一个 phase，把长期计划拆成可执行的小段。',
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            else
+              Column(
+                children: bundle.phases
+                    .map(
+                      (phase) => Padding(
+                        padding: const EdgeInsets.only(bottom: DS.spacing12),
+                        child: _PhaseCard(
+                          phase: phase,
+                          isCurrent: bundle.currentPhaseCardId == phase.cardId,
+                          onActivate: () => _activatePhase(context, ref, phase),
+                          onComplete: () => _completePhase(context, ref, phase),
+                          onFeedback: () =>
+                              _submitFeedback(context, ref, phase),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showCreatePhaseDialog(
+    BuildContext context,
+    WidgetRef ref,
+    PlanPhaseBundle bundle,
+  ) async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Create phase'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Phase name',
+            hintText: 'Foundation / Build / Review',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+    if (!context.mounted || name == null || name.isEmpty) return;
+
+    try {
+      await ref.read(planPhaseControllerProvider).createPhase(
+            plan.id,
+            name: name,
+            phaseIndex: bundle.phases.length + 1,
+          );
+      if (context.mounted) {
+        AppFeedback.success(context, 'Phase created');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(context, 'Create phase failed: $e');
+      }
+    }
+  }
+
+  Future<void> _activatePhase(
+    BuildContext context,
+    WidgetRef ref,
+    PlanPhaseModel phase,
+  ) async {
+    try {
+      await ref.read(planPhaseControllerProvider).activatePhase(
+            plan.id,
+            phase.cardId,
+          );
+      if (context.mounted) {
+        AppFeedback.success(context, 'Phase activated');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(context, 'Activate failed: $e');
+      }
+    }
+  }
+
+  Future<void> _completePhase(
+    BuildContext context,
+    WidgetRef ref,
+    PlanPhaseModel phase,
+  ) async {
+    try {
+      final result = await ref.read(planPhaseControllerProvider).completePhase(
+            plan.id,
+            phase.cardId,
+          );
+      if (!context.mounted) return;
+      final status = result['status']?.toString();
+      if (status == 'NEEDS_FEEDBACK') {
+        AppFeedback.info(context, 'This phase needs feedback before advancing');
+      } else {
+        AppFeedback.success(context, 'Phase completed');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(context, 'Complete phase failed: $e');
+      }
+    }
+  }
+
+  Future<void> _submitFeedback(
+    BuildContext context,
+    WidgetRef ref,
+    PlanPhaseModel phase,
+  ) async {
+    var rating = 4.0;
+    var blocked = false;
+    var lifeChanged = false;
+    var requestCompassReview = false;
+    final reflectionController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          title: Text('Phase feedback · ${phase.title}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'How aligned did this phase feel?',
+                  style: Theme.of(dialogContext).textTheme.bodyMedium,
+                ),
+                Slider(
+                  value: rating,
+                  min: 1,
+                  max: 5,
+                  divisions: 4,
+                  label: rating.toStringAsFixed(0),
+                  onChanged: (value) => setState(() => rating = value),
+                ),
+                TextField(
+                  controller: reflectionController,
+                  minLines: 3,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    labelText: 'Reflection',
+                    hintText: 'What worked, what failed, what changed?',
+                  ),
+                ),
+                CheckboxListTile(
+                  value: blocked,
+                  onChanged: (value) =>
+                      setState(() => blocked = value ?? false),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('I felt blocked this phase'),
+                ),
+                CheckboxListTile(
+                  value: lifeChanged,
+                  onChanged: (value) =>
+                      setState(() => lifeChanged = value ?? false),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('My life conditions changed'),
+                ),
+                CheckboxListTile(
+                  value: requestCompassReview,
+                  onChanged: (value) => setState(
+                    () => requestCompassReview = value ?? false,
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Request compass review'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!context.mounted || confirmed != true) return;
+
+    try {
+      final result = await ref.read(planPhaseControllerProvider).submitFeedback(
+            plan.id,
+            phase.cardId,
+            rating: rating,
+            reflection: reflectionController.text.trim(),
+            blocked: blocked,
+            lifeChanged: lifeChanged,
+            requestCompassReview: requestCompassReview,
+          );
+      if (!context.mounted) return;
+      final triggered = result['trigger_compass_review'] == true;
+      AppFeedback.success(
+        context,
+        triggered
+            ? 'Feedback saved, compass review suggested'
+            : 'Feedback saved',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(context, 'Submit feedback failed: $e');
+      }
+    }
+  }
+}
+
+class _PhaseCard extends StatelessWidget {
+  const _PhaseCard({
+    required this.phase,
+    required this.isCurrent,
+    required this.onActivate,
+    required this.onComplete,
+    required this.onFeedback,
+  });
+
+  final PlanPhaseModel phase;
+  final bool isCurrent;
+  final VoidCallback onActivate;
+  final VoidCallback onComplete;
+  final VoidCallback onFeedback;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel = [
+      if (phase.estimatedStart != null)
+        Formatters.formatDateMedium(phase.estimatedStart!),
+      if (phase.estimatedEnd != null)
+        Formatters.formatDateMedium(phase.estimatedEnd!),
+    ].join(' -> ');
+
+    return GraphiteCardSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing8,
+                  vertical: DS.spacing4,
+                ),
+                decoration: BoxDecoration(
+                  color: isCurrent
+                      ? DS.primaryBase.withValues(alpha: 0.12)
+                      : DS.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text('P${phase.phaseIndex}'),
+              ),
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: Text(
+                  phase.title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: DS.fontWeightSemiBold,
+                      ),
+                ),
+              ),
+              if (isCurrent) Icon(Icons.bolt_rounded, color: DS.primaryBase),
+            ],
+          ),
+          if ((phase.objective ?? '').isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(phase.objective!),
+          ],
+          const SizedBox(height: DS.spacing12),
+          LinearProgressIndicator(
+            value: phase.progress.clamp(0, 1),
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            '${(phase.progress * 100).round()}% · ${phase.completedOccurrenceCount}/${phase.occurrenceCount} occurrences · ${phase.taskCount} tasks',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
+          if (dateLabel.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing6),
+            Text(
+              dateLabel,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+          ],
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              if (!isCurrent && phase.lifecycleStatus != 'COMPLETED')
+                SparkleButton.secondary(
+                  onPressed: onActivate,
+                  label: 'Activate',
+                  icon: const Icon(Icons.play_arrow_rounded),
+                ),
+              if (phase.lifecycleStatus == 'ACTIVE')
+                SparkleButton.ghost(
+                  onPressed: onComplete,
+                  label: 'Complete',
+                  icon: const Icon(Icons.check_rounded),
+                ),
+              if (phase.needsFeedback || phase.lifecycleStatus == 'ACTIVE')
+                SparkleButton.ghost(
+                  onPressed: onFeedback,
+                  label: 'Feedback',
+                  icon: const Icon(Icons.rate_review_outlined),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DayBucket {

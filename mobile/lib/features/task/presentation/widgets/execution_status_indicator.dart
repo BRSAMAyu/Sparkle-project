@@ -151,6 +151,12 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
           color: DS.info,
           icon: Icons.check_circle_outline_rounded,
         );
+      case ExecutionIntentStatus.queued:
+        return _ExecutionVisualSpec(
+          color: DS.info,
+          icon: Icons.schedule_send_rounded,
+          pulse: true,
+        );
       case ExecutionIntentStatus.dispatched:
         return _ExecutionVisualSpec(
           color: DS.info,
@@ -227,6 +233,8 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
         return '待准备';
       case ExecutionIntentStatus.ready:
         return '准备完成';
+      case ExecutionIntentStatus.queued:
+        return '排队中';
       case ExecutionIntentStatus.dispatched:
         return '已发送';
       case ExecutionIntentStatus.running:

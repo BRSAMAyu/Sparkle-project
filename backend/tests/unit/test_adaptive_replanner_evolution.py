@@ -71,6 +71,9 @@ async def test_replanner_rolls_back_after_two_negative_feedbacks() -> None:
         get_plan_state=AsyncMock(return_value=state),
         upsert_plan_state=AsyncMock(),
     )
+    replanner.cognitive_pattern_trigger = SimpleNamespace(
+        _direction=lambda value: "increase" if (value or 0) > 0 else "decrease"
+    )
     replanner._enqueue_adaptation_update = AsyncMock()
 
     records = await replanner._maybe_rollback_after_feedback(
@@ -89,6 +92,60 @@ async def test_replanner_rolls_back_after_two_negative_feedbacks() -> None:
     assert failed_adjustments
     assert failed_adjustments[0]["constraint_key"] == "time_multiplier"
     assert patch["facts"]["adaptive_meta"]["rollback_learning_state"]["last_restored_snapshot_id"] == "snap-base"
+
+
+@pytest.mark.asyncio
+async def test_handle_report_marks_no_adjustment_produced_when_patch_is_noop() -> None:
+    replanner = object.__new__(AdaptiveReplanner)
+    user_id = uuid4()
+    plan_id = uuid4()
+    state = SimpleNamespace(facts={"adaptive_meta": {}}, constraints={})
+    report = PlanHealthReport(
+        plan_id=plan_id,
+        user_id=user_id,
+        status="active",
+        severity="warning",
+        reasons=["progress_lag"],
+        metrics={"progress_rate": 0.3},
+        requires_adjustment=True,
+        recommended_action="adjust",
+    )
+
+    replanner.plan_state_service = SimpleNamespace(get_plan_state=AsyncMock(return_value=state))
+    replanner.plan_health_signal_service = SimpleNamespace(maybe_publish=AsyncMock())
+    replanner._apply_cognitive_pattern_adjustments = AsyncMock(return_value=[])
+    replanner._apply_incremental_adjustment = AsyncMock(return_value=[])
+    replanner._recently_triggered = lambda *args, **kwargs: False
+
+    await replanner._handle_report(report, trigger="task_feedback")
+
+    kwargs = replanner.plan_health_signal_service.maybe_publish.await_args.kwargs
+    assert kwargs["action_taken"] == "no_adjustment_produced"
+    assert kwargs["adaptation_records"] == []
+
+
+@pytest.mark.asyncio
+async def test_on_task_feedback_uses_struggle_trigger_for_unclear_feedback() -> None:
+    user_id = uuid4()
+    plan_id = uuid4()
+    task_id = uuid4()
+    replanner = object.__new__(AdaptiveReplanner)
+    replanner._maybe_record_breakdown_feedback = AsyncMock()
+    replanner._maybe_rollback_after_feedback = AsyncMock(return_value=[])
+    replanner.evaluate_plan_health_now = AsyncMock(return_value=[])
+
+    await replanner.on_task_feedback(
+        user_id=user_id,
+        plan_id=plan_id,
+        task_id=task_id,
+        category="unclear",
+        difficulty_delta=-0.1,
+        feedback_text="这里我还是不理解这个概念",
+    )
+
+    kwargs = replanner.evaluate_plan_health_now.await_args.kwargs
+    assert kwargs["trigger"] == "task_feedback_struggle"
+    assert kwargs["feedback_category"] == "unclear"
 
 
 def test_cognitive_pattern_trigger_skips_previously_failed_adjustment() -> None:

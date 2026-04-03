@@ -7,6 +7,7 @@ import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
+import 'package:sparkle/features/chat/presentation/screens/chat_settings_screen.dart';
 import 'package:sparkle/features/chat/presentation/screens/group_chat_screen.dart';
 import 'package:sparkle/features/chat/presentation/screens/private_chat_screen.dart';
 
@@ -25,6 +26,7 @@ Map<String, String> _mergeQueryWithDefaultName(
 class ChatRoutes {
   // New unified chat routes
   static const String chat = '/chat';
+  static const String chatSettings = '/chat/settings';
   static const String groupChat = '/chat/group/:id';
   static const String privateChat = '/chat/private/:id';
 
@@ -36,6 +38,22 @@ class ChatRoutes {
 
   static List<RouteBase> get routes => [
         // Group chat (full-screen, uses root navigator)
+        GoRoute(
+          path: chatSettings,
+          name: 'chatSettings',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            motionToken: SparkleMotionToken.scene,
+            type: SharedAxisTransitionType.scaled,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.assistantFlow.audioPolicy(
+                trackOverride: BgmTrack.chat,
+              ),
+              child: const ChatSettingsScreen(),
+            ),
+          ),
+        ),
         GoRoute(
           path: groupChat,
           name: 'groupChat',

@@ -30,6 +30,108 @@ const String kChatSeedLibraryEnabledKey = 'settings_chat_seed_library_enabled';
 const String kMotionIntensityLevelPreferenceKey =
     'settings_motion_intensity_level';
 
+const Set<String> _supportedNotificationLevels = {
+  'minimal',
+  'standard',
+  'verbose',
+};
+const Set<String> _supportedAiReasoningModes = {
+  'fast',
+  'balanced',
+  'deep',
+};
+
+String normalizeNotificationLevelSetting(Object? rawValue) {
+  final value = rawValue?.toString().trim().toLowerCase();
+  if (value != null && _supportedNotificationLevels.contains(value)) {
+    return value;
+  }
+  switch (value) {
+    case 'focused':
+      return 'minimal';
+    case 'normal':
+    case 'default':
+      return 'standard';
+    case 'detailed':
+      return 'verbose';
+    default:
+      return 'standard';
+  }
+}
+
+String normalizeAiReasoningModeSetting(Object? rawValue) {
+  final value = rawValue?.toString().trim().toLowerCase();
+  if (value != null && _supportedAiReasoningModes.contains(value)) {
+    return value;
+  }
+  switch (value) {
+    case 'quick':
+      return 'fast';
+    case 'default':
+    case 'standard':
+      return 'balanced';
+    case 'intensive':
+      return 'deep';
+    default:
+      return 'balanced';
+  }
+}
+
+int? parseBoundedIntSetting(
+  Object? rawValue, {
+  required int min,
+  required int max,
+  Map<String, int> aliases = const <String, int>{},
+}) {
+  if (rawValue == null) {
+    return null;
+  }
+
+  int? parsedValue;
+  if (rawValue is num) {
+    parsedValue = rawValue.toInt();
+  } else {
+    final normalized = rawValue.toString().trim().toLowerCase();
+    parsedValue = aliases[normalized] ?? int.tryParse(normalized);
+  }
+
+  if (parsedValue == null) {
+    return null;
+  }
+
+  return parsedValue.clamp(min, max);
+}
+
+int normalizeTransparencyLevelSetting(Object? rawValue) =>
+    parseBoundedIntSetting(
+      rawValue,
+      min: 0,
+      max: 3,
+      aliases: const <String, int>{
+        'off': 0,
+        'basic': 1,
+        'standard': 2,
+        'advanced': 3,
+      },
+    ) ??
+    0;
+
+int normalizeSystemUpdateLevelSetting(Object? rawValue) =>
+    parseBoundedIntSetting(
+      rawValue,
+      min: 0,
+      max: 2,
+      aliases: const <String, int>{
+        'silent': 0,
+        'minimal': 0,
+        'summary': 1,
+        'standard': 1,
+        'detailed': 2,
+        'verbose': 2,
+      },
+    ) ??
+    1;
+
 /// Learning preferences model
 class LearningPreferences {
   const LearningPreferences({
@@ -119,7 +221,9 @@ class NotificationPreferenceSettings {
       NotificationPreferenceSettings(
         enableSystem: json['enable_system'] as bool? ?? true,
         enableInterventions: json['enable_interventions'] as bool? ?? true,
-        notificationLevel: json['notification_level'] as String? ?? 'standard',
+        notificationLevel: normalizeNotificationLevelSetting(
+          json['notification_level'],
+        ),
         quietHoursEnabled: json['quiet_hours_enabled'] as bool? ?? false,
         quietHoursStart: json['quiet_hours_start'] as String? ?? '22:00',
         quietHoursEnd: json['quiet_hours_end'] as String? ?? '08:00',
@@ -281,7 +385,9 @@ class NotificationPreferenceSettingsNotifier
     final nextState = previousState.copyWith(
       enableSystem: enableSystem,
       enableInterventions: enableInterventions,
-      notificationLevel: notificationLevel,
+      notificationLevel: notificationLevel == null
+          ? null
+          : normalizeNotificationLevelSetting(notificationLevel),
       quietHoursEnabled: quietHoursEnabled,
       quietHoursStart: quietHoursStart,
       quietHoursEnd: quietHoursEnd,
@@ -739,7 +845,7 @@ class TransparencyLevelNotifier extends StateNotifier<int> {
       final prefs = await SharedPreferences.getInstance();
       final level = prefs.getInt(kTransparencyLevelKey);
       if (level != null) {
-        state = level;
+        state = normalizeTransparencyLevelSetting(level);
       } else {
         final enabled = prefs.getBool(kTransparentModeKey);
         if (enabled != null) {
@@ -754,6 +860,7 @@ class TransparencyLevelNotifier extends StateNotifier<int> {
   }
 
   Future<void> setLevel(int level) async {
+    level = normalizeTransparencyLevelSetting(level);
     if (state == level) return;
     state = level;
     await _persist(level);
@@ -776,7 +883,17 @@ class TransparencyLevelNotifier extends StateNotifier<int> {
     try {
       final repo = _ref.read(userRepositoryProvider);
       final settings = await repo.fetchUserSettings();
-      final level = settings['transparency_level'] as int?;
+      final level = parseBoundedIntSetting(
+        settings['transparency_level'],
+        min: 0,
+        max: 3,
+        aliases: const <String, int>{
+          'off': 0,
+          'basic': 1,
+          'standard': 2,
+          'advanced': 3,
+        },
+      );
       if (level != null && level != state) {
         state = level;
         await _persist(level);
@@ -905,7 +1022,7 @@ class SystemUpdateLevelNotifier extends StateNotifier<int> {
       final prefs = await SharedPreferences.getInstance();
       final value = prefs.getInt(kSystemUpdateLevelKey);
       if (value != null) {
-        state = value;
+        state = normalizeSystemUpdateLevelSetting(value);
       }
     } catch (_) {
       state = 1;
@@ -914,6 +1031,7 @@ class SystemUpdateLevelNotifier extends StateNotifier<int> {
   }
 
   Future<void> setLevel(int level) async {
+    level = normalizeSystemUpdateLevelSetting(level);
     if (state == level) return;
     state = level;
     try {
@@ -931,7 +1049,19 @@ class SystemUpdateLevelNotifier extends StateNotifier<int> {
     try {
       final repo = _ref.read(userRepositoryProvider);
       final settings = await repo.fetchUserSettings();
-      final level = settings['system_update_level'] as int?;
+      final level = parseBoundedIntSetting(
+        settings['system_update_level'],
+        min: 0,
+        max: 2,
+        aliases: const <String, int>{
+          'silent': 0,
+          'minimal': 0,
+          'summary': 1,
+          'standard': 1,
+          'detailed': 2,
+          'verbose': 2,
+        },
+      );
       if (level != null && level != state) {
         state = level;
         final prefs = await SharedPreferences.getInstance();
@@ -972,8 +1102,9 @@ class AiReasoningModeNotifier extends StateNotifier<String> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final value = prefs.getString(kAiReasoningModeKey);
-      if (value != null && {'fast', 'balanced', 'deep'}.contains(value)) {
-        state = value;
+      final normalized = normalizeAiReasoningModeSetting(value);
+      if (_supportedAiReasoningModes.contains(normalized)) {
+        state = normalized;
       }
     } catch (_) {
       state = 'balanced';
@@ -982,8 +1113,7 @@ class AiReasoningModeNotifier extends StateNotifier<String> {
   }
 
   Future<void> setMode(String mode) async {
-    final normalized =
-        {'fast', 'balanced', 'deep'}.contains(mode) ? mode : 'balanced';
+    final normalized = normalizeAiReasoningModeSetting(mode);
     if (state == normalized) return;
     final previous = state;
     state = normalized;
@@ -1016,11 +1146,13 @@ class AiReasoningModeNotifier extends StateNotifier<String> {
     try {
       final settings =
           await _ref.read(userRepositoryProvider).fetchUserSettings();
-      final value = settings['ai_reasoning_mode'] as String?;
-      if (value != null && {'fast', 'balanced', 'deep'}.contains(value)) {
-        state = value;
+      final normalized = normalizeAiReasoningModeSetting(
+        settings['ai_reasoning_mode'],
+      );
+      if (_supportedAiReasoningModes.contains(normalized)) {
+        state = normalized;
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(kAiReasoningModeKey, value);
+        await prefs.setString(kAiReasoningModeKey, normalized);
       }
       _ref.invalidate(aiUsageSummaryProvider);
       _ref.invalidate(aiOpsDashboardProvider);

@@ -325,7 +325,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             return;
                           }
                           unawaited(
-                              context.push('/galaxy/node/$relatedNodeId'));
+                            context.push('/galaxy/node/$relatedNodeId'),
+                          );
                         },
                       );
                     }).toList(),
@@ -529,12 +530,15 @@ class KnowledgeDetailScreen extends ConsumerWidget {
         child: _NodeExpansionSheet(
           nodeId: nodeId,
           nodeName: detail.node.name,
-          onApplied: () {
-            ref
-              ..invalidate(knowledgeDetailProvider(nodeId))
-              ..invalidate(galaxyRepositoryProvider)
-              ..invalidate(enhancedGalaxyRepositoryProvider)
-              ..invalidate(galaxyProvider);
+          onApplied: (_) {
+            ref.invalidate(knowledgeDetailProvider(nodeId));
+            ref.read(enhancedGalaxyRepositoryProvider).clearCache();
+            unawaited(
+              ref.read(galaxyProvider.notifier).loadGalaxy(
+                    forceRefresh: true,
+                    showLoading: false,
+                  ),
+            );
           },
         ),
       ),
@@ -789,7 +793,7 @@ class _NodeExpansionSheet extends ConsumerStatefulWidget {
 
   final String nodeId;
   final String nodeName;
-  final VoidCallback onApplied;
+  final ValueChanged<NodeExpansionApplyResult> onApplied;
 
   @override
   ConsumerState<_NodeExpansionSheet> createState() =>
@@ -851,7 +855,8 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
       _error = null;
     });
     try {
-      final created =
+      final selectedCount = selected.length;
+      final result =
           await ref.read(galaxyRepositoryProvider).applyExpansionCandidates(
                 widget.nodeId,
                 promptVersion: _promptVersion ?? 'v1',
@@ -860,11 +865,11 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
       if (!mounted) {
         return;
       }
-      widget.onApplied();
+      widget.onApplied(result);
       Navigator.of(context).pop();
       AppFeedback.success(
         context,
-        created.isEmpty ? '候选节点已处理。' : '已将 ${created.length} 个节点纳入星图。',
+        _buildApplySuccessMessage(result, fallbackCount: selectedCount),
       );
     } catch (e) {
       if (!mounted) {
@@ -891,6 +896,24 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
       default:
         return '相关';
     }
+  }
+
+  String _buildApplySuccessMessage(
+    NodeExpansionApplyResult result, {
+    required int fallbackCount,
+  }) {
+    final appliedCount =
+        result.appliedCount > 0 ? result.appliedCount : fallbackCount;
+    if (appliedCount <= 0) {
+      return '候选节点已处理。';
+    }
+    if (result.createdCount > 0 && result.reusedCount > 0) {
+      return '已处理 $appliedCount 个候选节点，新增 ${result.createdCount} 个，复用 ${result.reusedCount} 个已有节点。';
+    }
+    if (result.reusedCount > 0) {
+      return '已处理 $appliedCount 个候选节点，复用 ${result.reusedCount} 个已有节点。';
+    }
+    return '已将 $appliedCount 个节点纳入星图。';
   }
 
   @override
@@ -940,6 +963,13 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
                     const SizedBox(height: DS.sm),
                   ],
                   if (_candidates.isNotEmpty) ...[
+                    Text(
+                      '已选 ${_selectedIds.length} / ${_candidates.length} 个候选节点',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
                     ..._candidates.map(
                       (candidate) => Container(
                         margin: const EdgeInsets.only(bottom: DS.spacing12),
@@ -967,9 +997,11 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
                                 runSpacing: DS.spacing8,
                                 children: [
                                   _CandidateMetaChip(
-                                      _relationLabel(candidate.relationToTrigger)),
+                                    _relationLabel(candidate.relationToTrigger),
+                                  ),
                                   _CandidateMetaChip(
-                                      '重要度 ${candidate.importanceLevel}'),
+                                    '重要度 ${candidate.importanceLevel}',
+                                  ),
                                   ...candidate.keywords
                                       .take(2)
                                       .map(_CandidateMetaChip.new),
@@ -981,10 +1013,11 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
                               ? null
                               : (selected) {
                                   setState(() {
-                                    if (selected == true) {
+                                    if (selected ?? false) {
                                       _selectedIds.add(candidate.candidateId);
                                     } else {
-                                      _selectedIds.remove(candidate.candidateId);
+                                      _selectedIds
+                                          .remove(candidate.candidateId);
                                     }
                                   });
                                 },
@@ -1008,7 +1041,9 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
                   onPressed: _isApplying ? null : _generateCandidates,
                 ),
                 SparkleButton(
-                  label: _selectedIds.isEmpty ? '本次不纳入' : '纳入星图',
+                  label: _selectedIds.isEmpty
+                      ? '本次不纳入'
+                      : '纳入星图（${_selectedIds.length}）',
                   icon: _isApplying
                       ? const SizedBox(
                           width: 16,

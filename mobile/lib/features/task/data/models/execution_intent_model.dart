@@ -8,6 +8,7 @@ enum ExecutionMode {
 enum ExecutionIntentStatus {
   draft,
   ready,
+  queued,
   dispatched,
   running,
   waitingApproval,
@@ -46,6 +47,8 @@ ExecutionIntentStatus _parseExecutionStatus(String? value) {
       return ExecutionIntentStatus.draft;
     case 'ready':
       return ExecutionIntentStatus.ready;
+    case 'queued':
+      return ExecutionIntentStatus.queued;
     case 'dispatched':
       return ExecutionIntentStatus.dispatched;
     case 'running':
@@ -168,6 +171,7 @@ class ExecutionIntentModel {
         return true;
       case ExecutionIntentStatus.draft:
       case ExecutionIntentStatus.ready:
+      case ExecutionIntentStatus.queued:
       case ExecutionIntentStatus.dispatched:
       case ExecutionIntentStatus.running:
       case ExecutionIntentStatus.waitingApproval:
@@ -184,6 +188,7 @@ class ExecutionIntentModel {
         return true;
       case ExecutionIntentStatus.draft:
       case ExecutionIntentStatus.ready:
+      case ExecutionIntentStatus.queued:
       case ExecutionIntentStatus.succeeded:
       case ExecutionIntentStatus.partial:
       case ExecutionIntentStatus.failed:
@@ -203,6 +208,8 @@ class ExecutionIntentModel {
         return '待准备';
       case ExecutionIntentStatus.ready:
         return '准备完成';
+      case ExecutionIntentStatus.queued:
+        return '排队中';
       case ExecutionIntentStatus.dispatched:
         return '已发送';
       case ExecutionIntentStatus.running:

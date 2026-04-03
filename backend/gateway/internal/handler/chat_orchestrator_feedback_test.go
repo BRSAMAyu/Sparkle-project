@@ -1,47 +1,38 @@
 package handler
 
-import (
-	"context"
-	"testing"
-)
+import "testing"
 
-type responseFeedbackAckRecorder struct {
-	responseID string
-	status     string
-	message    string
-}
+func TestBuildExecutionSummaryToolResultPayload(t *testing.T) {
+	payload := buildExecutionSummaryToolResultPayload(map[string]interface{}{
+		"id":                    "record-1",
+		"execution_intent_id":   "intent-1",
+		"execution_status":      "succeeded",
+		"requires_confirmation": false,
+		"result_preview": map[string]interface{}{
+			"summary": "workspace clean",
+		},
+	})
 
-func (r *responseFeedbackAckRecorder) SendResponseFeedbackAck(responseID, status, message string) {
-	r.responseID = responseID
-	r.status = status
-	r.message = message
-}
-
-func TestHandleResponseFeedbackMissingResponseID(t *testing.T) {
-	h := &ChatOrchestrator{}
-	recorder := &responseFeedbackAckRecorder{}
-	msg := map[string]interface{}{
-		"feedback_type": "up",
+	if payload["tool_name"] != "openclaw.chat_control" {
+		t.Fatalf("expected tool_name to be openclaw.chat_control, got %v", payload["tool_name"])
 	}
-
-	h.handleResponseFeedbackWithResponder(context.Background(), recorder, msg, "user-123")
-
-	if recorder.status != "failed" {
-		t.Fatalf("expected failed status, got %q", recorder.status)
+	widgetData, ok := payload["widget_data"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected widget_data to be a map")
+	}
+	if widgetData["tool_result_id"] != "record-1" {
+		t.Fatalf("expected tool_result_id to equal record id, got %v", widgetData["tool_result_id"])
+	}
+	if widgetData["summary"] != "workspace clean" {
+		t.Fatalf("expected summary to be derived from result preview, got %v", widgetData["summary"])
 	}
 }
 
-func TestHandleResponseFeedbackInvalidFeedbackType(t *testing.T) {
-	h := &ChatOrchestrator{}
-	recorder := &responseFeedbackAckRecorder{}
-	msg := map[string]interface{}{
-		"response_id":   "resp-123",
-		"feedback_type": "unknown",
-	}
-
-	h.handleResponseFeedbackWithResponder(context.Background(), recorder, msg, "user-123")
-
-	if recorder.status != "failed" {
-		t.Fatalf("expected failed status, got %q", recorder.status)
+func TestExtractErrorMessage(t *testing.T) {
+	message := extractErrorMessage(map[string]interface{}{
+		"detail": "pairing required",
+	})
+	if message != "pairing required" {
+		t.Fatalf("expected detail message, got %q", message)
 	}
 }

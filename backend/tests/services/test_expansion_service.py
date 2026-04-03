@@ -1,8 +1,10 @@
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
 
+from app.config import settings
 from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.subject import Subject
@@ -107,6 +109,117 @@ async def test_upsert_node_from_candidate_enriches_sector_and_unlocks_user(db_se
     assert status.is_unlocked is True
     assert relation is not None
     assert relation.relation_type == "evolution"
+
+
+@pytest.mark.asyncio
+async def test_apply_expansion_candidates_reports_reused_nodes(db_session):
+    user = User(
+        username="reuse_owner",
+        email="reuse_owner@example.com",
+        hashed_password="hashed",
+    )
+    trigger = KnowledgeNode(
+        name="概率论",
+        description="研究随机现象的数学分支",
+        importance_level=4,
+        sector_weights={"COSMOS": 100},
+        dominant_sector_code="COSMOS",
+        sector_classification_status="completed",
+        position_x=12,
+        position_y=18,
+    )
+    reused = KnowledgeNode(
+        id=uuid4(),
+        name="条件概率",
+        description="在已知事件发生条件下计算概率。",
+        importance_level=3,
+        sector_weights={"COSMOS": 100},
+        dominant_sector_code="COSMOS",
+        sector_classification_status="completed",
+        position_x=22,
+        position_y=28,
+    )
+    created = KnowledgeNode(
+        id=uuid4(),
+        name="贝叶斯推断",
+        description="根据先验与观测更新概率判断。",
+        importance_level=4,
+        sector_weights={"COSMOS": 100},
+        dominant_sector_code="COSMOS",
+        sector_classification_status="completed",
+        position_x=32,
+        position_y=38,
+    )
+    db_session.add_all([user, trigger, reused])
+    await db_session.flush()
+
+    service = ExpansionService(db_session)
+
+    async def _fake_find_semantic_duplicate(item):
+        if item["name"] == "条件概率":
+            return reused
+        return None
+
+    async def _fake_upsert_node_from_candidate(**kwargs):
+        name = kwargs["candidate"]["name"]
+        if name == "随机变量":
+            return reused, False
+        if name == "贝叶斯推断":
+            return created, True
+        raise AssertionError(f"Unexpected candidate: {name}")
+
+    with patch.object(
+        settings,
+        "EXPANSION_SEMANTIC_DEDUP_ENABLED",
+        True,
+    ), patch.object(
+        ExpansionService,
+        "_find_semantic_duplicate",
+        new=AsyncMock(side_effect=_fake_find_semantic_duplicate),
+    ), patch.object(
+        ExpansionService,
+        "upsert_node_from_candidate",
+        new=AsyncMock(side_effect=_fake_upsert_node_from_candidate),
+    ), patch.object(
+        ExpansionService,
+        "_ensure_user_node_status",
+        new=AsyncMock(),
+    ), patch.object(
+        ExpansionService,
+        "_ensure_relation",
+        new=AsyncMock(),
+    ), patch.object(
+        ExpansionService,
+        "_invalidate_after_graph_mutation",
+        new=AsyncMock(),
+    ):
+        result = await service.apply_expansion_candidates(
+            trigger.id,
+            user.id,
+            candidates=[
+                {
+                    "candidate_id": "reuse-semantic",
+                    "name": "条件概率",
+                    "description": "用已有节点复用已有知识。",
+                },
+                {
+                    "candidate_id": "reuse-exact",
+                    "name": "随机变量",
+                    "description": "命中已有节点，不重复创建。",
+                },
+                {
+                    "candidate_id": "create-new",
+                    "name": "贝叶斯推断",
+                    "description": "需要新建的拓展节点。",
+                },
+            ],
+        )
+
+    assert result.applied_count == 3
+    assert result.created_count == 1
+    assert result.reused_count == 2
+    assert [node.name for node in result.created_nodes] == ["贝叶斯推断"]
+    assert [node.id for node in result.reused_nodes] == [reused.id]
 
 
 @pytest.mark.asyncio

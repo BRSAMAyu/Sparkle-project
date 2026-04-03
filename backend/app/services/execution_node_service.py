@@ -15,6 +15,9 @@ class ExecutionNode:
     name: str
     platform: str
     connected: bool
+    status: str
+    active_runs: int
+    last_seen: str | None
     commands: tuple[str, ...]
     caps: tuple[str, ...]
     raw: dict[str, Any]
@@ -30,6 +33,9 @@ class ExecutionNode:
             "name": self.name,
             "platform": self.platform,
             "connected": self.connected,
+            "status": self.status,
+            "active_runs": self.active_runs,
+            "last_seen": self.last_seen,
             "commands": list(self.commands),
             "caps": list(self.caps),
         }
@@ -64,6 +70,15 @@ class ExecutionNodeService:
             name = str(item.get("name") or item.get("label") or node_id)
             platform = str(item.get("platform") or item.get("os") or "unknown")
             connected = bool(item.get("connected", item.get("isConnected", False)))
+            status = str(item.get("status") or ("online" if connected else "offline"))
+            active_runs = int(
+                item.get("activeRuns")
+                or item.get("active_runs")
+                or item.get("runningTasks")
+                or item.get("running_tasks")
+                or 0
+            )
+            last_seen_raw = item.get("lastSeenAt") or item.get("last_seen_at") or item.get("lastSeen")
             commands = tuple(str(cmd) for cmd in (item.get("commands") or []) if cmd)
             caps = tuple(str(cap) for cap in (item.get("caps") or item.get("capabilities") or []) if cap)
             nodes.append(
@@ -72,6 +87,9 @@ class ExecutionNodeService:
                     name=name,
                     platform=platform,
                     connected=connected,
+                    status=status,
+                    active_runs=active_runs,
+                    last_seen=str(last_seen_raw) if last_seen_raw else None,
                     commands=commands,
                     caps=caps,
                     raw=item,

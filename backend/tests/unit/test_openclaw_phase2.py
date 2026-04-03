@@ -13,6 +13,7 @@ from app.models.execution_intent import (
 )
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
+from app.services.execution_ingestor import ExecutionIngestor
 from app.services.execution_service import ExecutionService
 
 
@@ -426,6 +427,43 @@ async def test_ingestor_invalid_parsed_output_schema_blocks_completion(
     assert record is not None
     assert record.error_message is not None
     assert record.error_message.startswith("parsed_output_schema_invalid")
+
+
+def test_execution_ingestor_accepts_union_schema_types(db_session) -> None:
+    ingestor = ExecutionIngestor(db=db_session)
+    parsed = {
+        "success": True,
+        "output": '{"summary":"ok","key_output":"pwd output","next_steps":"none"}',
+        "parsed_output": {
+            "summary": "ok",
+            "key_output": "pwd output",
+            "next_steps": "none",
+        },
+        "artifacts": [],
+        "tool_calls_count": 0,
+        "token_usage": None,
+        "requires_approval": False,
+        "approval_requests": 0,
+        "error_message": None,
+        "raw_status": "completed",
+    }
+
+    updated = ingestor._validate_parsed_output_contract(
+        parsed=parsed,
+        result_contract={
+            "parsed_output_schema": {
+                "required": ["summary", "key_output", "next_steps"],
+                "properties": {
+                    "summary": {"type": "string"},
+                    "key_output": {"type": ["array", "string"]},
+                    "next_steps": {"type": ["array", "string"]},
+                },
+            }
+        },
+    )
+
+    assert updated["success"] is True
+    assert updated["parsed_output"]["key_output"] == "pwd output"
 
 
 @pytest.mark.asyncio

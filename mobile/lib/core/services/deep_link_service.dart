@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,32 +17,39 @@ class DeepLinkService {
     'capsule': '/curiosity-capsule',
     'node': '/galaxy/node',
     'prism': '/cognitive/patterns',
+    'openclaw': '/openclaw',
+    'openclaw-settings': '/profile/openclaw-settings',
   };
 
   /// 解析 sparkle:// 协议并导航
   /// deepLink 格式: sparkle://achievement/abc123
   /// 返回 true 表示导航成功，false 表示无法处理
   static bool handleDeepLink(BuildContext context, String deepLink) {
-    final uri = Uri.tryParse(deepLink);
-    if (uri == null || uri.scheme != 'sparkle') return false;
+    final route = resolveRoute(deepLink);
+    if (route == null) return false;
 
-    final segments = uri.pathSegments;
-    if (segments.isEmpty) return false;
+    if (!context.mounted) return false;
 
-    final type = segments[0];
-    final id = segments.length > 1 ? segments[1] : null;
-
-    return _navigateToResource(context, type, id);
+    try {
+      unawaited(context.push(route));
+      return true;
+    } catch (e) {
+      debugPrint('DeepLink navigation failed: $e');
+      return false;
+    }
   }
 
   /// 根据资源类型和 ID 导航到对应页面
-  static bool _navigateToResource(
-    BuildContext context,
-    String type,
-    String? id,
-  ) {
+  static String? resolveRoute(String deepLink) {
+    final uri = Uri.tryParse(deepLink);
+    if (uri == null || uri.scheme != 'sparkle') return null;
+
+    final type = _resolveResourceType(uri);
+    if (type == null) return null;
+    final id = _resolveResourceId(uri, type);
+
     final baseRoute = _routeMapping[type];
-    if (baseRoute == null) return false;
+    if (baseRoute == null) return null;
 
     // 构建完整路由路径
     final route = switch (type) {
@@ -52,21 +61,14 @@ class DeepLinkService {
       // 使用 query 参数的类型
       'capsule' => id != null ? '$baseRoute?highlight=$id' : baseRoute,
       'prism' => id != null ? '$baseRoute?highlight=$id' : baseRoute,
+      'openclaw' => _appendQueryParameters(baseRoute, uri.queryParameters),
+      'openclaw-settings' => _appendQueryParameters(
+        baseRoute,
+        uri.queryParameters,
+      ),
       _ => null,
     };
-
-    if (route == null) return false;
-
-    // 检查 context 是否仍然有效
-    if (!context.mounted) return false;
-
-    try {
-      context.push(route);
-      return true;
-    } catch (e) {
-      debugPrint('DeepLink navigation failed: $e');
-      return false;
-    }
+    return route;
   }
 
   /// 检查深链接是否有效
@@ -74,11 +76,8 @@ class DeepLinkService {
     final uri = Uri.tryParse(deepLink);
     if (uri == null || uri.scheme != 'sparkle') return false;
 
-    final segments = uri.pathSegments;
-    if (segments.isEmpty) return false;
-
-    final type = segments[0];
-    return _routeMapping.containsKey(type);
+    final type = _resolveResourceType(uri);
+    return type != null && _routeMapping.containsKey(type);
   }
 
   /// 获取深链接中的资源类型
@@ -86,10 +85,8 @@ class DeepLinkService {
     final uri = Uri.tryParse(deepLink);
     if (uri == null || uri.scheme != 'sparkle') return null;
 
-    final segments = uri.pathSegments;
-    if (segments.isEmpty) return null;
-
-    final type = segments[0];
+    final type = _resolveResourceType(uri);
+    if (type == null) return null;
     return _routeMapping.containsKey(type) ? type : null;
   }
 
@@ -97,10 +94,40 @@ class DeepLinkService {
   static String? getResourceId(String deepLink) {
     final uri = Uri.tryParse(deepLink);
     if (uri == null || uri.scheme != 'sparkle') return null;
+    final type = _resolveResourceType(uri);
+    if (type == null) return null;
+    return _resolveResourceId(uri, type);
+  }
 
+  static String? _resolveResourceType(Uri uri) {
+    if (uri.host.isNotEmpty) {
+      return uri.host;
+    }
+    if (uri.pathSegments.isEmpty) {
+      return null;
+    }
+    return uri.pathSegments.first;
+  }
+
+  static String? _resolveResourceId(Uri uri, String type) {
     final segments = uri.pathSegments;
-    if (segments.length < 2) return null;
-
+    if (uri.host.isNotEmpty) {
+      return segments.isNotEmpty ? segments.first : null;
+    }
+    if (segments.length < 2) {
+      return null;
+    }
     return segments[1];
+  }
+
+  static String _appendQueryParameters(
+    String route,
+    Map<String, String> queryParameters,
+  ) {
+    if (queryParameters.isEmpty) {
+      return route;
+    }
+    final query = Uri(queryParameters: queryParameters).query;
+    return '$route?$query';
   }
 }

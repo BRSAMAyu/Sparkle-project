@@ -95,8 +95,12 @@ class ApplyNodeExpansionRequest(BaseModel):
 
 class ApplyNodeExpansionResponse(BaseModel):
     success: bool = True
+    requested_count: int = 0
+    applied_count: int = 0
     created_count: int = 0
+    reused_count: int = 0
     created_nodes: list[NodeBase] = Field(default_factory=list)
+    reused_nodes: list[NodeBase] = Field(default_factory=list)
 
 
 # ==========================================

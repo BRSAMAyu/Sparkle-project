@@ -17,7 +17,10 @@ class UserRepository {
     try {
       final response = await _apiClient.put<Map<String, dynamic>>(
         '/users/me/preferences',
-        data: preferences.toJson(),
+        data: <String, dynamic>{
+          'learning_depth': preferences.depthPreference,
+          'curiosity_level': preferences.curiosityPreference,
+        },
       );
       final payload = ApiResponseParser.unwrapMap(response.data,
           action: 'updateUserPreferences',);

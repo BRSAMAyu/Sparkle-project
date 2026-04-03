@@ -14,6 +14,7 @@ from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.llm_fallback_utils import focus_llm
+from app.services.memory_service import MemoryService
 
 
 def _utcnow() -> datetime.datetime:
@@ -161,6 +162,32 @@ class FocusService:
         except Exception as e:
             import logging
             logging.warning(f"Auto fragment collection failed for focus session: {e}")
+
+        if status == FocusStatus.COMPLETED and duration_minutes > 0:
+            try:
+                task_title = task.title if task_id and task else None
+                summary = (
+                    f"{duration_minutes} 分钟专注于 {task_title}"
+                    if task_title
+                    else f"完成了 {duration_minutes} 分钟专注"
+                )
+                evidence_refs = [{"type": "event", "id": session_id, "schema_version": "event.v1"}]
+                if task_id:
+                    evidence_refs.append({"type": "task", "id": str(task_id), "schema_version": "task.v1"})
+                memory_service = MemoryService(db)
+                await memory_service.create_episodic_memory(
+                    user_id=user_id,
+                    summary=summary,
+                    source_type="focus_session",
+                    source_id=session_id,
+                    occurred_at=end_time,
+                    importance_score=min(1.0, max(0.2, duration_minutes / 120.0)),
+                    tags=["focus", str(focus_type.value)],
+                    evidence_refs=evidence_refs,
+                )
+            except Exception as e:
+                import logging
+                logging.warning(f"Focus session episodic memory write failed: {e}")
 
         return {
             "session_id": session_id,

@@ -4,6 +4,9 @@ Task Feedback Service
 处理任务反馈，更新用户推断偏好
 """
 from __future__ import annotations
+import inspect
+import json
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +20,12 @@ from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.personalization.preference_service import PreferenceService
+from app.services.routing_profile_service import RoutingProfileService
 from app.services.task_reflection_service import TaskReflectionService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class TaskFeedbackService:
@@ -103,9 +111,18 @@ class TaskFeedbackService:
                     task_id=task_id,
                     category=feedback.category,
                     difficulty_delta=difficulty_delta,
+                    feedback_text=feedback.feedback_text,
                 )
             except Exception as e:
                 logger.warning(f"[TaskFeedback] Adaptive replanning failed: {e}")
+
+        try:
+            await self._maybe_update_routing_profile_after_feedback(
+                user_id=user_id,
+                feedback=feedback,
+            )
+        except Exception as e:
+            logger.warning(f"[TaskFeedback] Routing profile update skipped: {e}")
 
         reflection_prompt = None
         try:
@@ -145,6 +162,7 @@ class TaskFeedbackService:
             {
                 "event_type": "task.feedback_submitted",
                 "user_id": str(user_id),
+                "feedback_id": str(feedback.id),
                 "task_id": str(task_id),
                 "plan_id": str(task.plan_id) if task.plan_id else "",
                 "category": feedback.category or "",
@@ -267,6 +285,70 @@ class TaskFeedbackService:
 
         await self.preference_service.update_inferred(user_id, updates)
         logger.debug(f"[TaskFeedback] Updated inferred preferences for user {user_id}: {updates}")
+
+    async def _maybe_update_routing_profile_after_feedback(
+        self,
+        *,
+        user_id: UUID,
+        feedback: TaskFeedback,
+    ) -> None:
+        if not AdaptiveReplanner.is_strong_cognitive_struggle_feedback(
+            category=feedback.category,
+            feedback_text=feedback.feedback_text,
+        ):
+            return
+
+        snapshot = await self._get_recent_dual_core_snapshot(user_id)
+        if not snapshot:
+            return
+
+        route_mode = str(snapshot.get("mode") or "").strip().lower()
+        if route_mode != "execution_first":
+            return
+
+        await RoutingProfileService(self.db, self.redis).record_session_outcome(
+            user_id,
+            route_mode=route_mode,
+            execution_suggestion_ignored=True,
+        )
+
+    async def _get_recent_dual_core_snapshot(self, user_id: UUID) -> dict[str, Any] | None:
+        if not self.redis:
+            return None
+
+        cache_key = f"user:routing:last_dual_core:{user_id}"
+        raw = self.redis.get(cache_key)
+        if inspect.isawaitable(raw):
+            raw = await raw
+        if not raw:
+            return None
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+
+        try:
+            snapshot = json.loads(raw)
+        except (TypeError, ValueError):
+            return None
+
+        if not isinstance(snapshot, dict):
+            return None
+
+        timestamp = str(snapshot.get("timestamp") or "").strip()
+        if not timestamp:
+            return None
+
+        try:
+            observed_at = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+        if observed_at.tzinfo is not None:
+            observed_at = observed_at.astimezone(timezone.utc).replace(tzinfo=None)
+
+        if observed_at < _utcnow() - timedelta(hours=12):
+            return None
+
+        return snapshot
 
     async def get_task_feedbacks(
         self,

@@ -10,6 +10,7 @@ from app.api.v1 import (
     achievements,
     agent_stats,
     calendar,
+    cards,
     analytics,
     assets,
     audit,
@@ -38,6 +39,7 @@ from app.api.v1 import (
     galaxy,
     graph_monitor,
     graphrag_trace,
+    growth,
     health_production,
     ingestion,
     interventions,
@@ -105,6 +107,7 @@ api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(client_telemetry.router)
 api_router.include_router(signals.router)
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+api_router.include_router(cards.router, prefix="/cards", tags=["cards"])
 api_router.include_router(executions.router)
 api_router.include_router(executions_admin.router)
 api_router.include_router(subtasks.router, tags=["subtasks"])
@@ -118,6 +121,7 @@ api_router.include_router(community.router, prefix="/community", tags=["communit
 api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitive"])
 api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(growth.router, prefix="/growth", tags=["growth"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(background_tasks.router, prefix="/background-tasks", tags=["background_tasks"])
 api_router.include_router(simulation.router)

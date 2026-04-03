@@ -18,7 +18,10 @@ class UnifiedNotification {
   factory UnifiedNotification.fromJson(Map<String, dynamic> json) =>
       UnifiedNotification(
         id: json['id'] as String,
-        sourceType: json['source_type'] as String,
+        sourceType: _normalizeSourceType(
+          json['source_type'] as String?,
+          json['type'] as String?,
+        ),
         title: json['title'] as String,
         content: json['content'] as String,
         type: json['type'] as String?,
@@ -28,7 +31,7 @@ class UnifiedNotification {
         readAt: json['read_at'] != null
             ? DateTime.parse(json['read_at'] as String)
             : null,
-        metadata: json['metadata'] as Map<String, dynamic>? ?? {},
+        metadata: _normalizeMetadata(json),
       );
   final String id;
   final String sourceType; // 'system' or 'intervention'
@@ -40,6 +43,36 @@ class UnifiedNotification {
   final DateTime createdAt;
   final DateTime? readAt;
   final Map<String, dynamic> metadata;
+
+  static String _normalizeSourceType(String? sourceType, String? type) {
+    if (sourceType == 'intervention') {
+      return 'intervention';
+    }
+    final normalizedType = (type ?? '').trim().toLowerCase();
+    if (normalizedType == 'intervention' ||
+        normalizedType == 'intervention_push') {
+      return 'intervention';
+    }
+    return sourceType ?? 'system';
+  }
+
+  static Map<String, dynamic> _normalizeMetadata(Map<String, dynamic> json) {
+    final metadata = json['metadata'];
+    if (metadata is Map<String, dynamic>) {
+      return metadata;
+    }
+    if (metadata is Map) {
+      return Map<String, dynamic>.from(metadata);
+    }
+    final data = json['data'];
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+    return const {};
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -57,7 +90,20 @@ class UnifiedNotification {
   /// Get icon based on notification type
   String get icon {
     if (sourceType == 'intervention') {
-      return '⚠️';
+      switch (intentType) {
+        case 'micro_restart':
+          return '🪜';
+        case 'concept_gap_focus':
+          return '🧠';
+        case 'overload_lighten_path':
+          return '🌿';
+        case 'plan_path_soft_replan':
+          return '🧭';
+        case 'recover_self_efficacy':
+          return '✨';
+        default:
+          return '⚠️';
+      }
     }
 
     // System notification icons
@@ -106,6 +152,79 @@ class UnifiedNotification {
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
     return createdAt.isAfter(weekAgo);
+  }
+
+  bool get isIntervention => sourceType == 'intervention';
+
+  String? get intentType => metadata['intent_type'] as String?;
+
+  String? get suggestedStep =>
+      metadata['suggested_step'] as String? ??
+      _contextVariables['suggested_step'] as String?;
+
+  String? get planId => metadata['plan_id'] as String?;
+
+  String? get recordId => metadata['record_id'] as String?;
+
+  String? get deliveryChannel => metadata['delivery_channel'] as String?;
+
+  String? get interactionState =>
+      metadata['client_intervention_state'] as String? ??
+      metadata['acceptance_status'] as String? ??
+      metadata['status'] as String?;
+
+  String? get outcomeStatus => metadata['outcome_status'] as String?;
+
+  Map<String, dynamic> get outcomeEvidence {
+    final raw = metadata['outcome_evidence'];
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {};
+  }
+
+  Map<String, dynamic> get parameterCompilation {
+    final raw = metadata['parameter_compilation'];
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {};
+  }
+
+  bool get canAcceptIntervention =>
+      isIntervention &&
+      interactionState != 'accepted' &&
+      interactionState != 'acted' &&
+      interactionState != 'dismissed';
+
+  bool get canActOnIntervention =>
+      isIntervention &&
+      interactionState != 'acted' &&
+      interactionState != 'dismissed';
+
+  String get previewText {
+    final step = suggestedStep;
+    if (isIntervention && step != null && step.trim().isNotEmpty) {
+      return '$content\n建议动作：$step';
+    }
+    return content;
+  }
+
+  Map<String, dynamic> get _contextVariables {
+    final raw = metadata['context_variables'];
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {};
   }
 
   UnifiedNotification copyWith({

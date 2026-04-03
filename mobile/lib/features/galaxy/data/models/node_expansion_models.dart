@@ -79,3 +79,23 @@ class NodeExpansionCandidatesResponse {
   final String promptVersion;
   final List<NodeExpansionCandidate> candidates;
 }
+
+class NodeExpansionApplyResult {
+  const NodeExpansionApplyResult({
+    required this.success,
+    required this.requestedCount,
+    required this.appliedCount,
+    required this.createdCount,
+    required this.reusedCount,
+    this.createdNodes = const <NodeExpansionCandidate>[],
+    this.reusedNodes = const <NodeExpansionCandidate>[],
+  });
+
+  final bool success;
+  final int requestedCount;
+  final int appliedCount;
+  final int createdCount;
+  final int reusedCount;
+  final List<NodeExpansionCandidate> createdNodes;
+  final List<NodeExpansionCandidate> reusedNodes;
+}

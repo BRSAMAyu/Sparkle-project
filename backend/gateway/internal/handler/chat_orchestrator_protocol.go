@@ -43,6 +43,7 @@ var jsonMetadataKeys = map[string]bool{
 	"ux_followthrough":       true,
 	"ux_sources":             true,
 	"ux_evolution":           true,
+	"execution_progress":     true,
 	"continuity_banner":      true,
 	"mode_explanation":       true,
 	"collaboration_summary":  true,

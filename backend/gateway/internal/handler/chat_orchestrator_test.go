@@ -197,6 +197,33 @@ func TestConvertResponseToJSONAddsUXProgressFromStatus(t *testing.T) {
 	assert.Equal(t, "我在替你执行需要的步骤", uxProgress["headline"])
 }
 
+func TestConvertResponseToJSONDecodesExecutionProgressMetadata(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-openclaw-progress",
+		RequestId:  "req-openclaw-progress",
+		Metadata: map[string]string{
+			"execution_progress": `{"current_step":"正在访问目标网页","recent_output":["页面标题：Example Domain"],"progress_hint":0.55}`,
+		},
+		Content: &agentv1.ChatResponse_StatusUpdate{
+			StatusUpdate: &agentv1.AgentStatus{
+				State:   agentv1.AgentStatus_EXECUTING_TOOL,
+				Details: "正在访问目标网页",
+			},
+		},
+	}
+
+	result := convertResponseToJSON(resp)
+	meta, ok := result["metadata"].(map[string]interface{})
+	assert.True(t, ok)
+	progress, ok := meta["execution_progress"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "正在访问目标网页", progress["current_step"])
+	recentOutput, ok := progress["recent_output"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, []interface{}{"页面标题：Example Domain"}, recentOutput)
+	assert.Equal(t, 0.55, progress["progress_hint"])
+}
+
 func TestConvertResponseToJSONMarksDoneOnFinishOnlyResponse(t *testing.T) {
 	resp := &agentv1.ChatResponse{
 		ResponseId:   "resp-done",

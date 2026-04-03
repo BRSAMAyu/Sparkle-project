@@ -1,5 +1,6 @@
 import asyncio
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
@@ -193,9 +194,11 @@ async def test_seed_extractor_fallback_seeds_are_stable_for_empty_user():
 
     seeds = extractor._fallback_seeds(scenario_key="study_group", limit=3)
 
-    assert len(seeds) == 3
-    assert all(seed.topic for seed in seeds)
-    assert all(seed.suggested_scenario for seed in seeds)
+    assert len(seeds) == 1
+    assert seeds[0].topic == ""
+    assert seeds[0].source_type == "user_input_required"
+    assert seeds[0].relevance_score == 0.0
+    assert seeds[0].suggested_scenario == "study_group"
 
 
 def test_seed_extractor_extract_selected_topics_accepts_dict_and_list_payloads():
@@ -437,6 +440,257 @@ async def test_free_mode_target_context_backfills_missing_required_fields(monkey
 
 
 @pytest.mark.asyncio
+async def test_generate_prediction_requests_clarification_for_short_freeform_topic(monkeypatch):
+    service = PredictionTheaterService(db=AsyncMock())
+    monkeypatch.setattr(service, "_topic_graph_candidates", AsyncMock(return_value=[]))
+
+    payload = await service.generate_prediction(
+        user_id=uuid4(),
+        topic="数学",
+    )
+
+    assert payload["status"] == "clarification_needed"
+    assert payload["prediction"] is None
+    assert len(payload["questions"]) == 4
+
+
+@pytest.mark.asyncio
+async def test_generate_prediction_proceeds_when_freeform_context_is_sufficient(monkeypatch):
+    service = PredictionTheaterService(db=AsyncMock())
+    target_context = SimpleNamespace(
+        name="特征值分解",
+        description="围绕特征值分解的学习路径。",
+        target_node_id=None,
+        resolution_mode="freeform_only",
+        backbone=[
+            {
+                "id": "step-1",
+                "name": "矩阵乘法",
+                "description": "已有前置",
+                "mapped_galaxy_node_id": None,
+                "is_target": False,
+            },
+            {
+                "id": "step-2",
+                "name": "特征值分解",
+                "description": "目标",
+                "mapped_galaxy_node_id": None,
+                "is_target": True,
+            },
+        ],
+        semantic_matches=[],
+        disclaimer="仅供参考",
+    )
+    monkeypatch.setattr(service, "_resolve_target_context", AsyncMock(return_value=target_context))
+    monkeypatch.setattr(service, "_get_mastery_map", AsyncMock(return_value={}))
+    monkeypatch.setattr(
+        service,
+        "_build_user_learning_profile",
+        AsyncMock(return_value={"average_session_minutes": 30}),
+    )
+    monkeypatch.setattr(service, "_top_pattern_names", AsyncMock(return_value=[]))
+    monkeypatch.setattr(service, "_related_error_evidence", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        service,
+        "_build_prediction_calibration",
+        AsyncMock(return_value={"sample_count": 0, "data_sufficiency_score": 0.42}),
+    )
+    monkeypatch.setattr(
+        service,
+        "_topic_calibration_signal",
+        AsyncMock(return_value={"sample_count": 0, "latest_pending_age_days": 4}),
+    )
+    monkeypatch.setattr(
+        service,
+        "_build_path_options",
+        AsyncMock(
+            return_value=[
+                TheaterPathOption(
+                    id="path-1",
+                    title="约束优先路径",
+                    summary="适合考试前快速补关键缺口。",
+                    strategy_type="constraint_first",
+                    expert_ids=["galaxy_guide"],
+                    estimated_completion_rate=None,
+                    estimated_mastery=None,
+                    daily_minutes=30,
+                    risks=["历史样本不足"],
+                    steps=[
+                        TheaterPathStep(
+                            index=1,
+                            node_id="step-1",
+                            node_name="矩阵乘法",
+                            rationale="先补前置。",
+                            current_mastery=None,
+                            predicted_mastery=None,
+                            risk_level="medium",
+                            estimated_minutes=30,
+                            day_label="第 1 天",
+                            source_type="ai_suggested",
+                        )
+                    ],
+                    data_quality="low",
+                    completion_range_low=0.6,
+                    completion_range_high=0.8,
+                    mastery_range_low=55.0,
+                    mastery_range_high=72.0,
+                )
+            ]
+        ),
+    )
+    monkeypatch.setattr(service, "_build_timeline", MagicMock(return_value=[]))
+    monkeypatch.setattr(service.accuracy, "record_prediction", AsyncMock(return_value=None))
+    monkeypatch.setattr(service, "_persist_prediction", AsyncMock(return_value=None))
+
+    payload = await service.generate_prediction(
+        user_id=uuid4(),
+        topic="线性代数中的特征值分解",
+        context="期末考试准备，我理解矩阵乘法，但不理解特征值的几何意义。",
+        preview_mode=True,
+    )
+
+    assert payload["status"] == "ready"
+    assert payload["target_name"] == "特征值分解"
+    assert payload["paths"][0]["data_quality"] == "low"
+
+
+@pytest.mark.asyncio
+async def test_low_data_quality_routes_do_not_claim_precise_completion_rate(monkeypatch):
+    service = PredictionTheaterService(db=AsyncMock())
+    target_context = SimpleNamespace(
+        name="现代诗阅读",
+        description="自由主题",
+        target_node_id=None,
+        resolution_mode="freeform_only",
+        backbone=[{"id": "step-1", "name": "意象分析", "description": "目标", "is_target": True}],
+        semantic_matches=[],
+        disclaimer="仅供参考",
+    )
+    monkeypatch.setattr(service, "_resolve_target_context", AsyncMock(return_value=target_context))
+    monkeypatch.setattr(service, "_get_mastery_map", AsyncMock(return_value={}))
+    monkeypatch.setattr(
+        service,
+        "_build_user_learning_profile",
+        AsyncMock(return_value={"average_session_minutes": 25}),
+    )
+    monkeypatch.setattr(service, "_top_pattern_names", AsyncMock(return_value=[]))
+    monkeypatch.setattr(service, "_related_error_evidence", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        service,
+        "_build_prediction_calibration",
+        AsyncMock(return_value={"sample_count": 0, "data_sufficiency_score": 0.42}),
+    )
+    monkeypatch.setattr(
+        service,
+        "_topic_calibration_signal",
+        AsyncMock(return_value={"sample_count": 0, "latest_pending_age_days": 9}),
+    )
+    monkeypatch.setattr(
+        service,
+        "_build_path_options",
+        AsyncMock(
+            return_value=[
+                TheaterPathOption(
+                    id="path-1",
+                    title="解释优先路径",
+                    summary="先用例子建立直觉。",
+                    strategy_type="custom",
+                    expert_ids=["study_buddy"],
+                    estimated_completion_rate=None,
+                    estimated_mastery=None,
+                    daily_minutes=25,
+                    risks=["缺少真实样本"],
+                    steps=[],
+                    data_quality="low",
+                    completion_range_low=0.55,
+                    completion_range_high=0.75,
+                    mastery_range_low=50.0,
+                    mastery_range_high=68.0,
+                )
+            ]
+        ),
+    )
+    monkeypatch.setattr(service, "_build_timeline", MagicMock(return_value=[]))
+    monkeypatch.setattr(service.accuracy, "record_prediction", AsyncMock(return_value=None))
+    monkeypatch.setattr(service, "_persist_prediction", AsyncMock(return_value=None))
+
+    payload = await service.generate_prediction(
+        user_id=uuid4(),
+        topic="我想提高现代诗阅读的理解深度，用于选修课期末论文准备",
+        preview_mode=True,
+    )
+
+    route = payload["paths"][0]
+    assert route["data_quality"] == "low"
+    assert route["estimated_completion_rate"] is None
+    assert route["completion_range_low"] > 0
+    assert route["completion_range_high"] > route["completion_range_low"]
+
+
+def test_materialize_dynamic_steps_keeps_ai_suggested_mastery_unknown_without_data():
+    service = PredictionTheaterService(db=AsyncMock())
+
+    steps = service._materialize_dynamic_steps(
+        plan={
+            "strategy_type": "custom",
+            "steps": [
+                {
+                    "node_name": "特征值的几何意义",
+                    "rationale": "先澄清概念直觉。",
+                    "estimated_minutes": 35,
+                    "risk_level": "high",
+                    "source_type": "ai_suggested",
+                    "predicted_mastery": None,
+                }
+            ],
+        },
+        backbone=[],
+        mastery_map={},
+        checkpoint_days=[1, 3, 7],
+        available_time_per_day=30,
+        risk_overrides=None,
+    )
+
+    assert len(steps) == 1
+    assert steps[0].source_type == "ai_suggested"
+    assert steps[0].predicted_mastery is None
+
+
+def test_route_score_and_rationale_use_current_strategy_names():
+    service = PredictionTheaterService(db=AsyncMock())
+
+    target_backtrack_score = service._route_score(
+        completion_rate=0.72,
+        estimated_mastery=74.0,
+        risks=["需要接受先看目标再回补前置的节奏"],
+        strategy_type="target_backtrack",
+    )
+    constraint_first_score = service._route_score(
+        completion_rate=0.72,
+        estimated_mastery=74.0,
+        risks=["需要接受先看目标再回补前置的节奏"],
+        strategy_type="constraint_first",
+    )
+
+    assert target_backtrack_score < constraint_first_score
+    assert "小步节奏" in service._step_rationale(
+        strategy_type="constraint_first",
+        node_name="行列式",
+        is_target=False,
+    )
+    assert "完整依赖链" in service._step_rationale(
+        strategy_type="full_chain",
+        node_name="线性变换",
+        is_target=False,
+    )
+    assert "回补节点" in service._step_rationale(
+        strategy_type="target_backtrack",
+        node_name="特征多项式",
+        is_target=False,
+    )
+
+
+@pytest.mark.asyncio
 async def test_resolve_target_node_for_user_rejects_inaccessible_explicit_node(db_session, test_user):
     node = KnowledgeNode(
         name="Private target node",
@@ -576,6 +830,7 @@ async def test_freeform_prediction_persists_candidate_bundle(db_session, test_us
         topic="我想系统学习 LLM",
         preview_mode=False,
         simulation_session_id="sim-session-123",
+        context="为了做一个问答 Demo，我想系统学习 LLM，目前只懂一点 Python。",
     )
 
     result = await db_session.execute(select(TheaterCandidateBundle))
@@ -993,7 +1248,7 @@ async def test_theater_api_returns_timeout_payload(monkeypatch):
     app.dependency_overrides[get_current_user_id] = lambda: TEST_USER_ID
     app.dependency_overrides[get_db] = lambda: object()
 
-    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14):
+    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14, **kwargs):
         raise TheaterTimeoutError()
 
     monkeypatch.setattr(
@@ -1021,7 +1276,7 @@ async def test_theater_api_returns_404_for_inaccessible_target(monkeypatch):
     app.dependency_overrides[get_current_user_id] = lambda: TEST_USER_ID
     app.dependency_overrides[get_db] = lambda: object()
 
-    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14):
+    async def fake_generate_prediction(self, *, user_id, topic, target_node_id=None, horizon_days=14, **kwargs):
         raise TheaterNodeAccessError()
 
     monkeypatch.setattr(
@@ -1139,16 +1394,61 @@ def test_theater_timeline_builds_daily_frames():
     timeline = service._build_timeline(
         [option],
         [{"turn_index": 0, "content": "先补前置。"}],
-        horizon_days=7,
+        available_time_per_day=40,
     )
 
-    assert len(timeline) == 7
+    assert len(timeline) == 2
     assert timeline[0]["day_index"] == 1
-    assert timeline[-1]["day_index"] == 7
-    assert timeline[0]["label"] == "第 1 天"
+    assert timeline[-1]["day_index"] == 2
+    assert timeline[0]["label"] == "第 1 天 · 步骤 1"
     assert timeline[0]["route_id"] == "path_foundation"
     assert timeline[-1]["projected_mastery"] >= timeline[0]["projected_mastery"]
     assert timeline[0]["compare_label"] == "推荐基线"
+
+
+@pytest.mark.asyncio
+async def test_get_accuracy_summary_includes_recent_comparison_pairs(monkeypatch):
+    service = PredictionTheaterService(db=AsyncMock())
+    user_id = uuid4()
+
+    monkeypatch.setattr(
+        service,
+        "_get_prediction_for_user_or_raise",
+        AsyncMock(return_value={"prediction_id": "pred-1"}),
+    )
+    monkeypatch.setattr(
+        service.accuracy,
+        "get_summary",
+        AsyncMock(
+            return_value={
+                "prediction_id": "pred-1",
+                "predicted_completion_rate": 0.72,
+                "actual_completion_rate": 0.55,
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        service,
+        "_recent_comparison_pairs",
+        AsyncMock(
+            return_value=[
+                {
+                    "predicted_completion": 0.72,
+                    "actual_completion": 0.55,
+                    "predicted_mastery": 68.0,
+                    "actual_mastery": 52.0,
+                    "topic": "线性代数",
+                    "date": "2026-03-25",
+                }
+            ]
+        ),
+    )
+
+    summary = await service.get_accuracy_summary(user_id=user_id, prediction_id="pred-1")
+
+    assert summary is not None
+    assert summary["comparison_pairs"][0]["topic"] == "线性代数"
+    assert summary["comparison_pairs"][0]["actual_mastery"] == 52.0
 
 
 @pytest.mark.asyncio
@@ -1564,7 +1864,9 @@ async def test_get_accuracy_summary_requires_prediction_owner(db_session, test_u
         prediction_id="pred-accuracy-owner-1",
     )
 
-    assert owned_summary == summary
+    assert owned_summary["prediction_id"] == summary["prediction_id"]
+    assert owned_summary["accuracy_score"] == summary["accuracy_score"]
+    assert owned_summary["comparison_pairs"] == []
 
     with pytest.raises(NotFoundError):
         await service.get_accuracy_summary(

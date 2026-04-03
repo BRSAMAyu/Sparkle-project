@@ -12,6 +12,7 @@ from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.services.growth_dashboard_service import GrowthDashboardService
 from app.services.insight_copy import (
     present_pattern_description,
     present_pattern_name,
@@ -97,18 +98,25 @@ class DashboardService:
 
         # Calculate today's focus minutes from completed tasks
         today_focus_minutes = await self._get_today_focus_minutes(user_id)
+        tasks_completed_today = await self._get_today_completed_tasks(user_id)
+        growth_dashboard = await GrowthDashboardService(self.db).build_snapshot(user_id, user=user)
 
         payload = {
             "weather": weather,
             "flame": {
                 "level": user.flame_level,
                 "brightness": user.flame_brightness,
-                "today_focus_minutes": today_focus_minutes
+                "today_focus_minutes": today_focus_minutes,
+                "tasks_completed": tasks_completed_today,
             },
             "sprint": sprint,
             "growth": growth,
             "next_actions": next_actions,
-            "cognitive": cognitive
+            "cognitive": cognitive,
+            "growth_status": growth_dashboard.get("growth_status"),
+            "most_important_task": growth_dashboard.get("most_important_task"),
+            "growth_signal": growth_dashboard.get("growth_signal"),
+            "active_plan_progress": growth_dashboard.get("active_plan_progress"),
         }
         await cache_service.set(
             cache_key,
@@ -204,6 +212,18 @@ class DashboardService:
         )
         result = await self.db.execute(query)
         return result.scalar() or 0
+
+    async def _get_today_completed_tasks(self, user_id: UUID) -> int:
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        query = select(func.count(Task.id)).where(
+            and_(
+                Task.user_id == user_id,
+                Task.status == TaskStatus.COMPLETED,
+                Task.completed_at >= today_start,
+            )
+        )
+        result = await self.db.execute(query)
+        return int(result.scalar() or 0)
 
     async def _get_cognitive_summary(self, user_id: UUID) -> dict:
         """Get cognitive prism summary for dashboard"""

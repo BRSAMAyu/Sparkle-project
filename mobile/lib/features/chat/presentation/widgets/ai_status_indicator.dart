@@ -190,8 +190,8 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
               ),
               child: Text(
                 trimmedDetails,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 5,
+                overflow: TextOverflow.fade,
                 style: DS.bodySmall.copyWith(
                   color: detailsColor,
                   height: 1.4,
@@ -219,8 +219,7 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
 
   String? _elapsedLabel(int? startedAtEpochMs) {
     if (startedAtEpochMs == null) return null;
-    final elapsedMs =
-        DateTime.now().millisecondsSinceEpoch - startedAtEpochMs;
+    final elapsedMs = DateTime.now().millisecondsSinceEpoch - startedAtEpochMs;
     if (elapsedMs < 0) return null;
     final seconds = elapsedMs ~/ 1000;
     if (seconds < 60) {
@@ -364,24 +363,24 @@ class _ElapsedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing10,
-        vertical: DS.spacing6,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: color.withValues(alpha: 0.16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
         ),
-      ),
-      child: Text(
-        label,
-        style: context.sparkleTypography.labelSmall.copyWith(
-          color: color,
-          fontWeight: DS.fontWeightBold,
-          fontFeatures: const [FontFeature.tabularFigures()],
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: color.withValues(alpha: 0.16),
+          ),
         ),
-      ),
-    );
+        child: Text(
+          label,
+          style: context.sparkleTypography.labelSmall.copyWith(
+            color: color,
+            fontWeight: DS.fontWeightBold,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      );
 }

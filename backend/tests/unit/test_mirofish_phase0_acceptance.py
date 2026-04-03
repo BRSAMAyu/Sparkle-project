@@ -294,8 +294,17 @@ async def test_learning_report_uses_chat_inference_for_intro_diagnostic(monkeypa
     payload = await agent.generate_report(user_id)
 
     assert payload["starter_focus"][0]["source_type"] == "chat_inference"
-    assert payload["mastery"][0]["node_name"] == "Rust 所有权"
-    assert payload["patterns"][0]["raw_pattern_name"] == "chat_inferred_bootstrap_friction"
+    assert payload["starter_focus"][0]["verified"] is False
+    assert payload["starter_focus"][0]["relevance_score"] == 0.0
+    assert payload["mastery"] == []
+    assert payload["patterns"] == []
+    assert payload["timeline"] == []
+    assert payload["trend_overview"]["status"] == "no_data"
     assert payload["chat_inference"]["goal_summary"] == "想系统学 Rust"
     assert payload["trigger_summary"]["mode"] == "baseline_ready"
-    assert payload["action_cards"][0]["deep_link"].startswith("/theater?topic=")
+    assert payload["trigger_summary"]["data_status"] == "insufficient"
+    assert len(payload["action_cards"]) == 1
+    assert payload["action_cards"][0]["title"] == "开始你的第一个学习任务"
+    assert payload["action_cards"][0]["deep_link"] == "/plan"
+    assert "/theater" not in payload["action_cards"][0]["deep_link"]
+    assert "/simulation" not in payload["action_cards"][0]["deep_link"]

@@ -188,6 +188,85 @@ async def test_analyze_and_link_publishes_event_without_links():
 
 
 @pytest.mark.asyncio
+async def test_analyze_and_link_flushes_node_mastery_events_after_commit():
+    db_mock = MagicMock(spec=AsyncSession)
+    db_mock.execute = AsyncMock()
+    db_mock.rollback = AsyncMock()
+    db_mock.begin_nested = MagicMock(return_value=_AsyncNullContext())
+
+    timeline: list[str] = []
+    commit_count = {"value": 0}
+
+    async def _commit():
+        commit_count["value"] += 1
+        timeline.append(f"commit{commit_count['value']}")
+
+    db_mock.commit = AsyncMock(side_effect=_commit)
+
+    service = ErrorBookService(db_mock)
+    user_id = uuid4()
+    error_id = uuid4()
+    linked_node_id = uuid4()
+
+    error = MagicMock(spec=ErrorRecord)
+    error.id = error_id
+    error.user_id = user_id
+    error.question_text = "What does pointer dereference return?"
+    error.question_image_url = None
+    error.user_answer = "address"
+    error.correct_answer = "value"
+    error.subject_code = "computer"
+    error.latest_analysis = None
+    error.linked_knowledge_node_ids = []
+
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = error
+    db_mock.execute.return_value = mock_result
+
+    linked_node = MagicMock()
+    linked_node.id = linked_node_id
+
+    mastery_result = [{
+        "_pending_event": {
+            "topic": "node_mastery_updated",
+            "payload": {"event_type": "node_mastery_updated", "node_id": str(linked_node_id)},
+        }
+    }]
+
+    async def _publish(topic, payload):
+        timeline.append(topic)
+
+    with patch.object(service, "_search_knowledge_nodes", AsyncMock(return_value=[linked_node])), \
+         patch.object(
+             service,
+             "_run_llm_analysis",
+             AsyncMock(
+                 return_value={
+                     "error_type": "concept_confusion",
+                     "error_type_label": "概念混淆",
+                     "root_cause": "把地址和值混淆了",
+                     "correct_approach": "先解引用再读取值",
+                     "similar_traps": [],
+                     "recommended_knowledge": [],
+                     "study_suggestion": "回看指针与引用",
+                 }
+             ),
+         ), \
+         patch("app.services.error_book_service.event_bus.publish", new=AsyncMock(side_effect=_publish)), \
+         patch("app.services.error_book_service.SemanticMemoryService") as mock_semantic, \
+         patch("app.services.error_book_signal_processor.ErrorBookSignalProcessor") as mock_processor, \
+         patch("app.services.error_book_mastery_sync_service.ErrorBookMasterySyncService") as mock_mastery:
+        mock_semantic.return_value.upsert_strategy_from_error = AsyncMock()
+        mock_processor.return_value.process_error_created = AsyncMock()
+        mock_mastery.return_value.apply_error_diagnosis = AsyncMock(return_value=mastery_result)
+        await service.analyze_and_link(error_id, user_id)
+
+    assert "node_mastery_updated" in timeline
+    assert "error_created" in timeline
+    assert timeline.index("commit2") < timeline.index("node_mastery_updated")
+
+
+@pytest.mark.asyncio
 async def test_search_knowledge_nodes_keyword_fallback_when_vector_search_unavailable():
     """向量检索不可用时，错题服务应退回关键词检索而不是整条链失败。"""
     db_mock = MagicMock(spec=AsyncSession)

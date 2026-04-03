@@ -1641,6 +1641,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
 
     final statusColor = switch (status) {
       'failed' => DS.error,
+      'degraded' => DS.info,
       'partial' => DS.warning,
       _ => DS.success,
     };
@@ -1672,6 +1673,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final selfVerification = _executionSummaryPreviewData(
       action.data['self_verification'],
     );
+    final errorSuggestion = _executionSummaryPreviewData(
+      action.data['error_suggestion'],
+    );
+    final manualSteps =
+        (action.data['manual_steps'] as List<dynamic>? ?? const [])
+            .whereType<Map<dynamic, dynamic>>()
+            .map(Map<String, dynamic>.from)
+            .toList();
+    final retryAction = _executionSummaryPreviewData(action.data['retry_action']);
     final comparisonHeadline = comparisonSummary is Map<String, dynamic>
         ? comparisonSummary['headline']?.toString() ?? '结果对比'
         : comparisonSummary != null
@@ -1708,6 +1718,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           child: Text(
             status == 'failed'
                 ? l10n.chatExecutionFailed
+                : status == 'degraded'
+                    ? '已切到手动协作'
                 : status == 'partial'
                     ? l10n.chatExecutionPartial
                     : l10n.chatExecutionCompleted,
@@ -1971,6 +1983,105 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     ),
                   ),
                 )),
+          ],
+        ],
+        if (errorSuggestion != null ||
+            manualSteps.isNotEmpty ||
+            retryAction != null) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            '恢复建议',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.neutral900,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          if ((errorSuggestion?['suggestion']?.toString() ?? '').isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(DS.spacing10),
+              decoration: BoxDecoration(
+                color: DS.info.withValues(alpha: 0.08),
+                borderRadius: DS.borderRadius12,
+                border: Border.all(color: DS.info.withValues(alpha: 0.16)),
+              ),
+              child: Text(
+                errorSuggestion!['suggestion'].toString(),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.neutral800,
+                      height: 1.45,
+                    ),
+              ),
+            ),
+          if (manualSteps.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            ...manualSteps.map(
+              (step) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(DS.spacing10),
+                  decoration: BoxDecoration(
+                    color: DS.surfaceSecondary,
+                    borderRadius: DS.borderRadius12,
+                    border: Border.all(color: DS.neutral200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        step['title']?.toString() ?? '手动步骤',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: DS.fontWeightSemibold,
+                              color: DS.neutral900,
+                            ),
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        step['description']?.toString() ?? '',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.neutral700,
+                              height: 1.45,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (retryAction != null &&
+              (retryAction['label']?.toString() ?? '').isNotEmpty &&
+              widget.onWidgetAction != null) ...[
+            const SizedBox(height: DS.spacing4),
+            InkWell(
+              onTap: () => unawaited(
+                widget.onWidgetAction!.call(
+                  retryAction['type']?.toString() ?? 'prompt',
+                  retryAction,
+                ),
+              ),
+              borderRadius: DS.borderRadius20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing12,
+                  vertical: DS.spacing8,
+                ),
+                decoration: BoxDecoration(
+                  color: DS.primaryBase.withValues(alpha: 0.1),
+                  borderRadius: DS.borderRadius20,
+                  border: Border.all(color: DS.primaryBase.withValues(alpha: 0.18)),
+                ),
+                child: Text(
+                  retryAction['label'].toString(),
+                  style: TextStyle(
+                    color: DS.primaryBase,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+                ),
+              ),
+            ),
           ],
         ],
         if (nextAction.isNotEmpty) ...[

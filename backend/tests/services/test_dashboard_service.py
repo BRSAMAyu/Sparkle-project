@@ -109,8 +109,21 @@ async def test_get_dashboard_status_caches_computed_payload():
     service._get_next_actions = AsyncMock(return_value=[{"id": "t1"}])
     service._get_cognitive_summary = AsyncMock(return_value={"status": "active"})
     service._get_today_focus_minutes = AsyncMock(return_value=45)
+    service._get_today_completed_tasks = AsyncMock(return_value=3)
+    growth_snapshot = {
+        "growth_status": {"headline": "Ava，你本周在热力学上进步了 22%"},
+        "most_important_task": {"id": "task-1", "title": "复盘热力学错题"},
+        "growth_signal": {"topic": "热力学", "delta_points": 22.0},
+        "active_plan_progress": {"plan_name": "热力学冲刺", "progress": 0.52},
+    }
 
-    with patch("app.services.dashboard_service.cache_service") as mock_cache:
+    with (
+        patch("app.services.dashboard_service.cache_service") as mock_cache,
+        patch(
+            "app.services.dashboard_service.GrowthDashboardService.build_snapshot",
+            new=AsyncMock(return_value=growth_snapshot),
+        ) as mock_growth_snapshot,
+    ):
         mock_cache.get = AsyncMock(return_value=None)
         mock_cache.set = AsyncMock()
 
@@ -118,6 +131,12 @@ async def test_get_dashboard_status_caches_computed_payload():
 
     assert result["weather"]["type"] == "cloudy"
     assert result["flame"]["today_focus_minutes"] == 45
+    assert result["flame"]["tasks_completed"] == 3
+    assert result["growth_status"] == growth_snapshot["growth_status"]
+    assert result["most_important_task"] == growth_snapshot["most_important_task"]
+    assert result["growth_signal"] == growth_snapshot["growth_signal"]
+    assert result["active_plan_progress"] == growth_snapshot["active_plan_progress"]
+    mock_growth_snapshot.assert_awaited_once_with(user_id, user=user)
     mock_cache.set.assert_awaited_once_with(
         DashboardService._dashboard_cache_key(user_id),
         result,

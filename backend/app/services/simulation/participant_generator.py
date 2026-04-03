@@ -16,6 +16,8 @@ async def generate_participants(
     scenario_key: str,
     participant_names: list[str],
     user_context: dict[str, Any] | None,
+    anchor_material: str | None = None,
+    anchor_type: str | None = None,
     db: AsyncSession | None = None,
     user_id: UUID | None = None,
     topic: str | None = None,
@@ -58,10 +60,22 @@ async def generate_participants(
                     graph_hint=graph_hint,
                 ),
                 "persona": persona.to_dict(),
-                "stance": _resolve_stance(scenario_key, index),
+                "stance": _resolve_stance(
+                    scenario_key,
+                    index,
+                    anchor_type=anchor_type,
+                ),
                 "source": "knowledge_graph" if graph_hint else "template",
                 "source_node_name": (graph_hint or {}).get("name"),
-                "context_anchor": (graph_hint or {}).get("description"),
+                "context_anchor": _resolve_context_anchor(
+                    graph_hint=graph_hint,
+                    anchor_material=anchor_material,
+                ),
+                "strategy": _resolve_strategy(
+                    scenario_key=scenario_key,
+                    participant_index=index,
+                    anchor_type=anchor_type,
+                ),
             }
         )
     return participants
@@ -183,7 +197,21 @@ def _resolve_role_hint(
     return fallback_name
 
 
-def _resolve_stance(scenario_key: str, index: int) -> str:
+def _resolve_stance(
+    scenario_key: str,
+    index: int,
+    *,
+    anchor_type: str | None = None,
+) -> str:
+    strategy = _resolve_strategy(
+        scenario_key=scenario_key,
+        participant_index=index,
+        anchor_type=anchor_type,
+    )
+    if strategy in {"using_misconception", "challenging", "opposing_perspective"}:
+        return "challenging"
+    if strategy in {"synthesizing", "moderating", "probing_depth"}:
+        return "probing"
     if scenario_key == "knowledge_debate":
         return ["supporting", "opposing", "moderating"][min(index, 2)]
     if scenario_key == "historical_roleplay":
@@ -191,3 +219,39 @@ def _resolve_stance(scenario_key: str, index: int) -> str:
     if scenario_key == "socratic_dialogue":
         return "probing"
     return "probing" if index == 0 else ("supportive" if index % 2 else "challenging")
+
+
+def _resolve_strategy(
+    *,
+    scenario_key: str,
+    participant_index: int,
+    anchor_type: str | None,
+) -> str:
+    if anchor_type == "error_record":
+        strategies = ["explaining_correct", "using_misconception", "probing_depth"]
+    elif anchor_type == "concept":
+        strategies = ["illustrating", "challenging", "connecting"]
+    elif anchor_type == "historical_source":
+        strategies = ["contextualizing", "opposing_perspective", "modern_parallel"]
+    else:
+        if scenario_key == "error_diagnosis":
+            strategies = ["explaining_correct", "using_misconception", "probing_depth"]
+        elif scenario_key == "historical_roleplay":
+            strategies = ["contextualizing", "opposing_perspective", "modern_parallel"]
+        else:
+            strategies = ["supporting", "challenging", "synthesizing"]
+    return strategies[min(participant_index, len(strategies) - 1)]
+
+
+def _resolve_context_anchor(
+    *,
+    graph_hint: dict[str, str] | None,
+    anchor_material: str | None,
+) -> str | None:
+    graph_anchor = str((graph_hint or {}).get("description") or "").strip()
+    explicit_anchor = str(anchor_material or "").strip()
+    if graph_anchor and explicit_anchor:
+        return f"{explicit_anchor}\n\n补充背景：{graph_anchor}"
+    if explicit_anchor:
+        return explicit_anchor
+    return graph_anchor or None
