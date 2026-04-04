@@ -372,6 +372,12 @@ class PhaseService:
         plan_card = await self.get_plan_card_by_legacy_plan(legacy_plan_id, user_id)
         if not plan_card:
             return None
+        if not await self._has_complete_weighted_progress_projection(
+            plan_card=plan_card,
+            legacy_plan_id=legacy_plan_id,
+            user_id=user_id,
+        ):
+            return None
         weighted_progress = await self.calculate_plan_progress(plan_card.id)
         legacy_plan = await self.db.get(Plan, legacy_plan_id)
         if legacy_plan and legacy_plan.user_id == user_id:
@@ -400,6 +406,32 @@ class PhaseService:
         total_weight = sum(weights) or float(len(weights))
         normalized = [weight / total_weight for weight in weights]
         return round(sum(weight * progress for weight, progress in zip(normalized, progress_values)), 4)
+
+    async def _has_complete_weighted_progress_projection(
+        self,
+        *,
+        plan_card: Card,
+        legacy_plan_id: UUID,
+        user_id: UUID,
+    ) -> bool:
+        legacy_task_result = await self.db.execute(
+            select(Task.id).where(
+                Task.plan_id == legacy_plan_id,
+                Task.user_id == user_id,
+            )
+        )
+        legacy_task_ids = {str(task_id) for task_id in legacy_task_result.scalars().all()}
+        if not legacy_task_ids:
+            return True
+
+        projected_task_ids: set[str] = set()
+        for phase in await self.get_plan_phases(plan_card.id):
+            for task_card in await self._get_phase_tasks(phase.id):
+                legacy_task_id = (task_card.metadata_ or {}).get("legacy_task_id")
+                if legacy_task_id:
+                    projected_task_ids.add(str(legacy_task_id))
+
+        return projected_task_ids == legacy_task_ids
 
     async def _get_owned_plan(self, plan_card_id: UUID, user_id: UUID) -> Card:
         plan_card = await self.card_service.get_card(plan_card_id)

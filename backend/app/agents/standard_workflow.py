@@ -110,6 +110,25 @@ def _build_minimal_user_context_for_grounded_synthesis(user_context: dict[str, A
     return {key: user_context.get(key) for key in allowed_keys if key in user_context}
 
 
+def _first_document_page_number(chunk: Any) -> int | None:
+    if chunk is None:
+        return None
+
+    page_numbers = getattr(chunk, "page_numbers", None)
+    if isinstance(page_numbers, list):
+        for item in page_numbers:
+            try:
+                return int(item)
+            except (TypeError, ValueError):
+                continue
+
+    page_number = getattr(chunk, "page_number", None)
+    try:
+        return int(page_number) if page_number is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _resolve_generation_agent_role(state: WorkflowState) -> str:
     explicit_role = state.context_data.get("agent_role")
     if explicit_role:
@@ -1058,12 +1077,13 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                         snippet = chunk.content.strip()
                         if len(snippet) > 400:
                             snippet = snippet[:400] + "..."
+                        page_number = _first_document_page_number(chunk)
 
                         label_parts = [item.file_name]
                         if chunk.section_title:
                             label_parts.append(chunk.section_title)
-                        if chunk.page_number is not None:
-                            label_parts.append(f"p{chunk.page_number}")
+                        if page_number is not None:
+                            label_parts.append(f"p{page_number}")
                         label_parts.append(f"#{chunk.chunk_index}")
                         label = " | ".join(label_parts)
                         lines.append(f"- [{label}] {snippet}")
@@ -1082,7 +1102,7 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                                     url="",
                                     score=item.score,
                                     file_id=str(chunk.file_id),
-                                    page_number=chunk.page_number or 0,
+                                    page_number=page_number or 0,
                                     chunk_index=chunk.chunk_index,
                                     section_title=chunk.section_title or "",
                                 )
@@ -2220,6 +2240,8 @@ def _should_use_slim_standard_context(state: WorkflowState, user_message: str) -
     context_data = state.context_data or {}
     chat_mode = str(context_data.get("chat_mode") or "standard").strip().lower()
     if chat_mode not in {"standard", "chat"}:
+        return False
+    if context_data.get("file_ids"):
         return False
     if context_data.get("planned_tool_sequence"):
         return False

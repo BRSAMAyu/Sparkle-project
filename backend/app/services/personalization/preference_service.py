@@ -11,6 +11,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 
 
@@ -219,8 +220,20 @@ class PreferenceService:
         prefs = result.scalar_one_or_none()
         if prefs:
             return prefs
+
+        user_exists = await self.db.execute(select(User.id).where(User.id == user_id))
+        if user_exists.scalar_one_or_none() is None:
+            logger.warning("PreferenceService: user {} not found, returning transient defaults", user_id)
+            return UserPreferencesCenter(
+                user_id=user_id,
+                version=1,
+                explicit=self.DEFAULT_EXPLICIT.copy(),
+                inferred={},
+            )
+
         prefs = UserPreferencesCenter(
             user_id=user_id,
+            version=1,
             explicit=self.DEFAULT_EXPLICIT.copy(),
             inferred={},
         )

@@ -27,6 +27,11 @@ from app.services.glm_batch_service import glm_batch_service
 router = APIRouter()
 
 
+def get_celery_status() -> dict:
+    """Backward-compatible Celery health probe for capsule batch generation."""
+    return get_celery_queue_status(settings.GLM_BATCH_QUEUE)
+
+
 # =============================================================================
 # Schema 定义
 # =============================================================================
@@ -338,7 +343,7 @@ async def request_batch_generation(
             "reason": "interactive_manual_request",
         }
         if interactive_manual_request
-        else get_celery_queue_status(settings.GLM_BATCH_QUEUE)
+        else get_celery_status()
     )
     dispatch = glm_batch_service.decide_capsule_dispatch(
         depth_preference=request.depth_preference,

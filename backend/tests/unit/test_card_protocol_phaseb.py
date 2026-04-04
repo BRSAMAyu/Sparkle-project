@@ -290,6 +290,29 @@ async def test_complete_phase_requires_feedback_and_weighted_progress(db_session
 
 
 @pytest.mark.asyncio
+async def test_sync_legacy_plan_progress_returns_none_for_partial_shadow_projection(db_session, test_user):
+    fake_bus = FakeEventBus()
+    plan = await _make_plan(db_session, test_user.id, name="Partial Projection Plan")
+    plan_card = await PlanAdapter(db_session, fake_bus).plan_to_card(plan)
+    service = PhaseService(db_session, fake_bus)
+
+    task_one = await _make_task(db_session, user_id=test_user.id, plan_id=plan.id, title="Projected task")
+    await _make_task(db_session, user_id=test_user.id, plan_id=plan.id, title="Unprojected task")
+    task_card_one = await TaskAdapter(db_session, fake_bus).task_to_card(task_one)
+    synthetic_phase = (await service.get_plan_phases(plan_card.id))[0]
+
+    await CardOperationsService(db_session, fake_bus).move_card(
+        card_id=task_card_one.id,
+        new_parent_card_id=synthetic_phase.id,
+        user_id=test_user.id,
+    )
+
+    weighted_progress = await service.sync_legacy_plan_progress(plan.id, test_user.id)
+
+    assert weighted_progress is None
+
+
+@pytest.mark.asyncio
 async def test_activate_phase_blocked_when_previous_phase_gate_not_submitted(db_session, test_user):
     """activate_phase must raise ValueError if the preceding phase requires feedback that was not submitted."""
     fake_bus = FakeEventBus()

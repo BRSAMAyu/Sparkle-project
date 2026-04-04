@@ -7,6 +7,7 @@ import pytest
 from uuid import uuid4
 from datetime import timezone, datetime, timedelta
 
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task, TaskStatus, TaskType
@@ -207,3 +208,65 @@ async def test_plan_progress_ignores_other_users_tasks(db_session: AsyncSession)
     result = await PlanService.update_progress(db_session, plan_a.id, user_b)
 
     assert result is None, "Should not update progress for unauthorized user"
+
+
+@pytest.mark.asyncio
+async def test_plan_progress_falls_back_when_shadow_card_progress_query_fails(db_session: AsyncSession, monkeypatch):
+    """
+    Regression: card-shadow progress queries must not poison the legacy fallback.
+
+    If weighted progress hits missing card schema, legacy task-count progress should
+    still complete on the same session.
+    """
+    user_id = uuid4()
+
+    plan = Plan(
+        id=uuid4(),
+        user_id=user_id,
+        name="阴影卡片回退测试",
+        type=PlanType.SPRINT,
+        progress=0.0,
+        is_active=True,
+    )
+    db_session.add(plan)
+    await db_session.commit()
+
+    completed_task = Task(
+        id=uuid4(),
+        user_id=user_id,
+        plan_id=plan.id,
+        title="已完成任务",
+        type=TaskType.LEARNING,
+        status=TaskStatus.COMPLETED,
+        estimated_minutes=30,
+    )
+    pending_task = Task(
+        id=uuid4(),
+        user_id=user_id,
+        plan_id=plan.id,
+        title="待完成任务",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=30,
+    )
+    db_session.add_all([completed_task, pending_task])
+    await db_session.commit()
+
+    async def _poison_shadow_progress(self, *, legacy_plan_id, user_id):
+        del legacy_plan_id, user_id
+        await self.db.execute(text("SELECT * FROM missing_card_shadow_progress"))
+        return None
+
+    monkeypatch.setattr(
+        "app.services.card_protocol.phase_service.PhaseService.sync_legacy_plan_progress",
+        _poison_shadow_progress,
+    )
+
+    new_progress = await PlanService.update_progress(db_session, plan.id, user_id)
+
+    await db_session.refresh(plan)
+    remaining_tasks = await db_session.execute(select(Task).where(Task.plan_id == plan.id))
+
+    assert new_progress == 0.5
+    assert plan.progress == 0.5
+    assert len(remaining_tasks.scalars().all()) == 2

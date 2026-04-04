@@ -58,7 +58,7 @@ class PersonalizationEngine:
 
         # 显式未设置时，使用推断值
         depth = explicit.get("depth_preference")
-        if depth is None or prefs.last_explicit_update is None:
+        if depth is None:
             depth = explicit.get(
                 "depth_preference_signal",
                 inferred.get("depth_preference_signal", inferred.get("depth_preference", 0.5)),
@@ -82,7 +82,7 @@ class PersonalizationEngine:
         # 标记来源（用于调试）
         depth_source = (
             "explicit"
-            if explicit.get("depth_preference") is not None and prefs.last_explicit_update is not None
+            if explicit.get("depth_preference") is not None
             else "inferred"
         )
         curiosity_source = "explicit" if explicit.get("curiosity_preference") is not None else "inferred"
@@ -342,7 +342,7 @@ class PersonalizationEngine:
             explicit.update(override_preferences)
 
         focus_duration = explicit.get("focus_duration_preference")
-        if focus_duration is None or prefs.last_explicit_update is None:
+        if focus_duration is None:
             inferred_focus = explicit.get("preferred_focus_duration", inferred.get("preferred_focus_duration"))
             if isinstance(inferred_focus, (int, float)):
                 focus_duration = int(inferred_focus)

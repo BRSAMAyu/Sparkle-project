@@ -1821,7 +1821,7 @@ class ChatOrchestrator(
                 COLLABORATION_SUCCESS.labels(
                     workflow_type="standard_chat", agents_used="orchestrator", outcome="error"
                 ).inc()
-                logger.error(f"Orchestration Error: {e}", exc_info=True)
+                logger.opt(exception=e).error("Orchestration Error")
                 await self._update_state(session_id, STATE_FAILED, str(e))
                 if transparency_generator is not None and emit_transparency_event is not None:
                     await emit_transparency_event(transparency_generator.get_complete_event())
