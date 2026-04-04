@@ -1,3 +1,4 @@
+from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
 from app.semantic.state_primitives import StudyDomainSemanticAdapter
 from app.orchestration.situation_brief import SituationBriefBuilder, format_situation_brief_section
 
@@ -84,6 +85,12 @@ def test_situation_brief_builder_uses_existing_context_sources() -> None:
     assert brief["outcome"]["status"] == "progressing"
     assert brief["sparkle_self_state"]["dual_core_mode"] == "balanced"
     assert brief["sparkle_self_state"]["confidence_estimate"] > 0.5
+    assert brief["decision_context"]["primary_residual"] == "R_e"
+    assert brief["decision_context"]["loop_type"] == "truth_seeking"
+    assert brief["decision_context"]["grounding_priority"][0] == "user_materials"
+    assert brief["decision_context"]["experience_mode"] == "explain"
+    assert brief["decision_context"]["intervention_family"] == "understanding_repair"
+    assert brief["decision_context"]["system_adjustments"][0]["field"] == "retrieval_emphasis"
     assert "progress_snapshot" in brief["source_trace"]["used_sources"]
     assert brief["source_trace"]["semantic_layer"]["adapter_name"] == StudyDomainSemanticAdapter.adapter_name
     assert "vision" in brief["semantic_primitives"]["source_mapping"]
@@ -120,6 +127,15 @@ def test_format_situation_brief_section_renders_compact_prompt_block() -> None:
             "recommended_stance": {
                 "stance": "先抓住最关键阻力，再给结构化推进。",
             },
+            "decision_context": {
+                "what_matters_now": "先找出真正没想通的点，并用用户材料把概念校准清楚。",
+                "primary_residual_label": "cognitive",
+                "loop_type": "truth_seeking",
+                "confidence_label": "high",
+                "experience_mode": "explain",
+                "intervention_family": "understanding_repair",
+                "reversibility_level": "medium",
+            },
         }
     )
 
@@ -128,4 +144,67 @@ def test_format_situation_brief_section_renders_compact_prompt_block() -> None:
     assert "最新证据" in section
     assert "当前干预" in section
     assert "最近结果" in section
+    assert "当前判断" in section
+    assert "残差诊断" in section
+    assert "决策策略" in section
     assert "本轮站位" in section
+
+
+def test_residual_diagnosis_runtime_detects_normative_loop() -> None:
+    diagnosis = ResidualDiagnosisRuntime().diagnose(
+        user_context_payload={
+            "current_query": "I do not want the answer. Help me decide whether I should drop this course.",
+        },
+        plan_context={"plan_title": "Course recovery"},
+        context_briefing_note="User wants help deciding between staying and withdrawing.",
+        visible_update_context={},
+        session_feedback_signal={},
+        user_strategy_state={"session_mode": "guided"},
+        vision={"primary_goal": "Protect GPA"},
+        current_state={"route_intent": "decision", "focus_mode": "general_focus"},
+        primary_obstacle={"summary": "The user is torn between two futures.", "obstacle_type": "alignment_gap"},
+        evidence={"summary": "They have conflicting priorities."},
+        intervention={},
+        outcome={},
+        sparkle_self_state={"confidence_estimate": 0.72},
+    ).to_dict()
+
+    assert diagnosis["primary_residual"] == "R_n"
+    assert diagnosis["loop_type"] == "normative"
+    assert diagnosis["grounding_priority"][0] == "user_values_and_constraints"
+
+
+def test_situation_brief_compiles_decision_policy_for_control_overload() -> None:
+    brief = SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "This is too much and I still cannot start.",
+            "context_focus": {"focus_mode": "general_focus", "route_intent": "chat"},
+            "user_strategy_state": {
+                "difficulty_level": 4,
+                "session_mode": "guided",
+                "intervention_intensity": "medium",
+                "push_vs_support": 0.6,
+            },
+            "profile_context": {
+                "cognitive_summary": {
+                    "active_patterns": [
+                        {"pattern_name": "启动困难", "pattern_type": "execution", "confidence": 0.83}
+                    ]
+                }
+            },
+        },
+        plan_context={"plan_title": "Thermo sprint", "goal": "Finish thermo review"},
+        focused_memory={},
+        context_briefing_note="User is overloaded and struggling to start.",
+        visible_update_context={},
+        dual_core_snapshot={"decision": {"mode": "execution_first"}},
+        session_feedback_signal={},
+        progress_snapshot={"attention_areas": ["Load is too high this week."]},
+        adaptation_records=[],
+    ).to_dict()
+
+    decision_context = brief["decision_context"]
+    assert decision_context["experience_mode"] == "stabilize"
+    assert decision_context["intervention_family"] == "load_shedding"
+    assert decision_context["system_adjustments"][0]["field"] == "session_mode"
+    assert decision_context["system_adjustments"][0]["recommended_value"] == "recovery"

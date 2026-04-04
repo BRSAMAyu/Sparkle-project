@@ -202,6 +202,61 @@ async def test_write_episode_note_tool_persists_episode_layer_note(db_session, t
 
 
 @pytest.mark.asyncio
+async def test_adjust_user_strategy_state_tool_rejects_invalid_episode_plan_id(db_session, test_user):
+    _set_runtime_context(
+        db_session,
+        {
+            "session_id": "session-bridge-invalid-plan",
+            "plan_id": "not-a-uuid",
+            "redis_client": _FakeRedis(),
+        },
+    )
+
+    tool = AdjustUserStrategyStateTool()
+    result = await tool.execute(
+        AdjustUserStrategyStateParams(
+            layer="episode",
+            changes={"retrieval_emphasis": "user_materials"},
+            reason="user asked to ground in their uploaded notes",
+            evidence={"source": "conversation", "snippet": "use my notes"},
+            confidence=0.88,
+        ),
+        user_id=str(test_user.id),
+        db_session=db_session,
+    )
+
+    assert result.success is False
+    assert result.error_type == "invalid_identifier"
+
+
+@pytest.mark.asyncio
+async def test_adjust_user_strategy_state_tool_requires_session_id_for_session_writes(db_session, test_user):
+    _set_runtime_context(
+        db_session,
+        {
+            "plan_id": str(uuid4()),
+            "redis_client": _FakeRedis(),
+        },
+    )
+
+    tool = AdjustUserStrategyStateTool()
+    result = await tool.execute(
+        AdjustUserStrategyStateParams(
+            layer="session",
+            changes={"session_mode": "recovery"},
+            reason="user asked to slow down",
+            evidence={"source": "conversation", "snippet": "slow down"},
+            confidence=0.8,
+        ),
+        user_id=str(test_user.id),
+        db_session=db_session,
+    )
+
+    assert result.success is False
+    assert result.error_type == "missing_identifier"
+
+
+@pytest.mark.asyncio
 async def test_retrieve_user_material_tool_formats_scoped_results(monkeypatch):
     scoped_files = [
         SimpleNamespace(

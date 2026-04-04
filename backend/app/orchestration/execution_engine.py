@@ -1698,6 +1698,12 @@ class ExecutionEngineMixin:
                         summary = str(situation_brief.get("summary") or "").strip()
                         if summary:
                             response_metadata["situation_brief_summary"] = summary
+                        decision_context = situation_brief.get("decision_context")
+                        if isinstance(decision_context, dict):
+                            response_metadata["residual_decision_context"] = json.dumps(
+                                decision_context,
+                                ensure_ascii=False,
+                            )
                     strategy_state = user_context_payload.get("user_strategy_state") if isinstance(user_context_payload, dict) else None
                     if isinstance(strategy_state, dict):
                         response_metadata["user_strategy_state"] = json.dumps(strategy_state, ensure_ascii=False)

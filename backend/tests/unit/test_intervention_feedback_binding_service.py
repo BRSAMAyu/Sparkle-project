@@ -175,3 +175,89 @@ async def test_feedback_binding_suppresses_duplicate_message(db_session, test_us
     assert second["duplicate_suppressed"] is True
     stored = json.loads(redis._kv[f"{service.LAST_FEEDBACK_BINDING_KEY_PREFIX}session-dedupe"])
     assert stored["message_id"] == "msg-dedupe"
+
+
+@pytest.mark.asyncio
+async def test_resolve_active_interventions_ignores_remembered_closed_records(db_session, test_user):
+    redis = _FakeRedis()
+    service = InterventionFeedbackBindingService(db_session, redis=redis)
+    record = InterventionRecord(
+        user_id=test_user.id,
+        trigger_type=InterventionTriggerType.PLAN_RISK,
+        delivery_strategy=DeliveryStrategy.DIRECT,
+        delivery_channel=DeliveryChannel.CHAT,
+        acceptance_status=InterventionAcceptanceStatus.DISMISSED,
+        outcome_status=InterventionOutcomeStatus.PENDING,
+    )
+    db_session.add(record)
+    await db_session.commit()
+    await db_session.refresh(record)
+
+    await service.remember_active_interventions(
+        "session-closed-memory",
+        [{"intervention_id": str(record.id), "source": "session_memory"}],
+    )
+
+    result = await service.bind_feedback(
+        user_id=test_user.id,
+        session_id="session-closed-memory",
+        sentiment="accepted",
+        user_words="Actually this part was okay.",
+        confidence=0.7,
+        message_id="msg-closed",
+    )
+
+    assert result["bound"] is False
+    assert result["reason"] == "no_active_intervention"
+    remembered = json.loads(redis._kv[f"{service.ACTIVE_INTERVENTIONS_KEY_PREFIX}session-closed-memory"])
+    assert remembered == []
+
+
+@pytest.mark.asyncio
+async def test_feedback_binding_suppresses_non_consecutive_duplicate_message(db_session, test_user):
+    redis = _FakeRedis()
+    service = InterventionFeedbackBindingService(db_session, redis=redis)
+    record = InterventionRecord(
+        user_id=test_user.id,
+        trigger_type=InterventionTriggerType.PLAN_RISK,
+        delivery_strategy=DeliveryStrategy.DIRECT,
+        delivery_channel=DeliveryChannel.CHAT,
+        acceptance_status=InterventionAcceptanceStatus.DELIVERED,
+        outcome_status=InterventionOutcomeStatus.PENDING,
+    )
+    db_session.add(record)
+    await db_session.commit()
+    await db_session.refresh(record)
+
+    first = await service.bind_feedback(
+        user_id=test_user.id,
+        session_id="session-non-consecutive-dedupe",
+        sentiment="accepted",
+        user_words="Yes, this framing is better.",
+        confidence=0.8,
+        intervention_id=str(record.id),
+        message_id="msg-a",
+    )
+    second = await service.bind_feedback(
+        user_id=test_user.id,
+        session_id="session-non-consecutive-dedupe",
+        sentiment="mixed",
+        user_words="I am still not fully sure.",
+        confidence=0.6,
+        intervention_id=str(record.id),
+        message_id="msg-b",
+    )
+    third = await service.bind_feedback(
+        user_id=test_user.id,
+        session_id="session-non-consecutive-dedupe",
+        sentiment="accepted",
+        user_words="Yes, this framing is better.",
+        confidence=0.8,
+        intervention_id=str(record.id),
+        message_id="msg-a",
+    )
+
+    assert first["bound"] is True
+    assert second["bound"] is True
+    assert third["bound"] is False
+    assert third["duplicate_suppressed"] is True

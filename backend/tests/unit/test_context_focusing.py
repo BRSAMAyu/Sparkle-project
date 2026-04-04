@@ -151,6 +151,31 @@ def test_build_system_prompt_includes_understanding_depth_hint() -> None:
     assert "当前升级: L3" in prompt
 
 
+def test_build_system_prompt_includes_auto_user_material_grounding_section() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "user_material_grounding": {
+                "status": "grounded",
+                "query": "帮我解释熵增方向判断；先用用户材料校准概念。",
+                "results": [
+                    {
+                        "file_name": "thermo-notes.pdf",
+                        "section_title": "Entropy",
+                        "page_numbers": [12],
+                        "snippet": "熵增方向的判断要先看系统边界，再看不可逆过程的主导项。",
+                    }
+                ],
+            },
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "## 用户材料依据 [L1 证据]" in prompt
+    assert "thermo-notes.pdf / Entropy / p.12" in prompt
+    assert "优先用这些用户材料片段校准概念" in prompt
+
+
 def test_build_system_prompt_includes_actual_cognitive_patterns_and_guidance() -> None:
     prompt = build_system_prompt(
         user_context={
@@ -286,6 +311,39 @@ def test_build_system_prompt_keeps_situation_brief_under_budget_pressure() -> No
     assert "## Situation Brief [L0 简报]" in prompt
     assert "热力学第二章" in prompt
     assert "本轮站位" in prompt
+
+
+def test_build_system_prompt_includes_decision_policy_section() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "residual_decision_context": {
+                "what_matters_now": "先把真正的概念混淆校准清楚。",
+                "experience_mode": "explain",
+                "intervention_family": "understanding_repair",
+                "reversibility_level": "medium",
+                "user_visible_expression": {
+                    "opening_intent": "Start from the actual misconception, not generic encouragement.",
+                    "response_shape": "repair_model_then_verify",
+                },
+                "system_adjustments": [
+                    {
+                        "field": "retrieval_emphasis",
+                        "recommended_value": "user_materials",
+                        "target_layer": "session",
+                    }
+                ],
+                "feedback_hook": {
+                    "ask": "Does this make the actual confusion clearer, or is a different concept still blocking you?",
+                },
+            },
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "## 当前决策策略 [L1 引导]" in prompt
+    assert "本轮模式: explain / understanding_repair / medium" in prompt
+    assert "retrieval_emphasis -> user_materials (session)" in prompt
 
 
 def test_build_system_prompt_uses_soul_runtime_driven_companion_section() -> None:

@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import timezone, datetime
 from typing import Any
 
+from app.orchestration.decision_policy import DecisionPolicyCompiler
+from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
 from app.semantic.state_primitives import StudyDomainSemanticAdapter
 
 
@@ -85,6 +87,7 @@ class SituationBrief:
     outcome: dict[str, Any]
     sparkle_self_state: dict[str, Any]
     recommended_stance: dict[str, Any]
+    decision_context: dict[str, Any]
     semantic_primitives: dict[str, Any]
     source_trace: dict[str, Any]
 
@@ -101,6 +104,7 @@ class SituationBrief:
             "outcome": self.outcome,
             "sparkle_self_state": self.sparkle_self_state,
             "recommended_stance": self.recommended_stance,
+            "decision_context": self.decision_context,
             "semantic_primitives": self.semantic_primitives,
             "source_trace": self.source_trace,
         }
@@ -183,6 +187,37 @@ class SituationBriefBuilder:
             intervention=intervention,
             outcome=outcome,
         )
+        diagnosis = ResidualDiagnosisRuntime().diagnose(
+            user_context_payload=user_context,
+            plan_context=plan_context,
+            context_briefing_note=context_briefing_note,
+            visible_update_context=visible_update_context,
+            session_feedback_signal=session_feedback_signal,
+            user_strategy_state=user_strategy_state,
+            vision=vision,
+            current_state=current_state,
+            primary_obstacle=primary_obstacle,
+            evidence=evidence,
+            intervention=intervention,
+            outcome=outcome,
+            sparkle_self_state=sparkle_self_state,
+        ).to_dict()
+        decision_policy = DecisionPolicyCompiler().compile(
+            diagnosis=diagnosis,
+            user_context_payload=user_context,
+            user_strategy_state=user_strategy_state,
+            recommended_stance=recommended_stance,
+            vision=vision,
+            current_state=current_state,
+            primary_obstacle=primary_obstacle,
+            intervention=intervention,
+            outcome=outcome,
+            sparkle_self_state=sparkle_self_state,
+        ).to_dict()
+        decision_context = {
+            **diagnosis,
+            **decision_policy,
+        }
         focus_question = self._build_focus_question(
             vision=vision,
             primary_obstacle=primary_obstacle,
@@ -196,6 +231,7 @@ class SituationBriefBuilder:
             intervention=intervention,
             outcome=outcome,
             recommended_stance=recommended_stance,
+            decision_context=decision_context,
         )
 
         return SituationBrief(
@@ -209,6 +245,7 @@ class SituationBriefBuilder:
             outcome=outcome,
             sparkle_self_state=sparkle_self_state,
             recommended_stance=recommended_stance,
+            decision_context=decision_context,
             semantic_primitives=semantic_primitives,
             source_trace=source_trace,
         )
@@ -409,6 +446,7 @@ class SituationBriefBuilder:
         intervention: dict[str, Any],
         outcome: dict[str, Any],
         recommended_stance: dict[str, Any],
+        decision_context: dict[str, Any],
     ) -> str:
         goal = _strip(vision.get("primary_goal") or vision.get("active_plan") or "当前目标")
         current_snapshot = _strip(current_state.get("snapshot"))
@@ -417,6 +455,7 @@ class SituationBriefBuilder:
         intervention_summary = _strip(intervention.get("summary") or intervention.get("label"))
         outcome_summary = _strip(outcome.get("summary") or outcome.get("latest_signal"))
         stance = _strip(recommended_stance.get("stance"))
+        what_matters_now = _strip(decision_context.get("what_matters_now"))
 
         parts = [f"目标图景是「{goal}」"]
         if current_snapshot:
@@ -428,6 +467,8 @@ class SituationBriefBuilder:
             parts.append(f"当前干预是 {intervention_summary}")
         elif outcome_summary:
             parts.append(f"最近结果是 {outcome_summary}")
+        if what_matters_now:
+            parts.append(f"当前判断是 {what_matters_now}")
         if stance:
             parts.append(f"本轮宜 {stance}")
         return "；".join(parts[:6]) + "。"
@@ -448,6 +489,7 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     intervention = _as_dict(payload.get("intervention") or semantic_primitives.get("intervention"))
     outcome = _as_dict(payload.get("outcome") or semantic_primitives.get("outcome"))
     stance = _as_dict(payload.get("recommended_stance"))
+    decision_context = _as_dict(payload.get("decision_context"))
 
     current_line_parts = [
         _strip(current_state.get("snapshot")),
@@ -489,7 +531,26 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     outcome_line = _strip(outcome.get("summary") or outcome.get("latest_signal"))
     if outcome_line:
         lines.append(f"- 最近结果: {outcome_line}")
+    decision_line = _strip(decision_context.get("what_matters_now"))
+    if decision_line:
+        lines.append(f"- 当前判断: {decision_line}")
+    diagnosis_bits = [
+        _strip(decision_context.get("primary_residual_label")),
+        _strip(decision_context.get("loop_type")),
+        _strip(decision_context.get("confidence_label")),
+    ]
+    diagnosis_line = " / ".join(bit for bit in diagnosis_bits if bit)
+    if diagnosis_line:
+        lines.append(f"- 残差诊断: {diagnosis_line}")
+    policy_bits = [
+        _strip(decision_context.get("experience_mode")),
+        _strip(decision_context.get("intervention_family")),
+        _strip(decision_context.get("reversibility_level")),
+    ]
+    policy_line = " / ".join(bit for bit in policy_bits if bit)
+    if policy_line:
+        lines.append(f"- 决策策略: {policy_line}")
     stance_line = _strip(stance.get("stance"))
     if stance_line:
         lines.append(f"- 本轮站位: {stance_line}")
-    return "\n" + "\n".join(lines[:11])
+    return "\n" + "\n".join(lines[:14])

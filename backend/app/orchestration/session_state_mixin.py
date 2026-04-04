@@ -329,12 +329,19 @@ class SessionStateMixin:
         ).to_dict()
 
         user_context_payload["situation_brief"] = situation_brief
+        decision_context = situation_brief.get("decision_context") if isinstance(situation_brief, dict) else None
+        if isinstance(decision_context, dict):
+            user_context_payload["residual_decision_context"] = decision_context
 
         if isinstance(state, WorkflowState):
             state.context_data["situation_brief"] = situation_brief
+            if isinstance(decision_context, dict):
+                state.context_data["residual_decision_context"] = decision_context
             existing_user_context = state.context_data.get("user_context")
             if isinstance(existing_user_context, dict):
                 existing_user_context["situation_brief"] = situation_brief
+                if isinstance(decision_context, dict):
+                    existing_user_context["residual_decision_context"] = decision_context
 
         return user_context_payload
 

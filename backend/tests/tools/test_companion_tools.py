@@ -122,3 +122,49 @@ async def test_get_companion_state_tolerates_non_uuid_plan_id(monkeypatch):
     assert result.success is True
     _, kwargs = fake_service.get_effective_state.await_args
     assert kwargs["plan_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_adjust_companion_state_requires_session_id(monkeypatch):
+    fake_service = SimpleNamespace(write_session_state=AsyncMock())
+    monkeypatch.setattr("app.tools.companion_tools.CompanionStateService", lambda *args, **kwargs: fake_service)
+
+    tool = AdjustCompanionStateTool()
+    result = await tool.execute(
+        AdjustCompanionStateParams(
+            field="warmth_calibration",
+            value=0.6,
+            reason="User needs slightly warmer pacing.",
+            evidence={"source": "conversation", "snippet": "be a bit warmer", "measurable_effect": False},
+            confidence=0.78,
+        ),
+        user_id="00000000-0000-0000-0000-000000000000",
+        db_session=_DbSessionStub({}),
+    )
+
+    assert result.success is False
+    assert result.error_type == "missing_identifier"
+    fake_service.write_session_state.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_write_relationship_note_rejects_invalid_plan_id(monkeypatch):
+    fake_service = SimpleNamespace(write_relationship_note=AsyncMock())
+    monkeypatch.setattr("app.tools.companion_tools.CompanionStateService", lambda *args, **kwargs: fake_service)
+
+    tool = WriteRelationshipNoteTool()
+    result = await tool.execute(
+        WriteRelationshipNoteParams(
+            note="User trusts directness when it stays warm.",
+            note_kind="boundary",
+            reason="Repeated chats showed this clearly.",
+            evidence={"source": "conversation", "snippet": "直接说但别冷", "measurable_effect": True},
+            confidence=0.84,
+        ),
+        user_id="00000000-0000-0000-0000-000000000000",
+        db_session=_DbSessionStub({"session_id": "session-1", "plan_id": "plan-deadbeef"}),
+    )
+
+    assert result.success is False
+    assert result.error_type == "invalid_identifier"
+    fake_service.write_relationship_note.assert_not_awaited()

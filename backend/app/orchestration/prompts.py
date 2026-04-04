@@ -55,6 +55,8 @@ _TIER_PROMPT_BUDGET: dict[str, int] = {
 
 _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "situation_brief_section": (140, 0.12),
+    "decision_policy_section": (110, 0.08),
+    "user_material_grounding_section": (120, 0.08),
     "context_briefing_section": (80, 0.05),
     "intent_section": (100, 0.08),
     "session_feedback_section": (60, 0.05),
@@ -309,6 +311,10 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 {agent_persona_section}
 
 {situation_brief_section}
+
+{decision_policy_section}
+
+{user_material_grounding_section}
 
 ## 当前用户上下文
 
@@ -926,6 +932,8 @@ def build_system_prompt(
     )
     constitution_guardrail_section = _format_constitution_guardrail_section(user_context=user_context)
     visible_intelligence_section = _format_visible_intelligence_section(user_context=user_context)
+    decision_policy_section = _format_decision_policy_section(user_context=user_context)
+    user_material_grounding_section = _format_user_material_grounding_section(user_context=user_context)
 
     agent_memory_section = ""
     if agent_memory_context:
@@ -1053,6 +1061,8 @@ def build_system_prompt(
     )
     section_map = {
         "situation_brief_section": situation_brief_section,
+        "decision_policy_section": decision_policy_section,
+        "user_material_grounding_section": user_material_grounding_section,
         "context_briefing_section": context_briefing_section,
         "visible_intelligence_section": visible_intelligence_section,
         "intent_section": intent_section,
@@ -1094,6 +1104,8 @@ def build_system_prompt(
         section_map,
         priority_map={
             "situation_brief_section": 0,
+            "decision_policy_section": 1,
+            "user_material_grounding_section": 1,
             "context_briefing_section": 0,
             "visible_intelligence_section": 1,
             "intent_section": 1,
@@ -1119,6 +1131,8 @@ def build_system_prompt(
         budget_tokens=_prompt_budget,
     )
     situation_brief_section = section_map["situation_brief_section"]
+    decision_policy_section = section_map["decision_policy_section"]
+    user_material_grounding_section = section_map["user_material_grounding_section"]
     context_briefing_section = section_map["context_briefing_section"]
     visible_intelligence_section = section_map["visible_intelligence_section"]
     intent_section = section_map["intent_section"]
@@ -1172,6 +1186,8 @@ def build_system_prompt(
                 agent_persona_section=agent_persona_section,
                 agent_memory_section=agent_memory_section,
                 situation_brief_section=situation_brief_section,
+                decision_policy_section=decision_policy_section,
+                user_material_grounding_section=user_material_grounding_section,
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
                 cognitive_prism_section=cognitive_prism_section,
@@ -1187,6 +1203,8 @@ def build_system_prompt(
                 constitution_guardrail_section,
                 agent_persona_section,
                 "" if embed_situation_brief_in_user_context else situation_brief_section,
+                decision_policy_section,
+                user_material_grounding_section,
                 plan_context_section,
                 conversation_history_section,
                 context_briefing_section,
@@ -1220,6 +1238,8 @@ def build_system_prompt(
                 companion_persona_section=companion_persona_section,
                 constitution_guardrail_section=constitution_guardrail_section,
                 situation_brief_section=situation_brief_section,
+                decision_policy_section=decision_policy_section,
+                user_material_grounding_section=user_material_grounding_section,
             )
         )
 
@@ -1231,6 +1251,8 @@ def build_system_prompt(
             constitution_guardrail_section,
             agent_persona_section,
             situation_brief_section,
+            decision_policy_section,
+            user_material_grounding_section,
             plan_context_section,
             conversation_history_section,
             context_briefing_section,
@@ -1446,7 +1468,11 @@ def _format_companion_persona_section(
         )
 
     context_focus = user_context.get("context_focus") if isinstance(user_context, dict) else None
-    section_weights = context_focus.get("section_weights") if isinstance(context_focus, dict) else {}
+    section_weights = (
+        context_focus.get("section_weights")
+        if isinstance(context_focus, dict) and isinstance(context_focus.get("section_weights"), dict)
+        else {}
+    )
     plan_weight = str(section_weights.get("plan_context") or "").strip().lower()
     goals_weight = str(section_weights.get("goals") or "").strip().lower()
     cognitive_weight = str(section_weights.get("cognitive_prism") or "").strip().lower()
@@ -1639,6 +1665,94 @@ def _format_visible_intelligence_section(*, user_context: dict) -> str:
     if post_adaptation_question:
         lines.append(f"- 若提到调整，可顺手确认: {post_adaptation_question}")
     lines.append("- 语气要像一直在关注用户的学习伙伴，不要像系统通知或播报日志。")
+    return "\n" + "\n".join(lines)
+
+
+def _format_decision_policy_section(*, user_context: dict) -> str:
+    decision_context = user_context.get("residual_decision_context") if isinstance(user_context, dict) else None
+    if not isinstance(decision_context, dict):
+        situation_brief = user_context.get("situation_brief") if isinstance(user_context, dict) else None
+        if isinstance(situation_brief, dict):
+            decision_context = situation_brief.get("decision_context")
+    if not isinstance(decision_context, dict):
+        return ""
+
+    experience_mode = str(decision_context.get("experience_mode") or "").strip()
+    intervention_family = str(decision_context.get("intervention_family") or "").strip()
+    reversibility_level = str(decision_context.get("reversibility_level") or "").strip()
+    visible_expression = decision_context.get("user_visible_expression")
+    visible_expression = visible_expression if isinstance(visible_expression, dict) else {}
+    feedback_hook = decision_context.get("feedback_hook")
+    feedback_hook = feedback_hook if isinstance(feedback_hook, dict) else {}
+    adjustments = decision_context.get("system_adjustments")
+    adjustments = [item for item in adjustments if isinstance(item, dict)] if isinstance(adjustments, list) else []
+    what_matters_now = str(decision_context.get("what_matters_now") or "").strip()
+
+    if not any([experience_mode, intervention_family, what_matters_now, adjustments]):
+        return ""
+
+    lines = ["## 当前决策策略 [L1 引导]"]
+    if what_matters_now:
+        lines.append(f"- 当前最重要的是: {what_matters_now}")
+    if experience_mode or intervention_family or reversibility_level:
+        bits = [bit for bit in [experience_mode, intervention_family, reversibility_level] if bit]
+        if bits:
+            lines.append(f"- 本轮模式: {' / '.join(bits)}")
+    opening_intent = str(visible_expression.get("opening_intent") or "").strip()
+    response_shape = str(visible_expression.get("response_shape") or "").strip()
+    if opening_intent:
+        lines.append(f"- 开场原则: {opening_intent}")
+    if response_shape:
+        lines.append(f"- 回答结构: {response_shape}")
+    if adjustments:
+        first = adjustments[0]
+        lines.append(
+            f"- 建议中的系统调整: {first.get('field')} -> {first.get('recommended_value')} ({first.get('target_layer')})"
+        )
+    feedback_ask = str(feedback_hook.get("ask") or "").strip()
+    if feedback_ask:
+        lines.append(f"- 回合结束前最好确认: {feedback_ask}")
+    lines.append("- 不要暴露 residual、policy、runtime 等内部术语，用自然语言把这套判断落到回答里。")
+    return "\n" + "\n".join(lines)
+
+
+def _format_user_material_grounding_section(*, user_context: dict) -> str:
+    grounding = user_context.get("user_material_grounding") if isinstance(user_context, dict) else None
+    if not isinstance(grounding, dict):
+        return ""
+
+    status = str(grounding.get("status") or "").strip()
+    query = str(grounding.get("query") or "").strip()
+    results = [item for item in (grounding.get("results") or []) if isinstance(item, dict)]
+    if not status and not results:
+        return ""
+
+    lines = ["## 用户材料依据 [L1 证据]"]
+    if query:
+        lines.append(f"- 本轮已按该查询预取用户材料: {query}")
+
+    if status == "grounded" and results:
+        lines.append("- 回答时优先用这些用户材料片段校准概念、范围和措辞；若材料不足，再补通用知识。")
+        for item in results[:3]:
+            label_parts = [str(item.get("file_name") or "").strip()]
+            section_title = str(item.get("section_title") or "").strip()
+            if section_title:
+                label_parts.append(section_title)
+            page_numbers = item.get("page_numbers") or []
+            if isinstance(page_numbers, list) and page_numbers:
+                label_parts.append(f"p.{','.join(str(page) for page in page_numbers[:3])}")
+            label = " / ".join(part for part in label_parts if part)
+            snippet = str(item.get("snippet") or "").strip()
+            if label and snippet:
+                lines.append(f"- {label}: {snippet}")
+            elif snippet:
+                lines.append(f"- {snippet}")
+    elif status in {"no_hits", "no_scoped_files", "retrieval_failed", "file_resolution_failed"}:
+        lines.append("- 当前策略要求先看用户材料，但这轮没有拿到足够可用的材料证据。")
+        lines.append("- 若继续回答，请明确缩小结论范围，并把通用知识当作补充而不是替代。")
+    else:
+        return ""
+
     return "\n" + "\n".join(lines)
 
 
@@ -2077,6 +2191,10 @@ def _normalize_user_context(context: dict) -> dict:
 
     if isinstance(context.get("user_strategy_state"), dict):
         normalized["user_strategy_state"] = context["user_strategy_state"]
+    if isinstance(context.get("residual_decision_context"), dict):
+        normalized["residual_decision_context"] = context["residual_decision_context"]
+    if isinstance(context.get("user_material_grounding"), dict):
+        normalized["user_material_grounding"] = context["user_material_grounding"]
 
     return normalized
 

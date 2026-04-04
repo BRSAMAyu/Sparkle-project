@@ -8,7 +8,7 @@ from typing import Any
 from app.orchestration.companion_constitution import COMPANION_CONSTITUTION, CONSTITUTION_VERSION
 from app.orchestration.companion_identity_kernel import IDENTITY_KERNEL_VERSION, SPARKLE_IDENTITY_KERNEL
 
-SOUL_COMPILER_VERSION = "2026-04-04.shadow.v1"
+SOUL_COMPILER_VERSION = "2026-04-04.v1"
 
 
 @dataclass(frozen=True)

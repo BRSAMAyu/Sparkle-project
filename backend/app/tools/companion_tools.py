@@ -65,24 +65,44 @@ class GetSelfRevisionHistoryParams(BaseModel):
     limit: int = Field(default=10, ge=1, le=20)
 
 
-def _resolve_runtime_ids(
-    db_session: Any, session_id: str | None, plan_id: str | None
-) -> tuple[str | None, UUID | None]:
+def _resolve_runtime_identifiers(db_session: Any, session_id: str | None, plan_id: str | None) -> dict[str, Any]:
     runtime_context = get_tool_runtime_context(db_session)
-    resolved_session_id = str(session_id or runtime_context.get("session_id") or "").strip() or None
-    raw_plan_id = str(plan_id or runtime_context.get("plan_id") or "").strip()
+    raw_session_id = str(session_id if session_id is not None else runtime_context.get("session_id") or "").strip()
+    raw_plan_id = str(plan_id if plan_id is not None else runtime_context.get("plan_id") or "").strip()
     resolved_plan_id: UUID | None = None
+    invalid_plan_id = False
     if raw_plan_id:
         try:
             resolved_plan_id = UUID(raw_plan_id)
         except (TypeError, ValueError):
-            resolved_plan_id = None
-    return resolved_session_id, resolved_plan_id
+            invalid_plan_id = True
+    return {
+        "session_id": raw_session_id or None,
+        "plan_id": resolved_plan_id,
+        "raw_plan_id": raw_plan_id,
+        "invalid_plan_id": invalid_plan_id,
+    }
 
 
 def _runtime_redis(db_session: Any):
     runtime_context = get_tool_runtime_context(db_session)
     return runtime_context.get("redis_client") or cache_service.redis
+
+
+def _identifier_error_result(
+    tool_name: str,
+    *,
+    message: str,
+    error_type: str,
+    tool_call_id: str | None = None,
+) -> ToolResult:
+    return ToolResult(
+        success=False,
+        tool_name=tool_name,
+        tool_call_id=tool_call_id,
+        error_message=message,
+        error_type=error_type,
+    )
 
 
 class GetCompanionStateTool(BaseTool):
@@ -99,21 +119,23 @@ class GetCompanionStateTool(BaseTool):
         tool_call_id: str | None = None,
     ) -> ToolResult:
         user_uuid = UUID(user_id)
-        session_id, plan_id = _resolve_runtime_ids(db_session, params.session_id, params.plan_id)
+        identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
         service = CompanionStateService(db_session, redis=_runtime_redis(db_session))
 
         data = {
             "effective_companion_state": await service.get_effective_state(
                 user_uuid,
-                plan_id=plan_id,
-                session_id=session_id,
+                plan_id=identifiers["plan_id"],
+                session_id=identifiers["session_id"],
             ),
         }
         if params.include_relationship_profile:
             data["relationship_profile"] = await service.get_relationship_profile(user_uuid)
         if params.include_recent_revisions:
             data["recent_revisions"] = await service.get_self_revision_history(
-                user_uuid, plan_id=plan_id, session_id=session_id
+                user_uuid,
+                plan_id=identifiers["plan_id"],
+                session_id=identifiers["session_id"],
             )
         return ToolResult(success=True, tool_name=self.name, tool_call_id=tool_call_id, data=data)
 
@@ -140,17 +162,31 @@ class AdjustCompanionStateTool(BaseTool):
                 error_type="invalid_field",
             )
         try:
-            session_id, plan_id = _resolve_runtime_ids(db_session, params.session_id, params.plan_id)
+            identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
+            if not identifiers["session_id"]:
+                return _identifier_error_result(
+                    self.name,
+                    message="Companion session writes require a valid session_id in params or runtime context.",
+                    error_type="missing_identifier",
+                    tool_call_id=tool_call_id,
+                )
+            if identifiers["invalid_plan_id"]:
+                return _identifier_error_result(
+                    self.name,
+                    message=f"Companion writes require a UUID plan_id when provided, got: {identifiers['raw_plan_id']}",
+                    error_type="invalid_identifier",
+                    tool_call_id=tool_call_id,
+                )
             service = CompanionStateService(db_session, redis=_runtime_redis(db_session))
             data = await service.write_session_state(
                 user_id=UUID(user_id),
-                session_id=session_id or "",
+                session_id=identifiers["session_id"],
                 field=params.field,
                 value=params.value,
                 reason=params.reason,
                 evidence=params.evidence.model_dump(),
                 confidence=params.confidence,
-                plan_id=plan_id,
+                plan_id=identifiers["plan_id"],
             )
             return ToolResult(success=True, tool_name=self.name, tool_call_id=tool_call_id, data=data)
         except Exception as exc:
@@ -177,16 +213,30 @@ class WriteCompanionGrowthNoteTool(BaseTool):
         tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
-            session_id, plan_id = _resolve_runtime_ids(db_session, params.session_id, params.plan_id)
+            identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
+            if not identifiers["session_id"]:
+                return _identifier_error_result(
+                    self.name,
+                    message="Companion growth notes require a valid session_id in params or runtime context.",
+                    error_type="missing_identifier",
+                    tool_call_id=tool_call_id,
+                )
+            if identifiers["invalid_plan_id"]:
+                return _identifier_error_result(
+                    self.name,
+                    message=f"Companion growth notes require a UUID plan_id when provided, got: {identifiers['raw_plan_id']}",
+                    error_type="invalid_identifier",
+                    tool_call_id=tool_call_id,
+                )
             service = CompanionStateService(db_session, redis=_runtime_redis(db_session))
             data = await service.write_companion_growth_note(
                 user_id=UUID(user_id),
-                session_id=session_id or "",
+                session_id=identifiers["session_id"],
                 note=params.note,
                 reason=params.reason,
                 evidence=params.evidence.model_dump(),
                 confidence=params.confidence,
-                plan_id=plan_id,
+                plan_id=identifiers["plan_id"],
             )
             return ToolResult(success=True, tool_name=self.name, tool_call_id=tool_call_id, data=data)
         except Exception as exc:
@@ -213,17 +263,31 @@ class WriteRelationshipNoteTool(BaseTool):
         tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
-            session_id, plan_id = _resolve_runtime_ids(db_session, params.session_id, params.plan_id)
+            identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
+            if not identifiers["session_id"]:
+                return _identifier_error_result(
+                    self.name,
+                    message="Relationship notes require a valid session_id in params or runtime context.",
+                    error_type="missing_identifier",
+                    tool_call_id=tool_call_id,
+                )
+            if identifiers["invalid_plan_id"]:
+                return _identifier_error_result(
+                    self.name,
+                    message=f"Relationship notes require a UUID plan_id when provided, got: {identifiers['raw_plan_id']}",
+                    error_type="invalid_identifier",
+                    tool_call_id=tool_call_id,
+                )
             service = CompanionStateService(db_session, redis=_runtime_redis(db_session))
             data = await service.write_relationship_note(
                 user_id=UUID(user_id),
-                session_id=session_id or "",
+                session_id=identifiers["session_id"],
                 note=params.note,
                 note_kind=params.note_kind,
                 reason=params.reason,
                 evidence=params.evidence.model_dump(),
                 confidence=params.confidence,
-                plan_id=plan_id,
+                plan_id=identifiers["plan_id"],
             )
             return ToolResult(success=True, tool_name=self.name, tool_call_id=tool_call_id, data=data)
         except Exception as exc:
@@ -249,13 +313,13 @@ class GetSelfRevisionHistoryTool(BaseTool):
         db_session: Any,
         tool_call_id: str | None = None,
     ) -> ToolResult:
-        session_id, plan_id = _resolve_runtime_ids(db_session, params.session_id, params.plan_id)
+        identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
         service = CompanionStateService(db_session, redis=_runtime_redis(db_session))
         data = {
             "recent_revisions": await service.get_self_revision_history(
                 UUID(user_id),
-                plan_id=plan_id,
-                session_id=session_id,
+                plan_id=identifiers["plan_id"],
+                session_id=identifiers["session_id"],
                 limit=params.limit,
             )
         }

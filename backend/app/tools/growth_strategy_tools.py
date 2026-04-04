@@ -60,19 +60,39 @@ def _runtime_redis(db_session: Any):
     return runtime_context.get("redis_client") or cache_service.redis
 
 
-def _resolve_runtime_ids(
-    db_session: Any, session_id: str | None, plan_id: str | None
-) -> tuple[str | None, UUID | None]:
+def _resolve_runtime_identifiers(db_session: Any, session_id: str | None, plan_id: str | None) -> dict[str, Any]:
     runtime_context = get_tool_runtime_context(db_session)
-    resolved_session_id = str(session_id or runtime_context.get("session_id") or "").strip() or None
-    raw_plan_id = str(plan_id or runtime_context.get("plan_id") or "").strip()
+    raw_session_id = str(session_id if session_id is not None else runtime_context.get("session_id") or "").strip()
+    raw_plan_id = str(plan_id if plan_id is not None else runtime_context.get("plan_id") or "").strip()
     resolved_plan_id: UUID | None = None
+    invalid_plan_id = False
     if raw_plan_id:
         try:
             resolved_plan_id = UUID(raw_plan_id)
         except (TypeError, ValueError):
-            resolved_plan_id = None
-    return resolved_session_id, resolved_plan_id
+            invalid_plan_id = True
+    return {
+        "session_id": raw_session_id or None,
+        "plan_id": resolved_plan_id,
+        "raw_plan_id": raw_plan_id,
+        "invalid_plan_id": invalid_plan_id,
+    }
+
+
+def _identifier_error_result(
+    tool_name: str,
+    *,
+    message: str,
+    error_type: str,
+    tool_call_id: str | None = None,
+) -> ToolResult:
+    return ToolResult(
+        success=False,
+        tool_name=tool_name,
+        tool_call_id=tool_call_id,
+        error_message=message,
+        error_type=error_type,
+    )
 
 
 def _compact_dict(value: dict[str, Any], *, include_source_trace: bool) -> dict[str, Any]:
@@ -173,21 +193,21 @@ class GetUserStrategyStateTool(BaseTool):
         tool_call_id: str | None = None,
     ) -> ToolResult:
         user_uuid = UUID(user_id)
-        session_id, plan_id = _resolve_runtime_ids(db_session, params.session_id, params.plan_id)
+        identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
         service = UserStrategyStateService(db_session, redis=_runtime_redis(db_session))
 
         data = {
             "effective_state": await service.get_effective_state(
                 user_uuid,
-                plan_id=plan_id,
-                session_id=session_id,
+                plan_id=identifiers["plan_id"],
+                session_id=identifiers["session_id"],
             )
         }
         if params.include_recent_changes:
             data["recent_changes"] = await service.get_recent_changes(
                 user_uuid,
-                plan_id=plan_id,
-                session_id=session_id,
+                plan_id=identifiers["plan_id"],
+                session_id=identifiers["session_id"],
                 limit=params.recent_change_limit,
             )
 
@@ -208,7 +228,29 @@ class AdjustUserStrategyStateTool(BaseTool):
         tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
-            session_id, plan_id = _resolve_runtime_ids(db_session, params.session_id, params.plan_id)
+            identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
+            normalized_layer = str(params.layer or "").strip().lower()
+            if normalized_layer == UserStrategyStateService.SESSION_LAYER and not identifiers["session_id"]:
+                return _identifier_error_result(
+                    self.name,
+                    message="Session-layer strategy writes require a valid session_id in params or runtime context.",
+                    error_type="missing_identifier",
+                    tool_call_id=tool_call_id,
+                )
+            if normalized_layer == UserStrategyStateService.EPISODE_LAYER and identifiers["invalid_plan_id"]:
+                return _identifier_error_result(
+                    self.name,
+                    message=f"Episode-layer strategy writes require a UUID plan_id, got: {identifiers['raw_plan_id']}",
+                    error_type="invalid_identifier",
+                    tool_call_id=tool_call_id,
+                )
+            if normalized_layer == UserStrategyStateService.EPISODE_LAYER and identifiers["plan_id"] is None:
+                return _identifier_error_result(
+                    self.name,
+                    message="Episode-layer strategy writes require a valid plan_id in params or runtime context.",
+                    error_type="missing_identifier",
+                    tool_call_id=tool_call_id,
+                )
             service = UserStrategyStateService(db_session, redis=_runtime_redis(db_session))
             data = await service.apply_adjustment(
                 user_id=UUID(user_id),
@@ -217,8 +259,8 @@ class AdjustUserStrategyStateTool(BaseTool):
                 reason=params.reason,
                 evidence=params.evidence.model_dump(),
                 confidence=params.confidence,
-                session_id=session_id,
-                plan_id=plan_id,
+                session_id=identifiers["session_id"],
+                plan_id=identifiers["plan_id"],
                 ttl_seconds=params.ttl_seconds,
             )
             return ToolResult(success=True, tool_name=self.name, tool_call_id=tool_call_id, data=data)
@@ -246,7 +288,21 @@ class WriteEpisodeNoteTool(BaseTool):
         tool_call_id: str | None = None,
     ) -> ToolResult:
         try:
-            session_id, plan_id = _resolve_runtime_ids(db_session, params.session_id, params.plan_id)
+            identifiers = _resolve_runtime_identifiers(db_session, params.session_id, params.plan_id)
+            if identifiers["invalid_plan_id"]:
+                return _identifier_error_result(
+                    self.name,
+                    message=f"Episode notes require a UUID plan_id, got: {identifiers['raw_plan_id']}",
+                    error_type="invalid_identifier",
+                    tool_call_id=tool_call_id,
+                )
+            if identifiers["plan_id"] is None:
+                return _identifier_error_result(
+                    self.name,
+                    message="Episode notes require a valid plan_id in params or runtime context.",
+                    error_type="missing_identifier",
+                    tool_call_id=tool_call_id,
+                )
             service = UserStrategyStateService(db_session, redis=_runtime_redis(db_session))
             data = await service.apply_adjustment(
                 user_id=UUID(user_id),
@@ -255,8 +311,8 @@ class WriteEpisodeNoteTool(BaseTool):
                 reason=params.reason,
                 evidence=params.evidence.model_dump(),
                 confidence=params.confidence,
-                session_id=session_id,
-                plan_id=plan_id,
+                session_id=identifiers["session_id"],
+                plan_id=identifiers["plan_id"],
                 ttl_seconds=params.ttl_seconds,
             )
             return ToolResult(success=True, tool_name=self.name, tool_call_id=tool_call_id, data=data)

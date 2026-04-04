@@ -48,6 +48,14 @@ class InterventionFeedbackBindingService:
     LAST_FEEDBACK_BINDING_TTL_SECONDS = 7 * 24 * 60 * 60
     DEDUPE_TTL_SECONDS = 12 * 60 * 60
     RECENT_PLAUSIBLE_DAYS = 7
+    DEDUPE_WINDOW_LIMIT = 24
+    OPEN_ACCEPTANCE_STATUSES = {
+        InterventionAcceptanceStatus.CREATED,
+        InterventionAcceptanceStatus.DELIVERED,
+        InterventionAcceptanceStatus.SEEN,
+        InterventionAcceptanceStatus.SNOOZED,
+        InterventionAcceptanceStatus.ACCEPTED,
+    }
 
     def __init__(self, db, redis=None):
         self.db = db
@@ -123,6 +131,21 @@ class InterventionFeedbackBindingService:
             return None
         return decoded if isinstance(decoded, dict) else None
 
+    async def _get_dedupe_window(self, session_id: str | None) -> list[dict[str, Any]]:
+        if not self.redis or not str(session_id or "").strip():
+            return []
+        try:
+            raw = await self.redis.get(f"{self.DEDUPE_KEY_PREFIX}{session_id}")
+            decoded = json.loads(raw) if raw else {}
+        except Exception as exc:
+            logger.warning(f"Failed to read feedback dedupe window for session {session_id}: {exc}")
+            return []
+        if isinstance(decoded, dict) and isinstance(decoded.get("entries"), list):
+            return _coerce_list_of_dicts(decoded.get("entries"))
+        if isinstance(decoded, dict) and str(decoded.get("fingerprint") or "").strip():
+            return [decoded]
+        return []
+
     async def resolve_active_interventions(
         self,
         *,
@@ -150,6 +173,8 @@ class InterventionFeedbackBindingService:
             result = await self.db.execute(stmt)
             record = result.scalar_one_or_none()
             if record is None:
+                return
+            if not self._is_bindable_record(record):
                 return
             seen.add(str(record.id))
             resolved.append(self._serialize_record(record, source=source, metadata=metadata))
@@ -183,6 +208,8 @@ class InterventionFeedbackBindingService:
                     break
                 if str(record.id) in seen:
                     continue
+                if not self._is_bindable_record(record):
+                    continue
                 seen.add(str(record.id))
                 resolved.append(self._serialize_record(record, source="pending_record"))
 
@@ -197,10 +224,12 @@ class InterventionFeedbackBindingService:
                     break
                 if str(record.id) in seen:
                     continue
+                if not self._is_bindable_record(record):
+                    continue
                 seen.add(str(record.id))
                 resolved.append(self._serialize_record(record, source="recent_record"))
 
-        if session_id and resolved:
+        if session_id:
             await self.remember_active_interventions(session_id, resolved)
         return resolved[:limit]
 
@@ -252,14 +281,23 @@ class InterventionFeedbackBindingService:
             user_words=normalized_words,
             message_id=message_id,
         )
-        prior_binding = await self.get_last_feedback_binding(session_id)
-        if isinstance(prior_binding, dict) and prior_binding.get("fingerprint") == fingerprint:
+        dedupe_window = await self._get_dedupe_window(session_id)
+        duplicate_hit = next(
+            (
+                entry
+                for entry in dedupe_window
+                if str(entry.get("fingerprint") or "").strip() == fingerprint
+            ),
+            None,
+        )
+        if isinstance(duplicate_hit, dict):
             return {
                 "bound": False,
                 "duplicate_suppressed": True,
                 "reason": "duplicate_feedback",
                 "active_interventions": candidates,
-                "last_feedback_binding": prior_binding,
+                "last_feedback_binding": await self.get_last_feedback_binding(session_id),
+                "duplicate_binding": duplicate_hit,
                 "intervention_record": self._serialize_record(target_record, source="duplicate_hit"),
             }
 
@@ -305,6 +343,16 @@ class InterventionFeedbackBindingService:
             "resolved_via": str(candidates[0].get("source") or "unknown"),
         }
         await self._persist_last_feedback_binding(session_id, last_feedback_binding)
+        await self._persist_dedupe_entry(
+            session_id,
+            {
+                "timestamp": last_feedback_binding["timestamp"],
+                "fingerprint": fingerprint,
+                "message_id": message_id,
+                "intervention_id": str(target_record.id),
+                "sentiment": normalized_sentiment,
+            },
+        )
 
         payload = {
             "bound": True,
@@ -479,7 +527,7 @@ class InterventionFeedbackBindingService:
         self,
         session_id: str | None,
         payload: dict[str, Any],
-    ) -> None:
+        ) -> None:
         if not self.redis or not str(session_id or "").strip():
             return
         try:
@@ -488,13 +536,31 @@ class InterventionFeedbackBindingService:
                 self.LAST_FEEDBACK_BINDING_TTL_SECONDS,
                 json.dumps(payload, ensure_ascii=False),
             )
+        except Exception as exc:
+            logger.warning(f"Failed to persist feedback binding for session {session_id}: {exc}")
+
+    async def _persist_dedupe_entry(
+        self,
+        session_id: str | None,
+        entry: dict[str, Any],
+    ) -> None:
+        if not self.redis or not str(session_id or "").strip():
+            return
+        try:
+            dedupe_window = await self._get_dedupe_window(session_id)
+            dedupe_window = [
+                item
+                for item in dedupe_window
+                if str(item.get("fingerprint") or "").strip() != str(entry.get("fingerprint") or "").strip()
+            ]
+            dedupe_window.insert(0, entry)
             await self.redis.setex(
                 f"{self.DEDUPE_KEY_PREFIX}{session_id}",
                 self.DEDUPE_TTL_SECONDS,
-                json.dumps({"fingerprint": payload.get("fingerprint")}, ensure_ascii=False),
+                json.dumps({"entries": dedupe_window[: self.DEDUPE_WINDOW_LIMIT]}, ensure_ascii=False),
             )
         except Exception as exc:
-            logger.warning(f"Failed to persist feedback binding for session {session_id}: {exc}")
+            logger.warning(f"Failed to persist feedback dedupe window for session {session_id}: {exc}")
 
     @staticmethod
     def _feedback_fingerprint(
@@ -507,6 +573,13 @@ class InterventionFeedbackBindingService:
         if not base:
             base = f"{sentiment}:{' '.join(str(user_words or '').split()).lower()}"
         return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def _is_bindable_record(cls, record: InterventionRecord) -> bool:
+        return (
+            record.acceptance_status in cls.OPEN_ACCEPTANCE_STATUSES
+            and record.outcome_status == InterventionOutcomeStatus.PENDING
+        )
 
     @staticmethod
     def _serialize_record(

@@ -15,6 +15,7 @@ ChatOrchestrator - 生产级实现
 
 import asyncio
 import json
+import os
 import time
 import uuid
 from collections.abc import AsyncGenerator
@@ -37,8 +38,10 @@ from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+from app.orchestration.experience_actuator import ExperienceActuator
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.prompts import build_system_prompt
+from app.orchestration.situation_brief import SituationBriefBuilder
 from app.orchestration.soul_compiler import DEFAULT_COMPANION_STATE, attach_shadow_soul_runtime
 from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.token_tracker import TokenTracker
@@ -97,6 +100,10 @@ if PROMETHEUS_AVAILABLE:
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}
 
 
 class CircuitBreaker:
@@ -209,15 +216,14 @@ class MessageTracker:
 
 class ProductionChatOrchestrator:
     """
-    生产级 ChatOrchestrator
+    Legacy production orchestrator.
 
-    特性:
-    - JSON 序列化 (无 pickle)
-    - 并发安全 (消息 ID 追踪)
-    - 错误处理 (Redis/LLM 降级)
-    - 熔断机制 (防止 OOM)
-    - Prometheus 监控
-    - 结构化日志
+    This stack is no longer bridge-safe. The supported runtime is
+    ``app.orchestration.orchestrator.ChatOrchestrator``.
+
+    Set ``SPARKLE_ALLOW_LEGACY_PRODUCTION_ORCHESTRATOR=1`` only for
+    audited migration work; otherwise construction is blocked so the
+    bridge architecture cannot be silently bypassed.
     """
 
     def __init__(
@@ -233,6 +239,12 @@ class ProductionChatOrchestrator:
         enable_metrics: bool = True,
         enable_circuit_breaker: bool = True,
     ):
+        if os.getenv("SPARKLE_ALLOW_LEGACY_PRODUCTION_ORCHESTRATOR", "").strip().lower() not in {"1", "true", "yes"}:
+            raise RuntimeError(
+                "ProductionChatOrchestrator is legacy and unsupported. "
+                "Use ChatOrchestrator or explicitly set SPARKLE_ALLOW_LEGACY_PRODUCTION_ORCHESTRATOR=1 "
+                "for audited migration-only use."
+            )
         self.db_session = db_session
         self.redis = redis_client
 
@@ -923,6 +935,46 @@ class ProductionChatOrchestrator:
                     runtime_context_data["user_strategy_history"] = user_strategy_history
                 except Exception as exc:
                     logger.warning(f"Failed to hydrate user strategy state: {exc}")
+            if isinstance(user_context_data, dict):
+                try:
+                    situation_brief = SituationBriefBuilder().build(
+                        user_context_payload=user_context_data,
+                        plan_context=plan_context,
+                        focused_memory=user_context_data.get("focused_memory"),
+                        context_briefing_note=str(user_context_data.get("context_briefing_note") or "").strip() or None,
+                        visible_update_context={},
+                        dual_core_snapshot=_as_dict(user_context_data.get("dual_core_snapshot")),
+                        session_feedback_signal={},
+                        progress_snapshot=_as_dict(user_context_data.get("progress_snapshot")),
+                        adaptation_records=[
+                            item
+                            for item in (user_context_data.get("adaptation_records") or [])
+                            if isinstance(item, dict)
+                        ],
+                    ).to_dict()
+                    user_context_data["situation_brief"] = situation_brief
+                    runtime_context_data["situation_brief"] = situation_brief
+                    decision_context = situation_brief.get("decision_context")
+                    if isinstance(decision_context, dict):
+                        user_context_data["residual_decision_context"] = decision_context
+                        runtime_context_data["residual_decision_context"] = decision_context
+                except Exception as exc:
+                    logger.warning(f"Failed to build production situation brief: {exc}")
+            if active_db and user_id and isinstance(user_context_data, dict):
+                try:
+                    request_message = request.message if request.WhichOneof("input") == "message" else ""
+                    await ExperienceActuator(active_db, self.redis).apply(
+                        user_id=user_id,
+                        session_id=session_id,
+                        plan_id=plan_uuid,
+                        request_id=request_id,
+                        user_message=request_message,
+                        file_ids=list(request.file_ids),
+                        user_context_payload=user_context_data,
+                        context_targets=[runtime_context_data],
+                    )
+                except Exception as exc:
+                    logger.warning(f"Failed to apply phase 4 experience actions in production runtime: {exc}")
             await attach_shadow_soul_runtime(
                 target_context=runtime_context_data,
                 redis_client=self.redis,

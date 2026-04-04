@@ -78,6 +78,7 @@ from app.orchestration.context_focus import (  # noqa: F401
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router  # noqa: F401
+from app.orchestration.experience_actuator import ExperienceActuator
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
 from app.orchestration.grounding_validator import GroundingValidator
@@ -1295,6 +1296,17 @@ class ChatOrchestrator(
                             session_feedback_signal.to_dict() if session_feedback_signal is not None else None
                         ),
                     )
+                    if active_db is not None and isinstance(user_context_payload, dict):
+                        await ExperienceActuator(active_db, getattr(self, "redis", None)).apply(
+                            user_id=user_id,
+                            session_id=session_id,
+                            plan_id=plan_id,
+                            request_id=request_id,
+                            user_message=user_message,
+                            file_ids=list(request.file_ids),
+                            user_context_payload=user_context_payload,
+                            context_targets=[state.context_data],
+                        )
 
                 # Step 6: Prepare runtime context (transparency, tools)
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
@@ -1665,6 +1677,17 @@ class ChatOrchestrator(
                         session_feedback_signal.to_dict() if session_feedback_signal is not None else None
                     ),
                 )
+                if active_db is not None and isinstance(user_context_payload, dict):
+                    await ExperienceActuator(active_db, getattr(self, "redis", None)).apply(
+                        user_id=user_id,
+                        session_id=session_id,
+                        plan_id=plan_id,
+                        request_id=request_id,
+                        user_message=user_message,
+                        file_ids=list(request.file_ids),
+                        user_context_payload=user_context_payload,
+                        context_targets=[state.context_data],
+                    )
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(

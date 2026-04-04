@@ -3136,16 +3136,7 @@ async def _execute_single_tool(
     )
     state.append_message("tool", result_json, name=tool_name)
     if tool_name == "record_intervention_feedback" and isinstance(result.data, dict):
-        active_interventions = result.data.get("active_interventions")
-        if isinstance(active_interventions, list):
-            state.context_data["active_interventions"] = active_interventions
-            if active_interventions:
-                active_intervention_id = str(active_interventions[0].get("intervention_id") or "").strip()
-                if active_intervention_id:
-                    state.context_data["active_intervention_id"] = active_intervention_id
-        last_feedback_binding = result.data.get("last_feedback_binding")
-        if isinstance(last_feedback_binding, dict):
-            state.context_data["last_feedback_binding"] = last_feedback_binding
+        _update_feedback_binding_runtime_state(state, result.data)
     state.context_data.setdefault("tool_results", []).append(
         {
             "name": tool_name,
@@ -3158,6 +3149,26 @@ async def _execute_single_tool(
             "tool_call_id": tool_call_id,
         }
     )
+
+
+def _update_feedback_binding_runtime_state(state: WorkflowState, result_data: dict[str, Any]) -> None:
+    active_interventions = result_data.get("active_interventions")
+    if isinstance(active_interventions, list):
+        state.context_data["active_interventions"] = active_interventions
+        if active_interventions:
+            active_intervention_id = str(active_interventions[0].get("intervention_id") or "").strip()
+            if active_intervention_id:
+                state.context_data["active_intervention_id"] = active_intervention_id
+            else:
+                state.context_data.pop("active_intervention_id", None)
+        else:
+            state.context_data.pop("active_intervention_id", None)
+
+    last_feedback_binding = result_data.get("last_feedback_binding")
+    if isinstance(last_feedback_binding, dict):
+        state.context_data["last_feedback_binding"] = last_feedback_binding
+    elif isinstance(active_interventions, list) and not active_interventions and not result_data.get("bound", False):
+        state.context_data.pop("last_feedback_binding", None)
 
 
 async def _write_feedback(
