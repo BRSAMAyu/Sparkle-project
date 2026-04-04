@@ -133,6 +133,59 @@ def _serialize_adjustment_summary(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_FIELD_LABELS = {
+    "difficulty_level": "难度先降了一档",
+    "session_mode": "会话节奏改得更贴近你现在的状态",
+    "explanation_style": "解释方式改成更慢一步",
+    "retrieval_emphasis": "优先按你的资料来校准",
+    "push_vs_support": "推进力度先放轻一点",
+    "intervention_intensity": "干预强度先调低",
+}
+
+
+def _describe_adjustment_field(field: str, new_value: Any) -> str:
+    label = _FIELD_LABELS.get(field)
+    if label:
+        return label
+    normalized = field.replace("_", " ").strip()
+    if not normalized:
+        return "做了一个轻量调整"
+    return f"{normalized} -> {new_value}"
+
+
+def _build_opening_copy(*, experience_mode: str, what_matters_now: str, adjustment_bits: list[str]) -> str:
+    first_adjustment = adjustment_bits[0] if adjustment_bits else ""
+    if experience_mode == "stabilize":
+        return (
+            f"我先把这轮放轻一点，因为现在更重要的是先能开始。{first_adjustment}".strip()
+            if first_adjustment
+            else "我先把这轮放轻一点，因为现在更重要的是先能开始。"
+        )
+    if experience_mode == "mobilize":
+        return (
+            f"我先把它收成一个更容易落地的下一步，因为你已经接近能动起来了。{first_adjustment}".strip()
+            if first_adjustment
+            else "我先把它收成一个更容易落地的下一步，因为你已经接近能动起来了。"
+        )
+    if experience_mode == "explain":
+        return (
+            f"我先按你的材料把真正卡住的点校准清楚，因为现在最重要的是别让误解继续滚大。{first_adjustment}".strip()
+            if first_adjustment
+            else "我先按你的材料把真正卡住的点校准清楚，因为现在最重要的是别让误解继续滚大。"
+        )
+    if experience_mode == "decide":
+        return (
+            "我先帮你把判断标准摆清楚，再决定往哪边走，这样不容易被我替你做决定。"
+        )
+    if experience_mode == "reframe":
+        return (
+            "我会先用证据把这件事放稳一点，不急着给你施压。"
+        )
+    if what_matters_now:
+        return f"我先顺着现在最重要的部分来帮你收紧：{what_matters_now}"
+    return "我先按这轮真正重要的部分来帮你调整。"
+
+
 def detect_intervention_feedback_signal(
     *,
     user_message: str,
@@ -255,6 +308,21 @@ class ExperienceActuator:
                 "query": grounding_runtime.get("query"),
                 "result_count": len(_as_list(grounding_runtime.get("results"))),
             }
+
+        visible_adaptation = self._build_visible_adaptation(
+            decision_context=decision_context,
+            runtime_summary=runtime_summary,
+            user_context=user_context,
+        )
+        if visible_adaptation:
+            runtime_summary["visible_adaptation"] = visible_adaptation
+            self._write_targets(targets, {"visible_adaptation": visible_adaptation})
+            decision_context["visible_adaptation"] = visible_adaptation
+
+            if not _strip(user_context.get("proactive_opening_message")):
+                self._write_targets(targets, {"proactive_opening_message": visible_adaptation.get("opening_message")})
+            if not _strip(user_context.get("post_adaptation_question")):
+                self._write_targets(targets, {"post_adaptation_question": visible_adaptation.get("follow_up_question")})
 
         if len(runtime_summary) == 1:
             return {}
@@ -550,3 +618,77 @@ class ExperienceActuator:
             situation_brief = target.get("situation_brief")
             if isinstance(situation_brief, dict):
                 situation_brief["decision_context"] = decision_context
+
+    def _build_visible_adaptation(
+        self,
+        *,
+        decision_context: dict[str, Any],
+        runtime_summary: dict[str, Any],
+        user_context: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        adjustments = [
+            item
+            for item in _as_list(runtime_summary.get("auto_strategy_adjustments"))
+            if isinstance(item, dict) and _strip(item.get("field"))
+        ]
+        feedback_runtime = _as_dict(runtime_summary.get("auto_feedback_binding"))
+        grounding_runtime = _as_dict(runtime_summary.get("user_material_grounding"))
+        feedback_hook = _as_dict(decision_context.get("feedback_hook"))
+        experience_mode = _strip(decision_context.get("experience_mode"))
+        what_matters_now = _strip(decision_context.get("what_matters_now"))
+        primary_residual = _strip(decision_context.get("primary_residual"))
+
+        if not adjustments and not feedback_runtime and not grounding_runtime:
+            return None
+
+        adjustment_bits = [
+            _describe_adjustment_field(_strip(item.get("field")), item.get("new_value"))
+            for item in adjustments
+            if _strip(item.get("field"))
+        ]
+        summary_bits: list[str] = []
+        if what_matters_now:
+            summary_bits.append(what_matters_now)
+        if adjustment_bits:
+            summary_bits.append("这轮我先做了更轻、更可逆的调整。")
+        if feedback_runtime.get("bound"):
+            summary_bits.append("我也记住了刚才那个调整对你是有帮助的。")
+        if grounding_runtime.get("status") == "grounded":
+            summary_bits.append("解释会优先按你的材料来，不先用泛化说法盖过去。")
+
+        evidence_summary = ""
+        if grounding_runtime.get("status") == "grounded":
+            results = [
+                item for item in _as_list(grounding_runtime.get("results")) if isinstance(item, dict)
+            ]
+            first = results[0] if results else {}
+            file_name = _strip(first.get("file_name"))
+            section_title = _strip(first.get("section_title"))
+            if file_name or section_title:
+                evidence_summary = f"这轮证据先来自你的资料：{file_name or '用户材料'} {section_title}".strip()
+        elif feedback_runtime.get("bound"):
+            evidence_summary = f"我根据你刚才的反馈做了保留：{_strip(feedback_runtime.get('trigger'))}"
+
+        follow_up_question = _strip(feedback_hook.get("ask"))
+        title = {
+            "R_e": "我先把真正卡住的点校准清楚",
+            "R_c": "我先把负荷调到更能动起来的水平",
+            "R_n": "我先把判断标准摆出来",
+            "R_i": "我先把这件事放回证据里",
+        }.get(primary_residual, "我先做了一个更贴近你的调整")
+
+        return {
+            "title": title,
+            "summary": " ".join(bit for bit in summary_bits if bit).strip(),
+            "opening_message": _build_opening_copy(
+                experience_mode=experience_mode,
+                what_matters_now=what_matters_now,
+                adjustment_bits=adjustment_bits,
+            ),
+            "what_changed": adjustment_bits[:4],
+            "reversibility_note": "如果这次调整不合适，我们可以再改，不会把你锁死在这条路上。",
+            "follow_up_question": follow_up_question,
+            "evidence_summary": evidence_summary,
+            "experience_mode": experience_mode,
+            "intervention_family": _strip(decision_context.get("intervention_family")),
+        }

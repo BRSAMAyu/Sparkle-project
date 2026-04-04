@@ -559,6 +559,15 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.secondaryGradient;
       case 'next_actions':
         return DS.primaryGradient;
+      case 'adaptation_summary':
+        return LinearGradient(
+          colors: [
+            DS.info.withValues(alpha: 0.95),
+            DS.success.withValues(alpha: 0.9)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case 'continuity_banner':
       case 'mode_explanation':
         return DS.cardGradientNeutral;
@@ -608,6 +617,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.secondaryBase;
       case 'next_actions':
         return DS.primaryBase;
+      case 'adaptation_summary':
+        return DS.info;
       case 'continuity_banner':
       case 'mode_explanation':
         return DS.neutral700;
@@ -662,6 +673,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.fact_check_rounded;
       case 'next_actions':
         return Icons.alt_route_rounded;
+      case 'adaptation_summary':
+        return Icons.tune_rounded;
       case 'continuity_banner':
         return Icons.link_rounded;
       case 'mode_explanation':
@@ -706,6 +719,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return l10n.chatActionTitleSourceSummary;
       case 'next_actions':
         return l10n.chatActionTitleNextActions;
+      case 'adaptation_summary':
+        return '这轮调整';
       case 'continuity_banner':
         return l10n.chatActionTitleContinuity;
       case 'mode_explanation':
@@ -757,6 +772,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     if (action.type == 'next_actions') {
       return _buildNextActions(context, action);
+    }
+    if (action.type == 'adaptation_summary') {
+      return _buildAdaptationSummary(context, action);
     }
     if (action.type == 'continuity_banner' ||
         action.type == 'mode_explanation') {
@@ -1681,7 +1699,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             .whereType<Map<dynamic, dynamic>>()
             .map(Map<String, dynamic>.from)
             .toList();
-    final retryAction = _executionSummaryPreviewData(action.data['retry_action']);
+    final retryAction =
+        _executionSummaryPreviewData(action.data['retry_action']);
     final comparisonHeadline = comparisonSummary is Map<String, dynamic>
         ? comparisonSummary['headline']?.toString() ?? '结果对比'
         : comparisonSummary != null
@@ -1720,9 +1739,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 ? l10n.chatExecutionFailed
                 : status == 'degraded'
                     ? '已切到手动协作'
-                : status == 'partial'
-                    ? l10n.chatExecutionPartial
-                    : l10n.chatExecutionCompleted,
+                    : status == 'partial'
+                        ? l10n.chatExecutionPartial
+                        : l10n.chatExecutionCompleted,
             style: TextStyle(
               color: statusColor,
               fontWeight: DS.fontWeightSemibold,
@@ -2071,7 +2090,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 decoration: BoxDecoration(
                   color: DS.primaryBase.withValues(alpha: 0.1),
                   borderRadius: DS.borderRadius20,
-                  border: Border.all(color: DS.primaryBase.withValues(alpha: 0.18)),
+                  border:
+                      Border.all(color: DS.primaryBase.withValues(alpha: 0.18)),
                 ),
                 child: Text(
                   retryAction['label'].toString(),
@@ -3086,6 +3106,111 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             customGradient: DS.warningGradient,
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildAdaptationSummary(BuildContext context, WidgetPayload action) {
+    final title = action.data['title']?.toString() ?? '我刚做了一个调整';
+    final summary = action.data['summary']?.toString() ?? '';
+    final reversibility = action.data['reversibility_note']?.toString() ?? '';
+    final evidence = action.data['evidence_summary']?.toString() ?? '';
+    final followUp = action.data['follow_up_question']?.toString() ?? '';
+    final whatChanged = (action.data['what_changed'] as List<dynamic>? ?? [])
+        .map((item) => '$item'.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontWeight: DS.fontWeightSemibold,
+                color: DS.neutral900,
+              ),
+        ),
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            summary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral700,
+                  height: 1.4,
+                ),
+          ),
+        ],
+        if (whatChanged.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: whatChanged
+                .map(
+                  (item) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing10,
+                      vertical: DS.spacing6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DS.info.withValues(alpha: 0.08),
+                      borderRadius: DS.borderRadiusFull,
+                      border: Border.all(
+                        color: DS.info.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Text(
+                      item,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.neutral800,
+                            fontWeight: DS.fontWeightSemibold,
+                          ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+        if (evidence.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            evidence,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral700,
+                  height: 1.4,
+                ),
+          ),
+        ],
+        if (reversibility.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Text(
+            reversibility,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral600,
+                  height: 1.4,
+                ),
+          ),
+        ],
+        if (followUp.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Container(
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              color: DS.surfaceOverlay,
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.borderSubtle),
+            ),
+            child: Text(
+              followUp,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.neutral800,
+                    fontWeight: DS.fontWeightSemibold,
+                    height: 1.4,
+                  ),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -11,12 +11,13 @@
 5. [product/implementation/SPARKLE_SOUL_RUNTIME_TASK_PACK_2026-04-04.md](./product/implementation/SPARKLE_SOUL_RUNTIME_TASK_PACK_2026-04-04.md)
 6. [product/SPARKLE_RESIDUAL_DECISION_POLICY_AND_EXPERIENCE_PHASE_PLAN_2026-04-04.md](./product/SPARKLE_RESIDUAL_DECISION_POLICY_AND_EXPERIENCE_PHASE_PLAN_2026-04-04.md)
 7. [product/SPARKLE_LIVE_PRODUCT_INTEGRATION_AND_EVALUATION_PLAN_2026-04-04.md](./product/SPARKLE_LIVE_PRODUCT_INTEGRATION_AND_EVALUATION_PLAN_2026-04-04.md)
-8. [05_部署与运维/README.md](./05_部署与运维/README.md)
-9. [02_技术设计文档/README.md](./02_技术设计文档/README.md)
-10. [01_核心模块文档/README.md](./01_核心模块文档/README.md)
-11. [03_功能实现指南/README.md](./03_功能实现指南/README.md)
-12. [engineering/README.md](./engineering/README.md)
-13. [verification/README.md](./verification/README.md)
+8. [product/SPARKLE_LIVE_ALPHA_GATE_2026-04-04.md](./product/SPARKLE_LIVE_ALPHA_GATE_2026-04-04.md)
+9. [05_部署与运维/README.md](./05_部署与运维/README.md)
+10. [02_技术设计文档/README.md](./02_技术设计文档/README.md)
+11. [01_核心模块文档/README.md](./01_核心模块文档/README.md)
+12. [03_功能实现指南/README.md](./03_功能实现指南/README.md)
+13. [engineering/README.md](./engineering/README.md)
+14. [verification/README.md](./verification/README.md)
 
 ## 当前主干目录
 

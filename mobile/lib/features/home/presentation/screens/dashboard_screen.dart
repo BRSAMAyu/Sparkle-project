@@ -293,6 +293,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           index: 3,
                           child: _MostImportantThingCard(
                             task: dashboardState.mostImportantTask,
+                            nextMoveCard: dashboardState.nextMoveCard,
                           ),
                         ),
                         _staggeredSection(
@@ -392,7 +393,8 @@ class _GrowthStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final growthStatus = dashboardState.growthStatus;
-    if (growthStatus == null) {
+    final whatChangedCard = dashboardState.whatChangedCard;
+    if (growthStatus == null && whatChangedCard == null) {
       return const SizedBox.shrink();
     }
     final isChinese = Localizations.localeOf(context)
@@ -434,9 +436,18 @@ class _GrowthStatusCard extends StatelessWidget {
                   letterSpacing: 0.2,
                 ),
               ),
+              if (whatChangedCard != null) ...[
+                const SizedBox(height: DS.spacing6),
+                Text(
+                  whatChangedCard.timeframeLabel,
+                  style: context.sparkleTypography.labelSmall.copyWith(
+                    color: DS.textSecondary,
+                  ),
+                ),
+              ],
               const SizedBox(height: DS.spacing8),
               Text(
-                growthStatus.headline,
+                whatChangedCard?.headline ?? growthStatus!.headline,
                 style: context.sparkleTypography.headingMedium.copyWith(
                   fontWeight: DS.fontWeightBold,
                   color: DS.textPrimary,
@@ -444,12 +455,50 @@ class _GrowthStatusCard extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                growthStatus.subtitle,
+                whatChangedCard?.summary ?? growthStatus!.subtitle,
                 style: context.sparkleTypography.bodyMedium.copyWith(
                   color: DS.textSecondary,
                   height: 1.35,
                 ),
               ),
+              if (whatChangedCard != null &&
+                  whatChangedCard.highlights.length > 1) ...[
+                const SizedBox(height: DS.spacing12),
+                ...whatChangedCard.highlights.skip(1).take(2).map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: DS.spacing6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 7,
+                                right: DS.spacing8,
+                              ),
+                              child: Container(
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  color: DS.brandPrimary,
+                                  borderRadius: DS.borderRadiusFull,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                item,
+                                style: context.sparkleTypography.bodySmall
+                                    .copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+              ],
             ],
           ),
         ),
@@ -459,13 +508,17 @@ class _GrowthStatusCard extends StatelessWidget {
 }
 
 class _MostImportantThingCard extends StatelessWidget {
-  const _MostImportantThingCard({required this.task});
+  const _MostImportantThingCard({
+    required this.task,
+    required this.nextMoveCard,
+  });
 
   final PriorityTaskData? task;
+  final NextMoveCardData? nextMoveCard;
 
   @override
   Widget build(BuildContext context) {
-    if (task == null) {
+    if (task == null && nextMoveCard == null) {
       return const SizedBox.shrink();
     }
     final isChinese = Localizations.localeOf(context)
@@ -491,19 +544,29 @@ class _MostImportantThingCard extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                task!.title,
+                nextMoveCard?.headline ?? task!.title,
                 style: context.sparkleTypography.titleLarge.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                task!.reason,
+                nextMoveCard?.summary ?? task!.reason,
                 style: context.sparkleTypography.bodyMedium.copyWith(
                   color: DS.textSecondary,
                   height: 1.35,
                 ),
               ),
+              if (nextMoveCard != null && nextMoveCard!.whyNow.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing8),
+                Text(
+                  nextMoveCard!.whyNow,
+                  style: context.sparkleTypography.bodySmall.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ],
               const SizedBox(height: DS.spacing12),
               Wrap(
                 spacing: DS.spacing8,
@@ -511,29 +574,46 @@ class _MostImportantThingCard extends StatelessWidget {
                 children: [
                   _DashboardChip(
                     icon: Icons.schedule_rounded,
-                    label: '${task!.estimatedMinutes} min',
+                    label:
+                        '${nextMoveCard?.estimatedMinutes ?? task!.estimatedMinutes} min',
                   ),
-                  if (task!.planName != null && task!.planName!.isNotEmpty)
+                  if ((nextMoveCard?.planName ?? task?.planName) != null &&
+                      (nextMoveCard?.planName ?? task?.planName)?.isNotEmpty ==
+                          true)
                     _DashboardChip(
                       icon: Icons.flag_rounded,
-                      label: task!.planName!,
+                      label: nextMoveCard?.planName ?? task!.planName!,
                     ),
-                  if (task!.daysToDeadline != null)
+                  if ((nextMoveCard?.daysToDeadline ?? task?.daysToDeadline) !=
+                      null)
                     _DashboardChip(
                       icon: Icons.timelapse_rounded,
                       label: isChinese
-                          ? '还有 ${task!.daysToDeadline} 天'
-                          : '${task!.daysToDeadline} days left',
+                          ? '还有 ${nextMoveCard?.daysToDeadline ?? task!.daysToDeadline} 天'
+                          : '${nextMoveCard?.daysToDeadline ?? task!.daysToDeadline} days left',
                     ),
                 ],
               ),
+              if (nextMoveCard != null &&
+                  nextMoveCard!.reassurance.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing12),
+                Text(
+                  nextMoveCard!.reassurance,
+                  style: context.sparkleTypography.bodySmall.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ],
               const SizedBox(height: DS.spacing16),
               Row(
                 children: [
                   Expanded(
                     child: SparkleButton.primary(
                       label: isChinese ? '先做这个' : 'Start Here',
-                      onPressed: () => context.push('/tasks/${task!.id}'),
+                      onPressed: () => context.push(
+                        '/tasks/${nextMoveCard?.taskId ?? task!.id}',
+                      ),
                     ),
                   ),
                   const SizedBox(width: DS.spacing10),

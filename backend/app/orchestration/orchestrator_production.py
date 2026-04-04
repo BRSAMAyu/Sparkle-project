@@ -975,16 +975,19 @@ class ProductionChatOrchestrator:
                     )
                 except Exception as exc:
                     logger.warning(f"Failed to apply phase 4 experience actions in production runtime: {exc}")
-            await attach_shadow_soul_runtime(
-                target_context=runtime_context_data,
-                redis_client=self.redis,
-                user_id=user_id,
-                user_context=user_context_data,
-                plan_context=plan_context,
-                effective_companion_state=runtime_context_data.get("effective_companion_state"),
-                relationship_profile=runtime_context_data.get("relationship_profile"),
-                recent_revisions=runtime_context_data.get("companion_state_recent_revisions"),
-            )
+            try:
+                await attach_shadow_soul_runtime(
+                    target_context=runtime_context_data,
+                    redis_client=self.redis,
+                    user_id=user_id,
+                    user_context=user_context_data,
+                    plan_context=plan_context,
+                    effective_companion_state=runtime_context_data.get("effective_companion_state"),
+                    relationship_profile=runtime_context_data.get("relationship_profile"),
+                    recent_revisions=runtime_context_data.get("companion_state_recent_revisions"),
+                )
+            except Exception as exc:
+                logger.warning(f"Shadow soul runtime attach failed (non-fatal): {exc}")
             if isinstance(user_context_data, dict):
                 for key in ("soul_runtime_context", "soul_runtime_debug"):
                     if runtime_context_data.get(key) is not None:

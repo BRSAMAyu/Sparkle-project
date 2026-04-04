@@ -17,7 +17,6 @@ This test requires:
 import pytest
 import asyncio
 import json
-import jwt
 from typing import Dict, Any
 from datetime import timezone, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +24,7 @@ from sqlalchemy import select
 import websockets
 from websockets.exceptions import InvalidStatus
 import grpc
-from jose import JWTError
+from jose import JWTError, jwt
 
 from app.models.user import User
 from app.core.security import (

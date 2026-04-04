@@ -16,8 +16,15 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
-import torch
 from loguru import logger
+
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    TORCH_AVAILABLE = False
+    logger.warning("torch not installed, BERT classifier disabled")
 
 try:
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -67,6 +74,11 @@ class BERTIntentClassifier:
 
     @staticmethod
     def _resolve_device(device: str):
+        if not TORCH_AVAILABLE:
+            requested = str(device or "cpu").strip() or "cpu"
+            if requested == "auto":
+                requested = "cpu"
+            return SimpleNamespace(type=requested)
         if device == "auto":
             requested = "cuda" if torch.cuda.is_available() else "cpu"
         else:
@@ -102,8 +114,8 @@ class BERTIntentClassifier:
             max_length: Maximum sequence length for tokenization
             batch_size: Batch size for inference
         """
-        if not TRANSFORMERS_AVAILABLE:
-            raise ImportError("transformers library not available. Install with: pip install transformers torch")
+        if not TRANSFORMERS_AVAILABLE or not TORCH_AVAILABLE:
+            raise ImportError("transformers and torch libraries not available. Install with: pip install transformers torch")
 
         self.model_name = model_name or self.DEFAULT_MODEL
         self.max_length = max_length
@@ -386,8 +398,8 @@ def get_bert_classifier(
     """
     global _bert_classifier
 
-    if not TRANSFORMERS_AVAILABLE:
-        logger.warning("transformers not installed")
+    if not TRANSFORMERS_AVAILABLE or not TORCH_AVAILABLE:
+        logger.warning("BERT dependencies not installed")
         return None
 
     if _bert_classifier is None or force_reload:

@@ -3233,6 +3233,17 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         started_at=now - timedelta(days=24),
         ended_at=now - timedelta(days=16),
     )
+    await _ensure_partnership(
+        session,
+        initiator_id=user.id,
+        partner_id=mia.id,
+        friendship_id=friendship_by_name["Mia"].id,
+        initiator_goal="一起把首页叙事和聊天解释卡再走一轮，确认是否足够清晰。",
+        partner_goal="下次体验回放时一起标记哪些变化最容易被用户感知。",
+        check_in_days=2,
+        status=AccountabilityStatus.PENDING,
+        started_at=None,
+    )
 
     accountability_timeline = [
         (

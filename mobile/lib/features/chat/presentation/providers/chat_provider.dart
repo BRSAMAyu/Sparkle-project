@@ -422,6 +422,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       'ux_followthrough',
       'ux_sources',
       'ux_evolution',
+      'adaptation_summary',
       'continuity_banner',
       'mode_explanation',
       'collaboration_summary',
@@ -457,6 +458,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final modeExplanation = uxEnvelope['mode_explanation'];
     if (modeExplanation is Map<String, dynamic>) {
       addWidget('mode_explanation', modeExplanation);
+    }
+
+    final adaptationSummary = uxEnvelope['adaptation_summary'];
+    if (adaptationSummary is Map<String, dynamic>) {
+      addWidget('adaptation_summary', adaptationSummary);
     }
 
     final sources = uxEnvelope['ux_sources'];

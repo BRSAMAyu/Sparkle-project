@@ -31,20 +31,34 @@ class GrowthDashboardService:
         active_plan = await self._get_active_plan(user_id)
         growth_signal = await self._get_growth_signal(user_id)
         most_important_task = await self._get_most_important_task(user_id)
+        weakest_area = await self._get_weakest_area(user_id)
         growth_status = await self._get_growth_status(
             user_id=user_id,
             user=resolved_user,
             active_plan=active_plan,
             growth_signal=growth_signal,
             most_important_task=most_important_task,
+            weakest_area=weakest_area,
         )
         active_plan_progress = self._serialize_active_plan(active_plan)
+        what_changed_card = self._build_what_changed_card(
+            growth_signal=growth_signal,
+            growth_status=growth_status,
+            weakest_area=weakest_area,
+        )
+        next_move_card = self._build_next_move_card(
+            most_important_task=most_important_task,
+            active_plan=active_plan,
+            weakest_area=weakest_area,
+        )
 
         return {
             "growth_status": growth_status,
             "most_important_task": most_important_task,
             "growth_signal": growth_signal,
             "active_plan_progress": active_plan_progress,
+            "what_changed_card": what_changed_card,
+            "next_move_card": next_move_card,
         }
 
     async def _get_user(self, user_id: UUID) -> User:
@@ -76,12 +90,12 @@ class GrowthDashboardService:
         active_plan: Plan | None,
         growth_signal: dict[str, Any] | None,
         most_important_task: dict[str, Any] | None,
+        weakest_area: str | None,
     ) -> dict[str, Any]:
         period_start = _utcnow() - timedelta(days=self.LOOKBACK_DAYS)
         focus_minutes = await self._sum_focus_minutes(user_id, period_start)
         tasks_completed = await self._count_completed_tasks(user_id, period_start)
         streak_days = await self._get_current_streak_days(user_id)
-        weakest_area = await self._get_weakest_area(user_id)
         display_name = str(user.nickname or user.full_name or user.username or "Sparkle").strip()
 
         signal_label = ""
@@ -132,6 +146,71 @@ class GrowthDashboardService:
             "streak_days": streak_days,
             "focus_hours_week": focus_hours,
             "tasks_completed_week": tasks_completed,
+        }
+
+    def _build_what_changed_card(
+        self,
+        *,
+        growth_signal: dict[str, Any] | None,
+        growth_status: dict[str, Any] | None,
+        weakest_area: str | None,
+    ) -> dict[str, Any] | None:
+        if not growth_signal and not growth_status:
+            return None
+
+        topic = str((growth_signal or {}).get("topic") or weakest_area or "").strip()
+        highlights: list[str] = []
+        if topic:
+            highlights.append(f"最近真正有变化的是「{topic}」而不只是表面忙碌。")
+        signal_summary = str((growth_signal or {}).get("summary") or "").strip()
+        if signal_summary:
+            highlights.append(signal_summary)
+        growth_subtitle = str((growth_status or {}).get("subtitle") or "").strip()
+        if growth_subtitle:
+            highlights.append(growth_subtitle)
+
+        if not highlights:
+            return None
+
+        return {
+            "headline": str((growth_status or {}).get("headline") or "我注意到你的推进轨迹有了真实变化。").strip(),
+            "summary": highlights[0],
+            "highlights": highlights[:3],
+            "timeframe_label": "最近 7 天",
+        }
+
+    def _build_next_move_card(
+        self,
+        *,
+        most_important_task: dict[str, Any] | None,
+        active_plan: Plan | None,
+        weakest_area: str | None,
+    ) -> dict[str, Any] | None:
+        if not most_important_task:
+            return None
+
+        title = str(most_important_task.get("title") or "").strip()
+        if not title:
+            return None
+
+        reason = str(most_important_task.get("reason") or "").strip()
+        plan_name = str(most_important_task.get("plan_name") or getattr(active_plan, "name", "") or "").strip()
+        why_now = (
+            f"因为它最直接对应你现在还没补稳的「{weakest_area}」。"
+            if weakest_area
+            else "因为它是现在风险和收益最平衡的一步。"
+        )
+        reassurance = "如果今天状态不稳，我们也可以把它再拆小，不需要硬扛。"
+
+        return {
+            "headline": f"下一步先做「{title}」",
+            "summary": reason or why_now,
+            "why_now": why_now,
+            "reassurance": reassurance,
+            "task_id": str(most_important_task.get('id') or '').strip(),
+            "estimated_minutes": int(most_important_task.get("estimated_minutes") or 0),
+            "plan_name": plan_name or None,
+            "days_to_deadline": most_important_task.get("days_to_deadline"),
         }
 
     async def _sum_focus_minutes(self, user_id: UUID, start: datetime) -> int:

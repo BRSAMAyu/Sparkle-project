@@ -1195,31 +1195,36 @@ class ChatOrchestrator(
                     user_context_payload=user_context_payload,
                     state=state,
                 )
-                soul_runtime_payload = await attach_shadow_soul_runtime(
-                    target_context=state.context_data,
-                    redis_client=self.redis,
-                    user_id=user_id,
-                    user_context=user_context_payload,
-                    plan_context=plan_context,
-                    effective_companion_state=state.context_data.get("effective_companion_state"),
-                    relationship_profile=state.context_data.get("relationship_profile"),
-                    recent_revisions=state.context_data.get("companion_state_recent_revisions"),
-                )
+                soul_runtime_payload = None
+                try:
+                    soul_runtime_payload = await attach_shadow_soul_runtime(
+                        target_context=state.context_data,
+                        redis_client=self.redis,
+                        user_id=user_id,
+                        user_context=user_context_payload,
+                        plan_context=plan_context,
+                        effective_companion_state=state.context_data.get("effective_companion_state"),
+                        relationship_profile=state.context_data.get("relationship_profile"),
+                        recent_revisions=state.context_data.get("companion_state_recent_revisions"),
+                    )
+                except Exception as exc:
+                    logger.warning(f"Shadow soul runtime attach failed (non-fatal): {exc}")
                 if isinstance(user_context_payload, dict):
                     self._copy_companion_runtime_keys(source_context=state.context_data, target_context=user_context_payload)
-                await run_ledger.record_event(
-                    event_type="soul_runtime_shadow_compiled",
-                    label="Soul shadow ready",
-                    workflow_stage="orchestration",
-                    metadata={
-                        "compiler_version": soul_runtime_payload.debug.get("compiler_version"),
-                        "constitution_version": soul_runtime_payload.debug.get("constitution_version"),
-                        "identity_kernel_version": soul_runtime_payload.debug.get("identity_kernel_version"),
-                        "dual_core_source": soul_runtime_payload.debug.get("dual_core_source"),
-                        "dual_core_mode": soul_runtime_payload.debug.get("dual_core_mode"),
-                    },
-                    emit_snapshot=False,
-                )
+                if soul_runtime_payload is not None:
+                    await run_ledger.record_event(
+                        event_type="soul_runtime_shadow_compiled",
+                        label="Soul shadow ready",
+                        workflow_stage="orchestration",
+                        metadata={
+                            "compiler_version": soul_runtime_payload.debug.get("compiler_version"),
+                            "constitution_version": soul_runtime_payload.debug.get("constitution_version"),
+                            "identity_kernel_version": soul_runtime_payload.debug.get("identity_kernel_version"),
+                            "dual_core_source": soul_runtime_payload.debug.get("dual_core_source"),
+                            "dual_core_mode": soul_runtime_payload.debug.get("dual_core_mode"),
+                        },
+                        emit_snapshot=False,
+                    )
 
                 # Step 5: Sufficiency check (may short-circuit)
                 sufficiency_handled, intent_type = await self._check_sufficiency(
@@ -1263,16 +1268,19 @@ class ChatOrchestrator(
                             session_feedback_signal.to_dict() if session_feedback_signal is not None else None
                         ),
                     )
-                    await attach_shadow_soul_runtime(
-                        target_context=state.context_data,
-                        redis_client=self.redis,
-                        user_id=user_id,
-                        user_context=user_context_payload,
-                        plan_context=plan_context,
-                        effective_companion_state=state.context_data.get("effective_companion_state"),
-                        relationship_profile=state.context_data.get("relationship_profile"),
-                        recent_revisions=state.context_data.get("companion_state_recent_revisions"),
-                    )
+                    try:
+                        await attach_shadow_soul_runtime(
+                            target_context=state.context_data,
+                            redis_client=self.redis,
+                            user_id=user_id,
+                            user_context=user_context_payload,
+                            plan_context=plan_context,
+                            effective_companion_state=state.context_data.get("effective_companion_state"),
+                            relationship_profile=state.context_data.get("relationship_profile"),
+                            recent_revisions=state.context_data.get("companion_state_recent_revisions"),
+                        )
+                    except Exception as exc:
+                        logger.warning(f"Shadow soul runtime refresh failed (non-fatal): {exc}")
                     if isinstance(user_context_payload, dict):
                         self._copy_companion_runtime_keys(
                             source_context=state.context_data,
@@ -1647,16 +1655,19 @@ class ChatOrchestrator(
                         session_feedback_signal.to_dict() if session_feedback_signal is not None else None
                     ),
                 )
-                await attach_shadow_soul_runtime(
-                    target_context=state.context_data,
-                    redis_client=self.redis,
-                    user_id=user_id,
-                    user_context=user_context_payload,
-                    plan_context=plan_context,
-                    effective_companion_state=state.context_data.get("effective_companion_state"),
-                    relationship_profile=state.context_data.get("relationship_profile"),
-                    recent_revisions=state.context_data.get("companion_state_recent_revisions"),
-                )
+                try:
+                    await attach_shadow_soul_runtime(
+                        target_context=state.context_data,
+                        redis_client=self.redis,
+                        user_id=user_id,
+                        user_context=user_context_payload,
+                        plan_context=plan_context,
+                        effective_companion_state=state.context_data.get("effective_companion_state"),
+                        relationship_profile=state.context_data.get("relationship_profile"),
+                        recent_revisions=state.context_data.get("companion_state_recent_revisions"),
+                    )
+                except Exception as exc:
+                    logger.warning(f"Shadow soul runtime refresh failed (non-fatal): {exc}")
                 if isinstance(user_context_payload, dict):
                     self._copy_companion_runtime_keys(source_context=state.context_data, target_context=user_context_payload)
                 user_context_payload = await self._attach_user_strategy_state(

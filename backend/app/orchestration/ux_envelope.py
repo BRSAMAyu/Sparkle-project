@@ -418,6 +418,10 @@ class UXEnvelopeBuilder:
         if collaboration_summary:
             envelope["collaboration_summary"] = collaboration_summary
 
+        visible_adaptation = self._visible_adaptation(final_state=final_state, user_context_payload=user_context_payload)
+        if visible_adaptation:
+            envelope["adaptation_summary"] = visible_adaptation
+
         session_adaptation = self._session_adaptation(final_state)
         if session_adaptation:
             envelope["session_adaptation"] = session_adaptation
@@ -1746,6 +1750,35 @@ class UXEnvelopeBuilder:
             "applied_strategy": (
                 str((adaptation or {}).get("applied_strategy") or "") if isinstance(adaptation, dict) else ""
             ),
+        }
+
+    def _visible_adaptation(
+        self,
+        *,
+        final_state: Any,
+        user_context_payload: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        user_context = context_data.get("user_context")
+        user_context = user_context if isinstance(user_context, dict) else user_context_payload or {}
+        visible = user_context.get("visible_adaptation") if isinstance(user_context, dict) else None
+        if not isinstance(visible, dict):
+            return None
+
+        summary = str(visible.get("summary") or "").strip()
+        what_changed = [str(item).strip() for item in (visible.get("what_changed") or []) if str(item).strip()]
+        if not summary and not what_changed:
+            return None
+
+        return {
+            "title": str(visible.get("title") or "我刚做了一个调整").strip(),
+            "summary": summary,
+            "what_changed": what_changed[:4],
+            "reversibility_note": str(visible.get("reversibility_note") or "").strip(),
+            "follow_up_question": str(visible.get("follow_up_question") or "").strip(),
+            "evidence_summary": str(visible.get("evidence_summary") or "").strip(),
+            "experience_mode": str(visible.get("experience_mode") or "").strip(),
+            "intervention_family": str(visible.get("intervention_family") or "").strip(),
         }
 
     def _mode_explanation(

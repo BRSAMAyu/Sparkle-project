@@ -103,6 +103,9 @@ async def test_experience_actuator_auto_applies_session_strategy_adjustments(db_
     )
 
     assert len(runtime_summary["auto_strategy_adjustments"]) == 2
+    assert runtime_summary["visible_adaptation"]["what_changed"]
+    assert "如果这次调整不合适" in runtime_summary["visible_adaptation"]["reversibility_note"]
+    assert "我先按你的材料把真正卡住的点校准清楚" in user_context_payload["proactive_opening_message"]
     assert user_context_payload["user_strategy_state"]["retrieval_emphasis"] == "user_materials"
     assert user_context_payload["user_strategy_state"]["explanation_style"] == "step_by_step"
     assert user_context_payload["residual_decision_context"]["auto_applied_adjustments"][0]["field"] == "retrieval_emphasis"
@@ -233,6 +236,74 @@ async def test_experience_actuator_auto_retrieves_user_material_grounding(monkey
     assert grounding["status"] == "grounded"
     assert grounding["results"][0]["file_name"] == "thermo-notes.pdf"
     assert "熵增方向" in grounding["results"][0]["snippet"]
+    assert runtime_summary["visible_adaptation"]["evidence_summary"].startswith("这轮证据先来自你的资料")
+
+
+@pytest.mark.asyncio
+async def test_experience_actuator_keeps_core_adjustments_when_grounding_sidecar_fails(
+    monkeypatch,
+    db_session,
+    test_user,
+    test_plan,
+):
+    actuator = ExperienceActuator(db_session, redis=_FakeRedis())
+
+    async def _fake_resolve_scoped_files(db_session, *, user_id, requested_file_ids):
+        del db_session, user_id, requested_file_ids
+        raise RuntimeError("vector index unavailable")
+
+    monkeypatch.setattr(
+        "app.orchestration.experience_actuator._resolve_scoped_files",
+        _fake_resolve_scoped_files,
+    )
+
+    user_context_payload = {
+        "current_query": "用我的资料解释这个概念。",
+        "user_strategy_state": {
+            "difficulty_level": 3,
+            "session_mode": "guided",
+            "explanation_style": "conceptual",
+            "retrieval_emphasis": "balanced",
+            "push_vs_support": 0.5,
+            "intervention_intensity": "medium",
+        },
+        "residual_decision_context": {
+            "confidence": 0.84,
+            "primary_residual": "R_e",
+            "loop_type": "truth_seeking",
+            "experience_mode": "explain",
+            "intervention_family": "understanding_repair",
+            "what_matters_now": "先把真实误解校准清楚。",
+            "grounding_priority": ["user_materials"],
+            "feedback_hook": {
+                "ask": "这样解释后，真正卡住的点是不是更清楚了？",
+            },
+            "system_adjustments": [
+                {
+                    "field": "retrieval_emphasis",
+                    "recommended_value": "user_materials",
+                    "target_layer": "session",
+                    "reversible": True,
+                    "confidence_gate": 0.84,
+                }
+            ],
+        },
+    }
+
+    runtime_summary = await actuator.apply(
+        user_id=str(test_user.id),
+        session_id="phase4-sidecar-safe",
+        plan_id=test_plan.id,
+        request_id="req-sidecar-safe-1",
+        user_message="用我的资料解释这个概念。",
+        file_ids=["file-1"],
+        user_context_payload=user_context_payload,
+    )
+
+    assert runtime_summary["auto_strategy_adjustments"][0]["field"] == "retrieval_emphasis"
+    assert runtime_summary["user_material_grounding"]["status"] == "file_resolution_failed"
+    assert runtime_summary["visible_adaptation"]["what_changed"] == ["优先按你的资料来校准"]
+    assert user_context_payload["user_strategy_state"]["retrieval_emphasis"] == "user_materials"
 
 
 @pytest.mark.asyncio
