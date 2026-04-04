@@ -7,9 +7,11 @@ tracking methods.
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 
+from app.orchestration.statechart_engine import WorkflowState
 from app.orchestration.session_state_mixin import SessionStateMixin
 
 
@@ -46,6 +48,8 @@ async def test_drain_system_updates_returns_empty_when_no_updates(orchestrator):
             "proactive_opening_message": "",
             "pending_observation": "",
             "post_adaptation_question": "",
+            "active_intervention_id": "",
+            "active_interventions": [],
         }
 
 
@@ -171,6 +175,7 @@ async def test_drain_system_updates_builds_visible_prompt_context(orchestrator):
             "metadata": {
                 "evolution_kind": "adjustment",
                 "node_name": "条件句",
+                "intervention_id": str(uuid4()),
             },
         },
         {
@@ -192,3 +197,76 @@ async def test_drain_system_updates_builds_visible_prompt_context(orchestrator):
         assert "条件句" in visible_context["proactive_opening_message"]
         assert "周四中断学习" in visible_context["pending_observation"]
         assert "合适吗" in visible_context["post_adaptation_question"]
+        assert visible_context["active_intervention_id"]
+        assert len(visible_context["active_interventions"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_attach_active_intervention_state_updates_runtime_context(orchestrator):
+    state = WorkflowState(
+        context_data={
+            "user_context": {},
+            "visible_update_context": {
+                "active_interventions": [
+                    {
+                        "intervention_id": str(uuid4()),
+                        "source": "system_update",
+                    }
+                ]
+            },
+        }
+    )
+    user_context_payload = {}
+
+    with patch("app.orchestration.session_state_mixin.InterventionFeedbackBindingService") as mock_service:
+        service = mock_service.return_value
+        service.resolve_active_interventions = AsyncMock(
+            return_value=[
+                {
+                    "intervention_id": str(uuid4()),
+                    "source": "pending_record",
+                    "acceptance_status": "DELIVERED",
+                }
+            ]
+        )
+        service.get_last_feedback_binding = AsyncMock(
+            return_value={"intervention_id": str(uuid4()), "sentiment": "accepted"}
+        )
+
+        await orchestrator._attach_active_intervention_state(
+            active_db=object(),
+            user_id=str(uuid4()),
+            session_id="session-1",
+            user_context_payload=user_context_payload,
+            state=state,
+        )
+
+    assert state.context_data["active_interventions"][0]["source"] == "pending_record"
+    assert state.context_data["active_intervention_id"]
+    assert state.context_data["last_feedback_binding"]["sentiment"] == "accepted"
+    assert user_context_payload["active_interventions"][0]["source"] == "pending_record"
+
+
+@pytest.mark.asyncio
+async def test_hydrate_companion_runtime_context_updates_state_and_user_context(orchestrator):
+    state = WorkflowState(context_data={"user_context": {}})
+    user_context_payload = {"preferences": {"depth_preference": 0.5}}
+
+    with patch("app.orchestration.session_state_mixin.CompanionStateService") as mock_service:
+        service = mock_service.return_value
+        service.get_effective_state = AsyncMock(return_value={"relationship_stage": "trusted", "candor_calibration": 0.8})
+        service.get_relationship_profile = AsyncMock(return_value={"trust_level": 0.7})
+        service.get_recent_revisions = AsyncMock(return_value=[{"field": "candor_calibration"}])
+
+        payload = await orchestrator._hydrate_companion_runtime_context(
+            active_db=object(),
+            user_id=str(uuid4()),
+            session_id="session-1",
+            plan_id=None,
+            user_context_payload=user_context_payload,
+            state=state,
+        )
+
+    assert payload["effective_companion_state"]["relationship_stage"] == "trusted"
+    assert state.context_data["relationship_profile"]["trust_level"] == 0.7
+    assert user_context_payload["companion_state_recent_revisions"][0]["field"] == "candor_calibration"

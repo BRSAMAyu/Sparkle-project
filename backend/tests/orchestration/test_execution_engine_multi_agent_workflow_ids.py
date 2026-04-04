@@ -5,6 +5,7 @@ import pytest
 
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.execution_engine import ExecutionEngineMixin
+from app.orchestration.statechart_engine import WorkflowState
 
 
 class _Adapter:
@@ -45,6 +46,15 @@ async def test_handle_multi_agent_mode_preserves_stable_workflow_id(monkeypatch)
 
     responses = []
     async for response in engine._handle_multi_agent_mode(
+        state=WorkflowState(
+            context_data={
+                "effective_companion_state": {"relationship_stage": "building"},
+                "relationship_profile": {"trust_level": 0.4},
+                "companion_state_recent_revisions": [],
+                "soul_runtime_context": {"companion_stance": "Balanced."},
+                "soul_runtime_debug": {"compiler_version": "test"},
+            }
+        ),
         chat_mode='team::{"agents":["deep_analyst","exam_oracle"]}',
         user_message="一起分析这个问题",
         user_id=str(uuid4()),

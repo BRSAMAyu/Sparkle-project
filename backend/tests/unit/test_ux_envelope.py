@@ -126,7 +126,9 @@ def test_ux_envelope_builder_marks_tool_failure_and_recovery_copy() -> None:
         full_response="这是当前可确认的结果。",
         final_state=final_state,
         executable_plan=SimpleNamespace(confidence=0.7, tool_calls=[{"name": "create_task"}]),
-        route_decision=RouteDecision(execution_mode="hybrid", reason="expert_auto_fallback_provider", risk_level="medium"),
+        route_decision=RouteDecision(
+            execution_mode="hybrid", reason="expert_auto_fallback_provider", risk_level="medium"
+        ),
         include_references=False,
         file_ids=[],
         execution_validation={"failed_steps": 1, "total_steps": 2, "quality_score": 0.58},
@@ -156,7 +158,14 @@ def test_ux_envelope_prefers_explicit_zero_failed_steps() -> None:
     }
 
     assert builder._completion_state(final_state, executable_plan, execution_validation) == "done"
-    assert builder._confidence_band(executable_plan, RouteDecision(execution_mode="direct", reason="chat", risk_level="low"), execution_validation) == "medium"
+    assert (
+        builder._confidence_band(
+            executable_plan,
+            RouteDecision(execution_mode="direct", reason="chat", risk_level="low"),
+            execution_validation,
+        )
+        == "medium"
+    )
 
 
 def test_ux_envelope_builder_exposes_preference_learning_in_evolution() -> None:
@@ -197,7 +206,10 @@ def test_ux_envelope_builder_exposes_preference_learning_in_evolution() -> None:
     )
 
     assert envelope["ux_turn"]["dual_core_mode"] == "balanced"
-    assert envelope["ux_followthrough"]["memory_updates"]["preference_learnings"][0]["user_facing_message"] == "我记住了你更喜欢简洁的回答方式。"
+    assert (
+        envelope["ux_followthrough"]["memory_updates"]["preference_learnings"][0]["user_facing_message"]
+        == "我记住了你更喜欢简洁的回答方式。"
+    )
     assert envelope["ux_evolution"]["preference_learnings"][0]["source"] == "memory_preference"
 
 
@@ -260,7 +272,9 @@ def test_ux_envelope_builder_adapts_style_and_structured_actions(monkeypatch) ->
         full_response="我已经把第一步整理好了。",
         final_state=final_state,
         executable_plan=SimpleNamespace(confidence=0.88, tool_calls=[{"name": "create_task"}]),
-        route_decision=RouteDecision(execution_mode="hybrid", reason="study_plan_mode", risk_level="low", confidence=0.8),
+        route_decision=RouteDecision(
+            execution_mode="hybrid", reason="study_plan_mode", risk_level="low", confidence=0.8
+        ),
         include_references=False,
         file_ids=[],
         execution_validation=None,
@@ -380,3 +394,76 @@ def test_ux_envelope_builder_exposes_plan_reasoning_summary() -> None:
 
     assert envelope["ux_evolution"]["evolution_kind"] == "plan_reasoning"
     assert "执行复杂度可控" in envelope["ux_evolution"]["reasoning_summary"]
+
+
+def test_ux_envelope_builder_uses_soul_adjusted_companion_frame(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "ENABLE_ADAPTIVE_PRESENTATION", True)
+    builder = UXEnvelopeBuilder()
+    final_state = WorkflowState(
+        messages=[{"role": "user", "content": "继续说重点"}],
+        context_data={
+            "chat_mode": "standard",
+            "effective_companion_state": {
+                "relationship_stage": "trusted",
+                "candor_calibration": 0.86,
+                "preferred_truth_style": "direct_structured",
+            },
+            "soul_runtime_context": {
+                "companion_stance": "Lead with actionable clarity and crisp structure, while keeping warmth present.",
+            },
+        },
+    )
+
+    envelope = _build_envelope(
+        builder,
+        user_message="继续说重点",
+        full_response="这是重点。",
+        final_state=final_state,
+        executable_plan=None,
+        route_decision=RouteDecision(execution_mode="direct", reason="chat", risk_level="low"),
+        include_references=False,
+        file_ids=[],
+        execution_validation=None,
+        conversation_context=None,
+        plan_context=None,
+        user_context_payload={"llm_profile": {"tone": "structured"}},
+    )
+
+    assert envelope["ux_turn"]["companion_frame"] == "我会先把关键判断直接说清，再把依据和可选动作放到你面前。"
+
+
+def test_ux_envelope_builder_preserves_zero_candor_in_soul_adjustment(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "ENABLE_ADAPTIVE_PRESENTATION", True)
+    builder = UXEnvelopeBuilder()
+    final_state = WorkflowState(
+        messages=[{"role": "user", "content": "继续说重点"}],
+        context_data={
+            "chat_mode": "standard",
+            "effective_companion_state": {
+                "relationship_stage": "trusted",
+                "candor_calibration": 0.0,
+                "preferred_truth_style": "direct_structured",
+            },
+            "soul_runtime_context": {
+                "companion_stance": "Lead with actionable clarity and crisp structure, while keeping warmth present.",
+            },
+        },
+    )
+
+    envelope = _build_envelope(
+        builder,
+        user_message="继续说重点",
+        full_response="这是重点。",
+        final_state=final_state,
+        executable_plan=None,
+        route_decision=RouteDecision(execution_mode="direct", reason="chat", risk_level="low"),
+        include_references=False,
+        file_ids=[],
+        execution_validation=None,
+        conversation_context=None,
+        plan_context=None,
+        user_context_payload={"llm_profile": {"tone": "structured"}},
+    )
+
+    assert "我会更明确地区分判断、依据和动作。" in envelope["ux_turn"]["companion_frame"]
+    assert "我会先把关键判断直接说清，再把依据和可选动作放到你面前。" not in envelope["ux_turn"]["companion_frame"]

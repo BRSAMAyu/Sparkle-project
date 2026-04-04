@@ -377,7 +377,9 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
     timeline: list[dict[str, Any]] = []
     few_shot_total = 0
 
-    async def _run_single_expert(expert_id: str, prior_handoffs: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], int]:
+    async def _run_single_expert(
+        expert_id: str, prior_handoffs: list[dict[str, Any]]
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], int]:
         started_at = time.time()
         runtime = await _resolve_llm_for_expert(expert_id=expert_id, state=state, task_type=task_type)
         few_shot_examples: list[dict[str, Any]] = []
@@ -463,9 +465,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         return expert_output, handoff_packet.to_dict(), timeline_step, len(few_shot_examples[:1])
 
     if run_parallel:
-        parallel_results = await asyncio.gather(
-            *[_run_single_expert(expert_id, []) for expert_id in selected]
-        )
+        parallel_results = await asyncio.gather(*[_run_single_expert(expert_id, []) for expert_id in selected])
         for expert_output, handoff_packet, timeline_step, few_shot_count in parallel_results:
             expert_outputs.append(expert_output)
             handoff_packets.append(handoff_packet)
@@ -3009,6 +3009,28 @@ async def _execute_single_tool(
             user_id=user_id,
             db_session=db_session,
             compensation_call=compensation_call,
+            runtime_context={
+                "session_id": state.context_data.get("session_id"),
+                "plan_id": state.context_data.get("plan_id"),
+                "redis_client": redis_client,
+                "current_user_message": state.messages[-1]["content"] if state.messages else "",
+                "file_ids": list(state.context_data.get("file_ids") or []),
+                "situation_brief": state.context_data.get("situation_brief"),
+                "user_context_payload": state.context_data.get("user_context_payload"),
+                "plan_context": state.context_data.get("plan_context"),
+                "focused_memory": state.context_data.get("focused_memory"),
+                "context_briefing_note": state.context_data.get("context_briefing_note"),
+                "visible_update_context": state.context_data.get("visible_update_context"),
+                "active_interventions": state.context_data.get("active_interventions"),
+                "active_intervention_id": state.context_data.get("active_intervention_id"),
+                "last_feedback_binding": state.context_data.get("last_feedback_binding"),
+                "dual_core_snapshot": state.context_data.get("dual_core_snapshot"),
+                "session_feedback_signal": state.context_data.get("session_feedback_signal"),
+                "progress_snapshot": state.context_data.get("progress_snapshot"),
+                "adaptation_records": (
+                    state.context_data.get("user_context_payload", {}) or {}
+                ).get("adaptation_records"),
+            },
         )
 
         # Check if tool execution failed
@@ -3113,6 +3135,17 @@ async def _execute_single_tool(
         }
     )
     state.append_message("tool", result_json, name=tool_name)
+    if tool_name == "record_intervention_feedback" and isinstance(result.data, dict):
+        active_interventions = result.data.get("active_interventions")
+        if isinstance(active_interventions, list):
+            state.context_data["active_interventions"] = active_interventions
+            if active_interventions:
+                active_intervention_id = str(active_interventions[0].get("intervention_id") or "").strip()
+                if active_intervention_id:
+                    state.context_data["active_intervention_id"] = active_intervention_id
+        last_feedback_binding = result.data.get("last_feedback_binding")
+        if isinstance(last_feedback_binding, dict):
+            state.context_data["last_feedback_binding"] = last_feedback_binding
     state.context_data.setdefault("tool_results", []).append(
         {
             "name": tool_name,

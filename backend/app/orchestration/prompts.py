@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Prompt 管理系统 - 统一的Agent Prompt管理
 
@@ -31,6 +32,8 @@ from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
 from app.core.plan_context import merge_plan_context
 from app.config import settings
 from app.orchestration.context_focus import ContextFocusDecision
+from app.orchestration.situation_brief import format_situation_brief_section
+
 
 class _SafeFormatDict(dict):
     def __missing__(self, key: str) -> str:
@@ -51,6 +54,7 @@ _TIER_PROMPT_BUDGET: dict[str, int] = {
 }
 
 _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
+    "situation_brief_section": (140, 0.12),
     "context_briefing_section": (80, 0.05),
     "intent_section": (100, 0.08),
     "session_feedback_section": (60, 0.05),
@@ -65,6 +69,7 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "preference_instructions": (60, 0.05),
     "persona_section": (40, 0.04),
     "companion_persona_section": (180, 0.16),
+    "constitution_guardrail_section": (60, 0.04),
     "agent_persona_section": (40, 0.04),
     "agent_memory_section": (40, 0.03),
     "understanding_depth_section": (60, 0.05),
@@ -117,6 +122,56 @@ def _soften_section(content: str, *, reason: str) -> str:
     return "\n".join([lines[0], f"[冲突预检] {reason}", *lines[1:]]) if lines else text
 
 
+def _coalesce_mapping_value(source: dict[str, Any], key: str, default: Any) -> Any:
+    value = source.get(key)
+    return default if value is None else value
+
+
+def _describe_warmth_level(value: float) -> str:
+    if value <= 0.2:
+        return "保持克制而不过度外露"
+    if value <= 0.45:
+        return "带着稳定的温度感"
+    if value <= 0.7:
+        return "明显温暖但不黏腻"
+    return "温暖感更主动一些"
+
+
+def _describe_candor_level(value: float) -> str:
+    if value <= 0.2:
+        return "先轻放判断，给用户留出缓冲"
+    if value <= 0.45:
+        return "保持柔和但不回避关键事实"
+    if value <= 0.75:
+        return "直说重点，同时注意落点"
+    return "会更直接地点明判断与代价"
+
+
+def _describe_relationship_stage(stage: str) -> str:
+    return {
+        "early": "关系还在建立早期，要轻一点、少预设",
+        "building": "关系正在建立，靠稳定承接和连续性来积累信任",
+        "trusted": "关系已有一定信任基础，可以更直接一些",
+        "deepening": "关系连续性更深了，但仍然要守住边界和节制",
+    }.get(stage, "关系连续性主要靠稳定、诚实和记忆感来体现")
+
+
+def _describe_challenge_style(style: str) -> str:
+    return {
+        "gentle": "推进时用更轻的力度，不把压力堆到用户身上",
+        "balanced": "推进时保持温度和力度都不过头",
+        "firm": "必要时稳稳顶住关键判断，不用软化核心现实",
+    }.get(style, "推进时保持温度和力度都不过头")
+
+
+def _describe_truth_style(style: str) -> str:
+    return {
+        "honest_warm": "表达真实判断时保留温度",
+        "direct_structured": "表达上更强调清晰、结构和结论先行",
+        "gentle_reflective": "表达上更偏向陪着想清楚，再慢慢落到结论",
+    }.get(style, "表达上保持真实、清晰和有分寸")
+
+
 def _truncate_section(content: str, *, target_tokens: int) -> str:
     text = str(content or "").strip()
     if not text or _estimate_prompt_tokens(text) <= target_tokens:
@@ -143,18 +198,16 @@ def _apply_prompt_budget(
     budget_tokens: int | None = None,
 ) -> dict[str, str]:
     limit = budget_tokens if budget_tokens is not None else PROMPT_SECTION_SOFT_LIMIT_TOKENS
-    total_tokens = sum(_estimate_prompt_tokens(content) for content in section_map.values() if str(content or "").strip())
+    total_tokens = sum(
+        _estimate_prompt_tokens(content) for content in section_map.values() if str(content or "").strip()
+    )
     if total_tokens <= limit:
         return section_map
 
     adjusted = dict(section_map)
 
     def _recount() -> int:
-        return sum(
-            _estimate_prompt_tokens(item)
-            for item in adjusted.values()
-            if str(item or "").strip()
-        )
+        return sum(_estimate_prompt_tokens(item) for item in adjusted.values() if str(item or "").strip())
 
     # 先按每个区域的最大占比做一次硬上限裁剪
     for priority in sorted(set(priority_map.values()), reverse=True):
@@ -175,7 +228,8 @@ def _apply_prompt_budget(
     # 如果仍超限，则从低优先级开始继续向下压到保底 token
     for priority in sorted(set(priority_map.values()), reverse=True):
         section_names = [
-            name for name in adjusted.keys()
+            name
+            for name in adjusted.keys()
             if priority_map.get(name) == priority and str(adjusted.get(name) or "").strip()
         ]
         for section_name in section_names:
@@ -191,6 +245,7 @@ def _apply_prompt_budget(
             if _recount() <= limit:
                 return adjusted
     return adjusted
+
 
 # ============================================
 # 通用 Agent Prompt 模板
@@ -223,10 +278,20 @@ TASK_AWARENESS_SECTION = """
 12. run_quick_simulation - 当用户要求模拟学习小组、知识辩论、角色扮演或“帮我演练一下”时，优先调用
 13. generate_learning_report - 当用户要求学习报告、阶段复盘、最近学习表现总结时，优先调用
 
+成长自省工具：
+14. get_situation_brief - 当你需要当前局面的高密度摘要，而不是靠长上下文猜测时，优先调用
+15. get_user_strategy_state - 当你需要确认当前节奏、讲解方式、支持力度时，优先调用
+16. adjust_user_strategy_state - 当用户明确要求换一种节奏、难度、解释方式或支持方式时，调用记录
+17. retrieve_user_material - 当回答应优先依赖用户上传材料时，优先调用
+18. get_intervention_track_record - 当你要判断哪些提示/干预对这个用户更有效时，优先调用
+19. record_intervention_feedback - 当用户直接评价某次提醒/推动有没有帮助时，调用绑定反馈
+20. write_episode_note - 当用户说明短期情境变化（如考试周、高压、降载）时，调用写入回合备注
+
 **重要提示**：在生成新任务前，务必先调用 get_plan_state 获取：
 - 当前进度和已达成里程碑
 - 任务完成统计
 - 自适应调整参数（difficulty_shift, time_multiplier）
+当你需要精确的成长状态、用户材料证据或干预记录时，优先使用以上成长自省工具，不要只依赖 prompt 里的静态上下文。
 """
 
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
@@ -239,7 +304,11 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 {companion_persona_section}
 
+{constitution_guardrail_section}
+
 {agent_persona_section}
+
+{situation_brief_section}
 
 ## 当前用户上下文
 
@@ -336,6 +405,8 @@ MODE_SYSTEM_PROMPTS = {
 
 
 {agent_memory_section}
+
+{situation_brief_section}
 
 
 
@@ -443,6 +514,8 @@ MODE_SYSTEM_PROMPTS = {
 
 {agent_memory_section}
 
+{situation_brief_section}
+
 
 
 ## 当前用户上下文
@@ -549,6 +622,8 @@ MODE_SYSTEM_PROMPTS = {
 
 {agent_memory_section}
 
+{situation_brief_section}
+
 
 
 ## 当前用户上下文
@@ -616,9 +691,6 @@ MODE_SYSTEM_PROMPTS = {
 }
 
 
-
-
-
 # ============================================
 
 # 主入口函数
@@ -626,37 +698,21 @@ MODE_SYSTEM_PROMPTS = {
 # ============================================
 
 
-
 def build_system_prompt(
-
     user_context: dict,
-
     conversation_history: dict = None,
-
     prompt_version: str = "v1",
-
     agent_role: AgentRole = AgentRole.GENERATION,
-
     plan_context: dict = None,
-
     intent_instruction: str = None,  # Vision Item 4b: Explicit Intent Injection
-
     session_feedback_instruction: str = None,
-
     dual_core_instruction: str = None,
-
     context_focus: dict | None = None,
-
     context_briefing_note: str | None = None,
-
     context_level: str = "full",  # full | light
-
     chat_mode: str = "standard",
-
     model_key: str | None = None,  # P2: model-aware prompt budget
-
 ) -> str:
-
     """
 
     构建完整的 System Prompt，深度集成用户偏好
@@ -703,8 +759,6 @@ def build_system_prompt(
 
         plan_context = user_context.get("plan_context")
 
-
-
     if plan_context and isinstance(user_context, dict):
 
         user_context = merge_plan_context(user_context, plan_context)
@@ -746,7 +800,6 @@ def build_system_prompt(
         agent_memory_context = str(user_context.get("agent_memory_context") or "").strip()
         collaboration_narrative = str(user_context.get("collaboration_narrative") or "").strip()
 
-
     # 1. 首先检查 AgentProfile 是否有专用 prompt
 
     profile = agent_profile_registry.get_profile(agent_role)
@@ -761,8 +814,6 @@ def build_system_prompt(
     else:
         base_prompt = MODE_SYSTEM_PROMPTS.get(chat_mode, AGENT_SYSTEM_PROMPT)
 
-
-
     # 2. 格式化上下文
 
     formatted_user_context = format_user_context(
@@ -770,8 +821,6 @@ def build_system_prompt(
         context_level=context_level,
         context_focus=context_focus,
     )
-
-
 
     llm_profile = _extract_llm_profile(user_context)
     understanding_depth_hint = None
@@ -786,11 +835,7 @@ def build_system_prompt(
         context_focus=context_focus,
     )
 
-
-
     conversation_history_section = _format_conversation_history(conversation_history)
-
-
 
     # 2.5 格式化计划上下文
 
@@ -799,8 +844,6 @@ def build_system_prompt(
         context_focus=context_focus,
         query_text=str(user_context.get("current_query", "") or ""),
     )
-
-
 
     # 2.6 格式化意图指令 (Vision Item 4b)
 
@@ -881,11 +924,16 @@ def build_system_prompt(
         user_context=user_context,
         plan_context=plan_context,
     )
+    constitution_guardrail_section = _format_constitution_guardrail_section(user_context=user_context)
     visible_intelligence_section = _format_visible_intelligence_section(user_context=user_context)
 
     agent_memory_section = ""
     if agent_memory_context:
         agent_memory_section = "\n## 专家交互记忆 [L2 引导]\n" + agent_memory_context
+
+    situation_brief_section = ""
+    if isinstance(user_context, dict):
+        situation_brief_section = format_situation_brief_section(user_context.get("situation_brief"))
 
     understanding_depth_section = ""
     if isinstance(understanding_depth_hint, dict):
@@ -900,7 +948,6 @@ def build_system_prompt(
                 + (f"当前升级: {level}\n" if level else "")
                 + (f"提示背景: {description}\n" if description else "")
             )
-
 
     # 2.7 格式化认知棱镜指令
     cognitive_prism_section = _format_cognitive_prism_section(user_context, context_focus=context_focus)
@@ -920,8 +967,7 @@ def build_system_prompt(
             if example_lines:
                 seed_library_section = (
                     "\n## 参考示例（来自用户订阅的种子库） [L3 背景]\n"
-                    "以下是该学科/领域的高质量问答示例，请参考其风格和深度：\n"
-                    + "\n".join(example_lines)
+                    "以下是该学科/领域的高质量问答示例，请参考其风格和深度：\n" + "\n".join(example_lines)
                 )
 
     context_briefing_section = ""
@@ -964,6 +1010,11 @@ def build_system_prompt(
                 companion_persona_section,
                 reason="本轮以精简为主；保留陪伴 framing，但不要展开成长背景。",
             )
+        if constitution_guardrail_section:
+            constitution_guardrail_section = _soften_section(
+                constitution_guardrail_section,
+                reason="本轮以精简为主；只保留最短的宪法护栏提醒。",
+            )
         if visible_intelligence_section:
             visible_intelligence_section = _soften_section(
                 visible_intelligence_section,
@@ -997,8 +1048,11 @@ def build_system_prompt(
             )
 
     focus_decision = ContextFocusDecision.from_dict(context_focus)
-    cognitive_priority = 2 if focus_decision and focus_decision.focus_mode in {"emotional_focus", "cognitive_focus"} else 3
+    cognitive_priority = (
+        2 if focus_decision and focus_decision.focus_mode in {"emotional_focus", "cognitive_focus"} else 3
+    )
     section_map = {
+        "situation_brief_section": situation_brief_section,
         "context_briefing_section": context_briefing_section,
         "visible_intelligence_section": visible_intelligence_section,
         "intent_section": intent_section,
@@ -1013,11 +1067,14 @@ def build_system_prompt(
         "mode_strategy_section": mode_strategy_section,
         "persona_section": persona_section,
         "companion_persona_section": companion_persona_section,
+        "constitution_guardrail_section": constitution_guardrail_section,
         "agent_persona_section": agent_persona_section,
         "agent_memory_section": agent_memory_section,
         "cognitive_prism_section": cognitive_prism_section,
         "seed_library_section": seed_library_section,
-        "conversation_history_section": f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else "",
+        "conversation_history_section": (
+            f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else ""
+        ),
         "task_awareness_section": f"[优先级：L3 背景]\n{TASK_AWARENESS_SECTION}".strip(),
     }
     # P2: 根据 model_key 的 tier 动态调整 prompt token 预算
@@ -1025,6 +1082,7 @@ def build_system_prompt(
     if model_key:
         try:
             from app.core.llm_router import llm_router as _lr
+
             _mc = _lr._available_models.get(model_key)
             if _mc and hasattr(_mc, "tier"):
                 _model_tier_str = _mc.tier.value
@@ -1035,6 +1093,7 @@ def build_system_prompt(
     section_map = _apply_prompt_budget(
         section_map,
         priority_map={
+            "situation_brief_section": 0,
             "context_briefing_section": 0,
             "visible_intelligence_section": 1,
             "intent_section": 1,
@@ -1049,6 +1108,7 @@ def build_system_prompt(
             "mode_strategy_section": 2,
             "persona_section": 2,
             "companion_persona_section": 1,
+            "constitution_guardrail_section": 1,
             "agent_persona_section": 2,
             "agent_memory_section": 2,
             "cognitive_prism_section": cognitive_priority,
@@ -1058,6 +1118,7 @@ def build_system_prompt(
         },
         budget_tokens=_prompt_budget,
     )
+    situation_brief_section = section_map["situation_brief_section"]
     context_briefing_section = section_map["context_briefing_section"]
     visible_intelligence_section = section_map["visible_intelligence_section"]
     intent_section = section_map["intent_section"]
@@ -1072,20 +1133,28 @@ def build_system_prompt(
     mode_strategy_section = section_map["mode_strategy_section"]
     persona_section = section_map["persona_section"]
     companion_persona_section = section_map["companion_persona_section"]
+    constitution_guardrail_section = section_map["constitution_guardrail_section"]
     agent_persona_section = section_map["agent_persona_section"]
     agent_memory_section = section_map["agent_memory_section"]
     cognitive_prism_section = section_map["cognitive_prism_section"]
     conversation_history_section = section_map["conversation_history_section"]
     task_awareness_section = section_map["task_awareness_section"]
     seed_library_section = section_map["seed_library_section"]
-
+    embed_situation_brief_in_user_context = bool(
+        situation_brief_section and base_prompt != AGENT_SYSTEM_PROMPT and "{user_context}" in base_prompt
+    )
+    rendered_user_context = formatted_user_context
+    if embed_situation_brief_in_user_context:
+        rendered_user_context = "\n\n".join(
+            section for section in (situation_brief_section, formatted_user_context) if str(section or "").strip()
+        )
 
     # 3. 如果是通用模板，进行完整渲染
 
     if base_prompt == AGENT_SYSTEM_PROMPT or "{user_context}" in base_prompt:
         prompt = base_prompt.format_map(
             _SafeFormatDict(
-                user_context=formatted_user_context,
+                user_context=rendered_user_context,
                 conversation_history_section=conversation_history_section,
                 preference_instructions=preference_instructions,
                 plan_context_section=plan_context_section,
@@ -1099,8 +1168,10 @@ def build_system_prompt(
                 mode_strategy_section=mode_strategy_section,
                 persona_section=persona_section,
                 companion_persona_section=companion_persona_section,
+                constitution_guardrail_section=constitution_guardrail_section,
                 agent_persona_section=agent_persona_section,
                 agent_memory_section=agent_memory_section,
+                situation_brief_section=situation_brief_section,
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
                 cognitive_prism_section=cognitive_prism_section,
@@ -1113,7 +1184,9 @@ def build_system_prompt(
                 task_awareness_section,
                 persona_section,
                 companion_persona_section,
+                constitution_guardrail_section,
                 agent_persona_section,
+                "" if embed_situation_brief_in_user_context else situation_brief_section,
                 plan_context_section,
                 conversation_history_section,
                 context_briefing_section,
@@ -1140,11 +1213,13 @@ def build_system_prompt(
 
         prompt = base_prompt.format_map(
             _SafeFormatDict(
-                user_context=formatted_user_context,
+                user_context=rendered_user_context,
                 query=user_context.get("current_query", ""),
                 context_briefing_section=context_briefing_section,
                 visible_intelligence_section=visible_intelligence_section,
                 companion_persona_section=companion_persona_section,
+                constitution_guardrail_section=constitution_guardrail_section,
+                situation_brief_section=situation_brief_section,
             )
         )
 
@@ -1153,7 +1228,9 @@ def build_system_prompt(
             task_awareness_section,
             persona_section,
             companion_persona_section,
+            constitution_guardrail_section,
             agent_persona_section,
+            situation_brief_section,
             plan_context_section,
             conversation_history_section,
             context_briefing_section,
@@ -1171,8 +1248,6 @@ def build_system_prompt(
         suffix = "\n\n".join(section for section in ordered_sections if str(section or "").strip())
         if suffix:
             prompt = f"{prompt}\n\n{suffix}"
-
-
 
     # 4. 版本特定修饰
 
@@ -1354,6 +1429,22 @@ def _format_companion_persona_section(
     user_context: dict,
     plan_context: dict | None,
 ) -> str:
+    soul_runtime_context = (
+        user_context.get("soul_runtime_context") if isinstance(user_context.get("soul_runtime_context"), dict) else None
+    )
+    effective_companion_state = (
+        user_context.get("effective_companion_state")
+        if isinstance(user_context.get("effective_companion_state"), dict)
+        else None
+    )
+    if isinstance(soul_runtime_context, dict) and isinstance(effective_companion_state, dict):
+        return _format_soul_driven_companion_persona_section(
+            user_context=user_context,
+            plan_context=plan_context,
+            soul_runtime_context=soul_runtime_context,
+            effective_companion_state=effective_companion_state,
+        )
+
     context_focus = user_context.get("context_focus") if isinstance(user_context, dict) else None
     section_weights = context_focus.get("section_weights") if isinstance(context_focus, dict) else {}
     plan_weight = str(section_weights.get("plan_context") or "").strip().lower()
@@ -1440,10 +1531,87 @@ def _format_companion_persona_section(
         elif community_ctx.get("recent_interaction"):
             lines.append(f"- 群组动态: 你最近 {community_ctx['recent_interaction']} 和学习群组有互动。")
 
-    lines.append('- 回答时优先承接这些已知背景，不要反复问“你的目标是什么”。')
+    lines.append("- 回答时优先承接这些已知背景，不要反复问“你的目标是什么”。")
     # If peer context is present, hint that the AI can reference it naturally
     if isinstance(community_ctx, dict) and community_ctx.get("active_group_count", 0) > 0:
         lines.append("- 如果适合，可以自然提及同学的进展作为激励或参考，但不要施压。")
+    return "\n" + "\n".join(lines)
+
+
+def _format_soul_driven_companion_persona_section(
+    *,
+    user_context: dict,
+    plan_context: dict | None,
+    soul_runtime_context: dict[str, Any],
+    effective_companion_state: dict[str, Any],
+) -> str:
+    profile = _extract_profile(user_context)
+    identity = profile.get("identity") if isinstance(profile.get("identity"), dict) else {}
+    raw_user_context = user_context.get("user_context") if isinstance(user_context.get("user_context"), dict) else {}
+    nickname = (
+        str(identity.get("nickname") or "").strip()
+        or str(raw_user_context.get("nickname") or raw_user_context.get("username") or "").strip()
+        or "这位用户"
+    )
+    relationship_stage = str(
+        _coalesce_mapping_value(effective_companion_state, "relationship_stage", "building")
+    ).strip()
+    warmth = float(_coalesce_mapping_value(effective_companion_state, "warmth_calibration", 0.55))
+    candor = float(_coalesce_mapping_value(effective_companion_state, "candor_calibration", 0.75))
+    challenge_style = str(_coalesce_mapping_value(effective_companion_state, "challenge_style", "balanced")).strip()
+    truth_style = str(
+        _coalesce_mapping_value(effective_companion_state, "preferred_truth_style", "honest_warm")
+    ).strip()
+    current_goal = ""
+    active_goals = user_context.get("active_goals") if isinstance(user_context.get("active_goals"), list) else []
+    if active_goals and isinstance(active_goals[0], dict):
+        current_goal = str(active_goals[0].get("title") or "").strip()
+    if not current_goal and isinstance(plan_context, dict):
+        current_goal = str(plan_context.get("goal") or plan_context.get("plan_description") or "").strip()
+    current_plan = ""
+    if isinstance(plan_context, dict):
+        current_plan = str(plan_context.get("plan_title") or plan_context.get("title") or "").strip()
+
+    lines = [
+        "## 陪伴式人格 framing [L2 引导]",
+        f"你是 Sparkle，{nickname} 的成长伙伴，不是 generic assistant。",
+        f"- 当前 companion stance: {str(soul_runtime_context.get('companion_stance') or '').strip()}",
+        (
+            f"- 当前陪伴取向: {_describe_relationship_stage(relationship_stage)}；"
+            f"{_describe_warmth_level(warmth)}；{_describe_candor_level(candor)}；"
+            f"{_describe_challenge_style(challenge_style)}；{_describe_truth_style(truth_style)}。"
+        ),
+        f"- 关系连续性: {str(soul_runtime_context.get('relationship_context') or '').strip()}",
+    ]
+    if current_goal:
+        lines.append(f"- 当前目标: {current_goal}")
+    if current_plan:
+        lines.append(f"- 当前计划背景: {current_plan}")
+    lines.append("- 通过连续性、诚实和结构感来体现陪伴，不要把陪伴写成表演或情绪堆砌。")
+    lines.append("- 不要原样复述 companion notes，也不要暴露 runtime 字段名。")
+    return "\n" + "\n".join(lines)
+
+
+def _format_constitution_guardrail_section(*, user_context: dict) -> str:
+    soul_runtime_context = (
+        user_context.get("soul_runtime_context") if isinstance(user_context.get("soul_runtime_context"), dict) else None
+    )
+    if not isinstance(soul_runtime_context, dict):
+        return ""
+
+    constitutional_summary = str(soul_runtime_context.get("constitutional_summary") or "").strip()
+    no_drift_flags = [
+        str(item).strip() for item in (soul_runtime_context.get("no_drift_flags") or []) if str(item).strip()
+    ]
+    if not constitutional_summary and not no_drift_flags:
+        return ""
+
+    lines = [
+        "## 宪法护栏 [L1 护栏]",
+        constitutional_summary or "优先保护用户成长、真实感和自由度。",
+    ]
+    for item in no_drift_flags[:2]:
+        lines.append(f"- {item}")
     return "\n" + "\n".join(lines)
 
 
@@ -1452,9 +1620,7 @@ def _format_visible_intelligence_section(*, user_context: dict) -> str:
     pending_observation = str(user_context.get("pending_observation") or "").strip()
     post_adaptation_question = str(user_context.get("post_adaptation_question") or "").strip()
     evolution_highlights = [
-        str(item).strip()
-        for item in (user_context.get("evolution_highlights") or [])
-        if str(item).strip()
+        str(item).strip() for item in (user_context.get("evolution_highlights") or []) if str(item).strip()
     ]
 
     if not proactive_opening and evolution_highlights:
@@ -1483,20 +1649,30 @@ def _resolve_preference_instructions(
     context_focus: dict[str, Any] | None,
 ) -> str:
     focus_decision = ContextFocusDecision.from_dict(context_focus)
+    strategy_state = user_context.get("user_strategy_state") if isinstance(user_context, dict) else None
+    strategy_state = strategy_state if isinstance(strategy_state, dict) else {}
     if focus_decision and focus_decision.focus_mode == "emotional_focus":
         tone = str(llm_profile.get("tone") or "稳定、温和").strip()
         verbosity = str(llm_profile.get("verbosity_target") or "concise").strip()
-        return (
+        instruction = (
             "## 用户偏好适配\n"
             f"- 当前优先语气：{tone}\n"
             f"- 当前优先长度：{verbosity}\n"
             "- 回答先降低认知负荷，再给可执行下一步"
         )
+        strategy_lines = _format_strategy_instruction_lines(strategy_state)
+        if strategy_lines:
+            instruction += "\n" + "\n".join(strategy_lines)
+        return instruction
 
-    return llm_profile.get(
+    base_instruction = llm_profile.get(
         "system_prompt_additions",
         _get_default_preference_instructions(user_context),
     )
+    strategy_lines = _format_strategy_instruction_lines(strategy_state)
+    if strategy_lines:
+        base_instruction = "\n".join([str(base_instruction).strip(), *strategy_lines]).strip()
+    return base_instruction
 
 
 def _format_plan_context(
@@ -1580,8 +1756,7 @@ def _format_plan_context(
         lines.append(f"- 单次学习约 {minutes} 分钟 (session_length_preference: {minutes})")
 
     # 其他事实（用可读方式展示）
-    other_facts = {k: v for k, v in facts.items()
-                   if k not in ("difficulty_preference", "session_length_preference")}
+    other_facts = {k: v for k, v in facts.items() if k not in ("difficulty_preference", "session_length_preference")}
     for key, value in other_facts.items():
         # 将下划线命名转换为空格分隔的描述
         readable_key = key.replace("_", " ")
@@ -1743,6 +1918,11 @@ def format_user_context(
         lines.append("【理解深度】")
         lines.append(f"- 当前等级: {understanding_depth.get('level')}")
 
+    strategy_state = normalized.get("user_strategy_state")
+    if isinstance(strategy_state, dict):
+        lines.append("【当前策略状态】")
+        lines.extend(_format_strategy_state_lines(strategy_state))
+
     # 活跃计划
     active_plans = normalized.get("active_plans") or []
     if active_plans and section_weights.get("plan_context", "medium") != "off":
@@ -1895,7 +2075,80 @@ def _normalize_user_context(context: dict) -> dict:
     if isinstance(context.get("understanding_depth"), dict):
         normalized["understanding_depth"] = context["understanding_depth"]
 
+    if isinstance(context.get("user_strategy_state"), dict):
+        normalized["user_strategy_state"] = context["user_strategy_state"]
+
     return normalized
+
+
+def _format_strategy_instruction_lines(strategy_state: dict[str, Any] | None) -> list[str]:
+    strategy_state = strategy_state if isinstance(strategy_state, dict) else {}
+    if not strategy_state:
+        return []
+
+    lines: list[str] = []
+    session_mode = str(strategy_state.get("session_mode") or "").strip()
+    explanation_style = str(strategy_state.get("explanation_style") or "").strip()
+    retrieval_emphasis = str(strategy_state.get("retrieval_emphasis") or "").strip()
+    push_vs_support = strategy_state.get("push_vs_support")
+    intensity = str(strategy_state.get("intervention_intensity") or "").strip()
+    note = str(strategy_state.get("current_episode_note") or "").strip()
+
+    if session_mode == "recovery":
+        lines.append("- 当前策略层要求：先减负和稳住节奏，再给最小可执行下一步")
+    elif session_mode == "review":
+        lines.append("- 当前策略层要求：优先复盘、纠错和巩固，而不是继续扩展新内容")
+    elif session_mode == "exploratory":
+        lines.append("- 当前策略层要求：允许更多探索和比较，但仍要收束到清晰结论")
+
+    if explanation_style == "step_by_step":
+        lines.append("- 解释方式：按步骤拆开，不要跳步")
+    elif explanation_style == "example_based":
+        lines.append("- 解释方式：优先用具体例子再抽象总结")
+
+    if retrieval_emphasis == "user_materials":
+        lines.append("- 检索倾向：若需要举证或补充背景，优先依赖用户自己的材料与当前计划")
+    elif retrieval_emphasis == "general_knowledge":
+        lines.append("- 检索倾向：当用户材料不足时，可更主动使用通用知识补齐")
+
+    if isinstance(push_vs_support, (int, float)):
+        if float(push_vs_support) >= 0.65:
+            lines.append("- 推进力度：可以更直接地收束和推动执行")
+        elif float(push_vs_support) <= 0.35:
+            lines.append("- 推进力度：先支持和承接，再轻推下一步")
+
+    if intensity == "low":
+        lines.append("- 干预强度：保持轻量，不要一下子塞太多动作")
+    elif intensity == "high":
+        lines.append("- 干预强度：可以更明确地下判断和给行动约束")
+
+    if note:
+        lines.append(f"- 当前回合备注：{note}")
+    return lines
+
+
+def _format_strategy_state_lines(strategy_state: dict[str, Any] | None) -> list[str]:
+    strategy_state = strategy_state if isinstance(strategy_state, dict) else {}
+    if not strategy_state:
+        return ["- 暂无显式策略状态"]
+
+    lines = [
+        f"- difficulty_level: {strategy_state.get('difficulty_level', 3)}",
+        f"- session_mode: {strategy_state.get('session_mode', 'guided')}",
+        f"- explanation_style: {strategy_state.get('explanation_style', 'conceptual')}",
+        f"- retrieval_emphasis: {strategy_state.get('retrieval_emphasis', 'balanced')}",
+        f"- push_vs_support: {strategy_state.get('push_vs_support', 0.5)}",
+        f"- intervention_intensity: {strategy_state.get('intervention_intensity', 'medium')}",
+    ]
+    note = str(strategy_state.get("current_episode_note") or "").strip()
+    if note:
+        lines.append(f"- current_episode_note: {note}")
+    meta = strategy_state.get("meta")
+    if isinstance(meta, dict):
+        adaptive_summary = str(meta.get("adaptive_summary") or "").strip()
+        if adaptive_summary:
+            lines.append(f"- adaptive_summary: {adaptive_summary}")
+    return lines
 
 
 def _format_cognitive_prism_section(user_context: dict, context_focus: dict[str, Any] | None = None) -> str:
@@ -1925,11 +2178,7 @@ def _format_cognitive_prism_section(user_context: dict, context_focus: dict[str,
     pattern_desc = []
     for p_type, count in patterns_by_type.items():
         if count > 0:
-            type_names = {
-                "cognitive": "认知",
-                "emotional": "情绪",
-                "execution": "执行"
-            }
+            type_names = {"cognitive": "认知", "emotional": "情绪", "execution": "执行"}
             pattern_desc.append(f"{type_names.get(p_type, p_type)}{count}个")
 
     pattern_text = "、".join(pattern_desc) if pattern_desc else f"{pattern_count}个"
@@ -2061,7 +2310,7 @@ def _maybe_log_prompt_snapshot(
         snapshot = prompt
     else:
         head = prompt[: max_chars // 2]
-        tail = prompt[-(max_chars // 2):]
+        tail = prompt[-(max_chars // 2) :]
         snapshot = f"{head}\n...<truncated>...\n{tail}"
 
     user_id = None

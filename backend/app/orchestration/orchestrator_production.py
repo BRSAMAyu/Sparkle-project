@@ -39,6 +39,7 @@ from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.prompts import build_system_prompt
+from app.orchestration.soul_compiler import DEFAULT_COMPANION_STATE, attach_shadow_soul_runtime
 from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.token_tracker import TokenTracker
 from app.orchestration.validator import RequestValidator
@@ -47,6 +48,9 @@ from app.services.galaxy_service import GalaxyService
 from app.services.graph_knowledge_service import GraphKnowledgeService
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import llm_service
+from app.services.companion_state_service import CompanionStateService
+from app.services.intervention_feedback_binding_service import InterventionFeedbackBindingService
+from app.services.user_strategy_state_service import UserStrategyStateService
 from app.services.user_service import UserService
 
 TRACER = trace.get_tracer(__name__)
@@ -818,12 +822,122 @@ class ProductionChatOrchestrator:
             if isinstance(user_context_data, dict):
                 visible_update_context = (context_data or {}).get("visible_update_context")
                 if isinstance(visible_update_context, dict):
-                    for key in ("proactive_opening_message", "pending_observation", "post_adaptation_question"):
+                    for key in (
+                        "proactive_opening_message",
+                        "pending_observation",
+                        "post_adaptation_question",
+                        "active_intervention_id",
+                    ):
                         value = str(visible_update_context.get(key) or "").strip()
                         if value:
                             user_context_data[key] = value
+                    active_interventions = visible_update_context.get("active_interventions")
+                    if isinstance(active_interventions, list) and active_interventions:
+                        user_context_data["active_interventions"] = active_interventions
                 if (context_data or {}).get("evolution_highlights"):
                     user_context_data["evolution_highlights"] = list((context_data or {}).get("evolution_highlights") or [])
+            companion_state_payload = {
+                "effective_companion_state": DEFAULT_COMPANION_STATE.to_dict(),
+                "relationship_profile": {},
+                "companion_state_recent_revisions": [],
+            }
+            plan_uuid = None
+            if active_db and user_id:
+                try:
+                    companion_service = CompanionStateService(active_db, self.redis)
+                    user_uuid = uuid.UUID(str(user_id))
+                    if isinstance(plan_context, dict):
+                        raw_plan_id = plan_context.get("plan_id")
+                        if raw_plan_id:
+                            try:
+                                plan_uuid = uuid.UUID(str(raw_plan_id))
+                            except (TypeError, ValueError, AttributeError):
+                                plan_uuid = None
+                    companion_state_payload = {
+                        "effective_companion_state": await companion_service.get_effective_state(
+                            user_uuid,
+                            plan_id=plan_uuid,
+                            session_id=session_id,
+                        ),
+                        "relationship_profile": await companion_service.get_relationship_profile(user_uuid),
+                        "companion_state_recent_revisions": await companion_service.get_recent_revisions(
+                            user_uuid,
+                            plan_id=plan_uuid,
+                            session_id=session_id,
+                        ),
+                    }
+                except Exception as exc:
+                    logger.warning(f"Failed to hydrate companion runtime context: {exc}")
+            if isinstance(user_context_data, dict):
+                user_context_data.update(companion_state_payload)
+            runtime_context_data = dict(context_data or {})
+            runtime_context_data.update(companion_state_payload)
+            if active_db and user_id:
+                try:
+                    binding_service = InterventionFeedbackBindingService(active_db, self.redis)
+                    active_interventions = await binding_service.resolve_active_interventions(
+                        user_id=uuid.UUID(str(user_id)),
+                        session_id=session_id,
+                        runtime_active_interventions=(
+                            user_context_data.get("active_interventions")
+                            if isinstance(user_context_data, dict) and isinstance(user_context_data.get("active_interventions"), list)
+                            else None
+                        ),
+                    )
+                    last_feedback_binding = await binding_service.get_last_feedback_binding(session_id)
+                    runtime_context_data["active_interventions"] = active_interventions
+                    if active_interventions:
+                        runtime_context_data["active_intervention_id"] = str(
+                            active_interventions[0].get("intervention_id") or ""
+                        ).strip()
+                    if last_feedback_binding:
+                        runtime_context_data["last_feedback_binding"] = last_feedback_binding
+                    if isinstance(user_context_data, dict):
+                        user_context_data["active_interventions"] = active_interventions
+                        if active_interventions:
+                            user_context_data["active_intervention_id"] = str(
+                                active_interventions[0].get("intervention_id") or ""
+                            ).strip()
+                        if last_feedback_binding:
+                            user_context_data["last_feedback_binding"] = last_feedback_binding
+                except Exception as exc:
+                    logger.warning(f"Failed to hydrate active intervention state: {exc}")
+            if active_db and user_id and isinstance(user_context_data, dict):
+                try:
+                    strategy_service = UserStrategyStateService(active_db, self.redis)
+                    user_strategy_state = await strategy_service.get_effective_state(
+                        uuid.UUID(str(user_id)),
+                        plan_id=plan_uuid,
+                        session_id=session_id,
+                    )
+                    user_strategy_history = await strategy_service.get_recent_changes(
+                        uuid.UUID(str(user_id)),
+                        plan_id=plan_uuid,
+                        session_id=session_id,
+                        limit=6,
+                    )
+                    user_context_data["user_strategy_state"] = user_strategy_state
+                    if user_strategy_history:
+                        user_context_data["user_strategy_history"] = user_strategy_history
+                    runtime_context_data["user_strategy_state"] = user_strategy_state
+                    runtime_context_data["user_strategy_history"] = user_strategy_history
+                except Exception as exc:
+                    logger.warning(f"Failed to hydrate user strategy state: {exc}")
+            await attach_shadow_soul_runtime(
+                target_context=runtime_context_data,
+                redis_client=self.redis,
+                user_id=user_id,
+                user_context=user_context_data,
+                plan_context=plan_context,
+                effective_companion_state=runtime_context_data.get("effective_companion_state"),
+                relationship_profile=runtime_context_data.get("relationship_profile"),
+                recent_revisions=runtime_context_data.get("companion_state_recent_revisions"),
+            )
+            if isinstance(user_context_data, dict):
+                for key in ("soul_runtime_context", "soul_runtime_debug"):
+                    if runtime_context_data.get(key) is not None:
+                        user_context_data[key] = runtime_context_data[key]
+            context_data = runtime_context_data
             base_system_prompt = build_system_prompt(
                 user_context_data,
                 conversation_history=conversation_context,

@@ -113,6 +113,7 @@ from app.orchestration.session_feedback import (
     build_session_feedback_instruction,
     detect_session_feedback_signal,  # noqa: F401
 )
+from app.orchestration.soul_compiler import attach_shadow_soul_runtime
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.route_adapter import to_route_decision  # noqa: F401
@@ -1167,12 +1168,57 @@ class ChatOrchestrator(
                     state.context_data["visible_update_context"] = visible_update_context
                     if isinstance(user_context_payload, dict):
                         for key, value in visible_update_context.items():
-                            if str(value or "").strip():
+                            if isinstance(value, list):
+                                if value:
+                                    user_context_payload[key] = value
+                            elif str(value or "").strip():
                                 user_context_payload[key] = str(value).strip()
                         if evolution_highlights:
                             user_context_payload["evolution_highlights"] = evolution_highlights
                 for update_resp in update_responses:
                     yield update_resp
+
+                user_context_payload = await self._attach_active_intervention_state(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
+
+                await self._hydrate_companion_runtime_context(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    plan_id=plan_id,
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
+                soul_runtime_payload = await attach_shadow_soul_runtime(
+                    target_context=state.context_data,
+                    redis_client=self.redis,
+                    user_id=user_id,
+                    user_context=user_context_payload,
+                    plan_context=plan_context,
+                    effective_companion_state=state.context_data.get("effective_companion_state"),
+                    relationship_profile=state.context_data.get("relationship_profile"),
+                    recent_revisions=state.context_data.get("companion_state_recent_revisions"),
+                )
+                if isinstance(user_context_payload, dict):
+                    self._copy_companion_runtime_keys(source_context=state.context_data, target_context=user_context_payload)
+                await run_ledger.record_event(
+                    event_type="soul_runtime_shadow_compiled",
+                    label="Soul shadow ready",
+                    workflow_stage="orchestration",
+                    metadata={
+                        "compiler_version": soul_runtime_payload.debug.get("compiler_version"),
+                        "constitution_version": soul_runtime_payload.debug.get("constitution_version"),
+                        "identity_kernel_version": soul_runtime_payload.debug.get("identity_kernel_version"),
+                        "dual_core_source": soul_runtime_payload.debug.get("dual_core_source"),
+                        "dual_core_mode": soul_runtime_payload.debug.get("dual_core_mode"),
+                    },
+                    emit_snapshot=False,
+                )
 
                 # Step 5: Sufficiency check (may short-circuit)
                 sufficiency_handled, intent_type = await self._check_sufficiency(
@@ -1211,6 +1257,39 @@ class ChatOrchestrator(
                         plan_id=plan_id,
                         plan_context=plan_context,
                         user_context_payload=user_context_payload,
+                        state=state,
+                        session_feedback_signal=(
+                            session_feedback_signal.to_dict() if session_feedback_signal is not None else None
+                        ),
+                    )
+                    await attach_shadow_soul_runtime(
+                        target_context=state.context_data,
+                        redis_client=self.redis,
+                        user_id=user_id,
+                        user_context=user_context_payload,
+                        plan_context=plan_context,
+                        effective_companion_state=state.context_data.get("effective_companion_state"),
+                        relationship_profile=state.context_data.get("relationship_profile"),
+                        recent_revisions=state.context_data.get("companion_state_recent_revisions"),
+                    )
+                    if isinstance(user_context_payload, dict):
+                        self._copy_companion_runtime_keys(
+                            source_context=state.context_data,
+                            target_context=user_context_payload,
+                        )
+                    user_context_payload = await self._attach_user_strategy_state(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        plan_id=plan_id,
+                        user_context_payload=user_context_payload,
+                        state=state,
+                    )
+                    user_context_payload = await self._attach_situation_brief(
+                        active_db=active_db,
+                        user_id=user_id,
+                        user_context_payload=user_context_payload,
+                        plan_context=plan_context,
                         state=state,
                         session_feedback_signal=(
                             session_feedback_signal.to_dict() if session_feedback_signal is not None else None
@@ -1358,6 +1437,7 @@ class ChatOrchestrator(
                 if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
                     mode_result: dict[str, Any] = {}
                     async for resp in self._handle_multi_agent_mode(
+                        state=state,
                         chat_mode=chat_mode,
                         user_message=user_message,
                         user_id=user_id,
@@ -1550,6 +1630,36 @@ class ChatOrchestrator(
                     plan_id=plan_id,
                     plan_context=plan_context,
                     user_context_payload=user_context_payload,
+                    state=state,
+                    session_feedback_signal=(
+                        session_feedback_signal.to_dict() if session_feedback_signal is not None else None
+                    ),
+                )
+                await attach_shadow_soul_runtime(
+                    target_context=state.context_data,
+                    redis_client=self.redis,
+                    user_id=user_id,
+                    user_context=user_context_payload,
+                    plan_context=plan_context,
+                    effective_companion_state=state.context_data.get("effective_companion_state"),
+                    relationship_profile=state.context_data.get("relationship_profile"),
+                    recent_revisions=state.context_data.get("companion_state_recent_revisions"),
+                )
+                if isinstance(user_context_payload, dict):
+                    self._copy_companion_runtime_keys(source_context=state.context_data, target_context=user_context_payload)
+                user_context_payload = await self._attach_user_strategy_state(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    plan_id=plan_id,
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
+                user_context_payload = await self._attach_situation_brief(
+                    active_db=active_db,
+                    user_id=user_id,
+                    user_context_payload=user_context_payload,
+                    plan_context=plan_context,
                     state=state,
                     session_feedback_signal=(
                         session_feedback_signal.to_dict() if session_feedback_signal is not None else None

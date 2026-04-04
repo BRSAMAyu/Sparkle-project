@@ -6,6 +6,7 @@ Implements intelligent plan review with:
 - LLM-based deep review for complex plans
 - User confirmation workflow for high-risk plans
 """
+
 from __future__ import annotations
 import asyncio
 import json
@@ -39,6 +40,7 @@ def _utcnow() -> datetime:
 
 class ReviewDecision(Enum):
     """Plan review decision types"""
+
     APPROVED = "approved"
     REJECTED = "rejected"
     NEEDS_MODIFICATION = "needs_modification"
@@ -47,6 +49,7 @@ class ReviewDecision(Enum):
 
 class ReviewCategory(Enum):
     """Review comment categories"""
+
     SAFETY = "safety"
     COMPLETENESS = "completeness"
     ALIGNMENT = "alignment"
@@ -56,6 +59,7 @@ class ReviewCategory(Enum):
 
 class SeverityLevel(Enum):
     """Comment severity levels"""
+
     CRITICAL = "critical"
     WARNING = "warning"
     INFO = "info"
@@ -64,6 +68,7 @@ class SeverityLevel(Enum):
 @dataclass
 class ReviewComment:
     """Individual review comment"""
+
     category: str
     severity: str
     message: str
@@ -83,6 +88,7 @@ class ReviewComment:
 @dataclass
 class PlanReviewResult:
     """Result of plan review"""
+
     review_id: str
     plan_id: str
     decision: str
@@ -261,7 +267,9 @@ class PlanReviewService:
                 review_id=review_id,
                 decision=(
                     decision
-                    if alignment_score is not None and alignment_score < 0.55 and mode_strategy.get("require_alignment_check")
+                    if alignment_score is not None
+                    and alignment_score < 0.55
+                    and mode_strategy.get("require_alignment_check")
                     else ReviewDecision.APPROVED.value
                 ),
                 comments=comments,
@@ -273,7 +281,9 @@ class PlanReviewService:
                 PLAN_REASONING_SOURCE_TOTAL.labels(source="rules_only").inc()
             final_decision = (
                 decision
-                if alignment_score is not None and alignment_score < 0.55 and mode_strategy.get("require_alignment_check")
+                if alignment_score is not None
+                and alignment_score < 0.55
+                and mode_strategy.get("require_alignment_check")
                 else ReviewDecision.APPROVED.value
             )
             return PlanReviewResult(
@@ -553,9 +563,7 @@ class PlanReviewService:
             # Rule: Expert/master level goals require minimum time investment
             if difficulty in ["expert", "master", "精通"]:
                 if daily_hours and daily_hours < 2:
-                    logger.warning(
-                        f"Feasibility check failed: {difficulty} level with only {daily_hours}h/day"
-                    )
+                    logger.warning(f"Feasibility check failed: {difficulty} level with only {daily_hours}h/day")
                     return False
 
                 # Additional check: liberal arts background needs more time for technical goals
@@ -581,8 +589,7 @@ class PlanReviewService:
                     # Most skills need ~100 hours for proficiency, 1000+ for mastery
                     if difficulty in ["expert", "master", "精通"] and total_hours < 50:
                         logger.warning(
-                            f"Feasibility check failed: {difficulty} requires more than "
-                            f"{total_hours} total hours"
+                            f"Feasibility check failed: {difficulty} requires more than " f"{total_hours} total hours"
                         )
                         return False
 
@@ -592,9 +599,9 @@ class PlanReviewService:
                 if any(word in title for word in ["爬虫", "web开发", "全栈", "crawler"]):
                     # Check if plan includes setup/basics
                     plan_has_setup = any(
-                        "环境" in str(tc.params.get("description", "")) or
-                        "安装" in str(tc.params.get("description", "")) or
-                        "基础" in str(tc.params.get("description", ""))
+                        "环境" in str(tc.params.get("description", ""))
+                        or "安装" in str(tc.params.get("description", ""))
+                        or "基础" in str(tc.params.get("description", ""))
                         for tc in plan.tool_calls
                     )
 
@@ -673,9 +680,7 @@ class PlanReviewService:
 
             except Exception as e:
                 last_error = e
-                logger.warning(
-                    f"LLM review attempt {attempt + 1}/{self.MAX_LLM_REVIEW_RETRIES} failed: {e}"
-                )
+                logger.warning(f"LLM review attempt {attempt + 1}/{self.MAX_LLM_REVIEW_RETRIES} failed: {e}")
                 if attempt < self.MAX_LLM_REVIEW_RETRIES - 1:
                     await asyncio.sleep(self.RETRY_DELAY * (attempt + 1))
 
@@ -718,20 +723,19 @@ class PlanReviewService:
             return {
                 "decision": decision,
                 "confidence": confidence,
-                "comments": [{
-                    "category": ReviewCategory.SAFETY.value,
-                    "severity": SeverityLevel.INFO.value,
-                    "message": "Empty plan (no tool calls). Auto-approved.",
-                }],
+                "comments": [
+                    {
+                        "category": ReviewCategory.SAFETY.value,
+                        "severity": SeverityLevel.INFO.value,
+                        "message": "Empty plan (no tool calls). Auto-approved.",
+                    }
+                ],
                 "fallback_used": True,
                 "fallback_reason": "llm_review_unavailable",
             }
 
         has_high_risk = any(name in self.HIGH_RISK_TOOLS for name in tool_names)
-        has_safe_only = all(
-            any(safe in name.lower() for safe in self.SAFE_TOOL_CATEGORIES)
-            for name in tool_names
-        )
+        has_safe_only = all(any(safe in name.lower() for safe in self.SAFE_TOOL_CATEGORIES) for name in tool_names)
         has_mixed = not has_high_risk and not has_safe_only
 
         comments = []
@@ -742,11 +746,13 @@ class PlanReviewService:
             # Safe plan - auto-approve
             decision = ReviewDecision.APPROVED.value
             confidence = 0.9
-            comments.append({
-                "category": ReviewCategory.SAFETY.value,
-                "severity": SeverityLevel.INFO.value,
-                "message": "Plan contains only read-only operations. Auto-approved by rule.",
-            })
+            comments.append(
+                {
+                    "category": ReviewCategory.SAFETY.value,
+                    "severity": SeverityLevel.INFO.value,
+                    "message": "Plan contains only read-only operations. Auto-approved by rule.",
+                }
+            )
             logger.info(f"Fallback: Auto-approved safe plan with {len(plan.tool_calls)} read-only tools")
 
         elif has_high_risk:
@@ -754,25 +760,29 @@ class PlanReviewService:
             decision = ReviewDecision.REQUIRES_CONFIRMATION.value
             confidence = 0.3
             high_risk_tools = [name for name in tool_names if name in self.HIGH_RISK_TOOLS]
-            comments.append({
-                "category": ReviewCategory.SAFETY.value,
-                "severity": SeverityLevel.WARNING.value,
-                "message": f"Plan contains high-risk operations: {', '.join(high_risk_tools)}",
-                "suggested_fix": "Please review carefully before proceeding.",
-                "affected_tool_calls": high_risk_tools,
-            })
+            comments.append(
+                {
+                    "category": ReviewCategory.SAFETY.value,
+                    "severity": SeverityLevel.WARNING.value,
+                    "message": f"Plan contains high-risk operations: {', '.join(high_risk_tools)}",
+                    "suggested_fix": "Please review carefully before proceeding.",
+                    "affected_tool_calls": high_risk_tools,
+                }
+            )
             logger.warning(f"Fallback: High-risk plan requires confirmation: {high_risk_tools}")
 
         elif has_mixed:
             # Mixed plan - require confirmation
             decision = ReviewDecision.REQUIRES_CONFIRMATION.value
             confidence = 0.6
-            comments.append({
-                "category": ReviewCategory.SAFETY.value,
-                "severity": SeverityLevel.INFO.value,
-                "message": "LLM review unavailable. Plan requires manual confirmation.",
-                "suggested_fix": "Review the tool calls below and confirm if you wish to proceed.",
-            })
+            comments.append(
+                {
+                    "category": ReviewCategory.SAFETY.value,
+                    "severity": SeverityLevel.INFO.value,
+                    "message": "LLM review unavailable. Plan requires manual confirmation.",
+                    "suggested_fix": "Review the tool calls below and confirm if you wish to proceed.",
+                }
+            )
             logger.info("Fallback: Mixed plan requires confirmation")
 
         return {
@@ -1313,7 +1323,9 @@ Please review this plan and provide your assessment."""
         else:
             tool_count = len(plan.tool_calls or [])
             confidence_pct = f"{float(plan.confidence or 0.0):.0%}"
-            summary_parts.append(f"这个计划被通过，是因为当前执行复杂度可控（{tool_count} 个动作）且整体置信度约 {confidence_pct}")
+            summary_parts.append(
+                f"这个计划被通过，是因为当前执行复杂度可控（{tool_count} 个动作）且整体置信度约 {confidence_pct}"
+            )
         if verbosity or tone:
             summary_parts.append(f"说明方式也会继续按你偏好的 {verbosity or 'balanced'} / {tone or '稳定'} 节奏呈现")
         if auto_approved and auto_approve_reason:
@@ -1377,9 +1389,7 @@ Please review this plan and provide your assessment."""
 
         preview_data = action.get("preview_data", {})
         plan_id = preview_data.get("plan_id")
-        logger.info(
-            f"User {user_decision} review {review_id} for plan {plan_id}"
-        )
+        logger.info(f"User {user_decision} review {review_id} for plan {plan_id}")
 
         # Fix #3: 追踪拒绝次数，检测连续两次拒绝
         if user_decision == "reject" and plan_id:
@@ -1388,19 +1398,14 @@ Please review this plan and provide your assessment."""
 
             # 两次拒绝，触发信息收集（回到对话澄清需求）
             if rejection_count >= 2:
-                logger.warning(
-                    f"Plan {plan_id} rejected {rejection_count} times, "
-                    "triggering information collection"
-                )
+                logger.warning(f"Plan {plan_id} rejected {rejection_count} times, " "triggering information collection")
 
                 # 清理拒绝计数
                 await self.reset_rejection_count(plan_id, user_id)
 
                 # 触发信息收集（通过Redis pub/sub通知orchestrator）
                 await self._trigger_information_collection(
-                    plan_id=plan_id,
-                    user_id=user_id,
-                    feedback=user_comment or "用户连续两次否定方案"
+                    plan_id=plan_id, user_id=user_id, feedback=user_comment or "用户连续两次否定方案"
                 )
 
                 # 清理存储的action
@@ -1409,7 +1414,7 @@ Please review this plan and provide your assessment."""
                 return {
                     "status": "information_collection_triggered",
                     "message": "方案被连续否定，需要重新了解您的需求",
-                    "rejection_count": rejection_count
+                    "rejection_count": rejection_count,
                 }
 
         # 用户接受方案，重置拒绝计数
@@ -1646,9 +1651,7 @@ Please review this plan and provide your assessment."""
                     return
 
                 # Check if tasks already exist for this plan
-                existing_tasks_result = await db.execute(
-                    select(Task).where(Task.plan_id == UUID(plan_id))
-                )
+                existing_tasks_result = await db.execute(select(Task).where(Task.plan_id == UUID(plan_id)))
                 existing_tasks = existing_tasks_result.scalars().all()
                 if existing_tasks:
                     logger.info(f"Plan {plan_id} already has {len(existing_tasks)} tasks, skipping generation")
@@ -1671,24 +1674,15 @@ Please review this plan and provide your assessment."""
                 topic = plan.subject or plan.name or "General learning"
 
                 logger.info(
-                    f"Generating {task_count} tasks for plan {plan_id} "
-                    f"(difficulty={difficulty}, topic={topic})"
+                    f"Generating {task_count} tasks for plan {plan_id} " f"(difficulty={difficulty}, topic={topic})"
                 )
 
                 # Execute the tool
                 params = GenerateTasksForPlanParams(
-                    plan_id=plan_id,
-                    topic=topic,
-                    difficulty=difficulty,
-                    task_count=task_count
+                    plan_id=plan_id, topic=topic, difficulty=difficulty, task_count=task_count
                 )
 
-                result = await tool.execute(
-                    params=params,
-                    user_id=user_id,
-                    db_session=db,
-                    tool_call_id=action_id
-                )
+                result = await tool.execute(params=params, user_id=user_id, db_session=db, tool_call_id=action_id)
 
                 if result.success:
                     task_count_created = result.data.get("task_count", 0)
@@ -1704,17 +1698,12 @@ Please review this plan and provide your assessment."""
                             tasks=result.data.get("tasks") or [],
                         )
                 else:
-                    logger.error(
-                        f"Task generation failed for plan {plan_id}: "
-                        f"{result.error_message}"
-                    )
+                    logger.error(f"Task generation failed for plan {plan_id}: " f"{result.error_message}")
 
         except Exception as e:
             logger.error(f"Error in _generate_tasks_after_approval: {e}", exc_info=True)
 
-    async def notify_plan_rejected(
-        self, plan_id: str, user_id: str, feedback: str
-    ) -> dict[str, Any]:
+    async def notify_plan_rejected(self, plan_id: str, user_id: str, feedback: str) -> dict[str, Any]:
         """
         Handle plan rejection by user.
 
@@ -1729,9 +1718,7 @@ Please review this plan and provide your assessment."""
         Returns:
             Status dictionary
         """
-        logger.info(
-            f"Plan {plan_id} rejected by user {user_id}. Feedback: {feedback[:100]}..."
-        )
+        logger.info(f"Plan {plan_id} rejected by user {user_id}. Feedback: {feedback[:100]}...")
 
         # Store rejection for analytics and learning
         action_id = await pending_actions_store.save(
@@ -1780,9 +1767,7 @@ Please review this plan and provide your assessment."""
         Returns:
             Status dictionary with new plan ID if created
         """
-        logger.info(
-            f"Triggering replan for {plan_id} by user {user_id}. Feedback: {feedback[:100]}..."
-        )
+        logger.info(f"Triggering replan for {plan_id} by user {user_id}. Feedback: {feedback[:100]}...")
 
         # Generate a new plan ID for the modified plan
         new_plan_id = f"plan-{uuid.uuid4().hex[:8]}"
@@ -1883,11 +1868,7 @@ Please review this plan and provide your assessment."""
                     db_session=db,
                 )
 
-                replan_message = (
-                    "用户请求修改当前计划。"
-                    f"原计划ID: {original_plan_id}。"
-                    f"反馈: {feedback}"
-                )
+                replan_message = "用户请求修改当前计划。" f"原计划ID: {original_plan_id}。" f"反馈: {feedback}"
 
                 planner = LangGraphPlanner(
                     self.redis,
@@ -1931,6 +1912,9 @@ Please review this plan and provide your assessment."""
                             db_session=db,
                             tool_call_id=tool_call.id,
                             compensation_call=tool_call.compensation_call,
+                            runtime_context={
+                                "plan_id": executable_plan.plan_id,
+                            },
                         )
                         results.append(result)
                         if not result.success:
@@ -1958,8 +1942,7 @@ Please review this plan and provide your assessment."""
                         user_id=user_id,
                     )
                     logger.info(
-                        f"Replan review queued: action_id={review_action_id}, "
-                        f"plan={executable_plan.plan_id}"
+                        f"Replan review queued: action_id={review_action_id}, " f"plan={executable_plan.plan_id}"
                     )
                     await sse_manager.send_to_user(
                         user_id,
@@ -1995,11 +1978,7 @@ Please review this plan and provide your assessment."""
 
     # Fix #3: 拒绝计数追踪和信息收集触发方法
 
-    async def track_rejection_count(
-        self,
-        plan_id: str,
-        user_id: str
-    ) -> int:
+    async def track_rejection_count(self, plan_id: str, user_id: str) -> int:
         """
         追踪用户连续拒绝方案的次数
 
@@ -2020,11 +1999,7 @@ Please review this plan and provide your assessment."""
             logger.warning(f"Failed to track rejection count: {e}")
             return 1
 
-    async def reset_rejection_count(
-        self,
-        plan_id: str,
-        user_id: str
-    ):
+    async def reset_rejection_count(self, plan_id: str, user_id: str):
         """
         重置拒绝计数（用户接受方案或触发信息收集后调用）
 
@@ -2039,12 +2014,7 @@ Please review this plan and provide your assessment."""
         except Exception as e:
             logger.warning(f"Failed to reset rejection count: {e}")
 
-    async def _trigger_information_collection(
-        self,
-        plan_id: str,
-        user_id: str,
-        feedback: str
-    ):
+    async def _trigger_information_collection(self, plan_id: str, user_id: str, feedback: str):
         """
         触发信息收集（通过Redis pub/sub通知orchestrator）
 
@@ -2062,10 +2032,7 @@ Please review this plan and provide your assessment."""
                 "timestamp": _utcnow().isoformat(),
             }
             try:
-                await self.redis.publish(
-                    f"user:{user_id}:info_collection",
-                    json.dumps(notification)
-                )
+                await self.redis.publish(f"user:{user_id}:info_collection", json.dumps(notification))
                 logger.info(f"Published information collection trigger for user {user_id}")
             except Exception as e:
                 logger.warning(f"Failed to publish information collection trigger: {e}")

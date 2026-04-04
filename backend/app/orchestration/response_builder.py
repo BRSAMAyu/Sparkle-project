@@ -358,6 +358,15 @@ class ResponseBuilderMixin:
                 semantic_meta = context_pack_meta.get("semantic_gating")
             if semantic_meta:
                 response_metadata["context_semantic_gating"] = json.dumps(semantic_meta, ensure_ascii=False)
+        situation_brief = final_state.context_data.get("situation_brief")
+        if isinstance(situation_brief, dict):
+            response_metadata["situation_brief"] = json.dumps(situation_brief, ensure_ascii=False)
+            summary = str(situation_brief.get("summary") or "").strip()
+            if summary:
+                response_metadata["situation_brief_summary"] = summary
+        strategy_state = final_state.context_data.get("user_strategy_state")
+        if isinstance(strategy_state, dict):
+            response_metadata["user_strategy_state"] = json.dumps(strategy_state, ensure_ascii=False)
         understanding_depth = (
             (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
         )
@@ -389,6 +398,13 @@ class ResponseBuilderMixin:
                     "goals": len(list((focused_memory or {}).get("active_goals") or [])),
                     "episodic": len(list((focused_memory or {}).get("episodic_memories") or [])),
                     "evidence_score_avg": evidence_avg,
+                    "situation_brief_confidence": (
+                        ((final_state.context_data.get("situation_brief") or {}).get("sparkle_self_state") or {}).get(
+                            "confidence_estimate"
+                        )
+                        if isinstance(final_state.context_data.get("situation_brief"), dict)
+                        else None
+                    ),
                 },
                 emit_snapshot=False,
             )

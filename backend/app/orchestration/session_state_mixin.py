@@ -26,12 +26,17 @@ from app.orchestration.session_feedback import (
     build_session_adaptation_context,
     detect_session_feedback_signal,
 )
+from app.orchestration.situation_brief import SituationBriefBuilder
+from app.orchestration.soul_compiler import DEFAULT_COMPANION_STATE
 from app.orchestration.statechart_engine import WorkflowState
 from app.services.perceptible_intelligence_service import PerceptibleInsightService
 from app.services.self_evolution_service import UnderstandingDepthService
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.services.companion_state_service import CompanionStateService
+from app.services.intervention_feedback_binding_service import InterventionFeedbackBindingService
 from app.services.user_service import UserService
 from app.services.progress_narrative_service import ProgressNarrativeService
+from app.services.user_strategy_state_service import UserStrategyStateService
 
 SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
 CONTEXT_VERSION_KEY_PREFIX = "user:context:versions:"
@@ -43,10 +48,78 @@ class SessionStateMixin:
     """Mixin providing session-state helpers extracted from Orchestrator."""
 
     @staticmethod
-    def _build_system_update_prompt_context(updates: list[dict[str, Any]]) -> dict[str, str]:
+    def _copy_companion_runtime_keys(
+        *,
+        source_context: dict[str, Any] | None,
+        target_context: dict[str, Any] | None,
+    ) -> None:
+        if not isinstance(source_context, dict) or not isinstance(target_context, dict):
+            return
+        for key in (
+            "effective_companion_state",
+            "companion_state_recent_revisions",
+            "relationship_profile",
+            "soul_runtime_context",
+            "soul_runtime_debug",
+        ):
+            value = source_context.get(key)
+            if value is not None:
+                target_context[key] = value
+
+    async def _hydrate_companion_runtime_context(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str | None,
+        plan_id: uuid.UUID | None,
+        user_context_payload: dict[str, Any] | None,
+        state: WorkflowState | None = None,
+    ) -> dict[str, Any]:
+        effective_companion_state: dict[str, Any]
+        relationship_profile: dict[str, Any]
+        recent_revisions: list[dict[str, Any]]
+
+        if active_db is None:
+            effective_companion_state = DEFAULT_COMPANION_STATE.to_dict()
+            relationship_profile = {}
+            recent_revisions = []
+        else:
+            service = CompanionStateService(active_db, getattr(self, "redis", None))
+            user_uuid = uuid.UUID(str(user_id))
+            effective_companion_state = await service.get_effective_state(
+                user_uuid,
+                plan_id=plan_id,
+                session_id=session_id,
+            )
+            relationship_profile = await service.get_relationship_profile(user_uuid)
+            recent_revisions = await service.get_recent_revisions(
+                user_uuid,
+                plan_id=plan_id,
+                session_id=session_id,
+            )
+
+        payload = {
+            "effective_companion_state": effective_companion_state,
+            "relationship_profile": relationship_profile,
+            "companion_state_recent_revisions": recent_revisions,
+        }
+
+        if isinstance(user_context_payload, dict):
+            user_context_payload.update(payload)
+        if state is not None:
+            state.context_data.update(payload)
+            existing_user_context = state.context_data.get("user_context")
+            if isinstance(existing_user_context, dict):
+                existing_user_context.update(payload)
+        return payload
+
+    @staticmethod
+    def _build_system_update_prompt_context(updates: list[dict[str, Any]]) -> dict[str, Any]:
         proactive_opening_message = ""
         pending_observation = ""
         post_adaptation_question = ""
+        active_interventions = InterventionFeedbackBindingService.extract_active_interventions_from_updates(updates)
 
         for update in updates:
             if not isinstance(update, dict):
@@ -91,6 +164,10 @@ class SessionStateMixin:
             "proactive_opening_message": proactive_opening_message,
             "pending_observation": pending_observation,
             "post_adaptation_question": post_adaptation_question,
+            "active_intervention_id": (
+                str(active_interventions[0].get("intervention_id") or "").strip() if active_interventions else ""
+            ),
+            "active_interventions": active_interventions,
         }
 
     async def _drain_system_updates(
@@ -175,6 +252,195 @@ class SessionStateMixin:
             understanding_depth_update,
             visible_prompt_context,
         )
+
+    async def _attach_situation_brief(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        user_context_payload: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        state: WorkflowState | None = None,
+        session_feedback_signal: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        if not isinstance(user_context_payload, dict):
+            return user_context_payload
+
+        effective_progress_snapshot = None
+        if isinstance(state, WorkflowState):
+            existing_snapshot = state.context_data.get("progress_snapshot")
+            if isinstance(existing_snapshot, dict):
+                effective_progress_snapshot = existing_snapshot
+        if effective_progress_snapshot is None and isinstance(user_context_payload.get("progress_snapshot"), dict):
+            effective_progress_snapshot = user_context_payload.get("progress_snapshot")
+        if effective_progress_snapshot is None and active_db is not None:
+            try:
+                effective_progress_snapshot = await ProgressNarrativeService(
+                    active_db,
+                    getattr(self, "redis", None),
+                ).maybe_get_lightweight_snapshot(user_id)
+            except Exception as exc:
+                logger.warning(f"Failed to refresh lightweight progress snapshot for situation brief: {exc}")
+                effective_progress_snapshot = None
+
+        if isinstance(effective_progress_snapshot, dict):
+            user_context_payload["progress_snapshot"] = effective_progress_snapshot
+            if isinstance(state, WorkflowState):
+                state.context_data["progress_snapshot"] = effective_progress_snapshot
+
+        dual_core_snapshot = {}
+        if isinstance(state, WorkflowState):
+            decision = state.context_data.get("dual_core_decision")
+            signals = state.context_data.get("dual_core_signal_snapshot")
+            if isinstance(decision, dict):
+                dual_core_snapshot["decision"] = decision
+            if isinstance(signals, dict):
+                dual_core_snapshot["signal_snapshot"] = signals
+            prompt_instruction = str(state.context_data.get("dual_core_prompt_instruction") or "").strip()
+            if prompt_instruction:
+                dual_core_snapshot["prompt_instruction"] = prompt_instruction
+
+        situation_brief = SituationBriefBuilder().build(
+            user_context_payload=user_context_payload,
+            plan_context=plan_context,
+            focused_memory=(
+                state.context_data.get("focused_memory")
+                if isinstance(state, WorkflowState) and isinstance(state.context_data.get("focused_memory"), dict)
+                else user_context_payload.get("focused_memory")
+            ),
+            context_briefing_note=(
+                str(state.context_data.get("context_briefing_note") or "").strip()
+                if isinstance(state, WorkflowState)
+                else str(user_context_payload.get("context_briefing_note") or "").strip()
+            ),
+            visible_update_context=(
+                state.context_data.get("visible_update_context")
+                if isinstance(state, WorkflowState) and isinstance(state.context_data.get("visible_update_context"), dict)
+                else {}
+            ),
+            dual_core_snapshot=dual_core_snapshot,
+            session_feedback_signal=session_feedback_signal,
+            progress_snapshot=effective_progress_snapshot,
+            adaptation_records=(
+                state.context_data.get("adaptation_records")
+                if isinstance(state, WorkflowState) and isinstance(state.context_data.get("adaptation_records"), list)
+                else user_context_payload.get("adaptation_records")
+            ),
+        ).to_dict()
+
+        user_context_payload["situation_brief"] = situation_brief
+
+        if isinstance(state, WorkflowState):
+            state.context_data["situation_brief"] = situation_brief
+            existing_user_context = state.context_data.get("user_context")
+            if isinstance(existing_user_context, dict):
+                existing_user_context["situation_brief"] = situation_brief
+
+        return user_context_payload
+
+    async def _attach_active_intervention_state(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str | None,
+        user_context_payload: dict[str, Any] | None,
+        state: WorkflowState | None = None,
+    ) -> dict[str, Any] | None:
+        if active_db is None:
+            return user_context_payload
+
+        runtime_active_interventions: list[dict[str, Any]] = []
+        if isinstance(state, WorkflowState):
+            visible_update_context = state.context_data.get("visible_update_context")
+            if isinstance(visible_update_context, dict):
+                runtime_active_interventions = [
+                    item
+                    for item in (visible_update_context.get("active_interventions") or [])
+                    if isinstance(item, dict)
+                ]
+
+        try:
+            binding_service = InterventionFeedbackBindingService(active_db, getattr(self, "redis", None))
+            resolved = await binding_service.resolve_active_interventions(
+                user_id=uuid.UUID(str(user_id)),
+                session_id=session_id,
+                runtime_active_interventions=runtime_active_interventions,
+                limit=3,
+            )
+            last_binding = await binding_service.get_last_feedback_binding(session_id)
+        except Exception as exc:
+            logger.warning(f"Failed to attach active intervention state: {exc}")
+            return user_context_payload
+
+        active_intervention_id = str(resolved[0].get("intervention_id") or "").strip() if resolved else ""
+        if isinstance(user_context_payload, dict):
+            user_context_payload["active_interventions"] = resolved
+            if active_intervention_id:
+                user_context_payload["active_intervention_id"] = active_intervention_id
+            if last_binding:
+                user_context_payload["last_feedback_binding"] = last_binding
+
+        if isinstance(state, WorkflowState):
+            state.context_data["active_interventions"] = resolved
+            if active_intervention_id:
+                state.context_data["active_intervention_id"] = active_intervention_id
+            if last_binding:
+                state.context_data["last_feedback_binding"] = last_binding
+            existing_user_context = state.context_data.get("user_context")
+            if isinstance(existing_user_context, dict):
+                existing_user_context["active_interventions"] = resolved
+                if active_intervention_id:
+                    existing_user_context["active_intervention_id"] = active_intervention_id
+                if last_binding:
+                    existing_user_context["last_feedback_binding"] = last_binding
+
+        return user_context_payload
+
+    async def _attach_user_strategy_state(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str | None,
+        plan_id: uuid.UUID | None,
+        user_context_payload: dict[str, Any] | None,
+        state: WorkflowState | None = None,
+    ) -> dict[str, Any] | None:
+        if not isinstance(user_context_payload, dict) or active_db is None:
+            return user_context_payload
+
+        try:
+            strategy_service = UserStrategyStateService(active_db, getattr(self, "redis", None))
+            effective_state = await strategy_service.get_effective_state(
+                uuid.UUID(str(user_id)),
+                plan_id=plan_id,
+                session_id=session_id,
+            )
+            recent_changes = await strategy_service.get_recent_changes(
+                uuid.UUID(str(user_id)),
+                plan_id=plan_id,
+                session_id=session_id,
+                limit=6,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to attach user strategy state: {exc}")
+            return user_context_payload
+
+        user_context_payload["user_strategy_state"] = effective_state
+        if recent_changes:
+            user_context_payload["user_strategy_history"] = recent_changes
+
+        if isinstance(state, WorkflowState):
+            state.context_data["user_strategy_state"] = effective_state
+            state.context_data["user_strategy_history"] = recent_changes
+            existing_user_context = state.context_data.get("user_context")
+            if isinstance(existing_user_context, dict):
+                existing_user_context["user_strategy_state"] = effective_state
+                if recent_changes:
+                    existing_user_context["user_strategy_history"] = recent_changes
+
+        return user_context_payload
 
     @staticmethod
     def _session_feedback_key(session_id: str) -> str:
@@ -411,6 +677,7 @@ class SessionStateMixin:
             state.context_data["focused_memory"] = focused_memory
             if merged_context.get("context_briefing_note"):
                 state.context_data["context_briefing_note"] = merged_context.get("context_briefing_note")
+            self._copy_companion_runtime_keys(source_context=state.context_data, target_context=merged_context)
         return merged_context
 
     async def _update_state(self, session_id: str, state: str, details: str = ""):
