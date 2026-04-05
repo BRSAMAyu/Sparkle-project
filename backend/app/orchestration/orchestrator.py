@@ -1268,7 +1268,15 @@ class ChatOrchestrator(
                     user_message=user_message,
                     user_id=user_id,
                     plan_id=plan_id,
+                    session_id=session_id,
                     conversation_context=conversation_context,
+                    user_context_payload=user_context_payload,
+                    plan_context=plan_context,
+                    state=state,
+                    active_db=active_db,
+                    session_feedback_signal=(
+                        session_feedback_signal.to_dict() if session_feedback_signal is not None else None
+                    ),
                     stream_callback=stream_callback,
                     queue=queue,
                 )

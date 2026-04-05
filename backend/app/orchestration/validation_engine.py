@@ -12,6 +12,7 @@ from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.business_metrics import EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL
 from app.gen.agent.v1 import agent_service_pb2
+from app.orchestration.planning_intent import detect_planning_like_turn
 from app.orchestration.schemas import ExecutablePlan
 from app.orchestration.sufficiency_checker import SufficiencyStatus, sufficiency_checker
 from app.orchestration.goal_quality_evaluator import goal_quality_evaluator
@@ -115,6 +116,21 @@ class ValidationEngineMixin:
             )
         else:
             logger.warning("Fast interaction copy resolved to empty text")
+
+    @staticmethod
+    def _persist_phase_a_evaluation(
+        *,
+        state: WorkflowState | None,
+        user_context_payload: dict[str, Any] | None,
+        evaluation: dict[str, Any],
+    ) -> None:
+        if isinstance(user_context_payload, dict):
+            user_context_payload["phase_a_evaluation"] = dict(evaluation)
+        if isinstance(state, WorkflowState):
+            state.context_data["phase_a_evaluation"] = dict(evaluation)
+            existing_user_context = state.context_data.get("user_context")
+            if isinstance(existing_user_context, dict):
+                existing_user_context["phase_a_evaluation"] = dict(evaluation)
 
     @staticmethod
     def _normalize_sufficiency_intent_type(
@@ -221,7 +237,13 @@ class ValidationEngineMixin:
         user_message: str,
         user_id: str,
         plan_id: uuid.UUID | None,
+        session_id: str | None,
         conversation_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        state: WorkflowState | None,
+        active_db: AsyncSession | None,
+        session_feedback_signal: dict[str, Any] | None,
         stream_callback,
         queue,
     ) -> tuple[bool, str]:
@@ -244,6 +266,23 @@ class ValidationEngineMixin:
                 "Sufficiency intent resolved "
                 f"(raw={raw_intent_type}, normalized={intent_type}, message={user_message[:80]!r})"
             )
+            phase_a_handled = await self._check_phase_a_planning_preflight(
+                intent_type=intent_type,
+                request=request,
+                user_message=user_message,
+                user_id=user_id,
+                session_id=session_id,
+                plan_id=plan_id,
+                active_db=active_db,
+                user_context_payload=user_context_payload,
+                plan_context=plan_context,
+                state=state,
+                stream_callback=stream_callback,
+                session_feedback_signal=session_feedback_signal,
+            )
+            if phase_a_handled:
+                return True, intent_type
+
             extracted_entities = self._build_sufficiency_entities(
                 intent_type=intent_type,
                 user_message=user_message,
@@ -306,6 +345,185 @@ class ValidationEngineMixin:
         except Exception as e:
             logger.warning(f"Sufficiency check failed, continuing: {e}")
         return False, intent_type if 'intent_type' in locals() else ""
+
+    async def _check_phase_a_planning_preflight(
+        self,
+        *,
+        intent_type: str,
+        request: agent_service_pb2.ChatRequest,
+        user_message: str,
+        user_id: str,
+        session_id: str | None,
+        plan_id: uuid.UUID | None,
+        active_db: AsyncSession | None,
+        user_context_payload: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        state: WorkflowState | None,
+        stream_callback,
+        session_feedback_signal: dict[str, Any] | None,
+    ) -> bool:
+        if not isinstance(user_context_payload, dict):
+            return False
+
+        context_focus = user_context_payload.get("context_focus") if isinstance(user_context_payload, dict) else None
+        route_intent = ""
+        if isinstance(context_focus, dict):
+            route_intent = str(context_focus.get("route_intent") or "").strip()
+        existing_decision_context = user_context_payload.get("residual_decision_context")
+        if not isinstance(existing_decision_context, dict):
+            existing_brief = user_context_payload.get("situation_brief")
+            if isinstance(existing_brief, dict):
+                existing_decision_context = existing_brief.get("decision_context")
+        planning_like, detection_source = detect_planning_like_turn(
+            normalized_intent=intent_type,
+            route_intent=route_intent,
+            user_message=user_message,
+            decision_context=existing_decision_context if isinstance(existing_decision_context, dict) else None,
+        )
+        if not planning_like:
+            return False
+
+        user_context_payload.setdefault("current_query", user_message)
+        if request.file_ids and not user_context_payload.get("file_ids"):
+            user_context_payload["file_ids"] = [str(file_id) for file_id in request.file_ids if str(file_id).strip()]
+
+        if not isinstance(user_context_payload.get("user_strategy_state"), dict):
+            user_context_payload = await self._attach_user_strategy_state(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                plan_id=plan_id,
+                user_context_payload=user_context_payload,
+                state=state,
+            )
+        user_context_payload = await self._attach_situation_brief(
+            active_db=active_db,
+            user_id=user_id,
+            user_context_payload=user_context_payload,
+            plan_context=plan_context,
+            state=state,
+            session_feedback_signal=session_feedback_signal,
+        )
+        if not isinstance(user_context_payload, dict):
+            return False
+
+        situation_brief = user_context_payload.get("situation_brief")
+        decision_context = (
+            situation_brief.get("decision_context")
+            if isinstance(situation_brief, dict)
+            else user_context_payload.get("residual_decision_context")
+        )
+        if not isinstance(decision_context, dict):
+            return False
+
+        insight_state = situation_brief.get("insight_state") if isinstance(situation_brief, dict) else {}
+        contradiction_map = insight_state.get("contradiction_map") if isinstance(insight_state, dict) else []
+        contradiction_ids = [
+            str(item.get("id") or "").strip()
+            for item in contradiction_map
+            if isinstance(item, dict) and str(item.get("id") or "").strip()
+        ]
+        blocking_unknowns = [
+            str(item).strip()
+            for item in (decision_context.get("planning_blocking_unknowns") or [])
+            if str(item).strip()
+        ]
+        phase_a_guardrail = str(decision_context.get("phase_a_guardrail") or "").strip()
+        phase_a_evaluation = {
+            "planning_like": "true",
+            "planning_detection_source": detection_source,
+            "planning_readiness": str(decision_context.get("planning_readiness") or "").strip(),
+            "planning_readiness_action": str(decision_context.get("planning_readiness_action") or "").strip(),
+            "phase_a_guardrail": phase_a_guardrail,
+            "blocking_unknowns": blocking_unknowns[:3],
+            "contradiction_ids": contradiction_ids[:3],
+            "hard_stop": "false",
+        }
+        self._persist_phase_a_evaluation(
+            state=state,
+            user_context_payload=user_context_payload,
+            evaluation=phase_a_evaluation,
+        )
+        observability = getattr(self, "observability", None)
+
+        if str(decision_context.get("planning_readiness_action") or "").strip() != "ask":
+            if observability is not None and hasattr(observability, "log_phase_a_decision"):
+                try:
+                    await observability.log_phase_a_decision(
+                        user_id=user_id,
+                        session_id=session_id or "",
+                        decision={
+                            "planning_like": True,
+                            "planning_detection_source": detection_source,
+                            "planning_readiness": phase_a_evaluation["planning_readiness"],
+                            "planning_readiness_action": phase_a_evaluation["planning_readiness_action"],
+                            "phase_a_guardrail": phase_a_guardrail,
+                            "blocking_unknowns": blocking_unknowns[:3],
+                            "contradiction_ids": contradiction_ids[:3],
+                            "contradictions": contradiction_map[:3] if isinstance(contradiction_map, list) else [],
+                            "hard_stop": False,
+                        },
+                    )
+                except Exception as exc:
+                    logger.debug(f"Failed to record Phase A observability: {exc}")
+            return False
+
+        clarification_questions = [
+            str(question).strip()
+            for question in (decision_context.get("strategic_clarification_questions") or [])
+            if str(question).strip()
+        ]
+        question = clarification_questions[0] if clarification_questions else "你现在最缺的关键信息是什么？"
+        fallback_text = (
+            "我先不急着给你完整计划，先确认一个最关键的问题：\n\n"
+            f"- {question}\n\n"
+            "你告诉我这个信息后，我就按它给你做下一步计划。"
+        )
+        interaction_text = await self._compose_fast_interaction_copy(
+            user_message=user_message,
+            interaction_type="clarification",
+            fallback_text=fallback_text,
+            prompts=[question],
+        )
+        await self._emit_fast_interaction(
+            stream_callback=stream_callback,
+            text=interaction_text,
+            details="我先确认一个关键缺口，再继续为你规划。",
+            metadata={
+                "requires_clarification": "true",
+                "clarification_source": "phase_a",
+                "phase_a_guardrail": "ask_before_plan",
+                "planning_readiness": str(decision_context.get("planning_readiness") or ""),
+                "planning_detection_source": detection_source,
+            },
+        )
+        phase_a_evaluation["hard_stop"] = "true"
+        phase_a_evaluation["phase_a_guardrail"] = "ask_before_plan"
+        self._persist_phase_a_evaluation(
+            state=state,
+            user_context_payload=user_context_payload,
+            evaluation=phase_a_evaluation,
+        )
+        if observability is not None and hasattr(observability, "log_phase_a_decision"):
+            try:
+                await observability.log_phase_a_decision(
+                    user_id=user_id,
+                    session_id=session_id or "",
+                    decision={
+                        "planning_like": True,
+                        "planning_detection_source": detection_source,
+                        "planning_readiness": phase_a_evaluation["planning_readiness"],
+                        "planning_readiness_action": phase_a_evaluation["planning_readiness_action"],
+                        "phase_a_guardrail": "ask_before_plan",
+                        "blocking_unknowns": blocking_unknowns[:3],
+                        "contradiction_ids": contradiction_ids[:3],
+                        "contradictions": contradiction_map[:3] if isinstance(contradiction_map, list) else [],
+                        "hard_stop": True,
+                    },
+                )
+            except Exception as exc:
+                logger.debug(f"Failed to record Phase A hard-stop observability: {exc}")
+        return True
 
     # ------------------------------------------------------------------
     # Build sufficiency entities

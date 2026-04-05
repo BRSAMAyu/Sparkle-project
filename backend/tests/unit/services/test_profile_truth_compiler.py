@@ -40,8 +40,9 @@ async def test_profile_truth_compiler_basic_compilation():
 
     # Verify contradictions (Case B)
     assert len(state.contradiction_map) == 1
-    assert state.contradiction_map[0]["id"] == "conflict:difficulty_vs_paralysis"
+    assert state.contradiction_map[0]["id"] == "conflict:difficulty_vs_start_friction"
     assert state.contradiction_map[0]["severity"] == "high"
+    assert state.contradiction_map[0]["evidence"]
 
     # Verify confidence
     assert state.confidence_map["cognitive:Perfectionism Paralysis"] == 0.85
@@ -78,3 +79,95 @@ async def test_profile_truth_compiler_uses_session_strategy_fields() -> None:
     assert state.current_state["strategy_mode"] == "recovery"
     assert state.current_state["push_vs_support"] == 0.2
     assert state.current_state["retrieval_emphasis"] == "user_materials"
+
+
+@pytest.mark.asyncio
+async def test_profile_truth_compiler_detects_push_vs_recovery_state() -> None:
+    pc = ProfileContext(
+        preferences={},
+        preference_version=0,
+        knowledge_summary=KnowledgeSummary(
+            overall_mastery=0.55,
+            weak_spots=[],
+            recent_mastery_changes=[],
+            active_learning_subjects=["Physics"],
+        ),
+        cognitive_summary=CognitiveSummary(
+            active_patterns=[],
+            dominant_pattern_type=None,
+            risk_signals=[],
+        ),
+    )
+
+    compiler = ProfileTruthCompiler()
+    state = await compiler.compile(
+        profile_context=pc,
+        user_strategy_state={"session_mode": "recovery"},
+        turn_signals={"wants_push": True, "requested_difficulty": "hard"},
+    )
+
+    contradiction_ids = {item["id"] for item in state.contradiction_map}
+    assert "conflict:push_vs_recovery_state" in contradiction_ids
+
+
+@pytest.mark.asyncio
+async def test_profile_truth_compiler_detects_misleading_mastery_self_report() -> None:
+    pc = ProfileContext(
+        preferences={},
+        preference_version=0,
+        knowledge_summary=KnowledgeSummary(
+            overall_mastery=0.25,
+            weak_spots=[WeakSpot(node_id="thermo_1", node_name="Entropy", mastery=0.2)],
+            recent_mastery_changes=[],
+            active_learning_subjects=["Thermodynamics"],
+        ),
+        cognitive_summary=CognitiveSummary(
+            active_patterns=[],
+            dominant_pattern_type=None,
+            risk_signals=[],
+        ),
+    )
+
+    compiler = ProfileTruthCompiler()
+    state = await compiler.compile(
+        profile_context=pc,
+        turn_signals={"self_report_high_mastery": True},
+    )
+
+    contradiction = next(
+        item for item in state.contradiction_map if item["id"] == "conflict:self_report_mastery_vs_profile_mastery"
+    )
+    assert contradiction["severity"] == "high"
+    assert any("overall_mastery" in evidence["detail"] for evidence in contradiction["evidence"])
+
+
+@pytest.mark.asyncio
+async def test_profile_truth_compiler_detects_maximal_pace_vs_low_capacity() -> None:
+    pc = ProfileContext(
+        preferences={},
+        preference_version=0,
+        knowledge_summary=KnowledgeSummary(
+            overall_mastery=0.4,
+            weak_spots=[],
+            recent_mastery_changes=[],
+            active_learning_subjects=["Physics"],
+        ),
+        cognitive_summary=CognitiveSummary(
+            active_patterns=[],
+            dominant_pattern_type=None,
+            risk_signals=[],
+        ),
+    )
+
+    compiler = ProfileTruthCompiler()
+    state = await compiler.compile(
+        profile_context=pc,
+        user_strategy_state={"session_mode": "recovery"},
+        turn_signals={"aggressive_pace": True, "low_capacity_language": True},
+    )
+
+    contradiction = next(
+        item for item in state.contradiction_map if item["id"] == "conflict:maximal_pace_vs_available_capacity"
+    )
+    assert contradiction["severity"] in {"medium", "high"}
+    assert contradiction["evidence"]

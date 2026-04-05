@@ -358,7 +358,7 @@ class ObservabilityEvent:
     event_type: Literal[
         "route_decision", "langgraph_plan", "validation_failed",
         "circuit_state_change", "collaboration_start", "collaboration_end",
-        "shadow_prediction", "tool_execution"
+        "shadow_prediction", "tool_execution", "phase_a_decision"
     ] = "route_decision"
 
     # 事件数据

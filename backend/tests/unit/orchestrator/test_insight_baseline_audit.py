@@ -151,3 +151,40 @@ async def test_baseline_audit_multilingual_goal_specificity_and_material_detecti
 
     assert "goal_specificity" not in brief.insight_state["blocking_unknowns"]
     assert "material_source" in brief.insight_state["blocking_unknowns"]
+
+
+@pytest.mark.asyncio
+async def test_baseline_audit_misleading_self_report_keeps_real_gaps_visible():
+    context = ProfileContext(
+        preferences={},
+        preference_version=0,
+        knowledge_summary=KnowledgeSummary(
+            overall_mastery=0.2,
+            weak_spots=[],
+            recent_mastery_changes=[],
+            active_learning_subjects=["Physics"],
+        ),
+        cognitive_summary=CognitiveSummary(
+            active_patterns=[],
+            dominant_pattern_type=None,
+            risk_signals=[],
+        ),
+    )
+
+    brief = await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "I already know the basics. Just give me a 14-day physics exam sprint plan.",
+            "profile_context": context.model_dump(),
+            "context_focus": {"route_intent": "plan"},
+        },
+        plan_context={},
+        focused_memory={},
+        context_briefing_note=None,
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal=None,
+    )
+
+    contradiction_ids = {item["id"] for item in brief.insight_state["contradiction_map"]}
+    assert "conflict:self_report_mastery_vs_profile_mastery" in contradiction_ids
+    assert "material_source" in brief.insight_state["blocking_unknowns"]

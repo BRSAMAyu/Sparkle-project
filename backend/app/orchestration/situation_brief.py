@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import timezone, datetime
 from typing import Any
+import re
 
+from app.orchestration.planning_intent import detect_planning_like_turn
 from app.orchestration.decision_policy import DecisionPolicyCompiler
 from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
 from app.semantic.state_primitives import StudyDomainSemanticAdapter
@@ -181,6 +183,10 @@ class SituationBriefBuilder:
             context_briefing_note=context_briefing_note,
             dual_core_instruction=dual_core_instruction,
         )
+        phase_a_turn_signals = self._build_phase_a_turn_signals(
+            planning_context=phase_a_planning_context,
+            user_strategy_state=user_strategy_state,
+        )
 
         insight_state: dict[str, Any] = {}
         if profile_context:
@@ -195,7 +201,8 @@ class SituationBriefBuilder:
             # 1. Compile Truth
             compiled_state = await compiler.compile(
                 profile_context=profile_context,
-                user_strategy_state=user_strategy_state
+                user_strategy_state=user_strategy_state,
+                turn_signals=phase_a_turn_signals,
             )
 
             # 2. Detect Gaps
@@ -461,6 +468,7 @@ class SituationBriefBuilder:
             "user_message": user_message,
             "current_query": _strip(user_context.get("current_query")),
             "context_briefing_note": _strip(context_briefing_note),
+            "route_intent": _strip(_as_dict(user_context.get("context_focus")).get("route_intent")),
             "goal_text": goal_text,
             "vision": vision,
             "current_state": current_state,
@@ -469,6 +477,64 @@ class SituationBriefBuilder:
             "material_sources": _as_list(user_context.get("material_sources")),
             "uploaded_materials": _as_list(user_context.get("uploaded_materials")),
             "attached_materials": _as_list(user_context.get("attached_materials")),
+        }
+
+    def _build_phase_a_turn_signals(
+        self,
+        *,
+        planning_context: dict[str, Any],
+        user_strategy_state: dict[str, Any],
+    ) -> dict[str, Any]:
+        text_corpus = " | ".join(
+            _strip(item)
+            for item in (
+                planning_context.get("user_message"),
+                planning_context.get("current_query"),
+                planning_context.get("context_briefing_note"),
+                planning_context.get("goal_text"),
+                _as_dict(planning_context.get("vision")).get("why_now"),
+                _as_dict(planning_context.get("current_state")).get("snapshot"),
+            )
+            if _strip(item)
+        )
+        requested_difficulty = ""
+        if re.search(r"\b(hard|harder|challenging|challenge|push me)\b|更难|高强度|狠一点|严格一点", text_corpus, re.IGNORECASE):
+            requested_difficulty = "hard"
+        elif re.search(r"\b(easy|easier|gentle)\b|简单一点|轻一点", text_corpus, re.IGNORECASE):
+            requested_difficulty = "easy"
+
+        wants_push = bool(
+            re.search(r"\b(push|push me|go harder|strict)\b|逼一逼|推一推|狠一点|严格一点", text_corpus, re.IGNORECASE)
+        )
+        aggressive_pace = bool(
+            re.search(
+                r"\b(urgent|as fast as possible|intensive|sprint|cram|in \d+ days?)\b|冲刺|突击|速成|尽快|马上|两周|14天|期中|期末|考试前",
+                text_corpus,
+                re.IGNORECASE,
+            )
+        )
+        self_report_high_mastery = bool(
+            re.search(
+                r"\b(i already know|i know this|basics are fine|foundation is fine)\b|我已经会了|我都懂|基础没问题|这个我会|不用从基础讲",
+                text_corpus,
+                re.IGNORECASE,
+            )
+        )
+        low_capacity_language = bool(
+            re.search(
+                r"\b(too much|overwhelmed|cannot start|can't start|burned out|exhausted)\b|太多了|开始不了|撑不住|扛不住|没精力|负荷太高",
+                text_corpus,
+                re.IGNORECASE,
+            )
+        )
+        return {
+            "raw_text": text_corpus,
+            "requested_difficulty": requested_difficulty,
+            "wants_push": wants_push,
+            "aggressive_pace": aggressive_pace,
+            "self_report_high_mastery": self_report_high_mastery,
+            "low_capacity_language": low_capacity_language,
+            "strategy_mode": _strip(user_strategy_state.get("session_mode")),
         }
 
     def _apply_phase_a_decision_context(
@@ -480,6 +546,13 @@ class SituationBriefBuilder:
     ) -> dict[str, Any]:
         if not insight_state:
             return decision_context
+
+        planning_like, _planning_source = detect_planning_like_turn(
+            normalized_intent=None,
+            route_intent=route_intent,
+            user_message=_strip(decision_context.get("what_matters_now")),
+            decision_context=decision_context,
+        )
 
         readiness_level = _strip(insight_state.get("readiness_level"))
         readiness_score = insight_state.get("readiness_score")
@@ -508,8 +581,6 @@ class SituationBriefBuilder:
         decision_context["insight_contradictions"] = contradictions
         decision_context["strategic_clarification_questions"] = questions
 
-        route_intent_lc = route_intent.lower()
-        planning_like = route_intent_lc == "plan" or "plan" in route_intent_lc
         if not planning_like:
             return decision_context
 

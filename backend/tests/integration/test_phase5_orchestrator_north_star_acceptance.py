@@ -527,6 +527,157 @@ async def _collect(
 
 
 @pytest.mark.asyncio
+async def test_phase5_orchestrator_cold_start_plan_asks_one_question_instead_of_planning(
+    monkeypatch,
+    db_session,
+):
+    _install_import_stubs()
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    circuit_breaker_module = importlib.import_module("app.orchestration.circuit_breaker")
+
+    monkeypatch.setattr(orchestrator_module, "create_standard_chat_graph", lambda: MagicMock())
+    monkeypatch.setattr(orchestrator_module, "RunLedgerRecorder", _RunLedgerStub)
+    monkeypatch.setattr(orchestrator_module, "ChatSignalCollector", _ChatSignalCollectorStub)
+
+    async def _breaker_initialize(self) -> None:
+        return None
+
+    monkeypatch.setattr(circuit_breaker_module.CircuitBreaker, "initialize", _breaker_initialize)
+
+    shadow_module = types.ModuleType("app.services.shadow_prediction_service")
+    shadow_module.shadow_prediction_service = SimpleNamespace(
+        predict_intent_only=AsyncMock(
+            return_value={
+                "intent_type": "create_plan",
+                "suggested_tools": ["create_plan"],
+            }
+        )
+    )
+    sys.modules["app.services.shadow_prediction_service"] = shadow_module
+
+    user = User(
+        username="phase5_cold_start_user",
+        email="phase5_cold_start_user@example.com",
+        hashed_password="hashed",
+        nickname="Ava",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    redis_client = _MemoryRedis()
+    orchestrator = orchestrator_module.ChatOrchestrator(db_session=db_session, redis_client=redis_client)
+    orchestrator.token_tracker = None
+    orchestrator._validate_request = AsyncMock(return_value=None)
+    orchestrator._check_idempotency_response = AsyncMock(return_value=None)
+    orchestrator._acquire_session_lock = AsyncMock(return_value=True)
+    orchestrator.state_manager.start_lock_renewal = AsyncMock(return_value=(None, None))
+    orchestrator._resolve_active_tools = MagicMock(return_value=[])
+    orchestrator._maybe_short_circuit_bridge_tool = AsyncMock(return_value=None)
+    orchestrator._detect_session_feedback = AsyncMock(return_value=(None, None, None))
+    orchestrator._apply_cohort_to_session_feedback_signal = MagicMock(side_effect=lambda signal, cohort: signal)
+    orchestrator._maybe_enqueue_perceptible_insight = AsyncMock(return_value=None)
+    orchestrator._maybe_enqueue_understanding_depth = AsyncMock(return_value=None)
+    orchestrator._drain_system_updates = AsyncMock(
+        return_value=(
+            [],
+            [],
+            [],
+            [],
+            None,
+            None,
+            {
+                "proactive_opening_message": "",
+                "pending_observation": "",
+                "post_adaptation_question": "",
+            },
+        )
+    )
+    orchestrator._load_context_versions = AsyncMock(return_value={})
+    orchestrator._prepare_runtime_context = AsyncMock(return_value=(None, _emit_noop))
+    orchestrator._notify_pending_milestone_proposals = AsyncMock(return_value=None)
+    orchestrator._emit_roundtable_preview = AsyncMock(return_value=None)
+    orchestrator._emit_orchestration_trace = AsyncMock(return_value=None)
+    orchestrator._suggest_mode_switch = MagicMock(return_value=None)
+    orchestrator._cache_response = AsyncMock(return_value=True)
+    orchestrator._cleanup = AsyncMock(return_value=None)
+    orchestrator._track_task = MagicMock()
+    orchestrator._persist_assistant_message = AsyncMock(return_value=None)
+    orchestrator._record_decision = AsyncMock(return_value=None)
+    orchestrator._validate_plan_execution = AsyncMock(return_value={})
+    orchestrator._detect_execution_suggestion = AsyncMock(return_value=None)
+    orchestrator._hydrate_evolution_context = AsyncMock(return_value=None)
+    orchestrator.grounding_validator.validate_plan = AsyncMock(
+        return_value=types.SimpleNamespace(is_valid=True, warnings=[], failure_reason="")
+    )
+    orchestrator.observability.log_route_decision = AsyncMock(return_value=None)
+    orchestrator.observability.log_circuit_state_change = AsyncMock(return_value=None)
+    orchestrator.observability.log_collaboration_start = AsyncMock(return_value=None)
+    orchestrator.observability.log_collaboration_end = AsyncMock(return_value=None)
+    orchestrator.observability.log_langgraph_plan = AsyncMock(return_value=None)
+    orchestrator.observability.log_validation_failed = AsyncMock(return_value=None)
+    orchestrator.observability.log_phase_a_decision = AsyncMock(return_value=None)
+    orchestrator.shadow_predictor.predict_and_record = AsyncMock(return_value=None)
+
+    orchestrator._check_sufficiency = orchestrator_module.ChatOrchestrator._check_sufficiency.__get__(
+        orchestrator,
+        type(orchestrator),
+    )
+    orchestrator._compose_fast_interaction_copy = AsyncMock(
+        return_value="我先确认一个最关键的问题：你目前对物理这部分的掌握大概在哪个水平？"
+    )
+    orchestrator._check_goal_quality = AsyncMock(return_value=False)
+    orchestrator._build_full_context = AsyncMock(
+        return_value=(
+            {},
+            None,
+            False,
+            {
+                "current_query": "帮我做一个 14 天物理考试冲刺计划",
+                "context_focus": {"route_intent": "plan"},
+                "profile_context": {
+                    "preferences": {},
+                    "preference_version": 0,
+                    "knowledge_summary": {
+                        "overall_mastery": 0.0,
+                        "weak_spots": [],
+                        "recent_mastery_changes": [],
+                        "active_learning_subjects": [],
+                    },
+                    "cognitive_summary": {
+                        "active_patterns": [],
+                        "dominant_pattern_type": None,
+                        "risk_signals": [],
+                    },
+                },
+            },
+            {"messages": []},
+            None,
+        )
+    )
+    orchestrator._attach_user_strategy_state = AsyncMock(side_effect=lambda **kwargs: kwargs["user_context_payload"])
+    orchestrator._route_and_classify = AsyncMock()
+    orchestrator._plan_and_validate = AsyncMock()
+
+    request = _make_request(
+        user_id=str(user.id),
+        session_id=f"phase5-cold-start-{uuid.uuid4()}",
+        message="帮我做一个 14 天物理考试冲刺计划",
+        history=[],
+    )
+    responses = await _collect(orchestrator, request, db_session)
+
+    assert orchestrator._plan_and_validate.await_count == 0
+    assert orchestrator._route_and_classify.await_count == 0
+    assert any(response.metadata.get("clarification_source") == "phase_a" for response in responses)
+    assert any(response.metadata.get("phase_a_guardrail") == "ask_before_plan" for response in responses)
+    assert responses[-1].finish_reason == agent_service_pb2.STOP
+    assert responses[-1].full_text.count("？") <= 1
+    assert "掌握" in responses[-1].full_text or "水平" in responses[-1].full_text
+    assert "计划" not in responses[-1].full_text or "先确认" in responses[-1].full_text
+
+
+@pytest.mark.asyncio
 async def test_phase5_thermodynamics_orchestrator_journey_derives_scores_from_runtime_outputs(
     monkeypatch,
     db_session,
@@ -712,6 +863,7 @@ async def test_phase5_thermodynamics_orchestrator_journey_derives_scores_from_ru
     orchestrator.observability.log_collaboration_end = AsyncMock(return_value=None)
     orchestrator.observability.log_langgraph_plan = AsyncMock(return_value=None)
     orchestrator.observability.log_validation_failed = AsyncMock(return_value=None)
+    orchestrator.observability.log_phase_a_decision = AsyncMock(return_value=None)
     orchestrator.shadow_predictor.predict_and_record = AsyncMock(return_value=None)
 
     async def _fake_build_full_context(*, request, active_db, user_id, session_id, user_message, request_id, tracer):

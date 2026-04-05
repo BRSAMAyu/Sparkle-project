@@ -266,6 +266,23 @@ class SessionStateMixin:
         if not isinstance(user_context_payload, dict):
             return user_context_payload
 
+        existing_brief = user_context_payload.get("situation_brief")
+        if isinstance(existing_brief, dict):
+            decision_context = existing_brief.get("decision_context") if isinstance(existing_brief, dict) else None
+            if isinstance(decision_context, dict):
+                user_context_payload["residual_decision_context"] = decision_context
+
+            if isinstance(state, WorkflowState):
+                state.context_data["situation_brief"] = existing_brief
+                if isinstance(decision_context, dict):
+                    state.context_data["residual_decision_context"] = decision_context
+                existing_user_context = state.context_data.get("user_context")
+                if isinstance(existing_user_context, dict):
+                    existing_user_context["situation_brief"] = existing_brief
+                    if isinstance(decision_context, dict):
+                        existing_user_context["residual_decision_context"] = decision_context
+            return user_context_payload
+
         effective_progress_snapshot = None
         if isinstance(state, WorkflowState):
             existing_snapshot = state.context_data.get("progress_snapshot")
@@ -300,7 +317,7 @@ class SessionStateMixin:
             if prompt_instruction:
                 dual_core_snapshot["prompt_instruction"] = prompt_instruction
 
-        situation_brief = await SituationBriefBuilder().build(
+        built_brief = await SituationBriefBuilder().build(
             user_context_payload=user_context_payload,
             plan_context=plan_context,
             focused_memory=(
@@ -326,7 +343,8 @@ class SessionStateMixin:
                 if isinstance(state, WorkflowState) and isinstance(state.context_data.get("adaptation_records"), list)
                 else user_context_payload.get("adaptation_records")
             ),
-        ).to_dict()
+        )
+        situation_brief = built_brief.to_dict()
 
         user_context_payload["situation_brief"] = situation_brief
         decision_context = situation_brief.get("decision_context") if isinstance(situation_brief, dict) else None

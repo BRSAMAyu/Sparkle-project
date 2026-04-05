@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.orchestration.planning_intent import is_planning_like_turn
 from app.orchestration.schemas import CompiledInsightState
 
 
@@ -79,6 +80,12 @@ class InsightGapDetector:
             vision=vision,
             current_state=current_state,
         )
+        planning_like = is_planning_like_turn(
+            normalized_intent=intent,
+            route_intent=_strip(context.get("route_intent")),
+            user_message=user_message or text_corpus,
+            decision_context=_as_dict(context.get("decision_context")),
+        )
 
         gaps: list[str] = []
 
@@ -91,10 +98,10 @@ class InsightGapDetector:
         if self._needs_deadline(insight_state=insight_state, text_corpus=text_corpus, vision=vision):
             gaps.append("deadline")
 
-        if intent == "plan" and self._needs_goal_specificity(text_corpus=text_corpus, vision=vision):
+        if planning_like and self._needs_goal_specificity(text_corpus=text_corpus, vision=vision):
             gaps.append("goal_specificity")
 
-        if intent == "plan" and self._needs_material_source(context=context, text_corpus=text_corpus, vision=vision):
+        if planning_like and self._needs_material_source(context=context, text_corpus=text_corpus, vision=vision):
             gaps.append("material_source")
 
         return gaps
