@@ -8,6 +8,7 @@ import pytest
 
 from app.orchestration.soul_compiler import DEFAULT_COMPANION_STATE
 from app.services.companion_state_service import CompanionStateService
+from app.services.self_revision_service import COMPANION_GOVERNANCE_KEY
 
 
 class _AsyncRedisStub:
@@ -168,6 +169,50 @@ async def test_companion_state_service_merges_profile_episode_and_session_layers
 
 
 @pytest.mark.asyncio
+async def test_companion_state_service_excludes_inactive_durable_fields_from_effective_merge() -> None:
+    user_id = uuid4()
+    plan_id = uuid4()
+    service = CompanionStateService(db=object(), redis=None)
+    pref_stub = _PreferenceServiceStub(
+        inferred={
+            "companion_state": {
+                "warmth_calibration": 0.35,
+                "preferred_truth_style": "direct_structured",
+            },
+            COMPANION_GOVERNANCE_KEY: {
+                "warmth_calibration": {"status": "demoted"},
+                "preferred_truth_style": {"status": "active"},
+            },
+        }
+    )
+    plan_stub = _PlanStateServiceStub()
+    await plan_stub.upsert_plan_state(
+        user_id,
+        plan_id,
+        {
+            "facts": {
+                "companion_state": {
+                    "candor_calibration": 0.85,
+                    "challenge_style": "firm",
+                },
+                COMPANION_GOVERNANCE_KEY: {
+                    "candor_calibration": {"review_after": "2026-04-04T00:00:00"},
+                    "challenge_style": {"status": "active"},
+                },
+            }
+        },
+    )
+    _wire_service(service, pref_stub=pref_stub, plan_stub=plan_stub)
+
+    state = await service.get_effective_state(user_id, plan_id=plan_id)
+
+    assert state["warmth_calibration"] == DEFAULT_COMPANION_STATE.warmth_calibration
+    assert state["candor_calibration"] == DEFAULT_COMPANION_STATE.candor_calibration
+    assert state["preferred_truth_style"] == "direct_structured"
+    assert state["challenge_style"] == "firm"
+
+
+@pytest.mark.asyncio
 async def test_write_session_state_records_ledger_and_is_readable_next_turn() -> None:
     user_id = uuid4()
     redis = _AsyncRedisStub()
@@ -253,7 +298,7 @@ async def test_write_relationship_note_promotes_profile_only_after_repeated_evid
 
     first = await service.write_relationship_note(
         user_id=user_id,
-        session_id="session-3",
+        session_id="session-3-a",
         note="User trusts direct boundary-setting when it is paired with warmth.",
         note_kind="boundary",
         reason="Boundary-setting reduced confusion in the chat.",
@@ -262,18 +307,28 @@ async def test_write_relationship_note_promotes_profile_only_after_repeated_evid
     )
     second = await service.write_relationship_note(
         user_id=user_id,
-        session_id="session-3",
+        session_id="session-3-a",
         note="User trusts direct boundary-setting when it is paired with warmth.",
         note_kind="boundary",
         reason="The same boundary style kept improving trust.",
         evidence={"source": "conversation", "snippet": "你这样说我更安心", "measurable_effect": True},
         confidence=0.86,
     )
+    third = await service.write_relationship_note(
+        user_id=user_id,
+        session_id="session-3-b",
+        note="User trusts direct boundary-setting when it is paired with warmth.",
+        note_kind="boundary",
+        reason="The pattern held in a later session too.",
+        evidence={"source": "conversation", "snippet": "后面一次也有用", "measurable_effect": True},
+        confidence=0.87,
+    )
 
     relationship = await service.get_relationship_profile(user_id)
 
     assert first["promotions"] == []
-    assert second["promotions"][-1]["layer"] == "profile"
+    assert second["promotions"] == []
+    assert third["promotions"][-1]["layer"] == "profile"
     assert relationship["boundary_notes"][0]["kind"] == "boundary"
 
 
@@ -348,7 +403,7 @@ async def test_relationship_profile_promotion_dedupes_and_caps_semantic_entries(
     for idx in range(3):
         await service.write_relationship_note(
             user_id=user_id,
-            session_id="session-dedupe",
+            session_id=f"session-dedupe-{idx // 2}",
             note="User trusts direct boundary-setting when it is paired with warmth.",
             note_kind="boundary",
             reason=f"Promotion evidence {idx}",

@@ -16,6 +16,7 @@ SESSION_COMPANION_TTL_SECONDS = 14 * 24 * 3600
 MAX_COMPANION_REVISIONS = 20
 MAX_RELATIONSHIP_PROFILE_ITEMS = 8
 MAX_RELATIONSHIP_EVIDENCE_REFS = 4
+COMPANION_GOVERNANCE_KEY = "companion_state_governance"
 
 
 def utcnow_iso() -> str:
@@ -104,6 +105,7 @@ class SelfRevisionService:
         plan_id: UUID,
         revision: dict[str, Any],
         state_patch: dict[str, Any] | None = None,
+        governance_patch: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         plan_state = await self.plan_state_service.get_or_create_plan_state(user_id, plan_id)
         facts = copy.deepcopy(plan_state.facts or {})
@@ -119,8 +121,14 @@ class SelfRevisionService:
         revisions.insert(0, dict(revision))
         revisions = revisions[:MAX_COMPANION_REVISIONS]
 
+        governance = facts.get(COMPANION_GOVERNANCE_KEY)
+        governance = dict(governance) if isinstance(governance, dict) else {}
+        if governance_patch:
+            governance = self._merge_dict(governance, governance_patch)
+
         facts["companion_state"] = companion_state
         facts["companion_revision_history"] = revisions
+        facts[COMPANION_GOVERNANCE_KEY] = governance
 
         await self.plan_state_service.upsert_plan_state(
             user_id,
@@ -131,6 +139,7 @@ class SelfRevisionService:
             "layer": "episode",
             "revision": dict(revision),
             "companion_state": companion_state,
+            "governance": governance,
             "revision_count": len(revisions),
         }
 
@@ -142,6 +151,7 @@ class SelfRevisionService:
         state_patch: dict[str, Any] | None = None,
         relationship_profile_patch: dict[str, Any] | None = None,
         identity_adjustment_candidate: dict[str, Any] | None = None,
+        governance_patch: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         prefs = await self.preference_service.get_preferences(user_id)
         inferred = copy.deepcopy(prefs.inferred or {})
@@ -158,6 +168,12 @@ class SelfRevisionService:
         ]
         revisions.insert(0, dict(revision))
         inferred_updates["companion_revision_history"] = revisions[:MAX_COMPANION_REVISIONS]
+
+        governance = inferred.get(COMPANION_GOVERNANCE_KEY)
+        governance = dict(governance) if isinstance(governance, dict) else {}
+        if governance_patch:
+            governance = self._merge_dict(governance, governance_patch)
+            inferred_updates[COMPANION_GOVERNANCE_KEY] = governance
 
         if relationship_profile_patch:
             inferred_updates["relationship_profile"] = self._merge_dict(
@@ -180,6 +196,7 @@ class SelfRevisionService:
             "revision": dict(revision),
             "companion_state": dict((updated.inferred or {}).get("companion_state") or {}),
             "relationship_profile": dict((updated.inferred or {}).get("relationship_profile") or {}),
+            "governance": dict((updated.inferred or {}).get(COMPANION_GOVERNANCE_KEY) or {}),
             "revision_count": len(list((updated.inferred or {}).get("companion_revision_history") or [])),
         }
 

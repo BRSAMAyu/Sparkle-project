@@ -12,6 +12,14 @@ from app.core.business_metrics import (
     PROFILE_LEDGER_PENDING_SYNTHESIS,
     VALIDATED_OUTCOME_LEARNING_PROMOTIONS_TOTAL,
 )
+from app.services.constitutional_drift_firewall import ConstitutionalDriftFirewall
+from app.services.five_layer_learning_contract import (
+    DEFAULT_FIVE_LAYER_CONTRACT,
+    build_temporal_metadata,
+    classify_profile_claim_kind,
+    filter_active_learnings,
+)
+from app.services.layer_conflict_resolver import LayerConflictResolver
 from app.services.outcome_learning_service import OutcomeLearningReport, OutcomeLearningService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.plan_state_service import PlanStateService
@@ -21,6 +29,7 @@ SESSION_OUTCOME_LEARNING_KEY_PREFIX = "session:outcome_learning:"
 SESSION_OUTCOME_LEARNING_TTL_SECONDS = 14 * 24 * 60 * 60
 EPISODE_OUTCOME_LEARNING_KEY = "validated_outcome_learning"
 PROFILE_OUTCOME_LEARNING_KEY = "validated_outcome_learning"
+OUTCOME_LEARNING_GOVERNANCE_KEY = "learning_governance"
 
 
 def _utcnow() -> datetime:
@@ -76,6 +85,9 @@ class OutcomePromotionGovernor:
         self.plan_state_service = PlanStateService(db, redis)
         self.preference_service = PreferenceService(db, redis)
         self.user_strategy_state_service = UserStrategyStateService(db, redis)
+        self.contract = DEFAULT_FIVE_LAYER_CONTRACT
+        self.conflict_resolver = LayerConflictResolver(self.contract)
+        self.drift_firewall = ConstitutionalDriftFirewall()
 
     async def get_effective_learning_state(
         self,
@@ -84,24 +96,35 @@ class OutcomePromotionGovernor:
         plan_id: UUID | str | None = None,
         session_id: str | None = None,
     ) -> dict[str, Any]:
+        now = _utcnow()
         profile_state = await self._load_profile_state(user_id)
         episode_state = await self._load_episode_state(user_id, plan_id)
         session_state = await self._load_session_state(session_id)
 
+        merged_all_learnings: dict[str, dict[str, Any]] = {}
         merged_learnings: dict[str, dict[str, Any]] = {}
+        inactive_learnings: list[dict[str, Any]] = []
+        governance_layers: dict[str, dict[str, Any]] = {}
         conflicts: list[dict[str, Any]] = []
         for layer_name, state in (
             ("profile", profile_state),
             ("episode", episode_state),
             ("session", session_state),
         ):
-            for item in _as_list(state.get("validated_learnings")):
+            active_learnings, inactive_for_layer, governance_summary = filter_active_learnings(
+                [dict(item) for item in _as_list(state.get("validated_learnings")) if isinstance(item, dict)],
+                _as_dict(state.get(OUTCOME_LEARNING_GOVERNANCE_KEY)),
+                now=now,
+            )
+            governance_layers[layer_name] = governance_summary
+            for item in [*active_learnings, *inactive_for_layer]:
                 if not isinstance(item, dict):
                     continue
                 learning_key = _strip(item.get("learning_key"))
                 if not learning_key:
                     continue
-                existing = merged_learnings.get(learning_key)
+                annotated = {**dict(item), "active_layer": layer_name}
+                existing = merged_all_learnings.get(learning_key)
                 if existing and _strip(existing.get("direction")) != _strip(item.get("direction")):
                     conflicts.append(
                         {
@@ -111,18 +134,51 @@ class OutcomePromotionGovernor:
                             "incoming_layer": layer_name,
                         }
                     )
-                merged_learnings[learning_key] = {**dict(item), "active_layer": layer_name}
+                merged_all_learnings[learning_key] = annotated
+                if item.get("governance_status") == "active":
+                    merged_learnings[learning_key] = annotated
+                else:
+                    inactive_learnings.append(annotated)
 
+        shared_conflicts = self.conflict_resolver.resolve_outcome_learning_conflicts(
+            profile_state=profile_state,
+            episode_state=episode_state,
+            session_state=session_state,
+        )
+        stale_items = [
+            *self.conflict_resolver.stale_items_from_governance(_as_dict(profile_state.get(OUTCOME_LEARNING_GOVERNANCE_KEY))),
+            *self.conflict_resolver.stale_items_from_governance(_as_dict(episode_state.get(OUTCOME_LEARNING_GOVERNANCE_KEY))),
+        ]
         bridge = self.compile_planning_bridge(
             {"validated_learnings": list(merged_learnings.values()), "conflicts": conflicts}
         )
+        pending_reviews = [dict(item) for item in stale_items if item.get("status") == "review_due"]
         return {
-            "validated_learnings": list(merged_learnings.values()),
+            "validated_learnings": list(merged_all_learnings.values()),
+            "active_validated_learnings": list(merged_learnings.values()),
+            "inactive_validated_learnings": inactive_learnings,
             "conflicts": conflicts,
+            "shared_conflict_reports": shared_conflicts,
+            "stale_items": stale_items,
+            "pending_reviews": pending_reviews,
+            "governance_summary": {
+                "policy": {
+                    "effective_runtime_statuses": list(self.contract.effective_runtime_statuses),
+                    "inactive_runtime_statuses": list(self.contract.inactive_runtime_statuses),
+                    "review_due_runtime_policy": self.contract.review_due_runtime_policy,
+                },
+                "layers": governance_layers,
+            },
+            "demotion_candidates": [
+                *[dict(item) for item in _as_list(profile_state.get("demotion_candidates")) if isinstance(item, dict)],
+                *[dict(item) for item in _as_list(episode_state.get("demotion_candidates")) if isinstance(item, dict)],
+                *[dict(item) for item in _as_list(session_state.get("demotion_candidates")) if isinstance(item, dict)],
+            ],
             "planning_bridge": bridge,
-            "profile_layer_active": bool(profile_state.get("validated_learnings")),
-            "episode_layer_active": bool(episode_state.get("validated_learnings")),
-            "session_layer_active": bool(session_state.get("validated_learnings")),
+            "profile_layer_active": any(item.get("active_layer") == "profile" for item in merged_learnings.values()),
+            "episode_layer_active": any(item.get("active_layer") == "episode" for item in merged_learnings.values()),
+            "session_layer_active": any(item.get("active_layer") == "session" for item in merged_learnings.values()),
+            "contract_version": self.contract.version,
         }
 
     async def apply_learning_report(
@@ -143,6 +199,14 @@ class OutcomePromotionGovernor:
             "demotion_candidates": [dict(item) for item in _as_list(payload.get("demotion_candidates")) if isinstance(item, dict)],
             "conflicts": [dict(item) for item in _as_list(payload.get("conflict_report")) if isinstance(item, dict)],
             "planning_bridge": self.compile_planning_bridge(payload),
+            "shared_conflict_reports": self.conflict_resolver.resolve_outcome_learning_conflicts(
+                profile_state=await self._load_profile_state(user_id),
+                episode_state=await self._load_episode_state(user_id, plan_id) if plan_id is not None else {},
+                session_state={"validated_learnings": [
+                    *[dict(item) for item in _as_list(payload.get("validated_plan_learnings")) if isinstance(item, dict)],
+                    *[dict(item) for item in _as_list(payload.get("validated_insight_learnings")) if isinstance(item, dict)],
+                ]},
+            ),
             "updated_at": _utcnow_iso(),
         }
         if session_id:
@@ -220,7 +284,7 @@ class OutcomePromotionGovernor:
             "profile_ledger_records": pending_before,
             "pending_records_before": pending_before,
             "pending_records_after": pending_after,
-            "validated_learning_count": len(applied["effective_learning_state"].get("validated_learnings") or []),
+            "validated_learning_count": len(applied["effective_learning_state"].get("active_validated_learnings") or []),
             "promotion_decision": list(applied.get("promotion_decision") or []),
             "effective_learning_state": dict(applied.get("effective_learning_state") or {}),
             "status": "applied",
@@ -302,14 +366,40 @@ class OutcomePromotionGovernor:
         facts = dict(state.facts or {})
         existing_state = _as_dict(facts.get(EPISODE_OUTCOME_LEARNING_KEY))
         validated = [dict(item) for item in _as_list(existing_state.get("validated_learnings")) if isinstance(item, dict)]
+        governance = _as_dict(existing_state.get(OUTCOME_LEARNING_GOVERNANCE_KEY))
+        threshold = self.contract.promotion_threshold("episode", "outcome_learning_to_episode")
         decisions: list[dict[str, Any]] = []
         for item in _as_list(session_state.get("validated_learnings")):
             if not isinstance(item, dict):
                 continue
             if _strip(item.get("suggested_layer")) not in {"episode", "profile"}:
                 continue
+            if threshold.requires_freshness and _strip(item.get("freshness_status")) not in {"fresh", ""}:
+                decisions.append(
+                    {
+                        "layer": "episode",
+                        "learning_key": item.get("learning_key"),
+                        "decision": "stale_without_reinforcement",
+                        "direction": item.get("direction"),
+                    }
+                )
+                continue
+            if int(item.get("sample_count") or 0) < threshold.sample_count_threshold:
+                decisions.append(
+                    {
+                        "layer": "episode",
+                        "learning_key": item.get("learning_key"),
+                        "decision": "insufficient_evidence",
+                        "direction": item.get("direction"),
+                    }
+                )
+                continue
             conflict = self._find_conflict(validated, item)
             if conflict:
+                existing_meta = _as_dict(governance.get(_strip(item.get("learning_key"))))
+                existing_meta["status"] = "blocked"
+                existing_meta["demotion_reason"] = "cross_layer_conflict"
+                governance[_strip(item.get("learning_key"))] = existing_meta
                 decisions.append(
                     {
                         "layer": "episode",
@@ -320,7 +410,24 @@ class OutcomePromotionGovernor:
                     }
                 )
                 continue
-            validated = self._upsert_learning(validated, item, layer="episode")
+            metadata = {
+                **build_temporal_metadata(
+                    contract=self.contract,
+                    target_layer="episode",
+                    source_layer="session",
+                    confidence=float(item.get("confidence") or 0.0),
+                    evidence={
+                        "source": "outcome_learning",
+                        "snippet": _strip(item.get("summary")),
+                        "measurable_effect": True,
+                    },
+                    promotion_reason="repeated_effective_evidence",
+                    state_kind="recent_state",
+                ),
+                "status": "active",
+            }
+            governance[_strip(item.get("learning_key"))] = metadata
+            validated = self._upsert_learning(validated, item, layer="episode", metadata=metadata)
             decisions.append(
                 {
                     "layer": "episode",
@@ -329,10 +436,22 @@ class OutcomePromotionGovernor:
                     "direction": item.get("direction"),
                 }
             )
+        for item in _as_list(session_state.get("demotion_candidates")):
+            learning_key = _strip(_as_dict(item).get("learning_key"))
+            if not learning_key:
+                continue
+            existing_meta = _as_dict(governance.get(learning_key))
+            existing_meta["status"] = "demoted"
+            existing_meta["demotion_reason"] = _strip(_as_dict(item).get("reason")) or "stale_without_reinforcement"
+            governance[learning_key] = existing_meta
+        active_validated, _, _ = filter_active_learnings(validated, governance)
         facts[EPISODE_OUTCOME_LEARNING_KEY] = {
             "validated_learnings": validated,
             "conflicts": [dict(item) for item in _as_list(session_state.get("conflicts")) if isinstance(item, dict)],
-            "planning_bridge": dict(session_state.get("planning_bridge") or {}),
+            "shared_conflict_reports": [dict(item) for item in _as_list(session_state.get("shared_conflict_reports")) if isinstance(item, dict)],
+            "demotion_candidates": [dict(item) for item in _as_list(session_state.get("demotion_candidates")) if isinstance(item, dict)],
+            "planning_bridge": self.compile_planning_bridge({"validated_learnings": active_validated}),
+            OUTCOME_LEARNING_GOVERNANCE_KEY: governance,
             "updated_at": _utcnow_iso(),
         }
         await self.plan_state_service.upsert_plan_state(user_id, plan_uuid, {"facts": facts}, bump_version=True)
@@ -343,22 +462,45 @@ class OutcomePromotionGovernor:
         inferred = dict(prefs.inferred or {})
         existing_state = _as_dict(inferred.get(PROFILE_OUTCOME_LEARNING_KEY))
         validated = [dict(item) for item in _as_list(existing_state.get("validated_learnings")) if isinstance(item, dict)]
+        governance = _as_dict(existing_state.get(OUTCOME_LEARNING_GOVERNANCE_KEY))
+        threshold = self.contract.promotion_threshold("profile", "outcome_learning_to_profile")
         decisions: list[dict[str, Any]] = []
         for item in _as_list(session_state.get("validated_learnings")):
             if not isinstance(item, dict) or _strip(item.get("suggested_layer")) != "profile":
                 continue
-            if int(item.get("sample_count") or 0) < 3:
+            profile_ledger_eligible = (
+                _strip(item.get("suggested_layer")) == "profile"
+                and int(item.get("sample_count") or 0) >= threshold.sample_count_threshold
+                and bool(_as_list(item.get("evidence_record_ids")) or _as_list(item.get("source_families")))
+            )
+            if int(item.get("sample_count") or 0) < threshold.sample_count_threshold or (
+                int(item.get("unique_sessions") or 0) < threshold.unique_sessions_threshold and not profile_ledger_eligible
+            ):
                 decisions.append(
                     {
                         "layer": "profile",
                         "learning_key": item.get("learning_key"),
-                        "decision": "insufficient_profile_evidence",
+                        "decision": "insufficient_evidence",
+                        "direction": item.get("direction"),
+                    }
+                )
+                continue
+            if threshold.requires_freshness and _strip(item.get("freshness_status")) not in {"fresh", ""}:
+                decisions.append(
+                    {
+                        "layer": "profile",
+                        "learning_key": item.get("learning_key"),
+                        "decision": "stale_without_reinforcement",
                         "direction": item.get("direction"),
                     }
                 )
                 continue
             conflict = self._find_conflict(validated, item)
             if conflict:
+                existing_meta = _as_dict(governance.get(_strip(item.get("learning_key"))))
+                existing_meta["status"] = "blocked"
+                existing_meta["demotion_reason"] = "cross_layer_conflict"
+                governance[_strip(item.get("learning_key"))] = existing_meta
                 decisions.append(
                     {
                         "layer": "profile",
@@ -369,7 +511,54 @@ class OutcomePromotionGovernor:
                     }
                 )
                 continue
-            validated = self._upsert_learning(validated, item, layer="profile")
+            safety_report = self.drift_firewall.evaluate_change(
+                change_type="profile_outcome_learning",
+                target_layer="profile",
+                proposed_value=_strip(item.get("summary")),
+                evidence={"source": "outcome_learning", "snippet": _strip(item.get("summary")), "measurable_effect": True},
+            ).to_dict()
+            if not safety_report.get("allowed"):
+                decisions.append(
+                    {
+                        "layer": "profile",
+                        "learning_key": item.get("learning_key"),
+                        "decision": "constitutional_block",
+                        "direction": item.get("direction"),
+                        "safety_report": safety_report,
+                    }
+                )
+                continue
+            if safety_report.get("disposition") == "escalate_review":
+                decisions.append(
+                    {
+                        "layer": "profile",
+                        "learning_key": item.get("learning_key"),
+                        "decision": "review_required",
+                        "direction": item.get("direction"),
+                        "safety_report": safety_report,
+                    }
+                )
+                continue
+            metadata = {
+                **build_temporal_metadata(
+                    contract=self.contract,
+                    target_layer="profile",
+                    source_layer="session",
+                    confidence=float(item.get("confidence") or 0.0),
+                    evidence={"source": "outcome_learning", "snippet": _strip(item.get("summary")), "measurable_effect": True},
+                    promotion_reason="repeated_effective_evidence",
+                    state_kind=classify_profile_claim_kind(
+                        confidence=float(item.get("confidence") or 0.0),
+                        distinct_sessions=int(item.get("unique_sessions") or 0),
+                        sample_count=int(item.get("sample_count") or 0),
+                        measurable_effect=True,
+                    ),
+                ),
+                "status": "active",
+                "firewall": safety_report,
+            }
+            governance[_strip(item.get("learning_key"))] = metadata
+            validated = self._upsert_learning(validated, item, layer="profile", metadata=metadata)
             decisions.append(
                 {
                     "layer": "profile",
@@ -378,13 +567,25 @@ class OutcomePromotionGovernor:
                     "direction": item.get("direction"),
                 }
             )
+        for item in _as_list(session_state.get("demotion_candidates")):
+            learning_key = _strip(_as_dict(item).get("learning_key"))
+            if not learning_key:
+                continue
+            existing_meta = _as_dict(governance.get(learning_key))
+            existing_meta["status"] = "demoted"
+            existing_meta["demotion_reason"] = _strip(_as_dict(item).get("reason")) or "stale_without_reinforcement"
+            governance[learning_key] = existing_meta
+        active_validated, _, _ = filter_active_learnings(validated, governance)
         await self.preference_service.update_inferred(
             user_id,
             {
                 PROFILE_OUTCOME_LEARNING_KEY: {
                     "validated_learnings": validated,
                     "conflicts": [dict(item) for item in _as_list(session_state.get("conflicts")) if isinstance(item, dict)],
-                    "planning_bridge": dict(session_state.get("planning_bridge") or {}),
+                    "shared_conflict_reports": [dict(item) for item in _as_list(session_state.get("shared_conflict_reports")) if isinstance(item, dict)],
+                    "demotion_candidates": [dict(item) for item in _as_list(session_state.get("demotion_candidates")) if isinstance(item, dict)],
+                    "planning_bridge": self.compile_planning_bridge({"validated_learnings": active_validated}),
+                    OUTCOME_LEARNING_GOVERNANCE_KEY: governance,
                     "updated_at": _utcnow_iso(),
                 }
             },
@@ -522,7 +723,13 @@ class OutcomePromotionGovernor:
         return None
 
     @staticmethod
-    def _upsert_learning(existing: list[dict[str, Any]], incoming: dict[str, Any], *, layer: str) -> list[dict[str, Any]]:
+    def _upsert_learning(
+        existing: list[dict[str, Any]],
+        incoming: dict[str, Any],
+        *,
+        layer: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         learning_key = _strip(incoming.get("learning_key"))
         updated: list[dict[str, Any]] = []
         replaced = False
@@ -531,6 +738,8 @@ class OutcomePromotionGovernor:
                 merged = {**dict(item), **dict(incoming)}
                 merged["active_layer"] = layer
                 merged["promoted_at"] = _utcnow_iso()
+                if metadata:
+                    merged.update(dict(metadata))
                 updated.append(merged)
                 replaced = True
             else:
@@ -539,6 +748,8 @@ class OutcomePromotionGovernor:
             fresh = dict(incoming)
             fresh["active_layer"] = layer
             fresh["promoted_at"] = _utcnow_iso()
+            if metadata:
+                fresh.update(dict(metadata))
             updated.append(fresh)
         return updated[-50:]
 

@@ -6,6 +6,8 @@ from typing import Any
 from app.config import settings
 from app.core.agent_profiles import ModelTier, agent_profile_registry, get_public_agent_catalog, get_public_mode_catalog
 from app.core.llm_router import llm_router
+from app.services.constitutional_drift_firewall import ConstitutionalDriftFirewall
+from app.services.five_layer_learning_contract import DEFAULT_FIVE_LAYER_CONTRACT
 
 
 def _utcnow() -> str:
@@ -16,6 +18,10 @@ class CapabilityRegistryService:
     """Structured body map for Sparkle's current capability surface."""
 
     SCHEMA_VERSION = "phase_d.v1"
+
+    def __init__(self) -> None:
+        self.firewall = ConstitutionalDriftFirewall()
+        self.contract = DEFAULT_FIVE_LAYER_CONTRACT
 
     _SUBSYSTEMS: tuple[dict[str, Any], ...] = (
         {
@@ -115,6 +121,13 @@ class CapabilityRegistryService:
             "allowed_scope": "bounded",
             "may_change_when": "A higher-confidence routing or cost constraint justifies it.",
             "must_not_change_when": "User trust or safety would be reduced by a silent downgrade.",
+            "rights_model": "bounded_registry_only",
+            "reversible": False,
+            "approval_level": "human_review_for_non_default",
+            "evidence_threshold": 0.8,
+            "allowed_target_layers": ["system"],
+            "constitutional_review_required": True,
+            "forbidden_without_human_approval": True,
         },
         {
             "id": "agent_mix_selection",
@@ -122,6 +135,13 @@ class CapabilityRegistryService:
             "allowed_scope": "bounded",
             "may_change_when": "The question clearly benefits from specialist collaboration.",
             "must_not_change_when": "The change would add theatrical complexity without user benefit.",
+            "rights_model": "bounded_registry_only",
+            "reversible": True,
+            "approval_level": "bounded_runtime",
+            "evidence_threshold": 0.65,
+            "allowed_target_layers": ["system", "session"],
+            "constitutional_review_required": True,
+            "forbidden_without_human_approval": False,
         },
         {
             "id": "tool_surface_selection",
@@ -129,6 +149,13 @@ class CapabilityRegistryService:
             "allowed_scope": "bounded",
             "may_change_when": "A tool can improve grounding, execution, or verification.",
             "must_not_change_when": "The tool is unavailable, unsafe, or would weaken reversibility.",
+            "rights_model": "bounded_registry_only",
+            "reversible": True,
+            "approval_level": "bounded_runtime",
+            "evidence_threshold": 0.6,
+            "allowed_target_layers": ["system", "session"],
+            "constitutional_review_required": True,
+            "forbidden_without_human_approval": False,
         },
     )
 
@@ -161,11 +188,11 @@ class CapabilityRegistryService:
             "tools": tools,
             "subsystems": list(self._SUBSYSTEMS),
             "configuration_layers": [
-                {"id": "constitutional", "status": "mostly_built", "writes_allowed": False},
-                {"id": "session", "status": "built_v1", "writes_allowed": True},
-                {"id": "episode", "status": "partially_built", "writes_allowed": "promotion_only"},
-                {"id": "profile", "status": "partially_built", "writes_allowed": "evidence_gated"},
-                {"id": "system", "status": "design_substrate", "writes_allowed": "registry_gated_future"},
+                {"id": "constitutional", "status": "mostly_built", "writes_allowed": False, "contract_version": self.contract.version},
+                {"id": "session", "status": "built_v1", "writes_allowed": True, "contract_version": self.contract.version},
+                {"id": "episode", "status": "partially_built", "writes_allowed": "promotion_only", "contract_version": self.contract.version},
+                {"id": "profile", "status": "partially_built", "writes_allowed": "evidence_gated", "contract_version": self.contract.version},
+                {"id": "system", "status": "design_substrate", "writes_allowed": "registry_gated_future", "contract_version": self.contract.version},
             ],
             "system_layer_knobs": list(self._SYSTEM_LAYER_KNOBS),
             "rights_model": {
@@ -174,6 +201,7 @@ class CapabilityRegistryService:
                     "User benefit outranks internal sophistication.",
                     "Reversibility is required for session-level adaptation.",
                     "System-level changes must declare cost, risk, and allowed write scope.",
+                    "System-layer rights remain contract-gated and constitution-reviewed.",
                 ],
             },
         }
@@ -185,6 +213,9 @@ class CapabilityRegistryService:
         reason: str,
         reversible: bool,
         target_subsystem_id: str | None = None,
+        evidence_strength: float | None = None,
+        target_layer: str | None = None,
+        approval_level: str | None = None,
     ) -> dict[str, Any]:
         knob = next((item for item in self._SYSTEM_LAYER_KNOBS if item["id"] == knob_id), None)
         subsystem = next((item for item in self._SUBSYSTEMS if item["id"] == target_subsystem_id), None)
@@ -202,10 +233,28 @@ class CapabilityRegistryService:
                 "reason": "System-layer changes require an explicit user-benefit reason.",
                 "knob_id": knob_id,
             }
-        if not reversible and knob_id != "model_tier_selection":
+        if not reversible and bool(knob.get("reversible")):
             return {
                 "allowed": False,
                 "reason": "Non-reversible changes are blocked for bounded system-layer knobs.",
+                "knob_id": knob_id,
+            }
+        if approval_level and approval_level != knob.get("approval_level"):
+            return {
+                "allowed": False,
+                "reason": "Approval level does not satisfy the knob contract.",
+                "knob_id": knob_id,
+            }
+        if target_layer and target_layer not in list(knob.get("allowed_target_layers") or []):
+            return {
+                "allowed": False,
+                "reason": "Target layer is outside the bounded rights model for this knob.",
+                "knob_id": knob_id,
+            }
+        if evidence_strength is not None and float(evidence_strength) < float(knob.get("evidence_threshold") or 0.0):
+            return {
+                "allowed": False,
+                "reason": "Evidence threshold not met for this system-layer change.",
                 "knob_id": knob_id,
             }
         if subsystem and subsystem["state"] not in {"active", "configured"}:
@@ -214,11 +263,40 @@ class CapabilityRegistryService:
                 "reason": f"{subsystem['label']} is not available.",
                 "knob_id": knob_id,
             }
+        safety_report = self.firewall.evaluate_system_change(
+            knob_id=knob_id,
+            reason=normalized_reason,
+            rights_model=str(knob.get("rights_model") or "bounded_registry_only"),
+            reversible=bool(knob.get("reversible")),
+        ).to_dict()
+        if not safety_report["allowed"]:
+            return {
+                "allowed": False,
+                "reason": "Constitutional review blocked this system-layer change.",
+                "knob_id": knob_id,
+                "target_subsystem_id": target_subsystem_id,
+                "safety_report": safety_report,
+            }
+        if safety_report["disposition"] == "escalate_review":
+            return {
+                "allowed": False,
+                "reason": "System-layer change requires escalation review before activation.",
+                "knob_id": knob_id,
+                "target_subsystem_id": target_subsystem_id,
+                "safety_report": safety_report,
+            }
         return {
             "allowed": True,
             "reason": knob["may_change_when"],
             "knob_id": knob_id,
             "target_subsystem_id": target_subsystem_id,
+            "rights_model": knob.get("rights_model"),
+            "approval_level": knob.get("approval_level"),
+            "evidence_threshold": knob.get("evidence_threshold"),
+            "allowed_target_layers": list(knob.get("allowed_target_layers") or []),
+            "constitutional_review_required": bool(knob.get("constitutional_review_required")),
+            "forbidden_without_human_approval": bool(knob.get("forbidden_without_human_approval")),
+            "safety_report": safety_report,
         }
 
     @staticmethod
@@ -544,8 +622,13 @@ class CapabilityRegistryService:
                     "when_to_use": [str(item.get("may_change_when") or "")],
                     "when_not_to_use": [str(item.get("must_not_change_when") or "")],
                     "rights_model": "bounded_registry_only",
-                    "reversible": item["id"] != "model_tier_selection",
+                    "reversible": bool(item.get("reversible")),
                     "declared_knobs": [item["id"]],
+                    "approval_level": item.get("approval_level"),
+                    "evidence_threshold": item.get("evidence_threshold"),
+                    "allowed_target_layers": list(item.get("allowed_target_layers") or []),
+                    "constitutional_review_required": bool(item.get("constitutional_review_required")),
+                    "forbidden_without_human_approval": bool(item.get("forbidden_without_human_approval")),
                 }
             )
         return capabilities

@@ -99,6 +99,7 @@ class SituationBrief:
     insight_state: dict[str, Any] = field(default_factory=dict)
     planning_strategy: dict[str, Any] = field(default_factory=dict)
     outcome_learning: dict[str, Any] = field(default_factory=dict)
+    five_layer_growth: dict[str, Any] = field(default_factory=dict)
     body_map: dict[str, Any] = field(default_factory=dict)
     capability_requirements: dict[str, Any] = field(default_factory=dict)
     capability_selection: dict[str, Any] = field(default_factory=dict)
@@ -122,6 +123,7 @@ class SituationBrief:
             "insight_state": self.insight_state,
             "planning_strategy": self.planning_strategy,
             "outcome_learning": self.outcome_learning,
+            "five_layer_growth": self.five_layer_growth,
             "body_map": self.body_map,
             "capability_requirements": self.capability_requirements,
             "capability_selection": self.capability_selection,
@@ -384,6 +386,13 @@ class SituationBriefBuilder:
         decision_context["capability_bounded_adjustments"] = list(
             _as_list(capability_selection.get("bounded_adjustments"))
         )
+        five_layer_growth = self._build_five_layer_growth_summary(
+            user_context=user_context,
+            outcome_learning=outcome_learning,
+            registry=registry,
+            capability_selection=capability_selection,
+        )
+        decision_context["five_layer_growth_summary"] = five_layer_growth
 
         focus_question = self._build_focus_question(
             vision=vision,
@@ -418,6 +427,7 @@ class SituationBriefBuilder:
             insight_state=insight_state,
             planning_strategy=planning_strategy,
             outcome_learning=outcome_learning,
+            five_layer_growth=five_layer_growth,
             body_map=body_map,
             capability_requirements=capability_requirements,
             capability_selection=capability_selection,
@@ -506,8 +516,67 @@ class SituationBriefBuilder:
             },
             "outcome_learning": {
                 "active": bool(outcome_learning),
-                "validated_learning_count": len(_as_list(outcome_learning.get("validated_learnings"))),
+                "validated_learning_count": len(
+                    _as_list(outcome_learning.get("active_validated_learnings"))
+                    or _as_list(outcome_learning.get("validated_learnings"))
+                ),
                 "known_failure_rule_count": len(_as_list(outcome_learning.get("known_failure_avoidance_rules"))),
+            },
+        }
+
+    def _build_five_layer_growth_summary(
+        self,
+        *,
+        user_context: dict[str, Any],
+        outcome_learning: dict[str, Any],
+        registry: dict[str, Any],
+        capability_selection: dict[str, Any],
+    ) -> dict[str, Any]:
+        strategy_meta = _as_dict(_as_dict(user_context.get("user_strategy_state")).get("meta"))
+        outcome_payload = _as_dict(outcome_learning)
+        layer_alignment = _as_dict(user_context.get("layer_alignment"))
+        active_outcome_learnings = list(
+            _as_list(outcome_payload.get("active_validated_learnings"))
+            or _as_list(outcome_payload.get("validated_learnings"))
+        )
+        inactive_outcome_learnings = list(_as_list(outcome_payload.get("inactive_validated_learnings")))
+        outcome_pending_reviews = list(_as_list(outcome_payload.get("pending_reviews")))
+        outcome_stale_items = list(_as_list(outcome_payload.get("stale_items")))
+        outcome_active_conflicts = list(_as_list(outcome_payload.get("shared_conflict_reports")))
+        active_conflicts = list(_as_list(layer_alignment.get("active_conflicts"))) + list(
+            _as_list(strategy_meta.get("active_conflicts"))
+        ) + outcome_active_conflicts
+        stale_items = list(_as_list(layer_alignment.get("stale_items"))) + list(_as_list(strategy_meta.get("stale_items"))) + list(
+            outcome_stale_items
+        )
+
+        return {
+            "contract_version": _strip(layer_alignment.get("contract_version")) or _strip(strategy_meta.get("five_layer_contract_version")),
+            "layers": [
+                {"id": "constitutional", "active": True, "summary": "Constitution artifacts remain the bounded source of identity and drift discipline."},
+                {"id": "session", "active": bool(strategy_meta.get("session_layer_active") or user_context.get("effective_companion_state")), "summary": "Fast reversible adaptation is live for the current turn."},
+                {"id": "episode", "active": bool(strategy_meta.get("episode_layer_active") or outcome_payload.get("episode_layer_active")), "summary": _strip(strategy_meta.get("adaptive_summary")) or "Journey-bounded learnings are available when the active plan supports them."},
+                {"id": "profile", "active": bool(strategy_meta.get("profile_layer_active") or outcome_payload.get("profile_layer_active") or _as_dict(user_context.get("profile_context"))), "summary": "Cross-session truths stay compact, evidence-gated, and auditable."},
+                {"id": "system", "active": bool(_as_dict(capability_selection.get("body_awareness_guidance"))), "summary": "System-layer choice is advisory, bounded, and registry-governed."},
+            ],
+            "active_conflict_count": len(active_conflicts),
+            "stale_item_count": len(stale_items),
+            "review_due_count": len(outcome_pending_reviews),
+            "active_conflicts": active_conflicts[:5],
+            "stale_items": stale_items[:5],
+            "outcome_learning_state": {
+                "active_learning_count": len(active_outcome_learnings),
+                "inactive_learning_count": len(inactive_outcome_learnings),
+                "review_due_count": len(outcome_pending_reviews),
+                "stale_learning_count": len(
+                    [item for item in outcome_stale_items if _strip(_as_dict(item).get("status")) == "stale"]
+                ),
+                "active_conflict_count": len(outcome_active_conflicts),
+                "governance_policy": _as_dict(outcome_payload.get("governance_summary")).get("policy", {}),
+            },
+            "system_rights_state": {
+                "bounded_knob_count": len(_as_list(registry.get("system_layer_knobs"))),
+                "active_bounded_adjustments": len(_as_list(capability_selection.get("bounded_adjustments"))),
             },
         }
 

@@ -8,6 +8,12 @@ from uuid import UUID
 
 from loguru import logger
 
+from app.services.five_layer_learning_contract import (
+    DEFAULT_FIVE_LAYER_CONTRACT,
+    build_temporal_metadata,
+    classify_profile_claim_kind,
+)
+from app.services.layer_conflict_resolver import LayerConflictResolver
 from app.services.personalization.preference_service import PreferenceService
 from app.services.plan_state_service import PlanStateService
 
@@ -50,6 +56,10 @@ def _clean_text(value: Any, *, limit: int = 240) -> str:
     if len(text) <= limit:
         return text
     return f"{text[: max(0, limit - 1)].rstrip()}…"
+
+
+def _strip(value: Any) -> str:
+    return str(value or "").strip()
 
 
 @dataclass(frozen=True)
@@ -139,6 +149,8 @@ class UserStrategyStateService:
         self.redis = redis
         self.preference_service = PreferenceService(db, redis)
         self.plan_state_service = PlanStateService(db, redis)
+        self.contract = DEFAULT_FIVE_LAYER_CONTRACT
+        self.conflict_resolver = LayerConflictResolver(self.contract)
 
     async def get_effective_state(
         self,
@@ -193,6 +205,19 @@ class UserStrategyStateService:
             "adaptive_adjustments": dict(adaptive_view.get("adaptive_adjustments") or {}) if isinstance(adaptive_view, dict) else {},
             "adaptive_summary": str(adaptive_view.get("summary") or "").strip() if isinstance(adaptive_view, dict) else "",
         }
+        conflicts = self._build_layer_conflicts(
+            profile_layer=profile_layer,
+            episode_layer=episode_layer,
+            session_layer=session_layer,
+        )
+        stale_items = [
+            *self.conflict_resolver.stale_items_from_governance(dict((profile_layer.get("meta") or {}).get("field_governance") or {})),
+            *self.conflict_resolver.stale_items_from_governance(dict((episode_layer.get("meta") or {}).get("field_governance") or {})),
+        ]
+        meta["active_conflicts"] = conflicts
+        meta["stale_items"] = stale_items
+        meta["pending_reviews"] = [item for item in stale_items if item.get("status") == "review_due"]
+        meta["five_layer_contract_version"] = self.contract.version
 
         return {**values, "meta": meta}
 
@@ -261,6 +286,7 @@ class UserStrategyStateService:
         current_meta = dict(current_layer.get("meta") or {})
         history = [item for item in _as_list(current_layer.get("history")) if isinstance(item, dict)]
         field_expirations = dict(current_meta.get("field_expirations") or {})
+        field_governance = dict(current_meta.get("field_governance") or {})
         audit_entries: list[dict[str, Any]] = []
 
         for field, new_value in valid_changes.items():
@@ -283,12 +309,34 @@ class UserStrategyStateService:
                     "expires_at": expires_at.isoformat() if expires_at is not None else None,
                 }
             )
+            if normalized_layer in {self.EPISODE_LAYER, self.PROFILE_LAYER}:
+                state_kind = ""
+                if normalized_layer == self.PROFILE_LAYER:
+                    state_kind = classify_profile_claim_kind(
+                        confidence=bounded_confidence,
+                        distinct_sessions=1 if _strip(_as_dict(evidence).get("session_id")) else 0,
+                        measurable_effect=bool(_as_dict(evidence).get("measurable_effect")),
+                    )
+                field_governance[field] = {
+                    **build_temporal_metadata(
+                        contract=self.contract,
+                        target_layer=normalized_layer,
+                        source_layer="session" if _strip(_as_dict(evidence).get("session_id")) else "manual",
+                        confidence=bounded_confidence,
+                        evidence=_as_dict(evidence),
+                        promotion_reason="repeated_effective_evidence" if bounded_confidence >= 0.7 else "insufficient_evidence",
+                        state_kind=state_kind,
+                        now=timestamp,
+                    ),
+                    "status": "active",
+                }
 
         current_meta.update(
             {
                 "updated_at": timestamp.isoformat(),
                 "last_reason": _clean_text(reason, limit=180),
                 "field_expirations": field_expirations,
+                "field_governance": field_governance,
             }
         )
         history = (audit_entries + history)[: self.HISTORY_LIMIT]
@@ -506,6 +554,7 @@ class UserStrategyStateService:
         meta = dict(payload.get("meta") or {})
         history = [item for item in _as_list(payload.get("history")) if isinstance(item, dict)]
         field_expirations = dict(meta.get("field_expirations") or {})
+        field_governance = dict(meta.get("field_governance") or {})
         now = _utcnow()
         for field, raw_expiry in list(field_expirations.items()):
             parsed = _parse_dt(raw_expiry)
@@ -514,7 +563,11 @@ class UserStrategyStateService:
             if parsed <= now:
                 state.pop(field, None)
                 field_expirations.pop(field, None)
+                metadata = dict(field_governance.get(field) or {})
+                metadata["status"] = "stale"
+                field_governance[field] = metadata
         meta["field_expirations"] = field_expirations
+        meta["field_governance"] = field_governance
         return {"state": state, "meta": meta, "history": history}
 
     def _layer_expiration_for_field(self, payload: dict[str, Any], field: str) -> str | None:
@@ -552,3 +605,41 @@ class UserStrategyStateService:
             "time_multiplier": time_multiplier,
             "summary": "；".join(parts[:3]),
         }
+
+    def _build_layer_conflicts(
+        self,
+        *,
+        profile_layer: dict[str, Any],
+        episode_layer: dict[str, Any],
+        session_layer: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        conflicts: list[dict[str, Any]] = []
+        for field in self.FIELD_SPECS:
+            layer_values: list[dict[str, Any]] = []
+            for layer_name, payload in (
+                (self.PROFILE_LAYER, profile_layer),
+                (self.EPISODE_LAYER, episode_layer),
+                (self.SESSION_LAYER, session_layer),
+            ):
+                value = dict(payload.get("state") or {}).get(field)
+                if value is None or str(value).strip() == "":
+                    continue
+                governance = dict((payload.get("meta") or {}).get("field_governance") or {}).get(field)
+                layer_values.append(
+                    {
+                        "layer": layer_name,
+                        "value": value,
+                        "confidence": _as_dict(governance).get("confidence", 0.6),
+                        "updated_at": _as_dict(governance).get("promoted_at") or dict(payload.get("meta") or {}).get("updated_at"),
+                        "evidence_summary": _as_dict(governance).get("evidence_summary") or f"{layer_name}:{field}",
+                        "repeated_evidence": 2 if layer_name == self.PROFILE_LAYER else 1,
+                    }
+                )
+            report = self.conflict_resolver.resolve_field_conflict(
+                learning_key=field,
+                layer_values=layer_values,
+                context_preferred_layer=self.EPISODE_LAYER if any(item["layer"] == self.EPISODE_LAYER for item in layer_values) else None,
+            )
+            if report is not None:
+                conflicts.append(report.to_dict())
+        return conflicts

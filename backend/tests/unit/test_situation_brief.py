@@ -205,6 +205,52 @@ def test_residual_diagnosis_runtime_detects_normative_loop() -> None:
     assert diagnosis["grounding_priority"][0] == "user_values_and_constraints"
 
 
+def test_five_layer_growth_summary_reports_active_and_inactive_outcome_learning_states() -> None:
+    summary = SituationBriefBuilder()._build_five_layer_growth_summary(
+        user_context={
+            "layer_alignment": {
+                "contract_version": "2026-04-05.phase_e.v1",
+                "active_conflicts": [{"conflict_id": "companion-conflict"}],
+                "stale_items": [],
+            },
+            "user_strategy_state": {"meta": {}},
+        },
+        outcome_learning={
+            "active_validated_learnings": [{"learning_key": "grounded_plans_work_better"}],
+            "inactive_validated_learnings": [
+                {"learning_key": "dense_first_step_overloads_user", "governance_status": "demoted"},
+                {"learning_key": "needs_revalidation", "governance_status": "review_due"},
+            ],
+            "pending_reviews": [{"learning_key": "needs_revalidation", "status": "review_due"}],
+            "stale_items": [
+                {"learning_key": "needs_revalidation", "status": "review_due"},
+                {"learning_key": "expired_pattern", "status": "stale"},
+            ],
+            "shared_conflict_reports": [{"conflict_id": "outcome-conflict"}],
+            "governance_summary": {
+                "policy": {
+                    "effective_runtime_statuses": ["active"],
+                    "inactive_runtime_statuses": ["blocked", "demoted", "review_due", "stale"],
+                    "review_due_runtime_policy": "exclude_until_revalidated",
+                }
+            },
+            "episode_layer_active": True,
+            "profile_layer_active": False,
+        },
+        registry={"system_layer_knobs": [{"id": "session_mode"}]},
+        capability_selection={"bounded_adjustments": [{"field": "session_mode"}]},
+    )
+
+    assert summary["active_conflict_count"] == 2
+    assert summary["review_due_count"] == 1
+    assert summary["stale_item_count"] == 2
+    assert summary["outcome_learning_state"]["active_learning_count"] == 1
+    assert summary["outcome_learning_state"]["inactive_learning_count"] == 2
+    assert summary["outcome_learning_state"]["review_due_count"] == 1
+    assert summary["outcome_learning_state"]["stale_learning_count"] == 1
+    assert summary["outcome_learning_state"]["governance_policy"]["review_due_runtime_policy"] == "exclude_until_revalidated"
+
+
 @pytest.mark.asyncio
 async def test_situation_brief_compiles_decision_policy_for_control_overload() -> None:
     brief = (await SituationBriefBuilder().build(
