@@ -1,0 +1,1829 @@
+{
+  "proof_level": "benchmark_v1",
+  "human_eval_required": true,
+  "fairness_notes": [
+    "Sparkle Phase B is evaluated as a system-level planning stack with compiled planning strategy in its prompt.",
+    "Raw baselines receive plain dossier prompts and remain useful comparative signals, not final product truth.",
+    "This deterministic evaluator is a regression and comparison layer, not a substitute for human product evaluation."
+  ],
+  "scenario_scorecards": [
+    {
+      "scenario_id": "phase_b_thermo_14_day_sprint",
+      "variant": "sparkle_current",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.44; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "# 🌟 Sparkle Plan: 14-Day Thermodynamics Sprint **Goal:** Pass the Exam **Deadline:** 2026-04-19 **Daily Budget:** 90 Minutes (Hard Stop) **Focus:** High-yield topics & fixing specific confusions. --- ## 🛑 Core Rules (Rea"
+        },
+        "constraint_realism": {
+          "score": 0.9333,
+          "notes": "Constraint hits=2/3; mode_fit=True.",
+          "evidence_excerpt": "# 🌟 Sparkle Plan: 14-Day Thermodynamics Sprint **Goal:** Pass the Exam **Deadline:** 2026-04-19 **Daily Budget:** 90 Minutes (Hard Stop) **Focus:** High-yield topics & fixing specific confusions. --- ## 🛑 Core Rules (Rea"
+        },
+        "plan_sequence_quality": {
+          "score": 1.0,
+          "notes": "Step markers=24; temporal markers=4.",
+          "evidence_excerpt": "# 🌟 Sparkle Plan: 14-Day Thermodynamics Sprint **Goal:** Pass the Exam **Deadline:** 2026-04-19 **Daily Budget:** 90 Minutes (Hard Stop) **Focus:** High-yield topics & fixing specific confusions. --- ## 🛑 Core Rules (Rea"
+        },
+        "grounding_quality": {
+          "score": 0.91,
+          "notes": "Material mentions=3/3; generic grounding hits=2.",
+          "evidence_excerpt": "# 🌟 Sparkle Plan: 14-Day Thermodynamics Sprint **Goal:** Pass the Exam **Deadline:** 2026-04-19 **Daily Budget:** 90 Minutes (Hard Stop) **Focus:** High-yield topics & fixing specific confusions. --- ## 🛑 Core Rules (Rea"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=7; question_count=3.",
+          "evidence_excerpt": "# 🌟 Sparkle Plan: 14-Day Thermodynamics Sprint **Goal:** Pass the Exam **Deadline:** 2026-04-19 **Daily Budget:** 90 Minutes (Hard Stop) **Focus:** High-yield topics & fixing specific confusions. --- ## 🛑 Core Rules (Rea"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.48,
+          "notes": "Fallback hits=1; continuity hits=1.",
+          "evidence_excerpt": "# 🌟 Sparkle Plan: 14-Day Thermodynamics Sprint **Goal:** Pass the Exam **Deadline:** 2026-04-19 **Daily Budget:** 90 Minutes (Hard Stop) **Focus:** High-yield topics & fixing specific confusions. --- ## 🛑 Core Rules (Rea"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=24; avg_line_len=77.9.",
+          "evidence_excerpt": "# 🌟 Sparkle Plan: 14-Day Thermodynamics Sprint **Goal:** Pass the Exam **Deadline:** 2026-04-19 **Daily Budget:** 90 Minutes (Hard Stop) **Focus:** High-yield topics & fixing specific confusions. --- ## 🛑 Core Rules (Rea"
+        },
+        "trustworthiness": {
+          "score": 0.67,
+          "notes": "Honesty hits=0; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "# 🌟 Sparkle Plan: 14-Day Thermodynamics Sprint **Goal:** Pass the Exam **Deadline:** 2026-04-19 **Daily Budget:** 90 Minutes (Hard Stop) **Focus:** High-yield topics & fixing specific confusions. --- ## 🛑 Core Rules (Rea"
+        }
+      },
+      "overall_score": 0.8442,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_thermo_14_day_sprint",
+      "variant": "sparkle_phase_b",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.70; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "# Planning Quality & Certainty Statement **Quality Level:** High-Confidence Structure, Medium-Confidence Content. **Certainty Note:** The timeline (14 days) and constraints (90 mins/day) are fixed. However, the exact exa"
+        },
+        "constraint_realism": {
+          "score": 1.0,
+          "notes": "Constraint hits=3/3; mode_fit=True.",
+          "evidence_excerpt": "# Planning Quality & Certainty Statement **Quality Level:** High-Confidence Structure, Medium-Confidence Content. **Certainty Note:** The timeline (14 days) and constraints (90 mins/day) are fixed. However, the exact exa"
+        },
+        "plan_sequence_quality": {
+          "score": 0.9467,
+          "notes": "Step markers=39; temporal markers=2.",
+          "evidence_excerpt": "# Planning Quality & Certainty Statement **Quality Level:** High-Confidence Structure, Medium-Confidence Content. **Certainty Note:** The timeline (14 days) and constraints (90 mins/day) are fixed. However, the exact exa"
+        },
+        "grounding_quality": {
+          "score": 0.91,
+          "notes": "Material mentions=3/3; generic grounding hits=2.",
+          "evidence_excerpt": "# Planning Quality & Certainty Statement **Quality Level:** High-Confidence Structure, Medium-Confidence Content. **Certainty Note:** The timeline (14 days) and constraints (90 mins/day) are fixed. However, the exact exa"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=6; question_count=0.",
+          "evidence_excerpt": "# Planning Quality & Certainty Statement **Quality Level:** High-Confidence Structure, Medium-Confidence Content. **Certainty Note:** The timeline (14 days) and constraints (90 mins/day) are fixed. However, the exact exa"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "# Planning Quality & Certainty Statement **Quality Level:** High-Confidence Structure, Medium-Confidence Content. **Certainty Note:** The timeline (14 days) and constraints (90 mins/day) are fixed. However, the exact exa"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=39; avg_line_len=100.1.",
+          "evidence_excerpt": "# Planning Quality & Certainty Statement **Quality Level:** High-Confidence Structure, Medium-Confidence Content. **Certainty Note:** The timeline (14 days) and constraints (90 mins/day) are fixed. However, the exact exa"
+        },
+        "trustworthiness": {
+          "score": 0.75,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "# Planning Quality & Certainty Statement **Quality Level:** High-Confidence Structure, Medium-Confidence Content. **Certainty Note:** The timeline (14 days) and constraints (90 mins/day) are fixed. However, the exact exa"
+        }
+      },
+      "overall_score": 0.8208,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_thermo_14_day_sprint",
+      "variant": "raw_baseline",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.52; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "# 14-Day Thermodynamics Sprint Plan **Deadline:** 2026-04-19 **Start Date:** 2026-04-05 **Daily Time Budget:** 90 Minutes (Strict) ## 1. Daily Routine (90 Minutes Total) To avoid impossible plans, stick to this exact bre"
+        },
+        "constraint_realism": {
+          "score": 1.0,
+          "notes": "Constraint hits=3/3; mode_fit=True.",
+          "evidence_excerpt": "# 14-Day Thermodynamics Sprint Plan **Deadline:** 2026-04-19 **Start Date:** 2026-04-05 **Daily Time Budget:** 90 Minutes (Strict) ## 1. Daily Routine (90 Minutes Total) To avoid impossible plans, stick to this exact bre"
+        },
+        "plan_sequence_quality": {
+          "score": 0.9933,
+          "notes": "Step markers=25; temporal markers=3.",
+          "evidence_excerpt": "# 14-Day Thermodynamics Sprint Plan **Deadline:** 2026-04-19 **Start Date:** 2026-04-05 **Daily Time Budget:** 90 Minutes (Strict) ## 1. Daily Routine (90 Minutes Total) To avoid impossible plans, stick to this exact bre"
+        },
+        "grounding_quality": {
+          "score": 0.83,
+          "notes": "Material mentions=3/3; generic grounding hits=1.",
+          "evidence_excerpt": "# 14-Day Thermodynamics Sprint Plan **Deadline:** 2026-04-19 **Start Date:** 2026-04-05 **Daily Time Budget:** 90 Minutes (Strict) ## 1. Daily Routine (90 Minutes Total) To avoid impossible plans, stick to this exact bre"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=7; question_count=0.",
+          "evidence_excerpt": "# 14-Day Thermodynamics Sprint Plan **Deadline:** 2026-04-19 **Start Date:** 2026-04-05 **Daily Time Budget:** 90 Minutes (Strict) ## 1. Daily Routine (90 Minutes Total) To avoid impossible plans, stick to this exact bre"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "# 14-Day Thermodynamics Sprint Plan **Deadline:** 2026-04-19 **Start Date:** 2026-04-05 **Daily Time Budget:** 90 Minutes (Strict) ## 1. Daily Routine (90 Minutes Total) To avoid impossible plans, stick to this exact bre"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=25; avg_line_len=83.5.",
+          "evidence_excerpt": "# 14-Day Thermodynamics Sprint Plan **Deadline:** 2026-04-19 **Start Date:** 2026-04-05 **Daily Time Budget:** 90 Minutes (Strict) ## 1. Daily Routine (90 Minutes Total) To avoid impossible plans, stick to this exact bre"
+        },
+        "trustworthiness": {
+          "score": 0.75,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "# 14-Day Thermodynamics Sprint Plan **Deadline:** 2026-04-19 **Start Date:** 2026-04-05 **Daily Time Budget:** 90 Minutes (Strict) ## 1. Daily Routine (90 Minutes Total) To avoid impossible plans, stick to this exact bre"
+        }
+      },
+      "overall_score": 0.8167,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_thermo_14_day_sprint",
+      "variant": "raw_baseline",
+      "model_key": "deepseek_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.59; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "Based solely on your provided information, here is a realistic 14-day sprint plan for your thermodynamics exam. **Core Strategy:** This plan prioritizes closing your specific knowledge gap first, uses short daily session"
+        },
+        "constraint_realism": {
+          "score": 0.8333,
+          "notes": "Constraint hits=2/3; mode_fit=True.",
+          "evidence_excerpt": "Based solely on your provided information, here is a realistic 14-day sprint plan for your thermodynamics exam. **Core Strategy:** This plan prioritizes closing your specific knowledge gap first, uses short daily session"
+        },
+        "plan_sequence_quality": {
+          "score": 0.9933,
+          "notes": "Step markers=27; temporal markers=3.",
+          "evidence_excerpt": "Based solely on your provided information, here is a realistic 14-day sprint plan for your thermodynamics exam. **Core Strategy:** This plan prioritizes closing your specific knowledge gap first, uses short daily session"
+        },
+        "grounding_quality": {
+          "score": 0.91,
+          "notes": "Material mentions=3/3; generic grounding hits=2.",
+          "evidence_excerpt": "Based solely on your provided information, here is a realistic 14-day sprint plan for your thermodynamics exam. **Core Strategy:** This plan prioritizes closing your specific knowledge gap first, uses short daily session"
+        },
+        "next_action_usefulness": {
+          "score": 0.62,
+          "notes": "Time hits=0; action hits=6; question_count=0.",
+          "evidence_excerpt": "Based solely on your provided information, here is a realistic 14-day sprint plan for your thermodynamics exam. **Core Strategy:** This plan prioritizes closing your specific knowledge gap first, uses short daily session"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.52,
+          "notes": "Fallback hits=2; continuity hits=0.",
+          "evidence_excerpt": "Based solely on your provided information, here is a realistic 14-day sprint plan for your thermodynamics exam. **Core Strategy:** This plan prioritizes closing your specific knowledge gap first, uses short daily session"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=27; avg_line_len=89.0.",
+          "evidence_excerpt": "Based solely on your provided information, here is a realistic 14-day sprint plan for your thermodynamics exam. **Core Strategy:** This plan prioritizes closing your specific knowledge gap first, uses short daily session"
+        },
+        "trustworthiness": {
+          "score": 0.75,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "Based solely on your provided information, here is a realistic 14-day sprint plan for your thermodynamics exam. **Core Strategy:** This plan prioritizes closing your specific knowledge gap first, uses short daily session"
+        }
+      },
+      "overall_score": 0.8233,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_overloaded_urgent_user",
+      "variant": "sparkle_current",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.63; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "# 🌟 Momentum Recovery Plan **Goal:** Get back on track without burning out. **Deadline:** 2026-04-10 **Focus:** Small wins > Perfect progress. --- ### 1. The Mindset Reset (Read this first) *   **Forgive the missed days:"
+        },
+        "constraint_realism": {
+          "score": 0.8,
+          "notes": "Constraint hits=3/3; mode_fit=False.",
+          "evidence_excerpt": "# 🌟 Momentum Recovery Plan **Goal:** Get back on track without burning out. **Deadline:** 2026-04-10 **Focus:** Small wins > Perfect progress. --- ### 1. The Mindset Reset (Read this first) *   **Forgive the missed days:"
+        },
+        "plan_sequence_quality": {
+          "score": 0.825,
+          "notes": "Step markers=17; temporal markers=1.",
+          "evidence_excerpt": "# 🌟 Momentum Recovery Plan **Goal:** Get back on track without burning out. **Deadline:** 2026-04-10 **Focus:** Small wins > Perfect progress. --- ### 1. The Mindset Reset (Read this first) *   **Forgive the missed days:"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "# 🌟 Momentum Recovery Plan **Goal:** Get back on track without burning out. **Deadline:** 2026-04-10 **Focus:** Small wins > Perfect progress. --- ### 1. The Mindset Reset (Read this first) *   **Forgive the missed days:"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=5; question_count=0.",
+          "evidence_excerpt": "# 🌟 Momentum Recovery Plan **Goal:** Get back on track without burning out. **Deadline:** 2026-04-10 **Focus:** Small wins > Perfect progress. --- ### 1. The Mindset Reset (Read this first) *   **Forgive the missed days:"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "# 🌟 Momentum Recovery Plan **Goal:** Get back on track without burning out. **Deadline:** 2026-04-10 **Focus:** Small wins > Perfect progress. --- ### 1. The Mindset Reset (Read this first) *   **Forgive the missed days:"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=17; avg_line_len=61.2.",
+          "evidence_excerpt": "# 🌟 Momentum Recovery Plan **Goal:** Get back on track without burning out. **Deadline:** 2026-04-10 **Focus:** Small wins > Perfect progress. --- ### 1. The Mindset Reset (Read this first) *   **Forgive the missed days:"
+        },
+        "trustworthiness": {
+          "score": 0.32,
+          "notes": "Honesty hits=0; materials_needed=False; mode_fit=False.",
+          "evidence_excerpt": "# 🌟 Momentum Recovery Plan **Goal:** Get back on track without burning out. **Deadline:** 2026-04-10 **Focus:** Small wins > Perfect progress. --- ### 1. The Mindset Reset (Read this first) *   **Forgive the missed days:"
+        }
+      },
+      "overall_score": 0.7194,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_overloaded_urgent_user",
+      "variant": "sparkle_phase_b",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.63; inferred_mode=provisional; expected_mode=provisional.",
+          "evidence_excerpt": "# Sparkle Phase B Planning Output **Planning Quality:** Provisional / Low Certainty **Grounding Status:** Limited (No materials provided) **Strategy Mode:** Growth-First (Light Pacing) ### 1. Goal Frame **Primary Objecti"
+        },
+        "constraint_realism": {
+          "score": 0.9333,
+          "notes": "Constraint hits=2/3; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B Planning Output **Planning Quality:** Provisional / Low Certainty **Grounding Status:** Limited (No materials provided) **Strategy Mode:** Growth-First (Light Pacing) ### 1. Goal Frame **Primary Objecti"
+        },
+        "plan_sequence_quality": {
+          "score": 0.98,
+          "notes": "Step markers=21; temporal markers=2.",
+          "evidence_excerpt": "# Sparkle Phase B Planning Output **Planning Quality:** Provisional / Low Certainty **Grounding Status:** Limited (No materials provided) **Strategy Mode:** Growth-First (Light Pacing) ### 1. Goal Frame **Primary Objecti"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "# Sparkle Phase B Planning Output **Planning Quality:** Provisional / Low Certainty **Grounding Status:** Limited (No materials provided) **Strategy Mode:** Growth-First (Light Pacing) ### 1. Goal Frame **Primary Objecti"
+        },
+        "next_action_usefulness": {
+          "score": 0.98,
+          "notes": "Time hits=2; action hits=4; question_count=1.",
+          "evidence_excerpt": "# Sparkle Phase B Planning Output **Planning Quality:** Provisional / Low Certainty **Grounding Status:** Limited (No materials provided) **Strategy Mode:** Growth-First (Light Pacing) ### 1. Goal Frame **Primary Objecti"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.6,
+          "notes": "Fallback hits=1; continuity hits=2.",
+          "evidence_excerpt": "# Sparkle Phase B Planning Output **Planning Quality:** Provisional / Low Certainty **Grounding Status:** Limited (No materials provided) **Strategy Mode:** Growth-First (Light Pacing) ### 1. Goal Frame **Primary Objecti"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=21; avg_line_len=91.7.",
+          "evidence_excerpt": "# Sparkle Phase B Planning Output **Planning Quality:** Provisional / Low Certainty **Grounding Status:** Limited (No materials provided) **Strategy Mode:** Growth-First (Light Pacing) ### 1. Goal Frame **Primary Objecti"
+        },
+        "trustworthiness": {
+          "score": 0.83,
+          "notes": "Honesty hits=2; materials_needed=False; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B Planning Output **Planning Quality:** Provisional / Low Certainty **Grounding Status:** Limited (No materials provided) **Strategy Mode:** Growth-First (Light Pacing) ### 1. Goal Frame **Primary Objecti"
+        }
+      },
+      "overall_score": 0.8917,
+      "inferred_mode": "provisional"
+    },
+    {
+      "scenario_id": "phase_b_overloaded_urgent_user",
+      "variant": "raw_baseline",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.70; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "# Momentum Recovery Plan **Target Deadline:** 2026-04-10 **Current Status:** Overwhelmed, missed 2 days, low energy. ### 1. Immediate Action (Today) **Goal:** Break the \"cannot start\" barrier with a visible next step. **"
+        },
+        "constraint_realism": {
+          "score": 0.8,
+          "notes": "Constraint hits=3/3; mode_fit=False.",
+          "evidence_excerpt": "# Momentum Recovery Plan **Target Deadline:** 2026-04-10 **Current Status:** Overwhelmed, missed 2 days, low energy. ### 1. Immediate Action (Today) **Goal:** Break the \"cannot start\" barrier with a visible next step. **"
+        },
+        "plan_sequence_quality": {
+          "score": 0.985,
+          "notes": "Step markers=14; temporal markers=3.",
+          "evidence_excerpt": "# Momentum Recovery Plan **Target Deadline:** 2026-04-10 **Current Status:** Overwhelmed, missed 2 days, low energy. ### 1. Immediate Action (Today) **Goal:** Break the \"cannot start\" barrier with a visible next step. **"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "# Momentum Recovery Plan **Target Deadline:** 2026-04-10 **Current Status:** Overwhelmed, missed 2 days, low energy. ### 1. Immediate Action (Today) **Goal:** Break the \"cannot start\" barrier with a visible next step. **"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=5; question_count=0.",
+          "evidence_excerpt": "# Momentum Recovery Plan **Target Deadline:** 2026-04-10 **Current Status:** Overwhelmed, missed 2 days, low energy. ### 1. Immediate Action (Today) **Goal:** Break the \"cannot start\" barrier with a visible next step. **"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.36,
+          "notes": "Fallback hits=1; continuity hits=0.",
+          "evidence_excerpt": "# Momentum Recovery Plan **Target Deadline:** 2026-04-10 **Current Status:** Overwhelmed, missed 2 days, low energy. ### 1. Immediate Action (Today) **Goal:** Break the \"cannot start\" barrier with a visible next step. **"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=14; avg_line_len=77.0.",
+          "evidence_excerpt": "# Momentum Recovery Plan **Target Deadline:** 2026-04-10 **Current Status:** Overwhelmed, missed 2 days, low energy. ### 1. Immediate Action (Today) **Goal:** Break the \"cannot start\" barrier with a visible next step. **"
+        },
+        "trustworthiness": {
+          "score": 0.4,
+          "notes": "Honesty hits=1; materials_needed=False; mode_fit=False.",
+          "evidence_excerpt": "# Momentum Recovery Plan **Target Deadline:** 2026-04-10 **Current Status:** Overwhelmed, missed 2 days, low energy. ### 1. Immediate Action (Today) **Goal:** Break the \"cannot start\" barrier with a visible next step. **"
+        }
+      },
+      "overall_score": 0.7694,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_overloaded_urgent_user",
+      "variant": "raw_baseline",
+      "model_key": "deepseek_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.43; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan focused on immediate momentum. **Core Strategy:** Replace long task lists with a single, tiny \"next step\" for today. The goal is not to catch up, "
+        },
+        "constraint_realism": {
+          "score": 0.8,
+          "notes": "Constraint hits=3/3; mode_fit=False.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan focused on immediate momentum. **Core Strategy:** Replace long task lists with a single, tiny \"next step\" for today. The goal is not to catch up, "
+        },
+        "plan_sequence_quality": {
+          "score": 1.0,
+          "notes": "Step markers=12; temporal markers=4.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan focused on immediate momentum. **Core Strategy:** Replace long task lists with a single, tiny \"next step\" for today. The goal is not to catch up, "
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan focused on immediate momentum. **Core Strategy:** Replace long task lists with a single, tiny \"next step\" for today. The goal is not to catch up, "
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=6; question_count=0.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan focused on immediate momentum. **Core Strategy:** Replace long task lists with a single, tiny \"next step\" for today. The goal is not to catch up, "
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.36,
+          "notes": "Fallback hits=1; continuity hits=0.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan focused on immediate momentum. **Core Strategy:** Replace long task lists with a single, tiny \"next step\" for today. The goal is not to catch up, "
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=12; avg_line_len=109.7.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan focused on immediate momentum. **Core Strategy:** Replace long task lists with a single, tiny \"next step\" for today. The goal is not to catch up, "
+        },
+        "trustworthiness": {
+          "score": 0.48,
+          "notes": "Honesty hits=2; materials_needed=False; mode_fit=False.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan focused on immediate momentum. **Core Strategy:** Replace long task lists with a single, tiny \"next step\" for today. The goal is not to catch up, "
+        }
+      },
+      "overall_score": 0.7812,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_materials_and_weak_spots",
+      "variant": "sparkle_current",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.39; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "# 📅 Recovery Plan: Grounded Mastery Strategy **Deadline:** 2026-04-21 **Focus:** Fixing weak spots using *only* your uploaded materials. **Status:** Ready to Start --- ## 🛑 Critical Rule: The \"No-Google\" Protocol **Why:*"
+        },
+        "constraint_realism": {
+          "score": 0.6667,
+          "notes": "Constraint hits=1/3; mode_fit=True.",
+          "evidence_excerpt": "# 📅 Recovery Plan: Grounded Mastery Strategy **Deadline:** 2026-04-21 **Focus:** Fixing weak spots using *only* your uploaded materials. **Status:** Ready to Start --- ## 🛑 Critical Rule: The \"No-Google\" Protocol **Why:*"
+        },
+        "plan_sequence_quality": {
+          "score": 0.8333,
+          "notes": "Step markers=29; temporal markers=1.",
+          "evidence_excerpt": "# 📅 Recovery Plan: Grounded Mastery Strategy **Deadline:** 2026-04-21 **Focus:** Fixing weak spots using *only* your uploaded materials. **Status:** Ready to Start --- ## 🛑 Critical Rule: The \"No-Google\" Protocol **Why:*"
+        },
+        "grounding_quality": {
+          "score": 0.99,
+          "notes": "Material mentions=3/3; generic grounding hits=3.",
+          "evidence_excerpt": "# 📅 Recovery Plan: Grounded Mastery Strategy **Deadline:** 2026-04-21 **Focus:** Fixing weak spots using *only* your uploaded materials. **Status:** Ready to Start --- ## 🛑 Critical Rule: The \"No-Google\" Protocol **Why:*"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=6; question_count=1.",
+          "evidence_excerpt": "# 📅 Recovery Plan: Grounded Mastery Strategy **Deadline:** 2026-04-21 **Focus:** Fixing weak spots using *only* your uploaded materials. **Status:** Ready to Start --- ## 🛑 Critical Rule: The \"No-Google\" Protocol **Why:*"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "# 📅 Recovery Plan: Grounded Mastery Strategy **Deadline:** 2026-04-21 **Focus:** Fixing weak spots using *only* your uploaded materials. **Status:** Ready to Start --- ## 🛑 Critical Rule: The \"No-Google\" Protocol **Why:*"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=29; avg_line_len=67.5.",
+          "evidence_excerpt": "# 📅 Recovery Plan: Grounded Mastery Strategy **Deadline:** 2026-04-21 **Focus:** Fixing weak spots using *only* your uploaded materials. **Status:** Ready to Start --- ## 🛑 Critical Rule: The \"No-Google\" Protocol **Why:*"
+        },
+        "trustworthiness": {
+          "score": 0.67,
+          "notes": "Honesty hits=0; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "# 📅 Recovery Plan: Grounded Mastery Strategy **Deadline:** 2026-04-21 **Focus:** Fixing weak spots using *only* your uploaded materials. **Status:** Ready to Start --- ## 🛑 Critical Rule: The \"No-Google\" Protocol **Why:*"
+        }
+      },
+      "overall_score": 0.765,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_materials_and_weak_spots",
+      "variant": "sparkle_phase_b",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.61; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Quality:** High Confidence on Structure | Medium Confidence on Content Specifics (due to file content opacity) **Strategy:** mode=full, depth=deep, pacing=steady, gr"
+        },
+        "constraint_realism": {
+          "score": 1.0,
+          "notes": "Constraint hits=3/3; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Quality:** High Confidence on Structure | Medium Confidence on Content Specifics (due to file content opacity) **Strategy:** mode=full, depth=deep, pacing=steady, gr"
+        },
+        "plan_sequence_quality": {
+          "score": 0.7867,
+          "notes": "Step markers=41; temporal markers=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Quality:** High Confidence on Structure | Medium Confidence on Content Specifics (due to file content opacity) **Strategy:** mode=full, depth=deep, pacing=steady, gr"
+        },
+        "grounding_quality": {
+          "score": 0.91,
+          "notes": "Material mentions=3/3; generic grounding hits=2.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Quality:** High Confidence on Structure | Medium Confidence on Content Specifics (due to file content opacity) **Strategy:** mode=full, depth=deep, pacing=steady, gr"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=4; question_count=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Quality:** High Confidence on Structure | Medium Confidence on Content Specifics (due to file content opacity) **Strategy:** mode=full, depth=deep, pacing=steady, gr"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.36,
+          "notes": "Fallback hits=1; continuity hits=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Quality:** High Confidence on Structure | Medium Confidence on Content Specifics (due to file content opacity) **Strategy:** mode=full, depth=deep, pacing=steady, gr"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=41; avg_line_len=90.8.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Quality:** High Confidence on Structure | Medium Confidence on Content Specifics (due to file content opacity) **Strategy:** mode=full, depth=deep, pacing=steady, gr"
+        },
+        "trustworthiness": {
+          "score": 0.75,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Quality:** High Confidence on Structure | Medium Confidence on Content Specifics (due to file content opacity) **Strategy:** mode=full, depth=deep, pacing=steady, gr"
+        }
+      },
+      "overall_score": 0.8208,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_materials_and_weak_spots",
+      "variant": "raw_baseline",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.48; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "### Plan Status & Uncertainties **Uncertainty Statement:** I do not have access to the actual content of `chapter3_notes.pdf`, `homework_set_4.pdf`, or `error_book_export.csv`. I do not know the specific subject matter, "
+        },
+        "constraint_realism": {
+          "score": 1.0,
+          "notes": "Constraint hits=3/3; mode_fit=True.",
+          "evidence_excerpt": "### Plan Status & Uncertainties **Uncertainty Statement:** I do not have access to the actual content of `chapter3_notes.pdf`, `homework_set_4.pdf`, or `error_book_export.csv`. I do not know the specific subject matter, "
+        },
+        "plan_sequence_quality": {
+          "score": 0.8167,
+          "notes": "Step markers=22; temporal markers=1.",
+          "evidence_excerpt": "### Plan Status & Uncertainties **Uncertainty Statement:** I do not have access to the actual content of `chapter3_notes.pdf`, `homework_set_4.pdf`, or `error_book_export.csv`. I do not know the specific subject matter, "
+        },
+        "grounding_quality": {
+          "score": 0.91,
+          "notes": "Material mentions=3/3; generic grounding hits=2.",
+          "evidence_excerpt": "### Plan Status & Uncertainties **Uncertainty Statement:** I do not have access to the actual content of `chapter3_notes.pdf`, `homework_set_4.pdf`, or `error_book_export.csv`. I do not know the specific subject matter, "
+        },
+        "next_action_usefulness": {
+          "score": 0.62,
+          "notes": "Time hits=0; action hits=4; question_count=0.",
+          "evidence_excerpt": "### Plan Status & Uncertainties **Uncertainty Statement:** I do not have access to the actual content of `chapter3_notes.pdf`, `homework_set_4.pdf`, or `error_book_export.csv`. I do not know the specific subject matter, "
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "### Plan Status & Uncertainties **Uncertainty Statement:** I do not have access to the actual content of `chapter3_notes.pdf`, `homework_set_4.pdf`, or `error_book_export.csv`. I do not know the specific subject matter, "
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=22; avg_line_len=96.7.",
+          "evidence_excerpt": "### Plan Status & Uncertainties **Uncertainty Statement:** I do not have access to the actual content of `chapter3_notes.pdf`, `homework_set_4.pdf`, or `error_book_export.csv`. I do not know the specific subject matter, "
+        },
+        "trustworthiness": {
+          "score": 0.75,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "### Plan Status & Uncertainties **Uncertainty Statement:** I do not have access to the actual content of `chapter3_notes.pdf`, `homework_set_4.pdf`, or `error_book_export.csv`. I do not know the specific subject matter, "
+        }
+      },
+      "overall_score": 0.7821,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_materials_and_weak_spots",
+      "variant": "raw_baseline",
+      "model_key": "deepseek_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.39; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "Based strictly on the information you've provided, here is a grounded recovery plan. **Core Principle:** Your plan will move from diagnosing your *specific* weak spots using your materials, to targeted review, to active "
+        },
+        "constraint_realism": {
+          "score": 0.8333,
+          "notes": "Constraint hits=2/3; mode_fit=True.",
+          "evidence_excerpt": "Based strictly on the information you've provided, here is a grounded recovery plan. **Core Principle:** Your plan will move from diagnosing your *specific* weak spots using your materials, to targeted review, to active "
+        },
+        "plan_sequence_quality": {
+          "score": 0.72,
+          "notes": "Step markers=15; temporal markers=0.",
+          "evidence_excerpt": "Based strictly on the information you've provided, here is a grounded recovery plan. **Core Principle:** Your plan will move from diagnosing your *specific* weak spots using your materials, to targeted review, to active "
+        },
+        "grounding_quality": {
+          "score": 0.99,
+          "notes": "Material mentions=3/3; generic grounding hits=3.",
+          "evidence_excerpt": "Based strictly on the information you've provided, here is a grounded recovery plan. **Core Principle:** Your plan will move from diagnosing your *specific* weak spots using your materials, to targeted review, to active "
+        },
+        "next_action_usefulness": {
+          "score": 0.62,
+          "notes": "Time hits=0; action hits=4; question_count=0.",
+          "evidence_excerpt": "Based strictly on the information you've provided, here is a grounded recovery plan. **Core Principle:** Your plan will move from diagnosing your *specific* weak spots using your materials, to targeted review, to active "
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "Based strictly on the information you've provided, here is a grounded recovery plan. **Core Principle:** Your plan will move from diagnosing your *specific* weak spots using your materials, to targeted review, to active "
+        },
+        "non_expert_usability": {
+          "score": 0.81,
+          "notes": "Bullet lines=15; avg_line_len=139.9.",
+          "evidence_excerpt": "Based strictly on the information you've provided, here is a grounded recovery plan. **Core Principle:** Your plan will move from diagnosing your *specific* weak spots using your materials, to targeted review, to active "
+        },
+        "trustworthiness": {
+          "score": 0.75,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "Based strictly on the information you've provided, here is a grounded recovery plan. **Core Principle:** Your plan will move from diagnosing your *specific* weak spots using your materials, to targeted review, to active "
+        }
+      },
+      "overall_score": 0.7404,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_contradictory_self_report",
+      "variant": "sparkle_current",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 0.9685,
+          "notes": "Keyword overlap=0.37; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "# Project Stability & Progress Plan **Deadline:** 2026-04-18 **Status:** Planning Phase **Focus:** Optimizing Workflow Efficiency ## 1. Executive Summary You have expressed confidence in the foundational basics, which is"
+        },
+        "constraint_realism": {
+          "score": 0.6333,
+          "notes": "Constraint hits=2/3; mode_fit=False.",
+          "evidence_excerpt": "# Project Stability & Progress Plan **Deadline:** 2026-04-18 **Status:** Planning Phase **Focus:** Optimizing Workflow Efficiency ## 1. Executive Summary You have expressed confidence in the foundational basics, which is"
+        },
+        "plan_sequence_quality": {
+          "score": 0.905,
+          "notes": "Step markers=20; temporal markers=2.",
+          "evidence_excerpt": "# Project Stability & Progress Plan **Deadline:** 2026-04-18 **Status:** Planning Phase **Focus:** Optimizing Workflow Efficiency ## 1. Executive Summary You have expressed confidence in the foundational basics, which is"
+        },
+        "grounding_quality": {
+          "score": 0.83,
+          "notes": "Material mentions=1/1; generic grounding hits=1.",
+          "evidence_excerpt": "# Project Stability & Progress Plan **Deadline:** 2026-04-18 **Status:** Planning Phase **Focus:** Optimizing Workflow Efficiency ## 1. Executive Summary You have expressed confidence in the foundational basics, which is"
+        },
+        "next_action_usefulness": {
+          "score": 0.9,
+          "notes": "Time hits=2; action hits=3; question_count=0.",
+          "evidence_excerpt": "# Project Stability & Progress Plan **Deadline:** 2026-04-18 **Status:** Planning Phase **Focus:** Optimizing Workflow Efficiency ## 1. Executive Summary You have expressed confidence in the foundational basics, which is"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "# Project Stability & Progress Plan **Deadline:** 2026-04-18 **Status:** Planning Phase **Focus:** Optimizing Workflow Efficiency ## 1. Executive Summary You have expressed confidence in the foundational basics, which is"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=20; avg_line_len=78.1.",
+          "evidence_excerpt": "# Project Stability & Progress Plan **Deadline:** 2026-04-18 **Status:** Planning Phase **Focus:** Optimizing Workflow Efficiency ## 1. Executive Summary You have expressed confidence in the foundational basics, which is"
+        },
+        "trustworthiness": {
+          "score": 0.4,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=False.",
+          "evidence_excerpt": "# Project Stability & Progress Plan **Deadline:** 2026-04-18 **Status:** Planning Phase **Focus:** Optimizing Workflow Efficiency ## 1. Executive Summary You have expressed confidence in the foundational basics, which is"
+        }
+      },
+      "overall_score": 0.7246,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_contradictory_self_report",
+      "variant": "sparkle_phase_b",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.44; inferred_mode=provisional; expected_mode=provisional.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Growth Plan **Goal Frame** Achieve the **2026-04-18** deadline by prioritizing sustainable velocity over immediate output. The objective is to resolve hidden friction in prerequisite topics"
+        },
+        "constraint_realism": {
+          "score": 0.8333,
+          "notes": "Constraint hits=2/3; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Growth Plan **Goal Frame** Achieve the **2026-04-18** deadline by prioritizing sustainable velocity over immediate output. The objective is to resolve hidden friction in prerequisite topics"
+        },
+        "plan_sequence_quality": {
+          "score": 0.82,
+          "notes": "Step markers=17; temporal markers=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Growth Plan **Goal Frame** Achieve the **2026-04-18** deadline by prioritizing sustainable velocity over immediate output. The objective is to resolve hidden friction in prerequisite topics"
+        },
+        "grounding_quality": {
+          "score": 0.83,
+          "notes": "Material mentions=1/1; generic grounding hits=1.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Growth Plan **Goal Frame** Achieve the **2026-04-18** deadline by prioritizing sustainable velocity over immediate output. The objective is to resolve hidden friction in prerequisite topics"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=4; question_count=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Growth Plan **Goal Frame** Achieve the **2026-04-18** deadline by prioritizing sustainable velocity over immediate output. The objective is to resolve hidden friction in prerequisite topics"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.52,
+          "notes": "Fallback hits=2; continuity hits=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Growth Plan **Goal Frame** Achieve the **2026-04-18** deadline by prioritizing sustainable velocity over immediate output. The objective is to resolve hidden friction in prerequisite topics"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=17; avg_line_len=97.3.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Growth Plan **Goal Frame** Achieve the **2026-04-18** deadline by prioritizing sustainable velocity over immediate output. The objective is to resolve hidden friction in prerequisite topics"
+        },
+        "trustworthiness": {
+          "score": 0.83,
+          "notes": "Honesty hits=2; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Growth Plan **Goal Frame** Achieve the **2026-04-18** deadline by prioritizing sustainable velocity over immediate output. The objective is to resolve hidden friction in prerequisite topics"
+        }
+      },
+      "overall_score": 0.8242,
+      "inferred_mode": "provisional"
+    },
+    {
+      "scenario_id": "phase_b_contradictory_self_report",
+      "variant": "raw_baseline",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 0.9685,
+          "notes": "Keyword overlap=0.37; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "# Action Plan: Prerequisite-First Strategy **Goal:** Meet the deadline of **2026-04-18** by addressing the identified bottleneck before proceeding to advanced tasks. **Core Strategy:** Recent performance data indicates t"
+        },
+        "constraint_realism": {
+          "score": 0.3667,
+          "notes": "Constraint hits=1/3; mode_fit=False.",
+          "evidence_excerpt": "# Action Plan: Prerequisite-First Strategy **Goal:** Meet the deadline of **2026-04-18** by addressing the identified bottleneck before proceeding to advanced tasks. **Core Strategy:** Recent performance data indicates t"
+        },
+        "plan_sequence_quality": {
+          "score": 0.745,
+          "notes": "Step markers=21; temporal markers=0.",
+          "evidence_excerpt": "# Action Plan: Prerequisite-First Strategy **Goal:** Meet the deadline of **2026-04-18** by addressing the identified bottleneck before proceeding to advanced tasks. **Core Strategy:** Recent performance data indicates t"
+        },
+        "grounding_quality": {
+          "score": 0.75,
+          "notes": "Material mentions=1/1; generic grounding hits=0.",
+          "evidence_excerpt": "# Action Plan: Prerequisite-First Strategy **Goal:** Meet the deadline of **2026-04-18** by addressing the identified bottleneck before proceeding to advanced tasks. **Core Strategy:** Recent performance data indicates t"
+        },
+        "next_action_usefulness": {
+          "score": 0.54,
+          "notes": "Time hits=0; action hits=3; question_count=0.",
+          "evidence_excerpt": "# Action Plan: Prerequisite-First Strategy **Goal:** Meet the deadline of **2026-04-18** by addressing the identified bottleneck before proceeding to advanced tasks. **Core Strategy:** Recent performance data indicates t"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "# Action Plan: Prerequisite-First Strategy **Goal:** Meet the deadline of **2026-04-18** by addressing the identified bottleneck before proceeding to advanced tasks. **Core Strategy:** Recent performance data indicates t"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=21; avg_line_len=86.4.",
+          "evidence_excerpt": "# Action Plan: Prerequisite-First Strategy **Goal:** Meet the deadline of **2026-04-18** by addressing the identified bottleneck before proceeding to advanced tasks. **Core Strategy:** Recent performance data indicates t"
+        },
+        "trustworthiness": {
+          "score": 0.48,
+          "notes": "Honesty hits=2; materials_needed=True; mode_fit=False.",
+          "evidence_excerpt": "# Action Plan: Prerequisite-First Strategy **Goal:** Meet the deadline of **2026-04-18** by addressing the identified bottleneck before proceeding to advanced tasks. **Core Strategy:** Recent performance data indicates t"
+        }
+      },
+      "overall_score": 0.6263,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_contradictory_self_report",
+      "variant": "raw_baseline",
+      "model_key": "deepseek_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.59; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan. The core assumption is that the stated \"basics are already fine\" may be optimistic, and the real bottleneck is a shaky foundation. ### **Assumpti"
+        },
+        "constraint_realism": {
+          "score": 0.5333,
+          "notes": "Constraint hits=2/3; mode_fit=False.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan. The core assumption is that the stated \"basics are already fine\" may be optimistic, and the real bottleneck is a shaky foundation. ### **Assumpti"
+        },
+        "plan_sequence_quality": {
+          "score": 0.905,
+          "notes": "Step markers=19; temporal markers=2.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan. The core assumption is that the stated \"basics are already fine\" may be optimistic, and the real bottleneck is a shaky foundation. ### **Assumpti"
+        },
+        "grounding_quality": {
+          "score": 0.83,
+          "notes": "Material mentions=1/1; generic grounding hits=1.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan. The core assumption is that the stated \"basics are already fine\" may be optimistic, and the real bottleneck is a shaky foundation. ### **Assumpti"
+        },
+        "next_action_usefulness": {
+          "score": 0.62,
+          "notes": "Time hits=0; action hits=5; question_count=1.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan. The core assumption is that the stated \"basics are already fine\" may be optimistic, and the real bottleneck is a shaky foundation. ### **Assumpti"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.36,
+          "notes": "Fallback hits=1; continuity hits=0.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan. The core assumption is that the stated \"basics are already fine\" may be optimistic, and the real bottleneck is a shaky foundation. ### **Assumpti"
+        },
+        "non_expert_usability": {
+          "score": 0.86,
+          "notes": "Bullet lines=19; avg_line_len=107.4.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan. The core assumption is that the stated \"basics are already fine\" may be optimistic, and the real bottleneck is a shaky foundation. ### **Assumpti"
+        },
+        "trustworthiness": {
+          "score": 0.48,
+          "notes": "Honesty hits=2; materials_needed=True; mode_fit=False.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic plan. The core assumption is that the stated \"basics are already fine\" may be optimistic, and the real bottleneck is a shaky foundation. ### **Assumpti"
+        }
+      },
+      "overall_score": 0.6985,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_vague_goal_needs_clarification",
+      "variant": "sparkle_current",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 0.7333,
+          "notes": "Keyword overlap=0.17; inferred_mode=full; expected_mode=next_step_only.",
+          "evidence_excerpt": "We cannot build a plan that sticks without a specific target. Generic advice fails because \"school\" is too big to tackle all at once. To avoid wasting your time, we need to pick one battle to win first. **Which single cl"
+        },
+        "constraint_realism": {
+          "score": 0.45,
+          "notes": "Constraint hits=1/2; mode_fit=False.",
+          "evidence_excerpt": "We cannot build a plan that sticks without a specific target. Generic advice fails because \"school\" is too big to tackle all at once. To avoid wasting your time, we need to pick one battle to win first. **Which single cl"
+        },
+        "plan_sequence_quality": {
+          "score": 0.45,
+          "notes": "Step markers=0; temporal markers=0.",
+          "evidence_excerpt": "We cannot build a plan that sticks without a specific target. Generic advice fails because \"school\" is too big to tackle all at once. To avoid wasting your time, we need to pick one battle to win first. **Which single cl"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "We cannot build a plan that sticks without a specific target. Generic advice fails because \"school\" is too big to tackle all at once. To avoid wasting your time, we need to pick one battle to win first. **Which single cl"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=0; action hits=0; question_count=1.",
+          "evidence_excerpt": "We cannot build a plan that sticks without a specific target. Generic advice fails because \"school\" is too big to tackle all at once. To avoid wasting your time, we need to pick one battle to win first. **Which single cl"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "We cannot build a plan that sticks without a specific target. Generic advice fails because \"school\" is too big to tackle all at once. To avoid wasting your time, we need to pick one battle to win first. **Which single cl"
+        },
+        "non_expert_usability": {
+          "score": 0.45,
+          "notes": "Bullet lines=0; avg_line_len=144.5.",
+          "evidence_excerpt": "We cannot build a plan that sticks without a specific target. Generic advice fails because \"school\" is too big to tackle all at once. To avoid wasting your time, we need to pick one battle to win first. **Which single cl"
+        },
+        "trustworthiness": {
+          "score": 0.32,
+          "notes": "Honesty hits=0; materials_needed=False; mode_fit=False.",
+          "evidence_excerpt": "We cannot build a plan that sticks without a specific target. Generic advice fails because \"school\" is too big to tackle all at once. To avoid wasting your time, we need to pick one battle to win first. **Which single cl"
+        }
+      },
+      "overall_score": 0.5317,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_vague_goal_needs_clarification",
+      "variant": "sparkle_phase_b",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.44; inferred_mode=full; expected_mode=next_step_only.",
+          "evidence_excerpt": "**Goal Frame** Improve academic performance in the near term. **Planning Quality** **Low.** Current certainty is minimal due to missing baseline data (subject, deadline, capacity). **Why a Full Plan is Withheld** A detai"
+        },
+        "constraint_realism": {
+          "score": 0.45,
+          "notes": "Constraint hits=1/2; mode_fit=False.",
+          "evidence_excerpt": "**Goal Frame** Improve academic performance in the near term. **Planning Quality** **Low.** Current certainty is minimal due to missing baseline data (subject, deadline, capacity). **Why a Full Plan is Withheld** A detai"
+        },
+        "plan_sequence_quality": {
+          "score": 0.45,
+          "notes": "Step markers=0; temporal markers=0.",
+          "evidence_excerpt": "**Goal Frame** Improve academic performance in the near term. **Planning Quality** **Low.** Current certainty is minimal due to missing baseline data (subject, deadline, capacity). **Why a Full Plan is Withheld** A detai"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "**Goal Frame** Improve academic performance in the near term. **Planning Quality** **Low.** Current certainty is minimal due to missing baseline data (subject, deadline, capacity). **Why a Full Plan is Withheld** A detai"
+        },
+        "next_action_usefulness": {
+          "score": 0.95,
+          "notes": "Time hits=1; action hits=2; question_count=1.",
+          "evidence_excerpt": "**Goal Frame** Improve academic performance in the near term. **Planning Quality** **Low.** Current certainty is minimal due to missing baseline data (subject, deadline, capacity). **Why a Full Plan is Withheld** A detai"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "**Goal Frame** Improve academic performance in the near term. **Planning Quality** **Low.** Current certainty is minimal due to missing baseline data (subject, deadline, capacity). **Why a Full Plan is Withheld** A detai"
+        },
+        "non_expert_usability": {
+          "score": 0.5,
+          "notes": "Bullet lines=0; avg_line_len=81.1.",
+          "evidence_excerpt": "**Goal Frame** Improve academic performance in the near term. **Planning Quality** **Low.** Current certainty is minimal due to missing baseline data (subject, deadline, capacity). **Why a Full Plan is Withheld** A detai"
+        },
+        "trustworthiness": {
+          "score": 0.32,
+          "notes": "Honesty hits=0; materials_needed=False; mode_fit=False.",
+          "evidence_excerpt": "**Goal Frame** Improve academic performance in the near term. **Planning Quality** **Low.** Current certainty is minimal due to missing baseline data (subject, deadline, capacity). **Why a Full Plan is Withheld** A detai"
+        }
+      },
+      "overall_score": 0.59,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_vague_goal_needs_clarification",
+      "variant": "raw_baseline",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.44; inferred_mode=full; expected_mode=next_step_only.",
+          "evidence_excerpt": "**Planning Status: Blocked** **Uncertainty:** High. A realistic study plan cannot be created yet because there is no specific subject, deadline, or capacity estimate. Creating a schedule now would be generic advice, whic"
+        },
+        "constraint_realism": {
+          "score": 0.7,
+          "notes": "Constraint hits=2/2; mode_fit=False.",
+          "evidence_excerpt": "**Planning Status: Blocked** **Uncertainty:** High. A realistic study plan cannot be created yet because there is no specific subject, deadline, or capacity estimate. Creating a schedule now would be generic advice, whic"
+        },
+        "plan_sequence_quality": {
+          "score": 0.45,
+          "notes": "Step markers=3; temporal markers=0.",
+          "evidence_excerpt": "**Planning Status: Blocked** **Uncertainty:** High. A realistic study plan cannot be created yet because there is no specific subject, deadline, or capacity estimate. Creating a schedule now would be generic advice, whic"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "**Planning Status: Blocked** **Uncertainty:** High. A realistic study plan cannot be created yet because there is no specific subject, deadline, or capacity estimate. Creating a schedule now would be generic advice, whic"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=0; action hits=1; question_count=1.",
+          "evidence_excerpt": "**Planning Status: Blocked** **Uncertainty:** High. A realistic study plan cannot be created yet because there is no specific subject, deadline, or capacity estimate. Creating a schedule now would be generic advice, whic"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "**Planning Status: Blocked** **Uncertainty:** High. A realistic study plan cannot be created yet because there is no specific subject, deadline, or capacity estimate. Creating a schedule now would be generic advice, whic"
+        },
+        "non_expert_usability": {
+          "score": 0.68,
+          "notes": "Bullet lines=3; avg_line_len=63.0.",
+          "evidence_excerpt": "**Planning Status: Blocked** **Uncertainty:** High. A realistic study plan cannot be created yet because there is no specific subject, deadline, or capacity estimate. Creating a schedule now would be generic advice, whic"
+        },
+        "trustworthiness": {
+          "score": 0.4,
+          "notes": "Honesty hits=1; materials_needed=False; mode_fit=False.",
+          "evidence_excerpt": "**Planning Status: Blocked** **Uncertainty:** High. A realistic study plan cannot be created yet because there is no specific subject, deadline, or capacity estimate. Creating a schedule now would be generic advice, whic"
+        }
+      },
+      "overall_score": 0.635,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_vague_goal_needs_clarification",
+      "variant": "raw_baseline",
+      "model_key": "deepseek_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.50; inferred_mode=full; expected_mode=next_step_only.",
+          "evidence_excerpt": "Based on the information provided, I cannot create a plan. A realistic plan requires a specific starting point, which is missing. To build a useful plan, I must ask the highest-value question first: **What is the single,"
+        },
+        "constraint_realism": {
+          "score": 0.7,
+          "notes": "Constraint hits=2/2; mode_fit=False.",
+          "evidence_excerpt": "Based on the information provided, I cannot create a plan. A realistic plan requires a specific starting point, which is missing. To build a useful plan, I must ask the highest-value question first: **What is the single,"
+        },
+        "plan_sequence_quality": {
+          "score": 0.45,
+          "notes": "Step markers=0; temporal markers=0.",
+          "evidence_excerpt": "Based on the information provided, I cannot create a plan. A realistic plan requires a specific starting point, which is missing. To build a useful plan, I must ask the highest-value question first: **What is the single,"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "Based on the information provided, I cannot create a plan. A realistic plan requires a specific starting point, which is missing. To build a useful plan, I must ask the highest-value question first: **What is the single,"
+        },
+        "next_action_usefulness": {
+          "score": 0.7,
+          "notes": "Time hits=0; action hits=2; question_count=2.",
+          "evidence_excerpt": "Based on the information provided, I cannot create a plan. A realistic plan requires a specific starting point, which is missing. To build a useful plan, I must ask the highest-value question first: **What is the single,"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "Based on the information provided, I cannot create a plan. A realistic plan requires a specific starting point, which is missing. To build a useful plan, I must ask the highest-value question first: **What is the single,"
+        },
+        "non_expert_usability": {
+          "score": 0.45,
+          "notes": "Bullet lines=0; avg_line_len=148.2.",
+          "evidence_excerpt": "Based on the information provided, I cannot create a plan. A realistic plan requires a specific starting point, which is missing. To build a useful plan, I must ask the highest-value question first: **What is the single,"
+        },
+        "trustworthiness": {
+          "score": 0.32,
+          "notes": "Honesty hits=0; materials_needed=False; mode_fit=False.",
+          "evidence_excerpt": "Based on the information provided, I cannot create a plan. A realistic plan requires a specific starting point, which is missing. To build a useful plan, I must ask the highest-value question first: **What is the single,"
+        }
+      },
+      "overall_score": 0.5837,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_missed_execution_replan",
+      "variant": "sparkle_current",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.60; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "# 🔄 Sprint Recovery Plan **Status:** Resetting Momentum **Deadline:** 2026-04-16 **Focus:** Consistency over Volume Hello. It is completely normal to miss sessions. The data shows the previous workload was too optimistic"
+        },
+        "constraint_realism": {
+          "score": 0.7,
+          "notes": "Constraint hits=3/3; mode_fit=False.",
+          "evidence_excerpt": "# 🔄 Sprint Recovery Plan **Status:** Resetting Momentum **Deadline:** 2026-04-16 **Focus:** Consistency over Volume Hello. It is completely normal to miss sessions. The data shows the previous workload was too optimistic"
+        },
+        "plan_sequence_quality": {
+          "score": 0.8,
+          "notes": "Step markers=9; temporal markers=1.",
+          "evidence_excerpt": "# 🔄 Sprint Recovery Plan **Status:** Resetting Momentum **Deadline:** 2026-04-16 **Focus:** Consistency over Volume Hello. It is completely normal to miss sessions. The data shows the previous workload was too optimistic"
+        },
+        "grounding_quality": {
+          "score": 0.28,
+          "notes": "Material mentions=0/1; generic grounding hits=1.",
+          "evidence_excerpt": "# 🔄 Sprint Recovery Plan **Status:** Resetting Momentum **Deadline:** 2026-04-16 **Focus:** Consistency over Volume Hello. It is completely normal to miss sessions. The data shows the previous workload was too optimistic"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=4; question_count=0.",
+          "evidence_excerpt": "# 🔄 Sprint Recovery Plan **Status:** Resetting Momentum **Deadline:** 2026-04-16 **Focus:** Consistency over Volume Hello. It is completely normal to miss sessions. The data shows the previous workload was too optimistic"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.68,
+          "notes": "Fallback hits=1; continuity hits=2.",
+          "evidence_excerpt": "# 🔄 Sprint Recovery Plan **Status:** Resetting Momentum **Deadline:** 2026-04-16 **Focus:** Consistency over Volume Hello. It is completely normal to miss sessions. The data shows the previous workload was too optimistic"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=9; avg_line_len=75.6.",
+          "evidence_excerpt": "# 🔄 Sprint Recovery Plan **Status:** Resetting Momentum **Deadline:** 2026-04-16 **Focus:** Consistency over Volume Hello. It is completely normal to miss sessions. The data shows the previous workload was too optimistic"
+        },
+        "trustworthiness": {
+          "score": 0.1,
+          "notes": "Honesty hits=0; materials_needed=True; mode_fit=False.",
+          "evidence_excerpt": "# 🔄 Sprint Recovery Plan **Status:** Resetting Momentum **Deadline:** 2026-04-16 **Focus:** Consistency over Volume Hello. It is completely normal to miss sessions. The data shows the previous workload was too optimistic"
+        }
+      },
+      "overall_score": 0.665,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_missed_execution_replan",
+      "variant": "sparkle_phase_b",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.67; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "# Planning Quality Statement: **PROVISIONAL** **Reasoning:** The dossier indicates high user distrust and recent execution failure. Additionally, while `existing_plan_snapshot.json` is cited as a material, its specific c"
+        },
+        "constraint_realism": {
+          "score": 0.7,
+          "notes": "Constraint hits=3/3; mode_fit=False.",
+          "evidence_excerpt": "# Planning Quality Statement: **PROVISIONAL** **Reasoning:** The dossier indicates high user distrust and recent execution failure. Additionally, while `existing_plan_snapshot.json` is cited as a material, its specific c"
+        },
+        "plan_sequence_quality": {
+          "score": 1.0,
+          "notes": "Step markers=20; temporal markers=3.",
+          "evidence_excerpt": "# Planning Quality Statement: **PROVISIONAL** **Reasoning:** The dossier indicates high user distrust and recent execution failure. Additionally, while `existing_plan_snapshot.json` is cited as a material, its specific c"
+        },
+        "grounding_quality": {
+          "score": 0.83,
+          "notes": "Material mentions=1/1; generic grounding hits=1.",
+          "evidence_excerpt": "# Planning Quality Statement: **PROVISIONAL** **Reasoning:** The dossier indicates high user distrust and recent execution failure. Additionally, while `existing_plan_snapshot.json` is cited as a material, its specific c"
+        },
+        "next_action_usefulness": {
+          "score": 0.98,
+          "notes": "Time hits=2; action hits=4; question_count=1.",
+          "evidence_excerpt": "# Planning Quality Statement: **PROVISIONAL** **Reasoning:** The dossier indicates high user distrust and recent execution failure. Additionally, while `existing_plan_snapshot.json` is cited as a material, its specific c"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.84,
+          "notes": "Fallback hits=2; continuity hits=2.",
+          "evidence_excerpt": "# Planning Quality Statement: **PROVISIONAL** **Reasoning:** The dossier indicates high user distrust and recent execution failure. Additionally, while `existing_plan_snapshot.json` is cited as a material, its specific c"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=20; avg_line_len=93.7.",
+          "evidence_excerpt": "# Planning Quality Statement: **PROVISIONAL** **Reasoning:** The dossier indicates high user distrust and recent execution failure. Additionally, while `existing_plan_snapshot.json` is cited as a material, its specific c"
+        },
+        "trustworthiness": {
+          "score": 0.48,
+          "notes": "Honesty hits=2; materials_needed=True; mode_fit=False.",
+          "evidence_excerpt": "# Planning Quality Statement: **PROVISIONAL** **Reasoning:** The dossier indicates high user distrust and recent execution failure. Additionally, while `existing_plan_snapshot.json` is cited as a material, its specific c"
+        }
+      },
+      "overall_score": 0.8488,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_missed_execution_replan",
+      "variant": "raw_baseline",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.70; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "**Important Note on Available Data** You listed `existing_plan_snapshot.json` as available material, but the content of that file was not included in your message. I cannot see the specific topics, tasks, or original sch"
+        },
+        "constraint_realism": {
+          "score": 0.7,
+          "notes": "Constraint hits=3/3; mode_fit=False.",
+          "evidence_excerpt": "**Important Note on Available Data** You listed `existing_plan_snapshot.json` as available material, but the content of that file was not included in your message. I cannot see the specific topics, tasks, or original sch"
+        },
+        "plan_sequence_quality": {
+          "score": 0.8,
+          "notes": "Step markers=11; temporal markers=1.",
+          "evidence_excerpt": "**Important Note on Available Data** You listed `existing_plan_snapshot.json` as available material, but the content of that file was not included in your message. I cannot see the specific topics, tasks, or original sch"
+        },
+        "grounding_quality": {
+          "score": 0.75,
+          "notes": "Material mentions=1/1; generic grounding hits=0.",
+          "evidence_excerpt": "**Important Note on Available Data** You listed `existing_plan_snapshot.json` as available material, but the content of that file was not included in your message. I cannot see the specific topics, tasks, or original sch"
+        },
+        "next_action_usefulness": {
+          "score": 0.54,
+          "notes": "Time hits=0; action hits=3; question_count=0.",
+          "evidence_excerpt": "**Important Note on Available Data** You listed `existing_plan_snapshot.json` as available material, but the content of that file was not included in your message. I cannot see the specific topics, tasks, or original sch"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.68,
+          "notes": "Fallback hits=1; continuity hits=2.",
+          "evidence_excerpt": "**Important Note on Available Data** You listed `existing_plan_snapshot.json` as available material, but the content of that file was not included in your message. I cannot see the specific topics, tasks, or original sch"
+        },
+        "non_expert_usability": {
+          "score": 0.86,
+          "notes": "Bullet lines=11; avg_line_len=101.0.",
+          "evidence_excerpt": "**Important Note on Available Data** You listed `existing_plan_snapshot.json` as available material, but the content of that file was not included in your message. I cannot see the specific topics, tasks, or original sch"
+        },
+        "trustworthiness": {
+          "score": 0.4,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=False.",
+          "evidence_excerpt": "**Important Note on Available Data** You listed `existing_plan_snapshot.json` as available material, but the content of that file was not included in your message. I cannot see the specific topics, tasks, or original sch"
+        }
+      },
+      "overall_score": 0.7163,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_missed_execution_replan",
+      "variant": "raw_baseline",
+      "model_key": "deepseek_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.57; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "Based solely on the information provided, here is a plan to salvage your study sprint. ### **Salvage Plan: Reset & Continue** **Core Principle:** We will preserve the **structure and end goal** of your original plan but "
+        },
+        "constraint_realism": {
+          "score": 0.7,
+          "notes": "Constraint hits=3/3; mode_fit=False.",
+          "evidence_excerpt": "Based solely on the information provided, here is a plan to salvage your study sprint. ### **Salvage Plan: Reset & Continue** **Core Principle:** We will preserve the **structure and end goal** of your original plan but "
+        },
+        "plan_sequence_quality": {
+          "score": 0.825,
+          "notes": "Step markers=14; temporal markers=1.",
+          "evidence_excerpt": "Based solely on the information provided, here is a plan to salvage your study sprint. ### **Salvage Plan: Reset & Continue** **Core Principle:** We will preserve the **structure and end goal** of your original plan but "
+        },
+        "grounding_quality": {
+          "score": 0.75,
+          "notes": "Material mentions=1/1; generic grounding hits=0.",
+          "evidence_excerpt": "Based solely on the information provided, here is a plan to salvage your study sprint. ### **Salvage Plan: Reset & Continue** **Core Principle:** We will preserve the **structure and end goal** of your original plan but "
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=4; question_count=1.",
+          "evidence_excerpt": "Based solely on the information provided, here is a plan to salvage your study sprint. ### **Salvage Plan: Reset & Continue** **Core Principle:** We will preserve the **structure and end goal** of your original plan but "
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.68,
+          "notes": "Fallback hits=1; continuity hits=2.",
+          "evidence_excerpt": "Based solely on the information provided, here is a plan to salvage your study sprint. ### **Salvage Plan: Reset & Continue** **Core Principle:** We will preserve the **structure and end goal** of your original plan but "
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=14; avg_line_len=97.9.",
+          "evidence_excerpt": "Based solely on the information provided, here is a plan to salvage your study sprint. ### **Salvage Plan: Reset & Continue** **Core Principle:** We will preserve the **structure and end goal** of your original plan but "
+        },
+        "trustworthiness": {
+          "score": 0.4,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=False.",
+          "evidence_excerpt": "Based solely on the information provided, here is a plan to salvage your study sprint. ### **Salvage Plan: Reset & Continue** **Core Principle:** We will preserve the **structure and end goal** of your original plan but "
+        }
+      },
+      "overall_score": 0.7644,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_high_readiness_full_plan",
+      "variant": "sparkle_current",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.57; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "# 🗓️ Strategic Learning Plan: Roadmap to 2026 **Goal:** Complete syllabus mastery & readiness **Deadline:** April 26, 2026 **Daily Capacity:** 2 Hours **Status:** ✅ Baseline Clear | ⚠️ Awaiting Syllabus Mapping --- ## 1."
+        },
+        "constraint_realism": {
+          "score": 1.0,
+          "notes": "Constraint hits=3/3; mode_fit=True.",
+          "evidence_excerpt": "# 🗓️ Strategic Learning Plan: Roadmap to 2026 **Goal:** Complete syllabus mastery & readiness **Deadline:** April 26, 2026 **Daily Capacity:** 2 Hours **Status:** ✅ Baseline Clear | ⚠️ Awaiting Syllabus Mapping --- ## 1."
+        },
+        "plan_sequence_quality": {
+          "score": 0.9933,
+          "notes": "Step markers=35; temporal markers=3.",
+          "evidence_excerpt": "# 🗓️ Strategic Learning Plan: Roadmap to 2026 **Goal:** Complete syllabus mastery & readiness **Deadline:** April 26, 2026 **Daily Capacity:** 2 Hours **Status:** ✅ Baseline Clear | ⚠️ Awaiting Syllabus Mapping --- ## 1."
+        },
+        "grounding_quality": {
+          "score": 0.83,
+          "notes": "Material mentions=1/1; generic grounding hits=1.",
+          "evidence_excerpt": "# 🗓️ Strategic Learning Plan: Roadmap to 2026 **Goal:** Complete syllabus mastery & readiness **Deadline:** April 26, 2026 **Daily Capacity:** 2 Hours **Status:** ✅ Baseline Clear | ⚠️ Awaiting Syllabus Mapping --- ## 1."
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=5; question_count=1.",
+          "evidence_excerpt": "# 🗓️ Strategic Learning Plan: Roadmap to 2026 **Goal:** Complete syllabus mastery & readiness **Deadline:** April 26, 2026 **Daily Capacity:** 2 Hours **Status:** ✅ Baseline Clear | ⚠️ Awaiting Syllabus Mapping --- ## 1."
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.52,
+          "notes": "Fallback hits=2; continuity hits=0.",
+          "evidence_excerpt": "# 🗓️ Strategic Learning Plan: Roadmap to 2026 **Goal:** Complete syllabus mastery & readiness **Deadline:** April 26, 2026 **Daily Capacity:** 2 Hours **Status:** ✅ Baseline Clear | ⚠️ Awaiting Syllabus Mapping --- ## 1."
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=35; avg_line_len=56.5.",
+          "evidence_excerpt": "# 🗓️ Strategic Learning Plan: Roadmap to 2026 **Goal:** Complete syllabus mastery & readiness **Deadline:** April 26, 2026 **Daily Capacity:** 2 Hours **Status:** ✅ Baseline Clear | ⚠️ Awaiting Syllabus Mapping --- ## 1."
+        },
+        "trustworthiness": {
+          "score": 0.67,
+          "notes": "Honesty hits=0; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "# 🗓️ Strategic Learning Plan: Roadmap to 2026 **Goal:** Complete syllabus mastery & readiness **Deadline:** April 26, 2026 **Daily Capacity:** 2 Hours **Status:** ✅ Baseline Clear | ⚠️ Awaiting Syllabus Mapping --- ## 1."
+        }
+      },
+      "overall_score": 0.8467,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_high_readiness_full_plan",
+      "variant": "sparkle_phase_b",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.57; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Status:** FULL (Deep Depth, Steady Pacing) **Plan Confidence:** High (Structural), Medium (Content Specificity) **Grounding Note:** Specific module content relies on"
+        },
+        "constraint_realism": {
+          "score": 1.0,
+          "notes": "Constraint hits=3/3; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Status:** FULL (Deep Depth, Steady Pacing) **Plan Confidence:** High (Structural), Medium (Content Specificity) **Grounding Note:** Specific module content relies on"
+        },
+        "plan_sequence_quality": {
+          "score": 1.0,
+          "notes": "Step markers=32; temporal markers=5.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Status:** FULL (Deep Depth, Steady Pacing) **Plan Confidence:** High (Structural), Medium (Content Specificity) **Grounding Note:** Specific module content relies on"
+        },
+        "grounding_quality": {
+          "score": 0.75,
+          "notes": "Material mentions=1/1; generic grounding hits=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Status:** FULL (Deep Depth, Steady Pacing) **Plan Confidence:** High (Structural), Medium (Content Specificity) **Grounding Note:** Specific module content relies on"
+        },
+        "next_action_usefulness": {
+          "score": 0.98,
+          "notes": "Time hits=2; action hits=4; question_count=1.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Status:** FULL (Deep Depth, Steady Pacing) **Plan Confidence:** High (Structural), Medium (Content Specificity) **Grounding Note:** Specific module content relies on"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.36,
+          "notes": "Fallback hits=1; continuity hits=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Status:** FULL (Deep Depth, Steady Pacing) **Plan Confidence:** High (Structural), Medium (Content Specificity) **Grounding Note:** Specific module content relies on"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=32; avg_line_len=86.5.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Status:** FULL (Deep Depth, Steady Pacing) **Plan Confidence:** High (Structural), Medium (Content Specificity) **Grounding Note:** Specific module content relies on"
+        },
+        "trustworthiness": {
+          "score": 0.75,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B: Growth-First Planning Engine **Plan Status:** FULL (Deep Depth, Steady Pacing) **Plan Confidence:** High (Structural), Medium (Content Specificity) **Grounding Note:** Specific module content relies on"
+        }
+      },
+      "overall_score": 0.85,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_high_readiness_full_plan",
+      "variant": "raw_baseline",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.65; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "### Study Plan Framework **Status Note:** While your baseline indicates the topic is clear to you, I do not have access to the specific subject matter or the content within `syllabus.pdf`. I also do not have your specifi"
+        },
+        "constraint_realism": {
+          "score": 1.0,
+          "notes": "Constraint hits=3/3; mode_fit=True.",
+          "evidence_excerpt": "### Study Plan Framework **Status Note:** While your baseline indicates the topic is clear to you, I do not have access to the specific subject matter or the content within `syllabus.pdf`. I also do not have your specifi"
+        },
+        "plan_sequence_quality": {
+          "score": 1.0,
+          "notes": "Step markers=32; temporal markers=4.",
+          "evidence_excerpt": "### Study Plan Framework **Status Note:** While your baseline indicates the topic is clear to you, I do not have access to the specific subject matter or the content within `syllabus.pdf`. I also do not have your specifi"
+        },
+        "grounding_quality": {
+          "score": 0.83,
+          "notes": "Material mentions=1/1; generic grounding hits=1.",
+          "evidence_excerpt": "### Study Plan Framework **Status Note:** While your baseline indicates the topic is clear to you, I do not have access to the specific subject matter or the content within `syllabus.pdf`. I also do not have your specifi"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=4; question_count=0.",
+          "evidence_excerpt": "### Study Plan Framework **Status Note:** While your baseline indicates the topic is clear to you, I do not have access to the specific subject matter or the content within `syllabus.pdf`. I also do not have your specifi"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.52,
+          "notes": "Fallback hits=2; continuity hits=0.",
+          "evidence_excerpt": "### Study Plan Framework **Status Note:** While your baseline indicates the topic is clear to you, I do not have access to the specific subject matter or the content within `syllabus.pdf`. I also do not have your specifi"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=32; avg_line_len=73.5.",
+          "evidence_excerpt": "### Study Plan Framework **Status Note:** While your baseline indicates the topic is clear to you, I do not have access to the specific subject matter or the content within `syllabus.pdf`. I also do not have your specifi"
+        },
+        "trustworthiness": {
+          "score": 0.75,
+          "notes": "Honesty hits=1; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "### Study Plan Framework **Status Note:** While your baseline indicates the topic is clear to you, I do not have access to the specific subject matter or the content within `syllabus.pdf`. I also do not have your specifi"
+        }
+      },
+      "overall_score": 0.8575,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_high_readiness_full_plan",
+      "variant": "raw_baseline",
+      "model_key": "deepseek_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.57; inferred_mode=full; expected_mode=full.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic study plan. **Core Assumption:** The `syllabus.pdf` contains the full sequence of topics, assignments, and likely the final goal (e.g., \"Complete Cours"
+        },
+        "constraint_realism": {
+          "score": 1.0,
+          "notes": "Constraint hits=3/3; mode_fit=True.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic study plan. **Core Assumption:** The `syllabus.pdf` contains the full sequence of topics, assignments, and likely the final goal (e.g., \"Complete Cours"
+        },
+        "plan_sequence_quality": {
+          "score": 0.93,
+          "notes": "Step markers=26; temporal markers=2.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic study plan. **Core Assumption:** The `syllabus.pdf` contains the full sequence of topics, assignments, and likely the final goal (e.g., \"Complete Cours"
+        },
+        "grounding_quality": {
+          "score": 0.91,
+          "notes": "Material mentions=1/1; generic grounding hits=2.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic study plan. **Core Assumption:** The `syllabus.pdf` contains the full sequence of topics, assignments, and likely the final goal (e.g., \"Complete Cours"
+        },
+        "next_action_usefulness": {
+          "score": 0.54,
+          "notes": "Time hits=0; action hits=3; question_count=0.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic study plan. **Core Assumption:** The `syllabus.pdf` contains the full sequence of topics, assignments, and likely the final goal (e.g., \"Complete Cours"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.2,
+          "notes": "Fallback hits=0; continuity hits=0.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic study plan. **Core Assumption:** The `syllabus.pdf` contains the full sequence of topics, assignments, and likely the final goal (e.g., \"Complete Cours"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=26; avg_line_len=86.6.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic study plan. **Core Assumption:** The `syllabus.pdf` contains the full sequence of topics, assignments, and likely the final goal (e.g., \"Complete Cours"
+        },
+        "trustworthiness": {
+          "score": 0.83,
+          "notes": "Honesty hits=2; materials_needed=True; mode_fit=True.",
+          "evidence_excerpt": "Based solely on the information you've provided, here is a realistic study plan. **Core Assumption:** The `syllabus.pdf` contains the full sequence of topics, assignments, and likely the final goal (e.g., \"Complete Cours"
+        }
+      },
+      "overall_score": 0.7963,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_medium_readiness_provisional",
+      "variant": "sparkle_current",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.48; inferred_mode=full; expected_mode=provisional.",
+          "evidence_excerpt": "# Plan Version 1.0: The Calibration Strategy **Target:** [Target Subject] **Hard Deadline:** 2026-04-24 **Status:** Draft / Assumption-Testing Phase --- ## 1. Core Philosophy Because past plans failed due to overambition"
+        },
+        "constraint_realism": {
+          "score": 0.5333,
+          "notes": "Constraint hits=2/3; mode_fit=False.",
+          "evidence_excerpt": "# Plan Version 1.0: The Calibration Strategy **Target:** [Target Subject] **Hard Deadline:** 2026-04-24 **Status:** Draft / Assumption-Testing Phase --- ## 1. Core Philosophy Because past plans failed due to overambition"
+        },
+        "plan_sequence_quality": {
+          "score": 0.905,
+          "notes": "Step markers=24; temporal markers=2.",
+          "evidence_excerpt": "# Plan Version 1.0: The Calibration Strategy **Target:** [Target Subject] **Hard Deadline:** 2026-04-24 **Status:** Draft / Assumption-Testing Phase --- ## 1. Core Philosophy Because past plans failed due to overambition"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "# Plan Version 1.0: The Calibration Strategy **Target:** [Target Subject] **Hard Deadline:** 2026-04-24 **Status:** Draft / Assumption-Testing Phase --- ## 1. Core Philosophy Because past plans failed due to overambition"
+        },
+        "next_action_usefulness": {
+          "score": 0.62,
+          "notes": "Time hits=0; action hits=4; question_count=3.",
+          "evidence_excerpt": "# Plan Version 1.0: The Calibration Strategy **Target:** [Target Subject] **Hard Deadline:** 2026-04-24 **Status:** Draft / Assumption-Testing Phase --- ## 1. Core Philosophy Because past plans failed due to overambition"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.52,
+          "notes": "Fallback hits=2; continuity hits=0.",
+          "evidence_excerpt": "# Plan Version 1.0: The Calibration Strategy **Target:** [Target Subject] **Hard Deadline:** 2026-04-24 **Status:** Draft / Assumption-Testing Phase --- ## 1. Core Philosophy Because past plans failed due to overambition"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=24; avg_line_len=71.0.",
+          "evidence_excerpt": "# Plan Version 1.0: The Calibration Strategy **Target:** [Target Subject] **Hard Deadline:** 2026-04-24 **Status:** Draft / Assumption-Testing Phase --- ## 1. Core Philosophy Because past plans failed due to overambition"
+        },
+        "trustworthiness": {
+          "score": 0.4,
+          "notes": "Honesty hits=1; materials_needed=False; mode_fit=False.",
+          "evidence_excerpt": "# Plan Version 1.0: The Calibration Strategy **Target:** [Target Subject] **Hard Deadline:** 2026-04-24 **Status:** Draft / Assumption-Testing Phase --- ## 1. Core Philosophy Because past plans failed due to overambition"
+        }
+      },
+      "overall_score": 0.7235,
+      "inferred_mode": "full"
+    },
+    {
+      "scenario_id": "phase_b_medium_readiness_provisional",
+      "variant": "sparkle_phase_b",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.52; inferred_mode=provisional; expected_mode=provisional.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Plan v0.1 **Status:** **PROVISIONAL** (High Uncertainty) **Deadline Target:** 2026-04-24 **Planning Horizon:** 6 Weeks (Immediate Focus) ## 1. Goal Frame The primary objective is not to com"
+        },
+        "constraint_realism": {
+          "score": 0.9333,
+          "notes": "Constraint hits=2/3; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Plan v0.1 **Status:** **PROVISIONAL** (High Uncertainty) **Deadline Target:** 2026-04-24 **Planning Horizon:** 6 Weeks (Immediate Focus) ## 1. Goal Frame The primary objective is not to com"
+        },
+        "plan_sequence_quality": {
+          "score": 0.82,
+          "notes": "Step markers=19; temporal markers=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Plan v0.1 **Status:** **PROVISIONAL** (High Uncertainty) **Deadline Target:** 2026-04-24 **Planning Horizon:** 6 Weeks (Immediate Focus) ## 1. Goal Frame The primary objective is not to com"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Plan v0.1 **Status:** **PROVISIONAL** (High Uncertainty) **Deadline Target:** 2026-04-24 **Planning Horizon:** 6 Weeks (Immediate Focus) ## 1. Goal Frame The primary objective is not to com"
+        },
+        "next_action_usefulness": {
+          "score": 0.72,
+          "notes": "Time hits=1; action hits=3; question_count=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Plan v0.1 **Status:** **PROVISIONAL** (High Uncertainty) **Deadline Target:** 2026-04-24 **Planning Horizon:** 6 Weeks (Immediate Focus) ## 1. Goal Frame The primary objective is not to com"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.68,
+          "notes": "Fallback hits=3; continuity hits=0.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Plan v0.1 **Status:** **PROVISIONAL** (High Uncertainty) **Deadline Target:** 2026-04-24 **Planning Horizon:** 6 Weeks (Immediate Focus) ## 1. Goal Frame The primary objective is not to com"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=19; avg_line_len=90.7.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Plan v0.1 **Status:** **PROVISIONAL** (High Uncertainty) **Deadline Target:** 2026-04-24 **Planning Horizon:** 6 Weeks (Immediate Focus) ## 1. Goal Frame The primary objective is not to com"
+        },
+        "trustworthiness": {
+          "score": 0.83,
+          "notes": "Honesty hits=2; materials_needed=False; mode_fit=True.",
+          "evidence_excerpt": "# Sparkle Phase B: Provisional Plan v0.1 **Status:** **PROVISIONAL** (High Uncertainty) **Deadline Target:** 2026-04-24 **Planning Horizon:** 6 Weeks (Immediate Focus) ## 1. Goal Frame The primary objective is not to com"
+        }
+      },
+      "overall_score": 0.8492,
+      "inferred_mode": "provisional"
+    },
+    {
+      "scenario_id": "phase_b_medium_readiness_provisional",
+      "variant": "raw_baseline",
+      "model_key": "dashscope_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.72; inferred_mode=provisional; expected_mode=provisional.",
+          "evidence_excerpt": "# Plan: Create First Version of Study/Action Plan **Objective:** Produce a realistic, first-draft plan to reach the target by **2026-04-24**. **Focus:** Planning process only (not full execution yet). **Status:** Key ass"
+        },
+        "constraint_realism": {
+          "score": 0.8333,
+          "notes": "Constraint hits=2/3; mode_fit=True.",
+          "evidence_excerpt": "# Plan: Create First Version of Study/Action Plan **Objective:** Produce a realistic, first-draft plan to reach the target by **2026-04-24**. **Focus:** Planning process only (not full execution yet). **Status:** Key ass"
+        },
+        "plan_sequence_quality": {
+          "score": 0.955,
+          "notes": "Step markers=25; temporal markers=2.",
+          "evidence_excerpt": "# Plan: Create First Version of Study/Action Plan **Objective:** Produce a realistic, first-draft plan to reach the target by **2026-04-24**. **Focus:** Planning process only (not full execution yet). **Status:** Key ass"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "# Plan: Create First Version of Study/Action Plan **Objective:** Produce a realistic, first-draft plan to reach the target by **2026-04-24**. **Focus:** Planning process only (not full execution yet). **Status:** Key ass"
+        },
+        "next_action_usefulness": {
+          "score": 0.8,
+          "notes": "Time hits=1; action hits=6; question_count=2.",
+          "evidence_excerpt": "# Plan: Create First Version of Study/Action Plan **Objective:** Produce a realistic, first-draft plan to reach the target by **2026-04-24**. **Focus:** Planning process only (not full execution yet). **Status:** Key ass"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.36,
+          "notes": "Fallback hits=1; continuity hits=0.",
+          "evidence_excerpt": "# Plan: Create First Version of Study/Action Plan **Objective:** Produce a realistic, first-draft plan to reach the target by **2026-04-24**. **Focus:** Planning process only (not full execution yet). **Status:** Key ass"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=25; avg_line_len=74.2.",
+          "evidence_excerpt": "# Plan: Create First Version of Study/Action Plan **Objective:** Produce a realistic, first-draft plan to reach the target by **2026-04-24**. **Focus:** Planning process only (not full execution yet). **Status:** Key ass"
+        },
+        "trustworthiness": {
+          "score": 0.83,
+          "notes": "Honesty hits=2; materials_needed=False; mode_fit=True.",
+          "evidence_excerpt": "# Plan: Create First Version of Study/Action Plan **Objective:** Produce a realistic, first-draft plan to reach the target by **2026-04-24**. **Focus:** Planning process only (not full execution yet). **Status:** Key ass"
+        }
+      },
+      "overall_score": 0.8235,
+      "inferred_mode": "provisional"
+    },
+    {
+      "scenario_id": "phase_b_medium_readiness_provisional",
+      "variant": "raw_baseline",
+      "model_key": "deepseek_chat",
+      "dimensions": {
+        "understanding_fit": {
+          "score": 1.0,
+          "notes": "Keyword overlap=0.64; inferred_mode=provisional; expected_mode=provisional.",
+          "evidence_excerpt": "Based solely on your information, here is a useful first version of a plan. It is built to be adjusted as you learn more. **Explicit Assumptions (What We Don't Know Yet):** *   **Assumption 1:** The specific subject/topi"
+        },
+        "constraint_realism": {
+          "score": 0.9333,
+          "notes": "Constraint hits=2/3; mode_fit=True.",
+          "evidence_excerpt": "Based solely on your information, here is a useful first version of a plan. It is built to be adjusted as you learn more. **Explicit Assumptions (What We Don't Know Yet):** *   **Assumption 1:** The specific subject/topi"
+        },
+        "plan_sequence_quality": {
+          "score": 0.745,
+          "notes": "Step markers=26; temporal markers=0.",
+          "evidence_excerpt": "Based solely on your information, here is a useful first version of a plan. It is built to be adjusted as you learn more. **Explicit Assumptions (What We Don't Know Yet):** *   **Assumption 1:** The specific subject/topi"
+        },
+        "grounding_quality": {
+          "score": 0.85,
+          "notes": "No uploaded materials required for this dossier.",
+          "evidence_excerpt": "Based solely on your information, here is a useful first version of a plan. It is built to be adjusted as you learn more. **Explicit Assumptions (What We Don't Know Yet):** *   **Assumption 1:** The specific subject/topi"
+        },
+        "next_action_usefulness": {
+          "score": 0.62,
+          "notes": "Time hits=0; action hits=5; question_count=5.",
+          "evidence_excerpt": "Based solely on your information, here is a useful first version of a plan. It is built to be adjusted as you learn more. **Explicit Assumptions (What We Don't Know Yet):** *   **Assumption 1:** The specific subject/topi"
+        },
+        "adaptation_fallback_quality": {
+          "score": 0.48,
+          "notes": "Fallback hits=1; continuity hits=1.",
+          "evidence_excerpt": "Based solely on your information, here is a useful first version of a plan. It is built to be adjusted as you learn more. **Explicit Assumptions (What We Don't Know Yet):** *   **Assumption 1:** The specific subject/topi"
+        },
+        "non_expert_usability": {
+          "score": 0.96,
+          "notes": "Bullet lines=26; avg_line_len=88.1.",
+          "evidence_excerpt": "Based solely on your information, here is a useful first version of a plan. It is built to be adjusted as you learn more. **Explicit Assumptions (What We Don't Know Yet):** *   **Assumption 1:** The specific subject/topi"
+        },
+        "trustworthiness": {
+          "score": 0.75,
+          "notes": "Honesty hits=1; materials_needed=False; mode_fit=True.",
+          "evidence_excerpt": "Based solely on your information, here is a useful first version of a plan. It is built to be adjusted as you learn more. **Explicit Assumptions (What We Don't Know Yet):** *   **Assumption 1:** The specific subject/topi"
+        }
+      },
+      "overall_score": 0.7923,
+      "inferred_mode": "provisional"
+    }
+  ],
+  "variant_summary": {
+    "raw_baseline:dashscope_chat": {
+      "average_overall_score": 0.7533,
+      "scenario_count": 8
+    },
+    "raw_baseline:deepseek_chat": {
+      "average_overall_score": 0.7475,
+      "scenario_count": 8
+    },
+    "sparkle_current:dashscope_chat": {
+      "average_overall_score": 0.7275,
+      "scenario_count": 8
+    },
+    "sparkle_phase_b:dashscope_chat": {
+      "average_overall_score": 0.8119,
+      "scenario_count": 8
+    }
+  },
+  "scenario_outcomes": [
+    {
+      "scenario_id": "phase_b_thermo_14_day_sprint",
+      "winner": "sparkle_current:dashscope_chat",
+      "winner_score": 0.8442,
+      "phase_b_outcome": "loss",
+      "scores": [
+        {
+          "label": "sparkle_current:dashscope_chat",
+          "overall_score": 0.8442,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:deepseek_chat",
+          "overall_score": 0.8233,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "sparkle_phase_b:dashscope_chat",
+          "overall_score": 0.8208,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:dashscope_chat",
+          "overall_score": 0.8167,
+          "inferred_mode": "full"
+        }
+      ]
+    },
+    {
+      "scenario_id": "phase_b_overloaded_urgent_user",
+      "winner": "sparkle_phase_b:dashscope_chat",
+      "winner_score": 0.8917,
+      "phase_b_outcome": "win",
+      "scores": [
+        {
+          "label": "sparkle_phase_b:dashscope_chat",
+          "overall_score": 0.8917,
+          "inferred_mode": "provisional"
+        },
+        {
+          "label": "raw_baseline:deepseek_chat",
+          "overall_score": 0.7812,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:dashscope_chat",
+          "overall_score": 0.7694,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "sparkle_current:dashscope_chat",
+          "overall_score": 0.7194,
+          "inferred_mode": "full"
+        }
+      ]
+    },
+    {
+      "scenario_id": "phase_b_materials_and_weak_spots",
+      "winner": "sparkle_phase_b:dashscope_chat",
+      "winner_score": 0.8208,
+      "phase_b_outcome": "win",
+      "scores": [
+        {
+          "label": "sparkle_phase_b:dashscope_chat",
+          "overall_score": 0.8208,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:dashscope_chat",
+          "overall_score": 0.7821,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "sparkle_current:dashscope_chat",
+          "overall_score": 0.765,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:deepseek_chat",
+          "overall_score": 0.7404,
+          "inferred_mode": "full"
+        }
+      ]
+    },
+    {
+      "scenario_id": "phase_b_contradictory_self_report",
+      "winner": "sparkle_phase_b:dashscope_chat",
+      "winner_score": 0.8242,
+      "phase_b_outcome": "win",
+      "scores": [
+        {
+          "label": "sparkle_phase_b:dashscope_chat",
+          "overall_score": 0.8242,
+          "inferred_mode": "provisional"
+        },
+        {
+          "label": "sparkle_current:dashscope_chat",
+          "overall_score": 0.7246,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:deepseek_chat",
+          "overall_score": 0.6985,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:dashscope_chat",
+          "overall_score": 0.6263,
+          "inferred_mode": "full"
+        }
+      ]
+    },
+    {
+      "scenario_id": "phase_b_vague_goal_needs_clarification",
+      "winner": "raw_baseline:dashscope_chat",
+      "winner_score": 0.635,
+      "phase_b_outcome": "loss",
+      "scores": [
+        {
+          "label": "raw_baseline:dashscope_chat",
+          "overall_score": 0.635,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "sparkle_phase_b:dashscope_chat",
+          "overall_score": 0.59,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:deepseek_chat",
+          "overall_score": 0.5837,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "sparkle_current:dashscope_chat",
+          "overall_score": 0.5317,
+          "inferred_mode": "full"
+        }
+      ]
+    },
+    {
+      "scenario_id": "phase_b_missed_execution_replan",
+      "winner": "sparkle_phase_b:dashscope_chat",
+      "winner_score": 0.8488,
+      "phase_b_outcome": "win",
+      "scores": [
+        {
+          "label": "sparkle_phase_b:dashscope_chat",
+          "overall_score": 0.8488,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:deepseek_chat",
+          "overall_score": 0.7644,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:dashscope_chat",
+          "overall_score": 0.7163,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "sparkle_current:dashscope_chat",
+          "overall_score": 0.665,
+          "inferred_mode": "full"
+        }
+      ]
+    },
+    {
+      "scenario_id": "phase_b_high_readiness_full_plan",
+      "winner": "raw_baseline:dashscope_chat",
+      "winner_score": 0.8575,
+      "phase_b_outcome": "tie",
+      "scores": [
+        {
+          "label": "raw_baseline:dashscope_chat",
+          "overall_score": 0.8575,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "sparkle_phase_b:dashscope_chat",
+          "overall_score": 0.85,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "sparkle_current:dashscope_chat",
+          "overall_score": 0.8467,
+          "inferred_mode": "full"
+        },
+        {
+          "label": "raw_baseline:deepseek_chat",
+          "overall_score": 0.7963,
+          "inferred_mode": "full"
+        }
+      ]
+    },
+    {
+      "scenario_id": "phase_b_medium_readiness_provisional",
+      "winner": "sparkle_phase_b:dashscope_chat",
+      "winner_score": 0.8492,
+      "phase_b_outcome": "win",
+      "scores": [
+        {
+          "label": "sparkle_phase_b:dashscope_chat",
+          "overall_score": 0.8492,
+          "inferred_mode": "provisional"
+        },
+        {
+          "label": "raw_baseline:dashscope_chat",
+          "overall_score": 0.8235,
+          "inferred_mode": "provisional"
+        },
+        {
+          "label": "raw_baseline:deepseek_chat",
+          "overall_score": 0.7923,
+          "inferred_mode": "provisional"
+        },
+        {
+          "label": "sparkle_current:dashscope_chat",
+          "overall_score": 0.7235,
+          "inferred_mode": "full"
+        }
+      ]
+    }
+  ],
+  "phase_b_vs_field": {
+    "wins": 5,
+    "ties": 1,
+    "losses": 2
+  },
+  "credible_win_profile": true
+}

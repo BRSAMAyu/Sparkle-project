@@ -7,6 +7,7 @@ import re
 
 from app.orchestration.planning_intent import detect_planning_like_turn
 from app.orchestration.decision_policy import DecisionPolicyCompiler
+from app.orchestration.planning_strategy_compiler import PlanningStrategyCompiler
 from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
 from app.semantic.state_primitives import StudyDomainSemanticAdapter
 from app.services.capability_registry_service import CapabilityRegistryService
@@ -94,6 +95,7 @@ class SituationBrief:
     semantic_primitives: dict[str, Any]
     source_trace: dict[str, Any]
     insight_state: dict[str, Any] = field(default_factory=dict)
+    planning_strategy: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -112,6 +114,7 @@ class SituationBrief:
             "semantic_primitives": self.semantic_primitives,
             "source_trace": self.source_trace,
             "insight_state": self.insight_state,
+            "planning_strategy": self.planning_strategy,
         }
 
 
@@ -319,6 +322,24 @@ class SituationBriefBuilder:
             insight_state=insight_state,
             route_intent=route_intent,
         )
+        planning_strategy = PlanningStrategyCompiler().compile(
+            situation_brief={
+                "vision": vision,
+                "current_state": current_state,
+                "evidence": evidence,
+                "decision_context": decision_context,
+                "insight_state": insight_state,
+            },
+            user_context_payload=user_context,
+            plan_context=plan_context,
+            planning_constraints=_as_dict(plan_context.get("constraints")),
+        ).to_dict()
+        decision_context["planning_strategy_mode"] = _strip(planning_strategy.get("plan_mode"))
+        decision_context["planning_depth"] = _strip(planning_strategy.get("plan_depth"))
+        decision_context["planning_pacing_profile"] = _strip(planning_strategy.get("pacing_profile"))
+        decision_context["planning_grounding_mode"] = _strip(planning_strategy.get("grounding_mode"))
+        decision_context["planning_fallback_policy"] = _strip(planning_strategy.get("fallback_policy"))
+        decision_context["planning_required_sections"] = list(_as_list(planning_strategy.get("required_plan_sections")))
 
         focus_question = self._build_focus_question(
             vision=vision,
@@ -351,6 +372,7 @@ class SituationBriefBuilder:
             semantic_primitives=semantic_primitives,
             source_trace=source_trace,
             insight_state=insight_state,
+            planning_strategy=planning_strategy,
         )
 
     def _build_source_trace(
@@ -770,6 +792,7 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     stance = _as_dict(payload.get("recommended_stance"))
     decision_context = _as_dict(payload.get("decision_context"))
     insight_state = _as_dict(payload.get("insight_state"))
+    planning_strategy = _as_dict(payload.get("planning_strategy"))
 
     current_line_parts = [
         _strip(current_state.get("snapshot")),
@@ -821,6 +844,22 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
         if readiness_action:
             readiness_bits.append(readiness_action)
         lines.append(f"- 规划就绪度: {' / '.join(readiness_bits)}")
+    strategy_bits = [
+        _strip(planning_strategy.get("plan_mode")),
+        _strip(planning_strategy.get("plan_depth")),
+        _strip(planning_strategy.get("pacing_profile")),
+        _strip(planning_strategy.get("grounding_mode")),
+    ]
+    strategy_line = " / ".join(bit for bit in strategy_bits if bit)
+    if strategy_line:
+        lines.append(f"- 规划策略: {strategy_line}")
+    required_sections = [
+        _strip(item)
+        for item in _as_list(planning_strategy.get("required_plan_sections"))
+        if _strip(item)
+    ]
+    if required_sections:
+        lines.append(f"- 计划必须显式覆盖: {', '.join(required_sections[:5])}")
     blocking_unknowns = [
         _strip(item)
         for item in _as_list(

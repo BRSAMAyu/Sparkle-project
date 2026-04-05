@@ -16,6 +16,7 @@ from loguru import logger
 
 from app.agents.graph.state import SparkleState
 from app.agents.graph.workflow import sparkle_planning_graph  # Phase 2: Use planning-only graph
+from app.orchestration.rendered_plan_artifact import parse_rendered_plan_artifact
 from app.orchestration.schemas import ExecutablePlan, StateSnapshot, StepCriteria, ToolCallSpec
 
 
@@ -62,6 +63,7 @@ class LangGraphPlanner:
         self.graph = sparkle_planning_graph
         # Optional: Inject circuit breaker for resilience
         self.circuit_breaker = circuit_breaker
+        self._rendered_plan_artifacts_by_session: dict[str, dict[str, Any]] = {}
         logger.info("LangGraphPlanner initialized with planning-only graph (no tool execution)")
 
     async def plan(
@@ -94,6 +96,7 @@ class LangGraphPlanner:
         Returns:
             ExecutablePlan: Executable plan with tool_calls
         """
+        self._rendered_plan_artifacts_by_session.pop(session_id, None)
         # Get plan_version from PlanState (Phase 4)
         plan_version = 1
         if plan_id:
@@ -195,6 +198,11 @@ class LangGraphPlanner:
             # It will NOT execute them (no ToolNode in planning graph)
             result_state = await self.graph.ainvoke(initial_state, config)
             final_state = result_state
+            rendered_plan_artifact = self._extract_rendered_plan_artifact(final_state)
+            if rendered_plan_artifact is not None:
+                self._rendered_plan_artifacts_by_session[session_id] = rendered_plan_artifact.to_dict()
+            else:
+                self._rendered_plan_artifacts_by_session.pop(session_id, None)
 
             # Record success in circuit breaker
             if self.circuit_breaker:
@@ -219,9 +227,35 @@ class LangGraphPlanner:
         # Convert to ExecutablePlan
         return self._convert_to_plan(final_state, snapshot, user_id, session_id)
 
+    def pop_rendered_plan_artifact(self, session_id: str) -> dict[str, Any] | None:
+        return self._rendered_plan_artifacts_by_session.pop(session_id, None)
+
     @staticmethod
     def _build_constraints_context(planning_constraints: dict[str, Any]) -> str:
         lines = ["规划约束（必须尽量满足）："]
+        planning_strategy = planning_constraints.get("planning_strategy")
+        if isinstance(planning_strategy, dict) and planning_strategy:
+            strategy_bits = [
+                str(planning_strategy.get("plan_mode") or "").strip(),
+                str(planning_strategy.get("plan_depth") or "").strip(),
+                str(planning_strategy.get("pacing_profile") or "").strip(),
+            ]
+            strategy_bits = [item for item in strategy_bits if item]
+            if strategy_bits:
+                lines.append(f"- 规划档位: {' / '.join(strategy_bits)}")
+            grounding_mode = str(planning_strategy.get("grounding_mode") or "").strip()
+            if grounding_mode:
+                lines.append(f"- grounding 模式: {grounding_mode}")
+            required_sections = [
+                str(item).strip()
+                for item in (planning_strategy.get("required_plan_sections") or [])
+                if str(item).strip()
+            ]
+            if required_sections:
+                lines.append(f"- 若要生成计划性回答，必须显式覆盖: {', '.join(required_sections)}")
+            fallback_policy = str(planning_strategy.get("fallback_policy") or "").strip()
+            if fallback_policy:
+                lines.append(f"- 如果信息不足或计划太弱，优先走: {fallback_policy}")
         weak_nodes = planning_constraints.get("weak_knowledge_nodes") or []
         if planning_constraints.get("insert_prerequisite_review") and isinstance(weak_nodes, list) and weak_nodes:
             names = [str(item.get("name") or "").strip() for item in weak_nodes if isinstance(item, dict)]
@@ -268,6 +302,32 @@ class LangGraphPlanner:
                 lines.append(f"- {key}: {value}")
             return "\n".join(lines)
         return "Persona-aware planning constraints: unavailable"
+
+    @staticmethod
+    def _message_text(message: Any) -> str:
+        content = getattr(message, "content", "")
+        if isinstance(content, str):
+            return content.strip()
+        if isinstance(content, list):
+            parts: list[str] = []
+            for item in content:
+                if isinstance(item, dict):
+                    text = item.get("text")
+                    if isinstance(text, str) and text.strip():
+                        parts.append(text.strip())
+            return "\n".join(parts).strip()
+        return str(content or "").strip()
+
+    def _extract_rendered_plan_artifact(self, langgraph_state: SparkleState) -> Any:
+        messages = langgraph_state.get("messages", [])
+        for msg in reversed(messages):
+            if not isinstance(msg, AIMessage):
+                continue
+            text = self._message_text(msg)
+            if not text:
+                continue
+            return parse_rendered_plan_artifact({"text": text})
+        return None
 
     def _convert_to_plan(
         self,

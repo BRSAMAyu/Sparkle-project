@@ -29,6 +29,7 @@ from app.core.business_metrics import (
 from app.core.event_bus import event_bus
 from app.core.pending_actions import pending_actions_store
 from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
+from app.orchestration.plan_quality_gate import PlanQualityGate
 from app.orchestration.schemas import ExecutablePlan
 from app.services.llm_service import llm_service
 from app.services.self_evolution_service import StrategyCalibrationService
@@ -105,6 +106,7 @@ class PlanReviewResult:
     alignment_score: float | None = None
     alignment_summary: str | None = None
     review_feedback_entry: dict[str, Any] | None = None
+    quality_report: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -124,6 +126,7 @@ class PlanReviewResult:
             "alignment_score": self.alignment_score,
             "alignment_summary": self.alignment_summary,
             "review_feedback_entry": self.review_feedback_entry,
+            "quality_report": self.quality_report,
         }
 
 
@@ -173,6 +176,7 @@ class PlanReviewService:
 
     def __init__(self, redis_client=None):
         self.redis = redis_client
+        self.quality_gate = PlanQualityGate()
 
     def set_redis(self, redis_client):
         """Configure Redis client"""
@@ -218,10 +222,30 @@ class PlanReviewService:
         review_id = str(uuid.uuid4())
         reviewed_at = _utcnow().isoformat()
         mode_strategy = self._extract_mode_strategy(user_context)
+        quality_report = self.quality_gate.evaluate(
+            plan=plan,
+            user_message=user_message,
+            user_context=user_context,
+        )
+        quality_payload = quality_report.to_dict()
 
         # Step 1: Quick rule-based check
         rule_result = await self._quick_rule_check(plan, user_context)
         if rule_result:
+            if quality_report.decision != "approve":
+                gated_decision = self._map_quality_gate_decision(quality_report.decision)
+                gated_comments = self._build_quality_gate_comments(quality_report)
+                return PlanReviewResult(
+                    review_id=review_id,
+                    plan_id=plan.plan_id,
+                    decision=gated_decision,
+                    confidence=min(plan.confidence, quality_report.overall_score),
+                    comments=gated_comments,
+                    reviewed_at=reviewed_at,
+                    auto_approved=False,
+                    user_facing_reason=self._get_quality_gate_reason(quality_report.decision),
+                    quality_report=quality_payload,
+                )
             logger.info(f"Plan {plan.plan_id} auto-approved by rules: {rule_result}")
             reasoning_summary, reasoning_details = self._build_reasoning_payload(
                 plan=plan,
@@ -276,6 +300,7 @@ class PlanReviewService:
                 alignment_score=alignment_score,
                 alignment_summary=alignment_summary,
                 mode_strategy=mode_strategy,
+                quality_report=quality_payload,
             )
             if reasoning_summary:
                 PLAN_REASONING_SOURCE_TOTAL.labels(source="rules_only").inc()
@@ -306,6 +331,7 @@ class PlanReviewService:
                 alignment_score=alignment_score,
                 alignment_summary=alignment_summary,
                 review_feedback_entry=review_feedback_entry,
+                quality_report=quality_payload,
             )
 
         # Step 2: LLM-based deep review
@@ -314,12 +340,6 @@ class PlanReviewService:
 
         decision = llm_result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
         reasoning_source = "llm_fallback" if llm_result.get("fallback_used") else "llm_review"
-        reasoning_summary, reasoning_details = self._build_reasoning_payload(
-            plan=plan,
-            user_context=user_context,
-            decision=decision,
-            auto_approved=False,
-        )
         calibration_service = StrategyCalibrationService(redis=self.redis)
         user_uuid = self._extract_user_id(user_context)
         persona_strategy_mapping = self._build_persona_strategy_mapping(user_context)
@@ -361,6 +381,16 @@ class PlanReviewService:
                     suggested_fix="建议把任务颗粒度再拆细一点，或先降低本轮负载后再推进。",
                 )
             )
+        if quality_report.decision != "approve":
+            if decision == ReviewDecision.APPROVED.value:
+                decision = self._map_quality_gate_decision(quality_report.decision)
+            comments.extend(self._build_quality_gate_comments(quality_report))
+        reasoning_summary, reasoning_details = self._build_reasoning_payload(
+            plan=plan,
+            user_context=user_context,
+            decision=decision,
+            auto_approved=False,
+        )
 
         review_feedback_entry = self.build_review_feedback_entry(
             review_id=review_id,
@@ -369,6 +399,7 @@ class PlanReviewService:
             alignment_score=alignment_score,
             alignment_summary=alignment_summary,
             mode_strategy=mode_strategy,
+            quality_report=quality_payload,
         )
         if reasoning_summary:
             PLAN_REASONING_SOURCE_TOTAL.labels(source=reasoning_source).inc()
@@ -392,6 +423,7 @@ class PlanReviewService:
             alignment_score=alignment_score,
             alignment_summary=alignment_summary,
             review_feedback_entry=review_feedback_entry,
+            quality_report=quality_payload,
         )
 
     async def _quick_rule_check(self, plan: ExecutablePlan, user_context: dict[str, Any]) -> str | None:
@@ -489,6 +521,7 @@ class PlanReviewService:
         alignment_score: float | None,
         alignment_summary: str | None,
         mode_strategy: dict[str, Any] | None = None,
+        quality_report: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         dominant = comments[0] if comments else None
         category = str(dominant.category if dominant else decision)
@@ -516,7 +549,71 @@ class PlanReviewService:
             "review_strictness": float((mode_strategy or {}).get("review_strictness", 1.0) or 1.0),
             "require_alignment_check": bool((mode_strategy or {}).get("require_alignment_check", False)),
             "recorded_at": _utcnow().isoformat(),
+            "quality_decision": str((quality_report or {}).get("decision") or ""),
+            "quality_overall_score": (quality_report or {}).get("overall_score"),
         }
+
+    @staticmethod
+    def _map_quality_gate_decision(quality_decision: str) -> str:
+        normalized = str(quality_decision or "").strip().lower()
+        if normalized == "approve":
+            return ReviewDecision.APPROVED.value
+        if normalized in {"revise", "downgrade_to_provisional", "ask_more"}:
+            return ReviewDecision.NEEDS_MODIFICATION.value
+        return ReviewDecision.REQUIRES_CONFIRMATION.value
+
+    @staticmethod
+    def _get_quality_gate_reason(quality_decision: str) -> str:
+        normalized = str(quality_decision or "").strip().lower()
+        if normalized == "ask_more":
+            return "我先不把这个计划当成强计划发出去，还需要先补一个关键信息。"
+        if normalized == "downgrade_to_provisional":
+            return "当前证据或可行性还不够强，这轮更适合先给一个带假设的暂定计划。"
+        if normalized == "revise":
+            return "这份计划还差关键部分，需要先修正后再执行。"
+        return "计划质量审查完成。"
+
+    def _build_quality_gate_comments(self, quality_report) -> list[ReviewComment]:
+        comments: list[ReviewComment] = []
+        for issue in quality_report.issues:
+            severity = SeverityLevel.INFO.value
+            if issue.severity == "critical":
+                severity = SeverityLevel.CRITICAL.value
+            elif issue.severity == "warning":
+                severity = SeverityLevel.WARNING.value
+            comments.append(
+                ReviewComment(
+                    category=ReviewCategory.QUALITY.value,
+                    severity=severity,
+                    message=issue.message,
+                    suggested_fix=self._quality_fix_hint(issue.code),
+                )
+            )
+        if not comments and quality_report.decision != "approve":
+            comments.append(
+                ReviewComment(
+                    category=ReviewCategory.QUALITY.value,
+                    severity=SeverityLevel.WARNING.value,
+                    message=self._get_quality_gate_reason(quality_report.decision),
+                )
+            )
+        return comments
+
+    @staticmethod
+    def _quality_fix_hint(issue_code: str) -> str | None:
+        normalized = str(issue_code or "").strip()
+        if normalized.startswith("missing_section:"):
+            section = normalized.split(":", 1)[-1]
+            return f"请把 {section} 明确写进这轮计划。"
+        if normalized == "grounding_required_but_missing":
+            return "先使用用户材料证据，或者明确降级为暂定计划。"
+        if normalized == "phase_a_guardrail_breach":
+            return "先补关键缺口，再继续完整规划。"
+        if normalized == "no_next_action":
+            return "请先给出一个未来 24 小时内可执行的下一步。"
+        if normalized == "overload_too_many_steps":
+            return "请减少并行步骤，先压成一个更轻的启动动作。"
+        return None
 
     async def _validate_feasibility(
         self,

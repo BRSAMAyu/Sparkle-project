@@ -933,6 +933,7 @@ def build_system_prompt(
     constitution_guardrail_section = _format_constitution_guardrail_section(user_context=user_context)
     visible_intelligence_section = _format_visible_intelligence_section(user_context=user_context)
     decision_policy_section = _format_decision_policy_section(user_context=user_context)
+    planning_strategy_section = _format_planning_strategy_section(user_context=user_context)
     user_material_grounding_section = _format_user_material_grounding_section(user_context=user_context)
 
     agent_memory_section = ""
@@ -1062,6 +1063,7 @@ def build_system_prompt(
     section_map = {
         "situation_brief_section": situation_brief_section,
         "decision_policy_section": decision_policy_section,
+        "planning_strategy_section": planning_strategy_section,
         "user_material_grounding_section": user_material_grounding_section,
         "context_briefing_section": context_briefing_section,
         "visible_intelligence_section": visible_intelligence_section,
@@ -1105,6 +1107,7 @@ def build_system_prompt(
         priority_map={
             "situation_brief_section": 0,
             "decision_policy_section": 1,
+            "planning_strategy_section": 1,
             "user_material_grounding_section": 1,
             "context_briefing_section": 0,
             "visible_intelligence_section": 1,
@@ -1132,6 +1135,7 @@ def build_system_prompt(
     )
     situation_brief_section = section_map["situation_brief_section"]
     decision_policy_section = section_map["decision_policy_section"]
+    planning_strategy_section = section_map["planning_strategy_section"]
     user_material_grounding_section = section_map["user_material_grounding_section"]
     context_briefing_section = section_map["context_briefing_section"]
     visible_intelligence_section = section_map["visible_intelligence_section"]
@@ -1187,6 +1191,7 @@ def build_system_prompt(
                 agent_memory_section=agent_memory_section,
                 situation_brief_section=situation_brief_section,
                 decision_policy_section=decision_policy_section,
+                planning_strategy_section=planning_strategy_section,
                 user_material_grounding_section=user_material_grounding_section,
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
@@ -1204,6 +1209,7 @@ def build_system_prompt(
                 agent_persona_section,
                 "" if embed_situation_brief_in_user_context else situation_brief_section,
                 decision_policy_section,
+                planning_strategy_section,
                 user_material_grounding_section,
                 plan_context_section,
                 conversation_history_section,
@@ -1239,6 +1245,7 @@ def build_system_prompt(
                 constitution_guardrail_section=constitution_guardrail_section,
                 situation_brief_section=situation_brief_section,
                 decision_policy_section=decision_policy_section,
+                planning_strategy_section=planning_strategy_section,
                 user_material_grounding_section=user_material_grounding_section,
             )
         )
@@ -1252,6 +1259,7 @@ def build_system_prompt(
             agent_persona_section,
             situation_brief_section,
             decision_policy_section,
+            planning_strategy_section,
             user_material_grounding_section,
             plan_context_section,
             conversation_history_section,
@@ -1748,6 +1756,49 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
     if feedback_ask:
         lines.append(f"- 回合结束前最好确认: {feedback_ask}")
     lines.append("- 不要暴露 residual、policy、runtime 等内部术语，用自然语言把这套判断落到回答里。")
+    return "\n" + "\n".join(lines)
+
+
+def _format_planning_strategy_section(*, user_context: dict) -> str:
+    situation_brief = user_context.get("situation_brief") if isinstance(user_context, dict) else None
+    strategy = {}
+    if isinstance(situation_brief, dict) and isinstance(situation_brief.get("planning_strategy"), dict):
+        strategy = situation_brief.get("planning_strategy")
+    elif isinstance(user_context, dict) and isinstance(user_context.get("planning_strategy"), dict):
+        strategy = user_context.get("planning_strategy")
+    if not strategy:
+        return ""
+
+    mode = str(strategy.get("plan_mode") or "").strip()
+    depth = str(strategy.get("plan_depth") or "").strip()
+    pacing = str(strategy.get("pacing_profile") or "").strip()
+    grounding_mode = str(strategy.get("grounding_mode") or "").strip()
+    required_sections = [
+        str(item).strip()
+        for item in (strategy.get("required_plan_sections") or [])
+        if str(item).strip()
+    ]
+    if not any([mode, depth, pacing, grounding_mode, required_sections]):
+        return ""
+
+    lines = ["## 规划生成约束 [L1 引导]"]
+    mode_bits = [item for item in (mode, depth, pacing) if item]
+    if mode_bits:
+        lines.append(f"- 本轮规划档位: {' / '.join(mode_bits)}")
+    if grounding_mode:
+        lines.append(f"- grounding 要求: {grounding_mode}")
+    checkpoint_cadence = str(strategy.get("checkpoint_cadence") or "").strip()
+    if checkpoint_cadence:
+        lines.append(f"- 检查点节奏: {checkpoint_cadence}")
+    fallback_policy = str(strategy.get("fallback_policy") or "").strip()
+    if fallback_policy:
+        lines.append(f"- 若计划偏弱，优先走: {fallback_policy}")
+    first_step_hint = str(strategy.get("first_step_hint") or "").strip()
+    if first_step_hint:
+        lines.append(f"- 下一步风格: {first_step_hint}")
+    if required_sections:
+        lines.append(f"- 如果这轮在做计划，最终回答必须显式覆盖: {', '.join(required_sections)}")
+    lines.append("- 不要暴露字段名，要把这些约束翻译成自然、可执行、非专家友好的计划。")
     return "\n" + "\n".join(lines)
 
 

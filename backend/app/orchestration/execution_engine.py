@@ -1928,6 +1928,12 @@ class ExecutionEngineMixin:
                 planning_constraints["excluded_agents"] = list(mode_strategy.excluded_agents)
             if mode_strategy and mode_strategy.output_structure:
                 planning_constraints["required_output_structure"] = list(mode_strategy.output_structure)
+            if isinstance(user_context_payload, dict):
+                situation_brief = user_context_payload.get("situation_brief")
+                if isinstance(situation_brief, dict):
+                    planning_strategy = situation_brief.get("planning_strategy")
+                    if isinstance(planning_strategy, dict) and planning_strategy:
+                        planning_constraints["planning_strategy"] = planning_strategy
 
             # Phase 1-B: Inject Cognitive Policy Signals
             if isinstance(user_context_payload, dict):
@@ -2081,6 +2087,11 @@ class ExecutionEngineMixin:
                             user_context_payload["agent_memory_context"] = memory_context
                     except Exception as exc:
                         logger.debug(f"Failed to hydrate agent memory context: {exc}")
+
+            rendered_plan_artifact = self.lang_graph_planner.pop_rendered_plan_artifact(session_id)
+            if rendered_plan_artifact and isinstance(user_context_payload, dict):
+                user_context_payload["rendered_plan_artifact"] = rendered_plan_artifact
+                state.context_data["rendered_plan_artifact"] = rendered_plan_artifact
 
             collaboration_narrative = (
                 executable_plan.collaboration_narrative
@@ -2269,6 +2280,7 @@ class ExecutionEngineMixin:
                             **(user_context_payload or {}),
                             "plan_context": plan_context or (user_context_payload or {}).get("plan_context"),
                             "mode_strategy": state.context_data.get("mode_strategy"),
+                            "rendered_plan_artifact": state.context_data.get("rendered_plan_artifact"),
                         },
                     )
                     if orchestration_trace is not None:
@@ -2373,6 +2385,42 @@ class ExecutionEngineMixin:
                                 },
                             )
                         logger.info(f"Review feedback written for plan {plan_id}")
+
+                    quality_report = review_result.quality_report or {}
+                    quality_decision = str(quality_report.get("decision") or "").strip()
+                    if quality_decision == "ask_more":
+                        situation_brief = (user_context_payload or {}).get("situation_brief")
+                        decision_context = situation_brief.get("decision_context") if isinstance(situation_brief, dict) else {}
+                        clarification_questions = [
+                            str(item).strip()
+                            for item in (decision_context.get("strategic_clarification_questions") or [])
+                            if str(item).strip()
+                        ] if isinstance(decision_context, dict) else []
+                        question = clarification_questions[0] if clarification_questions else "我还缺哪个关键信息，才能把计划做得更靠谱？"
+                        clarification_delta = (
+                            "\n\n⚠️ 这轮我先不把计划当成强计划发出去。\n\n"
+                            f"- 我需要先确认：{question}\n\n"
+                            "你告诉我这个信息后，我会按同一目标继续收紧并重做计划。"
+                        )
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                delta=clarification_delta,
+                                metadata={
+                                    "requires_clarification": "true",
+                                    "clarification_source": "phase_b_quality_gate",
+                                    "review_decision": review_result.decision,
+                                    "quality_decision": quality_decision,
+                                    "review_id": review_result.review_id,
+                                    "plan_id": review_result.plan_id,
+                                },
+                            )
+                        )
+                        state.context_data["plan_review"] = review_result.to_dict()
+                        logger.info(
+                            "Plan %s bounced to clarification by Phase B quality gate",
+                            executable_plan.plan_id,
+                        )
+                        return route_decision, executable_plan, snapshot, True
 
                     review_requires_user_action = review_result.decision in [
                         ReviewDecision.REJECTED.value,
