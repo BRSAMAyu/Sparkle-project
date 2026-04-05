@@ -38,3 +38,30 @@ def test_planning_strategy_compiler_differs_by_readiness() -> None:
     assert provisional.plan_mode == PLAN_MODE_PROVISIONAL
     assert ask.plan_mode == PLAN_MODE_NEXT_STEP_ONLY
     assert full.required_plan_sections != ask.required_plan_sections
+
+
+def test_planning_strategy_compiler_applies_validated_outcome_learning_hints() -> None:
+    compiler = PlanningStrategyCompiler()
+
+    strategy = compiler.compile(
+        situation_brief={
+            "vision": {"primary_goal": "Pass exam"},
+            "current_state": {"snapshot": "Need a safer recovery plan"},
+            "decision_context": {"planning_readiness_action": "proceed", "planning_readiness": "high"},
+            "outcome_learning": {
+                "planning_bias_constraints": {
+                    "lighter_first_step": True,
+                    "grounding_mode": "mandatory",
+                    "scaffold_level": "high",
+                },
+                "plan_generation_hints_from_outcomes": ["Default to a lighter first step."],
+                "known_failure_avoidance_rules": ["Avoid dense first steps when similar conditions recur."],
+            },
+        },
+        user_context_payload={},
+    )
+
+    assert strategy.grounding_mode == "mandatory"
+    assert strategy.scaffold_level == "high"
+    assert strategy.pacing_profile == "light"
+    assert "Default to a lighter first step." in strategy.outcome_learning_hints

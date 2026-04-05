@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+from app.core.business_metrics import HUMAN_EVAL_REPEATED_FAILURE_TAGS_TOTAL
+
 
 ALLOWED_HUMAN_EVAL_ISSUE_TAGS = (
     "diagnosis_wrong",
@@ -89,6 +91,94 @@ class HumanEvalReviewService:
         strongest_positive_signal = str(summary.get("strongest_positive_signal") or "").strip()
         if strongest_positive_signal:
             lines.extend(["", "## Strongest Positive Signal", f"- {strongest_positive_signal}"])
+        return "\n".join(lines) + "\n"
+
+    def build_operations_report(
+        self,
+        payload: dict[str, Any],
+        *,
+        repeated_failure_threshold: int = 2,
+        release_blocker_threshold: int = 3,
+    ) -> dict[str, Any]:
+        summary = self.summarize_review_run(payload)
+        repeated_failures = [
+            dict(item)
+            for item in (summary.get("repeated_failures") or [])
+            if int(item.get("count") or 0) >= repeated_failure_threshold
+        ]
+        backlog_candidates = [
+            {
+                "tag": item["tag"],
+                "priority": "high" if item["tag"] in {"diagnosis_wrong", "grounding_weak"} else "medium",
+                "why_now": f"Repeated human-eval failure detected {item['count']} times.",
+            }
+            for item in repeated_failures
+        ]
+        release_blockers = [
+            {
+                "tag": item["tag"],
+                "reason": "Repeated serious failure should block the next pilot until resolved.",
+            }
+            for item in repeated_failures
+            if int(item.get("count") or 0) >= release_blocker_threshold
+            or item["tag"] in {"diagnosis_wrong", "grounding_weak"}
+        ]
+        repeated_failure_clusters = [
+            {
+                "cluster_id": f"{summary.get('scenario_id') or 'scenario'}:{item['tag']}",
+                "tag": item["tag"],
+                "count": item["count"],
+                "segment_ids": [
+                    segment["segment_id"]
+                    for segment in (summary.get("segments") or [])
+                    if item["tag"] in (segment.get("issue_tags") or [])
+                ],
+            }
+            for item in repeated_failures
+        ]
+        operating_recommendation = "continue_review"
+        if release_blockers:
+            operating_recommendation = "block_release_and_open_backlog_items"
+        elif backlog_candidates:
+            operating_recommendation = "open_backlog_items_before_next_iteration"
+
+        for item in repeated_failures:
+            HUMAN_EVAL_REPEATED_FAILURE_TAGS_TOTAL.labels(tag=item["tag"]).inc()
+
+        return {
+            **summary,
+            "repeated_failure_threshold": repeated_failure_threshold,
+            "release_blocker_threshold": release_blocker_threshold,
+            "repeated_failure_clusters": repeated_failure_clusters,
+            "backlog_candidates": backlog_candidates,
+            "release_blockers": release_blockers,
+            "operating_recommendation": operating_recommendation,
+        }
+
+    def render_operations_markdown(self, report: dict[str, Any]) -> str:
+        lines = [
+            "# Sparkle Human Eval Ops Loop",
+            "",
+            f"- Scenario: {report.get('scenario_id') or 'unknown'}",
+            f"- Operating recommendation: {report.get('operating_recommendation') or 'continue_review'}",
+            f"- Release blockers: {len(report.get('release_blockers') or [])}",
+            f"- Backlog candidates: {len(report.get('backlog_candidates') or [])}",
+        ]
+        blockers = report.get("release_blockers") or []
+        if blockers:
+            lines.extend(["", "## Release Blockers"])
+            for item in blockers:
+                lines.append(f"- {item['tag']}: {item['reason']}")
+        backlog = report.get("backlog_candidates") or []
+        if backlog:
+            lines.extend(["", "## Backlog Candidates"])
+            for item in backlog:
+                lines.append(f"- [{item['priority']}] {item['tag']}: {item['why_now']}")
+        clusters = report.get("repeated_failure_clusters") or []
+        if clusters:
+            lines.extend(["", "## Failure Clusters"])
+            for item in clusters:
+                lines.append(f"- {item['tag']}: {item['count']} ({', '.join(item['segment_ids'])})")
         return "\n".join(lines) + "\n"
 
     def _normalize_segment(self, segment: dict[str, Any], *, index: int) -> dict[str, Any]:

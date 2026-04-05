@@ -55,6 +55,11 @@ async def test_situation_brief_builder_uses_existing_context_sources() -> None:
                 "sentiment": "helped",
                 "user_words": "这样轻一点我就能开始了。",
             },
+            "validated_outcome_learning": {
+                "plan_generation_hints_from_outcomes": ["Default to a lighter first step."],
+                "known_failure_avoidance_rules": ["Avoid dense first steps when similar conditions recur."],
+                "validated_learnings": [{"learning_key": "dense_first_step_overloads_user"}],
+            },
         },
         plan_context={
             "plan_title": "热力学冲刺计划",
@@ -98,6 +103,8 @@ async def test_situation_brief_builder_uses_existing_context_sources() -> None:
     assert brief["decision_context"]["body_awareness_guidance"]["primary_subsystem"]["id"] == "galaxy"
     assert brief["decision_context"]["planning_readiness"] in {"medium", "high"}
     assert "progress_snapshot" in brief["source_trace"]["used_sources"]
+    assert "outcome_learning" in brief["source_trace"]["used_sources"]
+    assert brief["outcome_learning"]["plan_generation_hints_from_outcomes"][0] == "Default to a lighter first step."
     assert brief["source_trace"]["semantic_layer"]["adapter_name"] == StudyDomainSemanticAdapter.adapter_name
     assert "vision" in brief["semantic_primitives"]["source_mapping"]
 

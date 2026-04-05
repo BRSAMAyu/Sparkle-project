@@ -751,6 +751,7 @@ class AdaptiveReplanner:
             feedback_category=feedback_category,
             what_changes=what_changed if (what_changed := record.what_changed) else "调整了当前计划的执行参数",
             new_next_action="按新的轻量节奏推进下一步任务。",
+            outcome_learning=self._extract_outcome_learning(state.facts or {}),
         )
         adaptive_meta = self._append_revision_summary(adaptive_meta, revision_summary)
         adjustments["adaptive_meta"] = adaptive_meta
@@ -858,11 +859,13 @@ class AdaptiveReplanner:
     ) -> list[AdaptationRecord]:
         now = _utcnow().isoformat()
         record = self._build_replan_record(report, feedback_category)
+        state = await self.plan_state_service.get_plan_state(report.user_id, report.plan_id)
         revision_summary = self._build_revision_summary(
             report=report,
             feedback_category=feedback_category,
             what_changes="重新规划当前阶段的执行路径与任务顺序。",
             new_next_action="先按新的阶段起点重新启动，并完成新的第一步任务。",
+            outcome_learning=self._extract_outcome_learning((state.facts or {}) if state else {}),
         )
         adaptive_facts = {
             "adaptive_meta": {
@@ -1165,19 +1168,44 @@ class AdaptiveReplanner:
         feedback_category: str | None,
         what_changes: str,
         new_next_action: str,
+        outcome_learning: dict[str, Any] | None = None,
     ) -> PlanRevisionSummary:
         reasons = ", ".join(report.reasons) if report.reasons else "plan health drift"
         assumption_failed = (
             feedback_category
             or (report.reasons[0] if report.reasons else "current plan assumptions no longer fit execution reality")
         )
+        learning = outcome_learning if isinstance(outcome_learning, dict) else {}
+        failure_rules = [
+            str(item).strip()
+            for item in list(learning.get("known_failure_avoidance_rules") or [])
+            if str(item).strip()
+        ]
+        success_patterns = [
+            str(item).strip()
+            for item in list(learning.get("known_success_patterns") or [])
+            if str(item).strip()
+        ]
+        why_text = f"Recent execution signals showed that the current plan drifted because: {reasons}."
+        if failure_rules:
+            why_text = (
+                f"{why_text} This also matches validated learning: {failure_rules[0]}"
+            )
+        what_stays = "The main goal stays the same, and any progress already made should be preserved."
+        if success_patterns:
+            what_stays = f"{what_stays} Keep the validated success pattern: {success_patterns[0]}"
         return PlanRevisionSummary(
-            why_plan_changed=f"Recent execution signals showed that the current plan drifted because: {reasons}.",
+            why_plan_changed=why_text,
             what_assumption_failed=f"The assumption that '{assumption_failed}' would remain manageable did not hold.",
-            what_stays="The main goal stays the same, and any progress already made should be preserved.",
+            what_stays=what_stays,
             what_changes=what_changes,
             new_next_action=new_next_action,
         )
+
+    @staticmethod
+    def _extract_outcome_learning(facts: dict[str, Any]) -> dict[str, Any]:
+        learning = facts.get("validated_outcome_learning")
+        return dict(learning) if isinstance(learning, dict) else {}
 
     def _build_pattern_adaptation_record(self, adjustment: PlanParameterAdjustment) -> AdaptationRecord:
         effect_map = {

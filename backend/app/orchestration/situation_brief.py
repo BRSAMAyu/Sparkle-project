@@ -96,6 +96,7 @@ class SituationBrief:
     source_trace: dict[str, Any]
     insight_state: dict[str, Any] = field(default_factory=dict)
     planning_strategy: dict[str, Any] = field(default_factory=dict)
+    outcome_learning: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -115,6 +116,7 @@ class SituationBrief:
             "source_trace": self.source_trace,
             "insight_state": self.insight_state,
             "planning_strategy": self.planning_strategy,
+            "outcome_learning": self.outcome_learning,
         }
 
 
@@ -168,6 +170,13 @@ class SituationBriefBuilder:
         evidence = _as_dict(semantic_primitives.get("evidence"))
         intervention = _as_dict(semantic_primitives.get("intervention"))
         outcome = _as_dict(semantic_primitives.get("outcome"))
+        outcome_learning = _as_dict(
+            user_context.get("outcome_learning")
+            or user_context.get("validated_outcome_learning")
+            or _as_dict(user_context.get("plan_state_facts")).get("validated_outcome_learning")
+            or plan_context.get("outcome_learning")
+            or _as_dict(plan_context.get("facts")).get("validated_outcome_learning")
+        )
 
         # Phase A: User Insight Engine
         profile_context_raw = user_context.get("profile_context")
@@ -260,6 +269,7 @@ class SituationBriefBuilder:
             visible_update_context=visible_update_context,
             context_briefing_note=context_briefing_note,
             semantic_primitives=semantic_primitives,
+            outcome_learning=outcome_learning,
         )
         sparkle_self_state = self._build_sparkle_self_state(
             dual_core_decision=dual_core_decision,
@@ -373,6 +383,7 @@ class SituationBriefBuilder:
             source_trace=source_trace,
             insight_state=insight_state,
             planning_strategy=planning_strategy,
+            outcome_learning=outcome_learning,
         )
 
     def _build_source_trace(
@@ -385,6 +396,7 @@ class SituationBriefBuilder:
         visible_update_context: dict[str, Any],
         context_briefing_note: str | None,
         semantic_primitives: dict[str, Any],
+        outcome_learning: dict[str, Any],
     ) -> dict[str, Any]:
         used_sources: list[str] = []
         if _as_dict(user_context.get("profile_context")):
@@ -403,6 +415,8 @@ class SituationBriefBuilder:
             used_sources.append("context_briefing_note")
         if semantic_primitives:
             used_sources.append("semantic_state_mapper")
+        if outcome_learning:
+            used_sources.append("outcome_learning")
 
         timestamps = [
             _parse_dt(progress_snapshot.get("generated_at")),
@@ -452,6 +466,11 @@ class SituationBriefBuilder:
                     if isinstance(semantic_primitives.get(name), dict) and semantic_primitives.get(name)
                 ],
                 "source_mapping": _as_dict(semantic_primitives).get("source_mapping", {}),
+            },
+            "outcome_learning": {
+                "active": bool(outcome_learning),
+                "validated_learning_count": len(_as_list(outcome_learning.get("validated_learnings"))),
+                "known_failure_rule_count": len(_as_list(outcome_learning.get("known_failure_avoidance_rules"))),
             },
         }
 
@@ -793,6 +812,7 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     decision_context = _as_dict(payload.get("decision_context"))
     insight_state = _as_dict(payload.get("insight_state"))
     planning_strategy = _as_dict(payload.get("planning_strategy"))
+    outcome_learning = _as_dict(payload.get("outcome_learning"))
 
     current_line_parts = [
         _strip(current_state.get("snapshot")),
@@ -853,6 +873,13 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     strategy_line = " / ".join(bit for bit in strategy_bits if bit)
     if strategy_line:
         lines.append(f"- 规划策略: {strategy_line}")
+    learning_hints = [
+        _compact_text(item, limit=88)
+        for item in _as_list(outcome_learning.get("plan_generation_hints_from_outcomes"))
+        if _strip(item)
+    ]
+    if learning_hints:
+        lines.append(f"- 已验证学习提示: {'；'.join(learning_hints[:2])}")
     required_sections = [
         _strip(item)
         for item in _as_list(planning_strategy.get("required_plan_sections"))

@@ -908,6 +908,29 @@ def verify_intervention_outcomes_full(self):
         raise self.retry(exc=exc, countdown=2 ** self.request.retries)
 
 
+@celery_app.task(bind=True, max_retries=3, name="sweep_profile_outcome_learning")
+def sweep_profile_outcome_learning(self):
+    """Rebuild validated profile learning from profile-ledger behavioral evidence."""
+    from sqlalchemy import select
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.intervention_adaptive import BehavioralOutcome
+    from app.services.outcome_promotion_governor import OutcomePromotionGovernor
+
+    async def _sweep():
+        async with AsyncSessionLocal() as session:
+            governor = OutcomePromotionGovernor(session)
+            result = await session.execute(select(BehavioralOutcome.user_id).distinct())
+            user_ids = [row[0] for row in result.all() if row[0] is not None]
+            return await governor.sweep_profile_ledger_learning(user_ids=user_ids)
+
+    try:
+        return _run_async(_sweep())
+    except Exception as exc:
+        logger.error(f"Profile outcome learning sweep failed: {exc}")
+        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+
+
 # =============================================================================
 # 周期任务 (Beat Schedule)
 # =============================================================================
@@ -945,6 +968,12 @@ celery_app.conf.beat_schedule = {
     "intervention-outcomes-full": {
         "task": "verify_intervention_outcomes_full",
         "schedule": crontab(minute=0, hour=2),
+        "options": {"queue": "low_priority"}
+    },
+
+    "profile-outcome-learning-sweep": {
+        "task": "sweep_profile_outcome_learning",
+        "schedule": crontab(minute=20, hour="*/6"),
         "options": {"queue": "low_priority"}
     },
 

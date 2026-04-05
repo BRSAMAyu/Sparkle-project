@@ -247,6 +247,64 @@ def test_plan_quality_gate_rejects_when_rendered_full_plan_omits_grounding_secti
     assert any(issue.code == "missing_section:grounding_basis" for issue in report.issues)
 
 
+def test_plan_quality_gate_flags_missing_validated_learning_alignment() -> None:
+    gate = PlanQualityGate()
+    report = gate.evaluate(
+        plan=_plan("create_plan"),
+        user_message="Build a safer restart plan",
+        user_context={
+            "situation_brief": {
+                "decision_context": {
+                    "planning_readiness_action": "proceed",
+                    "planning_readiness": "high",
+                },
+                "planning_strategy": {
+                    "plan_mode": "full",
+                    "required_plan_sections": [
+                        "goal_frame",
+                        "assumptions",
+                        "readiness_fit",
+                        "workload_model",
+                        "sequence",
+                        "grounding_basis",
+                        "next_action",
+                        "adaptation_trigger",
+                        "failure_guard",
+                    ],
+                    "grounding_mode": "general_knowledge",
+                    "scaffold_level": "medium",
+                    "first_step_hint": "Start by outlining the full workload.",
+                },
+                "outcome_learning": {
+                    "planning_bias_constraints": {
+                        "lighter_first_step": True,
+                        "grounding_mode": "mandatory",
+                        "scaffold_level": "high",
+                    },
+                    "plan_generation_hints_from_outcomes": ["Default to a lighter first step."],
+                },
+            },
+            "user_material_grounding": {"status": "grounded", "results": [{"file_name": "notes.pdf"}]},
+            "rendered_plan_artifact": {
+                "text": (
+                    "Goal Frame\nRecover the plan safely.\n"
+                    "Key Assumptions\nAssume I can study 2 hours immediately.\n"
+                    "Readiness Fit\nThis is a full plan.\n"
+                    "Workload Model\nUse one 120-minute session.\n"
+                    "Sequence and Rationale\nStart with the full backlog.\n"
+                    "Grounding Basis\nUse notes.pdf.\n"
+                    "Next Action Within 24 Hours\nWork through the full backlog outline.\n"
+                    "Adaptation Trigger\nIf it slips, try again tomorrow.\n"
+                    "Failure Guard\nKeep pushing."
+                )
+            },
+        },
+    )
+
+    assert report.outcome_learning_score < 0.5
+    assert any(issue.code == "missed_validated_grounding_requirement" for issue in report.issues)
+
+
 def test_plan_quality_gate_accepts_provisional_plan_with_rendered_sections() -> None:
     gate = PlanQualityGate()
     report = gate.evaluate(

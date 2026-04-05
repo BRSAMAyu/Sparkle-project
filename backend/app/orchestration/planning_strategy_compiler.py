@@ -80,6 +80,10 @@ class CompiledPlanningStrategy:
     adaptation_trigger: str = ""
     first_step_hint: str = ""
     assumption_basis: tuple[str, ...] = ()
+    outcome_learning_hints: tuple[str, ...] = ()
+    known_failure_avoidance_rules: tuple[str, ...] = ()
+    known_success_patterns: tuple[str, ...] = ()
+    planning_bias_constraints: dict[str, Any] = field(default_factory=dict)
     version: str = PLANNING_STRATEGY_VERSION
     generated_at: str = field(default_factory=lambda: _utcnow().isoformat())
 
@@ -103,6 +107,10 @@ class CompiledPlanningStrategy:
             "adaptation_trigger": self.adaptation_trigger,
             "first_step_hint": self.first_step_hint,
             "assumption_basis": list(self.assumption_basis),
+            "outcome_learning_hints": list(self.outcome_learning_hints),
+            "known_failure_avoidance_rules": list(self.known_failure_avoidance_rules),
+            "known_success_patterns": list(self.known_success_patterns),
+            "planning_bias_constraints": dict(self.planning_bias_constraints),
             "version": self.version,
             "generated_at": self.generated_at,
         }
@@ -132,6 +140,27 @@ class PlanningStrategyCompiler:
         current_state = _as_dict(brief.get("current_state"))
         user_strategy_state = _as_dict(user_context.get("user_strategy_state"))
         material_grounding = _as_dict(user_context.get("user_material_grounding"))
+        outcome_learning = _as_dict(
+            brief.get("outcome_learning")
+            or user_context.get("outcome_learning")
+            or user_context.get("validated_outcome_learning")
+        )
+        planning_bias_constraints = _as_dict(outcome_learning.get("planning_bias_constraints"))
+        outcome_learning_hints = tuple(
+            _strip(item)
+            for item in _as_list(outcome_learning.get("plan_generation_hints_from_outcomes"))
+            if _strip(item)
+        )
+        known_failure_avoidance_rules = tuple(
+            _strip(item)
+            for item in _as_list(outcome_learning.get("known_failure_avoidance_rules"))
+            if _strip(item)
+        )
+        known_success_patterns = tuple(
+            _strip(item)
+            for item in _as_list(outcome_learning.get("known_success_patterns"))
+            if _strip(item)
+        )
 
         readiness_action = _strip(decision_context.get("planning_readiness_action") or insight_state.get("recommended_action"))
         readiness_level = _strip(decision_context.get("planning_readiness") or insight_state.get("readiness_level"))
@@ -185,6 +214,17 @@ class PlanningStrategyCompiler:
 
         first_step_hint = self._build_first_step_hint(plan_mode=plan_mode, overload_signal=overload_signal, plan_type=plan_type)
         adaptation_trigger = self._build_adaptation_trigger(overload_signal=overload_signal, deadline_days=deadline_days, plan_mode=plan_mode)
+        scaffold_level = str(planning_bias_constraints.get("scaffold_level") or scaffold_level)
+        if planning_bias_constraints.get("grounding_mode") == "mandatory":
+            grounding_mode = "mandatory"
+        if planning_bias_constraints.get("checkpoint_cadence") == "short":
+            checkpoint_cadence = "daily"
+        if planning_bias_constraints.get("lighter_first_step") is True:
+            first_step_hint = "Start with the lightest validated first step before expanding scope."
+            pacing_profile = "light"
+            assumption_basis.append("validated_learning_prefers_light_first_step")
+        if outcome_learning_hints:
+            assumption_basis.extend(item for item in outcome_learning_hints[:2] if item not in assumption_basis)
 
         return CompiledPlanningStrategy(
             plan_type=plan_type,
@@ -205,6 +245,10 @@ class PlanningStrategyCompiler:
             adaptation_trigger=adaptation_trigger,
             first_step_hint=first_step_hint,
             assumption_basis=tuple(assumption_basis),
+            outcome_learning_hints=outcome_learning_hints,
+            known_failure_avoidance_rules=known_failure_avoidance_rules,
+            known_success_patterns=known_success_patterns,
+            planning_bias_constraints=planning_bias_constraints,
         )
 
     @staticmethod

@@ -1,0 +1,288 @@
+[
+  {
+    "signal_id": "response_feedback_turn_reaction",
+    "signal_family": "turn_reaction",
+    "source_kind": "explicit_user_feedback",
+    "runtime_source": [
+      "backend/app/services/response_feedback_service.py",
+      "backend/app/models/response_feedback.py"
+    ],
+    "storage_or_state": [
+      "response_feedback",
+      "run_ledger feedback_received events",
+      "agent scoring and memory side effects"
+    ],
+    "evidence_level": "Turn Reaction",
+    "time_horizon": "single response to short horizon",
+    "durability_level": "durable row, weak semantic evidence",
+    "promotable_now": "session_only",
+    "current_consumers": [
+      "prompt bandit updates",
+      "agent scoring",
+      "agent memory preference inference",
+      "content quality evaluator",
+      "context-pack budget tuning linkage"
+    ],
+    "known_blind_spots": [
+      "does not prove plan success or user progress",
+      "no shared freshness or conflict contract",
+      "stored durably but semantically mostly turn-level"
+    ]
+  },
+  {
+    "signal_id": "context_pack_feedback_turn_reaction",
+    "signal_family": "turn_reaction",
+    "source_kind": "derived_pack_feedback",
+    "runtime_source": [
+      "backend/app/services/response_feedback_service.py",
+      "backend/app/models/context_pack.py"
+    ],
+    "storage_or_state": [
+      "context_pack_feedback",
+      "context_pack_runs"
+    ],
+    "evidence_level": "Turn Reaction",
+    "time_horizon": "single response to pack-run horizon",
+    "durability_level": "durable row, optimization signal",
+    "promotable_now": "session_only",
+    "current_consumers": [
+      "budget tuning service",
+      "pack-run linkage for context quality tuning"
+    ],
+    "known_blind_spots": [
+      "optimizes retrieval/context shape, not outcome learning",
+      "no promotion path into plan or profile truth",
+      "does not distinguish sentiment from real progress"
+    ]
+  },
+  {
+    "signal_id": "intervention_acceptance_and_feedback_binding",
+    "signal_family": "intervention_feedback",
+    "source_kind": "acceptance_lifecycle_plus_conversation_binding",
+    "runtime_source": [
+      "backend/app/services/intervention_record_service.py",
+      "backend/app/services/intervention_feedback_binding_service.py",
+      "backend/app/models/card_protocol.py"
+    ],
+    "storage_or_state": [
+      "intervention_records.acceptance_status",
+      "intervention_records.action_payload.conversation_feedback_log",
+      "redis session active intervention memory",
+      "redis last_feedback_binding"
+    ],
+    "evidence_level": "Behavioral Signal",
+    "time_horizon": "session to short episode horizon",
+    "durability_level": "mixed session cache plus durable intervention record",
+    "promotable_now": "session_to_episode_only",
+    "current_consumers": [
+      "experience actuator auto-binding",
+      "intervention strategy learner",
+      "semantic outcome primitives",
+      "notification analytics"
+    ],
+    "known_blind_spots": [
+      "binding still mixes sentiment and evidence in one surface",
+      "no canonical normalization across plan and non-plan interventions",
+      "no explicit evidence strength or reversibility contract"
+    ]
+  },
+  {
+    "signal_id": "behavioral_outcome_tracker_records",
+    "signal_family": "behavioral_outcome",
+    "source_kind": "post_intervention_behavior_event",
+    "runtime_source": [
+      "backend/app/services/behavioral_outcome_tracker.py",
+      "backend/app/models/intervention_adaptive.py"
+    ],
+    "storage_or_state": [
+      "behavioral_outcomes"
+    ],
+    "evidence_level": "Behavioral Signal",
+    "time_horizon": "short-horizon post-intervention window",
+    "durability_level": "durable row",
+    "promotable_now": "not_promoted_directly",
+    "current_consumers": [
+      "adaptive intervention analytics",
+      "future candidate input for plan outcome aggregation"
+    ],
+    "known_blind_spots": [
+      "currently isolated from plan outcome learning",
+      "no shared conflict resolution with other outcome surfaces",
+      "not wired into profile or episode promotion governance"
+    ]
+  },
+  {
+    "signal_id": "intervention_outcome_verification",
+    "signal_family": "plan_outcome_proxy",
+    "source_kind": "verified_intervention_effectiveness",
+    "runtime_source": [
+      "backend/app/services/card_protocol/outcome_verifier.py",
+      "backend/app/services/intervention_record_service.py",
+      "backend/app/models/card_protocol.py"
+    ],
+    "storage_or_state": [
+      "intervention_records.outcome_status",
+      "intervention_records.evidence_payload"
+    ],
+    "evidence_level": "Plan Outcome",
+    "time_horizon": "outcome_window_days and periodic verification sweep",
+    "durability_level": "durable row with evidence payload",
+    "promotable_now": "used_for_strategy_learning_only",
+    "current_consumers": [
+      "intervention strategy learner",
+      "card protocol artifact summaries",
+      "phase pipeline verification"
+    ],
+    "known_blind_spots": [
+      "outcome resolution is intervention-centric, not a canonical plan outcome record",
+      "plan health, mastery, and execution evidence remain fragmented",
+      "no common shape with human-review findings or plan feedback"
+    ]
+  },
+  {
+    "signal_id": "plan_feedback_and_rejection_tracking",
+    "signal_family": "plan_feedback",
+    "source_kind": "review_and_user_feedback_log",
+    "runtime_source": [
+      "backend/app/services/plan_feedback_service.py",
+      "backend/app/services/plan_state_service.py",
+      "backend/app/models/plan_state.py"
+    ],
+    "storage_or_state": [
+      "plan_states.feedback_log",
+      "plan_states.consecutive_rejection_count",
+      "plan_states.constraints.require_phase_rollback"
+    ],
+    "evidence_level": "Turn Reaction",
+    "time_horizon": "plan episode horizon",
+    "durability_level": "durable plan-state log",
+    "promotable_now": "episode_only",
+    "current_consumers": [
+      "plan review loop",
+      "rollback triggering",
+      "artifact summaries"
+    ],
+    "known_blind_spots": [
+      "feedback log mixes review comments, user feedback, and adjustment metadata",
+      "no explicit split between sentiment, execution failure, and validated plan outcome",
+      "rejection tracking is safety useful but not yet learning-governed"
+    ]
+  },
+  {
+    "signal_id": "plan_health_and_execution_miss_proxies",
+    "signal_family": "plan_outcome_proxy",
+    "source_kind": "derived_plan_health_and_execution_state",
+    "runtime_source": [
+      "backend/app/services/card_protocol/outcome_verifier.py",
+      "backend/app/services/growth_dashboard_service.py",
+      "backend/app/models/plan_state.py"
+    ],
+    "storage_or_state": [
+      "plan state facts and constraints",
+      "task completion state",
+      "focus session aggregates",
+      "card metadata recovery and replan evidence"
+    ],
+    "evidence_level": "Plan Outcome",
+    "time_horizon": "episode to multi-day horizon",
+    "durability_level": "fragmented durable and derived state",
+    "promotable_now": "not_promoted_directly",
+    "current_consumers": [
+      "outcome verifier heuristics",
+      "dashboard growth signal snapshots",
+      "replan and rollback logic"
+    ],
+    "known_blind_spots": [
+      "execution misses are inferred indirectly across multiple stores",
+      "no canonical source for plan attempt versus observed outcome",
+      "evidence freshness and conflict handling are implicit"
+    ]
+  },
+  {
+    "signal_id": "task_feedback_difficulty_and_clarity",
+    "signal_family": "task_feedback",
+    "source_kind": "task_level_user_feedback",
+    "runtime_source": [
+      "backend/app/models/task_feedback.py",
+      "backend/app/services/task_feedback_service.py"
+    ],
+    "storage_or_state": [
+      "task_feedbacks",
+      "reflection_payload"
+    ],
+    "evidence_level": "Behavioral Signal",
+    "time_horizon": "task to short episode horizon",
+    "durability_level": "durable row",
+    "promotable_now": "session_to_preference_tuning_only",
+    "current_consumers": [
+      "task reflection prompts",
+      "difficulty and depth preference inference",
+      "adaptive replanner triggers"
+    ],
+    "known_blind_spots": [
+      "good signal for difficulty and clarity, weak signal for full plan success",
+      "no shared outcome taxonomy with plan and intervention layers",
+      "promotion semantics are preference-oriented rather than outcome-oriented"
+    ]
+  },
+  {
+    "signal_id": "human_eval_review_repeated_failures",
+    "signal_family": "human_truth",
+    "source_kind": "human_transcript_review",
+    "runtime_source": [
+      "backend/app/services/human_eval_review_service.py",
+      "docs/product/evaluation/SPARKLE_NORTH_STAR_HUMAN_EVALUATION_PROTOCOL_2026-04-04.md"
+    ],
+    "storage_or_state": [
+      "normalized review payloads",
+      "markdown summaries",
+      "repeated_failures arrays",
+      "must_fix_before_next_pilot tags"
+    ],
+    "evidence_level": "Human Truth",
+    "time_horizon": "scenario to release horizon",
+    "durability_level": "report-level artifact",
+    "promotable_now": "manual_product_loop_only",
+    "current_consumers": [
+      "evaluation summaries",
+      "human review decision support"
+    ],
+    "known_blind_spots": [
+      "stops at summary and repeated-failure detection",
+      "not yet connected to backlog labels or release blockers",
+      "not yet fed into future planning or insight compilation as validated learning"
+    ]
+  },
+  {
+    "signal_id": "companion_relationship_promotion_guardrails",
+    "signal_family": "promotion_governance",
+    "source_kind": "repeated_evidence_guardrail",
+    "runtime_source": [
+      "backend/app/services/companion_state_service.py",
+      "backend/app/services/relationship_profile_service.py",
+      "backend/app/services/self_revision_service.py",
+      "backend/app/services/user_strategy_state_service.py"
+    ],
+    "storage_or_state": [
+      "session companion redis state",
+      "plan state facts companion_state",
+      "preference inferred companion_state",
+      "companion revision histories",
+      "relationship profile inferred notes"
+    ],
+    "evidence_level": "Behavioral Signal",
+    "time_horizon": "session to profile horizon",
+    "durability_level": "bounded cross-layer revision history",
+    "promotable_now": "session_to_episode_to_profile_with_gates",
+    "current_consumers": [
+      "effective companion state compilation",
+      "relationship profile inference",
+      "layer alignment and conflict visibility"
+    ],
+    "known_blind_spots": [
+      "governance exists for companion/relationship state, not for canonical outcome learning",
+      "promotion rules are field-specific and not yet shared across Phase C evidence surfaces",
+      "validated outcome learning still lacks a common governor"
+    ]
+  }
+]

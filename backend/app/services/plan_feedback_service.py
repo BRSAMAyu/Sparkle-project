@@ -18,6 +18,13 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.orchestration.schemas import PlanFeedback
+from app.services.outcome_learning_service import OutcomeLearningService
+from app.services.outcome_promotion_governor import OutcomePromotionGovernor
+from app.services.plan_outcome_service import (
+    EVIDENCE_LEVEL_PLAN_OUTCOME,
+    EVIDENCE_LEVEL_TURN_REACTION,
+    PlanOutcomeService,
+)
 from app.services.plan_state_service import PlanStateService
 
 if TYPE_CHECKING:
@@ -42,6 +49,9 @@ class PlanFeedbackService:
         self.db = db
         self.redis = redis
         self._plan_state_service = PlanStateService(db, redis)
+        self._plan_outcome_service = PlanOutcomeService(db, redis)
+        self._outcome_learning_service = OutcomeLearningService(db, redis)
+        self._outcome_promotion_governor = OutcomePromotionGovernor(db, redis)
 
     async def append_review_feedback(
         self,
@@ -93,6 +103,28 @@ class PlanFeedbackService:
         logger.info(
             f"Review feedback appended: plan_id={plan_id}, "
             f"review_id={review_result.review_id}, decision={feedback.decision}"
+        )
+
+        await self._plan_outcome_service.record_outcome(
+            user_id,
+            source_family="plan_review_feedback",
+            source_id=str(review_result.review_id),
+            evidence_level=EVIDENCE_LEVEL_TURN_REACTION,
+            target_type="plan",
+            target_layer="episode",
+            target_object=str(plan_id),
+            target_hypothesis="plan_review_feedback",
+            observed_outcome=feedback.feedback_type,
+            outcome_signal={
+                "decision": feedback.decision,
+                "priority": feedback.priority,
+                "review_decision": feedback.review_decision,
+            },
+            time_horizon="plan_review_turn",
+            confidence=0.62,
+            evidence_strength="medium",
+            evidence_sources=["plan_feedback_service", "plan_review_service"],
+            plan_id=plan_id,
         )
 
         return state.to_dict() if state else None
@@ -147,6 +179,28 @@ class PlanFeedbackService:
             f"User feedback appended: plan_id={plan_id}, decision={decision}"
         )
 
+        await self._plan_outcome_service.record_outcome(
+            user_id,
+            source_family="plan_user_feedback",
+            source_id=f"{plan_id}:{decision}:{len(content)}",
+            evidence_level=EVIDENCE_LEVEL_TURN_REACTION,
+            target_type="plan",
+            target_layer="episode",
+            target_object=str(plan_id),
+            target_hypothesis="plan_user_feedback",
+            observed_outcome=decision,
+            outcome_signal={
+                "priority": priority,
+                "content": content[:180],
+                "related_task_id": str(related_task_id) if related_task_id else "",
+            },
+            time_horizon="plan_episode",
+            confidence=0.6,
+            evidence_strength="medium",
+            evidence_sources=["plan_feedback_service"],
+            plan_id=plan_id,
+        )
+
         return state.to_dict() if state else None
 
     async def track_rejection(
@@ -194,6 +248,30 @@ class PlanFeedbackService:
             )
             logger.info(
                 f"Phase rollback triggered: plan_id={plan_id}, rejection_count={new_count}"
+            )
+            await self._plan_outcome_service.record_outcome(
+                user_id,
+                source_family="plan_rejection_tracking",
+                source_id=f"{plan_id}:rollback:{new_count}",
+                evidence_level=EVIDENCE_LEVEL_PLAN_OUTCOME,
+                target_type="plan",
+                target_layer="episode",
+                target_object=str(plan_id),
+                target_hypothesis="repeated_plan_rejection",
+                observed_outcome="repeated_rejection_triggered",
+                outcome_signal={"rejection_count": new_count, "requires_rollback": True},
+                time_horizon="plan_episode",
+                confidence=0.84,
+                evidence_strength="strong",
+                evidence_sources=["plan_feedback_service", "plan_state_service"],
+                planning_implications={"lighter_first_step": True, "scaffold_level": "high", "checkpoint_cadence": "short"},
+                plan_id=plan_id,
+            )
+            report = await self._outcome_learning_service.build_report_for_scope(user_id, plan_id=plan_id)
+            await self._outcome_promotion_governor.apply_learning_report(
+                user_id,
+                report=report,
+                plan_id=plan_id,
             )
 
         return (new_count, should_rollback)

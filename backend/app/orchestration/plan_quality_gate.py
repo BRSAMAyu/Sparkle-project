@@ -60,6 +60,7 @@ class PlanQualityReport:
     grounding_score: float
     next_action_score: float
     adaptation_score: float
+    outcome_learning_score: float
     issues: tuple[PlanQualityIssue, ...] = field(default_factory=tuple)
     decision: str = "approve"
     contract_mode: str = PLAN_MODE_FULL
@@ -75,6 +76,7 @@ class PlanQualityReport:
             "grounding_score": round(float(self.grounding_score), 4),
             "next_action_score": round(float(self.next_action_score), 4),
             "adaptation_score": round(float(self.adaptation_score), 4),
+            "outcome_learning_score": round(float(self.outcome_learning_score), 4),
             "issues": [item.to_dict() for item in self.issues],
             "decision": self.decision,
             "contract_mode": self.contract_mode,
@@ -106,6 +108,11 @@ class PlanQualityGate:
         )
         material_grounding = _as_dict(normalized_context.get("user_material_grounding"))
         rendered_plan_artifact = parse_rendered_plan_artifact(normalized_context.get("rendered_plan_artifact"))
+        outcome_learning = _as_dict(
+            situation_brief.get("outcome_learning")
+            or normalized_context.get("outcome_learning")
+            or normalized_context.get("validated_outcome_learning")
+        )
         readiness_action = _strip(decision_context.get("planning_readiness_action"))
         contract_mode = self.contract.classify_mode(
             readiness_action=readiness_action,
@@ -165,6 +172,12 @@ class PlanQualityGate:
             rendered_plan_artifact=rendered_plan_artifact,
             issues=issues,
         )
+        outcome_learning_score = self._score_outcome_learning_alignment(
+            planning_strategy=planning_strategy,
+            outcome_learning=outcome_learning,
+            rendered_plan_artifact=rendered_plan_artifact,
+            issues=issues,
+        )
 
         for missing in coverage.missing_sections:
             severity = "critical" if contract_mode == PLAN_MODE_FULL else "warning"
@@ -181,7 +194,8 @@ class PlanQualityGate:
             + feasibility_score * 0.20
             + grounding_score * 0.20
             + next_action_score * 0.20
-            + adaptation_score * 0.15
+            + adaptation_score * 0.10
+            + outcome_learning_score * 0.05
         )
         if coverage.missing_sections:
             overall_score = max(0.0, overall_score - min(len(coverage.missing_sections) * 0.06, 0.24))
@@ -203,6 +217,7 @@ class PlanQualityGate:
             grounding_score=grounding_score,
             next_action_score=next_action_score,
             adaptation_score=adaptation_score,
+            outcome_learning_score=outcome_learning_score,
             issues=tuple(issues),
             decision=decision,
             contract_mode=contract_mode,
@@ -210,6 +225,58 @@ class PlanQualityGate:
             artifact_coverage=coverage.to_dict(),
             metadata_expectations=metadata_expectations.to_dict(),
         )
+
+    def _score_outcome_learning_alignment(
+        self,
+        *,
+        planning_strategy: dict[str, Any],
+        outcome_learning: dict[str, Any],
+        rendered_plan_artifact: Any,
+        issues: list[PlanQualityIssue],
+    ) -> float:
+        hints = [_strip(item) for item in _as_list(outcome_learning.get("plan_generation_hints_from_outcomes")) if _strip(item)]
+        if not hints:
+            return 0.75
+        constraints = _as_dict(outcome_learning.get("planning_bias_constraints"))
+        score = 0.9
+        strategy_hint_text = " | ".join(
+            part
+            for part in (
+                _strip(planning_strategy.get("first_step_hint")),
+                " | ".join(_strip(item) for item in _as_list(planning_strategy.get("outcome_learning_hints")) if _strip(item)),
+                _strip(planning_strategy.get("grounding_mode")),
+                _strip(planning_strategy.get("scaffold_level")),
+            )
+            if part
+        ).lower()
+        if constraints.get("lighter_first_step") is True and "light" not in strategy_hint_text:
+            score -= 0.25
+            issues.append(
+                PlanQualityIssue(
+                    code="missed_validated_light_first_step",
+                    message="Validated outcome learning says to start lighter, but the planning strategy did not reflect that.",
+                    severity="warning",
+                )
+            )
+        if constraints.get("grounding_mode") == "mandatory" and _strip(planning_strategy.get("grounding_mode")) != "mandatory":
+            score -= 0.3
+            issues.append(
+                PlanQualityIssue(
+                    code="missed_validated_grounding_requirement",
+                    message="Validated outcome learning requires grounding, but the planning strategy did not enforce it.",
+                    severity="critical",
+                )
+            )
+        if constraints.get("scaffold_level") == "high" and _strip(planning_strategy.get("scaffold_level")) != "high":
+            score -= 0.2
+            issues.append(
+                PlanQualityIssue(
+                    code="missed_validated_scaffold_level",
+                    message="Validated outcome learning requires higher scaffolding than the current strategy provides.",
+                    severity="warning",
+                )
+            )
+        return max(0.0, score)
 
     @staticmethod
     def _tool_calls(plan: Any) -> list[Any]:

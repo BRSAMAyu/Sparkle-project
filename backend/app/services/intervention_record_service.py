@@ -30,6 +30,13 @@ from app.models.card_protocol import (
     DeliveryChannel,
 )
 from app.core.event_bus import EventBus
+from app.services.outcome_learning_service import OutcomeLearningService
+from app.services.outcome_promotion_governor import OutcomePromotionGovernor
+from app.services.plan_outcome_service import EVIDENCE_LEVEL_PLAN_OUTCOME, PlanOutcomeService
+
+
+def _strip(value: object) -> str:
+    return str(value or "").strip()
 
 
 _VALID_ACCEPTANCE_TRANSITIONS: dict[InterventionAcceptanceStatus, set[InterventionAcceptanceStatus]] = {
@@ -63,6 +70,9 @@ class InterventionRecordService:
     def __init__(self, db: AsyncSession, event_bus: EventBus | None = None):
         self.db = db
         self.event_bus = event_bus
+        self.plan_outcome_service = PlanOutcomeService(db)
+        self.outcome_learning_service = OutcomeLearningService(db)
+        self.outcome_promotion_governor = OutcomePromotionGovernor(db)
 
     # ------------------------------------------------------------------
     # Create
@@ -202,6 +212,34 @@ class InterventionRecordService:
         await self.db.flush()
 
         await self._publish_status_change(record, old_outcome=old_outcome)
+        legacy_plan_id = self._extract_legacy_plan_id(record, evidence_payload or {})
+        await self.plan_outcome_service.record_outcome(
+            record.user_id,
+            source_family="intervention_outcome_verification",
+            source_id=str(record.id),
+            evidence_level=EVIDENCE_LEVEL_PLAN_OUTCOME,
+            target_type="intervention",
+            target_layer="episode" if legacy_plan_id else "session",
+            target_object=str(record.id),
+            target_hypothesis=str(record.trigger_type.value if record.trigger_type else "intervention_effectiveness"),
+            observed_outcome=str(outcome.value if outcome else ""),
+            outcome_signal={"acceptance_status": record.acceptance_status.value, "evidence_payload": evidence_payload or {}},
+            time_horizon=f"{record.outcome_window_days}_days",
+            confidence=0.82 if outcome != InterventionOutcomeStatus.UNKNOWN else 0.6,
+            evidence_strength="strong" if outcome != InterventionOutcomeStatus.UNKNOWN else "medium",
+            evidence_sources=["intervention_record_service", "outcome_verifier"],
+            planning_implications=self._derive_planning_implications(record, outcome, evidence_payload or {}),
+            plan_id=legacy_plan_id,
+            intervention_id=record.id,
+            persist_profile_ledger=legacy_plan_id is None,
+        )
+        if legacy_plan_id:
+            report = await self.outcome_learning_service.build_report_for_scope(record.user_id, plan_id=legacy_plan_id)
+            await self.outcome_promotion_governor.apply_learning_report(
+                record.user_id,
+                report=report,
+                plan_id=legacy_plan_id,
+            )
         return record
 
     async def batch_resolve_pending(self) -> int:
@@ -259,6 +297,42 @@ class InterventionRecordService:
         if resolved:
             await self.db.commit()
         return resolved
+
+    @staticmethod
+    def _extract_legacy_plan_id(record: InterventionRecord, evidence_payload: dict[str, Any]) -> str | None:
+        candidates = [
+            _strip(((evidence_payload.get("improvement") or {}).get("legacy_plan_id"))),
+            _strip((record.diagnosis_payload or {}).get("legacy_plan_id")),
+            _strip((record.action_payload or {}).get("plan_id")),
+        ]
+        for item in candidates:
+            try:
+                if item:
+                    return str(uuid.UUID(item))
+            except ValueError:
+                continue
+        return None
+
+    @staticmethod
+    def _derive_planning_implications(
+        record: InterventionRecord,
+        outcome: InterventionOutcomeStatus,
+        evidence_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        implications: dict[str, Any] = {}
+        improvement = evidence_payload.get("improvement") if isinstance(evidence_payload.get("improvement"), dict) else {}
+        trigger = record.trigger_type.value if record.trigger_type else ""
+        if trigger in {InterventionTriggerType.OVERLOAD.value, InterventionTriggerType.STALL_PATTERN.value}:
+            implications["lighter_first_step"] = True
+            implications["scaffold_level"] = "high"
+            implications["checkpoint_cadence"] = "short"
+        if trigger == InterventionTriggerType.PLAN_RISK.value:
+            implications["checkpoint_cadence"] = "short"
+        if improvement.get("parameter_strategy_effective") or outcome == InterventionOutcomeStatus.EFFECTIVE:
+            implications["preserve_success_pattern"] = True
+        if record.acceptance_status == InterventionAcceptanceStatus.ACTED:
+            implications.setdefault("lighter_first_step", False)
+        return implications
 
     # ------------------------------------------------------------------
     # Query helpers
