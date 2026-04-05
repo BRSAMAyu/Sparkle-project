@@ -123,8 +123,8 @@ async def test_validate_plan_execution_uses_dag_path(monkeypatch) -> None:
         async def validate_and_record(self, **_kwargs):
             raise AssertionError("legacy validate_and_record path should not be called")
 
-    monkeypatch.setattr("app.orchestration.orchestrator.PlanExecutionValidator", MockValidator)
-    monkeypatch.setattr("app.orchestration.orchestrator.PlanExecutionRecordService", lambda _db: object())
+    monkeypatch.setattr("app.orchestration.validation_engine.PlanExecutionValidator", MockValidator)
+    monkeypatch.setattr("app.orchestration.validation_engine.PlanExecutionRecordService", lambda _db: object())
 
     plan_id = str(uuid4())
     executable_plan = ExecutablePlan(

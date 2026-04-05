@@ -8,6 +8,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 import json
 
+
+def _async_db_mock():
+    db_mock = MagicMock()
+    db_mock.execute = AsyncMock()
+    db_mock.rollback = AsyncMock()
+    db_mock.commit = AsyncMock()
+    db_mock.add = MagicMock()
+    return db_mock
+
 @pytest.mark.asyncio
 async def test_full_agent_flow_with_redis():
     """
@@ -37,8 +46,7 @@ async def test_full_agent_flow_with_redis():
     redis_mock.ttl = AsyncMock(return_value=3600)
     
     # DB mock
-    db_mock = MagicMock()
-    db_mock.execute = AsyncMock()
+    db_mock = _async_db_mock()
     
     # Mock user data
     mock_user = MagicMock()
@@ -135,13 +143,13 @@ async def test_idempotency_flow():
     redis_mock.keys = AsyncMock(return_value=[])
     redis_mock.ttl = AsyncMock(return_value=3600)
     
-    db_mock = MagicMock()
-    db_mock.execute = AsyncMock()
-    
+    db_mock = _async_db_mock()
+
     orchestrator = ChatOrchestrator(db_session=db_mock, redis_client=redis_mock)
+    user_id = str(uuid4())
     
     request = agent_service_pb2.ChatRequest(
-        user_id="user-123",
+        user_id=user_id,
         session_id="session-456",
         request_id="req-789",
         message="Test"
@@ -209,13 +217,13 @@ async def test_concurrent_session_protection():
     redis_mock.keys = AsyncMock(return_value=[])
     redis_mock.ttl = AsyncMock(return_value=3600)
     
-    db_mock = MagicMock()
-    db_mock.execute = AsyncMock()
-    
+    db_mock = _async_db_mock()
+
     orchestrator = ChatOrchestrator(db_session=db_mock, redis_client=redis_mock)
+    user_id = str(uuid4())
     
     request = agent_service_pb2.ChatRequest(
-        user_id="user-123",
+        user_id=user_id,
         session_id="session-456",
         request_id="req-789",
         message="Test"

@@ -141,6 +141,51 @@ class CompanionStateService:
             ][:3],
         }
 
+    async def get_layer_alignment(
+        self,
+        user_id: UUID,
+        *,
+        plan_id: UUID | str | None = None,
+        session_id: str | None = None,
+    ) -> dict[str, Any]:
+        profile_state = self._normalize_companion_state(await self._get_profile_companion_state(user_id))
+        episode_state = self._normalize_companion_state(await self._get_episode_companion_state(user_id, plan_id))
+        session_state = self._normalize_companion_state(await self._get_session_companion_state(session_id))
+
+        conflicts: list[dict[str, Any]] = []
+        for field in _PROFILE_PROMOTABLE_FIELDS:
+            values = [
+                {"layer": layer_name, "value": layer_state.get(field)}
+                for layer_name, layer_state in (
+                    ("profile", profile_state),
+                    ("episode", episode_state),
+                    ("session", session_state),
+                )
+                if field in layer_state
+            ]
+            normalized_values = {
+                self._normalize_revision_value(item["value"])
+                for item in values
+                if item["value"] is not None and str(item["value"]).strip() != ""
+            }
+            if len(normalized_values) > 1:
+                conflicts.append(
+                    {
+                        "field": field,
+                        "values": values,
+                        "resolution_rule": "Prefer session for the current turn; require stronger repeated evidence before profile overwrite.",
+                    }
+                )
+
+        return {
+            "constitutional": {"status": "mostly_built", "writes_allowed": False},
+            "session": {"status": "built_v1", "writes_allowed": True, "active_fields": sorted(session_state.keys())},
+            "episode": {"status": "partially_built", "writes_allowed": "promotion_only", "active_fields": sorted(episode_state.keys())},
+            "profile": {"status": "partially_built", "writes_allowed": "evidence_gated", "active_fields": sorted(profile_state.keys())},
+            "conflicts": conflicts,
+            "silent_drift_risk": "elevated" if conflicts else "bounded",
+        }
+
     async def write_session_state(
         self,
         *,
@@ -218,13 +263,23 @@ class CompanionStateService:
                 )
             )
 
+        profile_state_before = (
+            await self._get_profile_companion_state(user_id)
+            if normalized_field in _PROFILE_PROMOTABLE_FIELDS
+            else {}
+        )
+        profile_conflict = self._has_cross_session_conflict(
+            existing_state=profile_state_before,
+            field=normalized_field,
+            new_value=new_value,
+        )
         if normalized_field in _PROFILE_PROMOTABLE_FIELDS and self._should_promote_to_profile(
             field=normalized_field,
             evidence=evidence_payload,
             confidence=confidence_value,
             matching_revision_count=matching_revision_count,
+            has_conflict=profile_conflict,
         ):
-            profile_state_before = await self._get_profile_companion_state(user_id)
             profile_revision = self.self_revision_service.build_revision(
                 field=normalized_field,
                 layer="profile",
@@ -255,7 +310,16 @@ class CompanionStateService:
                 plan_id=plan_id,
                 session_id=session_id,
             ),
+            "layer_alignment": await self.get_layer_alignment(
+                user_id,
+                plan_id=plan_id,
+                session_id=session_id,
+            ),
             "promotions": promotions,
+            "conflict_resolution": {
+                "profile_conflict": profile_conflict,
+                "rule": "Conflicting cross-session signals require stronger repeated evidence before profile overwrite.",
+            },
         }
 
     async def write_companion_growth_note(
@@ -480,13 +544,31 @@ class CompanionStateService:
         evidence: dict[str, Any],
         confidence: float,
         matching_revision_count: int,
+        has_conflict: bool = False,
     ) -> bool:
+        required_confidence = 0.9 if has_conflict else 0.8
+        required_matches = 4 if has_conflict else 3
         return (
             field in _PROFILE_PROMOTABLE_FIELDS
             and bool(evidence.get("measurable_effect"))
-            and confidence >= 0.8
-            and matching_revision_count >= 3
+            and confidence >= required_confidence
+            and matching_revision_count >= required_matches
         )
+
+    @classmethod
+    def _has_cross_session_conflict(
+        cls,
+        *,
+        existing_state: dict[str, Any] | None,
+        field: str,
+        new_value: Any,
+    ) -> bool:
+        if not isinstance(existing_state, dict) or field not in existing_state:
+            return False
+        current_value = existing_state.get(field)
+        if current_value is None or str(current_value).strip() == "":
+            return False
+        return cls._normalize_revision_value(current_value) != cls._normalize_revision_value(new_value)
 
     @staticmethod
     def _coerce_plan_uuid(plan_id: UUID | str | None) -> UUID | None:

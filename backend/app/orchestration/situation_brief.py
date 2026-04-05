@@ -7,6 +7,7 @@ from typing import Any
 from app.orchestration.decision_policy import DecisionPolicyCompiler
 from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
 from app.semantic.state_primitives import StudyDomainSemanticAdapter
+from app.services.capability_registry_service import CapabilityRegistryService
 
 
 def _utcnow() -> datetime:
@@ -218,6 +219,13 @@ class SituationBriefBuilder:
             **diagnosis,
             **decision_policy,
         }
+        capability_guidance = CapabilityRegistryService().recommend_runtime_capabilities(
+            route_intent=_strip(context_focus.get("route_intent") or current_state.get("route_intent")),
+            experience_mode=_strip(decision_context.get("experience_mode")),
+            grounding_priority=_as_list(decision_context.get("grounding_priority")),
+            active_plan=_strip(vision.get("active_plan")),
+        )
+        decision_context["body_awareness_guidance"] = capability_guidance
         focus_question = self._build_focus_question(
             vision=vision,
             primary_obstacle=primary_obstacle,
@@ -550,7 +558,16 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     policy_line = " / ".join(bit for bit in policy_bits if bit)
     if policy_line:
         lines.append(f"- 决策策略: {policy_line}")
+    body_guidance = _as_dict(decision_context.get("body_awareness_guidance"))
+    primary_subsystem = _as_dict(body_guidance.get("primary_subsystem"))
+    subsystem_label = _strip(primary_subsystem.get("label") or primary_subsystem.get("id"))
+    subsystem_why = _strip(primary_subsystem.get("why"))
+    if subsystem_label:
+        lines.append(
+            f"- 当前优先调用的系统器官: {subsystem_label}"
+            + (f"；原因: {subsystem_why}" if subsystem_why else "")
+        )
     stance_line = _strip(stance.get("stance"))
     if stance_line:
         lines.append(f"- 本轮站位: {stance_line}")
-    return "\n" + "\n".join(lines[:14])
+    return "\n" + "\n".join(lines[:15])

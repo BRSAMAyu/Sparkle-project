@@ -407,3 +407,72 @@ async def test_recent_revisions_are_sorted_by_timestamp_descending() -> None:
     revisions = await service.get_recent_revisions(user_id, plan_id=plan_id, session_id="session-sort")
 
     assert [item["layer"] for item in revisions[:3]] == ["profile", "session", "episode"]
+
+
+@pytest.mark.asyncio
+async def test_profile_conflict_requires_stronger_repeated_evidence() -> None:
+    user_id = uuid4()
+    redis = _AsyncRedisStub()
+    service = CompanionStateService(db=object(), redis=redis)
+    pref_stub = _PreferenceServiceStub(
+        inferred={
+            "companion_state": {
+                "challenge_style": "gentle",
+            }
+        }
+    )
+    plan_stub = _PlanStateServiceStub()
+    _wire_service(service, pref_stub=pref_stub, plan_stub=plan_stub)
+
+    for idx in range(3):
+        result = await service.write_session_state(
+            user_id=user_id,
+            session_id="session-conflict",
+            field="challenge_style",
+            value="firm",
+            reason=f"Conflicting evidence {idx}",
+            evidence={"source": "conversation", "snippet": f"worked-{idx}", "measurable_effect": True},
+            confidence=0.85,
+        )
+
+    state = await service.get_effective_state(user_id)
+
+    assert result["conflict_resolution"]["profile_conflict"] is True
+    assert result["promotions"] == []
+    assert state["challenge_style"] == "gentle"
+
+
+@pytest.mark.asyncio
+async def test_layer_alignment_reports_cross_layer_conflicts() -> None:
+    user_id = uuid4()
+    plan_id = uuid4()
+    redis = _AsyncRedisStub(
+        {
+            "session:companion:session-alignment": json.dumps(
+                {"companion_state": {"challenge_style": "firm"}},
+                ensure_ascii=False,
+            )
+        }
+    )
+    service = CompanionStateService(db=object(), redis=redis)
+    pref_stub = _PreferenceServiceStub(
+        inferred={
+            "companion_state": {"challenge_style": "gentle"},
+        }
+    )
+    plan_stub = _PlanStateServiceStub()
+    await plan_stub.upsert_plan_state(
+        user_id,
+        plan_id,
+        {
+            "facts": {
+                "companion_state": {"challenge_style": "balanced"},
+            }
+        },
+    )
+    _wire_service(service, pref_stub=pref_stub, plan_stub=plan_stub)
+
+    alignment = await service.get_layer_alignment(user_id, plan_id=plan_id, session_id="session-alignment")
+
+    assert alignment["silent_drift_risk"] == "elevated"
+    assert alignment["conflicts"][0]["field"] == "challenge_style"

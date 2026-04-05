@@ -91,6 +91,7 @@ def test_situation_brief_builder_uses_existing_context_sources() -> None:
     assert brief["decision_context"]["experience_mode"] == "explain"
     assert brief["decision_context"]["intervention_family"] == "understanding_repair"
     assert brief["decision_context"]["system_adjustments"][0]["field"] == "retrieval_emphasis"
+    assert brief["decision_context"]["body_awareness_guidance"]["primary_subsystem"]["id"] == "galaxy"
     assert "progress_snapshot" in brief["source_trace"]["used_sources"]
     assert brief["source_trace"]["semantic_layer"]["adapter_name"] == StudyDomainSemanticAdapter.adapter_name
     assert "vision" in brief["semantic_primitives"]["source_mapping"]
@@ -135,6 +136,12 @@ def test_format_situation_brief_section_renders_compact_prompt_block() -> None:
                 "experience_mode": "explain",
                 "intervention_family": "understanding_repair",
                 "reversibility_level": "medium",
+                "body_awareness_guidance": {
+                    "primary_subsystem": {
+                        "label": "Galaxy Knowledge Systems",
+                        "why": "This turn benefits from grounded retrieval and structure-aware knowledge support.",
+                    }
+                },
             },
         }
     )
@@ -147,6 +154,7 @@ def test_format_situation_brief_section_renders_compact_prompt_block() -> None:
     assert "当前判断" in section
     assert "残差诊断" in section
     assert "决策策略" in section
+    assert "当前优先调用的系统器官: Galaxy Knowledge Systems" in section
     assert "本轮站位" in section
 
 

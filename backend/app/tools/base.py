@@ -87,11 +87,19 @@ class BaseTool(ABC):
         转换为 OpenAI Function Calling 格式
         兼容 Qwen/DeepSeek 的 OpenAI 兼容 API
         """
+        parameters_schema = self.parameters_schema
+        if hasattr(parameters_schema, "model_json_schema"):
+            parameters = parameters_schema.model_json_schema()
+        elif isinstance(parameters_schema, dict):
+            parameters = parameters_schema
+        else:
+            parameters = {"type": "object", "properties": {}}
+
         return {
             "type": "function",
             "function": {
                 "name": self.name,
                 "description": self.description,
-                "parameters": self.parameters_schema.model_json_schema(),
+                "parameters": parameters,
             },
         }

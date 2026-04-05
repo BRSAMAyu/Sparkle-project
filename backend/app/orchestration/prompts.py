@@ -1686,9 +1686,11 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
     feedback_hook = feedback_hook if isinstance(feedback_hook, dict) else {}
     adjustments = decision_context.get("system_adjustments")
     adjustments = [item for item in adjustments if isinstance(item, dict)] if isinstance(adjustments, list) else []
+    body_guidance = decision_context.get("body_awareness_guidance")
+    body_guidance = body_guidance if isinstance(body_guidance, dict) else {}
     what_matters_now = str(decision_context.get("what_matters_now") or "").strip()
 
-    if not any([experience_mode, intervention_family, what_matters_now, adjustments]):
+    if not any([experience_mode, intervention_family, what_matters_now, adjustments, body_guidance]):
         return ""
 
     lines = ["## 当前决策策略 [L1 引导]"]
@@ -1709,6 +1711,15 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
         lines.append(
             f"- 建议中的系统调整: {first.get('field')} -> {first.get('recommended_value')} ({first.get('target_layer')})"
         )
+    primary_subsystem = body_guidance.get("primary_subsystem")
+    if isinstance(primary_subsystem, dict):
+        subsystem_label = str(primary_subsystem.get("label") or primary_subsystem.get("id") or "").strip()
+        subsystem_why = str(primary_subsystem.get("why") or "").strip()
+        if subsystem_label:
+            lines.append(
+                f"- 当前优先调用的系统器官: {subsystem_label}"
+                + (f"；原因: {subsystem_why}" if subsystem_why else "")
+            )
     feedback_ask = str(feedback_hook.get("ask") or "").strip()
     if feedback_ask:
         lines.append(f"- 回合结束前最好确认: {feedback_ask}")

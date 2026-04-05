@@ -587,7 +587,12 @@ class ContextPackBuilder:
         episodic_scores = {str(entry.item.id): entry.score for entry in ranked_episodic}
 
         profile_prefs = await self.preference_service.get_preferences(user_id)
-        profile_keys = set((profile_prefs.explicit or {}).keys()) | set((profile_prefs.inferred or {}).keys())
+        profile_keys = set((profile_prefs.inferred or {}).keys())
+        explicit_profile_prefs = dict(profile_prefs.explicit or {})
+        for key, value in explicit_profile_prefs.items():
+            default_value = PreferenceService.DEFAULT_EXPLICIT.get(key, object())
+            if key not in PreferenceService.DEFAULT_EXPLICIT or value != default_value:
+                profile_keys.add(key)
         if profile_keys:
             ranked_preferences = [
                 entry for entry in ranked_preferences

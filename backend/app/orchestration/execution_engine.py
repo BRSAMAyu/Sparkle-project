@@ -187,7 +187,7 @@ class ExecutionEngineMixin:
             tool_call_id=f"bridge_{bridge_tool_name}_{uuid.uuid4().hex[:12]}",
             runtime_context={
                 "session_id": session_id,
-                "redis_client": self.redis,
+                "redis_client": getattr(self, "redis", None),
             },
         )
         if not result.success or not isinstance(result.data, dict):

@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from app.data.achievement_seeds import INITIAL_ACHIEVEMENTS, INITIAL_GALAXY_SKINS
+from app.data.achievement_seeds import INITIAL_VISUAL_ELEMENTS
 from app.data.populate_achievements import (
     SUPPORTED_REWARD_TYPES,
     sync_achievement_definitions,
@@ -123,10 +124,11 @@ async def test_sync_achievement_definitions_inserts_and_updates_existing_records
     db_session.add(existing_skin)
     await db_session.commit()
 
-    synced_achievements, synced_skins = await sync_achievement_definitions(db_session)
+    synced_achievements, synced_skins, synced_visual_elements = await sync_achievement_definitions(db_session)
 
     assert synced_achievements == len(INITIAL_ACHIEVEMENTS)
     assert synced_skins == len(INITIAL_GALAXY_SKINS)
+    assert synced_visual_elements == len(INITIAL_VISUAL_ELEMENTS)
 
     refreshed_achievement = await db_session.get(Achievement, "nodes_10")
     refreshed_skin = await db_session.get(GalaxySkin, "default")

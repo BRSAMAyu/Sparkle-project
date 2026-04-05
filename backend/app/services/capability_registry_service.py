@@ -6,7 +6,6 @@ from typing import Any
 from app.config import settings
 from app.core.agent_profiles import agent_profile_registry, get_public_agent_catalog, get_public_mode_catalog
 from app.core.llm_router import llm_router
-from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 
 
 def _utcnow() -> str:
@@ -24,6 +23,8 @@ class CapabilityRegistryService:
             "purpose": "Diagnose, decide, act, and explain on the primary user loop.",
             "state": "active",
             "cost_hint": "medium",
+            "activation_cues": ["primary conversation loop", "diagnosis", "user-facing explanation"],
+            "risk_hint": "Can become theatrical if it expands scope without user benefit.",
             "permissions": {"read": ["conversation", "plan", "profile"], "write": ["session", "episode_candidate"]},
         },
         {
@@ -33,6 +34,8 @@ class CapabilityRegistryService:
             "purpose": "Delegate bounded execution work when the task is ready for action.",
             "state": "configured" if bool(settings.OPENCLAW_ENABLED and settings.OPENCLAW_GATEWAY_URL) else "not_configured",
             "cost_hint": "variable",
+            "activation_cues": ["bounded execution", "tool-backed delivery", "task-ready action"],
+            "risk_hint": "Should not be implied when gateway or rights are unavailable.",
             "permissions": {"read": ["execution_probe"], "write": ["execution_artifacts"]},
         },
         {
@@ -42,6 +45,8 @@ class CapabilityRegistryService:
             "purpose": "Forecast likely next actions, engagement windows, and risk trends.",
             "state": "active",
             "cost_hint": "low",
+            "activation_cues": ["timing optimization", "risk forecasting", "next-move selection"],
+            "risk_hint": "Forecasts should inform, not silently steer against user intent.",
             "permissions": {"read": ["behavior", "focus", "plan"], "write": []},
         },
         {
@@ -51,6 +56,8 @@ class CapabilityRegistryService:
             "purpose": "Ground learning structure, node mastery, and prerequisite maps.",
             "state": "active",
             "cost_hint": "medium",
+            "activation_cues": ["knowledge grounding", "user materials", "mastery structure"],
+            "risk_hint": "Weak or stale graph state can create false confidence if not grounded.",
             "permissions": {"read": ["knowledge_graph", "study_records"], "write": ["knowledge_state"]},
         },
         {
@@ -60,6 +67,8 @@ class CapabilityRegistryService:
             "purpose": "Bind user feedback to interventions and keep adaptations reversible.",
             "state": "active",
             "cost_hint": "low",
+            "activation_cues": ["visible adaptation", "intervention feedback", "reversibility"],
+            "risk_hint": "Adaptations lose trust if they are invisible or feel non-reversible.",
             "permissions": {"read": ["active_interventions", "session_feedback"], "write": ["intervention_state"]},
         },
         {
@@ -69,6 +78,8 @@ class CapabilityRegistryService:
             "purpose": "Support community interactions and social accountability loops.",
             "state": "active",
             "cost_hint": "medium",
+            "activation_cues": ["accountability", "shared momentum", "social support"],
+            "risk_hint": "Community should not be invoked when privacy or timing makes it burdensome.",
             "permissions": {"read": ["community_threads"], "write": ["community_posts"]},
         },
         {
@@ -78,6 +89,8 @@ class CapabilityRegistryService:
             "purpose": "Reflect progress and reinforce durable movement without overpowering the core loop.",
             "state": "active",
             "cost_hint": "low",
+            "activation_cues": ["progress reflection", "celebration", "motivation support"],
+            "risk_hint": "Achievement surfaces can cheapen the loop if they replace true diagnosis.",
             "permissions": {"read": ["progress_events"], "write": ["achievement_updates"]},
         },
         {
@@ -87,6 +100,8 @@ class CapabilityRegistryService:
             "purpose": "Shape atmosphere and continuity across chat, focus, and home surfaces.",
             "state": "active",
             "cost_hint": "low",
+            "activation_cues": ["mood support", "continuity", "ambient adaptation"],
+            "risk_hint": "Ambient changes should support the moment, not distract from it.",
             "permissions": {"read": ["experience_profile"], "write": ["ambient_state"]},
         },
     )
@@ -116,6 +131,8 @@ class CapabilityRegistryService:
     )
 
     def build_registry(self) -> dict[str, Any]:
+        from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+
         dynamic_tool_registry.ensure_package_registered("app.tools")
         return {
             "generated_at": _utcnow(),
@@ -146,6 +163,201 @@ class CapabilityRegistryService:
                     "System-level changes must declare cost, risk, and allowed write scope.",
                 ],
             },
+        }
+
+    def evaluate_system_change_request(
+        self,
+        *,
+        knob_id: str,
+        reason: str,
+        reversible: bool,
+        target_subsystem_id: str | None = None,
+    ) -> dict[str, Any]:
+        knob = next((item for item in self._SYSTEM_LAYER_KNOBS if item["id"] == knob_id), None)
+        subsystem = next((item for item in self._SUBSYSTEMS if item["id"] == target_subsystem_id), None)
+        if knob is None:
+            return {
+                "allowed": False,
+                "reason": "Unknown system-layer knob.",
+                "knob_id": knob_id,
+            }
+
+        normalized_reason = str(reason or "").strip()
+        if not normalized_reason:
+            return {
+                "allowed": False,
+                "reason": "System-layer changes require an explicit user-benefit reason.",
+                "knob_id": knob_id,
+            }
+        if not reversible and knob_id != "model_tier_selection":
+            return {
+                "allowed": False,
+                "reason": "Non-reversible changes are blocked for bounded system-layer knobs.",
+                "knob_id": knob_id,
+            }
+        if subsystem and subsystem["state"] not in {"active", "configured"}:
+            return {
+                "allowed": False,
+                "reason": f"{subsystem['label']} is not available.",
+                "knob_id": knob_id,
+            }
+        return {
+            "allowed": True,
+            "reason": knob["may_change_when"],
+            "knob_id": knob_id,
+            "target_subsystem_id": target_subsystem_id,
+        }
+
+    @staticmethod
+    def _append_unique_entry(
+        collection: list[dict[str, Any]],
+        entry: dict[str, Any],
+    ) -> None:
+        entry_id = str(entry.get("id") or "").strip()
+        if entry_id and any(str(item.get("id") or "").strip() == entry_id for item in collection):
+            return
+        collection.append(entry)
+
+    def recommend_runtime_capabilities(
+        self,
+        *,
+        route_intent: str | None,
+        experience_mode: str | None,
+        grounding_priority: list[str] | None = None,
+        active_plan: str | None = None,
+    ) -> dict[str, Any]:
+        """Return bounded body-awareness guidance for one runtime decision."""
+        grounding = [str(item).strip() for item in (grounding_priority or []) if str(item or "").strip()]
+        normalized_intent = str(route_intent or "").strip().lower()
+        normalized_mode = str(experience_mode or "").strip().lower()
+
+        primary_subsystem = {
+            "id": "chat_orchestrator",
+            "label": "Chat Orchestrator",
+            "why": "Sparkle should stay on the primary diagnosis-decide-act loop for this turn.",
+        }
+        supporting_subsystems: list[dict[str, Any]] = []
+        risk_notes: list[str] = []
+        activation_surfaces: list[dict[str, Any]] = []
+        evidence_sources: list[str] = ["conversation"]
+
+        if "user_materials" in grounding or normalized_intent in {"knowledge", "translation", "learn", "review"}:
+            primary_subsystem = {
+                "id": "galaxy",
+                "label": "Galaxy Knowledge Systems",
+                "why": "This turn benefits from grounded retrieval and structure-aware knowledge support.",
+            }
+            self._append_unique_entry(
+                supporting_subsystems,
+                {
+                    "id": "chat_orchestrator",
+                    "label": "Chat Orchestrator",
+                    "why": "The orchestrator should still own explanation quality and user-facing pacing.",
+                },
+            )
+            evidence_sources.extend(["user_materials", "knowledge_graph"])
+        elif normalized_intent in {"plan", "planning", "sprint_plan", "task"} or active_plan:
+            primary_subsystem = {
+                "id": "chat_orchestrator",
+                "label": "Chat Orchestrator",
+                "why": "This turn is primarily about sequencing and next-move judgment on the active growth path.",
+            }
+            self._append_unique_entry(
+                supporting_subsystems,
+                {
+                    "id": "prediction",
+                    "label": "Prediction Systems",
+                    "why": "Prediction can help choose a lighter next move or a better timing window.",
+                },
+            )
+            evidence_sources.extend(["active_plan", "behavioral_timing"])
+        elif normalized_mode in {"stabilize", "mobilize", "reframe"}:
+            primary_subsystem = {
+                "id": "feedback_binding",
+                "label": "Feedback and Intervention Binding",
+                "why": "This turn is adaptation-heavy and should stay reversible and feedback-aware.",
+            }
+            self._append_unique_entry(
+                supporting_subsystems,
+                {
+                    "id": "chat_orchestrator",
+                    "label": "Chat Orchestrator",
+                    "why": "The orchestrator still needs to express the adaptation in human language.",
+                },
+            )
+            self._append_unique_entry(
+                activation_surfaces,
+                {
+                    "id": "visual_bgm",
+                    "label": "Visual and BGM Systems",
+                    "why": "Ambient support can reinforce the lighter or steadier posture without changing the core plan.",
+                },
+            )
+
+        if normalized_intent in {"execution", "delegate", "openclaw"}:
+            openclaw_state = next(
+                (subsystem for subsystem in self._SUBSYSTEMS if subsystem["id"] == "openclaw"),
+                None,
+            )
+            if openclaw_state and openclaw_state["state"] == "configured":
+                self._append_unique_entry(
+                    supporting_subsystems,
+                    {
+                        "id": "openclaw",
+                        "label": "OpenClaw Pipeline",
+                        "why": "Execution can be delegated in a bounded way when the task is ready for action.",
+                    },
+                )
+            else:
+                risk_notes.append("OpenClaw is not configured, so Sparkle should avoid pretending execution is available.")
+
+        if normalized_mode in {"mobilize", "celebrate"}:
+            self._append_unique_entry(
+                activation_surfaces,
+                {
+                    "id": "achievements",
+                    "label": "Achievement Systems",
+                    "why": "Progress reflection can reinforce momentum after a real movement signal.",
+                },
+            )
+        if normalized_intent in {"community", "accountability", "group"}:
+            self._append_unique_entry(
+                activation_surfaces,
+                {
+                    "id": "community",
+                    "label": "Community Systems",
+                    "why": "This turn explicitly benefits from social accountability or shared support.",
+                },
+            )
+
+        knob_decisions = [
+            self.evaluate_system_change_request(
+                knob_id="tool_surface_selection",
+                reason="Grounding and runtime subsystem choice should stay tied to user benefit.",
+                reversible=True,
+                target_subsystem_id=primary_subsystem["id"],
+            )
+        ]
+        if supporting_subsystems:
+            knob_decisions.append(
+                self.evaluate_system_change_request(
+                    knob_id="agent_mix_selection",
+                    reason="Supporting subsystems are only warranted when they improve the current user outcome.",
+                    reversible=True,
+                    target_subsystem_id=supporting_subsystems[0]["id"],
+                )
+            )
+
+        return {
+            "primary_subsystem": primary_subsystem,
+            "supporting_subsystems": supporting_subsystems,
+            "activation_surfaces": activation_surfaces,
+            "evidence_sources": sorted(set(evidence_sources)),
+            "bounded_knob_decisions": knob_decisions,
+            "grounding_priority": grounding,
+            "cost_posture": "medium" if primary_subsystem["id"] in {"galaxy", "openclaw"} else "low",
+            "risk_notes": risk_notes,
+            "rights_note": "System choice is advisory and bounded; Sparkle should not silently expand write scope.",
         }
 
     def _models(self) -> list[dict[str, Any]]:
@@ -193,6 +405,8 @@ class CapabilityRegistryService:
         return agents
 
     def _tools(self) -> list[dict[str, Any]]:
+        from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+
         return [
             {
                 "name": item["name"],

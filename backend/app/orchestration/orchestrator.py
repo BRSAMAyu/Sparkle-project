@@ -73,6 +73,9 @@ from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConf
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_focus import (  # noqa: F401
     FocusedContextAssembler,
+    KNOWLEDGE_ACTION_KEYWORDS,
+    PLAN_ACTION_KEYWORDS,
+    TASK_ACTION_KEYWORDS,
     infer_route_intent_from_chat_mode,
 )
 from app.orchestration.context_pruner import ContextPruner
@@ -115,6 +118,7 @@ from app.orchestration.session_feedback import (
     detect_session_feedback_signal,  # noqa: F401
 )
 from app.orchestration.soul_compiler import attach_shadow_soul_runtime
+from app.services.capability_registry_service import CapabilityRegistryService
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.route_adapter import to_route_decision  # noqa: F401
@@ -687,10 +691,43 @@ class ChatOrchestrator(
 
     def _resolve_active_tools(self, request: agent_service_pb2.ChatRequest, user_message: str) -> list[str]:
         requested = [tool.strip() for tool in list(request.active_tools) if str(tool).strip()]
+        explicit_request = bool(requested)
         for inferred in self._infer_bridge_tool_names(user_message):
             if inferred not in requested:
                 requested.append(inferred)
+        if not explicit_request:
+            route_intent = self._infer_capability_route_intent(
+                user_message=user_message,
+                chat_mode=getattr(request, "chat_mode", None),
+            )
+            guidance = CapabilityRegistryService().recommend_runtime_capabilities(
+                route_intent=route_intent,
+                experience_mode=None,
+            )
+            primary_subsystem = ((guidance or {}).get("primary_subsystem") or {}).get("id")
+            if primary_subsystem == "galaxy" and "query_knowledge" not in requested:
+                requested.append("query_knowledge")
         return requested
+
+    def _infer_capability_route_intent(self, *, user_message: str, chat_mode: str | None) -> str | None:
+        route_intent = infer_route_intent_from_chat_mode(chat_mode)
+        if route_intent:
+            return route_intent
+
+        message = str(user_message or "").strip().lower()
+        if not message:
+            return None
+
+        def _contains_any(keywords: set[str]) -> bool:
+            return any(str(keyword).strip().lower() in message for keyword in keywords if str(keyword).strip())
+
+        if _contains_any(KNOWLEDGE_ACTION_KEYWORDS):
+            return "knowledge"
+        if _contains_any(PLAN_ACTION_KEYWORDS):
+            return "plan"
+        if _contains_any(TASK_ACTION_KEYWORDS):
+            return "task"
+        return None
 
     @staticmethod
     def _derive_task_context_for_execution(
@@ -876,6 +913,7 @@ class ChatOrchestrator(
             total_completion_tokens = 0
             transparency_generator: TransparencyDataGenerator | None = None
             emit_transparency_event = None
+            queue: asyncio.Queue = asyncio.Queue(maxsize=self._STREAM_QUEUE_MAXSIZE)
 
             try:
                 # Step 2: Distributed lock
@@ -1075,8 +1113,6 @@ class ChatOrchestrator(
                 if conversation_rhythm is not None:
                     state.context_data["conversation_rhythm"] = conversation_rhythm
                 # Bound stream buffering while preserving critical terminal/content events.
-                queue: asyncio.Queue = asyncio.Queue(maxsize=self._STREAM_QUEUE_MAXSIZE)
-
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
                     resp.response_id = response_id
                     resp.created_at = int(datetime.now().timestamp())
