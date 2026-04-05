@@ -430,3 +430,42 @@ class PlanFeedback:
             review_decision=review_result.decision,
             review_comments=[c.to_dict() for c in review_result.comments],
         )
+
+# ============ Phase A: User Insight Engine ============
+
+@dataclass
+class CompiledInsightState:
+    """Compiled runtime truth layer reconcile signals from multiple sources.
+
+    Phase A: User Insight Engine Strengthening
+    """
+    stable_traits: dict[str, Any] = field(default_factory=dict)
+    current_state: dict[str, Any] = field(default_factory=dict)
+    active_constraints: list[dict[str, Any]] = field(default_factory=list)
+    active_bottlenecks: list[dict[str, Any]] = field(default_factory=list)
+    key_uncertainties: list[dict[str, Any]] = field(default_factory=list)
+    missing_information: list[str] = field(default_factory=list)
+    confidence_map: dict[str, float] = field(default_factory=dict)
+    freshness_map: dict[str, str] = field(default_factory=dict)
+    contradiction_map: list[dict[str, Any]] = field(default_factory=list)
+    planning_readiness: dict[str, Any] = field(default_factory=dict)
+    recommended_clarification: list[str] = field(default_factory=list)
+    version: str = "1.0"
+    generated_at: str = field(default_factory=_utcnow_iso)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "stable_traits": self.stable_traits,
+            "current_state": self.current_state,
+            "active_constraints": self.active_constraints,
+            "active_bottlenecks": self.active_bottlenecks,
+            "key_uncertainties": self.key_uncertainties,
+            "missing_information": self.missing_information,
+            "confidence_map": self.confidence_map,
+            "freshness_map": self.freshness_map,
+            "contradiction_map": self.contradiction_map,
+            "planning_readiness": self.planning_readiness,
+            "recommended_clarification": self.recommended_clarification,
+            "version": self.version,
+            "generated_at": self.generated_at,
+        }

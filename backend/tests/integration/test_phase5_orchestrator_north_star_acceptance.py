@@ -731,7 +731,7 @@ async def test_phase5_thermodynamics_orchestrator_journey_derives_scores_from_ru
         if "这样轻一点" in user_message:
             payload["active_interventions"] = [{"intervention_id": str(intervention.id), "source": "runtime_context"}]
         dual_core_mode = "execution_first" if ("too much" in user_message.lower() or "这样轻一点" in user_message) else "balanced"
-        brief = SituationBriefBuilder().build(
+        brief = await SituationBriefBuilder().build(
             user_context_payload=payload,
             plan_context=_base_plan_context(plan),
             focused_memory={},

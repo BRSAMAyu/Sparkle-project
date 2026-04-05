@@ -300,7 +300,7 @@ class SessionStateMixin:
             if prompt_instruction:
                 dual_core_snapshot["prompt_instruction"] = prompt_instruction
 
-        situation_brief = SituationBriefBuilder().build(
+        situation_brief = await SituationBriefBuilder().build(
             user_context_payload=user_context_payload,
             plan_context=plan_context,
             focused_memory=(

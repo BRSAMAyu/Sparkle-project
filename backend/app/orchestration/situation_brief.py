@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timezone, datetime
 from typing import Any
 
@@ -91,6 +91,7 @@ class SituationBrief:
     decision_context: dict[str, Any]
     semantic_primitives: dict[str, Any]
     source_trace: dict[str, Any]
+    insight_state: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -108,13 +109,14 @@ class SituationBrief:
             "decision_context": self.decision_context,
             "semantic_primitives": self.semantic_primitives,
             "source_trace": self.source_trace,
+            "insight_state": self.insight_state,
         }
 
 
 class SituationBriefBuilder:
     """Build a compact read-model from already assembled orchestration context."""
 
-    def build(
+    async def build(
         self,
         *,
         user_context_payload: dict[str, Any] | None,
@@ -145,6 +147,7 @@ class SituationBriefBuilder:
         semantic_context_payload = dict(user_context)
         if dual_core_snapshot:
             semantic_context_payload["dual_core_snapshot"] = dual_core_snapshot
+
         semantic_primitives = StudyDomainSemanticAdapter().map_from_context(
             user_context_payload=semantic_context_payload,
             plan_context=plan_context,
@@ -160,6 +163,84 @@ class SituationBriefBuilder:
         evidence = _as_dict(semantic_primitives.get("evidence"))
         intervention = _as_dict(semantic_primitives.get("intervention"))
         outcome = _as_dict(semantic_primitives.get("outcome"))
+
+        # Phase A: User Insight Engine
+        profile_context_raw = user_context.get("profile_context")
+        from app.core.profile_context import ProfileContext
+        profile_context = None
+        if isinstance(profile_context_raw, dict):
+            profile_context = ProfileContext(**profile_context_raw)
+        elif hasattr(profile_context_raw, "model_dump"):
+             profile_context = profile_context_raw
+
+        route_intent = _strip(context_focus.get("route_intent") or current_state.get("route_intent") or "plan")
+        phase_a_planning_context = self._build_phase_a_planning_context(
+            user_context=user_context,
+            plan_context=plan_context,
+            semantic_primitives=semantic_primitives,
+            context_briefing_note=context_briefing_note,
+            dual_core_instruction=dual_core_instruction,
+        )
+
+        insight_state: dict[str, Any] = {}
+        if profile_context:
+            from app.services.insight_gap_detector import InsightGapDetector
+            from app.services.planning_readiness_gate import PlanningReadinessGate
+            from app.services.profile_truth_compiler import ProfileTruthCompiler
+
+            compiler = ProfileTruthCompiler()
+            detector = InsightGapDetector()
+            gate = PlanningReadinessGate()
+
+            # 1. Compile Truth
+            compiled_state = await compiler.compile(
+                profile_context=profile_context,
+                user_strategy_state=user_strategy_state
+            )
+
+            # 2. Detect Gaps
+            gaps = await detector.detect_gaps(
+                insight_state=compiled_state,
+                user_message=_strip(phase_a_planning_context.get("user_message")),
+                intent=route_intent or "plan",
+                planning_context=phase_a_planning_context,
+            )
+
+            # 3. Evaluate Readiness
+            readiness = gate.evaluate(insight_state=compiled_state, gaps=gaps)
+            
+            # 4. Generate Strategic Questions
+            questions = detector.generate_questions(gaps)
+
+            compiled_state.missing_information = list(gaps)
+            compiled_state.key_uncertainties = [
+                {"id": gap, "description": detector.PLANNING_GAPS.get(gap, gap)}
+                for gap in gaps
+            ]
+            compiled_state.planning_readiness = dict(readiness)
+            compiled_state.recommended_clarification = list(questions)
+
+            insight_state = compiled_state.to_dict()
+            insight_state.update(readiness)
+            insight_state["recommended_clarification"] = list(questions)
+        else:
+            # Fallback for missing profile
+            fallback_questions = ["你能先介绍一下你的背景或当前目标吗？"]
+            readiness = {
+                "readiness_level": "low",
+                "readiness_score": 0.0,
+                "recommended_action": "ask",
+                "blocking_unknowns": ["profile_missing"],
+                "blocking_contradictions": [],
+                "ask_before_plan": True,
+            }
+            insight_state = {
+                **readiness,
+                "planning_readiness": readiness,
+                "recommended_clarification": fallback_questions,
+                "missing_information": ["profile_missing"],
+                "key_uncertainties": [{"id": "profile_missing", "description": "Missing user profile context."}],
+            }
 
         source_trace = self._build_source_trace(
             user_context=user_context,
@@ -220,12 +301,18 @@ class SituationBriefBuilder:
             **decision_policy,
         }
         capability_guidance = CapabilityRegistryService().recommend_runtime_capabilities(
-            route_intent=_strip(context_focus.get("route_intent") or current_state.get("route_intent")),
+            route_intent=route_intent,
             experience_mode=_strip(decision_context.get("experience_mode")),
             grounding_priority=_as_list(decision_context.get("grounding_priority")),
             active_plan=_strip(vision.get("active_plan")),
         )
         decision_context["body_awareness_guidance"] = capability_guidance
+        decision_context = self._apply_phase_a_decision_context(
+            decision_context=decision_context,
+            insight_state=insight_state,
+            route_intent=route_intent,
+        )
+
         focus_question = self._build_focus_question(
             vision=vision,
             primary_obstacle=primary_obstacle,
@@ -256,6 +343,7 @@ class SituationBriefBuilder:
             decision_context=decision_context,
             semantic_primitives=semantic_primitives,
             source_trace=source_trace,
+            insight_state=insight_state,
         )
 
     def _build_source_trace(
@@ -337,6 +425,118 @@ class SituationBriefBuilder:
                 "source_mapping": _as_dict(semantic_primitives).get("source_mapping", {}),
             },
         }
+
+    def _build_phase_a_planning_context(
+        self,
+        *,
+        user_context: dict[str, Any],
+        plan_context: dict[str, Any],
+        semantic_primitives: dict[str, Any],
+        context_briefing_note: str | None,
+        dual_core_instruction: str,
+    ) -> dict[str, Any]:
+        vision = _as_dict(semantic_primitives.get("vision"))
+        current_state = _as_dict(semantic_primitives.get("current_state"))
+        active_goals = [
+            item
+            for item in _as_list(user_context.get("active_goals"))
+            if isinstance(item, dict)
+        ]
+        goal_titles = [
+            _strip(item.get("title") or item.get("name"))
+            for item in active_goals[:2]
+            if _strip(item.get("title") or item.get("name"))
+        ]
+        goal_text = " / ".join(
+            part
+            for part in (
+                goal_titles[0] if goal_titles else "",
+                _strip(plan_context.get("goal")),
+                _strip(vision.get("primary_goal")),
+            )
+            if part
+        )
+        user_message = _strip(user_context.get("current_query")) or dual_core_instruction or _strip(context_briefing_note)
+        return {
+            "user_message": user_message,
+            "current_query": _strip(user_context.get("current_query")),
+            "context_briefing_note": _strip(context_briefing_note),
+            "goal_text": goal_text,
+            "vision": vision,
+            "current_state": current_state,
+            "file_ids": _as_list(user_context.get("file_ids")),
+            "user_material_grounding": _as_dict(user_context.get("user_material_grounding")),
+            "material_sources": _as_list(user_context.get("material_sources")),
+            "uploaded_materials": _as_list(user_context.get("uploaded_materials")),
+            "attached_materials": _as_list(user_context.get("attached_materials")),
+        }
+
+    def _apply_phase_a_decision_context(
+        self,
+        *,
+        decision_context: dict[str, Any],
+        insight_state: dict[str, Any],
+        route_intent: str,
+    ) -> dict[str, Any]:
+        if not insight_state:
+            return decision_context
+
+        readiness_level = _strip(insight_state.get("readiness_level"))
+        readiness_score = insight_state.get("readiness_score")
+        recommended_action = _strip(insight_state.get("recommended_action"))
+        contradictions = [
+            _strip(item.get("description"))
+            for item in _as_list(insight_state.get("contradiction_map"))
+            if isinstance(item, dict) and _strip(item.get("description"))
+        ]
+        questions = [
+            _strip(item)
+            for item in _as_list(insight_state.get("recommended_clarification"))
+            if _strip(item)
+        ]
+        blocking_unknowns = [
+            _strip(item)
+            for item in _as_list(insight_state.get("blocking_unknowns") or insight_state.get("missing_information"))
+            if _strip(item)
+        ]
+
+        decision_context["planning_readiness"] = readiness_level
+        if readiness_score is not None:
+            decision_context["planning_readiness_score"] = readiness_score
+        decision_context["planning_readiness_action"] = recommended_action
+        decision_context["planning_blocking_unknowns"] = blocking_unknowns
+        decision_context["insight_contradictions"] = contradictions
+        decision_context["strategic_clarification_questions"] = questions
+
+        route_intent_lc = route_intent.lower()
+        planning_like = route_intent_lc == "plan" or "plan" in route_intent_lc
+        if not planning_like:
+            return decision_context
+
+        if recommended_action == "ask":
+            question_focus = "、".join(blocking_unknowns[:2]) if blocking_unknowns else "关键缺口"
+            decision_context["what_matters_now"] = f"先补齐{question_focus}，再进入计划制定。"
+            decision_context["experience_mode"] = "clarify"
+            decision_context["intervention_family"] = "clarifying_probe"
+            decision_context["reversibility_level"] = "high"
+            decision_context["phase_a_guardrail"] = "ask_before_plan"
+            visible_expression = _as_dict(decision_context.get("user_visible_expression"))
+            visible_expression["opening_intent"] = "Ask the highest-value clarification before generating a plan."
+            visible_expression["response_shape"] = "ask_one_targeted_question_then_hold_back"
+            decision_context["user_visible_expression"] = visible_expression
+            feedback_hook = _as_dict(decision_context.get("feedback_hook"))
+            if questions:
+                feedback_hook["ask"] = questions[0]
+            decision_context["feedback_hook"] = feedback_hook
+        elif recommended_action == "provisional":
+            decision_context["phase_a_guardrail"] = "provisional_plan_with_assumptions"
+            visible_expression = _as_dict(decision_context.get("user_visible_expression"))
+            visible_expression["response_shape"] = "state_assumptions_then_offer_provisional_plan"
+            decision_context["user_visible_expression"] = visible_expression
+            if questions and not _strip(decision_context.get("what_matters_now")):
+                decision_context["what_matters_now"] = "计划可以先给出，但要把关键假设和待确认点说清楚。"
+
+        return decision_context
 
     def _build_sparkle_self_state(
         self,
@@ -498,6 +698,7 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     outcome = _as_dict(payload.get("outcome") or semantic_primitives.get("outcome"))
     stance = _as_dict(payload.get("recommended_stance"))
     decision_context = _as_dict(payload.get("decision_context"))
+    insight_state = _as_dict(payload.get("insight_state"))
 
     current_line_parts = [
         _strip(current_state.get("snapshot")),
@@ -542,6 +743,38 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     decision_line = _strip(decision_context.get("what_matters_now"))
     if decision_line:
         lines.append(f"- 当前判断: {decision_line}")
+    readiness_level = _strip(decision_context.get("planning_readiness") or insight_state.get("readiness_level"))
+    readiness_action = _strip(decision_context.get("planning_readiness_action") or insight_state.get("recommended_action"))
+    if readiness_level:
+        readiness_bits = [readiness_level]
+        if readiness_action:
+            readiness_bits.append(readiness_action)
+        lines.append(f"- 规划就绪度: {' / '.join(readiness_bits)}")
+    blocking_unknowns = [
+        _strip(item)
+        for item in _as_list(
+            decision_context.get("planning_blocking_unknowns")
+            or insight_state.get("blocking_unknowns")
+            or insight_state.get("missing_information")
+        )
+        if _strip(item)
+    ]
+    if blocking_unknowns:
+        lines.append(f"- 计划前仍需补齐: {', '.join(blocking_unknowns[:3])}")
+    contradictions = [
+        _compact_text(item, limit=88)
+        for item in _as_list(decision_context.get("insight_contradictions") or [])
+        if _strip(item)
+    ]
+    if contradictions:
+        lines.append(f"- 洞察冲突: {'；'.join(contradictions[:2])}")
+    clarification_questions = [
+        _compact_text(item, limit=88)
+        for item in _as_list(decision_context.get("strategic_clarification_questions") or [])
+        if _strip(item)
+    ]
+    if clarification_questions:
+        lines.append(f"- 优先澄清问题: {clarification_questions[0]}")
     diagnosis_bits = [
         _strip(decision_context.get("primary_residual_label")),
         _strip(decision_context.get("loop_type")),
@@ -570,4 +803,4 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     stance_line = _strip(stance.get("stance"))
     if stance_line:
         lines.append(f"- 本轮站位: {stance_line}")
-    return "\n" + "\n".join(lines[:15])
+    return "\n" + "\n".join(lines[:18])

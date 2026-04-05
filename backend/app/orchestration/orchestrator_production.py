@@ -937,7 +937,7 @@ class ProductionChatOrchestrator:
                     logger.warning(f"Failed to hydrate user strategy state: {exc}")
             if isinstance(user_context_data, dict):
                 try:
-                    situation_brief = SituationBriefBuilder().build(
+                    situation_brief = (await SituationBriefBuilder().build(
                         user_context_payload=user_context_data,
                         plan_context=plan_context,
                         focused_memory=user_context_data.get("focused_memory"),
@@ -951,7 +951,7 @@ class ProductionChatOrchestrator:
                             for item in (user_context_data.get("adaptation_records") or [])
                             if isinstance(item, dict)
                         ],
-                    ).to_dict()
+                    )).to_dict()
                     user_context_data["situation_brief"] = situation_brief
                     runtime_context_data["situation_brief"] = situation_brief
                     decision_context = situation_brief.get("decision_context")

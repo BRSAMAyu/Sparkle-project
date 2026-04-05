@@ -1,10 +1,13 @@
+import pytest
+
 from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
-from app.semantic.state_primitives import StudyDomainSemanticAdapter
 from app.orchestration.situation_brief import SituationBriefBuilder, format_situation_brief_section
+from app.semantic.state_primitives import StudyDomainSemanticAdapter
 
 
-def test_situation_brief_builder_uses_existing_context_sources() -> None:
-    brief = SituationBriefBuilder().build(
+@pytest.mark.asyncio
+async def test_situation_brief_builder_uses_existing_context_sources() -> None:
+    brief = (await SituationBriefBuilder().build(
         user_context_payload={
             "learning_gaps_summary": "热力学第二定律相关概念仍然容易混淆。",
             "context_focus": {
@@ -14,10 +17,11 @@ def test_situation_brief_builder_uses_existing_context_sources() -> None:
             "profile_context": {
                 "knowledge_summary": {
                     "weak_spots": [
-                        {"node_name": "熵增方向判断", "mastery": 42},
+                        {"node_id": "thermo-entropy-direction", "node_name": "熵增方向判断", "mastery": 42},
                     ],
                     "recent_mastery_changes": [
                         {
+                            "node_id": "thermo-efficiency",
                             "node_name": "热机效率",
                             "old_mastery": 31,
                             "new_mastery": 46,
@@ -74,7 +78,7 @@ def test_situation_brief_builder_uses_existing_context_sources() -> None:
             "generated_at": "2026-04-04T09:00:00",
         },
         adaptation_records=[{"strategy_name": "降载微调", "effectiveness": "accepted"}],
-    ).to_dict()
+    )).to_dict()
 
     assert "在期中前拿下热力学第二章" in brief["focus_question"]
     assert brief["summary"].startswith("目标图景是")
@@ -92,6 +96,7 @@ def test_situation_brief_builder_uses_existing_context_sources() -> None:
     assert brief["decision_context"]["intervention_family"] == "understanding_repair"
     assert brief["decision_context"]["system_adjustments"][0]["field"] == "retrieval_emphasis"
     assert brief["decision_context"]["body_awareness_guidance"]["primary_subsystem"]["id"] == "galaxy"
+    assert brief["decision_context"]["planning_readiness"] in {"medium", "high"}
     assert "progress_snapshot" in brief["source_trace"]["used_sources"]
     assert brief["source_trace"]["semantic_layer"]["adapter_name"] == StudyDomainSemanticAdapter.adapter_name
     assert "vision" in brief["semantic_primitives"]["source_mapping"]
@@ -136,6 +141,10 @@ def test_format_situation_brief_section_renders_compact_prompt_block() -> None:
                 "experience_mode": "explain",
                 "intervention_family": "understanding_repair",
                 "reversibility_level": "medium",
+                "planning_readiness": "low",
+                "planning_readiness_action": "ask",
+                "planning_blocking_unknowns": ["baseline_mastery", "capacity_hours"],
+                "strategic_clarification_questions": ["你目前对这个主题的掌握大概在哪个水平？"],
                 "body_awareness_guidance": {
                     "primary_subsystem": {
                         "label": "Galaxy Knowledge Systems",
@@ -152,6 +161,9 @@ def test_format_situation_brief_section_renders_compact_prompt_block() -> None:
     assert "当前干预" in section
     assert "最近结果" in section
     assert "当前判断" in section
+    assert "规划就绪度" in section
+    assert "计划前仍需补齐" in section
+    assert "优先澄清问题" in section
     assert "残差诊断" in section
     assert "决策策略" in section
     assert "当前优先调用的系统器官: Galaxy Knowledge Systems" in section
@@ -182,8 +194,9 @@ def test_residual_diagnosis_runtime_detects_normative_loop() -> None:
     assert diagnosis["grounding_priority"][0] == "user_values_and_constraints"
 
 
-def test_situation_brief_compiles_decision_policy_for_control_overload() -> None:
-    brief = SituationBriefBuilder().build(
+@pytest.mark.asyncio
+async def test_situation_brief_compiles_decision_policy_for_control_overload() -> None:
+    brief = (await SituationBriefBuilder().build(
         user_context_payload={
             "current_query": "This is too much and I still cannot start.",
             "context_focus": {"focus_mode": "general_focus", "route_intent": "chat"},
@@ -209,10 +222,47 @@ def test_situation_brief_compiles_decision_policy_for_control_overload() -> None
         session_feedback_signal={},
         progress_snapshot={"attention_areas": ["Load is too high this week."]},
         adaptation_records=[],
-    ).to_dict()
+    )).to_dict()
 
     decision_context = brief["decision_context"]
     assert decision_context["experience_mode"] == "stabilize"
     assert decision_context["intervention_family"] == "load_shedding"
     assert decision_context["system_adjustments"][0]["field"] == "session_mode"
     assert decision_context["system_adjustments"][0]["recommended_value"] == "recovery"
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_uses_phase_a_gate_to_force_clarify_before_planning() -> None:
+    brief = await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我做一个两周内通过热力学考试的计划。",
+            "context_focus": {"focus_mode": "knowledge_focus", "route_intent": "plan"},
+            "profile_context": {
+                "knowledge_summary": {
+                    "overall_mastery": 0.0,
+                    "weak_spots": [],
+                    "recent_mastery_changes": [],
+                    "active_learning_subjects": [],
+                },
+                "cognitive_summary": {
+                    "active_patterns": [],
+                    "dominant_pattern_type": None,
+                    "risk_signals": [],
+                },
+            },
+        },
+        plan_context={},
+        focused_memory={},
+        context_briefing_note=None,
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+        adaptation_records=[],
+    )
+
+    assert brief.insight_state["readiness_level"] == "low"
+    assert brief.decision_context["planning_readiness"] == "low"
+    assert brief.decision_context["planning_readiness_action"] == "ask"
+    assert brief.decision_context["experience_mode"] == "clarify"
+    assert brief.decision_context["phase_a_guardrail"] == "ask_before_plan"
+    assert brief.decision_context["strategic_clarification_questions"]

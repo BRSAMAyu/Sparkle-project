@@ -1689,13 +1689,37 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
     body_guidance = decision_context.get("body_awareness_guidance")
     body_guidance = body_guidance if isinstance(body_guidance, dict) else {}
     what_matters_now = str(decision_context.get("what_matters_now") or "").strip()
+    planning_readiness = str(decision_context.get("planning_readiness") or "").strip()
+    planning_action = str(decision_context.get("planning_readiness_action") or "").strip()
+    planning_unknowns = decision_context.get("planning_blocking_unknowns")
+    planning_unknowns = [item for item in planning_unknowns if str(item).strip()] if isinstance(planning_unknowns, list) else []
+    clarification_questions = decision_context.get("strategic_clarification_questions")
+    clarification_questions = [item for item in clarification_questions if str(item).strip()] if isinstance(clarification_questions, list) else []
 
-    if not any([experience_mode, intervention_family, what_matters_now, adjustments, body_guidance]):
+    if not any([
+        experience_mode,
+        intervention_family,
+        what_matters_now,
+        adjustments,
+        body_guidance,
+        planning_readiness,
+        planning_unknowns,
+        clarification_questions,
+    ]):
         return ""
 
     lines = ["## 当前决策策略 [L1 引导]"]
     if what_matters_now:
         lines.append(f"- 当前最重要的是: {what_matters_now}")
+    if planning_readiness:
+        readiness_bits = [planning_readiness]
+        if planning_action:
+            readiness_bits.append(planning_action)
+        lines.append(f"- 规划前置信号: {' / '.join(readiness_bits)}")
+    if planning_unknowns:
+        lines.append(f"- 计划前仍需补齐: {', '.join(str(item) for item in planning_unknowns[:3])}")
+    if clarification_questions:
+        lines.append(f"- 若要追问，优先问: {str(clarification_questions[0]).strip()}")
     if experience_mode or intervention_family or reversibility_level:
         bits = [bit for bit in [experience_mode, intervention_family, reversibility_level] if bit]
         if bits:

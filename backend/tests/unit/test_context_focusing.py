@@ -319,6 +319,10 @@ def test_build_system_prompt_includes_decision_policy_section() -> None:
             "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
             "residual_decision_context": {
                 "what_matters_now": "先把真正的概念混淆校准清楚。",
+                "planning_readiness": "low",
+                "planning_readiness_action": "ask",
+                "planning_blocking_unknowns": ["baseline_mastery", "capacity_hours"],
+                "strategic_clarification_questions": ["你目前对这个主题的掌握大概在哪个水平？"],
                 "experience_mode": "explain",
                 "intervention_family": "understanding_repair",
                 "reversibility_level": "medium",
@@ -342,6 +346,9 @@ def test_build_system_prompt_includes_decision_policy_section() -> None:
     )
 
     assert "## 当前决策策略 [L1 引导]" in prompt
+    assert "规划前置信号: low / ask" in prompt
+    assert "计划前仍需补齐: baseline_mastery, capacity_hours" in prompt
+    assert "若要追问，优先问: 你目前对这个主题的掌握大概在哪个水平？" in prompt
     assert "本轮模式: explain / understanding_repair / medium" in prompt
     assert "retrieval_emphasis -> user_materials (session)" in prompt
 
