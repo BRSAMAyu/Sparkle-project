@@ -101,6 +101,10 @@ async def test_situation_brief_builder_uses_existing_context_sources() -> None:
     assert brief["decision_context"]["intervention_family"] == "understanding_repair"
     assert brief["decision_context"]["system_adjustments"][0]["field"] == "retrieval_emphasis"
     assert brief["decision_context"]["body_awareness_guidance"]["primary_subsystem"]["id"] == "galaxy"
+    assert brief["body_map"]["available_organs"]
+    assert brief["capability_requirements"]["grounding_required"] == "mandatory"
+    assert brief["capability_selection"]["summary"]["retrieval_mode"] == "user_materials_first"
+    assert brief["capability_selection"]["model_selection"]["preferred_tier"] in {"standard", "plus"}
     assert brief["decision_context"]["planning_readiness"] in {"medium", "high"}
     assert "progress_snapshot" in brief["source_trace"]["used_sources"]
     assert "outcome_learning" in brief["source_trace"]["used_sources"]
@@ -273,3 +277,30 @@ async def test_situation_brief_uses_phase_a_gate_to_force_clarify_before_plannin
     assert brief.decision_context["experience_mode"] == "clarify"
     assert brief.decision_context["phase_a_guardrail"] == "ask_before_plan"
     assert brief.decision_context["strategic_clarification_questions"]
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_selects_specialist_path_when_error_diagnosis_is_required() -> None:
+    brief = await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "Help me debug the root cause of why I keep missing the sign in this thermodynamics derivation.",
+            "context_focus": {"focus_mode": "knowledge_focus", "route_intent": "error_diagnosis"},
+            "profile_context": {
+                "knowledge_summary": {"overall_mastery": 0.52},
+                "cognitive_summary": {"active_patterns": []},
+            },
+            "attached_materials": [{"file_id": "file-1"}],
+        },
+        plan_context={},
+        focused_memory={},
+        context_briefing_note="User wants a root-cause diagnosis, not a generic explanation.",
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+        adaptation_records=[],
+    )
+
+    assert brief.capability_requirements["specialization_required"] is True
+    assert brief.capability_selection["summary"]["specialist_strategy"] == "specialist_required"
+    assert brief.capability_selection["specialist_selection"]["selected_experts"]
+    assert "mandatory" == brief.capability_requirements["grounding_required"]

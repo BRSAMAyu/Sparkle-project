@@ -269,18 +269,32 @@ class SessionStateMixin:
         existing_brief = user_context_payload.get("situation_brief")
         if isinstance(existing_brief, dict):
             decision_context = existing_brief.get("decision_context") if isinstance(existing_brief, dict) else None
+            capability_selection = existing_brief.get("capability_selection") if isinstance(existing_brief, dict) else None
             if isinstance(decision_context, dict):
                 user_context_payload["residual_decision_context"] = decision_context
+            if isinstance(capability_selection, dict):
+                user_context_payload["capability_selection"] = capability_selection
 
             if isinstance(state, WorkflowState):
                 state.context_data["situation_brief"] = existing_brief
                 if isinstance(decision_context, dict):
                     state.context_data["residual_decision_context"] = decision_context
+                if isinstance(capability_selection, dict):
+                    state.context_data["capability_selection_report"] = capability_selection
+                    state.context_data["capability_selection_summary"] = capability_selection.get("summary", {})
+                    state.context_data["why_this_path"] = str(capability_selection.get("why_this_path") or "").strip()
+                    model_selection = capability_selection.get("model_selection")
+                    if isinstance(model_selection, dict):
+                        state.context_data["phase_d_forced_model_tier"] = str(
+                            model_selection.get("preferred_tier") or ""
+                        ).strip()
                 existing_user_context = state.context_data.get("user_context")
                 if isinstance(existing_user_context, dict):
                     existing_user_context["situation_brief"] = existing_brief
                     if isinstance(decision_context, dict):
                         existing_user_context["residual_decision_context"] = decision_context
+                    if isinstance(capability_selection, dict):
+                        existing_user_context["capability_selection"] = capability_selection
             return user_context_payload
 
         effective_progress_snapshot = None
@@ -348,18 +362,32 @@ class SessionStateMixin:
 
         user_context_payload["situation_brief"] = situation_brief
         decision_context = situation_brief.get("decision_context") if isinstance(situation_brief, dict) else None
+        capability_selection = situation_brief.get("capability_selection") if isinstance(situation_brief, dict) else None
         if isinstance(decision_context, dict):
             user_context_payload["residual_decision_context"] = decision_context
+        if isinstance(capability_selection, dict):
+            user_context_payload["capability_selection"] = capability_selection
 
         if isinstance(state, WorkflowState):
             state.context_data["situation_brief"] = situation_brief
             if isinstance(decision_context, dict):
                 state.context_data["residual_decision_context"] = decision_context
+            if isinstance(capability_selection, dict):
+                state.context_data["capability_selection_report"] = capability_selection
+                state.context_data["capability_selection_summary"] = capability_selection.get("summary", {})
+                state.context_data["why_this_path"] = str(capability_selection.get("why_this_path") or "").strip()
+                model_selection = capability_selection.get("model_selection")
+                if isinstance(model_selection, dict):
+                    state.context_data["phase_d_forced_model_tier"] = str(
+                        model_selection.get("preferred_tier") or ""
+                    ).strip()
             existing_user_context = state.context_data.get("user_context")
             if isinstance(existing_user_context, dict):
                 existing_user_context["situation_brief"] = situation_brief
                 if isinstance(decision_context, dict):
                     existing_user_context["residual_decision_context"] = decision_context
+                if isinstance(capability_selection, dict):
+                    existing_user_context["capability_selection"] = capability_selection
 
         return user_context_payload
 

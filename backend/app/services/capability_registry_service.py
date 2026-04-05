@@ -4,7 +4,7 @@ from datetime import timezone, datetime
 from typing import Any
 
 from app.config import settings
-from app.core.agent_profiles import agent_profile_registry, get_public_agent_catalog, get_public_mode_catalog
+from app.core.agent_profiles import ModelTier, agent_profile_registry, get_public_agent_catalog, get_public_mode_catalog
 from app.core.llm_router import llm_router
 
 
@@ -14,6 +14,8 @@ def _utcnow() -> str:
 
 class CapabilityRegistryService:
     """Structured body map for Sparkle's current capability surface."""
+
+    SCHEMA_VERSION = "phase_d.v1"
 
     _SUBSYSTEMS: tuple[dict[str, Any], ...] = (
         {
@@ -134,18 +136,29 @@ class CapabilityRegistryService:
         from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 
         dynamic_tool_registry.ensure_package_registered("app.tools")
+        models = self._models()
+        agents = self._agents()
+        tools = self._tools()
+        canonical_capabilities = self._canonical_capabilities(
+            models=models,
+            agents=agents,
+            tools=tools,
+        )
         return {
+            "schema_version": self.SCHEMA_VERSION,
             "generated_at": _utcnow(),
             "summary": {
-                "model_count": len(self._models()),
-                "agent_count": len(self._agents()),
-                "tool_count": len(self._tools()),
+                "model_count": len(models),
+                "agent_count": len(agents),
+                "tool_count": len(tools),
                 "subsystem_count": len(self._SUBSYSTEMS),
+                "canonical_capability_count": len(canonical_capabilities),
             },
-            "models": self._models(),
-            "agents": self._agents(),
+            "canonical_capabilities": canonical_capabilities,
+            "models": models,
+            "agents": agents,
             "modes": get_public_mode_catalog(),
-            "tools": self._tools(),
+            "tools": tools,
             "subsystems": list(self._SUBSYSTEMS),
             "configuration_layers": [
                 {"id": "constitutional", "status": "mostly_built", "writes_allowed": False},
@@ -417,3 +430,240 @@ class CapabilityRegistryService:
             }
             for item in dynamic_tool_registry.list_tools(verbose=True)
         ]
+
+    def _canonical_capabilities(
+        self,
+        *,
+        models: list[dict[str, Any]],
+        agents: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        capabilities: list[dict[str, Any]] = []
+        for item in models:
+            tier = str(item.get("tier") or "")
+            capabilities.append(
+                {
+                    "capability_id": f"model:{item['key']}",
+                    "label": str(item.get("model_name") or item["key"]),
+                    "capability_kind": "model",
+                    "purpose": f"Generation and reasoning at the {tier or 'unknown'} tier.",
+                    "availability": "healthy" if item.get("state") == "healthy" else "degraded",
+                    "quality_hint": self._quality_hint_for_model_tier(tier),
+                    "latency_hint": self._latency_hint(item.get("avg_latency_ms")),
+                    "cost_hint": self._cost_hint_for_tier(tier, item.get("cost_per_1k_tokens")),
+                    "read_scope": ["conversation", "tool_results"],
+                    "write_scope": [],
+                    "required_preconditions": ["provider_configured"],
+                    "when_to_use": [f"{tier}_tier_generation", "llm_routing_selected"],
+                    "when_not_to_use": ["provider_unhealthy", "cost_band_rejected"],
+                    "rights_model": "read_only_generation",
+                    "reversible": True,
+                    "declared_knobs": ["model_tier_selection"],
+                }
+            )
+        for item in agents:
+            capabilities.append(
+                {
+                    "capability_id": f"agent:{item['id']}",
+                    "label": str(item.get("display_name") or item["id"]),
+                    "capability_kind": "agent",
+                    "purpose": f"Specialized reasoning path for {item['id']}.",
+                    "availability": "available" if item.get("public_entry") else "configured",
+                    "quality_hint": "specialized" if item.get("expertise_domains") else "general",
+                    "latency_hint": "medium",
+                    "cost_hint": self._cost_hint_for_tier(item.get("model_tier"), None),
+                    "read_scope": ["conversation", "context"],
+                    "write_scope": [],
+                    "required_preconditions": ["agent_profile_registered"],
+                    "when_to_use": list(item.get("expertise_domains") or []) or ["expert_collaboration", item["id"]],
+                    "when_not_to_use": ["specialist_not_needed"],
+                    "rights_model": "read_only_reasoning",
+                    "reversible": True,
+                    "declared_knobs": ["agent_mix_selection"],
+                }
+            )
+        for item in tools:
+            tool_name = str(item.get("name") or "")
+            capabilities.append(
+                {
+                    "capability_id": f"tool:{tool_name}",
+                    "label": tool_name,
+                    "capability_kind": "tool",
+                    "purpose": str(item.get("description") or ""),
+                    "availability": "available",
+                    "quality_hint": "bounded" if tool_name in {"query_knowledge"} else "task_specific",
+                    "latency_hint": "medium",
+                    "cost_hint": "low",
+                    "read_scope": ["conversation", "knowledge"] if tool_name == "query_knowledge" else ["conversation"],
+                    "write_scope": [],
+                    "required_preconditions": ["tool_registered"],
+                    "when_to_use": [str(item.get("category") or ""), tool_name],
+                    "when_not_to_use": ["tool_unavailable", "rights_blocked"],
+                    "rights_model": "tool_registry_bounded",
+                    "reversible": True,
+                    "declared_knobs": ["tool_surface_selection"],
+                }
+            )
+        for item in self._SUBSYSTEMS:
+            kind = "surface" if item["id"] in {"community", "achievements", "visual_bgm"} else "subsystem"
+            capabilities.append(
+                {
+                    "capability_id": f"{kind}:{item['id']}",
+                    "label": item["label"],
+                    "capability_kind": kind,
+                    "purpose": item["purpose"],
+                    "availability": self._normalize_subsystem_state(item.get("state")),
+                    "quality_hint": "operational_now" if item["id"] not in {"community", "achievements", "visual_bgm"} else "soft_guided",
+                    "latency_hint": "medium",
+                    "cost_hint": str(item.get("cost_hint") or "medium"),
+                    "read_scope": list((item.get("permissions") or {}).get("read") or []),
+                    "write_scope": list((item.get("permissions") or {}).get("write") or []),
+                    "required_preconditions": list(item.get("activation_cues") or []),
+                    "when_to_use": list(item.get("activation_cues") or []),
+                    "when_not_to_use": [str(item.get("risk_hint") or "")],
+                    "rights_model": "declared_permissions_only",
+                    "reversible": item["id"] not in {"openclaw", "community"},
+                    "declared_knobs": ["tool_surface_selection"] if kind == "surface" else ["agent_mix_selection"],
+                }
+            )
+        capabilities.extend(self._canonical_runtime_paths())
+        for item in self._SYSTEM_LAYER_KNOBS:
+            capabilities.append(
+                {
+                    "capability_id": f"knob:{item['id']}",
+                    "label": item["id"],
+                    "capability_kind": "knob",
+                    "purpose": f"Bounded system knob for {item['id']}.",
+                    "availability": "declared",
+                    "quality_hint": "declared_but_not_governed",
+                    "latency_hint": "n/a",
+                    "cost_hint": "n/a",
+                    "read_scope": [],
+                    "write_scope": [str(item.get("layer") or "system")],
+                    "required_preconditions": [str(item.get("may_change_when") or "")],
+                    "when_to_use": [str(item.get("may_change_when") or "")],
+                    "when_not_to_use": [str(item.get("must_not_change_when") or "")],
+                    "rights_model": "bounded_registry_only",
+                    "reversible": item["id"] != "model_tier_selection",
+                    "declared_knobs": [item["id"]],
+                }
+            )
+        return capabilities
+
+    @staticmethod
+    def _canonical_runtime_paths() -> list[dict[str, Any]]:
+        return [
+            {
+                "capability_id": "path:body_awareness_guidance_projection",
+                "label": "Body Awareness Guidance Projection",
+                "capability_kind": "orchestration_path",
+                "purpose": "Project current body-awareness decisions into decision_context for prompt/runtime consumers.",
+                "availability": "available",
+                "quality_hint": "compatibility_projection",
+                "latency_hint": "low",
+                "cost_hint": "low",
+                "read_scope": ["decision_context"],
+                "write_scope": ["decision_context"],
+                "required_preconditions": ["situation_brief_compiled"],
+                "when_to_use": ["prompt_guidance", "brief_projection"],
+                "when_not_to_use": ["when_runtime_contract_is_missing"],
+                "rights_model": "projection_only",
+                "reversible": True,
+                "declared_knobs": [],
+            },
+            {
+                "capability_id": "path:specialist_expert_path",
+                "label": "Specialist Expert Path",
+                "capability_kind": "orchestration_path",
+                "purpose": "Route the turn through specialist collaboration when the requirement profile justifies it.",
+                "availability": "available",
+                "quality_hint": "operational_now",
+                "latency_hint": "medium",
+                "cost_hint": "medium",
+                "read_scope": ["conversation", "user_context"],
+                "write_scope": ["state.context_data"],
+                "required_preconditions": ["selected_experts_available"],
+                "when_to_use": ["specialist_reasoning", "error_diagnosis", "prediction"],
+                "when_not_to_use": ["specialist_not_needed", "cost_band_low"],
+                "rights_model": "state_bounded",
+                "reversible": True,
+                "declared_knobs": ["agent_mix_selection"],
+            },
+            {
+                "capability_id": "path:user_material_grounding",
+                "label": "User Material Grounding Path",
+                "capability_kind": "retrieval_path",
+                "purpose": "Ground the turn in user-provided materials before answering.",
+                "availability": "available",
+                "quality_hint": "operational_now",
+                "latency_hint": "medium",
+                "cost_hint": "medium",
+                "read_scope": ["conversation", "user_materials"],
+                "write_scope": ["decision_context"],
+                "required_preconditions": ["file_scope_available"],
+                "when_to_use": ["mandatory_grounding", "user_materials"],
+                "when_not_to_use": ["no_scoped_files"],
+                "rights_model": "session_bounded",
+                "reversible": True,
+                "declared_knobs": ["tool_surface_selection"],
+            },
+            {
+                "capability_id": "path:no_retrieval",
+                "label": "No Retrieval Fallback Path",
+                "capability_kind": "retrieval_path",
+                "purpose": "Stay on a bounded no-retrieval path when no authorized retrieval organ is live.",
+                "availability": "available",
+                "quality_hint": "fallback_only",
+                "latency_hint": "low",
+                "cost_hint": "low",
+                "read_scope": ["conversation"],
+                "write_scope": [],
+                "required_preconditions": ["retrieval_organs_unavailable_or_not_authorized"],
+                "when_to_use": ["fallback_only", "no_live_retrieval", "cost_minimal"],
+                "when_not_to_use": ["when_grounding_is_available"],
+                "rights_model": "bounded_fallback_only",
+                "reversible": True,
+                "declared_knobs": [],
+            },
+        ]
+
+    @staticmethod
+    def _normalize_subsystem_state(value: Any) -> str:
+        normalized = str(value or "").strip().lower()
+        if normalized in {"active", "configured"}:
+            return "available"
+        if normalized in {"not_configured", "blocked"}:
+            return "blocked"
+        return normalized or "unknown"
+
+    @staticmethod
+    def _quality_hint_for_model_tier(tier: Any) -> str:
+        normalized = str(tier or "").strip().lower()
+        if normalized in {ModelTier.FAST.value, ModelTier.FREE_FAST.value}:
+            return "fast_enough"
+        if normalized in {ModelTier.PRO.value, ModelTier.MAX.value}:
+            return "deep_reasoning"
+        return "balanced"
+
+    @staticmethod
+    def _cost_hint_for_tier(tier: Any, explicit_cost: Any) -> str:
+        normalized = str(tier or "").strip().lower()
+        if normalized in {ModelTier.FAST.value, ModelTier.FREE_FAST.value, ModelTier.FREE.value}:
+            return "low"
+        if normalized in {ModelTier.PRO.value, ModelTier.MAX.value}:
+            return "high"
+        if isinstance(explicit_cost, (int, float)) and float(explicit_cost) >= 0.001:
+            return "medium"
+        return "medium"
+
+    @staticmethod
+    def _latency_hint(avg_latency_ms: Any) -> str:
+        try:
+            latency = float(avg_latency_ms)
+        except (TypeError, ValueError):
+            return "unknown"
+        if latency <= 400:
+            return "low"
+        if latency <= 1200:
+            return "medium"
+        return "high"

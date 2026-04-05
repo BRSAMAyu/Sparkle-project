@@ -307,6 +307,55 @@ async def test_experience_actuator_keeps_core_adjustments_when_grounding_sidecar
 
 
 @pytest.mark.asyncio
+async def test_experience_actuator_blocks_disallowed_phase_d_knob_writes(db_session, test_user, test_plan):
+    actuator = ExperienceActuator(db_session, redis=_FakeRedis())
+    user_context_payload = {
+        "user_strategy_state": {
+            "difficulty_level": 3,
+            "session_mode": "guided",
+            "explanation_style": "conceptual",
+            "retrieval_emphasis": "balanced",
+            "push_vs_support": 0.5,
+            "intervention_intensity": "medium",
+            "current_episode_note": "",
+        },
+        "residual_decision_context": {
+            "confidence": 0.9,
+            "experience_mode": "stabilize",
+            "system_adjustments": [],
+            "capability_bounded_adjustments": [
+                {
+                    "field": "current_episode_note",
+                    "recommended_value": "write a persistent episode note",
+                    "target_layer": "session",
+                    "reversible": True,
+                },
+                {
+                    "field": "session_mode",
+                    "recommended_value": "recovery",
+                    "target_layer": "session",
+                    "reversible": True,
+                },
+            ],
+        },
+    }
+
+    runtime_summary = await actuator.apply(
+        user_id=str(test_user.id),
+        session_id="phase-d-governor",
+        plan_id=test_plan.id,
+        request_id="req-phase-d-governor",
+        user_message="Please make this lighter.",
+        file_ids=[],
+        user_context_payload=user_context_payload,
+    )
+
+    assert runtime_summary["auto_strategy_adjustments"][0]["field"] == "session_mode"
+    assert user_context_payload["user_strategy_state"]["session_mode"] == "recovery"
+    assert user_context_payload["residual_decision_context"]["blocked_capability_adjustments"][0]["field"] == "current_episode_note"
+
+
+@pytest.mark.asyncio
 async def test_experience_actuator_clears_stale_feedback_binding_when_auto_bind_finds_none(
     monkeypatch,
     db_session,

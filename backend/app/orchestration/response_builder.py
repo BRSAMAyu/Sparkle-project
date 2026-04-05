@@ -29,6 +29,30 @@ from app.orchestration.ux_envelope import ux_envelope_builder
 class ResponseBuilderMixin:
     """Mixin providing response-building and cleanup helpers for the Orchestrator."""
 
+    @staticmethod
+    def _capability_selection_metadata(context_data: dict[str, Any]) -> dict[str, str]:
+        situation_brief = context_data.get("situation_brief")
+        capability_selection_report = context_data.get("capability_selection_report")
+        if not isinstance(capability_selection_report, dict) and isinstance(situation_brief, dict):
+            capability_selection_report = situation_brief.get("capability_selection")
+        if not isinstance(capability_selection_report, dict):
+            return {}
+
+        metadata = {
+            "capability_selection_report": json.dumps(capability_selection_report, ensure_ascii=False),
+        }
+        summary_payload = capability_selection_report.get("summary")
+        if isinstance(summary_payload, dict) and summary_payload:
+            metadata["capability_selection_summary"] = json.dumps(summary_payload, ensure_ascii=False)
+        why_this_path = str(
+            context_data.get("why_this_path")
+            or capability_selection_report.get("why_this_path")
+            or ""
+        ).strip()
+        if why_this_path:
+            metadata["why_this_path"] = why_this_path
+        return metadata
+
     def _extract_response_outcome_stats(self, final_state: WorkflowState | None) -> dict[str, int]:
         if final_state is None:
             return {"task_count": 0, "plan_count": 0, "execution_count": 0}
@@ -367,6 +391,7 @@ class ResponseBuilderMixin:
             decision_context = situation_brief.get("decision_context")
             if isinstance(decision_context, dict):
                 response_metadata["residual_decision_context"] = json.dumps(decision_context, ensure_ascii=False)
+        response_metadata.update(self._capability_selection_metadata(final_state.context_data))
         strategy_state = final_state.context_data.get("user_strategy_state")
         if isinstance(strategy_state, dict):
             response_metadata["user_strategy_state"] = json.dumps(strategy_state, ensure_ascii=False)

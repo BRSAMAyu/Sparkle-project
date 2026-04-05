@@ -6,6 +6,7 @@ from uuid import UUID
 
 from loguru import logger
 
+from app.services.capability_knob_governor import CapabilityKnobGovernor
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.intervention_feedback_binding_service import InterventionFeedbackBindingService
 from app.services.user_strategy_state_service import UserStrategyStateService
@@ -351,13 +352,35 @@ class ExperienceActuator:
             return []
 
         strategy_state = _as_dict(user_context.get("user_strategy_state"))
-        adjustments = [
+        direct_adjustments = [
             item
             for item in _as_list(decision_context.get("system_adjustments"))
+            if isinstance(item, dict)
+        ]
+        capability_adjustments = [
+            item
+            for item in _as_list(decision_context.get("capability_bounded_adjustments"))
+            if isinstance(item, dict)
+        ]
+        if not direct_adjustments and not capability_adjustments:
+            return []
+
+        governed = CapabilityKnobGovernor().evaluate(
+            adjustments=[*direct_adjustments, *capability_adjustments],
+            strategy_state=strategy_state,
+        )
+        adjustments = [
+            item
+            for item in _as_list(governed.get("allowed_adjustments"))
             if isinstance(item, dict)
             and _strip(item.get("target_layer")) == UserStrategyStateService.SESSION_LAYER
             and bool(item.get("reversible"))
         ]
+        blocked_adjustments = [
+            item for item in _as_list(governed.get("blocked_adjustments")) if isinstance(item, dict)
+        ]
+        if blocked_adjustments:
+            decision_context["blocked_capability_adjustments"] = blocked_adjustments
         if not adjustments:
             return []
 
@@ -378,6 +401,7 @@ class ExperienceActuator:
                     "new_value": recommended_value,
                     "reason": _strip(item.get("reason")),
                     "confidence_gate": item.get("confidence_gate"),
+                    "source": _strip(item.get("source")),
                 }
             )
 

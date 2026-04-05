@@ -174,3 +174,21 @@ def test_roundtrip_ms_returns_zero_for_future_time(orchestrator):
 
     # Should return 0 instead of negative
     assert result == 0
+
+
+def test_capability_selection_metadata_stays_in_response_metadata(orchestrator):
+    metadata = orchestrator._capability_selection_metadata(
+        {
+            "capability_selection_report": {
+                "summary": {
+                    "retrieval_mode": "user_materials_first",
+                    "preferred_model_tier": "standard",
+                },
+                "why_this_path": "Used your materials first because this turn needed grounded evidence.",
+            }
+        }
+    )
+
+    assert "capability_selection_report" in metadata
+    assert "capability_selection_summary" in metadata
+    assert metadata["why_this_path"].startswith("Used your materials first")

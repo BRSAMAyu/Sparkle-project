@@ -1,0 +1,460 @@
+{
+  "latest_result_date": "2026-04-05",
+  "harness_role": "regression_harness_v1",
+  "fixture_path": "/Users/brsama/code/GitHub/Sparkle-project/backend/tests/fixtures/phase_d_body_awareness_baseline_scenarios.json",
+  "scenario_count": 10,
+  "modes": {
+    "regression_guided": {
+      "mode": "regression_guided",
+      "selection_correctness": 0.9,
+      "grounding_win_rate": 0.4,
+      "specialist_escalation_precision": 1.0,
+      "unnecessary_escalation_rate": 0.0,
+      "cost_discipline": 0.9,
+      "user_facing_coherence": 1.0,
+      "scenario_error_cases": [],
+      "status": "pass",
+      "scenario_results": [
+        {
+          "scenario_id": "phase_d_materials_mandatory_grounding",
+          "mode": "regression_guided",
+          "retrieval_score": 1.0,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 1.0,
+          "notes": [],
+          "selection_summary": {
+            "retrieval_mode": "user_materials_first",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "plus",
+            "selected_model_capability_id": "model:dashscope_chat",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_light_knowledge_turn",
+          "mode": "regression_guided",
+          "retrieval_score": 0.8,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.95,
+          "notes": [],
+          "selection_summary": {
+            "retrieval_mode": "light_query_knowledge",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "fast",
+            "selected_model_capability_id": "model:dashscope_fast",
+            "selected_experts": [],
+            "degraded_selection": true
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_overload_needs_stabilization",
+          "mode": "regression_guided",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.85,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "fast",
+            "selected_model_capability_id": "model:dashscope_fast",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_high_readiness_simple_plan",
+          "mode": "regression_guided",
+          "retrieval_score": 0.6,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.9,
+          "notes": [],
+          "selection_summary": {
+            "retrieval_mode": "user_materials_first",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "plus",
+            "selected_model_capability_id": "model:dashscope_chat",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_specialist_escalation_required",
+          "mode": "regression_guided",
+          "retrieval_score": 1.0,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 1.0,
+          "notes": [],
+          "selection_summary": {
+            "retrieval_mode": "user_materials_first",
+            "specialist_strategy": "specialist_required",
+            "preferred_model_tier": "plus",
+            "selected_model_capability_id": "model:dashscope_chat",
+            "selected_experts": [
+              "error_analyst",
+              "math_agent"
+            ],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_prediction_turn",
+          "mode": "regression_guided",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.85,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "fast",
+            "selected_model_capability_id": "model:dashscope_fast",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_community_surface_case",
+          "mode": "regression_guided",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.85,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "fast",
+            "selected_model_capability_id": "model:dashscope_fast",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_execution_fallback_when_unavailable",
+          "mode": "regression_guided",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 0.8,
+          "coherence_score": 1.0,
+          "overall_score": 0.8,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "standard",
+            "selected_model_capability_id": "model:dashscope_standard_thinking",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_adaptation_surface_case",
+          "mode": "regression_guided",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.85,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "fast",
+            "selected_model_capability_id": "model:dashscope_fast",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_cost_sensitive_fast_enough",
+          "mode": "regression_guided",
+          "retrieval_score": 0.8,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.95,
+          "notes": [],
+          "selection_summary": {
+            "retrieval_mode": "light_query_knowledge",
+            "specialist_strategy": "fallback_specialist",
+            "preferred_model_tier": "fast",
+            "selected_model_capability_id": "model:dashscope_fast",
+            "selected_experts": [
+              "error_analyst"
+            ],
+            "degraded_selection": true
+          },
+          "blocked_capabilities": []
+        }
+      ]
+    },
+    "strict_runtime": {
+      "mode": "strict_runtime",
+      "selection_correctness": 0.8812,
+      "grounding_win_rate": 0.4,
+      "specialist_escalation_precision": 1.0,
+      "unnecessary_escalation_rate": 0.0,
+      "cost_discipline": 0.9,
+      "user_facing_coherence": 1.0,
+      "scenario_error_cases": [],
+      "status": "pass",
+      "scenario_results": [
+        {
+          "scenario_id": "phase_d_materials_mandatory_grounding",
+          "mode": "strict_runtime",
+          "retrieval_score": 0.85,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.9625,
+          "notes": [],
+          "selection_summary": {
+            "retrieval_mode": "user_materials_tool_only",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "standard",
+            "selected_model_capability_id": "model:dashscope_standard_thinking",
+            "selected_experts": [],
+            "degraded_selection": true
+          },
+          "blocked_capabilities": [
+            "path:user_material_grounding"
+          ]
+        },
+        {
+          "scenario_id": "phase_d_light_knowledge_turn",
+          "mode": "strict_runtime",
+          "retrieval_score": 0.8,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.95,
+          "notes": [],
+          "selection_summary": {
+            "retrieval_mode": "light_query_knowledge",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "fast",
+            "selected_model_capability_id": "model:dashscope_fast",
+            "selected_experts": [],
+            "degraded_selection": true
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_overload_needs_stabilization",
+          "mode": "strict_runtime",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.85,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "fast",
+            "selected_model_capability_id": "model:dashscope_fast",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_high_readiness_simple_plan",
+          "mode": "strict_runtime",
+          "retrieval_score": 0.6,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.9,
+          "notes": [],
+          "selection_summary": {
+            "retrieval_mode": "user_materials_first",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "plus",
+            "selected_model_capability_id": "model:dashscope_chat",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_specialist_escalation_required",
+          "mode": "strict_runtime",
+          "retrieval_score": 1.0,
+          "specialist_score": 0.4,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.85,
+          "notes": [
+            "specialist requirement degraded to simple path"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "user_materials_first",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "plus",
+            "selected_model_capability_id": "model:dashscope_chat",
+            "selected_experts": [],
+            "degraded_selection": true
+          },
+          "blocked_capabilities": [
+            "path:specialist_expert_path"
+          ]
+        },
+        {
+          "scenario_id": "phase_d_prediction_turn",
+          "mode": "strict_runtime",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.85,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "standard",
+            "selected_model_capability_id": "model:dashscope_standard_thinking",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_community_surface_case",
+          "mode": "strict_runtime",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.85,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "standard",
+            "selected_model_capability_id": "model:dashscope_standard_thinking",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_execution_fallback_when_unavailable",
+          "mode": "strict_runtime",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 0.8,
+          "coherence_score": 1.0,
+          "overall_score": 0.8,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "standard",
+            "selected_model_capability_id": "model:dashscope_standard_thinking",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_adaptation_surface_case",
+          "mode": "strict_runtime",
+          "retrieval_score": 0.4,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.85,
+          "notes": [
+            "retrieval path stayed minimal"
+          ],
+          "selection_summary": {
+            "retrieval_mode": "no_retrieval",
+            "specialist_strategy": "simple_path",
+            "preferred_model_tier": "standard",
+            "selected_model_capability_id": "model:dashscope_standard_thinking",
+            "selected_experts": [],
+            "degraded_selection": false
+          },
+          "blocked_capabilities": []
+        },
+        {
+          "scenario_id": "phase_d_cost_sensitive_fast_enough",
+          "mode": "strict_runtime",
+          "retrieval_score": 0.8,
+          "specialist_score": 1.0,
+          "cost_score": 1.0,
+          "coherence_score": 1.0,
+          "overall_score": 0.95,
+          "notes": [],
+          "selection_summary": {
+            "retrieval_mode": "light_query_knowledge",
+            "specialist_strategy": "specialist_required",
+            "preferred_model_tier": "standard",
+            "selected_model_capability_id": "model:dashscope_standard_thinking",
+            "selected_experts": [
+              "error_analyst",
+              "deep_analyst",
+              "math_agent",
+              "science_agent",
+              "search_agent",
+              "galaxy_guide",
+              "time_tutor",
+              "study_buddy",
+              "writing_agent",
+              "code_agent"
+            ],
+            "degraded_selection": true
+          },
+          "blocked_capabilities": [
+            "model:xiaomi_chat",
+            "model:dashscope_fast",
+            "model:glm_4_7_flash_no_thinking"
+          ]
+        }
+      ]
+    }
+  }
+}

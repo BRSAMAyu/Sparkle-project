@@ -94,6 +94,16 @@ def _should_force_final_synthesis_without_tools(state: WorkflowState) -> bool:
     return False
 
 
+def _phase_d_forced_model_tier(state: WorkflowState) -> ModelTier | None:
+    raw = str(state.context_data.get("phase_d_forced_model_tier") or "").strip().lower()
+    if not raw:
+        return None
+    try:
+        return ModelTier(raw)
+    except ValueError:
+        return None
+
+
 def _build_minimal_user_context_for_grounded_synthesis(user_context: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(user_context, dict):
         return {}
@@ -1187,7 +1197,16 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
             generation_llm = explicit_runtime["service"]
             agent_role = explicit_runtime["agent_role"].value
         else:
-            if _should_force_fast_first_touch(
+            forced_phase_d_tier = _phase_d_forced_model_tier(state)
+            if forced_phase_d_tier is not None:
+                generation_llm = await get_configured_llm_service_for_tier(
+                    agent_role,
+                    forced_phase_d_tier,
+                    task_type=task_type,
+                    reasoning_mode=reasoning_mode,
+                )
+                state.context_data["phase_d_model_tier_enforced"] = forced_phase_d_tier.value
+            elif _should_force_fast_first_touch(
                 state,
                 explicit_runtime=explicit_runtime,
                 task_type=task_type,

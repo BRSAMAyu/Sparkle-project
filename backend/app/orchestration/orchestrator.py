@@ -95,6 +95,7 @@ from app.orchestration.chat_modes import (
     normalize_chat_mode,
     parse_team_spec,
 )
+from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
 from app.orchestration.expert_strategy import ExpertStrategyV1
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config  # noqa: F401
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow  # noqa: F401
@@ -700,13 +701,11 @@ class ChatOrchestrator(
                 user_message=user_message,
                 chat_mode=getattr(request, "chat_mode", None),
             )
-            guidance = CapabilityRegistryService().recommend_runtime_capabilities(
+            requested = CapabilitySelectionPolicy().choose_pre_context_tools(
                 route_intent=route_intent,
-                experience_mode=None,
+                user_message=user_message,
+                requested_tools=requested,
             )
-            primary_subsystem = ((guidance or {}).get("primary_subsystem") or {}).get("id")
-            if primary_subsystem == "galaxy" and "query_knowledge" not in requested:
-                requested.append("query_knowledge")
         return requested
 
     def _infer_capability_route_intent(self, *, user_message: str, chat_mode: str | None) -> str | None:
@@ -1435,27 +1434,61 @@ class ChatOrchestrator(
                     orchestration_trace=orchestration_trace,
                     user_context_payload=user_context_payload,
                 )
-                if expert_routing_decision:
+                capability_selection_report = state.context_data.get("capability_selection_report")
+                capability_specialist = (
+                    capability_selection_report.get("specialist_selection")
+                    if isinstance(capability_selection_report, dict)
+                    else None
+                )
+                capability_strategy = (
+                    str(capability_specialist.get("strategy") or "").strip()
+                    if isinstance(capability_specialist, dict)
+                    else ""
+                )
+                capability_experts = (
+                    [
+                        str(item).strip()
+                        for item in capability_specialist.get("selected_experts", [])
+                        if str(item).strip()
+                    ]
+                    if isinstance(capability_specialist, dict)
+                    else []
+                )
+
+                if requested_experts:
+                    state.context_data["selected_experts"] = list(requested_experts)
+                    state.context_data["expert_policy_id"] = "custom_team_v1" if team_spec else "explicit_custom_expert"
+                elif capability_strategy == "specialist_required" and capability_experts:
+                    state.context_data["selected_experts"] = list(capability_experts)
+                    state.context_data["expert_policy_id"] = "phase_d_capability_policy_v1"
+                    state.context_data["expert_routing_metadata"] = {
+                        "selected_experts": json.dumps(capability_experts, ensure_ascii=False),
+                        "routing_strategy": "phase_d_capability_policy",
+                        "fallback_reason": "",
+                        "route_confidence": "0.80",
+                        "expert_entry_source": "phase_d",
+                        "policy_id": "phase_d_capability_policy_v1",
+                        "complexity_score": "0.70",
+                        "complexity_tier": "medium",
+                    }
+                elif expert_routing_decision and capability_strategy != "simple_path":
                     state.context_data["expert_routing_metadata"] = expert_routing_decision.to_metadata()
                     state.context_data["selected_experts"] = list(expert_routing_decision.selected_experts)
                     state.context_data["expert_policy_id"] = expert_routing_decision.policy_id
-                elif requested_experts:
-                    state.context_data["selected_experts"] = list(requested_experts)
-                    state.context_data["expert_policy_id"] = "custom_team_v1" if team_spec else "explicit_custom_expert"
                 if answer_experts:
                     state.context_data["answer_experts"] = list(answer_experts)
                 if custom_expert_profiles:
                     state.context_data["_custom_expert_profiles"] = dict(custom_expert_profiles)
 
                 selected_for_preview = []
-                if expert_routing_decision and expert_routing_decision.selected_experts:
-                    selected_for_preview = list(expert_routing_decision.selected_experts)
-                elif isinstance(state.context_data.get("selected_experts"), list):
+                if isinstance(state.context_data.get("selected_experts"), list):
                     selected_for_preview = [
                         str(item).strip()
                         for item in state.context_data.get("selected_experts", [])
                         if str(item).strip()
                     ]
+                elif expert_routing_decision and expert_routing_decision.selected_experts:
+                    selected_for_preview = list(expert_routing_decision.selected_experts)
                 if selected_for_preview:
                     routing_preview = await emit_routing_preview(
                         stream_callback,

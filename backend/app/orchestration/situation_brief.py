@@ -6,6 +6,8 @@ from typing import Any
 import re
 
 from app.orchestration.planning_intent import detect_planning_like_turn
+from app.orchestration.capability_requirement_compiler import CapabilityRequirementCompiler
+from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
 from app.orchestration.decision_policy import DecisionPolicyCompiler
 from app.orchestration.planning_strategy_compiler import PlanningStrategyCompiler
 from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
@@ -97,6 +99,9 @@ class SituationBrief:
     insight_state: dict[str, Any] = field(default_factory=dict)
     planning_strategy: dict[str, Any] = field(default_factory=dict)
     outcome_learning: dict[str, Any] = field(default_factory=dict)
+    body_map: dict[str, Any] = field(default_factory=dict)
+    capability_requirements: dict[str, Any] = field(default_factory=dict)
+    capability_selection: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -117,6 +122,9 @@ class SituationBrief:
             "insight_state": self.insight_state,
             "planning_strategy": self.planning_strategy,
             "outcome_learning": self.outcome_learning,
+            "body_map": self.body_map,
+            "capability_requirements": self.capability_requirements,
+            "capability_selection": self.capability_selection,
         }
 
 
@@ -320,13 +328,6 @@ class SituationBriefBuilder:
             **diagnosis,
             **decision_policy,
         }
-        capability_guidance = CapabilityRegistryService().recommend_runtime_capabilities(
-            route_intent=route_intent,
-            experience_mode=_strip(decision_context.get("experience_mode")),
-            grounding_priority=_as_list(decision_context.get("grounding_priority")),
-            active_plan=_strip(vision.get("active_plan")),
-        )
-        decision_context["body_awareness_guidance"] = capability_guidance
         decision_context = self._apply_phase_a_decision_context(
             decision_context=decision_context,
             insight_state=insight_state,
@@ -350,6 +351,39 @@ class SituationBriefBuilder:
         decision_context["planning_grounding_mode"] = _strip(planning_strategy.get("grounding_mode"))
         decision_context["planning_fallback_policy"] = _strip(planning_strategy.get("fallback_policy"))
         decision_context["planning_required_sections"] = list(_as_list(planning_strategy.get("required_plan_sections")))
+        current_context = self._build_capability_selection_context(
+            user_context=user_context,
+            plan_context=plan_context,
+            decision_context=decision_context,
+            insight_state=insight_state,
+            route_intent=route_intent,
+        )
+        registry = CapabilityRegistryService().build_registry()
+        capability_requirements = CapabilityRequirementCompiler().compile(
+            user_context_payload=user_context,
+            plan_context=plan_context,
+            decision_context=decision_context,
+            insight_state=insight_state,
+            planning_strategy=planning_strategy,
+            route_intent=route_intent,
+        )
+        body_map = CapabilitySelectionPolicy().build_body_map(
+            registry=registry,
+            route_intent=route_intent,
+            capability_requirements=capability_requirements,
+        )
+        capability_selection = CapabilitySelectionPolicy().select(
+            body_map=body_map,
+            capability_requirements=capability_requirements,
+            route_intent=route_intent,
+            mode_strategy=recommended_stance,
+            current_context=current_context,
+        )
+        decision_context["body_awareness_guidance"] = _as_dict(capability_selection.get("body_awareness_guidance"))
+        decision_context["capability_selection_summary"] = _as_dict(capability_selection.get("summary"))
+        decision_context["capability_bounded_adjustments"] = list(
+            _as_list(capability_selection.get("bounded_adjustments"))
+        )
 
         focus_question = self._build_focus_question(
             vision=vision,
@@ -384,6 +418,9 @@ class SituationBriefBuilder:
             insight_state=insight_state,
             planning_strategy=planning_strategy,
             outcome_learning=outcome_learning,
+            body_map=body_map,
+            capability_requirements=capability_requirements,
+            capability_selection=capability_selection,
         )
 
     def _build_source_trace(
@@ -576,6 +613,40 @@ class SituationBriefBuilder:
             "self_report_high_mastery": self_report_high_mastery,
             "low_capacity_language": low_capacity_language,
             "strategy_mode": _strip(user_strategy_state.get("session_mode")),
+        }
+
+    def _build_capability_selection_context(
+        self,
+        *,
+        user_context: dict[str, Any],
+        plan_context: dict[str, Any],
+        decision_context: dict[str, Any],
+        insight_state: dict[str, Any],
+        route_intent: str,
+    ) -> dict[str, Any]:
+        query = " | ".join(
+            part
+            for part in (
+                _strip(user_context.get("current_query")),
+                _strip(decision_context.get("what_matters_now")),
+                _strip(plan_context.get("goal")),
+            )
+            if part
+        ).lower()
+        preferred_specialists: list[str] = []
+        if any(marker in query for marker in ("error", "debug", "报错", "根因")):
+            preferred_specialists.extend(["error_analyst"])
+        if any(marker in query for marker in ("math", "积分", "方程", "热力学")):
+            preferred_specialists.extend(["math_agent"])
+        if any(marker in query for marker in ("predict", "forecast", "预测")):
+            preferred_specialists.extend(["deep_analyst"])
+
+        return {
+            "query": query,
+            "experience_mode": _strip(decision_context.get("experience_mode")),
+            "planning_readiness": _strip(insight_state.get("readiness_level")),
+            "preferred_specialists": list(dict.fromkeys(preferred_specialists)),
+            "route_intent": _strip(route_intent),
         }
 
     def _apply_phase_a_decision_context(
