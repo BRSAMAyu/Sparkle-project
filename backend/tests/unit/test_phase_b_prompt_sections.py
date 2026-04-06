@@ -82,3 +82,35 @@ def test_build_system_prompt_hides_raw_strategy_state_fields_from_model_facing_s
     assert "retrieval_emphasis" not in prompt
     assert "intervention_intensity" not in prompt
     assert "current_episode_note" not in prompt
+
+
+def test_build_system_prompt_hides_raw_response_shape_tags() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "current_query": "信息还不够，先别直接给大计划。",
+            "situation_brief": {
+                "summary": "Need clarify-first behavior.",
+                "decision_context": {
+                    "experience_mode": "clarify",
+                    "planning_readiness_action": "ask",
+                    "user_visible_expression": {
+                        "opening_intent": "Ask the highest-value clarification before generating a plan.",
+                        "response_shape": "ask_one_targeted_question_then_hold_back",
+                    },
+                },
+                "planning_strategy": {
+                    "plan_mode": "next_step_only",
+                    "plan_depth": "light",
+                    "pacing_profile": "light",
+                    "grounding_mode": "mandatory",
+                    "fallback_policy": "ask_more",
+                    "required_plan_sections": ["withhold_reason", "next_action", "unlock_question"],
+                },
+            },
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "回答结构" in prompt
+    assert "一个高价值问题" in prompt or "一条高价值问题" in prompt
+    assert "ask_one_targeted_question_then_hold_back" not in prompt

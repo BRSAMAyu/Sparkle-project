@@ -431,3 +431,46 @@ async def test_situation_brief_selects_specialist_path_when_error_diagnosis_is_r
     assert brief.capability_selection["summary"]["specialist_strategy"] == "specialist_required"
     assert brief.capability_selection["specialist_selection"]["selected_experts"]
     assert "mandatory" == brief.capability_requirements["grounding_required"]
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_surfaces_prediction_summary_into_decision_context() -> None:
+    brief = await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我做一个复习计划",
+            "context_focus": {"route_intent": "plan"},
+            "profile_context": {
+                "preferences": {},
+                "knowledge_summary": {
+                    "overall_mastery": 0.52,
+                    "weak_spots": [],
+                    "recent_mastery_changes": [],
+                    "active_learning_subjects": ["热力学"],
+                },
+                "cognitive_summary": {"active_patterns": [], "risk_signals": []},
+                "user_insight_state": {
+                    "multi_span_analysis": {
+                        "short_span": {"overload_pressure": "high"},
+                    },
+                    "prediction_summaries": {
+                        "overload_risk": {"level": "high", "score": 0.8},
+                        "schedule_fit": {"level": "medium", "score": 0.58},
+                        "plan_slippage_risk": {"level": "high", "score": 0.77},
+                        "intervention_receptivity": {"level": "medium", "score": 0.55},
+                    },
+                },
+            },
+        },
+        plan_context={"goal": "完成热力学冲刺"},
+        focused_memory={},
+        context_briefing_note="",
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+        adaptation_records=[],
+    )
+
+    assert brief.decision_context["predicted_overload_risk"] == "high"
+    assert brief.decision_context["predicted_schedule_fit"] == "medium"
+    assert brief.decision_context["predicted_plan_slippage_risk"] == "high"
+    assert brief.decision_context["predicted_intervention_receptivity"] == "medium"

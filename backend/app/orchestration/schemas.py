@@ -449,6 +449,9 @@ class CompiledInsightState:
     freshness_map: dict[str, str] = field(default_factory=dict)
     contradiction_map: list[dict[str, Any]] = field(default_factory=list)
     planning_readiness: dict[str, Any] = field(default_factory=dict)
+    multi_span_analysis: dict[str, Any] = field(default_factory=dict)
+    prediction_summary: dict[str, Any] = field(default_factory=dict)
+    calibration_summary: dict[str, Any] = field(default_factory=dict)
     recommended_clarification: list[str] = field(default_factory=list)
     version: str = "1.0"
     generated_at: str = field(default_factory=_utcnow_iso)
@@ -465,6 +468,9 @@ class CompiledInsightState:
             "freshness_map": self.freshness_map,
             "contradiction_map": self.contradiction_map,
             "planning_readiness": self.planning_readiness,
+            "multi_span_analysis": self.multi_span_analysis,
+            "prediction_summary": self.prediction_summary,
+            "calibration_summary": self.calibration_summary,
             "recommended_clarification": self.recommended_clarification,
             "version": self.version,
             "generated_at": self.generated_at,

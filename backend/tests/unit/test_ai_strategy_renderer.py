@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
+from app.orchestration.ai_strategy_renderer import (
+    build_semantic_control,
+    evaluate_semantic_control_compliance,
+    format_semantic_control_lines,
+)
 
 
 def test_renderer_builds_strategy_doctrine_from_governed_terms_only() -> None:
@@ -81,3 +85,62 @@ def test_renderer_does_not_fallback_to_active_conflict_dicts_when_learning_hints
 
     assert semantic_control["rendered_doctrine_summary"]["learning_doctrine"] == []
     assert "companion-conflict" not in semantic_control["rendered_doctrine_summary"]["summary"]
+
+
+def test_renderer_exposes_response_shape_doctrine_without_raw_tags() -> None:
+    semantic_control = build_semantic_control(
+        decision_context={
+            "experience_mode": "clarify",
+            "planning_readiness_action": "ask",
+        },
+        planning_strategy={"plan_mode": "next_step_only"},
+        language="zh",
+    ).to_dict()
+
+    response_shape_lines = format_semantic_control_lines(semantic_control, language="zh", section="response_shape")
+
+    assert response_shape_lines
+    assert any("高价值问题" in line or "微步骤" in line for line in response_shape_lines)
+    assert not any("ask_one_targeted_question_then_hold_back" in line for line in response_shape_lines)
+
+
+def test_semantic_compliance_expands_to_doctrine_aware_strategy_checks() -> None:
+    semantic_control = build_semantic_control(
+        decision_context={
+            "experience_mode": "explain",
+            "intervention_family": "understanding_repair",
+        },
+        planning_strategy={},
+        user_strategy_state={
+            "explanation_style": "example_based",
+            "retrieval_emphasis": "user_materials",
+            "push_vs_support": 0.2,
+            "intervention_intensity": "low",
+        },
+        language="en",
+    ).to_dict()
+
+    failing = evaluate_semantic_control_compliance(
+        text="Give the answer directly and push harder.",
+        semantic_control=semantic_control,
+        tool_call_count=0,
+        question_count=0,
+    )
+    passing = evaluate_semantic_control_compliance(
+        text=(
+            "It's okay to keep this light. For example, start with one note from chapter2_notes.pdf, "
+            "because that example will make the concept clearer. Next action: rebuild one mistake from your notes."
+        ),
+        semantic_control=semantic_control,
+        tool_call_count=0,
+        question_count=0,
+    )
+
+    assert failing.checks["explanation_style_behavior"] is False
+    assert failing.checks["retrieval_emphasis_behavior"] is False
+    assert failing.checks["support_posture_behavior"] is False
+    assert failing.checks["intervention_family_behavior"] is False
+    assert passing.checks["explanation_style_behavior"] is True
+    assert passing.checks["retrieval_emphasis_behavior"] is True
+    assert passing.checks["support_posture_behavior"] is True
+    assert passing.checks["experience_mode_behavior"] is True

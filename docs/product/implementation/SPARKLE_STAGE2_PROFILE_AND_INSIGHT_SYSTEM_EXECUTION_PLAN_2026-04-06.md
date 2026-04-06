@@ -256,6 +256,13 @@ Because this is the highest-ROI work and the current biggest moat leak.
 2. `S2-I0B`: prompt leakage repair
 3. `S2-I0C`: consumption telemetry and regression tests
 
+### Closeout Artifact
+
+- `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/SPARKLE_STAGE2_S2_I0_INSIGHT_CLOSURE_AUDIT_2026-04-06.md`
+  - freezes the `S2-I0` signal map
+  - documents the temporary `prompt_signal_telemetry` contract
+  - records the broader `S2-I0` verification gate
+
 ## Phase S2-I1: Canonical User Insight State
 
 ### Purpose
@@ -646,3 +653,6 @@ Its mission is:
 - lock regression tests around those fixes
 
 That is the best first move because it improves the moat immediately and clarifies everything that follows.
+
+Closeout reference after implementation:
+- `/Users/brsama/code/GitHub/Sparkle-project/docs/verification/SPARKLE_STAGE2_S2_I0_INSIGHT_CLOSURE_AUDIT_2026-04-06.md`

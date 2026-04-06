@@ -882,6 +882,12 @@ class SituationBriefBuilder:
             for item in _as_list(insight_state.get("blocking_unknowns") or insight_state.get("missing_information"))
             if _strip(item)
         ]
+        prediction_summary = _as_dict(insight_state.get("prediction_summary"))
+        calibration_summary = _as_dict(insight_state.get("calibration_summary"))
+        overload_prediction = _as_dict(prediction_summary.get("overload_risk"))
+        schedule_prediction = _as_dict(prediction_summary.get("schedule_fit"))
+        slippage_prediction = _as_dict(prediction_summary.get("plan_slippage_risk"))
+        receptivity_prediction = _as_dict(prediction_summary.get("intervention_receptivity"))
 
         decision_context["planning_readiness"] = readiness_level
         if readiness_score is not None:
@@ -890,6 +896,16 @@ class SituationBriefBuilder:
         decision_context["planning_blocking_unknowns"] = blocking_unknowns
         decision_context["insight_contradictions"] = contradictions
         decision_context["strategic_clarification_questions"] = questions
+        if overload_prediction:
+            decision_context["predicted_overload_risk"] = _strip(overload_prediction.get("level"))
+        if schedule_prediction:
+            decision_context["predicted_schedule_fit"] = _strip(schedule_prediction.get("level"))
+        if slippage_prediction:
+            decision_context["predicted_plan_slippage_risk"] = _strip(slippage_prediction.get("level"))
+        if receptivity_prediction:
+            decision_context["predicted_intervention_receptivity"] = _strip(receptivity_prediction.get("level"))
+        if calibration_summary:
+            decision_context["insight_calibration_posture"] = _strip(calibration_summary.get("calibration_posture"))
 
         if not planning_like:
             return decision_context

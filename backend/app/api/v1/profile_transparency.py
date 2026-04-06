@@ -30,6 +30,7 @@ from app.services.profile_context_service import ProfileContextService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.insight_copy import present_pattern_name
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.services.user_insight_transparency_service import UserInsightTransparencyService
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -38,6 +39,10 @@ def _snippet(value: str, limit: int = 80) -> str:
     if not value:
         return ""
     return value if len(value) <= limit else f"{value[:limit - 1]}…"
+
+
+def _strip(value: Any) -> str:
+    return str(value or "").strip()
 
 
 def _response_style_from_depth(depth: float) -> str:
@@ -466,6 +471,13 @@ class ResetOverrideRequest(BaseModel):
     key: str
 
 
+class InsightControlRequest(BaseModel):
+    target_id: str
+    action: str
+    value: Any | None = None
+    reason: str | None = None
+
+
 def _coerce_preference_value(pref_key: str, value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
@@ -495,6 +507,15 @@ def _merge_preferences(explicit: dict[str, Any], inferred: dict[str, Any]) -> di
     merged = dict(inferred or {})
     merged.update(explicit or {})
     return merged
+
+
+def _merge_scope_overrides(merged_preferences: dict[str, Any], target_id: str, scope: str | None) -> dict[str, Any]:
+    current = dict(merged_preferences.get("insight_scope_overrides") or {})
+    if scope:
+        current[target_id] = {"scope": scope}
+    else:
+        current.pop(target_id, None)
+    return current
 
 
 def _normalize_inferred_display_value(value: Any) -> Any:
@@ -877,14 +898,23 @@ async def get_profile_context(
 ) -> dict[str, Any]:
     profile_context_service = ProfileContextService(db, cache_service.redis)
     pref_service = PreferenceService(db, cache_service.redis)
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
 
     context = await profile_context_service.get_profile_context(current_user.id)
     prefs = await pref_service.get_preferences(current_user.id)
     merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
+    inferred_backups = await profile_write_service.list_inferred_backups(current_user.id)
 
     payload = context.to_prompt_context()
     payload["preferences"] = merged_preferences
     payload["preference_version"] = prefs.version or payload.get("preference_version", 0)
+    user_insight_state = getattr(context, "user_insight_state", None)
+    if user_insight_state is not None:
+        payload["user_insight_transparency"] = UserInsightTransparencyService().build_payload(
+            state=user_insight_state,
+            merged_preferences=merged_preferences,
+            inferred_backups=inferred_backups,
+        )
     partnership_result = await db.execute(
         select(AccountabilityPartnership).where(
             and_(
@@ -910,6 +940,38 @@ async def get_profile_context(
     if active_partnership is not None:
         payload["accountability_summary"]["has_core_partner"] = True
     return payload
+
+
+@router.get("/insights")
+async def get_profile_insights(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    profile_context_service = ProfileContextService(db, cache_service.redis)
+    pref_service = PreferenceService(db, cache_service.redis)
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+
+    context = await profile_context_service.get_profile_context(current_user.id)
+    prefs = await pref_service.get_preferences(current_user.id)
+    merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
+    inferred_backups = await profile_write_service.list_inferred_backups(current_user.id)
+
+    state = context.user_insight_state
+    if state is None:
+        return {
+            "claims": [],
+            "predictions": [],
+            "recent_changes": [],
+            "unknowns": [],
+            "calibration": {},
+            "current_profile": {},
+        }
+
+    return UserInsightTransparencyService().build_payload(
+        state=state,
+        merged_preferences=merged_preferences,
+        inferred_backups=inferred_backups,
+    )
 
 
 @router.get("/inferred-preferences")
@@ -1232,6 +1294,135 @@ async def reset_override_preference(
     return {
         "status": "ok",
         "version": result.preference_version,
+    }
+
+
+@router.post("/insights/control")
+async def control_profile_insight(
+    payload: InsightControlRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    from app.models.memory import MemoryCorrection
+
+    target_id = _strip(payload.target_id)
+    action = _strip(payload.action).lower()
+    if not target_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="target_id required")
+    if action not in {"wrong", "used_to_be_true", "exam_mode_only", "reset_override"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="unsupported action")
+
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+    pref_service = PreferenceService(db, cache_service.redis)
+    prefs = await pref_service.get_preferences(current_user.id)
+    merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
+    meta = INFERRED_META.get(target_id)
+
+    preference_version = prefs.version or 0
+    if action == "reset_override":
+        if meta is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown inferred key")
+        result = await profile_write_service.reset_override_preference(
+            user_id=current_user.id,
+            pref_key=target_id,
+        )
+        scope_updates = _merge_scope_overrides(merged_preferences, target_id, None)
+        scope_result = await profile_write_service.set_explicit_preference(
+            user_id=current_user.id,
+            pref_key="insight_scope_overrides",
+            pref_value=scope_updates,
+            evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+            source_type="user_state",
+            source="insight_control",
+        )
+        preference_version = max(result.preference_version, scope_result.preference_version)
+    elif meta is not None:
+        if action == "wrong":
+            if meta.adjustable and payload.value is not None:
+                value_payload = _coerce_preference_value(target_id, payload.value)
+                result = await profile_write_service.override_inferred_preference(
+                    user_id=current_user.id,
+                    pref_key=target_id,
+                    pref_value=value_payload,
+                    evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+                    source="insight_control",
+                )
+                preference_version = result.preference_version
+            else:
+                result = await profile_write_service.remove_inferred_preference(
+                    user_id=current_user.id,
+                    pref_key=target_id,
+                )
+                preference_version = result.preference_version
+            scope_updates = _merge_scope_overrides(merged_preferences, target_id, None)
+            await profile_write_service.set_explicit_preference(
+                user_id=current_user.id,
+                pref_key="insight_scope_overrides",
+                pref_value=scope_updates,
+                evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+                source_type="user_state",
+                source="insight_control",
+            )
+        elif action == "used_to_be_true":
+            result = await profile_write_service.remove_inferred_preference(
+                user_id=current_user.id,
+                pref_key=target_id,
+            )
+            preference_version = result.preference_version
+            scope_updates = _merge_scope_overrides(merged_preferences, target_id, None)
+            await profile_write_service.set_explicit_preference(
+                user_id=current_user.id,
+                pref_key="insight_scope_overrides",
+                pref_value=scope_updates,
+                evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+                source_type="user_state",
+                source="insight_control",
+            )
+        elif action == "exam_mode_only":
+            scope_updates = _merge_scope_overrides(merged_preferences, target_id, "exam_mode_only")
+            result = await profile_write_service.set_explicit_preference(
+                user_id=current_user.id,
+                pref_key="insight_scope_overrides",
+                pref_value=scope_updates,
+                evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+                source_type="user_state",
+                source="insight_control",
+            )
+            preference_version = result.preference_version
+
+    correction = MemoryCorrection(
+        user_id=current_user.id,
+        memory_type="insight_signal",
+        memory_id=current_user.id,
+        action=action,
+        reason=json.dumps(
+            {
+                "target_id": target_id,
+                "field_name": target_id,
+                "suggested_value": payload.value,
+                "reason": payload.reason,
+            },
+            ensure_ascii=True,
+        ),
+    )
+    db.add(correction)
+    await db.commit()
+    await SystemUpdateService(cache_service.redis).enqueue(
+        current_user.id,
+        build_system_update(
+            update_type="insight_control_applied",
+            category="cognitive",
+            title="画像理解已根据你的反馈调整",
+            description="Sparkle 会在后续判断中考虑这条修正",
+            priority="medium",
+            metadata={"target_id": target_id, "action": action},
+        ),
+    )
+    return {
+        "status": "ok",
+        "target_id": target_id,
+        "action": action,
+        "preference_version": preference_version,
     }
 
 

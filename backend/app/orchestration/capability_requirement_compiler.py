@@ -118,7 +118,7 @@ class CapabilityRequirementCompiler:
 
         overload_detected = any(
             re.search(pattern, text_corpus, re.IGNORECASE) for pattern in self._OVERLOAD_PATTERNS
-        ) or experience_mode == "stabilize"
+        ) or experience_mode == "stabilize" or _strip(decision_context.get("predicted_overload_risk")).lower() == "high"
 
         if overload_detected:
             planning_depth_required = "light"

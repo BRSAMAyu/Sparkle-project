@@ -65,3 +65,24 @@ def test_planning_strategy_compiler_applies_validated_outcome_learning_hints() -
     assert strategy.scaffold_level == "high"
     assert strategy.pacing_profile == "light"
     assert "Default to a lighter first step." in strategy.outcome_learning_hints
+
+
+def test_planning_strategy_compiler_uses_predicted_overload_risk() -> None:
+    compiler = PlanningStrategyCompiler()
+
+    strategy = compiler.compile(
+        situation_brief={
+            "vision": {"primary_goal": "Pass exam"},
+            "current_state": {"snapshot": "Need a plan"},
+            "decision_context": {
+                "planning_readiness_action": "proceed",
+                "planning_readiness": "high",
+                "predicted_overload_risk": "high",
+            },
+        },
+        user_context_payload={},
+    )
+
+    assert strategy.overload_signal is True
+    assert strategy.plan_type == "recovery"
+    assert strategy.plan_depth == "standard"

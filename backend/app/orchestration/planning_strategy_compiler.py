@@ -285,6 +285,8 @@ class PlanningStrategyCompiler:
             return True
         if _strip(decision_context.get("experience_mode")) == "stabilize":
             return True
+        if _strip(decision_context.get("predicted_overload_risk")) == "high":
+            return True
         if planning_constraints.get("require_warmup_task") is True:
             return True
         text_blob = " | ".join(

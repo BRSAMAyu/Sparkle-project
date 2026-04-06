@@ -31,6 +31,9 @@ def test_planning_benchmark_harness_builds_mixed_provider_prompts() -> None:
     assert "Compiled planning strategy" in sparkle_prompt
     assert "Semantic doctrine" in semantic_prompt
     assert "behavioral contract" in semantic_prompt
+    assert "controlled regression evidence" in raw_prompt
+    assert "controlled regression evidence" in sparkle_prompt
+    assert "controlled regression evidence" in semantic_prompt
 
 
 def test_planning_benchmark_harness_uses_phase_a_inputs_not_expected_mode_for_strategy() -> None:

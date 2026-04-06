@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -22,13 +22,16 @@ from app.core.profile_context import (
 from app.models.cognitive import BehaviorPattern
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.subject import Subject
+from app.schemas.error_book import ErrorQueryParams
+from app.services.error_book_service import ErrorBookService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_name
 from app.services.personalization.preference_service import PreferenceService
 from app.services.report.report_tools import LearningReportTools
+from app.services.user_insight_compiler import UserInsightCompiler
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ProfileContextService:
@@ -105,6 +108,7 @@ class ProfileContextService:
         self.db = db
         self.redis = redis or cache_service.redis
         self.pref_service = PreferenceService(db, self.redis)
+        self.error_book_service = ErrorBookService(db)
         self.report_tools = LearningReportTools(db)
 
     async def get_profile_context(self, user_id: UUID) -> ProfileContext:
@@ -116,13 +120,14 @@ class ProfileContextService:
                     data = json.loads(cached)
                     context = ProfileContext(**data)
                     current_version = await self.pref_service.get_preference_version(user_id)
-                    if context.preference_version == current_version:
+                    if context.preference_version == current_version and context.user_insight_state is not None:
                         return context
                     logger.info(
-                        "ProfileContext cache stale for %s: cached_version=%s current_version=%s",
+                        "ProfileContext cache stale for %s: cached_version=%s current_version=%s has_insight=%s",
                         user_id,
                         context.preference_version,
                         current_version,
+                        bool(context.user_insight_state),
                     )
             except Exception as exc:
                 logger.warning(f"ProfileContext cache read failed: {exc}")
@@ -130,12 +135,19 @@ class ProfileContextService:
         preferences = await self._get_preferences(user_id)
         knowledge_summary = await self._get_knowledge_summary(user_id)
         cognitive_summary = await self._get_cognitive_summary(user_id)
+        error_payload = await self._get_error_summary(user_id)
 
         context = ProfileContext(
             preferences=preferences.get("explicit") or {},
             preference_version=preferences.get("version") or 0,
             knowledge_summary=knowledge_summary,
             cognitive_summary=cognitive_summary,
+            error_summary=error_payload.get("summary") or {},
+            recent_errors=error_payload.get("recent") or [],
+        )
+        context.user_insight_state = await UserInsightCompiler(self.db).compile(
+            user_id=user_id,
+            profile_context=context,
         )
 
         if self.redis:
@@ -157,6 +169,35 @@ class ProfileContextService:
             "inferred": inferred,
             "version": prefs.version if prefs else 0,
         }
+
+    async def _get_error_summary(self, user_id: UUID) -> dict[str, Any]:
+        try:
+            stats = await self.error_book_service.get_review_stats(user_id)
+        except Exception as exc:
+            logger.warning(f"Failed to load error stats: {exc}")
+            stats = {}
+
+        try:
+            errors, _ = await self.error_book_service.list_errors(
+                user_id,
+                ErrorQueryParams(page=1, page_size=5, need_review=False),
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to load recent errors: {exc}")
+            errors = []
+
+        recent_errors: list[dict[str, Any]] = []
+        for error in errors or []:
+            recent_errors.append(
+                {
+                    "id": str(error.id),
+                    "question_preview": error.question_text[:50] if error.question_text else "Image Question",
+                    "subject": error.subject_code,
+                    "error_type": error.latest_analysis.get("error_type_label") if error.latest_analysis else "Unknown",
+                    "mastery": error.mastery_level,
+                }
+            )
+        return {"summary": stats or {}, "recent": recent_errors}
 
     async def _get_knowledge_summary(self, user_id: UUID) -> KnowledgeSummary:
         overall_mastery = 0.0

@@ -13,6 +13,7 @@ from app.orchestration.planning_strategy_compiler import PlanningStrategyCompile
 from app.services.llm_service import get_llm_service_for_specific_model
 
 RAW_BASELINE_MODEL_KEYS = ("dashscope_chat", "deepseek_chat")
+BENCHMARK_STATUS_NOTE = "This benchmark is controlled regression evidence, not final proof of live AI-system behavior."
 PLANNING_BENCHMARK_DIMENSIONS = (
     "understanding_fit",
     "behavior_compliance",
@@ -166,6 +167,7 @@ class PlanningBenchmarkHarness:
     def build_raw_model_prompt(self, scenario: PlanningBenchmarkScenario) -> str:
         return (
             "You are helping an ordinary user build a study or action plan.\n"
+            f"{BENCHMARK_STATUS_NOTE}\n"
             "Use only the information below. Do not invent hidden data. If uncertainty remains, say so plainly.\n\n"
             f"Goal: {scenario.user_goal}\n"
             f"Deadline: {scenario.deadline}\n"
@@ -179,6 +181,7 @@ class PlanningBenchmarkHarness:
     def build_sparkle_current_prompt(self, scenario: PlanningBenchmarkScenario) -> str:
         return (
             "You are Sparkle's current planning stack.\n"
+            f"{BENCHMARK_STATUS_NOTE}\n"
             "Turn the dossier into a helpful plan for a non-expert user.\n\n"
             f"Goal: {scenario.user_goal}\n"
             f"Deadline: {scenario.deadline}\n"
@@ -230,6 +233,7 @@ class PlanningBenchmarkHarness:
         }.get(mode, "Honor the compiled planning mode exactly.")
         return (
             "You are Sparkle Phase B, a growth-first planning engine.\n"
+            f"{BENCHMARK_STATUS_NOTE}\n"
             "Make planning quality explicit and do not pretend certainty when the dossier is weak.\n"
             "Respond in English.\n\n"
             f"Dossier goal: {scenario.user_goal}\n"
@@ -239,7 +243,7 @@ class PlanningBenchmarkHarness:
             f"Dossier recent failures: {'; '.join(scenario.recent_failures) or 'None'}\n"
             f"Dossier materials: {'; '.join(scenario.materials) or 'None'}\n\n"
             f"Compiled planning strategy: mode={strategy['plan_mode']}, depth={strategy['plan_depth']}, pacing={strategy['pacing_profile']}, grounding={strategy['grounding_mode']}, fallback={strategy['fallback_policy']}.\n"
-            "The compiled planning strategy is authoritative for this benchmark.\n"
+            "The compiled planning strategy is authoritative for this regression benchmark harness.\n"
             f"The response must explicitly cover: {section_requirements}.\n"
             f"{mode_instruction}\n"
             "Use attached materials by name whenever grounding is mandatory."
@@ -291,6 +295,7 @@ class PlanningBenchmarkHarness:
             doctrine_lines.extend([_strip(item) for item in summary.get(key, []) if _strip(item)])
         return (
             "You are Sparkle's semantic-control planning stack.\n"
+            f"{BENCHMARK_STATUS_NOTE}\n"
             "Treat the doctrine below as behavioral contract, not stylistic suggestion.\n"
             "Respond in English.\n\n"
             f"Dossier goal: {scenario.user_goal}\n"

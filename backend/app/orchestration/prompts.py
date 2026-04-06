@@ -1736,6 +1736,9 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
     what_matters_now = str(decision_context.get("what_matters_now") or "").strip()
     planning_readiness = str(decision_context.get("planning_readiness") or "").strip()
     planning_action = str(decision_context.get("planning_readiness_action") or "").strip()
+    predicted_overload_risk = str(decision_context.get("predicted_overload_risk") or "").strip()
+    predicted_schedule_fit = str(decision_context.get("predicted_schedule_fit") or "").strip()
+    predicted_plan_slippage_risk = str(decision_context.get("predicted_plan_slippage_risk") or "").strip()
     planning_unknowns = decision_context.get("planning_blocking_unknowns")
     planning_unknowns = [item for item in planning_unknowns if str(item).strip()] if isinstance(planning_unknowns, list) else []
     clarification_questions = decision_context.get("strategic_clarification_questions")
@@ -1748,6 +1751,9 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
         adjustments,
         body_guidance,
         planning_readiness,
+        predicted_overload_risk,
+        predicted_schedule_fit,
+        predicted_plan_slippage_risk,
         planning_unknowns,
         clarification_questions,
     ]):
@@ -1761,6 +1767,15 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
         if planning_action:
             readiness_bits.append(planning_action)
         lines.append(f"- 规划前置信号: {' / '.join(readiness_bits)}")
+    if predicted_overload_risk:
+        lines.append(f"- 预测负荷风险: {predicted_overload_risk}")
+    if predicted_schedule_fit or predicted_plan_slippage_risk:
+        fit_bits = []
+        if predicted_schedule_fit:
+            fit_bits.append(f"时段适配 {predicted_schedule_fit}")
+        if predicted_plan_slippage_risk:
+            fit_bits.append(f"计划滑移风险 {predicted_plan_slippage_risk}")
+        lines.append(f"- 预测前瞻: {' / '.join(fit_bits)}")
     if planning_unknowns:
         lines.append(f"- 计划前仍需补齐: {', '.join(str(item) for item in planning_unknowns[:3])}")
     if clarification_questions:
@@ -1769,11 +1784,11 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
     for item in doctrine_lines[:3]:
         lines.append(f"- {item}")
     opening_intent = str(visible_expression.get("opening_intent") or "").strip()
-    response_shape = str(visible_expression.get("response_shape") or "").strip()
+    response_shape_lines = format_semantic_control_lines(semantic_control, language="zh", section="response_shape")
     if opening_intent:
         lines.append(f"- 开场原则: {opening_intent}")
-    if response_shape:
-        lines.append(f"- 回答结构: {response_shape}")
+    if response_shape_lines:
+        lines.append(f"- 回答结构: {response_shape_lines[0]}")
     if adjustments:
         first = adjustments[0]
         field = str(first.get("field") or "").strip()

@@ -1,6 +1,7 @@
 
 import pytest
 from app.core.profile_context import ProfileContext, KnowledgeSummary, CognitiveSummary, ActivePattern, WeakSpot
+from app.core.user_insight_state import UserInsightState
 from app.services.profile_truth_compiler import ProfileTruthCompiler
 
 @pytest.mark.asyncio
@@ -171,3 +172,29 @@ async def test_profile_truth_compiler_detects_maximal_pace_vs_low_capacity() -> 
     )
     assert contradiction["severity"] in {"medium", "high"}
     assert contradiction["evidence"]
+
+
+@pytest.mark.asyncio
+async def test_profile_truth_compiler_projects_multi_span_analysis_and_predictions_from_canonical_state() -> None:
+    canonical = UserInsightState(
+        multi_span_analysis={
+            "short_span": {"overload_pressure": "high", "current_traction": "low"},
+            "medium_span": {"task_start_completion_drift": {"label": "high_drift"}},
+        },
+        prediction_summaries={
+            "overload_risk": {"level": "high", "score": 0.82},
+            "schedule_fit": {"level": "low", "score": 0.24},
+        },
+    )
+    pc = ProfileContext(
+        preferences={},
+        preference_version=0,
+        knowledge_summary=KnowledgeSummary(),
+        cognitive_summary=CognitiveSummary(),
+        user_insight_state=canonical,
+    )
+
+    state = await ProfileTruthCompiler().compile(profile_context=pc)
+
+    assert state.multi_span_analysis["short_span"]["overload_pressure"] == "high"
+    assert state.prediction_summary["overload_risk"]["level"] == "high"

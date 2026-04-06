@@ -2,11 +2,11 @@ from datetime import datetime
 
 import pytest
 
-from app.models.user import User
-from app.services.personalization.preference_service import PreferenceService
 from app.models.cognitive import BehaviorPattern
 from app.models.error_book import ErrorRecord
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.user import User
+from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 
 
@@ -54,6 +54,8 @@ async def test_profile_context_service_maps_patterns_to_policy_signals(db_sessio
     ]
     assert "risk.execution_delay" in context.cognitive_summary.risk_signals
     assert "risk.focus_fatigue" in context.cognitive_summary.risk_signals
+    assert context.user_insight_state is not None
+    assert context.user_insight_state.constraints
 
 
 @pytest.mark.asyncio
@@ -101,6 +103,8 @@ async def test_profile_context_service_backfills_knowledge_summary_without_node_
     assert context.knowledge_summary.recent_mastery_changes
     assert context.knowledge_summary.recent_mastery_changes[0].node_name == "完成一次指针复盘"
     assert "指针与内存" in context.knowledge_summary.active_learning_subjects
+    assert context.user_insight_state is not None
+    assert context.user_insight_state.recent_wins
 
 
 class _RedisCache:

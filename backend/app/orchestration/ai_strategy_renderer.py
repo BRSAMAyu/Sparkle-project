@@ -56,6 +56,68 @@ def _safe_text_items(value: Any) -> list[str]:
     return lines
 
 
+def _selected_term_value(payload: dict[str, Any], term: str) -> str:
+    for item in _as_list(payload.get("selected_terms")):
+        if isinstance(item, dict) and _strip(item.get("term")) == term:
+            return _strip(item.get("value"))
+    return ""
+
+
+def _response_shape_guidance_lines(payload: dict[str, Any], *, language: str) -> list[str]:
+    contract = _as_dict(payload.get("response_contract"))
+    lines: list[str] = []
+    if _bool(contract.get("should_ask_high_value_question_first")):
+        lines.append(
+            "先只问一个高价值问题，再暂停，不要把回答扩成大计划。"
+            if language == "zh"
+            else "Ask exactly one highest-value question first, then hold scope instead of expanding into a broader plan."
+        )
+    if _bool(contract.get("must_name_assumptions")):
+        lines.append(
+            "先声明关键假设，再给缩范围的暂定方案。"
+            if language == "zh"
+            else "State the key assumptions first, then offer a narrowed provisional plan."
+        )
+    if _bool(contract.get("must_reduce_pressure")):
+        lines.append(
+            "先减轻负担，再给最小可执行下一步。"
+            if language == "zh"
+            else "Lower burden first, then give the smallest executable next move."
+        )
+    if _bool(contract.get("must_surface_tradeoffs")):
+        lines.append(
+            "先摆出标准与取舍，再比较路径。"
+            if language == "zh"
+            else "Surface the criteria and tradeoffs before comparing paths."
+        )
+    if _bool(contract.get("must_preserve_identity_safety")):
+        lines.append(
+            "先用证据稳住解释框架，再给轻一点的下一步。"
+            if language == "zh"
+            else "Stabilize the meaning of the evidence first, then offer a gentler next move."
+        )
+    if lines:
+        return lines
+
+    seen: set[str] = set()
+    lines = []
+    for item in _as_list(payload.get("selected_terms")):
+        if not isinstance(item, dict):
+            continue
+        term = _strip(item.get("term"))
+        value = _strip(item.get("value"))
+        doctrine = get_value_doctrine(term, value)
+        if doctrine is None:
+            continue
+        for guidance in doctrine.response_shape_guidance:
+            text = _strip(guidance)
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            lines.append(text)
+    return lines
+
+
 @dataclass(frozen=True)
 class RenderedSemanticDoctrine:
     selected_terms: list[dict[str, Any]]
@@ -284,6 +346,14 @@ def build_semantic_control(
     }
 
     summary_lines = [*decision_lines, *planning_lines, *strategy_lines, *body_lines, *learning_lines]
+    response_shape_lines = _response_shape_guidance_lines(
+        {
+            "selected_terms": selected_terms,
+            "response_contract": response_contract,
+        },
+        language=language,
+    )
+    summary_lines.extend(response_shape_lines[:2])
     if not summary_lines and language == "zh":
         summary_lines.append("当前没有额外的语义控制约束。")
     if not summary_lines and language != "zh":
@@ -296,6 +366,7 @@ def build_semantic_control(
             "decision_doctrine": decision_lines,
             "planning_doctrine": planning_lines,
             "strategy_doctrine": strategy_lines,
+            "response_shape_doctrine": response_shape_lines,
             "body_doctrine": body_lines,
             "learning_doctrine": learning_lines,
             "summary": " ".join(summary_lines),
@@ -317,6 +388,7 @@ def format_semantic_control_lines(
         "decision": "decision_doctrine",
         "planning": "planning_doctrine",
         "strategy": "strategy_doctrine",
+        "response_shape": "response_shape_doctrine",
         "body": "body_doctrine",
         "learning": "learning_doctrine",
         "all": "summary",
@@ -343,8 +415,28 @@ def evaluate_semantic_control_compliance(
         "provisional_assumptions": True,
         "mandatory_grounding": True,
         "stabilize_low_pressure": True,
+        "experience_mode_behavior": True,
+        "intervention_family_behavior": True,
+        "explanation_style_behavior": True,
+        "retrieval_emphasis_behavior": True,
+        "support_posture_behavior": True,
     }
     violations: list[dict[str, str]] = []
+    experience_mode = _selected_term_value(payload, "experience_mode")
+    intervention_family = _selected_term_value(payload, "intervention_family")
+    explanation_style = _selected_term_value(payload, "explanation_style")
+    retrieval_emphasis = _selected_term_value(payload, "retrieval_emphasis")
+    support_posture = _selected_term_value(payload, "support_posture")
+    intervention_intensity = _selected_term_value(payload, "intervention_intensity")
+    material_markers = ("grounding basis", "uploaded", ".pdf", ".csv", "材料", "笔记", "错题", "grounded")
+    step_markers = ("1.", "2.", "第一", "第二", "step 1", "step 2")
+    example_markers = ("for example", "example:", "例如", "比如", "举例")
+    concept_markers = ("concept", "principle", "because", "means", "原理", "概念", "意思是", "因为")
+    support_markers = ("you can", "it's okay", "we can", "先", "可以先", "没关系", "先不用", "先承接", "轻一点")
+    direct_markers = ("next action", "do this", "start with", "现在就", "下一步", "先做", "先去")
+    tradeoff_markers = ("tradeoff", "trade-off", "pros", "cons", "criteria", "option", "取舍", "标准", "代价", "路径")
+    identity_reframe_markers = ("does not mean", "not equal to", "already", "evidence", "这不等于", "不代表", "证据", "已经")
+    pressure_markers = ("push harder", "harder", "intensive", "strict", "更狠", "高强度", "push")
 
     if _bool(contract.get("should_ask_high_value_question_first")):
         checks["clarify_question_first"] = question_count == 1 and tool_call_count <= 1
@@ -367,8 +459,7 @@ def evaluate_semantic_control_compliance(
             )
 
     if _bool(contract.get("must_use_user_material_evidence")):
-        grounding_markers = ("grounding basis", "uploaded", ".pdf", ".csv", "材料", "笔记", "错题", "grounded")
-        checks["mandatory_grounding"] = any(marker in lowered or marker in text for marker in grounding_markers)
+        checks["mandatory_grounding"] = any(marker in lowered or marker in text for marker in material_markers)
         if not checks["mandatory_grounding"]:
             violations.append(
                 {
@@ -378,7 +469,6 @@ def evaluate_semantic_control_compliance(
             )
 
     if _bool(contract.get("must_reduce_pressure")):
-        pressure_markers = ("push harder", "harder", "intensive", "strict", "更狠", "高强度", "push")
         checks["stabilize_low_pressure"] = not any(marker in lowered or marker in text for marker in pressure_markers) and tool_call_count <= 3
         if not checks["stabilize_low_pressure"]:
             violations.append(
@@ -387,6 +477,98 @@ def evaluate_semantic_control_compliance(
                     "message": "Stabilize-mode output still sounded too high-pressure or too broad.",
                 }
             )
+
+    if explanation_style == "step_by_step":
+        checks["explanation_style_behavior"] = sum(1 for marker in step_markers if marker in lowered or marker in text) >= 2
+    elif explanation_style == "example_based":
+        checks["explanation_style_behavior"] = any(marker in lowered or marker in text for marker in example_markers)
+    elif explanation_style == "conceptual":
+        checks["explanation_style_behavior"] = any(marker in lowered or marker in text for marker in concept_markers)
+    if not checks["explanation_style_behavior"]:
+        violations.append(
+            {
+                "code": "missing_explanation_style_signal",
+                "message": "The response did not visibly follow the configured explanation style.",
+            }
+        )
+
+    if retrieval_emphasis == "user_materials":
+        checks["retrieval_emphasis_behavior"] = any(marker in lowered or marker in text for marker in material_markers)
+    elif retrieval_emphasis == "general_knowledge":
+        checks["retrieval_emphasis_behavior"] = not any(marker in lowered or marker in text for marker in material_markers)
+    if not checks["retrieval_emphasis_behavior"]:
+        violations.append(
+            {
+                "code": "missing_retrieval_emphasis_signal",
+                "message": "The response did not visibly match the configured grounding posture.",
+            }
+        )
+
+    if support_posture == "support_first":
+        checks["support_posture_behavior"] = any(marker in lowered or marker in text for marker in support_markers) and not any(
+            marker in lowered or marker in text for marker in pressure_markers
+        )
+    elif support_posture == "directive":
+        checks["support_posture_behavior"] = any(marker in lowered or marker in text for marker in direct_markers)
+    elif support_posture == "balanced":
+        checks["support_posture_behavior"] = any(marker in lowered or marker in text for marker in support_markers) and any(
+            marker in lowered or marker in text for marker in direct_markers
+        )
+    if not checks["support_posture_behavior"]:
+        violations.append(
+            {
+                "code": "missing_support_posture_signal",
+                "message": "The response did not visibly match the configured support posture.",
+            }
+        )
+
+    if experience_mode == "explain":
+        checks["experience_mode_behavior"] = checks["explanation_style_behavior"] or any(
+            marker in lowered or marker in text for marker in concept_markers + example_markers
+        )
+    elif experience_mode == "decide":
+        checks["experience_mode_behavior"] = any(marker in lowered or marker in text for marker in tradeoff_markers)
+    elif experience_mode == "reframe":
+        checks["experience_mode_behavior"] = any(marker in lowered or marker in text for marker in identity_reframe_markers)
+    elif experience_mode == "mobilize":
+        checks["experience_mode_behavior"] = any(marker in lowered or marker in text for marker in direct_markers)
+    elif experience_mode == "review":
+        checks["experience_mode_behavior"] = any(
+            marker in lowered or marker in text for marker in ("what changed", "adjust", "复盘", "回看", "哪里卡住", "调整")
+        )
+    if not checks["experience_mode_behavior"]:
+        violations.append(
+            {
+                "code": "missing_experience_mode_signal",
+                "message": "The response did not visibly match the active experience-mode contract.",
+            }
+        )
+
+    if intervention_family == "understanding_repair":
+        checks["intervention_family_behavior"] = checks["explanation_style_behavior"] or any(
+            marker in lowered or marker in text for marker in concept_markers
+        )
+    elif intervention_family == "clarifying_probe":
+        checks["intervention_family_behavior"] = checks["clarify_question_first"]
+    elif intervention_family == "load_shedding":
+        checks["intervention_family_behavior"] = checks["stabilize_low_pressure"]
+    elif intervention_family == "decision_navigation":
+        checks["intervention_family_behavior"] = any(marker in lowered or marker in text for marker in tradeoff_markers)
+    elif intervention_family == "identity_repair":
+        checks["intervention_family_behavior"] = any(marker in lowered or marker in text for marker in identity_reframe_markers)
+    elif intervention_family == "scaffolded_activation":
+        checks["intervention_family_behavior"] = any(marker in lowered or marker in text for marker in direct_markers)
+    if intervention_intensity == "low":
+        checks["intervention_family_behavior"] = checks["intervention_family_behavior"] and not any(
+            marker in lowered or marker in text for marker in pressure_markers
+        )
+    if not checks["intervention_family_behavior"]:
+        violations.append(
+            {
+                "code": "missing_intervention_family_signal",
+                "message": "The response did not visibly follow the active intervention-family behavior.",
+            }
+        )
 
     passed = all(checks.values())
     return SemanticControlComplianceReport(passed=passed, checks=checks, violations=violations)

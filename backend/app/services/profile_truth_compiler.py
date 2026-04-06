@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
-from datetime import datetime, timezone
 
 from app.core.profile_context import ProfileContext
+from app.core.user_insight_state import UserInsightState
 from app.orchestration.schemas import CompiledInsightState
 
+
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    return datetime.now(UTC).replace(tzinfo=None).isoformat()
+
 
 class ProfileTruthCompiler:
     """
@@ -24,26 +27,48 @@ class ProfileTruthCompiler:
         turn_signals: dict[str, Any] | None = None,
     ) -> CompiledInsightState:
         """Compile a unified insight state from multiple sources."""
-        
-        stable_traits = self._extract_stable_traits(profile_context)
-        current_state = self._extract_current_state(profile_context, user_strategy_state)
-        
-        # Initial extraction of constraints and bottlenecks
-        active_constraints = self._extract_constraints(profile_context)
-        active_bottlenecks = self._extract_bottlenecks(profile_context)
-        
-        # Map signal confidence and freshness
-        confidence_map = self._build_confidence_map(profile_context)
-        freshness_map = self._build_freshness_map(profile_context)
-        
+        canonical = self._coerce_canonical_state(profile_context)
+        if canonical is not None:
+            projection = canonical.to_legacy_projection()
+            stable_traits = dict(projection.get("stable_traits") or {})
+            current_state = dict(projection.get("current_state") or {})
+            if user_strategy_state:
+                current_state = self._merge_strategy_state(current_state, user_strategy_state)
+            active_constraints = list(projection.get("active_constraints") or [])
+            active_bottlenecks = list(projection.get("active_bottlenecks") or [])
+            confidence_map = dict(projection.get("confidence_map") or {})
+            freshness_map = dict(projection.get("freshness_map") or {})
+            contradictions = list(projection.get("contradiction_map") or [])
+            multi_span_analysis = dict(projection.get("multi_span_analysis") or {})
+            prediction_summary = dict(projection.get("prediction_summary") or {})
+            calibration_summary = dict(projection.get("calibration_summary") or {})
+        else:
+            stable_traits = self._extract_stable_traits(profile_context)
+            current_state = self._extract_current_state(profile_context, user_strategy_state)
+
+            # Initial extraction of constraints and bottlenecks
+            active_constraints = self._extract_constraints(profile_context)
+            active_bottlenecks = self._extract_bottlenecks(profile_context)
+
+            # Map signal confidence and freshness
+            confidence_map = self._build_confidence_map(profile_context)
+            freshness_map = self._build_freshness_map(profile_context)
+            contradictions = []
+            multi_span_analysis = {}
+            prediction_summary = {}
+            calibration_summary = {}
+
         # Detect contradictions between sources
-        contradictions = self._detect_contradictions(
+        detected = self._detect_contradictions(
             profile_context=profile_context,
             stable_traits=stable_traits,
             current_state=current_state,
             active_constraints=active_constraints,
             turn_signals=turn_signals or {},
         )
+        for item in detected:
+            if item not in contradictions:
+                contradictions.append(item)
 
         return CompiledInsightState(
             stable_traits=stable_traits,
@@ -53,8 +78,38 @@ class ProfileTruthCompiler:
             confidence_map=confidence_map,
             freshness_map=freshness_map,
             contradiction_map=contradictions,
+            multi_span_analysis=multi_span_analysis,
+            prediction_summary=prediction_summary,
+            calibration_summary=calibration_summary,
             generated_at=_utcnow_iso()
         )
+
+    @staticmethod
+    def _coerce_canonical_state(profile_context: ProfileContext) -> UserInsightState | None:
+        candidate = getattr(profile_context, "user_insight_state", None)
+        if isinstance(candidate, UserInsightState):
+            return candidate
+        if isinstance(candidate, dict):
+            return UserInsightState(**candidate)
+        return None
+
+    @staticmethod
+    def _merge_strategy_state(current_state: dict[str, Any], strategy: dict[str, Any] | None) -> dict[str, Any]:
+        merged = dict(current_state or {})
+        if not strategy:
+            return merged
+        for source_key, target_key in (
+            ("session_mode", "strategy_mode"),
+            ("active_mode", "strategy_mode"),
+            ("push_vs_support", "push_vs_support"),
+            ("intervention_intensity", "intervention_intensity"),
+            ("explanation_style", "explanation_style"),
+            ("retrieval_emphasis", "retrieval_emphasis"),
+        ):
+            value = strategy.get(source_key)
+            if value is not None:
+                merged[target_key] = value
+        return merged
 
     def _extract_stable_traits(self, pc: ProfileContext) -> dict[str, Any]:
         """Traits that don't change frequently (personality, base preferences)."""
@@ -69,19 +124,7 @@ class ProfileTruthCompiler:
             "overall_mastery": pc.knowledge_summary.overall_mastery,
             "active_subjects": pc.knowledge_summary.active_learning_subjects,
         }
-        if strategy:
-            for source_key, target_key in (
-                ("session_mode", "strategy_mode"),
-                ("active_mode", "strategy_mode"),
-                ("push_vs_support", "push_vs_support"),
-                ("intervention_intensity", "intervention_intensity"),
-                ("explanation_style", "explanation_style"),
-                ("retrieval_emphasis", "retrieval_emphasis"),
-            ):
-                value = strategy.get(source_key)
-                if value is not None and target_key not in state:
-                    state[target_key] = value
-        return state
+        return self._merge_strategy_state(state, strategy)
 
     def _extract_constraints(self, pc: ProfileContext) -> list[dict[str, Any]]:
         """Known behavioral or system-imposed constraints."""
@@ -109,7 +152,7 @@ class ProfileTruthCompiler:
                 "mastery": spot.mastery,
                 "last_attempt": spot.last_attempt_at.isoformat() if spot.last_attempt_at else None
             })
-        
+
         # High-risk cognitive patterns
         for signal in pc.cognitive_summary.risk_signals:
             bottlenecks.append({
@@ -117,7 +160,7 @@ class ProfileTruthCompiler:
                 "label": signal,
                 "type": "behavioral_risk"
             })
-            
+
         return bottlenecks
 
     def _build_confidence_map(self, pc: ProfileContext) -> dict[str, float]:
@@ -136,7 +179,7 @@ class ProfileTruthCompiler:
         }
 
     def _detect_contradictions(
-        self, 
+        self,
         profile_context: ProfileContext,
         stable_traits: dict[str, Any],
         current_state: dict[str, Any],
