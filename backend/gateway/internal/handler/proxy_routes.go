@@ -426,6 +426,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered dashboard proxy routes")
 
+	// ==================== Growth Routes ====================
+	growth := api.Group("/growth")
+	growth.Use(authMiddleware)
+	{
+		growth.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered growth proxy routes")
+
 	// ==================== Background Tasks Routes ====================
 	backgroundTasks := api.Group("/background-tasks")
 	backgroundTasks.Use(authMiddleware)

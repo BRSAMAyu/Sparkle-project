@@ -254,15 +254,22 @@ class Settings(BaseSettings):
     LLM_TIER_PRO: str = ""
     LLM_TIER_REASONING: str = ""
     LLM_TIER_MAX: str = ""
+    LLM_TIER_TOP: str = ""
     LLM_TIER_GLM_BATCH: str = ""
     LLM_TIER_SPECIALIST: str = ""
 
-    # XiaoMi MIMO Configuration (快速响应)
+    # XiaoMi MIMO Configuration
     XIAOMI_MIMO_API_KEY: str = ""
     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
     XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
     XIAOMI_STANDARD_MODEL: str = "mimo-v2-flash"
+    XIAOMI_PRO_MODEL: str = "mimo-v2-pro"
     XIAOMI_TEMPERATURE: float = 0.3
+    XIAOMI_PRO_TEMPERATURE: float = 0.3
+
+    # MIMO Token Plan API (Pro route uses a different base URL from flash/standard)
+    XIAOMI_MIMO_TOKEN_PLAN_API_KEY: str = ""
+    XIAOMI_MIMO_TOKEN_PLAN_BASE_URL: str = "https://token-plan-cn.xiaomimimo.com/v1"
 
     # Prompt Snapshot (debug observability)
     PROMPT_SNAPSHOT_ENABLED: bool = False
@@ -286,6 +293,7 @@ class Settings(BaseSettings):
     ZHIPU_AIR_MODEL: str = "glm-4.5-air"
     ZHIPU_LIGHT_MODEL: str = "glm-4.6"
     ZHIPU_MAX_MODEL: str = "glm-5"
+    ZHIPU_TOP_MODEL: str = "glm-5.1"  # TOP 层模型
     ZHIPU_TEMPERATURE: float = 0.3
     ZHIPU_OCR_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
     ZHIPU_OCR_MODEL: str = "glm-ocr"
