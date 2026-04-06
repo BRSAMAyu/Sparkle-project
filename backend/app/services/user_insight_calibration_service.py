@@ -29,6 +29,53 @@ class UserInsightCalibrationService:
 
     CORRECTION_WINDOW_DAYS = 90
     OUTCOME_WINDOW_DAYS = 60
+    NON_EFFECTIVE_STATUSES = {"corrected", "scoped"}
+    SIGNAL_TO_STABLE_PREFERENCE_KEYS = {
+        "capsule_depth_preference": ["content_depth_preference"],
+        "capsule_subject_affinity": ["content_subject_affinities"],
+    }
+    SIGNAL_TO_CURRENT_STATE_KEYS = {
+        "calendar_density": ["calendar_density_level"],
+        "workflow_tool_reliability": ["workflow_reliability"],
+        "accountability_rhythm": ["accountability_rhythm"],
+    }
+    SIGNAL_TO_WORK_STYLE_KEYS = {
+        "achievement_peak_hours": ["achievement_peak_hours"],
+        "achievement_motivation_response": ["achievement_motivation_response"],
+        "achievement_pace_style": ["achievement_pace_style"],
+        "achievement_reward_sensitivity": ["achievement_reward_sensitivity"],
+        "peak_focus_hours": ["peak_focus_hours"],
+        "inactive_push_hours": ["inactive_push_hours"],
+        "workflow_tool_affinity": ["preferred_tools"],
+        "accountability_support": ["accountability_support"],
+    }
+    SIGNAL_TO_TEMPORAL_KEYS = {
+        "achievement_peak_hours": [("achievement", "peak_hours")],
+        "achievement_motivation_response": [("achievement", "motivation_response")],
+        "achievement_pace_style": [("achievement", "pace_style")],
+        "achievement_reward_sensitivity": [("achievement", "reward_sensitivity")],
+        "calendar_density": [
+            ("calendar", "density_level"),
+            ("calendar", "avg_events_per_day"),
+            ("calendar", "avg_minutes_per_day"),
+        ],
+        "calendar_recurring_windows": [("calendar", "recurring_windows")],
+        "peak_focus_hours": [("calendar", "peak_focus_hours")],
+        "inactive_push_hours": [("calendar", "inactive_push_hours")],
+        "exam_urgency": [("calendar", "exam_urgency")],
+        "workflow_tool_affinity": [("workflow", "preferred_tools"), ("workflow", "recent_tool_runs")],
+        "workflow_tool_reliability": [("workflow", "reliability")],
+        "capsule_subject_affinity": [("content", "top_subjects")],
+        "accountability_support": [("community", "active_partnerships")],
+        "accountability_rhythm": [("community", "recent_checkins"), ("community", "rhythm")],
+    }
+    SIGNAL_TO_CONSTRAINT_IDS = {
+        "calendar_recurring_windows": {"calendar:recurring_windows"},
+        "inactive_push_hours": {"calendar:inactive_push_hours"},
+    }
+    SIGNAL_TO_GOAL_IDS = {
+        "exam_urgency": {"goal:exam_window", "goal:exam_pressure"},
+    }
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -62,6 +109,10 @@ class UserInsightCalibrationService:
             correction_summary=correction_summary,
             outcome_summary=outcome_summary,
         )
+        inactive_effective_signals = self._apply_effective_signal_pruning(
+            state=state,
+            stale_signals=stale_signals,
+        )
         prediction_adjustments = self._apply_prediction_calibration(
             state=state,
             correction_summary=correction_summary,
@@ -90,6 +141,7 @@ class UserInsightCalibrationService:
             "promoted_hypotheses": promotion_summary["promoted"],
             "demoted_hypotheses": promotion_summary["demoted"],
             "stale_signals": stale_signals,
+            "inactive_effective_signals": inactive_effective_signals,
             "prediction_adjustments": prediction_adjustments,
             "scope_overrides": scope_overrides,
             "calibration_posture": self._calibration_posture(
@@ -99,6 +151,27 @@ class UserInsightCalibrationService:
         }
         state.calibration_summary = summary
         return summary
+
+    def reapply_prediction_adjustments(
+        self,
+        *,
+        state: UserInsightState,
+        calibration_summary: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        correction_summary = {
+            "total": int(calibration_summary.get("recent_correction_count") or 0),
+        }
+        outcome_summary = {
+            "effective_rate": float(calibration_summary.get("strategy_effective_rate") or 0.0),
+            "ineffective_rate": float(calibration_summary.get("strategy_ineffective_rate") or 0.0),
+        }
+        adjustments = self._apply_prediction_calibration(
+            state=state,
+            correction_summary=correction_summary,
+            outcome_summary=outcome_summary,
+        )
+        calibration_summary["prediction_adjustments"] = adjustments
+        return adjustments
 
     async def _load_recent_corrections(self, user_id: UUID) -> list[MemoryCorrection]:
         since = _utcnow() - timedelta(days=self.CORRECTION_WINDOW_DAYS)
@@ -252,17 +325,12 @@ class UserInsightCalibrationService:
         outcome_summary: dict[str, Any],
     ) -> list[str]:
         stale: list[str] = []
-        low_sample = int(outcome_summary["sample_count"] or 0) < 2
 
         for signal_id, freshness in list(state.freshness_metadata.items()):
             if freshness == "low":
                 stale.append(signal_id)
                 continue
             if correction_summary["targets"].get(signal_id, 0) > 0:
-                state.freshness_metadata[signal_id] = "low"
-                stale.append(signal_id)
-                continue
-            if low_sample and freshness == "medium" and signal_id.startswith("workflow_"):
                 state.freshness_metadata[signal_id] = "low"
                 stale.append(signal_id)
 
@@ -302,6 +370,91 @@ class UserInsightCalibrationService:
                 }
             )
         return adjustments
+
+    def _apply_effective_signal_pruning(
+        self,
+        *,
+        state: UserInsightState,
+        stale_signals: list[str],
+    ) -> list[str]:
+        ineffective_signal_ids = self._ineffective_signal_ids(state=state, stale_signals=stale_signals)
+        if not ineffective_signal_ids:
+            return []
+
+        self._prune_mapping(
+            container=state.stable_preferences,
+            mapping=self.SIGNAL_TO_STABLE_PREFERENCE_KEYS,
+            ineffective_signal_ids=ineffective_signal_ids,
+        )
+        self._prune_mapping(
+            container=state.current_state,
+            mapping=self.SIGNAL_TO_CURRENT_STATE_KEYS,
+            ineffective_signal_ids=ineffective_signal_ids,
+        )
+        self._prune_mapping(
+            container=state.inferred_work_style,
+            mapping=self.SIGNAL_TO_WORK_STYLE_KEYS,
+            ineffective_signal_ids=ineffective_signal_ids,
+        )
+        self._prune_temporal_patterns(state=state, ineffective_signal_ids=ineffective_signal_ids)
+        self._prune_constraints(state=state, ineffective_signal_ids=ineffective_signal_ids)
+        self._prune_goals(state=state, ineffective_signal_ids=ineffective_signal_ids)
+        self._prune_hypotheses(state=state, ineffective_signal_ids=ineffective_signal_ids)
+        return sorted(ineffective_signal_ids)
+
+    def _ineffective_signal_ids(self, *, state: UserInsightState, stale_signals: list[str]) -> set[str]:
+        stale_signal_set = {_strip(item) for item in stale_signals if _strip(item)}
+        ineffective_signal_ids: set[str] = set(stale_signal_set)
+        for evidence in state.signal_evidence:
+            status = _strip(evidence.status).lower()
+            if status in self.NON_EFFECTIVE_STATUSES:
+                ineffective_signal_ids.add(evidence.signal_id)
+        return ineffective_signal_ids
+
+    @staticmethod
+    def _prune_mapping(
+        *,
+        container: dict[str, Any],
+        mapping: dict[str, list[str]],
+        ineffective_signal_ids: set[str],
+    ) -> None:
+        for signal_id in ineffective_signal_ids:
+            for key in mapping.get(signal_id, []):
+                container.pop(key, None)
+
+    def _prune_temporal_patterns(self, *, state: UserInsightState, ineffective_signal_ids: set[str]) -> None:
+        for signal_id in ineffective_signal_ids:
+            for section, key in self.SIGNAL_TO_TEMPORAL_KEYS.get(signal_id, []):
+                payload = state.temporal_patterns.get(section)
+                if isinstance(payload, dict):
+                    payload.pop(key, None)
+                    if not payload:
+                        state.temporal_patterns.pop(section, None)
+
+    def _prune_constraints(self, *, state: UserInsightState, ineffective_signal_ids: set[str]) -> None:
+        blocked_ids: set[str] = set()
+        for signal_id in ineffective_signal_ids:
+            blocked_ids.update(self.SIGNAL_TO_CONSTRAINT_IDS.get(signal_id, set()))
+        if blocked_ids:
+            state.constraints = [item for item in state.constraints if _strip(item.get("id")) not in blocked_ids]
+
+    def _prune_goals(self, *, state: UserInsightState, ineffective_signal_ids: set[str]) -> None:
+        blocked_ids: set[str] = set()
+        for signal_id in ineffective_signal_ids:
+            blocked_ids.update(self.SIGNAL_TO_GOAL_IDS.get(signal_id, set()))
+        if blocked_ids:
+            state.goals = [item for item in state.goals if _strip(item.get("id")) not in blocked_ids]
+
+    @staticmethod
+    def _prune_hypotheses(*, state: UserInsightState, ineffective_signal_ids: set[str]) -> None:
+        state.evidence_backed_hypotheses = [
+            hypothesis
+            for hypothesis in state.evidence_backed_hypotheses
+            if not any(
+                _strip(signal_id) in ineffective_signal_ids
+                for signal_id in (hypothesis.get("source_signals") or [])
+            )
+        ]
 
     @staticmethod
     def _calibration_posture(

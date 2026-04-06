@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Generic, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar('T')
 
@@ -50,12 +50,7 @@ class BaseSchema(BaseModel):
     created_at: datetime = Field(description="Created time")
     updated_at: datetime = Field(description="Updated time")
 
-    class Config:
-        from_attributes = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-            UUID: lambda v: str(v),
-        }
+    model_config = ConfigDict(from_attributes=True)
 
 class TokenResponse(BaseModel):
     """JWT Token response"""

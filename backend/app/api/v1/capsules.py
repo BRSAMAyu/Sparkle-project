@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -52,8 +52,7 @@ class CuriosityCapsuleSchema(BaseModel):
     share_count: int = 0
     personalization_context: dict | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CapsuleDetailSchema(CuriosityCapsuleSchema):
@@ -80,8 +79,7 @@ class CapsuleFeedbackSchema(BaseModel):
     comment: str | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CapsuleFavoriteSchema(BaseModel):
@@ -92,8 +90,7 @@ class CapsuleFavoriteSchema(BaseModel):
     created_at: datetime
     capsule: CuriosityCapsuleSchema | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CapsuleGenerationRequest(BaseModel):
@@ -119,8 +116,7 @@ class CapsuleGenerationJobSchema(BaseModel):
     created_at: datetime
     completed_at: datetime | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CapsuleShareRequest(BaseModel):

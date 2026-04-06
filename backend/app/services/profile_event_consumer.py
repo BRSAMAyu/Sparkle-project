@@ -4,7 +4,7 @@ Keeps downstream caches and user-visible updates in sync with preference changes
 """
 import asyncio
 import json
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -12,21 +12,43 @@ from loguru import logger
 
 from app.core.cache import cache_service
 from app.core.event_bus import EventBus
+from app.core.event_types import (
+    ACCOUNTABILITY_CHECKIN_CREATED,
+    ACCOUNTABILITY_PARTNERSHIP_UPDATED,
+    CAPSULE_CONTENT_UPDATED,
+    CAPSULE_FAVORITE_UPDATED,
+    CAPSULE_FEEDBACK_SUBMITTED,
+    CAPSULE_REGENERATE_REQUESTED,
+    TOOL_HISTORY_RECORDED,
+)
 from app.db.session import AsyncSessionLocal
+from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.error_book_signal_processor import ErrorBookSignalProcessor
 from app.services.focus_signal_processor import FocusSignalProcessor
-from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.personalization.engine import invalidate_personalization_cache
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ProfileEventConsumer:
     STREAM_NAME = "sparkle_events"
     GROUP_NAME = "profile_event_consumer"
+    INSIGHT_SIGNAL_EVENTS = {
+        "achievement.unlocked",
+        "calendar.event.created",
+        "calendar.event.updated",
+        "calendar.event.deleted",
+        CAPSULE_FEEDBACK_SUBMITTED,
+        CAPSULE_REGENERATE_REQUESTED,
+        CAPSULE_FAVORITE_UPDATED,
+        CAPSULE_CONTENT_UPDATED,
+        TOOL_HISTORY_RECORDED,
+        ACCOUNTABILITY_PARTNERSHIP_UPDATED,
+        ACCOUNTABILITY_CHECKIN_CREATED,
+    }
 
     def __init__(self, event_bus: EventBus, redis_client=None):
         self.event_bus = event_bus
@@ -63,6 +85,8 @@ class ProfileEventConsumer:
             await self._handle_focus_session_completed(event)
         elif event_type in {"error_created", "error.created"}:
             await self._handle_error_created(event)
+        elif event_type in self.INSIGHT_SIGNAL_EVENTS:
+            await self._handle_insight_signal_family_updated(event)
 
     async def _handle_preference_updated(self, event: dict):
         try:
@@ -162,6 +186,16 @@ class ProfileEventConsumer:
         except Exception as exc:
             logger.error(f"Failed to handle error created event: {exc}")
 
+    async def _handle_insight_signal_family_updated(self, event: dict) -> None:
+        try:
+            user_ids = self._normalize_user_ids(event)
+            if not user_ids:
+                return
+            for user_id in user_ids:
+                await self._invalidate_profile_context_cache(user_id)
+        except Exception as exc:
+            logger.error(f"Failed to handle insight signal family update event: {exc}")
+
     async def _invalidate_context_cache(self, user_id: str) -> None:
         if not self.redis:
             return
@@ -187,6 +221,21 @@ class ProfileEventConsumer:
         if value is None:
             return ""
         return str(value)
+
+    @classmethod
+    def _normalize_user_ids(cls, event: dict[str, Any]) -> list[str]:
+        normalized: list[str] = []
+        explicit_user_ids = event.get("user_ids")
+        if isinstance(explicit_user_ids, list):
+            for item in explicit_user_ids:
+                user_id = cls._normalize_user_id(item)
+                if user_id and user_id not in normalized:
+                    normalized.append(user_id)
+
+        user_id = cls._normalize_user_id(event.get("user_id"))
+        if user_id and user_id not in normalized:
+            normalized.append(user_id)
+        return normalized
 
     @staticmethod
     def _normalize_pref_keys(value: Any) -> list[str]:

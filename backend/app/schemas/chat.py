@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.chat import MessageRole
 from app.schemas.common import BaseSchema
@@ -50,8 +50,7 @@ class ChatSession(BaseModel):
     created_at: datetime = Field(description="Created time")
     last_message_at: datetime = Field(description="Last message time")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ChatHistory(BaseModel):
     """Chat history"""
@@ -68,5 +67,4 @@ class AIResponse(BaseModel):
     suggestions: list[str] | None = Field(default=None, description="Suggestions list")
     created_at: datetime = Field(description="Created time")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

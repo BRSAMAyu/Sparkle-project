@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Generic, TypeVar
 
-from pydantic import UUID4, BaseModel, Field
+from pydantic import UUID4, BaseModel, ConfigDict, Field
 
 T = TypeVar('T')
 
@@ -25,8 +25,7 @@ class UnifiedNotificationResponse(BaseModel):
     read_at: datetime | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NotificationInteractionCreate(BaseModel):
@@ -47,8 +46,7 @@ class NotificationInteractionResponse(BaseModel):
     action_time: datetime
     time_to_action: int | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InterventionNotificationActionRequest(BaseModel):
@@ -86,8 +84,7 @@ class NotificationPreferencesResponse(BaseModel):
     quiet_hours_end: str | None
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NotificationHistoryFilters(BaseModel):

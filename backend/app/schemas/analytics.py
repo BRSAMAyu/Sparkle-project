@@ -1,6 +1,6 @@
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class DailyMetricResponse(BaseModel):
@@ -14,8 +14,7 @@ class DailyMetricResponse(BaseModel):
     anxiety_score: float
     chat_messages_count: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserAnalyticsSummary(BaseModel):
     summary: str

@@ -70,6 +70,16 @@ async def test_user_insight_calibration_service_demotes_corrected_signals_and_ca
     await db_session.commit()
 
     state = UserInsightState(
+        stable_preferences={"content_depth_preference": "deep"},
+        current_state={"calendar_density_level": "high"},
+        inferred_work_style={
+            "peak_focus_hours": [19, 20],
+            "achievement_motivation_response": "progress_praise",
+        },
+        temporal_patterns={
+            "calendar": {"peak_focus_hours": [19, 20], "density_level": "high"},
+            "achievement": {"motivation_response": "progress_praise"},
+        },
         signal_evidence=[
             InsightSignalEvidence(
                 signal_id="peak_focus_hours",
@@ -123,6 +133,12 @@ async def test_user_insight_calibration_service_demotes_corrected_signals_and_ca
     assert summary["recent_correction_count"] == 1
     assert summary["strategy_outcome_sample_count"] == 3
     assert summary["demoted_signals"][0]["signal_id"] == "peak_focus_hours"
+    assert "achievement_motivation_response" in summary["inactive_effective_signals"]
+    assert "peak_focus_hours" in summary["inactive_effective_signals"]
     assert state.confidence_metadata["peak_focus_hours"] < 0.84
+    assert "peak_focus_hours" not in state.inferred_work_style
+    assert "achievement_motivation_response" not in state.inferred_work_style
+    assert "peak_focus_hours" not in state.temporal_patterns["calendar"]
+    assert "achievement" not in state.temporal_patterns
     assert state.prediction_summaries["overload_risk"]["calibrated_confidence"] < 0.7
-    assert state.evidence_backed_hypotheses[0]["status"] == "demoted"
+    assert state.evidence_backed_hypotheses == []

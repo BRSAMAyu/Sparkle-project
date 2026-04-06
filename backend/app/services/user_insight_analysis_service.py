@@ -73,12 +73,9 @@ class UserInsightAnalysisService:
             short_span=short_span,
             medium_span=medium_span,
         )
+        state.active_contradictions = list(contradictions)
         confidence_decay = self._build_confidence_decay(state)
         long_span = self._build_long_span(state=state, confidence_decay=confidence_decay)
-
-        for contradiction in contradictions:
-            if not any(item.get("id") == contradiction["id"] for item in state.active_contradictions):
-                state.active_contradictions.append(contradiction)
 
         self._annotate_hypotheses(state=state, confidence_decay=confidence_decay)
         self._apply_analysis_side_effects(

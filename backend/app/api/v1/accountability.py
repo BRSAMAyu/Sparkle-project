@@ -3,20 +3,22 @@
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
+from app.core.event_bus import event_bus
+from app.core.event_types import ACCOUNTABILITY_CHECKIN_CREATED, ACCOUNTABILITY_PARTNERSHIP_UPDATED
 from app.models.accountability import (
     AccountabilityCheckin,
     AccountabilityPartnership,
@@ -26,7 +28,6 @@ from app.models.accountability import (
 from app.models.achievement import UserAchievement
 from app.models.community import Friendship, FriendshipStatus, SharedResource
 from app.models.user import User
-from app.schemas.leaderboard import LeaderboardType
 from app.schemas.community import UserBrief as CommunityUserBrief
 from app.services.accountability_notification_service import _user_display_name
 from app.services.community_service import UserBlockService
@@ -36,7 +37,33 @@ router = APIRouter()
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+async def _publish_accountability_signal_update(
+    *,
+    event_type: str,
+    user_ids: list[UUID],
+    partnership_id: UUID,
+    checkin_id: UUID | None = None,
+    action: str,
+) -> None:
+    normalized_user_ids = []
+    for user_id in user_ids:
+        value = str(user_id)
+        if value not in normalized_user_ids:
+            normalized_user_ids.append(value)
+
+    payload = {
+        "event_type": event_type,
+        "user_ids": normalized_user_ids,
+        "partnership_id": str(partnership_id),
+        "action": action,
+    }
+    if checkin_id is not None:
+        payload["checkin_id"] = str(checkin_id)
+
+    await event_bus.publish(event_type, payload)
 
 
 async def _ensure_partnership_access(
@@ -106,8 +133,7 @@ class PartnershipOut(BaseModel):
     partner_checked_in_today: bool | None = None
     last_checkin_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CheckinOut(BaseModel):
@@ -122,8 +148,7 @@ class CheckinOut(BaseModel):
     encouragements: list = []
     author: CommunityUserBrief | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PartnershipStatsOut(BaseModel):
@@ -174,15 +199,15 @@ def _day_range_for_timezone(timezone_name: str, *, reference: datetime | None = 
     now_local = (reference or datetime.now(zone)).astimezone(zone)
     local_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     local_end = local_start.replace(hour=23, minute=59, second=59, microsecond=999999)
-    start_utc = local_start.astimezone(timezone.utc).replace(tzinfo=None)
-    end_utc = local_end.astimezone(timezone.utc).replace(tzinfo=None)
+    start_utc = local_start.astimezone(UTC).replace(tzinfo=None)
+    end_utc = local_end.astimezone(UTC).replace(tzinfo=None)
     return start_utc, end_utc
 
 
 def _to_local_date(timestamp: datetime, timezone_name: str):
     zone = ZoneInfo(timezone_name)
     if timestamp.tzinfo is None:
-        timestamp = timestamp.replace(tzinfo=timezone.utc)
+        timestamp = timestamp.replace(tzinfo=UTC)
     return timestamp.astimezone(zone).date()
 
 
@@ -821,6 +846,12 @@ async def request_partnership(
     await accountability_notification_service.send_partner_request(
         db, partnership.id, current_user.id, body.partner_id, body.initiator_goal
     )
+    await _publish_accountability_signal_update(
+        event_type=ACCOUNTABILITY_PARTNERSHIP_UPDATED,
+        user_ids=[current_user.id, body.partner_id],
+        partnership_id=partnership.id,
+        action="requested",
+    )
 
     return await _build_partnership_out(db, partnership, current_user)
 
@@ -871,6 +902,12 @@ async def respond_to_partnership(
         )
     else:
         await accountability_notification_service.send_partner_declined(db, partnership.initiator_id, current_user.id)
+    await _publish_accountability_signal_update(
+        event_type=ACCOUNTABILITY_PARTNERSHIP_UPDATED,
+        user_ids=[partnership.initiator_id, partnership.partner_id],
+        partnership_id=partnership.id,
+        action="accepted" if body.accept else "declined",
+    )
 
     return await _build_partnership_out(db, partnership, current_user)
 
@@ -1080,6 +1117,12 @@ async def end_partnership(
     await accountability_notification_service.send_partnership_ended(
         db, current_user.id, partnership_id, partner_id, current_user.id
     )
+    await _publish_accountability_signal_update(
+        event_type=ACCOUNTABILITY_PARTNERSHIP_UPDATED,
+        user_ids=[current_user.id, partner_id],
+        partnership_id=partnership.id,
+        action="ended",
+    )
 
 
 @router.post("/{partnership_id}/checkin", response_model=CheckinOut, status_code=201)
@@ -1149,6 +1192,14 @@ async def daily_checkin(
         logger.error(
             f"Failed to check achievements for user {current_user.id}, partnership {partnership_id}: {e}", exc_info=True
         )
+
+    await _publish_accountability_signal_update(
+        event_type=ACCOUNTABILITY_CHECKIN_CREATED,
+        user_ids=[current_user.id],
+        partnership_id=partnership.id,
+        checkin_id=checkin.id,
+        action="created",
+    )
 
     return await _build_checkin_out(db, checkin)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import UUID4, BaseModel
+from pydantic import UUID4, BaseModel, ConfigDict
 
 
 class NotificationBase(BaseModel):
@@ -24,5 +24,4 @@ class NotificationResponse(NotificationBase):
     read_at: datetime | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

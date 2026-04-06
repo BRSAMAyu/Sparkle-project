@@ -12,7 +12,7 @@ import re
 
 import json_repair
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.llm import (
     CoercedInt,
@@ -31,8 +31,7 @@ class TaskActionParams(BaseModel):
     difficulty: CoercedInt = 3          # 自动转换
     guide_content: str | None = None
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 class ChatAction(BaseModel):
@@ -40,8 +39,7 @@ class ChatAction(BaseModel):
     type: str
     params: dict = {}
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 

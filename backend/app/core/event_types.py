@@ -3,8 +3,13 @@ Event type constants for the cognitive feedback loop.
 """
 
 CAPSULE_FEEDBACK_SUBMITTED = "capsule.feedback.submitted"
+CAPSULE_FAVORITE_UPDATED = "capsule.favorite.updated"
+CAPSULE_CONTENT_UPDATED = "capsule.content.updated"
 PROFILE_COGNITIVE_UPDATED = "profile.cognitive.updated"
 CAPSULE_REGENERATE_REQUESTED = "capsule.regenerate.requested"
+TOOL_HISTORY_RECORDED = "tool.history.recorded"
+ACCOUNTABILITY_PARTNERSHIP_UPDATED = "accountability.partnership.updated"
+ACCOUNTABILITY_CHECKIN_CREATED = "accountability.checkin.created"
 EXECUTION_DELEGATED = "execution.delegated"
 EXECUTION_STATUS_CHANGED = "execution.status_changed"
 EXECUTION_WAITING_APPROVAL = "execution.waiting_approval"
@@ -22,8 +27,13 @@ PLAN_HEALTH_ALERTED = "plan.health.alerted"
 
 __all__ = [
     "CAPSULE_FEEDBACK_SUBMITTED",
+    "CAPSULE_FAVORITE_UPDATED",
+    "CAPSULE_CONTENT_UPDATED",
     "PROFILE_COGNITIVE_UPDATED",
     "CAPSULE_REGENERATE_REQUESTED",
+    "TOOL_HISTORY_RECORDED",
+    "ACCOUNTABILITY_PARTNERSHIP_UPDATED",
+    "ACCOUNTABILITY_CHECKIN_CREATED",
     "EXECUTION_DELEGATED",
     "EXECUTION_STATUS_CHANGED",
     "EXECUTION_WAITING_APPROVAL",

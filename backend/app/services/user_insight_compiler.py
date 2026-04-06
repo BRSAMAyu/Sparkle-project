@@ -91,6 +91,9 @@ class UserInsightCompiler:
         turn_signals: dict[str, Any] | None = None,
     ) -> UserInsightState:
         state = self._build_base_state(profile_context=profile_context, user_strategy_state=user_strategy_state)
+        analysis_service = UserInsightAnalysisService(self.db)
+        prediction_service = InsightPredictionService()
+        calibration_service = UserInsightCalibrationService(self.db)
 
         self._apply_error_signals(state, profile_context)
         self._apply_learning_progress(state, profile_context)
@@ -99,22 +102,38 @@ class UserInsightCompiler:
         await self._apply_workflow_signals(user_id, state)
         await self._apply_content_signals(user_id, state)
         await self._apply_accountability_signals(user_id, state)
-        state.multi_span_analysis = await UserInsightAnalysisService(self.db).analyze(
+        state.multi_span_analysis = await analysis_service.analyze(
             user_id=user_id,
             state=state,
             profile_context=profile_context,
             turn_signals=turn_signals,
         )
-        state.prediction_summaries = InsightPredictionService().compile_predictions(
+        state.prediction_summaries = prediction_service.compile_predictions(
             state=state,
             turn_signals=turn_signals,
         )
         self._apply_prediction_projection(state)
-        state.calibration_summary = await UserInsightCalibrationService(self.db).calibrate(
+        state.calibration_summary = await calibration_service.calibrate(
             user_id=user_id,
             state=state,
             profile_context=profile_context,
         )
+        if self._needs_post_calibration_refresh(state.calibration_summary):
+            state.multi_span_analysis = await analysis_service.analyze(
+                user_id=user_id,
+                state=state,
+                profile_context=profile_context,
+                turn_signals=turn_signals,
+            )
+            state.prediction_summaries = prediction_service.compile_predictions(
+                state=state,
+                turn_signals=turn_signals,
+            )
+            self._apply_prediction_projection(state)
+            calibration_service.reapply_prediction_adjustments(
+                state=state,
+                calibration_summary=state.calibration_summary,
+            )
         self._apply_uncertainty_markers(state)
 
         if companion_state:
@@ -129,6 +148,14 @@ class UserInsightCompiler:
                 state.current_state["turn_signals"] = compact_turn_signals
 
         return state
+
+    @staticmethod
+    def _needs_post_calibration_refresh(calibration_summary: dict[str, Any]) -> bool:
+        return bool(
+            calibration_summary.get("inactive_effective_signals")
+            or calibration_summary.get("demoted_signals")
+            or calibration_summary.get("stale_signals")
+        )
 
     def _apply_prediction_projection(self, state: UserInsightState) -> None:
         planning = state.prediction_summaries.get("planning_readiness")

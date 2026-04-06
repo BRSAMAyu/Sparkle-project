@@ -16,8 +16,8 @@ from app.api.v1 import community as community_api
 from app.api.v1.accountability import router as accountability_router
 from app.api.v1.community import router as community_router
 from app.api.v1.profile_transparency import router as profile_router
-from app.api.v1 import profile_transparency as profile_api
 from app.core.cache import cache_service
+from app.core.event_types import ACCOUNTABILITY_CHECKIN_CREATED, ACCOUNTABILITY_PARTNERSHIP_UPDATED
 from app.models.accountability import (
     AccountabilityCheckin,
     AccountabilityPartnership,
@@ -25,12 +25,20 @@ from app.models.accountability import (
     AccountabilityStatus,
 )
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
-from app.models.community import Friendship, FriendshipStatus, Group, GroupMember, GroupRole, GroupType
-from app.models.community import SharedResource, UserBlock
+from app.models.community import (
+    Friendship,
+    FriendshipStatus,
+    Group,
+    GroupMember,
+    GroupRole,
+    GroupType,
+    SharedResource,
+    UserBlock,
+)
 from app.models.curiosity_capsule import CuriosityCapsule
-from app.models.group_files import GroupFile
 from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode
+from app.models.group_files import GroupFile
 from app.models.seed_content import SeedItem, SeedLibrary
 from app.models.task import Task, TaskType
 from app.models.user import User
@@ -852,3 +860,73 @@ async def test_update_group_file_permissions_rejects_non_admin_before_service(
     assert response.status_code == 403
     assert response.json()["detail"] == "无权限修改群文件权限"
     update_permissions.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_accountability_routes_publish_profile_refresh_events(
+    accountability_app,
+    db_session,
+    monkeypatch,
+):
+    app, state = accountability_app
+    publish = AsyncMock()
+    monkeypatch.setattr(accountability_api.event_bus, "publish", publish)
+
+    initiator = _make_user(username="initiator")
+    partner = _make_user(username="partner")
+    await _commit_all(db_session, initiator, partner)
+    await _create_friendship(db_session, initiator, partner)
+
+    state["current_user"] = initiator
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        request_response = await client.post(
+            "/accountability/request",
+            json={
+                "partner_id": str(partner.id),
+                "initiator_goal": "一起盯住考试周节奏",
+                "check_in_days": 1,
+            },
+        )
+
+    assert request_response.status_code == 201
+    partnership_id = request_response.json()["id"]
+    first_call = publish.await_args_list[0]
+    assert first_call.args[0] == ACCOUNTABILITY_PARTNERSHIP_UPDATED
+    assert set(first_call.args[1]["user_ids"]) == {str(initiator.id), str(partner.id)}
+    assert first_call.args[1]["action"] == "requested"
+
+    publish.reset_mock()
+    state["current_user"] = partner
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        respond_response = await client.post(
+            f"/accountability/{partnership_id}/respond",
+            json={"accept": True, "partner_goal": "每天晚间互相确认进度"},
+        )
+
+    assert respond_response.status_code == 200
+    second_call = publish.await_args_list[0]
+    assert second_call.args[0] == ACCOUNTABILITY_PARTNERSHIP_UPDATED
+    assert second_call.args[1]["action"] == "accepted"
+
+    publish.reset_mock()
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        checkin_response = await client.post(
+            f"/accountability/{partnership_id}/checkin",
+            json={"content": "今天完成了重点复盘", "mood": 4, "minutes": 35},
+        )
+
+    assert checkin_response.status_code == 201
+    third_call = publish.await_args_list[0]
+    assert third_call.args[0] == ACCOUNTABILITY_CHECKIN_CREATED
+    assert third_call.args[1]["user_ids"] == [str(partner.id)]
+    assert third_call.args[1]["action"] == "created"
+    assert third_call.args[1]["partnership_id"] == partnership_id

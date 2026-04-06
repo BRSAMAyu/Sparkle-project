@@ -15,8 +15,9 @@ from app.models.accountability import (
 from app.models.calendar_event import CalendarEvent
 from app.models.capsule_favorite import CapsuleFavorite
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
-from app.models.tool_history import UserToolHistory
+from app.models.memory import MemoryCorrection
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.tool_history import UserToolHistory
 from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.profile_context_service import ProfileContextService
@@ -274,10 +275,39 @@ async def test_profile_truth_compiler_projects_canonical_user_insight_state_with
         turn_signals={"wants_push": True, "requested_difficulty": "hard"},
     )
 
-    contradiction_ids = {item["id"] for item in state.contradiction_map}
     assert state.stable_traits["learning_style"] == "structured"
     assert state.current_state["strategy_mode"] == "recovery"
     assert state.active_constraints[0]["id"] == "cognitive:Perfectionism Paralysis"
-    assert state.multi_span_analysis == {}
-    assert state.prediction_summary == {}
-    assert "conflict:push_vs_recovery_state" in contradiction_ids
+
+
+@pytest.mark.asyncio
+async def test_profile_context_service_user_correction_removes_signal_influence_from_analysis_and_prediction(
+    db_session,
+    test_user,
+):
+    db_session.add(
+        UserPreferencesCenter(
+            user_id=test_user.id,
+            version=1,
+            explicit={"learning_goal_type": "exam"},
+            inferred={"peak_focus_hours": [19, 20]},
+        )
+    )
+    db_session.add(
+        MemoryCorrection(
+            user_id=test_user.id,
+            memory_type="insight_signal",
+            memory_id=test_user.id,
+            action="wrong",
+            reason='{"target_id": "peak_focus_hours", "reason": "No longer true"}',
+        )
+    )
+    await db_session.commit()
+
+    context = await ProfileContextService(db_session, redis=None).get_profile_context(test_user.id)
+    state = context.user_insight_state
+
+    assert state is not None
+    assert "peak_focus_hours" not in state.inferred_work_style
+    assert state.multi_span_analysis["short_span"]["focus_alignment"] == "unclear"
+    assert state.prediction_summaries["schedule_fit"]["level"] == "low"

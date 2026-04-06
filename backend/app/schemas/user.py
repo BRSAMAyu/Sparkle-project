@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 # ========== Request Schemas ==========
 
@@ -168,8 +168,7 @@ class UserBase(BaseModel):
     avatar_status: AvatarStatus = Field(default=AvatarStatus.APPROVED, description="Avatar status")
     pending_avatar_url: str | None = Field(default=None, description="Pending avatar URL")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserProfile(UserBase):
     """User detailed information"""
@@ -229,8 +228,7 @@ class UserFlameStatus(BaseModel):
     days_streak: int = Field(description="Consecutive days")
     total_completed_tasks: int = Field(description="Total completed tasks")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserPreferences(BaseModel):
     """User preferences"""
@@ -242,8 +240,7 @@ class UserPreferences(BaseModel):
     persona_type: str = Field(default="coach", description="AI persona type (coach, anime, etc.)")
     daily_cap: int = Field(default=5, description="Daily interaction cap")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PushPreferenceUpdate(BaseModel):
@@ -263,8 +260,7 @@ class PushPreferenceResponse(BaseModel):
     active_slots: list[dict[str, str]] | None = Field(default=None, description="Active time slots")
     timezone: str = Field(description="User timezone")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserContext(BaseModel):
@@ -280,5 +276,4 @@ class UserContext(BaseModel):
     persona_type: str = Field(default="coach", description="AI persona type")
     preference_version: int = Field(default=0, description="Preference version for cache validation")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
