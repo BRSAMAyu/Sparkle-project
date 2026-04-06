@@ -2,322 +2,359 @@
 
 # Sparkle
 
-### AI-Powered Growth Operating System
+### An AI-Native Planning and Growth Operating System
 
-**Not just answering questions — understanding you, growing with you, helping you become your best self.**
+**Sparkle does not ask ordinary users to master prompt engineering. It understands the user first, then turns the user’s own information into better plans, better next moves, and better adaptive guidance.**
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.24+-02569B?style=flat-square&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.3+-FF6B6B?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.0-blue?style=flat-square)](CHANGELOG.md)
 
-**[中文](README.md)** &nbsp;&middot;&nbsp; [Quick Start](#-quick-start) &nbsp;&middot;&nbsp; [Documentation](docs/)
+[中文](README.md) · **English** · [Docs](docs/README.md)
 
 </div>
 
 ---
 
-## Sparkle in One Sentence
+## One-Sentence Product Pitch
 
-> Every AI assistant on the market is a tool — you use it and leave. Sparkle is a **continuously evolving growth companion** that remembers who you are, understands how you think, helps you break down goals, tracks execution, and provides just the right support when you're stuck.
+> **Sparkle is an AI-native planning and guidance operating system that deeply understands ordinary users and turns their own data into better plans, better next moves, and better ongoing adaptation than raw AI alone.**
+
+---
+
+## Where We Are Now
+
+Sparkle is no longer a concept project, and it is not just a multi-agent technology demo.
+
+Its `v1` core is now materially in place:
+
+- the `user profile / insight system` has a canonical compiled backbone
+- the `Planning Engine` has readiness gating, strategy compilation, and plan-quality constraints
+- the `Feedback / Growth Engine` has outcome learning, calibration, and anti-drift
+- the `AI semantic-control system` now has a unified ontology, renderer, compliance layer, and trace
+- `Body Awareness` and the `Five-Layer Learning System` are now runtime-governed instead of aspirational
+
+The project is now in `Stage 2`:
+
+- we are no longer trying to endlessly invent new foundational layers
+- the focus is now `runnable golden path`
+- the focus is now `full-stack product coherence`
+- the focus is now `Live Alpha` and `real human validation`
+
+The most honest and strongest description of Sparkle today is:
+
+> **an AI-native product with its core intelligence systems in place, now moving from internal sophistication to real product proof**
 
 ---
 
 ## The Problem Sparkle Solves
 
-| Traditional AI | Learning/Productivity Apps | Sparkle |
-|:---|:---|:---|
-| No memory — starts from scratch every time | Static tags — coarse categorization | **Evolving cognitive profile** that deepens over time |
-| Passive Q&A — no proactive guidance | Preset paths — one size fits all | **Goal-driven** — from "what to ask" to "who to become" |
-| Fragmented information — no system | Linear notes — manual organization | **Knowledge Galaxy** — auto-builds your knowledge network |
-| Single conversation — no follow-up | Simple stats — no real insights | **7-stage growth loop** — continuous companionship |
-| Pure tool — no warmth | Random matching — shallow community | **Cognitive matching** — find truly compatible partners |
+Frontier AI is powerful, but most ordinary users still face three real problems:
+
+1. they do not know what information to give the model
+2. they do not know how to turn their own materials, errors, behavior, and constraints into high-quality context
+3. even when they get an answer, they struggle to convert it into an executable, adaptive, trustworthy path
+
+Sparkle is not trying to turn users into AI experts.
+
+Sparkle is trying to:
+
+- help users understand themselves better
+- help users see their real goal structure and bottlenecks
+- turn user-owned data into better plans
+- keep adapting after execution, failure, overload, and correction
 
 ---
 
-## Core Capabilities
+## Who Sparkle Is For
 
-**AI Micro-Tutor** — Not just answering — diagnosing your cognitive state. When you say "this is hard", it analyzes knowledge gaps, adapts explanation depth, recommends targeted practice, and tracks comprehension. The chain runs through Sparkle's production orchestration with plan generation, review, user approval, execution, and replanning.
+Sparkle is not designed first for AI power users.
 
-**Knowledge Galaxy** — Your personal knowledge network visualized as a cosmic map. Each concept is a star, mastery determines brightness, relationships form constellations. AI auto-identifies blind spots. The GraphRAG hybrid engine ensures every query understands context.
+It is designed first for people who:
 
-**Smart Task System** — Six task types, AI-recommended based on your cognitive profile. Built-in focus timer with mindfulness mode. Tasks can enter the OpenClaw delegation flow with approval, comparison, self-verification, and profile feedback.
+- have important goals but weak AI-operating skill
+- have lots of personal materials, errors, notes, and history but do not know how to use them well
+- need to find the right path quickly under time pressure
+- want long-term growth but lack high-quality external structure and feedback
 
-**Achievement Engine** — Gamification that actually works. Streaks build habits. Milestones record breakthroughs. Growth contracts provide commitment. Hidden achievements create surprise. Achievements aren't just numbers — they're proof of your growth.
+Typical cases:
 
-**Mirofish Group Agent System** — Turning multi-agent orchestration into a real product surface. Chat can short-circuit into Insight Hub, Simulation, Knowledge Theater, and Learning Report so prediction, scenario modeling, reporting, and next actions happen in one connected experience.
-
-**Multi-Sensory Experience** — A unified immersive experience design system. Context-aware BGM and ambient audio shift with each screen. Semantic haptics make interactions tangible. Motion intensity, celebration states, and accessibility modes are tuned as one coherent system.
-
----
-
-## Technical Moat
-
-Sparkle's competitive edge isn't any single feature — it's the **combinatorial barrier of system-level architectural innovations**:
-
-| Technical Barrier | Implementation | Industry Status |
-|:---|:---|:---|
-| Dual-Core Architecture | Execution Core + Cognitive Core collaborate in real-time | Most products have a single conversation pipeline |
-| Self-Built Orchestrator + LangGraph Planning | Core production control stays in Sparkle; LangGraph handles complex planning | Many products hand business control directly to agent frameworks |
-| Evidence-Based 4D Profile | Knowledge, Cognition, Motivation, Social — each backed by behavioral evidence | Typically static tags or simple statistics |
-| GraphRAG Hybrid Retrieval | pgvector semantic search + Apache AGE graph traversal, fused ranking | Pure vector retrieval, no relational reasoning |
-| Mirofish Productized Group Agents | Expert catalog, custom experts/teams, bridge previews, deep links into product surfaces | Most products stop at "multi-agent chat UI" |
-| OpenClaw Execution Loop | Handoff, offline queue, pairing, approval, comparison, self-verification, degradation | Most products stop at advice or one-shot automation |
-| 7-Stage Growth Loop | Sense > Clarify > Plan > Execute > Reflect > Reinforce > Adapt | Linear task flows, no closed loop |
-| Unified Multi-Sensory UX | 5 experience profiles + sensory budget + particle budget + a11y degradation | Scattered animations, no system design |
+- preparing for a final exam in 14 days
+- building a study plan from personal materials
+- recovering after overload, procrastination, or plan drift
+- gradually building a system that actually understands the user over time
 
 ---
 
-## Architecture Overview
+## The 4 External Product Modes
 
-```
-+====================================================================+
-|                        Flutter Mobile App                          |
-|         Riverpod  |  Design System V2  |  Multi-Sensory UX        |
-|         732 Dart files  |  24 feature modules  |  131 tests        |
-+========================================+===========================+
-                                         |
-                                  WebSocket / HTTP
-                                         |
-+========================================v===========================+
-|                           Go Gateway (8080)                        |
-|   Auth (JWT + Blacklist)  |  Rate Limiting  |  Caching  |  WS     |
-|   16 Middleware  |  Security Headers  |  gRPC Bridge             |
-+========================================+===========================+
-                                         |
-                                     gRPC (50051)
-                                         |
-+========================================v===========================+
-|                        Python AI Engine                            |
-|                                                                    |
-|   +----------------------------------------------------------------+
-|   |  Self-Built Orchestrator (LangGraph FSM)                       |
-|   |  Dual-Core Router  |  UX Envelope  |  Plan Review             |
-|   +----------------------------------------------------------------+
-|   |  Cognitive Core            |  Execution Core                  |
-|   |  Profile | Memory | Prism  |  Plan | Task | DAG Executor      |
-|   +----------------------------------------------------------------+
-|   |  GraphRAG  |  Event Bus  |  Tool Registry  |  Achievement     |
-|   +----------------------------------------------------------------+
-|   |  OpenClaw Adapter  |  Celery Tasks  |  LLM Service             |
-|   +----------------------------------------------------------------+
-+---+----------------+------------------+-----------------------------+
-    |                |                  |
-    v                v                  v
-+--------+    +-----------+    +------------------+
-| PG 16  |    | Redis 7+  |    | MinIO / S3       |
-|pgvector|    | Stack     |    | Object Storage   |
-|AGE     |    | Streams   |    |                  |
-|143 tbl |    | Pub/Sub   |    |                  |
-+--------+    +-----------+    +------------------+
-                      |
-            External Execution
-                      |
-            +---------v----------+
-            | OpenClaw Gateway   |
-            | Queue | Pairing    |
-            | Approval | Verify  |
-            +--------------------+
-```
+These are the cleanest product-facing modes to use in a pitch or demo.
 
-**Why three layers plus an external executor?**
-
-- **Flutter** handles presentation and experience only — no business logic
-- **Go Gateway** handles high-concurrency connections, auth, caching — no AI reasoning
-- **Python Engine** handles orchestration, planning, review, and execution control — no user authentication
-- **OpenClaw** is an external executor and does not own Sparkle's business brain
-
-Each layer has clear responsibilities and scales independently. The Gateway handles 10K+ WebSocket connections, the Engine scales AI compute horizontally, and OpenClaw closes the digital execution loop.
-
-<details>
-<summary><b>Dual-Core Growth Operating System</b> (click to expand)</summary>
-
-Sparkle's core innovation splits the AI system into two collaborative cores:
-
-```
-+=====================================+  +=====================================+
-|          EXECUTION CORE             |  |          COGNITIVE CORE             |
-|                                     |  |                                     |
-|  Goal Clarification                 |  |  User Profile (4D)                  |
-|         |                           |  |         |                           |
-|         v                           |  |         v                           |
-|  Sufficiency Evaluation             |  |  Long/Short-term Memory             |
-|         |                           |  |         |                           |
-|         v                           |  |         v                           |
-|  Staged Plan (DAG)                  |  |  Cognitive Prism                    |
-|         |                           |  |         |                           |
-|         v                           |  |         v                           |
-|  Task Execution                     |  |  Emotion & Motivation               |
-|         |                           |  |         |                           |
-|         v                           |  |         v                           |
-|  Dynamic Adjustment                 |  |  Continuous Companion               |
-+--------------------+----------------+  +--------------------+----------------+
-                     |                                      |
-                     +---------- Collaboration -------------+
-                       Event Bus  |  Context Aggregation  |  Real-time Sync
-```
-
-The **Execution Core** handles "getting things done": defining goals, assessing feasibility, breaking down plans, reviewing strategies, dispatching execution, collecting results, and replanning based on reality.
-
-The **Cognitive Core** handles "understanding the user": continuously updating the 4D profile, accumulating long/short-term memory, perceiving thinking patterns through the Cognitive Prism, recognizing emotional states for personalized motivation, and feeding execution outcomes back into future strategy.
-
-The two cores don't run in isolation — they collaborate in real-time through an event bus.
-
-</details>
-
-<details>
-<summary><b>7-Stage Growth Loop</b> (click to expand)</summary>
-
-Every Sparkle interaction is a complete growth cycle:
-
-```
-                      +-----------------+
-                      |    Sense        |
-                      |  (passive)      |
-                      +--------+--------+
-                               |
-          +--------------------+--------------------+
-          |                    |                    |
-          v                    v                    v
-  +---------------+   +---------------+   +---------------+
-  |   Clarify     |   |     Plan      |   |   Execute     |
-  | true intent   |-->| executable    |-->| specific      |
-  +---------------+   | paths         |   | tasks         |
-          ^            +---------------+   +-------+-------+
-          |                    |                   |
-          |             +------+-------+           |
-          |             |   Reflect    |<----------+
-          |             | analyze      |
-          |             +------+-------+
-          |                    |
-          |           +--------+--------+
-          |           |                 |
-          |  +---------------+  +---------------+
-          |  |  Reinforce    |  |    Adapt      |
-          +--| consolidate   |->| adjust        |
-             +---------------+  | strategy      |
-                                +-------+-------+
-                                        |
-          Enter next iteration <--------+
-```
-
-| Stage | Responsibility | Technical Implementation |
+| Mode | What the user experiences | What Sparkle is doing under the hood |
 |:---|:---|:---|
-| Sense | Passively capture user signals | Behavior tracking, emotion recognition, learning trajectory |
-| Clarify | Understand true intent | Intent recognition, context understanding, clarifying questions |
-| Plan | Generate executable paths | Goal decomposition, path planning, resource matching, version snapshot |
-| Execute | Run specific tasks | Task scheduling, tool invocation, OpenClaw delegation, approval feedback |
-| Reflect | Analyze results | Outcome evaluation, error attribution, comparison, self-verification |
-| Reinforce | Consolidate learning | Spaced repetition, memory curves, achievement motivation |
-| Adapt | Adjust strategy | Profile updates, strategy optimization, failure degradation and replanning |
+| `Understand` | Understand who the user is, what they want, and what is still missing | Compile profile, evidence, gaps, and current state |
+| `Plan` | Turn the user’s information into the best plan and next move | Evaluate readiness, compile strategy, constrain plan quality |
+| `Adapt` | Change the path when reality changes | Read feedback, outcomes, load, materials, and runtime context |
+| `Grow` | Improve over time while staying visible and governable | Calibrate, prevent drift, expose insights, accept corrections |
 
-</details>
-
-<details>
-<summary><b>Evidence-Based 4D Cognitive Profile</b> (click to expand)</summary>
-
-We don't just track "what you know" — we understand "how you think". Every dimension is backed by **behavioral evidence**:
-
-```
-+--------------------------------------------------------------------+
-|                    4D Cognitive Profile                              |
-+--------------------------------+-----------------------------------+
-|                                |                                   |
-|  Knowledge                     |  Cognition                        |
-|  - Mastery (0-100)             |  - Metacognition                  |
-|  - Forgetting curve half-life  |  - Cognitive load assessment      |
-|  - Learning rate               |  - Thinking style (abstract/concrete)|
-|  - Knowledge gap map           |  - Problem-solving strategy       |
-|                                |                                   |
-+--------------------------------+-----------------------------------+
-|                                |                                   |
-|  Motivation                    |  Social                           |
-|  - Self-efficacy               |  - Collaboration style            |
-|  - Intrinsic/extrinsic ratio   |  - Communication traits           |
-|  - Interest map                |  - Community contribution         |
-|  - Goal commitment             |  - Peer influence sensitivity     |
-|                                |                                   |
-+--------------------------------+-----------------------------------+
-
-Evidence sources: conversation analysis, task completion quality/timing,
-review intervals/effectiveness, error pattern clustering, emotional signals,
-community interaction behavior.
-```
-
-</details>
-
-<details>
-<summary><b>GraphRAG Hybrid Retrieval Engine</b> (click to expand)</summary>
-
-Breaking through traditional RAG limitations by fusing semantic vector search with knowledge graph traversal:
-
-```
-                          User Query
-                              |
-               +--------------+--------------+
-               |                             |
-               v                             v
-+------------------------------+  +-----------------------------+
-| pgvector Semantic Search     |  | Apache AGE Graph Traversal  |
-|                              |  |                             |
-| - Similar content chunks     |  | - Prerequisites             |
-| - Topic matching             |  | - Follow-up concepts        |
-| - Context relevance          |  | - Related relationships     |
-|                              |  |                             |
-|         < 200ms              |  |         < 500ms             |
-+--------------+---------------+  +--------------+--------------+
-               |                                 |
-               +----------------+----------------+
-                                |
-                                v
-               +------------------------------+
-               | Fused Ranking Engine         |
-               |                              |
-               | 1. Deduplication             |
-               | 2. Dependency chain build    |
-               | 3. Profile-based weighting   |
-               | 4. Context compression       |
-               +--------------+---------------+
-                              |
-                              v
-               +------------------------------+
-               | Personalized Response        |
-               |         < 800ms total        |
-               +------------------------------+
-```
-
-| Capability | Traditional RAG | Sparkle GraphRAG |
-|:---|:---|:---|
-| Semantic understanding | Vector similarity | Vector similarity |
-| Knowledge relations | None | Graph traversal reasoning |
-| Prerequisites | Not identified | Auto-linked |
-| Personalization | None | Profile-weighted |
-| Learning paths | None | Dependency chain generation |
-
-</details>
+Internally, Sparkle also has chat modes, experience modes, agent routing, and tool routing. But these four modes are the clearest way to explain the product.
 
 ---
 
-## Tech Stack
+## Sparkle’s Two Real Moats
 
-| Layer | Technology | Version | Rationale |
-|:---|:---|:---|:---|
-| **Mobile** | Flutter | 3.24+ | Cross-platform consistency, hot reload, rich widgets |
-| | Riverpod | 2.x | Compile-time safe, declarative state management |
-| **Gateway** | Go | 1.22+ | High concurrency, low memory, compiled |
-| | Gin + gRPC | -- | High-performance HTTP + strongly-typed cross-language calls |
-| **AI Engine** | Python | 3.11+ | Rich AI ecosystem |
-| | LangGraph | 0.3+ | Observable state machine, complex orchestration |
-| | Celery | 5.x | Mature async task queue |
-| **Data** | PostgreSQL | 16+ | ACID + rich extensions |
-| | pgvector | 0.7+ | Native vector index |
-| | Apache AGE | 1.5+ | PostgreSQL graph extension, Cypher queries |
-| | Redis | 7+ | Cache, pub/sub, event bus |
-| **Storage** | MinIO | -- | S3-compatible object storage |
-| **Observability** | Prometheus + Grafana + Loki + Tempo | -- | Metrics, logs, traces, alerts |
+Sparkle is not trying to win by “having more models.”
+
+It is trying to win through two real moats:
+
+| Moat | Meaning | What the user feels |
+|:---|:---|:---|
+| `User Understanding Quality` | Sparkle can surface things the user cannot easily see alone from their goals, materials, behavior, errors, and feedback | “It really understood what was actually blocking me.” |
+| `Plan Quality` | Sparkle turns that understanding into a better plan, pacing model, decomposition, and next move | “This plan is more useful than what I would get from raw AI directly.” |
+
+The product standard is simple:
+
+> **Sparkle should understand the user more deeply and plan more intelligently than raw AI use for a non-expert user.**
+
+---
+
+## Raw AI vs Sparkle
+
+| Dimension | Raw AI Direct Use | Sparkle |
+|:---|:---|:---|
+| Context organization | The user does the prompt engineering | The system actively detects gaps and compiles context |
+| User understanding | Mostly limited to the current turn | Built on a persistent `UserInsightState` |
+| Plan quality | Often a generic answer or generic plan | Readiness-gated, strategy-driven, grounded planning |
+| Feedback learning | Mostly turn-level satisfaction | Outcome learning, calibration, and anti-drift |
+| Transparency | Users rarely see how the system models them | Users can inspect, correct, and control their insight state |
+| Continuity | Usually session-local | Designed for cross-session improvement and continuity |
+
+---
+
+## The Core Product Loop
+
+```mermaid
+flowchart LR
+    A["1. User states a goal"] --> B["2. Sparkle compiles situation, materials, and missing information"]
+    B --> C["3. Sparkle decides whether it is ready to plan"]
+    C -->|Not ready| D["4a. Ask one highest-value clarification question"]
+    C -->|Ready enough| E["4b. Generate the plan or next move"]
+    D --> B
+    E --> F["5. User or external executor acts"]
+    F --> G["6. Sparkle receives feedback, evidence, and outcomes"]
+    G --> H["7. Sparkle adapts the next move and preserves continuity"]
+    H --> B
+```
+
+This is not a one-shot answer system. It is an evolving planning loop.
+
+---
+
+## The Core Data-Utilization Loop
+
+Sparkle’s core principle is not “collect more data.”
+
+It is **use the user’s own data more deeply, more accurately, and more transparently**.
+
+```mermaid
+flowchart LR
+    A["1. Gather
+Goals, materials, behavior, errors, feedback"] --> B["2. Store
+Structured state + vectors + graph relations"]
+    B --> C["3. Analyze
+Multi-layer, multi-span insight analysis"]
+    C --> D["4. Predict
+Risk, load, slippage, support-fit prediction"]
+    D --> E["5. Update
+Feedback, correction, calibration, anti-drift"]
+    E --> F["6. Present
+Transparent profile, insight, and user control"]
+    F --> A
+```
+
+This six-part loop is one of Sparkle’s deepest advantages:
+
+- not just memory
+- but utilization
+- not just utilization
+- but explainable, correctable utilization
+
+---
+
+## The Technical Design That Matters Most
+
+### 1. User Insight and Profile System
+
+Sparkle does not re-guess the user from scratch on every turn.
+
+It compiles user-owned information into a canonical `UserInsightState` that supports:
+
+- goal and constraint understanding
+- current-state and bottleneck detection
+- multi-span analysis
+- bounded prediction
+- transparency and user correction
+
+This is the substrate that makes “understanding the user” real.
+
+### 2. Planning Engine
+
+Sparkle is designed not to politely hallucinate plans.
+
+Before planning, it checks:
+
+- whether the system is ready enough to plan
+- whether it should clarify first
+- whether it should only offer a provisional plan
+- whether it must explicitly ground itself in user materials
+
+Then it enforces plan quality instead of treating generation as final truth.
+
+### 3. AI Semantic Control
+
+Sparkle does not rely on opaque control tags alone.
+
+We built:
+
+- a canonical strategy ontology
+- a shared doctrine renderer
+- behavior-level semantic compliance checks
+- traceable semantic-control metadata
+
+This makes the AI system better at following product intent instead of guessing what a label means.
+
+### 4. Feedback, Growth, and Anti-Drift
+
+Sparkle does not only ask whether the user liked a sentence.
+
+It keeps learning:
+
+- which plans worked
+- which strategies failed
+- what the user corrected about the system’s profile
+- which inferred signals became stale or should be scoped
+
+And it responds with:
+
+- confidence calibration
+- ineffective-signal pruning
+- scope control
+- drift prevention
+
+### 5. Transparency and User Control
+
+One of Sparkle’s core principles is:
+
+> **users should be able to see how the system understands them, and they should have the right to correct it**
+
+So the system supports:
+
+- visible insight / prediction / unknowns
+- visible calibration state
+- `wrong`
+- `used_to_be_true`
+- `exam_mode_only`
+- `reset_override`
+
+That is one of the strongest differences between Sparkle and many large-model products.
+
+---
+
+## System Architecture Overview
+
+```mermaid
+flowchart TB
+    Mobile["Flutter Mobile App
+Chat / Home / Tasks / Galaxy / Community"] <--> Gateway["Go Gateway
+WebSocket / HTTP / Auth / Rate Limit / gRPC Bridge"]
+    Gateway <--> Engine["Python AI Engine
+Orchestration / Planning / Feedback / Capability Governance"]
+
+    Engine <--> Data["PostgreSQL
+Business Data + pgvector + Apache AGE"]
+    Engine <--> Redis["Redis
+Cache / Streams / Event Bus / Runtime State"]
+    Engine <--> Storage["Object Storage
+User Materials / Files / Assets"]
+    Engine --> Executors["External Executors
+OpenClaw / tools / specialist paths"]
+```
+
+### Inside the AI Engine
+
+```mermaid
+flowchart LR
+    Insight["User Insight Engine
+Profile / Evidence / Multi-span analysis / Prediction"] --> Planning["Planning Engine
+Readiness / Strategy / Plan quality gate"]
+    Planning --> Feedback["Feedback & Growth Engine
+Outcome learning / Calibration / Anti-drift"]
+    Feedback --> Insight
+    Body["Body Awareness & Capability Governance"] --> Planning
+    Layered["Five-Layer Learning System"] --> Insight
+    Layered --> Planning
+    Semantic["AI Semantic Control
+Ontology / Doctrine / Compliance / Trace"] --> Planning
+```
+
+These diagrams are the clearest README-level explanation of the system.
+
+---
+
+## The Best Parts of the Design
+
+If we had to summarize Sparkle’s strongest design decisions, they would be:
+
+1. **A canonical user understanding state instead of scattered profile fragments**
+2. **Ask-before-plan discipline instead of polite guessing**
+3. **Semantic AI control instead of opaque prompt tags**
+4. **Outcome learning with governance and anti-drift**
+5. **Visible profile transparency and user correction**
+6. **A convergent architecture built around two moats: understanding quality and plan quality**
+
+---
+
+## North-Star Scenario
+
+The best scenario for demonstrating Sparkle remains:
+
+### Thermodynamics Final in 14 Days
+
+The user:
+
+- uploads slides, notes, homework, and prior errors
+- has a real exam in 14 days
+- does not fully understand their own bottleneck
+- becomes overloaded partway through
+
+Sparkle should:
+
+- figure out what is still missing
+- ground itself in the user’s real materials
+- produce a good plan
+- visibly adapt when pressure or failure appears
+- preserve continuity and trust across time
+
+That is the scenario where the product should visibly beat raw AI usage.
+
+---
+
+## The Most Important Product Goal Right Now
+
+The most important question is no longer “do we have enough modules?”
+
+The most important question now is:
+
+> **Can Sparkle run as a real product and clearly outperform ordinary raw-AI use for a non-expert user?**
+
+That is why Stage 2 is focused on:
+
+- a runnable golden path
+- real in-app experience
+- first human-evaluation cycles and transcript review
+- judging value through real product behavior, not only synthetic scores
 
 ---
 
@@ -325,235 +362,96 @@ Breaking through traditional RAG limitations by fusing semantic vector search wi
 
 ### Prerequisites
 
-| Dependency | Version | Notes |
-|:---|:---|:---|
-| Go | 1.22+ | Gateway development |
-| Python | 3.11+ | AI engine development |
-| Flutter | 3.24+ | Mobile development |
-| Docker | 24+ | Containerized deployment |
-| Docker Compose | 2.x | Service orchestration |
+| Dependency | Version |
+|:---|:---|
+| Go | 1.22+ |
+| Python | 3.11+ |
+| Flutter | 3.24+ |
+| Docker / Docker Compose | 24+ / 2.x |
 
-### One-Command Setup
+### Local Bring-Up
 
 ```bash
-# 1. Clone the project
+# 1. Clone the repository
 git clone https://github.com/BRSAMAyu/Sparkle-project.git
 cd Sparkle-project
 
-# 2. Configure environment
-cp .env.example .env
-# Edit .env with required configs (LLM API Key, Database, Redis)
+# 2. Configure environment variables
+cp backend/.env.example backend/.env
+cp backend/gateway/.env.example backend/gateway/.env
 
-# 3. Start infrastructure (PostgreSQL, Redis, MinIO)
+# 3. Start infrastructure
 make dev-up
 
-# 4. Initialize database
+# 4. Sync database and generate code
 make sync-db
+make proto-gen
 
-# 5. Start backend services (two terminals)
-make grpc-server    # Terminal 1: Python AI Engine
-make gateway-dev    # Terminal 2: Go Gateway
+# 5. Start the Python AI engine
+make grpc-server
 
-# 6. Start mobile client (third terminal)
-make mobile-run
+# 6. Start the Go gateway
+make gateway-dev
+
+# 7. Run the mobile app
+cd mobile && flutter run
 ```
 
 ### Common Commands
 
 ```bash
-# Development
-make dev-up              # Start infrastructure
-make gateway-dev         # Start Go gateway (hot reload)
-make grpc-server         # Start Python gRPC server
-make mobile-run          # Start Flutter app
+make dev-up
+make grpc-server
+make gateway-dev
+make proto-gen
+make sync-db
 
-# Code Generation
-make proto-gen           # Generate Protobuf code
-make sync-db             # DB migration + SQLC generation
-make mobile-gen          # Flutter code generation
-
-# Task Queue
-make celery-up           # Start Celery Worker + Beat
-make celery-status       # Check queue status
-
-# Health Checks
-make smoke               # All services health check
-make env-check           # Environment config check
-
-# Testing
-cd backend && pytest                    # Python tests (311 files)
-cd backend/gateway && go test ./...     # Go tests (34 files)
-cd mobile && flutter test               # Flutter tests (131 files)
+cd backend && pytest
+cd backend/gateway && go test ./...
+cd mobile && flutter test
 ```
 
 ---
 
-## Project Structure
+## Repository Structure
 
-```
+```text
 Sparkle-project/
-+-- mobile/                             # Flutter mobile client
-|   +-- lib/
-|   |   +-- core/                       # Core infrastructure
-|   |   |   +-- design/                 # Design System V2 (tokens, components, motion)
-|   |   |   +-- experience/             # Experience profile system
-|   |   |   +-- services/               # Global services (BGM, haptics, audio policy)
-|   |   +-- features/                   # Feature modules (24 route modules)
-|   |   |   +-- chat/                   # AI conversation
-|   |   |   +-- task/                   # Task management
-|   |   |   +-- galaxy/                 # Knowledge galaxy
-|   |   |   +-- mirofish/               # Mirofish group-agent UI support
-|   |   |   +-- focus/                  # Focus mode
-|   |   |   +-- achievement/            # Achievement system
-|   |   |   +-- community/              # Community
-|   |   |   +-- ...                     # Plan, cognitive, error book, shop, etc.
-|   |   +-- gen/                        # Protobuf generated code (78 files)
-|   +-- test/                           # 131 test files
-|
-+-- backend/
-|   +-- gateway/                        # Go gateway layer
-|   |   +-- internal/
-|   |       +-- handler/                # HTTP/WebSocket handlers (46 files)
-|   |       +-- agent/                  # gRPC client
-|   |       +-- middleware/             # 16 middleware (Auth, RateLimit, Security...)
-|   |       +-- service/                # Business services (12 files)
-|   |       +-- db/                     # Database layer (143 tables, SQLC)
-|   |
-|   +-- app/                            # Python AI engine (319 .py files)
-|       +-- orchestration/              # LangGraph orchestration
-|       +-- adapters/openclaw/          # OpenClaw execution adapter
-|       +-- services/                   # 26 service files
-|       +-- tools/                      # AI tool registry
-|       +-- core/                       # Core (context, event bus, profiles)
-|
-+-- proto/                              # 6 Protobuf definitions (API contract source)
-+-- monitoring/                         # Prometheus + Grafana + Loki + Tempo + 11 alert rules
-+-- scripts/                            # Deploy, backup, acceptance scripts (21 scripts)
-+-- docker-compose.yml                  # Development environment (17 services)
-+-- Makefile                            # Build scripts
-+-- CLAUDE.md                           # AI development assistant guide
+├── mobile/                  # Flutter client
+├── backend/app/             # Python AI engine
+├── backend/gateway/         # Go gateway
+├── proto/                   # gRPC protocol definitions
+├── docs/                    # product, architecture, and verification docs
+├── scripts/                 # startup, verification, and utility scripts
+└── docker-compose.yml       # local infrastructure
 ```
 
 ---
 
-## Engineering Metrics
+## Key Documents
 
-| Metric | Value |
-|:---|:---|
-| Python test files | 311 |
-| Go test files | 34 |
-| Flutter test files | 131 |
-| Acceptance scripts | 21 |
-| CI Workflows | 13 |
-| Pre-commit Hooks | 10 |
-| Proto files | 6 |
-| Database tables | 143 |
-| Alembic migrations | 52 |
-| Docker services | 17 |
-| SLO alert rules | 11 |
-| Go lint rules | 22 linters |
-| Flutter lint rules | strict-casts + strict-inference + strict-raw-types |
+- [Docs Entry](docs/README.md)
+- [Product Thesis and Refocused Roadmap](docs/product/SPARKLE_PRODUCT_THESIS_AND_REFOCUSED_ROADMAP_2026-04-05.md)
+- [Stage 2 Product Coherence and Live Alpha Plan](docs/product/SPARKLE_STAGE2_PRODUCT_COHERENCE_AND_LIVE_ALPHA_PLAN_2026-04-06.md)
+- [Stage 2 Product Coherence Execution Plan](docs/product/implementation/SPARKLE_STAGE2_PRODUCT_COHERENCE_EXECUTION_PLAN_2026-04-06.md)
+- [Stage 2 Profile and Insight System Plan](docs/product/implementation/SPARKLE_STAGE2_PROFILE_AND_INSIGHT_SYSTEM_EXECUTION_PLAN_2026-04-06.md)
+- [AI Semantic Control Plan](docs/product/implementation/SPARKLE_AI_SYSTEM_SEMANTIC_CONTROL_EXECUTION_PLAN_2026-04-06.md)
+- [Data Utilization Analysis](docs/product/SPARKLE_DATA_UTILIZATION_ANALYSIS_2026-04-06.md)
 
 ---
 
-## Documentation
+## Current Position
 
-| Document | Description | Audience |
-|:---|:---|:---|
-| [CLAUDE.md](CLAUDE.md) | Dev guide, architecture rules, code patterns | Developers |
-| [Developer Docs Entry](docs/README.md) | Main entry for current development documentation | Developers / Product |
-| [Technical Architecture](docs/00_项目概览/02_技术架构.md) | 3-layer architecture deep dive | Developers |
-| [Knowledge Galaxy Design](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) | GraphRAG implementation details | Developers |
-| [OpenClaw Execution Review](docs/architecture/SPARKLE_OPENCLAW_ALIGNMENT_REVIEW_v1.5.md) | Handoff, approval, comparison, self-verification, degradation | Developers / Product |
-| [Mirofish Verification Checklist](docs/verification/本地发布前完整签收清单_2026-03-21.md) | Acceptance scope for Mirofish and linked product flows | Developers / QA |
-| [CHANGELOG](CHANGELOG.md) | Version history | Everyone |
-| [Frontend Experience Spec](docs/engineering/前端改进对齐文档_2026-03-22.md) | Multi-sensory experience system specification | Frontend developers |
+The most accurate description of Sparkle right now is not “a giant AI platform.”
 
----
+It is:
 
-## Contributing
+> **an AI-native planning and growth operating system with its core intelligence systems in place, now moving into real product proof**
 
-We welcome all forms of contributions: bug reports, feature proposals, documentation improvements, and code PRs.
-
-```bash
-# 1. Fork this repository
-# 2. Create feature branch
-git checkout -b feature/amazing-feature
-
-# 3. Commit changes (Conventional Commits)
-git commit -m 'feat: add amazing feature'
-
-# 4. Push and create Pull Request
-git push origin feature/amazing-feature
-```
+That is the consensus this repository should communicate.
 
 ---
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
----
-
-<div align="center">
-
-**Sparkle** &nbsp;&middot;&nbsp; v1.0.0
-
-*Helping everyone become their best self*
-
-[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
-[![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-FF6B6B?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
-
-</div>
-loper Docs Entry](docs/README.md) | Main entry for current development documentation | Developers / Product |
-| [Technical Architecture](docs/00_项目概览/02_技术架构.md) | 3-layer architecture deep dive | Developers |
-| [Knowledge Galaxy Design](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) | GraphRAG implementation details | Developers |
-| [API Design](docs/02_技术设计文档/05_API设计.md) | gRPC + WebSocket interfaces | Developers |
-| [OpenClaw Execution Review](docs/architecture/SPARKLE_OPENCLAW_ALIGNMENT_REVIEW_v1.5.md) | Handoff, approval, comparison, self-verification, degradation | Developers / Product |
-| [Mirofish Verification Checklist](docs/verification/本地发布前完整签收清单_2026-03-21.md) | Acceptance scope for Mirofish and linked product flows | Developers / QA |
-| [CHANGELOG](CHANGELOG.md) | Version history | Everyone |
-| [Frontend Experience Spec](docs/engineering/前端改进对齐文档_2026-03-22.md) | Multi-sensory experience system spec | Frontend devs |
-| [Last Five Multi-Sensory Rounds](mobile/docs/multisensory_recent_five_rounds_alignment.md) | Recent BGM, motion, haptics, and settings refinements | Frontend devs |
-
----
-
-## Contributing
-
-We welcome all forms of contributions: bug reports, feature proposals, documentation improvements, and code PRs.
-
-```bash
-# 1. Fork this repository
-# 2. Create feature branch
-git checkout -b feature/amazing-feature
-
-# 3. Commit changes (Conventional Commits)
-git commit -m 'feat: add amazing feature'
-
-# 4. Push and create Pull Request
-git push origin feature/amazing-feature
-```
-
----
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-<div align="center">
-
-**Sparkle** &nbsp;&middot;&nbsp; v1.0.0
-
-*Helping everyone become their best self*
-
-[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
-[![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-FF6B6B?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
-
-</div>
