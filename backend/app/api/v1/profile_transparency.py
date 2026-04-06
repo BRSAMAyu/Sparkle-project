@@ -504,6 +504,10 @@ def _normalize_inferred_display_value(value: Any) -> Any:
 
 
 _INFERRED_KEY_LABELS = {
+    "achievement_motivation_response": "成就激励响应",
+    "achievement_pace_style": "成就节奏风格",
+    "achievement_peak_hours": "成就高峰时段",
+    "achievement_reward_sensitivity": "成就奖励敏感度",
     "avg_question_complexity": "问题复杂度",
     "chat_active_hours": "聊天活跃时段",
     "community_engagement_level": "社区参与度",
@@ -523,6 +527,7 @@ _INFERRED_KEY_LABELS = {
 }
 
 _INFERRED_SOURCE_LABELS = {
+    "achievement_signals": "成就行为",
     "behavior": "行为推断",
     "chat_behavior": "聊天行为",
     "community": "社区行为",
@@ -540,8 +545,14 @@ _VALUE_LABELS = {
     "high": "高",
     "low": "低",
     "balanced": "均衡",
+    "mastery_affirmation": "掌握提升型鼓励",
+    "milestone_celebration": "里程碑庆祝型鼓励",
+    "mixed": "混合",
+    "progress_praise": "进度肯定型鼓励",
     "detailed": "详细",
     "concise": "简洁",
+    "sprint": "冲刺型",
+    "steady": "稳步型",
     "structured": "结构化",
     "intermediate": "中等基础",
 }
@@ -597,6 +608,14 @@ def _present_value_text(value: Any) -> str:
 
 def _localize_inferred_explanation(key: str, value: Any, fallback: str) -> str:
     label = _INFERRED_KEY_LABELS.get(key, key)
+    if key == "achievement_peak_hours" and isinstance(value, list):
+        return f"系统观察到你最近更常在 { _present_value_text(value) } 解锁成就，这些时段会被视为更容易形成正反馈的窗口。"
+    if key == "achievement_motivation_response":
+        return f"最近成就行为显示，你更容易被「{ _present_value_text(value) }」这类反馈方式带动。"
+    if key == "achievement_pace_style":
+        return f"结合最近的成就节奏，系统判断你当前更接近 { _present_value_text(value) } 的推进方式。"
+    if key == "achievement_reward_sensitivity":
+        return f"根据最近成就的稀有度与分享行为，系统认为你对奖励反馈的敏感度大约是 { _present_value_text(value) }。"
     if key == "peak_focus_hours" and isinstance(value, list):
         return f"系统根据最近专注记录判断，你更容易进入状态的时间集中在 { _present_value_text(value) }。"
     if key == "chat_active_hours" and isinstance(value, list):

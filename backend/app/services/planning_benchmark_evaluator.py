@@ -309,6 +309,17 @@ class PlanningBenchmarkEvaluator:
                 inferred_mode=inferred_mode,
                 section_ratio=section_ratio,
             ),
+            "behavior_compliance": self._score_behavior_compliance(
+                scenario=scenario,
+                text=text,
+                inferred_mode=inferred_mode,
+            ),
+            "response_shape_compliance": self._score_response_shape(
+                scenario=scenario,
+                text=text,
+                inferred_mode=inferred_mode,
+                section_ratio=section_ratio,
+            ),
             "constraint_realism": self._score_constraint_realism(
                 scenario=scenario,
                 text=text,
@@ -325,6 +336,7 @@ class PlanningBenchmarkEvaluator:
             "adaptation_fallback_quality": self._score_adaptation(scenario=scenario, text=text),
             "non_expert_usability": self._score_usability(scenario=scenario, text=text),
             "trustworthiness": self._score_trust(scenario=scenario, text=text, inferred_mode=inferred_mode),
+            "trust_tone_compliance": self._score_trust_tone(scenario=scenario, text=text, inferred_mode=inferred_mode),
         }
         overall = _average([item.score for item in dimensions.values()])
         return PlanningBenchmarkScenarioScore(
@@ -364,8 +376,9 @@ class PlanningBenchmarkEvaluator:
         for scenario_id, scores in by_scenario.items():
             ordered = sorted(scores, key=lambda item: item.overall_score, reverse=True)
             winner = ordered[0]
-            phase_b = next((item for item in ordered if item.variant == "sparkle_phase_b"), None)
-            best_non_phase_b = next((item for item in ordered if item.variant != "sparkle_phase_b"), None)
+            target_variant = "semantic_doctrine" if any(item.variant == "semantic_doctrine" for item in ordered) else "sparkle_phase_b"
+            phase_b = next((item for item in ordered if item.variant == target_variant), None)
+            best_non_phase_b = next((item for item in ordered if item.variant != target_variant), None)
             outcome = "loss"
             if phase_b is not None and best_non_phase_b is not None:
                 delta = phase_b.overall_score - best_non_phase_b.overall_score
@@ -383,6 +396,7 @@ class PlanningBenchmarkEvaluator:
                     "winner": self.variant_label(winner.variant, winner.model_key),
                     "winner_score": _bounded(winner.overall_score),
                     "phase_b_outcome": outcome,
+                    "target_variant": target_variant,
                     "scores": [
                         {
                             "label": self.variant_label(item.variant, item.model_key),
@@ -401,12 +415,17 @@ class PlanningBenchmarkEvaluator:
             }
             for label, scores in sorted(by_variant.items())
         }
-        phase_b_average = variant_summary.get("sparkle_phase_b:dashscope_chat", {}).get("average_overall_score", 0.0)
+        benchmark_target_label = (
+            "semantic_doctrine:dashscope_chat"
+            if "semantic_doctrine:dashscope_chat" in variant_summary
+            else "sparkle_phase_b:dashscope_chat"
+        )
+        phase_b_average = variant_summary.get(benchmark_target_label, {}).get("average_overall_score", 0.0)
         strongest_baseline = max(
             (
                 item["average_overall_score"]
                 for label, item in variant_summary.items()
-                if label != "sparkle_phase_b:dashscope_chat"
+                if label != benchmark_target_label
             ),
             default=0.0,
         )
@@ -424,6 +443,7 @@ class PlanningBenchmarkEvaluator:
             "variant_summary": variant_summary,
             "scenario_outcomes": scenario_outcomes,
             "phase_b_vs_field": win_tie_loss,
+            "benchmark_target_label": benchmark_target_label,
             "credible_win_profile": credible_win_profile,
         }
 
@@ -489,6 +509,42 @@ class PlanningBenchmarkEvaluator:
         mode_bonus = 0.15 if inferred_mode == scenario.expected_plan_mode else 0.0
         score = 0.35 + overlap * 1.4 + section_ratio * 0.2 + mode_bonus
         notes = f"Keyword overlap={overlap:.2f}; inferred_mode={inferred_mode}; expected_mode={scenario.expected_plan_mode}."
+        return PlanningBenchmarkDimensionScore(score=_bounded(score), notes=notes, evidence_excerpt=self._excerpt(text))
+
+    def _score_behavior_compliance(
+        self,
+        *,
+        scenario: PlanningBenchmarkScenario,
+        text: str,
+        inferred_mode: str,
+    ) -> PlanningBenchmarkDimensionScore:
+        lowered = text.lower()
+        question_count = text.count("?") + text.count("？")
+        if scenario.expected_plan_mode == PLAN_MODE_NEXT_STEP_ONLY:
+            score = 0.88 if inferred_mode == PLAN_MODE_NEXT_STEP_ONLY and question_count == 1 else 0.35
+        elif scenario.phase_a_readiness_action == "provisional":
+            score = 0.88 if inferred_mode == PLAN_MODE_PROVISIONAL else 0.45
+        else:
+            score = 0.86 if inferred_mode == scenario.expected_plan_mode else 0.5
+        if "push harder" in lowered and "low energy" in lowered:
+            score -= 0.18
+        notes = f"inferred_mode={inferred_mode}; expected_mode={scenario.expected_plan_mode}; question_count={question_count}."
+        return PlanningBenchmarkDimensionScore(score=_bounded(score), notes=notes, evidence_excerpt=self._excerpt(text))
+
+    def _score_response_shape(
+        self,
+        *,
+        scenario: PlanningBenchmarkScenario,
+        text: str,
+        inferred_mode: str,
+        section_ratio: float,
+    ) -> PlanningBenchmarkDimensionScore:
+        question_count = text.count("?") + text.count("？")
+        if scenario.expected_plan_mode == PLAN_MODE_NEXT_STEP_ONLY:
+            score = 0.45 + section_ratio * 0.35 + (0.2 if question_count == 1 else 0.0)
+        else:
+            score = 0.35 + section_ratio * 0.55 + (0.1 if inferred_mode == scenario.expected_plan_mode else 0.0)
+        notes = f"required_section_ratio={section_ratio:.2f}; question_count={question_count}."
         return PlanningBenchmarkDimensionScore(score=_bounded(score), notes=notes, evidence_excerpt=self._excerpt(text))
 
     def _score_constraint_realism(
@@ -626,6 +682,22 @@ class PlanningBenchmarkEvaluator:
         mode_bonus = 0.2 if inferred_mode == scenario.expected_plan_mode else -0.15
         score = 0.35 + min(honesty_hits, 4) * 0.08 + grounding_bonus + mode_bonus
         notes = f"Honesty hits={honesty_hits}; materials_needed={materials_needed}; mode_fit={inferred_mode == scenario.expected_plan_mode}."
+        return PlanningBenchmarkDimensionScore(score=_bounded(score), notes=notes, evidence_excerpt=self._excerpt(text))
+
+    def _score_trust_tone(
+        self,
+        *,
+        scenario: PlanningBenchmarkScenario,
+        text: str,
+        inferred_mode: str,
+    ) -> PlanningBenchmarkDimensionScore:
+        lowered = text.lower()
+        punitive_hits = _count_matches(lowered, ("push harder", "no excuses", "must", "strict"))
+        supportive_hits = _count_matches(lowered, ("for now", "realistic", "if this is too much", "adjust", "plainly"))
+        score = 0.55 + min(supportive_hits, 3) * 0.1 - min(punitive_hits, 3) * 0.14
+        if scenario.expected_plan_mode == PLAN_MODE_NEXT_STEP_ONLY and inferred_mode != PLAN_MODE_NEXT_STEP_ONLY:
+            score -= 0.12
+        notes = f"supportive_hits={supportive_hits}; punitive_hits={punitive_hits}; inferred_mode={inferred_mode}."
         return PlanningBenchmarkDimensionScore(score=_bounded(score), notes=notes, evidence_excerpt=self._excerpt(text))
 
     @staticmethod

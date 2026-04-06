@@ -380,3 +380,120 @@ def test_plan_quality_gate_scores_next_step_only_from_rendered_action_and_questi
     assert report.decision == "ask_more"
     assert report.next_action_score >= 0.9
     assert report.adaptation_score >= 0.8
+
+
+def test_plan_quality_gate_flags_over_scoped_clarify_response() -> None:
+    gate = PlanQualityGate()
+    report = gate.evaluate(
+        plan=_plan("create_plan", "generate_tasks_for_plan"),
+        user_message="Help me do better at school",
+        user_context={
+            "situation_brief": {
+                "decision_context": {
+                    "planning_readiness_action": "ask",
+                    "planning_readiness": "low",
+                    "experience_mode": "clarify",
+                },
+                "planning_strategy": {
+                    "plan_mode": "next_step_only",
+                    "required_plan_sections": ["goal_frame", "withhold_reason", "next_action", "unlock_question"],
+                    "fallback_policy": "ask_more",
+                },
+            },
+            "rendered_plan_artifact": {
+                "text": (
+                    "Goal Frame\nImprove school performance.\n"
+                    "Why a Full Plan Is Withheld\nDetails are still missing.\n"
+                    "Next Action Within 24 Hours\nReview every class and build a two-week plan.\n"
+                    "Unlock Question\nWhich subject matters most right now?\n"
+                    "Extra Question\nHow many hours do you have this week?"
+                )
+            },
+        },
+    )
+
+    assert report.decision == "ask_more"
+    assert any(issue.code == "clarify_over_scoped" for issue in report.issues)
+
+
+def test_plan_quality_gate_flags_missing_assumptions_for_provisional_plan() -> None:
+    gate = PlanQualityGate()
+    report = gate.evaluate(
+        plan=_plan("create_plan"),
+        user_message="Help me recover momentum",
+        user_context={
+            "situation_brief": {
+                "decision_context": {
+                    "planning_readiness_action": "provisional",
+                    "planning_readiness": "medium",
+                },
+                "planning_strategy": {
+                    "plan_mode": "provisional",
+                    "required_plan_sections": [
+                        "goal_frame",
+                        "assumptions",
+                        "readiness_fit",
+                        "scope_and_horizon",
+                        "next_action",
+                        "fallback_uncertainty",
+                    ],
+                    "grounding_mode": "preferred",
+                    "fallback_policy": "downgrade_to_provisional",
+                },
+            },
+            "rendered_plan_artifact": {
+                "text": (
+                    "Goal Frame\nRecover enough momentum to study again.\n"
+                    "Readiness Fit\nThis is a provisional plan.\n"
+                    "Narrowed Scope and Horizon\nOnly cover the next 48 hours.\n"
+                    "Next Action Within 24 Hours\nSet a 15-minute study block for tonight.\n"
+                    "Fallback Path and Uncertainty\nIf that block fails, reduce to five minutes tomorrow."
+                )
+            },
+        },
+    )
+
+    assert any(issue.code == "missing_explicit_assumptions" for issue in report.issues)
+
+
+def test_plan_quality_gate_flags_high_pressure_stabilize_plan() -> None:
+    gate = PlanQualityGate()
+    report = gate.evaluate(
+        plan=_plan("create_plan", "generate_tasks_for_plan", "generate_tasks_for_plan", "generate_tasks_for_plan"),
+        user_message="I am overwhelmed and need a restart plan",
+        user_context={
+            "situation_brief": {
+                "decision_context": {
+                    "planning_readiness_action": "provisional",
+                    "planning_readiness": "medium",
+                    "experience_mode": "stabilize",
+                },
+                "planning_strategy": {
+                    "plan_mode": "provisional",
+                    "required_plan_sections": [
+                        "goal_frame",
+                        "assumptions",
+                        "readiness_fit",
+                        "scope_and_horizon",
+                        "next_action",
+                        "fallback_uncertainty",
+                    ],
+                    "grounding_mode": "preferred",
+                    "pacing_profile": "light",
+                    "fallback_policy": "shrink_scope_then_retry",
+                },
+            },
+            "rendered_plan_artifact": {
+                "text": (
+                    "Goal Frame\nRestart studying immediately.\n"
+                    "Key Assumptions\nAssume energy is low today.\n"
+                    "Readiness Fit\nThis is a provisional plan.\n"
+                    "Narrowed Scope and Horizon\nOnly cover the next 24 hours.\n"
+                    "Next Action Within 24 Hours\nPush harder tonight and complete four dense study blocks.\n"
+                    "Fallback Path and Uncertainty\nIf this is too much, cut to one block tomorrow."
+                )
+            },
+        },
+    )
+
+    assert any(issue.code == "stabilize_pressure_too_high" for issue in report.issues)

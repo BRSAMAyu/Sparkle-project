@@ -11,6 +11,7 @@ from app.orchestration.plan_quality_contract import (
     build_contract_payload,
     build_plan_quality_contract,
 )
+from app.orchestration.ai_strategy_renderer import build_semantic_control, evaluate_semantic_control_compliance
 from app.orchestration.rendered_plan_artifact import parse_rendered_plan_artifact
 
 
@@ -106,6 +107,18 @@ class PlanQualityGate:
             situation_brief.get("planning_strategy")
             or normalized_context.get("planning_strategy")
         )
+        semantic_control = _as_dict(
+            situation_brief.get("semantic_control")
+            or normalized_context.get("semantic_control")
+            or build_semantic_control(
+                decision_context=decision_context,
+                planning_strategy=planning_strategy,
+                body_awareness_guidance=_as_dict(decision_context.get("body_awareness_guidance")),
+                user_strategy_state=_as_dict(normalized_context.get("user_strategy_state")),
+                outcome_learning=_as_dict(situation_brief.get("outcome_learning") or normalized_context.get("outcome_learning")),
+                language="zh",
+            ).to_dict()
+        )
         material_grounding = _as_dict(normalized_context.get("user_material_grounding"))
         rendered_plan_artifact = parse_rendered_plan_artifact(normalized_context.get("rendered_plan_artifact"))
         outcome_learning = _as_dict(
@@ -178,6 +191,22 @@ class PlanQualityGate:
             rendered_plan_artifact=rendered_plan_artifact,
             issues=issues,
         )
+        semantic_compliance = evaluate_semantic_control_compliance(
+            text=getattr(rendered_plan_artifact, "text", "") if rendered_plan_artifact is not None else "",
+            semantic_control=semantic_control,
+            tool_call_count=len(self._tool_calls(plan)),
+            question_count=(getattr(rendered_plan_artifact, "text", "").count("?") + getattr(rendered_plan_artifact, "text", "").count("？"))
+            if rendered_plan_artifact is not None
+            else 0,
+        )
+        for violation in semantic_compliance.violations:
+            issues.append(
+                PlanQualityIssue(
+                    code=str(violation.get("code") or "semantic_control_violation"),
+                    message=str(violation.get("message") or "Semantic control contract was violated."),
+                    severity="critical" if str(violation.get("code") or "").startswith("missing_") else "warning",
+                )
+            )
 
         for missing in coverage.missing_sections:
             severity = "critical" if contract_mode == PLAN_MODE_FULL else "warning"
@@ -199,6 +228,8 @@ class PlanQualityGate:
         )
         if coverage.missing_sections:
             overall_score = max(0.0, overall_score - min(len(coverage.missing_sections) * 0.06, 0.24))
+        if not semantic_compliance.passed:
+            overall_score = max(0.0, overall_score - min(len(semantic_compliance.violations) * 0.08, 0.24))
 
         decision = self._decide(
             contract_mode=contract_mode,
@@ -223,7 +254,10 @@ class PlanQualityGate:
             contract_mode=contract_mode,
             section_coverage=coverage.to_dict(),
             artifact_coverage=coverage.to_dict(),
-            metadata_expectations=metadata_expectations.to_dict(),
+            metadata_expectations={
+                **metadata_expectations.to_dict(),
+                "semantic_control": semantic_compliance.to_dict(),
+            },
         )
 
     def _score_outcome_learning_alignment(

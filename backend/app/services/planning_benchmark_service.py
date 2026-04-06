@@ -7,6 +7,7 @@ from typing import Any
 
 from app.core.agent_profiles import AgentRole
 from app.core.llm_router import llm_router
+from app.orchestration.ai_strategy_renderer import build_semantic_control
 from app.orchestration.plan_quality_contract import build_plan_quality_contract
 from app.orchestration.planning_strategy_compiler import PlanningStrategyCompiler
 from app.services.llm_service import get_llm_service_for_specific_model
@@ -14,6 +15,8 @@ from app.services.llm_service import get_llm_service_for_specific_model
 RAW_BASELINE_MODEL_KEYS = ("dashscope_chat", "deepseek_chat")
 PLANNING_BENCHMARK_DIMENSIONS = (
     "understanding_fit",
+    "behavior_compliance",
+    "response_shape_compliance",
     "constraint_realism",
     "plan_sequence_quality",
     "grounding_quality",
@@ -21,6 +24,7 @@ PLANNING_BENCHMARK_DIMENSIONS = (
     "adaptation_fallback_quality",
     "non_expert_usability",
     "trustworthiness",
+    "trust_tone_compliance",
 )
 BENCHMARK_SECTION_LABELS = {
     "goal_frame": "goal frame",
@@ -241,6 +245,66 @@ class PlanningBenchmarkHarness:
             "Use attached materials by name whenever grounding is mandatory."
         )
 
+    def build_semantic_doctrine_prompt(self, scenario: PlanningBenchmarkScenario) -> str:
+        strategy = self.strategy_compiler.compile(
+            situation_brief={
+                "vision": {
+                    "primary_goal": scenario.user_goal,
+                    "target_date": scenario.deadline,
+                },
+                "current_state": {
+                    "snapshot": scenario.baseline_state,
+                },
+                "decision_context": {
+                    "planning_readiness_action": scenario.phase_a_readiness_action,
+                    "planning_readiness": scenario.phase_a_readiness_level,
+                    "planning_blocking_unknowns": list(scenario.planning_blocking_unknowns),
+                },
+                "insight_state": {},
+            },
+            user_context_payload={
+                "file_ids": ["fixture"] if scenario.materials else [],
+                "user_material_grounding": {
+                    "status": "grounded" if scenario.materials else "",
+                    "results": [{"file_name": name} for name in scenario.materials[:3]],
+                },
+            },
+            plan_context={},
+            planning_constraints={},
+        ).to_dict()
+        semantic_control = build_semantic_control(
+            decision_context={
+                "planning_readiness_action": scenario.phase_a_readiness_action,
+                "planning_readiness": scenario.phase_a_readiness_level,
+                "planning_blocking_unknowns": list(scenario.planning_blocking_unknowns),
+                "experience_mode": "clarify" if scenario.phase_a_readiness_action == "ask" else "",
+            },
+            planning_strategy=strategy,
+            body_awareness_guidance={},
+            user_strategy_state={},
+            outcome_learning={},
+            language="en",
+        ).to_dict()
+        summary = dict(semantic_control.get("rendered_doctrine_summary") or {})
+        doctrine_lines = []
+        for key in ("decision_doctrine", "planning_doctrine"):
+            doctrine_lines.extend([_strip(item) for item in summary.get(key, []) if _strip(item)])
+        return (
+            "You are Sparkle's semantic-control planning stack.\n"
+            "Treat the doctrine below as behavioral contract, not stylistic suggestion.\n"
+            "Respond in English.\n\n"
+            f"Dossier goal: {scenario.user_goal}\n"
+            f"Dossier deadline: {scenario.deadline}\n"
+            f"Dossier baseline: {scenario.baseline_state}\n"
+            f"Dossier constraints: {'; '.join(scenario.constraints) or 'None'}\n"
+            f"Dossier recent failures: {'; '.join(scenario.recent_failures) or 'None'}\n"
+            f"Dossier materials: {'; '.join(scenario.materials) or 'None'}\n\n"
+            "Semantic doctrine:\n"
+            + "\n".join(f"- {item}" for item in doctrine_lines)
+            + "\n\n"
+            + "Use the doctrine behaviorally. If grounding is required, explicitly name the materials you used."
+        )
+
     def build_blank_scorecard(self, run: PlanningBenchmarkRun) -> PlanningBenchmarkScorecard:
         excerpt = run.output_text.strip().splitlines()[:3]
         evidence = " ".join(line.strip() for line in excerpt if line.strip())[:240]
@@ -279,6 +343,8 @@ class PlanningBenchmarkHarness:
             prompt = self.build_sparkle_current_prompt(scenario)
         elif variant == "sparkle_phase_b":
             prompt = self.build_sparkle_phase_b_prompt(scenario)
+        elif variant == "semantic_doctrine":
+            prompt = self.build_semantic_doctrine_prompt(scenario)
         elif variant == "raw_baseline":
             prompt = self.build_raw_model_prompt(scenario)
         else:

@@ -1214,6 +1214,18 @@ class ExecutionEngineMixin:
 
         return "\n".join(lines)
 
+    @staticmethod
+    def _attach_quality_report_context(*, state: Any, quality_report: dict[str, Any] | None) -> None:
+        quality_report = quality_report if isinstance(quality_report, dict) else {}
+        metadata_expectations = quality_report.get("metadata_expectations")
+        metadata_expectations = metadata_expectations if isinstance(metadata_expectations, dict) else {}
+        semantic_control_compliance = metadata_expectations.get("semantic_control")
+        if not isinstance(semantic_control_compliance, dict) or not semantic_control_compliance:
+            return
+        context_data = getattr(state, "context_data", None)
+        if isinstance(context_data, dict):
+            context_data["semantic_control_compliance"] = semantic_control_compliance
+
     async def _get_tools_schema(self, active_tools: list[str] | None = None) -> list[dict[str, Any]]:
         """Get tools from dynamic registry, optionally filtered by request-scoped allowlist."""
         try:
@@ -2387,6 +2399,7 @@ class ExecutionEngineMixin:
                         logger.info(f"Review feedback written for plan {plan_id}")
 
                     quality_report = review_result.quality_report or {}
+                    self._attach_quality_report_context(state=state, quality_report=quality_report)
                     quality_decision = str(quality_report.get("decision") or "").strip()
                     if quality_decision == "ask_more":
                         situation_brief = (user_context_payload or {}).get("situation_brief")

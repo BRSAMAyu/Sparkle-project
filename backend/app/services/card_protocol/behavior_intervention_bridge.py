@@ -166,6 +166,7 @@ class BehaviorInterventionBridge:
             "evidence_ids": evidence_ids or [],
             "detected_at": datetime.utcnow().isoformat(),
             "default_delivery_strategy": default_strategy.value,
+            "cohort_profile": cohort_profile or {},
         }
 
         # 7. Create the record
@@ -254,7 +255,7 @@ class BehaviorInterventionBridge:
             prefs = result.scalar_one_or_none()
             if prefs is None:
                 return None
-            explicit = dict(prefs.explicit_preferences or {})
+            explicit = dict(getattr(prefs, "explicit", None) or getattr(prefs, "explicit_preferences", None) or {})
             goal_mem = dict(prefs.goal_memory or {}) if hasattr(prefs, "goal_memory") else {}
             return {
                 "goal_type": goal_mem.get("learning_goal_type") or explicit.get("learning_goal_type"),

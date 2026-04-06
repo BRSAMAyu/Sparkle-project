@@ -25,9 +25,12 @@ def test_planning_benchmark_harness_builds_mixed_provider_prompts() -> None:
 
     raw_prompt = harness.build_raw_model_prompt(scenario)
     sparkle_prompt = harness.build_sparkle_phase_b_prompt(scenario)
+    semantic_prompt = harness.build_semantic_doctrine_prompt(scenario)
 
     assert "Goal:" in raw_prompt
     assert "Compiled planning strategy" in sparkle_prompt
+    assert "Semantic doctrine" in semantic_prompt
+    assert "behavioral contract" in semantic_prompt
 
 
 def test_planning_benchmark_harness_uses_phase_a_inputs_not_expected_mode_for_strategy() -> None:

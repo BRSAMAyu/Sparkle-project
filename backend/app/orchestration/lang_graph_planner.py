@@ -16,6 +16,7 @@ from loguru import logger
 
 from app.agents.graph.state import SparkleState
 from app.agents.graph.workflow import sparkle_planning_graph  # Phase 2: Use planning-only graph
+from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.rendered_plan_artifact import parse_rendered_plan_artifact
 from app.orchestration.schemas import ExecutablePlan, StateSnapshot, StepCriteria, ToolCallSpec
 
@@ -234,28 +235,21 @@ class LangGraphPlanner:
     def _build_constraints_context(planning_constraints: dict[str, Any]) -> str:
         lines = ["规划约束（必须尽量满足）："]
         planning_strategy = planning_constraints.get("planning_strategy")
+        semantic_control = planning_constraints.get("semantic_control")
         if isinstance(planning_strategy, dict) and planning_strategy:
-            strategy_bits = [
-                str(planning_strategy.get("plan_mode") or "").strip(),
-                str(planning_strategy.get("plan_depth") or "").strip(),
-                str(planning_strategy.get("pacing_profile") or "").strip(),
-            ]
-            strategy_bits = [item for item in strategy_bits if item]
-            if strategy_bits:
-                lines.append(f"- 规划档位: {' / '.join(strategy_bits)}")
-            grounding_mode = str(planning_strategy.get("grounding_mode") or "").strip()
-            if grounding_mode:
-                lines.append(f"- grounding 模式: {grounding_mode}")
-            required_sections = [
-                str(item).strip()
-                for item in (planning_strategy.get("required_plan_sections") or [])
-                if str(item).strip()
-            ]
-            if required_sections:
-                lines.append(f"- 若要生成计划性回答，必须显式覆盖: {', '.join(required_sections)}")
-            fallback_policy = str(planning_strategy.get("fallback_policy") or "").strip()
-            if fallback_policy:
-                lines.append(f"- 如果信息不足或计划太弱，优先走: {fallback_policy}")
+            if not isinstance(semantic_control, dict) or not semantic_control:
+                semantic_control = build_semantic_control(
+                    decision_context=planning_constraints.get("decision_context"),
+                    planning_strategy=planning_strategy,
+                    body_awareness_guidance=planning_constraints.get("body_awareness_guidance"),
+                    user_strategy_state=planning_constraints.get("user_strategy_state"),
+                    outcome_learning=planning_constraints.get("outcome_learning"),
+                    language="zh",
+                ).to_dict()
+            for item in format_semantic_control_lines(semantic_control, language="zh", section="planning")[:4]:
+                lines.append(f"- {item}")
+            for item in format_semantic_control_lines(semantic_control, language="zh", section="decision")[:2]:
+                lines.append(f"- {item}")
         weak_nodes = planning_constraints.get("weak_knowledge_nodes") or []
         if planning_constraints.get("insert_prerequisite_review") and isinstance(weak_nodes, list) and weak_nodes:
             names = [str(item.get("name") or "").strip() for item in weak_nodes if isinstance(item, dict)]
@@ -271,7 +265,18 @@ class LangGraphPlanner:
         for key, value in planning_constraints.items():
             if key == "_meta":
                 continue
-            if key in {"insert_prerequisite_review", "weak_knowledge_node_ids", "weak_knowledge_nodes", "cognitive_policy_signals"}:
+            if key in {
+                "insert_prerequisite_review",
+                "weak_knowledge_node_ids",
+                "weak_knowledge_nodes",
+                "cognitive_policy_signals",
+                "planning_strategy",
+                "semantic_control",
+                "decision_context",
+                "body_awareness_guidance",
+                "user_strategy_state",
+                "outcome_learning",
+            }:
                 continue
             lines.append(f"- {key}: {value}")
             

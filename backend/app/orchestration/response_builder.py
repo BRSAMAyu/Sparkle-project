@@ -53,6 +53,41 @@ class ResponseBuilderMixin:
             metadata["why_this_path"] = why_this_path
         return metadata
 
+    @staticmethod
+    def _semantic_control_trace_metadata(context_data: dict[str, Any]) -> dict[str, str]:
+        situation_brief = context_data.get("situation_brief")
+        if not isinstance(situation_brief, dict):
+            return {}
+        semantic_control = situation_brief.get("semantic_control")
+        if not isinstance(semantic_control, dict) or not semantic_control:
+            return {}
+
+        trace_payload = {
+            "selected_terms": list(semantic_control.get("selected_terms") or []),
+            "rendered_doctrine_summary": dict(semantic_control.get("rendered_doctrine_summary") or {}),
+            "response_contract": dict(semantic_control.get("response_contract") or {}),
+            "compliance_expectations": dict(semantic_control.get("compliance_expectations") or {}),
+        }
+        observed_payload = ResponseBuilderMixin._semantic_control_observed_payload(context_data)
+        if observed_payload:
+            trace_payload.update(observed_payload)
+        return {
+            "semantic_control_trace": json.dumps(trace_payload, ensure_ascii=False),
+        }
+
+    @staticmethod
+    def _semantic_control_observed_payload(context_data: dict[str, Any]) -> dict[str, Any]:
+        compliance = context_data.get("semantic_control_compliance")
+        if not isinstance(compliance, dict):
+            return {}
+        checks = compliance.get("checks")
+        if not isinstance(checks, dict) or not checks:
+            return {}
+        return {
+            "observed_compliance_flags": dict(checks),
+            "observed_compliance_source": "plan_quality_gate",
+        }
+
     def _extract_response_outcome_stats(self, final_state: WorkflowState | None) -> dict[str, int]:
         if final_state is None:
             return {"task_count": 0, "plan_count": 0, "execution_count": 0}
@@ -391,6 +426,7 @@ class ResponseBuilderMixin:
             decision_context = situation_brief.get("decision_context")
             if isinstance(decision_context, dict):
                 response_metadata["residual_decision_context"] = json.dumps(decision_context, ensure_ascii=False)
+        response_metadata.update(self._semantic_control_trace_metadata(final_state.context_data))
         response_metadata.update(self._capability_selection_metadata(final_state.context_data))
         strategy_state = final_state.context_data.get("user_strategy_state")
         if isinstance(strategy_state, dict):
@@ -436,6 +472,26 @@ class ResponseBuilderMixin:
                 },
                 emit_snapshot=False,
             )
+            semantic_control = (
+                ((final_state.context_data.get("situation_brief") or {}).get("semantic_control") or {})
+                if isinstance(final_state.context_data.get("situation_brief"), dict)
+                else {}
+            )
+            if isinstance(semantic_control, dict) and semantic_control:
+                metadata = {
+                    "selected_terms": list(semantic_control.get("selected_terms") or []),
+                    "rendered_doctrine_summary": dict(semantic_control.get("rendered_doctrine_summary") or {}),
+                    "response_contract": dict(semantic_control.get("response_contract") or {}),
+                    "compliance_expectations": dict(semantic_control.get("compliance_expectations") or {}),
+                }
+                metadata.update(self._semantic_control_observed_payload(final_state.context_data))
+                await run_ledger.record_event(
+                    event_type="semantic_control_attached",
+                    label="语义控制层已附着",
+                    workflow_stage="orchestration",
+                    metadata=metadata,
+                    emit_snapshot=False,
+                )
 
         execution_validation = await self._validate_plan_execution(
             executable_plan=executable_plan,

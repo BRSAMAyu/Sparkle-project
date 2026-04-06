@@ -106,6 +106,15 @@ async def test_situation_brief_builder_uses_existing_context_sources() -> None:
     assert brief["capability_selection"]["summary"]["retrieval_mode"] == "user_materials_first"
     assert brief["capability_selection"]["model_selection"]["preferred_tier"] in {"standard", "plus"}
     assert brief["decision_context"]["planning_readiness"] in {"medium", "high"}
+    assert "planning_strategy_mode" not in brief["decision_context"]
+    assert "planning_depth" not in brief["decision_context"]
+    assert "planning_pacing_profile" not in brief["decision_context"]
+    assert "planning_grounding_mode" not in brief["decision_context"]
+    assert "planning_fallback_policy" not in brief["decision_context"]
+    assert "planning_required_sections" not in brief["decision_context"]
+    assert "semantic_control" in brief
+    assert brief["semantic_control"]["selected_terms"]
+    assert brief["semantic_control"]["rendered_doctrine_summary"]["summary"]
     assert "progress_snapshot" in brief["source_trace"]["used_sources"]
     assert "outcome_learning" in brief["source_trace"]["used_sources"]
     assert brief["outcome_learning"]["plan_generation_hints_from_outcomes"][0] == "Default to a lighter first step."
@@ -163,6 +172,21 @@ def test_format_situation_brief_section_renders_compact_prompt_block() -> None:
                     }
                 },
             },
+            "planning_strategy": {
+                "plan_mode": "next_step_only",
+                "plan_depth": "light",
+                "pacing_profile": "light",
+                "grounding_mode": "mandatory",
+                "fallback_policy": "ask_more",
+                "required_plan_sections": ["goal_frame", "withhold_reason", "next_action", "unlock_question"],
+            },
+            "user_strategy_state": {
+                "session_mode": "recovery",
+                "explanation_style": "step_by_step",
+                "retrieval_emphasis": "user_materials",
+                "push_vs_support": 0.2,
+                "intervention_intensity": "low",
+            },
         }
     )
 
@@ -172,12 +196,14 @@ def test_format_situation_brief_section_renders_compact_prompt_block() -> None:
     assert "当前干预" in section
     assert "最近结果" in section
     assert "当前判断" in section
-    assert "规划就绪度" in section
+    assert "当前语义控制" in section
+    assert "规划语义约束" in section
+    assert "当前交互策略" in section
     assert "计划前仍需补齐" in section
     assert "优先澄清问题" in section
-    assert "残差诊断" in section
-    assert "决策策略" in section
-    assert "当前优先调用的系统器官: Galaxy Knowledge Systems" in section
+    assert "残差诊断" not in section
+    assert "决策策略" not in section
+    assert "系统器官协同" in section
     assert "本轮站位" in section
 
 
@@ -203,6 +229,61 @@ def test_residual_diagnosis_runtime_detects_normative_loop() -> None:
     assert diagnosis["primary_residual"] == "R_n"
     assert diagnosis["loop_type"] == "normative"
     assert diagnosis["grounding_priority"][0] == "user_values_and_constraints"
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_surfaces_recent_pain_points_and_wins_from_signal_context() -> None:
+    brief = (await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我判断下一步怎么学更稳",
+            "cognitive_context": {
+                "error_summary": {
+                    "total_errors": 6,
+                    "need_review_count": 2,
+                    "subject_distribution": {"thermo": 4},
+                },
+                "recent_errors": [
+                    {
+                        "question_preview": "熵增方向判断",
+                        "subject": "thermo",
+                        "error_type": "概念混淆",
+                    }
+                ],
+                "recent_mastery_changes": [
+                    {
+                        "node_name": "热机效率",
+                        "old_mastery": 31,
+                        "new_mastery": 46,
+                    }
+                ],
+            },
+            "profile_context": {
+                "knowledge_summary": {
+                    "recent_mastery_changes": [
+                        {
+                            "node_id": "thermo-efficiency",
+                            "node_name": "热机效率",
+                            "old_mastery": 31,
+                            "new_mastery": 46,
+                            "changed_at": "2026-04-04T08:30:00",
+                        }
+                    ],
+                }
+            },
+        },
+        plan_context={"goal": "热力学冲刺"},
+        focused_memory={},
+        context_briefing_note=None,
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+    )).to_dict()
+
+    assert brief["evidence"]["recent_pain_points"][0].startswith("累计错题 6")
+    assert "熵增方向判断" in brief["evidence"]["recent_pain_points"][1]
+    assert "热机效率" in brief["evidence"]["recent_wins"][0]
+    assert any("近期痛点" in item for item in brief["evidence"]["freshest_items"])
+    assert any("近期进展" in item for item in brief["evidence"]["freshest_items"])
 
 
 def test_five_layer_growth_summary_reports_active_and_inactive_outcome_learning_states() -> None:

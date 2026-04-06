@@ -489,7 +489,7 @@ def _turn_user_context(user_message: str) -> dict[str, object]:
         "context_focus": {"focus_mode": "knowledge_focus", "route_intent": "knowledge"},
         "profile_context": {
             "knowledge_summary": {
-                "weak_spots": [{"node_name": "熵增方向判断", "mastery": 39}],
+                "weak_spots": [{"node_id": "thermo-entropy-direction", "node_name": "熵增方向判断", "mastery": 39}],
             },
             "cognitive_summary": {
                 "active_patterns": [{"pattern_name": "启动困难", "pattern_type": "execution", "confidence": 0.81}]
@@ -883,7 +883,8 @@ async def test_phase5_thermodynamics_orchestrator_journey_derives_scores_from_ru
         if "这样轻一点" in user_message:
             payload["active_interventions"] = [{"intervention_id": str(intervention.id), "source": "runtime_context"}]
         dual_core_mode = "execution_first" if ("too much" in user_message.lower() or "这样轻一点" in user_message) else "balanced"
-        brief = await SituationBriefBuilder().build(
+        brief = (
+            await SituationBriefBuilder().build(
             user_context_payload=payload,
             plan_context=_base_plan_context(plan),
             focused_memory={},
@@ -893,6 +894,7 @@ async def test_phase5_thermodynamics_orchestrator_journey_derives_scores_from_ru
             session_feedback_signal={},
             progress_snapshot=payload.get("progress_snapshot") if isinstance(payload.get("progress_snapshot"), dict) else {},
             adaptation_records=[],
+            )
         ).to_dict()
         payload["situation_brief"] = brief
         payload["residual_decision_context"] = brief["decision_context"]
@@ -1091,6 +1093,9 @@ async def test_phase5_thermodynamics_orchestrator_journey_derives_scores_from_ru
     assert "## 当前决策策略 [L1 引导]" in str(turn1_capture["prompt"])
     assert "## 用户材料依据 [L1 证据]" in str(turn1_capture["prompt"])
     assert "先确定系统边界" in str(turn1_capture["prompt"])
+    assert "semantic_control" in turn1_capture["user_context"]["situation_brief"]
+    assert "解释模式" in str(turn1_capture["prompt"])
+    assert "load_shedding" not in str(turn2_capture["prompt"])
     assert turn1_decision["primary_residual"] == "R_e"
     assert turn1_decision["loop_type"] == "truth_seeking"
     assert turn1_decision["experience_mode"] == "explain"
@@ -1099,7 +1104,7 @@ async def test_phase5_thermodynamics_orchestrator_journey_derives_scores_from_ru
 
     assert turn2_decision["primary_residual"] == "R_c"
     assert turn2_decision["experience_mode"] == "stabilize"
-    assert "load_shedding" in str(turn2_capture["prompt"])
+    assert "稳定模式" in str(turn2_capture["prompt"])
     assert "5 分钟" in final_responses[1].full_text
 
     assert turn3_decision["primary_residual"] == "R_c"

@@ -117,7 +117,11 @@ class PlanHealthInterventionBridge:
 
         # 5. Select delivery strategy
         default_strategy = self.INTERVENTION_THRESHOLDS[severity]
-        delivery_strategy = await self.strategy_learner.get_best_strategy(user_id, trigger_type) or default_strategy
+        cohort_profile = await self._get_cohort_profile(user_id)
+        delivery_strategy = (
+            await self.strategy_learner.get_best_strategy(user_id, trigger_type, cohort_profile=cohort_profile)
+            or default_strategy
+        )
 
         # 6. Determine delivery channel
         delivery_channel = self._select_channel(action_taken)
@@ -131,6 +135,7 @@ class PlanHealthInterventionBridge:
             "context": context or {},
             "detected_at": datetime.utcnow().isoformat(),
             "default_delivery_strategy": default_strategy.value,
+            "cohort_profile": cohort_profile or {},
         }
 
         # 8. Create the record
@@ -189,6 +194,27 @@ class PlanHealthInterventionBridge:
 
         # Default to chat for gentle delivery
         return DeliveryChannel.CHAT
+
+    async def _get_cohort_profile(self, user_id: uuid.UUID) -> dict | None:
+        """Fetch minimal profile fields needed for cohort-based strategy selection."""
+        try:
+            from app.models.user_preferences import UserPreferencesCenter
+
+            result = await self.db.execute(
+                select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
+            )
+            prefs = result.scalar_one_or_none()
+            if prefs is None:
+                return None
+            explicit = dict(getattr(prefs, "explicit", None) or getattr(prefs, "explicit_preferences", None) or {})
+            goal_mem = dict(prefs.goal_memory or {}) if hasattr(prefs, "goal_memory") else {}
+            return {
+                "goal_type": goal_mem.get("learning_goal_type") or explicit.get("learning_goal_type"),
+                "knowledge_level": explicit.get("knowledge_level"),
+                "learning_style": explicit.get("learning_style"),
+            }
+        except Exception:
+            return None
 
     async def _find_plan_card(self, legacy_plan_id: uuid.UUID) -> Card | None:
         stmt = (

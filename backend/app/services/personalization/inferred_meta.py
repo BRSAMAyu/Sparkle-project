@@ -16,6 +16,30 @@ class InferredFieldMeta:
 
 
 INFERRED_META: dict[str, InferredFieldMeta] = {
+    "achievement_motivation_response": InferredFieldMeta(
+        source="achievement_signals",
+        explanation_template="Recent achievement unlocks suggest you respond best to {value} reinforcement.",
+        adjustable=True,
+        related_fields=["achievement_reward_sensitivity", "achievement_pace_style"],
+    ),
+    "achievement_pace_style": InferredFieldMeta(
+        source="achievement_signals",
+        explanation_template="Your recent achievement pattern looks more {value} in pace.",
+        adjustable=True,
+        related_fields=["achievement_peak_hours"],
+    ),
+    "achievement_peak_hours": InferredFieldMeta(
+        source="achievement_signals",
+        explanation_template="Recent achievements tend to unlock around {hours_text}.",
+        adjustable=False,
+        related_fields=["peak_focus_hours"],
+    ),
+    "achievement_reward_sensitivity": InferredFieldMeta(
+        source="achievement_signals",
+        explanation_template="Recent achievement rarity and sharing behavior suggest a {value} reward sensitivity.",
+        adjustable=True,
+        related_fields=["achievement_motivation_response"],
+    ),
     "avg_question_complexity": InferredFieldMeta(
         source="chat_behavior",
         explanation_template="Recent conversations suggest an average question complexity of {value:.2f}.",

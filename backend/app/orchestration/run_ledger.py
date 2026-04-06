@@ -122,6 +122,13 @@ class RunLedgerStore:
                 "strategy_effects": [],
                 "effect_latency_seconds": None,
             },
+            "semantic_control": {
+                "selected_terms": [],
+                "rendered_doctrine_summary": {},
+                "response_contract": {},
+                "compliance_expectations": {},
+                "observed_compliance_flags": {},
+            },
         }
 
     @classmethod
@@ -165,6 +172,7 @@ class RunLedgerStore:
         updated.setdefault("evidence", {})
         updated.setdefault("response", {})
         updated.setdefault("feedback", {})
+        updated.setdefault("semantic_control", {})
         updated["updated_at"] = event.get("timestamp") or _utcnow_iso()
         updated["event_count"] = int(updated.get("event_count") or 0) + 1
 
@@ -226,6 +234,10 @@ class RunLedgerStore:
             evidence = dict(updated.get("evidence") or {})
             evidence.update({k: v for k, v in dict(metadata or {}).items() if v not in (None, "")})
             updated["evidence"] = evidence
+        elif event_type == "semantic_control_attached":
+            semantic_control = dict(updated.get("semantic_control") or {})
+            semantic_control.update({k: v for k, v in dict(metadata or {}).items() if v not in (None, "")})
+            updated["semantic_control"] = semantic_control
         elif event_type == "tool_reviewed":
             quality = dict(updated.get("quality") or {})
             quality["tool_review_issue_count"] = int(metadata.get("issue_count") or 0)

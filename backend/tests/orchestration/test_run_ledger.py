@@ -119,3 +119,35 @@ async def test_append_external_event_enriches_feedback_effects():
     assert updated["feedback"]["feedback_type"] == "down"
     assert updated["feedback"]["effect_latency_seconds"] == 12
     assert updated["feedback"]["strategy_effects"][0]["target"] == "prompt_bandit"
+
+
+@pytest.mark.asyncio
+async def test_run_ledger_tracks_semantic_control_summary():
+    redis = FakeRedis()
+    recorder = RunLedgerRecorder(
+        trace_id="trace-semantic",
+        session_id="session-semantic",
+        workflow_id="workflow-semantic",
+        response_id="response-semantic",
+        prompt_version="v1",
+        request_id="request-semantic",
+        redis_client=redis,
+    )
+
+    await recorder.record_event(
+        event_type="semantic_control_attached",
+        label="语义控制附着",
+        workflow_stage="orchestration",
+        metadata={
+            "selected_terms": [{"term": "experience_mode", "value": "clarify"}],
+            "response_contract": {"should_ask_high_value_question_first": True},
+            "observed_compliance_flags": {"clarify_question_first": True},
+        },
+        emit_snapshot=False,
+    )
+
+    summary = await RunLedgerStore.load_summary(redis, "trace-semantic")
+
+    assert summary is not None
+    assert summary["semantic_control"]["selected_terms"][0]["value"] == "clarify"
+    assert summary["semantic_control"]["response_contract"]["should_ask_high_value_question_first"] is True

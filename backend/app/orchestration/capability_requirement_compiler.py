@@ -83,7 +83,7 @@ class CapabilityRequirementCompiler:
         grounding_priority = [str(item).strip().lower() for item in _as_list(decision_context.get("grounding_priority"))]
         planning_readiness = _strip(insight_state.get("readiness_level") or decision_context.get("planning_readiness")).lower()
         experience_mode = _strip(decision_context.get("experience_mode")).lower()
-        planning_depth = _strip(planning_strategy.get("plan_depth") or decision_context.get("planning_depth")).lower()
+        planning_depth = _strip(planning_strategy.get("plan_depth")).lower()
 
         material_dependency = "none"
         grounding_required = "optional"

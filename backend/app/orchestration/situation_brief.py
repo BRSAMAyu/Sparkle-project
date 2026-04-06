@@ -6,6 +6,8 @@ from typing import Any
 import re
 
 from app.orchestration.planning_intent import detect_planning_like_turn
+from app.orchestration.plan_quality_contract import build_plan_quality_contract
+from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.capability_requirement_compiler import CapabilityRequirementCompiler
 from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
 from app.orchestration.decision_policy import DecisionPolicyCompiler
@@ -47,6 +49,121 @@ def _compact_text(value: Any, *, limit: int = 160) -> str:
     if len(text) <= limit:
         return text
     return f"{text[: max(0, limit - 1)].rstrip()}…"
+
+
+def _extract_cognitive_context(value: dict[str, Any]) -> dict[str, Any]:
+    payload = value.get("cognitive_context") if isinstance(value, dict) else None
+    if hasattr(payload, "model_dump"):
+        payload = payload.model_dump(mode="json")
+    return payload if isinstance(payload, dict) else {}
+
+
+def _recent_pain_points(user_context: dict[str, Any]) -> list[str]:
+    cognitive_context = _extract_cognitive_context(user_context)
+    summary = user_context.get("error_summary")
+    if not isinstance(summary, dict):
+        summary = cognitive_context.get("error_summary")
+    recent_errors = user_context.get("recent_errors")
+    if not isinstance(recent_errors, list):
+        recent_errors = cognitive_context.get("recent_errors")
+
+    points: list[str] = []
+    if isinstance(summary, dict) and summary:
+        parts: list[str] = []
+        total_errors = summary.get("total_errors")
+        if total_errors is not None:
+            parts.append(f"累计错题 {int(total_errors)}")
+        need_review = summary.get("need_review_count") or summary.get("due_for_review")
+        if need_review is not None:
+            parts.append(f"待复习 {int(need_review)}")
+        subject_distribution = summary.get("subject_distribution")
+        if isinstance(subject_distribution, dict) and subject_distribution:
+            ranked = sorted(
+                (
+                    (str(subject).strip(), int(count))
+                    for subject, count in subject_distribution.items()
+                    if str(subject).strip()
+                ),
+                key=lambda item: (-item[1], item[0]),
+            )
+            if ranked:
+                parts.append(f"高频科目 {ranked[0][0]}")
+        if parts:
+            points.append("；".join(parts))
+
+    for item in recent_errors or []:
+        if not isinstance(item, dict):
+            continue
+        preview = _strip(item.get("question_preview") or item.get("title"))
+        subject = _strip(item.get("subject"))
+        error_type = _strip(item.get("error_type"))
+        detail = " / ".join(part for part in (subject, error_type) if part)
+        points.append(f"{preview or '最近有一道题反复卡住'}{f'（{detail}）' if detail else ''}")
+        if len(points) >= 3:
+            break
+    return points[:3]
+
+
+def _recent_wins(user_context: dict[str, Any]) -> list[str]:
+    cognitive_context = _extract_cognitive_context(user_context)
+    mastery_changes = user_context.get("recent_mastery_changes")
+    if not isinstance(mastery_changes, list):
+        mastery_changes = cognitive_context.get("recent_mastery_changes")
+    if not isinstance(mastery_changes, list):
+        profile_context = _as_dict(user_context.get("profile_context"))
+        mastery_changes = _as_dict(profile_context.get("knowledge_summary")).get("recent_mastery_changes")
+
+    wins: list[str] = []
+    for item in mastery_changes or []:
+        if not isinstance(item, dict):
+            continue
+        node_name = _strip(item.get("node_name") or item.get("node_id"))
+        if not node_name:
+            continue
+        old_mastery = item.get("old_mastery")
+        new_mastery = item.get("new_mastery")
+        if old_mastery is None or new_mastery is None:
+            wins.append(f"{node_name} 最近有明显进步")
+        else:
+            try:
+                wins.append(
+                    f"{node_name} 掌握度从 {float(old_mastery):.0f}% 提升到 {float(new_mastery):.0f}%"
+                )
+            except Exception:
+                wins.append(f"{node_name} 掌握度从 {old_mastery} 提升到 {new_mastery}")
+        if len(wins) >= 3:
+            break
+    return wins[:3]
+
+
+def _merge_signal_evidence(evidence: dict[str, Any], user_context: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(evidence or {})
+    freshest_items = [_strip(item) for item in _as_list(merged.get("freshest_items")) if _strip(item)]
+    pain_points = _recent_pain_points(user_context)
+    recent_wins = _recent_wins(user_context)
+
+    for item in pain_points:
+        marker = f"近期痛点：{item}"
+        if marker not in freshest_items:
+            freshest_items.append(marker)
+    for item in recent_wins:
+        marker = f"近期进展：{item}"
+        if marker not in freshest_items:
+            freshest_items.append(marker)
+
+    merged["freshest_items"] = freshest_items[:5]
+    if pain_points:
+        merged["recent_pain_points"] = pain_points
+    if recent_wins:
+        merged["recent_wins"] = recent_wins
+
+    summary_parts = [_strip(merged.get("summary"))]
+    if pain_points:
+        summary_parts.append(f"近期痛点：{pain_points[0]}")
+    if recent_wins:
+        summary_parts.append(f"近期进展：{recent_wins[0]}")
+    merged["summary"] = "；".join(part for part in summary_parts if part)
+    return merged
 
 
 def _parse_dt(value: Any) -> datetime | None:
@@ -94,6 +211,7 @@ class SituationBrief:
     sparkle_self_state: dict[str, Any]
     recommended_stance: dict[str, Any]
     decision_context: dict[str, Any]
+    semantic_control: dict[str, Any]
     semantic_primitives: dict[str, Any]
     source_trace: dict[str, Any]
     insight_state: dict[str, Any] = field(default_factory=dict)
@@ -118,6 +236,7 @@ class SituationBrief:
             "sparkle_self_state": self.sparkle_self_state,
             "recommended_stance": self.recommended_stance,
             "decision_context": self.decision_context,
+            "semantic_control": self.semantic_control,
             "semantic_primitives": self.semantic_primitives,
             "source_trace": self.source_trace,
             "insight_state": self.insight_state,
@@ -177,7 +296,10 @@ class SituationBriefBuilder:
         vision = _as_dict(semantic_primitives.get("vision"))
         current_state = _as_dict(semantic_primitives.get("current_state"))
         primary_obstacle = _as_dict(semantic_primitives.get("obstacle"))
-        evidence = _as_dict(semantic_primitives.get("evidence"))
+        evidence = _merge_signal_evidence(
+            _as_dict(semantic_primitives.get("evidence")),
+            user_context,
+        )
         intervention = _as_dict(semantic_primitives.get("intervention"))
         outcome = _as_dict(semantic_primitives.get("outcome"))
         outcome_learning = _as_dict(
@@ -330,6 +452,10 @@ class SituationBriefBuilder:
             **diagnosis,
             **decision_policy,
         }
+        if evidence.get("recent_pain_points"):
+            decision_context["recent_pain_points"] = list(_as_list(evidence.get("recent_pain_points")))
+        if evidence.get("recent_wins"):
+            decision_context["recent_wins"] = list(_as_list(evidence.get("recent_wins")))
         decision_context = self._apply_phase_a_decision_context(
             decision_context=decision_context,
             insight_state=insight_state,
@@ -347,12 +473,6 @@ class SituationBriefBuilder:
             plan_context=plan_context,
             planning_constraints=_as_dict(plan_context.get("constraints")),
         ).to_dict()
-        decision_context["planning_strategy_mode"] = _strip(planning_strategy.get("plan_mode"))
-        decision_context["planning_depth"] = _strip(planning_strategy.get("plan_depth"))
-        decision_context["planning_pacing_profile"] = _strip(planning_strategy.get("pacing_profile"))
-        decision_context["planning_grounding_mode"] = _strip(planning_strategy.get("grounding_mode"))
-        decision_context["planning_fallback_policy"] = _strip(planning_strategy.get("fallback_policy"))
-        decision_context["planning_required_sections"] = list(_as_list(planning_strategy.get("required_plan_sections")))
         current_context = self._build_capability_selection_context(
             user_context=user_context,
             plan_context=plan_context,
@@ -393,6 +513,14 @@ class SituationBriefBuilder:
             capability_selection=capability_selection,
         )
         decision_context["five_layer_growth_summary"] = five_layer_growth
+        semantic_control = build_semantic_control(
+            decision_context=decision_context,
+            planning_strategy=planning_strategy,
+            body_awareness_guidance=_as_dict(capability_selection.get("body_awareness_guidance")),
+            user_strategy_state=user_strategy_state,
+            outcome_learning=outcome_learning,
+            language="zh",
+        ).to_dict()
 
         focus_question = self._build_focus_question(
             vision=vision,
@@ -422,6 +550,7 @@ class SituationBriefBuilder:
             sparkle_self_state=sparkle_self_state,
             recommended_stance=recommended_stance,
             decision_context=decision_context,
+            semantic_control=semantic_control,
             semantic_primitives=semantic_primitives,
             source_trace=source_trace,
             insight_state=insight_state,
@@ -950,6 +1079,17 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     outcome = _as_dict(payload.get("outcome") or semantic_primitives.get("outcome"))
     stance = _as_dict(payload.get("recommended_stance"))
     decision_context = _as_dict(payload.get("decision_context"))
+    semantic_control = _as_dict(
+        payload.get("semantic_control")
+        or build_semantic_control(
+            decision_context=decision_context,
+            planning_strategy=_as_dict(payload.get("planning_strategy")),
+            body_awareness_guidance=_as_dict(decision_context.get("body_awareness_guidance")),
+            user_strategy_state=_as_dict(payload.get("user_strategy_state")),
+            outcome_learning=_as_dict(payload.get("outcome_learning")),
+            language="zh",
+        ).to_dict()
+    )
     insight_state = _as_dict(payload.get("insight_state"))
     planning_strategy = _as_dict(payload.get("planning_strategy"))
     outcome_learning = _as_dict(payload.get("outcome_learning"))
@@ -997,22 +1137,15 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     decision_line = _strip(decision_context.get("what_matters_now"))
     if decision_line:
         lines.append(f"- 当前判断: {decision_line}")
-    readiness_level = _strip(decision_context.get("planning_readiness") or insight_state.get("readiness_level"))
-    readiness_action = _strip(decision_context.get("planning_readiness_action") or insight_state.get("recommended_action"))
-    if readiness_level:
-        readiness_bits = [readiness_level]
-        if readiness_action:
-            readiness_bits.append(readiness_action)
-        lines.append(f"- 规划就绪度: {' / '.join(readiness_bits)}")
-    strategy_bits = [
-        _strip(planning_strategy.get("plan_mode")),
-        _strip(planning_strategy.get("plan_depth")),
-        _strip(planning_strategy.get("pacing_profile")),
-        _strip(planning_strategy.get("grounding_mode")),
-    ]
-    strategy_line = " / ".join(bit for bit in strategy_bits if bit)
-    if strategy_line:
-        lines.append(f"- 规划策略: {strategy_line}")
+    readiness_guidance = format_semantic_control_lines(semantic_control, language="zh", section="decision")
+    if readiness_guidance:
+        lines.append(f"- 当前语义控制: {readiness_guidance[0]}")
+    planning_guidance = format_semantic_control_lines(semantic_control, language="zh", section="planning")
+    if planning_guidance:
+        lines.append(f"- 规划语义约束: {planning_guidance[0]}")
+    strategy_guidance = format_semantic_control_lines(semantic_control, language="zh", section="strategy")
+    if strategy_guidance:
+        lines.append(f"- 当前交互策略: {strategy_guidance[0]}")
     learning_hints = [
         _compact_text(item, limit=88)
         for item in _as_list(outcome_learning.get("plan_generation_hints_from_outcomes"))
@@ -1026,7 +1159,9 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
         if _strip(item)
     ]
     if required_sections:
-        lines.append(f"- 计划必须显式覆盖: {', '.join(required_sections[:5])}")
+        labels = build_plan_quality_contract().build_prompt_requirements(mode=_strip(planning_strategy.get("plan_mode")) or "full")
+        if labels:
+            lines.append(f"- 计划必须显式覆盖: {'，'.join(labels[:5])}")
     blocking_unknowns = [
         _strip(item)
         for item in _as_list(
@@ -1052,32 +1187,10 @@ def format_situation_brief_section(brief: SituationBrief | dict[str, Any] | None
     ]
     if clarification_questions:
         lines.append(f"- 优先澄清问题: {clarification_questions[0]}")
-    diagnosis_bits = [
-        _strip(decision_context.get("primary_residual_label")),
-        _strip(decision_context.get("loop_type")),
-        _strip(decision_context.get("confidence_label")),
-    ]
-    diagnosis_line = " / ".join(bit for bit in diagnosis_bits if bit)
-    if diagnosis_line:
-        lines.append(f"- 残差诊断: {diagnosis_line}")
-    policy_bits = [
-        _strip(decision_context.get("experience_mode")),
-        _strip(decision_context.get("intervention_family")),
-        _strip(decision_context.get("reversibility_level")),
-    ]
-    policy_line = " / ".join(bit for bit in policy_bits if bit)
-    if policy_line:
-        lines.append(f"- 决策策略: {policy_line}")
-    body_guidance = _as_dict(decision_context.get("body_awareness_guidance"))
-    primary_subsystem = _as_dict(body_guidance.get("primary_subsystem"))
-    subsystem_label = _strip(primary_subsystem.get("label") or primary_subsystem.get("id"))
-    subsystem_why = _strip(primary_subsystem.get("why"))
-    if subsystem_label:
-        lines.append(
-            f"- 当前优先调用的系统器官: {subsystem_label}"
-            + (f"；原因: {subsystem_why}" if subsystem_why else "")
-        )
+    body_guidance = format_semantic_control_lines(semantic_control, language="zh", section="body")
+    if body_guidance:
+        lines.append(f"- 系统器官协同: {body_guidance[0]}")
     stance_line = _strip(stance.get("stance"))
     if stance_line:
         lines.append(f"- 本轮站位: {stance_line}")
-    return "\n" + "\n".join(lines[:18])
+    return "\n" + "\n".join(lines[:20])

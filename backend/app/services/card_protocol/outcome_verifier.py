@@ -628,6 +628,7 @@ class InterventionOutcomeVerifier:
         improvement = dict(evidence.get("improvement") or {})
         diagnosis = dict(record.diagnosis_payload or {})
         context = dict(diagnosis.get("context") or {})
+        cohort_profile = dict(diagnosis.get("cohort_profile") or {})
         return {
             "evaluation_method": evidence.get("evaluation_method"),
             "plan_health_recovered": improvement.get("plan_health_recovered"),
@@ -638,6 +639,9 @@ class InterventionOutcomeVerifier:
             "pattern_type": diagnosis.get("pattern_type"),
             "reasons": diagnosis.get("reasons") or [],
             "completed_count": context.get("completed_count"),
+            "goal_type": cohort_profile.get("goal_type"),
+            "knowledge_level": cohort_profile.get("knowledge_level"),
+            "learning_style": cohort_profile.get("learning_style"),
         }
 
     @classmethod

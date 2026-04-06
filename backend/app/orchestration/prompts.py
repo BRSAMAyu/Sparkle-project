@@ -31,6 +31,7 @@ from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
 from app.core.plan_context import merge_plan_context
 from app.config import settings
+from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.context_focus import ContextFocusDecision
 from app.orchestration.situation_brief import format_situation_brief_section
 
@@ -822,7 +823,7 @@ def build_system_prompt(
 
     # 2. 格式化上下文
 
-    formatted_user_context = format_user_context(
+    formatted_user_context, prompt_signal_telemetry = _render_user_context_content(
         user_context,
         context_level=context_level,
         context_focus=context_focus,
@@ -1166,6 +1167,31 @@ def build_system_prompt(
         rendered_user_context = "\n\n".join(
             section for section in (situation_brief_section, formatted_user_context) if str(section or "").strip()
         )
+    if isinstance(prompt_signal_telemetry, dict):
+        visible_fields: list[str] = []
+        if "【近期痛点】" in rendered_user_context:
+            if prompt_signal_telemetry["high_value_fields"].get("error_summary", {}).get("rendered"):
+                visible_fields.append("error_summary")
+            if prompt_signal_telemetry["high_value_fields"].get("recent_errors", {}).get("rendered"):
+                visible_fields.append("recent_errors")
+        if "【近期进展】" in rendered_user_context and prompt_signal_telemetry["high_value_fields"].get(
+            "recent_mastery_changes", {}
+        ).get("rendered"):
+            visible_fields.append("recent_mastery_changes")
+        prompt_signal_telemetry["prompt_visible_high_value_fields"] = visible_fields
+        for key in prompt_signal_telemetry["tracked_fields"]:
+            meta = prompt_signal_telemetry["high_value_fields"].get(key, {})
+            meta["prompt_visible"] = key in visible_fields
+        prompt_signal_telemetry["dropped_high_value_fields"] = [
+            key
+            for key, meta in prompt_signal_telemetry["high_value_fields"].items()
+            if meta.get("collected") and not meta.get("prompt_visible")
+        ]
+        prompt_signal_telemetry["model_facing_section_sizes"] = {
+            key: value for key, value in prompt_signal_telemetry.get("section_sizes", {}).items()
+        }
+        if isinstance(user_context, dict):
+            user_context["prompt_signal_telemetry"] = prompt_signal_telemetry
 
     # 3. 如果是通用模板，进行完整渲染
 
@@ -1677,9 +1703,9 @@ def _format_visible_intelligence_section(*, user_context: dict) -> str:
 
 
 def _format_decision_policy_section(*, user_context: dict) -> str:
+    situation_brief = user_context.get("situation_brief") if isinstance(user_context, dict) else None
     decision_context = user_context.get("residual_decision_context") if isinstance(user_context, dict) else None
     if not isinstance(decision_context, dict):
-        situation_brief = user_context.get("situation_brief") if isinstance(user_context, dict) else None
         if isinstance(situation_brief, dict):
             decision_context = situation_brief.get("decision_context")
     if not isinstance(decision_context, dict):
@@ -1687,7 +1713,6 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
 
     experience_mode = str(decision_context.get("experience_mode") or "").strip()
     intervention_family = str(decision_context.get("intervention_family") or "").strip()
-    reversibility_level = str(decision_context.get("reversibility_level") or "").strip()
     visible_expression = decision_context.get("user_visible_expression")
     visible_expression = visible_expression if isinstance(visible_expression, dict) else {}
     feedback_hook = decision_context.get("feedback_hook")
@@ -1696,6 +1721,18 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
     adjustments = [item for item in adjustments if isinstance(item, dict)] if isinstance(adjustments, list) else []
     body_guidance = decision_context.get("body_awareness_guidance")
     body_guidance = body_guidance if isinstance(body_guidance, dict) else {}
+    semantic_control = {}
+    if isinstance(situation_brief, dict):
+        semantic_control = situation_brief.get("semantic_control") or {}
+    if not isinstance(semantic_control, dict) or not semantic_control:
+        semantic_control = build_semantic_control(
+            decision_context=decision_context,
+            planning_strategy=(situation_brief.get("planning_strategy") if isinstance(situation_brief, dict) else {}),
+            body_awareness_guidance=body_guidance,
+            user_strategy_state=user_context.get("user_strategy_state") if isinstance(user_context, dict) else {},
+            outcome_learning=(situation_brief.get("outcome_learning") if isinstance(situation_brief, dict) else {}),
+            language="zh",
+        ).to_dict()
     what_matters_now = str(decision_context.get("what_matters_now") or "").strip()
     planning_readiness = str(decision_context.get("planning_readiness") or "").strip()
     planning_action = str(decision_context.get("planning_readiness_action") or "").strip()
@@ -1728,10 +1765,9 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
         lines.append(f"- 计划前仍需补齐: {', '.join(str(item) for item in planning_unknowns[:3])}")
     if clarification_questions:
         lines.append(f"- 若要追问，优先问: {str(clarification_questions[0]).strip()}")
-    if experience_mode or intervention_family or reversibility_level:
-        bits = [bit for bit in [experience_mode, intervention_family, reversibility_level] if bit]
-        if bits:
-            lines.append(f"- 本轮模式: {' / '.join(bits)}")
+    doctrine_lines = format_semantic_control_lines(semantic_control, language="zh", section="decision")
+    for item in doctrine_lines[:3]:
+        lines.append(f"- {item}")
     opening_intent = str(visible_expression.get("opening_intent") or "").strip()
     response_shape = str(visible_expression.get("response_shape") or "").strip()
     if opening_intent:
@@ -1740,18 +1776,17 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
         lines.append(f"- 回答结构: {response_shape}")
     if adjustments:
         first = adjustments[0]
-        lines.append(
-            f"- 建议中的系统调整: {first.get('field')} -> {first.get('recommended_value')} ({first.get('target_layer')})"
-        )
-    primary_subsystem = body_guidance.get("primary_subsystem")
-    if isinstance(primary_subsystem, dict):
-        subsystem_label = str(primary_subsystem.get("label") or primary_subsystem.get("id") or "").strip()
-        subsystem_why = str(primary_subsystem.get("why") or "").strip()
-        if subsystem_label:
+        field = str(first.get("field") or "").strip()
+        value = str(first.get("recommended_value") or "").strip()
+        reason = str(first.get("reason") or "").strip()
+        if field and value:
             lines.append(
-                f"- 当前优先调用的系统器官: {subsystem_label}"
-                + (f"；原因: {subsystem_why}" if subsystem_why else "")
+                f"- 建议中的系统调整要服务于当前语义控制：先把 {field} 调整到更贴近「{value}」"
+                + (f"；原因：{reason}" if reason else "")
             )
+    body_lines = format_semantic_control_lines(semantic_control, language="zh", section="body")
+    if body_lines:
+        lines.append(f"- {body_lines[0]}")
     feedback_ask = str(feedback_hook.get("ask") or "").strip()
     if feedback_ask:
         lines.append(f"- 回合结束前最好确认: {feedback_ask}")
@@ -1762,42 +1797,35 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
 def _format_planning_strategy_section(*, user_context: dict) -> str:
     situation_brief = user_context.get("situation_brief") if isinstance(user_context, dict) else None
     strategy = {}
+    semantic_control = {}
     if isinstance(situation_brief, dict) and isinstance(situation_brief.get("planning_strategy"), dict):
         strategy = situation_brief.get("planning_strategy")
+        semantic_control = situation_brief.get("semantic_control") or {}
     elif isinstance(user_context, dict) and isinstance(user_context.get("planning_strategy"), dict):
         strategy = user_context.get("planning_strategy")
     if not strategy:
         return ""
 
-    mode = str(strategy.get("plan_mode") or "").strip()
-    depth = str(strategy.get("plan_depth") or "").strip()
-    pacing = str(strategy.get("pacing_profile") or "").strip()
-    grounding_mode = str(strategy.get("grounding_mode") or "").strip()
-    required_sections = [
-        str(item).strip()
-        for item in (strategy.get("required_plan_sections") or [])
-        if str(item).strip()
-    ]
-    if not any([mode, depth, pacing, grounding_mode, required_sections]):
+    if not isinstance(semantic_control, dict) or not semantic_control:
+        semantic_control = build_semantic_control(
+            decision_context=(situation_brief.get("decision_context") if isinstance(situation_brief, dict) else {}),
+            planning_strategy=strategy,
+            body_awareness_guidance=(
+                (situation_brief.get("decision_context") or {}).get("body_awareness_guidance")
+                if isinstance(situation_brief, dict)
+                else {}
+            ),
+            user_strategy_state=user_context.get("user_strategy_state") if isinstance(user_context, dict) else {},
+            outcome_learning=(situation_brief.get("outcome_learning") if isinstance(situation_brief, dict) else {}),
+            language="zh",
+        ).to_dict()
+    doctrine_lines = format_semantic_control_lines(semantic_control, language="zh", section="planning")
+    if not doctrine_lines:
         return ""
 
     lines = ["## 规划生成约束 [L1 引导]"]
-    mode_bits = [item for item in (mode, depth, pacing) if item]
-    if mode_bits:
-        lines.append(f"- 本轮规划档位: {' / '.join(mode_bits)}")
-    if grounding_mode:
-        lines.append(f"- grounding 要求: {grounding_mode}")
-    checkpoint_cadence = str(strategy.get("checkpoint_cadence") or "").strip()
-    if checkpoint_cadence:
-        lines.append(f"- 检查点节奏: {checkpoint_cadence}")
-    fallback_policy = str(strategy.get("fallback_policy") or "").strip()
-    if fallback_policy:
-        lines.append(f"- 若计划偏弱，优先走: {fallback_policy}")
-    first_step_hint = str(strategy.get("first_step_hint") or "").strip()
-    if first_step_hint:
-        lines.append(f"- 下一步风格: {first_step_hint}")
-    if required_sections:
-        lines.append(f"- 如果这轮在做计划，最终回答必须显式覆盖: {', '.join(required_sections)}")
+    for item in doctrine_lines[:4]:
+        lines.append(f"- {item}")
     lines.append("- 不要暴露字段名，要把这些约束翻译成自然、可执行、非专家友好的计划。")
     return "\n" + "\n".join(lines)
 
@@ -1849,8 +1877,8 @@ def _resolve_preference_instructions(
     context_focus: dict[str, Any] | None,
 ) -> str:
     focus_decision = ContextFocusDecision.from_dict(context_focus)
-    strategy_state = user_context.get("user_strategy_state") if isinstance(user_context, dict) else None
-    strategy_state = strategy_state if isinstance(strategy_state, dict) else {}
+    semantic_control = _resolve_semantic_control_from_context(user_context)
+    strategy_lines = format_semantic_control_lines(semantic_control, language="zh", section="strategy")
     if focus_decision and focus_decision.focus_mode == "emotional_focus":
         tone = str(llm_profile.get("tone") or "稳定、温和").strip()
         verbosity = str(llm_profile.get("verbosity_target") or "concise").strip()
@@ -1860,7 +1888,6 @@ def _resolve_preference_instructions(
             f"- 当前优先长度：{verbosity}\n"
             "- 回答先降低认知负荷，再给可执行下一步"
         )
-        strategy_lines = _format_strategy_instruction_lines(strategy_state)
         if strategy_lines:
             instruction += "\n" + "\n".join(strategy_lines)
         return instruction
@@ -1869,7 +1896,6 @@ def _resolve_preference_instructions(
         "system_prompt_additions",
         _get_default_preference_instructions(user_context),
     )
-    strategy_lines = _format_strategy_instruction_lines(strategy_state)
     if strategy_lines:
         base_instruction = "\n".join([str(base_instruction).strip(), *strategy_lines]).strip()
     return base_instruction
@@ -2014,20 +2040,144 @@ def _format_plan_context(
     return "\n".join(lines)
 
 
-def format_user_context(
+def _extract_cognitive_context_payload(context: dict[str, Any] | None) -> dict[str, Any]:
+    payload = context.get("cognitive_context") if isinstance(context, dict) else None
+    if hasattr(payload, "model_dump"):
+        payload = payload.model_dump(mode="json")
+    return payload if isinstance(payload, dict) else {}
+
+
+def _has_signal_payload(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (dict, list, tuple, set, str)):
+        return bool(value)
+    return True
+
+
+def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str, Any]) -> dict[str, Any]:
+    cognitive_context = _extract_cognitive_context_payload(context)
+    tracked_fields = ("error_summary", "recent_errors", "recent_mastery_changes")
+    field_status: dict[str, Any] = {}
+    for key in tracked_fields:
+        sources: list[str] = []
+        if _has_signal_payload(context.get(key)):
+            sources.append("context")
+        if _has_signal_payload(cognitive_context.get(key)):
+            sources.append("cognitive_context")
+
+        normalized_value = normalized.get(key)
+        item_count = 0
+        if isinstance(normalized_value, (list, dict)):
+            item_count = len(normalized_value)
+        elif _has_signal_payload(normalized_value):
+            item_count = 1
+
+        field_status[key] = {
+            "collected": bool(sources),
+            "collected_sources": sources,
+            "normalized": _has_signal_payload(normalized_value),
+            "rendered": False,
+            "item_count": item_count,
+        }
+
+    return {
+        "tracked_fields": list(tracked_fields),
+        "collected_high_value_fields": [key for key, meta in field_status.items() if meta["collected"]],
+        "normalized_high_value_fields": [key for key, meta in field_status.items() if meta["normalized"]],
+        "rendered_high_value_fields": [],
+        "dropped_high_value_fields": [],
+        "high_value_fields": field_status,
+        "section_sizes": {},
+    }
+
+
+def _format_error_summary_line(summary: dict[str, Any]) -> str:
+    if not isinstance(summary, dict) or not summary:
+        return ""
+    parts: list[str] = []
+    total_errors = summary.get("total_errors")
+    if total_errors is not None:
+        parts.append(f"累计错题 {int(total_errors)}")
+    need_review = summary.get("need_review_count") or summary.get("due_for_review")
+    if need_review is not None:
+        parts.append(f"待复习 {int(need_review)}")
+    review_streak = summary.get("review_streak_days")
+    if review_streak:
+        parts.append(f"复盘连续 {int(review_streak)} 天")
+    distribution = summary.get("subject_distribution")
+    if isinstance(distribution, dict) and distribution:
+        ranked = sorted(
+            (
+                (str(subject).strip(), int(count))
+                for subject, count in distribution.items()
+                if str(subject).strip()
+            ),
+            key=lambda item: (-item[1], item[0]),
+        )
+        if ranked:
+            top_subjects = "、".join(f"{subject}({count})" for subject, count in ranked[:2])
+            parts.append(f"高频科目 {top_subjects}")
+    return "；".join(parts)
+
+
+def _format_recent_error_line(item: dict[str, Any]) -> str:
+    if not isinstance(item, dict):
+        return ""
+    preview = str(item.get("question_preview") or item.get("title") or "").strip()
+    subject = str(item.get("subject") or "").strip()
+    error_type = str(item.get("error_type") or "").strip()
+    mastery = item.get("mastery")
+    bits = [bit for bit in (subject, error_type) if bit]
+    if mastery is not None:
+        try:
+            bits.append(f"掌握度 {float(mastery):.0%}")
+        except Exception:
+            bits.append(f"掌握度 {mastery}")
+    if bits:
+        return f"{preview or '最近有一道题反复卡住'} ({', '.join(bits)})"
+    return preview or "最近有一道题反复卡住"
+
+
+def _format_mastery_change_line(item: dict[str, Any]) -> str:
+    if not isinstance(item, dict):
+        return ""
+    node_name = str(item.get("node_name") or item.get("node_id") or "").strip()
+    if not node_name:
+        return ""
+    old_mastery = item.get("old_mastery")
+    new_mastery = item.get("new_mastery")
+    if old_mastery is None or new_mastery is None:
+        return f"{node_name} 最近掌握度有提升"
+    try:
+        old_val = float(old_mastery)
+        new_val = float(new_mastery)
+        return f"{node_name} 掌握度从 {old_val:.0f}% 提升到 {new_val:.0f}% (+{new_val - old_val:.0f})"
+    except Exception:
+        return f"{node_name} 掌握度从 {old_mastery} 提升到 {new_mastery}"
+
+
+def _render_user_context_content(
     context: dict,
+    *,
     context_level: str = "full",
     context_focus: dict[str, Any] | None = None,
-) -> str:
-    """格式化用户上下文"""
-    lines = []
-
+) -> tuple[str, dict[str, Any]]:
+    lines: list[str] = []
     normalized = _normalize_user_context(context)
+    telemetry = _build_prompt_signal_telemetry(context, normalized)
     focus_decision = ContextFocusDecision.from_dict(context_focus)
     section_weights = focus_decision.section_weights if focus_decision else {}
     section_caps = focus_decision.section_caps if focus_decision else {}
 
-    # 用户基本信息
+    def _mark_rendered(field_name: str) -> None:
+        meta = telemetry["high_value_fields"].get(field_name)
+        if not isinstance(meta, dict):
+            return
+        meta["rendered"] = True
+        if field_name not in telemetry["rendered_high_value_fields"]:
+            telemetry["rendered_high_value_fields"].append(field_name)
+
     identity = normalized.get("identity")
     if identity:
         lines.append("【身份信息】")
@@ -2035,7 +2185,6 @@ def format_user_context(
         lines.append(f"- 时区: {identity.get('timezone', 'Asia/Shanghai')}")
         lines.append(f"- Pro状态: {'是' if identity.get('is_pro') else '否'}")
 
-    # 分析摘要
     if normalized.get("analytics_summary"):
         analytics = normalized["analytics_summary"]
         if isinstance(analytics, dict):
@@ -2049,11 +2198,9 @@ def format_user_context(
             lines.append("【分析摘要】")
             lines.append(f"分析摘要: {analytics}")
 
-    # 火花等级
     if identity and identity.get("flame_level") is not None:
         lines.append(f"火花等级: {identity['flame_level']}")
 
-    # 学习偏好
     if normalized.get("preferences") and section_weights.get("preferences", "medium") != "off":
         prefs = normalized["preferences"]
         lines.append("【学习偏好】")
@@ -2069,7 +2216,6 @@ def format_user_context(
             lines.append(f"- 深度: {prefs.get('depth_preference', 0.5):.1f}")
             lines.append(f"- 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
 
-    # 知识薄弱点
     knowledge_summary = normalized.get("knowledge_summary")
     if knowledge_summary and section_weights.get("knowledge", "medium") != "off":
         weak_spots = knowledge_summary.get("weak_spots") or []
@@ -2096,7 +2242,43 @@ def format_user_context(
         lines.append("【当前学习状态】")
         lines.append(f"- {learning_gaps_summary}")
 
-    # 碎片时间推荐线索：待办任务
+    pain_limit = section_caps.get("recent_pain_points") or (1 if context_level == "light" else 3)
+    pain_lines: list[str] = []
+    error_summary_line = _format_error_summary_line(normalized.get("error_summary") or {})
+    if error_summary_line:
+        pain_lines.append(error_summary_line)
+        _mark_rendered("error_summary")
+    remaining_error_items = max(0, pain_limit - len(pain_lines))
+    for item in (normalized.get("recent_errors") or [])[:remaining_error_items]:
+        line = _format_recent_error_line(item)
+        if not line:
+            continue
+        pain_lines.append(line)
+        _mark_rendered("recent_errors")
+    if pain_lines:
+        lines.append("【近期痛点】")
+        lines.extend(f"- {line}" for line in pain_lines)
+        telemetry["section_sizes"]["recent_pain_points"] = {
+            "items": len(pain_lines),
+            "approx_tokens": _estimate_prompt_tokens("\n".join(pain_lines)),
+        }
+
+    win_limit = section_caps.get("recent_wins") or (1 if context_level == "light" else 3)
+    win_lines: list[str] = []
+    for item in (normalized.get("recent_mastery_changes") or [])[:win_limit]:
+        line = _format_mastery_change_line(item)
+        if not line:
+            continue
+        win_lines.append(line)
+        _mark_rendered("recent_mastery_changes")
+    if win_lines:
+        lines.append("【近期进展】")
+        lines.extend(f"- {line}" for line in win_lines)
+        telemetry["section_sizes"]["recent_wins"] = {
+            "items": len(win_lines),
+            "approx_tokens": _estimate_prompt_tokens("\n".join(win_lines)),
+        }
+
     next_actions = normalized.get("next_actions") or []
     task_weight = section_weights.get("task_summary", "medium")
     if next_actions and task_weight != "off":
@@ -2106,7 +2288,6 @@ def format_user_context(
         for task in next_actions[:limit]:
             lines.append(f"- {task.get('title')} ({task.get('estimated_minutes')}m, {task.get('type')})")
 
-    # 专注统计
     if normalized.get("focus_stats"):
         stats = normalized["focus_stats"]
         lines.append("【专注统计】")
@@ -2118,12 +2299,12 @@ def format_user_context(
         lines.append("【理解深度】")
         lines.append(f"- 当前等级: {understanding_depth.get('level')}")
 
-    strategy_state = normalized.get("user_strategy_state")
-    if isinstance(strategy_state, dict):
-        lines.append("【当前策略状态】")
-        lines.extend(_format_strategy_state_lines(strategy_state))
+    strategy_semantic_control = _resolve_semantic_control_from_context(context)
+    strategy_doctrine = format_semantic_control_lines(strategy_semantic_control, language="zh", section="strategy")
+    if strategy_doctrine:
+        lines.append("【当前交互策略】")
+        lines.extend(f"- {item}" for item in strategy_doctrine)
 
-    # 活跃计划
     active_plans = normalized.get("active_plans") or []
     if active_plans and section_weights.get("plan_context", "medium") != "off":
         lines.append("【活跃计划】")
@@ -2147,12 +2328,10 @@ def format_user_context(
             if summary:
                 lines.append(f"- {summary}")
 
-    # 工具偏好 (P4)
     if normalized.get("preferred_tools"):
         lines.append("【工具偏好】")
         lines.append(f"- 常用工具: {', '.join(normalized['preferred_tools'])}")
 
-    # 考试紧迫度
     if isinstance(normalized.get("exam_urgency"), dict):
         urgency = normalized["exam_urgency"]
         days_left = urgency.get("days_left")
@@ -2195,12 +2374,31 @@ def format_user_context(
                     occurred = item.get("occurred_at")
                     lines.append(f"- {item.get('summary')}: score={score}, occurred_at={occurred}")
 
-    return "\n".join(lines) if lines else "暂无上下文信息"
+    for key, meta in telemetry["high_value_fields"].items():
+        if meta.get("collected") and not meta.get("rendered"):
+            telemetry["dropped_high_value_fields"].append(key)
+
+    return ("\n".join(lines) if lines else "暂无上下文信息", telemetry)
+
+
+def format_user_context(
+    context: dict,
+    context_level: str = "full",
+    context_focus: dict[str, Any] | None = None,
+) -> str:
+    """格式化用户上下文"""
+    rendered, _telemetry = _render_user_context_content(
+        context,
+        context_level=context_level,
+        context_focus=context_focus,
+    )
+    return rendered
 
 
 def _normalize_user_context(context: dict) -> dict:
     """统一用户画像结构，避免字段重复与冲突"""
     normalized: dict[str, Any] = {}
+    cognitive_context = _extract_cognitive_context_payload(context)
 
     user_ctx = context.get("user_context")
     if user_ctx:
@@ -2237,6 +2435,15 @@ def _normalize_user_context(context: dict) -> dict:
     if context.get("knowledge_summary") and "knowledge_summary" not in normalized:
         if isinstance(context.get("knowledge_summary"), dict):
             normalized["knowledge_summary"] = context["knowledge_summary"]
+
+    for key in ("error_summary", "recent_errors", "recent_mastery_changes"):
+        direct_value = context.get(key)
+        if _has_signal_payload(direct_value):
+            normalized[key] = direct_value
+            continue
+        cognitive_value = cognitive_context.get(key)
+        if _has_signal_payload(cognitive_value):
+            normalized[key] = cognitive_value
 
     llm_profile = context.get("llm_profile")
     if isinstance(llm_profile, dict):
@@ -2285,74 +2492,33 @@ def _normalize_user_context(context: dict) -> dict:
     return normalized
 
 
-def _format_strategy_instruction_lines(strategy_state: dict[str, Any] | None) -> list[str]:
-    strategy_state = strategy_state if isinstance(strategy_state, dict) else {}
-    if not strategy_state:
-        return []
+def _resolve_semantic_control_from_context(context: dict[str, Any] | None) -> dict[str, Any]:
+    context = context if isinstance(context, dict) else {}
+    situation_brief = context.get("situation_brief")
+    if isinstance(situation_brief, dict):
+        semantic_control = situation_brief.get("semantic_control")
+        if isinstance(semantic_control, dict) and semantic_control:
+            return semantic_control
 
-    lines: list[str] = []
-    session_mode = str(strategy_state.get("session_mode") or "").strip()
-    explanation_style = str(strategy_state.get("explanation_style") or "").strip()
-    retrieval_emphasis = str(strategy_state.get("retrieval_emphasis") or "").strip()
-    push_vs_support = strategy_state.get("push_vs_support")
-    intensity = str(strategy_state.get("intervention_intensity") or "").strip()
-    note = str(strategy_state.get("current_episode_note") or "").strip()
+    decision_context = context.get("residual_decision_context")
+    if not isinstance(decision_context, dict) and isinstance(situation_brief, dict):
+        decision_context = situation_brief.get("decision_context")
+    planning_strategy = {}
+    if isinstance(situation_brief, dict) and isinstance(situation_brief.get("planning_strategy"), dict):
+        planning_strategy = situation_brief.get("planning_strategy") or {}
 
-    if session_mode == "recovery":
-        lines.append("- 当前策略层要求：先减负和稳住节奏，再给最小可执行下一步")
-    elif session_mode == "review":
-        lines.append("- 当前策略层要求：优先复盘、纠错和巩固，而不是继续扩展新内容")
-    elif session_mode == "exploratory":
-        lines.append("- 当前策略层要求：允许更多探索和比较，但仍要收束到清晰结论")
-
-    if explanation_style == "step_by_step":
-        lines.append("- 解释方式：按步骤拆开，不要跳步")
-    elif explanation_style == "example_based":
-        lines.append("- 解释方式：优先用具体例子再抽象总结")
-
-    if retrieval_emphasis == "user_materials":
-        lines.append("- 检索倾向：若需要举证或补充背景，优先依赖用户自己的材料与当前计划")
-    elif retrieval_emphasis == "general_knowledge":
-        lines.append("- 检索倾向：当用户材料不足时，可更主动使用通用知识补齐")
-
-    if isinstance(push_vs_support, (int, float)):
-        if float(push_vs_support) >= 0.65:
-            lines.append("- 推进力度：可以更直接地收束和推动执行")
-        elif float(push_vs_support) <= 0.35:
-            lines.append("- 推进力度：先支持和承接，再轻推下一步")
-
-    if intensity == "low":
-        lines.append("- 干预强度：保持轻量，不要一下子塞太多动作")
-    elif intensity == "high":
-        lines.append("- 干预强度：可以更明确地下判断和给行动约束")
-
-    if note:
-        lines.append(f"- 当前回合备注：{note}")
-    return lines
-
-
-def _format_strategy_state_lines(strategy_state: dict[str, Any] | None) -> list[str]:
-    strategy_state = strategy_state if isinstance(strategy_state, dict) else {}
-    if not strategy_state:
-        return ["- 暂无显式策略状态"]
-
-    lines = [
-        f"- difficulty_level: {strategy_state.get('difficulty_level', 3)}",
-        f"- session_mode: {strategy_state.get('session_mode', 'guided')}",
-        f"- explanation_style: {strategy_state.get('explanation_style', 'conceptual')}",
-        f"- retrieval_emphasis: {strategy_state.get('retrieval_emphasis', 'balanced')}",
-        f"- push_vs_support: {strategy_state.get('push_vs_support', 0.5)}",
-        f"- intervention_intensity: {strategy_state.get('intervention_intensity', 'medium')}",
-    ]
-    note = str(strategy_state.get("current_episode_note") or "").strip()
-    if note:
-        lines.append(f"- current_episode_note: {note}")
-    meta = strategy_state.get("meta")
-    if isinstance(meta, dict):
-        adaptive_summary = str(meta.get("adaptive_summary") or "").strip()
-        if adaptive_summary:
-            lines.append(f"- adaptive_summary: {adaptive_summary}")
-    return lines
+    return build_semantic_control(
+        decision_context=decision_context if isinstance(decision_context, dict) else {},
+        planning_strategy=planning_strategy,
+        body_awareness_guidance=(
+            decision_context.get("body_awareness_guidance")
+            if isinstance(decision_context, dict)
+            else {}
+        ),
+        user_strategy_state=context.get("user_strategy_state") if isinstance(context.get("user_strategy_state"), dict) else {},
+        outcome_learning=(situation_brief.get("outcome_learning") if isinstance(situation_brief, dict) else {}),
+        language="zh",
+    ).to_dict()
 
 
 def _format_cognitive_prism_section(user_context: dict, context_focus: dict[str, Any] | None = None) -> str:

@@ -31,6 +31,26 @@ def orchestrator():
     return MinimalOrchestrator()
 
 
+def test_attach_quality_report_context_persists_semantic_control_compliance(orchestrator):
+    state = MagicMock()
+    state.context_data = {}
+
+    orchestrator._attach_quality_report_context(
+        state=state,
+        quality_report={
+            "metadata_expectations": {
+                "semantic_control": {
+                    "checks": {
+                        "clarify_question_first": True,
+                    }
+                }
+            }
+        },
+    )
+
+    assert state.context_data["semantic_control_compliance"]["checks"]["clarify_question_first"] is True
+
+
 @pytest.mark.asyncio
 async def test_maybe_short_circuit_bridge_tool_returns_none_when_no_bridge_tool(orchestrator):
     """Test _maybe_short_circuit_bridge_tool returns None when no bridge tool is active."""
