@@ -109,7 +109,9 @@ async def test_context_pack_intent_budget(db_session):
     builder = ContextPackBuilder(db_session, scheduler=scheduler)
     pack = await builder.build(user_id, intent="planning")
 
-    assert pack.budgets["goals"] == 2
+    assert pack.budgets["goals"] == 3
+    assert pack.context_focus is not None
+    assert pack.context_focus["focus_mode"] == "plan_focus"
     assert pack.intent == "planning"
 
     router = IntentRouter()

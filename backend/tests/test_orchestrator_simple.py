@@ -40,6 +40,7 @@ async def test_orchestrator_basic_flow():
                 mock_ks.retrieve_context = AsyncMock(return_value="Mocked Context")
 
                 orchestrator = ChatOrchestrator(db_session=mock_db, redis_client=mock_redis)
+                orchestrator._hydrate_companion_runtime_context = AsyncMock(return_value={})
 
                 request = agent_service_pb2.ChatRequest(
                     request_id="test_req",
@@ -56,8 +57,8 @@ async def test_orchestrator_basic_flow():
                 assert len(responses) > 0
                 # Check for thinking status
                 assert any(r.HasField("status_update") and r.status_update.state == agent_service_pb2.AgentStatus.THINKING for r in responses)
-                # Check for text output (schema may use delta/full_text depending on path)
-                assert any((getattr(r, "delta", "") or getattr(r, "full_text", "")) for r in responses)
+                # Check for text output through the ChatResponse content oneof
+                assert any(r.WhichOneof("content") in {"delta", "full_text"} for r in responses)
                 # Check for finish
                 assert any(r.finish_reason == agent_service_pb2.STOP for r in responses)
 

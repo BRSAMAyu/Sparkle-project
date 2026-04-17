@@ -1,10 +1,9 @@
 """Smart Schedule Service - 智能排程服务"""
 from __future__ import annotations
-import random
+
 from datetime import date, datetime, timedelta
 from uuid import UUID
 
-from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,17 +14,13 @@ from app.schemas.smart_schedule import (
     TimeSlotQuality,
     TimeSlotSuggestion,
 )
+from app.services.personalization.preference_service import PreferenceService
 
 
 class SmartScheduleService:
     """智能排程服务"""
 
-    # 默认高效时段配置
-    DEFAULT_PEAK_HOURS = {
-        "morning": (6, 12),    # 6:00-12:00
-        "afternoon": (12, 18),  # 12:00-18:00
-        "evening": (18, 23),    # 18:00-23:00
-    }
+    HISTORY_WINDOW_DAYS = 28
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -35,62 +30,92 @@ class SmartScheduleService:
         user_id: UUID,
         request: SmartScheduleRequest,
     ) -> SmartScheduleResponse:
-        """
-        生成智能时间槽建议
-
-        算法:
-        1. 加载用户已有事件（排除冲突）
-        2. 获取用户认知模式（如有）
-        3. 生成可用时间槽
-        4. 根据任务参数评分
-        5. 返回 Top 3 建议
-        """
+        """生成智能时间槽建议。"""
         target_date = request.preferred_date or date.today()
-
-        # 1. 获取用户已有事件
         existing_events = await self._get_existing_events(user_id, target_date)
+        schedule_profile = await self._build_schedule_profile(user_id, target_date, existing_events)
 
-        # 2. 获取认知模式（可选增强）
-        cognitive_patterns = await self._get_cognitive_patterns(user_id)
-
-        # 3. 生成可用时间槽
         available_slots = self._generate_available_slots(
             target_date,
             existing_events,
             request.exclude_event_ids,
         )
 
-        # 4. 评分排序
-        scored_slots = []
+        scored_slots: list[tuple[tuple[int, int], float, list[str]]] = []
         for slot in available_slots:
-            score = self._score_time_slot(
-                slot,
-                request.energy_cost,
-                request.difficulty,
-                cognitive_patterns,
+            score, reasons = self._score_time_slot(
+                slot=slot,
+                energy_cost=request.energy_cost,
+                difficulty=request.difficulty,
+                schedule_profile=schedule_profile,
             )
-            scored_slots.append((slot, score))
+            scored_slots.append((slot, score, reasons))
 
-        scored_slots.sort(key=lambda x: x[1], reverse=True)
-
-        # 5. 构建响应
+        scored_slots.sort(key=lambda item: (-item[1], item[0][0], item[0][1]))
         suggestions = [
-            self._build_suggestion(slot, score, target_date)
-            for slot, score in scored_slots[:3]
+            self._build_suggestion(
+                slot=slot,
+                score=score,
+                target_date=target_date,
+                reasons=reasons,
+            )
+            for slot, score, reasons in scored_slots[:3]
         ]
 
         return SmartScheduleResponse(
             suggestions=suggestions,
-            cognitive_insights=cognitive_patterns.get("insights"),
-            fallback_used=cognitive_patterns.get("fallback", False),
+            cognitive_insights=self._build_cognitive_insights(schedule_profile),
+            fallback_used=bool(schedule_profile.get("fallback_used")),
         )
+
+    async def _build_schedule_profile(
+        self,
+        user_id: UUID,
+        target_date: date,
+        existing_events: list[CalendarEvent],
+    ) -> dict[str, object]:
+        prefs = await PreferenceService(self.db).get_preferences(user_id)
+        explicit = dict(prefs.explicit or {})
+        inferred = dict(prefs.inferred or {})
+
+        recent_events = await self._get_recent_events(user_id, target_date)
+        focus_hours, focus_source = self._resolve_focus_hours(explicit, inferred)
+        inactive_hours = self._normalize_hours(explicit.get("inactive_push_hours", inferred.get("inactive_push_hours")))
+        recurring_windows = self._detect_recurring_windows(recent_events, target_date)
+        busy_windows = self._derive_busy_windows(existing_events)
+        density_level = self._density_level(existing_events)
+        exam_urgency = self._resolve_exam_urgency(explicit, inferred)
+
+        signals_used = []
+        if focus_source:
+            signals_used.append(focus_source)
+        if recurring_windows:
+            signals_used.append("recurring_calendar_windows")
+        if busy_windows:
+            signals_used.append("busy_window_density")
+        if inactive_hours:
+            signals_used.append("inactive_push_hours")
+        if exam_urgency:
+            signals_used.append("exam_urgency")
+
+        return {
+            "focus_hours": focus_hours,
+            "focus_source": focus_source,
+            "inactive_hours": inactive_hours,
+            "recurring_windows": recurring_windows,
+            "busy_windows": busy_windows,
+            "density_level": density_level,
+            "exam_urgency": exam_urgency,
+            "signals_used": signals_used,
+            "fallback_used": focus_source in {"generic_hours", ""},
+        }
 
     async def _get_existing_events(
         self,
         user_id: UUID,
         target_date: date,
     ) -> list[CalendarEvent]:
-        """获取用户指定日期的已有事件"""
+        """获取用户指定日期的已有事件。"""
         day_start = datetime.combine(target_date, datetime.min.time())
         day_end = datetime.combine(target_date, datetime.max.time())
 
@@ -104,42 +129,107 @@ class SmartScheduleService:
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
-    async def _get_cognitive_patterns(self, user_id: UUID) -> dict:
-        """获取用户认知模式（可选增强）"""
-        try:
-            from app.services.cognitive_service import CognitiveService
-
-            cognitive_service = CognitiveService(self.db)
-            # Try to get user patterns if available
-            # Note: This is a placeholder - actual implementation depends on
-            # the cognitive service's get_user_patterns method
-            patterns = await self._try_get_user_patterns(cognitive_service, user_id)
-
-            if patterns:
-                return {
-                    "insights": {
-                        "focus_period": patterns.get("focus_period"),
-                        "energy_pattern": patterns.get("energy_pattern"),
-                    },
-                    "fallback": False,
-                }
-        except Exception as e:
-            logger.warning(f"Failed to get cognitive patterns: {e}")
-
-        return {"fallback": True}
-
-    async def _try_get_user_patterns(
+    async def _get_recent_events(
         self,
-        cognitive_service,
         user_id: UUID,
-    ) -> dict | None:
-        """尝试获取用户模式（带异常处理）"""
-        try:
-            # Check if method exists
-            if hasattr(cognitive_service, "get_user_patterns"):
-                return await cognitive_service.get_user_patterns(user_id)
-        except Exception:
-            pass
+        target_date: date,
+    ) -> list[CalendarEvent]:
+        since = datetime.combine(target_date, datetime.min.time()) - timedelta(days=self.HISTORY_WINDOW_DAYS)
+        until = datetime.combine(target_date, datetime.max.time())
+        result = await self.db.execute(
+            select(CalendarEvent).where(
+                CalendarEvent.user_id == user_id,
+                CalendarEvent.deleted_at.is_(None),
+                CalendarEvent.start_time >= since,
+                CalendarEvent.start_time <= until,
+            )
+        )
+        return list(result.scalars().all())
+
+    def _resolve_focus_hours(
+        self,
+        explicit: dict[str, object],
+        inferred: dict[str, object],
+    ) -> tuple[list[int], str]:
+        peak_focus_hours = self._normalize_hours(inferred.get("peak_focus_hours"))
+        achievement_hours = self._normalize_hours(
+            explicit.get("achievement_peak_hours", inferred.get("achievement_peak_hours"))
+        )
+
+        if len(peak_focus_hours) >= 2:
+            return peak_focus_hours[:3], "peak_focus_hours"
+        if achievement_hours:
+            return achievement_hours[:3], "achievement_peak_hours"
+        if peak_focus_hours:
+            return peak_focus_hours[:3], "peak_focus_hours"
+        return [9, 10, 14], "generic_hours"
+
+    @staticmethod
+    def _normalize_hours(raw_hours: object) -> list[int]:
+        hours: list[int] = []
+        if not isinstance(raw_hours, list):
+            return hours
+        for raw in raw_hours:
+            try:
+                hour = int(raw)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= hour <= 23 and hour not in hours:
+                hours.append(hour)
+        return hours
+
+    @staticmethod
+    def _detect_recurring_windows(events: list[CalendarEvent], target_date: date) -> set[int]:
+        pattern_counts: dict[tuple[int, int, int], int] = {}
+        for event in events:
+            weekday = event.start_time.weekday()
+            start_hour = int(event.start_time.hour)
+            end_hour = min(23, int(event.end_time.hour) + (1 if event.end_time.minute > 0 else 0))
+            pattern = (weekday, start_hour, end_hour)
+            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+
+        recurring_hours: set[int] = set()
+        for (weekday, start_hour, end_hour), count in pattern_counts.items():
+            if weekday != target_date.weekday() or count < 2:
+                continue
+            recurring_hours.update(range(start_hour, end_hour))
+        return recurring_hours
+
+    @staticmethod
+    def _derive_busy_windows(events: list[CalendarEvent]) -> set[int]:
+        busy_windows: set[int] = set()
+        ordered = sorted(events, key=lambda item: item.start_time)
+        for index, event in enumerate(ordered):
+            duration_minutes = max(0, int((event.end_time - event.start_time).total_seconds() / 60))
+            end_hour = min(22, event.end_time.hour)
+            if duration_minutes >= 90:
+                busy_windows.add(end_hour)
+            if index + 1 < len(ordered):
+                next_event = ordered[index + 1]
+                gap_minutes = int((next_event.start_time - event.end_time).total_seconds() / 60)
+                if gap_minutes < 60:
+                    busy_windows.add(end_hour)
+                    busy_windows.add(next_event.start_time.hour)
+        return busy_windows
+
+    @staticmethod
+    def _density_level(events: list[CalendarEvent]) -> str:
+        total_minutes = sum(max(0, int((event.end_time - event.start_time).total_seconds() / 60)) for event in events)
+        if len(events) >= 5 or total_minutes >= 360:
+            return "high"
+        if len(events) >= 3 or total_minutes >= 180:
+            return "medium"
+        return "low"
+
+    @staticmethod
+    def _resolve_exam_urgency(
+        explicit: dict[str, object],
+        inferred: dict[str, object],
+    ) -> dict[str, object] | None:
+        for source in (explicit, inferred):
+            raw = source.get("exam_urgency")
+            if isinstance(raw, dict) and raw.get("days_left") is not None:
+                return raw
         return None
 
     def _generate_available_slots(
@@ -148,117 +238,138 @@ class SmartScheduleService:
         existing_events: list[CalendarEvent],
         exclude_ids: list[str] | None,
     ) -> list[tuple[int, int]]:
-        """
-        生成可用时间槽
-
-        Returns:
-            List of (start_hour, end_hour) tuples
-        """
-        # 生成工作时段内的候选槽位（6:00-23:00）
-        slots = []
-        for hour in range(6, 23):
-            slots.append((hour, hour + 1))
-
-        # 排除已占用时段
+        """生成可用时间槽。"""
+        slots = [(hour, hour + 1) for hour in range(6, 23)]
         for event in existing_events:
             if exclude_ids and str(event.id) in exclude_ids:
                 continue
             start_hour = event.start_time.hour
             end_hour = min(23, event.end_time.hour + (1 if event.end_time.minute > 0 else 0))
-            slots = [(s, e) for s, e in slots if not (s >= start_hour and e <= end_hour)]
-
+            slots = [(start, end) for start, end in slots if not (start >= start_hour and end <= end_hour)]
         return slots
 
     def _score_time_slot(
         self,
+        *,
         slot: tuple[int, int],
         energy_cost: int,
         difficulty: int,
-        cognitive_patterns: dict,
-    ) -> float:
-        """
-        评分时间槽
-
-        评分因素:
-        - 时段质量 (40%): 高效时段 vs 低效时段
-        - 任务匹配 (30%): 高能耗/高难度任务匹配高效时段
-        - 认知模式 (20%): 用户个人模式
-        - 随机因子 (10%): 避免过于机械
-        """
+        schedule_profile: dict[str, object],
+    ) -> tuple[float, list[str]]:
         start_hour, _ = slot
+        score = 0.35
+        reasons: list[str] = []
 
-        # 基础分数
-        score = 0.5
+        focus_hours = set(schedule_profile.get("focus_hours") or [])
+        inactive_hours = set(schedule_profile.get("inactive_hours") or [])
+        recurring_windows = set(schedule_profile.get("recurring_windows") or [])
+        busy_windows = set(schedule_profile.get("busy_windows") or [])
+        density_level = str(schedule_profile.get("density_level") or "low")
+        exam_urgency = schedule_profile.get("exam_urgency")
+        task_intensity = (energy_cost + difficulty) / 10.0
 
-        # 1. 时段质量评分 (40%)
-        if 9 <= start_hour <= 11:  # 上午高峰
-            score += 0.4
-        elif 14 <= start_hour <= 17:  # 下午高效
-            score += 0.3
-        elif 6 <= start_hour <= 8:  # 早晨
-            score += 0.2
-        elif 18 <= start_hour <= 21:  # 晚间
-            score += 0.15
-        else:  # 低效时段
-            score += 0.05
+        if start_hour in focus_hours:
+            score += 0.26
+            reasons.append("命中用户更容易进入状态的时段")
+        elif 9 <= start_hour <= 11:
+            score += 0.18
+            reasons.append("上午通用高效时段")
+        elif 14 <= start_hour <= 17:
+            score += 0.13
+            reasons.append("下午稳定时段")
+        elif 18 <= start_hour <= 21:
+            score += 0.06
+        else:
+            score += 0.02
 
-        # 2. 任务匹配评分 (30%)
-        task_intensity = (energy_cost + difficulty) / 10  # 0.2-1.0
-        if task_intensity > 0.6 and 9 <= start_hour <= 17:
-            score += 0.3  # 高强度任务匹配高效时段
+        if task_intensity >= 0.7:
+            if start_hour in focus_hours:
+                score += 0.16
+                reasons.append("高强度任务与高专注时段匹配")
+            elif 9 <= start_hour <= 17:
+                score += 0.08
+            else:
+                score -= 0.08
         elif task_intensity <= 0.4 and start_hour >= 18:
-            score += 0.2  # 低强度任务适合晚间
+            score += 0.08
+            reasons.append("低强度任务可放在较轻松时段")
 
-        # 3. 认知模式评分 (20%)
-        if cognitive_patterns.get("insights"):
-            focus_period = cognitive_patterns["insights"].get("focus_period")
-            if focus_period == "morning" and 6 <= start_hour <= 12:
-                score += 0.2
-            elif focus_period == "afternoon" and 12 <= start_hour <= 18:
-                score += 0.2
-            elif focus_period == "evening" and 18 <= start_hour <= 23:
-                score += 0.2
+        if start_hour in recurring_windows:
+            score -= 0.24
+            reasons.append("该时段与近期重复日程模式重叠")
+        if start_hour in busy_windows:
+            score -= 0.14
+            reasons.append("该时段紧邻密集事件窗口")
+        if start_hour in inactive_hours:
+            score -= 0.12
+            reasons.append("该时段通常不适合打断或推进任务")
 
-        # 4. 随机因子 (10%)
-        score += random.uniform(0, 0.1)
+        if density_level == "high":
+            score -= 0.07
+            reasons.append("当天事件密度较高")
+        elif density_level == "low":
+            score += 0.04
 
-        return min(score, 1.0)
+        if isinstance(exam_urgency, dict):
+            try:
+                days_left = int(exam_urgency.get("days_left"))
+            except (TypeError, ValueError):
+                days_left = None
+            if days_left is not None and days_left <= 14:
+                score += max(0.0, (18 - start_hour) * 0.01)
+                reasons.append("考试临近，优先更早的可执行时段")
+
+        return (max(0.0, min(score, 1.0)), reasons[:3])
 
     def _build_suggestion(
         self,
+        *,
         slot: tuple[int, int],
         score: float,
         target_date: date,
+        reasons: list[str],
     ) -> TimeSlotSuggestion:
-        """构建时间槽建议"""
         start_hour, end_hour = slot
-
-        # 确定质量等级
-        if score >= 0.8:
+        if score >= 0.74:
             quality = TimeSlotQuality.PEAK
-        elif score >= 0.5:
+        elif score >= 0.48:
             quality = TimeSlotQuality.NORMAL
         else:
             quality = TimeSlotQuality.LOW
 
-        # 生成推荐理由
-        if 9 <= start_hour <= 11:
-            reason = "上午高效期，适合专注工作"
+        if reasons:
+            reason = "；".join(reasons[:2])
+        elif 9 <= start_hour <= 11:
+            reason = "上午高效期，适合专注任务"
         elif 14 <= start_hour <= 17:
-            reason = "下午稳定期，适合常规任务"
-        elif 6 <= start_hour <= 8:
-            reason = "清晨清醒期，适合轻度任务"
-        elif 18 <= start_hour <= 21:
-            reason = "晚间放松期，适合复习回顾"
+            reason = "下午稳定期，适合常规推进"
         else:
-            reason = "可用时段"
+            reason = "当前可用时段"
 
+        confidence = min(0.95, 0.62 + score * 0.28)
         return TimeSlotSuggestion(
             start_time=f"{start_hour:02d}:00",
             end_time=f"{end_hour:02d}:00",
             date=target_date,
             quality=quality,
             score=round(score, 2),
-            confidence=0.7 + (score * 0.2),
+            confidence=round(confidence, 2),
             reason=reason,
         )
+
+    def _build_cognitive_insights(self, schedule_profile: dict[str, object]) -> dict[str, object]:
+        exam_urgency = schedule_profile.get("exam_urgency")
+        exam_pressure = None
+        if isinstance(exam_urgency, dict) and exam_urgency.get("days_left") is not None:
+            exam_pressure = {
+                "days_left": exam_urgency.get("days_left"),
+                "urgent": bool(exam_urgency.get("urgent")),
+            }
+
+        return {
+            "focus_hours": list(schedule_profile.get("focus_hours") or []),
+            "busy_windows": [f"{hour:02d}:00" for hour in sorted(schedule_profile.get("busy_windows") or [])],
+            "density_level": schedule_profile.get("density_level"),
+            "exam_pressure": exam_pressure,
+            "signals_used": list(schedule_profile.get("signals_used") or []),
+        }

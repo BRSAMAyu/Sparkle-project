@@ -157,6 +157,7 @@ def _install_import_stubs() -> None:
         llm_module.get_configured_llm_service = lambda *args, **kwargs: llm_module.llm_service
         llm_module.get_configured_llm_service_for_tier = lambda *args, **kwargs: llm_module.llm_service
         llm_module.get_llm_service_for_specific_model = lambda *args, **kwargs: llm_module.llm_service
+        llm_module.get_llm_service_for_task = lambda *args, **kwargs: llm_module.llm_service
         sys.modules["app.services.llm_service"] = llm_module
 
     if "app.orchestration.lang_graph_planner" not in sys.modules:
@@ -298,6 +299,7 @@ def _install_import_stubs() -> None:
 
     if "app.services.plan_progress_service" not in sys.modules:
         progress_module = types.ModuleType("app.services.plan_progress_service")
+        progress_module.PlanHealthReport = type("PlanHealthReport", (), {})
         progress_module.PlanProgressService = type("PlanProgressService", (), {})
         sys.modules["app.services.plan_progress_service"] = progress_module
 
@@ -398,7 +400,13 @@ def orchestrator_factory(monkeypatch):
         orchestrator._apply_cohort_to_session_feedback_signal = MagicMock(side_effect=lambda signal, cohort: signal)
         orchestrator._maybe_enqueue_perceptible_insight = AsyncMock(return_value=None)
         orchestrator._maybe_enqueue_understanding_depth = AsyncMock(return_value=None)
-        orchestrator._drain_system_updates = AsyncMock(return_value=([], [], [], [], None, None))
+        orchestrator._drain_system_updates = AsyncMock(
+            return_value=([], [], [], [], None, None, {
+                "proactive_opening_message": "",
+                "pending_observation": "",
+                "post_adaptation_question": "",
+            })
+        )
         orchestrator._check_sufficiency = AsyncMock(return_value=(False, "chat"))
         orchestrator._check_goal_quality = AsyncMock(return_value=False)
         orchestrator._load_context_versions = AsyncMock(return_value={})
@@ -413,12 +421,20 @@ def orchestrator_factory(monkeypatch):
         orchestrator._track_task = MagicMock()
         orchestrator._persist_assistant_message = AsyncMock(return_value=None)
         orchestrator._record_decision = AsyncMock(return_value=None)
+        orchestrator.grounding_validator.validate_plan = AsyncMock(
+            return_value=types.SimpleNamespace(
+                is_valid=True,
+                warnings=[],
+                failure_reason="",
+            )
+        )
         orchestrator.observability.log_route_decision = AsyncMock(return_value=None)
         orchestrator.observability.log_circuit_state_change = AsyncMock(return_value=None)
         orchestrator.observability.log_collaboration_start = AsyncMock(return_value=None)
         orchestrator.observability.log_collaboration_end = AsyncMock(return_value=None)
         orchestrator.observability.log_langgraph_plan = AsyncMock(return_value=None)
         orchestrator.observability.log_validation_failed = AsyncMock(return_value=None)
+        orchestrator.observability.log_phase_a_decision = AsyncMock(return_value=None)
         orchestrator.shadow_predictor.predict_and_record = AsyncMock(return_value=None)
 
         return orchestrator, redis_client, state_updates
@@ -681,3 +697,130 @@ async def test_process_stream_review_required_drains_queue_before_return(orchest
     assert final_state is not None
     assert final_state.state == STATE_INIT
     assert orchestrator.langgraph_breaker.on_success.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_process_stream_phase_a_hard_stops_cold_start_plan_before_planning(orchestrator_factory):
+    orchestrator, _, _state_updates = orchestrator_factory()
+    request = _make_request(message="帮我做一个 14 天物理考试冲刺计划")
+
+    shadow_module = types.ModuleType("app.services.shadow_prediction_service")
+    shadow_module.shadow_prediction_service = types.SimpleNamespace(
+        predict_intent_only=AsyncMock(
+            return_value={
+                "intent_type": "create_plan",
+                "suggested_tools": ["create_plan"],
+            }
+        )
+    )
+    sys.modules["app.services.shadow_prediction_service"] = shadow_module
+
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    orchestrator._check_sufficiency = orchestrator_module.ChatOrchestrator._check_sufficiency.__get__(
+        orchestrator,
+        type(orchestrator),
+    )
+    orchestrator._compose_fast_interaction_copy = AsyncMock(
+        return_value="先确认一个关键问题：你目前对这个主题的掌握大概在哪个水平？"
+    )
+    orchestrator._build_full_context = AsyncMock(
+        return_value=(
+            {},
+            None,
+            False,
+            {
+                "profile_context": {
+                    "preferences": {},
+                    "preference_version": 0,
+                    "knowledge_summary": {
+                        "overall_mastery": 0.0,
+                        "weak_spots": [],
+                        "recent_mastery_changes": [],
+                        "active_learning_subjects": [],
+                    },
+                    "cognitive_summary": {
+                        "active_patterns": [],
+                        "dominant_pattern_type": None,
+                        "risk_signals": [],
+                    },
+                },
+            },
+            {"messages": []},
+            None,
+        )
+    )
+    orchestrator._route_and_classify = AsyncMock()
+    orchestrator._plan_and_validate = AsyncMock()
+
+    responses = await _collect(orchestrator, request)
+
+    assert orchestrator._plan_and_validate.await_count == 0
+    assert orchestrator._route_and_classify.await_count == 0
+    assert any(response.metadata.get("requires_clarification") == "true" for response in responses)
+    assert any(response.metadata.get("clarification_source") == "phase_a" for response in responses)
+    assert any(response.metadata.get("phase_a_guardrail") == "ask_before_plan" for response in responses)
+    assert responses[-1].full_text.count("？") <= 1
+    assert "掌握" in responses[-1].full_text or "水平" in responses[-1].full_text
+
+
+@pytest.mark.asyncio
+async def test_process_stream_phase_a_hard_stop_survives_underclassified_planning_intent(orchestrator_factory):
+    orchestrator, _, _state_updates = orchestrator_factory()
+    request = _make_request(message="帮我安排一下 14 天物理考试冲刺计划")
+
+    shadow_module = types.ModuleType("app.services.shadow_prediction_service")
+    shadow_module.shadow_prediction_service = types.SimpleNamespace(
+        predict_intent_only=AsyncMock(
+            return_value={
+                "intent_type": "knowledge_query",
+                "suggested_tools": [],
+            }
+        )
+    )
+    sys.modules["app.services.shadow_prediction_service"] = shadow_module
+
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    orchestrator._check_sufficiency = orchestrator_module.ChatOrchestrator._check_sufficiency.__get__(
+        orchestrator,
+        type(orchestrator),
+    )
+    orchestrator._compose_fast_interaction_copy = AsyncMock(
+        return_value="先确认一个关键问题：你目前对这个主题的掌握大概在哪个水平？"
+    )
+    orchestrator._build_full_context = AsyncMock(
+        return_value=(
+            {},
+            None,
+            False,
+            {
+                "current_query": "帮我安排一下 14 天物理考试冲刺计划",
+                "context_focus": {"route_intent": "plan"},
+                "profile_context": {
+                    "preferences": {},
+                    "preference_version": 0,
+                    "knowledge_summary": {
+                        "overall_mastery": 0.0,
+                        "weak_spots": [],
+                        "recent_mastery_changes": [],
+                        "active_learning_subjects": [],
+                    },
+                    "cognitive_summary": {
+                        "active_patterns": [],
+                        "dominant_pattern_type": None,
+                        "risk_signals": [],
+                    },
+                },
+            },
+            {"messages": []},
+            None,
+        )
+    )
+    orchestrator._route_and_classify = AsyncMock()
+    orchestrator._plan_and_validate = AsyncMock()
+
+    responses = await _collect(orchestrator, request)
+
+    assert orchestrator._plan_and_validate.await_count == 0
+    assert orchestrator._route_and_classify.await_count == 0
+    assert any(response.metadata.get("planning_detection_source") == "route_intent" for response in responses)
+    orchestrator.observability.log_phase_a_decision.assert_awaited()

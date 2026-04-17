@@ -147,13 +147,15 @@ class LLMConcurrencyManager:
         if self._bound_loop is current_loop:
             return
 
+        initial_bind = self._bound_loop is None
         self._bound_loop = current_loop
         self._lock = asyncio.Lock()
         for state in self._runtime.values():
             state.condition = asyncio.Condition()
-            state.active = 0
-            state.waiting = 0
-            state.hydrated = False
+            if not initial_bind:
+                state.active = 0
+                state.waiting = 0
+                state.hydrated = False
         logger.info("LLMConcurrencyManager rebound to current event loop")
 
     def _get_provider_type(self, provider: str) -> ProviderType:

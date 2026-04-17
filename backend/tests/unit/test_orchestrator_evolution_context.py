@@ -131,7 +131,7 @@ async def test_drain_system_updates_extracts_understanding_depth_hint():
         "app.orchestration.orchestrator.SystemUpdateService.drain",
         AsyncMock(return_value=updates),
     ):
-        _, _, _, highlights, _, understanding_depth_update = await orchestrator._drain_system_updates("user-1")
+        _, _, _, highlights, _, understanding_depth_update, _ = await orchestrator._drain_system_updates("user-1")
 
     assert understanding_depth_update is not None
     assert understanding_depth_update["understanding_depth"]["level"] == "L3"

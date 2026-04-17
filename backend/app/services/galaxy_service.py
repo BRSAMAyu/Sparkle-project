@@ -385,14 +385,47 @@ class GalaxyService:
         if user_stats.total_nodes > 0:
             user_flame_intensity = min(1.0, user_stats.unlocked_count / max(1, user_stats.total_nodes))
 
-        # 5. Assemble with Flutter-compatible fields
+        # 5. Fetch recent error counts per node (single batch query, last 14 days)
+        error_counts = await self._get_recent_error_counts_by_node(user_id, days=14)
+
+        # 6. Assemble with Flutter-compatible fields
         return GalaxyGraphResponse(
-            nodes=[NodeWithStatus.from_models(node, status) for node, status in nodes_with_status],
+            nodes=[
+                NodeWithStatus.from_models(node, status, recent_error_count=error_counts.get(node.id, 0))
+                for node, status in nodes_with_status
+            ],
             relations=edge_list,
             edges=edge_list,  # Flutter expects this field name
             user_stats=user_stats,
             user_flame_intensity=user_flame_intensity,  # Flutter expects 0.0-1.0
         )
+
+    async def _get_recent_error_counts_by_node(self, user_id: UUID, days: int = 14) -> dict[UUID, int]:
+        """Return {node_id: error_count} for errors in the last `days` days (single query)."""
+        from datetime import timedelta
+
+        try:
+            from app.models.error_book import ErrorRecord
+
+            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+            result = await self.db.execute(
+                select(ErrorRecord.linked_knowledge_node_ids)
+                .where(ErrorRecord.user_id == user_id)
+                .where(ErrorRecord.is_deleted.is_(False))
+                .where(ErrorRecord.created_at >= cutoff)
+            )
+            counts: dict[UUID, int] = {}
+            for (linked_ids,) in result.all():
+                for nid in (linked_ids or []):
+                    try:
+                        key = UUID(str(nid)) if not isinstance(nid, UUID) else nid
+                        counts[key] = counts.get(key, 0) + 1
+                    except (ValueError, AttributeError):
+                        pass
+            return counts
+        except Exception as exc:
+            logger.debug("GalaxyService: could not load error counts: {}", exc)
+            return {}
 
     async def get_galaxy_graph_viewport(
         self,

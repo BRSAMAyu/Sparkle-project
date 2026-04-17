@@ -1263,6 +1263,24 @@ def test_infer_bridge_tool_names_respects_negation():
     assert "generate_learning_report" not in no_report_tools
 
 
+def test_resolve_active_tools_uses_body_awareness_for_knowledge_turns():
+    orchestrator = object.__new__(ChatOrchestrator)
+    request = SimpleNamespace(active_tools=[], chat_mode="standard")
+
+    resolved = orchestrator._resolve_active_tools(request, "解释一下什么是特征值")
+
+    assert "query_knowledge" in resolved
+
+
+def test_resolve_active_tools_does_not_override_explicit_tool_scope():
+    orchestrator = object.__new__(ChatOrchestrator)
+    request = SimpleNamespace(active_tools=["create_task"], chat_mode="standard")
+
+    resolved = orchestrator._resolve_active_tools(request, "解释一下什么是特征值")
+
+    assert resolved == ["create_task"]
+
+
 @pytest.mark.asyncio
 async def test_maybe_short_circuit_bridge_tool_returns_preview_metadata():
     engine = _DummyExecutionEngine()

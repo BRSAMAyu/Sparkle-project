@@ -10,7 +10,7 @@ from typing import Any
 
 from loguru import logger
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class FirebaseSettings(BaseSettings):
@@ -27,10 +27,11 @@ class FirebaseSettings(BaseSettings):
         default=None, env="FIREBASE_CREDENTIALS_PATH"
     )
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
 
     def is_configured(self) -> bool:
         """Check if Firebase is properly configured"""

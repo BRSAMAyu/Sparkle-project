@@ -3,92 +3,97 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
-import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
+
+import '../features/home/dashboard_test_harness.dart';
 
 const bool _enableDashboardGoldens = bool.fromEnvironment(
   'ENABLE_DASHBOARD_GOLDEN',
-  defaultValue: false,
 );
 
 void main() {
   group('Dashboard Golden Tests', () {
-    testGoldens('Dashboard light theme', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: ThemeData.light(),
-            home: const DashboardScreen(),
+    testGoldens(
+      'Dashboard light theme',
+      (tester) async {
+        await initializeDashboardTestEnvironment();
+        await tester.pumpWidget(
+          buildDashboardTestHarness(theme: ThemeData.light()),
+        );
+
+        await _pumpDashboard(tester);
+
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile('dashboard_light.png'),
+        );
+      },
+      skip: !_enableDashboardGoldens,
+    );
+
+    testGoldens(
+      'Dashboard dark theme',
+      (tester) async {
+        await initializeDashboardTestEnvironment();
+        await tester.pumpWidget(
+          buildDashboardTestHarness(theme: ThemeData.dark()),
+        );
+
+        await _pumpDashboard(tester);
+
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile('dashboard_dark.png'),
+        );
+      },
+      skip: !_enableDashboardGoldens,
+    );
+
+    testGoldens(
+      'Dashboard responsive layout - mobile',
+      (tester) async {
+        await initializeDashboardTestEnvironment();
+        await tester.pumpWidget(
+          buildDashboardTestHarness(
+            size: const Size(375, 667),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await _pumpDashboard(tester);
 
-      await expectLater(
-        find.byType(DashboardScreen),
-        matchesGoldenFile('dashboard_light.png'),
-      );
-    }, skip: !_enableDashboardGoldens);
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile('dashboard_mobile.png'),
+        );
+      },
+      skip: !_enableDashboardGoldens,
+    );
 
-    testGoldens('Dashboard dark theme', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: ThemeData.dark(),
-            home: const DashboardScreen(),
+    testGoldens(
+      'Dashboard responsive layout - tablet',
+      (tester) async {
+        await initializeDashboardTestEnvironment();
+        await tester.pumpWidget(
+          buildDashboardTestHarness(
+            size: const Size(768, 1024),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await _pumpDashboard(tester);
 
-      await expectLater(
-        find.byType(DashboardScreen),
-        matchesGoldenFile('dashboard_dark.png'),
-      );
-    }, skip: !_enableDashboardGoldens);
-
-    testGoldens('Dashboard responsive layout - mobile', (tester) async {
-      await tester.pumpWidgetBuilder(
-        const ProviderScope(
-          child: MaterialApp(
-            home: MediaQuery(
-              data: MediaQueryData(size: Size(375, 667)), // iPhone SE
-              child: DashboardScreen(),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      await expectLater(
-        find.byType(DashboardScreen),
-        matchesGoldenFile('dashboard_mobile.png'),
-      );
-    }, skip: !_enableDashboardGoldens);
-
-    testGoldens('Dashboard responsive layout - tablet', (tester) async {
-      await tester.pumpWidgetBuilder(
-        const ProviderScope(
-          child: MaterialApp(
-            home: MediaQuery(
-              data: MediaQueryData(size: Size(768, 1024)), // iPad
-              child: DashboardScreen(),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      await expectLater(
-        find.byType(DashboardScreen),
-        matchesGoldenFile('dashboard_tablet.png'),
-      );
-    }, skip: !_enableDashboardGoldens);
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile('dashboard_tablet.png'),
+        );
+      },
+      skip: !_enableDashboardGoldens,
+    );
   });
+}
+
+Future<void> _pumpDashboard(WidgetTester tester) async {
+  for (var i = 0; i < 8; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }

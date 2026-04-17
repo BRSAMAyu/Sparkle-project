@@ -14,7 +14,7 @@ from typing import Any
 
 from loguru import logger
 from pydantic import Field, PostgresDsn, RedisDsn, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ProductionSettings(BaseSettings):
@@ -264,7 +264,7 @@ class ProductionSettings(BaseSettings):
         Returns:
             脱敏配置
         """
-        config = self.dict()
+        config = self.model_dump()
 
         # 脱敏敏感信息
         sensitive_keys = [
@@ -289,10 +289,11 @@ class ProductionSettings(BaseSettings):
 
         return config
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
 
 
 # 单例实例

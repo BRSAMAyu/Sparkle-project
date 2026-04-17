@@ -79,6 +79,7 @@ class ProfileWriteService:
             for pref_key, pref_value in updates.items()
         }
         prefs = await self.pref_service.update_explicit(user_id, explicit_updates)
+        preference_version = prefs.version or 0
         await self._sync_legacy_fields(user_id, explicit_updates)
 
         latest_history_version: int | None = None
@@ -109,7 +110,7 @@ class ProfileWriteService:
                 )
 
         result = ProfileWriteResult(
-            preference_version=prefs.version or 0,
+            preference_version=preference_version,
             history_version=latest_history_version,
             history_record_id=latest_record_id,
         )

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.shop import PhotonTransactionType
 
@@ -16,8 +16,7 @@ class PhotonBalance(BaseModel):
     balance: int = Field(description="Current photon balance")
     updated_at: datetime | None = Field(default=None, description="Last update time")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PhotonBalanceResponse(BaseModel):
@@ -50,8 +49,7 @@ class PhotonTransactionItem(BaseModel):
         """Is expense transaction"""
         return self.amount < 0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TransactionHistoryResponse(BaseModel):
@@ -94,14 +92,15 @@ class PhotonTransferRequest(BaseModel):
             raise ValueError('Amount cannot exceed 10000 photons per transfer')
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "recipient_id": "123e4567-e89b-12d3-a456-426614174000",
                 "amount": 100,
-                "message": "Good job on your achievement!"
+                "message": "Good job on your achievement!",
             }
         }
+    )
 
 
 class PhotonTransferResponse(BaseModel):
@@ -127,16 +126,17 @@ class PhotonAdjustmentRequest(BaseModel):
     related_item_id: str | None = Field(default=None, description="Related item ID")
     extra_data: dict[str, Any] | None = Field(default=None, description="Additional metadata")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "user_id": "123e4567-e89b-12d3-a456-426614174000",
                 "amount": 500,
                 "reason": "Achievement reward: First sprint completion",
                 "transaction_type": "grant_achievement",
-                "related_item_id": "sprint_first_complete"
+                "related_item_id": "sprint_first_complete",
             }
         }
+    )
 
 
 class PhotonAdjustmentResponse(BaseModel):

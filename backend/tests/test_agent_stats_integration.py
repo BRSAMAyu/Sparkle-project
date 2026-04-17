@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import sys
 import os
+from uuid import uuid4
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -48,7 +49,7 @@ async def test_agent_stats_integration():
         print("🧪 开始Agent统计系统集成测试\n")
 
         # 测试数据
-        test_user_id = 1
+        test_user_id = str(uuid4())
         test_session_id = "test_session_123"
         test_request_id = "req_456"
 

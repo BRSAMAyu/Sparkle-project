@@ -156,10 +156,11 @@ class PlanService:
         try:
             from app.services.card_protocol.phase_service import PhaseService
 
-            weighted_progress = await PhaseService(db, event_bus).sync_legacy_plan_progress(
-                legacy_plan_id=plan_id,
-                user_id=user_id,
-            )
+            async with db.begin_nested():
+                weighted_progress = await PhaseService(db, event_bus).sync_legacy_plan_progress(
+                    legacy_plan_id=plan_id,
+                    user_id=user_id,
+                )
             if weighted_progress is not None:
                 await db.commit()
                 await db.refresh(plan)

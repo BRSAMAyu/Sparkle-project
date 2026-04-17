@@ -1,4 +1,5 @@
 """ExecutionEngineMixin — execution, planning, and tool-handling methods for ChatOrchestrator."""
+
 from __future__ import annotations
 
 import asyncio
@@ -184,6 +185,10 @@ class ExecutionEngineMixin:
             user_id=user_id,
             db_session=active_db,
             tool_call_id=f"bridge_{bridge_tool_name}_{uuid.uuid4().hex[:12]}",
+            runtime_context={
+                "session_id": session_id,
+                "redis_client": getattr(self, "redis", None),
+            },
         )
         if not result.success or not isinstance(result.data, dict):
             return None
@@ -572,13 +577,13 @@ class ExecutionEngineMixin:
     ) -> tuple[str, dict[str, Any]]:
         status = intent.status.value if intent and intent.status else "unknown"
         error_message = str(
-            (record.error_message if record else None)
-            or (intent.error_message if intent else None)
-            or ""
+            (record.error_message if record else None) or (intent.error_message if intent else None) or ""
         ).strip()
         parsed_output = record.parsed_output if record and isinstance(record.parsed_output, dict) else None
         output_text = self._extract_openclaw_output_text(record.raw_response if record else {})
-        approval = (record.raw_response or {}).get("approval") if record and isinstance(record.raw_response, dict) else {}
+        approval = (
+            (record.raw_response or {}).get("approval") if record and isinstance(record.raw_response, dict) else {}
+        )
         approval = approval if isinstance(approval, dict) else {}
         recovery = ((intent.policy or {}).get("error_recovery") or {}) if intent else {}
         recovery = recovery if isinstance(recovery, dict) else {}
@@ -625,9 +630,7 @@ class ExecutionEngineMixin:
             "source_message": message,
             "result_preview": result_preview,
             "impact_summary": "这次结果来自用户自己的 OpenClaw 远程执行链路。",
-            "manual_steps": [
-                item for item in list(recovery.get("manual_steps") or []) if isinstance(item, dict)
-            ],
+            "manual_steps": [item for item in list(recovery.get("manual_steps") or []) if isinstance(item, dict)],
             "error_suggestion": (
                 {
                     "suggestion": recovery.get("suggestion"),
@@ -652,7 +655,8 @@ class ExecutionEngineMixin:
         }
         return assistant_text, {
             "tool_name": "openclaw.chat_control",
-            "success": intent.status in {
+            "success": intent.status
+            in {
                 ExecutionIntentStatus.WAITING_APPROVAL,
                 ExecutionIntentStatus.SUCCEEDED,
                 ExecutionIntentStatus.PARTIAL,
@@ -689,12 +693,12 @@ class ExecutionEngineMixin:
                 "error_recovery": fallback or None,
             },
             "error_message": error_message,
-            "suggestion": str(
-                fallback.get("suggestion") or "先检查 OpenClaw 连接状态，再重试这条请求"
-            ),
+            "suggestion": str(fallback.get("suggestion") or "先检查 OpenClaw 连接状态，再重试这条请求"),
             "widget_type": "execution_summary",
             "widget_data": {
-                "title": "OpenClaw 已切到手动协作" if fallback.get("manual_only") is True else "OpenClaw 远程控制未完成",
+                "title": (
+                    "OpenClaw 已切到手动协作" if fallback.get("manual_only") is True else "OpenClaw 远程控制未完成"
+                ),
                 "summary": str(fallback.get("suggestion") or error_message),
                 "status": "degraded" if fallback.get("manual_only") is True else "failed",
                 "tool_result_id": error_id,
@@ -703,9 +707,7 @@ class ExecutionEngineMixin:
                 "error_message": error_message,
                 "requires_confirmation": False,
                 "source_message": message,
-                "manual_steps": [
-                    item for item in list(fallback.get("manual_steps") or []) if isinstance(item, dict)
-                ],
+                "manual_steps": [item for item in list(fallback.get("manual_steps") or []) if isinstance(item, dict)],
                 "error_suggestion": (
                     {
                         "suggestion": fallback.get("suggestion"),
@@ -715,7 +717,9 @@ class ExecutionEngineMixin:
                     if fallback
                     else None
                 ),
-                "retry_action": fallback.get("retry_action") if isinstance(fallback.get("retry_action"), dict) else None,
+                "retry_action": (
+                    fallback.get("retry_action") if isinstance(fallback.get("retry_action"), dict) else None
+                ),
             },
             "tool_call_id": error_id,
         }
@@ -789,11 +793,7 @@ class ExecutionEngineMixin:
     @staticmethod
     def _format_openclaw_live_details(live_state: dict[str, Any]) -> str:
         current_step = str(live_state.get("current_step") or "").strip()
-        recent_output = [
-            str(item).strip()
-            for item in list(live_state.get("recent_output") or [])
-            if str(item).strip()
-        ]
+        recent_output = [str(item).strip() for item in list(live_state.get("recent_output") or []) if str(item).strip()]
         if not recent_output:
             return current_step or "正在连接你的 OpenClaw"
         return "\n".join([current_step or "正在执行中", *recent_output[-3:]])
@@ -925,11 +925,7 @@ class ExecutionEngineMixin:
     ) -> None:
         if executable_plan is None or stream_callback is None:
             return
-        agent_ids = [
-            str(agent).strip()
-            for agent in list(executable_plan.agents_involved or [])
-            if str(agent).strip()
-        ]
+        agent_ids = [str(agent).strip() for agent in list(executable_plan.agents_involved or []) if str(agent).strip()]
         if len(agent_ids) < 2:
             return
 
@@ -1073,7 +1069,12 @@ class ExecutionEngineMixin:
                 } and isinstance(value, str):
                     with contextlib.suppress(ValueError):
                         sink.append(str(uuid.UUID(value)))
-                elif normalized_key in {"focus_node_ids", "related_node_ids", "source_ids", "references"} and isinstance(value, list):
+                elif normalized_key in {
+                    "focus_node_ids",
+                    "related_node_ids",
+                    "source_ids",
+                    "references",
+                } and isinstance(value, list):
                     for item in value:
                         if isinstance(item, str):
                             with contextlib.suppress(ValueError):
@@ -1213,10 +1214,24 @@ class ExecutionEngineMixin:
 
         return "\n".join(lines)
 
+    @staticmethod
+    def _attach_quality_report_context(*, state: Any, quality_report: dict[str, Any] | None) -> None:
+        quality_report = quality_report if isinstance(quality_report, dict) else {}
+        metadata_expectations = quality_report.get("metadata_expectations")
+        metadata_expectations = metadata_expectations if isinstance(metadata_expectations, dict) else {}
+        semantic_control_compliance = metadata_expectations.get("semantic_control")
+        if not isinstance(semantic_control_compliance, dict) or not semantic_control_compliance:
+            return
+        context_data = getattr(state, "context_data", None)
+        if isinstance(context_data, dict):
+            context_data["semantic_control_compliance"] = semantic_control_compliance
+
     async def _get_tools_schema(self, active_tools: list[str] | None = None) -> list[dict[str, Any]]:
         """Get tools from dynamic registry, optionally filtered by request-scoped allowlist."""
         try:
-            requested_tools = [tool_name.strip() for tool_name in (active_tools or []) if tool_name and tool_name.strip()]
+            requested_tools = [
+                tool_name.strip() for tool_name in (active_tools or []) if tool_name and tool_name.strip()
+            ]
             if not requested_tools:
                 return dynamic_tool_registry.get_openai_tools_schema()
 
@@ -1257,9 +1272,7 @@ class ExecutionEngineMixin:
         """
         import typing
 
-        transparency_enabled = bool(
-            settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT
-        )
+        transparency_enabled = bool(settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT)
         transparency_generator = TransparencyDataGenerator(
             request_id=request_id or response_id,
             enabled=transparency_enabled,
@@ -1310,11 +1323,11 @@ class ExecutionEngineMixin:
             )
 
         # Emit initial thinking status
-        await stream_callback(agent_service_pb2.ChatResponse(
-            status_update=agent_service_pb2.AgentStatus(
-                state=agent_service_pb2.AgentStatus.THINKING
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                status_update=agent_service_pb2.AgentStatus(state=agent_service_pb2.AgentStatus.THINKING)
             )
-        ))
+        )
 
         # Inject tools into state
         state.context_data["tools_schema"] = tools
@@ -1335,7 +1348,7 @@ class ExecutionEngineMixin:
     def _iter_text_chunks(text: str, chunk_size: int = 240) -> list[str]:
         if not text:
             return []
-        return [text[idx:idx + chunk_size] for idx in range(0, len(text), chunk_size)]
+        return [text[idx : idx + chunk_size] for idx in range(0, len(text), chunk_size)]
 
     async def _continue_after_tool_result(
         self,
@@ -1444,12 +1457,15 @@ class ExecutionEngineMixin:
         ux_envelope = await ux_envelope_builder.build(
             user_message=self._extract_latest_user_message(conversation_history),
             full_response=full_response,
-            final_state=WorkflowState(messages=conversation_history, context_data={
-                "chat_mode": CHAT_MODE_STANDARD,
-                "conversation_context": conversation_context,
-                "include_references": False,
-                "file_ids": [],
-            }),
+            final_state=WorkflowState(
+                messages=conversation_history,
+                context_data={
+                    "chat_mode": CHAT_MODE_STANDARD,
+                    "conversation_context": conversation_context,
+                    "include_references": False,
+                    "file_ids": [],
+                },
+            ),
             executable_plan=None,
             route_decision=RouteDecision(
                 execution_mode="direct",
@@ -1470,7 +1486,7 @@ class ExecutionEngineMixin:
             "metadata": response_metadata,
         }
         await self._cache_response(session_id, request_id, final_response_data)
-        update_responses, _, _, _, _, _ = await self._drain_system_updates(user_id)
+        update_responses, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
         for update_resp in update_responses:
             yield update_resp
 
@@ -1488,6 +1504,8 @@ class ExecutionEngineMixin:
 
     async def _handle_multi_agent_mode(
         self,
+        *,
+        state: WorkflowState,
         chat_mode: str,
         user_message: str,
         user_id: str,
@@ -1519,6 +1537,11 @@ class ExecutionEngineMixin:
             "user_context": user_context_payload,
             "conversation_context": conversation_context,
             "plan_context": plan_context,
+            "effective_companion_state": state.context_data.get("effective_companion_state"),
+            "relationship_profile": state.context_data.get("relationship_profile"),
+            "companion_state_recent_revisions": state.context_data.get("companion_state_recent_revisions"),
+            "soul_runtime_context": state.context_data.get("soul_runtime_context"),
+            "soul_runtime_debug": state.context_data.get("soul_runtime_debug"),
             "db_session": active_db,
             "prompt_version": prompt_version,
             "workflow_id": workflow_id,
@@ -1656,10 +1679,12 @@ class ExecutionEngineMixin:
                     context_focus = None
                     briefing_note = ""
                     focused_memory = None
+                    situation_brief = None
                     if isinstance(user_context_payload, dict):
                         context_focus = user_context_payload.get("context_focus")
                         briefing_note = str(user_context_payload.get("context_briefing_note") or "").strip()
                         focused_memory = user_context_payload.get("focused_memory")
+                        situation_brief = user_context_payload.get("situation_brief")
                     if context_focus:
                         response_metadata["context_focus"] = json.dumps(context_focus, ensure_ascii=False)
                         response_metadata["context_section_weights"] = json.dumps(
@@ -1675,13 +1700,37 @@ class ExecutionEngineMixin:
                             "episodic": len(list(focused_memory.get("episodic_memories") or [])),
                         }
                         response_metadata["focused_memory_summary"] = json.dumps(summary, ensure_ascii=False)
-                        semantic_meta = (((focused_memory.get("context_pack") or {}).get("metadata") or {}).get("semantic_gating"))
+                        semantic_meta = ((focused_memory.get("context_pack") or {}).get("metadata") or {}).get(
+                            "semantic_gating"
+                        )
                         if semantic_meta:
                             response_metadata["context_semantic_gating"] = json.dumps(semantic_meta, ensure_ascii=False)
-                understanding_depth = (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
+                    if isinstance(situation_brief, dict):
+                        response_metadata["situation_brief"] = json.dumps(situation_brief, ensure_ascii=False)
+                        summary = str(situation_brief.get("summary") or "").strip()
+                        if summary:
+                            response_metadata["situation_brief_summary"] = summary
+                        decision_context = situation_brief.get("decision_context")
+                        if isinstance(decision_context, dict):
+                            response_metadata["residual_decision_context"] = json.dumps(
+                                decision_context,
+                                ensure_ascii=False,
+                            )
+                    strategy_state = user_context_payload.get("user_strategy_state") if isinstance(user_context_payload, dict) else None
+                    if isinstance(strategy_state, dict):
+                        response_metadata["user_strategy_state"] = json.dumps(strategy_state, ensure_ascii=False)
+                understanding_depth = (
+                    (user_context_payload or {}).get("understanding_depth")
+                    if isinstance(user_context_payload, dict)
+                    else None
+                )
                 if isinstance(understanding_depth, dict):
                     response_metadata["understanding_depth"] = json.dumps(understanding_depth, ensure_ascii=False)
-                returning_context = (user_context_payload or {}).get("returning_context") if isinstance(user_context_payload, dict) else None
+                returning_context = (
+                    (user_context_payload or {}).get("returning_context")
+                    if isinstance(user_context_payload, dict)
+                    else None
+                )
                 if isinstance(returning_context, dict):
                     response_metadata["returning_after_silence"] = json.dumps(returning_context, ensure_ascii=False)
                 result_holder["final_response_data"] = {
@@ -1738,23 +1787,25 @@ class ExecutionEngineMixin:
         """Inject all runtime dependencies into the workflow state."""
         if active_db:
             state.context_data["db_session"] = active_db
-        state.context_data.update({
-            "user_id": user_id,
-            "session_id": session_id,
-            "stream_callback": stream_callback,
-            "tools_schema": tools_schema,
-            "transparency_generator": transparency_generator,
-            "emit_transparency_event": emit_transparency_event,
-            "redis_client": self.redis,
-            "user_context": user_context_payload,
-            "conversation_context": conversation_context,
-            "plan_context": plan_context,
-            "file_ids": file_ids,
-            "include_references": include_references,
-            "workflow_id": workflow_id,
-            "prompt_version": prompt_version,
-            "run_ledger": run_ledger,
-        })
+        state.context_data.update(
+            {
+                "user_id": user_id,
+                "session_id": session_id,
+                "stream_callback": stream_callback,
+                "tools_schema": tools_schema,
+                "transparency_generator": transparency_generator,
+                "emit_transparency_event": emit_transparency_event,
+                "redis_client": self.redis,
+                "user_context": user_context_payload,
+                "conversation_context": conversation_context,
+                "plan_context": plan_context,
+                "file_ids": file_ids,
+                "include_references": include_references,
+                "workflow_id": workflow_id,
+                "prompt_version": prompt_version,
+                "run_ledger": run_ledger,
+            }
+        )
 
     async def _execute_graph(
         self,
@@ -1889,6 +1940,12 @@ class ExecutionEngineMixin:
                 planning_constraints["excluded_agents"] = list(mode_strategy.excluded_agents)
             if mode_strategy and mode_strategy.output_structure:
                 planning_constraints["required_output_structure"] = list(mode_strategy.output_structure)
+            if isinstance(user_context_payload, dict):
+                situation_brief = user_context_payload.get("situation_brief")
+                if isinstance(situation_brief, dict):
+                    planning_strategy = situation_brief.get("planning_strategy")
+                    if isinstance(planning_strategy, dict) and planning_strategy:
+                        planning_constraints["planning_strategy"] = planning_strategy
 
             # Phase 1-B: Inject Cognitive Policy Signals
             if isinstance(user_context_payload, dict):
@@ -1934,11 +1991,7 @@ class ExecutionEngineMixin:
                         reason=(
                             f"根据你的画像，当前最大专注时长约 {persona_constraints.max_session_minutes} 分钟，"
                             f"时间倍率 {persona_constraints.time_multiplier:.2f}"
-                            + (
-                                "，并需要热身任务来降低启动成本。"
-                                if persona_constraints.require_warmup_task
-                                else "。"
-                            )
+                            + ("，并需要热身任务来降低启动成本。" if persona_constraints.require_warmup_task else "。")
                         ),
                         metadata={
                             "recent_completion_rate": round(persona_constraints.recent_completion_rate, 4),
@@ -2023,8 +2076,7 @@ class ExecutionEngineMixin:
                         user_id=user_id,
                         session_id=session_id,
                         rationale=(
-                            f"Planner timeout after {_LANGGRAPH_PLANNER_TIMEOUT_SECONDS:.0f}s, "
-                            "synthesized fallback"
+                            f"Planner timeout after {_LANGGRAPH_PLANNER_TIMEOUT_SECONDS:.0f}s, " "synthesized fallback"
                         ),
                         plan_version=1,
                     )
@@ -2047,6 +2099,11 @@ class ExecutionEngineMixin:
                             user_context_payload["agent_memory_context"] = memory_context
                     except Exception as exc:
                         logger.debug(f"Failed to hydrate agent memory context: {exc}")
+
+            rendered_plan_artifact = self.lang_graph_planner.pop_rendered_plan_artifact(session_id)
+            if rendered_plan_artifact and isinstance(user_context_payload, dict):
+                user_context_payload["rendered_plan_artifact"] = rendered_plan_artifact
+                state.context_data["rendered_plan_artifact"] = rendered_plan_artifact
 
             collaboration_narrative = (
                 executable_plan.collaboration_narrative
@@ -2071,7 +2128,9 @@ class ExecutionEngineMixin:
                     ]
                     if actual_agents:
                         mode_step.metadata["agents_involved"] = actual_agents
-                        if not (mode_step.metadata.get("required_agents") or mode_step.metadata.get("preferred_agents")):
+                        if not (
+                            mode_step.metadata.get("required_agents") or mode_step.metadata.get("preferred_agents")
+                        ):
                             mode_step.metadata["required_agents"] = actual_agents
                         self._sync_orchestration_trace(
                             state=state,
@@ -2203,9 +2262,9 @@ class ExecutionEngineMixin:
                 user_id=user_id,
             )
             if not preflight["is_ready"]:
-                await stream_callback(agent_service_pb2.ChatResponse(
-                    delta=f"\n\n⚠️ 服务暂时不可用: {', '.join(preflight['blocked_by'])}"
-                ))
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(delta=f"\n\n⚠️ 服务暂时不可用: {', '.join(preflight['blocked_by'])}")
+                )
                 await self.langgraph_breaker.on_failure("preflight_blocked")
                 return route_decision, executable_plan, snapshot, True
 
@@ -2233,15 +2292,14 @@ class ExecutionEngineMixin:
                             **(user_context_payload or {}),
                             "plan_context": plan_context or (user_context_payload or {}).get("plan_context"),
                             "mode_strategy": state.context_data.get("mode_strategy"),
+                            "rendered_plan_artifact": state.context_data.get("rendered_plan_artifact"),
                         },
                     )
                     if orchestration_trace is not None:
                         alignment_score = review_result.alignment_score
                         decision_label = str(review_result.decision or "unknown")
                         alignment_text = (
-                            f"{alignment_score:.2f}"
-                            if isinstance(alignment_score, (int, float))
-                            else "未知"
+                            f"{alignment_score:.2f}" if isinstance(alignment_score, (int, float)) else "未知"
                         )
                         orchestration_trace.add_step(
                             step_id="plan_review",
@@ -2340,6 +2398,43 @@ class ExecutionEngineMixin:
                             )
                         logger.info(f"Review feedback written for plan {plan_id}")
 
+                    quality_report = review_result.quality_report or {}
+                    self._attach_quality_report_context(state=state, quality_report=quality_report)
+                    quality_decision = str(quality_report.get("decision") or "").strip()
+                    if quality_decision == "ask_more":
+                        situation_brief = (user_context_payload or {}).get("situation_brief")
+                        decision_context = situation_brief.get("decision_context") if isinstance(situation_brief, dict) else {}
+                        clarification_questions = [
+                            str(item).strip()
+                            for item in (decision_context.get("strategic_clarification_questions") or [])
+                            if str(item).strip()
+                        ] if isinstance(decision_context, dict) else []
+                        question = clarification_questions[0] if clarification_questions else "我还缺哪个关键信息，才能把计划做得更靠谱？"
+                        clarification_delta = (
+                            "\n\n⚠️ 这轮我先不把计划当成强计划发出去。\n\n"
+                            f"- 我需要先确认：{question}\n\n"
+                            "你告诉我这个信息后，我会按同一目标继续收紧并重做计划。"
+                        )
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                delta=clarification_delta,
+                                metadata={
+                                    "requires_clarification": "true",
+                                    "clarification_source": "phase_b_quality_gate",
+                                    "review_decision": review_result.decision,
+                                    "quality_decision": quality_decision,
+                                    "review_id": review_result.review_id,
+                                    "plan_id": review_result.plan_id,
+                                },
+                            )
+                        )
+                        state.context_data["plan_review"] = review_result.to_dict()
+                        logger.info(
+                            "Plan %s bounced to clarification by Phase B quality gate",
+                            executable_plan.plan_id,
+                        )
+                        return route_decision, executable_plan, snapshot, True
+
                     review_requires_user_action = review_result.decision in [
                         ReviewDecision.REJECTED.value,
                         ReviewDecision.REQUIRES_CONFIRMATION.value,
@@ -2385,8 +2480,7 @@ class ExecutionEngineMixin:
                             "confidence": executable_plan.confidence,
                             "alignment_score": executable_plan.confidence,
                             "alignment_summary": (
-                                "复杂规划已自动降级为可直接执行的最小计划链，"
-                                "以确保聊天内能稳定产出计划卡与任务卡。"
+                                "复杂规划已自动降级为可直接执行的最小计划链，" "以确保聊天内能稳定产出计划卡与任务卡。"
                             ),
                             "reasoning_source": "review_degraded_to_synthesized_fallback",
                             "plan_id": executable_plan.plan_id,
@@ -2410,10 +2504,12 @@ class ExecutionEngineMixin:
                             "review_data": json.dumps(review_data_dict),
                         }
                         review_delta = self._format_review_message(review_result)
-                        await stream_callback(agent_service_pb2.ChatResponse(
-                            delta=review_delta,
-                            metadata=review_metadata,
-                        ))
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                delta=review_delta,
+                                metadata=review_metadata,
+                            )
+                        )
                         state.context_data["plan_review"] = review_result.to_dict()
                         state.context_data["pending_review_action_id"] = action_id
                         logger.info(
@@ -2424,8 +2520,7 @@ class ExecutionEngineMixin:
 
                     state.context_data["plan_review"] = review_result.to_dict()
                     logger.info(
-                        f"Plan {executable_plan.plan_id} auto-approved: "
-                        f"confidence={review_result.confidence}"
+                        f"Plan {executable_plan.plan_id} auto-approved: " f"confidence={review_result.confidence}"
                     )
 
             state.context_data["executable_plan"] = executable_plan
@@ -2463,8 +2558,6 @@ class ExecutionEngineMixin:
         except Exception as e:
             logger.error(f"LangGraph planning error: {e}", exc_info=True)
             await self.langgraph_breaker.on_failure(str(e))
-            await stream_callback(agent_service_pb2.ChatResponse(
-                delta=f"\n\n⚠️ 规划失败，使用直接模式: {str(e)}"
-            ))
+            await stream_callback(agent_service_pb2.ChatResponse(delta=f"\n\n⚠️ 规划失败，使用直接模式: {str(e)}"))
             route_decision.execution_mode = "direct"
             return route_decision, executable_plan, snapshot, False

@@ -19,6 +19,8 @@ class DashboardState {
     this.mostImportantTask,
     this.growthSignal,
     this.activePlanProgress,
+    this.whatChangedCard,
+    this.nextMoveCard,
     this.isLoading = false,
     this.error,
   });
@@ -35,6 +37,8 @@ class DashboardState {
         mostImportantTask = null,
         growthSignal = null,
         activePlanProgress = null,
+        whatChangedCard = null,
+        nextMoveCard = null,
         isLoading = true,
         error = null;
 
@@ -50,6 +54,8 @@ class DashboardState {
         mostImportantTask = null,
         growthSignal = null,
         activePlanProgress = null,
+        whatChangedCard = null,
+        nextMoveCard = null,
         isLoading = false,
         error = errorMessage;
   final WeatherData weather;
@@ -63,6 +69,8 @@ class DashboardState {
   final PriorityTaskData? mostImportantTask;
   final GrowthSignalData? growthSignal;
   final ActivePlanProgressData? activePlanProgress;
+  final WhatChangedCardData? whatChangedCard;
+  final NextMoveCardData? nextMoveCard;
   final bool isLoading;
   final String? error;
 
@@ -78,6 +86,8 @@ class DashboardState {
     PriorityTaskData? mostImportantTask,
     GrowthSignalData? growthSignal,
     ActivePlanProgressData? activePlanProgress,
+    WhatChangedCardData? whatChangedCard,
+    NextMoveCardData? nextMoveCard,
     bool? isLoading,
     String? error,
   }) =>
@@ -93,6 +103,8 @@ class DashboardState {
         mostImportantTask: mostImportantTask ?? this.mostImportantTask,
         growthSignal: growthSignal ?? this.growthSignal,
         activePlanProgress: activePlanProgress ?? this.activePlanProgress,
+        whatChangedCard: whatChangedCard ?? this.whatChangedCard,
+        nextMoveCard: nextMoveCard ?? this.nextMoveCard,
         isLoading: isLoading ?? this.isLoading,
         error: error ?? this.error,
       );
@@ -258,6 +270,42 @@ class ActivePlanProgressData {
   final double progress;
   final double masteryLevel;
   final String? targetDate;
+  final int? daysToDeadline;
+}
+
+class WhatChangedCardData {
+  WhatChangedCardData({
+    required this.headline,
+    required this.summary,
+    required this.highlights,
+    required this.timeframeLabel,
+  });
+
+  final String headline;
+  final String summary;
+  final List<String> highlights;
+  final String timeframeLabel;
+}
+
+class NextMoveCardData {
+  NextMoveCardData({
+    required this.headline,
+    required this.summary,
+    required this.whyNow,
+    required this.reassurance,
+    this.taskId,
+    this.estimatedMinutes = 0,
+    this.planName,
+    this.daysToDeadline,
+  });
+
+  final String headline;
+  final String summary;
+  final String whyNow;
+  final String reassurance;
+  final String? taskId;
+  final int estimatedMinutes;
+  final String? planName;
   final int? daysToDeadline;
 }
 
@@ -549,6 +597,38 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
                   : _asInt(activePlanMap['days_to_deadline']),
             );
 
+      final whatChangedMap =
+          _asStringKeyedMap(mergedDashboardData['what_changed_card']);
+      final whatChangedCard = whatChangedMap == null
+          ? null
+          : WhatChangedCardData(
+              headline: _asString(whatChangedMap['headline']),
+              summary: _asString(whatChangedMap['summary']),
+              highlights: _asDynamicList(whatChangedMap['highlights'])
+                  .map((item) => '$item')
+                  .where((item) => item.trim().isNotEmpty)
+                  .toList(),
+              timeframeLabel:
+                  _asString(whatChangedMap['timeframe_label'], fallback: '最近'),
+            );
+
+      final nextMoveMap =
+          _asStringKeyedMap(mergedDashboardData['next_move_card']);
+      final nextMoveCard = nextMoveMap == null
+          ? null
+          : NextMoveCardData(
+              headline: _asString(nextMoveMap['headline']),
+              summary: _asString(nextMoveMap['summary']),
+              whyNow: _asString(nextMoveMap['why_now']),
+              reassurance: _asString(nextMoveMap['reassurance']),
+              taskId: _asNullableString(nextMoveMap['task_id']),
+              estimatedMinutes: _asInt(nextMoveMap['estimated_minutes']),
+              planName: _asNullableString(nextMoveMap['plan_name']),
+              daysToDeadline: nextMoveMap['days_to_deadline'] == null
+                  ? null
+                  : _asInt(nextMoveMap['days_to_deadline']),
+            );
+
       state = DashboardState(
         weather: weather,
         flame: flame,
@@ -561,6 +641,8 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         mostImportantTask: mostImportantTask,
         growthSignal: growthSignal,
         activePlanProgress: activePlanProgress,
+        whatChangedCard: whatChangedCard,
+        nextMoveCard: nextMoveCard,
       );
     } catch (e) {
       debugPrint('Error loading dashboard: $e');

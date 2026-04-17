@@ -4,13 +4,16 @@ Closes event-bus paths for achievement progression without blocking request hand
 """
 
 import asyncio
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
+from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import select
 
 from app.core.event_bus import EventBus
 from app.core.event_types import EXECUTION_RESULT_INGESTED
 from app.db.session import AsyncSessionLocal
+from app.models.achievement import Achievement, AchievementRarity, UserAchievement
 from app.models.execution_intent import ExecutionIntent
 from app.models.execution_record import ExecutionRecord
 from app.models.task import Task
@@ -24,6 +27,8 @@ def _utcnow() -> datetime:
 class AchievementEventConsumer:
     STREAM_NAME = "sparkle_events"
     GROUP_NAME = "achievement_event_consumer"
+    SIGNAL_WINDOW_DAYS = 30
+    MIN_SIGNAL_SAMPLE = 3
 
     def __init__(self, event_bus: EventBus):
         self.event_bus = event_bus
@@ -166,18 +171,17 @@ class AchievementEventConsumer:
             return
 
         try:
-            from uuid import UUID
-
             from app.core.cache import cache_service
             from app.services.cognitive_service import CognitiveService
             from app.services.community_signal_bridge import CommunitySignalBridge
             from app.services.personalization.preference_service import PreferenceService
 
             async with AsyncSessionLocal() as db:
+                user_uuid = UUID(str(user_id))
                 cognitive_service = CognitiveService(db)
                 achievement_title = event.get("achievement_name") or event.get("title") or str(achievement_id)
                 await cognitive_service.create_fragment(
-                    user_id=UUID(str(user_id)),
+                    user_id=user_uuid,
                     content=f"用户达成了 {achievement_title} 成就。这是用户持续努力和进步的证明。",
                     source_type="achievement",
                     severity=1,
@@ -186,14 +190,14 @@ class AchievementEventConsumer:
                 logger.info(f"Recorded cognitive fragment for achievement {achievement_id} unlock by user {user_id}")
 
                 pref_service = PreferenceService(db, cache_service.redis)
-                prefs = await pref_service.get_preferences(UUID(str(user_id)))
+                prefs = await pref_service.get_preferences(user_uuid)
                 share_enabled = (prefs.explicit or {}).get("share_achievements_to_community", True)
 
                 if share_enabled:
                     try:
                         bridge = CommunitySignalBridge(db, cache_service.redis)
                         await bridge.broadcast_achievement_unlock(
-                            user_id=UUID(str(user_id)),
+                            user_id=user_uuid,
                             achievement_id=str(achievement_id),
                             achievement_title=achievement_title,
                             rarity=event.get("rarity", "common"),
@@ -201,8 +205,112 @@ class AchievementEventConsumer:
                         logger.info(f"Broadcast achievement {achievement_id} unlock to community for user {user_id}")
                     except Exception as broadcast_err:
                         logger.warning(f"Failed to broadcast achievement to community: {broadcast_err}")
+
+                await self._refresh_achievement_profile_signals(db, user_uuid)
         except Exception as e:
             logger.warning(f"Failed to record cognitive fragment for achievement: {e}")
 
     def stop(self):
         self._running = False
+
+    async def _refresh_achievement_profile_signals(self, db, user_id: UUID) -> None:
+        from app.core.cache import cache_service
+        from app.services.profile_write_service import ProfileWriteService
+
+        since = _utcnow() - timedelta(days=self.SIGNAL_WINDOW_DAYS)
+        result = await db.execute(
+            select(UserAchievement, Achievement)
+            .join(Achievement, Achievement.id == UserAchievement.achievement_id)
+            .where(
+                UserAchievement.user_id == user_id,
+                UserAchievement.unlocked_at.is_not(None),
+                UserAchievement.unlocked_at >= since,
+            )
+        )
+        rows = list(result.all())
+        if len(rows) < self.MIN_SIGNAL_SAMPLE:
+            return
+
+        hour_scores: dict[int, float] = {}
+        pace_scores = {"steady": 0.0, "sprint": 0.0, "mixed": 0.0}
+        motivation_scores = {
+            "progress_praise": 0.0,
+            "milestone_celebration": 0.0,
+            "mastery_affirmation": 0.0,
+        }
+        reward_score = 0.0
+        total_weight = 0.0
+
+        for user_achievement, achievement in rows:
+            unlocked_at = user_achievement.unlocked_at or user_achievement.updated_at or user_achievement.created_at or _utcnow()
+            recency_days = max(0.0, (_utcnow() - unlocked_at).total_seconds() / 86400.0)
+            recency_weight = max(0.35, 1.0 - (recency_days / self.SIGNAL_WINDOW_DAYS))
+            rarity_weight = self._rarity_weight(achievement.rarity)
+            weight = recency_weight * rarity_weight
+            total_weight += weight
+            hour_scores[unlocked_at.hour] = hour_scores.get(unlocked_at.hour, 0.0) + weight
+
+            achievement_type = self._achievement_type_name(achievement)
+            if achievement_type in {"streak", "study_time"}:
+                pace_scores["steady"] += weight * 1.15
+                motivation_scores["progress_praise"] += weight
+            elif achievement_type in {"task_complete", "sprint"}:
+                pace_scores["sprint"] += weight * 1.2
+                motivation_scores["milestone_celebration"] += weight
+            elif achievement_type in {"mastery", "milestone", "node_explore"}:
+                pace_scores["mixed"] += weight
+                motivation_scores["mastery_affirmation"] += weight * 1.15
+            else:
+                pace_scores["mixed"] += weight
+                motivation_scores["milestone_celebration"] += weight * 0.8
+
+            reward_score += (rarity_weight * 0.7 + min(float(user_achievement.share_count or 0), 2.0) * 0.15) * recency_weight
+
+        if total_weight <= 0:
+            return
+
+        updates: dict[str, object] = {}
+        top_hours = sorted(hour_scores.items(), key=lambda item: (-item[1], item[0]))
+        if top_hours:
+            updates["achievement_peak_hours"] = [hour for hour, _score in top_hours[:3]]
+
+        pace_style = max(pace_scores, key=pace_scores.get)
+        if pace_scores[pace_style] > 0:
+            updates["achievement_pace_style"] = pace_style
+
+        motivation_response = max(motivation_scores, key=motivation_scores.get)
+        if motivation_scores[motivation_response] > 0:
+            updates["achievement_motivation_response"] = motivation_response
+
+        normalized_reward = reward_score / total_weight
+        if normalized_reward >= 1.35:
+            updates["achievement_reward_sensitivity"] = "high"
+        elif normalized_reward >= 0.95:
+            updates["achievement_reward_sensitivity"] = "medium"
+        else:
+            updates["achievement_reward_sensitivity"] = "low"
+
+        if not updates:
+            return
+
+        writer = ProfileWriteService(db, cache_service.redis)
+        await writer.update_inferred_preference(
+            user_id=user_id,
+            updates=updates,
+            source="achievement_signals",
+        )
+
+    @staticmethod
+    def _achievement_type_name(achievement: Achievement) -> str:
+        raw = achievement.type
+        return str(raw.value if hasattr(raw, "value") else raw or "").strip().lower()
+
+    @staticmethod
+    def _rarity_weight(rarity: AchievementRarity | str | None) -> float:
+        value = str(rarity.value if hasattr(rarity, "value") else rarity or "").strip().lower()
+        return {
+            "common": 1.0,
+            "rare": 1.2,
+            "epic": 1.45,
+            "legendary": 1.7,
+        }.get(value, 1.0)

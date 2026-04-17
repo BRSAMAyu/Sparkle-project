@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.cognitive import AnalysisStatus, PatternType
 
@@ -48,8 +48,7 @@ class CognitiveFragmentResponse(BaseModel):
     persona_version: str | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # ==========================================
 # Behavior Pattern Schemas
@@ -92,5 +91,4 @@ class BehaviorPatternResponse(BaseModel):
 
         return PatternType.EXECUTION
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

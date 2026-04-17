@@ -82,6 +82,7 @@ class ModelTier(str, Enum):
     PLUS = "plus"           # 高质量非思考
     PRO = "pro"             # 深推理
     MAX = "max"             # 最高层，显式使用
+    TOP = "top"             # 超高层，glm-5.1
     REASONING = "reasoning" # 兼容旧值，内部会归一到 pro
     GLM_BATCH = "glm_batch" # GLM批量处理层
     SPECIALIST = "specialist" # OCR、翻译等专用模型

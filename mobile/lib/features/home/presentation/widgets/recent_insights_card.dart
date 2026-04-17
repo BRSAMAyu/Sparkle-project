@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
@@ -53,6 +54,10 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isChinese = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('zh');
     final notificationState = ref.watch(notificationCenterProvider);
     final systemUpdates = ref.watch(systemUpdatesProvider).maybeWhen(
           data: (items) => items,
@@ -86,7 +91,8 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
           .map(
             (item) => _InsightEntry(
               type: item['type']?.toString() ?? '',
-              title: item['title']?.toString() ?? '最近洞察',
+              title: item['title']?.toString() ??
+                  (isChinese ? '最近洞察' : 'Recent Insights'),
               subtitle: item['description']?.toString() ?? '',
               metadata: Map<String, dynamic>.from(
                 item['metadata'] as Map? ?? const {},
@@ -117,77 +123,69 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
           DS.spacing16,
           0,
           DS.spacing16,
-          DS.spacing16,
+          DS.spacing10,
         ),
-        child: GraphiteCardSurface(
-          surfaceRole: SparkleSurfaceRole.card,
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing10,
-          ),
+        child: DashboardSectionShell(
+          tone: DashboardSurfaceTone.summary,
+          padding: const EdgeInsets.all(DS.spacing12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: DS.brandPrimary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.auto_graph_rounded,
-                      size: 16,
-                      color: DS.brandPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing8),
-                  Expanded(
-                    child: Text(
-                      '最近洞察',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                  Text(
-                    '${recentEntries.length} 条',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              DashboardSectionHeader(
+                icon: Icons.auto_graph_rounded,
+                accentColor: DS.brandPrimary,
+                title: isChinese ? '最近洞察' : 'Recent Insights',
+                summary: _isCollapsed
+                    ? (isChinese
+                        ? '已收起最近洞察，需要时可随时展开查看。'
+                        : 'Recent insights are collapsed. Expand them whenever you want another look.')
+                    : (isChinese
+                        ? '最近 ${recentEntries.length} 条与你学习动线相关的更新。'
+                        : 'Latest ${recentEntries.length} updates related to your learning flow.'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing8,
+                        vertical: DS.spacing4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceOverlay,
+                        borderRadius: DS.borderRadiusFull,
+                        border: Border.all(color: DS.borderSubtle),
+                      ),
+                      child: Text(
+                        '${recentEntries.length}',
+                        style: context.sparkleTypography.labelSmall.copyWith(
                           color: DS.textSecondary,
+                          fontWeight: DS.fontWeightBold,
                         ),
-                  ),
-                  const SizedBox(width: DS.spacing4),
-                  SparkleIconButton(
-                    variant: ButtonVariant.ghost,
-                    size: 32,
-                    onPressed: () => unawaited(_setCollapsed(!_isCollapsed)),
-                    icon: Icon(
-                      _isCollapsed
-                          ? Icons.keyboard_arrow_down_rounded
-                          : Icons.keyboard_arrow_up_rounded,
-                      size: 18,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: DS.spacing6),
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: 32,
+                      onPressed: () => unawaited(_setCollapsed(!_isCollapsed)),
+                      icon: Icon(
+                        _isCollapsed
+                            ? Icons.keyboard_arrow_down_rounded
+                            : Icons.keyboard_arrow_up_rounded,
+                        size: 18,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               AnimatedSwitcher(
                 duration: DS.durationFast,
                 switchInCurve: Curves.easeOutCubic,
                 switchOutCurve: Curves.easeInCubic,
                 child: _isCollapsed
-                    ? Padding(
-                        key: const ValueKey('collapsed'),
-                        padding: const EdgeInsets.only(top: DS.spacing8),
-                        child: Text(
-                          '已收起最近洞察，需要时可随时展开查看。',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: DS.textSecondary,
-                                    height: 1.4,
-                                  ),
-                        ),
+                    ? const SizedBox(
+                        key: ValueKey('collapsed'),
+                        height: 0,
                       )
                     : Column(
                         key: const ValueKey('expanded'),
@@ -313,8 +311,14 @@ class _InsightRow extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: DS.spacing8),
+          padding: const EdgeInsets.all(DS.spacing10),
+          decoration: BoxDecoration(
+            color: DS.surfacePrimary.withValues(alpha: 0.72),
+            borderRadius: DS.borderRadius16,
+            border: Border.all(color: DS.borderSubtle),
+          ),
           child: Row(
             children: [
               Container(
@@ -335,22 +339,29 @@ class _InsightRow extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: context.sparkleTypography.labelLarge.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
                     ),
+                    const SizedBox(height: DS.spacing4),
                     Text(
                       subtitle,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: context.sparkleTypography.bodySmall.copyWith(
                         color: DS.textSecondary,
-                        fontSize: DS.fontSizeXs,
+                        height: 1.35,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: DS.spacing6),
-              const Icon(Icons.chevron_right_rounded, size: 16),
+              const SizedBox(width: DS.spacing8),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: DS.textTertiary,
+              ),
             ],
           ),
         ),

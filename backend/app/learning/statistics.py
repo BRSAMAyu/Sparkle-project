@@ -9,6 +9,9 @@ Provides statistical methods for analyzing A/B test experiments including:
 - Confidence intervals
 - Effect size estimation
 """
+from math import erfc, sqrt
+from statistics import NormalDist
+
 try:
     from scipy import stats
     HAS_SCIPY = True
@@ -44,35 +47,43 @@ class ABTestStatistics:
             - confidence_interval: 95% CI for the difference
             - recommendation: Text recommendation
         """
-        if not HAS_SCIPY:
-            return {
-                "error": "scipy is required for Welch's t-test",
-                "test_type": "welch_t_test",
-            }
-
         if len(control_data) == 0 or len(treatment_data) == 0:
             return {
                 "error": "Both groups must have at least one observation",
                 "test_type": "welch_t_test",
             }
 
-        # Execute Welch's t-test (does not assume equal variance)
-        t_statistic, p_value = stats.ttest_ind(
-            control_data,
-            treatment_data,
-            equal_var=False,  # Welch's t-test
-        )
-
-        # Calculate effect size (Cohen's d)
         control_mean = np.mean(control_data)
         treatment_mean = np.mean(treatment_data)
-        control_std = np.std(control_data, ddof=1)
-        treatment_std = np.std(treatment_data, ddof=1)
+        control_std = np.std(control_data, ddof=1 if len(control_data) > 1 else 0)
+        treatment_std = np.std(treatment_data, ddof=1 if len(treatment_data) > 1 else 0)
+        n1, n2 = len(control_data), len(treatment_data)
+
+        # Execute Welch's t-test (does not assume equal variance).
+        if HAS_SCIPY:
+            t_statistic, p_value = stats.ttest_ind(
+                control_data,
+                treatment_data,
+                equal_var=False,
+            )
+        else:
+            se_diff = np.sqrt((control_std**2 / n1) + (treatment_std**2 / n2))
+            if se_diff == 0:
+                t_statistic = np.inf if treatment_mean != control_mean else 0.0
+                p_value = 0.0 if treatment_mean != control_mean else 1.0
+            else:
+                t_statistic = (treatment_mean - control_mean) / se_diff
+                # Use a normal approximation when scipy is unavailable.
+                p_value = 2 * (1 - NormalDist().cdf(abs(float(t_statistic))))
 
         # Pooled standard deviation
-        n1, n2 = len(control_data), len(treatment_data)
-        pooled_std = np.sqrt(
-            ((n1 - 1) * control_std**2 + (n2 - 1) * treatment_std**2) / (n1 + n2 - 2)
+        pooled_denominator = n1 + n2 - 2
+        pooled_std = (
+            np.sqrt(
+                ((n1 - 1) * control_std**2 + (n2 - 1) * treatment_std**2) / pooled_denominator
+            )
+            if pooled_denominator > 0
+            else 0.0
         )
 
         cohens_d = (treatment_mean - control_mean) / pooled_std if pooled_std > 0 else 0
@@ -129,12 +140,6 @@ class ABTestStatistics:
         Returns:
             Dict with test results
         """
-        if not HAS_SCIPY:
-            return {
-                "error": "scipy is required for chi-square test",
-                "test_type": "chi_square",
-            }
-
         # Build contingency table
         control_failure = control_total - control_success
         treatment_failure = treatment_total - treatment_success
@@ -143,7 +148,20 @@ class ABTestStatistics:
                             [treatment_success, treatment_failure]]
 
         # Execute chi-square test
-        chi2, p_value, dof, expected = stats.chi2_contingency(contingency_table)
+        if HAS_SCIPY:
+            chi2, p_value, dof, expected = stats.chi2_contingency(contingency_table)
+        else:
+            observed = np.asarray(contingency_table, dtype=float)
+            row_totals = observed.sum(axis=1, keepdims=True)
+            col_totals = observed.sum(axis=0, keepdims=True)
+            grand_total = observed.sum()
+            expected = (row_totals @ col_totals) / grand_total if grand_total > 0 else np.zeros_like(observed)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                chi2_terms = np.where(expected > 0, (observed - expected) ** 2 / expected, 0.0)
+            chi2 = float(np.sum(chi2_terms))
+            dof = 1
+            # For 2x2 tables, chi-square with 1 degree of freedom has a closed-form SF.
+            p_value = float(erfc(sqrt(chi2 / 2.0)))
 
         # Calculate proportions
         control_rate = control_success / control_total if control_total > 0 else 0
@@ -154,7 +172,7 @@ class ABTestStatistics:
             (control_rate * (1 - control_rate) / control_total)
             + (treatment_rate * (1 - treatment_rate) / treatment_total)
         )
-        z_critical = stats.norm.ppf(1 - alpha / 2)
+        z_critical = stats.norm.ppf(1 - alpha / 2) if HAS_SCIPY else NormalDist().inv_cdf(1 - alpha / 2)
         ci_diff = (
             (treatment_rate - control_rate) - z_critical * se_diff,
             (treatment_rate - control_rate) + z_critical * se_diff,
@@ -277,12 +295,6 @@ class ABTestStatistics:
         Returns:
             Dict with sequential analysis results
         """
-        if not HAS_SCIPY:
-            return {
-                "error": "scipy is required for sequential analysis",
-                "test_type": "sequential_analysis",
-            }
-
         # Calculate boundaries
         boundaries = ABTestStatistics._calculate_sequential_boundaries(alpha, power, look_ahead)
 
@@ -300,14 +312,33 @@ class ABTestStatistics:
 
             # Periodic checks
             if i % check_interval == 0 or i == sample_size:
-                t_stat, p_value = stats.ttest_ind(
-                    current_control,
-                    current_treatment,
-                    equal_var=False,
-                )
+                if len(current_control) < 2 or len(current_treatment) < 2:
+                    t_stat, p_value = 0.0, 1.0
+                elif HAS_SCIPY:
+                    t_stat, p_value = stats.ttest_ind(
+                        current_control,
+                        current_treatment,
+                        equal_var=False,
+                    )
+                else:
+                    fallback_result = ABTestStatistics.t_test(
+                        current_control,
+                        current_treatment,
+                        alpha,
+                    )
+                    t_stat = fallback_result["t_statistic"]
+                    p_value = fallback_result["p_value"]
 
                 # Convert p-value to z-score (two-tailed)
-                z_score = stats.norm.ppf(1 - p_value / 2) if p_value < 1 else 0
+                if p_value < 1:
+                    tail_probability = min(max(1 - p_value / 2, 1e-12), 1 - 1e-12)
+                    z_score = (
+                        stats.norm.ppf(tail_probability)
+                        if HAS_SCIPY
+                        else NormalDist().inv_cdf(tail_probability)
+                    )
+                else:
+                    z_score = 0
 
                 # Check if boundaries crossed
                 if z_score >= boundaries["upper"]:
@@ -356,19 +387,21 @@ class ABTestStatistics:
         alpha: float,
     ) -> tuple[float, float]:
         """Calculate confidence interval for difference"""
-        if not HAS_SCIPY:
-            return (0.0, 0.0)
         diff_mean = np.mean(treatment_data) - np.mean(control_data)
         n1, n2 = len(control_data), len(treatment_data)
 
-        var1 = np.var(control_data, ddof=1)
-        var2 = np.var(treatment_data, ddof=1)
+        var1 = np.var(control_data, ddof=1 if len(control_data) > 1 else 0)
+        var2 = np.var(treatment_data, ddof=1 if len(treatment_data) > 1 else 0)
 
         se_diff = np.sqrt(var1 / n1 + var2 / n2)
 
         # Use t-distribution for small samples
         df = n1 + n2 - 2
-        t_critical = stats.t.ppf(1 - alpha / 2, df)
+        t_critical = (
+            stats.t.ppf(1 - alpha / 2, df)
+            if HAS_SCIPY
+            else NormalDist().inv_cdf(1 - alpha / 2)
+        )
 
         margin_error = t_critical * se_diff
         lower = float(diff_mean - margin_error)
@@ -398,16 +431,15 @@ class ABTestStatistics:
         alpha: float, power: float, look_ahead: int
     ) -> dict:
         """Calculate sequential analysis boundaries (O'Brien-Fleming)"""
-        if not HAS_SCIPY:
-            return {"upper": 0.0, "lower": 0.0, "alpha_spending": 0.0}
-        from scipy.stats import norm
+        norm = stats.norm if HAS_SCIPY else NormalDist()
+        inv_cdf = norm.ppf if HAS_SCIPY else norm.inv_cdf
 
-        # Calculate adjusted significance boundary
-        alpha_spending = 2 * (1 - norm.ppf(1 - alpha / (2 * look_ahead)))
+        # Calculate adjusted significance boundary.
+        alpha_spending = 2 * (1 - inv_cdf(1 - alpha / (2 * look_ahead)))
 
         return {
-            "upper": float(norm.ppf(1 - alpha / 2)),
-            "lower": float(norm.ppf(alpha / 2)),
+            "upper": float(inv_cdf(1 - alpha / 2)),
+            "lower": float(inv_cdf(alpha / 2)),
             "alpha_spending": float(alpha_spending),
         }
 
@@ -470,19 +502,14 @@ class ABTestStatistics:
         power: float,
     ) -> dict:
         """Fallback sample size calculation using normal approximation"""
-        if not HAS_SCIPY:
-            return {
-                "error": "scipy is required for sample size approximation",
-                "test_type": "sample_size",
-            }
-        from scipy.stats import norm
-
         target_rate = baseline_rate * (1 + minimum_detectable_effect)
         p_pooled = (baseline_rate + target_rate) / 2
 
         # Z-values
-        z_alpha = norm.ppf(1 - alpha / 2)
-        z_beta = norm.ppf(power)
+        norm = stats.norm if HAS_SCIPY else NormalDist()
+        inv_cdf = norm.ppf if HAS_SCIPY else norm.inv_cdf
+        z_alpha = inv_cdf(1 - alpha / 2)
+        z_beta = inv_cdf(power)
 
         # Sample size formula
         numerator = (z_alpha * np.sqrt(2 * p_pooled * (1 - p_pooled)) +

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core.event_types import EXECUTION_RESULT_INGESTED
+from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement
 from app.models.execution_intent import (
     ExecutionIntent,
     ExecutionIntentStatus,
@@ -208,6 +209,103 @@ async def test_achievement_event_consumer_processes_chat_control_execution_succe
     assert captured[0]["event_type"] == AchievementEvent.TASK_COMPLETED
     assert captured[0]["source"] == "execution_chat_control"
     assert captured[0]["task_id"] == str(task.id)
+
+
+@pytest.mark.asyncio
+async def test_achievement_signal_refresh_requires_minimum_sample(db_session, test_user, monkeypatch):
+    achievements = [
+        Achievement(
+            id="ach-streak",
+            name="连续进步",
+            type=AchievementType.STREAK,
+            rarity=AchievementRarity.RARE,
+            trigger_code="streak",
+            trigger_config={},
+        ),
+        Achievement(
+            id="ach-mastery",
+            name="掌握提升",
+            type=AchievementType.MASTERY,
+            rarity=AchievementRarity.EPIC,
+            trigger_code="mastery",
+            trigger_config={},
+        ),
+        Achievement(
+            id="ach-sprint",
+            name="冲刺完成",
+            type=AchievementType.SPRINT,
+            rarity=AchievementRarity.RARE,
+            trigger_code="sprint",
+            trigger_config={},
+        ),
+    ]
+    db_session.add_all(achievements)
+    await db_session.flush()
+
+    now = datetime.utcnow()
+    db_session.add_all(
+        [
+            UserAchievement(
+                user_id=test_user.id,
+                achievement_id="ach-streak",
+                progress=1.0,
+                progress_value=1,
+                progress_target=1,
+                unlocked_at=now.replace(hour=20, minute=0),
+            ),
+            UserAchievement(
+                user_id=test_user.id,
+                achievement_id="ach-mastery",
+                progress=1.0,
+                progress_value=1,
+                progress_target=1,
+                unlocked_at=(now - timedelta(days=1)).replace(hour=19, minute=0),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    captured_updates: list[dict[str, object]] = []
+
+    async def fake_update_inferred_preference(self, *, user_id, updates, source="ai_inferred"):
+        captured_updates.append({"user_id": user_id, "updates": updates, "source": source})
+        return 2
+
+    monkeypatch.setattr(
+        "app.services.profile_write_service.ProfileWriteService.update_inferred_preference",
+        fake_update_inferred_preference,
+    )
+
+    consumer = AchievementEventConsumer(event_bus=object())  # type: ignore[arg-type]
+    await consumer._refresh_achievement_profile_signals(db_session, test_user.id)
+    assert captured_updates == []
+
+    db_session.add(
+        UserAchievement(
+            user_id=test_user.id,
+            achievement_id="ach-sprint",
+            progress=1.0,
+            progress_value=1,
+            progress_target=1,
+            unlocked_at=(now - timedelta(days=2)).replace(hour=18, minute=0),
+            share_count=1,
+        )
+    )
+    await db_session.commit()
+
+    await consumer._refresh_achievement_profile_signals(db_session, test_user.id)
+
+    assert len(captured_updates) == 1
+    assert captured_updates[0]["source"] == "achievement_signals"
+    updates = captured_updates[0]["updates"]
+    assert set(updates["achievement_peak_hours"]) == {18, 19, 20}
+    assert updates["achievement_motivation_response"] in {
+        "progress_praise",
+        "milestone_celebration",
+        "mastery_affirmation",
+    }
+    assert updates["achievement_pace_style"] in {"steady", "sprint", "mixed"}
+    assert updates["achievement_reward_sensitivity"] in {"low", "medium", "high"}
 
 
 @pytest.mark.asyncio

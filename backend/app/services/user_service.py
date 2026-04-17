@@ -180,6 +180,7 @@ class UserService:
             pref_service = PreferenceService(self.db, self.redis)
             prefs_center = await pref_service.get_preferences(user_id)
             explicit = prefs_center.explicit if prefs_center else {}
+            preference_version = int(getattr(prefs_center, "version", 0) or 0)
 
             if explicit:
                 timezone = explicit.get("timezone", "Asia/Shanghai")
@@ -208,7 +209,7 @@ class UserService:
                 active_slots=active_slots,
                 daily_cap=explicit.get("daily_cap", push_pref.daily_cap if push_pref else 5),
                 persona_type=explicit.get("persona_type", push_pref.persona_type if push_pref else "coach"),
-                preference_version=prefs_center.version if prefs_center else 0,
+                preference_version=preference_version,
             )
 
             # 3. Cache Write

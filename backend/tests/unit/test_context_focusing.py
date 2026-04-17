@@ -108,21 +108,21 @@ def test_user_context_budget_is_reserved_for_richer_profile_payloads() -> None:
     min_tokens, max_ratio = _SECTION_BUDGET_RATIO["user_context"]
     plan_tokens, _ = _SECTION_BUDGET_RATIO["plan_context_section"]
     cognitive_tokens, _ = _SECTION_BUDGET_RATIO["cognitive_prism_section"]
+    companion_tokens, companion_ratio = _SECTION_BUDGET_RATIO["companion_persona_section"]
 
     assert min_tokens >= 350
     assert plan_tokens >= 200
     assert cognitive_tokens >= 120
     assert max_ratio >= 0.18
+    assert companion_tokens >= 160
+    assert companion_ratio >= 0.14
 
 
 def test_build_system_prompt_defaults_to_five_episodic_memories() -> None:
     prompt = build_system_prompt(
         user_context={
             "preferences": {"depth_preference": 0.5},
-            "episodic_memories": [
-                {"summary": f"memory-{idx}"}
-                for idx in range(6)
-            ],
+            "episodic_memories": [{"summary": f"memory-{idx}"} for idx in range(6)],
         },
         conversation_history={"messages": []},
     )
@@ -149,6 +149,31 @@ def test_build_system_prompt_includes_understanding_depth_hint() -> None:
     assert "## 理解深度升级提示 [L2 引导]" in prompt
     assert "仅当本轮表达自然且不打断当前任务时" in prompt
     assert "当前升级: L3" in prompt
+
+
+def test_build_system_prompt_includes_auto_user_material_grounding_section() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "user_material_grounding": {
+                "status": "grounded",
+                "query": "帮我解释熵增方向判断；先用用户材料校准概念。",
+                "results": [
+                    {
+                        "file_name": "thermo-notes.pdf",
+                        "section_title": "Entropy",
+                        "page_numbers": [12],
+                        "snippet": "熵增方向的判断要先看系统边界，再看不可逆过程的主导项。",
+                    }
+                ],
+            },
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "## 用户材料依据 [L1 证据]" in prompt
+    assert "thermo-notes.pdf / Entropy / p.12" in prompt
+    assert "优先用这些用户材料片段校准概念" in prompt
 
 
 def test_build_system_prompt_includes_actual_cognitive_patterns_and_guidance() -> None:
@@ -218,6 +243,160 @@ def test_build_system_prompt_includes_companion_persona_context() -> None:
     assert "- 本周在努力的事: 热力学冲刺计划 / 当前阶段 冲刺阶段" in prompt
     assert "- 正在挣扎的地方: 热力学第二定律相关概念仍然容易混淆" in prompt
     assert "- 你观察到的规律: 完美主义回避循环" in prompt
+
+
+def test_build_system_prompt_includes_visible_intelligence_opening() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "proactive_opening_message": "我注意到你在条件句上连续卡住了几次，已经把相关练习提前。",
+            "pending_observation": "你最近总在周四掉线，这和你的真实节奏一致吗？",
+            "post_adaptation_question": "我把这周安排放轻了一点，这样对你来说合适吗？",
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "## 本轮可感知智能 [L1 开场]" in prompt
+    assert "已经把相关练习提前" in prompt
+    assert "周四掉线" in prompt
+    assert "这样对你来说合适吗" in prompt
+
+
+def test_build_system_prompt_places_situation_brief_before_user_context() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "situation_brief": {
+                "focus_question": "为了继续推进「热力学第二章」，这轮最该先处理的阻力是什么，为什么是现在？",
+                "summary": "用户当前主线是「热力学第二章」；但眼前最需要处理的是概念混淆；本轮宜先抓住最关键阻力，再给结构化推进。",
+                "vision": {"primary_goal": "热力学第二章", "active_plan": "热力学冲刺计划"},
+                "current_state": {"snapshot": "第二定律相关概念仍然容易混淆。"},
+                "primary_obstacle": {"summary": "先搭桥澄清概念卡点，再给执行动作。"},
+                "evidence": {"freshest_items": ["最近 7 天你在 3 个知识点上有推进。"]},
+                "recommended_stance": {"stance": "先抓住最关键阻力，再给结构化推进。"},
+            },
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "## Situation Brief [L0 简报]" in prompt
+    assert prompt.index("## Situation Brief [L0 简报]") < prompt.index("【学习偏好】")
+    assert "目标图景: 热力学第二章 / 当前计划 热力学冲刺计划" in prompt
+
+
+def test_build_system_prompt_keeps_situation_brief_under_budget_pressure() -> None:
+    long_text = "这是很长的背景信息。" * 1200
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "llm_profile": {"system_prompt_additions": "## 用户偏好适配\n- 保持稳定"},
+            "active_goals": [{"title": long_text, "status": "active"}],
+            "episodic_memories": [{"summary": long_text}],
+            "situation_brief": {
+                "focus_question": "这轮最重要的事是什么，为什么是现在？",
+                "summary": "用户当前主线是「热力学第二章」；但眼前最需要处理的是概念混淆；本轮宜先抓住最关键阻力，再给结构化推进。",
+                "vision": {"primary_goal": "热力学第二章", "active_plan": "热力学冲刺计划"},
+                "current_state": {"snapshot": "第二定律相关概念仍然容易混淆。"},
+                "primary_obstacle": {"summary": "先搭桥澄清概念卡点，再给执行动作。"},
+                "evidence": {"freshest_items": ["最近 7 天你在 3 个知识点上有推进。"]},
+                "recommended_stance": {"stance": "先抓住最关键阻力，再给结构化推进。"},
+            },
+        },
+        conversation_history={"messages": [{"role": "user", "content": long_text}]},
+        intent_instruction="先解决用户当前问题。",
+        session_feedback_instruction="用户刚要求更简洁，请立刻收短。",
+        dual_core_instruction="优先执行当前目标。",
+    )
+
+    assert "## Situation Brief [L0 简报]" in prompt
+    assert "热力学第二章" in prompt
+    assert "本轮站位" in prompt
+
+
+def test_build_system_prompt_includes_decision_policy_section() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "residual_decision_context": {
+                "what_matters_now": "先把真正的概念混淆校准清楚。",
+                "planning_readiness": "low",
+                "planning_readiness_action": "ask",
+                "planning_blocking_unknowns": ["baseline_mastery", "capacity_hours"],
+                "strategic_clarification_questions": ["你目前对这个主题的掌握大概在哪个水平？"],
+                "experience_mode": "explain",
+                "intervention_family": "understanding_repair",
+                "reversibility_level": "medium",
+                "user_visible_expression": {
+                    "opening_intent": "Start from the actual misconception, not generic encouragement.",
+                    "response_shape": "repair_model_then_verify",
+                },
+                "system_adjustments": [
+                    {
+                        "field": "retrieval_emphasis",
+                        "recommended_value": "user_materials",
+                        "target_layer": "session",
+                    }
+                ],
+                "feedback_hook": {
+                    "ask": "Does this make the actual confusion clearer, or is a different concept still blocking you?",
+                },
+            },
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert "## 当前决策策略 [L1 引导]" in prompt
+    assert "规划前置信号: low / ask" in prompt
+    assert "计划前仍需补齐: baseline_mastery, capacity_hours" in prompt
+    assert "若要追问，优先问: 你目前对这个主题的掌握大概在哪个水平？" in prompt
+    assert "本轮模式: explain / understanding_repair / medium" in prompt
+    assert "retrieval_emphasis -> user_materials (session)" in prompt
+
+
+def test_build_system_prompt_uses_soul_runtime_driven_companion_section() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+            "user_context": {"nickname": "Ava"},
+            "active_goals": [{"title": "在期中前拿下热力学第二章"}],
+            "effective_companion_state": {
+                "warmth_calibration": 0.62,
+                "candor_calibration": 0.84,
+                "challenge_style": "firm",
+                "emotional_explicitness": 0.42,
+                "relationship_stage": "trusted",
+                "self_description_note": "不要把这句原样塞进 prompt",
+                "companion_growth_note": "这句也不应该出现",
+                "relationship_note": "也不要暴露这句",
+                "preferred_truth_style": "direct_structured",
+                "growth_confidence": 0.7,
+            },
+            "soul_runtime_context": {
+                "constitutional_summary": "Serve user flourishing with truthful, non-manipulative guidance.",
+                "identity_summary": "Sparkle is a growth companion.",
+                "companion_stance": "Lead with actionable clarity and crisp structure, while keeping warmth present.",
+                "relationship_context": "You can be a bit more direct because trust has some foundation.",
+                "no_drift_flags": [
+                    "Keep the user's flourishing above Sparkle self-interest.",
+                    "Do not trade truth for comfort theater.",
+                ],
+                "evidence_trace": {},
+            },
+        },
+        conversation_history={"messages": []},
+        plan_context={"plan_title": "热力学冲刺计划", "goal": "掌握热力学第二章"},
+    )
+
+    assert "## 陪伴式人格 framing [L2 引导]" in prompt
+    assert "你是 Sparkle，Ava 的成长伙伴，不是 generic assistant。" in prompt
+    assert "关系已有一定信任基础，可以更直接一些" in prompt
+    assert "表达上更强调清晰、结构和结论先行" in prompt
+    assert "relationship_stage=" not in prompt
+    assert "truth_style=" not in prompt
+    assert "challenge_style=" not in prompt
+    assert "## 宪法护栏 [L1 护栏]" in prompt
+    assert "Do not trade truth for comfort theater." in prompt
+    assert "不要把这句原样塞进 prompt" not in prompt
 
 
 @pytest.mark.asyncio

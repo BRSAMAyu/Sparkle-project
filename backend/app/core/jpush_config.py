@@ -13,7 +13,7 @@ from typing import Literal
 
 from loguru import logger
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class JPushSettings(BaseSettings):
@@ -32,10 +32,11 @@ class JPushSettings(BaseSettings):
     # API endpoints for different regions
     JPUSH_API_URL: str = Field(default="", env="JPUSH_API_URL")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
 
     def is_configured(self) -> bool:
         """Check if JPush is properly configured"""

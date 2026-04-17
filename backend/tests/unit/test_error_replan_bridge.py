@@ -2,7 +2,9 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from sqlalchemy import select
 
+from app.models.card_protocol import InterventionRecord, InterventionTriggerType
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
@@ -101,10 +103,16 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
     await db_session.commit()
 
     bridge = ErrorReplanBridge(db_session)
-    with patch(
-        "app.services.error_replan_bridge.AdaptiveReplanner.evaluate_plan_health_now",
-        new=AsyncMock(),
-    ) as mock_eval:
+    with (
+        patch(
+            "app.services.error_replan_bridge.AdaptiveReplanner.evaluate_plan_health_now",
+            new=AsyncMock(),
+        ) as mock_eval,
+        patch(
+            "app.services.system_update_service.SystemUpdateService.enqueue",
+            new=AsyncMock(return_value=True),
+        ) as mock_enqueue,
+    ):
         result = await bridge.on_error_created(
             user_id=user.id,
             error_id=errors[-1].id,
@@ -120,6 +128,16 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
         trigger="error_created_bridge",
         feedback_category="concept_gap_repeated",
     )
+    record = (
+        await db_session.execute(
+            select(InterventionRecord).where(InterventionRecord.user_id == user.id)
+        )
+    ).scalar_one()
+    assert record.trigger_type == InterventionTriggerType.CONCEPT_GAP
+    assert record.diagnosis_payload["node_name"] == node.name
+    enqueue_args = mock_enqueue.await_args.args
+    payload = enqueue_args[-1]
+    assert payload["metadata"]["intervention_id"] == str(record.id)
 
 
 @pytest.mark.asyncio

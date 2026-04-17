@@ -212,17 +212,30 @@ class SummarizationWorker:
             },
             {"role": "user", "content": prompt},
         ]
-        summary = await summarization_llm.call(
-            messages,
-            fallback="",  # 空字符串作为fallback
-            temperature=0.3,
-            max_tokens=500,
+        try:
+            summary = await summarization_llm.call(
+                messages,
+                fallback="",  # 空字符串作为fallback
+                temperature=0.3,
+                max_tokens=500,
+            )
+        except Exception as exc:
+            logger.warning(
+                "LLM summarization unavailable for user %s, using local fallback: %s",
+                user_id,
+                exc,
+            )
+            summary = ""
+
+        if summary and len(summary.strip()) >= 10:
+            return summary
+
+        fallback_summary = self._build_local_fallback_summary(history)
+        logger.warning(
+            "Using local fallback summary for user %s because LLM summary was empty or too short",
+            user_id,
         )
-
-        if not summary or len(summary.strip()) < 10:
-            raise ValueError("Summary too short or empty")
-
-        return summary
+        return fallback_summary
 
     def _build_summary_prompt(self, history: list[dict]) -> str:
         """
@@ -259,6 +272,38 @@ class SummarizationWorker:
         ])
 
         return "\n".join(prompt_parts)
+
+    def _build_local_fallback_summary(self, history: list[dict]) -> str:
+        """Build a deterministic fallback summary when the LLM path is unavailable."""
+        limited_history = history[-8:] if len(history) > 8 else history
+        user_messages = [
+            str(msg.get("content", "")).strip()
+            for msg in limited_history
+            if msg.get("role") == "user" and str(msg.get("content", "")).strip()
+        ]
+        assistant_messages = [
+            str(msg.get("content", "")).strip()
+            for msg in limited_history
+            if msg.get("role") == "assistant" and str(msg.get("content", "")).strip()
+        ]
+
+        user_focus = "；".join(user_messages[:2]) if user_messages else "用户提出了一个需要持续跟进的话题。"
+        assistant_focus = (
+            "；".join(assistant_messages[:2])
+            if assistant_messages
+            else "助手给出了初步回应，但需要后续补充。"
+        )
+        next_step = (
+            "建议下一轮继续围绕用户最新问题推进，并补充更具体的行动建议。"
+            if user_messages
+            else "建议下一轮先确认用户当前最想解决的问题。"
+        )
+
+        return (
+            f"用户主要在讨论：{user_focus}\n"
+            f"当前助手回应重点：{assistant_focus}\n"
+            f"下一步：{next_step}"
+        )
 
     async def _log_summary(self, session_id: str, summary: str, history: list[dict]):
         """

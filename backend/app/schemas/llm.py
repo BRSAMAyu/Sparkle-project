@@ -14,7 +14,7 @@ from datetime import date, timedelta
 from typing import Annotated, Any
 
 from loguru import logger
-from pydantic import BaseModel, BeforeValidator, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 
 # ==================== 中文数字映射 ====================
 
@@ -434,8 +434,7 @@ class CreateTaskParams(BaseModel):
             return 480
         return v
 
-    class Config:
-        extra = "ignore"  # 忽略额外字段
+    model_config = ConfigDict(extra="ignore")  # 忽略额外字段
 
 
 class CreatePlanParams(BaseModel):
@@ -466,8 +465,7 @@ class CreatePlanParams(BaseModel):
             return 720
         return v
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 class LLMResponse(BaseModel):
     assistant_message: str | None = None
@@ -475,6 +473,4 @@ class LLMResponse(BaseModel):
     parse_degraded: bool = False
     degraded_reason: str | None = None
 
-    class Config:
-        extra = "ignore"
-
+    model_config = ConfigDict(extra="ignore")

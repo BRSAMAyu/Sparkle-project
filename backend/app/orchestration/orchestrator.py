@@ -73,11 +73,15 @@ from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConf
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_focus import (  # noqa: F401
     FocusedContextAssembler,
+    KNOWLEDGE_ACTION_KEYWORDS,
+    PLAN_ACTION_KEYWORDS,
+    TASK_ACTION_KEYWORDS,
     infer_route_intent_from_chat_mode,
 )
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router  # noqa: F401
+from app.orchestration.experience_actuator import ExperienceActuator
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
 from app.orchestration.grounding_validator import GroundingValidator
@@ -91,6 +95,7 @@ from app.orchestration.chat_modes import (
     normalize_chat_mode,
     parse_team_spec,
 )
+from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
 from app.orchestration.expert_strategy import ExpertStrategyV1
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config  # noqa: F401
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow  # noqa: F401
@@ -113,6 +118,8 @@ from app.orchestration.session_feedback import (
     build_session_feedback_instruction,
     detect_session_feedback_signal,  # noqa: F401
 )
+from app.orchestration.soul_compiler import attach_shadow_soul_runtime
+from app.services.capability_registry_service import CapabilityRegistryService
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.route_adapter import to_route_decision  # noqa: F401
@@ -685,10 +692,41 @@ class ChatOrchestrator(
 
     def _resolve_active_tools(self, request: agent_service_pb2.ChatRequest, user_message: str) -> list[str]:
         requested = [tool.strip() for tool in list(request.active_tools) if str(tool).strip()]
+        explicit_request = bool(requested)
         for inferred in self._infer_bridge_tool_names(user_message):
             if inferred not in requested:
                 requested.append(inferred)
+        if not explicit_request:
+            route_intent = self._infer_capability_route_intent(
+                user_message=user_message,
+                chat_mode=getattr(request, "chat_mode", None),
+            )
+            requested = CapabilitySelectionPolicy().choose_pre_context_tools(
+                route_intent=route_intent,
+                user_message=user_message,
+                requested_tools=requested,
+            )
         return requested
+
+    def _infer_capability_route_intent(self, *, user_message: str, chat_mode: str | None) -> str | None:
+        route_intent = infer_route_intent_from_chat_mode(chat_mode)
+        if route_intent:
+            return route_intent
+
+        message = str(user_message or "").strip().lower()
+        if not message:
+            return None
+
+        def _contains_any(keywords: set[str]) -> bool:
+            return any(str(keyword).strip().lower() in message for keyword in keywords if str(keyword).strip())
+
+        if _contains_any(KNOWLEDGE_ACTION_KEYWORDS):
+            return "knowledge"
+        if _contains_any(PLAN_ACTION_KEYWORDS):
+            return "plan"
+        if _contains_any(TASK_ACTION_KEYWORDS):
+            return "task"
+        return None
 
     @staticmethod
     def _derive_task_context_for_execution(
@@ -874,6 +912,7 @@ class ChatOrchestrator(
             total_completion_tokens = 0
             transparency_generator: TransparencyDataGenerator | None = None
             emit_transparency_event = None
+            queue: asyncio.Queue = asyncio.Queue(maxsize=self._STREAM_QUEUE_MAXSIZE)
 
             try:
                 # Step 2: Distributed lock
@@ -1073,8 +1112,6 @@ class ChatOrchestrator(
                 if conversation_rhythm is not None:
                     state.context_data["conversation_rhythm"] = conversation_rhythm
                 # Bound stream buffering while preserving critical terminal/content events.
-                queue: asyncio.Queue = asyncio.Queue(maxsize=self._STREAM_QUEUE_MAXSIZE)
-
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
                     resp.response_id = response_id
                     resp.created_at = int(datetime.now().timestamp())
@@ -1141,6 +1178,7 @@ class ChatOrchestrator(
                     evolution_highlights,
                     progress_snapshot,
                     understanding_depth_update,
+                    visible_update_context,
                 ) = await self._drain_system_updates(user_id)
                 if adaptation_records:
                     state.context_data["adaptation_records"] = adaptation_records
@@ -1162,8 +1200,66 @@ class ChatOrchestrator(
                                 else None
                             ),
                         }
+                if isinstance(visible_update_context, dict):
+                    state.context_data["visible_update_context"] = visible_update_context
+                    if isinstance(user_context_payload, dict):
+                        for key, value in visible_update_context.items():
+                            if isinstance(value, list):
+                                if value:
+                                    user_context_payload[key] = value
+                            elif str(value or "").strip():
+                                user_context_payload[key] = str(value).strip()
+                        if evolution_highlights:
+                            user_context_payload["evolution_highlights"] = evolution_highlights
                 for update_resp in update_responses:
                     yield update_resp
+
+                user_context_payload = await self._attach_active_intervention_state(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
+
+                await self._hydrate_companion_runtime_context(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    plan_id=plan_id,
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
+                soul_runtime_payload = None
+                try:
+                    soul_runtime_payload = await attach_shadow_soul_runtime(
+                        target_context=state.context_data,
+                        redis_client=self.redis,
+                        user_id=user_id,
+                        user_context=user_context_payload,
+                        plan_context=plan_context,
+                        effective_companion_state=state.context_data.get("effective_companion_state"),
+                        relationship_profile=state.context_data.get("relationship_profile"),
+                        recent_revisions=state.context_data.get("companion_state_recent_revisions"),
+                    )
+                except Exception as exc:
+                    logger.warning(f"Shadow soul runtime attach failed (non-fatal): {exc}")
+                if isinstance(user_context_payload, dict):
+                    self._copy_companion_runtime_keys(source_context=state.context_data, target_context=user_context_payload)
+                if soul_runtime_payload is not None:
+                    await run_ledger.record_event(
+                        event_type="soul_runtime_shadow_compiled",
+                        label="Soul shadow ready",
+                        workflow_stage="orchestration",
+                        metadata={
+                            "compiler_version": soul_runtime_payload.debug.get("compiler_version"),
+                            "constitution_version": soul_runtime_payload.debug.get("constitution_version"),
+                            "identity_kernel_version": soul_runtime_payload.debug.get("identity_kernel_version"),
+                            "dual_core_source": soul_runtime_payload.debug.get("dual_core_source"),
+                            "dual_core_mode": soul_runtime_payload.debug.get("dual_core_mode"),
+                        },
+                        emit_snapshot=False,
+                    )
 
                 # Step 5: Sufficiency check (may short-circuit)
                 sufficiency_handled, intent_type = await self._check_sufficiency(
@@ -1171,7 +1267,15 @@ class ChatOrchestrator(
                     user_message=user_message,
                     user_id=user_id,
                     plan_id=plan_id,
+                    session_id=session_id,
                     conversation_context=conversation_context,
+                    user_context_payload=user_context_payload,
+                    plan_context=plan_context,
+                    state=state,
+                    active_db=active_db,
+                    session_feedback_signal=(
+                        session_feedback_signal.to_dict() if session_feedback_signal is not None else None
+                    ),
                     stream_callback=stream_callback,
                     queue=queue,
                 )
@@ -1207,6 +1311,53 @@ class ChatOrchestrator(
                             session_feedback_signal.to_dict() if session_feedback_signal is not None else None
                         ),
                     )
+                    try:
+                        await attach_shadow_soul_runtime(
+                            target_context=state.context_data,
+                            redis_client=self.redis,
+                            user_id=user_id,
+                            user_context=user_context_payload,
+                            plan_context=plan_context,
+                            effective_companion_state=state.context_data.get("effective_companion_state"),
+                            relationship_profile=state.context_data.get("relationship_profile"),
+                            recent_revisions=state.context_data.get("companion_state_recent_revisions"),
+                        )
+                    except Exception as exc:
+                        logger.warning(f"Shadow soul runtime refresh failed (non-fatal): {exc}")
+                    if isinstance(user_context_payload, dict):
+                        self._copy_companion_runtime_keys(
+                            source_context=state.context_data,
+                            target_context=user_context_payload,
+                        )
+                    user_context_payload = await self._attach_user_strategy_state(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        plan_id=plan_id,
+                        user_context_payload=user_context_payload,
+                        state=state,
+                    )
+                    user_context_payload = await self._attach_situation_brief(
+                        active_db=active_db,
+                        user_id=user_id,
+                        user_context_payload=user_context_payload,
+                        plan_context=plan_context,
+                        state=state,
+                        session_feedback_signal=(
+                            session_feedback_signal.to_dict() if session_feedback_signal is not None else None
+                        ),
+                    )
+                    if active_db is not None and isinstance(user_context_payload, dict):
+                        await ExperienceActuator(active_db, getattr(self, "redis", None)).apply(
+                            user_id=user_id,
+                            session_id=session_id,
+                            plan_id=plan_id,
+                            request_id=request_id,
+                            user_message=user_message,
+                            file_ids=list(request.file_ids),
+                            user_context_payload=user_context_payload,
+                            context_targets=[state.context_data],
+                        )
 
                 # Step 6: Prepare runtime context (transparency, tools)
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
@@ -1283,27 +1434,61 @@ class ChatOrchestrator(
                     orchestration_trace=orchestration_trace,
                     user_context_payload=user_context_payload,
                 )
-                if expert_routing_decision:
+                capability_selection_report = state.context_data.get("capability_selection_report")
+                capability_specialist = (
+                    capability_selection_report.get("specialist_selection")
+                    if isinstance(capability_selection_report, dict)
+                    else None
+                )
+                capability_strategy = (
+                    str(capability_specialist.get("strategy") or "").strip()
+                    if isinstance(capability_specialist, dict)
+                    else ""
+                )
+                capability_experts = (
+                    [
+                        str(item).strip()
+                        for item in capability_specialist.get("selected_experts", [])
+                        if str(item).strip()
+                    ]
+                    if isinstance(capability_specialist, dict)
+                    else []
+                )
+
+                if requested_experts:
+                    state.context_data["selected_experts"] = list(requested_experts)
+                    state.context_data["expert_policy_id"] = "custom_team_v1" if team_spec else "explicit_custom_expert"
+                elif capability_strategy == "specialist_required" and capability_experts:
+                    state.context_data["selected_experts"] = list(capability_experts)
+                    state.context_data["expert_policy_id"] = "phase_d_capability_policy_v1"
+                    state.context_data["expert_routing_metadata"] = {
+                        "selected_experts": json.dumps(capability_experts, ensure_ascii=False),
+                        "routing_strategy": "phase_d_capability_policy",
+                        "fallback_reason": "",
+                        "route_confidence": "0.80",
+                        "expert_entry_source": "phase_d",
+                        "policy_id": "phase_d_capability_policy_v1",
+                        "complexity_score": "0.70",
+                        "complexity_tier": "medium",
+                    }
+                elif expert_routing_decision and capability_strategy != "simple_path":
                     state.context_data["expert_routing_metadata"] = expert_routing_decision.to_metadata()
                     state.context_data["selected_experts"] = list(expert_routing_decision.selected_experts)
                     state.context_data["expert_policy_id"] = expert_routing_decision.policy_id
-                elif requested_experts:
-                    state.context_data["selected_experts"] = list(requested_experts)
-                    state.context_data["expert_policy_id"] = "custom_team_v1" if team_spec else "explicit_custom_expert"
                 if answer_experts:
                     state.context_data["answer_experts"] = list(answer_experts)
                 if custom_expert_profiles:
                     state.context_data["_custom_expert_profiles"] = dict(custom_expert_profiles)
 
                 selected_for_preview = []
-                if expert_routing_decision and expert_routing_decision.selected_experts:
-                    selected_for_preview = list(expert_routing_decision.selected_experts)
-                elif isinstance(state.context_data.get("selected_experts"), list):
+                if isinstance(state.context_data.get("selected_experts"), list):
                     selected_for_preview = [
                         str(item).strip()
                         for item in state.context_data.get("selected_experts", [])
                         if str(item).strip()
                     ]
+                elif expert_routing_decision and expert_routing_decision.selected_experts:
+                    selected_for_preview = list(expert_routing_decision.selected_experts)
                 if selected_for_preview:
                     routing_preview = await emit_routing_preview(
                         stream_callback,
@@ -1349,6 +1534,7 @@ class ChatOrchestrator(
                 if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
                     mode_result: dict[str, Any] = {}
                     async for resp in self._handle_multi_agent_mode(
+                        state=state,
                         chat_mode=chat_mode,
                         user_message=user_message,
                         user_id=user_id,
@@ -1376,7 +1562,7 @@ class ChatOrchestrator(
                     final_response_data = mode_result.get("final_response_data")
                     if isinstance(final_response_data, dict):
                         await self._cache_response(session_id, request_id, final_response_data)
-                        followup_updates, _, _, _, _, _ = await self._drain_system_updates(user_id)
+                        followup_updates, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
                         for update_resp in followup_updates:
                             yield update_resp
                     return
@@ -1546,6 +1732,50 @@ class ChatOrchestrator(
                         session_feedback_signal.to_dict() if session_feedback_signal is not None else None
                     ),
                 )
+                try:
+                    await attach_shadow_soul_runtime(
+                        target_context=state.context_data,
+                        redis_client=self.redis,
+                        user_id=user_id,
+                        user_context=user_context_payload,
+                        plan_context=plan_context,
+                        effective_companion_state=state.context_data.get("effective_companion_state"),
+                        relationship_profile=state.context_data.get("relationship_profile"),
+                        recent_revisions=state.context_data.get("companion_state_recent_revisions"),
+                    )
+                except Exception as exc:
+                    logger.warning(f"Shadow soul runtime refresh failed (non-fatal): {exc}")
+                if isinstance(user_context_payload, dict):
+                    self._copy_companion_runtime_keys(source_context=state.context_data, target_context=user_context_payload)
+                user_context_payload = await self._attach_user_strategy_state(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    plan_id=plan_id,
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
+                user_context_payload = await self._attach_situation_brief(
+                    active_db=active_db,
+                    user_id=user_id,
+                    user_context_payload=user_context_payload,
+                    plan_context=plan_context,
+                    state=state,
+                    session_feedback_signal=(
+                        session_feedback_signal.to_dict() if session_feedback_signal is not None else None
+                    ),
+                )
+                if active_db is not None and isinstance(user_context_payload, dict):
+                    await ExperienceActuator(active_db, getattr(self, "redis", None)).apply(
+                        user_id=user_id,
+                        session_id=session_id,
+                        plan_id=plan_id,
+                        request_id=request_id,
+                        user_message=user_message,
+                        file_ids=list(request.file_ids),
+                        user_context_payload=user_context_payload,
+                        context_targets=[state.context_data],
+                    )
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(
@@ -1663,7 +1893,7 @@ class ChatOrchestrator(
                         )
                     if transparency_generator is not None and emit_transparency_event is not None:
                         await emit_transparency_event(transparency_generator.get_complete_event())
-                    followup_updates, _, _, _, _, _ = await self._drain_system_updates(user_id)
+                    followup_updates, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
                     for update_resp in followup_updates:
                         yield update_resp
                     await self._update_state(session_id, STATE_DONE, "Response completed")
@@ -1679,7 +1909,7 @@ class ChatOrchestrator(
                 COLLABORATION_SUCCESS.labels(
                     workflow_type="standard_chat", agents_used="orchestrator", outcome="error"
                 ).inc()
-                logger.error(f"Orchestration Error: {e}", exc_info=True)
+                logger.opt(exception=e).error("Orchestration Error")
                 await self._update_state(session_id, STATE_FAILED, str(e))
                 if transparency_generator is not None and emit_transparency_event is not None:
                     await emit_transparency_event(transparency_generator.get_complete_event())

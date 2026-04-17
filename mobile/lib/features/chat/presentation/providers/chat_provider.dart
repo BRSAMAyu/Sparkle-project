@@ -422,6 +422,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       'ux_followthrough',
       'ux_sources',
       'ux_evolution',
+      'adaptation_summary',
       'continuity_banner',
       'mode_explanation',
       'collaboration_summary',
@@ -457,6 +458,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final modeExplanation = uxEnvelope['mode_explanation'];
     if (modeExplanation is Map<String, dynamic>) {
       addWidget('mode_explanation', modeExplanation);
+    }
+
+    final adaptationSummary = uxEnvelope['adaptation_summary'];
+    if (adaptationSummary is Map<String, dynamic>) {
+      addWidget('adaptation_summary', adaptationSummary);
     }
 
     final sources = uxEnvelope['ux_sources'];
@@ -698,6 +704,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     }
     return WidgetPayload(type: type, data: data);
+  }
+
+  /// Prepend a local AI welcome message (no backend call).
+  /// Used after onboarding to show the AI's personalized opener immediately.
+  void prependWelcomeMessage(String content) {
+    if (content.trim().isEmpty) return;
+    // Don't inject if there are already messages (e.g., returning to chat tab)
+    if (state.messages.isNotEmpty) return;
+    final welcome = ChatMessageModel(
+      id: 'welcome_${DateTime.now().millisecondsSinceEpoch}',
+      conversationId: state.conversationId ?? 'onboarding',
+      role: MessageRole.assistant,
+      content: content.trim(),
+      createdAt: DateTime.now(),
+    );
+    state = state.copyWith(messages: [welcome]);
   }
 
   /// 发送消息 (使用 SSE/WebSocket 流式响应)

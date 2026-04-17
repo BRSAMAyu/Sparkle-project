@@ -726,7 +726,9 @@ class LearningReportAgent:
         now = datetime.now(UTC)
         for created_at, item in dated_rows:
             delta_days = max(0, (now - created_at).days)
-            bucket_index = min(delta_days // 7, 2)
+            # Treat the trailing 7-day window as "本周" so an event exactly 7 days ago
+            # does not jump backward one bucket at the boundary.
+            bucket_index = min(max(delta_days - 1, 0) // 7, 2)
             bucket = buckets.setdefault(
                 bucket_index,
                 {

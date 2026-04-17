@@ -4,12 +4,15 @@ Capsule Share Service
 处理胶囊分享功能（分享到群组/好友）
 """
 from __future__ import annotations
+
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import event_bus
+from app.core.event_types import CAPSULE_CONTENT_UPDATED
 from app.models.community import Friendship, Group, GroupMember, GroupMessage, MessageType, PrivateMessage
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.user import User
@@ -93,6 +96,11 @@ class CapsuleShareService:
 
         await db.commit()
         await db.refresh(group_message)
+        await self._publish_content_update_event(
+            user_id=user_id,
+            capsule_id=capsule_id,
+            action="shared_to_group",
+        )
 
         logger.info(
             f"[Share] User {user_id} shared capsule {capsule_id} to group {group_id}"
@@ -173,6 +181,11 @@ class CapsuleShareService:
 
         await db.commit()
         await db.refresh(private_message)
+        await self._publish_content_update_event(
+            user_id=user_id,
+            capsule_id=capsule_id,
+            action="shared_to_friend",
+        )
 
         logger.info(
             f"[Share] User {user_id} shared capsule {capsule_id} to friend {friend_id}"
@@ -257,7 +270,6 @@ class CapsuleShareService:
         friendships = result.scalars().all()
 
         friend_ids = [f.friend_id for f in friendships]
-
         if not friend_ids:
             return []
 
@@ -266,6 +278,23 @@ class CapsuleShareService:
             select(User).where(User.id.in_(friend_ids))
         )
         return list(users_result.scalars().all())
+
+    async def _publish_content_update_event(
+        self,
+        *,
+        user_id: UUID,
+        capsule_id: UUID,
+        action: str,
+    ) -> None:
+        await event_bus.publish(
+            CAPSULE_CONTENT_UPDATED,
+            {
+                "event_type": CAPSULE_CONTENT_UPDATED,
+                "user_id": str(user_id),
+                "capsule_id": str(capsule_id),
+                "action": action,
+            },
+        )
 
 
 # 全局单例

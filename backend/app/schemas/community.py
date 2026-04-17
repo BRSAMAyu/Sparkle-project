@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Any, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.common import BaseSchema
 
@@ -68,8 +68,7 @@ class UserBrief(BaseModel):
     flame_brightness: float = Field(default=0.5, description="火苗亮度")
     status: UserStatusEnum = Field(default=UserStatusEnum.OFFLINE, description="在线状态")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserStatusUpdate(BaseModel):
@@ -129,8 +128,7 @@ class FriendRecommendation(BaseModel):
     recommended_action: str = Field(default="send_friend_request", description="推荐动作")
     score_breakdown: dict[str, float] = Field(default_factory=dict, description="评分拆解")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FriendMatchStrategyEnum(str, Enum):
@@ -316,8 +314,7 @@ class GroupListItem(BaseModel):
     activity_score: float | None = Field(default=None, description="目录排序用活跃度得分")
     my_role: GroupRoleEnum | None = Field(default=None, description="我的角色")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============ 群组推荐 ============
@@ -381,8 +378,7 @@ class GroupMemberInfo(BaseModel):
     joined_at: datetime = Field(description="加入时间")
     last_active_at: datetime = Field(description="最后活跃时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MemberRoleUpdate(BaseModel):
@@ -635,8 +631,7 @@ class SharedResourceInfo(BaseSchema):
     resource_summary: str | None = None
     entity_card: dict[str, Any] | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============ 私聊消息 Schemas ============

@@ -4,12 +4,15 @@ Capsule Favorite Service
 处理胶囊收藏功能
 """
 from __future__ import annotations
+
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import event_bus
+from app.core.event_types import CAPSULE_FAVORITE_UPDATED
 from app.models.capsule_favorite import CapsuleFavorite
 from app.models.curiosity_capsule import CuriosityCapsule
 
@@ -67,6 +70,11 @@ class CapsuleFavoriteService:
                 existing_favorite.note = note
             await db.commit()
             await db.refresh(existing_favorite)
+            await self._publish_favorite_event(
+                user_id=user_id,
+                capsule_id=capsule_id,
+                action="updated",
+            )
             return existing_favorite
 
         # 创建新收藏
@@ -79,6 +87,11 @@ class CapsuleFavoriteService:
 
         await db.commit()
         await db.refresh(favorite)
+        await self._publish_favorite_event(
+            user_id=user_id,
+            capsule_id=capsule_id,
+            action="favorited",
+        )
 
         logger.info(f"[Favorite] User {user_id} favorited capsule {capsule_id}")
         return favorite
@@ -111,6 +124,11 @@ class CapsuleFavoriteService:
         await db.delete(favorite)
 
         await db.commit()
+        await self._publish_favorite_event(
+            user_id=user_id,
+            capsule_id=capsule_id,
+            action="unfavorited",
+        )
 
         logger.info(f"[Favorite] User {user_id} unfavorited capsule {capsule_id}")
         return True
@@ -203,6 +221,23 @@ class CapsuleFavoriteService:
         else:
             favorite = await self.add_favorite(user_id, capsule_id, db, note)
             return {"is_favorited": True, "favorite": favorite}
+
+    async def _publish_favorite_event(
+        self,
+        *,
+        user_id: UUID,
+        capsule_id: UUID,
+        action: str,
+    ) -> None:
+        await event_bus.publish(
+            CAPSULE_FAVORITE_UPDATED,
+            {
+                "event_type": CAPSULE_FAVORITE_UPDATED,
+                "user_id": str(user_id),
+                "capsule_id": str(capsule_id),
+                "action": action,
+            },
+        )
 
 
 # 全局单例

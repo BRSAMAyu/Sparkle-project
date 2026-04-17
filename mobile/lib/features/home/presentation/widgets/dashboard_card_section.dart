@@ -12,6 +12,7 @@ import 'package:sparkle/features/home/presentation/widgets/dashboard_card_carous
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_grid.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_curiosity_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_edit_sheet.dart';
+import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/focus_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/long_term_plan_card.dart';
@@ -28,6 +29,10 @@ class DashboardCardSection extends ConsumerWidget {
     final config = ref.watch(dashboardCardConfigProvider);
     final isGridMode = config.layoutMode == DashboardCardLayoutMode.grid;
     final visibleCardIds = config.visibleOrderedCards;
+    final isChinese = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('zh');
     final cards = visibleCardIds
         .map((cardId) => _buildCard(context, cardId, isGridMode: isGridMode))
         .toList(growable: false);
@@ -44,34 +49,48 @@ class DashboardCardSection extends ConsumerWidget {
           builder: (context, constraints) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => _openEditSheet(context),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing10,
-                      vertical: DS.spacing6,
+              DashboardSectionShell(
+                key: const ValueKey('dashboard-workspace-section'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DashboardSectionHeader(
+                      icon: Icons.widgets_outlined,
+                      accentColor: DS.brandPrimary,
+                      title: isChinese ? '工作模块' : 'Workspace Modules',
+                      summary: isChinese
+                          ? '保留可定制区，把功能模块放在下半屏。'
+                          : 'Keep customization in the lower workspace without disturbing the top story.',
+                      trailing: TextButton.icon(
+                        key: const ValueKey('dashboard-customize-action'),
+                        onPressed: () => _openEditSheet(context),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing10,
+                            vertical: DS.spacing6,
+                          ),
+                        ),
+                        icon: const Icon(Icons.tune_rounded, size: 18),
+                        label: Text(
+                          AppLocalizations.of(context)!.dashboardCustomizeCards,
+                        ),
+                      ),
                     ),
-                  ),
-                  icon: const Icon(Icons.tune_rounded, size: 18),
-                  label: Text(
-                    AppLocalizations.of(context)!.dashboardCustomizeCards,
-                  ),
+                    const SizedBox(height: DS.spacing12),
+                    if (cards.isEmpty)
+                      const _EmptyDashboardCardSection()
+                    else if (config.layoutMode == DashboardCardLayoutMode.swipe)
+                      DashboardCardCarousel(
+                        cards: cards,
+                        cardIds: visibleCardIds,
+                        preferredInitialCardId: DashboardCardIds.calendar,
+                      )
+                    else
+                      DashboardCardGrid(cards: cards),
+                  ],
                 ),
               ),
-              const SizedBox(height: DS.spacing6),
-              if (cards.isEmpty)
-                const _EmptyDashboardCardSection()
-              else if (config.layoutMode == DashboardCardLayoutMode.swipe)
-                DashboardCardCarousel(
-                  cards: cards,
-                  cardIds: visibleCardIds,
-                  preferredInitialCardId: DashboardCardIds.calendar,
-                )
-              else
-                DashboardCardGrid(cards: cards),
             ],
           ),
         ),
@@ -196,8 +215,14 @@ class _EmptyDashboardCardSection extends StatelessWidget {
   const _EmptyDashboardCardSection();
 
   @override
-  Widget build(BuildContext context) => GraphiteCardSurface(
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary.withValues(alpha: 0.72),
+          borderRadius: DS.borderRadius16,
+          border: Border.all(color: DS.borderSubtle),
+        ),
         child: Text(
           AppLocalizations.of(context)!.dashboardEmptyHint,
           style: context.sparkleTypography.bodyMedium.copyWith(

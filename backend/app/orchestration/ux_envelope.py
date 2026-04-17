@@ -45,6 +45,11 @@ NEGATIVE_USER_SIGNAL_KEYWORDS = {
 HIGH_FRICTION_ACTION_TYPES = {"start_focus", "create_task_draft", "switch_plan"}
 
 
+def _coalesce_mapping_value(source: dict[str, Any], key: str, default: Any) -> Any:
+    value = source.get(key)
+    return default if value is None else value
+
+
 @dataclass(frozen=True)
 class PresentationProfile:
     mode_label: str
@@ -403,13 +408,19 @@ class UXEnvelopeBuilder:
         if continuity_banner:
             envelope["continuity_banner"] = continuity_banner
 
-        mode_explanation = self._mode_explanation(chat_mode=chat_mode, profile=profile, selected_experts=selected_experts)
+        mode_explanation = self._mode_explanation(
+            chat_mode=chat_mode, profile=profile, selected_experts=selected_experts
+        )
         if mode_explanation:
             envelope["mode_explanation"] = mode_explanation
 
         collaboration_summary = self._collaboration_summary(final_state, selected_experts)
         if collaboration_summary:
             envelope["collaboration_summary"] = collaboration_summary
+
+        visible_adaptation = self._visible_adaptation(final_state=final_state, user_context_payload=user_context_payload)
+        if visible_adaptation:
+            envelope["adaptation_summary"] = visible_adaptation
 
         session_adaptation = self._session_adaptation(final_state)
         if session_adaptation:
@@ -418,11 +429,7 @@ class UXEnvelopeBuilder:
         return envelope
 
     def to_metadata_map(self, envelope: dict[str, dict[str, Any]]) -> dict[str, str]:
-        return {
-            key: json.dumps(value, ensure_ascii=False)
-            for key, value in envelope.items()
-            if value
-        }
+        return {key: json.dumps(value, ensure_ascii=False) for key, value in envelope.items() if value}
 
     def _get_profile(self, chat_mode: str) -> PresentationProfile:
         if chat_mode == "execution_delegate":
@@ -490,6 +497,7 @@ class UXEnvelopeBuilder:
             style_variant=style_variant,
             tone_variant=tone_variant,
             user_message=user_message,
+            final_state=final_state,
         )
         next_actions_title_variant = self._base_next_actions_title(
             profile=profile,
@@ -643,10 +651,14 @@ class UXEnvelopeBuilder:
         }:
             return "plan_ready"
 
-        if plan_context and plan_context.get("plan_id") and (
-            chat_mode == "study_plan"
-            or executable_plan is not None
-            or any(token in full_response for token in ("第一步", "开始", "执行", "今天先"))
+        if (
+            plan_context
+            and plan_context.get("plan_id")
+            and (
+                chat_mode == "study_plan"
+                or executable_plan is not None
+                or any(token in full_response for token in ("第一步", "开始", "执行", "今天先"))
+            )
         ):
             return "plan_ready"
 
@@ -663,6 +675,7 @@ class UXEnvelopeBuilder:
         style_variant: str,
         tone_variant: str,
         user_message: str,
+        final_state: Any,
     ) -> str:
         if style_variant == "compact":
             if tone_variant == "warm":
@@ -670,6 +683,22 @@ class UXEnvelopeBuilder:
             if tone_variant == "analytical":
                 return "我先压缩成结论、关键依据和下一步，避免信息过载。"
             return "我先给你最直接可用的部分，再看要不要展开。"
+
+        soul_adjusted = self._soul_adjusted_companion_frame(
+            profile=profile,
+            tone_variant=tone_variant,
+            user_message=user_message,
+            final_state=final_state,
+        )
+        if soul_adjusted:
+            if style_variant == "exploratory":
+                if tone_variant == "warm":
+                    return f"{soul_adjusted} 如果你愿意，我也会补几个更适合继续聊下去的方向。"
+                if tone_variant == "analytical":
+                    return f"{soul_adjusted} 我会顺手标出关键依据、风险和可选分支。"
+                return f"{soul_adjusted} 我也会补几个可继续探索的方向。"
+            return soul_adjusted
+
         if style_variant == "exploratory":
             if tone_variant == "warm":
                 return f"{profile.companion_frame} 如果你愿意，我也会补几个更适合继续聊下去的方向。"
@@ -681,6 +710,49 @@ class UXEnvelopeBuilder:
         if tone_variant == "analytical":
             return f"{profile.companion_frame} 我会尽量按结论、依据、动作来组织。"
         return profile.companion_frame
+
+    def _soul_adjusted_companion_frame(
+        self,
+        *,
+        profile: PresentationProfile,
+        tone_variant: str,
+        user_message: str,
+        final_state: Any,
+    ) -> str:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        soul_runtime_context = (
+            context_data.get("soul_runtime_context")
+            if isinstance(context_data.get("soul_runtime_context"), dict)
+            else {}
+        )
+        effective_companion_state = (
+            context_data.get("effective_companion_state")
+            if isinstance(context_data.get("effective_companion_state"), dict)
+            else {}
+        )
+        if not soul_runtime_context or not effective_companion_state:
+            return ""
+
+        relationship_stage = str(
+            _coalesce_mapping_value(effective_companion_state, "relationship_stage", "building")
+        ).strip()
+        candor = float(_coalesce_mapping_value(effective_companion_state, "candor_calibration", 0.75))
+        truth_style = str(
+            _coalesce_mapping_value(effective_companion_state, "preferred_truth_style", "honest_warm")
+        ).strip()
+        stance = str(soul_runtime_context.get("companion_stance") or "").strip().lower()
+
+        if relationship_stage in {"early", "building"} and (
+            tone_variant == "warm" or self._message_has_negative_signal(user_message)
+        ):
+            return "我会先稳稳接住现在最关键的部分，再一起决定下一步。"
+        if relationship_stage in {"trusted", "deepening"} and candor >= 0.72:
+            return "我会先把关键判断直接说清，再把依据和可选动作放到你面前。"
+        if truth_style == "direct_structured":
+            return f"{profile.companion_frame} 我会更明确地区分判断、依据和动作。"
+        if "naming the user's friction" in stance or "lead by naming the user's friction" in stance:
+            return "我会先点出你现在真正卡住的地方，再一起把下一步收紧。"
+        return ""
 
     def _base_next_actions_title(
         self,
@@ -738,7 +810,9 @@ class UXEnvelopeBuilder:
                 "exploratory": "如果你愿意，现在可以顺手做一轮反思更新",
             },
         }
-        title = stage_titles.get(stage, {}).get(style_decision.style_variant) or style_decision.next_actions_title_variant
+        title = (
+            stage_titles.get(stage, {}).get(style_decision.style_variant) or style_decision.next_actions_title_variant
+        )
         if style_decision.tone_variant == "warm" and stage == "blocked":
             return "别急，我们先把这一点补齐"
         return title
@@ -816,7 +890,9 @@ class UXEnvelopeBuilder:
     def _execution_total_count(self, execution_validation: dict[str, Any] | None) -> int:
         return self._execution_metric(execution_validation, "total_steps", "total_tool_calls")
 
-    def _completion_state(self, final_state: Any, executable_plan: Any | None, execution_validation: dict[str, Any] | None) -> str:
+    def _completion_state(
+        self, final_state: Any, executable_plan: Any | None, execution_validation: dict[str, Any] | None
+    ) -> str:
         if execution_validation:
             if execution_validation.get("execution_suggestion"):
                 return "partial"
@@ -827,13 +903,35 @@ class UXEnvelopeBuilder:
             if total and failed >= total:
                 return "blocked"
         context_data = getattr(final_state, "context_data", {}) or {}
-        if context_data.get("plan_review"):
+        plan_review = context_data.get("plan_review")
+        if isinstance(plan_review, dict):
+            decision = str(plan_review.get("decision") or "").strip().lower()
+            if decision in {"requires_confirmation", "needs_modification"}:
+                return "needs_input"
+            if decision and decision != "approved":
+                return "needs_input"
+        chat_mode = str(context_data.get("chat_mode") or CHAT_MODE_STANDARD)
+        latest_user_message = ""
+        messages = getattr(final_state, "messages", None) or []
+        if isinstance(messages, list):
+            for item in reversed(messages):
+                if isinstance(item, dict) and str(item.get("role") or "user") == "user":
+                    latest_user_message = str(item.get("content") or "").strip()
+                    break
+        if (
+            chat_mode == "study_plan"
+            and executable_plan is None
+            and not context_data.get("plan_context")
+            and any(token in latest_user_message for token in ("计划", "排计划", "安排", "规划", "复习", "继续"))
+        ):
             return "needs_input"
         if executable_plan is not None and not getattr(executable_plan, "tool_calls", []):
             return "done"
         return "done"
 
-    def _confidence_band(self, executable_plan: Any | None, route_decision: Any, execution_validation: dict[str, Any] | None) -> str:
+    def _confidence_band(
+        self, executable_plan: Any | None, route_decision: Any, execution_validation: dict[str, Any] | None
+    ) -> str:
         validation_score = None
         if execution_validation:
             validation_score = execution_validation.get("quality_score") or execution_validation.get("confidence")
@@ -917,7 +1015,9 @@ class UXEnvelopeBuilder:
         if self._execution_failed_count(execution_validation) > 0:
             message = profile.partial_message
             if selected_experts and "fallback" in fallback_reason:
-                message = "综合结论已可用，但有部分专家结果降级或执行步骤失败，所以这轮更适合先拿主结论，再决定是否继续复核。"
+                message = (
+                    "综合结论已可用，但有部分专家结果降级或执行步骤失败，所以这轮更适合先拿主结论，再决定是否继续复核。"
+                )
             return {
                 "failure_kind": "partial_tool_failure",
                 "failure_message": message,
@@ -999,7 +1099,9 @@ class UXEnvelopeBuilder:
 
         finalized = self._finalize_actions(
             actions=actions,
-            limit=style_decision.next_action_limit if settings.ENABLE_ADAPTIVE_PRESENTATION else profile.next_action_limit,
+            limit=(
+                style_decision.next_action_limit if settings.ENABLE_ADAPTIVE_PRESENTATION else profile.next_action_limit
+            ),
         )
         if not settings.ENABLE_STRUCTURED_NEXT_ACTIONS:
             return [action.label for action in finalized]
@@ -1022,9 +1124,7 @@ class UXEnvelopeBuilder:
         primary_task = task_candidates[0] if task_candidates else None
         plan_id = str((plan_context or {}).get("plan_id") or "").strip()
         plan_title = str(
-            (plan_context or {}).get("plan_title")
-            or (plan_context or {}).get("plan_name")
-            or "当前计划"
+            (plan_context or {}).get("plan_title") or (plan_context or {}).get("plan_name") or "当前计划"
         ).strip()
 
         if stage == "plan_ready":
@@ -1501,11 +1601,7 @@ class UXEnvelopeBuilder:
         if not adaptation_records and not preference_learnings and not progress_snapshot and not plan_reasoning_summary:
             return None
         headline = "系统正在根据你的反馈继续调整"
-        summary = (
-            str(highlights[0])
-            if highlights
-            else "我会把这轮新学到的偏好和调整继续用于后续对话。"
-        )
+        summary = str(highlights[0]) if highlights else "我会把这轮新学到的偏好和调整继续用于后续对话。"
         evolution_kind = "adaptation"
         if isinstance(progress_snapshot, dict) and (progress_snapshot.get("highlights") or []):
             headline = "这是你最近一段时间最值得看到的进步"
@@ -1652,13 +1748,42 @@ class UXEnvelopeBuilder:
             "applies_adaptation": bool(signal.get("applies_adaptation")),
             "visible_hint": str(signal.get("visible_hint") or ""),
             "applied_strategy": (
-                str((adaptation or {}).get("applied_strategy") or "")
-                if isinstance(adaptation, dict)
-                else ""
+                str((adaptation or {}).get("applied_strategy") or "") if isinstance(adaptation, dict) else ""
             ),
         }
 
-    def _mode_explanation(self, *, chat_mode: str, profile: PresentationProfile, selected_experts: list[str]) -> dict[str, Any]:
+    def _visible_adaptation(
+        self,
+        *,
+        final_state: Any,
+        user_context_payload: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        user_context = context_data.get("user_context")
+        user_context = user_context if isinstance(user_context, dict) else user_context_payload or {}
+        visible = user_context.get("visible_adaptation") if isinstance(user_context, dict) else None
+        if not isinstance(visible, dict):
+            return None
+
+        summary = str(visible.get("summary") or "").strip()
+        what_changed = [str(item).strip() for item in (visible.get("what_changed") or []) if str(item).strip()]
+        if not summary and not what_changed:
+            return None
+
+        return {
+            "title": str(visible.get("title") or "我刚做了一个调整").strip(),
+            "summary": summary,
+            "what_changed": what_changed[:4],
+            "reversibility_note": str(visible.get("reversibility_note") or "").strip(),
+            "follow_up_question": str(visible.get("follow_up_question") or "").strip(),
+            "evidence_summary": str(visible.get("evidence_summary") or "").strip(),
+            "experience_mode": str(visible.get("experience_mode") or "").strip(),
+            "intervention_family": str(visible.get("intervention_family") or "").strip(),
+        }
+
+    def _mode_explanation(
+        self, *, chat_mode: str, profile: PresentationProfile, selected_experts: list[str]
+    ) -> dict[str, Any]:
         description = profile.companion_frame
         if selected_experts:
             description += f" 当前已激活：{'、'.join(selected_experts[:3])}。"

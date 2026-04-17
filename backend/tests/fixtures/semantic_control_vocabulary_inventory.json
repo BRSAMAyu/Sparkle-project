@@ -1,0 +1,209 @@
+[
+  {
+    "term_family": "decision_policy",
+    "term": "experience_mode",
+    "value": "clarify|explain|review|stabilize|mobilize|decide|reframe",
+    "source_surface": "prompt_responder",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "prompts._format_decision_policy_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "decision_policy",
+    "term": "intervention_family",
+    "value": "clarifying_probe|understanding_repair|trajectory_review|criteria_construction|decision_navigation|identity_repair|load_shedding|scaffolded_activation|diagnostic_rebalance",
+    "source_surface": "prompt_responder",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "prompts._format_decision_policy_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "decision_policy",
+    "term": "reversibility_level",
+    "value": "high|medium|low",
+    "source_surface": "prompt_responder",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "prompts._format_decision_policy_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "decision",
+    "term": "primary_residual",
+    "value": "R_e|R_n|R_c|R_i|R_mixed|R_unknown",
+    "source_surface": "situation_brief_prompt",
+    "exposure_class": "mixed",
+    "current_rendering_path": "situation_brief.format_situation_brief_section",
+    "risk_level": "medium"
+  },
+  {
+    "term_family": "decision",
+    "term": "loop_type",
+    "value": "truth_seeking|normative|identity_repair",
+    "source_surface": "situation_brief_prompt",
+    "exposure_class": "mixed",
+    "current_rendering_path": "situation_brief.format_situation_brief_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "decision",
+    "term": "confidence_label",
+    "value": "high|medium|low",
+    "source_surface": "situation_brief_prompt",
+    "exposure_class": "mixed",
+    "current_rendering_path": "situation_brief.format_situation_brief_section",
+    "risk_level": "medium"
+  },
+  {
+    "term_family": "planning",
+    "term": "planning_readiness",
+    "value": "low|medium|high",
+    "source_surface": "prompt_responder",
+    "exposure_class": "mixed",
+    "current_rendering_path": "prompts._format_decision_policy_section",
+    "risk_level": "medium"
+  },
+  {
+    "term_family": "planning",
+    "term": "planning_readiness_action",
+    "value": "ask|provisional|proceed",
+    "source_surface": "prompt_responder",
+    "exposure_class": "mixed",
+    "current_rendering_path": "prompts._format_decision_policy_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "planning_strategy",
+    "term": "plan_mode",
+    "value": "full|provisional|next_step_only",
+    "source_surface": "prompt_responder",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "prompts._format_planning_strategy_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "planning_strategy",
+    "term": "plan_depth",
+    "value": "light|standard|deep",
+    "source_surface": "prompt_responder",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "prompts._format_planning_strategy_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "planning_strategy",
+    "term": "pacing_profile",
+    "value": "light|steady|push",
+    "source_surface": "prompt_responder",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "prompts._format_planning_strategy_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "planning_strategy",
+    "term": "grounding_mode",
+    "value": "mandatory|required_from_profile|preferred|light",
+    "source_surface": "prompt_responder",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "prompts._format_planning_strategy_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "planning_strategy",
+    "term": "fallback_policy",
+    "value": "ask_more|downgrade_to_provisional|shrink_scope_then_retry|use_materials_or_downgrade|revise",
+    "source_surface": "prompt_responder",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "prompts._format_planning_strategy_section",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "planning_strategy",
+    "term": "plan_mode",
+    "value": "full|provisional|next_step_only",
+    "source_surface": "planner_constraints",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "lang_graph_planner._build_constraints_context",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "planning_strategy",
+    "term": "plan_depth",
+    "value": "light|standard|deep",
+    "source_surface": "planner_constraints",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "lang_graph_planner._build_constraints_context",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "planning_strategy",
+    "term": "grounding_mode",
+    "value": "mandatory|required_from_profile|preferred|light",
+    "source_surface": "planner_constraints",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "lang_graph_planner._build_constraints_context",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "planning_strategy",
+    "term": "fallback_policy",
+    "value": "ask_more|downgrade_to_provisional|shrink_scope_then_retry|use_materials_or_downgrade|revise",
+    "source_surface": "planner_constraints",
+    "exposure_class": "model_facing",
+    "current_rendering_path": "lang_graph_planner._build_constraints_context",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "strategy_state",
+    "term": "session_mode",
+    "value": "recovery|guided|exploratory|review",
+    "source_surface": "semantic_control",
+    "exposure_class": "mixed",
+    "current_rendering_path": "ai_strategy_renderer selected strategy-state rendering",
+    "risk_level": "medium"
+  },
+  {
+    "term_family": "strategy_state",
+    "term": "explanation_style",
+    "value": "conceptual|example_based|step_by_step",
+    "source_surface": "semantic_control",
+    "exposure_class": "mixed",
+    "current_rendering_path": "ai_strategy_renderer strategy doctrine rendering",
+    "risk_level": "medium"
+  },
+  {
+    "term_family": "strategy_state",
+    "term": "retrieval_emphasis",
+    "value": "user_materials|balanced|general_knowledge",
+    "source_surface": "semantic_control",
+    "exposure_class": "mixed",
+    "current_rendering_path": "ai_strategy_renderer strategy doctrine rendering",
+    "risk_level": "high"
+  },
+  {
+    "term_family": "strategy_state",
+    "term": "intervention_intensity",
+    "value": "low|medium|high",
+    "source_surface": "semantic_control",
+    "exposure_class": "mixed",
+    "current_rendering_path": "ai_strategy_renderer strategy doctrine rendering",
+    "risk_level": "medium"
+  },
+  {
+    "term_family": "strategy_state",
+    "term": "support_posture",
+    "value": "support_first|balanced|directive",
+    "source_surface": "semantic_control",
+    "exposure_class": "mixed",
+    "current_rendering_path": "ai_strategy_renderer derived strategy doctrine rendering",
+    "risk_level": "medium"
+  },
+  {
+    "term_family": "body_awareness",
+    "term": "primary_subsystem",
+    "value": "registry-driven label",
+    "source_surface": "prompt_responder",
+    "exposure_class": "mixed",
+    "current_rendering_path": "decision policy and situation brief body awareness rendering",
+    "risk_level": "medium"
+  }
+]

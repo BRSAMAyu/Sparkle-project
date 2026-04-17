@@ -236,6 +236,34 @@ SESSION_FEEDBACK_CONFIDENCE_BUCKET = get_or_create_metric(
     ["signal_type", "bucket"],
 )
 
+PHASE_A_DECISION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_phase_a_decision_total",
+    "Phase A planning readiness decisions by action",
+    ["action"],
+)
+
+PHASE_A_GAP_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_phase_a_gap_total",
+    "Phase A missing planning gaps by gap id",
+    ["gap_id"],
+)
+
+PHASE_A_CONTRADICTION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_phase_a_contradiction_total",
+    "Phase A contradiction frequency by id and severity",
+    ["contradiction_id", "severity"],
+)
+
+PHASE_A_PLANNING_LIKE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_phase_a_planning_like_total",
+    "Phase A planning-like turn evaluations by detection source",
+    ["source"],
+)
+
 AGENT_PERFORMANCE_RECORDED_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_agent_performance_recorded_total",

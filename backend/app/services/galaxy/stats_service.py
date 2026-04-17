@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.event_bus import event_bus
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.schemas.galaxy import GalaxyUserStats, NodeWithStatus, SectorCode, SparkEvent, SparkResult, UserStatusInfo
 from app.services.expansion_service import ExpansionService
@@ -77,7 +78,7 @@ class GalaxyStatsService:
 
         # 5.5. 发布掌握度更新事件
         try:
-            from app.core.event_bus import NodeMasteryUpdatedEvent, event_bus
+            from app.core.event_bus import NodeMasteryUpdatedEvent
             await event_bus.publish(
                 "node_mastery_updated",
                 NodeMasteryUpdatedEvent(

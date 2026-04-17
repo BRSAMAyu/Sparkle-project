@@ -8,6 +8,7 @@
 | :--- | :--- | :--- |
 | [埋点事件字典](./TRACKING_EVENT_DICTIONARY.md) | **[契约]** 客户端与后端必须严格遵守的埋点 Schema | 2026-01-04 |
 | [离线评估协议](./OFFLINE_EVALUATION_PROTOCOL.md) | **[裁判]** 模型上线前的唯一准入标准 | 2026-01-04 |
+| [LTM 评估数据集规范](./ltm_eval_spec.md) | 长期记忆系统评估数据集与评估流程 | — |
 
 ## Governance
 

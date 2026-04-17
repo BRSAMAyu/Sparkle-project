@@ -1,0 +1,367 @@
+[
+  {
+    "scenario_id": "phase_d_materials_mandatory_grounding",
+    "title": "Uploaded materials must outrank generic explanation",
+    "user_request": "Use my uploaded thermodynamics notes and mistake log to explain why I keep confusing reversible and irreversible processes, then tell me what to review first.",
+    "route_intent": "knowledge",
+    "current_context": {
+      "materials_attached": true,
+      "knowledge_graph_available": true,
+      "planning_readiness": "high",
+      "experience_mode": "explain",
+      "surface": "chat"
+    },
+    "expected_capability_needs": {
+      "grounding_required": "mandatory",
+      "preferred_retrieval_organs": [
+        "retrieve_user_material",
+        "query_knowledge",
+        "galaxy_guide"
+      ],
+      "specialist_needed": false,
+      "cost_posture": "medium"
+    },
+    "current_implicit_path": {
+      "route_chain": "route_intent -> SituationBrief body_awareness_guidance -> prompt guidance",
+      "hard_governed_steps": [
+        "query_knowledge auto-injection"
+      ],
+      "advisory_steps": [
+        "user-material grounding preference",
+        "galaxy primary subsystem recommendation"
+      ]
+    },
+    "wrong_organ_risk": "Sparkle can mention grounding but still fail to force the user-material path before generic explanation.",
+    "phase_d_target_decisions": [
+      "force user-material grounding",
+      "choose retrieval organ family",
+      "justify why a light path is not enough"
+    ]
+  },
+  {
+    "scenario_id": "phase_d_light_knowledge_turn",
+    "title": "Simple concept question should use the lightest sufficient retrieval path",
+    "user_request": "What is an eigenvalue? Keep it simple.",
+    "route_intent": "knowledge",
+    "current_context": {
+      "materials_attached": false,
+      "knowledge_graph_available": true,
+      "planning_readiness": "not_applicable",
+      "experience_mode": "explain",
+      "surface": "chat"
+    },
+    "expected_capability_needs": {
+      "grounding_required": "helpful_but_light",
+      "preferred_retrieval_organs": [
+        "query_knowledge"
+      ],
+      "specialist_needed": false,
+      "cost_posture": "low"
+    },
+    "current_implicit_path": {
+      "route_chain": "route_intent -> ChatOrchestrator._resolve_active_tools -> query_knowledge",
+      "hard_governed_steps": [
+        "query_knowledge auto-injection"
+      ],
+      "advisory_steps": [
+        "galaxy primary subsystem recommendation"
+      ]
+    },
+    "wrong_organ_risk": "The system could over-escalate to heavy reasoning or multi-agent behavior for a simple lookup-like turn.",
+    "phase_d_target_decisions": [
+      "prefer simple retrieval over specialist escalation",
+      "avoid expensive model overuse",
+      "record why the light path was enough"
+    ]
+  },
+  {
+    "scenario_id": "phase_d_overload_needs_stabilization",
+    "title": "Overloaded user needs stabilization before deeper planning",
+    "user_request": "This is too much and I still cannot start. Please help me get moving again.",
+    "route_intent": "plan",
+    "current_context": {
+      "materials_attached": false,
+      "planning_readiness": "medium",
+      "experience_mode": "stabilize",
+      "outcome_status": "stalled",
+      "surface": "chat"
+    },
+    "expected_capability_needs": {
+      "grounding_required": "light",
+      "preferred_retrieval_organs": [],
+      "specialist_needed": false,
+      "bounded_adjustments_allowed": true,
+      "cost_posture": "low"
+    },
+    "current_implicit_path": {
+      "route_chain": "diagnosis -> DecisionPolicyCompiler -> session_mode/intervention_intensity recommendations",
+      "hard_governed_steps": [
+        "experience_mode selection"
+      ],
+      "advisory_steps": [
+        "body-awareness subsystem recommendation"
+      ]
+    },
+    "wrong_organ_risk": "Sparkle may still choose a planning-heavy or specialist-heavy path when the real need is reversible stabilization.",
+    "phase_d_target_decisions": [
+      "prefer stabilization organ family over deep planning",
+      "use bounded reversible knobs",
+      "avoid unnecessary specialist or pro-tier escalation"
+    ]
+  },
+  {
+    "scenario_id": "phase_d_high_readiness_simple_plan",
+    "title": "High-readiness planning should avoid theatrical complexity",
+    "user_request": "I have a clear deadline, two hours a day, and my syllabus. Make me a realistic study plan.",
+    "route_intent": "plan",
+    "current_context": {
+      "materials_attached": true,
+      "planning_readiness": "high",
+      "experience_mode": "mobilize",
+      "surface": "chat"
+    },
+    "expected_capability_needs": {
+      "grounding_required": "required_from_profile",
+      "preferred_retrieval_organs": [
+        "retrieve_user_material"
+      ],
+      "specialist_needed": false,
+      "cost_posture": "medium"
+    },
+    "current_implicit_path": {
+      "route_chain": "SituationBrief -> PlanningStrategyCompiler -> prompt/plan-quality path",
+      "hard_governed_steps": [
+        "planning strategy compilation"
+      ],
+      "advisory_steps": [
+        "body-awareness subsystem recommendation"
+      ]
+    },
+    "wrong_organ_risk": "The system may add unnecessary specialist routing or deeper orchestration when the ordinary planning path is already enough.",
+    "phase_d_target_decisions": [
+      "prefer simple planning path",
+      "use materials without over-escalation",
+      "justify why a stronger organ was rejected"
+    ]
+  },
+  {
+    "scenario_id": "phase_d_specialist_escalation_required",
+    "title": "Error-diagnosis request should escalate to the right specialist family",
+    "user_request": "I keep getting the same integration by parts problems wrong. Diagnose the root cause and show me the pattern.",
+    "route_intent": "knowledge",
+    "current_context": {
+      "materials_attached": true,
+      "planning_readiness": "not_applicable",
+      "experience_mode": "explain",
+      "surface": "chat",
+      "error_pattern_present": true
+    },
+    "expected_capability_needs": {
+      "grounding_required": "mandatory",
+      "preferred_retrieval_organs": [
+        "query_knowledge",
+        "retrieve_user_material"
+      ],
+      "specialist_needed": true,
+      "preferred_specialists": [
+        "error_analyst",
+        "math_agent"
+      ],
+      "cost_posture": "medium"
+    },
+    "current_implicit_path": {
+      "route_chain": "agent profile catalog and expert entry exist, but main turn path lacks a shared specialist selection policy",
+      "hard_governed_steps": [],
+      "advisory_steps": [
+        "specialist suitability remains distributed across agent policies and routing heuristics"
+      ]
+    },
+    "wrong_organ_risk": "Sparkle may stay on the general orchestrator path and miss a specialist that would improve diagnosis quality.",
+    "phase_d_target_decisions": [
+      "select specialist escalation when error diagnosis is required",
+      "document why the specialist was worth the extra cost",
+      "keep fallback path if specialist is unavailable"
+    ]
+  },
+  {
+    "scenario_id": "phase_d_prediction_turn",
+    "title": "Prediction-like request should choose forecasting organs without pretending certainty",
+    "user_request": "If I keep studying like this, what is most likely to happen over the next two weeks?",
+    "route_intent": "task",
+    "current_context": {
+      "materials_attached": false,
+      "planning_readiness": "medium",
+      "experience_mode": "review",
+      "surface": "chat",
+      "behavior_history_available": true
+    },
+    "expected_capability_needs": {
+      "grounding_required": "behavioral",
+      "preferred_retrieval_organs": [
+        "prediction",
+        "launch_prediction"
+      ],
+      "specialist_needed": false,
+      "cost_posture": "low"
+    },
+    "current_implicit_path": {
+      "route_chain": "keyword inference -> bridge tool activation for launch_prediction",
+      "hard_governed_steps": [
+        "launch_prediction keyword-based tool inference"
+      ],
+      "advisory_steps": [
+        "prediction subsystem recommendation for planning turns"
+      ]
+    },
+    "wrong_organ_risk": "The system may answer with generic coaching instead of a bounded predictive path, or may overstate forecast confidence.",
+    "phase_d_target_decisions": [
+      "choose prediction organ when forecast value is real",
+      "keep claims bounded and auditable",
+      "fall back to review path if prediction organ is unavailable"
+    ]
+  },
+  {
+    "scenario_id": "phase_d_community_surface_case",
+    "title": "Accountability request should consider community surface selection",
+    "user_request": "I need accountability from other people this week. Help me set that up without making it feel heavy.",
+    "route_intent": "community",
+    "current_context": {
+      "materials_attached": false,
+      "planning_readiness": "medium",
+      "experience_mode": "mobilize",
+      "surface": "chat",
+      "privacy_sensitivity": "medium"
+    },
+    "expected_capability_needs": {
+      "grounding_required": "light",
+      "preferred_surfaces": [
+        "community"
+      ],
+      "specialist_needed": false,
+      "cost_posture": "low"
+    },
+    "current_implicit_path": {
+      "route_chain": "CapabilityRegistryService can recommend community as an activation surface",
+      "hard_governed_steps": [],
+      "advisory_steps": [
+        "community activation surface recommendation"
+      ]
+    },
+    "wrong_organ_risk": "Community is declared in the body but not selected through a real shared runtime policy, so the system can ignore it or invoke it vaguely.",
+    "phase_d_target_decisions": [
+      "select community surface family when accountability is explicit",
+      "check privacy and burden constraints",
+      "record fallback if community is not appropriate"
+    ]
+  },
+  {
+    "scenario_id": "phase_d_execution_fallback_when_unavailable",
+    "title": "Bounded execution request should fall back safely when execution organ is unavailable",
+    "user_request": "Go ahead and do the setup work for me.",
+    "route_intent": "execution",
+    "current_context": {
+      "materials_attached": false,
+      "planning_readiness": "high",
+      "experience_mode": "mobilize",
+      "surface": "chat",
+      "execution_rights_uncertain": true,
+      "openclaw_expected_state": "may_be_unavailable"
+    },
+    "expected_capability_needs": {
+      "grounding_required": "task_ready_only",
+      "preferred_retrieval_organs": [],
+      "preferred_execution_organs": [
+        "openclaw"
+      ],
+      "specialist_needed": false,
+      "cost_posture": "variable"
+    },
+    "current_implicit_path": {
+      "route_chain": "CapabilityRegistryService can recommend openclaw only if configured",
+      "hard_governed_steps": [
+        "configured vs not_configured subsystem check inside advisory guidance"
+      ],
+      "advisory_steps": [
+        "execution delegation recommendation"
+      ]
+    },
+    "wrong_organ_risk": "The system can imply an execution organ exists without one audited selector deciding whether rights and availability are actually satisfied.",
+    "phase_d_target_decisions": [
+      "check execution organ availability",
+      "check declared rights before delegation",
+      "fall back to plan or guidance when execution is blocked"
+    ]
+  },
+  {
+    "scenario_id": "phase_d_adaptation_surface_case",
+    "title": "Adaptation-heavy turn should consider visible support surfaces without losing reversibility",
+    "user_request": "I finally started again, but I need something that keeps the mood lighter so I do not shut down tomorrow.",
+    "route_intent": "task",
+    "current_context": {
+      "materials_attached": false,
+      "planning_readiness": "medium",
+      "experience_mode": "mobilize",
+      "surface": "chat",
+      "recent_positive_feedback": true
+    },
+    "expected_capability_needs": {
+      "grounding_required": "light",
+      "preferred_surfaces": [
+        "visual_bgm",
+        "achievements"
+      ],
+      "bounded_adjustments_allowed": true,
+      "specialist_needed": false,
+      "cost_posture": "low"
+    },
+    "current_implicit_path": {
+      "route_chain": "DecisionPolicyCompiler recommends reversible adjustments; capability guidance may add activation surfaces",
+      "hard_governed_steps": [
+        "session-level adjustment recommendations"
+      ],
+      "advisory_steps": [
+        "activation surface recommendations"
+      ]
+    },
+    "wrong_organ_risk": "Visible support surfaces are part of the declared body but are not yet chosen through a real selector with rationale and fallback.",
+    "phase_d_target_decisions": [
+      "select visible support surfaces when helpful",
+      "keep reversibility explicit",
+      "avoid replacing diagnosis with decoration"
+    ]
+  },
+  {
+    "scenario_id": "phase_d_cost_sensitive_fast_enough",
+    "title": "Fast-enough path should beat expensive escalation when the request is straightforward",
+    "user_request": "Translate this short paragraph into Chinese and keep the tone natural.",
+    "route_intent": "translation",
+    "current_context": {
+      "materials_attached": false,
+      "planning_readiness": "not_applicable",
+      "experience_mode": "explain",
+      "surface": "chat",
+      "specialist_translation_available": true
+    },
+    "expected_capability_needs": {
+      "grounding_required": "minimal",
+      "preferred_specialists": [
+        "translate"
+      ],
+      "specialist_needed": true,
+      "cost_posture": "low"
+    },
+    "current_implicit_path": {
+      "route_chain": "translation tool exists and specialist translation models exist, but main path does not use one shared capability selector to prefer the fast-enough specialist lane",
+      "hard_governed_steps": [],
+      "advisory_steps": [
+        "model and tool choice remain distributed"
+      ]
+    },
+    "wrong_organ_risk": "Sparkle can spend a more expensive general-purpose path on a task that should go to a cheaper specialist lane.",
+    "phase_d_target_decisions": [
+      "prefer fast-enough specialist capability",
+      "reject unnecessary deep reasoning",
+      "make the cost/latency tradeoff auditable"
+    ]
+  }
+]

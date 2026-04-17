@@ -182,6 +182,8 @@ class SchedulerService:
                 service = NightlyReviewService(db)
                 for user in users:
                     await service.generate_for_user(user.id, user.timezone)
+        except Exception as e:
+            logger.error(f"Error in nightly review job: {e}", exc_info=True)
 
     async def run_execution_schedule_tick(self):
         logger.info("Starting execution schedule tick...")
@@ -195,8 +197,6 @@ class SchedulerService:
                 )
         except Exception as e:
             logger.error(f"Error in execution schedule tick: {e}", exc_info=True)
-        except Exception as e:
-            logger.error(f"Error in nightly review job: {e}", exc_info=True)
 
     async def run_memory_evidence_health_job(self):
         if not settings.ENABLE_MEMORY_JOBS:

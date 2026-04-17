@@ -75,7 +75,12 @@ class ABExperiment(BaseModel):
     conclusion = Column(Text, nullable=True, doc="实验结论")
     winning_variant_id = Column(
         GUID(),
-        ForeignKey("ab_experiment_variants.id", ondelete="SET NULL"),
+        ForeignKey(
+            "ab_experiment_variants.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_ab_experiments_winning_variant_id",
+        ),
         nullable=True,
         doc="获胜变体ID"
     )

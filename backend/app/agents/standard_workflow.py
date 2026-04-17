@@ -94,6 +94,16 @@ def _should_force_final_synthesis_without_tools(state: WorkflowState) -> bool:
     return False
 
 
+def _phase_d_forced_model_tier(state: WorkflowState) -> ModelTier | None:
+    raw = str(state.context_data.get("phase_d_forced_model_tier") or "").strip().lower()
+    if not raw:
+        return None
+    try:
+        return ModelTier(raw)
+    except ValueError:
+        return None
+
+
 def _build_minimal_user_context_for_grounded_synthesis(user_context: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(user_context, dict):
         return {}
@@ -108,6 +118,25 @@ def _build_minimal_user_context_for_grounded_synthesis(user_context: dict[str, A
         "context_focus",
     }
     return {key: user_context.get(key) for key in allowed_keys if key in user_context}
+
+
+def _first_document_page_number(chunk: Any) -> int | None:
+    if chunk is None:
+        return None
+
+    page_numbers = getattr(chunk, "page_numbers", None)
+    if isinstance(page_numbers, list):
+        for item in page_numbers:
+            try:
+                return int(item)
+            except (TypeError, ValueError):
+                continue
+
+    page_number = getattr(chunk, "page_number", None)
+    try:
+        return int(page_number) if page_number is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _resolve_generation_agent_role(state: WorkflowState) -> str:
@@ -377,7 +406,9 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
     timeline: list[dict[str, Any]] = []
     few_shot_total = 0
 
-    async def _run_single_expert(expert_id: str, prior_handoffs: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], int]:
+    async def _run_single_expert(
+        expert_id: str, prior_handoffs: list[dict[str, Any]]
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], int]:
         started_at = time.time()
         runtime = await _resolve_llm_for_expert(expert_id=expert_id, state=state, task_type=task_type)
         few_shot_examples: list[dict[str, Any]] = []
@@ -463,9 +494,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         return expert_output, handoff_packet.to_dict(), timeline_step, len(few_shot_examples[:1])
 
     if run_parallel:
-        parallel_results = await asyncio.gather(
-            *[_run_single_expert(expert_id, []) for expert_id in selected]
-        )
+        parallel_results = await asyncio.gather(*[_run_single_expert(expert_id, []) for expert_id in selected])
         for expert_output, handoff_packet, timeline_step, few_shot_count in parallel_results:
             expert_outputs.append(expert_output)
             handoff_packets.append(handoff_packet)
@@ -1058,12 +1087,13 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                         snippet = chunk.content.strip()
                         if len(snippet) > 400:
                             snippet = snippet[:400] + "..."
+                        page_number = _first_document_page_number(chunk)
 
                         label_parts = [item.file_name]
                         if chunk.section_title:
                             label_parts.append(chunk.section_title)
-                        if chunk.page_number is not None:
-                            label_parts.append(f"p{chunk.page_number}")
+                        if page_number is not None:
+                            label_parts.append(f"p{page_number}")
                         label_parts.append(f"#{chunk.chunk_index}")
                         label = " | ".join(label_parts)
                         lines.append(f"- [{label}] {snippet}")
@@ -1082,7 +1112,7 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                                     url="",
                                     score=item.score,
                                     file_id=str(chunk.file_id),
-                                    page_number=chunk.page_number or 0,
+                                    page_number=page_number or 0,
                                     chunk_index=chunk.chunk_index,
                                     section_title=chunk.section_title or "",
                                 )
@@ -1167,7 +1197,16 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
             generation_llm = explicit_runtime["service"]
             agent_role = explicit_runtime["agent_role"].value
         else:
-            if _should_force_fast_first_touch(
+            forced_phase_d_tier = _phase_d_forced_model_tier(state)
+            if forced_phase_d_tier is not None:
+                generation_llm = await get_configured_llm_service_for_tier(
+                    agent_role,
+                    forced_phase_d_tier,
+                    task_type=task_type,
+                    reasoning_mode=reasoning_mode,
+                )
+                state.context_data["phase_d_model_tier_enforced"] = forced_phase_d_tier.value
+            elif _should_force_fast_first_touch(
                 state,
                 explicit_runtime=explicit_runtime,
                 task_type=task_type,
@@ -2221,6 +2260,8 @@ def _should_use_slim_standard_context(state: WorkflowState, user_message: str) -
     chat_mode = str(context_data.get("chat_mode") or "standard").strip().lower()
     if chat_mode not in {"standard", "chat"}:
         return False
+    if context_data.get("file_ids"):
+        return False
     if context_data.get("planned_tool_sequence"):
         return False
     if context_data.get("selected_experts") or context_data.get("answer_experts"):
@@ -3009,6 +3050,28 @@ async def _execute_single_tool(
             user_id=user_id,
             db_session=db_session,
             compensation_call=compensation_call,
+            runtime_context={
+                "session_id": state.context_data.get("session_id"),
+                "plan_id": state.context_data.get("plan_id"),
+                "redis_client": redis_client,
+                "current_user_message": state.messages[-1]["content"] if state.messages else "",
+                "file_ids": list(state.context_data.get("file_ids") or []),
+                "situation_brief": state.context_data.get("situation_brief"),
+                "user_context_payload": state.context_data.get("user_context_payload"),
+                "plan_context": state.context_data.get("plan_context"),
+                "focused_memory": state.context_data.get("focused_memory"),
+                "context_briefing_note": state.context_data.get("context_briefing_note"),
+                "visible_update_context": state.context_data.get("visible_update_context"),
+                "active_interventions": state.context_data.get("active_interventions"),
+                "active_intervention_id": state.context_data.get("active_intervention_id"),
+                "last_feedback_binding": state.context_data.get("last_feedback_binding"),
+                "dual_core_snapshot": state.context_data.get("dual_core_snapshot"),
+                "session_feedback_signal": state.context_data.get("session_feedback_signal"),
+                "progress_snapshot": state.context_data.get("progress_snapshot"),
+                "adaptation_records": (
+                    state.context_data.get("user_context_payload", {}) or {}
+                ).get("adaptation_records"),
+            },
         )
 
         # Check if tool execution failed
@@ -3113,6 +3176,8 @@ async def _execute_single_tool(
         }
     )
     state.append_message("tool", result_json, name=tool_name)
+    if tool_name == "record_intervention_feedback" and isinstance(result.data, dict):
+        _update_feedback_binding_runtime_state(state, result.data)
     state.context_data.setdefault("tool_results", []).append(
         {
             "name": tool_name,
@@ -3125,6 +3190,26 @@ async def _execute_single_tool(
             "tool_call_id": tool_call_id,
         }
     )
+
+
+def _update_feedback_binding_runtime_state(state: WorkflowState, result_data: dict[str, Any]) -> None:
+    active_interventions = result_data.get("active_interventions")
+    if isinstance(active_interventions, list):
+        state.context_data["active_interventions"] = active_interventions
+        if active_interventions:
+            active_intervention_id = str(active_interventions[0].get("intervention_id") or "").strip()
+            if active_intervention_id:
+                state.context_data["active_intervention_id"] = active_intervention_id
+            else:
+                state.context_data.pop("active_intervention_id", None)
+        else:
+            state.context_data.pop("active_intervention_id", None)
+
+    last_feedback_binding = result_data.get("last_feedback_binding")
+    if isinstance(last_feedback_binding, dict):
+        state.context_data["last_feedback_binding"] = last_feedback_binding
+    elif isinstance(active_interventions, list) and not active_interventions and not result_data.get("bound", False):
+        state.context_data.pop("last_feedback_binding", None)
 
 
 async def _write_feedback(

@@ -273,8 +273,23 @@ class RoutingEngineMixin:
             )
         else:
             decision = self.dual_core_router.route(routing_input)
+
         state.context_data["dual_core_decision"] = decision.to_dict()
-        state.context_data["dual_core_prompt_instruction"] = decision.prompt_instruction
+        prompt_instruction = decision.prompt_instruction
+
+        # Stickiness Moment 3: detect mode-shift and inject a natural transition phrase
+        # so the AI opens with acknowledgment when switching from task-mode to feeling-mode.
+        last_mode = await self._get_last_dual_core_mode(user_id)
+        if last_mode and last_mode != decision.mode and decision.mode == "cognitive_first":
+            _TRANSITION_PHRASES = {
+                "execution_first": "今天我会先陪你把这件事想清楚，再一起看下一步怎么做。",
+                "balanced": "今天先聊聊感受，任务可以等一会儿。",
+            }
+            phrase = _TRANSITION_PHRASES.get(last_mode, "今天我们换个角度来看看。")
+            transition_hint = f"\n\n【开场过渡提示】{phrase}"
+            prompt_instruction = (prompt_instruction + transition_hint).strip()
+
+        state.context_data["dual_core_prompt_instruction"] = prompt_instruction
         state.context_data["dual_core_signal_snapshot"] = {
             "intent": routing_input.intent,
             "intent_confidence": routing_input.intent_confidence,
@@ -443,6 +458,21 @@ class RoutingEngineMixin:
             "suggested_verbosity": suggested_verbosity,
             "current_guidance": current_guidance,
         }
+
+    async def _get_last_dual_core_mode(self, user_id: str) -> str | None:
+        """Return the dual-core mode from the previous session, or None."""
+        if not self.redis:
+            return None
+        try:
+            raw = self.redis.get(f"user:routing:last_dual_core:{user_id}")
+            if inspect.isawaitable(raw):
+                raw = await raw
+            if raw:
+                data = json.loads(raw)
+                return data.get("mode")
+        except Exception:
+            pass
+        return None
 
     async def _persist_dual_core_decision_snapshot(
         self,

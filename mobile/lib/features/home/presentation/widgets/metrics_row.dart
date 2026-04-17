@@ -5,7 +5,9 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
+import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class MetricsRow extends ConsumerWidget {
@@ -18,6 +20,11 @@ class MetricsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isChinese = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('zh');
+    final l10n = AppLocalizations.of(context)!;
     final streakStats = ref.watch(streakStatsProvider);
     final taskState = ref.watch(taskListProvider);
     final taskMetric = _buildTaskMetric(taskState, dashboardState);
@@ -32,20 +39,8 @@ class MetricsRow extends ConsumerWidget {
           DS.spacing16,
           DS.spacing10,
         ),
-        child: MaterialStyler(
-          material: AppMaterials.ceramic(context).copyWith(
-            backgroundGradient: LinearGradient(
-              colors: [
-                DS.surfacePrimaryElevated,
-                DS.surfaceSecondary,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderColor: DS.borderSubtle,
-            borderWidth: 1,
-          ),
-          borderRadius: DS.borderRadius20,
+        child: DashboardSectionShell(
+          tone: DashboardSurfaceTone.summary,
           padding: const EdgeInsets.symmetric(horizontal: DS.spacing8),
           child: SizedBox(
             height: compactMode ? 82 : 72,
@@ -60,7 +55,7 @@ class MetricsRow extends ConsumerWidget {
                       value: _formatFocusTime(
                         dashboardState.flame.todayFocusMinutes,
                       ),
-                      label: '今日专注',
+                      label: isChinese ? '今日专注' : 'Today Focus',
                       icon: Icons.center_focus_strong_rounded,
                       color: DS.brandPrimary,
                       compact: compactMode,
@@ -76,7 +71,7 @@ class MetricsRow extends ConsumerWidget {
                     slideOffset: const Offset(0, 0.05),
                     child: _MetricCell(
                       value: taskMetric.primary,
-                      label: '今日任务',
+                      label: isChinese ? '今日任务' : 'Today Tasks',
                       icon: Icons.task_alt_rounded,
                       color: DS.success,
                       compact: compactMode,
@@ -91,8 +86,10 @@ class MetricsRow extends ConsumerWidget {
                     stagger: const Duration(milliseconds: 80),
                     slideOffset: const Offset(0, 0.05),
                     child: _MetricCell(
-                      value: '${streakStats.currentStreak}天',
-                      label: '连胜',
+                      value: isChinese
+                          ? '${streakStats.currentStreak}天'
+                          : l10n.streakDays(streakStats.currentStreak),
+                      label: l10n.winStreak,
                       icon: Icons.local_fire_department_rounded,
                       color: DS.warning,
                       compact: compactMode,

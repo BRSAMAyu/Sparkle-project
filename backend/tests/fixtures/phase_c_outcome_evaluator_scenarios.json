@@ -1,0 +1,37 @@
+[
+  {
+    "scenario_id": "phase_c_failure_then_improves",
+    "first_cycle": {
+      "plan_quality": 0.52,
+      "trust_score": 0.71,
+      "repeated_mistakes": 3
+    },
+    "later_cycle": {
+      "plan_quality": 0.84,
+      "trust_score": 0.76,
+      "repeated_mistakes": 1,
+      "overfit_risk": false
+    },
+    "validated_learning_applied": [
+      "Default to a lighter first step.",
+      "Prefer a shorter checkpoint cadence."
+    ]
+  },
+  {
+    "scenario_id": "phase_c_overfits_after_success",
+    "first_cycle": {
+      "plan_quality": 0.82,
+      "trust_score": 0.83,
+      "repeated_mistakes": 0
+    },
+    "later_cycle": {
+      "plan_quality": 0.86,
+      "trust_score": 0.48,
+      "repeated_mistakes": 0,
+      "overfit_risk": true
+    },
+    "validated_learning_applied": [
+      "Reuse the validated success pattern when context matches."
+    ]
+  }
+]

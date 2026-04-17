@@ -41,6 +41,7 @@ import 'package:sparkle/features/home/presentation/providers/intent_prediction_p
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
+import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 const _defaultAiSystemPreferences = TransparencyPreferences(
@@ -63,11 +64,16 @@ class ChatScreen extends ConsumerStatefulWidget {
     this.initialPrompt,
     this.initialChatMode,
     this.initialConversationId,
+    this.initialAiMessage,
   });
 
   final String? initialPrompt;
   final String? initialChatMode;
   final String? initialConversationId;
+
+  /// Pre-generated AI opening message shown immediately on first open (no backend call).
+  /// Used after onboarding to make the AI feel present from the very first moment.
+  final String? initialAiMessage;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -87,6 +93,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _showContextControls = false;
   String? _dispatchedInitialPrompt;
   String? _hydratedConversationId;
+  String? _hydratedChatOpeningConversationId;
 
   @override
   void initState() {
@@ -239,6 +246,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await ref.read(chatProvider.notifier).loadConversationHistory(sessionId);
     }
     _queueInitialPromptDispatch();
+    _injectWelcomeMessageIfNeeded();
+    await _hydrateChatOpeningIfNeeded();
+  }
+
+  void _injectWelcomeMessageIfNeeded() {
+    final msg = widget.initialAiMessage?.trim();
+    if (msg == null || msg.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(chatProvider.notifier).prependWelcomeMessage(msg);
+    });
+  }
+
+  Future<void> _hydrateChatOpeningIfNeeded() async {
+    if (!mounted) {
+      return;
+    }
+    if (widget.initialAiMessage?.trim().isNotEmpty ?? false) {
+      return;
+    }
+
+    final conversationId = ref.read(chatProvider).conversationId?.trim();
+    if (conversationId == null ||
+        conversationId.isEmpty ||
+        conversationId == _hydratedChatOpeningConversationId) {
+      return;
+    }
+
+    _hydratedChatOpeningConversationId = conversationId;
+    try {
+      final created = await ref
+          .read(userRepositoryProvider)
+          .hydrateChatOpening(conversationId);
+      if (!mounted || !created) {
+        return;
+      }
+      await ref.read(chatProvider.notifier).loadConversationHistory(
+            conversationId,
+          );
+    } catch (_) {
+      _hydratedChatOpeningConversationId = null;
+    }
   }
 
   void _queueInitialPromptDispatch() {

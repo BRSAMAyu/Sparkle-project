@@ -19,6 +19,7 @@ from app.core.agent_profiles import get_public_agent_catalog, get_public_mode_ca
 from app.core.llm_router import llm_router
 from app.db.session import get_db
 from app.models.user import User
+from app.services.capability_registry_service import CapabilityRegistryService
 from app.services.custom_expert_service import CustomExpertService
 
 router = APIRouter(prefix="/multi-agent", tags=["multi-agent"])
@@ -252,6 +253,14 @@ async def get_multi_agent_catalog(
         "model_options": CustomExpertService.build_model_options(),
         "total_experts": len(experts),
     }
+
+
+@router.get("/body-map")
+async def get_multi_agent_body_map(
+    current_user: User = Depends(get_current_user),
+):
+    del current_user
+    return CapabilityRegistryService().build_registry()
 
 
 def _validate_expert_payload(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import asyncio
 import json
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -14,9 +14,13 @@ from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.models.accountability import AccountabilityPartnership, AccountabilitySlotType, AccountabilityStatus
+from app.models.card_protocol import InterventionAcceptanceStatus, InterventionRecord
+from app.models.chat import ChatMessage, ChatSession as ChatSessionModel, MessageRole
 from app.models.user import User
 from app.api.v1.accountability import _build_relationship_summary
+from app.orchestration.session_state_mixin import SessionStateMixin
 from app.services.cognitive_service import CognitiveService
+from app.services.intervention_record_service import InterventionRecordService
 from app.services.llm_service import get_configured_llm_service_for_tier
 from app.services.memory_service import MemoryService
 from app.services.personalization import get_personalization_engine
@@ -26,6 +30,7 @@ from app.services.profile_context_service import ProfileContextService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.insight_copy import present_pattern_name
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.services.user_insight_transparency_service import UserInsightTransparencyService
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -36,12 +41,27 @@ def _snippet(value: str, limit: int = 80) -> str:
     return value if len(value) <= limit else f"{value[:limit - 1]}…"
 
 
+def _strip(value: Any) -> str:
+    return str(value or "").strip()
+
+
 def _response_style_from_depth(depth: float) -> str:
     if depth >= 0.7:
         return "detailed"
     if depth <= 0.3:
         return "concise"
     return "balanced"
+
+
+class ChatOpeningRequest(BaseModel):
+    conversation_id: UUID
+
+
+class ChatOpeningResponse(BaseModel):
+    created: bool
+    conversation_id: UUID
+    message_id: UUID | None = None
+    content: str | None = None
 
 def _source_score(source: str) -> float:
     mapping = {
@@ -50,6 +70,116 @@ def _source_score(source: str) -> float:
         "system": 0.2,
     }
     return mapping.get(source, 0.5)
+
+
+def _is_chat_opening_update(update: dict[str, Any]) -> bool:
+    if not isinstance(update, dict):
+        return False
+    update_type = str(update.get("type") or "").strip()
+    metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+    evolution_kind = str(metadata.get("evolution_kind") or "").strip()
+    return update_type == "plan_adjusted_from_error" or evolution_kind in {
+        "adjustment",
+        "plan_reasoning",
+        "progress_comparison",
+        "proactive_insight",
+        "weekly_learning_report",
+    }
+
+
+def _compose_chat_opening_content(prompt_context: dict[str, str]) -> str:
+    lines: list[str] = []
+    for key in ("proactive_opening_message", "pending_observation", "post_adaptation_question"):
+        text = str(prompt_context.get(key) or "").strip()
+        if text and text not in lines:
+            lines.append(text)
+    return "\n\n".join(lines).strip()
+
+
+def _extract_intervention_id(updates: list[dict[str, Any]]) -> UUID | None:
+    for update in updates:
+        if not isinstance(update, dict):
+            continue
+        metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+        raw = metadata.get("intervention_id")
+        if not raw:
+            continue
+        try:
+            return UUID(str(raw))
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _build_chat_opening_widgets(
+    *,
+    proactive_opening_message: str,
+    post_adaptation_question: str,
+    intervention_id: UUID | None,
+) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+
+    if proactive_opening_message:
+        actions.append(
+            {
+                "label": "看看我改了什么",
+                "type": "route",
+                "route": "/tasks",
+            }
+        )
+
+    if intervention_id and post_adaptation_question:
+        actions.extend(
+            [
+                {
+                    "label": "这样更合适",
+                    "type": "intervention_feedback",
+                    "intervention_id": str(intervention_id),
+                    "feedback_action": "acted",
+                    "message": "已记住，这次调整对你是有帮助的。",
+                },
+                {
+                    "label": "不太对",
+                    "type": "intervention_feedback",
+                    "intervention_id": str(intervention_id),
+                    "feedback_action": "dismissed",
+                    "message": "收到，我不会继续沿着这个方向强推。",
+                },
+            ]
+        )
+
+    if not actions:
+        return []
+
+    return [
+        {
+            "type": "next_actions",
+            "data": {
+                "title": "你想怎么继续？",
+                "actions": actions,
+            },
+        }
+    ]
+
+
+async def _mark_chat_opening_intervention_seen(
+    *,
+    db: AsyncSession,
+    user_id: UUID,
+    intervention_id: UUID | None,
+) -> None:
+    if intervention_id is None:
+        return
+
+    record = await db.get(InterventionRecord, intervention_id)
+    if record is None or record.user_id != user_id:
+        return
+
+    service = InterventionRecordService(db)
+    if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+        await service.mark_delivered(record.id)
+    if record.acceptance_status == InterventionAcceptanceStatus.DELIVERED:
+        await service.mark_seen(record.id)
 
 
 def _risk_score(risk: str) -> float:
@@ -77,6 +207,84 @@ def _goal_type_label(value: str | None) -> str:
         "interest": "兴趣探索",
     }
     return mapping.get(str(value or "").strip().lower(), "学习目标")
+
+
+def _build_first_session_message(
+    *,
+    learning_goal: str | None,
+    learning_goal_type: str | None,
+    knowledge_level: str | None,
+    study_time_minutes: int | None,
+) -> str:
+    """Deterministic fallback for the first-session opener message."""
+    if not (learning_goal or "").strip():
+        return "你好！我是 Sparkle。告诉我你现在最想突破的学习难关，我们一起来想办法。"
+    goal = learning_goal.strip()
+    goal_label = _goal_type_label(learning_goal_type)
+    level_map = {
+        "beginner": "刚开始接触",
+        "intermediate": "有一些基础",
+        "advanced": "已经有较深积累",
+    }
+    level_label = level_map.get(str(knowledge_level or "").strip(), "")
+    time_label = f"每天 {study_time_minutes} 分钟" if study_time_minutes else "你的时间"
+    lines = [f"你好！我已经了解你想推进「{goal}」这个{goal_label}目标。"]
+    if level_label:
+        lines.append(f"你目前{level_label}，我会根据这个来调整节奏和难度。")
+    lines.append(f"我们用{time_label}来开始——先告诉我：你现在这个目标里，觉得最卡住的是哪一块？")
+    return "\n".join(lines)
+
+
+async def _generate_first_session_message(
+    *,
+    learning_goal: str | None,
+    learning_goal_type: str | None,
+    knowledge_level: str | None,
+    study_time_minutes: int | None,
+) -> str:
+    """Generate a personalized AI opening message for the user's very first chat session."""
+    fallback = _build_first_session_message(
+        learning_goal=learning_goal,
+        learning_goal_type=learning_goal_type,
+        knowledge_level=knowledge_level,
+        study_time_minutes=study_time_minutes,
+    )
+    goal = (learning_goal or "").strip()
+    if not goal:
+        return fallback
+
+    summary_bits = [f"目标类型：{_goal_type_label(learning_goal_type)}", f"目标：{goal}"]
+    if knowledge_level:
+        summary_bits.append(f"当前基础：{knowledge_level}")
+    if study_time_minutes is not None:
+        summary_bits.append(f"每日学习时间：{study_time_minutes} 分钟")
+
+    llm = await get_configured_llm_service_for_tier(
+        AgentRole.GENERATION,
+        ModelTier.FAST,
+        task_type=TaskType.QUICK_QUERY,
+        reasoning_mode="fast",
+    )
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "你是 Sparkle，一个AI学习成长伙伴。"
+                "用户刚完成画像设置，现在第一次进入对话界面。"
+                "请生成一段自然的开场白，3句话以内：第1句表达你已了解他们的目标；"
+                "第2句（可选）针对他们的基础/时间给出一句个性化观察；"
+                "第3句以开放式问题结尾，邀请他们告诉你现在最卡住的地方。"
+                "语气温暖、直接，像朋友不像客服。总字数80字内。不要markdown，不要列表。"
+            ),
+        },
+        {"role": "user", "content": "\n".join(summary_bits)},
+    ]
+    try:
+        message = await asyncio.wait_for(llm.chat(messages, temperature=0.3), timeout=8.0)
+        message = " ".join((message or "").split())
+        return message if message else fallback
+    except Exception:
+        return fallback
 
 
 def _build_onboarding_preview_fallback(payload: OnboardingRequest) -> str:
@@ -263,6 +471,13 @@ class ResetOverrideRequest(BaseModel):
     key: str
 
 
+class InsightControlRequest(BaseModel):
+    target_id: str
+    action: str
+    value: Any | None = None
+    reason: str | None = None
+
+
 def _coerce_preference_value(pref_key: str, value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
@@ -294,6 +509,15 @@ def _merge_preferences(explicit: dict[str, Any], inferred: dict[str, Any]) -> di
     return merged
 
 
+def _merge_scope_overrides(merged_preferences: dict[str, Any], target_id: str, scope: str | None) -> dict[str, Any]:
+    current = dict(merged_preferences.get("insight_scope_overrides") or {})
+    if scope:
+        current[target_id] = {"scope": scope}
+    else:
+        current.pop(target_id, None)
+    return current
+
+
 def _normalize_inferred_display_value(value: Any) -> Any:
     if isinstance(value, dict) and set(value.keys()) == {"value"}:
         return value.get("value")
@@ -301,6 +525,10 @@ def _normalize_inferred_display_value(value: Any) -> Any:
 
 
 _INFERRED_KEY_LABELS = {
+    "achievement_motivation_response": "成就激励响应",
+    "achievement_pace_style": "成就节奏风格",
+    "achievement_peak_hours": "成就高峰时段",
+    "achievement_reward_sensitivity": "成就奖励敏感度",
     "avg_question_complexity": "问题复杂度",
     "chat_active_hours": "聊天活跃时段",
     "community_engagement_level": "社区参与度",
@@ -320,6 +548,7 @@ _INFERRED_KEY_LABELS = {
 }
 
 _INFERRED_SOURCE_LABELS = {
+    "achievement_signals": "成就行为",
     "behavior": "行为推断",
     "chat_behavior": "聊天行为",
     "community": "社区行为",
@@ -337,8 +566,14 @@ _VALUE_LABELS = {
     "high": "高",
     "low": "低",
     "balanced": "均衡",
+    "mastery_affirmation": "掌握提升型鼓励",
+    "milestone_celebration": "里程碑庆祝型鼓励",
+    "mixed": "混合",
+    "progress_praise": "进度肯定型鼓励",
     "detailed": "详细",
     "concise": "简洁",
+    "sprint": "冲刺型",
+    "steady": "稳步型",
     "structured": "结构化",
     "intermediate": "中等基础",
 }
@@ -394,6 +629,14 @@ def _present_value_text(value: Any) -> str:
 
 def _localize_inferred_explanation(key: str, value: Any, fallback: str) -> str:
     label = _INFERRED_KEY_LABELS.get(key, key)
+    if key == "achievement_peak_hours" and isinstance(value, list):
+        return f"系统观察到你最近更常在 { _present_value_text(value) } 解锁成就，这些时段会被视为更容易形成正反馈的窗口。"
+    if key == "achievement_motivation_response":
+        return f"最近成就行为显示，你更容易被「{ _present_value_text(value) }」这类反馈方式带动。"
+    if key == "achievement_pace_style":
+        return f"结合最近的成就节奏，系统判断你当前更接近 { _present_value_text(value) } 的推进方式。"
+    if key == "achievement_reward_sensitivity":
+        return f"根据最近成就的稀有度与分享行为，系统认为你对奖励反馈的敏感度大约是 { _present_value_text(value) }。"
     if key == "peak_focus_hours" and isinstance(value, list):
         return f"系统根据最近专注记录判断，你更容易进入状态的时间集中在 { _present_value_text(value) }。"
     if key == "chat_active_hours" and isinstance(value, list):
@@ -655,14 +898,23 @@ async def get_profile_context(
 ) -> dict[str, Any]:
     profile_context_service = ProfileContextService(db, cache_service.redis)
     pref_service = PreferenceService(db, cache_service.redis)
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
 
     context = await profile_context_service.get_profile_context(current_user.id)
     prefs = await pref_service.get_preferences(current_user.id)
     merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
+    inferred_backups = await profile_write_service.list_inferred_backups(current_user.id)
 
     payload = context.to_prompt_context()
     payload["preferences"] = merged_preferences
     payload["preference_version"] = prefs.version or payload.get("preference_version", 0)
+    user_insight_state = getattr(context, "user_insight_state", None)
+    if user_insight_state is not None:
+        payload["user_insight_transparency"] = UserInsightTransparencyService().build_payload(
+            state=user_insight_state,
+            merged_preferences=merged_preferences,
+            inferred_backups=inferred_backups,
+        )
     partnership_result = await db.execute(
         select(AccountabilityPartnership).where(
             and_(
@@ -688,6 +940,38 @@ async def get_profile_context(
     if active_partnership is not None:
         payload["accountability_summary"]["has_core_partner"] = True
     return payload
+
+
+@router.get("/insights")
+async def get_profile_insights(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    profile_context_service = ProfileContextService(db, cache_service.redis)
+    pref_service = PreferenceService(db, cache_service.redis)
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+
+    context = await profile_context_service.get_profile_context(current_user.id)
+    prefs = await pref_service.get_preferences(current_user.id)
+    merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
+    inferred_backups = await profile_write_service.list_inferred_backups(current_user.id)
+
+    state = context.user_insight_state
+    if state is None:
+        return {
+            "claims": [],
+            "predictions": [],
+            "recent_changes": [],
+            "unknowns": [],
+            "calibration": {},
+            "current_profile": {},
+        }
+
+    return UserInsightTransparencyService().build_payload(
+        state=state,
+        merged_preferences=merged_preferences,
+        inferred_backups=inferred_backups,
+    )
 
 
 @router.get("/inferred-preferences")
@@ -731,6 +1015,80 @@ async def list_system_updates(
     service = SystemUpdateService(cache_service.redis)
     items = await service.list_updates(current_user.id, limit=limit, offset=offset)
     return {"items": items}
+
+
+@router.post("/chat-opening", response_model=ChatOpeningResponse)
+async def create_chat_opening(
+    payload: ChatOpeningRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ChatOpeningResponse:
+    service = SystemUpdateService(cache_service.redis)
+    updates = await service.drain(current_user.id, limit=20)
+    relevant_updates = [update for update in updates if _is_chat_opening_update(update)]
+    deferred_updates = [update for update in updates if update not in relevant_updates]
+
+    if not relevant_updates:
+        for update in reversed(deferred_updates):
+            await service.enqueue(current_user.id, update)
+        return ChatOpeningResponse(created=False, conversation_id=payload.conversation_id)
+
+    prompt_context = SessionStateMixin._build_system_update_prompt_context(relevant_updates)
+    content = _compose_chat_opening_content(prompt_context)
+    if not content:
+        for update in reversed(updates):
+            await service.enqueue(current_user.id, update)
+        return ChatOpeningResponse(created=False, conversation_id=payload.conversation_id)
+
+    intervention_id = _extract_intervention_id(relevant_updates)
+    widgets = _build_chat_opening_widgets(
+        proactive_opening_message=prompt_context.get("proactive_opening_message", ""),
+        post_adaptation_question=prompt_context.get("post_adaptation_question", ""),
+        intervention_id=intervention_id,
+    )
+
+    session_meta = await db.get(ChatSessionModel, payload.conversation_id)
+    now = datetime.utcnow()
+    if session_meta is None:
+        session_meta = ChatSessionModel(
+            id=payload.conversation_id,
+            user_id=current_user.id,
+            is_active=True,
+            last_message_at=now,
+        )
+        db.add(session_meta)
+    elif session_meta.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
+    else:
+        session_meta.is_active = True
+        session_meta.last_message_at = now
+
+    message = ChatMessage(
+        user_id=current_user.id,
+        session_id=payload.conversation_id,
+        role=MessageRole.ASSISTANT,
+        content=content,
+        actions=widgets or None,
+    )
+    db.add(message)
+
+    await _mark_chat_opening_intervention_seen(
+        db=db,
+        user_id=current_user.id,
+        intervention_id=intervention_id,
+    )
+    await db.commit()
+    await db.refresh(message)
+
+    for update in reversed(deferred_updates):
+        await service.enqueue(current_user.id, update)
+
+    return ChatOpeningResponse(
+        created=True,
+        conversation_id=payload.conversation_id,
+        message_id=message.id,
+        content=content,
+    )
 
 
 @router.post("/onboarding")
@@ -819,7 +1177,29 @@ async def submit_onboarding(
         if record:
             updated["learning_goal"] = payload.learning_goal
 
-    return {"status": "ok", "updated": updated}
+    # Bootstrap galaxy scaffold nodes from goal
+    try:
+        from app.services.galaxy_bootstrap_service import GalaxyBootstrapService
+        bootstrap_service = GalaxyBootstrapService(db)
+        await bootstrap_service.seed_from_goal(
+            user_id=current_user.id,
+            learning_goal=payload.learning_goal,
+            goal_type=payload.learning_goal_type,
+        )
+        await db.commit()
+    except Exception as _exc:
+        import logging
+        logging.getLogger(__name__).warning("Galaxy bootstrap failed during onboarding: %s", _exc)
+
+    # Generate personalized first-session opener for the chat
+    first_message = await _generate_first_session_message(
+        learning_goal=payload.learning_goal,
+        learning_goal_type=payload.learning_goal_type,
+        knowledge_level=payload.knowledge_level,
+        study_time_minutes=payload.study_time_minutes,
+    )
+
+    return {"status": "ok", "updated": updated, "first_message": first_message}
 
 
 @router.post("/onboarding/preview", response_model=OnboardingPreviewResponse)
@@ -914,6 +1294,135 @@ async def reset_override_preference(
     return {
         "status": "ok",
         "version": result.preference_version,
+    }
+
+
+@router.post("/insights/control")
+async def control_profile_insight(
+    payload: InsightControlRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    from app.models.memory import MemoryCorrection
+
+    target_id = _strip(payload.target_id)
+    action = _strip(payload.action).lower()
+    if not target_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="target_id required")
+    if action not in {"wrong", "used_to_be_true", "exam_mode_only", "reset_override"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="unsupported action")
+
+    profile_write_service = ProfileWriteService(db, cache_service.redis)
+    pref_service = PreferenceService(db, cache_service.redis)
+    prefs = await pref_service.get_preferences(current_user.id)
+    merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
+    meta = INFERRED_META.get(target_id)
+
+    preference_version = prefs.version or 0
+    if action == "reset_override":
+        if meta is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown inferred key")
+        result = await profile_write_service.reset_override_preference(
+            user_id=current_user.id,
+            pref_key=target_id,
+        )
+        scope_updates = _merge_scope_overrides(merged_preferences, target_id, None)
+        scope_result = await profile_write_service.set_explicit_preference(
+            user_id=current_user.id,
+            pref_key="insight_scope_overrides",
+            pref_value=scope_updates,
+            evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+            source_type="user_state",
+            source="insight_control",
+        )
+        preference_version = max(result.preference_version, scope_result.preference_version)
+    elif meta is not None:
+        if action == "wrong":
+            if meta.adjustable and payload.value is not None:
+                value_payload = _coerce_preference_value(target_id, payload.value)
+                result = await profile_write_service.override_inferred_preference(
+                    user_id=current_user.id,
+                    pref_key=target_id,
+                    pref_value=value_payload,
+                    evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+                    source="insight_control",
+                )
+                preference_version = result.preference_version
+            else:
+                result = await profile_write_service.remove_inferred_preference(
+                    user_id=current_user.id,
+                    pref_key=target_id,
+                )
+                preference_version = result.preference_version
+            scope_updates = _merge_scope_overrides(merged_preferences, target_id, None)
+            await profile_write_service.set_explicit_preference(
+                user_id=current_user.id,
+                pref_key="insight_scope_overrides",
+                pref_value=scope_updates,
+                evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+                source_type="user_state",
+                source="insight_control",
+            )
+        elif action == "used_to_be_true":
+            result = await profile_write_service.remove_inferred_preference(
+                user_id=current_user.id,
+                pref_key=target_id,
+            )
+            preference_version = result.preference_version
+            scope_updates = _merge_scope_overrides(merged_preferences, target_id, None)
+            await profile_write_service.set_explicit_preference(
+                user_id=current_user.id,
+                pref_key="insight_scope_overrides",
+                pref_value=scope_updates,
+                evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+                source_type="user_state",
+                source="insight_control",
+            )
+        elif action == "exam_mode_only":
+            scope_updates = _merge_scope_overrides(merged_preferences, target_id, "exam_mode_only")
+            result = await profile_write_service.set_explicit_preference(
+                user_id=current_user.id,
+                pref_key="insight_scope_overrides",
+                pref_value=scope_updates,
+                evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
+                source_type="user_state",
+                source="insight_control",
+            )
+            preference_version = result.preference_version
+
+    correction = MemoryCorrection(
+        user_id=current_user.id,
+        memory_type="insight_signal",
+        memory_id=current_user.id,
+        action=action,
+        reason=json.dumps(
+            {
+                "target_id": target_id,
+                "field_name": target_id,
+                "suggested_value": payload.value,
+                "reason": payload.reason,
+            },
+            ensure_ascii=True,
+        ),
+    )
+    db.add(correction)
+    await db.commit()
+    await SystemUpdateService(cache_service.redis).enqueue(
+        current_user.id,
+        build_system_update(
+            update_type="insight_control_applied",
+            category="cognitive",
+            title="画像理解已根据你的反馈调整",
+            description="Sparkle 会在后续判断中考虑这条修正",
+            priority="medium",
+            metadata={"target_id": target_id, "action": action},
+        ),
+    )
+    return {
+        "status": "ok",
+        "target_id": target_id,
+        "action": action,
+        "preference_version": preference_version,
     }
 
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.plan import PlanPriority, PlanStage, PlanType
 from app.schemas.common import BaseSchema
@@ -96,8 +96,7 @@ class PlanProgress(BaseModel):
     total_minutes_spent: int = Field(description="Total minutes spent")
     estimated_remaining_hours: float = Field(description="Estimated remaining hours")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PlanSummary(BaseModel):
@@ -121,8 +120,7 @@ class PlanQuotaStatus(BaseModel):
     is_unlimited: bool = Field(description="Is unlimited quota")
     primary_plan_id: UUID | None = Field(default=None, description="Current primary plan ID")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SetPrimaryPlanRequest(BaseModel):

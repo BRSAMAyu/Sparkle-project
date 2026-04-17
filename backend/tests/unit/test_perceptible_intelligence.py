@@ -446,9 +446,6 @@ def test_plan_alignment_score_uses_weak_rule_weight():
         plan_id="plan-weak",
         confidence=0.72,
         tool_calls=[ToolCallSpec(id="1", name="list_tasks", params={})],
-        constraints={
-            "task_difficulty": "lower",
-        },
     )
 
     score, summary, matched = service._score_plan_alignment(

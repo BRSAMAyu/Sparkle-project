@@ -6,6 +6,7 @@ Agent Execution Statistics Service
 from __future__ import annotations
 from datetime import timezone, datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, case, desc, func, select
@@ -26,7 +27,7 @@ class AgentStatsService:
 
     async def record_agent_execution(
         self,
-        user_id: int,
+        user_id: str | UUID,
         session_id: str,
         request_id: str,
         agent_type: str,
@@ -86,7 +87,7 @@ class AgentStatsService:
 
     async def get_user_stats(
         self,
-        user_id: int,
+        user_id: str | UUID,
         days: int = 30
     ) -> dict[str, Any]:
         """
@@ -182,7 +183,7 @@ class AgentStatsService:
 
     async def get_most_used_agents(
         self,
-        user_id: int,
+        user_id: str | UUID,
         limit: int = 5,
         days: int = 30
     ) -> list[dict[str, Any]]:
@@ -231,7 +232,7 @@ class AgentStatsService:
 
     async def get_performance_metrics(
         self,
-        user_id: int | None = None,
+        user_id: str | UUID | None = None,
         agent_type: str | None = None,
         days: int = 7
     ) -> dict[str, Any]:

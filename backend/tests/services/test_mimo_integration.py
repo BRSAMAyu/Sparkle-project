@@ -26,13 +26,25 @@ class TestMIMOPRoTierRouting:
         assert "glm_5_max" not in standard_models
 
     def test_glm_5_max_is_available_in_max_tier(self):
-        """验证 glm_5_max 仍在 MAX 层级"""
+        """验证 MAX 层级包含 glm_5_max，且 MIMO Pro 已注册"""
         router = LLMRouter()
 
         max_models = router._tier_mapping.get(ModelTier.MAX, [])
 
         assert "glm_5_max" in max_models
-        assert "mimo_pro" not in router._available_models
+        assert "mimo_pro" in router._available_models
+
+    def test_mimo_pro_uses_pro_model_and_token_plan_url(self):
+        """验证 MIMO Pro 使用 mimo-v2-pro 和独立 token-plan URL"""
+        router = LLMRouter()
+
+        mimo_pro_config = router._available_models.get("mimo_pro")
+
+        assert mimo_pro_config is not None, "mimo_pro 配置应该存在"
+        assert mimo_pro_config.provider == ModelProvider.XIAOMI
+        assert mimo_pro_config.model_name == "mimo-v2-pro"
+        assert mimo_pro_config.base_url == "https://token-plan-cn.xiaomimimo.com/v1"
+        assert mimo_pro_config.tier == ModelTier.MAX
 
     def test_glm_5_max_config_is_registered(self):
         """验证 glm_5_max 配置已注册"""
@@ -67,7 +79,7 @@ class TestMIMOPRoTierRouting:
             reasoning_mode='deep',
         )
 
-        assert selection.model_key in {"dashscope_reason", "deepseek_reason"}
+        assert selection.model_key in {"glm_4_7_pro", "dashscope_reason", "deepseek_reason"}
 
 
 class TestMaxConfigFields:

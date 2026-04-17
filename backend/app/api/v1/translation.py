@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db
@@ -37,9 +37,7 @@ class TranslateRequest(BaseModel):
     page_no: int | None = Field(default=None, description="页码")
     source_file_id: str | None = Field(default=None, description="源文件ID")
 
-    class Config:
-        # 允许两种参数风格互用
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
     def get_normalized_params(self) -> dict[str, Any]:
         """获取标准化后的参数"""

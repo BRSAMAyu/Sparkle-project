@@ -334,21 +334,17 @@ class TestSeedLibraryAccessAndPromptContext:
 
         execute_result = MagicMock()
         execute_result.scalars.return_value.all.return_value = [item]
-        mock_db.execute.return_value = execute_result
+        item.library_id = library_id
+        mock_db.execute = AsyncMock(side_effect=[execute_result, MagicMock()])
 
-        with patch.object(
-            service,
-            "_get_accessible_library_ids",
-            AsyncMock(return_value=[library_id]),
-        ) as accessible_mock:
-            examples = await service.get_few_shot_examples(
-                mock_db,
-                user_id=user_id,
-                subject="math",
-                count=1,
-            )
+        examples = await service.get_few_shot_examples(
+            mock_db,
+            user_id=user_id,
+            subject="math",
+            count=1,
+        )
 
-        accessible_mock.assert_awaited_once()
+        assert mock_db.execute.await_count == 2
         assert examples == [
             {
                 "input": "1+1=?",

@@ -196,6 +196,38 @@ async def test_generation_node_forces_fast_tier_for_balanced_light_standard_chat
 
 
 @pytest.mark.asyncio
+async def test_generation_node_respects_phase_d_forced_model_tier(monkeypatch):
+    fake_llm = _FakeGenerationLLM()
+    get_tier_mock = AsyncMock(return_value=fake_llm)
+    get_llm_mock = AsyncMock(side_effect=AssertionError("Phase D forced tier should bypass default routing helper"))
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "Give me the lightest sufficient answer."}],
+        context_data={
+            "chat_mode": "standard",
+            "reasoning_mode": "balanced",
+            "phase_d_forced_model_tier": "fast",
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [],
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    get_tier_mock.assert_awaited_once_with(
+        "generation",
+        ModelTier.FAST,
+        task_type=TaskType.STANDARD_RESPONSE,
+        reasoning_mode="balanced",
+    )
+    assert new_state.context_data["phase_d_model_tier_enforced"] == "fast"
+
+
+@pytest.mark.asyncio
 async def test_generation_node_uses_custom_expert_specific_model(monkeypatch):
     fake_llm = _FakeGenerationLLM()
     get_specific_mock = AsyncMock(return_value=fake_llm)

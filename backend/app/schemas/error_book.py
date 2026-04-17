@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # ============================================
 # 枚举定义
@@ -160,8 +160,7 @@ class KnowledgeLinkBrief(BaseModel):
     relevance: float = 1.0 # Default fallback
     is_primary: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ErrorRecordResponse(BaseModel):
@@ -193,8 +192,7 @@ class ErrorRecordResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ErrorRecordListResponse(BaseModel):

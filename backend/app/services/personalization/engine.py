@@ -58,7 +58,7 @@ class PersonalizationEngine:
 
         # 显式未设置时，使用推断值
         depth = explicit.get("depth_preference")
-        if depth is None or prefs.last_explicit_update is None:
+        if depth is None:
             depth = explicit.get(
                 "depth_preference_signal",
                 inferred.get("depth_preference_signal", inferred.get("depth_preference", 0.5)),
@@ -82,7 +82,7 @@ class PersonalizationEngine:
         # 标记来源（用于调试）
         depth_source = (
             "explicit"
-            if explicit.get("depth_preference") is not None and prefs.last_explicit_update is not None
+            if explicit.get("depth_preference") is not None
             else "inferred"
         )
         curiosity_source = "explicit" if explicit.get("curiosity_preference") is not None else "inferred"
@@ -140,6 +140,58 @@ class PersonalizationEngine:
                     source_pattern="streak_stats",
                 )
             )
+        achievement_motivation = explicit.get(
+            "achievement_motivation_response",
+            inferred.get("achievement_motivation_response"),
+        )
+        achievement_reward_sensitivity = explicit.get(
+            "achievement_reward_sensitivity",
+            inferred.get("achievement_reward_sensitivity"),
+        )
+        achievement_pace_style = explicit.get(
+            "achievement_pace_style",
+            inferred.get("achievement_pace_style"),
+        )
+        if achievement_motivation == "progress_praise":
+            system_additions += "\n- 用户对进度型肯定反馈反应较好，先明确指出已经推进到哪一步，再给下一步。"
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="llm.achievement.reinforce_progress",
+                    effect="Responses lead with visible progress recognition before proposing the next step.",
+                    source_pattern="achievement_signals",
+                )
+            )
+        elif achievement_motivation == "mastery_affirmation":
+            system_additions += "\n- 用户更吃“你正在变强”的反馈，适度强调掌握提升和能力增长。"
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="llm.achievement.reinforce_mastery",
+                    effect="Responses frame feedback around growing mastery rather than only task completion.",
+                    source_pattern="achievement_signals",
+                )
+            )
+        elif achievement_motivation == "milestone_celebration":
+            system_additions += "\n- 用户对阶段性里程碑反馈较敏感，适度强调这一步完成后的阶段意义。"
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="llm.achievement.highlight_milestones",
+                    effect="Responses connect the next action to a clear milestone payoff.",
+                    source_pattern="achievement_signals",
+                )
+            )
+        if achievement_reward_sensitivity == "high":
+            system_additions += "\n- 用户对成就与奖励反馈比较敏感，可以自然指出完成后的可见收益，但不要显得操控。"
+            applied_policies.append(
+                PolicyExplanation(
+                    signal="llm.achievement.surface_rewards",
+                    effect="Responses mention visible payoff when it helps motivation without overhyping it.",
+                    source_pattern="achievement_signals",
+                )
+            )
+        if achievement_pace_style == "steady":
+            system_additions += "\n- 以稳步推进的 framing 组织建议，优先连续的小进展，而不是一次压很多。"
+        elif achievement_pace_style == "sprint":
+            system_additions += "\n- 用户接受短时冲刺节奏较好，可以给清晰的冲刺块和完成标准。"
         if explicit.get("task_reflection_depth", inferred.get("task_reflection_depth")) == "deep":
             system_additions += "\n- 用户愿意做较深的任务反思，可适度鼓励其继续总结原因与下一步改进。"
             applied_policies.append(
@@ -342,7 +394,7 @@ class PersonalizationEngine:
             explicit.update(override_preferences)
 
         focus_duration = explicit.get("focus_duration_preference")
-        if focus_duration is None or prefs.last_explicit_update is None:
+        if focus_duration is None:
             inferred_focus = explicit.get("preferred_focus_duration", inferred.get("preferred_focus_duration"))
             if isinstance(inferred_focus, (int, float)):
                 focus_duration = int(inferred_focus)

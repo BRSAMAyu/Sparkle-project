@@ -2,474 +2,269 @@
 
 # Sparkle 星火
 
-### AI 驱动的成长操作系统
+### AI 原生的规划与成长操作系统
 
-**不只是回答问题，而是理解你、陪伴你、帮你成为更好的自己。**
+**Sparkle 不是让普通用户学会 prompt engineering，而是先理解用户，再把用户自己的信息转化成更好的计划、更好的下一步和更好的持续适应。**
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.24+-02569B?style=flat-square&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.3+-FF6B6B?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.0-blue?style=flat-square)](CHANGELOG.md)
 
-**[English](README_EN.md)** &nbsp;&middot;&nbsp; [快速开始](#-快速开始) &nbsp;&middot;&nbsp; [技术文档](docs/)
+**简体中文** · [English](README_EN.md) · [开发文档入口](docs/README.md)
 
 </div>
 
 ---
 
-## 一句话理解 Sparkle
+## Sparkle 是什么
 
-> 市面上的 AI 是工具，用完即走。Sparkle 是一个**持续进化的成长伙伴**——它记住你是谁、理解你的思维模式、帮你拆解目标、追踪执行、在你卡住时给出恰到好处的支持。
+Sparkle 是一个 **AI-native 的规划与指导系统**。它的核心不是聊天本身，而是把用户的目标、材料、限制、行为、错误和反馈组织成一个持续演化的理解状态，再用这个状态去生成更好的计划、节奏和下一步。
+
+一句话说：
+
+> **Sparkle 先真正理解你，再给你更好的路径。**
 
 ---
 
-## Sparkle 解决什么问题
+## 为什么它重要
 
-| 传统 AI 助手 | 学习/效率类 App | Sparkle |
+今天的大模型已经很强，但大多数普通用户在真实目标场景中仍然会卡在三个地方：
+
+1. 不知道该给 AI 什么信息
+2. 不知道如何把自己的资料、行为、错误和限制组织成高质量上下文
+3. 即使拿到了答案，也很难把它变成真正可执行、可持续、可纠偏的路径
+
+Sparkle 的目标不是把用户训练成 AI 专家，而是替用户承担这部分“理解、组织、规划、适配”的系统工作。
+
+---
+
+## 它为谁而做
+
+Sparkle 优先服务的不是 prompt 工程高手，而是这些人：
+
+- 有重要目标，但不会高质量使用 AI 的普通用户
+- 手里有很多自己的资料、笔记、错题、经历，却不会把它们转化成有效帮助的人
+- 在 deadline、压力和负荷波动中，需要快速找对路径的人
+- 想长期成长，但缺乏高质量结构与反馈回路的人
+
+当前最能体现 Sparkle 价值的北极星场景仍然是：
+
+> **14 天准备热力学期末考试**
+
+在这个场景里，Sparkle 不只是回答问题，而是要看懂用户真正的状态，判断还缺什么信息，生成合理计划，并在过载、拖延、滑移和反馈之后继续做可见的调整。
+
+---
+
+## Sparkle 如何工作
+
+Sparkle 当前最稳定的产品表达是四个模式：
+
+| 模式 | 用户看到什么 | 系统在背后做什么 |
 |:---|:---|:---|
-| 没有记忆，每次从零开始 | 静态标签，粗粒度分类 | **持续进化的认知画像**，越用越懂你 |
-| 被动问答，不会主动引导 | 预设路径，千人一面 | **目标驱动**，从"问什么"到"成为谁" |
-| 信息碎片化，缺乏系统性 | 线性笔记，手动整理 | **知识星图**，自动构建你的知识网络 |
-| 单次对话，无后续跟进 | 简单统计，缺乏洞察 | **七阶段成长闭环**，全程陪伴 |
-| 纯工具感，没有温度 | 随机匹配，社群无深度 | **认知匹配**，找到真正合拍的伙伴 |
+| `Understand` | 先弄清你是谁、你要什么、还缺什么 | 编译用户画像、证据、缺口和当前状态 |
+| `Plan` | 给出最合适的计划、节奏和下一步 | 判断 readiness，编译策略，并约束计划质量 |
+| `Adapt` | 当现实变化时，计划会跟着变 | 读取反馈、结果、负荷、材料和执行状态 |
+| `Grow` | 系统会越用越懂你，而且你能看见并纠正它 | 做校准、反漂移、透明展示和用户控制 |
+
+这意味着 Sparkle 不是单轮问答系统，而是一个围绕目标达成持续迭代的闭环。
 
 ---
 
-## 核心能力
+## 为什么 Sparkle 不一样
 
-**AI 微调导师** — 不只是答题，而是诊断你的认知状态。当你说"这个好难"，它会分析知识盲区、动态调整讲解深度、推荐针对性练习、追踪理解进度。链路已接入自研编排主系统，支持计划生成、审查、用户审批、执行和重规划。
+Sparkle 不是靠“模型更多”取胜，它真正收敛在两条 moat 上：
 
-**知识星图** — 你的个人知识网络，以宇宙地图的形式呈现。每个概念是一颗星，掌握度决定亮度，关系形成星座。AI 自动识别知识盲区，GraphRAG 混合检索引擎让每次查询都理解上下文。
-
-**智能任务系统** — 六种任务类型，AI 根据你的认知画像自动推荐。内置专注计时器，支持正念模式。任务可进入 OpenClaw 委派链路，经历审批、结果对比、自验证和画像回流。
-
-**成就引擎** — 真正有效的游戏化机制。连击记录养成习惯，里程碑记录突破，成长合约提供承诺机制，隐藏成就制造惊喜。成就不只是数字——它是你成长的证明。
-
-**Mirofish 群体 Agent 系统** — 把多 Agent 从"技术能力"做成"产品能力"。聊天可以短链路桥接到 Insight Hub、Simulation、Knowledge Theater 和 Learning Report，让预测、推演、报告和行动建议在同一条体验链里完成。
-
-**多感官体验系统** — 统一的沉浸式体验设计。场景化 BGM 和环境音随页面切换；语义化触觉反馈让每个操作都有感知；入场动效、庆祝系统和可调动效强度让成长可见可感。无障碍与低刺激模式优雅降级。
-
----
-
-## 技术壁垒
-
-Sparkle 的竞争力不在于单个功能，而在于**系统级架构创新**的组合壁垒：
-
-| 技术壁垒 | 实现方式 | 竞品现状 |
+| Moat | 含义 | 用户感受到的价值 |
 |:---|:---|:---|
-| 双核协作架构 | 执行核 + 认知核实时协作 | 大多数产品只有单一对话管线 |
-| 自研编排主链 + LangGraph 规划增强 | 自研系统掌控生产执行，LangGraph 负责复杂规划 | 常见做法是把业务控制权直接交给 Agent 框架 |
-| 证据驱动的 4D 画像 | 知识、认知、动机、社交四维度，每项都有行为证据 | 通常只有静态标签或简单统计 |
-| GraphRAG 混合检索 | pgvector 语义搜索 + Apache AGE 知识图谱遍历，融合排序 | 纯向量检索，缺乏关系推理 |
-| Mirofish 群体 Agent 产品化 | 专家目录、自定义专家/团队、桥接预览、深链跳转 | 多数产品只停留在聊天里的"多 Agent 展示" |
-| OpenClaw 执行闭环 | 任务委派、离线排队、设备配对、审批、对比、自验证、失败降级 | 常见做法是止步于"给建议"或一次性自动化 |
-| 七阶段成长闭环 | 感知 > 澄清 > 计划 > 执行 > 反思 > 巩固 > 适应 | 线性任务流，无闭环 |
-| 统一多感官体验 | 5 种体验画像 + 感官预算 + 全局粒子预算 + 无障碍降级 | 零散动效，无系统性 |
+| `User Understanding Quality` | 系统能从用户自己的目标、材料、行为、错误和反馈里看到用户不容易独自看清的东西 | “它真的理解我卡在哪里。” |
+| `Plan Quality` | 系统不是泛泛回答，而是把理解转化成更可执行的计划、节奏、分解和下一步 | “这个计划比我直接问 AI 更落地。” |
+
+和原始 AI 直接使用相比，Sparkle 的差异在于：
+
+| 维度 | 原始 AI 直接使用 | Sparkle |
+|:---|:---|:---|
+| 上下文组织 | 用户自己做 prompt engineering | 系统主动判断缺口并编译上下文 |
+| 用户理解 | 高度依赖当前轮输入 | 建立在持续累积的 `UserInsightState` 之上 |
+| 规划质量 | 往往是通用答案或通用计划 | 先判断是否准备好规划，再给 grounded plan |
+| 反馈学习 | 多数停留在单轮满意度 | 进入 outcome learning、calibration 和 anti-drift |
+| 透明度 | 用户通常看不到系统如何理解自己 | 用户可以查看、纠正和控制自己的 insight |
+| 连续性 | 多数是会话级 | 目标是跨会话、跨阶段持续改进 |
 
 ---
 
-## 架构总览
+## 系统架构
 
-```
-+====================================================================+
-|                        Flutter Mobile App                          |
-|         Riverpod  |  Design System V2  |  Multi-Sensory UX        |
-|         732 Dart files  |  24 feature modules  |  131 tests        |
-+========================================+===========================+
-                                         |
-                                  WebSocket / HTTP
-                                         |
-+========================================v===========================+
-|                           Go Gateway (8080)                        |
-|   Auth (JWT + Blacklist)  |  Rate Limiting  |  Caching  |  WS     |
-|   16 Middleware  |  Security Headers  |  gRPC Bridge             |
-+========================================+===========================+
-                                         |
-                                     gRPC (50051)
-                                         |
-+========================================v===========================+
-|                        Python AI Engine                            |
-|                                                                    |
-|   +----------------------------------------------------------------+
-|   |  Self-Built Orchestrator (LangGraph FSM)                       |
-|   |  Dual-Core Router  |  UX Envelope  |  Plan Review             |
-|   +----------------------------------------------------------------+
-|   |  Cognitive Core            |  Execution Core                  |
-|   |  Profile | Memory | Prism  |  Plan | Task | DAG Executor      |
-|   +----------------------------------------------------------------+
-|   |  GraphRAG  |  Event Bus  |  Tool Registry  |  Achievement     |
-|   +----------------------------------------------------------------+
-|   |  OpenClaw Adapter  |  Celery Tasks  |  LLM Service             |
-|   +----------------------------------------------------------------+
-+---+----------------+------------------+-----------------------------+
-    |                |                  |
-    v                v                  v
-+--------+    +-----------+    +------------------+
-| PG 16  |    | Redis 7+  |    | MinIO / S3       |
-|pgvector|    | Stack     |    | Object Storage   |
-|AGE     |    | Streams   |    |                  |
-|143 tbl |    | Pub/Sub   |    |                  |
-+--------+    +-----------+    +------------------+
-                      |
-            External Execution
-                      |
-            +---------v----------+
-            | OpenClaw Gateway   |
-            | Queue | Pairing    |
-            | Approval | Verify  |
-            +--------------------+
+Sparkle 当前是一个三层混合系统：`Flutter Mobile + Go Gateway + Python AI Engine`，并由 PostgreSQL、Redis、对象存储和外部执行层共同支撑。
+
+```mermaid
+flowchart TB
+    Mobile["Flutter Mobile App
+Chat / Home / Tasks / Galaxy / Insights"] <--> Gateway["Go Gateway
+WebSocket / HTTP / Auth / Rate Limit / gRPC Bridge"]
+    Gateway <--> Engine["Python AI Engine
+Orchestration / Planning / Feedback / Semantic Control"]
+
+    Engine <--> Postgres["PostgreSQL
+Business data / pgvector / graph extension"]
+    Engine <--> Redis["Redis
+Cache / streams / runtime state / event bus"]
+    Engine <--> Storage["Object Storage
+User materials / files / assets"]
+    Engine --> OpenClaw["OpenClaw
+Delegated execution layer"]
 ```
 
-**为什么是三层 + 外部执行器？**
+### 为什么是这套结构
 
-- **Flutter** 只负责展示和体验——不做业务逻辑
-- **Go Gateway** 负责高并发连接管理、认证、缓存——不做 AI 推理
-- **Python Engine** 负责编排、规划、审查、执行控制——不做用户认证
-- **OpenClaw** 是外部执行器，不拥有 Sparkle 的业务主导权
-
-每层职责清晰，独立扩缩容。Gateway 能扛住万级 WebSocket 连接，Engine 能水平扩展 AI 算力，而 OpenClaw 负责补齐数字执行闭环。
-
-<details>
-<summary><b>双核成长操作系统</b>（点击展开）</summary>
-
-Sparkle 的核心创新是将 AI 系统拆为两个协作核心：
-
-```
-+=====================================+  +=====================================+
-|          EXECUTION CORE             |  |          COGNITIVE CORE             |
-|                                     |  |                                     |
-|  Goal Clarification                 |  |  User Profile (4D)                  |
-|         |                           |  |         |                           |
-|         v                           |  |         v                           |
-|  Sufficiency Evaluation             |  |  Long/Short-term Memory             |
-|         |                           |  |         |                           |
-|         v                           |  |         v                           |
-|  Staged Plan (DAG)                  |  |  Cognitive Prism                    |
-|         |                           |  |         |                           |
-|         v                           |  |         v                           |
-|  Task Execution                     |  |  Emotion & Motivation               |
-|         |                           |  |         |                           |
-|         v                           |  |         v                           |
-|  Dynamic Adjustment                 |  |  Continuous Companion               |
-+--------------------+----------------+  +--------------------+----------------+
-                     |                                      |
-                     +---------- Collaboration -------------+
-                       Event Bus  |  Context Aggregation  |  Real-time Sync
-```
-
-**执行核**负责"把事做成"：帮用户定义目标、评估可行性、拆解计划、审查方案、发起执行、接收结果并根据实际重规划。
-
-**认知核**负责"理解用户"：四维画像持续更新、长短期记忆积累、认知棱镜洞察思维模式、情感状态识别与个性化激励，并把执行结果回流到下一轮策略。
-
-两个核心不是并行孤立运行，而是通过事件总线实时协作。
-
-</details>
-
-<details>
-<summary><b>七阶段成长闭环</b>（点击展开）</summary>
-
-每次 Sparkle 交互都是一个完整的成长循环：
-
-```
-                      +-----------------+
-                      |  Sense (感知)   |
-                      |  行为追踪       |
-                      +--------+--------+
-                               |
-          +--------------------+--------------------+
-          |                    |                    |
-          v                    v                    v
-  +---------------+   +---------------+   +---------------+
-  | Clarify (澄清)|   |  Plan (规划)  |   | Execute (执行)|
-  | 意图识别      |-->| 目标拆解      |-->| 任务调度      |
-  +---------------+   +---------------+   +-------+-------+
-          ^                                       |
-          |             +---------------+         |
-          |             | Reflect (反思)|<--------+
-          |             | 结果分析      |
-          |             +-------+-------+
-          |                     |
-          |           +---------+---------+
-          |           |                   |
-          |  +---------------+   +---------------+
-          |  |Reinforce (巩固)|  | Adapt (适配)  |
-          +--| 间隔重复      |   | 画像更新      |
-             +---------------+   +-------+-------+
-                                         |
-           进入下一轮迭代 <---------------+
-```
-
-| 阶段 | 职责 | 技术实现 |
+| 组件 | 角色 | 为什么存在 |
 |:---|:---|:---|
-| 感知 | 被动捕获用户信号 | 行为追踪、情绪识别、学习轨迹 |
-| 澄清 | 理解真实意图 | 意图识别、上下文理解、澄清式提问 |
-| 计划 | 生成可执行路径 | 目标拆解、路径规划、资源匹配、版本快照 |
-| 执行 | 执行具体任务 | 任务调度、工具调用、OpenClaw 委派、审批回流 |
-| 反思 | 分析执行结果 | 效果评估、错误归因、结果对比、自验证 |
-| 巩固 | 固化学习成果 | 间隔重复、记忆曲线、成就激励 |
-| 适应 | 调整策略模型 | 画像更新、策略优化、失败降级与重规划 |
+| `Flutter Mobile` | 真实产品入口 | 承载聊天、主页、任务、星图、洞察等用户体验 |
+| `Go Gateway` | 接入与桥接层 | 负责 WebSocket / HTTP 接入、鉴权、连接治理、以及到 Python gRPC 的转发 |
+| `Python AI Engine` | 智能主引擎 | 负责上下文编译、规划、工具调用、反馈学习和语义控制 |
+| `FastAPI` | 业务 API 层 | 承载资源管理、文件、设置、干预、观测等 HTTP 能力 |
+| `gRPC AgentService` | AI 主通信协议 | 承载主聊天链路中的流式 AI 请求与结构化响应 |
+| `PostgreSQL` | 事实与业务数据源 | 存用户、任务、计划、反馈、知识状态等核心数据 |
+| `Redis` | 运行时与事件层 | 用于缓存、streams、事件总线、运行态和部分状态同步 |
+| `Object Storage / MinIO` | 材料与文件层 | 承载用户上传材料、文件和资产 |
+| `OpenClaw` | 外部执行层 | 负责被委派的真实执行任务，但不是 Sparkle 的产品本体 |
 
-</details>
+### 主产品请求路径
 
-<details>
-<summary><b>GraphRAG 混合检索引擎</b>（点击展开）</summary>
+当前真实主聊天链路不是直接打 Python HTTP，而是：
 
-突破传统 RAG 局限，将语义向量搜索与知识图谱遍历融合：
+`Flutter -> /ws/chat -> Go Gateway -> gRPC AgentService -> Python ChatOrchestrator`
 
-```
-                             User Query
-                                |
-                 +--------------+--------------+
-                 |                             |
-                 v                             v
-  +------------------------------+  +-----------------------------+
-  | pgvector Semantic Search     |  | Apache AGE Graph Traversal  |
-  |                              |  |                             |
-  | - Similar content chunks     |  | - Prerequisites             |
-  | - Topic matching             |  | - Follow-up concepts        |
-  | - Context relevance          |  | - Related relationships     |
-  |                              |  |                             |
-  |         < 200ms              |  |         < 500ms             |
-  +--------------+---------------+  +--------------+--------------+
-                 |                                 |
-                 +----------------+----------------+
-                                  |
-                                  v
-                 +------------------------------+
-                 | Fused Ranking Engine         |
-                 |                              |
-                 | 1. Deduplication             |
-                 | 2. Dependency chain build    |
-                 | 3. Profile-based weighting   |
-                 | 4. Context compression       |
-                 +--------------+---------------+
-                                |
-                                v
-                 +------------------------------+
-                 | Personalized Response        |
-                 |         < 800ms total        |
-                 +------------------------------+
+对应关系大致是：
+
+1. Flutter 端主聊天服务通过 WebSocket 连接 Gateway
+2. Go Gateway 负责连接、鉴权、消息治理和协议桥接
+3. Gateway 调用 Python 的 `AgentService.StreamChat`
+4. Python `ChatOrchestrator` 组装上下文、决定策略、调用工具、生成流式结果
+5. 结果再经 Gateway 回到 App，驱动文本、卡片、工具结果和干预表达
+
+### AI 引擎内部主干
+
+```mermaid
+flowchart LR
+    Insight["User Insight Engine
+画像 / 证据 / 多跨度分析 / 预测"] --> Planning["Planning Engine
+readiness / strategy / plan quality gate"]
+    Planning --> Growth["Feedback & Growth
+outcome learning / calibration / anti-drift"]
+    Growth --> Insight
+    Semantic["AI Semantic Control
+ontology / renderer / compliance / trace"] --> Planning
+    Body["Body Awareness & Capability Governance"] --> Planning
+    Layered["Five-Layer Learning System"] --> Insight
+    Layered --> Planning
 ```
 
-| 能力 | 传统 RAG | Sparkle GraphRAG |
-|:---|:---|:---|
-| 语义理解 | 向量相似度 | 向量相似度 |
-| 知识关系 | 无 | 图遍历推理 |
-| 前置知识 | 无法识别 | 自动关联 |
-| 个性化 | 无 | 画像加权 |
-| 学习路径 | 无 | 依赖链生成 |
+这条主干表达了 Sparkle 的核心逻辑：
 
-</details>
+- `User Insight Engine` 负责把用户自己的信息编译成统一理解状态
+- `Planning Engine` 负责判断是否该规划、如何规划、以及计划质量是否足够好
+- `Feedback & Growth` 负责把结果、反馈和纠偏重新带回系统
+- `Semantic Control` 不只是贴标签，而是约束 AI 行为与产品意图的一层
+- `Body Awareness` 和 `Five-Layer Learning` 负责把能力边界、负荷状态和长期学习治理插回主链
 
 ---
 
-## 技术栈
+## 当前阶段
 
-| 层 | 技术 | 版本 | 选型理由 |
-|:---|:---|:---|:---|
-| 移动端 | Flutter | 3.24+ | 跨平台一致性、热重载、丰富组件 |
-| | Riverpod | 2.x | 编译期安全、声明式状态管理 |
-| 网关 | Go | 1.22+ | 高并发、低内存、编译型 |
-| | Gin + gRPC | -- | 高性能 HTTP + 强类型跨语言调用 |
-| AI 引擎 | Python | 3.11+ | AI 生态丰富 |
-| | LangGraph | 0.3+ | 可观测状态机、复杂编排 |
-| | Celery | 5.x | 成熟异步任务队列 |
-| 数据 | PostgreSQL | 16+ | ACID + pgvector + Apache AGE |
-| | pgvector | 0.7+ | 原生向量索引 |
-| | Apache AGE | 1.5+ | PostgreSQL 图扩展，Cypher 查询 |
-| | Redis | 7+ | 缓存、发布订阅、事件总线 |
-| 存储 | MinIO | -- | S3 兼容对象存储 |
-| 可观测 | Prometheus + Grafana + Loki + Tempo | -- | 指标、日志、追踪、告警全覆盖 |
+Sparkle 已经不再是概念验证项目，也不是“多 Agent 炫技 demo”。
+
+它的核心产品主干已经完成了 `v1` 级别的搭建：
+
+- `User Profile / Insight` 已形成统一编译主干
+- `Planning Engine` 已具备 readiness gate、strategy compile 和 plan quality gate
+- `Feedback / Growth` 已具备 outcome learning、calibration 和 anti-drift
+- `AI Semantic Control` 已形成 ontology、renderer、compliance 和 trace
+- `Body Awareness` 与 `Five-Layer Learning` 已进入受治理的运行状态
+
+当前项目已进入 `Stage 2`。重点不再是继续发明新的基础层，而是：
+
+- 跑通 runnable golden path
+- 提升全链路产品一致性
+- 在真实 App 中证明理解质量和计划质量
+- 用真实 transcript、真实反馈和真实人类验证推动下一轮迭代
+
+今天最准确的描述是：
+
+> **Sparkle 是一个已经搭起核心智能系统、正在从内部复杂性走向真实产品证明的 AI-native 产品。**
 
 ---
 
 ## 快速开始
 
-### 前置条件
-
-| 依赖 | 版本 | 说明 |
-|:---|:---|:---|
-| Go | 1.22+ | 网关开发 |
-| Python | 3.11+ | AI 引擎开发 |
-| Flutter | 3.24+ | 移动端开发 |
-| Docker | 24+ | 容器化部署 |
-| Docker Compose | 2.x | 服务编排 |
-
-### 一键启动
+### 最短启动路径
 
 ```bash
-# 1. 克隆项目
-git clone https://github.com/BRSAMAyu/Sparkle-project.git
-cd Sparkle-project
-
-# 2. 配置环境变量
 cp .env.example .env
-# 编辑 .env，填入必要配置（LLM API Key、数据库、Redis）
+cp backend/.env.example backend/.env
+cp backend/gateway/.env.example backend/gateway/.env
 
-# 3. 启动基础设施（PostgreSQL、Redis、MinIO）
 make dev-up
-
-# 4. 初始化数据库
 make sync-db
-
-# 5. 启动后端服务（需要两个终端）
-make grpc-server    # 终端 1：Python AI 引擎
-make gateway-dev    # 终端 2：Go 网关
-
-# 6. 启动移动端（第三个终端）
-make mobile-run
+make proto-gen
 ```
 
-### 常用命令
+然后在多个终端分别运行：
 
 ```bash
-# 开发
-make dev-up              # 启动基础设施
-make gateway-dev         # 启动 Go 网关（热重载）
-make grpc-server         # 启动 Python gRPC 服务
-make mobile-run          # 启动 Flutter 应用
-
-# 代码生成
-make proto-gen           # 生成 Protobuf 代码
-make sync-db             # 数据库迁移 + SQLC 生成
-make mobile-gen          # Flutter 代码生成
-
-# 任务队列
-make celery-up           # 启动 Celery Worker + Beat
-make celery-status       # 查看队列状态
-
-# 健康检查
-make smoke               # 全服务健康检查
-make env-check           # 环境配置检查
-
-# 测试
-cd backend && pytest                    # Python 测试 (311 文件)
-cd backend/gateway && go test ./...     # Go 测试 (34 文件)
-cd mobile && flutter test               # Flutter 测试 (131 文件)
+make grpc-server
+make gateway-dev
+cd mobile && flutter pub get && flutter run
 ```
 
----
+### 这几个命令分别做什么
 
-## 项目结构
-
-```
-Sparkle-project/
-+-- mobile/                             # Flutter 移动端 (732 .dart files)
-|   +-- lib/
-|   |   +-- core/                       # 核心基础设施
-|   |   |   +-- design/                 # 设计系统 V2（Token、组件、动效原语）
-|   |   |   +-- experience/             # 体验画像系统
-|   |   |   +-- services/               # 全局服务（BGM、触觉、音频策略、OpenClaw）
-|   |   +-- features/                   # 功能模块（24 个路由模块）
-|   |   |   +-- chat/                   # AI 对话
-|   |   |   +-- task/                   # 任务管理
-|   |   |   +-- galaxy/                 # 知识星图
-|   |   |   +-- mirofish/               # Mirofish 群体 Agent UI 支撑
-|   |   |   +-- focus/                  # 专注模式
-|   |   |   +-- achievement/            # 成就系统
-|   |   |   +-- community/              # 社群
-|   |   |   +-- ...                     # 计划、认知、错题本、商店等
-|   |   +-- gen/                        # Protobuf 生成代码 (78 files)
-|   +-- test/                           # 131 个测试文件
-|
-+-- backend/
-|   +-- gateway/                        # Go 网关层 (24 .go files)
-|   |   +-- internal/
-|   |       +-- handler/                # HTTP/WebSocket 处理器 (46 files)
-|   |       +-- agent/                  # gRPC 客户端
-|   |       +-- middleware/             # 16 个中间件 (Auth, RateLimit, Security...)
-|   |       +-- service/                # 业务服务 (12 files)
-|   |       +-- db/                     # 数据库层 (143 tables, SQLC)
-|   |
-|   +-- app/                            # Python AI 引擎 (319 .py files)
-|       +-- orchestration/              # LangGraph 编排层
-|       +-- adapters/openclaw/          # OpenClaw 执行适配层
-|       +-- services/                   # 26 个服务文件
-|       +-- tools/                      # AI 工具集
-|       +-- core/                       # 核心组件（上下文、事件总线、画像）
-|
-+-- proto/                              # 6 个 Protobuf 定义（API 契约源）
-+-- monitoring/                         # Prometheus + Grafana + Loki + Tempo + 11 告警规则
-+-- scripts/                            # 部署、备份、验收脚本 (21 acceptance scripts)
-+-- docker-compose.yml                  # 开发环境 (17 services)
-+-- Makefile                            # 构建脚本
-+-- CLAUDE.md                           # AI 开发助手指南
-```
-
----
-
-## 工程化指标
-
-| 指标 | 数值 |
+| 命令 | 作用 |
 |:---|:---|
-| Python 测试文件 | 311 |
-| Go 测试文件 | 34 |
-| Flutter 测试文件 | 131 |
-| 验收脚本 | 21 |
-| CI Workflows | 13 |
-| Pre-commit Hooks | 10 |
-| Proto 文件 | 6 |
-| 数据库表 | 143 |
-| Alembic 迁移 | 52 |
-| Docker 服务 | 17 |
-| SLO 告警规则 | 11 |
-| Go Lint 规则 | 22 linters |
-| Flutter Lint 规则 | strict-casts + strict-inference + strict-raw-types |
+| `make dev-up` | 启动 PostgreSQL、Redis、MinIO 等基础设施 |
+| `make sync-db` | 执行迁移并同步 Go 侧数据库 schema / SQLC 代码 |
+| `make proto-gen` | 重新生成 gRPC / protobuf 相关代码 |
+| `make grpc-server` | 启动 Python gRPC AI 引擎 |
+| `make gateway-dev` | 以开发模式启动 Go Gateway |
+
+### 常用开发命令
+
+| 命令 | 场景 |
+|:---|:---|
+| `make dev-all` | 查看完整启动指引 |
+| `make api-server` | 启动 Python FastAPI 业务 API |
+| `cd backend && pytest` | 跑 Python 测试 |
+| `cd backend/gateway && go test ./...` | 跑 Go 测试 |
+| `cd mobile && flutter test` | 跑 Flutter 测试 |
 
 ---
 
-## 文档
+## 仓库导航
 
-| 文档 | 说明 | 受众 |
+| 路径 | 主要内容 | 什么时候看 |
 |:---|:---|:---|
-| [CLAUDE.md](CLAUDE.md) | 开发指南、架构规则、代码模式 | 开发者 |
-| [开发文档入口](docs/README.md) | 当前开发所需文档总入口 | 开发者 / 产品 |
-| [技术架构](docs/00_项目概览/02_技术架构.md) | 三层架构深度讲解 | 开发者 |
-| [知识星图设计](docs/02_技术设计文档/02_知识星图系统设计_v3.0.md) | GraphRAG 实现细节 | 开发者 |
-| [OpenClaw 执行闭环审查](docs/architecture/SPARKLE_OPENCLAW_ALIGNMENT_REVIEW_v1.5.md) | 任务委派、审批、对比、自验证与降级 | 开发者 / 产品 |
-| [Mirofish 融合签收清单](docs/verification/本地发布前完整签收清单_2026-03-21.md) | Mirofish 新链路与主流程验收范围 | 开发者 / QA |
-| [CHANGELOG](CHANGELOG.md) | 版本变更记录 | 全部 |
-| [前端体验对齐](docs/engineering/前端改进对齐文档_2026-03-22.md) | 多感官体验系统规范 | 前端开发者 |
+| `mobile/` | Flutter 客户端与真实产品体验 | 看用户流程、页面和交互时 |
+| `backend/app/` | Python AI 引擎、FastAPI、编排与状态系统 | 看智能逻辑、规划、反馈、API 时 |
+| `backend/gateway/` | Go Gateway、WebSocket / HTTP 接入、gRPC 桥接 | 看主聊天链路、鉴权和连接治理时 |
+| `proto/` | gRPC 协议定义 | 改跨服务接口时 |
+| `docs/product/` | 当前产品共识、路线图、Stage 2 文档 | 做产品判断时 |
+| `docs/02_技术设计文档/` | API、协议、数据库、关键设计 | 改架构、接口或数据模型时 |
+| `docs/README.md` | 文档总入口 | 第一次进入仓库时 |
 
 ---
 
-## 参与贡献
+## 延伸阅读
 
-欢迎各种形式的贡献：提交 Bug、提出新功能、改进文档、提交代码。
-
-```bash
-# 1. Fork 本仓库
-# 2. 创建功能分支
-git checkout -b feature/amazing-feature
-
-# 3. 提交更改（遵循 Conventional Commits）
-git commit -m 'feat: add amazing feature'
-
-# 4. 推送并创建 Pull Request
-git push origin feature/amazing-feature
-```
+- [开发文档入口](docs/README.md)
+- [产品 Thesis 与重构路线](docs/product/SPARKLE_PRODUCT_THESIS_AND_REFOCUSED_ROADMAP_2026-04-05.md)
+- [Sparkle 项目理解总文档](docs/product/SPARKLE_CHATGPT_PROJECT_CONTEXT_MASTER_2026-04-16.md)
+- [Stage 2 Product Coherence 与 Live Alpha Plan](docs/product/SPARKLE_STAGE2_PRODUCT_COHERENCE_AND_LIVE_ALPHA_PLAN_2026-04-06.md)
+- [系统架构全景与模块分层](docs/00_项目概览/04_系统架构全景与模块分层.md)
+- [API 参考](docs/02_技术设计文档/03_API参考.md)
 
 ---
 
-## 许可证
+## 许可协议
 
-本项目采用 [MIT License](LICENSE) 许可。
-
----
-
-<div align="center">
-
-**Sparkle** &nbsp;&middot;&nbsp; v1.0.0
-
-帮助每个人成为更好的自己
-
-[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
-[![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-FF6B6B?style=for-the-badge)](https://langchain-ai.github.io/langgraph/)
-
-</div>
+本项目采用 [MIT License](LICENSE)。

@@ -902,6 +902,13 @@ class SparkleTypography {
   final TextStyle bodyMedium;
   final TextStyle labelLarge;
   final TextStyle labelSmall;
+
+  // Temporary compatibility alias for screens that still expect a smaller
+  // body style while the design-token migration converges on the new scale.
+  TextStyle get bodySmall => bodyMedium.copyWith(
+        fontSize: 12.0,
+        height: 1.45,
+      );
 }
 
 /// 间距系统

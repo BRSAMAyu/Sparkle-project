@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.shop import ItemRarity, ShopItemType
 from app.schemas.common import BaseSchema
@@ -61,8 +61,7 @@ class ShopItemSummary(BaseModel):
     stock_quantity: int | None = Field(default=None, description="Stock quantity")
     is_owned: bool = Field(default=False, description="User owns this item")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ShopItemListResponse(BaseModel):
@@ -84,12 +83,7 @@ class PurchaseRequest(BaseModel):
     """Purchase request"""
     item_id: str = Field(description="Item ID to purchase")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "item_id": "skin_galaxy_001"
-            }
-        }
+    model_config = ConfigDict(json_schema_extra={"example": {"item_id": "skin_galaxy_001"}})
 
 
 class PurchaseResponse(BaseModel):
@@ -115,8 +109,7 @@ class PurchaseHistoryItem(BaseModel):
     photon_balance_after: int = Field(description="Balance after")
     created_at: datetime = Field(description="Purchase time")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PurchaseHistoryResponse(BaseModel):
@@ -141,8 +134,7 @@ class InventoryItem(BaseModel):
     expires_at: datetime | None = Field(default=None, description="Expiration time (consumables)")
     item_config: dict[str, Any] | None = Field(default=None, description="Item config")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InventoryResponse(BaseModel):
@@ -157,13 +149,9 @@ class EquipRequest(BaseModel):
     item_id: str | None = Field(default=None, description="Item ID to equip (null to unequip)")
     item_type: ShopItemType = Field(description="Item type (skin, title)")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "item_id": "skin_galaxy_001",
-                "item_type": "skin"
-            }
-        }
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"item_id": "skin_galaxy_001", "item_type": "skin"}}
+    )
 
 
 class EquipResponse(BaseModel):
@@ -180,13 +168,9 @@ class UseConsumableRequest(BaseModel):
     consumable_id: str = Field(description="Consumable ID to use")
     quantity: int = Field(default=1, ge=1, description="Quantity to use")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "consumable_id": "boost_exp_2x_001",
-                "quantity": 1
-            }
-        }
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"consumable_id": "boost_exp_2x_001", "quantity": 1}}
+    )
 
 
 class UseConsumableResponse(BaseModel):

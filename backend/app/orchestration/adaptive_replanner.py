@@ -20,6 +20,7 @@ from app.models.cognitive import BehaviorPattern
 from app.models.task import Task
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.dual_core_router import AdaptationRecord
+from app.orchestration.plan_revision_summary import PlanRevisionSummary
 from app.orchestration.plan_review_service import plan_review_service
 from app.services.personalization.preference_service import PreferenceService
 from app.services.plan_adjustment_applier import PlanAdjustmentApplier
@@ -745,6 +746,14 @@ class AdaptiveReplanner:
             "negative_feedback_streak": 0,
             "last_feedback_category": feedback_category or "",
         }
+        revision_summary = self._build_revision_summary(
+            report=report,
+            feedback_category=feedback_category,
+            what_changes=what_changed if (what_changed := record.what_changed) else "调整了当前计划的执行参数",
+            new_next_action="按新的轻量节奏推进下一步任务。",
+            outcome_learning=self._extract_outcome_learning(state.facts or {}),
+        )
+        adaptive_meta = self._append_revision_summary(adaptive_meta, revision_summary)
         adjustments["adaptive_meta"] = adaptive_meta
 
         feedback_entry = self._build_feedback_entry(
@@ -757,7 +766,13 @@ class AdaptiveReplanner:
         await self.plan_state_service.upsert_plan_state(
             user_id=report.user_id,
             plan_id=report.plan_id,
-            patch={"facts": adjustments, "feedback_log": feedback_entry},
+            patch={
+                "facts": {
+                    **adjustments,
+                    "last_plan_revision_summary": revision_summary.to_dict(),
+                },
+                "feedback_log": feedback_entry,
+            },
             bump_version=True,
         )
 
@@ -844,12 +859,21 @@ class AdaptiveReplanner:
     ) -> list[AdaptationRecord]:
         now = _utcnow().isoformat()
         record = self._build_replan_record(report, feedback_category)
+        state = await self.plan_state_service.get_plan_state(report.user_id, report.plan_id)
+        revision_summary = self._build_revision_summary(
+            report=report,
+            feedback_category=feedback_category,
+            what_changes="重新规划当前阶段的执行路径与任务顺序。",
+            new_next_action="先按新的阶段起点重新启动，并完成新的第一步任务。",
+            outcome_learning=self._extract_outcome_learning((state.facts or {}) if state else {}),
+        )
         adaptive_facts = {
             "adaptive_meta": {
                 "last_replan_at": now,
                 "last_trigger": trigger,
                 "last_replan_reason": report.reasons,
                 "recent_adaptations": [record.to_dict()],
+                "recent_revision_summaries": [revision_summary.to_dict()],
             }
         }
 
@@ -868,7 +892,13 @@ class AdaptiveReplanner:
         await self.plan_state_service.upsert_plan_state(
             user_id=report.user_id,
             plan_id=report.plan_id,
-            patch={"facts": adaptive_facts, "feedback_log": feedback_entry},
+            patch={
+                "facts": {
+                    **adaptive_facts,
+                    "last_plan_revision_summary": revision_summary.to_dict(),
+                },
+                "feedback_log": feedback_entry,
+            },
             bump_version=True,
         )
 
@@ -1122,6 +1152,60 @@ class AdaptiveReplanner:
             user_facing_message="我发现原来的推进方式已经不够合适，准备帮你重新收紧这段计划。",
             source="adaptive_replanner",
         )
+
+    @staticmethod
+    def _append_revision_summary(adaptive_meta: dict[str, Any], revision_summary: PlanRevisionSummary) -> dict[str, Any]:
+        updated = dict(adaptive_meta)
+        recent = list(updated.get("recent_revision_summaries", []) or [])
+        recent.append(revision_summary.to_dict())
+        updated["recent_revision_summaries"] = recent[-10:]
+        return updated
+
+    def _build_revision_summary(
+        self,
+        *,
+        report: PlanHealthReport,
+        feedback_category: str | None,
+        what_changes: str,
+        new_next_action: str,
+        outcome_learning: dict[str, Any] | None = None,
+    ) -> PlanRevisionSummary:
+        reasons = ", ".join(report.reasons) if report.reasons else "plan health drift"
+        assumption_failed = (
+            feedback_category
+            or (report.reasons[0] if report.reasons else "current plan assumptions no longer fit execution reality")
+        )
+        learning = outcome_learning if isinstance(outcome_learning, dict) else {}
+        failure_rules = [
+            str(item).strip()
+            for item in list(learning.get("known_failure_avoidance_rules") or [])
+            if str(item).strip()
+        ]
+        success_patterns = [
+            str(item).strip()
+            for item in list(learning.get("known_success_patterns") or [])
+            if str(item).strip()
+        ]
+        why_text = f"Recent execution signals showed that the current plan drifted because: {reasons}."
+        if failure_rules:
+            why_text = (
+                f"{why_text} This also matches validated learning: {failure_rules[0]}"
+            )
+        what_stays = "The main goal stays the same, and any progress already made should be preserved."
+        if success_patterns:
+            what_stays = f"{what_stays} Keep the validated success pattern: {success_patterns[0]}"
+        return PlanRevisionSummary(
+            why_plan_changed=why_text,
+            what_assumption_failed=f"The assumption that '{assumption_failed}' would remain manageable did not hold.",
+            what_stays=what_stays,
+            what_changes=what_changes,
+            new_next_action=new_next_action,
+        )
+
+    @staticmethod
+    def _extract_outcome_learning(facts: dict[str, Any]) -> dict[str, Any]:
+        learning = facts.get("validated_outcome_learning")
+        return dict(learning) if isinstance(learning, dict) else {}
 
     def _build_pattern_adaptation_record(self, adjustment: PlanParameterAdjustment) -> AdaptationRecord:
         effect_map = {

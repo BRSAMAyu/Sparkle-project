@@ -46,6 +46,7 @@ class InterventionStrategyLearner:
         intervention_id: UUID,
         outcome_status: InterventionOutcomeStatus,
         context_snapshot: dict[str, Any] | None = None,
+        user_profile: dict[str, Any] | None = None,
     ) -> InterventionStrategyOutcome | None:
         record = await self.db.get(InterventionRecord, intervention_id)
         if record is None or record.user_id != user_id or record.trigger_type is None:
@@ -57,7 +58,7 @@ class InterventionStrategyLearner:
         )
         existing = (await self.db.execute(existing_stmt)).scalar_one_or_none()
 
-        payload = self._build_context_snapshot(record, context_snapshot)
+        payload = self._build_context_snapshot(record, context_snapshot, user_profile=user_profile)
         if existing:
             existing.acceptance_status = record.acceptance_status
             existing.outcome = outcome_status
@@ -85,11 +86,44 @@ class InterventionStrategyLearner:
         self,
         user_id: UUID,
         trigger_type: InterventionTriggerType,
+        *,
+        cohort_profile: dict | None = None,
     ) -> DeliveryStrategy | None:
-        outcomes = await self._load_outcomes(user_id=user_id, trigger_type=trigger_type)
-        if len(outcomes) < self.MIN_PERSONALIZED_SAMPLES:
-            return None
+        """Return the best delivery strategy for this user and trigger type.
 
+        Falls back to cohort-aggregate outcomes when the user has fewer than
+        MIN_PERSONALIZED_SAMPLES personal observations. This ensures new users
+        receive evidence-informed interventions from session 1 rather than
+        relying on random defaults.
+
+        Args:
+            cohort_profile: Optional dict with keys ``goal_type``,
+                ``knowledge_level``, and/or ``learning_style`` used to select
+                the peer cohort when personal data is insufficient.
+        """
+        outcomes = await self._load_outcomes(user_id=user_id, trigger_type=trigger_type)
+        if len(outcomes) >= self.MIN_PERSONALIZED_SAMPLES:
+            return self._select_best(outcomes)
+
+        # Personal data insufficient — try cohort fallback
+        if cohort_profile:
+            cohort_outcomes = await self._load_cohort_outcomes(
+                trigger_type=trigger_type,
+                goal_type=cohort_profile.get("goal_type"),
+                knowledge_level=cohort_profile.get("knowledge_level"),
+                learning_style=cohort_profile.get("learning_style"),
+                exclude_user_id=user_id,
+            )
+            if len(cohort_outcomes) >= self.MIN_PERSONALIZED_SAMPLES:
+                return self._select_best(cohort_outcomes)
+
+        return None
+
+    def _select_best(
+        self,
+        outcomes: list[InterventionStrategyOutcome],
+    ) -> DeliveryStrategy | None:
+        """Select the highest-scoring strategy from a list of outcomes."""
         best_strategy: DeliveryStrategy | None = None
         best_score: tuple[float, float, float, int] | None = None
         for strategy, group in self._group_by_strategy(outcomes).items():
@@ -108,6 +142,45 @@ class InterventionStrategyLearner:
                 best_strategy = strategy
                 best_score = score
         return best_strategy
+
+    async def _load_cohort_outcomes(
+        self,
+        *,
+        trigger_type: InterventionTriggerType,
+        goal_type: str | None,
+        knowledge_level: str | None,
+        learning_style: str | None,
+        exclude_user_id: UUID | None = None,
+    ) -> list[InterventionStrategyOutcome]:
+        """Load outcomes from users with a similar profile (cohort).
+
+        Matches on context_snapshot JSONB fields stored at intervention time.
+        Capped at 100 rows for query performance.
+        """
+        from sqlalchemy import cast
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        stmt = (
+            select(InterventionStrategyOutcome)
+            .where(
+                InterventionStrategyOutcome.trigger_type == trigger_type,
+                InterventionStrategyOutcome.not_deleted_filter(),
+            )
+        )
+        if exclude_user_id is not None:
+            stmt = stmt.where(InterventionStrategyOutcome.user_id != exclude_user_id)
+        if goal_type:
+            stmt = stmt.where(
+                InterventionStrategyOutcome.context_snapshot["goal_type"].as_string() == goal_type
+            )
+        if knowledge_level:
+            stmt = stmt.where(
+                InterventionStrategyOutcome.context_snapshot["knowledge_level"].as_string() == knowledge_level
+            )
+        # learning_style is a softer match — only apply if both above fields also match
+        # (avoids over-filtering when cohort data is sparse)
+        stmt = stmt.limit(100)
+        return list((await self.db.execute(stmt)).scalars().all())
 
     async def get_user_response_profile(self, user_id: UUID) -> ResponseProfile:
         stmt = select(InterventionStrategyOutcome).where(
@@ -179,6 +252,8 @@ class InterventionStrategyLearner:
     def _build_context_snapshot(
         record: InterventionRecord,
         override: dict[str, Any] | None,
+        *,
+        user_profile: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if override:
             return dict(override)
@@ -187,7 +262,7 @@ class InterventionStrategyLearner:
         diagnosis = dict(record.diagnosis_payload or {})
         improvement = dict(evidence.get("improvement") or {})
         context = dict(diagnosis.get("context") or {})
-        return {
+        snapshot: dict[str, Any] = {
             "trigger_type": record.trigger_type.value if record.trigger_type else None,
             "delivery_channel": record.delivery_channel.value if record.delivery_channel else None,
             "delivery_strategy": record.delivery_strategy.value if record.delivery_strategy else None,
@@ -197,6 +272,13 @@ class InterventionStrategyLearner:
             "completed_count": context.get("completed_count"),
             "evaluation_method": evidence.get("evaluation_method"),
         }
+        # Store cohort-matchable profile fields so future queries can filter by them
+        if isinstance(user_profile, dict):
+            for field in ("goal_type", "knowledge_level", "learning_style"):
+                val = user_profile.get(field)
+                if val is not None:
+                    snapshot[field] = str(val)
+        return snapshot
 
     @staticmethod
     def _compute_time_to_action_seconds(record: InterventionRecord) -> int | None:

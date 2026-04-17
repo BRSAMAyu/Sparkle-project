@@ -267,6 +267,48 @@ MEMORY_SETTINGS_UPDATE_TOTAL = get_or_create_metric(
     'Memory settings update count',
 )
 
+# ========== Phase C Outcome Metrics ==========
+OUTCOME_RECORDS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_outcome_records_total',
+    'Outcome records persisted by evidence level and layer',
+    ['evidence_level', 'layer', 'source_family']
+)
+
+VALIDATED_OUTCOME_LEARNING_PROMOTIONS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_validated_outcome_learning_promotions_total',
+    'Validated outcome learning promotions by layer and direction',
+    ['layer', 'direction']
+)
+
+OUTCOME_LEARNING_CONFLICTS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_outcome_learning_conflicts_total',
+    'Outcome learning conflicts and demotions by layer and reason',
+    ['layer', 'reason']
+)
+
+PROFILE_LEDGER_PENDING_SYNTHESIS = get_or_create_metric(
+    Gauge,
+    'sparkle_profile_ledger_pending_synthesis',
+    'Current number of profile-ledger records waiting for synthesis'
+)
+
+OUTCOME_LEARNING_PLANNING_CONSTRAINTS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_outcome_learning_planning_constraints_total',
+    'Planning constraints emitted from outcome learning',
+    ['constraint_key', 'constraint_value']
+)
+
+HUMAN_EVAL_REPEATED_FAILURE_TAGS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_human_eval_repeated_failure_tags_total',
+    'Repeated human-eval failure tags observed in operations reports',
+    ['tag']
+)
+
 # ========== Context Pack Metrics ==========
 CONTEXT_PACK_BUILD = get_or_create_metric(
     Counter,

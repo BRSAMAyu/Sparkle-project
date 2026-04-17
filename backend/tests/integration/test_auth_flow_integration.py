@@ -17,15 +17,14 @@ This test requires:
 import pytest
 import asyncio
 import json
-import jwt
 from typing import Dict, Any
 from datetime import timezone, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import websockets
-from websockets.exceptions import InvalidStatus
+from websockets.exceptions import InvalidMessage, InvalidStatus
 import grpc
-from jose import JWTError
+from jose import JWTError, jwt
 
 from app.models.user import User
 from app.core.security import (
@@ -104,6 +103,14 @@ def websocket_url():
     gateway_host = os.getenv("GATEWAY_HOST", "localhost")
     gateway_port = os.getenv("GATEWAY_PORT", "8080")
     return f"ws://{gateway_host}:{gateway_port}/ws/chat"
+
+
+def _skip_when_gateway_unavailable(exc: BaseException) -> None:
+    """Skip WebSocket integration tests when the gateway is not actually reachable."""
+    if isinstance(exc, OSError):
+        pytest.skip("Gateway not running for WebSocket integration tests")
+    if isinstance(exc, InvalidMessage):
+        pytest.skip("Gateway unavailable or returned an invalid HTTP response")
 
 
 # ============================================================
@@ -285,6 +292,8 @@ class TestWebSocketAuthentication:
             if status == 401:
                 pytest.skip("Gateway rejected integration JWT (401); check JWT runtime alignment")
             raise
+        except (OSError, InvalidMessage) as exc:
+            _skip_when_gateway_unavailable(exc)
 
     @pytest.mark.asyncio
     async def test_websocket_with_expired_token(
@@ -295,16 +304,22 @@ class TestWebSocketAuthentication:
         """Test WebSocket connection with expired token"""
         uri = f"{websocket_url}?token={expired_token}"
 
-        with pytest.raises(Exception):
-            async with websockets.connect(uri) as websocket:
-                await websocket.send(json.dumps({"type": "ping"}))
+        try:
+            with pytest.raises(Exception):
+                async with websockets.connect(uri) as websocket:
+                    await websocket.send(json.dumps({"type": "ping"}))
+        except (OSError, InvalidMessage) as exc:
+            _skip_when_gateway_unavailable(exc)
 
     @pytest.mark.asyncio
     async def test_websocket_without_token(self, websocket_url: str):
         """Test WebSocket connection without token"""
-        with pytest.raises(Exception):
-            async with websockets.connect(websocket_url) as websocket:
-                pass
+        try:
+            with pytest.raises(Exception):
+                async with websockets.connect(websocket_url) as websocket:
+                    pass
+        except (OSError, InvalidMessage) as exc:
+            _skip_when_gateway_unavailable(exc)
 
     @pytest.mark.asyncio
     async def test_websocket_with_invalid_token(
@@ -314,9 +329,12 @@ class TestWebSocketAuthentication:
         """Test WebSocket connection with invalid token"""
         uri = f"{websocket_url}?token=invalid_token_xyz"
 
-        with pytest.raises(Exception):
-            async with websockets.connect(uri) as websocket:
-                pass
+        try:
+            with pytest.raises(Exception):
+                async with websockets.connect(uri) as websocket:
+                    pass
+        except (OSError, InvalidMessage) as exc:
+            _skip_when_gateway_unavailable(exc)
 
 
 # ============================================================

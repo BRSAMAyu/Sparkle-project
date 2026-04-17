@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Profile Context - Sparkle 用户画像域统一读模型
 
@@ -16,11 +17,12 @@ ProfileContextService.get_profile_context() 获取此对象，
 写入路径：所有偏好变更通过 ProfileWriteService (不通过此类)
 """
 
-
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+from app.core.user_insight_state import UserInsightState
 
 
 class WeakSpot(BaseModel):
@@ -63,6 +65,9 @@ class ProfileContext(BaseModel):
     preference_version: int = 0
     knowledge_summary: KnowledgeSummary = Field(default_factory=KnowledgeSummary)
     cognitive_summary: CognitiveSummary = Field(default_factory=CognitiveSummary)
+    error_summary: dict[str, Any] = Field(default_factory=dict)
+    recent_errors: list[dict[str, Any]] = Field(default_factory=list)
+    user_insight_state: UserInsightState | None = None
 
     def to_prompt_context(self) -> dict[str, Any]:
         return self.model_dump(mode="json")

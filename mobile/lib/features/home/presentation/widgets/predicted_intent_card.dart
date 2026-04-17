@@ -9,11 +9,12 @@ import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
-import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 
 class PredictedIntentCard extends ConsumerStatefulWidget {
   const PredictedIntentCard({super.key});
@@ -73,33 +74,32 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     }
     _recordImpressionIfNeeded(forecast);
 
+    final isChinese = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('zh');
     final confidencePercent = (forecast.confidence * 100).round();
-    final sourceLabel = switch (forecast.predictionSource) {
-      'glm_batch' => '长期预测',
-      'rules' => '规则兜底',
-      _ => forecast.predictionSource,
-    };
-    final windowLabel = _windowLabel(forecast.predictedWindow);
-    final actionLabel = _actionLabel(forecast.predictedActionType);
-    final freshnessLabel = _freshnessLabel(forecast.generatedAt);
+    final sourceLabel = _sourceLabel(
+      forecast.predictionSource,
+      isChinese: isChinese,
+    );
+    final windowLabel = _windowLabel(
+      forecast.predictedWindow,
+      isChinese: isChinese,
+    );
+    final actionLabel = _actionLabel(
+      forecast.predictedActionType,
+      isChinese: isChinese,
+    );
+    final freshnessLabel = _freshnessLabel(
+      forecast.generatedAt,
+      isChinese: isChinese,
+    );
     final primaryAction = forecast.recommendedActions.isNotEmpty
         ? forecast.recommendedActions.first
         : null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final promptPreview = forecast.suggestedPrompt.trim();
-    final gradientStart = isDark
-        ? Color.alphaBlend(
-            DS.info.withValues(alpha: 0.16),
-            DS.surfaceSecondary,
-          )
-        : DS.info.withValues(alpha: 0.1);
-    final gradientMid = isDark
-        ? Color.alphaBlend(
-            DS.brandPrimary.withValues(alpha: 0.12),
-            DS.surfaceSecondary,
-          )
-        : DS.brandPrimary.withValues(alpha: 0.05);
-    final gradientEnd = isDark ? DS.surfaceOverlay : DS.surfaceSecondary;
 
     if (_isCollapsed) {
       return ContentConstraint(
@@ -110,76 +110,39 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
             DS.spacing16,
             DS.spacing10,
           ),
-          child: MaterialStyler(
-            material: AppMaterials.ceramic(context).copyWith(
-              backgroundGradient: LinearGradient(
-                colors: [gradientStart, gradientMid, gradientEnd],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderColor: DS.info.withValues(alpha: isDark ? 0.22 : 0.16),
-              borderWidth: 1,
-            ),
-            borderRadius: DS.borderRadius20,
+          child: DashboardSectionShell(
+            tone: DashboardSurfaceTone.summary,
             padding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: DS.spacing12,
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: DS.info.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+            child: DashboardSectionHeader(
+              icon: Icons.psychology_alt_rounded,
+              accentColor: DS.info,
+              title: isChinese ? '系统预测已收起' : 'System Prediction Collapsed',
+              summary: freshnessLabel == null
+                  ? (isChinese
+                      ? '需要时再展开查看建议'
+                      : 'Expand it again whenever you want to review the recommendation.')
+                  : (isChinese
+                      ? '上次更新于$freshnessLabel'
+                      : 'Last updated $freshnessLabel'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _Chip(label: '$confidencePercent%', subdued: true),
+                  const SizedBox(width: DS.spacing8),
+                  SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    size: 34,
+                    onPressed: () => _setCollapsed(false),
+                    icon: const Icon(
+                      Icons.unfold_more_rounded,
+                      size: 18,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.psychology_alt_rounded,
-                    color: DS.info,
-                    size: 16,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '系统预测已收起',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.sparkleTypography.labelLarge.copyWith(
-                          fontWeight: DS.fontWeightBold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        freshnessLabel == null
-                            ? '需要时再展开查看建议'
-                            : '上次更新于$freshnessLabel',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.sparkleTypography.labelSmall.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _Chip(label: '$confidencePercent%', subdued: true),
-                const SizedBox(width: DS.spacing8),
-                SparkleIconButton(
-                  variant: ButtonVariant.ghost,
-                  size: 34,
-                  onPressed: () => _setCollapsed(false),
-                  icon: const Icon(
-                    Icons.unfold_more_rounded,
-                    size: 18,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -194,289 +157,224 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
           DS.spacing16,
           DS.spacing10,
         ),
-        child: MaterialStyler(
-          material: AppMaterials.ceramic(context).copyWith(
-            backgroundGradient: LinearGradient(
-              colors: [gradientStart, gradientMid, gradientEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderColor: DS.info.withValues(alpha: isDark ? 0.22 : 0.16),
-            borderWidth: 1,
-            shadows: [
-              BoxShadow(
-                color: DS.info.withValues(alpha: isDark ? 0.12 : 0.06),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          borderRadius: DS.borderRadius20,
-          padding: const EdgeInsets.all(DS.spacing16),
-          child: Stack(
+        child: DashboardSectionShell(
+          tone: DashboardSurfaceTone.summary,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Positioned(
-                right: -10,
-                top: -12,
-                child: IgnorePointer(
-                  child: Container(
-                    width: 96,
-                    height: 96,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          DS.info.withValues(alpha: isDark ? 0.14 : 0.12),
-                          Colors.transparent,
-                        ],
+              DashboardSectionHeader(
+                icon: Icons.psychology_alt_rounded,
+                iconSize: 40,
+                accentColor: DS.info,
+                title: isChinese ? '系统预测' : 'System Prediction',
+                summary: isChinese
+                    ? '基于画像、最近 24 小时行为与任务节奏'
+                    : 'Based on your profile, the last 24 hours, and task rhythm',
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _Chip(label: '$confidencePercent%'),
+                    const SizedBox(width: DS.spacing8),
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: 34,
+                      onPressed: () => _setCollapsed(true),
+                      icon: const Icon(
+                        Icons.visibility_off_rounded,
+                        size: 18,
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 14),
+              Text(
+                forecast.title,
+                style: context.sparkleTypography.titleLarge.copyWith(
+                  fontWeight: DS.fontWeightBold,
+                  height: 1.15,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                forecast.summary,
+                style: context.sparkleTypography.bodyMedium.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : DS.surfaceOverlay,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: DS.borderSubtle,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isChinese ? '建议接续' : 'Suggested Continuation',
+                      style: context.sparkleTypography.labelSmall.copyWith(
+                        color: DS.textTertiary,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing6),
+                    Text(
+                      promptPreview.isEmpty
+                          ? (isChinese
+                              ? '预测结果已生成，等待可继续指令'
+                              : 'The prediction is ready and waiting for a follow-up prompt.')
+                          : promptPreview,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.sparkleTypography.bodyMedium.copyWith(
+                        color: DS.textPrimary,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Row(
                 children: [
-                  Row(
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 6,
+                        value: forecast.confidence.clamp(0.0, 1.0),
+                        backgroundColor: DS.surfaceTertiary,
+                        valueColor: AlwaysStoppedAnimation<Color>(DS.info),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing10),
+                  Text(
+                    isChinese
+                        ? '可信度 $confidencePercent%'
+                        : 'Confidence $confidencePercent%',
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      color: DS.textSecondary,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                ],
+              ),
+              if (forecast.reasons.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing12),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: forecast.reasons
+                      .take(3)
+                      .map(
+                        (reason) => _Chip(
+                          label: reason,
+                          subdued: true,
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+              if (forecast.allExplanationLines.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.03)
+                        : DS.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: DS.info.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: DS.info.withValues(alpha: 0.16),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.psychology_alt_rounded,
-                          color: DS.info,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: DS.spacing12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '系统预测',
-                              style:
-                                  context.sparkleTypography.labelLarge.copyWith(
-                                fontWeight: DS.fontWeightBold,
-                              ),
-                            ),
-                            Text(
-                              '基于画像、最近 24 小时行为与任务节奏',
-                              style:
-                                  context.sparkleTypography.labelSmall.copyWith(
-                                color: DS.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _Chip(label: '$confidencePercent%'),
-                      const SizedBox(width: DS.spacing8),
-                      SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        size: 34,
-                        onPressed: () => _setCollapsed(true),
-                        icon: const Icon(
-                          Icons.visibility_off_rounded,
-                          size: 18,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    forecast.title,
-                    style: context.sparkleTypography.titleLarge.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                      height: 1.15,
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing8),
-                  Text(
-                    forecast.summary,
-                    style: context.sparkleTypography.bodyMedium.copyWith(
-                      color: DS.textSecondary,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(DS.spacing12),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.04)
-                          : DS.surfaceOverlay,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: DS.borderSubtle,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '建议接续',
-                          style: context.sparkleTypography.labelSmall.copyWith(
-                            color: DS.textTertiary,
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                        ),
-                        const SizedBox(height: DS.spacing6),
-                        Text(
-                          promptPreview.isEmpty
-                              ? '预测结果已生成，等待可继续指令'
-                              : promptPreview,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.sparkleTypography.bodyMedium.copyWith(
-                            color: DS.textPrimary,
-                            height: 1.45,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            minHeight: 6,
-                            value: forecast.confidence.clamp(0.0, 1.0),
-                            backgroundColor: DS.surfaceTertiary,
-                            valueColor: AlwaysStoppedAnimation<Color>(DS.info),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: DS.spacing10),
                       Text(
-                        '可信度 $confidencePercent%',
+                        isChinese ? '为什么这样预测' : 'Why the system predicts this',
                         style: context.sparkleTypography.labelSmall.copyWith(
-                          color: DS.textSecondary,
+                          color: DS.textTertiary,
                           fontWeight: DS.fontWeightBold,
                         ),
                       ),
-                    ],
-                  ),
-                  if (forecast.reasons.isNotEmpty) ...[
-                    const SizedBox(height: DS.spacing12),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: forecast.reasons
-                          .take(3)
-                          .map(
-                            (reason) => _Chip(
-                              label: reason,
-                              subdued: true,
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                  if (forecast.allExplanationLines.isNotEmpty) ...[
-                    const SizedBox(height: DS.spacing12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(DS.spacing12),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.03)
-                            : DS.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '为什么这样预测',
-                            style:
-                                context.sparkleTypography.labelSmall.copyWith(
-                              color: DS.textTertiary,
-                              fontWeight: DS.fontWeightBold,
+                      const SizedBox(height: DS.spacing6),
+                      ...forecast.allExplanationLines.take(3).map(
+                            (line) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 5,
+                                    height: 5,
+                                    margin: const EdgeInsets.only(
+                                      top: 8,
+                                      right: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: DS.textSecondary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      line,
+                                      style: context
+                                          .sparkleTypography.bodyMedium
+                                          .copyWith(
+                                        color: DS.textSecondary,
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(height: DS.spacing6),
-                          ...forecast.allExplanationLines.take(3).map(
-                                (line) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        width: 5,
-                                        height: 5,
-                                        margin: const EdgeInsets.only(
-                                            top: 8, right: 8),
-                                        decoration: BoxDecoration(
-                                          color: DS.textSecondary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Text(
-                                          line,
-                                          style: context
-                                              .sparkleTypography.bodyMedium
-                                              .copyWith(
-                                            color: DS.textSecondary,
-                                            height: 1.45,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  SparkleButton(
-                    label: _isContinuing
-                        ? '正在衔接…'
-                        : ((primaryAction?.label.isNotEmpty ?? false)
-                            ? primaryAction!.label
-                            : '按这个继续'),
-                    icon: Icon(
-                      _isContinuing
-                          ? Icons.sync_rounded
-                          : Icons.auto_awesome_rounded,
-                    ),
-                    loading: _isContinuing,
-                    expand: true,
-                    disabled: _isContinuing ||
-                        (promptPreview.isEmpty && primaryAction == null),
-                    onPressed: _isContinuing ||
-                            (promptPreview.isEmpty && primaryAction == null)
-                        ? null
-                        : () => _handleContinue(forecast),
-                  ),
-                  const SizedBox(height: DS.spacing10),
-                  Wrap(
-                    spacing: DS.spacing8,
-                    runSpacing: DS.spacing8,
-                    children: [
-                      _Chip(label: actionLabel, subdued: true),
-                      _Chip(label: windowLabel, subdued: true),
-                      _Chip(label: sourceLabel, subdued: true),
-                      if (freshnessLabel != null)
-                        _Chip(label: freshnessLabel, subdued: true),
                     ],
                   ),
+                ),
+              ],
+              const SizedBox(height: 14),
+              SparkleButton(
+                label: _isContinuing
+                    ? (isChinese ? '正在衔接…' : 'Continuing...')
+                    : ((primaryAction?.label.isNotEmpty ?? false)
+                        ? primaryAction!.label
+                        : (isChinese ? '按这个继续' : 'Continue With This')),
+                icon: Icon(
+                  _isContinuing
+                      ? Icons.sync_rounded
+                      : Icons.auto_awesome_rounded,
+                ),
+                loading: _isContinuing,
+                expand: true,
+                disabled: _isContinuing ||
+                    (promptPreview.isEmpty && primaryAction == null),
+                onPressed: _isContinuing ||
+                        (promptPreview.isEmpty && primaryAction == null)
+                    ? null
+                    : () => _handleContinue(forecast),
+              ),
+              const SizedBox(height: DS.spacing10),
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
+                  _Chip(label: actionLabel, subdued: true),
+                  _Chip(label: windowLabel, subdued: true),
+                  _Chip(label: sourceLabel, subdued: true),
+                  if (freshnessLabel != null)
+                    _Chip(label: freshnessLabel, subdued: true),
                 ],
               ),
             ],
@@ -571,7 +469,16 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
       ref.invalidate(dashboardProvider);
     } catch (_) {
       if (mounted) {
-        AppFeedback.error(context, '继续对话时出现问题，请稍后重试');
+        final isChinese = Localizations.localeOf(context)
+            .languageCode
+            .toLowerCase()
+            .startsWith('zh');
+        AppFeedback.error(
+          context,
+          isChinese
+              ? '继续对话时出现问题，请稍后重试'
+              : 'Something went wrong while continuing. Please try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -593,62 +500,73 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
         },
       };
 
-  String _actionLabel(String actionType) {
+  String _actionLabel(String actionType, {required bool isChinese}) {
     switch (actionType) {
       case 'resume_priority_task':
       case 'resume_task':
-        return '继续重点任务';
+        return isChinese ? '继续重点任务' : 'Resume Priority Task';
       case 'study_plan':
-        return '生成学习计划';
+        return isChinese ? '生成学习计划' : 'Build Study Plan';
       case 'error_diagnosis':
-        return '问题诊断';
+        return isChinese ? '问题诊断' : 'Diagnose Issue';
       case 'create_task':
-        return '落成任务';
+        return isChinese ? '落成任务' : 'Turn Into Task';
       case 'translate':
-        return '即时结果';
+        return isChinese ? '即时结果' : 'Instant Result';
       case 'review_progress':
-        return '复盘进展';
+        return isChinese ? '复盘进展' : 'Review Progress';
       case 'plan_next_step':
-        return '规划下一步';
+        return isChinese ? '规划下一步' : 'Plan Next Step';
       case 'reflection':
-        return '快速反思';
+        return isChinese ? '快速反思' : 'Quick Reflection';
       default:
-        return '预测意图';
+        return isChinese ? '预测意图' : 'Predicted Intent';
     }
   }
 
-  String _windowLabel(String window) {
+  String _windowLabel(String window, {required bool isChinese}) {
     switch (window) {
       case 'now':
-        return '就是现在';
+        return isChinese ? '就是现在' : 'Right Now';
       case 'next_30m':
-        return '未来 30 分钟';
+        return isChinese ? '未来 30 分钟' : 'Next 30 Minutes';
       case 'next_1h':
-        return '未来 1 小时';
+        return isChinese ? '未来 1 小时' : 'Next Hour';
       case 'next_2h':
-        return '未来 2 小时';
+        return isChinese ? '未来 2 小时' : 'Next 2 Hours';
       case 'next_6h':
-        return '未来 6 小时';
+        return isChinese ? '未来 6 小时' : 'Next 6 Hours';
       case 'today':
-        return '今天内';
+        return isChinese ? '今天内' : 'Later Today';
       default:
         return window.replaceAll('_', ' ');
     }
   }
 
-  String? _freshnessLabel(DateTime? generatedAt) {
+  String _sourceLabel(String source, {required bool isChinese}) {
+    switch (source) {
+      case 'glm_batch':
+        return isChinese ? '长期预测' : 'Long-Range Forecast';
+      case 'rules':
+        return isChinese ? '规则兜底' : 'Rules Fallback';
+      default:
+        return source;
+    }
+  }
+
+  String? _freshnessLabel(DateTime? generatedAt, {required bool isChinese}) {
     if (generatedAt == null) return null;
     final diff = DateTime.now().difference(generatedAt);
     if (diff.inMinutes < 1) {
-      return '刚刚更新';
+      return isChinese ? '刚刚更新' : 'just now';
     }
     if (diff.inHours < 1) {
-      return '${diff.inMinutes} 分钟前';
+      return isChinese ? '${diff.inMinutes} 分钟前' : '${diff.inMinutes} min ago';
     }
     if (diff.inDays < 1) {
-      return '${diff.inHours} 小时前';
+      return isChinese ? '${diff.inHours} 小时前' : '${diff.inHours} hr ago';
     }
-    return '${diff.inDays} 天前';
+    return isChinese ? '${diff.inDays} 天前' : '${diff.inDays} d ago';
   }
 }
 

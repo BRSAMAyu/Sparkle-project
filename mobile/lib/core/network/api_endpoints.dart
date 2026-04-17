@@ -169,6 +169,7 @@ class ApiEndpoints {
   static const String statsWeekly = '/stats/weekly';
   static const String statsFlame = '/stats/flame';
   static const String growthDashboard = '/growth/dashboard';
+  static const String profileChatOpening = '/profile/chat-opening';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';

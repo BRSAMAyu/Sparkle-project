@@ -284,6 +284,71 @@ class ObservabilityLogger:
             }
         )
 
+    async def log_phase_a_decision(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        decision: dict[str, Any],
+    ) -> None:
+        logger.info(
+            "Phase A decision: "
+            f"user={user_id[:8] if user_id else 'unknown'}, "
+            f"source={decision.get('planning_detection_source')}, "
+            f"readiness={decision.get('planning_readiness')}, "
+            f"action={decision.get('planning_readiness_action')}, "
+            f"guardrail={decision.get('phase_a_guardrail', '')}, "
+            f"hard_stop={decision.get('hard_stop', False)}"
+        )
+
+        await self.log_event(
+            event_type="phase_a_decision",
+            user_id=user_id,
+            session_id=session_id,
+            data=decision,
+        )
+
+        try:
+            from app.core.metrics import (
+                PHASE_A_CONTRADICTION_TOTAL,
+                PHASE_A_DECISION_TOTAL,
+                PHASE_A_GAP_TOTAL,
+                PHASE_A_PLANNING_LIKE_TOTAL,
+            )
+
+            source = str(decision.get("planning_detection_source") or "unknown")
+            action = str(decision.get("planning_readiness_action") or "proceed")
+            PHASE_A_PLANNING_LIKE_TOTAL.labels(source=source).inc()
+            PHASE_A_DECISION_TOTAL.labels(action=action).inc()
+
+            for gap_id in decision.get("blocking_unknowns") or []:
+                gap = str(gap_id or "").strip()
+                if gap:
+                    PHASE_A_GAP_TOTAL.labels(gap_id=gap).inc()
+
+            contradiction_details = decision.get("contradictions")
+            if isinstance(contradiction_details, list):
+                for item in contradiction_details:
+                    if not isinstance(item, dict):
+                        continue
+                    contradiction_id = str(item.get("id") or "").strip()
+                    severity = str(item.get("severity") or "unknown").strip().lower()
+                    if contradiction_id:
+                        PHASE_A_CONTRADICTION_TOTAL.labels(
+                            contradiction_id=contradiction_id,
+                            severity=severity or "unknown",
+                        ).inc()
+            else:
+                for contradiction_id in decision.get("contradiction_ids") or []:
+                    cid = str(contradiction_id or "").strip()
+                    if cid:
+                        PHASE_A_CONTRADICTION_TOTAL.labels(
+                            contradiction_id=cid,
+                            severity="unknown",
+                        ).inc()
+        except ImportError:
+            pass
+
     async def log_expert_selected(
         self,
         *,

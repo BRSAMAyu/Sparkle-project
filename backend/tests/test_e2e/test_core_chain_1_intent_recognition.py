@@ -29,7 +29,6 @@ from app.orchestration.sufficiency_checker import (
     SufficiencyStatus,
     SufficiencyCheckResult
 )
-from app.orchestration.bert_intent_classifier import BERTIntentClassifier
 from app.core.unified_intent_router import (
     UnifiedIntentRouter,
     UnifiedIntentType,

@@ -1,0 +1,474 @@
+{
+  "snapshot_version": "phase_d_d0_2026-04-05",
+  "purpose": "Current body-awareness baseline snapshot for D0 audit and D1 registry parity checks.",
+  "source_of_truth": {
+    "registry_service": "backend/app/services/capability_registry_service.py",
+    "situation_brief": "backend/app/orchestration/situation_brief.py",
+    "orchestrator": "backend/app/orchestration/orchestrator.py",
+    "llm_router": "backend/app/core/llm_router.py",
+    "agent_profiles": "backend/app/core/agent_profiles.py",
+    "decision_policy": "backend/app/orchestration/decision_policy.py",
+    "strategy_state": "backend/app/services/user_strategy_state_service.py"
+  },
+  "models": [
+    {
+      "id": "free_and_free_fast_models",
+      "status": "operational_now",
+      "selection_owner": "LLMRouter",
+      "availability_gate": "configured credentials plus router health state",
+      "model_keys": [
+        "siliconflow_free",
+        "glm_4_7_flash_thinking",
+        "glm_4_5_air_free"
+      ],
+      "notes": "Used for lightweight or exploratory lanes."
+    },
+    {
+      "id": "fast_models",
+      "status": "operational_now",
+      "selection_owner": "LLMRouter",
+      "availability_gate": "configured credentials plus router health state",
+      "model_keys": [
+        "xiaomi_chat",
+        "dashscope_fast",
+        "glm_4_7_flash_no_thinking"
+      ],
+      "notes": "Fast general-purpose lane."
+    },
+    {
+      "id": "standard_models",
+      "status": "operational_now",
+      "selection_owner": "LLMRouter",
+      "availability_gate": "configured credentials plus router health state",
+      "model_keys": [
+        "xiaomi_standard_thinking",
+        "dashscope_standard_thinking",
+        "default"
+      ],
+      "notes": "Default main-turn sweet spot."
+    },
+    {
+      "id": "plus_models",
+      "status": "operational_now",
+      "selection_owner": "LLMRouter",
+      "availability_gate": "configured credentials plus router health state",
+      "model_keys": [
+        "dashscope_chat",
+        "deepseek_chat"
+      ],
+      "notes": "Higher-quality chat lane."
+    },
+    {
+      "id": "pro_models",
+      "status": "operational_now",
+      "selection_owner": "LLMRouter",
+      "availability_gate": "configured credentials plus router health state",
+      "model_keys": [
+        "dashscope_reason",
+        "deepseek_reason"
+      ],
+      "notes": "Deep reasoning lane."
+    },
+    {
+      "id": "max_and_batch_models",
+      "status": "operational_now",
+      "selection_owner": "LLMRouter",
+      "availability_gate": "configured credentials plus router health state",
+      "model_keys": [
+        "glm_5_max",
+        "glm_4_7_no_thinking",
+        "glm_4_7_thinking",
+        "glm_4_5_air_batch",
+        "glm_4_6_batch"
+      ],
+      "notes": "Used for explicit max or batch-oriented lanes."
+    },
+    {
+      "id": "specialist_models",
+      "status": "operational_now",
+      "selection_owner": "LLMRouter",
+      "availability_gate": "configured credentials plus router health state",
+      "model_keys": [
+        "zhipu_ocr",
+        "siliconflow_ocr",
+        "hunyuan_translate",
+        "siliconflow_translate"
+      ],
+      "notes": "Specialist OCR and translation lanes exist, but main-turn selection is not yet governed by a shared Phase D selector."
+    }
+  ],
+  "agent_families": [
+    {
+      "id": "core_runtime_agents",
+      "status": "operational_now",
+      "selection_owner": "agent_profiles plus LLMRouter",
+      "agent_ids": [
+        "orchestrator",
+        "generation",
+        "retrieval",
+        "tool_execution",
+        "router"
+      ],
+      "notes": "Primary runtime roles."
+    },
+    {
+      "id": "public_specialists",
+      "status": "operational_now",
+      "selection_owner": "expert entry catalog and routing heuristics",
+      "agent_ids": [
+        "galaxy_guide",
+        "exam_oracle",
+        "time_tutor",
+        "deep_analyst",
+        "error_analyst",
+        "study_buddy",
+        "search_agent",
+        "math_agent",
+        "code_agent",
+        "writing_agent",
+        "science_agent"
+      ],
+      "notes": "Experts exist today, but a shared capability selector does not yet decide specialist escalation on the main path."
+    },
+    {
+      "id": "workflow_and_support_agents",
+      "status": "operational_now",
+      "selection_owner": "agent_profiles plus workflow code",
+      "agent_ids": [
+        "study_planner",
+        "problem_solver",
+        "execution_assistant",
+        "reviewer"
+      ],
+      "notes": "Used in workflow or support lanes rather than as a Phase D-governed selection layer."
+    }
+  ],
+  "tool_families": [
+    {
+      "id": "query_tools",
+      "status": "operational_now",
+      "registry_source": "DynamicToolRegistry",
+      "tool_count": 17,
+      "example_tools": [
+        "query_knowledge",
+        "web_search_pro",
+        "generate_learning_report",
+        "run_quick_simulation",
+        "launch_prediction"
+      ]
+    },
+    {
+      "id": "task_tools",
+      "status": "operational_now",
+      "registry_source": "DynamicToolRegistry",
+      "tool_count": 11,
+      "example_tools": [
+        "create_task",
+        "update_task_status",
+        "breakdown_task",
+        "modify_plan_task",
+        "query_all_tasks"
+      ]
+    },
+    {
+      "id": "growth_tools",
+      "status": "operational_now",
+      "registry_source": "DynamicToolRegistry",
+      "tool_count": 7,
+      "example_tools": [
+        "get_situation_brief",
+        "get_user_strategy_state",
+        "adjust_user_strategy_state",
+        "retrieve_user_material",
+        "record_intervention_feedback"
+      ]
+    },
+    {
+      "id": "plan_tools",
+      "status": "operational_now",
+      "registry_source": "DynamicToolRegistry",
+      "tool_count": 5,
+      "example_tools": [
+        "create_plan",
+        "generate_tasks_for_plan",
+        "get_plan_state",
+        "confirm_milestone_proposal",
+        "dismiss_milestone_proposal"
+      ]
+    },
+    {
+      "id": "focus_tools",
+      "status": "operational_now",
+      "registry_source": "DynamicToolRegistry",
+      "tool_count": 2,
+      "example_tools": [
+        "suggest_focus_session",
+        "suggest_quick_task"
+      ]
+    },
+    {
+      "id": "knowledge_mutation_tools",
+      "status": "operational_now",
+      "registry_source": "DynamicToolRegistry",
+      "tool_count": 2,
+      "example_tools": [
+        "create_knowledge_node",
+        "link_knowledge_nodes"
+      ]
+    },
+    {
+      "id": "tool_modules_not_fully_operationalized",
+      "status": "declared_but_not_governed",
+      "registry_source": "repo_code_not_live_registry",
+      "example_modules": [
+        "app.tools.query_plan_tasks_tool"
+      ],
+      "notes": "The module exists, but D0 observed a dynamic-registration failure because QueryPlanTasksTool lacks parameters_schema."
+    }
+  ],
+  "runtime_pipelines": [
+    {
+      "id": "body_awareness_guidance_pipeline",
+      "status": "advisory_only",
+      "owner": "SituationBriefBuilder plus CapabilityRegistryService",
+      "path": "route_intent -> recommend_runtime_capabilities -> decision_context.body_awareness_guidance -> prompts",
+      "notes": "Compiled into turn context but mostly not enforced downstream."
+    },
+    {
+      "id": "knowledge_tool_auto_injection",
+      "status": "operational_now",
+      "owner": "ChatOrchestrator",
+      "path": "route_intent -> _resolve_active_tools -> query_knowledge",
+      "notes": "Current strongest hard-governed Phase D-like decision."
+    },
+    {
+      "id": "model_selection_pipeline",
+      "status": "operational_now",
+      "owner": "LLMRouter",
+      "path": "AgentProfile/TaskType -> candidate models -> health-aware selection",
+      "notes": "Real policy system, but not yet driven by a unified capability requirement profile."
+    },
+    {
+      "id": "decision_policy_adjustment_pipeline",
+      "status": "operational_now",
+      "owner": "DecisionPolicyCompiler",
+      "path": "diagnosis -> experience_mode -> system_adjustments",
+      "notes": "Real bounded adjustment recommendation path."
+    },
+    {
+      "id": "planning_strategy_pipeline",
+      "status": "operational_now",
+      "owner": "PlanningStrategyCompiler",
+      "path": "situation brief plus constraints -> deterministic planning recipe",
+      "notes": "Governed planning recipe exists, but it is not yet a general capability requirement compiler."
+    }
+  ],
+  "retrieval_organs": [
+    {
+      "id": "query_knowledge",
+      "status": "operational_now",
+      "type": "tool",
+      "availability_gate": "registered in DynamicToolRegistry"
+    },
+    {
+      "id": "retrieve_user_material",
+      "status": "operational_now",
+      "type": "tool",
+      "availability_gate": "registered in DynamicToolRegistry"
+    },
+    {
+      "id": "retrieval_agent",
+      "status": "operational_now",
+      "type": "agent",
+      "availability_gate": "agent profile loaded"
+    },
+    {
+      "id": "galaxy_guide",
+      "status": "operational_now",
+      "type": "specialist_agent",
+      "availability_gate": "public expert enabled"
+    },
+    {
+      "id": "search_agent",
+      "status": "operational_now",
+      "type": "specialist_agent",
+      "availability_gate": "public expert enabled"
+    },
+    {
+      "id": "web_search_pro",
+      "status": "operational_now",
+      "type": "tool",
+      "availability_gate": "registered in DynamicToolRegistry"
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "chat_response_surface",
+      "status": "operational_now",
+      "selection_mode": "default_runtime",
+      "notes": "Primary visible surface."
+    },
+    {
+      "id": "expert_catalog_surface",
+      "status": "operational_now",
+      "selection_mode": "catalog_and_route_preview",
+      "notes": "Public experts are visible and selectable."
+    },
+    {
+      "id": "body_map_endpoint",
+      "status": "operational_now",
+      "selection_mode": "registry_dump",
+      "notes": "Exposes registry inventory, not yet a live per-turn body map."
+    },
+    {
+      "id": "community",
+      "status": "declared_but_not_governed",
+      "selection_mode": "advisory_recommendation_only",
+      "notes": "Declared subsystem and activation surface, but not selected through one shared runtime selector."
+    },
+    {
+      "id": "achievements",
+      "status": "declared_but_not_governed",
+      "selection_mode": "advisory_recommendation_only",
+      "notes": "Declared motivation surface, not yet an auditable selection target."
+    },
+    {
+      "id": "visual_bgm",
+      "status": "declared_but_not_governed",
+      "selection_mode": "advisory_recommendation_only",
+      "notes": "Declared ambient surface, not yet governed through a real capability-selection report."
+    }
+  ],
+  "current_writable_knobs": [
+    {
+      "field": "difficulty_level",
+      "status": "operational_now",
+      "allowed_layers": [
+        "session",
+        "episode",
+        "profile"
+      ]
+    },
+    {
+      "field": "push_vs_support",
+      "status": "operational_now",
+      "allowed_layers": [
+        "session",
+        "episode",
+        "profile"
+      ]
+    },
+    {
+      "field": "session_mode",
+      "status": "operational_now",
+      "allowed_layers": [
+        "session",
+        "episode",
+        "profile"
+      ]
+    },
+    {
+      "field": "intervention_intensity",
+      "status": "operational_now",
+      "allowed_layers": [
+        "session",
+        "episode",
+        "profile"
+      ]
+    },
+    {
+      "field": "explanation_style",
+      "status": "operational_now",
+      "allowed_layers": [
+        "session",
+        "episode",
+        "profile"
+      ]
+    },
+    {
+      "field": "retrieval_emphasis",
+      "status": "operational_now",
+      "allowed_layers": [
+        "session",
+        "episode",
+        "profile"
+      ]
+    },
+    {
+      "field": "current_episode_note",
+      "status": "operational_now",
+      "allowed_layers": [
+        "session",
+        "episode"
+      ]
+    },
+    {
+      "field": "model_tier_selection",
+      "status": "declared_but_not_governed",
+      "allowed_layers": [
+        "system"
+      ],
+      "notes": "Declared in CapabilityRegistryService as a bounded system-layer knob, but not yet enforced by a Phase D governance layer."
+    },
+    {
+      "field": "agent_mix_selection",
+      "status": "declared_but_not_governed",
+      "allowed_layers": [
+        "system"
+      ],
+      "notes": "Declared in CapabilityRegistryService as a bounded system-layer knob, but not yet enforced by a Phase D governance layer."
+    },
+    {
+      "field": "tool_surface_selection",
+      "status": "declared_but_not_governed",
+      "allowed_layers": [
+        "system"
+      ],
+      "notes": "Declared in CapabilityRegistryService as a bounded system-layer knob, but not yet enforced by a Phase D governance layer."
+    }
+  ],
+  "implicit_decisions": [
+    {
+      "id": "knowledge_turn_auto_tool",
+      "status": "operational_now",
+      "trigger": "knowledge-like route intent with no explicit active_tools",
+      "path": "ChatOrchestrator._resolve_active_tools -> CapabilityRegistryService.recommend_runtime_capabilities -> query_knowledge injection",
+      "governance_strength": "hard_for_one_tool_case"
+    },
+    {
+      "id": "body_awareness_prompt_guidance",
+      "status": "advisory_only",
+      "trigger": "SituationBrief generation",
+      "path": "SituationBriefBuilder -> decision_context.body_awareness_guidance -> prompts",
+      "governance_strength": "prompt guidance only"
+    },
+    {
+      "id": "model_selection",
+      "status": "operational_now",
+      "trigger": "agent role plus task type plus reasoning mode",
+      "path": "agent_profiles -> LLMRouter.select_model",
+      "governance_strength": "real policy, not yet unified with Phase D body awareness"
+    },
+    {
+      "id": "bounded_adjustment_recommendations",
+      "status": "operational_now",
+      "trigger": "diagnosis plus experience mode",
+      "path": "DecisionPolicyCompiler -> system_adjustments",
+      "governance_strength": "real bounded recommendations against current strategy state"
+    },
+    {
+      "id": "specialist_escalation",
+      "status": "advisory_only",
+      "trigger": "expert suitability or multi-agent context",
+      "path": "agent profile catalog, route preview, and workflow-specific routing",
+      "governance_strength": "distributed heuristics, not one shared selector"
+    },
+    {
+      "id": "visible_surface_activation",
+      "status": "declared_but_not_governed",
+      "trigger": "capability guidance activation surfaces",
+      "path": "CapabilityRegistryService recommendations for community, achievements, visual_bgm",
+      "governance_strength": "declared inventory without shared runtime enforcement"
+    }
+  ]
+}

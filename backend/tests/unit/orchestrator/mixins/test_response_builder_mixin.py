@@ -5,6 +5,7 @@ Tests the response-building and cleanup helpers for the orchestrator.
 """
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -174,3 +175,65 @@ def test_roundtrip_ms_returns_zero_for_future_time(orchestrator):
 
     # Should return 0 instead of negative
     assert result == 0
+
+
+def test_capability_selection_metadata_stays_in_response_metadata(orchestrator):
+    metadata = orchestrator._capability_selection_metadata(
+        {
+            "capability_selection_report": {
+                "summary": {
+                    "retrieval_mode": "user_materials_first",
+                    "preferred_model_tier": "standard",
+                },
+                "why_this_path": "Used your materials first because this turn needed grounded evidence.",
+            }
+        }
+    )
+
+    assert "capability_selection_report" in metadata
+    assert "capability_selection_summary" in metadata
+    assert metadata["why_this_path"].startswith("Used your materials first")
+
+
+def test_semantic_control_trace_metadata_is_emitted(orchestrator):
+    metadata = orchestrator._semantic_control_trace_metadata(
+        {
+            "situation_brief": {
+                "semantic_control": {
+                    "selected_terms": [{"term": "experience_mode", "value": "clarify"}],
+                    "rendered_doctrine_summary": {"summary": "Ask one high-value question first."},
+                    "response_contract": {"should_ask_high_value_question_first": True},
+                    "compliance_expectations": {"expect_explicit_unlock_question": True},
+                }
+            }
+        }
+    )
+
+    assert "semantic_control_trace" in metadata
+    assert "clarify" in metadata["semantic_control_trace"]
+    trace = json.loads(metadata["semantic_control_trace"])
+    assert "observed_compliance_flags" not in trace
+
+
+def test_semantic_control_trace_metadata_includes_observed_flags_only_when_present(orchestrator):
+    metadata = orchestrator._semantic_control_trace_metadata(
+        {
+            "situation_brief": {
+                "semantic_control": {
+                    "selected_terms": [{"term": "experience_mode", "value": "clarify"}],
+                    "rendered_doctrine_summary": {"summary": "Ask one high-value question first."},
+                    "response_contract": {"should_ask_high_value_question_first": True},
+                    "compliance_expectations": {"expect_explicit_unlock_question": True},
+                }
+            },
+            "semantic_control_compliance": {
+                "checks": {
+                    "clarify_question_first": True,
+                }
+            },
+        }
+    )
+
+    trace = json.loads(metadata["semantic_control_trace"])
+    assert trace["observed_compliance_flags"] == {"clarify_question_first": True}
+    assert trace["observed_compliance_source"] == "plan_quality_gate"

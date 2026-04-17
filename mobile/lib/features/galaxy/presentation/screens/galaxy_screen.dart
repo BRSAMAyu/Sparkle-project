@@ -164,6 +164,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   bool _didApplyProviderGraph = false;
   bool? _nextProviderGraphPreserveCamera;
 
+  // Mastery milestone subscription
+  StreamSubscription<MasteryMilestoneEvent>? _milestoneSubscription;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -192,6 +195,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       galaxyProvider,
       _handleGalaxyStateChanged,
     );
+    // Subscribe to mastery milestone events for celebration animation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _milestoneSubscription = ref
+          .read(galaxyProvider.notifier)
+          .masteryMilestones
+          .listen(_handleMasteryMilestone);
+    });
     _flingTicker = createTicker(_handleFlingTick);
     _physicsTicker = createTicker(_handlePhysicsTick);
     _ambientTicker = createTicker(_handleAmbientTick);
@@ -280,6 +291,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _entranceController.dispose();
     _displaySettingsSubscription.close();
     _galaxySubscription.close();
+    unawaited(_milestoneSubscription?.cancel());
     _previewDismissTimer?.cancel();
     _initialBuildReplayTimer?.cancel();
     SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
@@ -1220,6 +1232,29 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _celebrations = _celebrations
           .where((entry) => entry.id != entryId)
           .toList(growable: false);
+    });
+  }
+
+  void _handleMasteryMilestone(MasteryMilestoneEvent event) {
+    if (!mounted) return;
+    // Find the node to get its sector color
+    final node = ref
+        .read(galaxyProvider)
+        .nodes
+        .where((n) => n.id == event.nodeId)
+        .firstOrNull;
+    final color = node != null
+        ? SectorConfig.getGlowColor(node.sector)
+        : const Color(0xFFFFD700);
+
+    final entry = _CelebrationEntry(
+      id: 'milestone:${event.nodeId}:${DateTime.now().microsecondsSinceEpoch}',
+      nodeId: event.nodeId,
+      color: color,
+      emphasizeNeighbors: event.milestone >= 85,
+    );
+    setState(() {
+      _celebrations = [..._celebrations, entry];
     });
   }
 

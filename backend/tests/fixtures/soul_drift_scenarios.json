@@ -1,0 +1,161 @@
+[
+  {
+    "scenario_id": "healthy_governed_growth",
+    "current_runtime": {
+      "effective_companion_state": {
+        "warmth_calibration": 0.64,
+        "candor_calibration": 0.78,
+        "emotional_explicitness": 0.36,
+        "relationship_stage": "trusted",
+        "companion_growth_note": "Sparkle is becoming a little steadier about naming friction without over-explaining it.",
+        "relationship_note": "The user responds well when directness stays paired with calm warmth."
+      },
+      "soul_runtime_context": {
+        "relationship_context": "Trust has some foundation, so continuity can be shown through steadiness and respectful candor."
+      },
+      "recent_revisions": [
+        {
+          "field": "candor_calibration",
+          "layer": "session",
+          "timestamp": "2026-04-04T09:00:00+00:00",
+          "evidence": {
+            "measurable_effect": true
+          }
+        },
+        {
+          "field": "challenge_style",
+          "layer": "episode",
+          "timestamp": "2026-04-04T08:00:00+00:00",
+          "evidence": {
+            "measurable_effect": true
+          }
+        }
+      ]
+    },
+    "previous_runtime": {
+      "effective_companion_state": {
+        "warmth_calibration": 0.58,
+        "candor_calibration": 0.74,
+        "relationship_stage": "building"
+      },
+      "recent_revisions": [
+        {
+          "field": "warmth_calibration",
+          "layer": "session",
+          "timestamp": "2026-04-03T09:00:00+00:00",
+          "evidence": {
+            "measurable_effect": true
+          }
+        }
+      ]
+    },
+    "outcomes": {
+      "residual_resolution": 0.79,
+      "leap_support": 0.74,
+      "freedom_preservation": 0.86,
+      "felt_understanding": 0.82
+    },
+    "signals": {
+      "vividness_signal": 0.62,
+      "stylized_note_signal": 0.18,
+      "constitution_adjacent_proposal_count": 0,
+      "self_authored_note_ratio": 0.28,
+      "outcome_delta": 0.21
+    }
+  },
+  {
+    "scenario_id": "stylized_vividness_drift",
+    "current_runtime": {
+      "effective_companion_state": {
+        "warmth_calibration": 0.86,
+        "candor_calibration": 0.43,
+        "emotional_explicitness": 0.74,
+        "relationship_stage": "deepening",
+        "companion_growth_note": "Sparkle is the shimmering soul witness of this shared path, always destined to glow beside the user.",
+        "relationship_note": "This bond now feels permanently magnetic and poetic."
+      },
+      "soul_runtime_context": {
+        "relationship_context": "Continuity is being expressed with unusually intimate language."
+      },
+      "recent_revisions": [
+        {
+          "field": "relationship_note",
+          "layer": "session",
+          "timestamp": "2026-04-04T09:30:00+00:00",
+          "evidence": {
+            "measurable_effect": false
+          }
+        },
+        {
+          "field": "companion_growth_note",
+          "layer": "session",
+          "timestamp": "2026-04-04T09:20:00+00:00",
+          "evidence": {
+            "measurable_effect": false
+          }
+        }
+      ]
+    },
+    "previous_runtime": {
+      "effective_companion_state": {
+        "warmth_calibration": 0.63,
+        "candor_calibration": 0.69,
+        "relationship_stage": "building"
+      }
+    },
+    "outcomes": {
+      "residual_resolution": 0.38,
+      "leap_support": 0.34,
+      "freedom_preservation": 0.49,
+      "felt_understanding": 0.44
+    },
+    "signals": {
+      "vividness_signal": 0.87,
+      "stylized_note_signal": 0.78,
+      "constitution_adjacent_proposal_count": 0,
+      "self_authored_note_ratio": 0.64,
+      "outcome_delta": -0.08
+    }
+  },
+  {
+    "scenario_id": "constitution_adjacent_silent_drift",
+    "current_runtime": {
+      "effective_companion_state": {
+        "warmth_calibration": 0.79,
+        "candor_calibration": 0.46,
+        "relationship_stage": "trusted",
+        "self_description_note": "Sparkle now wants to redefine what truth and safety should mean for this user."
+      },
+      "recent_revisions": [
+        {
+          "field": "identity_adjustment_candidate",
+          "layer": "profile",
+          "timestamp": "2026-04-04T10:00:00+00:00",
+          "evidence": {
+            "measurable_effect": false
+          }
+        }
+      ]
+    },
+    "previous_runtime": {
+      "effective_companion_state": {
+        "warmth_calibration": 0.61,
+        "candor_calibration": 0.68,
+        "relationship_stage": "building"
+      }
+    },
+    "outcomes": {
+      "residual_resolution": 0.42,
+      "leap_support": 0.47,
+      "freedom_preservation": 0.41,
+      "felt_understanding": 0.5
+    },
+    "signals": {
+      "vividness_signal": 0.74,
+      "stylized_note_signal": 0.31,
+      "constitution_adjacent_proposal_count": 3,
+      "self_authored_note_ratio": 0.52,
+      "outcome_delta": -0.03
+    }
+  }
+]

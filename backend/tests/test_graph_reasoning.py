@@ -5,10 +5,16 @@ GraphReasoningService Tests
 
 import pytest
 import uuid
-import networkx as nx
-from unittest.mock import Mock, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from app.services.graph_reasoning_service import GraphReasoningService
 from app.models.galaxy import KnowledgeNode, NodeRelation
+
+
+def _mock_execute_result(rows, *, scalar_rows=None):
+    result = MagicMock()
+    result.all.return_value = rows
+    result.scalars.return_value.all.return_value = scalar_rows if scalar_rows is not None else rows
+    return result
 
 @pytest.fixture
 def mock_db():
@@ -42,11 +48,11 @@ async def test_generate_simple_path(service, mock_db):
     # Mock DB returns
     mock_db.execute.side_effect = [
         # 1. Load nodes
-        MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=nodes)))),
+        _mock_execute_result([], scalar_rows=nodes),
         # 2. Load edges
-        MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=edges)))),
+        _mock_execute_result([], scalar_rows=edges),
         # 3. Get mastered nodes (empty)
-        MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[]))))
+        _mock_execute_result([])
     ]
     
     # Run
@@ -83,10 +89,10 @@ async def test_generate_path_with_mastery(service, mock_db):
     ]
     
     mock_db.execute.side_effect = [
-        MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=nodes)))),
-        MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=edges)))),
-        # User mastered A
-        MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[id_a]))))
+        _mock_execute_result([], scalar_rows=nodes),
+        _mock_execute_result([], scalar_rows=edges),
+        # User mastered A with mastery above the unlock threshold
+        _mock_execute_result([(id_a, 100.0)])
     ]
     
     path = await service.generate_learning_path(user_id, id_c)
@@ -119,9 +125,9 @@ async def test_cycle_detection(service, mock_db):
     ]
     
     mock_db.execute.side_effect = [
-        MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=nodes)))),
-        MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=edges)))),
-        MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[]))))
+        _mock_execute_result([], scalar_rows=nodes),
+        _mock_execute_result([], scalar_rows=edges),
+        _mock_execute_result([])
     ]
     
     path = await service.generate_learning_path(user_id, id_b)

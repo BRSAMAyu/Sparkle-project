@@ -142,6 +142,7 @@ async def test_stream_synthesis_response_uses_role_scoped_llm_and_context(monkey
     orchestrator = type("O", (), {})()
     adapter = MultiAgentWorkflowAdapter(orchestrator)
     capturing_llm = _CapturingLLM()
+    captured_prompt_kwargs = {}
 
     monkeypatch.setattr(
         "app.orchestration.multi_agent_adapter.get_configured_llm_service",
@@ -149,7 +150,7 @@ async def test_stream_synthesis_response_uses_role_scoped_llm_and_context(monkey
     )
     monkeypatch.setattr(
         "app.orchestration.multi_agent_adapter.build_system_prompt",
-        lambda **kwargs: "BASE_SYSTEM_PROMPT",
+        lambda **kwargs: captured_prompt_kwargs.update(kwargs) or "BASE_SYSTEM_PROMPT",
     )
 
     validation_result = ExecutionValidationResult(
@@ -183,6 +184,7 @@ async def test_stream_synthesis_response_uses_role_scoped_llm_and_context(monkey
                 "summary": "历史摘要",
                 "summary_used": True,
             },
+            "dual_core_prompt_instruction": "先共情，再给步骤。",
         },
     ):
         responses.append(resp)
@@ -192,6 +194,7 @@ async def test_stream_synthesis_response_uses_role_scoped_llm_and_context(monkey
     assert capturing_llm.messages[0]["role"] == "system"
     assert "BASE_SYSTEM_PROMPT" in capturing_llm.messages[0]["content"]
     assert "已验证的执行结果摘要" in capturing_llm.messages[0]["content"]
+    assert captured_prompt_kwargs["dual_core_instruction"] == "先共情，再给步骤。"
     assert capturing_llm.messages[1]["content"] == "前一个问题"
     assert capturing_llm.messages[2]["content"] == "前一个回答"
     assert capturing_llm.messages[-1]["content"] == "帮我深度分析"

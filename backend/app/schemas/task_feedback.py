@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TaskFeedbackCategory:
@@ -26,14 +26,15 @@ class TaskFeedbackCreate(BaseModel):
     feedback_text: str | None = Field(None, max_length=2000, description="用户文字反馈")
     category: str | None = Field(None, description="反馈分类")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "completion_quality": 5,
                 "feedback_text": "这个任务很有帮助！",
-                "category": "just_right"
+                "category": "just_right",
             }
         }
+    )
 
 
 class TaskFeedbackResponse(BaseModel):
@@ -53,8 +54,7 @@ class TaskFeedbackResponse(BaseModel):
     created_at: str
     updated_at: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TaskFeedbackStats(BaseModel):
@@ -64,19 +64,20 @@ class TaskFeedbackStats(BaseModel):
     category_distribution: dict
     recent_feedbacks: list[TaskFeedbackResponse]
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "total_feedbacks": 42,
                 "avg_completion_quality": 4.2,
                 "category_distribution": {
                     "just_right": 30,
                     "too_difficult": 8,
-                    "too_easy": 4
+                    "too_easy": 4,
                 },
-                "recent_feedbacks": []
+                "recent_feedbacks": [],
             }
         }
+    )
 
 
 class NextActionSelectionCreate(BaseModel):
@@ -90,8 +91,8 @@ class NextActionSelectionCreate(BaseModel):
     displayed_actions_count: int | None = None
     context: dict[str, Any] | None = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "task_id": "123e4567-e89b-12d3-a456-426614174000",
                 "action_type": "quick_review",
@@ -99,9 +100,10 @@ class NextActionSelectionCreate(BaseModel):
                 "selected": True,
                 "skipped": False,
                 "display_position": 0,
-                "displayed_actions_count": 3
+                "displayed_actions_count": 3,
             }
         }
+    )
 
 
 class PreferenceUpdateDetail(BaseModel):
@@ -109,13 +111,9 @@ class PreferenceUpdateDetail(BaseModel):
     depth_preference: float | None = Field(None, description="深度偏好变化")
     difficulty_preference: float | None = Field(None, description="难度偏好变化")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "depth_preference": 0.03,
-                "difficulty_preference": -0.05
-            }
-        }
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"depth_preference": 0.03, "difficulty_preference": -0.05}}
+    )
 
 
 class TaskFeedbackSubmitResponse(BaseModel):
@@ -126,18 +124,19 @@ class TaskFeedbackSubmitResponse(BaseModel):
     preference_updates: PreferenceUpdateDetail | None = Field(None, description="偏好更新详情")
     reflection_prompt: dict[str, Any] | None = Field(None, description="可选的反思引导卡片")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "message": "偏好已更新",
                 "data": None,
                 "preference_updates": {
                     "depth_preference": 0.03,
-                    "difficulty_preference": -0.05
-                }
+                    "difficulty_preference": -0.05,
+                },
             }
         }
+    )
 
 
 class ReflectionAnswerCreate(BaseModel):

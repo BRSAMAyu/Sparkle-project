@@ -24,6 +24,7 @@ async def _create_record(
     strategy: DeliveryStrategy,
     outcome: InterventionOutcomeStatus,
     acted: bool,
+    diagnosis_payload: dict | None = None,
 ):
     service = InterventionRecordService(db_session)
     record = await service.create_record(
@@ -32,7 +33,7 @@ async def _create_record(
         delivery_strategy=strategy,
         delivery_channel=DeliveryChannel.CHAT,
         trigger_source_ref=f"test:{trigger_type.value.lower()}",
-        diagnosis_payload={"context": {"completed_count": 1}},
+        diagnosis_payload=diagnosis_payload or {"context": {"completed_count": 1}},
         outcome_window_days=1,
     )
     record.created_at = datetime.utcnow() - timedelta(days=2)
@@ -162,3 +163,51 @@ async def test_strategy_learner_diverges_for_different_users(db_session, test_us
 
     assert await learner.get_best_strategy(test_user.id, InterventionTriggerType.CONCEPT_GAP) == DeliveryStrategy.SUPPORTIVE
     assert await learner.get_best_strategy(other_user_id, InterventionTriggerType.CONCEPT_GAP) == DeliveryStrategy.DIRECT
+
+
+@pytest.mark.asyncio
+async def test_strategy_learner_uses_cohort_profile_when_personal_data_is_sparse(db_session, test_user):
+    learner = InterventionStrategyLearner(db_session)
+    cohort_user_id = uuid4()
+
+    from app.models.user import User
+
+    cohort_user = User(
+        id=cohort_user_id,
+        username="cohort_user",
+        email="cohort@example.com",
+        hashed_password="hashed",
+        photon_balance=0,
+    )
+    db_session.add(cohort_user)
+    await db_session.commit()
+
+    cohort_profile = {
+        "goal_type": "exam",
+        "knowledge_level": "intermediate",
+        "learning_style": "balanced",
+    }
+
+    for _ in range(5):
+        record = await _create_record(
+            db_session,
+            user_id=cohort_user_id,
+            trigger_type=InterventionTriggerType.CONCEPT_GAP,
+            strategy=DeliveryStrategy.SUPPORTIVE,
+            outcome=InterventionOutcomeStatus.EFFECTIVE,
+            acted=True,
+        )
+        await learner.record_outcome(
+            user_id=cohort_user_id,
+            intervention_id=record.id,
+            outcome_status=record.outcome_status,
+            context_snapshot=cohort_profile,
+        )
+
+    best = await learner.get_best_strategy(
+        test_user.id,
+        InterventionTriggerType.CONCEPT_GAP,
+        cohort_profile=cohort_profile,
+    )
+
+    assert best == DeliveryStrategy.SUPPORTIVE

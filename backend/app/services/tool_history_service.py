@@ -8,19 +8,48 @@ Tool History Service - 工具执行历史记录和学习服务
 4. 性能监控
 """
 from __future__ import annotations
+
+import asyncio
 import uuid
-from datetime import timezone, datetime, timedelta
-from typing import Any
+from datetime import UTC, datetime, timedelta
+from typing import Any, Awaitable, Callable
 
 from loguru import logger
-from sqlalchemy import Integer, and_, desc, func, select
+from sqlalchemy import Integer, and_, desc, event, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import event_bus
+from app.core.event_types import TOOL_HISTORY_RECORDED
 from app.models.tool_history import ToolSuccessRateView, UserToolHistory, UserToolPreference
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+_AFTER_COMMIT_TASKS_KEY = "tool_history_after_commit_tasks"
+
+
+@event.listens_for(AsyncSession.sync_session_class, "after_commit")
+def _run_tool_history_after_commit_tasks(session) -> None:
+    callbacks: list[Callable[[], Awaitable[None]]] = session.info.pop(_AFTER_COMMIT_TASKS_KEY, [])
+    if not callbacks:
+        return
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        logger.warning("Skipping tool history after-commit callbacks because no event loop is running")
+        return
+
+    for callback in callbacks:
+        loop.create_task(callback())
+
+
+@event.listens_for(AsyncSession.sync_session_class, "after_rollback")
+@event.listens_for(AsyncSession.sync_session_class, "after_soft_rollback")
+def _clear_tool_history_after_commit_tasks(session, *_args) -> None:
+    session.info.pop(_AFTER_COMMIT_TASKS_KEY, None)
 
 
 class ToolHistoryService:
@@ -28,6 +57,10 @@ class ToolHistoryService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
+
+    def _enqueue_after_commit(self, callback: Callable[[], Awaitable[None]]) -> None:
+        callbacks = self.db_session.sync_session.info.setdefault(_AFTER_COMMIT_TASKS_KEY, [])
+        callbacks.append(callback)
 
     async def record_tool_execution(
         self,
@@ -76,6 +109,14 @@ class ToolHistoryService:
 
             self.db_session.add(record)
             await self.db_session.flush()
+            self._enqueue_after_commit(
+                lambda: self._publish_tool_history_event(
+                    user_id=user_id,
+                    tool_name=tool_name,
+                    success=success,
+                    tool_category=tool_category,
+                )
+            )
 
             logger.info(
                 f"Recorded tool execution: user={user_id}, tool={tool_name}, "
@@ -87,6 +128,25 @@ class ToolHistoryService:
         except Exception as e:
             logger.error(f"Failed to record tool execution: {e}")
             raise
+
+    async def _publish_tool_history_event(
+        self,
+        *,
+        user_id: uuid.UUID,
+        tool_name: str,
+        success: bool,
+        tool_category: str | None,
+    ) -> None:
+        await event_bus.publish(
+            TOOL_HISTORY_RECORDED,
+            {
+                "event_type": TOOL_HISTORY_RECORDED,
+                "user_id": str(user_id),
+                "tool_name": tool_name,
+                "success": success,
+                "tool_category": tool_category,
+            },
+        )
 
     async def get_tool_success_rate(
         self,
@@ -277,7 +337,7 @@ class ToolHistoryService:
         ).where(
             and_(
                 UserToolHistory.user_id == user_id,
-                UserToolHistory.success == False
+                UserToolHistory.success.is_(False)
             )
         ).order_by(
             desc(UserToolHistory.created_at)

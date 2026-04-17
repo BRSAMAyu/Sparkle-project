@@ -15,7 +15,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -115,8 +115,7 @@ class VariantResponse(BaseModel):
     prompt_version: str | None
     configuration: dict | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExperimentResponse(BaseModel):
@@ -139,8 +138,7 @@ class ExperimentResponse(BaseModel):
     updated_at: datetime
     variants: list[VariantResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExperimentStatsResponse(BaseModel):

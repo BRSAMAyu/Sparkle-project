@@ -21,6 +21,47 @@ class ChatRepository {
   final Dio _dio;
   final WebSocketChatServiceV2 _wsService;
 
+  List<Map<String, dynamic>> _historyWidgetsFromActions(dynamic rawActions) {
+    if (rawActions is! List) {
+      return const [];
+    }
+
+    final widgets = <Map<String, dynamic>>[];
+    for (final item in rawActions) {
+      Map<String, dynamic>? asMap;
+      if (item is Map<String, dynamic>) {
+        asMap = item;
+      } else if (item is Map) {
+        asMap = Map<String, dynamic>.from(item);
+      }
+      if (asMap == null || asMap.isEmpty) {
+        continue;
+      }
+
+      final widgetType = asMap['type']?.toString().trim();
+      final widgetData = asMap['data'];
+      if (widgetType != null && widgetType.isNotEmpty && widgetData is Map) {
+        widgets.add({
+          'type': widgetType,
+          'data': Map<String, dynamic>.from(widgetData),
+        });
+        continue;
+      }
+
+      final toolWidgetType = asMap['widget_type']?.toString().trim();
+      final toolWidgetData = asMap['widget_data'];
+      if (toolWidgetType != null &&
+          toolWidgetType.isNotEmpty &&
+          toolWidgetData is Map) {
+        widgets.add({
+          'type': toolWidgetType,
+          'data': Map<String, dynamic>.from(toolWidgetData),
+        });
+      }
+    }
+    return widgets;
+  }
+
   /// 获取 WebSocket 连接状态流
   Stream<WsConnectionState> get connectionStateStream =>
       _wsService.connectionStateStream;
@@ -103,7 +144,14 @@ class ChatRepository {
         continue;
       }
       try {
-        messages.add(ChatMessageModel.fromJson(item));
+        final normalizedItem = Map<String, dynamic>.from(item);
+        final historyWidgets =
+            _historyWidgetsFromActions(normalizedItem['actions']);
+        final existingWidgets = normalizedItem['widgets'] as List<dynamic>?;
+        if (historyWidgets.isNotEmpty && (existingWidgets?.isEmpty ?? true)) {
+          normalizedItem['widgets'] = historyWidgets;
+        }
+        messages.add(ChatMessageModel.fromJson(normalizedItem));
       } catch (error, stackTrace) {
         debugPrint(
           'ChatRepository.getConversationHistory: failed to parse history item '
@@ -126,8 +174,10 @@ class ChatRepository {
               .demoChatHistory
               .where((message) => message.conversationId == 'demo_conv_1')
               .map((message) => message.createdAt)
-              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0),
-                  (latest, value) => value.isAfter(latest) ? value : latest)
+              .fold<DateTime>(
+                DateTime.fromMillisecondsSinceEpoch(0),
+                (latest, value) => value.isAfter(latest) ? value : latest,
+              )
               .toIso8601String(),
         },
         {
@@ -137,8 +187,10 @@ class ChatRepository {
               .demoChatHistory
               .where((message) => message.conversationId == 'demo_conv_2')
               .map((message) => message.createdAt)
-              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0),
-                  (latest, value) => value.isAfter(latest) ? value : latest)
+              .fold<DateTime>(
+                DateTime.fromMillisecondsSinceEpoch(0),
+                (latest, value) => value.isAfter(latest) ? value : latest,
+              )
               .toIso8601String(),
         },
         {
@@ -148,8 +200,10 @@ class ChatRepository {
               .demoChatHistory
               .where((message) => message.conversationId == 'demo_conv_3')
               .map((message) => message.createdAt)
-              .fold<DateTime>(DateTime.fromMillisecondsSinceEpoch(0),
-                  (latest, value) => value.isAfter(latest) ? value : latest)
+              .fold<DateTime>(
+                DateTime.fromMillisecondsSinceEpoch(0),
+                (latest, value) => value.isAfter(latest) ? value : latest,
+              )
               .toIso8601String(),
         },
       ];

@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -25,6 +25,11 @@ from app.services.curiosity_capsule_service import curiosity_capsule_service
 from app.services.glm_batch_service import glm_batch_service
 
 router = APIRouter()
+
+
+def get_celery_status() -> dict:
+    """Backward-compatible Celery health probe for capsule batch generation."""
+    return get_celery_queue_status(settings.GLM_BATCH_QUEUE)
 
 
 # =============================================================================
@@ -47,8 +52,7 @@ class CuriosityCapsuleSchema(BaseModel):
     share_count: int = 0
     personalization_context: dict | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CapsuleDetailSchema(CuriosityCapsuleSchema):
@@ -75,8 +79,7 @@ class CapsuleFeedbackSchema(BaseModel):
     comment: str | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CapsuleFavoriteSchema(BaseModel):
@@ -87,8 +90,7 @@ class CapsuleFavoriteSchema(BaseModel):
     created_at: datetime
     capsule: CuriosityCapsuleSchema | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CapsuleGenerationRequest(BaseModel):
@@ -114,8 +116,7 @@ class CapsuleGenerationJobSchema(BaseModel):
     created_at: datetime
     completed_at: datetime | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CapsuleShareRequest(BaseModel):
@@ -338,7 +339,7 @@ async def request_batch_generation(
             "reason": "interactive_manual_request",
         }
         if interactive_manual_request
-        else get_celery_queue_status(settings.GLM_BATCH_QUEUE)
+        else get_celery_status()
     )
     dispatch = glm_batch_service.decide_capsule_dispatch(
         depth_preference=request.depth_preference,

@@ -13,9 +13,18 @@ This module provides:
 """
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 
-import torch
 from loguru import logger
+
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    TORCH_AVAILABLE = False
+    logger.warning("torch not installed, BERT classifier disabled")
 
 try:
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -63,6 +72,33 @@ class BERTIntentClassifier:
         "tiny_bert": "hfl/chinese-bert-wwm-ext-tiny",  # Faster, slightly less accurate
     }
 
+    @staticmethod
+    def _resolve_device(device: str):
+        if not TORCH_AVAILABLE:
+            requested = str(device or "cpu").strip() or "cpu"
+            if requested == "auto":
+                requested = "cpu"
+            return SimpleNamespace(type=requested)
+        if device == "auto":
+            requested = "cuda" if torch.cuda.is_available() else "cpu"
+        else:
+            requested = device
+        requested = str(requested or "cpu").strip() or "cpu"
+        resolved = torch.device(requested)
+        if hasattr(resolved, "type"):
+            return resolved
+        return SimpleNamespace(type=requested)
+
+    def _classify_sync(self, message: str) -> dict:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self.classify(message))
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(lambda: asyncio.run(self.classify(message)))
+            return future.result()
+
     def __init__(
         self,
         model_name: str = None,
@@ -78,18 +114,15 @@ class BERTIntentClassifier:
             max_length: Maximum sequence length for tokenization
             batch_size: Batch size for inference
         """
-        if not TRANSFORMERS_AVAILABLE:
-            raise ImportError("transformers library not available. Install with: pip install transformers torch")
+        if not TRANSFORMERS_AVAILABLE or not TORCH_AVAILABLE:
+            raise ImportError("transformers and torch libraries not available. Install with: pip install transformers torch")
 
         self.model_name = model_name or self.DEFAULT_MODEL
         self.max_length = max_length
         self.batch_size = batch_size
 
         # Detect device
-        if device == "auto":
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        else:
-            self.device = torch.device(device)
+        self.device = self._resolve_device(device)
 
         logger.info(f"Initializing BERT classifier: {self.model_name} on {self.device}")
 
@@ -299,18 +332,8 @@ class BERTIntentClassifier:
             max_intent = max(keyword_scores, key=keyword_scores.get)
             return max_intent, keyword_scores[max_intent]
 
-        # Run BERT classification
-        import asyncio
         try:
-            # Get event loop or create new one
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-
-            # Run async classify in sync context
-            bert_result = loop.run_until_complete(self.classify(message))
+            bert_result = self._classify_sync(message)
 
             # Combine scores
             adjusted_scores = {}
@@ -348,7 +371,7 @@ class BERTIntentClassifier:
         """
         return {
             "model_name": self.model_name,
-            "device": str(self.device),
+            "device": str(getattr(self.device, "type", self.device)),
             "loaded": self.model_loaded,
             "num_labels": len(self.INTENT_LABELS),
             "max_length": self.max_length,
@@ -375,8 +398,8 @@ def get_bert_classifier(
     """
     global _bert_classifier
 
-    if not TRANSFORMERS_AVAILABLE:
-        logger.warning("transformers not installed")
+    if not TRANSFORMERS_AVAILABLE or not TORCH_AVAILABLE:
+        logger.warning("BERT dependencies not installed")
         return None
 
     if _bert_classifier is None or force_reload:

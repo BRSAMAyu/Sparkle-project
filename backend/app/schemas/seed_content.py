@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # 枚举类型定义 (与模型保持一致)
@@ -96,8 +96,7 @@ class LibraryInfo(BaseModel):
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LibraryListParams(BaseModel):
@@ -168,8 +167,7 @@ class ItemInfo(BaseModel):
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ItemListParams(BaseModel):
@@ -233,8 +231,7 @@ class SubscriptionInfo(BaseModel):
     last_used_at: datetime | None = Field(None, description="最后使用时间")
     created_at: datetime = Field(..., description="创建时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============ 查询相关 Schema ============
