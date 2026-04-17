@@ -4,7 +4,7 @@
 
 ### An AI-Native Planning and Growth Operating System
 
-**Sparkle does not ask ordinary users to master prompt engineering. It understands the user first, then turns the user’s own information into better plans, better next moves, and better adaptive guidance.**
+**Sparkle is built for people who should not have to master prompt engineering first. It understands the user, then turns the user’s own information into better plans, better next moves, and better long-term adaptation.**
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.24+-02569B?style=flat-square&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
@@ -18,437 +18,252 @@
 
 ---
 
-## One-Sentence Product Pitch
+## What Sparkle Is
 
-> **Sparkle is an AI-native planning and guidance operating system that deeply understands ordinary users and turns their own data into better plans, better next moves, and better ongoing adaptation than raw AI alone.**
+Sparkle is an **AI-native planning and guidance system**. Its core job is not just to chat. Its job is to turn a user’s goals, materials, constraints, behavior, mistakes, and feedback into a durable understanding state, then use that state to produce better plans, better pacing, and better next moves.
 
----
+In one sentence:
 
-## Where We Are Now
-
-Sparkle is no longer a concept project, and it is not just a multi-agent technology demo.
-
-Its `v1` core is now materially in place:
-
-- the `user profile / insight system` has a canonical compiled backbone
-- the `Planning Engine` has readiness gating, strategy compilation, and plan-quality constraints
-- the `Feedback / Growth Engine` has outcome learning, calibration, and anti-drift
-- the `AI semantic-control system` now has a unified ontology, renderer, compliance layer, and trace
-- `Body Awareness` and the `Five-Layer Learning System` are now runtime-governed instead of aspirational
-
-The project is now in `Stage 2`:
-
-- we are no longer trying to endlessly invent new foundational layers
-- the focus is now `runnable golden path`
-- the focus is now `full-stack product coherence`
-- the focus is now `Live Alpha` and `real human validation`
-
-The most honest and strongest description of Sparkle today is:
-
-> **an AI-native product with its core intelligence systems in place, now moving from internal sophistication to real product proof**
+> **Sparkle understands the user first, then gives the user a better path.**
 
 ---
 
-## The Problem Sparkle Solves
+## Why It Matters
 
-Frontier AI is powerful, but most ordinary users still face three real problems:
+Frontier AI is already powerful, but ordinary users still run into three persistent problems:
 
 1. they do not know what information to give the model
-2. they do not know how to turn their own materials, errors, behavior, and constraints into high-quality context
+2. they do not know how to turn their own materials, behavior, mistakes, and constraints into high-quality context
 3. even when they get an answer, they struggle to convert it into an executable, adaptive, trustworthy path
 
-Sparkle is not trying to turn users into AI experts.
-
-Sparkle is trying to:
-
-- help users understand themselves better
-- help users see their real goal structure and bottlenecks
-- turn user-owned data into better plans
-- keep adapting after execution, failure, overload, and correction
+Sparkle is not trying to turn users into AI experts. It is trying to take on the system work of understanding, structuring, planning, and adapting on the user’s behalf.
 
 ---
 
-## Who Sparkle Is For
+## Who It Is For
 
-Sparkle is not designed first for AI power users.
+Sparkle is not designed first for power users who already know how to operate frontier models well.
 
 It is designed first for people who:
 
 - have important goals but weak AI-operating skill
-- have lots of personal materials, errors, notes, and history but do not know how to use them well
-- need to find the right path quickly under time pressure
-- want long-term growth but lack high-quality external structure and feedback
+- have a lot of their own materials, notes, and mistakes, but do not know how to turn them into better decisions
+- need to find the right path under time pressure
+- want long-term growth but lack strong external structure and feedback loops
 
-Typical cases:
+The clearest north-star scenario remains:
 
-- preparing for a final exam in 14 days
-- building a study plan from personal materials
-- recovering after overload, procrastination, or plan drift
-- gradually building a system that actually understands the user over time
+> **preparing for a thermodynamics final in 14 days**
+
+In that scenario, Sparkle should not just answer questions. It should understand the user’s real state, identify what is still missing, build the plan, and visibly adapt after overload, drift, failure, or correction.
 
 ---
 
-## The 4 External Product Modes
+## How Sparkle Works
 
-These are the cleanest product-facing modes to use in a pitch or demo.
+The cleanest product-facing framing for Sparkle is four modes:
 
-| Mode | What the user experiences | What Sparkle is doing under the hood |
+| Mode | What the user sees | What the system is doing |
 |:---|:---|:---|
-| `Understand` | Understand who the user is, what they want, and what is still missing | Compile profile, evidence, gaps, and current state |
-| `Plan` | Turn the user’s information into the best plan and next move | Evaluate readiness, compile strategy, constrain plan quality |
-| `Adapt` | Change the path when reality changes | Read feedback, outcomes, load, materials, and runtime context |
-| `Grow` | Improve over time while staying visible and governable | Calibrate, prevent drift, expose insights, accept corrections |
+| `Understand` | Clarify who the user is, what they want, and what is still missing | Compile profile, evidence, gaps, and current state |
+| `Plan` | Generate the best plan, pacing model, and next move | Evaluate readiness, compile strategy, and constrain plan quality |
+| `Adapt` | Change the path when reality changes | Read feedback, outcomes, load, materials, and execution state |
+| `Grow` | Improve over time while remaining visible and correctable | Calibrate, prevent drift, expose insights, and accept correction |
 
-Internally, Sparkle also has chat modes, experience modes, agent routing, and tool routing. But these four modes are the clearest way to explain the product.
+That is why Sparkle should be read as a continuous planning loop, not a one-shot answer engine.
 
 ---
 
-## Sparkle’s Two Real Moats
+## Why Sparkle Is Different
 
-Sparkle is not trying to win by “having more models.”
-
-It is trying to win through two real moats:
+Sparkle is not trying to win by “having more models.” It is trying to win through two real moats:
 
 | Moat | Meaning | What the user feels |
 |:---|:---|:---|
-| `User Understanding Quality` | Sparkle can surface things the user cannot easily see alone from their goals, materials, behavior, errors, and feedback | “It really understood what was actually blocking me.” |
-| `Plan Quality` | Sparkle turns that understanding into a better plan, pacing model, decomposition, and next move | “This plan is more useful than what I would get from raw AI directly.” |
+| `User Understanding Quality` | The system can surface things the user cannot easily see alone from their own goals, materials, behavior, mistakes, and feedback | “It actually understood what was blocking me.” |
+| `Plan Quality` | The system converts that understanding into a more useful plan, pacing model, decomposition, and next move | “This plan is better than what I would get from raw AI directly.” |
 
-The product standard is simple:
-
-> **Sparkle should understand the user more deeply and plan more intelligently than raw AI use for a non-expert user.**
-
----
-
-## Raw AI vs Sparkle
+Compared with raw AI use:
 
 | Dimension | Raw AI Direct Use | Sparkle |
 |:---|:---|:---|
 | Context organization | The user does the prompt engineering | The system actively detects gaps and compiles context |
-| User understanding | Mostly limited to the current turn | Built on a persistent `UserInsightState` |
-| Plan quality | Often a generic answer or generic plan | Readiness-gated, strategy-driven, grounded planning |
+| User understanding | Mostly constrained to the current turn | Built on a persistent `UserInsightState` |
+| Planning quality | Usually a generic answer or generic plan | Readiness-gated, grounded, strategy-driven planning |
 | Feedback learning | Mostly turn-level satisfaction | Outcome learning, calibration, and anti-drift |
-| Transparency | Users rarely see how the system models them | Users can inspect, correct, and control their insight state |
-| Continuity | Usually session-local | Designed for cross-session improvement and continuity |
+| Transparency | Users rarely see how the system models them | Users can inspect, correct, and govern their insight state |
+| Continuity | Usually session-local | Designed for cross-session continuity and improvement |
 
 ---
 
-## The Core Product Loop
+## Architecture
 
-```mermaid
-flowchart LR
-    A["1. User states a goal"] --> B["2. Sparkle compiles situation, materials, and missing information"]
-    B --> C["3. Sparkle decides whether it is ready to plan"]
-    C -->|Not ready| D["4a. Ask one highest-value clarification question"]
-    C -->|Ready enough| E["4b. Generate the plan or next move"]
-    D --> B
-    E --> F["5. User or external executor acts"]
-    F --> G["6. Sparkle receives feedback, evidence, and outcomes"]
-    G --> H["7. Sparkle adapts the next move and preserves continuity"]
-    H --> B
-```
-
-This is not a one-shot answer system. It is an evolving planning loop.
-
----
-
-## The Core Data-Utilization Loop
-
-Sparkle’s core principle is not “collect more data.”
-
-It is **use the user’s own data more deeply, more accurately, and more transparently**.
-
-```mermaid
-flowchart LR
-    A["1. Gather
-Goals, materials, behavior, errors, feedback"] --> B["2. Store
-Structured state + vectors + graph relations"]
-    B --> C["3. Analyze
-Multi-layer, multi-span insight analysis"]
-    C --> D["4. Predict
-Risk, load, slippage, support-fit prediction"]
-    D --> E["5. Update
-Feedback, correction, calibration, anti-drift"]
-    E --> F["6. Present
-Transparent profile, insight, and user control"]
-    F --> A
-```
-
-This six-part loop is one of Sparkle’s deepest advantages:
-
-- not just memory
-- but utilization
-- not just utilization
-- but explainable, correctable utilization
-
----
-
-## The Technical Design That Matters Most
-
-### 1. User Insight and Profile System
-
-Sparkle does not re-guess the user from scratch on every turn.
-
-It compiles user-owned information into a canonical `UserInsightState` that supports:
-
-- goal and constraint understanding
-- current-state and bottleneck detection
-- multi-span analysis
-- bounded prediction
-- transparency and user correction
-
-This is the substrate that makes “understanding the user” real.
-
-### 2. Planning Engine
-
-Sparkle is designed not to politely hallucinate plans.
-
-Before planning, it checks:
-
-- whether the system is ready enough to plan
-- whether it should clarify first
-- whether it should only offer a provisional plan
-- whether it must explicitly ground itself in user materials
-
-Then it enforces plan quality instead of treating generation as final truth.
-
-### 3. AI Semantic Control
-
-Sparkle does not rely on opaque control tags alone.
-
-We built:
-
-- a canonical strategy ontology
-- a shared doctrine renderer
-- behavior-level semantic compliance checks
-- traceable semantic-control metadata
-
-This makes the AI system better at following product intent instead of guessing what a label means.
-
-### 4. Feedback, Growth, and Anti-Drift
-
-Sparkle does not only ask whether the user liked a sentence.
-
-It keeps learning:
-
-- which plans worked
-- which strategies failed
-- what the user corrected about the system’s profile
-- which inferred signals became stale or should be scoped
-
-And it responds with:
-
-- confidence calibration
-- ineffective-signal pruning
-- scope control
-- drift prevention
-
-### 5. Transparency and User Control
-
-One of Sparkle’s core principles is:
-
-> **users should be able to see how the system understands them, and they should have the right to correct it**
-
-So the system supports:
-
-- visible insight / prediction / unknowns
-- visible calibration state
-- `wrong`
-- `used_to_be_true`
-- `exam_mode_only`
-- `reset_override`
-
-That is one of the strongest differences between Sparkle and many large-model products.
-
----
-
-## System Architecture Overview
+Sparkle is currently a three-layer system: `Flutter Mobile + Go Gateway + Python AI Engine`, backed by PostgreSQL, Redis, object storage, and an external execution layer.
 
 ```mermaid
 flowchart TB
     Mobile["Flutter Mobile App
-Chat / Home / Tasks / Galaxy / Community"] <--> Gateway["Go Gateway
+Chat / Home / Tasks / Galaxy / Insights"] <--> Gateway["Go Gateway
 WebSocket / HTTP / Auth / Rate Limit / gRPC Bridge"]
     Gateway <--> Engine["Python AI Engine
-Orchestration / Planning / Feedback / Capability Governance"]
+Orchestration / Planning / Feedback / Semantic Control"]
 
-    Engine <--> Data["PostgreSQL
-Business Data + pgvector + Apache AGE"]
+    Engine <--> Postgres["PostgreSQL
+Business data / pgvector / graph extension"]
     Engine <--> Redis["Redis
-Cache / Streams / Event Bus / Runtime State"]
+Cache / streams / runtime state / event bus"]
     Engine <--> Storage["Object Storage
-User Materials / Files / Assets"]
-    Engine --> Executors["External Executors
-OpenClaw / tools / specialist paths"]
+User materials / files / assets"]
+    Engine --> OpenClaw["OpenClaw
+Delegated execution layer"]
 ```
 
-### Inside the AI Engine
+### Why the system is shaped this way
+
+| Component | Role | Why it exists |
+|:---|:---|:---|
+| `Flutter Mobile` | Product surface | Hosts the real user experience: chat, home, tasks, galaxy, insights |
+| `Go Gateway` | Access and bridge layer | Handles WebSocket / HTTP ingress, auth, connection governance, and gRPC bridging |
+| `Python AI Engine` | Intelligence core | Owns context compilation, planning, tool use, feedback learning, and semantic control |
+| `FastAPI` | Business API layer | Serves resource APIs, files, settings, interventions, observability, and operational surfaces |
+| `gRPC AgentService` | Main AI transport | Carries the primary streaming AI path between the Gateway and the orchestrator |
+| `PostgreSQL` | Core data source | Stores users, tasks, plans, feedback, knowledge state, and other durable product data |
+| `Redis` | Runtime and event layer | Supports cache, streams, event bus, runtime state, and parts of state synchronization |
+| `Object Storage / MinIO` | Material and file layer | Stores user-uploaded materials, files, and assets |
+| `OpenClaw` | External execution layer | Handles delegated execution tasks, but is not the product definition of Sparkle itself |
+
+### Main product request path
+
+The primary product chat path is not direct Python HTTP. It is:
+
+`Flutter -> /ws/chat -> Go Gateway -> gRPC AgentService -> Python ChatOrchestrator`
+
+In practice:
+
+1. the Flutter app opens the main chat WebSocket to the Gateway
+2. the Go Gateway handles connection lifecycle, auth, protocol shaping, and request governance
+3. the Gateway calls Python `AgentService.StreamChat`
+4. the Python `ChatOrchestrator` compiles context, selects strategy, invokes tools, and streams results
+5. results flow back through the Gateway to the app as text, cards, tool results, and intervention expressions
+
+### Inside the AI engine
 
 ```mermaid
 flowchart LR
     Insight["User Insight Engine
 Profile / Evidence / Multi-span analysis / Prediction"] --> Planning["Planning Engine
-Readiness / Strategy / Plan quality gate"]
-    Planning --> Feedback["Feedback & Growth Engine
-Outcome learning / Calibration / Anti-drift"]
-    Feedback --> Insight
+readiness / strategy / plan quality gate"]
+    Planning --> Growth["Feedback & Growth
+outcome learning / calibration / anti-drift"]
+    Growth --> Insight
+    Semantic["AI Semantic Control
+ontology / renderer / compliance / trace"] --> Planning
     Body["Body Awareness & Capability Governance"] --> Planning
     Layered["Five-Layer Learning System"] --> Insight
     Layered --> Planning
-    Semantic["AI Semantic Control
-Ontology / Doctrine / Compliance / Trace"] --> Planning
 ```
 
-These diagrams are the clearest README-level explanation of the system.
+That internal backbone is the heart of Sparkle:
+
+- the `User Insight Engine` compiles user-owned information into a usable understanding state
+- the `Planning Engine` decides whether the system is ready to plan, how it should plan, and whether the plan is good enough
+- `Feedback & Growth` binds outcomes and corrections back into the next cycle
+- `Semantic Control` constrains model behavior around product intent instead of relying on opaque tags alone
+- `Body Awareness` and the `Five-Layer Learning System` inject capability limits, load awareness, and long-range learning governance back into the loop
 
 ---
 
-## The Best Parts of the Design
+## Current Stage
 
-If we had to summarize Sparkle’s strongest design decisions, they would be:
+Sparkle is no longer a concept project, and it is not just a multi-agent demo.
 
-1. **A canonical user understanding state instead of scattered profile fragments**
-2. **Ask-before-plan discipline instead of polite guessing**
-3. **Semantic AI control instead of opaque prompt tags**
-4. **Outcome learning with governance and anti-drift**
-5. **Visible profile transparency and user correction**
-6. **A convergent architecture built around two moats: understanding quality and plan quality**
+Its `v1` core is now materially in place:
 
----
+- `User Profile / Insight` has a canonical compiled backbone
+- the `Planning Engine` has readiness gating, strategy compilation, and plan-quality control
+- `Feedback / Growth` has outcome learning, calibration, and anti-drift
+- `AI Semantic Control` now has ontology, rendering, compliance, and trace
+- `Body Awareness` and the `Five-Layer Learning System` are now runtime-governed rather than aspirational
 
-## North-Star Scenario
+The project is now in `Stage 2`. The priority is no longer inventing more foundational layers. The priority is:
 
-The best scenario for demonstrating Sparkle remains:
+- establishing a runnable golden path
+- improving full-stack product coherence
+- proving understanding quality and plan quality in the real app
+- using real transcripts, real feedback, and real human evaluation to drive the next iteration
 
-### Thermodynamics Final in 14 Days
+The most accurate description of Sparkle today is:
 
-The user:
-
-- uploads slides, notes, homework, and prior errors
-- has a real exam in 14 days
-- does not fully understand their own bottleneck
-- becomes overloaded partway through
-
-Sparkle should:
-
-- figure out what is still missing
-- ground itself in the user’s real materials
-- produce a good plan
-- visibly adapt when pressure or failure appears
-- preserve continuity and trust across time
-
-That is the scenario where the product should visibly beat raw AI usage.
-
----
-
-## The Most Important Product Goal Right Now
-
-The most important question is no longer “do we have enough modules?”
-
-The most important question now is:
-
-> **Can Sparkle run as a real product and clearly outperform ordinary raw-AI use for a non-expert user?**
-
-That is why Stage 2 is focused on:
-
-- a runnable golden path
-- real in-app experience
-- first human-evaluation cycles and transcript review
-- judging value through real product behavior, not only synthetic scores
+> **an AI-native product with its core intelligence systems in place, now moving from internal sophistication to real product proof**
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-| Dependency | Version |
-|:---|:---|
-| Go | 1.22+ |
-| Python | 3.11+ |
-| Flutter | 3.24+ |
-| Docker / Docker Compose | 24+ / 2.x |
-
-### Local Bring-Up
+### Shortest bring-up path
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/BRSAMAyu/Sparkle-project.git
-cd Sparkle-project
-
-# 2. Configure environment variables
+cp .env.example .env
 cp backend/.env.example backend/.env
 cp backend/gateway/.env.example backend/gateway/.env
 
-# 3. Start infrastructure
 make dev-up
-
-# 4. Sync database and generate code
 make sync-db
 make proto-gen
-
-# 5. Start the Python AI engine
-make grpc-server
-
-# 6. Start the Go gateway
-make gateway-dev
-
-# 7. Run the mobile app
-cd mobile && flutter run
 ```
 
-### Common Commands
+Then start the main services in separate terminals:
 
 ```bash
-make dev-up
 make grpc-server
 make gateway-dev
-make proto-gen
-make sync-db
-
-cd backend && pytest
-cd backend/gateway && go test ./...
-cd mobile && flutter test
+cd mobile && flutter pub get && flutter run
 ```
+
+### What each main command does
+
+| Command | Purpose |
+|:---|:---|
+| `make dev-up` | Starts PostgreSQL, Redis, MinIO, and other base infrastructure |
+| `make sync-db` | Applies migrations and syncs the Go-side database schema / SQLC code |
+| `make proto-gen` | Regenerates protobuf / gRPC code |
+| `make grpc-server` | Starts the Python gRPC AI engine |
+| `make gateway-dev` | Starts the Go Gateway in development mode |
+
+### Common development commands
+
+| Command | Use case |
+|:---|:---|
+| `make dev-all` | Prints the full bring-up guide |
+| `make api-server` | Starts the Python FastAPI business API |
+| `cd backend && pytest` | Runs Python tests |
+| `cd backend/gateway && go test ./...` | Runs Go tests |
+| `cd mobile && flutter test` | Runs Flutter tests |
 
 ---
 
-## Repository Structure
+## Repository Guide
 
-```text
-Sparkle-project/
-├── mobile/                  # Flutter client
-├── backend/app/             # Python AI engine
-├── backend/gateway/         # Go gateway
-├── proto/                   # gRPC protocol definitions
-├── docs/                    # product, architecture, and verification docs
-├── scripts/                 # startup, verification, and utility scripts
-└── docker-compose.yml       # local infrastructure
-```
+| Path | What it holds | When to read it |
+|:---|:---|:---|
+| `mobile/` | Flutter client and real product UX | When working on user flows, screens, and interaction |
+| `backend/app/` | Python AI engine, FastAPI, orchestration, and state systems | When working on intelligence, planning, feedback, or APIs |
+| `backend/gateway/` | Go Gateway, WebSocket / HTTP ingress, gRPC bridge | When working on the main chat path, auth, or connection lifecycle |
+| `proto/` | gRPC protocol definitions | When changing cross-service contracts |
+| `docs/product/` | Current product consensus, roadmap, and Stage 2 planning | When making product or strategy judgments |
+| `docs/02_技术设计文档/` | APIs, protocol references, database and technical design docs | When changing architecture, interfaces, or data models |
+| `docs/README.md` | Main docs entry point | When entering the codebase for the first time |
 
 ---
 
-## Key Documents
+## Further Reading
 
 - [Docs Entry](docs/README.md)
-- [Product Thesis and Refocused Roadmap](docs/product/SPARKLE_PRODUCT_THESIS_AND_REFOCUSED_ROADMAP_2026-04-05.md)
+- [Sparkle Product Thesis and Refocused Roadmap](docs/product/SPARKLE_PRODUCT_THESIS_AND_REFOCUSED_ROADMAP_2026-04-05.md)
+- [Sparkle ChatGPT Project Context Master](docs/product/SPARKLE_CHATGPT_PROJECT_CONTEXT_MASTER_2026-04-16.md)
 - [Stage 2 Product Coherence and Live Alpha Plan](docs/product/SPARKLE_STAGE2_PRODUCT_COHERENCE_AND_LIVE_ALPHA_PLAN_2026-04-06.md)
-- [Stage 2 Product Coherence Execution Plan](docs/product/implementation/SPARKLE_STAGE2_PRODUCT_COHERENCE_EXECUTION_PLAN_2026-04-06.md)
-- [Stage 2 Profile and Insight System Plan](docs/product/implementation/SPARKLE_STAGE2_PROFILE_AND_INSIGHT_SYSTEM_EXECUTION_PLAN_2026-04-06.md)
-- [AI Semantic Control Plan](docs/product/implementation/SPARKLE_AI_SYSTEM_SEMANTIC_CONTROL_EXECUTION_PLAN_2026-04-06.md)
-- [Data Utilization Analysis](docs/product/SPARKLE_DATA_UTILIZATION_ANALYSIS_2026-04-06.md)
-
----
-
-## Current Position
-
-The most accurate description of Sparkle right now is not “a giant AI platform.”
-
-It is:
-
-> **an AI-native planning and growth operating system with its core intelligence systems in place, now moving into real product proof**
-
-That is the consensus this repository should communicate.
+- [System Architecture Overview](docs/00_项目概览/04_系统架构全景与模块分层.md)
+- [API Reference](docs/02_技术设计文档/03_API参考.md)
 
 ---
 
