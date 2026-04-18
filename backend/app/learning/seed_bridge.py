@@ -127,7 +127,7 @@ def build_distilled_strategy_from_seed(
         title=title,
         description=_item_description(item_payload),
         strategy_type=f"{_enum_value(library_payload.get('category') or 'seed')}::{item_type}",
-        status=DistilledStrategyLifecycle.DISTILLED,
+        status=DistilledStrategyLifecycle.USER_REVIEWED,
         applicability_scope=_strategy_scope(library_payload, item_payload),
         contraindications=[f"avoid:{tag}" for tag in list(item_payload.get("tags") or [])[:3]],
         evidence_strength=_evidence_strength(library_payload, item_payload),
@@ -135,14 +135,15 @@ def build_distilled_strategy_from_seed(
         safety_audit={
             "human_authored": True,
             "deidentified": True,
-            "reviewed": False,
+            "reviewed": True,
+            "safe": True,
         },
         source_trajectory_type="human_authored",
         attribution_count=1,
         deidentification_verified=True,
-        user_authorization=None,
+        user_authorization=True,
         projection_policy=ProjectionPolicy.SENSITIVE_MEDIATED,
-        shareability=Shareability.PRIVATE_ONLY,
+        shareability=Shareability.PUBLIC_SEED_CANDIDATE,
     )
 
 

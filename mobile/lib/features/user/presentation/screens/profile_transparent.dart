@@ -1,0 +1,427 @@
+// ignore_for_file: prefer_expression_function_bodies
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
+import 'package:sparkle/features/user/presentation/providers/ws6_profile_mirror_provider.dart';
+import 'package:sparkle/features/user/presentation/widgets/mirror_bar.dart';
+import 'package:sparkle/features/user/presentation/ws6_flags.dart';
+
+class ProfileTransparentScreen extends ConsumerWidget {
+  const ProfileTransparentScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewAsync = ref.watch(ws6TransparentProfileViewProvider);
+    return GraphiteScaffold(
+      role: SparklePageRole.settings,
+      safeArea: false,
+      child: viewAsync.when(
+        data: (view) => RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(ws6TransparentProfileViewProvider);
+            await ref.read(ws6TransparentProfileViewProvider.future);
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(DS.spacing16),
+            children: [
+              _buildHeader(context, view),
+              const SizedBox(height: DS.spacing12),
+              MirrorBar(model: view.mirrorBar),
+              const SizedBox(height: DS.spacing12),
+              _buildSummaryCard(context, view),
+              const SizedBox(height: DS.spacing12),
+              _buildItemSection(
+                context,
+                title: '可见画像',
+                subtitle: 'open_editable / open_discussable 条目会在这里直接呈现。',
+                items: view.visibleItems,
+              ),
+              const SizedBox(height: DS.spacing12),
+              _buildItemSection(
+                context,
+                title: '中介画像',
+                subtitle: 'sensitive_mediated 条目只在合适上下文里展开。',
+                items: view.mediatedItems,
+              ),
+              const SizedBox(height: DS.spacing12),
+              _buildRevertSection(context, view),
+              const SizedBox(height: DS.spacing12),
+              _buildBindingCard(context, view),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => _buildOfflineFallback(context),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, Ws6TransparentProfileViewModel view) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '透明画像',
+                style: DS.titleLarge.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: DS.fontWeightBold,
+                ),
+              ),
+              const SizedBox(height: DS.spacing4),
+              Text(
+                view.summary,
+                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: DS.spacing8),
+        const _ModePill(
+          label: kWs6ProfileSurfaceEnabled ? 'live' : 'gated',
+          color: kWs6ProfileSurfaceEnabled
+              ? Color(0xFF73E0B9)
+              : Color(0xFF8A8EA8),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryCard(
+    BuildContext context,
+    Ws6TransparentProfileViewModel view,
+  ) {
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '概要',
+            style: DS.labelLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            view.summary,
+            style: DS.bodyMedium.copyWith(color: DS.textPrimary),
+          ),
+          if (view.hiddenItemCount > 0) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '隐藏条目 ${view.hiddenItemCount} 条，未进入透明面板。',
+              style: DS.labelSmall.copyWith(color: DS.textSecondary),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemSection(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required List<Ws6TransparentProfileItemModel> items,
+  }) {
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: DS.labelLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            subtitle,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing12),
+          if (items.isEmpty)
+            Text(
+              '暂无内容。',
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            )
+          else
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing10),
+                child: _ProfileItemCard(item: item),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRevertSection(
+    BuildContext context,
+    Ws6TransparentProfileViewModel view,
+  ) {
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '可回退更改',
+            style: DS.labelLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            '这里只展示 Aurora 介入过的变化，不做静默覆盖。',
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing12),
+          if (view.revertActions.isEmpty)
+            Text(
+              '暂无可回退动作。',
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            )
+          else
+            ...view.revertActions.map(
+              (action) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing10),
+                child: _RevertActionCard(action: action),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBindingCard(
+    BuildContext context,
+    Ws6TransparentProfileViewModel view,
+  ) {
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Binding notes',
+            style: DS.labelLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            view.bindingNotes.isEmpty
+                ? 'provisional binding only'
+                : view.bindingNotes.join(' · '),
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfflineFallback(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing24),
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.panel,
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '透明画像暂未接入',
+                style: DS.titleMedium.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                'WS6 目前保持 inert，等后续路由或后端绑定补齐后再启用。',
+                style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileItemCard extends StatelessWidget {
+  const _ProfileItemCard({required this.item});
+
+  final Ws6TransparentProfileItemModel item;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = ws6VisibilityColor(item.visibility);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          accent.withValues(alpha: 0.05),
+          DS.surfacePrimary,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: DS.bodyMedium.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+                ),
+              ),
+              _ModePill(label: item.projectionPolicy, color: accent),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            item.summary,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing6),
+          Text(
+            item.evidenceSummary,
+            style: DS.labelSmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              if (item.canEditDirectly) const _ModePill(label: 'editable', color: Color(0xFF73E0B9)),
+              if (item.canRevert) const _ModePill(label: 'revertable', color: Color(0xFFF1C27A)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RevertActionCard extends StatelessWidget {
+  const _RevertActionCard({required this.action});
+
+  final Ws6ProfileRevertActionModel action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.surfacePrimaryElevated,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  action.label,
+                  style: DS.bodyMedium.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+                ),
+              ),
+              _ModePill(label: action.projectionPolicy, color: const Color(0xFFF1C27A)),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            action.currentSummary,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            '建议：${action.suggestedSummary}',
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            action.reason,
+            style: DS.labelSmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: null,
+                  child: Text(action.requiresDialogue ? '需要对话确认' : '可回退'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModePill extends StatelessWidget {
+  const _ModePill({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing10,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        label,
+        style: DS.labelSmall.copyWith(
+          color: color,
+          fontWeight: DS.fontWeightMedium,
+        ),
+      ),
+    );
+  }
+}

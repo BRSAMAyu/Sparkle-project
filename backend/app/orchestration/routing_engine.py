@@ -11,6 +11,11 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.aurora.migration import (
+    record_shadow_divergence_if_needed,
+    resolve_cutover_state,
+    route_dual_core_via_aurora,
+)
 from app.core.metrics import ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL, ROUTING_SUMMARY_CONTEXT_TOTAL
 from app.core.unified_intent_router import UnifiedIntentType
 from app.orchestration.chat_modes import CHAT_MODE_STANDARD
@@ -264,17 +269,59 @@ class RoutingEngineMixin:
             unified_routing_result=unified_routing_result,
             information_sufficient=information_sufficient,
         )
+        cutover_state = resolve_cutover_state(user_id)
+
+        legacy_decision: DualCoreDecision | None = None
         if routing_input.intent == "chat" and route_decision.execution_mode == "direct":
-            decision = DualCoreDecision(
+            legacy_decision = DualCoreDecision(
                 mode="execution_first",
                 reason="通用知识问答优先直接回答，避免把认知调制或任务背景混入基础解释。",
                 cognitive_adjustments=[],
                 execution_constraints=[],
             )
+        elif cutover_state.mode != "active":
+            legacy_decision = self.dual_core_router.route(routing_input)
+
+        aurora_projection = None
+        if cutover_state.mode in {"shadow", "active"}:
+            aurora_projection = route_dual_core_via_aurora(
+                routing_input,
+                user_id=user_id,
+            )
+
+        if cutover_state.mode == "active" and aurora_projection is not None:
+            decision = aurora_projection.projected_decision
         else:
-            decision = self.dual_core_router.route(routing_input)
+            decision = legacy_decision or DualCoreDecision(
+                mode="balanced",
+                reason="legacy dual-core decision unavailable, falling back to balanced mode",
+                cognitive_adjustments=[],
+                execution_constraints=[],
+            )
 
         state.context_data["dual_core_decision"] = decision.to_dict()
+        state.context_data["aurora_cutover_state"] = {
+            "mode": cutover_state.mode,
+            "reason": cutover_state.reason,
+        }
+        if aurora_projection is not None:
+            shadow_diverged = False
+            if legacy_decision is not None and cutover_state.mode == "shadow":
+                shadow_diverged = record_shadow_divergence_if_needed(
+                    legacy_decision=legacy_decision,
+                    aurora_decision=aurora_projection.projected_decision,
+                    trigger_point="pre-node-routing",
+                    enabled=True,
+                )
+            state.context_data["aurora_shadow_comparison"] = {
+                "mode": cutover_state.mode,
+                "legacy_mode": legacy_decision.mode if legacy_decision is not None else None,
+                "aurora_mode": aurora_projection.projected_decision.mode,
+                "decision_type": aurora_projection.transition_decision.decision_type,
+                "decision_basis": aurora_projection.transition_decision.decision_basis.value,
+                "impact_class": aurora_projection.transition_decision.impact_class.value,
+                "diverged": shadow_diverged,
+            }
         prompt_instruction = decision.prompt_instruction
 
         # Stickiness Moment 3: detect mode-shift and inject a natural transition phrase
@@ -328,6 +375,8 @@ class RoutingEngineMixin:
         if isinstance(plan_meta, dict):
             plan_meta["dual_core_mode"] = decision.mode
             plan_meta["dual_core_reason"] = decision.reason
+            plan_meta["dual_core_source"] = "aurora" if cutover_state.mode == "active" else "legacy"
+            plan_meta["aurora_cutover_mode"] = cutover_state.mode
             state.context_data["plan_metadata"] = plan_meta
 
         return route_decision

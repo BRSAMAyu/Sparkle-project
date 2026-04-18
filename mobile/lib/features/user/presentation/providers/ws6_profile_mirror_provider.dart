@@ -1,0 +1,559 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
+import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
+import 'package:sparkle/features/user/presentation/ws6_flags.dart';
+
+final ws6ProfileMirrorAdapterProvider = Provider<Ws6ProfileMirrorAdapter>(
+  (ref) => const Ws6ProfileMirrorAdapter(),
+);
+
+final ws6TransparentProfileViewProvider =
+    FutureProvider<Ws6TransparentProfileViewModel>((ref) async {
+  if (!kWs6ProfileSurfaceEnabled) {
+    return Ws6TransparentProfileViewModel.inert(
+      bindingNotes: const <String>[
+        'provisional binding: transparentProfileProvider',
+        'provisional binding: profileContextProvider',
+      ],
+    );
+  }
+
+  try {
+    final transparentProfile =
+        await ref.watch(transparentProfileProvider.future);
+    final profileContext = await ref.watch(profileContextProvider.future);
+    final adapter = ref.watch(ws6ProfileMirrorAdapterProvider);
+    return adapter.build(
+      transparentProfile: transparentProfile,
+      profileContext: profileContext,
+    );
+  } catch (_) {
+    return Ws6TransparentProfileViewModel.inert(
+      summary: 'WS6 profile surface could not bind to live data yet.',
+      bindingNotes: const <String>[
+        'provisional binding: transparentProfileProvider',
+        'provisional binding: profileContextProvider',
+        'fall back to inert local model',
+      ],
+    );
+  }
+});
+
+class Ws6ProfileMirrorAdapter {
+  const Ws6ProfileMirrorAdapter();
+
+  Ws6TransparentProfileViewModel build({
+    required Map<String, dynamic> transparentProfile,
+    required Map<String, dynamic> profileContext,
+    Map<String, dynamic>? relationshipState,
+    bool allowSensitiveMediation = false,
+  }) {
+    final rawItems = _extractClaimLikeItems(transparentProfile);
+    final synthesizedItems = rawItems.isEmpty
+        ? _synthesizeItemsFromLegacyLayers(transparentProfile)
+        : rawItems;
+    final computedHiddenCount = _hiddenItemCount(transparentProfile) > 0
+        ? _hiddenItemCount(transparentProfile)
+        : synthesizedItems.where(
+            (item) =>
+                _parseVisibility(
+                  item['projection_policy']?.toString(),
+                  allowSensitiveMediation: allowSensitiveMediation,
+                ) ==
+                Ws6ProfileVisibility.hidden,
+          ).length;
+    final visibleItems = <Ws6TransparentProfileItemModel>[];
+    final mediatedItems = <Ws6TransparentProfileItemModel>[];
+    final revertActions = <Ws6ProfileRevertActionModel>[];
+
+    for (final item in synthesizedItems) {
+      final visibility = _parseVisibility(
+        item['projection_policy']?.toString(),
+        allowSensitiveMediation: allowSensitiveMediation,
+      );
+      final mappedItem = _buildProfileItem(item, visibility);
+      switch (visibility) {
+        case Ws6ProfileVisibility.visible:
+          visibleItems.add(mappedItem);
+        case Ws6ProfileVisibility.mediated:
+          mediatedItems.add(mappedItem);
+        case Ws6ProfileVisibility.hidden:
+          // Hidden items stay out of the rendered lists by design.
+      }
+
+      if (mappedItem.canRevert) {
+        revertActions.add(
+          Ws6ProfileRevertActionModel(
+            key: mappedItem.key,
+            label: mappedItem.label,
+            currentSummary: mappedItem.summary,
+            suggestedSummary:
+                item['suggested_summary']?.toString() ?? mappedItem.summary,
+            reason: item['revert_reason']?.toString() ??
+                'dialogue-mediated revert required',
+            projectionPolicy: item['projection_policy']?.toString() ?? 'open_discussable',
+            requiresDialogue: visibility != Ws6ProfileVisibility.visible,
+          ),
+        );
+      }
+    }
+
+    final mirrorBar = _buildMirrorBar(
+      transparentProfile: transparentProfile,
+      profileContext: profileContext,
+      relationshipState: relationshipState,
+      allowSensitiveMediation: allowSensitiveMediation,
+    );
+    final summary = _buildSummary(
+      transparentProfile: transparentProfile,
+      visibleItems: visibleItems,
+      mediatedItems: mediatedItems,
+      hiddenItemCount: computedHiddenCount,
+      relationshipState: relationshipState,
+    );
+
+    return Ws6TransparentProfileViewModel(
+      enabled: true,
+      summary: summary,
+      mirrorBar: mirrorBar,
+      visibleItems: visibleItems,
+      mediatedItems: mediatedItems,
+      hiddenItemCount: computedHiddenCount,
+      revertActions: revertActions,
+      bindingNotes: List<String>.unmodifiable([
+        'data source: transparentProfileProvider',
+        'data source: profileContextProvider',
+        if (relationshipState != null) 'data source: relationship_state adapter',
+      ]),
+    );
+  }
+
+  Ws6MirrorBarModel _buildMirrorBar({
+    required Map<String, dynamic> transparentProfile,
+    required Map<String, dynamic> profileContext,
+    required bool allowSensitiveMediation,
+    Map<String, dynamic>? relationshipState,
+  }) {
+    final layer1 = _asMap(transparentProfile['layer_1']);
+    final layer2 = _asMap(transparentProfile['layer_2']);
+    final layer3 = _asMap(transparentProfile['layer_3']);
+    final currentState = _asMap(profileContext['current_state']);
+    final readiness = _asMap(profileContext['readiness']);
+    final knowledgeSummary = _asMap(profileContext['knowledge_summary']);
+    final cognitiveSummary = _asMap(profileContext['cognitive_summary']);
+    final relationship = relationshipState ?? const <String, dynamic>{};
+
+    final focusValue = _dimensionValue(
+      [currentState['focus'], currentState['active_goal'], layer1['goals']],
+      fallback: _dimensionValue(layer1['goals'], fallback: 0.4),
+    );
+    final energyValue = _dimensionValue(
+      [
+        currentState['energy'],
+        readiness['energy'],
+        if (_asMap(layer2['persona']).isNotEmpty)
+          _asMap(layer2['persona'])['capabilities'],
+      ],
+      fallback: _dimensionValue([readiness['energy']], fallback: 0.45),
+    );
+    final commitmentValue = _dimensionValue(
+      [currentState['commitment'], knowledgeSummary['active_learning_subjects'], layer1['preferences']],
+      fallback: _dimensionValue(knowledgeSummary['active_learning_subjects'], fallback: 0.35),
+    );
+    final memoryValue = _dimensionValue(
+      [knowledgeSummary['overall_mastery'], cognitiveSummary['active_patterns'], layer3['patterns']],
+      fallback: _dimensionValue(layer3['patterns'], fallback: 0.3),
+    );
+
+    final presenceFromRelationship = _numericFrom(relationship['relationship_maturity']);
+    final presenceFallback = _clamp01((focusValue + energyValue + commitmentValue + memoryValue) / 4);
+    final presenceValue = presenceFromRelationship ?? presenceFallback;
+    final presenceLabel = _presenceLabel(presenceValue);
+
+    return Ws6MirrorBarModel(
+      enabled: true,
+      presenceLabel: presenceLabel,
+      presenceValue: presenceValue,
+      dimensions: [
+        Ws6MirrorDimensionModel(
+          key: 'focus',
+          label: 'Focus',
+          value: focusValue,
+          subtitle: _dimensionSubtitle(
+            currentState['focus'],
+            layer1['goals'],
+            fallback: '当前关注点和目标聚焦',
+          ),
+          sourceLabel: _sourceLabel(
+            ['profileContext.current_state.focus', 'transparentProfile.layer_1.goals'],
+          ),
+          visibility: Ws6ProfileVisibility.visible,
+          canEditDirectly: _looksEditable(layer1['goals']),
+          canRevert: true,
+        ),
+        Ws6MirrorDimensionModel(
+          key: 'energy',
+          label: 'Energy',
+          value: energyValue,
+          subtitle: _dimensionSubtitle(
+            currentState['energy'],
+            readiness['energy'],
+            fallback: '系统对当前能量状态的保守估计',
+          ),
+          sourceLabel: _sourceLabel(
+            ['profileContext.current_state.energy', 'profileContext.readiness.energy'],
+          ),
+          visibility: allowSensitiveMediation ? Ws6ProfileVisibility.visible : Ws6ProfileVisibility.mediated,
+          canEditDirectly: false,
+          canRevert: true,
+        ),
+        Ws6MirrorDimensionModel(
+          key: 'commitment',
+          label: 'Commitment',
+          value: commitmentValue,
+          subtitle: _dimensionSubtitle(
+            currentState['commitment'],
+            knowledgeSummary['active_learning_subjects'],
+            fallback: '当前承诺与任务执行节奏',
+          ),
+          sourceLabel: _sourceLabel(
+            ['profileContext.knowledge_summary.active_learning_subjects', 'transparentProfile.layer_1.preferences'],
+          ),
+          visibility: Ws6ProfileVisibility.visible,
+          canEditDirectly: _looksEditable(layer1['preferences']),
+          canRevert: true,
+        ),
+        Ws6MirrorDimensionModel(
+          key: 'memory',
+          label: 'Memory',
+          value: memoryValue,
+          subtitle: _dimensionSubtitle(
+            knowledgeSummary['overall_mastery'],
+            cognitiveSummary['active_patterns'],
+            fallback: '最近记忆与模式的保守投影',
+          ),
+          sourceLabel: _sourceLabel(
+            ['profileContext.knowledge_summary.overall_mastery', 'profileContext.cognitive_summary.active_patterns'],
+          ),
+          visibility: Ws6ProfileVisibility.visible,
+          canEditDirectly: false,
+          canRevert: false,
+        ),
+      ],
+      bindingNotes: [
+        'Focus: transparentProfile.layer_1 + profileContext.current_state',
+        'Energy: profileContext.readiness + current_state',
+        'Commitment: profileContext.knowledge_summary + layer_1',
+        'Memory: profileContext.knowledge_summary + cognitive_summary',
+      ],
+    );
+  }
+
+  List<Map<String, dynamic>> _extractClaimLikeItems(Map<String, dynamic> transparentProfile) {
+    final items = <Map<String, dynamic>>[];
+    final rawItems = transparentProfile['items'] ?? transparentProfile['claims'];
+    if (rawItems is List) {
+      for (final item in rawItems) {
+        final map = _asMap(item);
+        if (map.isNotEmpty) {
+          items.add(map);
+        }
+      }
+    }
+    return items;
+  }
+
+  List<Map<String, dynamic>> _synthesizeItemsFromLegacyLayers(Map<String, dynamic> transparentProfile) {
+    final layer1 = _asMap(transparentProfile['layer_1']);
+    final layer2 = _asMap(transparentProfile['layer_2']);
+    final layer3 = _asMap(transparentProfile['layer_3']);
+    final items = <Map<String, dynamic>>[];
+
+    void addLegacyItem({
+      required String key,
+      required String label,
+      required dynamic value,
+      required String projectionPolicy,
+      required String visibility,
+      required bool canEditDirectly,
+      required bool canRevert,
+      String? summary,
+      String? suggestedSummary,
+      String? revertReason,
+    }) {
+      items.add({
+        'key': key,
+        'label': label,
+        'summary': summary ?? _stringifyValue(value),
+        'projection_policy': projectionPolicy,
+        'visibility': visibility,
+        'can_edit_directly': canEditDirectly,
+        'can_revert': canRevert,
+        if (suggestedSummary != null) 'suggested_summary': suggestedSummary,
+        if (revertReason != null) 'revert_reason': revertReason,
+      });
+    }
+
+    for (final goal in _asList(layer1['goals'])) {
+      addLegacyItem(
+        key: 'goal:${goal.hashCode}',
+        label: _displayLabel(goal, fallback: 'Goal'),
+        value: goal,
+        projectionPolicy: 'open_editable',
+        visibility: 'visible',
+        canEditDirectly: true,
+        canRevert: true,
+      );
+    }
+    for (final preference in _asList(layer1['preferences'])) {
+      addLegacyItem(
+        key: 'preference:${preference.hashCode}',
+        label: _displayLabel(preference, fallback: 'Preference'),
+        value: preference,
+        projectionPolicy: 'open_discussable',
+        visibility: 'visible',
+        canEditDirectly: true,
+        canRevert: true,
+      );
+    }
+    final persona = _asMap(layer2['persona']);
+    final capabilities = _asMap(persona['capabilities']);
+    for (final entry in capabilities.entries) {
+      addLegacyItem(
+        key: 'capability:${entry.key}',
+        label: entry.key,
+        value: entry.value,
+        projectionPolicy: 'sensitive_mediated',
+        visibility: 'mediated',
+        canEditDirectly: false,
+        canRevert: true,
+      );
+    }
+    for (final pattern in _asList(layer3['patterns'])) {
+      addLegacyItem(
+        key: 'pattern:${pattern.hashCode}',
+        label: _displayLabel(pattern, fallback: 'Pattern'),
+        value: pattern,
+        projectionPolicy: 'open_discussable',
+        visibility: 'visible',
+        canEditDirectly: false,
+        canRevert: false,
+      );
+    }
+    for (final fragment in _asList(layer3['fragments'])) {
+      addLegacyItem(
+        key: 'fragment:${fragment.hashCode}',
+        label: _displayLabel(fragment, fallback: 'Fragment'),
+        value: fragment,
+        projectionPolicy: 'internal',
+        visibility: 'hidden',
+        canEditDirectly: false,
+        canRevert: false,
+      );
+    }
+    return items;
+  }
+
+  Ws6TransparentProfileItemModel _buildProfileItem(
+    Map<String, dynamic> item,
+    Ws6ProfileVisibility visibility,
+  ) {
+    final policy = item['projection_policy']?.toString() ?? 'open_discussable';
+    final label = item['label']?.toString() ?? item['key']?.toString() ?? 'Profile item';
+    final summary = item['summary']?.toString() ?? item['content']?.toString() ?? label;
+    final canEditDirectly = item['can_edit_directly'] == true;
+    final canRevert = item['can_revert'] != false && visibility != Ws6ProfileVisibility.hidden;
+    final evidenceSummary = item['evidence_summary']?.toString() ??
+        item['evidence_refs']?.toString() ??
+        'provisional binding';
+
+    return Ws6TransparentProfileItemModel(
+      key: item['key']?.toString() ?? label,
+      label: label,
+      summary: summary,
+      projectionPolicy: policy,
+      visibility: visibility,
+      canEditDirectly: canEditDirectly,
+      canRevert: canRevert,
+      evidenceSummary: evidenceSummary,
+    );
+  }
+
+  Ws6ProfileVisibility _parseVisibility(
+    String? projectionPolicy, {
+    required bool allowSensitiveMediation,
+  }) {
+    switch ((projectionPolicy ?? '').toLowerCase()) {
+      case 'internal':
+        return Ws6ProfileVisibility.hidden;
+      case 'sensitive_mediated':
+        return allowSensitiveMediation
+            ? Ws6ProfileVisibility.visible
+            : Ws6ProfileVisibility.mediated;
+      case 'open_editable':
+      case 'open_discussable':
+      default:
+        return Ws6ProfileVisibility.visible;
+    }
+  }
+
+  String _buildSummary({
+    required Map<String, dynamic> transparentProfile,
+    required List<Ws6TransparentProfileItemModel> visibleItems,
+    required List<Ws6TransparentProfileItemModel> mediatedItems,
+    required int hiddenItemCount,
+    Map<String, dynamic>? relationshipState,
+  }) {
+    final explicitSummary = transparentProfile['summary']?.toString().trim();
+    if (explicitSummary != null && explicitSummary.isNotEmpty) {
+      return explicitSummary;
+    }
+    final lead = visibleItems.isNotEmpty ? visibleItems.first.label : '你的画像';
+    final mediatedCount = mediatedItems.length;
+    final relationshipPart = relationshipState != null
+        ? '协作成熟度约 ${_clamp01(_numericFrom(relationshipState['relationship_maturity']) ?? 0.0) * 100}%'
+        : '协作成熟度暂未接入';
+    return '当前透明画像以「$lead」为主，'
+        '可见条目 ${visibleItems.length} 条，中介条目 $mediatedCount 条，'
+        '隐藏条目 $hiddenItemCount 条。$relationshipPart。';
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return value.map((key, dynamic item) => MapEntry(key.toString(), item));
+    }
+    return <String, dynamic>{};
+  }
+
+  List<dynamic> _asList(dynamic value) {
+    if (value is List) {
+      return value;
+    }
+    return const <dynamic>[];
+  }
+
+  int _hiddenItemCount(Map<String, dynamic> transparentProfile) {
+    final value = transparentProfile['hidden_item_count'] ?? transparentProfile['hidden_count'];
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return 0;
+  }
+
+  double _dimensionValue(dynamic sources, {double fallback = 0.0}) {
+    final normalizedSources = sources is List ? sources : <dynamic>[sources];
+    for (final source in normalizedSources) {
+      final value = _numericFrom(source);
+      if (value != null) {
+        return value;
+      }
+      if (source is Iterable) {
+        return _clamp01(source.length / 5.0);
+      }
+      if (source is Map) {
+        return _clamp01(source.length / 6.0);
+      }
+    }
+    return _clamp01(fallback);
+  }
+
+  double? _numericFrom(dynamic value) {
+    if (value is num) {
+      final raw = value.toDouble();
+      if (raw <= 1.0) {
+        return _clamp01(raw);
+      }
+      return _clamp01(raw / 100.0);
+    }
+    if (value is bool) {
+      return value ? 1.0 : 0.0;
+    }
+    if (value is String) {
+      final parsed = double.tryParse(value);
+      if (parsed != null) {
+        return parsed <= 1.0 ? _clamp01(parsed) : _clamp01(parsed / 100.0);
+      }
+    }
+    if (value is Iterable) {
+      return _clamp01(value.length / 5.0);
+    }
+    if (value is Map) {
+      return _clamp01(value.length / 6.0);
+    }
+    return null;
+  }
+
+  double _clamp01(double value) => value.clamp(0.0, 1.0);
+
+  String _dimensionSubtitle(dynamic primary, dynamic secondary, {required String fallback}) {
+    final primaryText = _stringifyValue(primary);
+    final secondaryText = _stringifyValue(secondary);
+    if (primaryText.isNotEmpty) {
+      return primaryText;
+    }
+    if (secondaryText.isNotEmpty) {
+      return secondaryText;
+    }
+    return fallback;
+  }
+
+  String _stringifyValue(dynamic value) {
+    if (value == null) {
+      return '';
+    }
+    if (value is String) {
+      return value.trim();
+    }
+    if (value is num || value is bool) {
+      return value.toString();
+    }
+    if (value is Iterable) {
+      return value.map(_stringifyValue).where((item) => item.isNotEmpty).join(' · ');
+    }
+    if (value is Map) {
+      final text = value.values.map(_stringifyValue).where((item) => item.isNotEmpty).join(' · ');
+      return text.isNotEmpty ? text : value.keys.join(' · ');
+    }
+    return value.toString();
+  }
+
+  bool _looksEditable(dynamic value) {
+    if (value is Map) {
+      return value.isNotEmpty;
+    }
+    if (value is Iterable) {
+      return value.isNotEmpty;
+    }
+    return value != null && value.toString().trim().isNotEmpty;
+  }
+
+  String _sourceLabel(List<String> sources) => sources.join(' · ');
+
+  String _presenceLabel(double value) {
+    if (value >= 0.7) {
+      return 'active';
+    }
+    if (value >= 0.35) {
+      return 'ambient';
+    }
+    return 'meta_surface';
+  }
+
+  String _displayLabel(dynamic value, {required String fallback}) {
+    if (value is Map) {
+      final label = value['label'] ?? value['title'] ?? value['name'];
+      if (label is String && label.trim().isNotEmpty) {
+        return label.trim();
+      }
+    }
+    final text = _stringifyValue(value);
+    return text.isNotEmpty ? text : fallback;
+  }
+}

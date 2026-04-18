@@ -280,3 +280,123 @@ async def test_apply_dual_core_routing_short_circuits_general_chat_to_execution_
     assert updated.reason.endswith("dual_core:execution_first")
     assert state.context_data["dual_core_decision"]["mode"] == "execution_first"
     orchestrator.dual_core_router.route.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_apply_dual_core_routing_records_shadow_comparison_without_taking_over(orchestrator):
+    legacy_decision = DualCoreDecision(
+        mode="execution_first",
+        reason="legacy decision",
+        cognitive_adjustments=[],
+        execution_constraints=[],
+    )
+    aurora_decision = DualCoreDecision(
+        mode="cognitive_first",
+        reason="aurora projected",
+        cognitive_adjustments=["先支持"],
+        execution_constraints=[],
+    )
+    orchestrator.dual_core_router.route.return_value = legacy_decision
+    state = SimpleNamespace(context_data={"plan_metadata": {}})
+
+    with (
+        patch("app.orchestration.routing_engine.resolve_cutover_state", return_value=SimpleNamespace(mode="shadow", reason="shadow_cohort_selected")),
+        patch(
+            "app.orchestration.routing_engine.route_dual_core_via_aurora",
+            return_value=SimpleNamespace(
+                projected_decision=aurora_decision,
+                transition_decision=SimpleNamespace(
+                    decision_type="stay",
+                    decision_basis=SimpleNamespace(value="behavioral_signal"),
+                    impact_class=SimpleNamespace(value="medium"),
+                ),
+            ),
+        ),
+        patch("app.orchestration.routing_engine.record_shadow_divergence_if_needed", return_value=True) as divergence_mock,
+    ):
+        updated = await orchestrator._apply_dual_core_routing(
+            route_decision=RouteDecision(
+                execution_mode="hybrid",
+                reason="legacy route",
+                risk_level="medium",
+                confidence=0.7,
+            ),
+            state=state,
+            active_db=None,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=None,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.81,
+            ),
+            information_sufficient=True,
+            stream_callback=AsyncMock(),
+        )
+
+    assert updated.reason.endswith("dual_core:execution_first")
+    assert state.context_data["dual_core_decision"]["mode"] == "execution_first"
+    assert state.context_data["aurora_cutover_state"]["mode"] == "shadow"
+    assert state.context_data["aurora_shadow_comparison"]["aurora_mode"] == "cognitive_first"
+    assert state.context_data["aurora_shadow_comparison"]["legacy_mode"] == "execution_first"
+    assert state.context_data["aurora_shadow_comparison"]["diverged"] is True
+    divergence_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_apply_dual_core_routing_uses_aurora_projection_for_active_cohort(orchestrator):
+    orchestrator.dual_core_router.route.return_value = DualCoreDecision(
+        mode="execution_first",
+        reason="legacy route",
+        cognitive_adjustments=[],
+        execution_constraints=[],
+    )
+    state = SimpleNamespace(context_data={"plan_metadata": {}})
+
+    with patch(
+        "app.orchestration.routing_engine.resolve_cutover_state",
+        return_value=SimpleNamespace(mode="active", reason="active_cohort_selected"),
+    ), patch(
+        "app.orchestration.routing_engine.route_dual_core_via_aurora",
+        return_value=SimpleNamespace(
+            projected_decision=DualCoreDecision(
+                mode="cognitive_first",
+                reason="aurora active route",
+                cognitive_adjustments=["先支持"],
+                execution_constraints=[],
+            ),
+            transition_decision=SimpleNamespace(
+                decision_type="stay",
+                decision_basis=SimpleNamespace(value="behavioral_signal"),
+                impact_class=SimpleNamespace(value="medium"),
+            ),
+        ),
+    ):
+        updated = await orchestrator._apply_dual_core_routing(
+            route_decision=RouteDecision(
+                execution_mode="langgraph",
+                reason="complex plan flow",
+                risk_level="medium",
+                confidence=0.8,
+            ),
+            state=state,
+            active_db=None,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=None,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.91,
+            ),
+            information_sufficient=False,
+            stream_callback=AsyncMock(),
+        )
+
+    assert updated.execution_mode == "direct"
+    assert updated.reason.endswith("dual_core:cognitive_first")
+    assert state.context_data["dual_core_decision"]["mode"] == "cognitive_first"
+    assert state.context_data["aurora_cutover_state"]["mode"] == "active"
+    assert state.context_data["plan_metadata"]["dual_core_source"] == "aurora"
+    orchestrator.dual_core_router.route.assert_not_called()

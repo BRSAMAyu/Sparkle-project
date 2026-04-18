@@ -26,12 +26,33 @@ class AuroraFlags(BaseSettings):
         default=False,
         validation_alias=AliasChoices("AURORA_ACTIVE"),
     )
+    AURORA_SHADOW_USER_IDS: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("AURORA_SHADOW_USER_IDS"),
+    )
+    AURORA_ACTIVE_USER_IDS: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("AURORA_ACTIVE_USER_IDS"),
+    )
+    AURORA_SHADOW_COHORT_PERCENT: int = Field(
+        default=0,
+        validation_alias=AliasChoices("AURORA_SHADOW_COHORT_PERCENT"),
+    )
+    AURORA_ACTIVE_COHORT_PERCENT: int = Field(
+        default=0,
+        validation_alias=AliasChoices("AURORA_ACTIVE_COHORT_PERCENT"),
+    )
     INTERACTION_VARIANTS: list[str] = Field(
         default_factory=list,
         validation_alias=AliasChoices("INTERACTION_VARIANTS"),
     )
 
-    @field_validator("INTERACTION_VARIANTS", mode="before")
+    @field_validator(
+        "INTERACTION_VARIANTS",
+        "AURORA_SHADOW_USER_IDS",
+        "AURORA_ACTIVE_USER_IDS",
+        mode="before",
+    )
     @classmethod
     def _parse_variants(cls, value):
         if value in (None, ""):
@@ -41,6 +62,11 @@ class AuroraFlags(BaseSettings):
         if isinstance(value, (list, tuple, set)):
             return [str(item).strip() for item in value if str(item).strip()]
         return value
+
+    @field_validator("AURORA_SHADOW_COHORT_PERCENT", "AURORA_ACTIVE_COHORT_PERCENT", mode="after")
+    @classmethod
+    def _clamp_percentage(cls, value: int) -> int:
+        return max(0, min(100, int(value)))
 
     @property
     def any_aurora_enabled(self) -> bool:
