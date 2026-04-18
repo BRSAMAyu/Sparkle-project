@@ -221,5 +221,35 @@ minio_data/
 mobile/local_audio_overrides/
 quality/flutter_analyze_report.json
 quality/openapi_snapshot.generated.json
+
+# ========================================
+# Generated Proto Code (use make proto-gen)
+# ========================================
+mobile/lib/gen/
+backend/gateway/gen/
+backend/app/gen/
+*.pb.go
+agent_service.pb.go
+
+# ========================================
+# Compiled Binaries (rebuild with go build / make)
+# ========================================
+backend/gateway/gateway
+backend/gateway/server
+backend/gateway/openclaw-gateway
+backend/gateway/bin/
+backend/gateway/chat-orchestrator-test
+
+# ========================================
+# Runtime / Debug Artifacts
+# ========================================
+dump.rdb
+tmp/
+backend/coverage.json
+mobile/libisar.dylib
+login_debug_res.json
+login_new_res.json
+register_res.json
+
 # Keep dictionaries directory (MDX files for vocabulary lookup)
 # data/dictionaries/
