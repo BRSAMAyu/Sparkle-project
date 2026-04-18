@@ -1,0 +1,315 @@
+{
+  "id": "exam_prep_14d@v1.0",
+  "name": "14-Day Exam Prep",
+  "version": "v1.0",
+  "description": "A focused 14-day backbone for exam preparation with explicit readiness checks and daily recovery loops.",
+  "applicability_conditions": [
+    "user is preparing for an exam within 14 days",
+    "user needs a structured daily backbone",
+    "user benefits from explicit readiness gating"
+  ],
+  "target_user_profile": {
+    "goal": "exam_preparation",
+    "horizon_days": 14,
+    "preferred_mode": "structured",
+    "risk_profile": "moderate"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_orientation",
+      "node_persona": "diagnostic_exam_oracle",
+      "prompt_template": "你是考试预言家，Sparkle AI 的考试分析专家。\n\n你的职责：\n1. 分析历年试卷\n2. 预测考试重点\n3. 生成模拟试题\n4. 制定复习策略\n\n先帮用户明确考试范围、时间线和当前最大不确定性。",
+      "available_tools": ["query_knowledge", "create_plan", "generate_tasks_for_plan"],
+      "exit_conditions": ["exam scope is explicit", "deadline is known", "top bottleneck is named"],
+      "neighbors": ["day2_prerequisite_map"],
+      "transition_triggers": {
+        "scope_clarified": "day2_prerequisite_map"
+      },
+      "ux_mapping": {
+        "frame": "orientation",
+        "tone": "structured_calm",
+        "signal_terms": ["exam_goal_defined", "exam_date_confirmed"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day2_prerequisite_map",
+      "node_persona": "knowledge_graph_guide",
+      "prompt_template": "你是星图向导，Sparkle AI 的知识图谱专家。\n\n你的职责：\n1. 解释概念及其关联关系\n2. 推荐学习路径\n3. 识别前置知识\n4. 回答\"什么是X\"类问题\n\n把考试范围拆成前置知识图，标出必须先补的节点。",
+      "available_tools": ["query_knowledge", "create_knowledge_node", "link_nodes"],
+      "exit_conditions": ["prerequisite gaps are mapped", "must-know nodes are ordered"],
+      "neighbors": ["day3_schedule_lock"],
+      "transition_triggers": {
+        "prereq_map_ready": "day3_schedule_lock"
+      },
+      "ux_mapping": {
+        "frame": "mapping",
+        "tone": "clear",
+        "signal_terms": ["prerequisite_mastery"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day3_schedule_lock",
+      "node_persona": "time_management_tutor",
+      "prompt_template": "你是时间导师，Sparkle AI 的学习计划专家。\n\n你的职责：\n1. 制定学习计划\n2. 管理任务列表\n3. 建议番茄钟安排\n4. 监控学习进度\n\n帮助用户把 14 天切成可执行的时间块，并锁定最小可行日程。",
+      "available_tools": ["create_plan", "generate_tasks_for_plan", "create_task", "suggest_focus_session"],
+      "exit_conditions": ["daily schedule exists", "study blocks are reserved"],
+      "neighbors": ["day4_deep_analysis"],
+      "transition_triggers": {
+        "schedule_locked": "day4_deep_analysis"
+      },
+      "ux_mapping": {
+        "frame": "planning",
+        "tone": "steady",
+        "signal_terms": ["study_schedule_reserved"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day4_deep_analysis",
+      "node_persona": "deep_analyst",
+      "prompt_template": "你是深度分析师，负责基于证据进行多角度分析。\n\n你的职责：\n1. 提炼关键论点与证据链\n2. 分析边界条件与反例\n3. 给出可执行应用建议\n\n对用户的薄弱点进行结构化诊断，明确为什么卡住。",
+      "available_tools": ["query_knowledge", "create_knowledge_node"],
+      "exit_conditions": ["root cause identified", "evidence chain is concise"],
+      "neighbors": ["day5_error_repair"],
+      "transition_triggers": {
+        "diagnosis_complete": "day5_error_repair"
+      },
+      "ux_mapping": {
+        "frame": "analysis",
+        "tone": "reflective",
+        "signal_terms": ["practice_feedback_loop"]
+      },
+      "default_interaction_model": "meta_reflection",
+      "default_ux_intent": "meta_surface"
+    },
+    {
+      "node_id": "day5_error_repair",
+      "node_persona": "error_analyst",
+      "prompt_template": "你是错题分析师，负责识别错误类型并输出补救策略。\n\n诊断格式（必须严格遵守）：\n① 错误类型（知识性/理解性/计算性/粗心）\n② 根因定位：具体指出哪个步骤、哪个概念存在偏差\n③ 正确解法对齐：给出完整的正确思路\n④ 同类题变式：设计 1 道针对性练习题\n\n把修复动作缩小到用户当天能完成的最小步。",
+      "available_tools": ["query_error_history", "record_error", "create_task", "query_knowledge"],
+      "exit_conditions": ["error pattern named", "repair drill assigned"],
+      "neighbors": ["day6_targeted_drill"],
+      "transition_triggers": {
+        "repair_ready": "day6_targeted_drill"
+      },
+      "ux_mapping": {
+        "frame": "repair",
+        "tone": "precise",
+        "signal_terms": ["error_repair_done"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day6_targeted_drill",
+      "node_persona": "targeted_practice_coach",
+      "prompt_template": "聚焦当天最薄弱的一个知识点，先做短练习，再给即时反馈，再修正一个具体误区。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["one focused drill completed"],
+      "neighbors": ["day7_timed_practice"],
+      "transition_triggers": {
+        "drill_complete": "day7_timed_practice"
+      },
+      "ux_mapping": {
+        "frame": "practice",
+        "tone": "direct",
+        "signal_terms": ["practice_volume_7d"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day7_timed_practice",
+      "node_persona": "timed_exam_runner",
+      "prompt_template": "把练习放进计时环境，训练节奏、取舍和稳定性，减少考试时的认知负荷。",
+      "available_tools": ["create_task", "suggest_focus_session"],
+      "exit_conditions": ["timed set completed"],
+      "neighbors": ["day8_review_cycle"],
+      "transition_triggers": {
+        "timed_practice_complete": "day8_review_cycle"
+      },
+      "ux_mapping": {
+        "frame": "timed_practice",
+        "tone": "encouraging",
+        "signal_terms": ["mock_exam_completed"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day8_review_cycle",
+      "node_persona": "feedback_synthesizer",
+      "prompt_template": "把错题、耗时点和成功点合并成一轮复盘，优先处理重复错误和高收益修正。",
+      "available_tools": ["query_error_history", "create_knowledge_node"],
+      "exit_conditions": ["review notes produced"],
+      "neighbors": ["day9_mock_exam"],
+      "transition_triggers": {
+        "review_cycle_complete": "day9_mock_exam"
+      },
+      "ux_mapping": {
+        "frame": "review",
+        "tone": "calm",
+        "signal_terms": ["review_notes_ready"]
+      },
+      "default_interaction_model": "meta_reflection",
+      "default_ux_intent": "meta_surface"
+    },
+    {
+      "node_id": "day9_mock_exam",
+      "node_persona": "mock_exam_proctor",
+      "prompt_template": "像真正考试一样做一整套模拟，强调节奏、顺序和失误记录。",
+      "available_tools": ["create_task", "suggest_focus_session"],
+      "exit_conditions": ["mock exam submitted"],
+      "neighbors": ["day10_error_book"],
+      "transition_triggers": {
+        "mock_exam_submitted": "day10_error_book"
+      },
+      "ux_mapping": {
+        "frame": "simulation",
+        "tone": "focused",
+        "signal_terms": ["mock_exam_score"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day10_error_book",
+      "node_persona": "error_book_builder",
+      "prompt_template": "把本周反复出现的错误整理成一个可回看、可复练的错误本，只保留高频问题。",
+      "available_tools": ["record_error", "create_knowledge_node"],
+      "exit_conditions": ["error book updated"],
+      "neighbors": ["day11_gap_closure"],
+      "transition_triggers": {
+        "error_book_updated": "day11_gap_closure"
+      },
+      "ux_mapping": {
+        "frame": "repair",
+        "tone": "precise",
+        "signal_terms": ["error_book_updated"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day11_gap_closure",
+      "node_persona": "gap_closure_coach",
+      "prompt_template": "选择最值得补的 1-2 个知识漏洞，补到能做题、能解释、能迁移为止。",
+      "available_tools": ["query_knowledge", "create_task"],
+      "exit_conditions": ["gap narrowed"],
+      "neighbors": ["day12_speed_drill"],
+      "transition_triggers": {
+        "gap_closed": "day12_speed_drill"
+      },
+      "ux_mapping": {
+        "frame": "closure",
+        "tone": "steady",
+        "signal_terms": ["gap_closure_confirmed"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day12_speed_drill",
+      "node_persona": "speed_and_accuracy_coach",
+      "prompt_template": "在保证准确率的前提下提升速度，把最常见题型做到自动化反应。",
+      "available_tools": ["create_task", "suggest_focus_session"],
+      "exit_conditions": ["speed drill stable"],
+      "neighbors": ["day13_final_simulation"],
+      "transition_triggers": {
+        "speed_stable": "day13_final_simulation"
+      },
+      "ux_mapping": {
+        "frame": "drill",
+        "tone": "energetic",
+        "signal_terms": ["speed_drill_done"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day13_final_simulation",
+      "node_persona": "final_exam_synthesizer",
+      "prompt_template": "做一轮接近正式考试的总模拟，重点观察是否能稳定执行前 12 天建立的节奏。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["final simulation finished"],
+      "neighbors": ["day14_final_reset"],
+      "transition_triggers": {
+        "final_simulation_done": "day14_final_reset"
+      },
+      "ux_mapping": {
+        "frame": "simulation",
+        "tone": "focused",
+        "signal_terms": ["final_simulation_done"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day14_final_reset",
+      "node_persona": "exam_day_reset_coach",
+      "prompt_template": "收束到考试当天的节奏：轻量复习、稳定睡眠、明确开考前的第一步。",
+      "available_tools": ["suggest_focus_session"],
+      "exit_conditions": ["exam day plan is locked"],
+      "neighbors": [],
+      "transition_triggers": {
+        "exam_day_locked": "day14_final_reset"
+      },
+      "ux_mapping": {
+        "frame": "reset",
+        "tone": "gentle",
+        "signal_terms": ["exam_day_plan_locked"]
+      },
+      "default_interaction_model": "holding_mode",
+      "default_ux_intent": "holding"
+    }
+  ],
+  "readiness_criteria": {
+    "exam_goal_defined": {
+      "signal_type": "goal_clarity",
+      "minimum_confidence": 0.8,
+      "required": true
+    },
+    "prerequisite_mastery": {
+      "signal_type": "mastery_map",
+      "minimum_confidence": 0.75,
+      "required": true
+    },
+    "study_schedule_reserved": {
+      "signal_type": "schedule_lock",
+      "minimum_confidence": 0.7,
+      "required": true
+    },
+    "practice_loop_active": {
+      "signal_type": "practice_feedback",
+      "minimum_confidence": 0.7,
+      "required": true
+    },
+    "exam_date_confirmed": {
+      "signal_type": "deadline_anchor",
+      "minimum_confidence": 0.9,
+      "required": true
+    }
+  },
+  "default_strategies": {
+    "onboarding": "day1_orientation",
+    "reanchor": "day4_deep_analysis",
+    "recovery": "day5_error_repair",
+    "final_review": "day14_final_reset"
+  },
+  "ux_mappings": {
+    "default_frame": "exam_prep",
+    "default_tone": "structured_calm",
+    "fallback_tone": "gentle_supportive"
+  },
+  "created_at": "2026-04-17T00:00:00",
+  "author": "sparkle-core",
+  "changelog": [
+    "Initial Wave 1 exam prep pack.",
+    "Migrated top expert prompt content into the first five backbone nodes."
+  ]
+}

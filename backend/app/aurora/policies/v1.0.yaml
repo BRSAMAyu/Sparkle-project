@@ -1,0 +1,108 @@
+id: aurora_policy@v1.0
+version: v1.0
+created_at: 2026-04-17T00:00:00
+author: human
+changelog:
+  - Frozen Gate 0 policy fixture for Wave 1 baseline.
+  - Includes all Gate 0 policy sub-models with conservative defaults.
+persona_invariants:
+  anti_flattery: true
+  directionality: true
+  safety: true
+  consistency: true
+  privacy: true
+audit_invariants:
+  all_decisions_logged: true
+  decision_mechanism_required: true
+  decision_basis_required: true
+  evidence_refs_required: true
+  rollback_anchor_required: true
+  input_snapshot_ref_required: true
+proactive_policy:
+  daily_budget: 3
+  weekly_budget: 10
+  allowed_time_windows: []
+  respect_busy_schedule: true
+  minimum_relationship_maturity: 0.5
+  requires_material_state_change: true
+  requires_reason_chain_visible: true
+reconciliation_policy:
+  default_bias: trust_user_single_turn
+  meta_discussion_threshold: 3
+  meta_timing: natural_breakpoint
+  requires_window_state_ok: true
+  claim_on_reconcile: contextualized
+continuous_learning_policy:
+  requires_abstraction: true
+  requires_deidentification: true
+  requires_human_review: true
+  human_review_threshold: 100
+  requires_user_authorization: true
+  requires_quality_gate: true
+  cooldown_monitoring: true
+  auto_downgrade_on_negative_signal: true
+parameter_write_authority:
+  - parameter_name: ux_intent
+    authority_level: auto_write
+    requires_confirmation: true
+    origin_trail_required: true
+  - parameter_name: aurora_presence
+    authority_level: suggest_confirm
+    requires_confirmation: true
+    origin_trail_required: true
+interaction_model_registry:
+  - variant: default_conversation
+    context_budget: 1200
+    allowed_tools_base:
+      - probe_question
+      - minimal_session_offer
+    default_tone: warm_conversational
+    default_proactivity: 0.2
+    writable_policy_scope:
+      - ux_intent
+      - aurora_presence
+  - variant: task_execution
+    context_budget: 1000
+    allowed_tools_base:
+      - task_breakdown
+      - checklist_offer
+    default_tone: structured_precise
+    default_proactivity: 0.35
+    writable_policy_scope:
+      - ux_intent
+      - capability_gate
+  - variant: meta_reflection
+    context_budget: 1500
+    allowed_tools_base:
+      - direct_question
+      - reconciliation_probe
+    default_tone: reflective
+    default_proactivity: 0.5
+    writable_policy_scope:
+      - ux_intent
+      - aurora_presence
+      - capability_gate
+  - variant: holding_mode
+    context_budget: 900
+    allowed_tools_base:
+      - emotional_support
+      - commitment_pause
+    default_tone: gentle_supportive
+    default_proactivity: 0.15
+    writable_policy_scope:
+      - ux_intent
+      - aurora_presence
+materiality_threshold: 0.5
+default_rollback_anchor_schema:
+  prev_focus_contract_version: 0
+  prev_active_commitment_ids: []
+  prev_claim_statuses: {}
+  policy_version_at_decision: aurora_policy@v1.0
+policy_notes:
+  persona_rationale: Keep Aurora non-flattering, directionally useful, and safety-first.
+  audit_rationale: Preserve append-only accountability for every material decision.
+  proactive_rationale: Use a small budget so proactive behavior stays restrained.
+  reconciliation_rationale: Prefer user-provided framing unless a later breakpoint warrants correction.
+  learning_rationale: Block unsupported self-updating and require review.
+  interaction_rationale: Register only the minimal variants needed by Gate 0.
+

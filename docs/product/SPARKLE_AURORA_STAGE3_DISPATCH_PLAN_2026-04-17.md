@@ -1,6 +1,6 @@
 # SPARKLE Stage 3 — Parallel Dispatch Plan
 
-> **Version**: 1.0
+> **Version**: 1.1 (incorporating Claude + Codex Wave 0 review)
 > **Date**: 2026-04-17
 > **Status**: ACTIVE
 > **Depends on**: `SPARKLE_AURORA_GATE0_SCHEMA_2026-04-17.md` (v1.0-frozen)
@@ -104,10 +104,13 @@ All Pydantic models from Gate 0 (11 primitives + 18 enums) are frozen. Workstrea
 ## 3. Wave Plan
 
 ```
-WAVE 0 (Foundation) — 3-4 days
-  ├─ W0.1: Deploy Gate 0 schemas to codebase (Pydantic + DB migration)
-  ├─ W0.2: Feature flag infrastructure for shadow mode
-  └─ W0.3: Common utilities (enum imports, base classes)
+WAVE 0 (Foundation) — 4-5 days
+  ├─ W0.1: Deploy Gate 0 schemas to codebase (Pydantic models)
+  ├─ W0.2: DB migration for new tables (with verified downgrade paths)
+  ├─ W0.3: Feature flag infrastructure for shadow mode
+  ├─ W0.4: Common utilities (enum imports, base classes)
+  ├─ W0.5: Reference flow test harness skeleton (WS8-T1 front-loaded)
+  └─ W0.6: Orchestrator ↔ Aurora integration contract document (WS1-T9 front-loaded)
 
 WAVE 1 (Core Engine) — 10-14 days
   ├─ WS1: Aurora Runtime (control plane)
@@ -154,6 +157,7 @@ TOTAL ESTIMATE: 30-42 days
 
 | ID | Task | Interrupt | Acceptance |
 |----|------|-----------|------------|
+| WS1-T0 | Author `AuroraPolicyVersion v1.0` initial content as YAML fixture at `backend/app/aurora/policies/v1.0.yaml`. Must include all sub-policies with initial values + rationale. | `deployable` | Policy loads via policy_loader, all decision functions find required thresholds |
 | WS1-T1 | Create `backend/app/aurora/` module structure with schema imports | `deployable` | Module loads, schemas importable |
 | WS1-T2 | Implement deterministic decision functions for backbone routing (stay on current node unless strong signal) | `behind_flag` | Unit test: given SignalSnapshot + no-conflict → stay decision |
 | WS1-T3 | Implement materiality check (signal vs threshold from policy) | `deployable` | Unit test: low-impact message → skip; commitment conflict → pass |
@@ -161,6 +165,8 @@ TOTAL ESTIMATE: 30-42 days
 | WS1-T5 | Implement 3-tier trigger (reactive/scheduled/on_demand) dispatch | `deployable` | Unit tests per trigger type |
 | WS1-T6 | Implement policy loader (read AuroraPolicyVersion from DB/config) | `deployable` | Loads v1.0 policy with all sub-policies |
 | WS1-T7 | Shadow comparison mode: run Aurora alongside dual_core_router, log agreement/divergence | `behind_flag` | Shadow comparison runs for 100 test scenarios, produces diff report |
+| WS1-T8 | Implement Aurora fallback decision: any deliberation failure (timeout / policy missing / snapshot corrupted / LLM error) → emit `TransitionDecisionRecord(decision_type=NO_OP, decision_basis=fallback, decision_mechanism=deterministic)` + stay on current node + alert to observability. No uncaught exceptions to orchestrator. | `deployable` | Unit test: corrupt snapshot → fallback TDR emitted, no exception propagated |
+| WS1-T9 | Define and document orchestrator ↔ Aurora integration contract at `docs/product/SPARKLE_AURORA_ORCHESTRATOR_INTEGRATION.md`. Specify: (a) which FSM edges trigger Aurora (pre-node-routing, pre-tool-selection, pre-response-formatting); (b) 6 outputs × 3 trigger points matrix; (c) shadow vs active call differences; (d) timeout/wait strategy. | `deployable` | Contract doc reviewed and signed off before WS1-T4 implementation |
 
 **Validation**: Run 3 Gate 0 reference flows through Aurora.deliberate(). Each produces correctly structured output.
 
@@ -217,7 +223,7 @@ TOTAL ESTIMATE: 30-42 days
 | WS3-T4 | Implement Ledger manager: append-only writes for all primitives, query by user_id/time range | `deployable` | Can write and read back FocusContract, Commitment, TDR, Claim records |
 | WS3-T5 | Implement InsightClaim lifecycle manager (open→probed→confirmed/refuted/contextualized) | `deployable` | Unit test: claim created → probe outcome received → status updated |
 | WS3-T6 | Implement dev-facing rollback CLI: read ledger + execute rollback by decision_id | `behind_flag` | CLI tool can list decisions and execute rollback, creating rollback_event record |
-| WS3-T7 | Fix existing prompt pipeline data leakage (render error_summary, recent_errors, recent_mastery_changes in prompts.py) | `deployable` | Before/after test: context dict 75% → prompt rendered 75%+ (up from ~50%) |
+| WS3-T7 | Fix existing prompt pipeline data leakage (render error_summary, recent_errors, recent_mastery_changes in prompts.py) | `deployable` | Before/after test: context dict 75% → prompt rendered 75%+ (up from ~50%). All new Alembic migrations have verified downgrade paths tested on throwaway DB. |
 
 **Validation**: SignalSnapshot produced for test user. Aurora receives it and produces valid decision. SignalProcessor executes the decision's writes.
 
@@ -444,15 +450,22 @@ TOTAL ESTIMATE: 30-42 days
 
 ## 6. Wave Execution Sequence
 
-### Wave 0: Foundation (3-4 days, Sequential)
+### Wave 0: Foundation (4-5 days, Sequential)
 
 Single agent executes. No parallelism needed.
 
 ```
 W0.1 → Deploy Gate 0 Pydantic models to backend/app/aurora/schemas/
 W0.2 → Create DB migration for new tables (FocusContract, Commitment, TDR, InsightClaim, etc.)
+       + Verify all migrations have tested downgrade paths on throwaway DB
 W0.3 → Add feature flags: AURORA_SHADOW_MODE, AURORA_ACTIVE, INTERACTION_VARIANTS
 W0.4 → Create common enum imports from Gate 0
+W0.5 → Build reference flow test harness skeleton (WS8-T1 front-loaded)
+       - Skeleton depends only on Gate 0 schemas, not on live system
+       - Wave 1 agents fill in data against this harness
+W0.6 → Author orchestrator ↔ Aurora integration contract (WS1-T9 front-loaded)
+       - docs/product/SPARKLE_AURORA_ORCHESTRATOR_INTEGRATION.md
+       - Must be signed off before Wave 1 agents begin WS1-T4
 ```
 
 ### Wave 1: Core Engine (10-14 days, 4 Parallel Agents)
@@ -469,11 +482,12 @@ Agent C: WS3 (Signal Pipeline)
   - Independent of Aurora and Graph; only needs schema definitions
   - WS3-T7 (prompt fix) can run immediately
 
-Agent D: WS4 (Scenario Pack)
+Agent D: WS4 (Scenario Pack) + WS7-T8 (Seed Library import to DistilledStrategy)
   - Independent; produces the first pack that everything validates against
+  - WS7-T8 imported here so Wave 1 validation finds strategies in retrieval
 ```
 
-**Wave 1 Gate**: All 4 workstreams complete their `deployable` tasks. Aurora can produce a TDR given a hand-crafted SignalSnapshot. Graph can traverse a backbone. SignalPipeline can assemble a snapshot.
+**Wave 1 Gate**: All 4 workstreams complete their `deployable` tasks. Aurora can produce a TDR given a hand-crafted SignalSnapshot. Graph can traverse a backbone. SignalPipeline can assemble a snapshot. **Additionally: at least 1 reference flow (Main Flow) runs end-to-end with real SignalAggregator → real Aurora.deliberate() → real Graph execution → real Ledger write. Pack may be a minimal 1-node stub, but no component may be mocked.**
 
 ### Wave 2: User Experience (10-14 days, 4 Parallel Agents)
 
@@ -553,6 +567,7 @@ Agent K: Migration (WS-M)
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | Aurora LLM calls too slow | Medium | High | Default to deterministic; LLM only for hybrid/critical decisions |
+| Aurora self-failure cascades to block user | Low | Critical | WS1-T8 fallback TDR + WS10 alert on fallback_count > threshold |
 | SignalSnapshot assembly fails silently | Medium | High | WS10 freshness monitor alerts on stale core signals |
 | Workstream file conflict | Low | High | File ownership matrix + CI check that no two PRs touch same file |
 | Graph runtime too complex for MVP | Medium | Medium | First version: if-else backbone traversal only, no dynamic graph |

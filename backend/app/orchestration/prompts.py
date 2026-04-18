@@ -2062,6 +2062,13 @@ def _extract_cognitive_context_payload(context: dict[str, Any] | None) -> dict[s
     return payload if isinstance(payload, dict) else {}
 
 
+def _extract_profile_context_payload(context: dict[str, Any] | None) -> dict[str, Any]:
+    payload = context.get("profile_context") if isinstance(context, dict) else None
+    if hasattr(payload, "model_dump"):
+        payload = payload.model_dump(mode="json")
+    return payload if isinstance(payload, dict) else {}
+
+
 def _has_signal_payload(value: Any) -> bool:
     if value is None:
         return False
@@ -2072,6 +2079,7 @@ def _has_signal_payload(value: Any) -> bool:
 
 def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str, Any]) -> dict[str, Any]:
     cognitive_context = _extract_cognitive_context_payload(context)
+    profile_context = _extract_profile_context_payload(context)
     tracked_fields = ("error_summary", "recent_errors", "recent_mastery_changes")
     field_status: dict[str, Any] = {}
     for key in tracked_fields:
@@ -2080,6 +2088,13 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
             sources.append("context")
         if _has_signal_payload(cognitive_context.get(key)):
             sources.append("cognitive_context")
+        if _has_signal_payload(profile_context.get(key)):
+            sources.append("profile_context")
+        knowledge_summary = profile_context.get("knowledge_summary") if isinstance(profile_context, dict) else {}
+        if key == "recent_mastery_changes" and isinstance(knowledge_summary, dict) and _has_signal_payload(
+            knowledge_summary.get("recent_mastery_changes")
+        ):
+            sources.append("profile_context.knowledge_summary")
 
         normalized_value = normalized.get(key)
         item_count = 0
@@ -2414,6 +2429,7 @@ def _normalize_user_context(context: dict) -> dict:
     """统一用户画像结构，避免字段重复与冲突"""
     normalized: dict[str, Any] = {}
     cognitive_context = _extract_cognitive_context_payload(context)
+    profile_context = _extract_profile_context_payload(context)
 
     user_ctx = context.get("user_context")
     if user_ctx:
@@ -2450,6 +2466,10 @@ def _normalize_user_context(context: dict) -> dict:
     if context.get("knowledge_summary") and "knowledge_summary" not in normalized:
         if isinstance(context.get("knowledge_summary"), dict):
             normalized["knowledge_summary"] = context["knowledge_summary"]
+    if "knowledge_summary" not in normalized:
+        profile_knowledge_summary = profile_context.get("knowledge_summary")
+        if isinstance(profile_knowledge_summary, dict):
+            normalized["knowledge_summary"] = profile_knowledge_summary
 
     for key in ("error_summary", "recent_errors", "recent_mastery_changes"):
         direct_value = context.get(key)
@@ -2459,6 +2479,17 @@ def _normalize_user_context(context: dict) -> dict:
         cognitive_value = cognitive_context.get(key)
         if _has_signal_payload(cognitive_value):
             normalized[key] = cognitive_value
+            continue
+        profile_value = profile_context.get(key)
+        if _has_signal_payload(profile_value):
+            normalized[key] = profile_value
+            continue
+        if key == "recent_mastery_changes":
+            knowledge_summary = profile_context.get("knowledge_summary")
+            if isinstance(knowledge_summary, dict):
+                nested_value = knowledge_summary.get("recent_mastery_changes")
+                if _has_signal_payload(nested_value):
+                    normalized[key] = nested_value
 
     llm_profile = context.get("llm_profile")
     if isinstance(llm_profile, dict):
