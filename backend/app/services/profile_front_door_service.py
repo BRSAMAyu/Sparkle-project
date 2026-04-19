@@ -93,18 +93,20 @@ class ProfileFrontDoorService:
                 inferred_backups={},
             )
         )
+        evidence_catalog = self._build_evidence_catalog(profile_context)
 
         claims = [
             self._build_claim_item(
                 claim,
                 highlighted_claim_id=highlighted_claim_id,
                 include_actions=include_actions,
+                evidence_catalog=evidence_catalog,
             )
             for claim in list(transparency_payload.get("claims") or [])[:4]
             if isinstance(claim, dict)
         ]
         predictions = [
-            self._build_prediction_item(prediction)
+            self._build_prediction_item(prediction, evidence_catalog=evidence_catalog)
             for prediction in list(transparency_payload.get("predictions") or [])[:2]
             if isinstance(prediction, dict)
         ]
@@ -139,6 +141,11 @@ class ProfileFrontDoorService:
             "calibration": calibration,
             "evidence_legend": [
                 {
+                    "id": "raw_evidence",
+                    "label": "原始依据",
+                    "description": "点击后可查看允许暴露的 L0 依据或明确的脱敏/缺失状态。",
+                },
+                {
                     "id": "compiled_claim",
                     "label": "编译结论",
                     "description": "这是基于证据编译后的当前判断，不等于不可变事实。",
@@ -154,14 +161,18 @@ class ProfileFrontDoorService:
                     "description": "这是用户明确提交的修正，会优先影响后续读路径。",
                 },
             ],
-            "evidence_resolution": "source_markers_only",
+            "evidence_resolution": "l0_clickable_refs",
             "read_lane": "canonical_profile_front_door",
             "preference_version": profile_context.preference_version,
             "contract_version": getattr(contract, "contract_version", None),
             "generated_at": state.generated_at,
-            "binding_note": "当前前门展示的是 canonical 结论 + 来源标记；尚未暴露逐条 L0 evidence id。",
+            "binding_note": (
+                "当前前门展示的是 canonical 结论 + 可点击的 L0 依据引用；"
+                "若没有可暴露依据，会明确显示为缺失或脱敏。"
+            ),
             "follow_up_hint": "如果哪一条不对，你可以直接在聊天里指出，我会按用户纠正通道处理。",
             "confirmation": dict(confirmation or {}),
+            "evidence_catalog_status": evidence_catalog["status"],
         }
 
     @staticmethod
@@ -181,10 +192,12 @@ class ProfileFrontDoorService:
         *,
         highlighted_claim_id: str | None,
         include_actions: bool,
+        evidence_catalog: dict[str, Any],
     ) -> dict[str, Any]:
         claim_id = _strip(claim.get("id"))
         label = _strip(claim.get("label") or claim_id)
         display_value = _display_value(claim.get("value"))
+        evidence_refs = self._claim_evidence_refs(claim, evidence_catalog=evidence_catalog)
         direct_controls = [
             control
             for control in list(claim.get("controls") or [])
@@ -205,6 +218,7 @@ class ProfileFrontDoorService:
             "evidence_class": "compiled_claim",
             "evidence_label": "编译结论",
             "source": _strip(claim.get("source")),
+            "family": _strip(claim.get("family")),
             "surfaces": [str(item).strip() for item in list(claim.get("surfaces") or []) if str(item).strip()],
             "freshness": _strip(claim.get("freshness")),
             "status": _strip(claim.get("status")),
@@ -212,6 +226,11 @@ class ProfileFrontDoorService:
             "correction_mode": "direct" if supports_direct_correction else "discussion_only",
             "correction_hint": "可直接在聊天里纠正" if supports_direct_correction else "如不准确，请在聊天里补充上下文",
             "highlighted": bool(highlighted_claim_id and claim_id == highlighted_claim_id),
+            "evidence_refs": evidence_refs,
+            "evidence_count": len(evidence_refs),
+            "evidence_cta": "查看依据" if evidence_refs else "",
+            "evidence_summary": f"{len(evidence_refs)} 条可点击依据" if evidence_refs else "暂无可点击依据",
+            "evidence_missing": False,
         }
         if include_actions:
             item["actions"] = self._build_claim_actions(
@@ -230,10 +249,11 @@ class ProfileFrontDoorService:
             return f"当前这条判断是：{label} = {value}"
         return f"当前这条判断围绕「{label}」展开，但值还不够稳定。"
 
-    def _build_prediction_item(self, prediction: dict[str, Any]) -> dict[str, Any]:
+    def _build_prediction_item(self, prediction: dict[str, Any], *, evidence_catalog: dict[str, Any]) -> dict[str, Any]:
         kind = _strip(prediction.get("kind") or prediction.get("id"))
         level = _strip(prediction.get("level"))
         explanation = _strip(prediction.get("explanation"))
+        evidence_refs = self._prediction_evidence_refs(prediction, evidence_catalog=evidence_catalog)
         return {
             "id": _strip(prediction.get("id")),
             "label": kind,
@@ -248,6 +268,11 @@ class ProfileFrontDoorService:
                 str(item).strip() for item in list(prediction.get("evidence_signals") or []) if str(item).strip()
             ],
             "calibration_status": _strip(prediction.get("calibration_status")),
+            "evidence_refs": evidence_refs,
+            "evidence_count": len(evidence_refs),
+            "evidence_cta": "查看依据" if evidence_refs else "",
+            "evidence_summary": f"{len(evidence_refs)} 条可点击依据" if evidence_refs else "暂无可点击依据",
+            "evidence_missing": False,
         }
 
     def _build_recent_change_item(self, item: dict[str, Any]) -> dict[str, Any]:
@@ -265,6 +290,84 @@ class ProfileFrontDoorService:
             "evidence_class": evidence_class,
             "evidence_label": evidence_label,
         }
+
+    @staticmethod
+    def _build_evidence_catalog(profile_context: ProfileContext) -> dict[str, Any]:
+        weak_concepts = [
+            {"type": "concept", "id": str(item.node_id), "schema_version": "concept.v1"}
+            for item in list(profile_context.knowledge_summary.weak_spots or [])
+            if str(item.node_id or "").strip() and not str(item.node_id).startswith("derived:")
+        ]
+        recent_concepts = [
+            {"type": "concept", "id": str(item.node_id), "schema_version": "concept.v1"}
+            for item in list(profile_context.knowledge_summary.recent_mastery_changes or [])
+            if str(item.node_id or "").strip() and not str(item.node_id).startswith("derived:")
+        ]
+        recent_errors = [
+            {"type": "error", "id": str(item.get("id")), "schema_version": "error.v1"}
+            for item in list(profile_context.recent_errors or [])
+            if _strip(item.get("id"))
+        ]
+        return {
+            "status": "known" if any((weak_concepts, recent_concepts, recent_errors)) else "sparse",
+            "weak_concepts": weak_concepts[:3],
+            "recent_concepts": recent_concepts[:3],
+            "recent_errors": recent_errors[:3],
+        }
+
+    @staticmethod
+    def _dedupe_evidence_refs(*groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        seen: set[tuple[str, str]] = set()
+        refs: list[dict[str, Any]] = []
+        for group in groups:
+            for item in group:
+                key = (_strip(item.get("type")), _strip(item.get("id")))
+                if not all(key) or key in seen:
+                    continue
+                seen.add(key)
+                refs.append(dict(item))
+        return refs[:3]
+
+    def _claim_evidence_refs(self, claim: dict[str, Any], *, evidence_catalog: dict[str, Any]) -> list[dict[str, Any]]:
+        source = _strip(claim.get("source"))
+        family = _strip(claim.get("family"))
+        claim_id = _strip(claim.get("id"))
+
+        if source == "knowledge_summary" or family == "knowledge":
+            return self._dedupe_evidence_refs(
+                evidence_catalog.get("weak_concepts") or [],
+                evidence_catalog.get("recent_concepts") or [],
+            )
+        if "error" in source or claim_id in {"anti_patterns", "cognitive_tendencies"} or family == "cognitive":
+            return self._dedupe_evidence_refs(
+                evidence_catalog.get("recent_errors") or [],
+                evidence_catalog.get("weak_concepts") or [],
+            )
+        if source in {"achievement_signals", "workflow_signals"}:
+            return self._dedupe_evidence_refs(
+                evidence_catalog.get("recent_concepts") or [],
+                evidence_catalog.get("recent_errors") or [],
+            )
+        return []
+
+    def _prediction_evidence_refs(
+        self,
+        prediction: dict[str, Any],
+        *,
+        evidence_catalog: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        evidence_signals = {str(item).strip() for item in list(prediction.get("evidence_signals") or []) if str(item).strip()}
+        if "error_summary" in evidence_signals:
+            return self._dedupe_evidence_refs(
+                evidence_catalog.get("recent_errors") or [],
+                evidence_catalog.get("weak_concepts") or [],
+            )
+        if "recent_mastery_changes" in evidence_signals:
+            return self._dedupe_evidence_refs(
+                evidence_catalog.get("recent_concepts") or [],
+                evidence_catalog.get("weak_concepts") or [],
+            )
+        return self._dedupe_evidence_refs(evidence_catalog.get("weak_concepts") or [])
 
     @staticmethod
     def _build_calibration(raw: Any) -> dict[str, Any]:

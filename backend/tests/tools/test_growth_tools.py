@@ -152,6 +152,30 @@ async def test_get_profile_front_door_tool_prefers_runtime_profile_context():
                 TOOL_RUNTIME_CONTEXT_KEY: {
                     "profile_context": {
                         "preference_version": 3,
+                        "knowledge_summary": {
+                            "weak_spots": [
+                                {
+                                    "node_id": "9c8f3cb3-bd56-4d55-9bb3-a7bbac2ef001",
+                                    "node_name": "热力学第二定律",
+                                    "mastery": 41.0,
+                                }
+                            ],
+                            "recent_mastery_changes": [
+                                {
+                                    "node_id": "9c8f3cb3-bd56-4d55-9bb3-a7bbac2ef001",
+                                    "node_name": "热力学第二定律",
+                                    "old_mastery": 36.0,
+                                    "new_mastery": 41.0,
+                                    "changed_at": "2026-04-20T09:30:00",
+                                }
+                            ],
+                        },
+                        "recent_errors": [
+                            {
+                                "id": "c5f9d6f1-61fa-4fc0-a0ca-8af50a6b1234",
+                                "question_preview": "熵增方向判断错题",
+                            }
+                        ],
                         "user_insight_state": {
                             "version": "2.0",
                             "signal_evidence": [
@@ -209,8 +233,10 @@ async def test_get_profile_front_door_tool_prefers_runtime_profile_context():
     assert payload["claims"][0]["id"] == "achievement_motivation_response"
     assert payload["claims"][0]["evidence_class"] == "compiled_claim"
     assert payload["claims"][0]["actions"][0]["label"] == "这条不对"
+    assert payload["claims"][0]["evidence_refs"][0]["type"] == "concept"
     assert payload["predictions"][0]["evidence_class"] == "prediction"
     assert payload["calibration"]["calibration_posture"] == "supported"
+    assert payload["evidence_resolution"] == "l0_clickable_refs"
     assert payload["binding_note"].startswith("当前前门展示的是 canonical")
 
 

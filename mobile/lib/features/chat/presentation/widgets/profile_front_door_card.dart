@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 
 class ProfileFrontDoorCard extends StatelessWidget {
   const ProfileFrontDoorCard({
@@ -226,6 +228,7 @@ class _ClaimTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = _mapList(claim['actions']);
+    final evidenceRefs = _parseEvidenceRefs(claim['evidence_refs']);
     return _SectionCard(
       color: claim['highlighted'] == true
           ? DS.primaryBase.withValues(alpha: 0.06)
@@ -310,6 +313,47 @@ class _ClaimTile extends StatelessWidget {
                   ),
             ),
           ],
+          if (evidenceRefs.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            InkWell(
+              onTap: () => unawaited(
+                EvidenceDrawer.show(
+                  context,
+                  refs: evidenceRefs,
+                  evidenceMissing: false,
+                ),
+              ),
+              borderRadius: DS.borderRadius12,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing2,
+                  vertical: DS.spacing2,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.dataset_linked_outlined,
+                      size: DS.iconSizeSm,
+                      color: DS.info,
+                    ),
+                    const SizedBox(width: DS.spacing6),
+                    Flexible(
+                      child: Text(
+                        claim['evidence_cta']?.toString().isNotEmpty == true
+                            ? '${claim['evidence_cta']} · ${claim['evidence_summary']}'
+                            : claim['evidence_summary']?.toString() ?? '查看依据',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.info,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (actions.isNotEmpty && onAction != null) ...[
             const SizedBox(height: DS.spacing10),
             Wrap(
@@ -339,6 +383,7 @@ class _PredictionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final evidenceRefs = _parseEvidenceRefs(item['evidence_refs']);
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,6 +424,47 @@ class _PredictionTile extends StatelessWidget {
                     color: DS.neutral900,
                     fontWeight: DS.fontWeightSemibold,
                   ),
+            ),
+          ],
+          if (evidenceRefs.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            InkWell(
+              onTap: () => unawaited(
+                EvidenceDrawer.show(
+                  context,
+                  refs: evidenceRefs,
+                  evidenceMissing: false,
+                ),
+              ),
+              borderRadius: DS.borderRadius12,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing2,
+                  vertical: DS.spacing2,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.dataset_linked_outlined,
+                      size: DS.iconSizeSm,
+                      color: DS.info,
+                    ),
+                    const SizedBox(width: DS.spacing6),
+                    Flexible(
+                      child: Text(
+                        item['evidence_cta']?.toString().isNotEmpty == true
+                            ? '${item['evidence_cta']} · ${item['evidence_summary']}'
+                            : item['evidence_summary']?.toString() ?? '查看依据',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.info,
+                              fontWeight: DS.fontWeightMedium,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ],
@@ -438,4 +524,15 @@ Map<String, dynamic> _asMap(dynamic raw) {
     return Map<String, dynamic>.from(raw);
   }
   return const <String, dynamic>{};
+}
+
+List<EvidenceRefModel> _parseEvidenceRefs(dynamic raw) {
+  if (raw is List) {
+    return raw
+        .whereType<Map>()
+        .map((item) => EvidenceRefModel.fromJson(Map<String, dynamic>.from(item)))
+        .where((item) => item.type.isNotEmpty && item.id.isNotEmpty)
+        .toList();
+  }
+  return const <EvidenceRefModel>[];
 }
