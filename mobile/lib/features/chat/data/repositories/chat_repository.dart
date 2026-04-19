@@ -84,15 +84,20 @@ class ChatRepository {
   }
 
   /// 发送任务相关消息 (非流式)
-  Future<ChatResponseModel> sendMessageToTask(
+  /// Returns the response model and any WS-D dormant injection metadata.
+  Future<({ChatResponseModel response, Map<String, dynamic>? dormantInjection})>
+      sendMessageToTask(
     String taskId,
     String message,
     String? conversationId,
   ) async {
     if (DemoDataService.isDemoMode) {
-      return ChatResponseModel(
-        message: 'Demo response to task: $message',
-        conversationId: 'demo_id',
+      return (
+        response: ChatResponseModel(
+          message: 'Demo response to task: $message',
+          conversationId: 'demo_id',
+        ),
+        dormantInjection: null,
       );
     }
     final response = await _dio.post<Map<String, dynamic>>(
@@ -104,7 +109,13 @@ class ChatRepository {
     );
     final payload =
         ApiResponseParser.unwrapMap(response.data, action: 'sendMessageToTask');
-    return ChatResponseModel.fromJson(payload);
+    // Extract dormant metadata before fromJson strips unknown keys
+    final dormantInjection =
+        payload['dormant_injection'] as Map<String, dynamic>?;
+    return (
+      response: ChatResponseModel.fromJson(payload),
+      dormantInjection: dormantInjection,
+    );
   }
 
   /// 获取对话历史

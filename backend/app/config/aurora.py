@@ -50,6 +50,10 @@ class AuroraFlags(BaseSettings):
         default=False,
         validation_alias=AliasChoices("AURORA_ROUTING_MODE_ENABLED"),
     )
+    TASK_ASSISTANT_DORMANT_MODE: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("TASK_ASSISTANT_DORMANT_MODE"),
+    )
 
     @field_validator(
         "INTERACTION_VARIANTS",

@@ -79,6 +79,7 @@ class ChatResponse(BaseModel):
     errors: list[dict[str, str]] | None = None
     requires_confirmation: bool = False
     confirmation_data: dict | None = None
+    dormant_injection: dict | None = None     # WS-D: dormant metadata for mobile
 
 @router.post("/task/{task_id}", response_model=ChatResponse)
 async def chat_with_task_context(
@@ -122,6 +123,35 @@ async def chat_with_task_context(
         "current_focus": "The user is currently working on this task."
     }
     user_context["current_task"] = task_context
+
+    # --- WS-D: Dormant injection (behind its own flag, sidecar semantics) ---
+    dormant_injection_block = ""
+    dormant_injection_meta: dict | None = None
+    try:
+        from app.config.aurora import aurora_flags
+        if aurora_flags.TASK_ASSISTANT_DORMANT_MODE:
+            from app.task_assistant.dormant_injector import DormantInjector
+            injector = DormantInjector()
+            injection = await injector.inject(task.id, current_user.id)
+            # Build injection context block only from available items
+            available = [it for it in injection.items if it.available]
+            if available:
+                lines = ["\nAurora dormant injection (read-only context):"]
+                for item in available:
+                    if item.payload:
+                        lines.append(f"- [{item.kind.value}] {item.payload}")
+                lines.append(
+                    f"- ux_intent={injection.ux_intent}, "
+                    f"presence={injection.aurora_presence}"
+                )
+                dormant_injection_block = "\n".join(lines)
+            # Store injection data for outcome capture + mobile metadata
+            injection_data = injection.model_dump(mode="json")
+            user_context["_dormant_injection"] = injection_data
+            dormant_injection_meta = injection_data
+    except Exception as exc:
+        logger.debug(f"WS-D: dormant injection skipped: {exc}")
+
     conversation_history_raw = await get_conversation_history(
         db, current_user.id, request.conversation_id
     )
@@ -144,6 +174,8 @@ async def chat_with_task_context(
         "- If the task has no valid plan context, continue helping within the "
         "task itself instead of blocking on plan data."
     )
+    if dormant_injection_block:
+        system_prompt += dormant_injection_block
     # 4. LLM Call (Standard Flow)
     # This duplicates the logic of the main chat endpoint but simplifies for this phase
     # Ideally, refactor common logic into a service method. For now, we inline for safety.
@@ -224,7 +256,23 @@ async def chat_with_task_context(
         tool_results=[tr.model_dump() for tr in tool_results],
         task_id=task.id,
     )
-    return ChatResponse(**response_data, conversation_id=session_id_str)
+
+    # --- WS-D: Outcome capture for nearline next-turn optimization ---
+    try:
+        if user_context.get("_dormant_injection"):
+            from app.task_assistant.outcome_capture import OutcomeCapture
+            cap = OutcomeCapture()
+            await cap.record(
+                task_id=task.id,
+                user_id=current_user.id,
+                conversation_id=session_id_uuid,
+                turn_number=len(conversation_history_raw) // 2 + 1,
+                injection_was_used=bool(dormant_injection_block),
+            )
+    except Exception as exc:
+        logger.debug(f"WS-D: outcome capture skipped: {exc}")
+
+    return ChatResponse(**response_data, conversation_id=session_id_str, dormant_injection=dormant_injection_meta)
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(

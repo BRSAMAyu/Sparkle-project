@@ -55,6 +55,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
     final chatState = ref.watch(taskChatProvider(widget.taskId));
     final messages = chatState.messages;
     final lastMessage = messages.isNotEmpty ? messages.last : null;
+    final dormantInjection = chatState.dormantInjection;
 
     return GraphiteCardSurface(
       padding: EdgeInsets.zero,
@@ -90,6 +91,26 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                     ),
                   ),
                   const Spacer(),
+                  // Dormant indicator chip
+                  if (dormantInjection?.hasInjection ?? false)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.primaryBase.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'context',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: DS.primaryBase,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: DS.spacing8),
                   Icon(
                     _isExpanded ? Icons.expand_less : Icons.expand_more,
                     color: DS.neutral500,
