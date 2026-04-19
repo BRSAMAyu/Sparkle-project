@@ -6,11 +6,13 @@ from .metrics import (
     AURORA_FALLBACK_TOTAL,
     AURORA_MATERIALITY_TOTAL,
     AURORA_SHADOW_DIVERGENCE_TOTAL,
+    AURORA_SHADOW_HOOK_TOTAL,
     AURORA_TRIGGER_DISPATCH_TOTAL,
     record_decision,
     record_fallback,
     record_materiality,
     record_shadow_divergence,
+    record_shadow_hook,
     record_trigger_dispatch,
 )
 
@@ -20,11 +22,12 @@ __all__ = [
     "AURORA_FALLBACK_TOTAL",
     "AURORA_MATERIALITY_TOTAL",
     "AURORA_SHADOW_DIVERGENCE_TOTAL",
+    "AURORA_SHADOW_HOOK_TOTAL",
     "AURORA_TRIGGER_DISPATCH_TOTAL",
     "record_decision",
     "record_fallback",
     "record_materiality",
     "record_shadow_divergence",
+    "record_shadow_hook",
     "record_trigger_dispatch",
 ]
-

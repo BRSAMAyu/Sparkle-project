@@ -9,7 +9,7 @@ from typing import Any, Iterable
 from uuid import UUID, uuid4
 
 from app.aurora.engine import AuroraDecisionContext, AuroraEngine
-from app.aurora.observability import record_shadow_divergence
+from app.aurora.observability import record_shadow_divergence, record_shadow_hook
 from app.aurora.policy_loader import load_policy_version
 from app.aurora.schemas import (
     AuroraPresenceLevel,
@@ -20,7 +20,7 @@ from app.aurora.schemas import (
     UXIntent,
 )
 from app.config import aurora_flags
-from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRoutingInput
+from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRoutingInput, dual_core_router
 
 
 @dataclass(frozen=True)
@@ -39,6 +39,19 @@ class AuroraProjectedDualCoreResult:
     snapshot: SignalSnapshot
     transition_decision: TransitionDecisionRecord
     projected_decision: DualCoreDecision
+
+
+@dataclass(frozen=True)
+class ShadowHookObservation:
+    """Shadow-only comparison payload for pre-tool and pre-response hooks."""
+
+    hook_point: str
+    trigger_point: str
+    legacy_mode: str
+    aurora_mode: str
+    agreed: bool
+    divergence_reason: str | None
+    routing_result: AuroraProjectedDualCoreResult
 
 
 def _utcnow() -> datetime:
@@ -331,6 +344,109 @@ def route_dual_core_via_aurora(
         snapshot=snapshot,
         transition_decision=transition_decision,
         projected_decision=projected_decision,
+    )
+
+
+def _shadow_only_hook_enabled() -> bool:
+    return aurora_flags.AURORA_SHADOW_MODE and not aurora_flags.AURORA_ACTIVE
+
+
+def _prepare_shadow_hook_observation(
+    routing_input: DualCoreRoutingInput,
+    *,
+    user_id: str,
+    hook_point: str,
+    trigger_point: str,
+    current_node: str = "dual_core_shadow",
+    candidate_node: str | None = None,
+    policy_version: str = "v1.0",
+    enabled: bool | None = None,
+) -> ShadowHookObservation | None:
+    shadow_only_enabled = _shadow_only_hook_enabled()
+    if enabled is not None:
+        shadow_only_enabled = shadow_only_enabled and bool(enabled)
+    if not shadow_only_enabled:
+        return None
+
+    routing_result = route_dual_core_via_aurora(
+        routing_input,
+        user_id=user_id,
+        current_node=current_node,
+        candidate_node=candidate_node,
+        trigger_point=trigger_point,
+        policy_version=policy_version,
+    )
+    legacy_decision = dual_core_router.route(routing_input)
+    aurora_mode = routing_result.projected_decision.mode
+    agreed = legacy_decision.mode == aurora_mode
+    divergence_reason = None if agreed else f"legacy={legacy_decision.mode}, aurora={aurora_mode}"
+
+    record_shadow_hook(
+        hook_point=hook_point,
+        trigger_point=trigger_point,
+        outcome="aligned" if agreed else "diverged",
+        enabled=True,
+    )
+    record_shadow_divergence_if_needed(
+        legacy_decision=legacy_decision,
+        aurora_decision=routing_result.projected_decision,
+        trigger_point=trigger_point,
+        enabled=True,
+    )
+    return ShadowHookObservation(
+        hook_point=hook_point,
+        trigger_point=trigger_point,
+        legacy_mode=legacy_decision.mode,
+        aurora_mode=aurora_mode,
+        agreed=agreed,
+        divergence_reason=divergence_reason,
+        routing_result=routing_result,
+    )
+
+
+def prepare_shadow_pre_tool_selection_hook(
+    routing_input: DualCoreRoutingInput,
+    *,
+    user_id: str,
+    current_node: str = "dual_core_shadow",
+    candidate_node: str | None = None,
+    policy_version: str = "v1.0",
+    enabled: bool | None = None,
+) -> ShadowHookObservation | None:
+    """Prepare a shadow-only hook for pre-tool-selection routing."""
+
+    return _prepare_shadow_hook_observation(
+        routing_input,
+        user_id=user_id,
+        hook_point="pre-tool-selection",
+        trigger_point="pre-tool-selection",
+        current_node=current_node,
+        candidate_node=candidate_node,
+        policy_version=policy_version,
+        enabled=enabled,
+    )
+
+
+def prepare_shadow_pre_response_formatting_hook(
+    routing_input: DualCoreRoutingInput,
+    *,
+    user_id: str,
+    current_node: str = "dual_core_shadow",
+    candidate_node: str | None = None,
+    policy_version: str = "v1.0",
+    enabled: bool | None = None,
+) -> ShadowHookObservation | None:
+    """Prepare a shadow-only hook for pre-response-formatting routing."""
+
+    return _prepare_shadow_hook_observation(
+        routing_input,
+        user_id=user_id,
+        hook_point="pre-response-formatting",
+        trigger_point="pre-response-formatting",
+        current_node=current_node,
+        candidate_node=candidate_node,
+        policy_version=policy_version,
+        enabled=enabled,
     )
 
 

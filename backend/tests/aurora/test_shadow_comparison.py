@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+import json
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Iterable
 from uuid import UUID
+from unittest.mock import patch
 
 from app.aurora.engine import AuroraDecisionContext, AuroraEngine
-from app.aurora.migration import project_aurora_to_dual_core_mode
+from app.aurora.migration import (
+    prepare_shadow_pre_response_formatting_hook,
+    prepare_shadow_pre_tool_selection_hook,
+    project_aurora_to_dual_core_mode,
+)
 from app.aurora.policy_loader import load_policy_version
 from app.aurora.schemas import SignalSnapshot, TransitionDecisionRecord
 from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router
@@ -16,6 +24,7 @@ _POLICY = load_policy_version("v1.0")
 _ENGINE = AuroraEngine()
 _USER_ID = UUID("11111111-1111-1111-1111-111111111111")
 _NOW = datetime(2026, 4, 19, 10, 0, 0)
+_SHADOW_CORPUS_PATH = Path(__file__).with_name("fixtures") / "shadow_corpus" / "shadow_corpus.json"
 
 
 @dataclass(frozen=True)
@@ -60,6 +69,77 @@ def _snapshot(
         total_tokens=900,
         budget_limit=4000,
     )
+
+
+def _load_shadow_corpus() -> tuple[dict[str, str], ...]:
+    payload = json.loads(_SHADOW_CORPUS_PATH.read_text(encoding="utf-8"))
+    return tuple(dict(case) for case in payload["cases"])
+
+
+def _corpus_routing_input(case_kind: str) -> DualCoreRoutingInput:
+    if case_kind == "execution_clear":
+        return DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.95,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 2},
+            session_length_preference=25,
+            difficulty_preference=0.5,
+        )
+    if case_kind == "support_first":
+        return DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.83,
+            information_sufficient=False,
+            primary_challenge_area="emotional",
+            recent_sentiment_distribution={"stressed": 2, "anxious": 1},
+            has_active_plan=True,
+            plan_health_status="critical",
+            recent_task_feedback_distribution={"too_difficult": 3, "too_long": 1},
+            emotional_block_detected=True,
+        )
+    if case_kind == "balanced":
+        return DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.61,
+            information_sufficient=True,
+            primary_challenge_area="cognitive",
+            recent_sentiment_distribution={"neutral": 2, "frustrated": 1},
+            has_active_plan=False,
+            plan_health_status=None,
+            recent_task_feedback_distribution={"too_long": 1},
+            current_guidance="need help regroup",
+        )
+    if case_kind == "concept_confusion":
+        return DualCoreRoutingInput(
+            intent="knowledge",
+            intent_confidence=0.88,
+            information_sufficient=False,
+            primary_challenge_area="cognitive",
+            recent_sentiment_distribution={"neutral": 2},
+            has_active_plan=True,
+            plan_health_status="warning",
+            recent_task_feedback_distribution={"unclear": 2},
+            cognitive_mode_suggested=True,
+        )
+    if case_kind == "procrastination":
+        return DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.9,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="warning",
+            recent_task_feedback_distribution={"too_long": 2, "too_difficult": 1},
+            procrastination_pattern=True,
+            behavior_pattern_names=["拖延回避", "完美主义"],
+        )
+    raise ValueError(f"unsupported corpus kind: {case_kind}")
 
 
 def _cases() -> tuple[ShadowComparisonCase, ...]:
@@ -370,3 +450,51 @@ def test_shadow_comparison_current_divergence_profile_is_explicit() -> None:
     assert divergences == {
         "routine_chat": "legacy=cognitive_first, aurora=balanced, basis=mixed, decision=stay"
     }
+
+
+def test_shadow_corpus_expands_to_fifty_entries_across_both_hooks() -> None:
+    corpus = _load_shadow_corpus()
+    hook_counts = Counter(case["hook_point"] for case in corpus)
+    kind_counts = Counter(case["case_kind"] for case in corpus)
+    observations = []
+
+    assert len(corpus) == 50
+    assert hook_counts == Counter({"pre-tool-selection": 25, "pre-response-formatting": 25})
+    assert kind_counts == Counter(
+        {
+            "balanced": 10,
+            "concept_confusion": 10,
+            "execution_clear": 10,
+            "procrastination": 10,
+            "support_first": 10,
+        }
+    )
+
+    with (
+        patch("app.aurora.migration.aurora_flags.AURORA_SHADOW_MODE", True),
+        patch("app.aurora.migration.aurora_flags.AURORA_ACTIVE", False),
+    ):
+        for index, case in enumerate(corpus, start=1):
+            routing_input = _corpus_routing_input(case["case_kind"])
+            user_id = f"00000000-0000-0000-0000-{index:012d}"
+            if case["hook_point"] == "pre-tool-selection":
+                observation = prepare_shadow_pre_tool_selection_hook(
+                    routing_input,
+                    user_id=user_id,
+                    enabled=True,
+                )
+            else:
+                observation = prepare_shadow_pre_response_formatting_hook(
+                    routing_input,
+                    user_id=user_id,
+                    enabled=True,
+                )
+            assert observation is not None
+            assert observation.hook_point == case["hook_point"]
+            observations.append(observation)
+
+    aligned = sum(1 for observation in observations if observation.agreed)
+    diverged = len(observations) - aligned
+
+    assert aligned > 0
+    assert diverged > 0

@@ -53,6 +53,13 @@ AURORA_SHADOW_DIVERGENCE_TOTAL = _get_or_create_metric(
     ["signal", "trigger_point"],
 )
 
+AURORA_SHADOW_HOOK_TOTAL = _get_or_create_metric(
+    Counter,
+    "sparkle_aurora_shadow_hook_total",
+    "Aurora shadow-only hook captures by hook point, trigger point, and outcome",
+    ["hook_point", "trigger_point", "outcome"],
+)
+
 AURORA_DECISION_LATENCY_SECONDS = _get_or_create_metric(
     Histogram,
     "sparkle_aurora_decision_latency_seconds",
@@ -150,6 +157,35 @@ def record_shadow_divergence(
     if not _enabled(enabled):
         return
     AURORA_SHADOW_DIVERGENCE_TOTAL.labels(signal=signal, trigger_point=trigger_point).inc()
+    emit_observability_event(
+        "shadow_divergence",
+        enabled=enabled,
+        signal=signal,
+        trigger_point=trigger_point,
+    )
+
+
+def record_shadow_hook(
+    hook_point: str,
+    trigger_point: str,
+    outcome: str,
+    *,
+    enabled: bool | None = None,
+) -> None:
+    if not _enabled(enabled):
+        return
+    AURORA_SHADOW_HOOK_TOTAL.labels(
+        hook_point=hook_point,
+        trigger_point=trigger_point,
+        outcome=outcome,
+    ).inc()
+    emit_observability_event(
+        "shadow_hook",
+        enabled=enabled,
+        hook_point=hook_point,
+        trigger_point=trigger_point,
+        outcome=outcome,
+    )
 
 
 class decision_latency:
@@ -172,4 +208,3 @@ class decision_latency:
             perf_counter() - self._start
         )
         return None
-

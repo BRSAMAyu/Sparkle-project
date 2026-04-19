@@ -5,11 +5,13 @@ from unittest.mock import patch
 from app.aurora.migration import (
     build_shadow_snapshot_from_routing_input,
     project_aurora_to_dual_core_mode,
+    prepare_shadow_pre_response_formatting_hook,
+    prepare_shadow_pre_tool_selection_hook,
     record_shadow_divergence_if_needed,
     resolve_cutover_state,
     route_dual_core_via_aurora,
 )
-from app.aurora.observability import AURORA_SHADOW_DIVERGENCE_TOTAL
+from app.aurora.observability import AURORA_SHADOW_DIVERGENCE_TOTAL, AURORA_SHADOW_HOOK_TOTAL
 from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRoutingInput
 
 
@@ -38,6 +40,19 @@ def _shadow_counter_total() -> float:
         sample.value
         for sample in collected[0].samples
         if sample.name == "sparkle_aurora_shadow_divergence_total"
+    )
+
+
+def _shadow_hook_total(hook_point: str, trigger_point: str) -> float:
+    collected = AURORA_SHADOW_HOOK_TOTAL.collect()
+    if not collected:
+        return 0.0
+    return sum(
+        sample.value
+        for sample in collected[0].samples
+        if sample.name == "sparkle_aurora_shadow_hook_total"
+        and sample.labels.get("hook_point") == hook_point
+        and sample.labels.get("trigger_point") == trigger_point
     )
 
 
@@ -135,3 +150,68 @@ def test_build_shadow_snapshot_includes_behavioral_hints() -> None:
     assert "拖延回避" in summary
     assert "概念混淆" in summary
     assert "need help regroup" in summary
+
+
+def test_shadow_hooks_are_flag_gated_and_shadow_only() -> None:
+    routing_input = _routing_input(
+        current_guidance="先把第一步压缩到 25 分钟",
+        session_length_preference=25,
+    )
+    user_id = "00000000-0000-0000-0000-000000000444"
+
+    with (
+        patch("app.aurora.migration.aurora_flags.AURORA_SHADOW_MODE", False),
+        patch("app.aurora.migration.aurora_flags.AURORA_ACTIVE", False),
+    ):
+        before_hook = _shadow_hook_total("pre-tool-selection", "pre-tool-selection")
+        before_response_hook = _shadow_hook_total("pre-response-formatting", "pre-response-formatting")
+
+        assert (
+            prepare_shadow_pre_tool_selection_hook(routing_input, user_id=user_id, enabled=True) is None
+        )
+        assert (
+            prepare_shadow_pre_response_formatting_hook(routing_input, user_id=user_id, enabled=True) is None
+        )
+
+        after_hook = _shadow_hook_total("pre-tool-selection", "pre-tool-selection")
+        after_response_hook = _shadow_hook_total("pre-response-formatting", "pre-response-formatting")
+
+    assert after_hook == before_hook
+    assert after_response_hook == before_response_hook
+
+    with (
+        patch("app.aurora.migration.aurora_flags.AURORA_SHADOW_MODE", True),
+        patch("app.aurora.migration.aurora_flags.AURORA_ACTIVE", False),
+    ):
+        before_tool = _shadow_hook_total("pre-tool-selection", "pre-tool-selection")
+        before_response = _shadow_hook_total("pre-response-formatting", "pre-response-formatting")
+
+        tool_observation = prepare_shadow_pre_tool_selection_hook(
+            routing_input,
+            user_id=user_id,
+            enabled=True,
+        )
+        response_observation = prepare_shadow_pre_response_formatting_hook(
+            routing_input,
+            user_id=user_id,
+            enabled=True,
+        )
+
+        after_tool = _shadow_hook_total("pre-tool-selection", "pre-tool-selection")
+        after_response = _shadow_hook_total("pre-response-formatting", "pre-response-formatting")
+
+    assert tool_observation is not None
+    assert tool_observation.hook_point == "pre-tool-selection"
+    assert tool_observation.trigger_point == "pre-tool-selection"
+    assert response_observation is not None
+    assert response_observation.hook_point == "pre-response-formatting"
+    assert response_observation.trigger_point == "pre-response-formatting"
+    assert after_tool == before_tool + 1
+    assert after_response == before_response + 1
+
+    with (
+        patch("app.aurora.migration.aurora_flags.AURORA_SHADOW_MODE", True),
+        patch("app.aurora.migration.aurora_flags.AURORA_ACTIVE", True),
+    ):
+        assert prepare_shadow_pre_tool_selection_hook(routing_input, user_id=user_id, enabled=True) is None
+        assert prepare_shadow_pre_response_formatting_hook(routing_input, user_id=user_id, enabled=True) is None
