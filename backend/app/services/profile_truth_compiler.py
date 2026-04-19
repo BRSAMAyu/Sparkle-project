@@ -14,8 +14,13 @@ def _utcnow_iso() -> str:
 
 class ProfileTruthCompiler:
     """
-    Profile Truth Compiler - Phase A1
-    Reconciles multiple profile signals into a single coherent truth model.
+    Profile Truth Compiler - Phase A1 runtime adapter.
+
+    Canonical fact ownership lives in
+    `UserInsightCompiler -> UserInsightState`.
+    This class adapts that canonical state into `CompiledInsightState`
+    for Phase A planning consumers, while preserving a raw-profile
+    fallback path for contexts where canonical state is absent.
     """
 
     async def compile(
@@ -26,22 +31,13 @@ class ProfileTruthCompiler:
         companion_state: dict[str, Any] | None = None,
         turn_signals: dict[str, Any] | None = None,
     ) -> CompiledInsightState:
-        """Compile a unified insight state from multiple sources."""
+        """Compile the Phase A runtime view from canonical state or fallback profile data."""
         canonical = self._coerce_canonical_state(profile_context)
         if canonical is not None:
-            projection = canonical.to_legacy_projection()
-            stable_traits = dict(projection.get("stable_traits") or {})
-            current_state = dict(projection.get("current_state") or {})
-            if user_strategy_state:
-                current_state = self._merge_strategy_state(current_state, user_strategy_state)
-            active_constraints = list(projection.get("active_constraints") or [])
-            active_bottlenecks = list(projection.get("active_bottlenecks") or [])
-            confidence_map = dict(projection.get("confidence_map") or {})
-            freshness_map = dict(projection.get("freshness_map") or {})
-            contradictions = list(projection.get("contradiction_map") or [])
-            multi_span_analysis = dict(projection.get("multi_span_analysis") or {})
-            prediction_summary = dict(projection.get("prediction_summary") or {})
-            calibration_summary = dict(projection.get("calibration_summary") or {})
+            compiled_state = CompiledInsightState.from_user_insight_state(
+                canonical,
+                user_strategy_state=user_strategy_state,
+            )
         else:
             stable_traits = self._extract_stable_traits(profile_context)
             current_state = self._extract_current_state(profile_context, user_strategy_state)
@@ -57,32 +53,33 @@ class ProfileTruthCompiler:
             multi_span_analysis = {}
             prediction_summary = {}
             calibration_summary = {}
+            compiled_state = CompiledInsightState(
+                stable_traits=stable_traits,
+                current_state=current_state,
+                active_constraints=active_constraints,
+                active_bottlenecks=active_bottlenecks,
+                confidence_map=confidence_map,
+                freshness_map=freshness_map,
+                contradiction_map=contradictions,
+                multi_span_analysis=multi_span_analysis,
+                prediction_summary=prediction_summary,
+                calibration_summary=calibration_summary,
+                generated_at=_utcnow_iso(),
+            )
 
         # Detect contradictions between sources
         detected = self._detect_contradictions(
             profile_context=profile_context,
-            stable_traits=stable_traits,
-            current_state=current_state,
-            active_constraints=active_constraints,
+            stable_traits=compiled_state.stable_traits,
+            current_state=compiled_state.current_state,
+            active_constraints=compiled_state.active_constraints,
             turn_signals=turn_signals or {},
         )
         for item in detected:
-            if item not in contradictions:
-                contradictions.append(item)
+            if item not in compiled_state.contradiction_map:
+                compiled_state.contradiction_map.append(item)
 
-        return CompiledInsightState(
-            stable_traits=stable_traits,
-            current_state=current_state,
-            active_constraints=active_constraints,
-            active_bottlenecks=active_bottlenecks,
-            confidence_map=confidence_map,
-            freshness_map=freshness_map,
-            contradiction_map=contradictions,
-            multi_span_analysis=multi_span_analysis,
-            prediction_summary=prediction_summary,
-            calibration_summary=calibration_summary,
-            generated_at=_utcnow_iso()
-        )
+        return compiled_state
 
     @staticmethod
     def _coerce_canonical_state(profile_context: ProfileContext) -> UserInsightState | None:

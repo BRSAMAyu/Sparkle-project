@@ -2,6 +2,7 @@
 import pytest
 from app.core.profile_context import ProfileContext, KnowledgeSummary, CognitiveSummary, ActivePattern, WeakSpot
 from app.core.user_insight_state import UserInsightState
+from app.orchestration.schemas import CompiledInsightState
 from app.services.profile_truth_compiler import ProfileTruthCompiler
 
 @pytest.mark.asyncio
@@ -198,3 +199,32 @@ async def test_profile_truth_compiler_projects_multi_span_analysis_and_predictio
 
     assert state.multi_span_analysis["short_span"]["overload_pressure"] == "high"
     assert state.prediction_summary["overload_risk"]["level"] == "high"
+
+
+def test_compiled_insight_state_adapts_canonical_user_insight_state_with_strategy_overlay() -> None:
+    canonical = UserInsightState(
+        stable_preferences={"learning_style": "structured"},
+        inferred_work_style={"preferred_tools": ["flashcard"]},
+        current_state={"overall_mastery": 0.63},
+        constraints=[{"id": "cognitive:start_friction", "label": "Start Friction", "type": "behavioral"}],
+        active_bottlenecks=[{"id": "knowledge:entropy", "label": "Entropy", "type": "knowledge_gap"}],
+        confidence_metadata={"cognitive:start_friction": 0.81},
+        freshness_metadata={"preferences": "high"},
+    )
+
+    compiled = CompiledInsightState.from_user_insight_state(
+        canonical,
+        user_strategy_state={
+            "session_mode": "recovery",
+            "push_vs_support": 0.2,
+        },
+    )
+
+    assert compiled.stable_traits["learning_style"] == "structured"
+    assert compiled.stable_traits["preferred_tools"] == ["flashcard"]
+    assert compiled.current_state["overall_mastery"] == 0.63
+    assert compiled.current_state["strategy_mode"] == "recovery"
+    assert compiled.current_state["push_vs_support"] == 0.2
+    assert compiled.active_constraints[0]["id"] == "cognitive:start_friction"
+    assert compiled.active_bottlenecks[0]["id"] == "knowledge:entropy"
+    assert compiled.confidence_map["cognitive:start_friction"] == 0.81

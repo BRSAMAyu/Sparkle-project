@@ -1,5 +1,7 @@
 import pytest
 
+from app.core.user_insight_state import UserInsightState
+from app.orchestration.prompts import _normalize_user_context
 from app.orchestration.learning_state_fragment import build_learning_state_fragment
 from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
 from app.orchestration.situation_brief import SituationBriefBuilder, format_situation_brief_section
@@ -570,3 +572,56 @@ async def test_situation_brief_surfaces_prediction_summary_into_decision_context
     assert brief.decision_context["predicted_schedule_fit"] == "medium"
     assert brief.decision_context["predicted_plan_slippage_risk"] == "high"
     assert brief.decision_context["predicted_intervention_receptivity"] == "medium"
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_and_prompt_share_canonical_preferred_tools_signal() -> None:
+    canonical = UserInsightState(
+        stable_preferences={"learning_style": "structured"},
+        inferred_work_style={"preferred_tools": ["flashcard"]},
+        current_state={"overall_mastery": 0.58, "active_subjects": ["Physics"]},
+        constraints=[
+            {
+                "id": "cognitive:start_friction",
+                "label": "Start Friction",
+                "type": "behavioral",
+                "policy_signals": ["task.difficulty.start_easy"],
+            }
+        ],
+        active_bottlenecks=[{"id": "knowledge:entropy", "label": "Entropy", "type": "knowledge_gap"}],
+    )
+    profile_context_payload = {
+        "preferences": {},
+        "preference_version": 1,
+        "knowledge_summary": {
+            "overall_mastery": 0.58,
+            "weak_spots": [],
+            "recent_mastery_changes": [],
+            "active_learning_subjects": ["Physics"],
+        },
+        "cognitive_summary": {
+            "active_patterns": [],
+            "dominant_pattern_type": None,
+            "risk_signals": [],
+        },
+        "user_insight_state": canonical.model_dump(mode="json"),
+    }
+
+    prompt_normalized = _normalize_user_context({"profile_context": profile_context_payload})
+    brief = (await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我规划下一步怎么复习物理。",
+            "profile_context": profile_context_payload,
+            "context_focus": {"route_intent": "plan"},
+        },
+        plan_context={"goal": "复习物理"},
+        focused_memory={},
+        context_briefing_note=None,
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+    )).to_dict()
+
+    assert prompt_normalized["preferred_tools"] == ["flashcard"]
+    assert brief["insight_state"]["stable_traits"]["preferred_tools"] == ["flashcard"]
+    assert brief["insight_state"]["active_constraints"][0]["id"] == "cognitive:start_friction"

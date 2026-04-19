@@ -32,6 +32,8 @@ import uuid
 from datetime import timezone, datetime
 from typing import Any, Literal
 
+from app.core.user_insight_state import UserInsightState
+
 
 def _utcnow_iso() -> str:
     return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
@@ -455,6 +457,54 @@ class CompiledInsightState:
     recommended_clarification: list[str] = field(default_factory=list)
     version: str = "1.0"
     generated_at: str = field(default_factory=_utcnow_iso)
+
+    @classmethod
+    def from_user_insight_state(
+        cls,
+        insight_state: UserInsightState,
+        *,
+        user_strategy_state: dict[str, Any] | None = None,
+    ) -> "CompiledInsightState":
+        """Adapt the canonical compiled user-model state into the Phase A runtime view.
+
+        `UserInsightCompiler -> UserInsightState` remains the fact owner.
+        `CompiledInsightState` is the runtime projection consumed by
+        `SituationBrief`, `InsightGapDetector`, and `PlanningReadinessGate`.
+        """
+
+        projection = insight_state.to_legacy_projection()
+        current_state = dict(projection.get("current_state") or {})
+        if user_strategy_state:
+            for source_key, target_key in (
+                ("session_mode", "strategy_mode"),
+                ("active_mode", "strategy_mode"),
+                ("push_vs_support", "push_vs_support"),
+                ("intervention_intensity", "intervention_intensity"),
+                ("explanation_style", "explanation_style"),
+                ("retrieval_emphasis", "retrieval_emphasis"),
+            ):
+                value = user_strategy_state.get(source_key)
+                if value is not None:
+                    current_state[target_key] = value
+
+        return cls(
+            stable_traits=dict(projection.get("stable_traits") or {}),
+            current_state=current_state,
+            active_constraints=list(projection.get("active_constraints") or []),
+            active_bottlenecks=list(projection.get("active_bottlenecks") or []),
+            key_uncertainties=list(projection.get("key_uncertainties") or []),
+            missing_information=list(projection.get("missing_information") or []),
+            confidence_map=dict(projection.get("confidence_map") or {}),
+            freshness_map=dict(projection.get("freshness_map") or {}),
+            contradiction_map=list(projection.get("contradiction_map") or []),
+            planning_readiness=dict(projection.get("planning_readiness") or {}),
+            multi_span_analysis=dict(projection.get("multi_span_analysis") or {}),
+            prediction_summary=dict(projection.get("prediction_summary") or {}),
+            calibration_summary=dict(projection.get("calibration_summary") or {}),
+            recommended_clarification=list(projection.get("recommended_clarification") or []),
+            version=str(projection.get("version") or insight_state.version or "1.0"),
+            generated_at=str(projection.get("generated_at") or insight_state.generated_at or _utcnow_iso()),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
