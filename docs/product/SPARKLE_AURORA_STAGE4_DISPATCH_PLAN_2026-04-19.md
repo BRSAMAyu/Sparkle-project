@@ -1,11 +1,11 @@
 # SPARKLE Aurora Stage 4 Dispatch Plan (2026-04-19)
 
-> **Status**: Draft v3
+> **Status**: Draft v4
 > **Depends on**:
 > - `SPARKLE_AURORA_STAGE4_VISION_ALIGNMENT_2026-04-19.md`
 > - `SPARKLE_AURORA_STAGE4_ENGINEERING_STRUCTURE_2026-04-19.md`
 > - `SPARKLE_AURORA_WSM_CUTOVER_RUNBOOK_2026-04-19.md`
-> **Scope**: Stage 4 execution plan. Defines workstream task cards, interrupt semantics, file ownership, and validation gates.
+> **Scope**: Stage 4 execution plan. Defines workstream task cards, collaboration governance, interrupt semantics, file ownership, and validation gates.
 
 ### Revision History
 
@@ -14,10 +14,48 @@
 | v1 | First Stage 4 dispatch plan with 6 rules, 4 corpora, file ownership, and 11 agents across 4 waves | Codex |
 | v2 | Incorporate Claude + GLM dispatch review: keep Wave 1a at 3 agents via narrower Agent B, add Agent K hard boundaries, clarify Corpus V1 plumbing/content ownership, harden Gate S4-4, make Agent E scope explicit, add mobile flag mechanism, define interrupt semantics, and record 5-gate split from engineering structure into dispatch control gates | Codex |
 | v3 | Add Rule G after the retroactive audit of commit `cd2f844b`, explicitly banning cross-workstream batch commits without dispatcher approval and making revert the default consequence | Codex |
+| v4 | Post-audit-v3 topology update: incorporate the multi-expert collaboration card, add Rule H and Rule I, formalize high-risk review lanes and escalation triggers, revise Wave 2 from `E/F/G/H` to `F'/G/H`, and require pre-Wave-2 posture hardening before dispatch resumes | Codex |
 
 ---
 
 ## 0. Dispatch Rules
+
+### Collaboration Card v1
+
+This dispatch plan now executes under the signed multi-expert collaboration model established after the Stage 4 governance incident.
+
+The six standing roles are:
+
+- `User / dispatcher`: final decision-maker and final arbiter for gates, constitutional changes, and dispatch signatures
+- `Claude`: lead designer plus `final-accept` reviewer for structure-layer, high-risk changes
+- `Codex`: execution coordinator, hard-problem solver, integrator, and final lander of code/docs
+- `GLM-observer`: `pre-accept` reviewer for intent drift and silent scope expansion
+- `MIMO`: user strategy companion and strategic-drift detector
+- `GLM-exec`: bounded execution worker operating only from hard allowlists
+
+### Review Lanes
+
+High-risk lane:
+
+`GLM-exec -> Codex initial review -> GLM-observer pre-accept -> Claude final-accept -> User sign-off`
+
+Low-risk lane:
+
+`GLM-exec -> Codex initial review -> User spot-check / sign-off`
+
+High-risk lane applies when any of the following is touched:
+
+1. Gate 0 frozen schema
+2. any `P1-P5` constitutional condition
+3. `TaskGuidance` schema or sidecar object shape
+4. feature flag default values
+5. seam anchors:
+   - `backend/app/aurora/engine.py`
+   - `backend/app/aurora/tasks.py`
+   - `backend/app/aurora/decision_fns/`
+   - `backend/app/task_guidance/`
+6. `backend/app/aurora/observability/` metric definitions or `tier_latency` labels
+7. any unavoidable cross-WS main write-zone interaction
 
 ### Rule A: Vision Authority
 
@@ -106,6 +144,52 @@ If this rule is violated:
 - retroactive accept is an exception path
 - the exception path requires independent review and per-workstream justification
 
+### Rule H: Agent Allowlist + Escalation Contract
+
+Every task card must include:
+
+- a hard allowlist of writable files using full repository paths
+- an `out-of-allowlist -> stop and report` instruction
+- an explicit ban on self-selected secondary dependency edits
+
+If a worker discovers a real need outside its allowlist, it must return a scope-expansion report rather than patching locally.
+
+### Rule I: Mandatory Handoff Artifact
+
+Handoff is mandatory at:
+
+- every Stage close
+- every executor-role transition
+
+Allowed filenames:
+
+- `SPARKLE_AURORA_STAGE{N}_HANDOFF_{date}.md`
+- `SPARKLE_AURORA_{ROLE}_HANDOFF_{date}.md`
+
+Required content:
+
+- accepted slices / disposition
+- open issues
+- constitutional constraints summary
+- next-entry conditions for the next Stage or next executor
+
+### Escalation Trigger Contract
+
+Any worker or reviewer must pause and escalate instead of patching in place if any of the following occurs:
+
+1. Gate 0 frozen schema would need to change
+2. any `P1-P5` constitutional clause would need to change
+3. a gate condition or acceptance criterion would need to change
+4. a public API or `proto` field would need to be added or modified
+5. `backend/app/aurora/observability/` metric definitions or `tier_latency` labels would need to change
+6. a cross-WS secondary edit becomes necessary
+7. the vision-alignment or engineering-structure docs appear internally inconsistent
+8. a seam-anchor file would need to change:
+   - `backend/app/aurora/engine.py`
+   - `backend/app/aurora/tasks.py`
+   - `backend/app/aurora/decision_fns/`
+   - `backend/app/task_guidance/`
+
 ---
 
 ## 1. Stage 4 Workstreams
@@ -127,7 +211,7 @@ This dispatch plan keeps the six workstreams defined in the engineering structur
 | --- | --- | --- | --- |
 | `Wave 1a` | `5-7` working days | `3` | async substrate + guidance skeleton |
 | `Wave 1b` | `4-6` working days | `1` | routing-mode seam |
-| `Wave 2` | `7-10` working days | `4` | task guidance UX + task assistant + workflow escalation |
+| `Wave 2` | `7-10` working days | `3` | rebuilt task assistant + closed-loop UX + workflow escalation |
 | `Wave 3` | `5-7` working days | `3` | budgets, eval, stabilization, activation prep |
 
 **Total estimate**
@@ -148,6 +232,21 @@ So:
 
 - `Wave 1a`: Agents `A / B / C`
 - `Wave 1b`: Agent `D`
+
+### Post-audit-v3 Wave 2 Topology
+
+Wave 2 is no longer dispatched as `E / F / G / H`.
+
+Current topology:
+
+- `Agent F'` -> `WS-D` rebuilt from the reverted baseline
+- `Agent G` -> `WS-E`
+- `Agent H` -> `WS-B.2`
+
+Retired from dispatch:
+
+- `Agent E` / `WS-C.2`
+  - reason: `WS-C.2` has already been retroactively accepted and must not be re-dispatched as active Wave 2 work
 
 ---
 
@@ -412,39 +511,13 @@ Make `routing_mode` real without yet implementing full conversation escalation.
 - flags-off behavior is stable
 - no pre-tool-selection or pre-response-formatting takeover begins
 
-## 5.3 Wave 2 — Agents E / F / G / H
+## 5.3 Wave 2 — Agents F' / G / H
 
-### Agent E — WS-C.2 TaskGuidance Productization
-
-**Goal**
-
-Finish dual-audience guide generation and product-ready guide lifecycle.
-
-**Write scope**
-
-- `mobile/lib/features/task/presentation/screens/task_detail_screen.dart`
-- `mobile/lib/features/plan/presentation/screens/plan_create_screen.dart`
-- `mobile/lib/features/plan/data/services/plan_guide_generator.dart`
-- `mobile/lib/features/task/presentation/widgets/guidance/` (new)
-- any additional non-hotspot guide-rendering files explicitly created under `mobile/lib/features/task/presentation/`
-
-**Tasks**
-
-1. Human-guide default generation path
-2. AI-guide on-demand generation path
-3. Guide version retrieval and refresh rules
-4. Guide quality hooks for Corpus V3
-5. Mobile render integration for human/AI guide surfaces deferred out of Wave 1a
-
-**Interrupt**
-
-- `behind_flag`
-
-### Agent F — WS-D Task Assistant Dormant Mode
+### Agent F' — WS-D Task Assistant Dormant Mode Rebuild
 
 **Goal**
 
-Implement single-shot Aurora injection and next-turn optimization for task assistant.
+Rebuild task assistant dormant mode from the reverted baseline under stricter scope and acceptance discipline.
 
 **Write scope**
 
@@ -455,17 +528,25 @@ Implement single-shot Aurora injection and next-turn optimization for task assis
 
 **Tasks**
 
-1. Implement 5-item initial injection set
+1. Implement the approved 5-item initial injection set only
 2. Implement cold-start fallback:
    - `UXIntent.ROUTINE`
    - `AuroraPresenceLevel.AMBIENT`
 3. Implement strong-signal refresh rules only
 4. Capture assistant outcome for nearline next-turn optimization
 5. Keep DORMANT as sidecar/candidate semantics, not frozen enum mutation
+6. Add end-to-end dormant-path acceptance coverage; sidecar files alone are not sufficient evidence
 
 **Interrupt**
 
 - `behind_flag`
+
+**Acceptance**
+
+- the dormant path works end-to-end from entry injection to next-turn outcome capture
+- the implementation remains behind safe defaults
+- no frozen-schema edits occur
+- no unreviewed takeover behavior is introduced
 
 ### Agent G — WS-E Closed-Loop UX
 
@@ -495,7 +576,7 @@ Make the direct/workflow/task-assistant split legible and usable without exposin
 
 **Goal**
 
-Implement conversation mid-flight escalation using the three approved trigger criteria only.
+Implement conversation mid-flight escalation on top of the cleaned `WS-B.1` routing seam.
 
 **Write scope**
 
@@ -511,6 +592,7 @@ Implement conversation mid-flight escalation using the three approved trigger cr
    - `2+` structural-topic turns
    - frustration/blockage signal
 3. Add Corpus V2 validation
+4. Treat `_classify_routing_mode(...)` as stable seam ground rather than reopening `WS-B.1`
 
 **Interrupt**
 
@@ -623,6 +705,10 @@ Required before Wave 2:
 - `routing_mode` path exists
 - all routing-mode changes are behind feature flags
 - default behavior remains `direct`-equivalent when flags are off
+- dispatch plan `v4` is signed
+- `WS-F` posture hardening is landed
+- the out-of-scope working-tree review is closed
+- MIMO has delivered the first "current position" report to the dispatcher
 
 ## Gate S4-3 — Closed-Loop Paths Function
 
@@ -672,20 +758,20 @@ The following remain out of scope:
 
 ## 8. Immediate Recommended Next Step
 
-If this dispatch plan is accepted, the first dispatch should be:
+If this dispatch plan is accepted, the next steps are:
 
-1. `Agent A` — WS-A.1 Async Substrate
-2. `Agent B` — WS-C.1 TaskGuidance Skeleton
-3. `Agent C` — WS-F.1 Benchmark and Guardrails Prep
+1. land this `v4` docs-only dispatch update
+2. dispatch `GLM-exec #1` on `WS-F` posture hardening as a single-card, single-commit task
+3. dispatch `GLM-exec #2` on the out-of-scope working-tree review as a single-card, single-commit task
+4. receive MIMO's first "current position" report
+5. only then dispatch Wave 2 as:
+   - `Agent F'`
+   - `Agent G`
+   - `Agent H`
 
-Then, only after Gate S4-1 passes:
+This preserves the post-audit recovery order:
 
-4. `Agent D` — WS-B.1 Routing-Mode Seam
-
-This keeps Stage 4 aligned with its intended shape:
-
-- async substrate first
-- routing seam second
-- closed-loop product paths after that
-
-Not the other way around.
+- governance first
+- posture hardening second
+- bounded cleanup third
+- new Wave 2 execution only after those are complete
