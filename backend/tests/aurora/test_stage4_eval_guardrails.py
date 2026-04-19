@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import warnings
 from pathlib import Path
 from time import perf_counter
 
@@ -79,11 +77,10 @@ def test_stage4_tier_tagged_events_support_dashboard_and_test_consumers() -> Non
 def test_stage4_p1_guardrail_report_runs_in_report_only_mode() -> None:
     report = build_p1_guardrail_report(repo_root=Path(__file__).resolve().parents[3])
 
-    assert report.mode == "report-only"
+    assert report.mode == "hard-fail"
     assert report.checked_files
     assert any(path.endswith("backend/app/aurora/engine.py") for path in report.checked_files)
-    if report.has_findings:
-        warnings.warn(report.render(), stacklevel=2)
+    assert report.has_findings is False, report.render()
 
 
 def test_stage4_p1_guardrail_no_longer_flags_aurora_tasks() -> None:

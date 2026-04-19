@@ -78,7 +78,7 @@ class P1GuardrailReport:
         headline = f"P1 guardrail ({self.mode}) checked {len(self.checked_files)} files"
         if not self.violations:
             return headline + " and found no violations."
-        lines = [headline + f" and found {len(self.violations)} report-only findings:"]
+        lines = [headline + f" and found {len(self.violations)} violations:"]
         for violation in self.violations:
             lines.append(f"- {violation.file_path}:{violation.line_no} {violation.message} [{violation.import_stmt}]")
         return "\n".join(lines)
@@ -409,10 +409,10 @@ def summarize_tier_tagged_events(events: Iterable[TierTaggedBenchmarkEvent]) -> 
 
 
 def build_p1_guardrail_report(repo_root: Path | None = None) -> P1GuardrailReport:
-    """Report-only scan for obvious cross-tier seam violations.
+    """Hard-fail scan for obvious cross-tier seam violations.
 
-    This intentionally does not fail CI in Wave 1a. It produces a stable report
-    surface that can later be upgraded from report-only to enforced.
+    Stage 4 posture after audit v3 requires this guardrail to fail tests/CI
+    whenever a forbidden cross-tier import reappears.
     """
 
     root = repo_root or Path(__file__).resolve().parents[3]
@@ -487,7 +487,7 @@ def build_p1_guardrail_report(repo_root: Path | None = None) -> P1GuardrailRepor
     )
 
     return P1GuardrailReport(
-        mode="report-only",
+        mode="hard-fail",
         checked_files=tuple(sorted(set(checked_files))),
         missing_targets=tuple(sorted(set(missing_targets))),
         violations=tuple(violations),
