@@ -207,8 +207,13 @@ class InterventionRecordService:
 
         old_outcome = record.outcome_status
         record.outcome_status = outcome
-        if evidence_payload:
-            record.evidence_payload = evidence_payload
+        payload = dict(evidence_payload or {})
+        payload["verification"] = {
+            "verdict": outcome.value,
+            "resolved_at": datetime.utcnow().isoformat(),
+            "resolved_via": payload.get("evaluation_method") or "manual_resolution",
+        }
+        record.evidence_payload = payload
         await self.db.flush()
 
         await self._publish_status_change(record, old_outcome=old_outcome)
