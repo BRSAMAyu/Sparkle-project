@@ -1,6 +1,6 @@
 # SPARKLE Aurora Stage 4 Retroactive Audit (2026-04-19)
 
-> **Status**: Retroactive audit v2
+> **Status**: Retroactive audit v3
 > **Audit target**: commit `cd2f844b` (`stage 4 part1`)
 > **Branch**: `Aurora-&-adaptive-harness-engineering`
 > **Purpose**: reconstruct the governance evidence chain for Stage 4 work that was implemented ahead of the signed dispatch sequence.
@@ -29,6 +29,8 @@ Since the initial audit draft:
 - `WS-D` revert has landed as commit `4f90c1c6`
 - `WS-C.1` backend CRUD coverage has landed as commit `573edf54`
 - Claude + GLM independent review has aligned on the workstream decision matrix and on `Rule G`
+- `WS-A.1` `P1` repair has landed as commit `79cdb8ad`
+- `WS-B.1` scope tightening has landed as commit `a5f5387c`
 
 ### Audit disposition
 
@@ -653,6 +655,46 @@ Independent Claude + GLM review aligned on the following points:
 - `WS-C.2`: accept
 - `WS-D`: revert
 - `Rule G`: keep in the dispatch plan as a standing governance rule
+
+## 6.5 Branch-tip remediation after audit v2
+
+Two remaining code-level conditions from audit v2 have now been repaired on the current branch tip:
+
+1. **`WS-A.1` `P1` repair landed**
+   - commit: `79cdb8ad`
+   - `backend/app/aurora/tasks.py` no longer imports or instantiates `AuroraEngine`
+   - nearline / long-horizon task entrypoints now consume only:
+     - `snapshot` references
+     - `prior_outputs` primitives
+   - verification:
+     - `tests/aurora/test_async_substrate_tasks.py`
+     - `tests/aurora/test_stage4_eval_guardrails.py`
+     - guardrail report now returns `has_findings False`
+
+2. **`WS-B.1` scope tightening landed**
+   - commit: `a5f5387c`
+   - `backend/app/aurora/decision_fns/backbone.py` now limits routing-mode classification to:
+     - planning markers
+     - task-assistant markers
+   - it no longer pre-spends escalation-adjacent triggers such as:
+     - `structural_topic_turns`
+     - `frustration_signal`
+     - `repeated_failure`
+     - `commitment_conflict`
+   - `backend/app/orchestration/routing_engine.py` no longer injects those escalation cues into the Stage 4 routing-mode seam
+
+### Current branch-tip disposition
+
+After commits `4f90c1c6`, `573edf54`, `79cdb8ad`, and `a5f5387c`, the current branch tip supports the following disposition:
+
+| Workstream | Current branch-tip status |
+| --- | --- |
+| `WS-A.1` Async Substrate | **accept** |
+| `WS-C.1` TaskGuidance Skeleton | **accept** |
+| `WS-F.1` Benchmark and Guardrails Prep | **accept** |
+| `WS-B.1` Routing-Mode Seam | **accept** |
+| `WS-C.2` TaskGuidance Productization | **accept** |
+| `WS-D` Task Assistant Dormant Mode | **reverted / not accepted** |
 
 ---
 
