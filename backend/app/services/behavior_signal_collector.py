@@ -114,6 +114,7 @@ class BehaviorSignalCollector:
             return
 
         intervention_created = False
+        pending_push_deliveries: list[tuple[str, dict]] = []
         states = await self.plan_state_service.get_active_plan_states(user_id, limit=3)
         for state in states:
             if state.status != PlanStateStatus.ACTIVE.value:
@@ -142,12 +143,38 @@ class BehaviorSignalCollector:
                 )
                 if record:
                     intervention_created = True
+                    try:
+                        from app.models.card_protocol import DeliveryChannel
+                        if record.delivery_channel == DeliveryChannel.PUSH:
+                            pending_push_deliveries.append(
+                                (
+                                    str(record.id),
+                                    dict(getattr(record, "diagnosis_payload", {}) or {}),
+                                )
+                            )
+                    except Exception:
+                        pass
             except Exception as bridge_exc:
                 await self.db.rollback()
                 logger.warning("Behavior→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)
 
         if intervention_created:
             await self.db.commit()
+            for intervention_id, payload in pending_push_deliveries:
+                try:
+                    from app.core.celery_tasks import schedule_push_notification
+
+                    schedule_push_notification.delay(
+                        user_id=str(user_id),
+                        intervention_id=intervention_id,
+                        payload=payload,
+                    )
+                except Exception as delivery_exc:
+                    logger.warning(
+                        "Behavior→push scheduling failed (non-fatal) for {}: {}",
+                        intervention_id,
+                        delivery_exc,
+                    )
 
     async def _maybe_emit_too_difficult_streak(self, user_id: UUID) -> None:
         signal_key = "too_difficult_streak"
