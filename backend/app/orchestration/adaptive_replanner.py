@@ -474,6 +474,23 @@ class AdaptiveReplanner:
         Persists step-level feedback to PlanState and triggers
         replanning if the execution signals warrant it.
         """
+        state = await self.plan_state_service.get_plan_state(user_id, plan_id)
+        outcome_learning = self._extract_outcome_learning((state.facts or {}) if state else {})
+        execution_summary = self._build_execution_revision_summary(
+            feedback=feedback,
+            outcome_learning=outcome_learning,
+        )
+        execution_delta = {
+            "validation_status": feedback.validation_status,
+            "quality_score": feedback.quality_score,
+            "needs_replanning": feedback.needs_replanning,
+            "slow_tools": list(feedback.slow_tools or []),
+            "failed_tools": list(feedback.failed_tools or []),
+            "unreliable_dependencies": list(feedback.unreliable_dependencies or []),
+            "next_action": execution_summary.new_next_action,
+            "what_changes": execution_summary.what_changes,
+        }
+
         # 1. Persist execution feedback to PlanState.feedback_log
         feedback_entry = self._build_feedback_entry(
             feedback_type="plan_execution",
@@ -499,6 +516,15 @@ class AdaptiveReplanner:
             adaptive_facts["recently_failed_tools"] = feedback.failed_tools
         if feedback.unreliable_dependencies:
             adaptive_facts["unreliable_dep_steps"] = feedback.unreliable_dependencies
+
+        existing_meta = dict((((state.facts or {}) if state else {}).get("adaptive_meta")) or {})
+        recent_execution_deltas = list(existing_meta.get("recent_execution_feedback_deltas", []) or [])
+        recent_execution_deltas.append(execution_delta)
+        existing_meta["recent_execution_feedback_deltas"] = recent_execution_deltas[-10:]
+        existing_meta["last_execution_feedback_delta"] = execution_delta
+        existing_meta = self._append_revision_summary(existing_meta, execution_summary)
+        existing_meta["last_plan_revision_summary"] = execution_summary.to_dict()
+        adaptive_facts["adaptive_meta"] = existing_meta
 
         patch: dict[str, Any] = {"feedback_log": feedback_entry}
         if adaptive_facts:
@@ -537,18 +563,23 @@ class AdaptiveReplanner:
                     source="adaptive_replanner",
                 )
                 await self._enqueue_adaptation_update(user_id, record, update_type="plan_adaptation")
-                # Mark replan timestamp
+                adaptive_meta = dict(((state.facts or {}).get("adaptive_meta")) or {})
+                adaptive_meta.update(
+                    {
+                        "last_replan_at": _utcnow().isoformat(),
+                        "last_trigger": "plan_execution_feedback",
+                        "last_replan_reason": [replan_reason],
+                        "recent_adaptations": [record.to_dict()],
+                        "last_execution_feedback_delta": execution_delta,
+                        "last_plan_revision_summary": execution_summary.to_dict(),
+                    }
+                )
                 await self.plan_state_service.upsert_plan_state(
                     user_id=user_id,
                     plan_id=plan_id,
                     patch={
                         "facts": {
-                            "adaptive_meta": {
-                                "last_replan_at": _utcnow().isoformat(),
-                                "last_trigger": "plan_execution_feedback",
-                                "last_replan_reason": [replan_reason],
-                                "recent_adaptations": [record.to_dict()],
-                            }
+                            "adaptive_meta": adaptive_meta,
                         }
                     },
                     bump_version=True,
@@ -583,14 +614,32 @@ class AdaptiveReplanner:
         feedback_category: str | None = None,
         difficulty_delta: float | None = None,
     ) -> list[AdaptationRecord]:
+        state = await self.plan_state_service.get_plan_state(report.user_id, report.plan_id)
         cognitive_records = await self._apply_cognitive_pattern_adjustments(
             user_id=report.user_id,
             plan_id=report.plan_id,
         )
         if not report.requires_adjustment:
+            if state:
+                observation_summary = self._build_observation_revision_summary(
+                    report=report,
+                    trigger=trigger,
+                    task_id=task_id,
+                    completion_rate=completion_rate,
+                    feedback_category=feedback_category,
+                    difficulty_delta=difficulty_delta,
+                )
+                adaptive_meta = dict(((state.facts or {}).get("adaptive_meta")) or {})
+                adaptive_meta = self._append_revision_summary(adaptive_meta, observation_summary)
+                adaptive_meta["last_plan_revision_summary"] = observation_summary.to_dict()
+                await self.plan_state_service.upsert_plan_state(
+                    user_id=report.user_id,
+                    plan_id=report.plan_id,
+                    patch={"facts": {"adaptive_meta": adaptive_meta}},
+                    bump_version=False,
+                )
             return cognitive_records
 
-        state = await self.plan_state_service.get_plan_state(report.user_id, report.plan_id)
         if not state:
             return cognitive_records
 
@@ -1197,6 +1246,113 @@ class AdaptiveReplanner:
         return PlanRevisionSummary(
             why_plan_changed=why_text,
             what_assumption_failed=f"The assumption that '{assumption_failed}' would remain manageable did not hold.",
+            what_stays=what_stays,
+            what_changes=what_changes,
+            new_next_action=new_next_action,
+        )
+
+    def _build_observation_revision_summary(
+        self,
+        *,
+        report: PlanHealthReport,
+        trigger: str,
+        task_id: UUID | None,
+        completion_rate: float | None,
+        feedback_category: str | None,
+        difficulty_delta: float | None,
+    ) -> PlanRevisionSummary:
+        signal_parts: list[str] = []
+        if report.reasons:
+            signal_parts.append(", ".join(report.reasons))
+        if completion_rate is not None:
+            signal_parts.append(f"completion_rate={completion_rate:.2f}")
+        if feedback_category:
+            signal_parts.append(f"feedback_category={feedback_category}")
+        if difficulty_delta is not None:
+            signal_parts.append(f"difficulty_delta={difficulty_delta:.2f}")
+        if task_id:
+            signal_parts.append(f"task_id={task_id}")
+        signal_text = "；".join(signal_parts) if signal_parts else "execution stayed within the current plan bounds"
+
+        if report.requires_adjustment:
+            what_changes = "收紧当前计划中的卡点，并围绕新的约束继续推进。"
+            new_next_action = "先处理最先暴露出来的执行卡点，再推进下一步。"
+        elif trigger == "task_completed":
+            what_changes = "保持当前计划结构不变，只继续推进下一步。"
+            new_next_action = "沿用已验证的路径，继续执行下一步任务。"
+        else:
+            what_changes = "保持当前计划结构，只把最新反馈记入下一轮执行参考。"
+            new_next_action = "根据最新反馈继续推进下一步。"
+
+        what_stays = "已验证通过的步骤和已完成的成果保持不变。"
+        if report.metrics.get("completion_rate") is not None:
+            what_stays = f"{what_stays} 当前完成度记录为 {float(report.metrics['completion_rate']):.2f}。"
+
+        return PlanRevisionSummary(
+            why_plan_changed=f"Recent execution signals indicate the current path still needs a light revision: {signal_text}.",
+            what_assumption_failed=(
+                f"The assumption that the current execution rhythm would remain stable for trigger '{trigger}' did not hold."
+            ),
+            what_stays=what_stays,
+            what_changes=what_changes,
+            new_next_action=new_next_action,
+        )
+
+    def _build_execution_revision_summary(
+        self,
+        *,
+        feedback: "PlanExecutionFeedback",
+        outcome_learning: dict[str, Any] | None = None,
+    ) -> PlanRevisionSummary:
+        learning = outcome_learning if isinstance(outcome_learning, dict) else {}
+        failure_rules = [
+            str(item).strip()
+            for item in list(learning.get("known_failure_avoidance_rules") or [])
+            if str(item).strip()
+        ]
+        success_patterns = [
+            str(item).strip()
+            for item in list(learning.get("known_success_patterns") or [])
+            if str(item).strip()
+        ]
+
+        signal_bits = [
+            f"validation_status={feedback.validation_status}",
+            f"quality_score={feedback.quality_score:.2f}",
+        ]
+        if feedback.aborted:
+            signal_bits.append("aborted=True")
+        if feedback.failed_tools:
+            signal_bits.append(f"failed_tools={','.join(feedback.failed_tools[:3])}")
+        if feedback.slow_tools:
+            signal_bits.append(f"slow_tools={','.join(feedback.slow_tools[:3])}")
+        if feedback.unreliable_dependencies:
+            signal_bits.append(f"unreliable_dependencies={','.join(feedback.unreliable_dependencies[:3])}")
+
+        if feedback.aborted or feedback.validation_status == "failed":
+            what_changes = "先修复失败工具和不稳定依赖，再继续后续步骤。"
+            new_next_action = "先从失败的关键步骤重新开始，只推进一小段验证路径。"
+        elif feedback.validation_status == "partial" or feedback.slow_tools or feedback.unreliable_dependencies:
+            what_changes = "保留已经通过的步骤，只围绕卡点做局部修正。"
+            new_next_action = "先处理最慢或最不稳定的步骤，然后再推进剩余步骤。"
+        else:
+            what_changes = "保持当前执行结构，只沿用已验证的步骤继续推进。"
+            new_next_action = "继续执行下一步，并沿用当前已验证的路径。"
+
+        what_stays = "已通过的步骤和已验证的执行成果保持不变。"
+        if success_patterns:
+            what_stays = f"{what_stays} Keep the validated success pattern: {success_patterns[0]}"
+
+        why_plan_changed = f"Recent execution signals show the current path should be revised slightly: {', '.join(signal_bits)}."
+        if failure_rules:
+            why_plan_changed = f"{why_plan_changed} This matches validated learning: {failure_rules[0]}"
+
+        failed_tool = feedback.failed_tools[0] if feedback.failed_tools else feedback.validation_status
+        return PlanRevisionSummary(
+            why_plan_changed=why_plan_changed,
+            what_assumption_failed=(
+                f"The assumption that '{failed_tool}' would remain stable through execution did not hold."
+            ),
             what_stays=what_stays,
             what_changes=what_changes,
             new_next_action=new_next_action,

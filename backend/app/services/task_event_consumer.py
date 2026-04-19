@@ -138,6 +138,36 @@ class TaskEventConsumer:
             async with AsyncSessionLocal() as db:
                 collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
                 await collector.handle_task_feedback_event(event)
+
+                user_id_raw = event.get("user_id")
+                task_id_raw = event.get("task_id")
+                if not user_id_raw or not task_id_raw:
+                    return
+
+                user_id = UUID(str(user_id_raw))
+                task_id = UUID(str(task_id_raw))
+                plan_id = event.get("plan_id")
+                if not plan_id or plan_id == "None":
+                    result = await db.execute(
+                        select(Task.plan_id).where(
+                            Task.id == task_id,
+                            Task.user_id == user_id,
+                        )
+                    )
+                    plan_id = result.scalar_one_or_none()
+
+                if not plan_id:
+                    return
+
+                adaptive_replanner = AdaptiveReplanner(db, cache_service.redis)
+                await adaptive_replanner.on_task_feedback(
+                    user_id=user_id,
+                    plan_id=UUID(str(plan_id)),
+                    task_id=task_id,
+                    category=event.get("category") or event.get("feedback_category"),
+                    difficulty_delta=event.get("difficulty_delta"),
+                    feedback_text=event.get("feedback_text") or event.get("feedback"),
+                )
         except Exception as e:
             logger.error(f"Failed to handle task.feedback_submitted: {e}")
 

@@ -6,6 +6,7 @@ import pytest
 
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.orchestration.adaptive_replanner import CognitivePatternTrigger, PlanParameterAdjustment
+from app.orchestration.step_feedback_collector import PlanExecutionFeedback
 from app.services.plan_progress_service import PlanHealthReport
 
 
@@ -146,6 +147,51 @@ async def test_on_task_feedback_uses_struggle_trigger_for_unclear_feedback() -> 
     kwargs = replanner.evaluate_plan_health_now.await_args.kwargs
     assert kwargs["trigger"] == "task_feedback_struggle"
     assert kwargs["feedback_category"] == "unclear"
+
+
+@pytest.mark.asyncio
+async def test_on_plan_execution_completed_records_execution_delta_without_replan() -> None:
+    user_id = uuid4()
+    plan_id = uuid4()
+    replanner = object.__new__(AdaptiveReplanner)
+    state = SimpleNamespace(facts={"adaptive_meta": {"recent_execution_feedback_deltas": []}})
+    replanner.plan_state_service = SimpleNamespace(
+        get_plan_state=AsyncMock(return_value=state),
+        upsert_plan_state=AsyncMock(),
+    )
+    replanner.plan_review_service = SimpleNamespace(trigger_replanning=AsyncMock())
+    replanner._enqueue_adaptation_update = AsyncMock()
+    replanner._apply_cognitive_pattern_adjustments = AsyncMock(return_value=[])
+
+    feedback = PlanExecutionFeedback(
+        plan_id=str(plan_id),
+        user_id=str(user_id),
+        session_id="session-1",
+        validation_status="passed",
+        quality_score=0.95,
+        total_steps=3,
+        steps_passed=3,
+        steps_failed=0,
+        aborted=False,
+        step_feedbacks=[],
+        slow_tools=[],
+        failed_tools=[],
+        unreliable_dependencies=[],
+    )
+
+    records = await replanner.on_plan_execution_completed(
+        user_id=user_id,
+        plan_id=plan_id,
+        feedback=feedback,
+    )
+
+    assert records == []
+    patch = replanner.plan_state_service.upsert_plan_state.await_args.kwargs["patch"]
+    adaptive_meta = patch["facts"]["adaptive_meta"]
+    assert adaptive_meta["last_execution_feedback_delta"]["validation_status"] == "passed"
+    assert adaptive_meta["last_execution_feedback_delta"]["needs_replanning"] is False
+    assert adaptive_meta["last_plan_revision_summary"]["new_next_action"].startswith("继续")
+    replanner.plan_review_service.trigger_replanning.assert_not_called()
 
 
 def test_cognitive_pattern_trigger_skips_previously_failed_adjustment() -> None:

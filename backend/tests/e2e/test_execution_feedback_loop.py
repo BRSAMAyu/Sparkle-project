@@ -17,6 +17,7 @@ Created: 2026-01-28
 import pytest
 from datetime import timezone, datetime, timedelta
 from uuid import uuid4
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 from sqlalchemy import select
 
@@ -37,12 +38,14 @@ from app.services.feedback_adjustment_service import (
 )
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.plan_progress_service import PlanProgressService
+from app.services.task_event_consumer import TaskEventConsumer
 from app.orchestration.version_conflict_service import (
     VersionConflictService,
     VersionConflictResult,
 )
 from app.orchestration.state_manager import SessionStateManager
 from app.services.milestone_handler import MilestoneHandler
+from app.orchestration.step_feedback_collector import PlanExecutionFeedback
 
 
 def _utcnow() -> datetime:
@@ -515,7 +518,106 @@ async def test_e2e_version_conflict_triggers_auto_replan(db_session: AsyncSessio
 
 
 # =============================================================================
-# E2E Test 5: Multi-Plan Isolation
+# E2E Test 5: Feedback Consumer Routing
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_task_feedback_consumer_routes_to_adaptive_replanner():
+    user_id = uuid4()
+    task_id = uuid4()
+    plan_id = uuid4()
+    consumer = TaskEventConsumer(Mock())
+
+    class _FakeSessionCM:
+        def __init__(self, db):
+            self.db = db
+
+        async def __aenter__(self):
+            return self.db
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    db_session = AsyncMock()
+    db_session.execute = AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: plan_id))
+
+    collector_instance = SimpleNamespace(handle_task_feedback_event=AsyncMock())
+    replanner_instance = SimpleNamespace(on_task_feedback=AsyncMock(return_value=[]))
+
+    with patch("app.services.task_event_consumer.AsyncSessionLocal", return_value=_FakeSessionCM(db_session)), patch(
+        "app.services.task_event_consumer.BehaviorSignalCollector",
+        return_value=collector_instance,
+    ), patch(
+        "app.services.task_event_consumer.AdaptiveReplanner",
+        return_value=replanner_instance,
+    ):
+        await consumer._handle_task_feedback(
+            {
+                "event_type": "task.feedback_submitted",
+                "user_id": str(user_id),
+                "task_id": str(task_id),
+                "category": "too_difficult",
+                "difficulty_delta": -0.2,
+                "feedback_text": "太难了",
+            }
+        )
+
+    collector_instance.handle_task_feedback_event.assert_awaited_once()
+    replanner_instance.on_task_feedback.assert_awaited_once()
+    kwargs = replanner_instance.on_task_feedback.await_args.kwargs
+    assert kwargs["user_id"] == user_id
+    assert kwargs["plan_id"] == plan_id
+    assert kwargs["task_id"] == task_id
+    assert kwargs["category"] == "too_difficult"
+    assert kwargs["difficulty_delta"] == -0.2
+    assert kwargs["feedback_text"] == "太难了"
+
+
+@pytest.mark.asyncio
+async def test_task_feedback_consumer_safe_fallback_when_plan_missing():
+    user_id = uuid4()
+    task_id = uuid4()
+    consumer = TaskEventConsumer(Mock())
+
+    class _FakeSessionCM:
+        def __init__(self, db):
+            self.db = db
+
+        async def __aenter__(self):
+            return self.db
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    db_session = AsyncMock()
+    db_session.execute = AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: None))
+
+    collector_instance = SimpleNamespace(handle_task_feedback_event=AsyncMock())
+    replanner_instance = SimpleNamespace(on_task_feedback=AsyncMock(return_value=[]))
+
+    with patch("app.services.task_event_consumer.AsyncSessionLocal", return_value=_FakeSessionCM(db_session)), patch(
+        "app.services.task_event_consumer.BehaviorSignalCollector",
+        return_value=collector_instance,
+    ), patch(
+        "app.services.task_event_consumer.AdaptiveReplanner",
+        return_value=replanner_instance,
+    ):
+        await consumer._handle_task_feedback(
+            {
+                "event_type": "task.feedback_submitted",
+                "user_id": str(user_id),
+                "task_id": str(task_id),
+                "feedback_text": "",
+            }
+        )
+
+    collector_instance.handle_task_feedback_event.assert_awaited_once()
+    replanner_instance.on_task_feedback.assert_not_called()
+
+
+# =============================================================================
+# E2E Test 6: Multi-Plan Isolation
 # =============================================================================
 
 

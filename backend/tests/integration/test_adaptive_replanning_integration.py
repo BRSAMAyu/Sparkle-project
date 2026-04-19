@@ -302,6 +302,69 @@ async def test_feedback_loop_integration(db_session: AsyncSession):
     # automatically append to PlanState.feedback_log.
 
 
+@pytest.mark.asyncio
+async def test_task_completion_records_observation_revision_summary(db_session: AsyncSession):
+    """
+    Integration: a healthy task completion still records a visible next-step delta.
+    """
+    user_id = uuid4()
+    await _ensure_user(db_session, user_id)
+    plan_id = uuid4()
+
+    plan = Plan(
+        id=plan_id,
+        user_id=user_id,
+        name="观察摘要计划",
+        type=PlanType.SPRINT,
+        progress=0.0,
+        is_active=True,
+    )
+    db_session.add(plan)
+
+    task = Task(
+        id=uuid4(),
+        user_id=user_id,
+        plan_id=plan_id,
+        title="完成一项稳定任务",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=20,
+        difficulty=2,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    plan_state_service = PlanStateService(db_session, redis=None)
+    await plan_state_service.get_or_create_plan_state(
+        user_id=user_id,
+        plan_id=plan_id,
+    )
+
+    progress_service = PlanProgressService(db_session, redis=None)
+    adaptive_replanner = AdaptiveReplanner(db_session, redis=None, progress_service=progress_service)
+
+    await TaskService.complete(
+        db=db_session,
+        db_obj=task,
+        actual_minutes=20,
+    )
+
+    await adaptive_replanner.on_task_completed(
+        user_id=user_id,
+        plan_id=plan_id,
+        task_id=task.id,
+        completion_rate=1.0,
+    )
+
+    updated_state = await plan_state_service.get_plan_state(user_id, plan_id)
+    assert updated_state is not None
+    adaptive_meta = (updated_state.facts or {}).get("adaptive_meta") or {}
+    summary = adaptive_meta.get("last_plan_revision_summary")
+    assert summary is not None
+    assert "继续" in summary["new_next_action"] or "continue" in summary["new_next_action"].lower()
+    assert adaptive_meta.get("recent_revision_summaries")
+
+
 # =============================================================================
 # Integration Test 4: MilestoneHandler + PlanState Integration
 # =============================================================================
