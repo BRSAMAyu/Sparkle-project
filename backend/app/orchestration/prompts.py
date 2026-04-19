@@ -83,6 +83,18 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "seed_library_section": (40, 0.04),
 }
 
+_PROMPT_UTILIZATION_SECTION_ALIASES: dict[str, str] = {
+    "situation_brief_section": "situation_brief",
+    "decision_policy_section": "decision_policy",
+    "planning_strategy_section": "planning_strategy",
+    "user_material_grounding_section": "user_material_grounding",
+    "intervention_language_contract_section": "intervention_language_contract",
+    "visible_intelligence_section": "visible_intelligence",
+    "plan_context_section": "plan_context",
+    "intent_section": "intent",
+    "session_feedback_section": "session_feedback",
+}
+
 
 def _is_cjk_character(char: str) -> bool:
     codepoint = ord(char)
@@ -1167,6 +1179,7 @@ def build_system_prompt(
             pass
     _prompt_budget = _TIER_PROMPT_BUDGET.get(_model_tier_str or "", PROMPT_SECTION_SOFT_LIMIT_TOKENS)
 
+    pre_budget_section_map = dict(section_map)
     section_map = _apply_prompt_budget(
         section_map,
         priority_map={
@@ -1256,6 +1269,11 @@ def build_system_prompt(
         prompt_signal_telemetry["model_facing_section_sizes"] = {
             key: value for key, value in prompt_signal_telemetry.get("section_sizes", {}).items()
         }
+        prompt_signal_telemetry["utilization"] = _build_prompt_utilization_snapshot(
+            pre_budget_section_map=pre_budget_section_map,
+            model_facing_section_map=section_map,
+            prompt_signal_telemetry=prompt_signal_telemetry,
+        )
         if isinstance(user_context, dict):
             user_context["prompt_signal_telemetry"] = prompt_signal_telemetry
 
@@ -2239,6 +2257,32 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
         "dropped_high_value_fields": [],
         "high_value_fields": field_status,
         "section_sizes": {},
+    }
+
+
+def _build_prompt_utilization_snapshot(
+    *,
+    pre_budget_section_map: dict[str, str],
+    model_facing_section_map: dict[str, str],
+    prompt_signal_telemetry: dict[str, Any],
+) -> dict[str, Any]:
+    selected_signal_blocks = [
+        alias
+        for section_name, alias in _PROMPT_UTILIZATION_SECTION_ALIASES.items()
+        if str(pre_budget_section_map.get(section_name) or "").strip()
+    ]
+    rendered_signal_blocks = [
+        alias
+        for section_name, alias in _PROMPT_UTILIZATION_SECTION_ALIASES.items()
+        if str(model_facing_section_map.get(section_name) or "").strip()
+    ]
+    return {
+        "selected_signal_block_count": len(selected_signal_blocks),
+        "rendered_signal_block_count": len(rendered_signal_blocks),
+        "selected_signal_blocks": selected_signal_blocks,
+        "rendered_signal_blocks": rendered_signal_blocks,
+        "selected_high_value_fields": list(prompt_signal_telemetry.get("collected_high_value_fields") or []),
+        "prompt_visible_high_value_fields": list(prompt_signal_telemetry.get("prompt_visible_high_value_fields") or []),
     }
 
 

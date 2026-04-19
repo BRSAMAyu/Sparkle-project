@@ -58,6 +58,7 @@ class TokenTracker:
         success: bool = True,
         fallback_used: bool = False,
         outcome_stats: dict[str, Any] | None = None,
+        utilization_metrics: dict[str, Any] | None = None,
     ) -> int:
         """
         记录 Token 使用量
@@ -94,6 +95,7 @@ class TokenTracker:
             "success": bool(success),
             "fallback_used": bool(fallback_used),
             "outcome_stats": outcome_stats or {},
+            "utilization_metrics": utilization_metrics or {},
             "timestamp": timestamp,
         }
 
@@ -185,6 +187,14 @@ class TokenTracker:
         if execution_count > 0:
             await self.redis.hincrby(ops_key, "execution_count_sum", execution_count)
             await self.redis.hincrby(ops_key, "execution_request_count", 1)
+        for metric_name in ("prompt_utilization", "inference_utilization"):
+            metric_payload = (utilization_metrics or {}).get(metric_name)
+            if isinstance(metric_payload, dict):
+                await self._record_utilization_metric(
+                    key=ops_key,
+                    metric_name=metric_name,
+                    metric_payload=metric_payload,
+                )
         await self.redis.expire(ops_key, 86400 * 30)
 
         # 5. 记录到历史明细（可选，用于详细分析）
@@ -203,6 +213,7 @@ class TokenTracker:
             "success": bool(success),
             "fallback_used": bool(fallback_used),
             "outcome_stats": outcome_stats or {},
+            "utilization_metrics": utilization_metrics or {},
             "timestamp": timestamp,
         }
         await self.redis.rpush(detail_key, json.dumps(detail))
@@ -226,6 +237,34 @@ class TokenTracker:
             return
         await self.redis.incrby(key, value)
         await self.redis.expire(key, 86400 * 14)
+
+    async def _record_utilization_metric(
+        self,
+        *,
+        key: str,
+        metric_name: str,
+        metric_payload: dict[str, Any],
+    ) -> None:
+        status = str(metric_payload.get("status") or "unknown").strip().lower()
+        numerator = self._safe_int(metric_payload.get("numerator"))
+        denominator = self._safe_int(metric_payload.get("denominator"))
+        ratio_value = metric_payload.get("ratio")
+        ratio_basis_points = 0
+        if ratio_value is not None:
+            try:
+                ratio_basis_points = max(0, int(round(float(ratio_value) * 10_000)))
+            except (TypeError, ValueError):
+                ratio_basis_points = 0
+
+        await self.redis.hincrby(key, f"{metric_name}_numerator_sum", numerator)
+        await self.redis.hincrby(key, f"{metric_name}_denominator_sum", denominator)
+        if status == "known" and denominator > 0:
+            await self.redis.hincrby(key, f"{metric_name}_known_count", 1)
+            await self.redis.hincrby(key, f"{metric_name}_ratio_basis_points_sum", ratio_basis_points)
+        elif status == "not_applicable":
+            await self.redis.hincrby(key, f"{metric_name}_not_applicable_count", 1)
+        else:
+            await self.redis.hincrby(key, f"{metric_name}_unknown_count", 1)
 
     @staticmethod
     def _normalize_mode(value: str | None) -> str:
@@ -639,6 +678,18 @@ class TokenTracker:
                         "task_request_count": 0,
                         "plan_request_count": 0,
                         "execution_request_count": 0,
+                        "prompt_utilization_known_count": 0,
+                        "prompt_utilization_unknown_count": 0,
+                        "prompt_utilization_not_applicable_count": 0,
+                        "prompt_utilization_ratio_basis_points_sum": 0,
+                        "prompt_utilization_numerator_sum": 0,
+                        "prompt_utilization_denominator_sum": 0,
+                        "inference_utilization_known_count": 0,
+                        "inference_utilization_unknown_count": 0,
+                        "inference_utilization_not_applicable_count": 0,
+                        "inference_utilization_ratio_basis_points_sum": 0,
+                        "inference_utilization_numerator_sum": 0,
+                        "inference_utilization_denominator_sum": 0,
                         "reasoning_mode_breakdown": {},
                     },
                 )
@@ -657,6 +708,18 @@ class TokenTracker:
                 task_request_count = int(raw.get("task_request_count") or 0)
                 plan_request_count = int(raw.get("plan_request_count") or 0)
                 execution_request_count = int(raw.get("execution_request_count") or 0)
+                prompt_known_count = int(raw.get("prompt_utilization_known_count") or 0)
+                prompt_unknown_count = int(raw.get("prompt_utilization_unknown_count") or 0)
+                prompt_not_applicable_count = int(raw.get("prompt_utilization_not_applicable_count") or 0)
+                prompt_ratio_basis_points_sum = int(raw.get("prompt_utilization_ratio_basis_points_sum") or 0)
+                prompt_numerator_sum = int(raw.get("prompt_utilization_numerator_sum") or 0)
+                prompt_denominator_sum = int(raw.get("prompt_utilization_denominator_sum") or 0)
+                inference_known_count = int(raw.get("inference_utilization_known_count") or 0)
+                inference_unknown_count = int(raw.get("inference_utilization_unknown_count") or 0)
+                inference_not_applicable_count = int(raw.get("inference_utilization_not_applicable_count") or 0)
+                inference_ratio_basis_points_sum = int(raw.get("inference_utilization_ratio_basis_points_sum") or 0)
+                inference_numerator_sum = int(raw.get("inference_utilization_numerator_sum") or 0)
+                inference_denominator_sum = int(raw.get("inference_utilization_denominator_sum") or 0)
                 bucket["requests_total"] += requests_total
                 bucket["requests_success"] += requests_success
                 bucket["requests_failed"] += requests_failed
@@ -672,6 +735,18 @@ class TokenTracker:
                 bucket["task_request_count"] += task_request_count
                 bucket["plan_request_count"] += plan_request_count
                 bucket["execution_request_count"] += execution_request_count
+                bucket["prompt_utilization_known_count"] += prompt_known_count
+                bucket["prompt_utilization_unknown_count"] += prompt_unknown_count
+                bucket["prompt_utilization_not_applicable_count"] += prompt_not_applicable_count
+                bucket["prompt_utilization_ratio_basis_points_sum"] += prompt_ratio_basis_points_sum
+                bucket["prompt_utilization_numerator_sum"] += prompt_numerator_sum
+                bucket["prompt_utilization_denominator_sum"] += prompt_denominator_sum
+                bucket["inference_utilization_known_count"] += inference_known_count
+                bucket["inference_utilization_unknown_count"] += inference_unknown_count
+                bucket["inference_utilization_not_applicable_count"] += inference_not_applicable_count
+                bucket["inference_utilization_ratio_basis_points_sum"] += inference_ratio_basis_points_sum
+                bucket["inference_utilization_numerator_sum"] += inference_numerator_sum
+                bucket["inference_utilization_denominator_sum"] += inference_denominator_sum
                 reasoning_bucket = bucket["reasoning_mode_breakdown"].setdefault(
                     reasoning_mode,
                     {
@@ -729,6 +804,32 @@ class TokenTracker:
                     "execution_conversion_rate_percent": round((execution_request_count / requests_total) * 100, 2)
                     if requests_total > 0
                     else 0.0,
+                    "prompt_utilization_known_count": int(bucket["prompt_utilization_known_count"]),
+                    "prompt_utilization_unknown_count": int(bucket["prompt_utilization_unknown_count"]),
+                    "prompt_utilization_not_applicable_count": int(bucket["prompt_utilization_not_applicable_count"]),
+                    "avg_prompt_utilization_percent": round(
+                        int(bucket["prompt_utilization_ratio_basis_points_sum"])
+                        / max(int(bucket["prompt_utilization_known_count"]), 1)
+                        / 100,
+                        2,
+                    )
+                    if int(bucket["prompt_utilization_known_count"]) > 0
+                    else None,
+                    "prompt_utilization_numerator_sum": int(bucket["prompt_utilization_numerator_sum"]),
+                    "prompt_utilization_denominator_sum": int(bucket["prompt_utilization_denominator_sum"]),
+                    "inference_utilization_known_count": int(bucket["inference_utilization_known_count"]),
+                    "inference_utilization_unknown_count": int(bucket["inference_utilization_unknown_count"]),
+                    "inference_utilization_not_applicable_count": int(bucket["inference_utilization_not_applicable_count"]),
+                    "avg_inference_utilization_percent": round(
+                        int(bucket["inference_utilization_ratio_basis_points_sum"])
+                        / max(int(bucket["inference_utilization_known_count"]), 1)
+                        / 100,
+                        2,
+                    )
+                    if int(bucket["inference_utilization_known_count"]) > 0
+                    else None,
+                    "inference_utilization_numerator_sum": int(bucket["inference_utilization_numerator_sum"]),
+                    "inference_utilization_denominator_sum": int(bucket["inference_utilization_denominator_sum"]),
                     "reasoning_mode_breakdown": [
                         {
                             "mode": mode,
@@ -778,6 +879,10 @@ class TokenTracker:
                         "first_token_ms_sum": 0,
                         "stream_duration_ms_sum": 0,
                         "execution_request_count": 0,
+                        "prompt_utilization_known_count": 0,
+                        "prompt_utilization_ratio_basis_points_sum": 0,
+                        "inference_utilization_known_count": 0,
+                        "inference_utilization_ratio_basis_points_sum": 0,
                         "reasoning_modes": set(),
                     },
                 )
@@ -790,6 +895,10 @@ class TokenTracker:
                 first_token_ms = int(raw.get("first_token_ms_sum") or 0)
                 stream_duration_ms = int(raw.get("stream_duration_ms_sum") or 0)
                 execution_request_count = int(raw.get("execution_request_count") or 0)
+                prompt_utilization_known_count = int(raw.get("prompt_utilization_known_count") or 0)
+                prompt_utilization_ratio_basis_points_sum = int(raw.get("prompt_utilization_ratio_basis_points_sum") or 0)
+                inference_utilization_known_count = int(raw.get("inference_utilization_known_count") or 0)
+                inference_utilization_ratio_basis_points_sum = int(raw.get("inference_utilization_ratio_basis_points_sum") or 0)
                 bucket["requests_total"] += requests_total
                 bucket["requests_success"] += requests_success
                 bucket["requests_failed"] += requests_failed
@@ -799,6 +908,10 @@ class TokenTracker:
                 bucket["first_token_ms_sum"] += first_token_ms
                 bucket["stream_duration_ms_sum"] += stream_duration_ms
                 bucket["execution_request_count"] += execution_request_count
+                bucket["prompt_utilization_known_count"] += prompt_utilization_known_count
+                bucket["prompt_utilization_ratio_basis_points_sum"] += prompt_utilization_ratio_basis_points_sum
+                bucket["inference_utilization_known_count"] += inference_utilization_known_count
+                bucket["inference_utilization_ratio_basis_points_sum"] += inference_utilization_ratio_basis_points_sum
                 bucket["reasoning_modes"].add(reasoning_mode)
 
         summaries: list[dict[str, Any]] = []
@@ -836,6 +949,22 @@ class TokenTracker:
                     )
                     if requests_total > 0
                     else 0.0,
+                    "avg_prompt_utilization_percent": round(
+                        int(bucket["prompt_utilization_ratio_basis_points_sum"])
+                        / max(int(bucket["prompt_utilization_known_count"]), 1)
+                        / 100,
+                        2,
+                    )
+                    if int(bucket["prompt_utilization_known_count"]) > 0
+                    else None,
+                    "avg_inference_utilization_percent": round(
+                        int(bucket["inference_utilization_ratio_basis_points_sum"])
+                        / max(int(bucket["inference_utilization_known_count"]), 1)
+                        / 100,
+                        2,
+                    )
+                    if int(bucket["inference_utilization_known_count"]) > 0
+                    else None,
                     "reasoning_modes": sorted(bucket["reasoning_modes"]),
                 }
             )

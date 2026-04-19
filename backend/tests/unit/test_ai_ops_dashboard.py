@@ -242,3 +242,77 @@ async def test_user_settings_service_ai_ops_export_returns_overview_and_trends(d
     assert study_series["points"][0]["execution_conversion_rate_percent"] == 100.0
 
     token_tracker_module._token_tracker_instance = None
+
+
+@pytest.mark.asyncio
+async def test_token_tracker_ai_ops_summary_surfaces_stage9_utilization_metrics():
+    redis = FakeRedis()
+    tracker = TokenTracker(redis)
+
+    await tracker.record_usage(
+        user_id="user-util",
+        session_id="session-util",
+        request_id="req-util",
+        prompt_tokens=80,
+        completion_tokens=120,
+        model="qwen3.5-flash",
+        cost=0.0019,
+        reasoning_mode="balanced",
+        model_tier="standard",
+        chat_mode="standard",
+        success=True,
+        fallback_used=False,
+        utilization_metrics={
+            "prompt_utilization": {
+                "status": "known",
+                "numerator": 4,
+                "denominator": 5,
+                "ratio": 0.8,
+            },
+            "inference_utilization": {
+                "status": "known",
+                "numerator": 3,
+                "denominator": 4,
+                "ratio": 0.75,
+            },
+        },
+    )
+    await tracker.record_usage(
+        user_id="user-util",
+        session_id="session-util",
+        request_id="req-util-2",
+        prompt_tokens=20,
+        completion_tokens=10,
+        model="qwen3.5-flash",
+        cost=0.0002,
+        reasoning_mode="balanced",
+        model_tier="standard",
+        chat_mode="standard",
+        success=True,
+        fallback_used=False,
+        utilization_metrics={
+            "prompt_utilization": {
+                "status": "not_applicable",
+                "numerator": 0,
+                "denominator": 0,
+                "ratio": None,
+            },
+            "inference_utilization": {
+                "status": "unknown",
+                "numerator": 0,
+                "denominator": 0,
+                "ratio": None,
+            },
+        },
+    )
+
+    summary = await tracker.get_ai_ops_summary("user-util", days=1)
+
+    assert len(summary) == 1
+    item = summary[0]
+    assert item["avg_prompt_utilization_percent"] == 80.0
+    assert item["avg_inference_utilization_percent"] == 75.0
+    assert item["prompt_utilization_known_count"] == 1
+    assert item["prompt_utilization_not_applicable_count"] == 1
+    assert item["inference_utilization_known_count"] == 1
+    assert item["inference_utilization_unknown_count"] == 1

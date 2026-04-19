@@ -23,6 +23,7 @@ from app.orchestration.schemas import ExecutablePlan, RouteDecision
 from app.orchestration.session_feedback import SessionFeedbackSignal, apply_session_feedback_visible_prefix
 from app.orchestration.statechart_engine import WorkflowState
 from app.orchestration.tool_result_extractor import ToolResultExtractor
+from app.orchestration.utilization_metrics import build_stage9_utilization_metrics
 from app.orchestration.ux_envelope import ux_envelope_builder
 
 
@@ -539,6 +540,14 @@ class ResponseBuilderMixin:
             user_context_payload=user_context_payload,
         )
         response_metadata.update(ux_envelope_builder.to_metadata_map(ux_envelope))
+        utilization_metrics = build_stage9_utilization_metrics(
+            user_context_payload=user_context_payload,
+            context_data=final_state.context_data,
+            response_metadata=response_metadata,
+            full_response=full_response,
+        )
+        final_state.context_data["utilization_metrics"] = utilization_metrics
+        response_metadata["utilization_metrics"] = json.dumps(utilization_metrics, ensure_ascii=False)
 
         await self._persist_assistant_message(
             active_db=active_db,
@@ -765,6 +774,9 @@ class ResponseBuilderMixin:
                         success=success,
                         fallback_used=fallback_used,
                         outcome_stats=outcome_stats,
+                        utilization_metrics=context_data.get("utilization_metrics")
+                        if isinstance(context_data.get("utilization_metrics"), dict)
+                        else None,
                     ),
                     task_name="token_usage_record",
                     user_id=str(user_id),
