@@ -3,11 +3,14 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-19
-> **版本**: v3（GLM-observer 审校 + 用户裁定关系模型 + Claude 三层修正）
+> **版本**: v4（Stage 5 完成 + 用户画像系统架构 + Rule K）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
 > - `SPARKLE_AURORA_STAGE4_VISION_ALIGNMENT_2026-04-19.md` — Stage 4 战略共识 v2
+> - `SPARKLE_AURORA_STAGE5_DISPATCH_PLAN_2026-04-19.md` — Stage 5 派发计划
+> - `SPARKLE_AURORA_STAGE5_HANDOFF_2026-04-19.md` — Stage 5 收尾 handoff
+> - `SPARKLE_USER_MODEL_LAYERED_ARCHITECTURE_2026-04-19.md` — 用户模型五层架构
 > - `SPARKLE_GROWTH_SYSTEM_ROADMAP_2026-04-03.md` — 成长系统路线图
 > - `SPARKLE_DATA_UTILIZATION_ANALYSIS_2026-04-06.md` — 数据利用分析
 
@@ -97,7 +100,23 @@ Aurora 是一个引擎在三种预算约束下的行为谱，对外统一、内�
 - 通信只通过 primitives 或 prior_outputs（P1 红线）
 - 三时层**禁止**共享内存、禁止共享 ORM session
 
-### 2.3 双交互模式
+### 2.3 用户模型五层架构（Rule K 写入纪律）
+
+画像系统是 pipeline + projection cache，不是 source-of-truth store。SoT 在 L0 Infrastructure。
+
+| 层 | 职责 | 写入边界 |
+|----|------|----------|
+| **L0 Infrastructure** | 收集 raw evidence，构建全软件闭环 | 只写 raw evidence events，不写 projection/inference |
+| **L1 画像系统** | 清洗、标准化、投影、证据链、projection cache | 只写 projection cache，不改 L0 raw events |
+| **L2 AI System** | 归因、压缩、裁判、预测、inference cache | 只写 inference cache，不改 L1 fact |
+| **L3 Aurora** | 独立影子状态、参数调控、漂移检测 | 只写白名单参数（数值/策略），不写任何层 data |
+| **用户纠偏** | 直达 raw/calibration，不经过 Aurora 代写 | 绕过 L2/L3，L1 下次编译周期吸收 |
+
+**Aurora 白名单纪律**：调旋钮（权重、阈值、采样频率、输出策略、token 分配）不改电路（数据源、算法、证据链结构、纠偏记录）。
+
+**Aurora 影子模型**：轻量状态摘要（朋友姿态锚、身份/审美、目标路由、执行评估、不确定性标记），用于漂移检测——Aurora 说的和画像系统说的不一致 = 需要问用户。
+
+### 2.4 双交互模式
 
 | 模式 | 体验 | Aurora 介入度 |
 |------|------|--------------|
@@ -313,7 +332,21 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 任何新提议撞到这 7 条中任意一条，默认拒绝。
 
-### 7.3 构建顺序原则
+### 7.3 Rule K · 用户模型写入纪律（Stage 5 新增）
+
+所有与用户模型相关的写入必须落入五条通道之一：
+
+| 通道 | 可写 | 禁写 |
+|------|------|------|
+| L0 Infrastructure | raw evidence events | projection / inference |
+| L1 画像系统 | projection cache | L0 raw events, L2 inference |
+| L2 AI System | inference cache | L1 fact, L0 raw events |
+| L3 Aurora | 白名单参数（数值/策略）+ 审计日志 | 任何层 data |
+| 用户纠偏 | raw / calibration 条目 | 推断/控制层伪装为用户真相 |
+
+**白名单纪律**：调旋钮不改电路。Aurora 可调权重、阈值、采样频率、输出策略、token 分配；不可改数据源、算法、证据链结构、纠偏记录。
+
+### 7.4 构建顺序原则
 
 **先建完整，再精简**：
 - 精简版需要知道从什么精简
@@ -341,53 +374,87 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 ## 九、当前进度与愿景距离
 
-### 9.1 Stage 4 Wave 1 已完成项（2026-04-19 验证通过）
+### 9.1 Stage 4 完成（全部 WS accept）
 
 | WS | 内容 | 状态 |
 |----|------|------|
 | WS-A.1 | Aurora 异步 substrate（三时层调度、Celery 入口、P1 修复） | ✅ accept |
+| WS-B.1 | routing_mode seam | ✅ accept |
+| WS-B.2 | Escalation Completion | ✅ accept |
 | WS-C.1 | TaskGuidance sidecar skeleton + CRUD | ✅ accept |
-| WS-F.1 | Benchmark harness + P1 guardrail（已升为 hard-fail） | ✅ accept |
-| WS-B.1 | routing_mode seam（escalation 触发器已删除，留给 WS-B.2） | ✅ accept |
 | WS-C.2 | TaskGuidance 双版本 UI（Flutter） | ✅ accept |
-| WS-D | Task Assistant Dormant Mode | ❌ 已 revert，待 Wave 2 重建 |
+| WS-D | Task Assistant Dormant Mode（重建） | ✅ accept |
+| WS-E | Closed-Loop UX | ✅ accept |
+| WS-F.1 | Benchmark harness + P1 guardrail | ✅ accept |
 
-### 9.2 Stage 4 Wave 2 待派发（3 张新卡）
+### 9.2 Stage 5 完成（5 WS accept，88 tests green）
 
-| 卡 | WS | 说明 |
-|----|-----|------|
-| F' | WS-D 重建 | 更严 5-item injection + 端到端 dormant path 测试 |
-| G | WS-E | Closed-Loop UX（flags 在 WS-D revert 时被误删，需恢复） |
-| H | WS-B.2 | Escalation Completion（干净地基） |
+| WS | 内容 | 状态 |
+|----|------|------|
+| WS-K1 | Learning-State Fragment（错题/mastery → 稳定片段） | ✅ accept |
+| WS-R1 | Adaptive Replanner Closure（执行反馈 → 下一步 delta） | ✅ accept |
+| WS-L1 | Intervention Language Contract（锚定 §3.3 介入语言） | ✅ accept |
+| WS-G1 | Growth Signal Uplink（成就 → Aurora 单向信号） | ✅ accept |
+| WS-S1 | Shadow Expansion（50 cases + hook metrics） | ✅ accept |
 
-### 9.3 愿景锚点 vs Stage 4 覆盖
+**Stage 5 关键成果**：
+- 7 阶段环：1/7 → ≥3/7（Execute→Reflect, Reflect→Adapt 变强）
+- 断点：#1 adaptive_replanner→执行、#2 error/mastery→profile、干预语言体系已推进
+- 双核闭环：cognitive/error evidence → learning-state fragment → intervention contract → replanner delta → outcome feedback
 
-| 愿景锚点 | Stage 4 覆盖度 | 说明 |
-|----------|---------------|------|
-| Aurora 异步化 | ✅ 支柱 1 | Wave 1 已完成 substrate，Wave 3 做预算执行 |
-| 对话分流 | ✅ 支柱 2 | Wave 1 完成 seam，Wave 2 完成升级 |
-| TaskGuidance 双版本 | ✅ 支柱 3 | Wave 1 完成 sidecar + UI |
-| 任务助手降级 | ✅ 支柱 4 | Wave 1 已 revert，Wave 2 重建 |
-| 5-P 宪法执行 | ✅ 治理 | P1 hard-fail 已落地，其余随 WS 推进 |
-| 交互式校准 | ❌ 未来 | 不在 Stage 4 scope |
-| 持续学习三层结构 | ❌ 未来 | 不在 Stage 4 scope |
-| 双交互模式 | ❌ 未来 | 不在 Stage 4 scope |
-| 数据泄漏修复 | ❌ 未来 | Stage 4 只建基建，泄漏修复是后续 Stage |
-| 6 个产品断点 | ❌ 未来 | 断点 1-3 是最高优先级，需独立 Stage |
-| 90 天计划执行 | ❌ 未来 | Stage 4 是 Aurora 基建，与断点修复可并行 |
+### 9.3 用户模型架构已落地
 
-### 9.4 距离评估
+| 组件 | 状态 | 说明 |
+|------|------|------|
+| 五层架构（L0-L3 + 用户纠偏） | ✅ 已落盘 | `SPARKLE_USER_MODEL_LAYERED_ARCHITECTURE_2026-04-19.md` |
+| Rule K 写入纪律 | ✅ 已定义 | 四档 + 用户纠偏独立通道 + 白名单 |
+| Aurora 影子模型 | ✅ 已定义 | 轻量状态摘要 + diff 漂移检测 |
+| L1 现状：UserInsightCompiler 四件套 | ✅ 70% 已实现 | compiler + state + calibration + transparency |
+
+### 9.4 Stage 6 待派发 WS
+
+| WS | 主题 | 说明 |
+|----|------|------|
+| WS-M1a | M1 源清点 + 数据质量评估 | 纯分析，不写代码 |
+| WS-M1b | M1 投影实现 | 编译已有源 + 补缺口 |
+| WS-RP1 | 渲染管线修复 | format_user_context 优先消费 UserInsightState；inline tier Redis 缓存 + 强信号热更 |
+| WS-V1 | 用户纠偏 UI + 透明画像 v1 | 硬化 Flutter 消费链路 |
+| WS-E1 | profile-aware evaluation 框架 v1 | 用 A 类验证，不直接优化 |
+| WS-VR1 | 干预效果验证 → calibration 回流 | 断点 #6 |
+
+### 9.5 愿景锚点 vs 当前覆盖
+
+| 愿景锚点 | 覆盖度 | 说明 |
+|----------|--------|------|
+| Aurora 异步化 | ✅ Stage 4 | 三时层 substrate + 路由分流 |
+| 对话分流 | ✅ Stage 4 | 三路 routing_mode + 会话中途升级 |
+| TaskGuidance 双版本 | ✅ Stage 4 | sidecar + UI |
+| 任务助手降级 | ✅ Stage 4 | 单核 + 5 项注入 + dormant |
+| 5-P 宪法执行 | ✅ Stage 4-5 | P1-P5 全部绿色 |
+| 交互式校准 | 🔶 部分 | UserInsightTransparencyService 存在；UI 消费链路待硬化（WS-V1） |
+| 数据泄漏修复 | 🔶 部分 | Stage 5 增加了 growth signal payload；最高 ROI 修复待 WS-RP1 |
+| 6 个产品断点 | 🔶 部分 | #1/#2/#干预语言已推进；#3-#6 待 Stage 6 |
+| 用户模型五层架构 | ✅ 已定义 | Rule K + 影子模型 + 白名单 |
+| 双核协作闭环 | 🔶 0.6/1 | Stage 5 建了一条通路，非完整双向 |
+| 持续学习三层结构 | ❌ 未来 | Stage 7+ |
+| 双交互模式 | ❌ 未来 | Stage 7+ |
+
+### 9.6 距离评估
 
 **用"7 阶段成长环"做标尺**：
-- Clarify → Plan：Aurora 在推进（routing decision、TaskGuidance）
-- Sense：数据采集 95%，但只有 20% 进 AI 推理
-- Reflect / Reinforce / Adapt：几乎零进展
-- 双核协作：Stage 3 做了决策点 routing，Stage 4 做了异步化和分流，但不是真正的双核协同闭环
+- Sense → Clarify → Plan：Stage 4 路由分流 ✅
+- Execute → Reflect：Stage 5 WS-R1 replanner 闭环 ✅
+- Reflect → Adapt：Stage 5 WS-G1 growth signal 变强 ✅
+- Reinforce：仍弱 ❌
+- 整体：≥3/7，从 Stage 4 结束时的 1/7 有实质推进
 
 **用"用户感知"做标尺**：
-- 用户目前能感受到的 Aurora 价值：接近零
-- 原因：所有工作都在基建层，没有用户可感知的闭环
-- Stage 4 完成后这一状态不会立刻改变——Stage 4 是让 Aurora 具备正确形态，用户可感知的价值要在断点修复和闭环闭合后才体现
+- Stage 5 建了第一条用户可感知的通路：干预语言不再空话，replanner 真的改下一步
+- 但仍不是完整闭环——断点 #6（干预效果验证）未闭合，用户还看不到"系统学到了什么方法对我有效"
+
+**用"数据利用"做标尺**：
+- Stage 5 增加了 growth signal payload（从 0 到有），但 prompts.py 死数据修复（最高 ROI）未动
+- WS-RP1 是修复泄漏的最后一公里
 
 ---
 
@@ -432,6 +499,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | v1 | 2026-04-19 | MIMO 初版，基于用户愿景讨论整理 |
 | v2 | 2026-04-19 | GLM-observer 审校修正：补齐 5-P 宪法、不做清单、三路分流、TaskGuidance 精确描述、干预语言 6 条原则、闭环完整定义、6 断点优先级、注入清单 5 项、数据泄漏最高 ROI 修复、Stage 4 进度精确化、核对机制增强、90 天计划三梯次 |
 | v3 | 2026-04-19 | 用户裁定关系模型为"朋友"（非队友/非教练/非工具）+ Sparkle 自我发展空间；引入三层模型（签字定义 / 架构本质 / 验证信号）防止层间替代；A 类改为可验证信号（配 CI 条件）；Claude "社会体"漂移事件记录为反面案例；首席设计者三条硬约束写入；漂移检测增加定义替换和信号当目标的检测项 |
+| v4 | 2026-04-19 | Stage 4 全部 WS accept 更新；Stage 5 完成（5 WS accept, 88 tests green）；用户模型五层架构（L0-L3 + 用户纠偏）落地；Rule K 写入纪律 + 白名单；Aurora 影子模型定义；Stage 6 WS 边界（M1a/M1b/RP1/V1/E1/VR1）；愿景锚点覆盖度更新；距离评估刷新至 Stage 5 结束基线 |
 
 ---
 
