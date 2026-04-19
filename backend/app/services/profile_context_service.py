@@ -36,6 +36,7 @@ def _utcnow() -> datetime:
 
 class ProfileContextService:
     CACHE_TTL_SECONDS = 300
+    INLINE_SNAPSHOT_CACHE_TTL_SECONDS = 120
     WEAK_SPOT_LIMIT = 5
     CHANGE_LIMIT = 5
     PATTERN_LIMIT = 5
@@ -156,7 +157,44 @@ class ProfileContextService:
             except Exception as exc:
                 logger.warning(f"ProfileContext cache write failed: {exc}")
 
+        # Write inline snapshot cache as a side-effect of compilation
+        if context.user_insight_state is not None:
+            await self._write_inline_snapshot_cache(user_id, context.user_insight_state.to_inline_snapshot())
+
         return context
+
+    async def get_inline_snapshot(self, user_id: UUID) -> dict[str, Any] | None:
+        """Retrieve the cached inline snapshot for a user, if available.
+
+        This is a cache-only read path.  It does NOT trigger recompilation.
+        Returns ``None`` on cache miss or parse failure.
+
+        The cache is populated as a side effect of ``get_profile_context()``
+        (via the ``user_insight_state.to_inline_snapshot()`` call) or can be
+        populated by a future nearline hot-reload worker.
+        """
+        if not self.redis:
+            return None
+        cache_key = f"user:inline_snapshot:{user_id}"
+        try:
+            cached = await self.redis.get(cache_key)
+            if cached:
+                import json as _json
+                return _json.loads(cached)
+        except Exception as exc:
+            logger.warning(f"Inline snapshot cache read failed: {exc}")
+        return None
+
+    async def _write_inline_snapshot_cache(self, user_id: UUID, snapshot: dict[str, Any]) -> None:
+        """Write the inline snapshot to Redis. Called internally after compilation."""
+        if not self.redis:
+            return
+        cache_key = f"user:inline_snapshot:{user_id}"
+        try:
+            import json as _json
+            await self.redis.setex(cache_key, self.INLINE_SNAPSHOT_CACHE_TTL_SECONDS, _json.dumps(snapshot))
+        except Exception as exc:
+            logger.warning(f"Inline snapshot cache write failed: {exc}")
 
     async def _get_preferences(self, user_id: UUID) -> dict[str, Any]:
         prefs = await self.pref_service.get_preferences(user_id)

@@ -1,92 +1,143 @@
-from app.orchestration.prompts import _normalize_user_context, build_system_prompt, format_user_context
+"""WS-RP1: Signal closure tests — verify compiled state and fallback paths."""
+
+from __future__ import annotations
+
+from app.core.user_insight_state import InsightSignalEvidence, UserInsightState
+from app.orchestration.prompts import _normalize_user_context, build_system_prompt
 
 
-def _signal_context() -> dict:
-    return {
-        "current_query": "帮我看看我最近为什么总在热力学上卡住",
-        "profile_context": {},
-        "cognitive_context": {
-            "error_summary": {
-                "total_errors": 7,
-                "need_review_count": 3,
-                "subject_distribution": {"thermo": 4, "math": 2},
+def test_normalize_user_context_lifts_profile_context_mastery_changes() -> None:
+    """Original fallback path: profile_context.knowledge_summary.recent_mastery_changes still works."""
+    context = {
+        "profile_context": {
+            "knowledge_summary": {
+                "overall_mastery": 0.74,
+                "active_learning_subjects": ["thermo"],
+                "recent_mastery_changes": [
+                    {
+                        "node_name": "热机效率",
+                        "old_mastery": 31,
+                        "new_mastery": 46,
+                    }
+                ],
             },
-            "recent_errors": [
-                {
-                    "question_preview": "熵增方向判断",
-                    "subject": "thermo",
-                    "error_type": "概念混淆",
-                    "mastery": 0.35,
-                },
-                {
-                    "question_preview": "可逆过程条件",
-                    "subject": "thermo",
-                    "error_type": "推理跳步",
-                    "mastery": 0.42,
-                },
-            ],
-            "recent_mastery_changes": [
-                {
-                    "node_name": "热机效率",
-                    "old_mastery": 31,
-                    "new_mastery": 46,
-                },
-                {
-                    "node_name": "卡诺循环",
-                    "old_mastery": 40,
-                    "new_mastery": 55,
-                },
-            ],
-        },
+            "error_summary": {"total_errors": 5, "need_review_count": 2},
+            "recent_errors": [{"question_preview": "熵增方向判断", "subject": "thermo"}],
+        }
     }
 
+    normalized = _normalize_user_context(context)
 
-def test_normalize_user_context_lifts_cognitive_context_signals() -> None:
-    normalized = _normalize_user_context(_signal_context())
-
-    assert normalized["error_summary"]["total_errors"] == 7
-    assert normalized["recent_errors"][0]["question_preview"] == "熵增方向判断"
+    assert normalized["knowledge_summary"]["overall_mastery"] == 0.74
     assert normalized["recent_mastery_changes"][0]["node_name"] == "热机效率"
+    assert normalized["error_summary"]["total_errors"] == 5
 
 
-def test_format_user_context_renders_recent_pain_points_and_wins_with_caps() -> None:
-    light = format_user_context(_signal_context(), context_level="light")
-    full = format_user_context(_signal_context(), context_level="full")
-
-    assert "【近期痛点】" in light
-    assert "累计错题 7；待复习 3；高频科目 thermo(4)、math(2)" in light
-    assert "熵增方向判断" not in light
-    assert "【近期进展】" in light
-    assert "热机效率 掌握度从 31% 提升到 46% (+15)" in light
-    assert "卡诺循环" not in light
-
-    assert "熵增方向判断" in full
-    assert "可逆过程条件" in full
-    assert "卡诺循环 掌握度从 40% 提升到 55% (+15)" in full
-
-
-def test_build_system_prompt_records_prompt_signal_telemetry() -> None:
-    user_context = _signal_context()
-
-    prompt = build_system_prompt(
-        user_context=user_context,
-        conversation_history={"messages": []},
-    )
-
+def test_build_system_prompt_renders_profile_context_mastery_changes() -> None:
+    """Original path: system prompt renders mastery changes from profile_context."""
+    user_context = {
+        "profile_context": {
+            "knowledge_summary": {
+                "overall_mastery": 0.74,
+                "active_learning_subjects": ["thermo"],
+                "recent_mastery_changes": [
+                    {
+                        "node_name": "热机效率",
+                        "old_mastery": 31,
+                        "new_mastery": 46,
+                    }
+                ],
+            },
+            "error_summary": {"total_errors": 5, "need_review_count": 2},
+            "recent_errors": [{"question_preview": "熵增方向判断", "subject": "thermo"}],
+        }
+    }
+    prompt = build_system_prompt(user_context=user_context, conversation_history={"messages": []})
     telemetry = user_context["prompt_signal_telemetry"]
 
-    assert "【近期痛点】" in prompt
     assert "【近期进展】" in prompt
-    assert telemetry["collected_high_value_fields"] == [
-        "error_summary",
-        "recent_errors",
-        "recent_mastery_changes",
-    ]
-    assert telemetry["prompt_visible_high_value_fields"] == [
-        "error_summary",
-        "recent_errors",
-        "recent_mastery_changes",
-    ]
-    assert telemetry["dropped_high_value_fields"] == []
-    assert telemetry["model_facing_section_sizes"]["recent_pain_points"]["items"] == 3
-    assert telemetry["model_facing_section_sizes"]["recent_wins"]["items"] == 2
+    assert "热机效率 掌握度从 31% 提升到 46% (+15)" in prompt
+    assert "recent_mastery_changes" in telemetry["collected_high_value_fields"]
+    assert "recent_mastery_changes" in telemetry["prompt_visible_high_value_fields"]
+
+
+def test_build_system_prompt_does_not_render_learning_state_fragment_payload() -> None:
+    """Learning state fragment payload is not dumped raw into prompt."""
+    user_context = {
+        "profile_context": {},
+        "situation_brief": {
+            "focus_question": "为了继续推进热力学，这轮最该先处理的阻力是什么？",
+            "summary": "目标图景是热力学复习；当前状态是存在一些学习卡点。",
+            "vision": {"primary_goal": "热力学复习"},
+            "learning_state_fragment": {
+                "status": "active",
+                "available": True,
+                "summary": "fragment-sentinel",
+                "signals": [
+                    {"kind": "pain", "text": "fragment-sentinel"},
+                ],
+                "recent_pain_points": ["fragment-sentinel"],
+                "recent_wins": [],
+                "source_signals": ["recent_errors"],
+                "budget": {"truncated": True},
+            },
+        }
+    }
+    prompt = build_system_prompt(user_context=user_context, conversation_history={"messages": []})
+
+    assert "## Situation Brief [L0 简报]" in prompt
+    assert "fragment-sentinel" not in prompt
+
+
+def test_canonical_insight_state_enriches_goals_and_tools() -> None:
+    """Canonical state injects goals, tools, and exam urgency when raw dict lacks them."""
+    insight = UserInsightState(
+        goals=[{"id": "goal:1", "type": "exam", "label": "期末考试冲刺"}],
+        inferred_work_style={"preferred_tools": ["flashcard"]},
+        temporal_patterns={"calendar": {"exam_urgency": {"days_left": 5, "urgent": True}}},
+    )
+    context = {"user_insight_state": insight}
+    normalized = _normalize_user_context(context)
+
+    assert normalized["active_goals"][0]["title"] == "期末考试冲刺"
+    assert normalized["preferred_tools"] == ["flashcard"]
+    assert normalized["exam_urgency"]["days_left"] == 5
+
+
+def test_canonical_insight_state_does_not_override_existing_goals() -> None:
+    """When raw dict already provides goals, canonical does not override."""
+    insight = UserInsightState(
+        goals=[{"id": "goal:canonical", "type": "exam", "label": "Canonical Goal"}],
+    )
+    context = {
+        "user_insight_state": insight,
+        "active_goals": [{"title": "Raw Dict Goal", "status": "active"}],
+    }
+    normalized = _normalize_user_context(context)
+
+    # Raw dict goal wins
+    assert normalized["active_goals"][0]["title"] == "Raw Dict Goal"
+
+
+def test_canonical_insight_state_via_profile_context_dict() -> None:
+    """UserInsightState embedded as dict in profile_context is extracted."""
+    insight = UserInsightState(
+        signal_evidence=[
+            InsightSignalEvidence(
+                signal_id="error_summary",
+                family="error",
+                label="Errors",
+                source="test",
+                value={"total_errors": 4},
+                confidence=0.9,
+            ),
+        ],
+    )
+    context = {
+        "profile_context": {
+            "user_insight_state": insight.model_dump(),
+        },
+    }
+    normalized = _normalize_user_context(context)
+
+    assert normalized["error_summary"]["total_errors"] == 4

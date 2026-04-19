@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
 
@@ -89,3 +89,97 @@ class UserInsightState(BaseModel):
             "version": self.version,
             "generated_at": self.generated_at,
         }
+
+    # ------------------------------------------------------------------
+    # Inline snapshot — bounded compact render material for prompt path
+    # ------------------------------------------------------------------
+
+    INLINE_SNAPSHOT_BUDGET_CHARS: ClassVar[int] = 1200  # ~200 CJK tokens at ~6 chars/token
+
+    def to_inline_snapshot(self) -> dict[str, Any]:
+        """Produce a compact, budget-bounded snapshot for inline prompt injection.
+
+        Returns a dict (not a raw string) so the caller can selectively render
+        sections.  All lists are capped and the total character budget is
+        enforced by the ``_truncate_to_budget`` helper.
+        """
+        items: list[str] = []
+
+        # Goals (up to 2)
+        for goal in (self.goals or [])[:2]:
+            label = str(goal.get("label") or goal.get("type") or "").strip()
+            if label:
+                items.append(f"- 目标: {label}")
+
+        # Top constraints (up to 2)
+        for constraint in (self.constraints or [])[:2]:
+            label = str(constraint.get("label") or "").strip()
+            if label:
+                ctype = str(constraint.get("type") or "").strip()
+                items.append(f"- 约束: {label}" + (f" ({ctype})" if ctype else ""))
+
+        # Pain points (up to 2)
+        for pain in (self.recent_pain_points or [])[:2]:
+            label = str(pain.get("label") or "").strip()
+            if label:
+                items.append(f"- 痛点: {label}")
+
+        # Wins (up to 2)
+        for win in (self.recent_wins or [])[:2]:
+            label = str(win.get("label") or "").strip()
+            if label:
+                items.append(f"- 进展: {label}")
+
+        # Readiness
+        readiness_level = ""
+        if isinstance(self.readiness, dict):
+            readiness_level = str(self.readiness.get("predicted_level") or self.readiness.get("recommended_action") or "").strip()
+        if readiness_level:
+            items.append(f"- 规划就绪度: {readiness_level}")
+
+        # Overload risk
+        overload = ""
+        current_state = self.current_state or {}
+        if current_state.get("predicted_overload_risk"):
+            overload = str(current_state["predicted_overload_risk"])
+        elif isinstance(self.prediction_summaries, dict) and isinstance(self.prediction_summaries.get("overload_risk"), dict):
+            overload = str(self.prediction_summaries["overload_risk"].get("level") or "")
+        if overload:
+            items.append(f"- 过载风险: {overload}")
+
+        # Top bottleneck
+        for bottleneck in (self.active_bottlenecks or [])[:1]:
+            label = str(bottleneck.get("label") or "").strip()
+            if label:
+                items.append(f"- 主要瓶颈: {label}")
+
+        # Work style highlights (up to 2)
+        ws = self.inferred_work_style or {}
+        if ws.get("peak_focus_hours"):
+            hours = ws["peak_focus_hours"]
+            if isinstance(hours, list):
+                items.append(f"- 高效时段: {', '.join(str(h) + ':00' for h in hours[:3])}")
+        if ws.get("accountability_support"):
+            items.append(f"- 伙伴支持: {ws['accountability_support']}")
+
+        body = "\n".join(items)
+        body = self._truncate_to_budget(body)
+
+        return {
+            "available": bool(items),
+            "body": body,
+            "item_count": len(items),
+            "budget_chars": self.INLINE_SNAPSHOT_BUDGET_CHARS,
+            "truncated": len("\n".join(items)) > self.INLINE_SNAPSHOT_BUDGET_CHARS,
+        }
+
+    @classmethod
+    def _truncate_to_budget(cls, text: str) -> str:
+        """Hard-truncate to character budget, breaking at last newline."""
+        if len(text) <= cls.INLINE_SNAPSHOT_BUDGET_CHARS:
+            return text
+        truncated = text[: cls.INLINE_SNAPSHOT_BUDGET_CHARS]
+        last_nl = truncated.rfind("\n")
+        if last_nl > cls.INLINE_SNAPSHOT_BUDGET_CHARS // 2:
+            return truncated[:last_nl]
+        return truncated

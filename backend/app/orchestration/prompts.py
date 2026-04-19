@@ -31,6 +31,7 @@ from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
 from app.core.plan_context import merge_plan_context
 from app.config import settings
+from app.core.user_insight_state import UserInsightState
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.context_focus import ContextFocusDecision
 from app.orchestration.situation_brief import format_situation_brief_section
@@ -2124,6 +2125,53 @@ def _format_plan_context(
     return "\n".join(lines)
 
 
+def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsightState | None:
+    """Try to extract a compiled UserInsightState from the context dict.
+
+    Lookup order:
+      1. context["user_insight_state"]  (direct top-level)
+      2. context["profile_context"].user_insight_state  (attribute on ProfileContext)
+      3. context["profile_context"]["user_insight_state"]  (serialised dict form)
+    """
+    if not isinstance(context, dict):
+        return None
+
+    # 1. Direct top-level
+    candidate = context.get("user_insight_state")
+    if isinstance(candidate, UserInsightState):
+        return candidate
+    if isinstance(candidate, dict) and candidate:
+        try:
+            return UserInsightState(**candidate)
+        except Exception:
+            pass
+
+    # 2. Attribute on profile_context object
+    profile_ctx = context.get("profile_context")
+    if profile_ctx is not None and hasattr(profile_ctx, "user_insight_state"):
+        attr = getattr(profile_ctx, "user_insight_state", None)
+        if isinstance(attr, UserInsightState):
+            return attr
+        if isinstance(attr, dict) and attr:
+            try:
+                return UserInsightState(**attr)
+            except Exception:
+                pass
+
+    # 3. Dict form inside profile_context
+    if isinstance(profile_ctx, dict):
+        inner = profile_ctx.get("user_insight_state")
+        if isinstance(inner, UserInsightState):
+            return inner
+        if isinstance(inner, dict) and inner:
+            try:
+                return UserInsightState(**inner)
+            except Exception:
+                pass
+
+    return None
+
+
 def _extract_cognitive_context_payload(context: dict[str, Any] | None) -> dict[str, Any]:
     payload = context.get("cognitive_context") if isinstance(context, dict) else None
     if hasattr(payload, "model_dump"):
@@ -2149,10 +2197,13 @@ def _has_signal_payload(value: Any) -> bool:
 def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str, Any]) -> dict[str, Any]:
     cognitive_context = _extract_cognitive_context_payload(context)
     profile_context = _extract_profile_context_payload(context)
+    canonical_insight = _extract_canonical_insight_state(context)
     tracked_fields = ("error_summary", "recent_errors", "recent_mastery_changes")
     field_status: dict[str, Any] = {}
     for key in tracked_fields:
         sources: list[str] = []
+        if _has_signal_payload(_extract_canonical_signal(canonical_insight, key)):
+            sources.append("canonical_insight_state")
         if _has_signal_payload(context.get(key)):
             sources.append("context")
         if _has_signal_payload(cognitive_context.get(key)):
@@ -2439,6 +2490,14 @@ def _render_user_context_content(
             urgency_label = "紧急" if urgency.get("urgent") else "一般"
             lines.append(f"考试倒计时: {days_left} 天 ({urgency_label})")
 
+    # --- Inline snapshot from canonical insight state ---
+    inline_snapshot = normalized.get("_inline_snapshot")
+    if isinstance(inline_snapshot, dict) and inline_snapshot.get("available"):
+        snapshot_body = str(inline_snapshot.get("body") or "").strip()
+        if snapshot_body:
+            lines.append("【画像快照】")
+            lines.append(snapshot_body)
+
     if context_level == "full" and not active_goals and not episodic_memories:
         context_pack = normalized.get("context_pack") or {}
         metadata = context_pack.get("metadata") if isinstance(context_pack, dict) else None
@@ -2494,11 +2553,56 @@ def format_user_context(
     return rendered
 
 
+def _extract_canonical_signal(
+    insight: UserInsightState | None,
+    key: str,
+) -> Any:
+    """Extract a high-value signal from the canonical UserInsightState.
+
+    Maps the normalizer key names to the compiled state fields:
+      - error_summary → signal_evidence with signal_id="error_summary" → value
+      - recent_errors → signal_evidence with signal_id="recent_errors" → value
+      - recent_mastery_changes → recent_wins shaped as mastery-change dicts
+    """
+    if insight is None:
+        return None
+
+    if key == "error_summary":
+        for evidence in insight.signal_evidence:
+            if evidence.signal_id == "error_summary" and _has_signal_payload(evidence.value):
+                return evidence.value
+        return None
+
+    if key == "recent_errors":
+        for evidence in insight.signal_evidence:
+            if evidence.signal_id == "recent_errors" and _has_signal_payload(evidence.value):
+                return evidence.value
+        return None
+
+    if key == "recent_mastery_changes":
+        wins = insight.recent_wins or []
+        if not wins:
+            return None
+        shaped: list[dict[str, Any]] = []
+        for win in wins[:5]:
+            if not isinstance(win, dict):
+                continue
+            shaped.append({
+                "node_name": win.get("label") or win.get("node_name") or "",
+                "old_mastery": win.get("old_mastery"),
+                "new_mastery": win.get("new_mastery"),
+            })
+        return shaped if shaped else None
+
+    return None
+
+
 def _normalize_user_context(context: dict) -> dict:
     """统一用户画像结构，避免字段重复与冲突"""
     normalized: dict[str, Any] = {}
     cognitive_context = _extract_cognitive_context_payload(context)
     profile_context = _extract_profile_context_payload(context)
+    canonical_insight = _extract_canonical_insight_state(context)
 
     user_ctx = context.get("user_context")
     if user_ctx:
@@ -2536,11 +2640,19 @@ def _normalize_user_context(context: dict) -> dict:
         if isinstance(context.get("knowledge_summary"), dict):
             normalized["knowledge_summary"] = context["knowledge_summary"]
     if "knowledge_summary" not in normalized:
-        profile_knowledge_summary = profile_context.get("knowledge_summary")
+        profile_knowledge_summary = profile_context.get("knowledge_summary") if isinstance(profile_context, dict) else None
         if isinstance(profile_knowledge_summary, dict):
             normalized["knowledge_summary"] = profile_knowledge_summary
 
     for key in ("error_summary", "recent_errors", "recent_mastery_changes"):
+        # --- canonical insight state (priority) ---
+        canonical_value = _extract_canonical_signal(canonical_insight, key)
+        if _has_signal_payload(canonical_value):
+            normalized[key] = canonical_value
+            normalized["_canonical_signal_source"] = normalized.get("_canonical_signal_source") or set()
+            normalized["_canonical_signal_source"].add(key)
+            continue
+        # --- original raw-dict cascade (fallback) ---
         direct_value = context.get(key)
         if _has_signal_payload(direct_value):
             normalized[key] = direct_value
@@ -2549,11 +2661,11 @@ def _normalize_user_context(context: dict) -> dict:
         if _has_signal_payload(cognitive_value):
             normalized[key] = cognitive_value
             continue
-        profile_value = profile_context.get(key)
+        profile_value = profile_context.get(key) if isinstance(profile_context, dict) else None
         if _has_signal_payload(profile_value):
             normalized[key] = profile_value
             continue
-        if key == "recent_mastery_changes":
+        if key == "recent_mastery_changes" and isinstance(profile_context, dict):
             knowledge_summary = profile_context.get("knowledge_summary")
             if isinstance(knowledge_summary, dict):
                 nested_value = knowledge_summary.get("recent_mastery_changes")
@@ -2603,6 +2715,28 @@ def _normalize_user_context(context: dict) -> dict:
         normalized["residual_decision_context"] = context["residual_decision_context"]
     if isinstance(context.get("user_material_grounding"), dict):
         normalized["user_material_grounding"] = context["user_material_grounding"]
+
+    # --- Canonical insight state enrichment ---
+    if canonical_insight is not None:
+        # Inline snapshot for prompt injection
+        normalized["_inline_snapshot"] = canonical_insight.to_inline_snapshot()
+        # Goals from compiled state, only if not already provided
+        if not normalized.get("active_goals") and canonical_insight.goals:
+            normalized["active_goals"] = [
+                {"title": str(g.get("label") or g.get("type") or ""), "status": "active"}
+                for g in canonical_insight.goals[:3]
+                if isinstance(g, dict)
+            ]
+        # Preferred tools from compiled state
+        if not normalized.get("preferred_tools"):
+            tools = (canonical_insight.inferred_work_style or {}).get("preferred_tools")
+            if isinstance(tools, list) and tools:
+                normalized["preferred_tools"] = tools
+        # Exam urgency from compiled state
+        if not normalized.get("exam_urgency"):
+            cal = (canonical_insight.temporal_patterns or {}).get("calendar")
+            if isinstance(cal, dict) and cal.get("exam_urgency"):
+                normalized["exam_urgency"] = cal["exam_urgency"]
 
     return normalized
 
