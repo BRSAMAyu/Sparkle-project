@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -15,6 +16,7 @@ import 'package:sparkle/features/task/presentation/screens/task_detail_screen.da
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/shared/models/api_response_model.dart';
 
 class _NoopApiClient implements ApiClient {
   @override
@@ -71,23 +73,95 @@ class _FakeTaskRepository extends TaskRepository {
   _FakeTaskRepository({
     required this.task,
     TaskSuggestionResponse? suggestions,
+    TaskGuidanceModel? humanGuidance,
+    TaskGuidanceModel? aiGuidance,
   })  : suggestions = suggestions ??
             TaskSuggestionResponse(
               intent: 'learning',
               suggestedNodes: const [],
               suggestedTags: const [],
             ),
+        _guidanceByAudience = {
+          if (humanGuidance != null) TaskGuidanceAudience.human: humanGuidance,
+          if (aiGuidance != null) TaskGuidanceAudience.ai: aiGuidance,
+        },
         super(_NoopApiClient());
 
   final TaskModel task;
   final TaskSuggestionResponse suggestions;
+  final Map<TaskGuidanceAudience, TaskGuidanceModel> _guidanceByAudience;
 
   @override
   Future<TaskModel> getTask(String id) async => task;
 
   @override
+  Future<PaginatedResponse<TaskModel>> getTasks({
+    Map<String, dynamic>? filters,
+    int page = 1,
+    int pageSize = 10,
+  }) async =>
+      PaginatedResponse(
+        items: [task],
+        total: 1,
+        page: page,
+        pageSize: pageSize,
+      );
+
+  @override
+  Future<List<TaskModel>> getTodayTasks() async => const [];
+
+  @override
+  Future<List<TaskModel>> getRecommendedTasks({int limit = 5}) async =>
+      const [];
+
+  @override
   Future<TaskSuggestionResponse> getSuggestions(String inputText) async =>
       suggestions;
+
+  @override
+  Future<TaskGuidanceModel?> getTaskGuidance(
+    String taskId, {
+    TaskGuidanceAudience audience = TaskGuidanceAudience.human,
+  }) async =>
+      _guidanceByAudience[audience];
+
+  @override
+  Future<TaskGuidanceModel> createOrRefreshTaskGuidance(
+    String taskId, {
+    TaskGuidanceAudience audience = TaskGuidanceAudience.human,
+    bool regenerate = false,
+  }) async {
+    final next = TaskGuidanceModel(
+      id: 'guidance-$taskId-${audience.wireValue}',
+      taskId: taskId,
+      userId: task.userId,
+      audience: audience,
+      content: audience == TaskGuidanceAudience.human
+          ? '''
+# 用户版任务指南
+
+- 先抓主线，再开始
+- 做完后回到 Sparkle 里记录结果
+'''
+          : '''
+TASK_GUIDANCE_SCAFFOLD v1
+task_id=$taskId
+task_title=${task.title}
+Use this only inside Sparkle task assistant.
+''',
+      generatedBy: audience == TaskGuidanceAudience.human
+          ? 'test_human_guidance'
+          : 'test_ai_guidance',
+      policyVersion: 'stage4.task_guidance.v1',
+      contentFormat:
+          audience == TaskGuidanceAudience.human ? 'markdown' : 'plaintext',
+      createdAt: DateTime(2026, 4, 19, 9),
+      updatedAt: DateTime(2026, 4, 19, regenerate ? 11 : 10),
+      sourceTaskUpdatedAt: task.updatedAt,
+    );
+    _guidanceByAudience[audience] = next;
+    return next;
+  }
 }
 
 class _FakeSubtaskRepository extends SubtaskRepository {
@@ -150,7 +224,8 @@ print(x);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('chat bubble normalizes question-mark bullets into markdown list',
+    testWidgets(
+        'chat bubble normalizes question-mark bullets into markdown list',
         (tester) async {
       final message = ChatMessageModel(
         conversationId: 'j1-bullets',
@@ -175,7 +250,6 @@ print(x);
               body: ChatBubble(
                 message: message,
                 currentUserId: 'me',
-                isLatestAssistantMessage: false,
               ),
             ),
           ),
@@ -354,6 +428,76 @@ print(nums)
         findsOneWidget,
       );
       expect(find.textContaining('�'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'task detail renders Stage 4 guidance surface on the default human path',
+        (tester) async {
+      AppFeatureFlags.enableTaskGuidanceV2 = true;
+      addTearDown(() => AppFeatureFlags.enableTaskGuidanceV2 = false);
+
+      const taskId = '11111111-1111-1111-1111-111111111111';
+      final taskRepository = _FakeTaskRepository(
+        task: TaskModel(
+          id: taskId,
+          userId: 'u-1',
+          title: '数据库索引复盘',
+          type: TaskType.learning,
+          tags: const ['DB'],
+          estimatedMinutes: 35,
+          difficulty: 3,
+          energyCost: 2,
+          status: TaskStatus.pending,
+          priority: 2,
+          createdAt: DateTime(2026, 4, 19, 8),
+          updatedAt: DateTime(2026, 4, 19, 8),
+          guideContent: '# 旧版指南\n\n- legacy',
+        ),
+        humanGuidance: TaskGuidanceModel(
+          id: 'guidance-human',
+          taskId: taskId,
+          userId: 'u-1',
+          audience: TaskGuidanceAudience.human,
+          content: '''
+# 用户版任务指南
+
+- 先抓主线，再开始
+- 做完后回到 Sparkle 里记录结果
+''',
+          generatedBy: 'test_human_guidance',
+          policyVersion: 'stage4.task_guidance.v1',
+          contentFormat: 'markdown',
+          createdAt: DateTime(2026, 4, 19, 9),
+          updatedAt: DateTime(2026, 4, 19, 10),
+          sourceTaskUpdatedAt: DateTime(2026, 4, 19, 8),
+        ),
+      );
+      final subtaskRepository = _FakeSubtaskRepository();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            taskRepositoryProvider.overrideWithValue(taskRepository),
+            subtaskRepositoryProvider.overrideWithValue(subtaskRepository),
+          ],
+          child: MaterialApp(
+            theme: AppThemes.lightTheme,
+            darkTheme: AppThemes.darkTheme,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const TaskDetailScreen(taskId: taskId),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text('给自己看'), findsOneWidget);
+      expect(find.text('给 AI 用'), findsOneWidget);
+      expect(find.textContaining('先抓主线，再开始'), findsOneWidget);
+      expect(find.textContaining('默认闭环交付'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

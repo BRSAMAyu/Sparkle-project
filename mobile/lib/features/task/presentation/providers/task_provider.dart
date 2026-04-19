@@ -43,6 +43,8 @@ class TaskListState {
     this.taskExecutionRecords = const {},
     this.taskExecutionTemplates = const {},
     this.selectedExecutionTemplateIds = const {},
+    this.taskGuidance = const {},
+    this.taskGuidanceInFlight = const <String>{},
     this.handoffInFlight = const <String>{},
     this.executionDecisionInFlight = const <String>{},
     this.currentFilter,
@@ -56,6 +58,8 @@ class TaskListState {
   final Map<String, ExecutionRecordModel> taskExecutionRecords;
   final Map<String, List<ExecutionTemplateModel>> taskExecutionTemplates;
   final Map<String, String> selectedExecutionTemplateIds;
+  final Map<String, TaskGuidanceModel> taskGuidance;
+  final Set<String> taskGuidanceInFlight;
   final Set<String> handoffInFlight;
   final Set<String> executionDecisionInFlight;
   final TaskFilter? currentFilter;
@@ -70,6 +74,8 @@ class TaskListState {
     Map<String, ExecutionRecordModel>? taskExecutionRecords,
     Map<String, List<ExecutionTemplateModel>>? taskExecutionTemplates,
     Map<String, String>? selectedExecutionTemplateIds,
+    Map<String, TaskGuidanceModel>? taskGuidance,
+    Set<String>? taskGuidanceInFlight,
     Set<String>? handoffInFlight,
     Set<String>? executionDecisionInFlight,
     TaskFilter? currentFilter,
@@ -87,6 +93,8 @@ class TaskListState {
             taskExecutionTemplates ?? this.taskExecutionTemplates,
         selectedExecutionTemplateIds:
             selectedExecutionTemplateIds ?? this.selectedExecutionTemplateIds,
+        taskGuidance: taskGuidance ?? this.taskGuidance,
+        taskGuidanceInFlight: taskGuidanceInFlight ?? this.taskGuidanceInFlight,
         handoffInFlight: handoffInFlight ?? this.handoffInFlight,
         executionDecisionInFlight:
             executionDecisionInFlight ?? this.executionDecisionInFlight,
@@ -248,7 +256,84 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       todayTasks:
           state.todayTasks.map((t) => t.id == id ? updated : t).toList(),
     );
+    unawaited(
+      loadTaskGuidance(id),
+    );
     return updated;
+  }
+
+  String _taskGuidanceKey(String taskId, TaskGuidanceAudience audience) =>
+      '$taskId::${audience.wireValue}';
+
+  void _setTaskGuidance(
+    String taskId,
+    TaskGuidanceAudience audience,
+    TaskGuidanceModel? guidance,
+  ) {
+    final key = _taskGuidanceKey(taskId, audience);
+    final next = Map<String, TaskGuidanceModel>.from(state.taskGuidance);
+    if (guidance == null) {
+      next.remove(key);
+    } else {
+      next[key] = guidance;
+    }
+    state = state.copyWith(taskGuidance: next);
+  }
+
+  void _setTaskGuidanceLoading(
+    String taskId,
+    TaskGuidanceAudience audience,
+    bool isLoading,
+  ) {
+    final key = _taskGuidanceKey(taskId, audience);
+    final next = Set<String>.from(state.taskGuidanceInFlight);
+    if (isLoading) {
+      next.add(key);
+    } else {
+      next.remove(key);
+    }
+    state = state.copyWith(taskGuidanceInFlight: next);
+  }
+
+  Future<TaskGuidanceModel?> loadTaskGuidance(
+    String taskId, {
+    TaskGuidanceAudience audience = TaskGuidanceAudience.human,
+  }) async {
+    _setTaskGuidanceLoading(taskId, audience, true);
+    try {
+      final guidance = await _taskRepository.getTaskGuidance(
+        taskId,
+        audience: audience,
+      );
+      if (guidance != null) {
+        _setTaskGuidance(taskId, audience, guidance);
+      }
+      return guidance;
+    } finally {
+      _setTaskGuidanceLoading(taskId, audience, false);
+    }
+  }
+
+  Future<TaskGuidanceModel> createOrRefreshTaskGuidance(
+    String taskId, {
+    TaskGuidanceAudience audience = TaskGuidanceAudience.human,
+    bool regenerate = false,
+  }) async {
+    _setTaskGuidanceLoading(taskId, audience, true);
+    try {
+      final guidance = await _taskRepository.createOrRefreshTaskGuidance(
+        taskId,
+        audience: audience,
+        regenerate: regenerate,
+      );
+      _setTaskGuidance(taskId, audience, guidance);
+      if (audience == TaskGuidanceAudience.human) {
+        await _refreshTaskFromServer(taskId);
+      }
+      return guidance;
+    } finally {
+      _setTaskGuidanceLoading(taskId, audience, false);
+    }
   }
 
   Future<void> deleteTask(String id) async {
@@ -1001,5 +1086,38 @@ final taskDetailProvider =
     rethrow;
   }
 });
+
+@immutable
+class TaskGuidanceRequest {
+  const TaskGuidanceRequest(
+    this.taskId, {
+    this.audience = TaskGuidanceAudience.human,
+  });
+
+  final String taskId;
+  final TaskGuidanceAudience audience;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskGuidanceRequest &&
+          runtimeType == other.runtimeType &&
+          taskId == other.taskId &&
+          audience == other.audience;
+
+  @override
+  int get hashCode => Object.hash(taskId, audience);
+}
+
+final taskGuidanceProvider =
+    FutureProvider.family<TaskGuidanceModel?, TaskGuidanceRequest>(
+  (ref, request) async {
+    final repository = ref.watch(taskRepositoryProvider);
+    return repository.getTaskGuidance(
+      request.taskId,
+      audience: request.audience,
+    );
+  },
+);
 
 final activeTaskProvider = StateProvider<TaskModel?>((ref) => null);

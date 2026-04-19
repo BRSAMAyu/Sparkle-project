@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from app.aurora.decision_fns import build_fallback_decision, check_materiality, decide_backbone_route, dispatch_trigger
+from app.aurora.decision_fns import (
+    RoutingMode,
+    build_fallback_decision,
+    check_materiality,
+    decide_backbone_route,
+    dispatch_trigger,
+)
 from app.aurora.engine import AuroraDecisionContext, AuroraEngine
 from app.aurora.observability import AURORA_FALLBACK_TOTAL
 from app.aurora.policy_loader import load_policy_version
@@ -66,6 +72,48 @@ def test_backbone_route_stays_without_strong_signal() -> None:
     assert decision.should_stay is True
     assert decision.route_kind == "stay"
     assert decision.proposed_node is None
+    assert decision.routing_mode == RoutingMode.DIRECT
+
+
+def test_backbone_route_marks_planning_request_as_workflow_mode() -> None:
+    case = AuroraReferenceFlowHarness().build_day3_study_resistance_case()
+    planning_snapshot = SignalSnapshot.model_validate(
+        {
+            **case.snapshot.model_dump(mode="json"),
+            "snapshot_hash": "ss_stage4_routing_workflow",
+            "core_signals": {"user_message": "帮我把这周复习计划拆成每天三步。"},
+        }
+    )
+
+    decision = decide_backbone_route(
+        snapshot=planning_snapshot,
+        policy=case.policy_version,
+        current_node=case.focus_contract.active_node,
+    )
+
+    assert decision.routing_mode == RoutingMode.WORKFLOW
+    assert decision.route_kind == "stay"
+
+
+def test_backbone_route_marks_task_assistant_request_as_task_assistant_mode() -> None:
+    case = AuroraReferenceFlowHarness().build_day3_study_resistance_case()
+    assistant_snapshot = SignalSnapshot.model_validate(
+        {
+            **case.snapshot.model_dump(mode="json"),
+            "snapshot_hash": "ss_stage4_routing_task_assistant",
+            "core_signals": {"user_message": "不用重做计划，我就想把当前这张任务卡顺下来。"},
+            "optional_signals": {"task_card_id": "task-card-01"},
+        }
+    )
+
+    decision = decide_backbone_route(
+        snapshot=assistant_snapshot,
+        policy=case.policy_version,
+        current_node=case.focus_contract.active_node,
+    )
+
+    assert decision.routing_mode == RoutingMode.TASK_ASSISTANT
+    assert decision.route_kind == "stay"
 
 
 def test_trigger_dispatch_maps_three_trigger_types() -> None:

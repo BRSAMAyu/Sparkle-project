@@ -73,6 +73,42 @@ wait_for_container_health() {
   return 1
 }
 
+# Rotate log file if it exceeds MAX_LOG_SIZE (default 200MB)
+# Keeps last 3 rotated copies (total cap ~600MB per service)
+rotate_log() {
+  local log_file="$1"
+  local max_size_mb="${2:-200}"
+  local max_backups=3
+
+  if [[ ! -f "$log_file" ]]; then
+    return
+  fi
+
+  local size_mb
+  size_mb="$(du -m "$log_file" 2>/dev/null | cut -f1)"
+
+  if (( size_mb > max_size_mb )); then
+    # Shift rotated logs: .2 -> .3, .1 -> .2, current -> .1
+    for ((i=max_backups; i>=1; i--)); do
+      local prev=$((i-1))
+      local ext_old=".${prev}.rotated"
+      local ext_new=".${i}.rotated"
+      [[ $prev -eq 0 ]] && ext_old=""
+      local src="${log_file}${ext_old}"
+      local dst="${log_file}${ext_new}"
+      [[ -f "$src" ]] && mv -f "$src" "$dst"
+    done
+    mv "$log_file" "${log_file}.0.rotated"
+    echo "rotated $log_file (${size_mb}MB > ${max_size_mb}MB)"
+  fi
+
+  # Prune old rotated files beyond max_backups
+  local i
+  for ((i=max_backups+1; i<=max_backups+5; i++)); do
+    rm -f "${log_file}.${i}.rotated"
+  done
+}
+
 start_service() {
   local name="$1"
   local cmd="$2"
@@ -83,6 +119,9 @@ start_service() {
     echo "$name already running (pid $(cat "$pid_file"))"
     return
   fi
+
+  # Rotate log before starting new service instance
+  rotate_log "$log_file" 200
 
   local pid
   pid="$(

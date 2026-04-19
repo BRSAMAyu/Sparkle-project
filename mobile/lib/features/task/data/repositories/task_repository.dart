@@ -17,6 +17,70 @@ import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
 
+enum TaskGuidanceAudience { human, ai }
+
+extension TaskGuidanceAudienceX on TaskGuidanceAudience {
+  String get wireValue => switch (this) {
+        TaskGuidanceAudience.human => 'human',
+        TaskGuidanceAudience.ai => 'ai',
+      };
+}
+
+class TaskGuidanceModel {
+  TaskGuidanceModel({
+    required this.id,
+    required this.taskId,
+    required this.userId,
+    required this.audience,
+    required this.content,
+    required this.generatedBy,
+    required this.policyVersion,
+    required this.contentFormat,
+    required this.createdAt,
+    required this.updatedAt,
+    this.sourceGuidanceId,
+    this.sourceTaskUpdatedAt,
+  });
+
+  factory TaskGuidanceModel.fromJson(Map<String, dynamic> json) {
+    final audienceValue =
+        (json['audience'] as String? ?? 'human').toLowerCase();
+    final audience = audienceValue == 'ai'
+        ? TaskGuidanceAudience.ai
+        : TaskGuidanceAudience.human;
+    return TaskGuidanceModel(
+      id: json['id'] as String,
+      taskId: json['task_id'] as String,
+      userId: json['user_id'] as String,
+      audience: audience,
+      content: json['content'] as String? ?? '',
+      generatedBy: json['generated_by'] as String? ?? 'unknown',
+      policyVersion:
+          json['policy_version'] as String? ?? 'stage4.task_guidance.v1',
+      contentFormat: json['content_format'] as String? ?? 'markdown',
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      sourceGuidanceId: json['source_guidance_id'] as String?,
+      sourceTaskUpdatedAt: json['source_task_updated_at'] != null
+          ? DateTime.tryParse(json['source_task_updated_at'] as String)
+          : null,
+    );
+  }
+
+  final String id;
+  final String taskId;
+  final String userId;
+  final TaskGuidanceAudience audience;
+  final String content;
+  final String generatedBy;
+  final String policyVersion;
+  final String contentFormat;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String? sourceGuidanceId;
+  final DateTime? sourceTaskUpdatedAt;
+}
+
 class TaskRepository {
   TaskRepository(this._apiClient);
   final ApiClient _apiClient;
@@ -84,6 +148,9 @@ class TaskRepository {
     if (data.isEmpty) return null;
     return (data.first as Map<String, dynamic>)['card_id'] as String?;
   }
+
+  String _taskGuidancePath(String taskId) =>
+      '${ApiEndpoints.task(taskId)}/guidance';
 
   Future<PaginatedResponse<TaskModel>> getTasks({
     Map<String, dynamic>? filters,
@@ -664,6 +731,86 @@ class TaskRepository {
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'generateGuide');
+    }
+  }
+
+  Future<TaskGuidanceModel?> getTaskGuidance(
+    String taskId, {
+    TaskGuidanceAudience audience = TaskGuidanceAudience.human,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final existing = DemoDataService().demoTasks.firstWhere(
+            (task) => task.id == taskId,
+            orElse: () => DemoDataService().demoTasks.first,
+          );
+      final content = audience == TaskGuidanceAudience.ai
+          ? 'TASK_GUIDANCE_SCAFFOLD v1\n'
+              'task_id=$taskId\n'
+              'task_title=${existing.title}\n'
+              'Use this only inside Sparkle task assistant.'
+          : (existing.guideContent ?? _demoGuide(existing.title));
+      return TaskGuidanceModel(
+        id: 'demo_${taskId}_${audience.wireValue}',
+        taskId: taskId,
+        userId: existing.userId,
+        audience: audience,
+        content: content,
+        generatedBy: audience == TaskGuidanceAudience.ai
+            ? 'task_guidance_ai_scaffold'
+            : 'demo_task_guidance',
+        policyVersion: 'stage4.task_guidance.v1',
+        contentFormat:
+            audience == TaskGuidanceAudience.ai ? 'plaintext' : 'markdown',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }
+
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        _taskGuidancePath(taskId),
+        queryParameters: {'audience': audience.wireValue},
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'getTaskGuidance',
+      );
+      if (payload.isEmpty) return null;
+      return TaskGuidanceModel.fromJson(payload);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      return _handleDioError(e, 'getTaskGuidance');
+    }
+  }
+
+  Future<TaskGuidanceModel> createOrRefreshTaskGuidance(
+    String taskId, {
+    TaskGuidanceAudience audience = TaskGuidanceAudience.human,
+    bool regenerate = false,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final guidance = await getTaskGuidance(taskId, audience: audience);
+      if (guidance == null) {
+        throw Exception('Task guidance not found in demo data');
+      }
+      return guidance;
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        _taskGuidancePath(taskId),
+        queryParameters: {
+          'audience': audience.wireValue,
+          if (regenerate) 'regenerate': 'true',
+        },
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'createOrRefreshTaskGuidance',
+      );
+      return TaskGuidanceModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'createOrRefreshTaskGuidance');
     }
   }
 

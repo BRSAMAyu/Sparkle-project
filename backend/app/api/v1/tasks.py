@@ -2,6 +2,7 @@
 Tasks API Endpoints
 """
 from __future__ import annotations
+
 from datetime import date
 from typing import Any
 from uuid import UUID
@@ -23,18 +24,18 @@ from app.schemas.task import (
     TaskCompleteRequest,
     TaskCreate,
     TaskDetail,
+    TaskRecommendationResponse,
     TaskReorderRequest,
     TaskResourceLinkCreate,
     TaskResourceLinkInfo,
-    TaskRecommendationResponse,
     TaskSuggestionRequest,
     TaskSuggestionResponse,
     TaskUpdate,
 )
 from app.schemas.task_feedback import (
+    NextActionSelectionCreate,
     ReflectionAnswerCreate,
     ReflectionAnswerResponse,
-    NextActionSelectionCreate,
     TaskFeedbackCreate,
     TaskFeedbackResponse,
     TaskFeedbackSubmitResponse,
@@ -44,8 +45,13 @@ from app.services.intelligent_task_service import IntelligentTaskService
 from app.services.seed_library_service import SeedLibraryService
 from app.services.task_guide_service import task_guide_service
 from app.services.task_service import TaskService
+from app.task_guidance import TaskGuidance, TaskGuidanceAudience
 
 router = APIRouter()
+
+
+def _serialize_task_guidance(guidance: TaskGuidance) -> dict[str, Any]:
+    return guidance.model_dump(mode="json")
 
 
 async def _get_user_task_or_404(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task:
@@ -176,9 +182,13 @@ async def create_task(
     task = await TaskService.create(db, task_in, current_user.id)
 
     if generate_guide and not task.guide_content:
-        # Call guide generation service
-        guide = await task_guide_service.generate_guide(task, current_user, db)
-        task.guide_content = guide
+        guidance = await task_guide_service.generate_task_guidance(
+            task,
+            current_user,
+            db,
+            audience=TaskGuidanceAudience.HUMAN,
+        )
+        task.guide_content = guidance.content
         db.add(task)
         await db.commit()
         await db.refresh(task)
@@ -446,13 +456,90 @@ async def generate_task_guide(
     if not task or task.user_id != current_user.id:
         raise NotFoundError(message="Task not found")
 
-    guide = await task_guide_service.generate_guide(task, current_user, db)
-    task.guide_content = guide
+    guidance = await task_guide_service.generate_task_guidance(
+        task,
+        current_user,
+        db,
+        audience=TaskGuidanceAudience.HUMAN,
+    )
+    task.guide_content = guidance.content
     db.add(task)
     await db.commit()
     await db.refresh(task)
 
     return {"data": TaskDetail.model_validate(task)}
+
+
+@router.get("/{task_id}/guidance", response_model=dict[str, Any])
+async def get_task_guidance(
+    task_id: UUID = Path(..., description="Task ID"),
+    audience: TaskGuidanceAudience = Query(
+        default=TaskGuidanceAudience.HUMAN,
+        description="Which TaskGuidance sidecar audience to fetch",
+    ),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Fetch a TaskGuidance sidecar object for the requested audience.
+    """
+    task = await db.get(Task, task_id)
+    if not task or task.user_id != current_user.id:
+        raise NotFoundError(message="Task not found")
+
+    guidance = await task_guide_service.get_task_guidance(
+        task,
+        current_user,
+        audience=audience,
+    )
+    if guidance is None:
+        raise HTTPException(status_code=404, detail="Task guidance not found")
+    return {"data": _serialize_task_guidance(guidance)}
+
+
+@router.post("/{task_id}/guidance", response_model=dict[str, Any])
+async def create_or_refresh_task_guidance(
+    task_id: UUID = Path(..., description="Task ID"),
+    audience: TaskGuidanceAudience = Query(
+        default=TaskGuidanceAudience.HUMAN,
+        description="Which TaskGuidance sidecar audience to generate",
+    ),
+    regenerate: bool = Query(
+        default=False,
+        description="Whether to force regeneration when a TaskGuidance sidecar already exists",
+    ),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create or regenerate a TaskGuidance sidecar object.
+    """
+    task = await db.get(Task, task_id)
+    if not task or task.user_id != current_user.id:
+        raise NotFoundError(message="Task not found")
+
+    if not regenerate:
+        existing = await task_guide_service.get_task_guidance(
+            task,
+            current_user,
+            audience=audience,
+        )
+        if existing is not None:
+            return {"data": _serialize_task_guidance(existing)}
+
+    guidance = await task_guide_service.generate_task_guidance(
+        task,
+        current_user,
+        db,
+        audience=audience,
+    )
+    if audience is TaskGuidanceAudience.HUMAN and task.guide_content != guidance.content:
+        task.guide_content = guidance.content
+        db.add(task)
+        await db.commit()
+        await db.refresh(task)
+
+    return {"data": _serialize_task_guidance(guidance)}
 
 
 @router.delete("/{task_id}")

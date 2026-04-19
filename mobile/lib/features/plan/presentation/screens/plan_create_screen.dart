@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -57,6 +59,8 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   var _isGeneratingGuide = false;
   var _didInitType = false;
   var _initialTaskCount = 0;
+  var _selectedGuideAudience = PlanGuideAudience.human;
+  var _aiGuidePreview = '';
   final List<PlanTaskDraft> _taskDrafts = <PlanTaskDraft>[];
 
   bool get _isEditMode => widget.isEditMode;
@@ -288,13 +292,26 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
 
     setState(() => _isGeneratingGuide = true);
     try {
-      final content =
-          await ref.read(planGuideGeneratorProvider).generate(_buildDraft());
+      final content = await ref.read(planGuideGeneratorProvider).generate(
+            _buildDraft(),
+            audience: _selectedGuideAudience,
+          );
       if (!mounted) {
         return;
       }
-      setState(() => _guideController.text = content);
-      AppFeedback.success(context, 'AI 已生成计划执行指南');
+      setState(() {
+        if (_selectedGuideAudience == PlanGuideAudience.human) {
+          _guideController.text = content;
+        } else {
+          _aiGuidePreview = content;
+        }
+      });
+      AppFeedback.success(
+        context,
+        _selectedGuideAudience == PlanGuideAudience.human
+            ? '已生成给用户看的执行指南'
+            : '已生成给 AI 使用的执行版本',
+      );
     } catch (e) {
       if (mounted) {
         AppFeedback.error(context, '计划指南生成失败：$e');
@@ -506,7 +523,20 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                 content: _PlanGuideStep(
                   scopeController: _scopeController,
                   guideController: _guideController,
+                  selectedAudience: _selectedGuideAudience,
+                  aiGuidePreview: _aiGuidePreview,
                   isGenerating: _isGeneratingGuide,
+                  enableStage4Experience: AppFeatureFlags.enableTaskGuidanceV2,
+                  onAudienceChanged: (audience) =>
+                      setState(() => _selectedGuideAudience = audience),
+                  onCopyAiGuide: () async {
+                    if (_aiGuidePreview.trim().isEmpty) return;
+                    await Clipboard.setData(
+                      ClipboardData(text: _aiGuidePreview.trim()),
+                    );
+                    if (!context.mounted) return;
+                    AppFeedback.success(context, 'AI 版本已复制');
+                  },
                   onGenerateGuide: _generateGuide,
                 ),
               ),
@@ -1038,53 +1068,116 @@ class _PlanGuideStep extends StatelessWidget {
   const _PlanGuideStep({
     required this.scopeController,
     required this.guideController,
+    required this.selectedAudience,
+    required this.aiGuidePreview,
     required this.isGenerating,
+    required this.enableStage4Experience,
+    required this.onAudienceChanged,
+    required this.onCopyAiGuide,
     required this.onGenerateGuide,
   });
 
   final TextEditingController scopeController;
   final TextEditingController guideController;
+  final PlanGuideAudience selectedAudience;
+  final String aiGuidePreview;
   final bool isGenerating;
+  final bool enableStage4Experience;
+  final ValueChanged<PlanGuideAudience> onAudienceChanged;
+  final VoidCallback onCopyAiGuide;
   final VoidCallback onGenerateGuide;
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextFormField(
-            controller: scopeController,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: '计划边界与注意事项',
-              hintText: '例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。',
-              border: OutlineInputBorder(),
+  Widget build(BuildContext context) {
+    final isHuman = selectedAudience == PlanGuideAudience.human;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: scopeController,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: '计划边界与注意事项',
+            hintText: '例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: DS.spacing16),
+        if (enableStage4Experience) ...[
+          Text(
+            '任务指南视角',
+            style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: DS.spacing8),
+          SegmentedButton<PlanGuideAudience>(
+            segments: const [
+              ButtonSegment(
+                value: PlanGuideAudience.human,
+                label: Text('给自己看'),
+                icon: Icon(Icons.person_outline_rounded),
+              ),
+              ButtonSegment(
+                value: PlanGuideAudience.ai,
+                label: Text('给 AI 用'),
+                icon: Icon(Icons.auto_awesome_rounded),
+              ),
+            ],
+            selected: {selectedAudience},
+            onSelectionChanged: (selection) =>
+                onAudienceChanged(selection.first),
+          ),
+          const SizedBox(height: DS.spacing12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              color: DS.surfaceSecondary,
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.borderSubtle),
+            ),
+            child: Text(
+              isHuman
+                  ? '用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。'
+                  : 'AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。',
+              style: DS.bodySmall.copyWith(
+                color: DS.textSecondary,
+                height: 1.5,
+              ),
             ),
           ),
           const SizedBox(height: DS.spacing16),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'AI 执行指南',
-                  style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
-                ),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                isHuman || !enableStage4Experience ? '用户版执行指南' : '给 AI 的执行版本',
+                style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
               ),
-              SparkleButton(
-                onPressed: isGenerating ? null : onGenerateGuide,
-                variant: ButtonVariant.ghost,
-                disabled: isGenerating,
-                icon: isGenerating
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.auto_awesome_rounded),
-                label: isGenerating ? '生成中' : '生成指南',
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing8),
+            ),
+            SparkleButton(
+              onPressed: isGenerating ? null : onGenerateGuide,
+              variant: ButtonVariant.ghost,
+              disabled: isGenerating,
+              icon: isGenerating
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      isHuman || !enableStage4Experience
+                          ? Icons.auto_awesome_rounded
+                          : Icons.smart_toy_outlined,
+                    ),
+              label: isGenerating
+                  ? '生成中'
+                  : (isHuman || !enableStage4Experience ? '生成用户版' : '生成 AI 版'),
+            ),
+          ],
+        ),
+        const SizedBox(height: DS.spacing8),
+        if (isHuman || !enableStage4Experience)
           TextFormField(
             controller: guideController,
             maxLines: 12,
@@ -1092,9 +1185,44 @@ class _PlanGuideStep extends StatelessWidget {
               hintText: '生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。',
               border: OutlineInputBorder(),
             ),
+          )
+        else
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(DS.spacing16),
+            decoration: BoxDecoration(
+              color: DS.neutral50,
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.borderSubtle),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  aiGuidePreview.trim().isEmpty
+                      ? '还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。'
+                      : aiGuidePreview.trim(),
+                  style: DS.bodySmall.copyWith(
+                    color: DS.textPrimary,
+                    fontFamily:
+                        aiGuidePreview.trim().isEmpty ? null : 'monospace',
+                    height: 1.55,
+                  ),
+                ),
+                if (aiGuidePreview.trim().isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing12),
+                  SparkleButton.ghost(
+                    onPressed: onCopyAiGuide,
+                    icon: const Icon(Icons.copy_all_rounded),
+                    label: '复制 AI 版',
+                  ),
+                ],
+              ],
+            ),
           ),
-        ],
-      );
+      ],
+    );
+  }
 }
 
 class _PlanReviewStep extends StatelessWidget {

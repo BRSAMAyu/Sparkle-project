@@ -25,6 +25,11 @@ from app.orchestration.executor import ToolExecutor
 from app.orchestration.prompts import build_system_prompt
 from app.services.analytics_service import AnalyticsService
 from app.services.llm_service import LLMResponse, llm_service
+from app.task_assistant import (
+    build_task_assistant_system_appendix,
+    enqueue_task_assistant_nearline,
+    parse_task_assistant_context,
+)
 from app.tools.registry import tool_registry
 
 router = APIRouter()
@@ -122,6 +127,9 @@ async def chat_with_task_context(
         "current_focus": "The user is currently working on this task."
     }
     user_context["current_task"] = task_context
+    task_assistant_context = parse_task_assistant_context(request.context)
+    if task_assistant_context is not None:
+        task_context["task_assistant_mode"] = task_assistant_context.session_mode
 
     conversation_history_raw = await get_conversation_history(
         db, current_user.id, request.conversation_id
@@ -145,6 +153,7 @@ async def chat_with_task_context(
         "- If the task has no valid plan context, continue helping within the "
         "task itself instead of blocking on plan data."
     )
+    system_prompt += build_task_assistant_system_appendix(task_assistant_context)
 
     # 4. LLM Call (Standard Flow)
     # This duplicates the logic of the main chat endpoint but simplifies for this phase
@@ -226,6 +235,19 @@ async def chat_with_task_context(
         tool_results=[tr.model_dump() for tr in tool_results],
         task_id=task.id,
     )
+    if task_assistant_context is not None:
+        try:
+            enqueue_task_assistant_nearline(
+                user_id=current_user.id,
+                task_id=task.id,
+                task_title=task.title,
+                user_message=request.message,
+                assistant_message=llm_text,
+                conversation_id=session_id_str,
+                context=task_assistant_context,
+            )
+        except Exception as exc:  # pragma: no cover - defensive async seam
+            logger.warning(f"Task assistant nearline enqueue failed: {exc}")
 
     return ChatResponse(**response_data, conversation_id=session_id_str)
 

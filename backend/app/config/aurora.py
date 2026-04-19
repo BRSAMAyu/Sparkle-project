@@ -46,6 +46,10 @@ class AuroraFlags(BaseSettings):
         default_factory=list,
         validation_alias=AliasChoices("INTERACTION_VARIANTS"),
     )
+    AURORA_ROUTING_MODE_ENABLED: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("AURORA_ROUTING_MODE_ENABLED"),
+    )
 
     @field_validator(
         "INTERACTION_VARIANTS",

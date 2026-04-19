@@ -88,6 +88,7 @@ class ChatRepository {
     String taskId,
     String message,
     String? conversationId,
+    {Map<String, dynamic>? context,}
   ) async {
     if (DemoDataService.isDemoMode) {
       return ChatResponseModel(
@@ -100,6 +101,7 @@ class ChatRepository {
       data: {
         'message': message,
         'conversation_id': conversationId,
+        if (context != null && context.isNotEmpty) 'context': context,
       },
     );
     final payload =

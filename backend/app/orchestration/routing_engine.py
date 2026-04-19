@@ -1,38 +1,39 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import inspect
 import json
 import uuid
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.aurora.engine import AuroraDecisionContext, AuroraEngine
 from app.aurora.migration import (
     record_shadow_divergence_if_needed,
     resolve_cutover_state,
     route_dual_core_via_aurora,
 )
+from app.aurora.schemas import SignalSnapshot
+from app.config import aurora_flags
 from app.core.metrics import ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL, ROUTING_SUMMARY_CONTEXT_TOTAL
 from app.core.unified_intent_router import UnifiedIntentType
-from app.orchestration.chat_modes import CHAT_MODE_STANDARD
-from app.orchestration.context_focus import infer_route_intent_from_chat_mode
+from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRoutingInput
-from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config
+from app.orchestration.mode_workflow_config import get_mode_strategy
 from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
-from app.gen.agent.v1 import agent_service_pb2
 from app.services.cognitive_service import CognitiveService
+from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
 from app.services.plan_progress_service import PlanProgressService
 from app.services.routing_profile_service import RoutingProfileService
-from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class RoutingEngineMixin:
@@ -628,12 +629,24 @@ class RoutingEngineMixin:
             state.context_data["unified_intent"]["execution_mode"] = route_decision.execution_mode
             state.context_data["unified_intent"]["risk_level"] = route_decision.risk_level
 
+        route_decision = self._apply_stage4_routing_mode(
+            route_decision=route_decision,
+            state=state,
+            user_id=user_id,
+            user_message=user_message,
+            conversation_context=conversation_context,
+        )
+        if unified_routing_result and "unified_intent" in state.context_data:
+            state.context_data["unified_intent"]["execution_mode"] = route_decision.execution_mode
+            state.context_data["unified_intent"]["risk_level"] = route_decision.risk_level
+
         state.context_data["plan_metadata"] = {
             "context_version": route_decision.context_version,
             "execution_mode": route_decision.execution_mode,
             "risk_level": route_decision.risk_level,
             "confidence": route_decision.confidence,
             "route_reason": route_decision.reason,
+            "routing_mode": state.context_data.get("stage4_routing_mode", {}).get("routing_mode", "direct"),
             "routing_layer": unified_routing_result.routing_layer if unified_routing_result else "fallback",
             "adaptive_notes": ",".join(adaptive_notes) if adaptive_notes else "",
             "summary_used_for_routing": "true" if has_summary else "false",
@@ -777,6 +790,141 @@ class RoutingEngineMixin:
         if ":" in reason_lc:
             return reason_lc.split(":", 1)[0]
         return reason_lc
+
+    @staticmethod
+    def _stage4_task_assistant_request(message: str) -> bool:
+        lowered = (message or "").lower()
+        markers = {
+            "当前这张任务卡",
+            "当前任务",
+            "直接带我",
+            "带我进入",
+            "陪我做",
+            "开始做",
+            "进入任务",
+            "不要再讲大道理",
+            "drill",
+            "task card",
+        }
+        return any(marker.lower() in lowered for marker in markers)
+
+    @staticmethod
+    def _stage4_frustration_signal(message: str) -> bool:
+        lowered = (message or "").lower()
+        markers = {
+            "做不下去",
+            "帮不到我",
+            "卡住了",
+            "崩了",
+            "frustrated",
+            "stuck",
+            "blocked",
+        }
+        return any(marker in lowered for marker in markers)
+
+    def _stage4_structural_topic_turns(
+        self,
+        user_message: str,
+        conversation_context: dict[str, Any] | None,
+    ) -> int:
+        if not self._is_complex_user_query(user_message):
+            return 0
+        count = 1
+        messages = (conversation_context or {}).get("messages") if isinstance(conversation_context, dict) else None
+        if not isinstance(messages, list):
+            return count
+        for item in reversed(messages):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("role") or "").strip().lower() != "user":
+                continue
+            content = str(item.get("content") or "")
+            if not self._is_complex_user_query(content):
+                break
+            count += 1
+            if count >= 3:
+                break
+        return count
+
+    def _build_stage4_routing_snapshot(
+        self,
+        *,
+        user_id: str,
+        user_message: str,
+        conversation_context: dict[str, Any] | None,
+    ) -> SignalSnapshot:
+        structural_turns = self._stage4_structural_topic_turns(user_message, conversation_context)
+        enhanced_signals: dict[str, Any] = {}
+        optional_signals: dict[str, Any] = {}
+        if self._stage4_frustration_signal(user_message):
+            enhanced_signals["frustration_signal"] = True
+        if structural_turns >= 2:
+            optional_signals["structural_topic_turns"] = structural_turns
+        if self._stage4_task_assistant_request(user_message):
+            optional_signals["task_card_id"] = "stage4_task_assistant_candidate"
+
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except (TypeError, ValueError, AttributeError):
+            user_uuid = uuid.uuid5(uuid.NAMESPACE_URL, f"stage4-routing:{user_id}")
+
+        digest = hashlib.sha256(f"{user_id}|{user_message}".encode()).hexdigest()[:16]
+        return SignalSnapshot(
+            snapshot_hash=f"stage4_route_{digest}",
+            user_id=user_uuid,
+            collected_at=_utcnow(),
+            scenario_pack_id="stage4_routing_mode@v1",
+            policy_version="aurora_policy@v1.0",
+            core_signals={"user_message": user_message},
+            enhanced_signals=enhanced_signals,
+            optional_signals=optional_signals,
+            total_tokens=max(len(user_message), 1),
+            budget_limit=4000,
+        )
+
+    def _apply_stage4_routing_mode(
+        self,
+        *,
+        route_decision: RouteDecision,
+        state,
+        user_id: str,
+        user_message: str,
+        conversation_context: dict[str, Any] | None,
+    ) -> RouteDecision:
+        snapshot = self._build_stage4_routing_snapshot(
+            user_id=user_id,
+            user_message=user_message,
+            conversation_context=conversation_context,
+        )
+        route = AuroraEngine().decide_backbone_route(
+            AuroraDecisionContext(
+                snapshot=snapshot,
+                trigger_point="pre-node-routing",
+                current_node="stage4_inline_route",
+                candidate_node="stage4_workflow_route",
+                mode="shadow",
+            )
+        )
+        feature_enabled = bool(getattr(aurora_flags, "AURORA_ROUTING_MODE_ENABLED", False))
+        state.context_data["stage4_routing_mode"] = {
+            "routing_mode": route.routing_mode.value,
+            "route_kind": route.route_kind,
+            "reason": route.reason,
+            "feature_enabled": feature_enabled,
+            "materiality_score": route.materiality.score,
+        }
+        if not feature_enabled:
+            return route_decision
+
+        if route_decision.execution_mode == "direct" and route.routing_mode.value == "workflow":
+            route_decision.execution_mode = "langgraph"
+            if route_decision.risk_level == "low":
+                route_decision.risk_level = "medium"
+            route_decision.reason = f"{route_decision.reason} | stage4_routing_mode:workflow"
+        elif route_decision.execution_mode == "direct" and route.routing_mode.value == "task_assistant":
+            state.context_data["stage4_task_assistant_candidate"] = True
+            route_decision.reason = f"{route_decision.reason} | stage4_routing_mode:task_assistant"
+        return route_decision
 
     # ------------------------------------------------------------------
     # Adaptive routing policy

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
@@ -23,6 +24,7 @@ import 'package:sparkle/features/plan/presentation/providers/active_plan_provide
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/task/presentation/widgets/guidance/task_guidance_surface.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/widgets/card_picker_sheet.dart';
@@ -81,29 +83,32 @@ class _TaskDetailView extends ConsumerWidget {
                           if ((task.userNote ?? '').trim().isNotEmpty)
                             _buildNoteSection(context),
                           _buildSubtaskSection(context, ref),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      context.l10n.taskGuideTitle,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            fontWeight: DS.fontWeightBold,
-                                          ),
+                          if (AppFeatureFlags.enableTaskGuidanceV2)
+                            TaskGuidanceSurface(task: task)
+                          else
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        context.l10n.taskGuideTitle,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              fontWeight: DS.fontWeightBold,
+                                            ),
+                                      ),
                                     ),
-                                  ),
-                                  _GenerateGuideButton(taskId: task.id),
-                                ],
-                              ),
-                              const SizedBox(height: DS.spacing12),
-                              _buildGuideSection(context),
-                            ],
-                          ),
+                                    _GenerateGuideButton(taskId: task.id),
+                                  ],
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                                _buildGuideSection(context),
+                              ],
+                            ),
                           const SizedBox(height: DS.spacing64),
                         ],
                       ),
