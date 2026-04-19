@@ -64,6 +64,7 @@ class DualCoreDecision:
     cognitive_adjustments: list[str]
     execution_constraints: list[str]
     routing_debug: dict[str, Any] = field(default_factory=dict)
+    strategy_adjustments: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -72,6 +73,7 @@ class DualCoreDecision:
             "cognitive_adjustments": list(self.cognitive_adjustments),
             "execution_constraints": list(self.execution_constraints),
             "routing_debug": dict(self.routing_debug or {}),
+            "strategy_adjustments": [dict(item) for item in self.strategy_adjustments if isinstance(item, dict)],
         }
 
     @property
@@ -164,18 +166,65 @@ class DualCoreRouter:
 
         cognitive_adjustments: list[str] = []
         execution_constraints: list[str] = []
+        strategy_adjustments: list[dict[str, Any]] = []
+        confidence_gate = round(max(0.55, min(0.95, float(routing_input.intent_confidence or 0.7))), 2)
+
+        def recommend_strategy(field: str, recommended_value: Any, *, reason: str) -> None:
+            if any(str(item.get("field") or "").strip() == field for item in strategy_adjustments):
+                return
+            strategy_adjustments.append(
+                {
+                    "field": field,
+                    "recommended_value": recommended_value,
+                    "target_layer": "session",
+                    "reversible": True,
+                    "confidence_gate": confidence_gate,
+                    "reason": reason,
+                    "source": "dual_core_router",
+                }
+            )
 
         if emotional_block:
             cognitive_adjustments.append("先处理用户当前的情绪阻力，再进入计划讨论。")
+            recommend_strategy(
+                "session_mode",
+                "recovery",
+                reason="Emotional blockage should switch the session into a lighter recovery stance before planning.",
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="High-friction turns need softer intervention intensity so the move stays reversible.",
+            )
         if not goal_clear:
             cognitive_adjustments.append("先帮助用户澄清目标、约束和成功标准，再进入具体方案。")
+            recommend_strategy(
+                "explanation_style",
+                "step_by_step",
+                reason="When the goal boundary is still blurry, the explanation path should slow down and clarify one step at a time.",
+            )
         if procrastination_pattern:
             cognitive_adjustments.append("先识别最近的执行阻力，并把建议收敛为更容易启动的动作。")
+            recommend_strategy(
+                "difficulty_level",
+                2,
+                reason="Execution friction should lower the startup bar before the system asks for another push.",
+            )
         if cognitive_mode_suggested:
             cognitive_adjustments.append("先校准理解偏差或概念卡点，再决定执行方案。")
+            recommend_strategy(
+                "explanation_style",
+                "step_by_step",
+                reason="Conceptual confusion benefits from a slower, incremental explanation mode.",
+            )
         cognitive_adjustments.extend(pattern_guidance["cognitive"])
         if routing_input.suggested_verbosity == "supportive":
             cognitive_adjustments.append("表达上更支持、更低压力，避免把建议说成必须立刻完成。")
+            recommend_strategy(
+                "push_vs_support",
+                0.25,
+                reason="Supportive delivery should reduce pressure and keep the tone on the user's side.",
+            )
 
         if routing_input.session_length_preference and routing_input.session_length_preference <= 25:
             execution_constraints.append(
@@ -241,6 +290,7 @@ class DualCoreRouter:
                 cognitive_adjustments=cognitive_adjustments[:2],
                 execution_constraints=execution_constraints[:3],
                 routing_debug=routing_debug,
+                strategy_adjustments=strategy_adjustments[:5],
             )
 
         if (
@@ -262,6 +312,7 @@ class DualCoreRouter:
                 cognitive_adjustments=cognitive_adjustments[:3],
                 execution_constraints=execution_constraints[:2],
                 routing_debug=routing_debug,
+                strategy_adjustments=strategy_adjustments[:5],
             )
 
         balanced_reason = "当前同时存在推进任务和理解用户状态的需求，先保持双核心并行。"
@@ -275,6 +326,7 @@ class DualCoreRouter:
             cognitive_adjustments=cognitive_adjustments[:2],
             execution_constraints=execution_constraints[:3],
             routing_debug=routing_debug,
+            strategy_adjustments=strategy_adjustments[:5],
         )
 
     def _goal_clarity_score(self, routing_input: DualCoreRoutingInput) -> float:

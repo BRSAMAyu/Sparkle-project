@@ -468,6 +468,72 @@ async def test_situation_brief_compiles_decision_policy_for_control_overload() -
 
 
 @pytest.mark.asyncio
+async def test_situation_brief_merges_dual_core_strategy_adjustments_into_bounded_adjustments() -> None:
+    brief = (await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "I keep overthinking and still cannot start.",
+            "context_focus": {"focus_mode": "general_focus", "route_intent": "plan"},
+            "user_strategy_state": {
+                "difficulty_level": 3,
+                "session_mode": "guided",
+                "intervention_intensity": "medium",
+                "push_vs_support": 0.5,
+                "explanation_style": "conceptual",
+            },
+            "profile_context": {
+                "knowledge_summary": {
+                    "overall_mastery": 0.52,
+                    "weak_spots": [],
+                    "recent_mastery_changes": [],
+                    "active_learning_subjects": ["Thermodynamics"],
+                },
+                "cognitive_summary": {
+                    "active_patterns": [
+                        {"pattern_name": "启动困难", "pattern_type": "execution", "confidence": 0.83}
+                    ]
+                },
+            },
+        },
+        plan_context={"plan_title": "Thermo sprint", "goal": "Finish thermo review"},
+        focused_memory={},
+        context_briefing_note="User is overloaded and stuck before starting.",
+        visible_update_context={},
+        dual_core_snapshot={
+            "decision": {
+                "mode": "cognitive_first",
+                "strategy_adjustments": [
+                    {
+                        "field": "session_mode",
+                        "recommended_value": "recovery",
+                        "target_layer": "session",
+                        "reversible": True,
+                        "source": "dual_core_router",
+                    },
+                    {
+                        "field": "difficulty_level",
+                        "recommended_value": 2,
+                        "target_layer": "session",
+                        "reversible": True,
+                        "source": "dual_core_router",
+                    },
+                ],
+            }
+        },
+        session_feedback_signal={},
+        progress_snapshot={"attention_areas": ["Load is too high this week."]},
+        adaptation_records=[],
+    )).to_dict()
+
+    adjustments = brief["decision_context"]["capability_bounded_adjustments"]
+    fields = {item["field"] for item in adjustments}
+    assert "session_mode" in fields
+    assert "difficulty_level" in fields
+    session_mode_adjustment = next(item for item in adjustments if item["field"] == "session_mode")
+    assert session_mode_adjustment["recommended_value"] == "recovery"
+    assert session_mode_adjustment["source"] == "dual_core_router"
+
+
+@pytest.mark.asyncio
 async def test_situation_brief_uses_phase_a_gate_to_force_clarify_before_planning() -> None:
     brief = await SituationBriefBuilder().build(
         user_context_payload={

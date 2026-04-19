@@ -124,3 +124,29 @@ def test_dual_core_router_uses_cognitive_mode_signal_for_concept_confusion() -> 
 
     assert decision.mode == "cognitive_first"
     assert decision.routing_debug["explicit_cognitive_signal"] is True
+
+
+def test_dual_core_router_emits_bounded_strategy_adjustments_for_high_friction_turns() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.88,
+            information_sufficient=False,
+            primary_challenge_area="emotional",
+            recent_sentiment_distribution={"overwhelmed": 2, "neutral": 1},
+            has_active_plan=True,
+            plan_health_status="critical",
+            recent_task_feedback_distribution={"too_long": 2, "too_difficult": 1},
+            procrastination_pattern=True,
+            cognitive_mode_suggested=True,
+            suggested_verbosity="supportive",
+        )
+    )
+
+    assert decision.mode == "cognitive_first"
+    adjustments = {item["field"]: item["recommended_value"] for item in decision.strategy_adjustments}
+    assert adjustments["session_mode"] == "recovery"
+    assert adjustments["intervention_intensity"] == "low"
+    assert adjustments["difficulty_level"] == 2
+    assert adjustments["explanation_style"] == "step_by_step"
+    assert adjustments["push_vs_support"] == 0.25

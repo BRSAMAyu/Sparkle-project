@@ -522,8 +522,9 @@ class SituationBriefBuilder:
         )
         decision_context["body_awareness_guidance"] = _as_dict(capability_selection.get("body_awareness_guidance"))
         decision_context["capability_selection_summary"] = _as_dict(capability_selection.get("summary"))
-        decision_context["capability_bounded_adjustments"] = list(
-            _as_list(capability_selection.get("bounded_adjustments"))
+        decision_context["capability_bounded_adjustments"] = self._merge_capability_bounded_adjustments(
+            dual_core_decision=dual_core_decision,
+            capability_selection=capability_selection,
         )
         five_layer_growth = self._build_five_layer_growth_summary(
             user_context=user_context,
@@ -672,6 +673,36 @@ class SituationBriefBuilder:
                 "known_failure_rule_count": len(_as_list(outcome_learning.get("known_failure_avoidance_rules"))),
             },
         }
+
+    def _merge_capability_bounded_adjustments(
+        self,
+        *,
+        dual_core_decision: dict[str, Any],
+        capability_selection: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        merged: list[dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+
+        def collect(items: list[Any], *, default_source: str) -> None:
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                field = _strip(item.get("field"))
+                if not field:
+                    continue
+                target_layer = _strip(item.get("target_layer") or "session")
+                key = (field, target_layer)
+                if key in seen:
+                    continue
+                payload = dict(item)
+                if not _strip(payload.get("source")):
+                    payload["source"] = default_source
+                merged.append(payload)
+                seen.add(key)
+
+        collect(_as_list(dual_core_decision.get("strategy_adjustments")), default_source="dual_core_router")
+        collect(_as_list(capability_selection.get("bounded_adjustments")), default_source="capability_selection")
+        return merged
 
     def _build_five_layer_growth_summary(
         self,
