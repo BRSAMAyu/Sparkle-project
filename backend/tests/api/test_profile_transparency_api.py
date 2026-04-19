@@ -328,6 +328,62 @@ async def test_profile_insights_returns_claims_predictions_and_unknowns(profile_
 
 
 @pytest.mark.asyncio
+async def test_profile_context_embeds_transparency_payload_for_ui_consumers(profile_client, db_session, monkeypatch):
+    client, state = profile_client
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    db_session.add(
+        UserPreferencesCenter(
+            user_id=user_id,
+            version=3,
+            explicit={"depth_preference": 0.7},
+            inferred={"achievement_motivation_response": "progress_praise"},
+        )
+    )
+    await db_session.commit()
+    state["current_user"] = type("UserStub", (), {"id": user_id})()
+
+    async def _fake_profile_context(self, _user_id):
+        return ProfileContext(
+            preferences={"depth_preference": 0.7},
+            preference_version=3,
+            knowledge_summary=KnowledgeSummary(),
+            cognitive_summary=CognitiveSummary(),
+            user_insight_state=UserInsightState(
+                signal_evidence=[
+                    InsightSignalEvidence(
+                        signal_id="achievement_motivation_response",
+                        family="achievement",
+                        label="成就激励响应",
+                        source="preferences",
+                        value="progress_praise",
+                        confidence=0.8,
+                        freshness="medium",
+                    )
+                ],
+                calibration_summary={"calibration_posture": "stable"},
+            ),
+        )
+
+    monkeypatch.setattr(ProfileContextService, "get_profile_context", _fake_profile_context)
+
+    response = client.get("/profile/context")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["preference_version"] == 3
+    assert "user_insight_transparency" in payload
+    assert payload["user_insight_transparency"]["claims"][0]["id"] == "achievement_motivation_response"
+    assert payload["user_insight_transparency"]["calibration"]["calibration_posture"] == "stable"
+
+
+@pytest.mark.asyncio
 async def test_profile_insight_control_removes_inferred_signal_and_logs_correction(profile_client, db_session):
     client, state = profile_client
     user_id = uuid4()
@@ -370,3 +426,91 @@ async def test_profile_insight_control_removes_inferred_signal_and_logs_correcti
     ).scalars().all()
     assert corrections
     assert corrections[0].action == "wrong"
+
+
+@pytest.mark.asyncio
+async def test_profile_insight_control_exam_mode_only_persists_scope_override(profile_client, db_session):
+    client, state = profile_client
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    db_session.add(
+        UserPreferencesCenter(
+            user_id=user_id,
+            version=1,
+            explicit={},
+            inferred={"achievement_motivation_response": "progress_praise"},
+        )
+    )
+    await db_session.commit()
+    state["current_user"] = type("UserStub", (), {"id": user_id})()
+
+    response = client.post(
+        "/profile/insights/control",
+        json={
+            "target_id": "achievement_motivation_response",
+            "action": "exam_mode_only",
+        },
+    )
+
+    assert response.status_code == 200
+    prefs = await PreferenceService(db_session, cache_service.redis).get_preferences(user_id)
+    overrides = (prefs.explicit or {}).get("insight_scope_overrides") or {}
+    assert overrides["achievement_motivation_response"]["scope"] == "exam_mode_only"
+
+
+@pytest.mark.asyncio
+async def test_submit_correction_creates_memory_correction_and_enqueues_update(profile_client, db_session):
+    client, state = profile_client
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = type("UserStub", (), {"id": user_id})()
+
+    class _FakeSystemUpdateService:
+        def __init__(self, _redis) -> None:
+            self.enqueued: list[dict] = []
+
+        async def enqueue(self, _user_id, payload):
+            self.enqueued.append(payload)
+            return True
+
+    fake_service = _FakeSystemUpdateService(None)
+    original_factory = profile_api.SystemUpdateService
+    profile_api.SystemUpdateService = lambda _redis=None: fake_service
+
+    try:
+        response = client.post(
+            "/profile/corrections",
+            json={
+                "target_type": "insight_signal",
+                "target_id": "achievement_motivation_response",
+                "field_name": "achievement_motivation_response",
+                "suggested_value": "mastery_affirmation",
+                "reason": "This reward framing fits less than mastery framing now.",
+            },
+        )
+    finally:
+        profile_api.SystemUpdateService = original_factory
+
+    assert response.status_code == 200
+    corrections = (
+        await db_session.execute(
+            select(MemoryCorrection).where(MemoryCorrection.user_id == user_id)
+        )
+    ).scalars().all()
+    assert len(corrections) == 1
+    assert corrections[0].action == "suggest_update"
+    assert fake_service.enqueued
+    assert fake_service.enqueued[0]["type"] == "correction_received"
