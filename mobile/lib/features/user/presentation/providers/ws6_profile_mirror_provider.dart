@@ -13,32 +13,63 @@ final ws6TransparentProfileViewProvider =
   if (!kWs6ProfileSurfaceEnabled) {
     return Ws6TransparentProfileViewModel.inert(
       bindingNotes: const <String>[
-        'provisional binding: transparentProfileProvider',
+        'canonical transparency surface gated',
         'provisional binding: profileContextProvider',
       ],
     );
   }
 
   try {
-    final transparentProfile =
-        await ref.watch(transparentProfileProvider.future);
     final profileContext = await ref.watch(profileContextProvider.future);
+    final embeddedTransparency = _asMap(
+      profileContext['user_insight_transparency'],
+    );
+    final transparentProfile = embeddedTransparency.isNotEmpty
+        ? embeddedTransparency
+        : await ref.watch(profileInsightsProvider.future);
     final adapter = ref.watch(ws6ProfileMirrorAdapterProvider);
     return adapter.build(
       transparentProfile: transparentProfile,
       profileContext: profileContext,
     );
   } catch (_) {
-    return Ws6TransparentProfileViewModel.inert(
-      summary: 'WS6 profile surface could not bind to live data yet.',
-      bindingNotes: const <String>[
-        'provisional binding: transparentProfileProvider',
-        'provisional binding: profileContextProvider',
-        'fall back to inert local model',
-      ],
-    );
+    try {
+      final transparentProfile =
+          await ref.watch(transparentProfileProvider.future);
+      final profileContext = await ref.watch(profileContextProvider.future);
+      final adapter = ref.watch(ws6ProfileMirrorAdapterProvider);
+      return adapter
+          .build(
+        transparentProfile: transparentProfile,
+        profileContext: profileContext,
+      )
+          .copyWithBindingNotes(
+        const <String>[
+          'data source: transparentProfileProvider (deprecated fallback)',
+          'data source: profileContextProvider',
+        ],
+      );
+    } catch (_) {
+      return Ws6TransparentProfileViewModel.inert(
+        summary: 'WS6 profile surface could not bind to live data yet.',
+        bindingNotes: const <String>[
+          'canonical transparency fetch failed',
+          'legacy transparentProfileProvider fallback failed',
+        ],
+      );
+    }
   }
 });
+
+Map<String, dynamic> _asMap(dynamic value) {
+  if (value is Map<String, dynamic>) {
+    return value;
+  }
+  if (value is Map) {
+    return value.map((key, dynamic item) => MapEntry(key.toString(), item));
+  }
+  return <String, dynamic>{};
+}
 
 class Ws6ProfileMirrorAdapter {
   const Ws6ProfileMirrorAdapter();
@@ -55,14 +86,16 @@ class Ws6ProfileMirrorAdapter {
         : rawItems;
     final computedHiddenCount = _hiddenItemCount(transparentProfile) > 0
         ? _hiddenItemCount(transparentProfile)
-        : synthesizedItems.where(
-            (item) =>
-                _parseVisibility(
-                  item['projection_policy']?.toString(),
-                  allowSensitiveMediation: allowSensitiveMediation,
-                ) ==
-                Ws6ProfileVisibility.hidden,
-          ).length;
+        : synthesizedItems
+            .where(
+              (item) =>
+                  _parseVisibility(
+                    item['projection_policy']?.toString(),
+                    allowSensitiveMediation: allowSensitiveMediation,
+                  ) ==
+                  Ws6ProfileVisibility.hidden,
+            )
+            .length;
     final visibleItems = <Ws6TransparentProfileItemModel>[];
     final mediatedItems = <Ws6TransparentProfileItemModel>[];
     final revertActions = <Ws6ProfileRevertActionModel>[];
@@ -79,7 +112,7 @@ class Ws6ProfileMirrorAdapter {
         case Ws6ProfileVisibility.mediated:
           mediatedItems.add(mappedItem);
         case Ws6ProfileVisibility.hidden:
-          // Hidden items stay out of the rendered lists by design.
+        // Hidden items stay out of the rendered lists by design.
       }
 
       if (mappedItem.canRevert) {
@@ -92,7 +125,8 @@ class Ws6ProfileMirrorAdapter {
                 item['suggested_summary']?.toString() ?? mappedItem.summary,
             reason: item['revert_reason']?.toString() ??
                 'dialogue-mediated revert required',
-            projectionPolicy: item['projection_policy']?.toString() ?? 'open_discussable',
+            projectionPolicy:
+                item['projection_policy']?.toString() ?? 'open_discussable',
             requiresDialogue: visibility != Ws6ProfileVisibility.visible,
           ),
         );
@@ -121,10 +155,22 @@ class Ws6ProfileMirrorAdapter {
       mediatedItems: mediatedItems,
       hiddenItemCount: computedHiddenCount,
       revertActions: revertActions,
+      calibrationPosture:
+          _asMap(transparentProfile['calibration'])['calibration_posture']
+                  ?.toString() ??
+              '',
+      unknowns: [
+        for (final item in _asList(transparentProfile['unknowns']))
+          _asMap(item)['description']?.toString() ?? '',
+      ].where((item) => item.isNotEmpty).toList(growable: false),
       bindingNotes: List<String>.unmodifiable([
-        'data source: transparentProfileProvider',
+        if (transparentProfile.containsKey('claims'))
+          'data source: user_insight_transparency / profileInsightsProvider',
+        if (!transparentProfile.containsKey('claims'))
+          'data source: transparentProfileProvider (deprecated fallback)',
         'data source: profileContextProvider',
-        if (relationshipState != null) 'data source: relationship_state adapter',
+        if (relationshipState != null)
+          'data source: relationship_state adapter',
       ]),
     );
   }
@@ -135,11 +181,19 @@ class Ws6ProfileMirrorAdapter {
     required bool allowSensitiveMediation,
     Map<String, dynamic>? relationshipState,
   }) {
+    final currentProfile = _asMap(transparentProfile['current_profile']);
     final layer1 = _asMap(transparentProfile['layer_1']);
     final layer2 = _asMap(transparentProfile['layer_2']);
     final layer3 = _asMap(transparentProfile['layer_3']);
-    final currentState = _asMap(profileContext['current_state']);
-    final readiness = _asMap(profileContext['readiness']);
+    final canonicalState = _asMap(profileContext['user_insight_state']);
+    final currentState = _asMap(profileContext['current_state']).isNotEmpty
+        ? _asMap(profileContext['current_state'])
+        : _asMap(currentProfile['current_state']).isNotEmpty
+            ? _asMap(currentProfile['current_state'])
+            : _asMap(canonicalState['current_state']);
+    final readiness = _asMap(profileContext['readiness']).isNotEmpty
+        ? _asMap(profileContext['readiness'])
+        : _asMap(canonicalState['readiness']);
     final knowledgeSummary = _asMap(profileContext['knowledge_summary']);
     final cognitiveSummary = _asMap(profileContext['cognitive_summary']);
     final relationship = relationshipState ?? const <String, dynamic>{};
@@ -158,16 +212,27 @@ class Ws6ProfileMirrorAdapter {
       fallback: _dimensionValue([readiness['energy']], fallback: 0.45),
     );
     final commitmentValue = _dimensionValue(
-      [currentState['commitment'], knowledgeSummary['active_learning_subjects'], layer1['preferences']],
-      fallback: _dimensionValue(knowledgeSummary['active_learning_subjects'], fallback: 0.35),
+      [
+        currentState['commitment'],
+        knowledgeSummary['active_learning_subjects'],
+        layer1['preferences']
+      ],
+      fallback: _dimensionValue(knowledgeSummary['active_learning_subjects'],
+          fallback: 0.35),
     );
     final memoryValue = _dimensionValue(
-      [knowledgeSummary['overall_mastery'], cognitiveSummary['active_patterns'], layer3['patterns']],
+      [
+        knowledgeSummary['overall_mastery'],
+        cognitiveSummary['active_patterns'],
+        layer3['patterns']
+      ],
       fallback: _dimensionValue(layer3['patterns'], fallback: 0.3),
     );
 
-    final presenceFromRelationship = _numericFrom(relationship['relationship_maturity']);
-    final presenceFallback = _clamp01((focusValue + energyValue + commitmentValue + memoryValue) / 4);
+    final presenceFromRelationship =
+        _numericFrom(relationship['relationship_maturity']);
+    final presenceFallback = _clamp01(
+        (focusValue + energyValue + commitmentValue + memoryValue) / 4);
     final presenceValue = presenceFromRelationship ?? presenceFallback;
     final presenceLabel = _presenceLabel(presenceValue);
 
@@ -186,7 +251,10 @@ class Ws6ProfileMirrorAdapter {
             fallback: '当前关注点和目标聚焦',
           ),
           sourceLabel: _sourceLabel(
-            ['profileContext.current_state.focus', 'transparentProfile.layer_1.goals'],
+            [
+              'profileContext.current_state.focus',
+              'transparentProfile.layer_1.goals'
+            ],
           ),
           visibility: Ws6ProfileVisibility.visible,
           canEditDirectly: _looksEditable(layer1['goals']),
@@ -202,9 +270,14 @@ class Ws6ProfileMirrorAdapter {
             fallback: '系统对当前能量状态的保守估计',
           ),
           sourceLabel: _sourceLabel(
-            ['profileContext.current_state.energy', 'profileContext.readiness.energy'],
+            [
+              'profileContext.current_state.energy',
+              'profileContext.readiness.energy'
+            ],
           ),
-          visibility: allowSensitiveMediation ? Ws6ProfileVisibility.visible : Ws6ProfileVisibility.mediated,
+          visibility: allowSensitiveMediation
+              ? Ws6ProfileVisibility.visible
+              : Ws6ProfileVisibility.mediated,
           canEditDirectly: false,
           canRevert: true,
         ),
@@ -218,7 +291,10 @@ class Ws6ProfileMirrorAdapter {
             fallback: '当前承诺与任务执行节奏',
           ),
           sourceLabel: _sourceLabel(
-            ['profileContext.knowledge_summary.active_learning_subjects', 'transparentProfile.layer_1.preferences'],
+            [
+              'profileContext.knowledge_summary.active_learning_subjects',
+              'transparentProfile.layer_1.preferences'
+            ],
           ),
           visibility: Ws6ProfileVisibility.visible,
           canEditDirectly: _looksEditable(layer1['preferences']),
@@ -234,7 +310,10 @@ class Ws6ProfileMirrorAdapter {
             fallback: '最近记忆与模式的保守投影',
           ),
           sourceLabel: _sourceLabel(
-            ['profileContext.knowledge_summary.overall_mastery', 'profileContext.cognitive_summary.active_patterns'],
+            [
+              'profileContext.knowledge_summary.overall_mastery',
+              'profileContext.cognitive_summary.active_patterns'
+            ],
           ),
           visibility: Ws6ProfileVisibility.visible,
           canEditDirectly: false,
@@ -242,7 +321,10 @@ class Ws6ProfileMirrorAdapter {
         ),
       ],
       bindingNotes: [
-        'Focus: transparentProfile.layer_1 + profileContext.current_state',
+        if (transparentProfile.containsKey('claims'))
+          'Focus: transparency claims + profileContext.current_state',
+        if (!transparentProfile.containsKey('claims'))
+          'Focus: transparentProfile.layer_1 + profileContext.current_state',
         'Energy: profileContext.readiness + current_state',
         'Commitment: profileContext.knowledge_summary + layer_1',
         'Memory: profileContext.knowledge_summary + cognitive_summary',
@@ -250,21 +332,52 @@ class Ws6ProfileMirrorAdapter {
     );
   }
 
-  List<Map<String, dynamic>> _extractClaimLikeItems(Map<String, dynamic> transparentProfile) {
+  List<Map<String, dynamic>> _extractClaimLikeItems(
+      Map<String, dynamic> transparentProfile) {
     final items = <Map<String, dynamic>>[];
-    final rawItems = transparentProfile['items'] ?? transparentProfile['claims'];
+    final rawItems =
+        transparentProfile['items'] ?? transparentProfile['claims'];
     if (rawItems is List) {
       for (final item in rawItems) {
         final map = _asMap(item);
         if (map.isNotEmpty) {
-          items.add(map);
+          items.add(_normalizeClaimLikeItem(map));
         }
       }
     }
     return items;
   }
 
-  List<Map<String, dynamic>> _synthesizeItemsFromLegacyLayers(Map<String, dynamic> transparentProfile) {
+  Map<String, dynamic> _normalizeClaimLikeItem(Map<String, dynamic> item) {
+    final controls = _asList(item['controls'])
+        .map((dynamic value) => value.toString())
+        .toList(growable: false);
+    final hasClaimShape = item.containsKey('id') && item.containsKey('value');
+    if (!hasClaimShape) {
+      return item;
+    }
+    return {
+      'key': item['id']?.toString() ?? item['label']?.toString() ?? 'claim',
+      'label': item['label']?.toString() ?? item['id']?.toString() ?? 'Claim',
+      'summary': _stringifyValue(item['value']),
+      'projection_policy': controls.contains('exam_mode_only')
+          ? 'open_editable'
+          : 'open_discussable',
+      'visibility': 'visible',
+      'can_edit_directly': controls.contains('exam_mode_only'),
+      'can_revert':
+          controls.contains('wrong') || controls.contains('used_to_be_true'),
+      'supports_exam_mode_only': controls.contains('exam_mode_only'),
+      'evidence_summary':
+          '${item['family'] ?? 'signal'} · freshness ${item['freshness'] ?? 'unknown'} · confidence ${item['confidence'] ?? 'n/a'}',
+      'revert_reason':
+          item['explanation']?.toString() ?? 'user-reported correction lane',
+      'suggested_summary': _stringifyValue(item['value']),
+    };
+  }
+
+  List<Map<String, dynamic>> _synthesizeItemsFromLegacyLayers(
+      Map<String, dynamic> transparentProfile) {
     final layer1 = _asMap(transparentProfile['layer_1']);
     final layer2 = _asMap(transparentProfile['layer_2']);
     final layer3 = _asMap(transparentProfile['layer_3']);
@@ -360,10 +473,13 @@ class Ws6ProfileMirrorAdapter {
     Ws6ProfileVisibility visibility,
   ) {
     final policy = item['projection_policy']?.toString() ?? 'open_discussable';
-    final label = item['label']?.toString() ?? item['key']?.toString() ?? 'Profile item';
-    final summary = item['summary']?.toString() ?? item['content']?.toString() ?? label;
+    final label =
+        item['label']?.toString() ?? item['key']?.toString() ?? 'Profile item';
+    final summary =
+        item['summary']?.toString() ?? item['content']?.toString() ?? label;
     final canEditDirectly = item['can_edit_directly'] == true;
-    final canRevert = item['can_revert'] != false && visibility != Ws6ProfileVisibility.hidden;
+    final canRevert = item['can_revert'] != false &&
+        visibility != Ws6ProfileVisibility.hidden;
     final evidenceSummary = item['evidence_summary']?.toString() ??
         item['evidence_refs']?.toString() ??
         'provisional binding';
@@ -377,6 +493,7 @@ class Ws6ProfileMirrorAdapter {
       canEditDirectly: canEditDirectly,
       canRevert: canRevert,
       evidenceSummary: evidenceSummary,
+      supportsExamModeOnly: item['supports_exam_mode_only'] == true,
     );
   }
 
@@ -419,16 +536,6 @@ class Ws6ProfileMirrorAdapter {
         '隐藏条目 $hiddenItemCount 条。$relationshipPart。';
   }
 
-  Map<String, dynamic> _asMap(dynamic value) {
-    if (value is Map<String, dynamic>) {
-      return value;
-    }
-    if (value is Map) {
-      return value.map((key, dynamic item) => MapEntry(key.toString(), item));
-    }
-    return <String, dynamic>{};
-  }
-
   List<dynamic> _asList(dynamic value) {
     if (value is List) {
       return value;
@@ -437,7 +544,8 @@ class Ws6ProfileMirrorAdapter {
   }
 
   int _hiddenItemCount(Map<String, dynamic> transparentProfile) {
-    final value = transparentProfile['hidden_item_count'] ?? transparentProfile['hidden_count'];
+    final value = transparentProfile['hidden_item_count'] ??
+        transparentProfile['hidden_count'];
     if (value is int) {
       return value;
     }
@@ -492,7 +600,8 @@ class Ws6ProfileMirrorAdapter {
 
   double _clamp01(double value) => value.clamp(0.0, 1.0);
 
-  String _dimensionSubtitle(dynamic primary, dynamic secondary, {required String fallback}) {
+  String _dimensionSubtitle(dynamic primary, dynamic secondary,
+      {required String fallback}) {
     final primaryText = _stringifyValue(primary);
     final secondaryText = _stringifyValue(secondary);
     if (primaryText.isNotEmpty) {
@@ -515,10 +624,16 @@ class Ws6ProfileMirrorAdapter {
       return value.toString();
     }
     if (value is Iterable) {
-      return value.map(_stringifyValue).where((item) => item.isNotEmpty).join(' · ');
+      return value
+          .map(_stringifyValue)
+          .where((item) => item.isNotEmpty)
+          .join(' · ');
     }
     if (value is Map) {
-      final text = value.values.map(_stringifyValue).where((item) => item.isNotEmpty).join(' · ');
+      final text = value.values
+          .map(_stringifyValue)
+          .where((item) => item.isNotEmpty)
+          .join(' · ');
       return text.isNotEmpty ? text : value.keys.join(' · ');
     }
     return value.toString();

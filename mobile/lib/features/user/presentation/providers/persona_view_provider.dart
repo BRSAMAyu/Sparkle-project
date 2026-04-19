@@ -7,6 +7,12 @@ final transparentProfileProvider =
   return repo.fetchTransparentProfile();
 });
 
+final profileInsightsProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
+  final repo = ref.watch(userRepositoryProvider);
+  return repo.fetchProfileInsights();
+});
+
 final systemUpdatesProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final repo = ref.watch(userRepositoryProvider);

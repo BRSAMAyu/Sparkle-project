@@ -3,7 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
+import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/ws6_profile_mirror_provider.dart';
 import 'package:sparkle/features/user/presentation/widgets/mirror_bar.dart';
 import 'package:sparkle/features/user/presentation/ws6_flags.dart';
@@ -14,6 +16,25 @@ class ProfileTransparentScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final viewAsync = ref.watch(ws6TransparentProfileViewProvider);
+    Future<void> submitInsightControl({
+      required String targetId,
+      required String action,
+      String? reason,
+    }) async {
+      await ref.read(userRepositoryProvider).submitInsightControl({
+        'target_id': targetId,
+        'action': action,
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      });
+      ref.invalidate(profileContextProvider);
+      ref.invalidate(ws6TransparentProfileViewProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已记录「$targetId」的画像调整。')),
+        );
+      }
+    }
+
     return GraphiteScaffold(
       role: SparklePageRole.settings,
       safeArea: false,
@@ -37,6 +58,15 @@ class ProfileTransparentScreen extends ConsumerWidget {
                 title: '可见画像',
                 subtitle: 'open_editable / open_discussable 条目会在这里直接呈现。',
                 items: view.visibleItems,
+                onMarkWrong: (item) => submitInsightControl(
+                  targetId: item.key,
+                  action: 'wrong',
+                  reason: 'Submitted from transparent profile surface.',
+                ),
+                onExamModeOnly: (item) => submitInsightControl(
+                  targetId: item.key,
+                  action: 'exam_mode_only',
+                ),
               ),
               const SizedBox(height: DS.spacing12),
               _buildItemSection(
@@ -44,9 +74,22 @@ class ProfileTransparentScreen extends ConsumerWidget {
                 title: '中介画像',
                 subtitle: 'sensitive_mediated 条目只在合适上下文里展开。',
                 items: view.mediatedItems,
+                onMarkWrong: (item) => submitInsightControl(
+                  targetId: item.key,
+                  action: 'wrong',
+                  reason: 'Submitted from transparent profile surface.',
+                ),
               ),
               const SizedBox(height: DS.spacing12),
-              _buildRevertSection(context, view),
+              _buildRevertSection(
+                context,
+                view,
+                onMarkWrong: (action) => submitInsightControl(
+                  targetId: action.key,
+                  action: 'wrong',
+                  reason: action.reason,
+                ),
+              ),
               const SizedBox(height: DS.spacing12),
               _buildBindingCard(context, view),
               const SizedBox(height: 24),
@@ -59,7 +102,8 @@ class ProfileTransparentScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, Ws6TransparentProfileViewModel view) {
+  Widget _buildHeader(
+      BuildContext context, Ws6TransparentProfileViewModel view) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -85,9 +129,8 @@ class ProfileTransparentScreen extends ConsumerWidget {
         const SizedBox(width: DS.spacing8),
         const _ModePill(
           label: kWs6ProfileSurfaceEnabled ? 'live' : 'gated',
-          color: kWs6ProfileSurfaceEnabled
-              ? Color(0xFF73E0B9)
-              : Color(0xFF8A8EA8),
+          color:
+              kWs6ProfileSurfaceEnabled ? Color(0xFF73E0B9) : Color(0xFF8A8EA8),
         ),
       ],
     );
@@ -115,6 +158,33 @@ class ProfileTransparentScreen extends ConsumerWidget {
             view.summary,
             style: DS.bodyMedium.copyWith(color: DS.textPrimary),
           ),
+          if (view.calibrationPosture.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              'Calibration posture: ${view.calibrationPosture}',
+              style: DS.labelSmall.copyWith(color: DS.textSecondary),
+            ),
+          ],
+          if (view.unknowns.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              '当前未知项',
+              style: DS.labelSmall.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightSemibold,
+              ),
+            ),
+            const SizedBox(height: DS.spacing4),
+            ...view.unknowns.take(3).map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.spacing4),
+                    child: Text(
+                      '• $item',
+                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                    ),
+                  ),
+                ),
+          ],
           if (view.hiddenItemCount > 0) ...[
             const SizedBox(height: DS.spacing8),
             Text(
@@ -132,6 +202,8 @@ class ProfileTransparentScreen extends ConsumerWidget {
     required String title,
     required String subtitle,
     required List<Ws6TransparentProfileItemModel> items,
+    Future<void> Function(Ws6TransparentProfileItemModel item)? onMarkWrong,
+    Future<void> Function(Ws6TransparentProfileItemModel item)? onExamModeOnly,
   }) {
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
@@ -161,7 +233,14 @@ class ProfileTransparentScreen extends ConsumerWidget {
             ...items.map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: DS.spacing10),
-                child: _ProfileItemCard(item: item),
+                child: _ProfileItemCard(
+                  item: item,
+                  onMarkWrong:
+                      onMarkWrong == null ? null : () => onMarkWrong(item),
+                  onExamModeOnly: onExamModeOnly == null
+                      ? null
+                      : () => onExamModeOnly(item),
+                ),
               ),
             ),
         ],
@@ -171,8 +250,9 @@ class ProfileTransparentScreen extends ConsumerWidget {
 
   Widget _buildRevertSection(
     BuildContext context,
-    Ws6TransparentProfileViewModel view,
-  ) {
+    Ws6TransparentProfileViewModel view, {
+    Future<void> Function(Ws6ProfileRevertActionModel action)? onMarkWrong,
+  }) {
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       padding: const EdgeInsets.all(DS.spacing16),
@@ -201,7 +281,11 @@ class ProfileTransparentScreen extends ConsumerWidget {
             ...view.revertActions.map(
               (action) => Padding(
                 padding: const EdgeInsets.only(bottom: DS.spacing10),
-                child: _RevertActionCard(action: action),
+                child: _RevertActionCard(
+                  action: action,
+                  onMarkWrong:
+                      onMarkWrong == null ? null : () => onMarkWrong(action),
+                ),
               ),
             ),
         ],
@@ -270,9 +354,15 @@ class ProfileTransparentScreen extends ConsumerWidget {
 }
 
 class _ProfileItemCard extends StatelessWidget {
-  const _ProfileItemCard({required this.item});
+  const _ProfileItemCard({
+    required this.item,
+    this.onMarkWrong,
+    this.onExamModeOnly,
+  });
 
   final Ws6TransparentProfileItemModel item;
+  final Future<void> Function()? onMarkWrong;
+  final Future<void> Function()? onExamModeOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -320,10 +410,33 @@ class _ProfileItemCard extends StatelessWidget {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              if (item.canEditDirectly) const _ModePill(label: 'editable', color: Color(0xFF73E0B9)),
-              if (item.canRevert) const _ModePill(label: 'revertable', color: Color(0xFFF1C27A)),
+              if (item.canEditDirectly)
+                const _ModePill(label: 'editable', color: Color(0xFF73E0B9)),
+              if (item.canRevert)
+                const _ModePill(label: 'revertable', color: Color(0xFFF1C27A)),
             ],
           ),
+          if (item.supportsExamModeOnly || item.canRevert) ...[
+            const SizedBox(height: DS.spacing10),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: [
+                if (item.supportsExamModeOnly)
+                  OutlinedButton(
+                    onPressed:
+                        onExamModeOnly == null ? null : () => onExamModeOnly!(),
+                    child: const Text('仅考试模式'),
+                  ),
+                if (item.canRevert)
+                  OutlinedButton(
+                    onPressed:
+                        onMarkWrong == null ? null : () => onMarkWrong!(),
+                    child: const Text('标记不准确'),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -331,9 +444,13 @@ class _ProfileItemCard extends StatelessWidget {
 }
 
 class _RevertActionCard extends StatelessWidget {
-  const _RevertActionCard({required this.action});
+  const _RevertActionCard({
+    required this.action,
+    this.onMarkWrong,
+  });
 
   final Ws6ProfileRevertActionModel action;
+  final Future<void> Function()? onMarkWrong;
 
   @override
   Widget build(BuildContext context) {
@@ -359,7 +476,9 @@ class _RevertActionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _ModePill(label: action.projectionPolicy, color: const Color(0xFFF1C27A)),
+              _ModePill(
+                  label: action.projectionPolicy,
+                  color: const Color(0xFFF1C27A)),
             ],
           ),
           const SizedBox(height: DS.spacing8),
@@ -382,8 +501,8 @@ class _RevertActionCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: null,
-                  child: Text(action.requiresDialogue ? '需要对话确认' : '可回退'),
+                  onPressed: onMarkWrong == null ? null : () => onMarkWrong!(),
+                  child: Text(action.requiresDialogue ? '标记需重校' : '标记不准确'),
                 ),
               ),
             ],

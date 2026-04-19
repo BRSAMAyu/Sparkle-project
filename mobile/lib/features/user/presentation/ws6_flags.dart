@@ -1,1 +1,1 @@
-const bool kWs6ProfileSurfaceEnabled = false;
+const bool kWs6ProfileSurfaceEnabled = true;

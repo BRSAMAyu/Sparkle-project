@@ -107,6 +107,25 @@ class UserRepository {
     );
   }
 
+  Future<Map<String, dynamic>> fetchProfileInsights() async {
+    if (DemoDataService.isDemoMode) {
+      return {
+        'claims': <dynamic>[],
+        'predictions': <dynamic>[],
+        'recent_changes': <dynamic>[],
+        'unknowns': <dynamic>[],
+        'calibration': <String, dynamic>{},
+        'current_profile': <String, dynamic>{},
+      };
+    }
+    final response =
+        await _apiClient.get<Map<String, dynamic>>('/profile/insights');
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'fetchProfileInsights',
+    );
+  }
+
   Future<List<Map<String, dynamic>>> fetchInferredPreferences() async {
     if (DemoDataService.isDemoMode) {
       return [];
@@ -172,6 +191,16 @@ class UserRepository {
     }
     await _apiClient.post<Map<String, dynamic>>(
       '/profile/corrections',
+      data: payload,
+    );
+  }
+
+  Future<void> submitInsightControl(Map<String, dynamic> payload) async {
+    if (DemoDataService.isDemoMode) {
+      return;
+    }
+    await _apiClient.post<Map<String, dynamic>>(
+      '/profile/insights/control',
       data: payload,
     );
   }

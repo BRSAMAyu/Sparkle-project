@@ -40,13 +40,14 @@ class Ws6MirrorBarModel {
   factory Ws6MirrorBarModel.inert({
     String presenceLabel = 'ambient',
     List<String> bindingNotes = const <String>[],
-  }) => Ws6MirrorBarModel(
-      enabled: false,
-      presenceLabel: presenceLabel,
-      presenceValue: 0.0,
-      dimensions: const <Ws6MirrorDimensionModel>[],
-      bindingNotes: List<String>.unmodifiable(bindingNotes),
-    );
+  }) =>
+      Ws6MirrorBarModel(
+        enabled: false,
+        presenceLabel: presenceLabel,
+        presenceValue: 0.0,
+        dimensions: const <Ws6MirrorDimensionModel>[],
+        bindingNotes: List<String>.unmodifiable(bindingNotes),
+      );
 
   final bool enabled;
   final String presenceLabel;
@@ -65,6 +66,7 @@ class Ws6TransparentProfileItemModel {
     required this.canEditDirectly,
     required this.canRevert,
     required this.evidenceSummary,
+    this.supportsExamModeOnly = false,
   });
 
   final String key;
@@ -75,6 +77,7 @@ class Ws6TransparentProfileItemModel {
   final bool canEditDirectly;
   final bool canRevert;
   final String evidenceSummary;
+  final bool supportsExamModeOnly;
 }
 
 class Ws6ProfileRevertActionModel {
@@ -106,22 +109,27 @@ class Ws6TransparentProfileViewModel {
     required this.mediatedItems,
     required this.hiddenItemCount,
     required this.revertActions,
+    required this.calibrationPosture,
+    required this.unknowns,
     required this.bindingNotes,
   });
 
   factory Ws6TransparentProfileViewModel.inert({
     String summary = 'WS6 profile surface is gated off.',
     List<String> bindingNotes = const <String>[],
-  }) => Ws6TransparentProfileViewModel(
-      enabled: false,
-      summary: summary,
-      mirrorBar: Ws6MirrorBarModel.inert(bindingNotes: bindingNotes),
-      visibleItems: const <Ws6TransparentProfileItemModel>[],
-      mediatedItems: const <Ws6TransparentProfileItemModel>[],
-      hiddenItemCount: 0,
-      revertActions: const <Ws6ProfileRevertActionModel>[],
-      bindingNotes: List<String>.unmodifiable(bindingNotes),
-    );
+  }) =>
+      Ws6TransparentProfileViewModel(
+        enabled: false,
+        summary: summary,
+        mirrorBar: Ws6MirrorBarModel.inert(bindingNotes: bindingNotes),
+        visibleItems: const <Ws6TransparentProfileItemModel>[],
+        mediatedItems: const <Ws6TransparentProfileItemModel>[],
+        hiddenItemCount: 0,
+        revertActions: const <Ws6ProfileRevertActionModel>[],
+        calibrationPosture: '',
+        unknowns: const <String>[],
+        bindingNotes: List<String>.unmodifiable(bindingNotes),
+      );
 
   final bool enabled;
   final String summary;
@@ -130,7 +138,23 @@ class Ws6TransparentProfileViewModel {
   final List<Ws6TransparentProfileItemModel> mediatedItems;
   final int hiddenItemCount;
   final List<Ws6ProfileRevertActionModel> revertActions;
+  final String calibrationPosture;
+  final List<String> unknowns;
   final List<String> bindingNotes;
+
+  Ws6TransparentProfileViewModel copyWithBindingNotes(List<String> notes) =>
+      Ws6TransparentProfileViewModel(
+        enabled: enabled,
+        summary: summary,
+        mirrorBar: mirrorBar,
+        visibleItems: visibleItems,
+        mediatedItems: mediatedItems,
+        hiddenItemCount: hiddenItemCount,
+        revertActions: revertActions,
+        calibrationPosture: calibrationPosture,
+        unknowns: unknowns,
+        bindingNotes: List<String>.unmodifiable(notes),
+      );
 }
 
 Color ws6VisibilityColor(Ws6ProfileVisibility visibility) {

@@ -5,7 +5,8 @@ import 'package:sparkle/features/user/presentation/providers/ws6_profile_mirror_
 import 'package:sparkle/features/user/presentation/widgets/mirror_bar.dart';
 
 void main() {
-  testWidgets('mirror bar renders four dimensions and presence label', (tester) async {
+  testWidgets('mirror bar renders four dimensions and presence label',
+      (tester) async {
     const model = Ws6MirrorBarModel(
       enabled: true,
       presenceLabel: 'active',
@@ -37,7 +38,8 @@ void main() {
           label: 'Commitment',
           value: 0.8,
           subtitle: '执行承诺',
-          sourceLabel: 'profileContext.knowledge_summary.active_learning_subjects',
+          sourceLabel:
+              'profileContext.knowledge_summary.active_learning_subjects',
           visibility: Ws6ProfileVisibility.visible,
           canEditDirectly: true,
           canRevert: true,
@@ -71,7 +73,8 @@ void main() {
     expect(find.text('Focus binding ready'), findsOneWidget);
   });
 
-  test('adapter builds mirror bar and transparent profile from legacy maps', () {
+  test('adapter builds mirror bar and transparent profile from legacy maps',
+      () {
     final adapter = Ws6ProfileMirrorAdapter();
     final result = adapter.build(
       transparentProfile: {
@@ -117,5 +120,60 @@ void main() {
     expect(result.mediatedItems, isNotEmpty);
     expect(result.hiddenItemCount, 1);
     expect(result.revertActions, isNotEmpty);
+  });
+
+  test('adapter builds transparent profile from canonical transparency payload',
+      () {
+    final adapter = Ws6ProfileMirrorAdapter();
+    final result = adapter.build(
+      transparentProfile: {
+        'claims': [
+          {
+            'id': 'achievement_motivation_response',
+            'label': 'Achievement motivation response',
+            'value': 'progress_praise',
+            'family': 'achievement',
+            'freshness': 'medium',
+            'confidence': 0.82,
+            'controls': ['wrong', 'exam_mode_only'],
+            'explanation': 'Derived from recent reward response.',
+          },
+        ],
+        'unknowns': [
+          {
+            'id': 'capacity_hours',
+            'description': 'Reliable time-capacity data is still missing.'
+          },
+        ],
+        'calibration': {
+          'calibration_posture': 'stable',
+        },
+        'current_profile': {
+          'current_state': {
+            'focus': 'exam prep',
+          },
+        },
+      },
+      profileContext: {
+        'knowledge_summary': {
+          'active_learning_subjects': ['physics'],
+          'overall_mastery': 0.55,
+        },
+        'cognitive_summary': {
+          'active_patterns': ['structured'],
+        },
+        'user_insight_state': {
+          'current_state': {'focus': 'exam prep'},
+          'readiness': {'energy': 0.6},
+        },
+      },
+    );
+
+    expect(result.visibleItems, isNotEmpty);
+    expect(result.visibleItems.first.key, 'achievement_motivation_response');
+    expect(result.visibleItems.first.supportsExamModeOnly, isTrue);
+    expect(result.calibrationPosture, 'stable');
+    expect(result.unknowns,
+        contains('Reliable time-capacity data is still missing.'));
   });
 }
