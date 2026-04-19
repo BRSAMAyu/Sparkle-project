@@ -1,6 +1,6 @@
 # SPARKLE Aurora Stage 5 Dispatch Plan (2026-04-19)
 
-> **Status**: Draft v1, awaiting user sign-off
+> **Status**: Closeout v2, execution landed on branch tip; awaiting external review and final sign-off
 > **Depends on**:
 > - `SPARKLE_VISION_ANCHOR_LIST_2026-04-19.md` v3
 > - `SPARKLE_AURORA_STAGE4_DISPATCH_PLAN_2026-04-19.md`
@@ -16,6 +16,7 @@
 | --- | --- | --- |
 | v0 | First Stage 5 draft after Stage 4 closeout. Re-anchors the next stage on user-visible closure, inherits Rule G/H/I, and converts Claude + MIMO review into a dispatchable plan skeleton. | Codex |
 | v1 | Absorb GLM-observer pre-review and Claude final-accept: split `Wave 1` into `Wave 1a / Wave 1b`, add deferred-breakpoint registry, quantify success criteria, and require the missing Stage 4 Rule I handoff artifact before `Gate S5-0`. | Codex |
+| v2 | Record Stage 5 execution closeout: `WS-K1`, `WS-R1`, `WS-L1`, `WS-G1`, and `WS-S1` all landed under `Rule G`; `Gate S5-1` and `Gate S5-2` are satisfied on the current branch tip and the stage is ready for external review. | Codex |
 
 ---
 
@@ -561,3 +562,30 @@ If this draft direction is accepted, the next moves should be:
    - `WS-L1`
 
 Only after `Gate S5-1` should `WS-G1` and `WS-S1` be dispatched.
+
+---
+
+## 14. Closeout Addendum
+
+Stage 5 execution is now landed on the current branch tip.
+
+### Final landed workstreams
+
+| Workstream | Final status | Landing commit |
+| --- | --- | --- |
+| `WS-K1` | **accept** | `b3afd12e` |
+| `WS-R1` | **accept** | `d7fa7b9a` |
+| `WS-L1` | **accept** | `6c375fcb` |
+| `WS-G1` | **accept** | `e190195b` |
+| `WS-S1` | **accept** | `f33e72ec` |
+
+### Gate status on branch tip
+
+- `Gate S5-0`: satisfied
+- `Gate S5-1`: satisfied
+- `Gate S5-2`: satisfied
+- `Gate S5-Close`: ready for external review / final sign-off
+
+### Closeout note
+
+Stage 5 should now be treated as an execution-complete stage pending expert review, not as an open design draft.
