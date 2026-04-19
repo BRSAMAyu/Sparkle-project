@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from app.services.profile_eval_llm_judge import JUDGE_CONTRACT_VERSION, build_profile_eval_llm_judge
+
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "tests" / "profile" / "eval" / "fixtures"
 DEFAULT_FIXTURE_NAMES = (
     "prediction_accuracy_baseline.json",
@@ -38,9 +40,9 @@ LLMJudge = Callable[[dict[str, Any]], dict[str, Any]]
 class ProfileEvalRunner:
     """Read-only rubric runner for Stage 9 profile-eval fixtures."""
 
-    runner_version = "stage9.ev2.runner.v1"
+    runner_version = "stage10.ev3.runner.v1"
     write_scope = "evaluation_records_only"
-    rubric_version = "stage9.ev2.rubric.v1"
+    rubric_version = "stage10.ev3.rubric.v1"
 
     def __init__(self, llm_judge: LLMJudge | None = None):
         self.llm_judge = llm_judge
@@ -57,6 +59,14 @@ class ProfileEvalRunner:
     def scoring_mode(self) -> str:
         return "llm_attached" if self.llm_judge is not None else "rubric_only"
 
+    @property
+    def judge_contract_version(self) -> str | None:
+        return JUDGE_CONTRACT_VERSION if self.llm_judge is not None else None
+
+    @classmethod
+    def from_runtime(cls, *, enable_llm_judge: bool = False) -> "ProfileEvalRunner":
+        return cls(llm_judge=build_profile_eval_llm_judge(enabled=enable_llm_judge))
+
     def run_fixture_names(self, fixture_names: list[str] | None = None) -> dict[str, Any]:
         names = fixture_names or list(DEFAULT_FIXTURE_NAMES)
         evaluations = [self.run_fixture(name) for name in names]
@@ -70,6 +80,7 @@ class ProfileEvalRunner:
             "runner_mode": self.runner_mode,
             "scoring_mode": self.scoring_mode,
             "rubric_version": self.rubric_version,
+            "judge_contract_version": self.judge_contract_version,
             "evaluations": evaluations,
             "summary": {
                 "fixture_count": len(evaluations),
@@ -100,6 +111,7 @@ class ProfileEvalRunner:
             "runner_mode": self.runner_mode,
             "scoring_mode": self.scoring_mode,
             "rubric_version": self.rubric_version,
+            "judge_contract_version": self.judge_contract_version,
             "evaluation_records": cases,
             "summary": {
                 "status": _score_label(average_score),
@@ -138,6 +150,7 @@ class ProfileEvalRunner:
             "write_scope": self.write_scope,
             "scoring_mode": self.scoring_mode,
             "rubric_version": self.rubric_version,
+            "judge_contract_version": self.judge_contract_version,
             "metric_records": metric_records,
             "expected_observation": expected_observation,
         }
@@ -206,6 +219,7 @@ class ProfileEvalRunner:
             "scoring_mode": self.scoring_mode,
             "llm_runtime": self.llm_runtime,
             "llm_attachment": llm_attachment,
+            "judge_contract_version": self.judge_contract_version,
             "evidence_excerpt": {
                 "prompt_context_keys": sorted(prompt_context.keys()),
                 "verification_window": expected_observation.get("verification_window"),
@@ -403,17 +417,25 @@ class ProfileEvalRunner:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run the Stage 7 read-only profile evaluation runner.")
+    parser = argparse.ArgumentParser(description="Run the Stage 10 read-only profile evaluation runner.")
     parser.add_argument(
         "--fixture",
         dest="fixtures",
         action="append",
         help="Fixture filename under tests/profile/eval/fixtures/. Can be passed multiple times.",
     )
+    parser.add_argument(
+        "--llm-judge",
+        choices=("disabled", "real"),
+        default="disabled",
+        help="Attach the real Stage 10 LLM judge or keep rubric_only mode.",
+    )
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     args = parser.parse_args(argv)
 
-    payload = ProfileEvalRunner().run_fixture_names(args.fixtures)
+    payload = ProfileEvalRunner.from_runtime(enable_llm_judge=args.llm_judge == "real").run_fixture_names(
+        args.fixtures
+    )
     json.dump(payload, sys.stdout, indent=2 if args.pretty else None)
     sys.stdout.write("\n")
     return 0
