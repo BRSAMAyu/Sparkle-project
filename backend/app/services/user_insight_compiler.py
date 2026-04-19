@@ -79,6 +79,20 @@ class UserInsightCompiler:
         "available_hours",
     }
 
+    ANTI_PATTERN_MARKERS = (
+        "avoid",
+        "avoidance",
+        "paralysis",
+        "friction",
+        "stuck",
+        "freeze",
+        "loop",
+        "回避",
+        "拖延",
+        "启动困难",
+        "卡住",
+    )
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -96,6 +110,7 @@ class UserInsightCompiler:
         prediction_service = InsightPredictionService()
         calibration_service = UserInsightCalibrationService(self.db)
 
+        self._apply_m1_quality_overlays(state, profile_context)
         self._apply_error_signals(state, profile_context)
         self._apply_learning_progress(state, profile_context)
         self._apply_achievement_signals(state, profile_context.preferences or {})
@@ -320,6 +335,76 @@ class UserInsightCompiler:
             state.confidence_metadata[signal_id] = float(confidence)
         if freshness:
             state.freshness_metadata[signal_id] = str(freshness)
+
+    def _apply_m1_quality_overlays(self, state: UserInsightState, profile_context: ProfileContext) -> None:
+        prefs = dict(profile_context.preferences or {})
+        motivation_type = str(prefs.get("motivation_type") or "").strip()
+        if motivation_type:
+            state.inferred_work_style["motivation_type"] = motivation_type
+            self._append_signal(
+                state,
+                "motivation_type",
+                value=motivation_type,
+                confidence=0.72,
+                freshness="medium",
+            )
+
+        high_conf_patterns = [
+            pattern
+            for pattern in list(profile_context.cognitive_summary.active_patterns or [])
+            if float(pattern.confidence or 0.0) >= 0.6
+        ]
+        if not high_conf_patterns:
+            return
+
+        cognitive_tendencies = [
+            {
+                "pattern_name": pattern.pattern_name,
+                "pattern_type": pattern.pattern_type,
+                "confidence": float(pattern.confidence or 0.0),
+                "policy_signals": list(pattern.policy_signals or []),
+            }
+            for pattern in high_conf_patterns[:5]
+        ]
+        state.temporal_patterns["cognitive_tendencies"] = cognitive_tendencies
+        self._append_signal(
+            state,
+            "cognitive_tendencies",
+            value=cognitive_tendencies,
+            confidence=_confidence_from_sample(len(cognitive_tendencies), base=0.7, ceil=0.86),
+            freshness="medium",
+        )
+
+        anti_patterns = [
+            item
+            for item in cognitive_tendencies
+            if self._looks_like_anti_pattern(item)
+        ]
+        if anti_patterns:
+            state.temporal_patterns["anti_patterns"] = anti_patterns[:4]
+            self._append_signal(
+                state,
+                "anti_patterns",
+                value=anti_patterns[:4],
+                confidence=_confidence_from_sample(len(anti_patterns), base=0.68, ceil=0.84),
+                freshness="medium",
+            )
+
+    def _looks_like_anti_pattern(self, pattern: dict[str, Any]) -> bool:
+        label = str(pattern.get("pattern_name") or "").strip().lower()
+        policy_signals = [
+            str(item).strip().lower()
+            for item in list(pattern.get("policy_signals") or [])
+            if str(item).strip()
+        ]
+        if any(marker in label for marker in self.ANTI_PATTERN_MARKERS):
+            return True
+        return any(
+            signal.endswith("start_easy")
+            or signal.endswith("reduce_friction")
+            or signal.endswith("decompose")
+            for signal in policy_signals
+        )
 
     def _apply_error_signals(self, state: UserInsightState, profile_context: ProfileContext) -> None:
         if profile_context.error_summary:

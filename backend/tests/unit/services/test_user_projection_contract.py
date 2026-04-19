@@ -36,7 +36,29 @@ def _sample_state() -> UserInsightState:
                 confidence=0.8,
                 freshness="medium",
             ),
+            InsightSignalEvidence(
+                signal_id="motivation_type",
+                family="motivation",
+                label="Motivation type",
+                source="prefs",
+                value="streak_driven",
+                confidence=0.72,
+                freshness="medium",
+            ),
+            InsightSignalEvidence(
+                signal_id="cognitive_tendencies",
+                family="cognitive",
+                label="Cognitive tendencies",
+                source="profile",
+                value=[{"pattern_name": "Perfectionism Paralysis"}],
+                confidence=0.77,
+                freshness="medium",
+            ),
         ],
+        temporal_patterns={
+            "anti_patterns": [{"pattern_name": "Perfectionism Paralysis"}],
+            "cognitive_tendencies": [{"pattern_name": "Perfectionism Paralysis"}],
+        },
     )
 
 
@@ -45,8 +67,13 @@ def test_user_projection_contract_captures_m1_source_inventory() -> None:
 
     assert contract.m1_sources.module_name == "M1"
     assert contract.m1_sources.source_of_truth == "L0"
-    assert contract.m1_sources.signal_count == 2
-    assert {"achievement", "error"} == set(contract.m1_sources.source_families)
+    assert contract.m1_sources.signal_count == 4
+    assert {"achievement", "cognitive", "error", "motivation"} == set(contract.m1_sources.source_families)
+    assert contract.m1_sources.source_family_counts["cognitive"] == 1
+    registry = {item["domain_id"]: item for item in contract.m1_sources.coverage_registry}
+    assert registry["motivation_patterns"]["status"] == "present"
+    assert registry["anti_patterns"]["status"] == "partial"
+    assert registry["cognitive_tendencies"]["status"] == "present"
 
 
 def test_user_projection_contract_captures_m2_canonical_state() -> None:

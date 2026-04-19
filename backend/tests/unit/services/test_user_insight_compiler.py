@@ -14,6 +14,7 @@ from app.models.accountability import (
 )
 from app.models.calendar_event import CalendarEvent
 from app.models.capsule_favorite import CapsuleFavorite
+from app.models.cognitive import BehaviorPattern
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
 from app.models.memory import MemoryCorrection
 from app.models.task import Task, TaskStatus, TaskType
@@ -47,6 +48,7 @@ async def test_profile_context_service_compiles_canonical_user_insight_state_wit
                 "learning_goal_type": "exam",
             },
             inferred={
+                "motivation_type": "streak_driven",
                 "achievement_peak_hours": [19, 20],
                 "achievement_motivation_response": "progress_praise",
                 "achievement_pace_style": "steady",
@@ -177,6 +179,16 @@ async def test_profile_context_service_compiles_canonical_user_insight_state_wit
             CapsuleFavorite(user_id=test_user.id, capsule_id=capsule_b.id, note="important"),
         ]
     )
+    db_session.add(
+        BehaviorPattern(
+            user_id=test_user.id,
+            pattern_name="The Perfectionism-Avoidance Loop",
+            pattern_type="cognitive",
+            confidence_score=0.96,
+            description="English placeholder",
+            solution_text="English placeholder",
+        )
+    )
 
     partnership = AccountabilityPartnership(
         initiator_id=test_user.id,
@@ -217,10 +229,14 @@ async def test_profile_context_service_compiles_canonical_user_insight_state_wit
     assert state is not None
     families = {item.family for item in state.signal_evidence}
     assert {"achievement", "calendar", "workflow", "content", "community"}.issubset(families)
+    assert {"motivation", "cognitive"}.issubset(families)
+    assert state.inferred_work_style["motivation_type"] == "streak_driven"
     assert state.inferred_work_style["achievement_pace_style"] == "steady"
     assert state.inferred_work_style["preferred_tools"][0] == "search_knowledge"
     assert state.stable_preferences["content_depth_preference"] == "deep"
     assert state.inferred_work_style["accountability_support"] == "active"
+    assert state.temporal_patterns["anti_patterns"][0]["pattern_name"] == "完美主义回避循环"
+    assert state.temporal_patterns["cognitive_tendencies"][0]["pattern_name"] == "完美主义回避循环"
     assert state.temporal_patterns["calendar"]["recurring_windows"]
     assert state.multi_span_analysis["short_span"]["overload_pressure"] in {"low", "medium", "high"}
     assert state.multi_span_analysis["medium_span"]["task_start_completion_drift"]["label"] in {
