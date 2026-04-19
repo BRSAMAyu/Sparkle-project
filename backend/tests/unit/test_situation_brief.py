@@ -1,5 +1,6 @@
 import pytest
 
+from app.orchestration.learning_state_fragment import build_learning_state_fragment
 from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
 from app.orchestration.situation_brief import SituationBriefBuilder, format_situation_brief_section
 from app.semantic.state_primitives import StudyDomainSemanticAdapter
@@ -284,6 +285,101 @@ async def test_situation_brief_surfaces_recent_pain_points_and_wins_from_signal_
     assert "热机效率" in brief["evidence"]["recent_wins"][0]
     assert any("近期痛点" in item for item in brief["evidence"]["freshest_items"])
     assert any("近期进展" in item for item in brief["evidence"]["freshest_items"])
+    assert brief["learning_state_fragment"]["available"] is True
+    assert brief["learning_state_fragment"]["status"] == "active"
+    assert brief["learning_state_fragment"]["recent_pain_points"][0].startswith("累计错题 6")
+    assert brief["learning_state_fragment"]["recent_wins"][0].startswith("热机效率")
+    assert brief["learning_state_fragment"]["budget"]["truncated"] is False
+
+
+def test_learning_state_fragment_falls_back_cleanly_for_empty_context() -> None:
+    fragment = build_learning_state_fragment(user_context={}).to_dict()
+
+    assert fragment["available"] is False
+    assert fragment["status"] == "cold_start"
+    assert fragment["signals"] == []
+    assert fragment["recent_pain_points"] == []
+    assert fragment["recent_wins"] == []
+    assert fragment["budget"]["truncated"] is False
+    assert "冷启动" in fragment["summary"]
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_truncates_learning_state_fragment_for_large_signal_sets() -> None:
+    brief = await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我看一下最近学习状态",
+            "cognitive_context": {
+                "error_summary": {
+                    "total_errors": 18,
+                    "need_review_count": 7,
+                    "subject_distribution": {"thermo": 12, "math": 6},
+                },
+                "recent_errors": [
+                    {
+                        "question_preview": "超长题干 " + "A" * 160,
+                        "subject": "thermo",
+                        "error_type": "概念混淆",
+                    },
+                    {
+                        "question_preview": "第二道题",
+                        "subject": "thermo",
+                        "error_type": "推理跳步",
+                    },
+                    {
+                        "question_preview": "第三道题",
+                        "subject": "math",
+                        "error_type": "步骤缺失",
+                    },
+                    {
+                        "question_preview": "第四道题",
+                        "subject": "math",
+                        "error_type": "审题遗漏",
+                    },
+                ],
+                "recent_mastery_changes": [
+                    {
+                        "node_name": "超长节点名 " + "B" * 160,
+                        "old_mastery": 22,
+                        "new_mastery": 49,
+                    },
+                    {
+                        "node_name": "卡诺循环",
+                        "old_mastery": 40,
+                        "new_mastery": 55,
+                    },
+                    {
+                        "node_name": "热机效率",
+                        "old_mastery": 31,
+                        "new_mastery": 46,
+                    },
+                    {
+                        "node_name": "熵增方向",
+                        "old_mastery": 33,
+                        "new_mastery": 44,
+                    },
+                ],
+            },
+        },
+        plan_context={},
+        focused_memory={},
+        context_briefing_note=None,
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+        adaptation_records=[],
+    )
+
+    fragment = brief.learning_state_fragment
+
+    assert fragment["status"] == "active"
+    assert fragment["available"] is True
+    assert fragment["budget"]["truncated"] is True
+    assert len(fragment["recent_pain_points"]) == 3
+    assert len(fragment["recent_wins"]) == 3
+    assert len(fragment["signals"]) == 6
+    assert len(fragment["summary"]) <= fragment["budget"]["max_summary_length"]
+    assert any(item["text"].endswith("…") for item in fragment["signals"])
 
 
 def test_five_layer_growth_summary_reports_active_and_inactive_outcome_learning_states() -> None:

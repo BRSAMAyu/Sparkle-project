@@ -4,6 +4,7 @@ from app.orchestration.prompts import _normalize_user_context, build_system_prom
 def _signal_context() -> dict:
     return {
         "current_query": "帮我看看我最近为什么总在热力学上卡住",
+        "profile_context": {},
         "cognitive_context": {
             "error_summary": {
                 "total_errors": 7,

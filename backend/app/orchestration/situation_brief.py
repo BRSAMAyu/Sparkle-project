@@ -5,6 +5,7 @@ from datetime import timezone, datetime
 from typing import Any
 import re
 
+from app.orchestration.learning_state_fragment import build_learning_state_fragment
 from app.orchestration.planning_intent import detect_planning_like_turn
 from app.orchestration.plan_quality_contract import build_plan_quality_contract
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
@@ -136,11 +137,25 @@ def _recent_wins(user_context: dict[str, Any]) -> list[str]:
     return wins[:3]
 
 
-def _merge_signal_evidence(evidence: dict[str, Any], user_context: dict[str, Any]) -> dict[str, Any]:
+def _merge_signal_evidence(
+    evidence: dict[str, Any],
+    user_context: dict[str, Any],
+    *,
+    learning_state_fragment: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     merged = dict(evidence or {})
     freshest_items = [_strip(item) for item in _as_list(merged.get("freshest_items")) if _strip(item)]
-    pain_points = _recent_pain_points(user_context)
-    recent_wins = _recent_wins(user_context)
+    fragment = _as_dict(learning_state_fragment)
+    pain_points = [
+        _strip(item)
+        for item in _as_list(fragment.get("recent_pain_points"))[:3]
+        if _strip(item)
+    ] or _recent_pain_points(user_context)
+    recent_wins = [
+        _strip(item)
+        for item in _as_list(fragment.get("recent_wins"))[:3]
+        if _strip(item)
+    ] or _recent_wins(user_context)
 
     for item in pain_points:
         marker = f"近期痛点：{item}"
@@ -206,6 +221,7 @@ class SituationBrief:
     current_state: dict[str, Any]
     primary_obstacle: dict[str, Any]
     evidence: dict[str, Any]
+    learning_state_fragment: dict[str, Any]
     intervention: dict[str, Any]
     outcome: dict[str, Any]
     sparkle_self_state: dict[str, Any]
@@ -231,6 +247,7 @@ class SituationBrief:
             "obstacle": self.primary_obstacle,
             "primary_obstacle": self.primary_obstacle,
             "evidence": self.evidence,
+            "learning_state_fragment": self.learning_state_fragment,
             "intervention": self.intervention,
             "outcome": self.outcome,
             "sparkle_self_state": self.sparkle_self_state,
@@ -296,9 +313,11 @@ class SituationBriefBuilder:
         vision = _as_dict(semantic_primitives.get("vision"))
         current_state = _as_dict(semantic_primitives.get("current_state"))
         primary_obstacle = _as_dict(semantic_primitives.get("obstacle"))
+        learning_state_fragment = build_learning_state_fragment(user_context=user_context).to_dict()
         evidence = _merge_signal_evidence(
             _as_dict(semantic_primitives.get("evidence")),
             user_context,
+            learning_state_fragment=learning_state_fragment,
         )
         intervention = _as_dict(semantic_primitives.get("intervention"))
         outcome = _as_dict(semantic_primitives.get("outcome"))
@@ -545,6 +564,7 @@ class SituationBriefBuilder:
             current_state=current_state,
             primary_obstacle=primary_obstacle,
             evidence=evidence,
+            learning_state_fragment=learning_state_fragment,
             intervention=intervention,
             outcome=outcome,
             sparkle_self_state=sparkle_self_state,
