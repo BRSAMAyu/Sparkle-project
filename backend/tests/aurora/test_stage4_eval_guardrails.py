@@ -6,6 +6,7 @@ from app.aurora.engine import AuroraDecisionContext, AuroraEngine
 
 from .stage4_eval_support import (
     build_corpus_v1_cases,
+    build_corpus_v2_cases,
     build_p1_guardrail_report,
     build_stage4_corpus_placeholders,
     run_corpus_v1_with_runner,
@@ -34,9 +35,59 @@ def test_stage4_corpus_v2_v3_v4_placeholders_are_ready_before_wave_1b() -> None:
 
     assert set(placeholders) == {"Corpus V2", "Corpus V3", "Corpus V4"}
     assert placeholders["Corpus V2"].distribution == {"direct": 10, "workflow": 10, "task_assistant": 10}
+    assert placeholders["Corpus V2"].status == "materialized"
     assert placeholders["Corpus V3"].minimum_size == 15
     assert placeholders["Corpus V4"].minimum_size >= 100
     assert placeholders["Corpus V4"].distribution["boundary"] >= 10
+
+
+def test_stage4_corpus_v2_materialized_content_covers_required_distribution() -> None:
+    cases = build_corpus_v2_cases()
+    placeholders = {p.corpus_id: p for p in build_stage4_corpus_placeholders()}
+    v2_placeholder = placeholders["Corpus V2"]
+
+    assert len(cases) >= v2_placeholder.minimum_size
+
+    categories = {case.category for case in cases}
+    assert "corpus_v2_direct" in categories
+    assert "corpus_v2_workflow" in categories
+    assert "corpus_v2_workflow_escalation" in categories
+    assert "corpus_v2_task_assistant" in categories
+
+    by_target: dict[str, int] = {}
+    for case in cases:
+        by_target[case.routing_target] = by_target.get(case.routing_target, 0) + 1
+    for target, expected_count in v2_placeholder.distribution.items():
+        assert by_target.get(target, 0) >= expected_count, (
+            f"Corpus V2 routing_target={target}: expected >= {expected_count}, got {by_target.get(target, 0)}"
+        )
+
+    escalation_cases = [c for c in cases if c.category == "corpus_v2_workflow_escalation"]
+    assert len(escalation_cases) >= 5, f"Expected >=5 escalation cases, got {len(escalation_cases)}"
+
+
+def test_stage4_corpus_v2_escalation_cases_use_approved_triggers_only() -> None:
+    cases = build_corpus_v2_cases()
+    escalation_cases = [c for c in cases if c.category == "corpus_v2_workflow_escalation"]
+
+    approved_triggers = {
+        "explicit_planning_request",
+        "structural_topic_turns",
+        "frustration_blockage",
+    }
+
+    for case in escalation_cases:
+        snapshot = case.snapshot
+        assert snapshot is not None, f"Escalation case {case.case_id} must have a snapshot"
+        from app.aurora.decision_fns.escalation import detect_escalation
+
+        verdict = detect_escalation(snapshot)
+        assert verdict.should_escalate is True, (
+            f"Escalation case {case.case_id} should trigger escalation but got: {verdict.reason}"
+        )
+        assert verdict.trigger in approved_triggers, (
+            f"Escalation case {case.case_id} trigger={verdict.trigger} not in approved set"
+        )
 
 
 def test_stage4_tier_tagged_events_support_dashboard_and_test_consumers() -> None:

@@ -114,3 +114,161 @@ def test_stage4_routing_mode_keeps_frustration_signal_direct_until_ws_b2(orchest
     assert updated.reason == "unified:fallback"
     assert state.context_data["stage4_routing_mode"]["routing_mode"] == "direct"
     assert "stage4_task_assistant_candidate" not in state.context_data
+
+
+# ======================================================================
+# WS-B.2 Escalation tests
+# ======================================================================
+
+
+def test_stage4_escalation_fires_on_explicit_planning_request(orchestrator):
+    """WS-B.2 trigger 1: explicit planning request promotes direct → langgraph."""
+    state = SimpleNamespace(context_data={})
+    route_decision = RouteDecision(
+        execution_mode="direct",
+        reason="unified:fallback",
+        risk_level="low",
+        confidence=0.7,
+    )
+
+    with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
+        updated = orchestrator._apply_stage4_escalation(
+            route_decision=route_decision,
+            state=state,
+            user_id=str(uuid.uuid4()),
+            user_message="别直答了，帮我做成方案一步步跟着做。",
+            conversation_context=None,
+        )
+
+    assert updated.execution_mode == "langgraph"
+    assert updated.risk_level == "medium"
+    assert "escalation:explicit_planning_request" in updated.reason
+    assert state.context_data["stage4_escalation"]["should_escalate"] is True
+    assert state.context_data["stage4_escalation"]["trigger"] == "explicit_planning_request"
+
+
+def test_stage4_escalation_fires_on_structural_topic_turns(orchestrator):
+    """WS-B.2 trigger 2: 2+ structural-topic turns promote direct → langgraph."""
+    state = SimpleNamespace(context_data={})
+    route_decision = RouteDecision(
+        execution_mode="direct",
+        reason="unified:fallback",
+        risk_level="low",
+        confidence=0.7,
+    )
+    conversation_context = {
+        "messages": [
+            {"role": "user", "content": "这三块拆开，顺序怎么定？"},
+            {"role": "assistant", "content": "可以按难度排序。"},
+            {"role": "user", "content": "那分类呢？先做哪个？"},
+        ]
+    }
+
+    with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
+        updated = orchestrator._apply_stage4_escalation(
+            route_decision=route_decision,
+            state=state,
+            user_id=str(uuid.uuid4()),
+            user_message="继续刚才的讨论。",
+            conversation_context=conversation_context,
+        )
+
+    assert updated.execution_mode == "langgraph"
+    assert "escalation:structural_topic_turns" in updated.reason
+    assert state.context_data["stage4_escalation"]["trigger"] == "structural_topic_turns"
+
+
+def test_stage4_escalation_fires_on_frustration_text(orchestrator):
+    """WS-B.2 trigger 3: frustration text markers promote direct → langgraph."""
+    state = SimpleNamespace(context_data={})
+    route_decision = RouteDecision(
+        execution_mode="direct",
+        reason="unified:fallback",
+        risk_level="low",
+        confidence=0.7,
+    )
+
+    with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
+        updated = orchestrator._apply_stage4_escalation(
+            route_decision=route_decision,
+            state=state,
+            user_id=str(uuid.uuid4()),
+            user_message="我真的有点做不下去了，这样聊完全帮不到我。",
+            conversation_context=None,
+        )
+
+    assert updated.execution_mode == "langgraph"
+    assert "escalation:frustration_blockage" in updated.reason
+    assert state.context_data["stage4_escalation"]["trigger"] == "frustration_blockage"
+
+
+def test_stage4_escalation_no_fire_when_flag_off(orchestrator):
+    """Escalation verdict is recorded but mode stays direct when flag is off."""
+    state = SimpleNamespace(context_data={})
+    route_decision = RouteDecision(
+        execution_mode="direct",
+        reason="unified:fallback",
+        risk_level="low",
+        confidence=0.7,
+    )
+
+    with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", False):
+        updated = orchestrator._apply_stage4_escalation(
+            route_decision=route_decision,
+            state=state,
+            user_id=str(uuid.uuid4()),
+            user_message="别直答了，帮我做成方案一步步跟着做。",
+            conversation_context=None,
+        )
+
+    assert updated.execution_mode == "direct"
+    # Verdict is still recorded for observability
+    assert state.context_data["stage4_escalation"]["should_escalate"] is True
+    assert state.context_data["stage4_escalation"]["feature_enabled"] is False
+
+
+def test_stage4_escalation_no_fire_when_already_workflow(orchestrator):
+    """Escalation does not fire when WS-B.1 already promoted to workflow."""
+    state = SimpleNamespace(context_data={})
+    route_decision = RouteDecision(
+        execution_mode="langgraph",
+        reason="stage4_routing_mode:workflow",
+        risk_level="medium",
+        confidence=0.7,
+    )
+
+    with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
+        updated = orchestrator._apply_stage4_escalation(
+            route_decision=route_decision,
+            state=state,
+            user_id=str(uuid.uuid4()),
+            user_message="别直答了，帮我做成方案。",
+            conversation_context=None,
+        )
+
+    assert updated.execution_mode == "langgraph"
+    assert updated.reason == "stage4_routing_mode:workflow"
+    assert "stage4_escalation" not in state.context_data
+
+
+def test_stage4_escalation_no_fire_without_trigger(orchestrator):
+    """No escalation when no trigger is present."""
+    state = SimpleNamespace(context_data={})
+    route_decision = RouteDecision(
+        execution_mode="direct",
+        reason="unified:fallback",
+        risk_level="low",
+        confidence=0.7,
+    )
+
+    with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
+        updated = orchestrator._apply_stage4_escalation(
+            route_decision=route_decision,
+            state=state,
+            user_id=str(uuid.uuid4()),
+            user_message="今天状态一般，先陪我简单聊两句。",
+            conversation_context=None,
+        )
+
+    assert updated.execution_mode == "direct"
+    assert state.context_data["stage4_escalation"]["should_escalate"] is False

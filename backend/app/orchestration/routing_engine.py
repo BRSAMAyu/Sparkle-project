@@ -636,10 +636,21 @@ class RoutingEngineMixin:
             user_message=user_message,
             conversation_context=conversation_context,
         )
+
+        # WS-B.2: mid-flight escalation (separate from WS-B.1 routing seam)
+        route_decision = self._apply_stage4_escalation(
+            route_decision=route_decision,
+            state=state,
+            user_id=user_id,
+            user_message=user_message,
+            conversation_context=conversation_context,
+        )
+
         if unified_routing_result and "unified_intent" in state.context_data:
             state.context_data["unified_intent"]["execution_mode"] = route_decision.execution_mode
             state.context_data["unified_intent"]["risk_level"] = route_decision.risk_level
 
+        escalation_data = state.context_data.get("stage4_escalation", {})
         state.context_data["plan_metadata"] = {
             "context_version": route_decision.context_version,
             "execution_mode": route_decision.execution_mode,
@@ -650,6 +661,8 @@ class RoutingEngineMixin:
             "routing_layer": unified_routing_result.routing_layer if unified_routing_result else "fallback",
             "adaptive_notes": ",".join(adaptive_notes) if adaptive_notes else "",
             "summary_used_for_routing": "true" if has_summary else "false",
+            "escalation_triggered": escalation_data.get("should_escalate", False),
+            "escalation_trigger": escalation_data.get("trigger"),
         }
         state.context_data["grounding_validator"] = self.grounding_validator
         return route_decision, unified_routing_result
@@ -791,6 +804,85 @@ class RoutingEngineMixin:
             return reason_lc.split(":", 1)[0]
         return reason_lc
 
+    # ------------------------------------------------------------------
+    # WS-B.2 escalation helpers
+    # ------------------------------------------------------------------
+
+    _STRUCTURAL_TOPIC_MARKERS: frozenset[str] = frozenset({
+        "拆开", "拆分", "顺序", "怎么定", "分类", "组织", "分层",
+        "架构", "结构", "步骤", "优先级", "先做什么", "怎么排",
+        "break down", "order", "structure", "organize",
+    })
+
+    @staticmethod
+    def _count_structural_topic_turns(conversation_context: dict[str, Any] | None) -> int:
+        """Count recent user turns containing structural-discussion markers."""
+        if not isinstance(conversation_context, dict):
+            return 0
+        messages = conversation_context.get("messages")
+        if not isinstance(messages, list):
+            return 0
+        count = 0
+        for msg in messages[-10:]:
+            if not isinstance(msg, dict):
+                continue
+            if str(msg.get("role", "")).lower() != "user":
+                continue
+            content = str(msg.get("content", "") or "").lower()
+            if any(marker in content for marker in RoutingEngineMixin._STRUCTURAL_TOPIC_MARKERS):
+                count += 1
+        return count
+
+    def _apply_stage4_escalation(
+        self,
+        *,
+        route_decision: RouteDecision,
+        state,
+        user_id: str,
+        user_message: str,
+        conversation_context: dict[str, Any] | None,
+    ) -> RouteDecision:
+        """WS-B.2: mid-flight escalation on top of the WS-B.1 routing seam.
+
+        Only fires when WS-B.1 left execution_mode as ``direct`` and one of
+        the three approved escalation triggers is present.
+        """
+        from app.aurora.decision_fns.escalation import detect_escalation
+
+        feature_enabled = bool(getattr(aurora_flags, "AURORA_ROUTING_MODE_ENABLED", False))
+
+        # Escalation only applies to direct-mode decisions.
+        if route_decision.execution_mode != "direct":
+            return route_decision
+
+        # Do not escalate task-assistant candidates.
+        if state.context_data.get("stage4_task_assistant_candidate"):
+            return route_decision
+
+        snapshot = self._build_stage4_routing_snapshot(
+            user_id=user_id,
+            user_message=user_message,
+            conversation_context=conversation_context,
+        )
+        verdict = detect_escalation(snapshot)
+
+        state.context_data["stage4_escalation"] = {
+            "should_escalate": verdict.should_escalate,
+            "trigger": verdict.trigger,
+            "confidence": verdict.confidence,
+            "reason": verdict.reason,
+            "feature_enabled": feature_enabled,
+        }
+
+        if not feature_enabled or not verdict.should_escalate:
+            return route_decision
+
+        route_decision.execution_mode = "langgraph"
+        if route_decision.risk_level == "low":
+            route_decision.risk_level = "medium"
+        route_decision.reason = f"{route_decision.reason} | {verdict.reason}"
+        return route_decision
+
     @staticmethod
     def _stage4_task_assistant_request(message: str) -> bool:
         lowered = (message or "").lower()
@@ -818,6 +910,10 @@ class RoutingEngineMixin:
         optional_signals: dict[str, Any] = {}
         if self._stage4_task_assistant_request(user_message):
             optional_signals["task_card_id"] = "stage4_task_assistant_candidate"
+
+        structural_turns = self._count_structural_topic_turns(conversation_context)
+        if structural_turns > 0:
+            optional_signals["structural_topic_turns"] = structural_turns
 
         try:
             user_uuid = uuid.UUID(str(user_id))

@@ -338,13 +338,327 @@ def build_corpus_v1_cases() -> tuple[Stage4BenchmarkCase, ...]:
     return corpus
 
 
+def build_corpus_v2_cases() -> tuple[Stage4BenchmarkCase, ...]:
+    """Materialized Stage 4 Corpus V2 content (Agent H / WS-B.2).
+
+    Coverage contract from the dispatch plan:
+    - routing_mode assignment (basic classification)
+    - mid-flight upgrades (escalation from direct to workflow)
+    - flags-off stability
+
+    Distribution: 10 direct, 10 workflow (incl. escalation), 10 task_assistant.
+    Minimum size: 30.
+    """
+
+    # ------------------------------------------------------------------
+    # Direct (10): no escalation triggers, no planning/task markers
+    # ------------------------------------------------------------------
+    v2_direct_cases = (
+        Stage4BenchmarkCase(
+            case_id="v2_direct_simple_question",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_direct_01", "什么是牛顿第三定律？"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_direct_casual_chat",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_direct_02", "今天天气不错。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_direct_acknowledgment",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_direct_03", "好的，我明白了。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_direct_brief_followup",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_direct_04", "那第二点呢？"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_direct_status_report",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_direct_05", "我刚学了一章，状态还行。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_direct_simple_definition",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_direct_06", "什么是递归？"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_direct_agreement",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_direct_07", "你说得对。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_direct_single_structural_turn",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot(
+                "ss_v2_direct_08",
+                "帮我看看这个思路对不对。",
+                optional_extra={"structural_topic_turns": 1},
+            ),
+            notes="1 structural turn — below escalation threshold",
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_direct_simple_calculation",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_direct_09", "3×7等于多少？"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_direct_mild_frustration_no_escalation",
+            category="corpus_v2_direct",
+            routing_target="direct",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_direct_10", "有点难，但还能继续。"),
+            notes="mild difficulty but no blockage signal",
+        ),
+    )
+
+    # ------------------------------------------------------------------
+    # Workflow (10): standard + escalation-triggered mid-flight upgrades
+    # ------------------------------------------------------------------
+    v2_workflow_cases = (
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_standard_plan",
+            category="corpus_v2_workflow",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_workflow_01", "帮我制定两周的复习计划。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_replan_adjust",
+            category="corpus_v2_workflow",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_workflow_02", "计划需要调整，时间不够了，帮我重排。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_goal_breakdown",
+            category="corpus_v2_workflow",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_workflow_03", "把这个目标拆成可执行的步骤。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_escalation_explicit",
+            category="corpus_v2_workflow_escalation",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_workflow_04", "别直答了，帮我做成方案一步步跟着做。"),
+            notes="WS-B.2 escalation: explicit planning request",
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_escalation_structural_2",
+            category="corpus_v2_workflow_escalation",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot(
+                "ss_v2_workflow_05",
+                "继续刚才的讨论。",
+                optional_extra={"structural_topic_turns": 2},
+            ),
+            notes="WS-B.2 escalation: 2 structural-topic turns",
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_escalation_structural_3",
+            category="corpus_v2_workflow_escalation",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot(
+                "ss_v2_workflow_06",
+                "还有呢？",
+                optional_extra={"structural_topic_turns": 3},
+            ),
+            notes="WS-B.2 escalation: 3 structural-topic turns",
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_escalation_frustration_text",
+            category="corpus_v2_workflow_escalation",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_workflow_07", "做不下去了，完全帮不到我。"),
+            notes="WS-B.2 escalation: frustration text markers",
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_escalation_frustration_signal",
+            category="corpus_v2_workflow_escalation",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot(
+                "ss_v2_workflow_08",
+                "这条路走不通了。",
+                enhanced_extra={"frustration_signal": True},
+            ),
+            notes="WS-B.2 escalation: enhanced frustration_signal",
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_escalation_combined",
+            category="corpus_v2_workflow_escalation",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot(
+                "ss_v2_workflow_09",
+                "别只是回答了，我需要一个能执行的方案。",
+                optional_extra={"structural_topic_turns": 2},
+                enhanced_extra={"frustration_signal": True},
+            ),
+            notes="WS-B.2 escalation: combined triggers",
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_workflow_escalation_text_plan",
+            category="corpus_v2_workflow_escalation",
+            routing_target="workflow",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_workflow_10", "别直接给答案了，我需要一个跟着做的方案。"),
+            notes="WS-B.2 escalation: explicit planning (alternate text)",
+        ),
+    )
+
+    # ------------------------------------------------------------------
+    # Task Assistant (10): task-specific requests, no escalation
+    # ------------------------------------------------------------------
+    v2_task_assistant_cases = (
+        Stage4BenchmarkCase(
+            case_id="v2_task_execute_now",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_task_01", "我现在就开始做这一章，直接带我进入。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_task_current_card",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day5_error_repair",
+            snapshot=_snapshot(
+                "ss_v2_task_02",
+                "不用重做计划，我就想把当前这张任务卡顺下来。",
+                optional_extra={"task_card_id": "task-card-02"},
+            ),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_task_drill",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day6_targeted_drill",
+            snapshot=_snapshot("ss_v2_task_03", "你直接陪我做这一轮 targeted drill。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_task_warm_start",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_task_04", "现在只需要把我带进任务，不要再讲大道理。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_task_step_start",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_task_05", "开始做这个任务。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_task_no_preach",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day4_deep_analysis",
+            snapshot=_snapshot("ss_v2_task_06", "别光讲道理，直接带我进入任务。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_task_card_reference",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day5_error_repair",
+            snapshot=_snapshot(
+                "ss_v2_task_07",
+                "当前任务下一步是什么？",
+                optional_extra={"task_card_id": "task-card-05"},
+            ),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_task_direct_guide",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_task_08", "直接带我进入这一章的练习。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_task_drill_session",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day6_targeted_drill",
+            snapshot=_snapshot("ss_v2_task_09", "陪我做 drill，从第一步开始。"),
+        ),
+        Stage4BenchmarkCase(
+            case_id="v2_task_step_complete",
+            category="corpus_v2_task_assistant",
+            routing_target="task_assistant",
+            trigger_point="pre-node-routing",
+            current_node="day3_execution",
+            snapshot=_snapshot("ss_v2_task_10", "当前任务做完了，带我进入下一步。"),
+        ),
+    )
+
+    corpus = v2_direct_cases + v2_workflow_cases + v2_task_assistant_cases
+    assert len(corpus) == 30
+    return corpus
+
+
 def build_stage4_corpus_placeholders() -> tuple[Stage4CorpusPlaceholder, ...]:
     return (
         Stage4CorpusPlaceholder(
             corpus_id="Corpus V2",
             minimum_size=30,
             distribution={"direct": 10, "workflow": 10, "task_assistant": 10},
-            purpose="routing_mode assignment, mid-flight upgrades, flags-off stability",
+            purpose="routing_mode assignment, mid-flight upgrades, flags-off stability (MATERIALIZED)",
+            status="materialized",
         ),
         Stage4CorpusPlaceholder(
             corpus_id="Corpus V3",
