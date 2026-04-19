@@ -36,7 +36,7 @@ Stage 5 was signed against six quantitative success conditions. The current bran
 | data-utilization improvement | no required measurable gain | `>= 1` measurable gain | **met** — Aurora optional signal payload now includes `growth_signal_contract` + `growth_signal_summary` where there were previously `0` bounded growth-signal projections |
 | dual-core cooperation | `0.3 / 1` | `>= 0.6 / 1` | **met in-stage** — one concrete path now exists: cognitive/error evidence -> learning-state fragment -> intervention contract -> replanner next-step delta -> outcome feedback summary |
 | `P1-P5` posture | all green | remain green | **met** — no new constitutional or frozen-schema drift was introduced in Stage 5 landings |
-| test baseline | green | remain green | **met** — independent Stage 5 verification subsets passed |
+| test baseline | green | remain green | **post-close-out correction** — subset verification passed first, then one cross-WS assertion collision was discovered in the full Aurora suite and closed by the narrow `WS-K1b` follow-up fix |
 
 ---
 
@@ -54,7 +54,7 @@ Stage 5 should not be summarized as “more plumbing.” The concrete movements 
 
 ## 4. Final Verification Baseline
 
-Codex independently re-ran the Stage 5 verification subsets on the current branch tip.
+Codex independently re-ran the Stage 5 verification subsets on the current branch tip, then ran the full Aurora suite as a post-close-out verification step.
 
 ### Wave 1 subsets
 
@@ -69,6 +69,21 @@ Codex independently re-ran the Stage 5 verification subsets on the current branc
 
 - `WS-G1` + `WS-S1` subset:
   - `19 passed`
+
+### Post-close-out full-suite baseline
+
+- Aurora suite:
+  - `88 passed`
+  - `0 failed`
+
+### Cross-WS close-out correction
+
+- after the initial close-out, the full Aurora suite exposed one cross-WS assertion collision:
+  - `backend/tests/aurora/test_prompt_leakage_fix.py::test_build_system_prompt_does_not_render_learning_state_fragment_payload`
+- the root cause was not payload leakage; it was that `WS-L1` legitimately referenced the internal signal name `learning_state_fragment` while the older `WS-K1` assertion prohibited the raw substring entirely
+- the narrow fix kept the real protection target:
+  - forbid leaked payload values such as `fragment-sentinel`
+  - allow internal signal-name references inside the signed intervention-language contract
 
 ### What those subsets covered
 
@@ -89,6 +104,7 @@ Stage 5 execution respected single-workstream commit discipline:
 - `6c375fcb` — `WS-L1`
 - `e190195b` — `WS-G1`
 - `f33e72ec` — `WS-S1`
+- final close-out verification fix commit — `WS-K1b` narrow close-out verification fix
 
 This means Stage 5 did not reintroduce the bundled multi-workstream failure mode that forced the Stage 4 governance recovery.
 
@@ -125,6 +141,7 @@ The main limits still in force are:
 - `WS-S1` hooks are prep-only and not wired into live runtime call sites
 - achievement uplink is one-way and deliberately narrow
 - Stage 5 improved the first real user-value loops, but it did not finish the full growth-control system
+- Stage 5 exposed a second instance of “subset green, full suite red” governance drift during close-out; that pattern must be explicitly blocked in Stage 6
 
 ---
 
@@ -136,6 +153,7 @@ Stage 6 should inherit these as non-negotiable boundaries:
 2. Shadow/cutover work must not treat `50` cases as activation-ready; larger rollout decisions still require the higher corpus bar and separate review.
 3. Prompt/control changes must preserve the intervention-language contract rather than bypassing it through alternate prompt paths.
 4. Deferred breakpoints must stay explicit; Stage 6 should not pretend they were already solved in Stage 5.
+5. Before any future stage is declared closed, Codex must run at least one **full post-close-out suite** after the final code change, not just per-WS subsets, and record that result in the handoff artifact.
 
 ---
 

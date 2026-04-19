@@ -83,4 +83,3 @@ def test_build_system_prompt_does_not_render_learning_state_fragment_payload() -
 
     assert "## Situation Brief [L0 简报]" in prompt
     assert "fragment-sentinel" not in prompt
-    assert "learning_state_fragment" not in prompt
