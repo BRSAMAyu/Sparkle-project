@@ -6,7 +6,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.core.user_insight_state import UserInsightState
-from app.services.user_insight_transparency_service import UserInsightTransparencyService
 
 
 def _utcnow_iso() -> str:
@@ -73,6 +72,8 @@ class UserProjectionContract(BaseModel):
         state: UserInsightState,
         merged_preferences: dict[str, Any] | None = None,
     ) -> "UserProjectionContract":
+        from app.services.user_insight_transparency_service import UserInsightTransparencyService
+
         merged_preferences = merged_preferences or {}
         source_families = sorted(
             {
