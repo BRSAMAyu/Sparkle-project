@@ -214,7 +214,7 @@ case "${1:-}" in
     start_service "grpc" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; export PYTHONPATH='$ROOT_DIR/backend'; cd '$ROOT_DIR/backend' && exec /bin/bash scripts/run_grpc_with_env.sh"
     start_service "api" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; cd '$ROOT_DIR/backend' && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env"
     wait_for_http "http://127.0.0.1:8000/health" "api"
-    start_service "gateway" "export PATH='/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; cd '$ROOT_DIR/backend/gateway' && go build -o bin/gateway ./cmd/server && exec ./bin/gateway"
+    start_service "gateway" "export PATH='/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin' LOG_DIR='$LOG_DIR'; cd '$ROOT_DIR/backend/gateway' && go build -o bin/gateway ./cmd/server && exec ./bin/gateway"
     wait_for_http "http://127.0.0.1:8080/api/v1/health" "gateway"
     start_service "summarization_worker" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; export PYTHONPATH='$ROOT_DIR/backend'; cd '$ROOT_DIR/backend' && exec python scripts/start_summarization_worker.py --worker-id local-summary"
     start_service "billing_worker" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; export PYTHONPATH='$ROOT_DIR/backend'; cd '$ROOT_DIR/backend' && exec python scripts/start_billing_worker.py"

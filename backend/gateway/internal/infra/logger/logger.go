@@ -8,7 +8,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"gopkg.in/natefinsh/lumberjack.v2"
+	"gopkg.in/lumberjack.v2"
 )
 
 var Log *zap.Logger
