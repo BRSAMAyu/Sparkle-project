@@ -36,7 +36,4 @@ class AppFeatureFlags {
   static bool enableMemoryCorrection = true;
   static bool enableUserMemoryControls = true;
   static bool enableTaskGuidanceV2 = false;
-  static bool enableTaskAssistantDormantMode = false;
-  static bool enableWorkflowEntryUx = false;
-  static bool enableCapabilityCeilingReferral = false;
 }
