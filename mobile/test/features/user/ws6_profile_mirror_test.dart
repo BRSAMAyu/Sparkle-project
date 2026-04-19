@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
+import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/ws6_profile_mirror_provider.dart';
 import 'package:sparkle/features/user/presentation/widgets/mirror_bar.dart';
 
@@ -175,5 +178,147 @@ void main() {
     expect(result.calibrationPosture, 'stable');
     expect(result.unknowns,
         contains('Reliable time-capacity data is still missing.'));
+  });
+
+  test('provider records canonical binding telemetry', () async {
+    final events = <Map<String, dynamic>>[];
+    final container = ProviderContainer(
+      overrides: [
+        profileContextProvider.overrideWith(
+          (ref) async => {
+            'knowledge_summary': {
+              'active_learning_subjects': ['physics'],
+              'overall_mastery': 0.55,
+            },
+            'cognitive_summary': {
+              'active_patterns': ['structured'],
+            },
+            'user_insight_state': {
+              'current_state': {'focus': 'exam prep'},
+              'readiness': {'energy': 0.6},
+            },
+            'user_insight_transparency': {
+              'claims': [
+                {
+                  'id': 'claim_1',
+                  'label': 'Claim 1',
+                  'value': 'steady',
+                  'controls': ['wrong'],
+                },
+              ],
+            },
+          },
+        ),
+        ws6BindingTelemetryRecorderProvider.overrideWith(
+          (ref) => (
+              {required String outcome, Map<String, dynamic>? metadata}) async {
+            events.add({
+              'outcome': outcome,
+              'metadata': metadata ?? <String, dynamic>{},
+            });
+          },
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(ws6TransparentProfileViewProvider.future);
+
+    expect(events, hasLength(1));
+    expect(events.single['outcome'], 'canonical_embedded');
+    expect((events.single['metadata'] as Map<String, dynamic>)['source'],
+        'user_insight_transparency');
+  });
+
+  test('provider records deprecated fallback telemetry', () async {
+    final events = <Map<String, dynamic>>[];
+    final container = ProviderContainer(
+      overrides: [
+        profileContextProvider.overrideWith(
+          (ref) async => {
+            'knowledge_summary': {
+              'active_learning_subjects': ['physics'],
+              'overall_mastery': 0.55,
+            },
+            'cognitive_summary': {
+              'active_patterns': ['structured'],
+            },
+            'user_insight_state': {
+              'current_state': {'focus': 'exam prep'},
+              'readiness': {'energy': 0.6},
+            },
+          },
+        ),
+        profileInsightsProvider.overrideWith(
+          (ref) async => throw Exception('profile insights unavailable'),
+        ),
+        transparentProfileProvider.overrideWith(
+          (ref) async => {
+            'layer_1': {
+              'goals': ['连续完成计划'],
+            },
+            'layer_2': {
+              'persona': {
+                'capabilities': {'energy': 0.62},
+              },
+            },
+            'layer_3': {
+              'patterns': ['review before sleep'],
+            },
+          },
+        ),
+        ws6BindingTelemetryRecorderProvider.overrideWith(
+          (ref) => (
+              {required String outcome, Map<String, dynamic>? metadata}) async {
+            events.add({
+              'outcome': outcome,
+              'metadata': metadata ?? <String, dynamic>{},
+            });
+          },
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(ws6TransparentProfileViewProvider.future);
+
+    expect(events, hasLength(1));
+    expect(events.single['outcome'], 'deprecated_fallback');
+    expect((events.single['metadata'] as Map<String, dynamic>)['source'],
+        'transparentProfileProvider');
+  });
+
+  test('provider records binding failure telemetry', () async {
+    final events = <Map<String, dynamic>>[];
+    final container = ProviderContainer(
+      overrides: [
+        profileContextProvider.overrideWith(
+          (ref) async => throw Exception('profile context unavailable'),
+        ),
+        transparentProfileProvider.overrideWith(
+          (ref) async =>
+              throw Exception('legacy transparent profile unavailable'),
+        ),
+        ws6BindingTelemetryRecorderProvider.overrideWith(
+          (ref) => (
+              {required String outcome, Map<String, dynamic>? metadata}) async {
+            events.add({
+              'outcome': outcome,
+              'metadata': metadata ?? <String, dynamic>{},
+            });
+          },
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final result =
+        await container.read(ws6TransparentProfileViewProvider.future);
+
+    expect(result.enabled, isFalse);
+    expect(events, hasLength(1));
+    expect(events.single['outcome'], 'binding_failure');
+    expect((events.single['metadata'] as Map<String, dynamic>)['source'],
+        'canonical_and_legacy_failed');
   });
 }

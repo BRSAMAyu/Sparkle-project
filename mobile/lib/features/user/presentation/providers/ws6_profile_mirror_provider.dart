@@ -1,16 +1,50 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/ws6_flags.dart';
 
+typedef Ws6BindingTelemetryRecorder = Future<void> Function({
+  required String outcome,
+  Map<String, dynamic>? metadata,
+});
+
 final ws6ProfileMirrorAdapterProvider = Provider<Ws6ProfileMirrorAdapter>(
   (ref) => const Ws6ProfileMirrorAdapter(),
 );
 
+final ws6BindingTelemetryRecorderProvider =
+    Provider<Ws6BindingTelemetryRecorder>((ref) {
+  return ({required String outcome, Map<String, dynamic>? metadata}) {
+    return ClientObservabilityService.instance.recordEvent(
+      eventType: 'profile_transparency_binding',
+      category: 'profile_surface',
+      route: '/user/profile/transparent',
+      status: outcome == 'binding_failure' ? 'error' : 'ok',
+      severity: outcome == 'binding_failure' ? 'warning' : 'info',
+      metadata: <String, dynamic>{
+        'outcome': outcome,
+        ...?metadata,
+      },
+    );
+  };
+});
+
 final ws6TransparentProfileViewProvider =
     FutureProvider<Ws6TransparentProfileViewModel>((ref) async {
+  final recordBinding = ref.read(ws6BindingTelemetryRecorderProvider);
   if (!kWs6ProfileSurfaceEnabled) {
+    unawaited(
+      recordBinding(
+        outcome: 'gated',
+        metadata: const <String, dynamic>{
+          'source': 'flag_disabled',
+        },
+      ),
+    );
     return Ws6TransparentProfileViewModel.inert(
       bindingNotes: const <String>[
         'canonical transparency surface gated',
@@ -27,17 +61,40 @@ final ws6TransparentProfileViewProvider =
     final transparentProfile = embeddedTransparency.isNotEmpty
         ? embeddedTransparency
         : await ref.watch(profileInsightsProvider.future);
+    final source = embeddedTransparency.isNotEmpty
+        ? 'user_insight_transparency'
+        : 'profile_insights';
     final adapter = ref.watch(ws6ProfileMirrorAdapterProvider);
-    return adapter.build(
+    final view = adapter.build(
       transparentProfile: transparentProfile,
       profileContext: profileContext,
     );
+    unawaited(
+      recordBinding(
+        outcome: embeddedTransparency.isNotEmpty
+            ? 'canonical_embedded'
+            : 'canonical_fallback',
+        metadata: <String, dynamic>{
+          'source': source,
+          'binding_notes': view.bindingNotes,
+        },
+      ),
+    );
+    return view;
   } catch (_) {
     try {
       final transparentProfile =
           await ref.watch(transparentProfileProvider.future);
       final profileContext = await ref.watch(profileContextProvider.future);
       final adapter = ref.watch(ws6ProfileMirrorAdapterProvider);
+      unawaited(
+        recordBinding(
+          outcome: 'deprecated_fallback',
+          metadata: const <String, dynamic>{
+            'source': 'transparentProfileProvider',
+          },
+        ),
+      );
       return adapter
           .build(
         transparentProfile: transparentProfile,
@@ -50,6 +107,14 @@ final ws6TransparentProfileViewProvider =
         ],
       );
     } catch (_) {
+      unawaited(
+        recordBinding(
+          outcome: 'binding_failure',
+          metadata: const <String, dynamic>{
+            'source': 'canonical_and_legacy_failed',
+          },
+        ),
+      );
       return Ws6TransparentProfileViewModel.inert(
         summary: 'WS6 profile surface could not bind to live data yet.',
         bindingNotes: const <String>[
