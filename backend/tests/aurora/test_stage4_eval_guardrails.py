@@ -84,3 +84,9 @@ def test_stage4_p1_guardrail_report_runs_in_report_only_mode() -> None:
     assert any(path.endswith("backend/app/aurora/engine.py") for path in report.checked_files)
     if report.has_findings:
         warnings.warn(report.render(), stacklevel=2)
+
+
+def test_stage4_p1_guardrail_no_longer_flags_aurora_tasks() -> None:
+    report = build_p1_guardrail_report(repo_root=Path(__file__).resolve().parents[3])
+
+    assert all(violation.file_path != "backend/app/aurora/tasks.py" for violation in report.violations)

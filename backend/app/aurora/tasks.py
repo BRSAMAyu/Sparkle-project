@@ -6,7 +6,6 @@ changing current user-visible routing behavior when flags are off.
 
 from __future__ import annotations
 
-from time import perf_counter
 from typing import Any
 
 from app.aurora.context import AuroraDecisionContext, AuroraTier, AuroraTierExecution, AuroraTierStatus
@@ -123,20 +122,27 @@ def enqueue_long_horizon_context(context: AuroraDecisionContext) -> AuroraTierEx
     )
 
 
-def _run_context_with_engine(context: AuroraDecisionContext) -> AuroraTierExecution[dict[str, Any]]:
-    from app.aurora.engine import AuroraEngine
-
+def _run_context_from_primitives(context: AuroraDecisionContext) -> AuroraTierExecution[dict[str, Any]]:
     if context.snapshot is None:
         return _miss_execution(context, "missing_snapshot")
+    if not context.prior_outputs:
+        return _miss_execution(context, "missing_prior_outputs")
 
-    engine = AuroraEngine()
-    started = perf_counter()
     with tier_latency(context.tier.value, context.trigger_point, enabled=context.async_flags.any_enabled):
         try:
-            decision = engine.safe_route(context)
+            # Nearline / long-horizon tiers may only consume snapshot references and
+            # primitives passed through the context envelope. They must not reach
+            # back into inline implementations such as AuroraEngine.
+            payload = {
+                "snapshot_ref": context.snapshot.snapshot_hash,
+                "policy_version": context.snapshot.policy_version,
+                "current_node": context.current_node,
+                "candidate_node": context.candidate_node,
+                "prior_output_keys": sorted(context.prior_outputs),
+                "prior_outputs": context.prior_outputs,
+            }
         except Exception as exc:  # pragma: no cover - defensive path
-            return _failure_execution(context, "decision_failure", exc)
-    duration_ms = (perf_counter() - started) * 1000
+            return _failure_execution(context, "primitive_consume_failure", exc)
     record_tier_outcome(
         tier=context.tier.value,
         trigger_point=context.trigger_point,
@@ -148,13 +154,7 @@ def _run_context_with_engine(context: AuroraDecisionContext) -> AuroraTierExecut
         tier=context.tier,
         status=AuroraTierStatus.SUCCESS,
         trigger_point=context.trigger_point,
-        duration_ms=duration_ms,
-        payload={
-            "decision_id": str(decision.id),
-            "decision_type": decision.decision_type,
-            "policy_version": decision.policy_version,
-            "snapshot_ref": decision.input_snapshot_ref,
-        },
+        payload=payload,
     )
 
 
@@ -163,7 +163,7 @@ def run_aurora_nearline(self, payload: dict[str, Any]) -> dict[str, Any]:
     """Celery entrypoint for nearline Aurora work."""
 
     context = AuroraDecisionContext.from_payload(payload).with_tier(AuroraTier.NEARLINE)
-    return _run_context_with_engine(context).to_payload()
+    return _run_context_from_primitives(context).to_payload()
 
 
 @celery_app.task(bind=True, name=LONG_HORIZON_TASK_NAME, max_retries=1)
@@ -171,7 +171,7 @@ def run_aurora_long_horizon(self, payload: dict[str, Any]) -> dict[str, Any]:
     """Celery entrypoint for long-horizon Aurora work."""
 
     context = AuroraDecisionContext.from_payload(payload).with_tier(AuroraTier.LONG_HORIZON)
-    return _run_context_with_engine(context).to_payload()
+    return _run_context_from_primitives(context).to_payload()
 
 
 __all__ = [
@@ -182,4 +182,3 @@ __all__ = [
     "run_aurora_nearline",
     "run_aurora_long_horizon",
 ]
-
