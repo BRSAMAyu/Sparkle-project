@@ -146,10 +146,12 @@ class ProfileContextService:
             error_summary=error_payload.get("summary") or {},
             recent_errors=error_payload.get("recent") or [],
         )
-        context.user_insight_state = await UserInsightCompiler(self.db).compile(
+        contract = await UserInsightCompiler(self.db).compile(
             user_id=user_id,
             profile_context=context,
         )
+        context.user_projection_contract = contract
+        context.user_insight_state = contract.canonical_state
 
         if self.redis:
             try:

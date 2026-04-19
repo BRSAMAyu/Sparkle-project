@@ -15,6 +15,7 @@ from app.models.calendar_event import CalendarEvent
 from app.models.capsule_favorite import CapsuleFavorite
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.tool_history import UserToolHistory
+from app.profile.projection_contract import UserProjectionContract
 from app.services.insight_prediction_service import InsightPredictionService
 from app.services.insight_signal_registry import build_signal_evidence
 from app.services.user_insight_analysis_service import UserInsightAnalysisService
@@ -89,7 +90,7 @@ class UserInsightCompiler:
         user_strategy_state: dict[str, Any] | None = None,
         companion_state: dict[str, Any] | None = None,
         turn_signals: dict[str, Any] | None = None,
-    ) -> UserInsightState:
+    ) -> UserProjectionContract:
         state = self._build_base_state(profile_context=profile_context, user_strategy_state=user_strategy_state)
         analysis_service = UserInsightAnalysisService(self.db)
         prediction_service = InsightPredictionService()
@@ -147,7 +148,10 @@ class UserInsightCompiler:
             if compact_turn_signals:
                 state.current_state["turn_signals"] = compact_turn_signals
 
-        return state
+        return UserProjectionContract.from_compiled_state(
+            state=state,
+            merged_preferences=dict(profile_context.preferences or {}),
+        )
 
     @staticmethod
     def _needs_post_calibration_refresh(calibration_summary: dict[str, Any]) -> bool:

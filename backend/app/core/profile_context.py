@@ -22,6 +22,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.profile.projection_contract import UserProjectionContract
 from app.core.user_insight_state import UserInsightState
 
 
@@ -68,6 +69,7 @@ class ProfileContext(BaseModel):
     error_summary: dict[str, Any] = Field(default_factory=dict)
     recent_errors: list[dict[str, Any]] = Field(default_factory=list)
     user_insight_state: UserInsightState | None = None
+    user_projection_contract: UserProjectionContract | None = None
 
     def to_prompt_context(self) -> dict[str, Any]:
         return self.model_dump(mode="json")
