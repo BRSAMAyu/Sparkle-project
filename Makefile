@@ -537,3 +537,14 @@ pip-install-china:
 uv-install-china:
 	@echo "🐍 Installing Python dependencies with uv (China mirror)..."
 	uv pip install -r backend/requirements.txt --index-url https://mirrors.aliyun.com/pypi/simple/
+
+# === Log Management ===
+logs-clean:
+	@echo "🧹 Cleaning backend logs and rotated log files..."
+	@rm -f backend/logs/local/*.log backend/logs/local/*.rotated
+	@echo "   Done. Service logs will be recreated on next start."
+
+logs-du:
+	@echo "📊 Log sizes:"
+	@du -sh backend/logs/local/*.log 2>/dev/null || echo "   No active logs"
+	@du -sh backend/logs/local/*.rotated 2>/dev/null || true
