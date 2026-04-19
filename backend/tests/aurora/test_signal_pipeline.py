@@ -81,7 +81,18 @@ class _FakeAchievementEngine:
         return {"current_streak": 11}
 
     async def get_user_achievements(self, user_id):
-        return [{"achievement_id": "a1"}]
+        return [
+            {"achievement_id": "a1", "achievement_name": "First Step"},
+            {"achievement_id": "a2", "achievement_name": "Momentum Builder"},
+            {"achievement_id": "a3", "achievement_name": "Consistency"},
+            {"achievement_id": "a4", "achievement_name": "Explorer"},
+            {"achievement_id": "a5", "achievement_name": "Closer"},
+            {"achievement_id": "a6", "achievement_name": "Overflow"},
+        ]
+
+
+class _EmptyAchievementEngine:
+    pass
 
 
 class _FakePredictiveService:
@@ -115,7 +126,7 @@ async def test_signal_snapshot_assembler_preserves_core_signals_and_trims_budget
         uuid4(),
         scenario_pack_id="exam_prep_14d@v1.0",
         policy_version="aurora_policy@v1.0",
-        budget_limit=240,
+        budget_limit=2400,
         context={"purpose": "test", "plan_id": uuid4()},
     )
 
@@ -124,8 +135,37 @@ async def test_signal_snapshot_assembler_preserves_core_signals_and_trims_budget
     assert snapshot.core_signals
     assert "memory_service" in snapshot.core_signals
     assert "focus_service" in snapshot.core_signals
+    assert "achievement_engine" in snapshot.optional_signals
+    achievement_contract = snapshot.optional_signals["achievement_engine"]["growth_signal_contract"]
+    assert achievement_contract["cold_start"] is False
+    assert achievement_contract["streak_days"] == 11
+    assert achievement_contract["achievement_count"] == 6
+    assert len(achievement_contract["recent_achievement_ids"]) == 5
+    assert snapshot.optional_signals["achievement_engine"]["growth_signal_summary"]["growth_phase"] in {
+        "steady",
+        "building",
+        "surging",
+    }
     assert snapshot.total_tokens <= snapshot.budget_limit
     assert snapshot.retention_tier.value in {"hot", "cold_archive", "reconstructable"}
+
+
+@pytest.mark.asyncio
+async def test_signal_snapshot_assembler_emits_explicit_cold_start_growth_signal() -> None:
+    aggregator = SignalAggregator(service_map={"achievement_engine": None})
+
+    snapshot = await aggregator.assemble_snapshot(
+        uuid4(),
+        scenario_pack_id="exam_prep_14d@v1.0",
+        policy_version="aurora_policy@v1.0",
+        context={"purpose": "test"},
+    )
+
+    achievement_contract = snapshot.optional_signals["achievement_engine"]["growth_signal_contract"]
+    assert achievement_contract["cold_start"] is True
+    assert achievement_contract["fallback_reason"] == "no_achievement_service"
+    assert achievement_contract["growth_phase"] == "cold_start"
+    assert achievement_contract["momentum_score"] == 0.0
 
 
 @pytest.mark.asyncio

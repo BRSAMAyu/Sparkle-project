@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable
 from uuid import UUID
 
+from app.orchestration.signal_samplers.achievement_sampler import sample_achievement_growth_signal
 from app.aurora.schemas import RetentionTier, SignalSnapshot, SignalTier
 
 
@@ -169,14 +170,11 @@ async def _collect_plan_state(service: Any, user_id: UUID, context: dict[str, An
 
 
 async def _collect_achievement(service: Any, user_id: UUID, context: dict[str, Any]) -> dict[str, Any]:
-    if service is None:
-        return {}
-    payload: dict[str, Any] = {}
-    if hasattr(service, "get_streak_stats"):
-        payload["streak_stats"] = _safe_dump(await service.get_streak_stats(str(user_id)))
-    if hasattr(service, "get_user_achievements"):
-        payload["achievements"] = _safe_dump(await service.get_user_achievements(str(user_id)))
-    return payload
+    contract = await sample_achievement_growth_signal(service, user_id, context=context)
+    return {
+        "growth_signal_contract": contract.to_payload(),
+        "growth_signal_summary": contract.summary_payload(),
+    }
 
 
 async def _collect_predictive(service: Any, user_id: UUID, context: dict[str, Any]) -> dict[str, Any]:
@@ -315,7 +313,7 @@ class SignalAggregator:
                 payload = await coro
             except Exception:
                 payload = {}
-            compacted = _compact_payload(payload)
+            compacted = payload if spec.name == "achievement_engine" else _compact_payload(payload)
             freshness = self._infer_freshness(compacted, collected_at, spec.tier)
             reading = SignalSourceReading(
                 name=spec.name,
