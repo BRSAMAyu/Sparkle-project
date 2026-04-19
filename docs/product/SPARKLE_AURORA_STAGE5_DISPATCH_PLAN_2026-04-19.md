@@ -1,10 +1,11 @@
 # SPARKLE Aurora Stage 5 Dispatch Plan (2026-04-19)
 
-> **Status**: Closeout v2, execution landed on branch tip; awaiting external review and final sign-off
+> **Status**: Closeout v1.2 amendment; execution is landed on branch tip, with final sign-off paused pending the user-model governance addendum and remaining `Gate S5-Close` scaffolds
 > **Depends on**:
 > - `SPARKLE_VISION_ANCHOR_LIST_2026-04-19.md` v3
 > - `SPARKLE_AURORA_STAGE4_DISPATCH_PLAN_2026-04-19.md`
 > - `SPARKLE_AURORA_STAGE4_RETROACTIVE_AUDIT_2026-04-19.md`
+> - `SPARKLE_USER_MODEL_LAYERED_ARCHITECTURE_2026-04-19.md`
 > - `SPARKLE_AURORA_WSM_CUTOVER_RUNBOOK_2026-04-19.md`
 > - `SPARKLE_DATA_UTILIZATION_ANALYSIS_2026-04-06.md`
 > - `docs/01_核心模块文档/成就体系现状对齐.md`
@@ -17,6 +18,7 @@
 | v0 | First Stage 5 draft after Stage 4 closeout. Re-anchors the next stage on user-visible closure, inherits Rule G/H/I, and converts Claude + MIMO review into a dispatchable plan skeleton. | Codex |
 | v1 | Absorb GLM-observer pre-review and Claude final-accept: split `Wave 1` into `Wave 1a / Wave 1b`, add deferred-breakpoint registry, quantify success criteria, and require the missing Stage 4 Rule I handoff artifact before `Gate S5-0`. | Codex |
 | v2 | Record Stage 5 execution closeout: `WS-K1`, `WS-R1`, `WS-L1`, `WS-G1`, and `WS-S1` all landed under `Rule G`; `Gate S5-1` and `Gate S5-2` are satisfied on the current branch tip and the stage is ready for external review. | Codex |
+| v1.2 | Ground Stage 5 in the layered user-model architecture: add workstream-to-layer mapping, introduce `Rule K` write-path discipline, and expand `Gate S5-Close` with the required user-model closeout scaffolds and architecture baseline. | Codex |
 
 ---
 
@@ -115,13 +117,13 @@ The following are not part of Stage 5 unless a later amendment says otherwise:
 
 ## 3. Workstream Overview
 
-| Workstream | Focus | Breakpoint Advanced | Anchor Signal | Priority |
-| --- | --- | --- | --- | --- |
-| `WS-K1` | learning-state fragment from error + mastery evidence | `错题 / 错误 -> mastery / profile` | `A1`, `A4` | highest |
-| `WS-L1` | intervention-language contract and prompt-facing response policy | `干预交付方式和语言体系` | `A2`, `A5` | highest |
-| `WS-R1` | adaptive replanner closure into next-step execution context | `adaptive_replanner -> 计划执行` | `A3`, `A4` | highest |
-| `WS-G1` | achievement-to-Aurora growth signal uplink | growth signals into adaptive control | `A2`, `A4`, `A5` | medium |
-| `WS-S1` | shadow expansion and Phase 2/3 hook preparation | future `WS-M` control readiness | `A3` | medium |
+| Workstream | Focus | User Model Module | Breakpoint Advanced | Anchor Signal | Priority |
+| --- | --- | --- | --- | --- | --- |
+| `WS-K1` | learning-state fragment from error + mastery evidence | `L1` profile / fact layer | `错题 / 错误 -> mastery / profile` | `A1`, `A4` | highest |
+| `WS-L1` | intervention-language contract and prompt-facing response policy | consumes `L1` in the prompt/control surface | `干预交付方式和语言体系` | `A2`, `A5` | highest |
+| `WS-R1` | adaptive replanner closure into next-step execution context | `L0 -> L1` feedback bridge | `adaptive_replanner -> 计划执行` | `A3`, `A4` | highest |
+| `WS-G1` | achievement-to-Aurora growth signal uplink | `L1` nearline growth projection | growth signals into adaptive control | `A2`, `A4`, `A5` | medium |
+| `WS-S1` | shadow expansion and Phase 2/3 hook preparation | outside the core user-model path; control-readiness support | future `WS-M` control readiness | `A3` | medium |
 
 ### Draft judgment baked into this plan
 
@@ -136,7 +138,7 @@ This draft makes four concrete calls rather than leaving them open:
 
 ## 4. Dispatch Rules
 
-Stage 5 inherits the Stage 4 rules and adds one new one.
+Stage 5 inherits the Stage 4 rules and adds two new ones.
 
 ### Rule G · Single-WS-per-Agent Commit Discipline
 
@@ -167,6 +169,32 @@ Every Stage 5 task card must declare:
 3. the user-visible proof expected at accept time
 
 If a workstream cannot name those three things, it does not belong in Stage 5.
+
+### Rule K · User Model Write-Path Discipline (Four-Lane + User Correction)
+
+All writes that touch the user-model stack must fall into exactly one of these five lanes:
+
+| Lane | Allowed writes | Forbidden writes |
+| --- | --- | --- |
+| `L0 Infrastructure` | raw evidence events | projection or inference results |
+| `L1 Profile System` | projection cache | raw events in `L0`, inference data in `L2` |
+| `L2 AI System` | inference cache | `L1` facts, `L0` raw events |
+| `L3 Aurora` | white-listed `L1/L2` parameters with audit logging | any data field in `L0/L1/L2` |
+| `User Correction` | raw / correction / calibration entries | inference or control-layer writes masquerading as user truth |
+
+Hard interpretation:
+
+- Aurora may adjust parameters, not data
+- the AI system may write inference cache, not facts
+- the profile system may write projection cache, not raw evidence
+- user correction bypasses `L2` and `L3`, then is absorbed by `L1` on the next compile cycle
+
+Additional hardening:
+
+- Stage 6 dispatch must explicitly enumerate the Aurora-adjustable parameter whitelist before any control-side writes occur
+- Aurora may tune numeric parameters and strategy selection only; it may not alter data-source selection or algorithm logic
+- any task card that implies Aurora output writes back into upstream data must stop and escalate
+- any Aurora parameter write outside the whitelist must stop and escalate
 
 ---
 
@@ -477,12 +505,17 @@ Required after `Wave 2`:
 Required to call Stage 5 complete:
 
 1. all Stage 5 workstreams accepted
-2. Rule G/H/I/J remained intact
+2. Rule G/H/I/J/K remained intact
 3. no frozen-schema or constitutional drift occurred
 4. closeout docs record:
    - what user-value loop moved
    - what remained unresolved
    - what becomes Stage 6 input
+5. the following user-model closeout scaffolds are landed:
+   - M1 source inventory table
+   - M5 calibration field skeleton
+   - profile-aware evaluation framework skeleton
+   - `SPARKLE_USER_MODEL_LAYERED_ARCHITECTURE_2026-04-19.md`
 
 ---
 
@@ -584,8 +617,8 @@ Stage 5 execution is now landed on the current branch tip.
 - `Gate S5-0`: satisfied
 - `Gate S5-1`: satisfied
 - `Gate S5-2`: satisfied
-- `Gate S5-Close`: ready for external review / final sign-off
+- `Gate S5-Close`: execution-complete, but pending the remaining user-model closeout scaffolds introduced by `v1.2`
 
 ### Closeout note
 
-Stage 5 should now be treated as an execution-complete stage pending expert review, not as an open design draft.
+Stage 5 should now be treated as an execution-complete stage with a governance addendum in flight: the implementation is landed, but final sign-off remains blocked until the `v1.2` user-model scaffolds are complete.
