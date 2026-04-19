@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-
+from typing import Any, Callable
 
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "tests" / "profile" / "eval" / "fixtures"
 DEFAULT_FIXTURE_NAMES = (
@@ -23,13 +23,39 @@ def _score_label(score: float) -> str:
     return "fail"
 
 
-class ProfileEvalRunner:
-    """Read-only deterministic runner for Stage 7 profile-eval fixtures."""
+@dataclass(frozen=True)
+class RubricCriterion:
+    criterion_id: str
+    label: str
+    weight: float
+    matched: bool
+    evidence: str
 
-    runner_version = "stage7.e2.runner.v1"
+
+LLMJudge = Callable[[dict[str, Any]], dict[str, Any]]
+
+
+class ProfileEvalRunner:
+    """Read-only rubric runner for Stage 9 profile-eval fixtures."""
+
+    runner_version = "stage9.ev2.runner.v1"
     write_scope = "evaluation_records_only"
-    llm_runtime = "not_attached"
-    runner_mode = "deterministic_fixture_eval"
+    rubric_version = "stage9.ev2.rubric.v1"
+
+    def __init__(self, llm_judge: LLMJudge | None = None):
+        self.llm_judge = llm_judge
+
+    @property
+    def llm_runtime(self) -> str:
+        return "attached" if self.llm_judge is not None else "optional_not_attached"
+
+    @property
+    def runner_mode(self) -> str:
+        return "llm_attached_rubric_eval" if self.llm_judge is not None else "rubric_fixture_eval"
+
+    @property
+    def scoring_mode(self) -> str:
+        return "llm_attached" if self.llm_judge is not None else "rubric_only"
 
     def run_fixture_names(self, fixture_names: list[str] | None = None) -> dict[str, Any]:
         names = fixture_names or list(DEFAULT_FIXTURE_NAMES)
@@ -42,6 +68,8 @@ class ProfileEvalRunner:
             "write_scope": self.write_scope,
             "llm_runtime": self.llm_runtime,
             "runner_mode": self.runner_mode,
+            "scoring_mode": self.scoring_mode,
+            "rubric_version": self.rubric_version,
             "evaluations": evaluations,
             "summary": {
                 "fixture_count": len(evaluations),
@@ -70,6 +98,8 @@ class ProfileEvalRunner:
             "write_scope": self.write_scope,
             "llm_runtime": self.llm_runtime,
             "runner_mode": self.runner_mode,
+            "scoring_mode": self.scoring_mode,
+            "rubric_version": self.rubric_version,
             "evaluation_records": cases,
             "summary": {
                 "status": _score_label(average_score),
@@ -106,6 +136,8 @@ class ProfileEvalRunner:
             "status": _score_label(average_score),
             "score": average_score,
             "write_scope": self.write_scope,
+            "scoring_mode": self.scoring_mode,
+            "rubric_version": self.rubric_version,
             "metric_records": metric_records,
             "expected_observation": expected_observation,
         }
@@ -119,38 +151,251 @@ class ProfileEvalRunner:
         expected_observation: dict[str, Any],
     ) -> dict[str, Any]:
         metric_id = str(metric["metric_id"])
-        if evaluation_focus == "prediction_accuracy":
-            predicted_level = str(prompt_context.get("predicted_level") or "").strip().lower()
-            supporting_signals = {str(item).strip() for item in list(prompt_context.get("supporting_signals") or [])}
-            if metric_id == "overload_risk_precision":
-                score = 1.0 if predicted_level == "high" and "error_summary" in supporting_signals else 0.4
-                observed = "supporting overload evidence is available in fixture context"
-            else:
-                score = 1.0 if supporting_signals.intersection({"recent_mastery_changes", "error_summary"}) else 0.5
-                observed = "planning readiness can be checked against named supporting signals"
-        elif evaluation_focus == "calibration_effectiveness":
-            correction_type = str(prompt_context.get("correction_type") or "").strip().lower()
-            pre_confidence = float(prompt_context.get("pre_calibration_confidence") or 0.0)
-            score = 1.0 if correction_type == "wrong" and pre_confidence >= 0.75 else 0.45
-            observed = "fixture contains enough calibration posture to score demotion/promotion behavior"
-        elif evaluation_focus == "freshness_validation":
-            label = str(prompt_context.get("freshness_label") or "").strip().lower()
-            evidence_age_days = int(prompt_context.get("evidence_age_days") or 0)
-            is_mismatch = label == "high" and evidence_age_days >= 30
-            score = 1.0 if is_mismatch else 0.5
-            observed = "runner detects freshness mismatch from label vs evidence age"
-        else:
-            score = 0.0
-            observed = "unsupported evaluation focus"
+        criteria = self._build_rubric(
+            evaluation_focus=evaluation_focus,
+            metric_id=metric_id,
+            prompt_context=prompt_context,
+            expected_observation=expected_observation,
+        )
+        total_weight = sum(max(item.weight, 0.0) for item in criteria) or 1.0
+        rubric_score = round(sum(item.weight for item in criteria if item.matched) / total_weight, 3)
+
+        llm_attachment: dict[str, Any] | None = None
+        final_score = rubric_score
+        if self.llm_judge is not None:
+            llm_attachment = dict(
+                self.llm_judge(
+                    {
+                        "evaluation_focus": evaluation_focus,
+                        "metric_id": metric_id,
+                        "prompt_context": prompt_context,
+                        "expected_observation": expected_observation,
+                        "rubric_score": rubric_score,
+                    }
+                )
+                or {}
+            )
+            try:
+                llm_score = float(llm_attachment.get("score"))
+            except (TypeError, ValueError):
+                llm_score = rubric_score
+            final_score = round((rubric_score * 0.7) + (llm_score * 0.3), 3)
+
+        observed = (
+            "; ".join(item.evidence for item in criteria if item.evidence) or "rubric produced no diagnostic evidence"
+        )
 
         return {
             "metric_id": metric_id,
             "expected_signal_family": metric.get("expected_signal_family"),
-            "score": round(score, 3),
-            "status": _score_label(score),
+            "score": round(final_score, 3),
+            "status": _score_label(final_score),
             "observed_summary": observed,
+            "diagnostic_summary": self._build_diagnostic_summary(criteria),
+            "criterion_records": [
+                {
+                    "criterion_id": item.criterion_id,
+                    "label": item.label,
+                    "weight": item.weight,
+                    "matched": item.matched,
+                    "evidence": item.evidence,
+                }
+                for item in criteria
+            ],
+            "rubric_version": self.rubric_version,
+            "scoring_mode": self.scoring_mode,
+            "llm_runtime": self.llm_runtime,
+            "llm_attachment": llm_attachment,
+            "evidence_excerpt": {
+                "prompt_context_keys": sorted(prompt_context.keys()),
+                "verification_window": expected_observation.get("verification_window"),
+            },
             "verification_window": expected_observation.get("verification_window"),
         }
+
+    def _build_rubric(
+        self,
+        *,
+        evaluation_focus: str,
+        metric_id: str,
+        prompt_context: dict[str, Any],
+        expected_observation: dict[str, Any],
+    ) -> list[RubricCriterion]:
+        if evaluation_focus == "prediction_accuracy":
+            predicted_level = str(prompt_context.get("predicted_level") or "").strip().lower()
+            prediction_key = str(prompt_context.get("prediction_key") or "").strip().lower()
+            supporting_signals = {str(item).strip() for item in list(prompt_context.get("supporting_signals") or [])}
+            verification_window = str(expected_observation.get("verification_window") or "").strip()
+            success_if = str(expected_observation.get("success_if") or "").strip()
+            if metric_id == "overload_risk_precision":
+                return [
+                    RubricCriterion(
+                        "prediction_key_present",
+                        "prediction key explicitly targets overload risk",
+                        0.2,
+                        prediction_key == "overload_risk",
+                        f"prediction_key={prediction_key or 'missing'}",
+                    ),
+                    RubricCriterion(
+                        "high_risk_level_explicit",
+                        "predicted level is explicitly high",
+                        0.4,
+                        predicted_level == "high",
+                        f"predicted_level={predicted_level or 'missing'}",
+                    ),
+                    RubricCriterion(
+                        "supporting_overload_signal_present",
+                        "fixture includes overload-supporting evidence",
+                        0.4,
+                        "error_summary" in supporting_signals,
+                        f"supporting_signals={sorted(supporting_signals)}",
+                    ),
+                ]
+            return [
+                RubricCriterion(
+                    "supporting_planning_signal_present",
+                    "planning readiness can be checked against named supporting signals",
+                    0.4,
+                    bool(supporting_signals.intersection({"recent_mastery_changes", "error_summary"})),
+                    f"supporting_signals={sorted(supporting_signals)}",
+                ),
+                RubricCriterion(
+                    "verification_window_present",
+                    "fixture preserves a verification window",
+                    0.2,
+                    bool(verification_window),
+                    f"verification_window={verification_window or 'missing'}",
+                ),
+                RubricCriterion(
+                    "success_clause_present",
+                    "fixture describes the expected planning outcome",
+                    0.4,
+                    bool(success_if),
+                    f"success_if={'present' if success_if else 'missing'}",
+                ),
+            ]
+
+        if evaluation_focus == "calibration_effectiveness":
+            correction_type = str(prompt_context.get("correction_type") or "").strip().lower()
+            target_signal_id = str(prompt_context.get("target_signal_id") or "").strip()
+            pre_confidence = float(prompt_context.get("pre_calibration_confidence") or 0.0)
+            verification_window = str(expected_observation.get("verification_window") or "").strip()
+            success_if = str(expected_observation.get("success_if") or "").strip().lower()
+            if metric_id == "signal_demotion_stickiness":
+                return [
+                    RubricCriterion(
+                        "wrong_correction_present",
+                        "fixture contains a direct user correction",
+                        0.45,
+                        correction_type == "wrong",
+                        f"correction_type={correction_type or 'missing'}",
+                    ),
+                    RubricCriterion(
+                        "high_confidence_prior",
+                        "pre-calibration confidence is strong enough to test demotion",
+                        0.35,
+                        pre_confidence >= 0.75,
+                        f"pre_calibration_confidence={pre_confidence:.2f}",
+                    ),
+                    RubricCriterion(
+                        "next_compile_window_defined",
+                        "verification window checks the next compilation cycle",
+                        0.2,
+                        verification_window == "next_compile",
+                        f"verification_window={verification_window or 'missing'}",
+                    ),
+                ]
+            return [
+                RubricCriterion(
+                    "target_signal_named",
+                    "fixture names the target signal whose state must persist",
+                    0.3,
+                    bool(target_signal_id),
+                    f"target_signal_id={target_signal_id or 'missing'}",
+                ),
+                RubricCriterion(
+                    "promotion_or_retention_clause_present",
+                    "success clause is rich enough to score retention behavior",
+                    0.4,
+                    "confidence" in success_if or "retain" in success_if or "remain" in success_if,
+                    f"success_if={success_if or 'missing'}",
+                ),
+                RubricCriterion(
+                    "calibration_window_present",
+                    "fixture keeps an explicit verification window",
+                    0.3,
+                    bool(verification_window),
+                    f"verification_window={verification_window or 'missing'}",
+                ),
+            ]
+
+        if evaluation_focus == "freshness_validation":
+            signal_id = str(prompt_context.get("signal_id") or "").strip()
+            label = str(prompt_context.get("freshness_label") or "").strip().lower()
+            evidence_age_days = int(prompt_context.get("evidence_age_days") or 0)
+            verification_window = str(expected_observation.get("verification_window") or "").strip()
+            mismatch_detected = label == "high" and evidence_age_days >= 30
+            if metric_id == "freshness_label_alignment":
+                return [
+                    RubricCriterion(
+                        "signal_named",
+                        "fixture names the signal under freshness review",
+                        0.1,
+                        bool(signal_id),
+                        f"signal_id={signal_id or 'missing'}",
+                    ),
+                    RubricCriterion(
+                        "freshness_label_present",
+                        "fixture preserves the emitted freshness label",
+                        0.2,
+                        bool(label),
+                        f"freshness_label={label or 'missing'}",
+                    ),
+                    RubricCriterion(
+                        "mismatch_detected",
+                        "runner can detect stale evidence behind a high freshness label",
+                        0.7,
+                        mismatch_detected,
+                        f"evidence_age_days={evidence_age_days}",
+                    ),
+                ]
+            return [
+                RubricCriterion(
+                    "stale_window_crossed",
+                    "fixture crosses the stale-evidence window",
+                    0.6,
+                    evidence_age_days >= 30,
+                    f"evidence_age_days={evidence_age_days}",
+                ),
+                RubricCriterion(
+                    "runner_window_explicit",
+                    "fixture scopes freshness checking to an evaluation-only window",
+                    0.4,
+                    verification_window == "eval_runner_only",
+                    f"verification_window={verification_window or 'missing'}",
+                ),
+            ]
+
+        return [
+            RubricCriterion(
+                "unsupported_focus",
+                "evaluation focus is unsupported",
+                1.0,
+                False,
+                f"unsupported evaluation_focus={evaluation_focus}",
+            )
+        ]
+
+    @staticmethod
+    def _build_diagnostic_summary(criteria: list[RubricCriterion]) -> str:
+        matched = [item.label for item in criteria if item.matched]
+        missing = [item.label for item in criteria if not item.matched]
+        parts: list[str] = []
+        if matched:
+            parts.append(f"matched: {', '.join(matched)}")
+        if missing:
+            parts.append(f"missing: {', '.join(missing)}")
+        return "; ".join(parts) if parts else "no rubric criteria were evaluated"
 
     @staticmethod
     def _load_fixture(fixture_name: str) -> dict[str, Any]:
