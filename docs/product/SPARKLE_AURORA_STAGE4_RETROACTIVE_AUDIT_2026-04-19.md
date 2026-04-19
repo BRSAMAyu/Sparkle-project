@@ -1,6 +1,6 @@
 # SPARKLE Aurora Stage 4 Retroactive Audit (2026-04-19)
 
-> **Status**: Retroactive audit v3
+> **Status**: Retroactive audit v4 with Stage 4 closeout addendum
 > **Audit target**: commit `cd2f844b` (`stage 4 part1`)
 > **Branch**: `Aurora-&-adaptive-harness-engineering`
 > **Purpose**: reconstruct the governance evidence chain for Stage 4 work that was implemented ahead of the signed dispatch sequence.
@@ -31,6 +31,9 @@ Since the initial audit draft:
 - Claude + GLM independent review has aligned on the workstream decision matrix and on `Rule G`
 - `WS-A.1` `P1` repair has landed as commit `79cdb8ad`
 - `WS-B.1` scope tightening has landed as commit `a5f5387c`
+- `WS-D` rebuilt dormant-mode implementation has landed as commit `804e28f9`
+- `WS-B.2` escalation completion has landed as commit `2d2b4a5a`
+- `WS-E` closed-loop UX has landed as commit `448ef9e3`
 
 ### Audit disposition
 
@@ -685,7 +688,7 @@ Two remaining code-level conditions from audit v2 have now been repaired on the 
 
 ### Current branch-tip disposition
 
-After commits `4f90c1c6`, `573edf54`, `79cdb8ad`, and `a5f5387c`, the current branch tip supports the following disposition:
+After commits `4f90c1c6`, `573edf54`, `79cdb8ad`, `a5f5387c`, `804e28f9`, `2d2b4a5a`, and `448ef9e3`, the current branch tip supports the following disposition:
 
 | Workstream | Current branch-tip status |
 | --- | --- |
@@ -693,8 +696,30 @@ After commits `4f90c1c6`, `573edf54`, `79cdb8ad`, and `a5f5387c`, the current br
 | `WS-C.1` TaskGuidance Skeleton | **accept** |
 | `WS-F.1` Benchmark and Guardrails Prep | **accept** |
 | `WS-B.1` Routing-Mode Seam | **accept** |
+| `WS-B.2` Escalation Completion | **accept** |
 | `WS-C.2` TaskGuidance Productization | **accept** |
-| `WS-D` Task Assistant Dormant Mode | **reverted / not accepted** |
+| `WS-D` Task Assistant Dormant Mode | **accept** |
+| `WS-E` Closed-Loop UX and Product Surface | **accept** |
+
+### Stage 4 closeout addendum
+
+Wave 2 is now implemented and review-ready at the branch tip.
+
+The final Wave 2 landings are:
+
+1. `804e28f9` — `feat(stage4): rebuild WS-D dormant task assistant mode`
+2. `2d2b4a5a` — `feat(stage4): complete WS-B.2 escalation flow`
+3. `448ef9e3` — `feat(stage4): land WS-E closed-loop chat UX`
+
+Independent Codex verification on the landed code covered:
+
+- `cd backend && ./.venv/bin/python -m pytest tests/unit/test_task_assistant_dormant.py -q` -> `20 passed`
+- `cd backend && ./.venv/bin/python -m pytest tests/unit/orchestrator/mixins/test_routing_engine_stage4.py tests/aurora/test_stage4_eval_guardrails.py -q` -> `17 passed`
+- `cd mobile && flutter test test/features/task/presentation/providers/task_chat_dormant_test.dart` -> `14 passed`
+- `cd mobile && flutter test test/features/chat/presentation/providers/guidance_mode_provider_test.dart test/features/chat/presentation/widgets/capability_ceiling_card_test.dart test/features/chat/presentation/widgets/mode_transition_test.dart` -> `17 passed`
+- `cd mobile && flutter analyze lib/features/chat/presentation/providers/chat_provider.dart lib/features/chat/presentation/providers/guidance_mode_provider.dart lib/features/chat/presentation/screens/chat_screen.dart lib/features/chat/presentation/widgets/chat_bubble.dart lib/features/chat/presentation/widgets/chat_mode_selector_sheet.dart lib/features/chat/presentation/widgets/capability_ceiling_card.dart lib/features/chat/presentation/widgets/chat_mode_transition_banner.dart lib/features/chat/presentation/widgets/guidance_mode_toggle.dart` -> `No issues found!`
+
+The earlier `WS-D` revert remains historically correct as an incident-response step. The later rebuild does not invalidate the audit; it closes the previously deferred Wave 2 work under stricter scope, review, and commit discipline.
 
 ---
 
@@ -702,23 +727,24 @@ After commits `4f90c1c6`, `573edf54`, `79cdb8ad`, and `a5f5387c`, the current br
 
 ### Recommended path
 
-Proceed with a **retroactive per-workstream acceptance review**.
+Treat Stage 4 as **implementation-complete and ready for final external review / sign-off**.
 
 ### Specifically
 
 1. accept `WS-F.1`
 2. accept `WS-C.2`
-3. conditionally accept `WS-A.1`, with a hard requirement that the `P1` repair plan be in place before `Wave 1b / Gate S4-2`
-4. conditionally accept `WS-C.1`, with the backend CRUD gap now closed by `573edf54`
-5. conditionally accept `WS-B.1`, with the quantified `_classify_routing_mode(...)` caveat preserved for future `WS-B.2`
-6. keep `WS-D` reverted and out of scope unless a future explicit dispatch reopens it
-7. keep `Rule G` in the Stage 4 dispatch plan as standing governance control
+3. accept `WS-A.1`
+4. accept `WS-C.1`
+5. accept `WS-B.1`
+6. accept `WS-B.2`
+7. accept `WS-D`
+8. accept `WS-E`
+9. keep `Rule G`, `Rule H`, and `Rule I` as standing governance controls for future stages
 
 ### What this audit does **not** recommend
 
-- it does **not** recommend continuing feature work immediately
+- it does **not** recommend resuming unordered feature work outside a signed plan
 - it does **not** recommend pretending the dispatch sequence was followed
-- it does **not** recommend silently merging `WS-D`
 - it does **not** recommend treating constitutional violations as normal debt items
 
 ### Dispatch hardening recommendation
@@ -752,4 +778,4 @@ The corrective state is now materially stronger than the original audit draft:
 
 Therefore the honest next step is:
 
-> accept or reject the completed slices retroactively by workstream, keep `WS-D` reverted, and only reopen Stage 4 dispatch from a clean gate after that decision.
+> complete final expert/user review on the landed Stage 4 branch tip, then close Stage 4 and move planning attention to Stage 5 / Wave 3.

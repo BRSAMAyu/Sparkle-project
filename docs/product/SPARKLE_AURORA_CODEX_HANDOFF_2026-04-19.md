@@ -1,12 +1,16 @@
 # SPARKLE Aurora / Stage 4 Codex Handoff (2026-04-19)
 
-> **Status**: Archived pre-remediation handoff snapshot
+> **Status**: Archived historical handoff snapshot
 > **Branch**: `Aurora-&-adaptive-harness-engineering`
 > **Current mode**: strategic + governance-sensitive; do **not** resume normal feature execution blindly
 > **Primary purpose**: let a new Codex safely continue from the current repo state without rereading the full multi-day conversation
 > **Superseded by**:
-> - `SPARKLE_AURORA_STAGE4_RETROACTIVE_AUDIT_2026-04-19.md` v2
+> - `SPARKLE_AURORA_STAGE4_RETROACTIVE_AUDIT_2026-04-19.md` v4
 > - corrective commits `4f90c1c6` (`WS-D` revert) and `573edf54` (`WS-C.1` backend CRUD tests)
+> - final Stage 4 Wave 2 landing commits `804e28f9` (`WS-D`), `2d2b4a5a` (`WS-B.2`), and `448ef9e3` (`WS-E`)
+
+> **Historical note**:
+> This handoff captures the repo state before Stage 4 Wave 2 execution resumed. It remains useful for reconstructing the governance incident and the pre-remediation context, but it is no longer the current operational state of the branch.
 
 ---
 

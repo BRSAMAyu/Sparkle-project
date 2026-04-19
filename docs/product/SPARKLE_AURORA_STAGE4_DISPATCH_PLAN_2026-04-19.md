@@ -1,6 +1,6 @@
 # SPARKLE Aurora Stage 4 Dispatch Plan (2026-04-19)
 
-> **Status**: Draft v4
+> **Status**: Closed after Stage 4 execution closeout
 > **Depends on**:
 > - `SPARKLE_AURORA_STAGE4_VISION_ALIGNMENT_2026-04-19.md`
 > - `SPARKLE_AURORA_STAGE4_ENGINEERING_STRUCTURE_2026-04-19.md`
@@ -15,6 +15,7 @@
 | v2 | Incorporate Claude + GLM dispatch review: keep Wave 1a at 3 agents via narrower Agent B, add Agent K hard boundaries, clarify Corpus V1 plumbing/content ownership, harden Gate S4-4, make Agent E scope explicit, add mobile flag mechanism, define interrupt semantics, and record 5-gate split from engineering structure into dispatch control gates | Codex |
 | v3 | Add Rule G after the retroactive audit of commit `cd2f844b`, explicitly banning cross-workstream batch commits without dispatcher approval and making revert the default consequence | Codex |
 | v4 | Post-audit-v3 topology update: incorporate the multi-expert collaboration card, add Rule H and Rule I, formalize high-risk review lanes and escalation triggers, revise Wave 2 from `E/F/G/H` to `F'/G/H`, and require pre-Wave-2 posture hardening before dispatch resumes | Codex |
+| v5 | Record Wave 2 completion (`WS-D`, `WS-B.2`, `WS-E`) and close this dispatch plan as historical execution record for Stage 4 | Codex |
 
 ---
 
@@ -756,22 +757,22 @@ The following remain out of scope:
 
 ---
 
-## 8. Immediate Recommended Next Step
+## 8. Closeout Outcome
 
-If this dispatch plan is accepted, the next steps are:
+The dispatch sequence described above has now been carried through to branch-tip implementation:
 
-1. land this `v4` docs-only dispatch update
-2. dispatch `GLM-exec #1` on `WS-F` posture hardening as a single-card, single-commit task
-3. dispatch `GLM-exec #2` on the out-of-scope working-tree review as a single-card, single-commit task
-4. receive MIMO's first "current position" report
-5. only then dispatch Wave 2 as:
-   - `Agent F'`
-   - `Agent G`
-   - `Agent H`
+1. `804e28f9` — `Agent F' / WS-D`
+2. `2d2b4a5a` — `Agent H / WS-B.2`
+3. `448ef9e3` — `Agent G / WS-E`
 
-This preserves the post-audit recovery order:
+That means this dispatch plan is no longer an active to-do list. It should now be read as the historical control document that governed Stage 4 recovery and Wave 2 execution.
 
-- governance first
-- posture hardening second
-- bounded cleanup third
-- new Wave 2 execution only after those are complete
+### Resulting state
+
+- Stage 4 workstreams are implemented at the branch tip
+- cross-WS batching was avoided during recovery and Wave 2 landings
+- the post-audit governance rules (`Rule G`, `Rule H`, `Rule I`) remain in force for future stages
+
+### Immediate next step
+
+Use the current branch tip for external expert review and final user sign-off. After that, archive Stage 4 as complete and begin Stage 5 / Wave 3 planning from this validated baseline.
