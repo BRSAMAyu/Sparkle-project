@@ -1,6 +1,6 @@
 # SPARKLE Aurora Stage 4 Dispatch Plan (2026-04-19)
 
-> **Status**: Draft v2
+> **Status**: Draft v3
 > **Depends on**:
 > - `SPARKLE_AURORA_STAGE4_VISION_ALIGNMENT_2026-04-19.md`
 > - `SPARKLE_AURORA_STAGE4_ENGINEERING_STRUCTURE_2026-04-19.md`
@@ -13,6 +13,7 @@
 | --- | --- | --- |
 | v1 | First Stage 4 dispatch plan with 6 rules, 4 corpora, file ownership, and 11 agents across 4 waves | Codex |
 | v2 | Incorporate Claude + GLM dispatch review: keep Wave 1a at 3 agents via narrower Agent B, add Agent K hard boundaries, clarify Corpus V1 plumbing/content ownership, harden Gate S4-4, make Agent E scope explicit, add mobile flag mechanism, define interrupt semantics, and record 5-gate split from engineering structure into dispatch control gates | Codex |
+| v3 | Add Rule G after the retroactive audit of commit `cd2f844b`, explicitly banning cross-workstream batch commits without dispatcher approval and making revert the default consequence | Codex |
 
 ---
 
@@ -94,6 +95,16 @@ Until:
 
 - Gate S4-3 passes
 - `>=100` production-replay corpus gate passes
+
+### Rule G: Single-WS-per-Agent Commit Discipline
+
+A single agent commit must not touch more than one workstream's primary write zone unless the dispatcher explicitly authorizes a cross-WS batch.
+
+If this rule is violated:
+
+- revert is the default outcome
+- retroactive accept is an exception path
+- the exception path requires independent review and per-workstream justification
 
 ---
 
