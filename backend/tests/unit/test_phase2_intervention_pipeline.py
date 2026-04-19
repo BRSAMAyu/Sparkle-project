@@ -241,6 +241,103 @@ async def test_plan_health_consumer_persists_intervention_even_when_visible_upda
 
 
 @pytest.mark.asyncio
+async def test_plan_health_consumer_enqueues_in_app_delivery_for_in_app_record(monkeypatch):
+    user_id = uuid4()
+    plan_id = uuid4()
+    fake_db = SimpleNamespace(commit=AsyncMock(), rollback=AsyncMock())
+    consumer = PlanHealthEventConsumer(event_bus=FakeEventBus())
+    enqueue = AsyncMock()
+
+    class FakeBridge:
+        async def on_plan_health_signal(self, **kwargs):
+            return SimpleNamespace(
+                id=uuid4(),
+                delivery_channel=DeliveryChannel.IN_APP,
+                diagnosis_payload={"severity": "critical"},
+            )
+
+    monkeypatch.setattr(
+        "app.services.plan_health_event_consumer.AsyncSessionLocal",
+        lambda: _AsyncSessionContext(fake_db),
+    )
+    monkeypatch.setattr(
+        "app.services.card_protocol.health_intervention_bridge.PlanHealthInterventionBridge",
+        lambda db, event_bus=None: FakeBridge(),
+    )
+    monkeypatch.setattr(
+        "app.services.plan_health_event_consumer.SystemUpdateService.enqueue",
+        enqueue,
+    )
+
+    await consumer._handle_plan_health_alerted(
+        {
+            "event_type": "plan.health.alerted",
+            "user_id": str(user_id),
+            "plan_id": str(plan_id),
+            "severity": "critical",
+            "reasons": ["stall_detected"],
+            "action_taken": "adjustment_cooldown_active",
+        }
+    )
+
+    fake_db.commit.assert_awaited_once()
+    assert enqueue.await_count == 2
+    payload = enqueue.await_args_list[-1].kwargs["payload"]
+    assert payload["metadata"]["payload"]["severity"] == "critical"
+
+
+@pytest.mark.asyncio
+async def test_plan_health_consumer_schedules_push_for_push_record(monkeypatch):
+    user_id = uuid4()
+    plan_id = uuid4()
+    fake_db = SimpleNamespace(commit=AsyncMock(), rollback=AsyncMock())
+    consumer = PlanHealthEventConsumer(event_bus=FakeEventBus())
+    scheduled_calls: list[dict] = []
+
+    class FakeBridge:
+        async def on_plan_health_signal(self, **kwargs):
+            return SimpleNamespace(
+                id=uuid4(),
+                delivery_channel=DeliveryChannel.PUSH,
+                diagnosis_payload={"severity": "critical", "reason": "stall_detected"},
+            )
+
+    class _FakeTask:
+        @staticmethod
+        def delay(**kwargs):
+            scheduled_calls.append(kwargs)
+
+    monkeypatch.setattr(
+        "app.services.plan_health_event_consumer.AsyncSessionLocal",
+        lambda: _AsyncSessionContext(fake_db),
+    )
+    monkeypatch.setattr(
+        "app.services.card_protocol.health_intervention_bridge.PlanHealthInterventionBridge",
+        lambda db, event_bus=None: FakeBridge(),
+    )
+    monkeypatch.setattr(
+        "app.core.celery_tasks.schedule_push_notification",
+        _FakeTask(),
+    )
+
+    await consumer._handle_plan_health_alerted(
+        {
+            "event_type": "plan.health.alerted",
+            "user_id": str(user_id),
+            "plan_id": str(plan_id),
+            "severity": "critical",
+            "reasons": ["stall_detected"],
+            "action_taken": "none",
+        }
+    )
+
+    fake_db.commit.assert_awaited_once()
+    assert len(scheduled_calls) == 1
+    assert scheduled_calls[0]["user_id"] == str(user_id)
+    assert scheduled_calls[0]["payload"]["reason"] == "stall_detected"
+
+
+@pytest.mark.asyncio
 async def test_behavior_bridge_creates_push_record_without_premarking_delivered(db_session, test_user):
     card_service = CardService(db_session)
     plan_card = await card_service.create_card(
