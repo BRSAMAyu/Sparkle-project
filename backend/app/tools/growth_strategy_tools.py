@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.core.cache import cache_service
 from app.orchestration.situation_brief import SituationBriefBuilder
+from app.services.profile_front_door_service import ProfileFrontDoorService
 from app.services.user_strategy_state_service import UserStrategyStateService
 from app.tools.base import BaseTool, ToolCategory, ToolResult, get_tool_runtime_context
 
@@ -53,6 +54,17 @@ class WriteEpisodeNoteParams(BaseModel):
     session_id: str | None = Field(default=None, description="Optional session override")
     plan_id: str | None = Field(default=None, description="Optional plan override")
     ttl_seconds: int | None = Field(default=None, ge=60, le=30 * 24 * 60 * 60)
+
+
+class GetProfileFrontDoorParams(BaseModel):
+    include_actions: bool = Field(
+        default=False,
+        description="Whether to include chat-native correction prompts for directly correctable claims.",
+    )
+    highlighted_claim_id: str | None = Field(
+        default=None,
+        description="Optional claim id to highlight in the payload when the user is asking about a specific belief.",
+    )
 
 
 def _runtime_redis(db_session: Any):
@@ -135,14 +147,24 @@ class GetSituationBriefTool(BaseTool):
                     success=True,
                     tool_name=self.name,
                     tool_call_id=tool_call_id,
-                    data={"situation_brief": _compact_dict(embedded_brief, include_source_trace=params.include_source_trace)},
+                    data={
+                        "situation_brief": _compact_dict(
+                            embedded_brief, include_source_trace=params.include_source_trace
+                        )
+                    },
                 )
 
         builder = SituationBriefBuilder()
         brief = builder.build(
             user_context_payload=user_context_payload if isinstance(user_context_payload, dict) else None,
-            plan_context=runtime_context.get("plan_context") if isinstance(runtime_context.get("plan_context"), dict) else None,
-            focused_memory=runtime_context.get("focused_memory") if isinstance(runtime_context.get("focused_memory"), dict) else None,
+            plan_context=(
+                runtime_context.get("plan_context") if isinstance(runtime_context.get("plan_context"), dict) else None
+            ),
+            focused_memory=(
+                runtime_context.get("focused_memory")
+                if isinstance(runtime_context.get("focused_memory"), dict)
+                else None
+            ),
             context_briefing_note=str(runtime_context.get("context_briefing_note") or "").strip() or None,
             visible_update_context=(
                 runtime_context.get("visible_update_context")
@@ -324,3 +346,40 @@ class WriteEpisodeNoteTool(BaseTool):
                 error_message=str(exc),
                 error_type=type(exc).__name__,
             )
+
+
+class GetProfileFrontDoorTool(BaseTool):
+    name = "get_profile_front_door"
+    description = (
+        "Read Sparkle's canonical current picture of the user for chat-native "
+        "questions like 'how do you currently see me' or 'what have you inferred about me'."
+    )
+    category = ToolCategory.GROWTH
+    parameters_schema = GetProfileFrontDoorParams
+
+    async def execute(
+        self,
+        params: GetProfileFrontDoorParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None = None,
+    ) -> ToolResult:
+        runtime_context = get_tool_runtime_context(db_session)
+        service = ProfileFrontDoorService(db_session, redis=_runtime_redis(db_session))
+        profile_context = await service.load_profile_context(
+            user_id=UUID(user_id),
+            runtime_context=runtime_context,
+        )
+        payload = service.build_payload(
+            profile_context=profile_context,
+            highlighted_claim_id=params.highlighted_claim_id,
+            include_actions=params.include_actions,
+        )
+        return ToolResult(
+            success=True,
+            tool_name=self.name,
+            tool_call_id=tool_call_id,
+            data={"profile_front_door": payload},
+            widget_type="profile_front_door",
+            widget_data=payload,
+        )

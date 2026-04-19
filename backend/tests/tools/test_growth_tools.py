@@ -20,6 +20,8 @@ from app.tools.base import TOOL_RUNTIME_CONTEXT_KEY
 from app.tools.growth_strategy_tools import (
     AdjustUserStrategyStateParams,
     AdjustUserStrategyStateTool,
+    GetProfileFrontDoorParams,
+    GetProfileFrontDoorTool,
     GetSituationBriefParams,
     GetSituationBriefTool,
     WriteEpisodeNoteParams,
@@ -94,6 +96,7 @@ async def test_growth_tools_register_in_dynamic_registry():
 
         assert registry.get_tool("get_situation_brief") is not None
         assert registry.get_tool("get_user_strategy_state") is not None
+        assert registry.get_tool("get_profile_front_door") is not None
         assert registry.get_tool("adjust_user_strategy_state") is not None
         assert registry.get_tool("retrieve_user_material") is not None
         assert registry.get_tool("get_intervention_track_record") is not None
@@ -134,6 +137,76 @@ async def test_get_situation_brief_tool_prefers_runtime_snapshot():
     assert result.success is True
     assert result.data["situation_brief"]["summary"] == "Exam week and overload signals are active."
     assert "source_trace" not in result.data["situation_brief"]
+
+
+@pytest.mark.asyncio
+async def test_get_profile_front_door_tool_prefers_runtime_profile_context():
+    tool = GetProfileFrontDoorTool()
+    db_session = SimpleNamespace(
+        sync_session=SimpleNamespace(
+            info={
+                TOOL_RUNTIME_CONTEXT_KEY: {
+                    "profile_context": {
+                        "preference_version": 3,
+                        "user_insight_state": {
+                            "version": "2.0",
+                            "signal_evidence": [
+                                {
+                                    "signal_id": "achievement_motivation_response",
+                                    "family": "motivation",
+                                    "label": "成就反馈响应",
+                                    "source": "achievement_signals",
+                                    "value": "supportive",
+                                    "confidence": 0.86,
+                                    "freshness": "fresh",
+                                    "surfaces": ["chat", "profile_surface"],
+                                    "status": "live",
+                                    "explanation": "最近的成就反馈更容易带动你继续推进。",
+                                }
+                            ],
+                            "prediction_summaries": {
+                                "overload_risk": {
+                                    "kind": "overload_risk",
+                                    "level": "medium",
+                                    "confidence": 0.72,
+                                    "recommended_action": "先缩窄下一步范围",
+                                    "explanation": "最近任务切换偏频繁，过载风险上升。",
+                                }
+                            },
+                            "calibration_summary": {
+                                "calibration_posture": "supported",
+                                "recent_correction_count": 1,
+                                "recent_corrections": [
+                                    {"target": "achievement_motivation_response", "reason": "user_correction"}
+                                ],
+                            },
+                            "uncertainty_markers": [
+                                {
+                                    "id": "uncertainty:peak_focus_hours",
+                                    "description": "高效时段还不够稳定。",
+                                }
+                            ],
+                        },
+                    }
+                }
+            }
+        )
+    )
+
+    result = await tool.execute(
+        GetProfileFrontDoorParams(),
+        user_id="00000000-0000-0000-0000-000000000000",
+        db_session=db_session,
+    )
+
+    assert result.success is True
+    assert result.widget_type == "profile_front_door"
+    payload = result.data["profile_front_door"]
+    assert payload["claims"][0]["id"] == "achievement_motivation_response"
+    assert payload["claims"][0]["evidence_class"] == "compiled_claim"
+    assert payload["predictions"][0]["evidence_class"] == "prediction"
+    assert payload["calibration"]["calibration_posture"] == "supported"
+    assert payload["binding_note"].startswith("当前前门展示的是 canonical")
 
 
 @pytest.mark.asyncio
@@ -197,7 +270,9 @@ async def test_write_episode_note_tool_persists_episode_layer_note(db_session, t
     )
 
     assert result.success is True
-    assert result.data["effective_state"]["current_episode_note"] == "Exam prep week, high stress, keep workload narrow."
+    assert (
+        result.data["effective_state"]["current_episode_note"] == "Exam prep week, high stress, keep workload narrow."
+    )
     assert result.data["effective_state"]["meta"]["sources"]["current_episode_note"] == "episode"
 
 

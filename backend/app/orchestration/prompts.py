@@ -358,12 +358,13 @@ TASK_AWARENESS_SECTION = """
 18. get_intervention_track_record - 当你要判断哪些提示/干预对这个用户更有效时，优先调用
 19. record_intervention_feedback - 当用户直接评价某次提醒/推动有没有帮助时，调用绑定反馈
 20. write_episode_note - 当用户说明短期情境变化（如考试周、高压、降载）时，调用写入回合备注
+21. get_profile_front_door - 当用户问“你怎么看我 / 你现在是怎么理解我的 / 我最近是什么状态”时，先调用，基于 canonical 画像回答，并明确哪些是编译结论、哪些是预测
 
 **重要提示**：在生成新任务前，务必先调用 get_plan_state 获取：
 - 当前进度和已达成里程碑
 - 任务完成统计
 - 自适应调整参数（difficulty_shift, time_multiplier）
-当你需要精确的成长状态、用户材料证据或干预记录时，优先使用以上成长自省工具，不要只依赖 prompt 里的静态上下文。
+当你需要精确的成长状态、用户材料证据、干预记录或用户画像前门时，优先使用以上成长自省工具，不要只依赖 prompt 里的静态上下文。
 """
 
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。
@@ -1828,23 +1829,31 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
     predicted_schedule_fit = str(decision_context.get("predicted_schedule_fit") or "").strip()
     predicted_plan_slippage_risk = str(decision_context.get("predicted_plan_slippage_risk") or "").strip()
     planning_unknowns = decision_context.get("planning_blocking_unknowns")
-    planning_unknowns = [item for item in planning_unknowns if str(item).strip()] if isinstance(planning_unknowns, list) else []
+    planning_unknowns = (
+        [item for item in planning_unknowns if str(item).strip()] if isinstance(planning_unknowns, list) else []
+    )
     clarification_questions = decision_context.get("strategic_clarification_questions")
-    clarification_questions = [item for item in clarification_questions if str(item).strip()] if isinstance(clarification_questions, list) else []
+    clarification_questions = (
+        [item for item in clarification_questions if str(item).strip()]
+        if isinstance(clarification_questions, list)
+        else []
+    )
 
-    if not any([
-        experience_mode,
-        intervention_family,
-        what_matters_now,
-        adjustments,
-        body_guidance,
-        planning_readiness,
-        predicted_overload_risk,
-        predicted_schedule_fit,
-        predicted_plan_slippage_risk,
-        planning_unknowns,
-        clarification_questions,
-    ]):
+    if not any(
+        [
+            experience_mode,
+            intervention_family,
+            what_matters_now,
+            adjustments,
+            body_guidance,
+            planning_readiness,
+            predicted_overload_risk,
+            predicted_schedule_fit,
+            predicted_plan_slippage_risk,
+            planning_unknowns,
+            clarification_questions,
+        ]
+    ):
         return ""
 
     lines = ["## 当前决策策略 [L1 引导]"]
@@ -2229,8 +2238,10 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
         if _has_signal_payload(profile_context.get(key)):
             sources.append("profile_context")
         knowledge_summary = profile_context.get("knowledge_summary") if isinstance(profile_context, dict) else {}
-        if key == "recent_mastery_changes" and isinstance(knowledge_summary, dict) and _has_signal_payload(
-            knowledge_summary.get("recent_mastery_changes")
+        if (
+            key == "recent_mastery_changes"
+            and isinstance(knowledge_summary, dict)
+            and _has_signal_payload(knowledge_summary.get("recent_mastery_changes"))
         ):
             sources.append("profile_context.knowledge_summary")
 
@@ -2302,11 +2313,7 @@ def _format_error_summary_line(summary: dict[str, Any]) -> str:
     distribution = summary.get("subject_distribution")
     if isinstance(distribution, dict) and distribution:
         ranked = sorted(
-            (
-                (str(subject).strip(), int(count))
-                for subject, count in distribution.items()
-                if str(subject).strip()
-            ),
+            ((str(subject).strip(), int(count)) for subject, count in distribution.items() if str(subject).strip()),
             key=lambda item: (-item[1], item[0]),
         )
         if ranked:
@@ -2631,11 +2638,13 @@ def _extract_canonical_signal(
         for win in wins[:5]:
             if not isinstance(win, dict):
                 continue
-            shaped.append({
-                "node_name": win.get("label") or win.get("node_name") or "",
-                "old_mastery": win.get("old_mastery"),
-                "new_mastery": win.get("new_mastery"),
-            })
+            shaped.append(
+                {
+                    "node_name": win.get("label") or win.get("node_name") or "",
+                    "old_mastery": win.get("old_mastery"),
+                    "new_mastery": win.get("new_mastery"),
+                }
+            )
         return shaped if shaped else None
 
     return None
@@ -2684,7 +2693,9 @@ def _normalize_user_context(context: dict) -> dict:
         if isinstance(context.get("knowledge_summary"), dict):
             normalized["knowledge_summary"] = context["knowledge_summary"]
     if "knowledge_summary" not in normalized:
-        profile_knowledge_summary = profile_context.get("knowledge_summary") if isinstance(profile_context, dict) else None
+        profile_knowledge_summary = (
+            profile_context.get("knowledge_summary") if isinstance(profile_context, dict) else None
+        )
         if isinstance(profile_knowledge_summary, dict):
             normalized["knowledge_summary"] = profile_knowledge_summary
 
@@ -2804,11 +2815,11 @@ def _resolve_semantic_control_from_context(context: dict[str, Any] | None) -> di
         decision_context=decision_context if isinstance(decision_context, dict) else {},
         planning_strategy=planning_strategy,
         body_awareness_guidance=(
-            decision_context.get("body_awareness_guidance")
-            if isinstance(decision_context, dict)
-            else {}
+            decision_context.get("body_awareness_guidance") if isinstance(decision_context, dict) else {}
         ),
-        user_strategy_state=context.get("user_strategy_state") if isinstance(context.get("user_strategy_state"), dict) else {},
+        user_strategy_state=(
+            context.get("user_strategy_state") if isinstance(context.get("user_strategy_state"), dict) else {}
+        ),
         outcome_learning=(situation_brief.get("outcome_learning") if isinstance(situation_brief, dict) else {}),
         language="zh",
     ).to_dict()

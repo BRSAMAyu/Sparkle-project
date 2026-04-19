@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/profile_front_door_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
@@ -568,6 +569,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
+      case 'profile_front_door':
+        return LinearGradient(
+          colors: [const Color(0xFF0EA5A4), const Color(0xFF4F46E5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       case 'continuity_banner':
       case 'mode_explanation':
         return DS.cardGradientNeutral;
@@ -619,6 +626,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.primaryBase;
       case 'adaptation_summary':
         return DS.info;
+      case 'profile_front_door':
+        return const Color(0xFF0EA5A4);
       case 'continuity_banner':
       case 'mode_explanation':
         return DS.neutral700;
@@ -675,6 +684,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.alt_route_rounded;
       case 'adaptation_summary':
         return Icons.tune_rounded;
+      case 'profile_front_door':
+        return Icons.psychology_rounded;
       case 'continuity_banner':
         return Icons.link_rounded;
       case 'mode_explanation':
@@ -721,6 +732,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return l10n.chatActionTitleNextActions;
       case 'adaptation_summary':
         return '这轮调整';
+      case 'profile_front_door':
+        return '当前画像前门';
       case 'continuity_banner':
         return l10n.chatActionTitleContinuity;
       case 'mode_explanation':
@@ -775,6 +788,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     if (action.type == 'adaptation_summary') {
       return _buildAdaptationSummary(context, action);
+    }
+    if (action.type == 'profile_front_door') {
+      return ProfileFrontDoorCard(
+        data: action.data,
+        onAction: widget.onWidgetAction,
+      );
     }
     if (action.type == 'continuity_banner' ||
         action.type == 'mode_explanation') {
@@ -969,6 +988,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'task_list':
       case 'source_summary':
       case 'next_actions':
+      case 'profile_front_door':
       case 'continuity_banner':
       case 'mode_explanation':
       case 'execution_summary':
