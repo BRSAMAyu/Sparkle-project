@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import select
 
 from app.models.card_protocol import (
     DeliveryChannel,
@@ -20,6 +21,8 @@ from app.tools.base import TOOL_RUNTIME_CONTEXT_KEY
 from app.tools.growth_strategy_tools import (
     AdjustUserStrategyStateParams,
     AdjustUserStrategyStateTool,
+    ApplyProfileCorrectionParams,
+    ApplyProfileCorrectionTool,
     GetProfileFrontDoorParams,
     GetProfileFrontDoorTool,
     GetSituationBriefParams,
@@ -97,6 +100,7 @@ async def test_growth_tools_register_in_dynamic_registry():
         assert registry.get_tool("get_situation_brief") is not None
         assert registry.get_tool("get_user_strategy_state") is not None
         assert registry.get_tool("get_profile_front_door") is not None
+        assert registry.get_tool("apply_profile_correction") is not None
         assert registry.get_tool("adjust_user_strategy_state") is not None
         assert registry.get_tool("retrieve_user_material") is not None
         assert registry.get_tool("get_intervention_track_record") is not None
@@ -204,9 +208,72 @@ async def test_get_profile_front_door_tool_prefers_runtime_profile_context():
     payload = result.data["profile_front_door"]
     assert payload["claims"][0]["id"] == "achievement_motivation_response"
     assert payload["claims"][0]["evidence_class"] == "compiled_claim"
+    assert payload["claims"][0]["actions"][0]["label"] == "这条不对"
     assert payload["predictions"][0]["evidence_class"] == "prediction"
     assert payload["calibration"]["calibration_posture"] == "supported"
     assert payload["binding_note"].startswith("当前前门展示的是 canonical")
+
+
+@pytest.mark.asyncio
+async def test_apply_profile_correction_tool_uses_user_correction_lane(db_session, test_user):
+    from app.models.memory import MemoryCorrection
+    from app.models.user_preferences import UserPreferencesCenter
+
+    user_id = test_user.id
+    db_session.add(
+        UserPreferencesCenter(
+            user_id=user_id,
+            version=1,
+            explicit={},
+            inferred={"achievement_motivation_response": "progress_praise"},
+        )
+    )
+    await db_session.commit()
+    _set_runtime_context(
+        db_session,
+        {
+            "profile_context": {
+                "preference_version": 1,
+                "user_insight_state": {
+                    "version": "2.0",
+                    "signal_evidence": [
+                        {
+                            "signal_id": "achievement_motivation_response",
+                            "family": "motivation",
+                            "label": "成就反馈响应",
+                            "source": "achievement_signals",
+                            "value": "progress_praise",
+                            "confidence": 0.86,
+                            "freshness": "fresh",
+                            "surfaces": ["chat", "profile_surface"],
+                            "status": "live",
+                            "explanation": "最近的成就反馈更容易带动你继续推进。",
+                        }
+                    ],
+                },
+            }
+        },
+    )
+
+    tool = ApplyProfileCorrectionTool()
+    result = await tool.execute(
+        ApplyProfileCorrectionParams(
+            target_id="achievement_motivation_response",
+            action="wrong",
+            reason="这条最近已经不成立了",
+        ),
+        user_id=str(user_id),
+        db_session=db_session,
+    )
+
+    assert result.success is True
+    assert result.widget_type == "profile_front_door"
+    confirmation = result.data["profile_front_door"]["confirmation"]
+    assert confirmation["title"].startswith("已记录")
+
+    corrections = (await db_session.execute(select(MemoryCorrection).where(MemoryCorrection.user_id == user_id))).scalars().all()
+    assert corrections
+    assert corrections[0].action == "wrong"
 
 
 @pytest.mark.asyncio

@@ -359,12 +359,13 @@ TASK_AWARENESS_SECTION = """
 19. record_intervention_feedback - 当用户直接评价某次提醒/推动有没有帮助时，调用绑定反馈
 20. write_episode_note - 当用户说明短期情境变化（如考试周、高压、降载）时，调用写入回合备注
 21. get_profile_front_door - 当用户问“你怎么看我 / 你现在是怎么理解我的 / 我最近是什么状态”时，先调用，基于 canonical 画像回答，并明确哪些是编译结论、哪些是预测
+22. apply_profile_correction - 当用户明确说“这条不对 / 以前对但现在不对 / 只在考试模式成立”并且 target_id 已明确时，调用这条用户纠正通道；不要改用 Aurora、dual-core 或 strategy lane
 
 **重要提示**：在生成新任务前，务必先调用 get_plan_state 获取：
 - 当前进度和已达成里程碑
 - 任务完成统计
 - 自适应调整参数（difficulty_shift, time_multiplier）
-当你需要精确的成长状态、用户材料证据、干预记录或用户画像前门时，优先使用以上成长自省工具，不要只依赖 prompt 里的静态上下文。
+当你需要精确的成长状态、用户材料证据、干预记录或用户画像前门时，优先使用以上成长自省工具，不要只依赖 prompt 里的静态上下文。涉及聊天内画像纠正时，先识别 target_id，再走 apply_profile_correction，不要把用户纠正偷换成策略调节。
 """
 
 AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手。你的目标是帮助用户高效学习，同时保持学习的乐趣。

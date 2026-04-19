@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from app.core.cache import cache_service
 from app.orchestration.situation_brief import SituationBriefBuilder
 from app.services.profile_front_door_service import ProfileFrontDoorService
+from app.services.profile_insight_control_service import ProfileInsightControlService
 from app.services.user_strategy_state_service import UserStrategyStateService
 from app.tools.base import BaseTool, ToolCategory, ToolResult, get_tool_runtime_context
 
@@ -58,12 +59,29 @@ class WriteEpisodeNoteParams(BaseModel):
 
 class GetProfileFrontDoorParams(BaseModel):
     include_actions: bool = Field(
-        default=False,
+        default=True,
         description="Whether to include chat-native correction prompts for directly correctable claims.",
     )
     highlighted_claim_id: str | None = Field(
         default=None,
         description="Optional claim id to highlight in the payload when the user is asking about a specific belief.",
+    )
+
+
+class ApplyProfileCorrectionParams(BaseModel):
+    target_id: str = Field(..., min_length=1, description="Canonical claim id from the profile front door payload.")
+    action: str = Field(
+        ...,
+        description="One of: wrong, used_to_be_true, exam_mode_only, reset_override.",
+    )
+    reason: str | None = Field(
+        default=None,
+        max_length=240,
+        description="Optional short user rationale for why the current claim is inaccurate.",
+    )
+    value: Any | None = Field(
+        default=None,
+        description="Optional explicit replacement value when correcting an adjustable inferred field.",
     )
 
 
@@ -382,4 +400,92 @@ class GetProfileFrontDoorTool(BaseTool):
             data={"profile_front_door": payload},
             widget_type="profile_front_door",
             widget_data=payload,
+        )
+
+
+class ApplyProfileCorrectionTool(BaseTool):
+    name = "apply_profile_correction"
+    description = (
+        "Apply a chat-originated profile correction through the User Correction lane only, "
+        "then return the refreshed canonical profile front door."
+    )
+    category = ToolCategory.GROWTH
+    parameters_schema = ApplyProfileCorrectionParams
+
+    async def execute(
+        self,
+        params: ApplyProfileCorrectionParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None = None,
+    ) -> ToolResult:
+        runtime_context = get_tool_runtime_context(db_session)
+        front_door_service = ProfileFrontDoorService(db_session, redis=_runtime_redis(db_session))
+        before_context = await front_door_service.load_profile_context(
+            user_id=UUID(user_id),
+            runtime_context=runtime_context,
+        )
+        before_payload = front_door_service.build_payload(
+            profile_context=before_context,
+            highlighted_claim_id=params.target_id,
+            include_actions=True,
+        )
+        claim_lookup = {
+            str(item.get("id") or "").strip(): item
+            for item in list(before_payload.get("claims") or [])
+            if isinstance(item, dict)
+        }
+        target_label = str(claim_lookup.get(params.target_id, {}).get("label") or params.target_id).strip()
+
+        control_service = ProfileInsightControlService(db_session, redis=_runtime_redis(db_session))
+        try:
+            result = await control_service.apply_control(
+                user_id=UUID(user_id),
+                target_id=params.target_id,
+                action=params.action,
+                value=params.value,
+                reason=params.reason,
+                source="chat_profile_correction",
+            )
+        except (ValueError, LookupError) as exc:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                tool_call_id=tool_call_id,
+                error_message=str(exc),
+                error_type=type(exc).__name__,
+            )
+
+        after_context = await front_door_service.load_profile_context(
+            user_id=UUID(user_id),
+            runtime_context={},
+        )
+        after_payload = front_door_service.build_payload(
+            profile_context=after_context,
+            highlighted_claim_id=params.target_id,
+            include_actions=True,
+            confirmation={
+                "title": f"已记录「{target_label}」这条纠正",
+                "message": (
+                    "这次更新走的是 User Correction 独立通道，不经过 Aurora / L3 / strategy lane。"
+                    "下面是我按最新 canonical 画像重新读取后的结果。"
+                ),
+            },
+        )
+
+        return ToolResult(
+            success=True,
+            tool_name=self.name,
+            tool_call_id=tool_call_id,
+            data={
+                "correction_result": {
+                    "status": result.status,
+                    "target_id": result.target_id,
+                    "action": result.action,
+                    "preference_version": result.preference_version,
+                },
+                "profile_front_door": after_payload,
+            },
+            widget_type="profile_front_door",
+            widget_data=after_payload,
         )

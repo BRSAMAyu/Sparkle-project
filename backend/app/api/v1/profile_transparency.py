@@ -27,6 +27,7 @@ from app.services.personalization import get_personalization_engine
 from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
+from app.services.profile_insight_control_service import ProfileInsightControlService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.insight_copy import present_pattern_name
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -62,6 +63,7 @@ class ChatOpeningResponse(BaseModel):
     conversation_id: UUID
     message_id: UUID | None = None
     content: str | None = None
+
 
 def _source_score(source: str) -> float:
     mapping = {
@@ -374,10 +376,7 @@ def _editability_meta(
         包含可编辑性元数据的字典
     """
     score = (
-        0.4 * _source_score(source)
-        + 0.3 * confidence
-        - 0.2 * _risk_score(risk_level)
-        + 0.1 * _field_score(field_type)
+        0.4 * _source_score(source) + 0.3 * confidence - 0.2 * _risk_score(risk_level) + 0.1 * _field_score(field_type)
     )
     if score > 0.6:
         level = "editable"
@@ -630,7 +629,9 @@ def _present_value_text(value: Any) -> str:
 def _localize_inferred_explanation(key: str, value: Any, fallback: str) -> str:
     label = _INFERRED_KEY_LABELS.get(key, key)
     if key == "achievement_peak_hours" and isinstance(value, list):
-        return f"系统观察到你最近更常在 { _present_value_text(value) } 解锁成就，这些时段会被视为更容易形成正反馈的窗口。"
+        return (
+            f"系统观察到你最近更常在 { _present_value_text(value) } 解锁成就，这些时段会被视为更容易形成正反馈的窗口。"
+        )
     if key == "achievement_motivation_response":
         return f"最近成就行为显示，你更容易被「{ _present_value_text(value) }」这类反馈方式带动。"
     if key == "achievement_pace_style":
@@ -857,11 +858,11 @@ async def get_profile_transparent(
                 "description": None,
                 "metadata": {
                     **_editability_meta(
-                    source="system",
-                    confidence=float(item.confidence or 0.0),
-                    risk_level="high",
-                    field_type="analysis",
-                ),
+                        source="system",
+                        confidence=float(item.confidence or 0.0),
+                        risk_level="high",
+                        field_type="analysis",
+                    ),
                     "policy_signals": item.policy_signals,
                 },
             }
@@ -916,7 +917,8 @@ async def get_profile_context(
             inferred_backups=inferred_backups,
         )
     partnership_result = await db.execute(
-        select(AccountabilityPartnership).where(
+        select(AccountabilityPartnership)
+        .where(
             and_(
                 AccountabilityPartnership.slot_type == AccountabilitySlotType.CORE,
                 AccountabilityPartnership.status == AccountabilityStatus.ACTIVE,
@@ -925,7 +927,8 @@ async def get_profile_context(
                     AccountabilityPartnership.partner_id == current_user.id,
                 ),
             )
-        ).order_by(AccountabilityPartnership.updated_at.desc())
+        )
+        .order_by(AccountabilityPartnership.updated_at.desc())
     )
     active_partnership = partnership_result.scalars().first()
     payload["accountability_summary"] = (
@@ -1100,9 +1103,7 @@ async def submit_onboarding(
     memory_service = MemoryService(db)
     profile_write_service = ProfileWriteService(db, cache_service.redis)
 
-    evidence_refs = [
-        {"type": "user_state", "id": "onboarding", "schema_version": "onboarding.v1"}
-    ]
+    evidence_refs = [{"type": "user_state", "id": "onboarding", "schema_version": "onboarding.v1"}]
 
     updated: dict[str, Any] = {}
     preference_updates: dict[str, Any] = {}
@@ -1180,6 +1181,7 @@ async def submit_onboarding(
     # Bootstrap galaxy scaffold nodes from goal
     try:
         from app.services.galaxy_bootstrap_service import GalaxyBootstrapService
+
         bootstrap_service = GalaxyBootstrapService(db)
         await bootstrap_service.seed_from_goal(
             user_id=current_user.id,
@@ -1189,6 +1191,7 @@ async def submit_onboarding(
         await db.commit()
     except Exception as _exc:
         import logging
+
         logging.getLogger(__name__).warning("Galaxy bootstrap failed during onboarding: %s", _exc)
 
     # Generate personalized first-session opener for the chat
@@ -1226,9 +1229,7 @@ async def update_preference(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="pref_key required")
 
     profile_write_service = ProfileWriteService(db, cache_service.redis)
-    evidence_refs = [
-        {"type": "user_state", "id": "manual_edit", "schema_version": "manual_edit.v1"}
-    ]
+    evidence_refs = [{"type": "user_state", "id": "manual_edit", "schema_version": "manual_edit.v1"}]
     value_payload = _coerce_preference_value(payload.pref_key, payload.value)
     result = await profile_write_service.set_explicit_preference(
         user_id=current_user.id,
@@ -1260,9 +1261,7 @@ async def override_inferred_preference(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key is not adjustable")
 
     profile_write_service = ProfileWriteService(db, cache_service.redis)
-    evidence_refs = [
-        {"type": "user_state", "id": "user_override", "schema_version": "user_override.v1"}
-    ]
+    evidence_refs = [{"type": "user_state", "id": "user_override", "schema_version": "user_override.v1"}]
     value_payload = _coerce_preference_value(payload.key, payload.value)
     result = await profile_write_service.override_inferred_preference(
         user_id=current_user.id,
@@ -1303,126 +1302,29 @@ async def control_profile_insight(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    from app.models.memory import MemoryCorrection
-
     target_id = _strip(payload.target_id)
     action = _strip(payload.action).lower()
     if not target_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="target_id required")
-    if action not in {"wrong", "used_to_be_true", "exam_mode_only", "reset_override"}:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="unsupported action")
-
-    profile_write_service = ProfileWriteService(db, cache_service.redis)
-    pref_service = PreferenceService(db, cache_service.redis)
-    prefs = await pref_service.get_preferences(current_user.id)
-    merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
-    meta = INFERRED_META.get(target_id)
-
-    preference_version = prefs.version or 0
-    if action == "reset_override":
-        if meta is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown inferred key")
-        result = await profile_write_service.reset_override_preference(
+    service = ProfileInsightControlService(db, cache_service.redis)
+    try:
+        result = await service.apply_control(
             user_id=current_user.id,
-            pref_key=target_id,
-        )
-        scope_updates = _merge_scope_overrides(merged_preferences, target_id, None)
-        scope_result = await profile_write_service.set_explicit_preference(
-            user_id=current_user.id,
-            pref_key="insight_scope_overrides",
-            pref_value=scope_updates,
-            evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
-            source_type="user_state",
+            target_id=target_id,
+            action=action,
+            value=payload.value,
+            reason=payload.reason,
             source="insight_control",
         )
-        preference_version = max(result.preference_version, scope_result.preference_version)
-    elif meta is not None:
-        if action == "wrong":
-            if meta.adjustable and payload.value is not None:
-                value_payload = _coerce_preference_value(target_id, payload.value)
-                result = await profile_write_service.override_inferred_preference(
-                    user_id=current_user.id,
-                    pref_key=target_id,
-                    pref_value=value_payload,
-                    evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
-                    source="insight_control",
-                )
-                preference_version = result.preference_version
-            else:
-                result = await profile_write_service.remove_inferred_preference(
-                    user_id=current_user.id,
-                    pref_key=target_id,
-                )
-                preference_version = result.preference_version
-            scope_updates = _merge_scope_overrides(merged_preferences, target_id, None)
-            await profile_write_service.set_explicit_preference(
-                user_id=current_user.id,
-                pref_key="insight_scope_overrides",
-                pref_value=scope_updates,
-                evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
-                source_type="user_state",
-                source="insight_control",
-            )
-        elif action == "used_to_be_true":
-            result = await profile_write_service.remove_inferred_preference(
-                user_id=current_user.id,
-                pref_key=target_id,
-            )
-            preference_version = result.preference_version
-            scope_updates = _merge_scope_overrides(merged_preferences, target_id, None)
-            await profile_write_service.set_explicit_preference(
-                user_id=current_user.id,
-                pref_key="insight_scope_overrides",
-                pref_value=scope_updates,
-                evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
-                source_type="user_state",
-                source="insight_control",
-            )
-        elif action == "exam_mode_only":
-            scope_updates = _merge_scope_overrides(merged_preferences, target_id, "exam_mode_only")
-            result = await profile_write_service.set_explicit_preference(
-                user_id=current_user.id,
-                pref_key="insight_scope_overrides",
-                pref_value=scope_updates,
-                evidence_refs=[{"type": "user_state", "id": "insight_control", "schema_version": "insight_control.v1"}],
-                source_type="user_state",
-                source="insight_control",
-            )
-            preference_version = result.preference_version
-
-    correction = MemoryCorrection(
-        user_id=current_user.id,
-        memory_type="insight_signal",
-        memory_id=current_user.id,
-        action=action,
-        reason=json.dumps(
-            {
-                "target_id": target_id,
-                "field_name": target_id,
-                "suggested_value": payload.value,
-                "reason": payload.reason,
-            },
-            ensure_ascii=True,
-        ),
-    )
-    db.add(correction)
-    await db.commit()
-    await SystemUpdateService(cache_service.redis).enqueue(
-        current_user.id,
-        build_system_update(
-            update_type="insight_control_applied",
-            category="cognitive",
-            title="画像理解已根据你的反馈调整",
-            description="Sparkle 会在后续判断中考虑这条修正",
-            priority="medium",
-            metadata={"target_id": target_id, "action": action},
-        ),
-    )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return {
-        "status": "ok",
-        "target_id": target_id,
-        "action": action,
-        "preference_version": preference_version,
+        "status": result.status,
+        "target_id": result.target_id,
+        "action": result.action,
+        "preference_version": result.preference_version,
     }
 
 
@@ -1443,9 +1345,7 @@ async def rollback_preference(
 
     current = candidates[0]
     previous = candidates[1]
-    evidence_refs = [
-        {"type": "user_state", "id": "rollback", "schema_version": "rollback.v1"}
-    ]
+    evidence_refs = [{"type": "user_state", "id": "rollback", "schema_version": "rollback.v1"}]
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     result = await profile_write_service.set_explicit_preference(
         user_id=current_user.id,
@@ -1466,11 +1366,7 @@ async def rollback_preference(
         "from_version": current.version,
         "to_version": previous.version,
         "new_version": result.history_version,
-        "preference_version": (
-            restored.preference_version
-            if restored is not None
-            else result.preference_version
-        ),
+        "preference_version": (restored.preference_version if restored is not None else result.preference_version),
     }
 
 
