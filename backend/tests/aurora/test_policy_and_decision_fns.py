@@ -95,6 +95,30 @@ def test_backbone_route_marks_planning_request_as_workflow_mode() -> None:
     assert decision.route_kind == "stay"
 
 
+def test_backbone_route_keeps_commitment_conflict_in_direct_mode_until_ws_b2() -> None:
+    case = AuroraReferenceFlowHarness().build_day3_study_resistance_case()
+    conflict_snapshot = SignalSnapshot.model_validate(
+        {
+            **case.snapshot.model_dump(mode="json"),
+            "snapshot_hash": "ss_stage4_routing_conflict_only",
+            "core_signals": {
+                "user_message": "考试突然提前了，我得马上调整明天安排。",
+                "commitment_conflict": "需要立刻改期",
+            },
+        }
+    )
+
+    decision = decide_backbone_route(
+        snapshot=conflict_snapshot,
+        policy=case.policy_version,
+        current_node=case.focus_contract.active_node,
+    )
+
+    assert decision.materiality.should_route is True
+    assert decision.routing_mode == RoutingMode.DIRECT
+    assert decision.route_kind == "stay"
+
+
 def test_backbone_route_marks_task_assistant_request_as_task_assistant_mode() -> None:
     case = AuroraReferenceFlowHarness().build_day3_study_resistance_case()
     assistant_snapshot = SignalSnapshot.model_validate(

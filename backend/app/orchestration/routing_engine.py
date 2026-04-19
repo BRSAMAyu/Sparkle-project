@@ -808,44 +808,6 @@ class RoutingEngineMixin:
         }
         return any(marker.lower() in lowered for marker in markers)
 
-    @staticmethod
-    def _stage4_frustration_signal(message: str) -> bool:
-        lowered = (message or "").lower()
-        markers = {
-            "做不下去",
-            "帮不到我",
-            "卡住了",
-            "崩了",
-            "frustrated",
-            "stuck",
-            "blocked",
-        }
-        return any(marker in lowered for marker in markers)
-
-    def _stage4_structural_topic_turns(
-        self,
-        user_message: str,
-        conversation_context: dict[str, Any] | None,
-    ) -> int:
-        if not self._is_complex_user_query(user_message):
-            return 0
-        count = 1
-        messages = (conversation_context or {}).get("messages") if isinstance(conversation_context, dict) else None
-        if not isinstance(messages, list):
-            return count
-        for item in reversed(messages):
-            if not isinstance(item, dict):
-                continue
-            if str(item.get("role") or "").strip().lower() != "user":
-                continue
-            content = str(item.get("content") or "")
-            if not self._is_complex_user_query(content):
-                break
-            count += 1
-            if count >= 3:
-                break
-        return count
-
     def _build_stage4_routing_snapshot(
         self,
         *,
@@ -853,13 +815,7 @@ class RoutingEngineMixin:
         user_message: str,
         conversation_context: dict[str, Any] | None,
     ) -> SignalSnapshot:
-        structural_turns = self._stage4_structural_topic_turns(user_message, conversation_context)
-        enhanced_signals: dict[str, Any] = {}
         optional_signals: dict[str, Any] = {}
-        if self._stage4_frustration_signal(user_message):
-            enhanced_signals["frustration_signal"] = True
-        if structural_turns >= 2:
-            optional_signals["structural_topic_turns"] = structural_turns
         if self._stage4_task_assistant_request(user_message):
             optional_signals["task_card_id"] = "stage4_task_assistant_candidate"
 
@@ -876,7 +832,7 @@ class RoutingEngineMixin:
             scenario_pack_id="stage4_routing_mode@v1",
             policy_version="aurora_policy@v1.0",
             core_signals={"user_message": user_message},
-            enhanced_signals=enhanced_signals,
+            enhanced_signals={},
             optional_signals=optional_signals,
             total_tokens=max(len(user_message), 1),
             budget_limit=4000,

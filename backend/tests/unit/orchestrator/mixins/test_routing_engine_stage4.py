@@ -90,3 +90,27 @@ def test_stage4_routing_mode_marks_task_assistant_candidate_without_workflow_jum
     assert "stage4_routing_mode:task_assistant" in updated.reason
     assert state.context_data["stage4_routing_mode"]["routing_mode"] == "task_assistant"
     assert state.context_data["stage4_task_assistant_candidate"] is True
+
+
+def test_stage4_routing_mode_keeps_frustration_signal_direct_until_ws_b2(orchestrator):
+    state = SimpleNamespace(context_data={})
+    route_decision = RouteDecision(
+        execution_mode="direct",
+        reason="unified:fallback",
+        risk_level="low",
+        confidence=0.7,
+    )
+
+    with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
+        updated = orchestrator._apply_stage4_routing_mode(
+            route_decision=route_decision,
+            state=state,
+            user_id=str(uuid.uuid4()),
+            user_message="我有点卡住了，但现在先别切模式。",
+            conversation_context=None,
+        )
+
+    assert updated.execution_mode == "direct"
+    assert updated.reason == "unified:fallback"
+    assert state.context_data["stage4_routing_mode"]["routing_mode"] == "direct"
+    assert "stage4_task_assistant_candidate" not in state.context_data

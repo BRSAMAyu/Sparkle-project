@@ -58,23 +58,16 @@ class BackboneRoutingDecision:
     routing_mode: RoutingMode = field(default=RoutingMode.DIRECT)
 
 
-def _classify_routing_mode(snapshot: SignalSnapshot, materiality: MaterialityCheck) -> RoutingMode:
+def _classify_routing_mode(snapshot: SignalSnapshot) -> RoutingMode:
     message = str(snapshot.core_signals.get("user_message") or "").strip().lower()
     optional = snapshot.optional_signals
-    enhanced = snapshot.enhanced_signals
-    core = snapshot.core_signals
 
     if optional.get("task_card_id") or any(marker.lower() in message for marker in _TASK_ASSISTANT_MARKERS):
         return RoutingMode.TASK_ASSISTANT
 
-    if (
-        materiality.should_route
-        or any(marker.lower() in message for marker in _PLANNING_MARKERS)
-        or int(optional.get("structural_topic_turns") or 0) >= 2
-        or bool(enhanced.get("frustration_signal"))
-        or bool(enhanced.get("repeated_failure"))
-        or bool(core.get("commitment_conflict"))
-    ):
+    # WS-B.1 owns only the routing seam. Escalation triggers remain reserved
+    # for the later WS-B.2 dispatch instead of being pre-spent here.
+    if any(marker.lower() in message for marker in _PLANNING_MARKERS):
         return RoutingMode.WORKFLOW
 
     return RoutingMode.DIRECT
@@ -89,7 +82,7 @@ def decide_backbone_route(
     """Stay on the current node unless a strong signal crosses policy materiality."""
 
     materiality = check_materiality(snapshot, policy)
-    routing_mode = _classify_routing_mode(snapshot, materiality)
+    routing_mode = _classify_routing_mode(snapshot)
     if not materiality.should_route:
         return BackboneRoutingDecision(
             should_stay=True,
