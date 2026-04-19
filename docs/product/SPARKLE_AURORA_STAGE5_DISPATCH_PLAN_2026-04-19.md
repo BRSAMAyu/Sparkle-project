@@ -1,6 +1,6 @@
 # SPARKLE Aurora Stage 5 Dispatch Plan (2026-04-19)
 
-> **Status**: Draft v0, awaiting multi-expert review and user sign-off
+> **Status**: Draft v1, awaiting user sign-off
 > **Depends on**:
 > - `SPARKLE_VISION_ANCHOR_LIST_2026-04-19.md` v3
 > - `SPARKLE_AURORA_STAGE4_DISPATCH_PLAN_2026-04-19.md`
@@ -15,6 +15,7 @@
 | Version | Changes | Source |
 | --- | --- | --- |
 | v0 | First Stage 5 draft after Stage 4 closeout. Re-anchors the next stage on user-visible closure, inherits Rule G/H/I, and converts Claude + MIMO review into a dispatchable plan skeleton. | Codex |
+| v1 | Absorb GLM-observer pre-review and Claude final-accept: split `Wave 1` into `Wave 1a / Wave 1b`, add deferred-breakpoint registry, quantify success criteria, and require the missing Stage 4 Rule I handoff artifact before `Gate S5-0`. | Codex |
 
 ---
 
@@ -280,6 +281,12 @@ MIMO is right that "data seen by Aurora" is not enough. If the language layer st
 
 - `WS-K1` learning-state fragment
 
+**Dispatch dependency**
+
+`WS-L1` must be dispatched only after `WS-K1` is accepted.
+
+It may not start from a stub or mock fragment, because the intervention-language contract has to be written against the real semantics of the learning-state signal rather than a placeholder interface.
+
 **Hard non-goals**
 
 - no chat-mode redesign
@@ -420,7 +427,8 @@ Indirect only. This workstream is accepted as a support lane because it enables 
 
 | Wave | Parallel Agents | Scope | Intent |
 | --- | --- | --- | --- |
-| `Wave 1` | `3` | `WS-K1`, `WS-L1`, `WS-R1` | close first user-visible loop |
+| `Wave 1a` | `2` | `WS-K1`, `WS-R1` | build the real signal fragment and the execution-side loop in parallel |
+| `Wave 1b` | `1` | `WS-L1` | write the intervention-language contract against the accepted `WS-K1` fragment |
 | `Wave 2` | `2` | `WS-G1`, `WS-S1` | add growth signals and prepare next control surfaces |
 | `Wave 3` | `1` | integration, review findings, closeout docs | consolidate and freeze |
 
@@ -429,6 +437,7 @@ Indirect only. This workstream is accepted as a support lane because it enables 
 This order is deliberate:
 
 - first close what the user can feel
+- first use real signal semantics, not mock semantics
 - then expand what Aurora can sense
 - only then spend more budget on future shadow depth
 
@@ -440,13 +449,14 @@ This order is deliberate:
 
 Required before execution:
 
+- `SPARKLE_AURORA_STAGE4_HANDOFF_2026-04-20.md` is landed as the missing Rule I closeout artifact for Stage 4
 - user signs this draft or its amended successor
 - `GLM-observer` pre-review completed
 - Claude final design review completed
 
 ### Gate `S5-1` — User-Value Loop Baseline
 
-Required after `Wave 1`:
+Required after `Wave 1a` and `Wave 1b`:
 
 1. learning-state fragment is present and tested
 2. intervention-language contract is landed
@@ -479,11 +489,22 @@ Required to call Stage 5 complete:
 
 Stage 5 should only be called a success if all of the following are true:
 
-1. at least one user-visible closure loop is stronger than at Stage 4 closeout
-2. intervention language is more explicitly governed by anchor §3.3
-3. error / mastery / growth signals are more stably available to Aurora than before
-4. replanner output is no longer a mostly hidden subsystem
-5. shadow expansion happened without swallowing the stage's purpose
+1. **7-phase progression** advances from the current `1 / 7` baseline to at least `3 / 7`.
+   - Minimum intended movement:
+   - `Execute -> Reflect`
+   - `Reflect -> Adapt`
+2. **Breakpoint coverage** moves at least `3` items from "unrepaired" to "visibly advanced".
+   - Required public count includes:
+   - `#1 adaptive_replanner -> execution`
+   - `#2 error / mastery -> profile`
+   - intervention language system
+3. **Data-utilization ratio** shows at least one measurable improvement across the four-layer chain.
+   - The closeout artifact must publish at least one concrete before/after number.
+4. **Dual-core cooperation** advances from the current `0.3 / 1` baseline to at least `0.6 / 1`.
+   - Minimum proof:
+   - at least one end-to-end `cognitive discovery -> execution adjustment -> outcome feedback` path
+5. **P1-P5 constitutional posture** remains all green with no newly introduced violation.
+6. **Test baseline** remains green for all touched Stage 5 surfaces.
 
 ### What does **not** count as success
 
@@ -493,7 +514,23 @@ Stage 5 should only be called a success if all of the following are true:
 
 ---
 
-## 11. Draft Entry Conditions for Stage 6
+## 11. Deferred Breakpoints
+
+Stage 5 does not try to solve every known breakpoint. The following registry makes the deferrals explicit:
+
+| Breakpoint | Stage 5 handling | Suggested next home |
+| --- | --- | --- |
+| `#1 adaptive_replanner -> execution` | **in Stage 5** via `WS-R1` | first-tier |
+| `#2 error / mastery -> profile` | **in Stage 5** via `WS-K1` | first-tier |
+| intervention language system | **in Stage 5** via `WS-L1` | first-tier |
+| `#3 plan health no event` | deferred | Stage 6 |
+| `#4 push time-only` | deferred | Stage 6 or dedicated behavior-trigger stage |
+| `#5 cognitive_adjustments text-only` | deferred | Stage 6 |
+| `#6 intervention verification / feedback return` | deferred | Stage 6, after Stage 5 establishes the first one-way closure paths |
+
+---
+
+## 12. Draft Entry Conditions for Stage 6
 
 If Stage 5 succeeds, Stage 6 should inherit:
 
@@ -510,16 +547,17 @@ Stage 6 should **not** have to reopen:
 
 ---
 
-## 12. Immediate Recommended Next Step
+## 13. Immediate Recommended Next Step
 
 If this draft direction is accepted, the next moves should be:
 
 1. expert review on this dispatch plan draft
 2. amend if needed
 3. land the signed Stage 5 dispatch plan
-4. dispatch `Wave 1` first:
+4. dispatch `Wave 1a` first:
    - `WS-K1`
-   - `WS-L1`
    - `WS-R1`
+5. dispatch `Wave 1b` only after `WS-K1` is accepted:
+   - `WS-L1`
 
 Only after `Gate S5-1` should `WS-G1` and `WS-S1` be dispatched.
