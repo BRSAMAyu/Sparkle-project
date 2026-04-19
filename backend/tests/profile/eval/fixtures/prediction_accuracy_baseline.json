@@ -1,0 +1,41 @@
+{
+  "schema_version": "stage6.eval.v1",
+  "evaluation_focus": "prediction_accuracy",
+  "runner_mode": "skeleton_only",
+  "write_scope": "evaluation_records_only",
+  "llm_runtime": "not_attached",
+  "metrics": [
+    {
+      "metric_id": "overload_risk_precision",
+      "description": "Check whether a high overload prediction is later supported by observed overload evidence.",
+      "expected_signal_family": "prediction_summaries"
+    },
+    {
+      "metric_id": "planning_readiness_alignment",
+      "description": "Check whether planning_readiness guidance aligns with the next observed planning outcome.",
+      "expected_signal_family": "prediction_summaries"
+    }
+  ],
+  "fixture_cases": [
+    {
+      "case_id": "prediction-overload-high-001",
+      "status": "ready_for_runner",
+      "prompt_context": {
+        "prediction_key": "overload_risk",
+        "predicted_level": "high",
+        "supporting_signals": [
+          "recent_mastery_changes",
+          "error_summary"
+        ]
+      },
+      "expected_observation": {
+        "verification_window": "7d",
+        "success_if": "subsequent evidence confirms overload or recovery intervention was necessary"
+      }
+    }
+  ],
+  "acceptance_questions": [
+    "Can we compare predicted risk levels against later evidence without writing back into the profile fact layer?",
+    "Is the fixture shape sufficient for a future read-only evaluation runner?"
+  ]
+}

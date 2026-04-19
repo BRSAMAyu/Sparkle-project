@@ -1,0 +1,38 @@
+{
+  "schema_version": "stage6.eval.v1",
+  "evaluation_focus": "calibration_effectiveness",
+  "runner_mode": "skeleton_only",
+  "write_scope": "evaluation_records_only",
+  "llm_runtime": "not_attached",
+  "metrics": [
+    {
+      "metric_id": "signal_demotion_stickiness",
+      "description": "Check whether corrected signals remain demoted across subsequent compilations.",
+      "expected_signal_family": "calibration_summary"
+    },
+    {
+      "metric_id": "hypothesis_promotion_retention",
+      "description": "Check whether promoted hypotheses remain stable after effective outcomes.",
+      "expected_signal_family": "calibration_summary"
+    }
+  ],
+  "fixture_cases": [
+    {
+      "case_id": "calibration-signal-demotion-001",
+      "status": "ready_for_runner",
+      "prompt_context": {
+        "correction_type": "wrong",
+        "target_signal_id": "achievement_motivation_response",
+        "pre_calibration_confidence": 0.82
+      },
+      "expected_observation": {
+        "verification_window": "next_compile",
+        "success_if": "confidence is lowered and freshness is reduced without mutating raw evidence"
+      }
+    }
+  ],
+  "acceptance_questions": [
+    "Does the calibration path stay read-only on fact data while still surfacing evaluation signals?",
+    "Are the retained/demoted states explicit enough for a later runner to score?"
+  ]
+}

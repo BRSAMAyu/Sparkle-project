@@ -1,0 +1,38 @@
+{
+  "schema_version": "stage6.eval.v1",
+  "evaluation_focus": "freshness_validation",
+  "runner_mode": "skeleton_only",
+  "write_scope": "evaluation_records_only",
+  "llm_runtime": "not_attached",
+  "metrics": [
+    {
+      "metric_id": "freshness_label_alignment",
+      "description": "Check whether freshness labels match the age of supporting evidence.",
+      "expected_signal_family": "freshness_metadata"
+    },
+    {
+      "metric_id": "staleness_window_breach_rate",
+      "description": "Track how often stale evidence remains marked as medium or high freshness.",
+      "expected_signal_family": "freshness_metadata"
+    }
+  ],
+  "fixture_cases": [
+    {
+      "case_id": "freshness-aging-001",
+      "status": "draft",
+      "prompt_context": {
+        "signal_id": "peak_focus_hours",
+        "freshness_label": "high",
+        "evidence_age_days": 45
+      },
+      "expected_observation": {
+        "verification_window": "eval_runner_only",
+        "success_if": "runner flags mismatch between freshness label and evidence age"
+      }
+    }
+  ],
+  "acceptance_questions": [
+    "Can a future runner score freshness mismatches without changing compilation logic?",
+    "Does the fixture shape preserve enough evidence to compare label vs age?"
+  ]
+}
