@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-19
-> **版本**: v7（Stage 9 完成 + 用户前门落地）
+> **版本**: v8（Stage 10 完成 + evidence 可点击 + graph 诊断面落地）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -466,17 +466,30 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 - prompt / inference utilization 不再是口头判断，而是有正式 metric carrier
 - evaluator 不再只是硬编码 fixture scorer，而是 rubric-driven、可诊断、仍保持 `evaluation_records_only`
 
-### 9.7 显式延后挂牌（Stage 9 收尾后）
+### 9.7 Stage 10 完成（3 WS accept，信任链深化）
+
+| WS | 内容 | 状态 |
+|----|------|------|
+| WS-EV3 | evaluator real LLM-judge 接线（Rule S，只写 evaluation_records） | ✅ accept |
+| WS-EVD1 | in-chat profile front door evidence_resolution：`source_markers_only` → `l0_clickable_refs` | ✅ accept |
+| WS-G2D | graph-as-diagnostic 用户诊断面（“我哪里弱” chat-native card） | ✅ accept |
+
+**Stage 10 关键成果**：
+- 用户第一次能从聊天里的画像 claim 直接点回允许暴露的 `L0` 依据引用，而不只是看来源标签
+- evaluator 第一次有了真实 judge attachment 路径，并且 timeout / unavailable 时能优雅降级，不破坏 `evaluation_records_only`
+- graph 系统第一次不只是基础设施或节点浏览器，而是能回答“我哪里弱”的诊断面
+
+### 9.8 显式延后挂牌（Stage 10 收尾后）
 
 | 项目 | 来源 | 状态 | 下一归属 |
 |------|------|------|----------|
-| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 10 candidate |
-| 可点击的逐条 L0 evidence id | WS-IC1/Rule Q 精度尾债 | deferred | Stage 10 candidate |
-| graph-as-diagnostic 产品化 | 长期愿景 | deferred | Stage 10+ candidate |
-| continuous learning / distillation 用户面集成 | 长期愿景 | deferred | Stage 10+ candidate |
-| evaluator production LLM judge | WS-EV2 后续增强 | deferred | Stage 10+ candidate |
+| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 11 candidate |
+| continuous learning / distillation 用户面集成 | 长期愿景 | deferred | Stage 11+ candidate |
+| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 11 candidate |
+| EV3 live judge latency / availability 硬化 | WS-EV3 深化 | deferred | Stage 11 candidate |
+| dual interaction mode | 长期愿景 | deferred | Stage 11+ candidate |
 
-### 9.8 愿景锚点 vs 当前覆盖
+### 9.9 愿景锚点 vs 当前覆盖
 
 | 愿景锚点 | 覆盖度 | 说明 |
 |----------|--------|------|
@@ -485,15 +498,16 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | TaskGuidance 双版本 | ✅ Stage 4 | sidecar + UI |
 | 任务助手降级 | ✅ Stage 4 | 单核 + 5 项注入 + dormant |
 | 5-P 宪法执行 | ✅ Stage 4-8 | P1-P5 全部绿色 |
-| 用户模型五层架构 | ✅ Stage 6-9 | Rule K + 影子模型 + compiler 归一 + evaluator + CI guard + chat front door |
-| 交互式校准 | ✅ Stage 7-9 | 后端环 + 前端消费 + fallback telemetry + in-chat query/correction |
+| 用户模型五层架构 | ✅ Stage 6-10 | Rule K + 影子模型 + compiler 归一 + evaluator + CI guard + chat front door + judge/evidence deepen |
+| 交互式校准 | ✅ Stage 7-10 | 后端环 + 前端消费 + fallback telemetry + in-chat query/correction + clickable evidence |
 | 7 个产品断点 | ✅ Stage 8 | #1/#2/#3/#4/#5/#6 + 干预语言全部收口 |
 | 数据泄漏修复 | 🔶 部分 | 渲染管线已修（WS-RP1）；utilization 已可观测，但 tokenizer-aware 精度尾债仍在 |
 | 双核协作闭环 | 🔶 0.6/1 | Stage 5 建了一条通路，非完整双向 |
+| graph-as-diagnostic | ✅ Stage 10 | chat-native “我哪里弱” 诊断面已落地；Galaxy 专页深化仍可继续 |
 | 持续学习三层结构 | ❌ 未来 | Stage 8+ |
 | 双交互模式 | ❌ 未来 | Stage 8+ |
 
-### 9.9 距离评估
+### 9.10 距离评估
 
 **用"7 阶段成长环"做标尺**：
 - Sense → Clarify → Plan：Stage 4 ✅
@@ -506,6 +520,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 - Stage 7 WS-V2 是系统第一次用户能在手机上感知的画像闭环
 - Stage 8 之后，用户昨天发生的摩擦更容易被系统接住：plan-health、behavior-trigger push、bounded steering 都已有闭环证据
 - Stage 9 之后，用户不再只能去设置页看画像，而是能在聊天里直接问、直接纠，这是真正的“用户前门”
+- Stage 10 之后，用户不仅能看到系统怎么想，还能点开依据、并直接问“我哪里弱”，信任链和诊断链都更具体了
 - 从 Stage 4 "用户感知 Aurora 价值接近零" 到 Stage 9 "画像可见、可问、可纠，日常环能接住变化"，有实质跃迁
 
 **用"断点收口"做标尺**：
@@ -559,6 +574,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | v5 | 2026-04-19 | Stage 7 final-accept 通过（4 WS accept，143 tests green，Rule G/H/I/J/K/L/M 零违规）；系统第一次有用户能在手机上感知的画像闭环（WS-V2）；compiler 边界清晰（WS-C1 委托模式）；eval runner 可执行（WS-E2）；GLM 4 项 P2 发现纳入 Stage 8 处理；Stage 8 入口条件定义（#3/#4/#5 最后一次 deferral + Rule K CI 检测必收）；愿景覆盖表更新：交互式校准从🔶升为✅ |
 | v6 | 2026-04-20 | Stage 8 完成（5 WS accept，144 baseline tests green，Stage 8 sweep 50 green，mobile user surface 13 tests green）；Rule K 第一次进入本地/CI 硬护栏；Stage 5 遗留断点 #3/#4/#5 全部收口；dual-core bounded steering 落地到受治理的 session strategy lane；透明度 fallback telemetry 可观测；愿景覆盖表更新：7 个产品断点从🔶升为✅ |
 | v7 | 2026-04-20 | Stage 9 完成（4 WS accept，Stage 8 baseline 144 green，Stage 9 backend sweep 27 green，mobile Stage 9 sweep 15 green）；用户前门成立：canonical 画像可在聊天里直接查询与纠正；User Correction lane 明确与 Aurora / L3 / strategy lane 分离；prompt / inference utilization 有正式度量载体；evaluator 从硬编码 scorer 升级为 rubric-driven，支持 optional LLM-attached 元数据 |
+| v8 | 2026-04-20 | Stage 10 完成（3 WS accept，Stage 9 frozen baseline 144 green，Stage 10 backend sweep 31 green，mobile Stage 10 sweep 17 green，Rule K guard 35 files / 0 violation）；画像前门从 source markers 升级为 clickable L0 evidence refs；evaluator 接上 real LLM-judge attachment path 并具备 graceful fallback；graph-as-diagnostic 首次成为用户可见的“我哪里弱”诊断面 |
 
 ---
 
