@@ -58,6 +58,7 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "situation_brief_section": (140, 0.12),
     "decision_policy_section": (110, 0.08),
     "user_material_grounding_section": (120, 0.08),
+    "intervention_language_contract_section": (90, 0.06),
     "context_briefing_section": (80, 0.05),
     "intent_section": (100, 0.08),
     "session_feedback_section": (60, 0.05),
@@ -173,6 +174,61 @@ def _describe_truth_style(style: str) -> str:
         "direct_structured": "表达上更强调清晰、结构和结论先行",
         "gentle_reflective": "表达上更偏向陪着想清楚，再慢慢落到结论",
     }.get(style, "表达上保持真实、清晰和有分寸")
+
+
+def _format_intervention_language_contract_section(
+    *,
+    user_context: dict[str, Any],
+    prompt_signal_telemetry: dict[str, Any] | None = None,
+) -> str:
+    if not isinstance(user_context, dict):
+        return ""
+
+    learning_state_fragment = user_context.get("learning_state_fragment")
+    if not isinstance(learning_state_fragment, dict):
+        situation_brief = user_context.get("situation_brief")
+        if isinstance(situation_brief, dict):
+            learning_state_fragment = situation_brief.get("learning_state_fragment")
+
+    pain_visible = False
+    win_visible = False
+    if isinstance(prompt_signal_telemetry, dict):
+        high_value_fields = prompt_signal_telemetry.get("high_value_fields") or {}
+        if isinstance(high_value_fields, dict):
+            pain_visible = bool(
+                high_value_fields.get("error_summary", {}).get("rendered")
+                or high_value_fields.get("recent_errors", {}).get("rendered")
+            )
+            win_visible = bool(high_value_fields.get("recent_mastery_changes", {}).get("rendered"))
+
+    has_fragment = isinstance(learning_state_fragment, dict) and bool(learning_state_fragment)
+    if not (pain_visible or win_visible or has_fragment):
+        return ""
+
+    signal_note = ""
+    if pain_visible and win_visible:
+        signal_note = "信号：痛点+进展并存，先承接推进，再提一个最小下一步。"
+    elif pain_visible:
+        signal_note = "信号：痛点主导，先站到用户同侧，不先下失败判词。"
+    elif win_visible:
+        signal_note = "信号：进展主导，先肯定已有推进，再谈放大。"
+    elif has_fragment:
+        signal_note = "信号：读取到 learning_state_fragment，先承接痛点与进展，再决定下一步。"
+
+    lines = [
+        "## 干预语言契约 [L2 引导]",
+        "适用：近期痛点 / 近期进展 / `learning_state_fragment`。",
+        "关系：Sparkle 是朋友，不是教练、工具或队友；像 a friend helping me restart。",
+    ]
+    if signal_note:
+        lines.append(signal_note)
+    lines.extend(
+        [
+            "Anchor §3.3：不审判；不羞辱；不替用户做道德评价；不先说“你又失败了”；先站到用户同侧；优先好奇和重新启动，不造羞耻和焦虑。",
+            "执行：先承接已有进展，再给最小可行改动。",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _truncate_section(content: str, *, target_tokens: int) -> str:
@@ -314,6 +370,8 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 {situation_brief_section}
 
 {decision_policy_section}
+
+{intervention_language_contract_section}
 
 {user_material_grounding_section}
 
@@ -936,6 +994,10 @@ def build_system_prompt(
     decision_policy_section = _format_decision_policy_section(user_context=user_context)
     planning_strategy_section = _format_planning_strategy_section(user_context=user_context)
     user_material_grounding_section = _format_user_material_grounding_section(user_context=user_context)
+    intervention_language_contract_section = _format_intervention_language_contract_section(
+        user_context=user_context,
+        prompt_signal_telemetry=prompt_signal_telemetry,
+    )
 
     agent_memory_section = ""
     if agent_memory_context:
@@ -1066,6 +1128,7 @@ def build_system_prompt(
         "decision_policy_section": decision_policy_section,
         "planning_strategy_section": planning_strategy_section,
         "user_material_grounding_section": user_material_grounding_section,
+        "intervention_language_contract_section": intervention_language_contract_section,
         "context_briefing_section": context_briefing_section,
         "visible_intelligence_section": visible_intelligence_section,
         "intent_section": intent_section,
@@ -1110,6 +1173,7 @@ def build_system_prompt(
             "decision_policy_section": 1,
             "planning_strategy_section": 1,
             "user_material_grounding_section": 1,
+            "intervention_language_contract_section": 1,
             "context_briefing_section": 0,
             "visible_intelligence_section": 1,
             "intent_section": 1,
@@ -1138,6 +1202,7 @@ def build_system_prompt(
     decision_policy_section = section_map["decision_policy_section"]
     planning_strategy_section = section_map["planning_strategy_section"]
     user_material_grounding_section = section_map["user_material_grounding_section"]
+    intervention_language_contract_section = section_map["intervention_language_contract_section"]
     context_briefing_section = section_map["context_briefing_section"]
     visible_intelligence_section = section_map["visible_intelligence_section"]
     intent_section = section_map["intent_section"]
@@ -1219,6 +1284,7 @@ def build_system_prompt(
                 decision_policy_section=decision_policy_section,
                 planning_strategy_section=planning_strategy_section,
                 user_material_grounding_section=user_material_grounding_section,
+                intervention_language_contract_section=intervention_language_contract_section,
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
                 cognitive_prism_section=cognitive_prism_section,
@@ -1237,6 +1303,7 @@ def build_system_prompt(
                 decision_policy_section,
                 planning_strategy_section,
                 user_material_grounding_section,
+                intervention_language_contract_section,
                 plan_context_section,
                 conversation_history_section,
                 context_briefing_section,
@@ -1273,6 +1340,7 @@ def build_system_prompt(
                 decision_policy_section=decision_policy_section,
                 planning_strategy_section=planning_strategy_section,
                 user_material_grounding_section=user_material_grounding_section,
+                intervention_language_contract_section=intervention_language_contract_section,
             )
         )
 
@@ -1287,6 +1355,7 @@ def build_system_prompt(
             decision_policy_section,
             planning_strategy_section,
             user_material_grounding_section,
+            intervention_language_contract_section,
             plan_context_section,
             conversation_history_section,
             context_briefing_section,
