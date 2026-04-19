@@ -28,8 +28,10 @@ import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.d
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_mode_transition_banner.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.dart';
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
+import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
@@ -1292,6 +1294,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             const SparkleStaggerItem(
               index: 2,
               child: ChatModeSelectorPill(),
+            ),
+            const SizedBox(height: DS.spacing8),
+            const SparkleStaggerItem(
+              index: 3,
+              child: GuidanceModeToggle(),
+            ),
+            Builder(
+              builder: (context) {
+                final transitions = ref.watch(modeTransitionHistoryProvider);
+                if (transitions.isNotEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: DS.spacing4),
+                    child: ChatModeTransitionBanner(
+                      transition: transitions.last,
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
             const SizedBox(height: DS.spacing2),
           ],

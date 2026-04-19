@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -39,7 +38,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
+            if (isDark) DS.surfaceSecondary else DS.surfacePrimaryElevated,
             Color.alphaBlend(
               DS.info.withValues(alpha: 0.04),
               DS.surfacePrimary,
@@ -99,7 +98,7 @@ class ChatModeSelectorSheet extends ConsumerWidget {
 
             const Divider(height: 1),
 
-            // Mode options
+            // Mode options — grouped by purpose for discoverability
             ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.7,
@@ -108,52 +107,51 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ...ChatMode.values.map(
-                      (mode) => _ModeListTile(
-                        mode: mode,
-                        isSelected: currentMode == mode,
-                        isDark: isDark,
-                      ),
+                    // Quick Chat section — standard mode only
+                    _SectionHeader(
+                      title: context.l10n.chatModeSectionQuickChat,
+                      isDark: isDark,
                     ),
-                    // Custom team builder — positioned between modes and experts
-                    const SizedBox(height: DS.spacing8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing20,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          context.l10n.chatModeCustomTeamLabel,
-                          style: TextStyle(
-                            fontSize: DS.fontSizeXs,
-                            fontWeight: DS.fontWeightSemibold,
-                            color: DS.neutral500,
-                          ),
-                        ),
-                      ),
+                    _ModeListTile(
+                      mode: ChatModeStandard(),
+                      isSelected: currentMode is ChatModeStandard,
+                      isDark: isDark,
                     ),
-                    const SizedBox(height: DS.spacing8),
+
+                    // Deep Workflows section — multi-agent workflow modes
+                    _SectionHeader(
+                      title: context.l10n.chatModeSectionDeepWork,
+                      isDark: isDark,
+                    ),
+                    _ModeListTile(
+                      mode: ChatModeDeepAnalysis(),
+                      isSelected: currentMode is ChatModeDeepAnalysis,
+                      isDark: isDark,
+                    ),
+                    _ModeListTile(
+                      mode: ChatModeStudyPlan(),
+                      isSelected: currentMode is ChatModeStudyPlan,
+                      isDark: isDark,
+                    ),
+                    _ModeListTile(
+                      mode: ChatModeErrorDiagnosis(),
+                      isSelected: currentMode is ChatModeErrorDiagnosis,
+                      isDark: isDark,
+                    ),
+
+                    // Expert Access section — auto + direct + custom teams
+                    _SectionHeader(
+                      title: context.l10n.chatModeSectionExpertAccess,
+                      isDark: isDark,
+                    ),
+                    _ModeListTile(
+                      mode: ChatModeExpertAuto(),
+                      isSelected: currentMode is ChatModeExpertAuto,
+                      isDark: isDark,
+                    ),
                     _TeamEntryTile(isDark: isDark),
                     if (expertModes.isNotEmpty) ...[
-                      const SizedBox(height: DS.spacing8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing20,
-                        ),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            context.l10n.chatModeExpertDirect,
-                            style: TextStyle(
-                              fontSize: DS.fontSizeXs,
-                              fontWeight: DS.fontWeightSemibold,
-                              color: DS.neutral500,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: DS.spacing8),
+                      const SizedBox(height: DS.spacing4),
                       ...expertModes.map(
                         (mode) => _ModeListTile(
                           mode: mode,
@@ -177,6 +175,35 @@ class ChatModeSelectorSheet extends ConsumerWidget {
 /// Sentinel returned when user wants to open the team builder instead of
 /// selecting a predefined mode.
 const openTeamBuilderSentinel = '_open_team_builder_';
+
+/// Section header for grouping modes by purpose.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.isDark});
+
+  final String title;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing20,
+          DS.spacing12,
+          DS.spacing20,
+          DS.spacing4,
+        ),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              fontWeight: DS.fontWeightSemibold,
+              color: DS.neutral500,
+            ),
+          ),
+        ),
+      );
+}
 
 class _TeamEntryTile extends StatelessWidget {
   const _TeamEntryTile({required this.isDark});

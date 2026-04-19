@@ -7337,6 +7337,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatModeSwitch => 'Chat Mode Switch';
 
   @override
+  String get chatModeSectionQuickChat => 'Quick Chat';
+
+  @override
+  String get chatModeSectionDeepWork => 'Deep Workflows';
+
+  @override
+  String get chatModeSectionExpertAccess => 'Expert Access';
+
+  @override
+  String chatModeTransitionToWorkflow(String mode) =>
+      'Switched to $mode — multi-expert collaboration active';
+
+  @override
+  String get chatModeTransitionToDirect => 'Returned to standard chat';
+
+  @override
+  String chatModeTransitionSwitched(String mode) => 'Switched to $mode';
+
+  @override
+  String get capabilityCeilingTitle => 'Capability Limit';
+
+  @override
+  String get capabilityCeilingDefault =>
+      'The current mode may not fully resolve this';
+
+  @override
+  String get capabilityCeilingAlternatives => 'Try a more capable mode:';
+
+  @override
+  String get capabilityCeilingContinue => 'Continue anyway';
+
+  @override
+  String get guidanceModeAi => 'AI Guide';
+
+  @override
+  String get guidanceModeSelf => 'Self Explore';
+
+  @override
   String get chatMultiAgentCollab => 'Chat Multi Agent Collab';
 
   @override

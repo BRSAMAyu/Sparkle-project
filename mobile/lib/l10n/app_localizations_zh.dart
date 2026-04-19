@@ -7065,6 +7065,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatModeSwitch => '切换模式';
 
   @override
+  String get chatModeSectionQuickChat => '快速对话';
+
+  @override
+  String get chatModeSectionDeepWork => '深度工作流';
+
+  @override
+  String get chatModeSectionExpertAccess => '专家协助';
+
+  @override
+  String chatModeTransitionToWorkflow(String mode) =>
+      '已切换至$mode，多专家将协作分析';
+
+  @override
+  String get chatModeTransitionToDirect => '已回到标准对话模式';
+
+  @override
+  String chatModeTransitionSwitched(String mode) => '已切换至$mode';
+
+  @override
+  String get capabilityCeilingTitle => '能力边界提示';
+
+  @override
+  String get capabilityCeilingDefault => '当前模式可能无法完全解决此问题';
+
+  @override
+  String get capabilityCeilingAlternatives => '试试更强的模式：';
+
+  @override
+  String get capabilityCeilingContinue => '仍然继续';
+
+  @override
+  String get guidanceModeAi => 'AI 引导';
+
+  @override
+  String get guidanceModeSelf => '自主探索';
+
+  @override
   String get chatMultiAgentCollab => '多智能体协作';
 
   @override

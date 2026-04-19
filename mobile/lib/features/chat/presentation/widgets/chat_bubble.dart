@@ -23,6 +23,7 @@ import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+import 'package:sparkle/features/chat/presentation/widgets/capability_ceiling_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
@@ -1157,6 +1158,21 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                 ),
                               ),
                             if (!chatPureMode &&
+                                !isUser &&
+                                modeSuggestion != null &&
+                                modeSuggestion['capability_ceiling'] == true &&
+                                showExpandedInformationalAccessories)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8.0,
+                                  right: 8.0,
+                                  left: 8.0,
+                                ),
+                                child: CapabilityCeilingCard(
+                                  ceilingData: modeSuggestion,
+                                ),
+                              )
+                            else if (!chatPureMode &&
                                 !isUser &&
                                 modeSuggestion != null &&
                                 showExpandedInformationalAccessories)

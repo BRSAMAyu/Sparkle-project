@@ -29,6 +29,7 @@ import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.da
 import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
+import 'package:sparkle/features/chat/presentation/providers/guidance_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart';
@@ -968,6 +969,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final extraContext = <String, dynamic>{
         if (selectedPlanId != null) 'plan_id': selectedPlanId,
         'reasoning_mode': reasoningMode,
+        'guidance_mode': _ref.read(guidanceModeProvider).name,
         'seed_library_enabled': seedLibraryEnabled,
         if (seedLibraryEnabled) ...{
           'active_seed_library_ids':

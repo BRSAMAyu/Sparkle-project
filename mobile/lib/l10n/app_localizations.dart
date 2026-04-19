@@ -13190,6 +13190,78 @@ abstract class AppLocalizations {
   /// **'切换模式'**
   String get chatModeSwitch;
 
+  /// No description provided for @chatModeSectionQuickChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速对话'**
+  String get chatModeSectionQuickChat;
+
+  /// No description provided for @chatModeSectionDeepWork.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度工作流'**
+  String get chatModeSectionDeepWork;
+
+  /// No description provided for @chatModeSectionExpertAccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家协助'**
+  String get chatModeSectionExpertAccess;
+
+  /// No description provided for @chatModeTransitionToWorkflow.
+  ///
+  /// In zh, this message translates to:
+  /// **'已切换至{mode}，多专家将协作分析'**
+  String chatModeTransitionToWorkflow(String mode);
+
+  /// No description provided for @chatModeTransitionToDirect.
+  ///
+  /// In zh, this message translates to:
+  /// **'已回到标准对话模式'**
+  String get chatModeTransitionToDirect;
+
+  /// No description provided for @chatModeTransitionSwitched.
+  ///
+  /// In zh, this message translates to:
+  /// **'已切换至{mode}'**
+  String chatModeTransitionSwitched(String mode);
+
+  /// No description provided for @capabilityCeilingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'能力边界提示'**
+  String get capabilityCeilingTitle;
+
+  /// No description provided for @capabilityCeilingDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前模式可能无法完全解决此问题'**
+  String get capabilityCeilingDefault;
+
+  /// No description provided for @capabilityCeilingAlternatives.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试更强的模式：'**
+  String get capabilityCeilingAlternatives;
+
+  /// No description provided for @capabilityCeilingContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'仍然继续'**
+  String get capabilityCeilingContinue;
+
+  /// No description provided for @guidanceModeAi.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 引导'**
+  String get guidanceModeAi;
+
+  /// No description provided for @guidanceModeSelf.
+  ///
+  /// In zh, this message translates to:
+  /// **'自主探索'**
+  String get guidanceModeSelf;
+
   /// No description provided for @chatMultiAgentCollab.
   ///
   /// In zh, this message translates to:
