@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.core.cache import cache_service
 from app.orchestration.situation_brief import SituationBriefBuilder
+from app.services.graph_reasoning_service import GraphReasoningService
 from app.services.profile_front_door_service import ProfileFrontDoorService
 from app.services.profile_insight_control_service import ProfileInsightControlService
 from app.services.user_strategy_state_service import UserStrategyStateService
@@ -83,6 +84,10 @@ class ApplyProfileCorrectionParams(BaseModel):
         default=None,
         description="Optional explicit replacement value when correcting an adjustable inferred field.",
     )
+
+
+class GetGraphDiagnosticSurfaceParams(BaseModel):
+    limit: int = Field(default=3, ge=1, le=5, description="Max items per weak / at-risk section.")
 
 
 def _runtime_redis(db_session: Any):
@@ -488,4 +493,42 @@ class ApplyProfileCorrectionTool(BaseTool):
             },
             widget_type="profile_front_door",
             widget_data=after_payload,
+        )
+
+
+class GetGraphDiagnosticSurfaceTool(BaseTool):
+    name = "get_graph_diagnostic_surface"
+    description = (
+        "Read a graph-derived diagnostic surface for questions like "
+        "'我哪里弱' or 'which knowledge areas are currently weakest'. "
+        "This is a read-only graph / galaxy diagnostic path."
+    )
+    category = ToolCategory.GROWTH
+    parameters_schema = GetGraphDiagnosticSurfaceParams
+
+    async def execute(
+        self,
+        params: GetGraphDiagnosticSurfaceParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None = None,
+    ) -> ToolResult:
+        snapshot = await GraphReasoningService(db_session).build_diagnostic_snapshot(
+            UUID(user_id),
+            limit=params.limit,
+        )
+        payload = {
+            "title": "你当前最薄弱的知识点",
+            "headline": "图谱诊断面",
+            **snapshot,
+            "read_lane": "graph_diagnostic_surface",
+            "binding_note": "这个诊断面只消费现有 graph / mastery 数据，不会直接改写任何用户状态。",
+        }
+        return ToolResult(
+            success=True,
+            tool_name=self.name,
+            tool_call_id=tool_call_id,
+            data={"graph_diagnostic_surface": payload},
+            widget_type="graph_diagnostic",
+            widget_data=payload,
         )

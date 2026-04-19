@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -23,6 +23,8 @@ from app.tools.growth_strategy_tools import (
     AdjustUserStrategyStateTool,
     ApplyProfileCorrectionParams,
     ApplyProfileCorrectionTool,
+    GetGraphDiagnosticSurfaceParams,
+    GetGraphDiagnosticSurfaceTool,
     GetProfileFrontDoorParams,
     GetProfileFrontDoorTool,
     GetSituationBriefParams,
@@ -101,6 +103,7 @@ async def test_growth_tools_register_in_dynamic_registry():
         assert registry.get_tool("get_user_strategy_state") is not None
         assert registry.get_tool("get_profile_front_door") is not None
         assert registry.get_tool("apply_profile_correction") is not None
+        assert registry.get_tool("get_graph_diagnostic_surface") is not None
         assert registry.get_tool("adjust_user_strategy_state") is not None
         assert registry.get_tool("retrieve_user_material") is not None
         assert registry.get_tool("get_intervention_track_record") is not None
@@ -300,6 +303,44 @@ async def test_apply_profile_correction_tool_uses_user_correction_lane(db_sessio
     corrections = (await db_session.execute(select(MemoryCorrection).where(MemoryCorrection.user_id == user_id))).scalars().all()
     assert corrections
     assert corrections[0].action == "wrong"
+
+
+@pytest.mark.asyncio
+async def test_get_graph_diagnostic_surface_tool_returns_graph_widget_payload():
+    with patch(
+        "app.tools.growth_strategy_tools.GraphReasoningService.build_diagnostic_snapshot",
+        AsyncMock(
+            return_value={
+                "status": "ok",
+                "summary": "当前最弱的是热力学第二定律。",
+                "weak_nodes": [
+                    {
+                        "node_id": "node-1",
+                        "node_name": "热力学第二定律",
+                        "mastery": 41.0,
+                        "status": "weak",
+                        "why": "掌握度已经落到明显偏低区间。",
+                        "route": "/galaxy/node/node-1",
+                        "prompt": "带我看看这个点为什么会卡住。",
+                    }
+                ],
+                "at_risk_nodes": [],
+                "recommended_next_review": [],
+                "graph_basis": {"source": "graph_reasoning_service"},
+            }
+        ),
+    ):
+        result = await GetGraphDiagnosticSurfaceTool().execute(
+            GetGraphDiagnosticSurfaceParams(limit=2),
+            user_id="00000000-0000-0000-0000-000000000000",
+            db_session=SimpleNamespace(),
+        )
+
+    assert result.success is True
+    assert result.widget_type == "graph_diagnostic"
+    payload = result.data["graph_diagnostic_surface"]
+    assert payload["weak_nodes"][0]["node_name"] == "热力学第二定律"
+    assert payload["binding_note"].startswith("这个诊断面只消费现有 graph")
 
 
 @pytest.mark.asyncio

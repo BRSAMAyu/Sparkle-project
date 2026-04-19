@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/graph_diagnostic_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/profile_front_door_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
@@ -791,6 +792,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     }
     if (action.type == 'profile_front_door') {
       return ProfileFrontDoorCard(
+        data: action.data,
+        onAction: widget.onWidgetAction,
+      );
+    }
+    if (action.type == 'graph_diagnostic') {
+      return GraphDiagnosticCard(
         data: action.data,
         onAction: widget.onWidgetAction,
       );

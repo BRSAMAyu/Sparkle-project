@@ -254,6 +254,110 @@ class GraphReasoningService:
 
         return final_path
 
+    async def build_diagnostic_snapshot(
+        self,
+        user_id: UUID,
+        *,
+        limit: int = 3,
+    ) -> dict[str, Any]:
+        """Build a read-only graph diagnostic view of the user's weakest nodes."""
+        await self._load_graph()
+
+        stmt = (
+            select(UserNodeStatus, KnowledgeNode.name)
+            .join(KnowledgeNode, KnowledgeNode.id == UserNodeStatus.node_id)
+            .where(UserNodeStatus.user_id == user_id)
+            .where(UserNodeStatus.is_unlocked.is_(True))
+        )
+        result = await self.db.execute(stmt)
+        rows = result.all()
+        if not rows:
+            return {
+                "status": "empty",
+                "summary": "当前还没有足够的星图掌握度数据来判断哪里最弱。",
+                "weak_nodes": [],
+                "at_risk_nodes": [],
+                "recommended_next_review": [],
+                "graph_basis": {
+                    "source": "graph_reasoning_service",
+                    "mode": "read_only_diagnostic",
+                },
+            }
+
+        ranked: list[dict[str, Any]] = []
+        for status, node_name in rows:
+            node_id = str(status.node_id)
+            mastery = float(status.mastery_score or 0.0)
+            predecessors = []
+            successors = []
+            if self.G is not None and self.G.has_node(status.node_id):
+                predecessors = list(self.G.predecessors(status.node_id))[:3]
+                successors = list(self.G.successors(status.node_id))[:3]
+            predecessor_names = [
+                str(self.G.nodes[item].get("name") or item)
+                for item in predecessors
+                if self.G is not None and self.G.has_node(item)
+            ]
+            successor_names = [
+                str(self.G.nodes[item].get("name") or item)
+                for item in successors
+                if self.G is not None and self.G.has_node(item)
+            ]
+            if mastery < 45:
+                status_label = "weak"
+                why = "掌握度已经落到明显偏低区间，优先复习更划算。"
+            elif mastery < 65:
+                status_label = "at_risk"
+                why = "还没掉到最弱，但已经接近会拖慢后续路径的风险区。"
+            elif mastery < 80:
+                status_label = "learning"
+                why = "还在学习区间，需要再巩固一次才能更稳。"
+            else:
+                status_label = "strong"
+                why = "当前掌握度相对稳定。"
+
+            ranked.append(
+                {
+                    "node_id": node_id,
+                    "node_name": str(node_name or node_id),
+                    "mastery": round(mastery, 1),
+                    "status": status_label,
+                    "why": why,
+                    "prerequisite_names": predecessor_names,
+                    "downstream_names": successor_names,
+                    "route": f"/galaxy/node/{node_id}",
+                    "prompt": f"带我看看「{node_name}」为什么会成为当前薄弱点。",
+                }
+            )
+
+        ranked.sort(key=lambda item: (float(item["mastery"]), item["node_name"]))
+        weak_nodes = [item for item in ranked if item["status"] == "weak"][:limit]
+        at_risk_nodes = [item for item in ranked if item["status"] == "at_risk"][:limit]
+        recommended = (weak_nodes or at_risk_nodes or ranked[:limit])[:limit]
+
+        summary = "当前最该先补的，是这些掌握度最低且会影响后续路径的知识点。"
+        if weak_nodes:
+            summary = f"当前最弱的点有 {len(weak_nodes)} 个，最该先补的是「{weak_nodes[0]['node_name']}」。"
+        elif at_risk_nodes:
+            summary = f"当前没有明显掉到底的薄弱点，但「{at_risk_nodes[0]['node_name']}」已经进入风险区。"
+
+        return {
+            "status": "ok",
+            "summary": summary,
+            "weak_nodes": weak_nodes,
+            "at_risk_nodes": at_risk_nodes,
+            "recommended_next_review": recommended,
+            "graph_basis": {
+                "source": "graph_reasoning_service",
+                "mode": "read_only_diagnostic",
+                "thresholds": {
+                    "weak_below": 45,
+                    "at_risk_below": 65,
+                    "strong_at_or_above": 80,
+                },
+            },
+        }
+
     async def _get_user_mastery_map(self, user_id: UUID) -> dict[UUID, float]:
         """获取用户节点掌握度映射"""
         result = await self.db.execute(
