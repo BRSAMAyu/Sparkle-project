@@ -99,6 +99,16 @@ repos:
       - id: hadolint-docker
         files: Dockerfile
 
+  # Local governance checks
+  - repo: local
+    hooks:
+      - id: rule-k-write-path-guard
+        name: Rule K Write-Path Guard
+        entry: python3 scripts/check_rule_k_write_paths.py
+        language: system
+        pass_filenames: true
+        files: ^backend/app/(aurora/.*\.py|orchestration/(experience_actuator|dual_core_router|routing_engine)\.py|services/capability_knob_governor\.py)$
+
 # CI configuration
 ci:
   autofix_commit_msg: |

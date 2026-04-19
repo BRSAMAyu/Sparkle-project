@@ -195,6 +195,9 @@ jobs:
       - name: Dependency Contract Check
         run: python3 scripts/check_dependency_contract.py
 
+      - name: Rule K Write-Path Guard
+        run: python3 scripts/check_rule_k_write_paths.py
+
       - name: Backend Fixture Replay Gate
         run: python3 scripts/replay_backend_contract_fixtures.py
 
