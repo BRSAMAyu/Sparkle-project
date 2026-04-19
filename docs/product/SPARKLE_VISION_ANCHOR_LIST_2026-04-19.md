@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-19
-> **版本**: v6（Stage 8 完成 + 日常环治理收口）
+> **版本**: v7（Stage 9 完成 + 用户前门落地）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -451,28 +451,30 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | P2-3 | 无 Rule K CI 静态检测 | **Stage 8 必须收口**：pre-commit hook |
 | P2-4 | handoff 文件名日期不一致 | 纯 hygiene，不修 |
 
-### 9.6 Stage 8 完成（5 WS accept，144 tests green）
+### 9.6 Stage 9 完成（4 WS accept，用户前门成立）
 
 | WS | 内容 | 状态 |
 |----|------|------|
-| WS-K-CI | Rule K CI 静态检测（pre-commit + CI hard stop） | ✅ accept |
-| WS-BP3 | breakpoint #3：plan health event → intervention → visible action | ✅ accept |
-| WS-BP4 | breakpoint #4：behavior bridge → push scheduling | ✅ accept |
-| WS-BP5 | breakpoint #5：dual-core `cognitive_adjustments` → bounded session strategy steering | ✅ accept |
-| WS-V2T | 透明度 fallback telemetry | ✅ accept |
+| WS-MET1 | prompt / inference utilization 定义与采集基线 | ✅ accept |
+| WS-IC1 | in-chat canonical profile front door（只读） | ✅ accept |
+| WS-IC2 | in-chat profile correction（User Correction 独立通道） | ✅ accept |
+| WS-EV2 | rubric evaluator + optional LLM-attached metadata | ✅ accept |
 
-**Stage 8 关键成果**：
-- Rule K 第一次有了真正可执行的工程护栏（本地 + CI），不再只是文档约束
-- Stage 5 遗留断点 `#3 / #4 / #5` 全部收口，不再继续漂移
-- dual-core 不再只停留在 prompt 文本调制，而是能走白名单、可审计的 session-layer steering
-- 透明度 fallback / binding failure 第一次可观测，日常环变成 governance-backed closure
+**Stage 9 关键成果**：
+- 用户第一次能在聊天里直接问“你现在怎么看我”，并读到 canonical 画像前门
+- 用户第一次能在聊天里纠正画像，而且写路径明确不经过 Aurora / L3 / strategy lane
+- prompt / inference utilization 不再是口头判断，而是有正式 metric carrier
+- evaluator 不再只是硬编码 fixture scorer，而是 rubric-driven、可诊断、仍保持 `evaluation_records_only`
 
-### 9.7 显式延后挂牌（Stage 8 收尾后）
+### 9.7 显式延后挂牌（Stage 9 收尾后）
 
 | 项目 | 来源 | 状态 | 下一归属 |
 |------|------|------|----------|
-| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 9 candidate |
-| WS-E2 评分逻辑硬编码 | GLM P2-2 | known limit | Stage 9+ candidate |
+| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 10 candidate |
+| 可点击的逐条 L0 evidence id | WS-IC1/Rule Q 精度尾债 | deferred | Stage 10 candidate |
+| graph-as-diagnostic 产品化 | 长期愿景 | deferred | Stage 10+ candidate |
+| continuous learning / distillation 用户面集成 | 长期愿景 | deferred | Stage 10+ candidate |
+| evaluator production LLM judge | WS-EV2 后续增强 | deferred | Stage 10+ candidate |
 
 ### 9.8 愿景锚点 vs 当前覆盖
 
@@ -483,10 +485,10 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | TaskGuidance 双版本 | ✅ Stage 4 | sidecar + UI |
 | 任务助手降级 | ✅ Stage 4 | 单核 + 5 项注入 + dormant |
 | 5-P 宪法执行 | ✅ Stage 4-8 | P1-P5 全部绿色 |
-| 用户模型五层架构 | ✅ Stage 6-8 | Rule K + 影子模型 + compiler 归一 + eval runner + CI guard |
-| 交互式校准 | ✅ Stage 7-8 | 后端环 + 前端消费 + fallback telemetry |
+| 用户模型五层架构 | ✅ Stage 6-9 | Rule K + 影子模型 + compiler 归一 + evaluator + CI guard + chat front door |
+| 交互式校准 | ✅ Stage 7-9 | 后端环 + 前端消费 + fallback telemetry + in-chat query/correction |
 | 7 个产品断点 | ✅ Stage 8 | #1/#2/#3/#4/#5/#6 + 干预语言全部收口 |
-| 数据泄漏修复 | 🔶 部分 | 渲染管线已修（WS-RP1）；tokenizer-aware 精度尾债 |
+| 数据泄漏修复 | 🔶 部分 | 渲染管线已修（WS-RP1）；utilization 已可观测，但 tokenizer-aware 精度尾债仍在 |
 | 双核协作闭环 | 🔶 0.6/1 | Stage 5 建了一条通路，非完整双向 |
 | 持续学习三层结构 | ❌ 未来 | Stage 8+ |
 | 双交互模式 | ❌ 未来 | Stage 8+ |
@@ -496,18 +498,19 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 **用"7 阶段成长环"做标尺**：
 - Sense → Clarify → Plan：Stage 4 ✅
 - Execute → Reflect：Stage 5 ✅
-- Reflect → Adapt：Stage 5-8 ✅（Stage 7 用户可感知，Stage 8 日常环治理收口）
+- Reflect → Adapt：Stage 5-9 ✅（Stage 7 用户可感知，Stage 8 日常环治理收口，Stage 9 聊天前门成立）
 - Reinforce：仍弱 ❌
 - 整体：4/7
 
 **用"用户感知"做标尺**：
 - Stage 7 WS-V2 是系统第一次用户能在手机上感知的画像闭环
 - Stage 8 之后，用户昨天发生的摩擦更容易被系统接住：plan-health、behavior-trigger push、bounded steering 都已有闭环证据
-- 从 Stage 4 "用户感知 Aurora 价值接近零" 到 Stage 8 "画像可见、纠错可用、日常环能接住变化"，有实质跃迁
+- Stage 9 之后，用户不再只能去设置页看画像，而是能在聊天里直接问、直接纠，这是真正的“用户前门”
+- 从 Stage 4 "用户感知 Aurora 价值接近零" 到 Stage 9 "画像可见、可问、可纠，日常环能接住变化"，有实质跃迁
 
 **用"断点收口"做标尺**：
 - 7 个断点已全部收口
-- Stage 8 不再存在 `#3/#4/#5` 的治理漂移
+- Stage 9 不再存在“画像后端闭环但用户前门缺失”的主要产品断裂
 
 ---
 
@@ -555,6 +558,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | v4 | 2026-04-19 | Stage 4/5/6 完成状态统一收口：Stage 5 完成（5 WS accept，88 tests green，7 阶段环 1/7→≥3/7）；Stage 6 完成（6 WS accept，渲染管线修复、用户纠偏后端环、eval 骨架、干预验证）；用户模型五层架构落盘（L0-L3 + 用户纠偏，Rule K + 影子模型 + 白名单）；Stage 7 骨架纳入（4 WS + 显式延后项）；愿景覆盖表与距离评估同步更新 |
 | v5 | 2026-04-19 | Stage 7 final-accept 通过（4 WS accept，143 tests green，Rule G/H/I/J/K/L/M 零违规）；系统第一次有用户能在手机上感知的画像闭环（WS-V2）；compiler 边界清晰（WS-C1 委托模式）；eval runner 可执行（WS-E2）；GLM 4 项 P2 发现纳入 Stage 8 处理；Stage 8 入口条件定义（#3/#4/#5 最后一次 deferral + Rule K CI 检测必收）；愿景覆盖表更新：交互式校准从🔶升为✅ |
 | v6 | 2026-04-20 | Stage 8 完成（5 WS accept，144 baseline tests green，Stage 8 sweep 50 green，mobile user surface 13 tests green）；Rule K 第一次进入本地/CI 硬护栏；Stage 5 遗留断点 #3/#4/#5 全部收口；dual-core bounded steering 落地到受治理的 session strategy lane；透明度 fallback telemetry 可观测；愿景覆盖表更新：7 个产品断点从🔶升为✅ |
+| v7 | 2026-04-20 | Stage 9 完成（4 WS accept，Stage 8 baseline 144 green，Stage 9 backend sweep 27 green，mobile Stage 9 sweep 15 green）；用户前门成立：canonical 画像可在聊天里直接查询与纠正；User Correction lane 明确与 Aurora / L3 / strategy lane 分离；prompt / inference utilization 有正式度量载体；evaluator 从硬编码 scorer 升级为 rubric-driven，支持 optional LLM-attached 元数据 |
 
 ---
 
