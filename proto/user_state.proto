@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package sparkle.userstate.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message StateFieldMetadata {
+  google.protobuf.Timestamp computed_at = 1;
+  repeated string source_snapshot_ids = 2;
+  int32 freshness_seconds = 3;
+}
+
+message CommitmentSummaryValue {
+  int32 overdue_count = 1;
+  google.protobuf.Timestamp next_due_at = 2;
+  repeated string pending_commitment_ids = 3;
+}
+
+message SocialMentionValue {
+  string summary = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+}
+
+message RecentPersonMentionsValue {
+  repeated SocialMentionValue mentions = 1;
+  int32 relationship_count = 2;
+}
+
+message EngagementStateValue {
+  google.protobuf.Timestamp last_active_at = 1;
+  int32 session_count_7d = 2;
+  int32 streak = 3;
+}
+
+message LearningStateValue {
+  string within_category_preference_json = 1;
+}
+
+message CommitmentSummaryField {
+  CommitmentSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message RecentPersonMentionsField {
+  RecentPersonMentionsValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message EngagementStateField {
+  EngagementStateValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message LearningStateField {
+  LearningStateValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message UserStateV1 {
+  string user_id = 1;
+  string schema_version = 2;
+  CommitmentSummaryField commitment_summary = 3;
+  RecentPersonMentionsField recent_person_mentions = 4;
+  EngagementStateField engagement_state = 5;
+  LearningStateField learning_state = 6;
+  // Reserved for Stage 19C emotion work; intentionally unset in Stage 18.
+  string emotion_hint_reserved = 7;
+}
+
