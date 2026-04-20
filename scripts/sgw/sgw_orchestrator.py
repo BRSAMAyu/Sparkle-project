@@ -107,8 +107,15 @@ class OrchestratorConfig:
     adversarial_sessions: int = 24
     websocket_url: str = os.getenv("WS_BASE_URL", "ws://127.0.0.1:8080")
     api_base_url: str = os.getenv("API_BASE_URL", "http://127.0.0.1:8080")
+    llm_provider: str = os.getenv("SGW_LLM_PROVIDER", "api" if os.getenv("SGW_API_KEY") else "claude_cli")
     soft_violation_threshold: float = 0.85
     soft_violation_rate_limit: float = 0.05
+    api_model: str = os.getenv("SGW_API_MODEL", "glm-4.7")
+    api_model_base_url: str = os.getenv("SGW_API_BASE_URL", "https://open.bigmodel.cn/api/coding/paas/v4")
+    api_key: str = os.getenv("SGW_API_KEY", "")
+    api_temperature: float = float(os.getenv("SGW_API_TEMPERATURE", "0.3"))
+    api_timeout_seconds: int = int(os.getenv("SGW_API_TIMEOUT_SECONDS", "45"))
+    api_clear_thinking: bool = os.getenv("SGW_API_CLEAR_THINKING", "true").lower() in {"1", "true", "yes", "on"}
     claude_model: str = os.getenv("SGW_CLAUDE_MODEL", "")
     claude_effort: str = os.getenv("SGW_CLAUDE_EFFORT", "medium")
     claude_timeout_seconds: int = int(os.getenv("SGW_CLAUDE_TIMEOUT_SECONDS", "45"))
@@ -377,6 +384,171 @@ class ClaudeCliClient:
         return "\n".join(lines)
 
 
+class OpenAICompatibleApiClient:
+    def __init__(self, config: OrchestratorConfig):
+        self._config = config
+        self._hard_cap = max(1, config.claude_max_parallel)
+        self._min_parallel = max(1, min(config.claude_min_parallel, self._hard_cap))
+        requested_initial = max(self._min_parallel, config.claude_initial_parallel)
+        self._effective_parallel = min(requested_initial, self._hard_cap)
+        self._parallel_condition = asyncio.Condition()
+        self._inflight_calls = 0
+        self._call_pace_lock = asyncio.Lock()
+        self._last_call_started_at = 0.0
+        self._last_rate_limit_at = 0.0
+        self._last_scaled_up_at = time.time()
+        self._stable_parallel_ceiling = self._hard_cap
+        self._last_ceiling_probe_at = 0.0
+        self._debug_dir = config.checkpoint_path.parent / "api_debug"
+        self._debug_dir.mkdir(parents=True, exist_ok=True)
+
+    async def text_call(self, *, system_prompt: str, prompt: str) -> str:
+        await self._acquire_effective_slot()
+        try:
+            await self._pace_calls()
+            payload: dict[str, Any] = {
+                "model": self._config.api_model,
+                "temperature": self._config.api_temperature,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+            }
+            if self._config.api_clear_thinking:
+                payload["clear_thinking"] = True
+            debug_path = self._debug_dir / f"{int(time.time())}_{uuid.uuid4().hex}.json"
+            headers = {
+                "Authorization": f"Bearer {self._config.api_key}",
+                "Content-Type": "application/json",
+            }
+            timeout = aiohttp.ClientTimeout(total=self._config.api_timeout_seconds)
+            url = f"{self._config.api_model_base_url.rstrip('/')}/chat/completions"
+            try:
+                async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+                    async with session.post(url, json=payload) as resp:
+                        raw = await resp.text()
+                        debug_path.write_text(
+                            json.dumps(
+                                {
+                                    "url": url,
+                                    "status": resp.status,
+                                    "payload": payload,
+                                    "response_text": raw,
+                                },
+                                ensure_ascii=False,
+                                indent=2,
+                            ),
+                            encoding="utf-8",
+                        )
+                        if resp.status == 429:
+                            raise ClaudeCallError("rate_limit", raw or "api rate limited")
+                        if resp.status in {401, 403}:
+                            raise ClaudeCallError("process", raw or "api authentication failed")
+                        if resp.status in {402}:
+                            raise ClaudeCallError("quota", raw or "api quota exhausted")
+                        if resp.status >= 500:
+                            raise ClaudeCallError("process", raw or f"api server error {resp.status}")
+                        if resp.status >= 400:
+                            lowered = raw.lower()
+                            if "1302" in lowered or "rate limit" in lowered or "too many requests" in lowered:
+                                raise ClaudeCallError("rate_limit", raw or "api rate limited")
+                            raise ClaudeCallError("process", raw or f"api request failed {resp.status}")
+                        data = json.loads(raw)
+            except asyncio.TimeoutError as exc:
+                raise ClaudeCallError("timeout", "api request timed out") from exc
+            except aiohttp.ClientError as exc:
+                raise ClaudeCallError("process", f"api client error: {exc}") from exc
+
+            content = ((((data.get("choices") or [{}])[0].get("message") or {}).get("content")) or "").strip()
+            if not content:
+                raise ClaudeCallError("process", json.dumps(data, ensure_ascii=False)[:400])
+            return ClaudeCliClient._normalize_output(content)
+        finally:
+            await self._release_effective_slot()
+
+    async def _acquire_effective_slot(self) -> None:
+        async with self._parallel_condition:
+            await self._parallel_condition.wait_for(lambda: self._inflight_calls < self._effective_parallel)
+            self._inflight_calls += 1
+
+    async def _release_effective_slot(self) -> None:
+        async with self._parallel_condition:
+            self._inflight_calls = max(0, self._inflight_calls - 1)
+            self._parallel_condition.notify_all()
+
+    async def _pace_calls(self) -> None:
+        async with self._call_pace_lock:
+            now = time.time()
+            wait_seconds = self._config.claude_min_interval_seconds - (now - self._last_call_started_at)
+            if wait_seconds > 0:
+                await asyncio.sleep(wait_seconds)
+            self._last_call_started_at = time.time()
+
+    @property
+    def effective_parallel(self) -> int:
+        return self._effective_parallel
+
+    @property
+    def hard_cap(self) -> int:
+        return self._hard_cap
+
+    def state_dict(self) -> dict[str, Any]:
+        return {
+            "effective_parallel": self._effective_parallel,
+            "last_rate_limit_at": self._last_rate_limit_at,
+            "last_scaled_up_at": self._last_scaled_up_at,
+            "stable_parallel_ceiling": self._stable_parallel_ceiling,
+            "last_ceiling_probe_at": self._last_ceiling_probe_at,
+        }
+
+    def restore_state(self, payload: dict[str, Any] | None) -> None:
+        if not payload:
+            return
+        effective = int(payload.get("effective_parallel", self._effective_parallel))
+        self._effective_parallel = max(self._min_parallel, min(effective, self._hard_cap))
+        self._last_rate_limit_at = float(payload.get("last_rate_limit_at", self._last_rate_limit_at))
+        self._last_scaled_up_at = float(payload.get("last_scaled_up_at", self._last_scaled_up_at))
+        ceiling = int(payload.get("stable_parallel_ceiling", self._hard_cap))
+        self._stable_parallel_ceiling = max(self._min_parallel, min(ceiling, self._hard_cap))
+        self._last_ceiling_probe_at = float(payload.get("last_ceiling_probe_at", self._last_ceiling_probe_at))
+
+    async def maybe_scale_up(self, *, queue_backlog: int) -> tuple[int, int] | None:
+        if queue_backlog <= 0 or self._effective_parallel >= self._hard_cap:
+            return None
+        now = time.time()
+        stable_since = max(self._last_rate_limit_at, self._last_scaled_up_at)
+        async with self._parallel_condition:
+            if self._inflight_calls > self._effective_parallel:
+                return None
+            if self._effective_parallel < self._stable_parallel_ceiling:
+                if now - stable_since < self._config.claude_scale_up_cooldown_seconds:
+                    return None
+            else:
+                if self._stable_parallel_ceiling >= self._hard_cap:
+                    return None
+                if now - max(self._last_rate_limit_at, self._last_ceiling_probe_at) < self._config.claude_ceiling_probe_cooldown_seconds:
+                    return None
+                self._stable_parallel_ceiling = min(self._hard_cap, self._stable_parallel_ceiling + 1)
+                self._last_ceiling_probe_at = now
+            before = self._effective_parallel
+            self._effective_parallel = min(self._hard_cap, self._effective_parallel + 1)
+            self._last_scaled_up_at = now
+            self._parallel_condition.notify_all()
+            return before, self._effective_parallel
+
+    async def back_off_after_rate_limit(self) -> tuple[int, int] | None:
+        self._last_rate_limit_at = time.time()
+        async with self._parallel_condition:
+            before = self._effective_parallel
+            new_effective = max(self._min_parallel, before - 1)
+            self._stable_parallel_ceiling = min(self._stable_parallel_ceiling, new_effective)
+            if before <= self._min_parallel:
+                return None
+            self._effective_parallel = new_effective
+            self._parallel_condition.notify_all()
+            return before, self._effective_parallel
+
+
 class SparkleGatewayClient:
     def __init__(self, config: OrchestratorConfig):
         self._config = config
@@ -430,7 +602,10 @@ class SGWOrchestrator:
         self.config = config
         self.random = random.Random(config.random_seed)
         self.metrics = MetricsCollector()
-        self.claude = ClaudeCliClient(config)
+        if config.llm_provider == "api":
+            self.claude = OpenAICompatibleApiClient(config)
+        else:
+            self.claude = ClaudeCliClient(config)
         self.gateway = SparkleGatewayClient(config)
         self.persona_prompt_template = (SCRIPT_DIR / "prompts" / "persona_system_prompt.md").read_text(encoding="utf-8")
         self.adversarial_prompt_template = (SCRIPT_DIR / "prompts" / "adversarial_system_prompt.md").read_text(

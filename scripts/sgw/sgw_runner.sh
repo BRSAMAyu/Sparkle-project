@@ -10,10 +10,16 @@ LOG_PATH="${SGW_LOG_PATH:-$STATE_DIR/sgw_runner.log}"
 MAX_RESTARTS="${SGW_MAX_RESTARTS:-12}"
 PYTHON_BIN="${SGW_PYTHON_BIN:-$ROOT_DIR/backend/.venv/bin/python}"
 RESTART_STACK_ON_BOOT="${SGW_RESTART_STACK_ON_BOOT:-auto}"
+RUNTIME_ENV_FILE="${SGW_RUNTIME_ENV_FILE:-$HOME/.sparkle_sgw_runtime.env}"
 
 mkdir -p "$STATE_DIR"
 touch "$LOG_PATH"
 trap 'code=$?; echo "[sgw] runner failed at line $LINENO (exit $code)" | tee -a "$LOG_PATH"; exit $code' ERR
+
+if [[ -f "$RUNTIME_ENV_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$RUNTIME_ENV_FILE"
+fi
 
 export PYTHONPATH="$ROOT_DIR/backend${PYTHONPATH:+:$PYTHONPATH}"
 export SPARKLE_MEMORY_INFERRED_WRITE_ENABLED="${SPARKLE_MEMORY_INFERRED_WRITE_ENABLED:-true}"
@@ -35,6 +41,16 @@ export LOCAL_STACK_AGE_REQUIRED="${LOCAL_STACK_AGE_REQUIRED:-false}"
 export AGE_INIT_RETRIES="${AGE_INIT_RETRIES:-8}"
 export AGE_INIT_SLEEP_SECONDS="${AGE_INIT_SLEEP_SECONDS:-3}"
 export SGW_WALL_CLOCK_HOURS="${SGW_WALL_CLOCK_HOURS:-18}"
+if [[ -n "${SGW_API_KEY:-}" ]]; then
+  export SGW_LLM_PROVIDER="${SGW_LLM_PROVIDER:-api}"
+else
+  export SGW_LLM_PROVIDER="${SGW_LLM_PROVIDER:-claude_cli}"
+fi
+export SGW_API_BASE_URL="${SGW_API_BASE_URL:-https://open.bigmodel.cn/api/coding/paas/v4}"
+export SGW_API_MODEL="${SGW_API_MODEL:-glm-4.7}"
+export SGW_API_TEMPERATURE="${SGW_API_TEMPERATURE:-0.3}"
+export SGW_API_TIMEOUT_SECONDS="${SGW_API_TIMEOUT_SECONDS:-45}"
+export SGW_API_CLEAR_THINKING="${SGW_API_CLEAR_THINKING:-true}"
 export SGW_CLAUDE_MIN_PARALLEL="${SGW_CLAUDE_MIN_PARALLEL:-1}"
 export SGW_CLAUDE_INITIAL_PARALLEL="${SGW_CLAUDE_INITIAL_PARALLEL:-2}"
 export SGW_CLAUDE_MAX_PARALLEL="${SGW_CLAUDE_MAX_PARALLEL:-8}"
@@ -48,18 +64,23 @@ export SGW_CLAUDE_MODEL="${SGW_CLAUDE_MODEL:-haiku}"
 export SGW_AUDIT_SAMPLE_RATE="${SGW_AUDIT_SAMPLE_RATE:-0.25}"
 export PYTHONUNBUFFERED="${PYTHONUNBUFFERED:-1}"
 
-if ! command -v claude >/dev/null 2>&1; then
-  echo "claude CLI not found in PATH" | tee -a "$LOG_PATH"
-  exit 1
-fi
-
 if [[ ! -x "$PYTHON_BIN" ]]; then
   echo "SGW python runtime not found: $PYTHON_BIN" | tee -a "$LOG_PATH"
   exit 1
 fi
 
-if ! claude auth status >/dev/null 2>&1; then
-  echo "claude CLI is not authenticated" | tee -a "$LOG_PATH"
+if [[ "$SGW_LLM_PROVIDER" == "claude_cli" ]]; then
+  if ! command -v claude >/dev/null 2>&1; then
+    echo "claude CLI not found in PATH" | tee -a "$LOG_PATH"
+    exit 1
+  fi
+
+  if ! claude auth status >/dev/null 2>&1; then
+    echo "claude CLI is not authenticated" | tee -a "$LOG_PATH"
+    exit 1
+  fi
+elif [[ -z "${SGW_API_KEY:-}" ]]; then
+  echo "SGW API provider selected but SGW_API_KEY is missing" | tee -a "$LOG_PATH"
   exit 1
 fi
 
