@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 
 class EvidenceCard extends StatelessWidget {
-  const EvidenceCard({required this.item, super.key});
+  const EvidenceCard({
+    required this.item,
+    this.onRouteTap,
+    super.key,
+  });
 
   final EvidenceResolveItem item;
+  final ValueChanged<String>? onRouteTap;
 
   @override
   Widget build(BuildContext context) {
     final content = _buildContent(context);
+    final routeAction = _buildRouteAction();
     return Card(
       margin: const EdgeInsets.only(bottom: DS.sm),
       child: Padding(
@@ -27,6 +34,17 @@ class EvidenceCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.sm),
             content,
+            if (routeAction != null) ...[
+              const SizedBox(height: DS.sm),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _dispatchRoute(context, routeAction.route),
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: Text(routeAction.label),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -85,6 +103,72 @@ class EvidenceCard extends StatelessWidget {
     }
     return const Text('证据记录');
   }
+
+  _EvidenceRouteAction? _buildRouteAction() {
+    if (item.status != 'ok') {
+      return null;
+    }
+    final payload = item.payload ?? const {};
+    final concept = payload['concept'] as Map<String, dynamic>?;
+    if (concept != null) {
+      final nodeId = (concept['id'] ?? item.id).toString().trim();
+      if (nodeId.isNotEmpty) {
+        return _EvidenceRouteAction(
+          route: '/galaxy/node/$nodeId',
+          label: '去星图看',
+        );
+      }
+    }
+
+    final error = payload['error'] as Map<String, dynamic>?;
+    if (error != null) {
+      final errorId = (error['id'] ?? item.id).toString().trim();
+      if (errorId.isNotEmpty) {
+        return _EvidenceRouteAction(
+          route: '/errors/$errorId',
+          label: '去错题本看',
+        );
+      }
+    }
+
+    final event = payload['event'] as Map<String, dynamic>?;
+    if (event != null) {
+      final sessionId = _extractSessionId(event);
+      if (sessionId.isNotEmpty) {
+        return _EvidenceRouteAction(
+          route: '/chat?session_id=$sessionId',
+          label: '打开相关对话',
+        );
+      }
+    }
+    return null;
+  }
+
+  String _extractSessionId(Map<String, dynamic> event) {
+    final candidates = <Object?>[
+      event['session_id'],
+      event['conversation_id'],
+      (event['payload'] as Map<String, dynamic>?)?['session_id'],
+      (event['payload'] as Map<String, dynamic>?)?['conversation_id'],
+      (event['entities'] as Map<String, dynamic>?)?['session_id'],
+      (event['entities'] as Map<String, dynamic>?)?['conversation_id'],
+    ];
+    for (final candidate in candidates) {
+      final normalized = candidate?.toString().trim() ?? '';
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+    return '';
+  }
+
+  void _dispatchRoute(BuildContext context, String route) {
+    if (onRouteTap != null) {
+      onRouteTap!(route);
+      return;
+    }
+    context.go(route);
+  }
 }
 
 class _KeyValueList extends StatelessWidget {
@@ -139,4 +223,14 @@ class _StatusBadge extends StatelessWidget {
       ),
     );
   }
+}
+
+class _EvidenceRouteAction {
+  const _EvidenceRouteAction({
+    required this.route,
+    required this.label,
+  });
+
+  final String route;
+  final String label;
 }

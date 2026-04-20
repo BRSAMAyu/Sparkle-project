@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -147,9 +148,22 @@ class _EvidenceDrawerContentState
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
-          ...entry.value.map((item) => EvidenceCard(item: item)),
+          ...entry.value.map(
+            (item) => EvidenceCard(
+              item: item,
+              onRouteTap: _handleRouteTap,
+            ),
+          ),
         ],
       ],
     );
+  }
+
+  void _handleRouteTap(String route) {
+    final router = GoRouter.of(context);
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      router.go(route);
+    });
   }
 }
