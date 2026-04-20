@@ -14,6 +14,7 @@ class MemoryApiService {
         allowPreferences: true,
         allowGoals: true,
         allowEpisodic: true,
+        allowInferredEpisodic: true,
         captureLevel: 'medium',
         blockedPrefKeys: <String>[],
         blockedSources: <String>[],

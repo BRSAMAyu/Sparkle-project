@@ -338,9 +338,14 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         MemoryEvidenceBadge(status: _evidenceStatus),
         const SizedBox(height: DS.md),
         _buildKeyValue('来源', episodic?.sourceType ?? '-'),
+        if ((episodic?.declarationLabel ?? '').isNotEmpty)
+          _buildKeyValue('声明', episodic?.declarationLabel ?? '-'),
         _buildKeyValue('发生时间', _formatDate(episodic?.occurredAt)),
         _buildKeyValue(
             '重要度', episodic?.importanceScore?.toStringAsFixed(2) ?? '-',),
+        _buildKeyValue('置信度', episodic?.confidence?.toStringAsFixed(2) ?? '-'),
+        _buildKeyValue('证据 Token', episodic?.evidenceToken ?? '-'),
+        _buildKeyValue('衰减策略', episodic?.decayPolicy ?? '-'),
         _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Corrections', _correctionCount.toString()),
         _buildKeyValue('最后更新', _formatDate(episodic?.updatedAt)),
@@ -652,6 +657,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
       if (!settings.allowEpisodic) {
         return '当前设置已关闭经历捕获，后续不会记录此类记忆。';
       }
+      if (!_memorySettings!.allowInferredEpisodic &&
+          (_episodic?.sourceLane == 'inferred_extraction')) {
+        return '当前已关闭 AI 自动记忆，后续不会继续写入此类推断。';
+      }
       final sourceType = _episodic?.sourceType;
       if (sourceType != null && settings.blockedSources.contains(sourceType)) {
         return '该来源已被屏蔽，后续不会记录此类记忆。';
@@ -665,6 +674,9 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
       case MemoryDetailType.preference:
         return 'Captured because your preference updated recently.';
       case MemoryDetailType.episodic:
+        if ((_episodic?.sourceLane ?? '') == 'inferred_extraction') {
+          return '这条经历由 AI 从聊天中推断，并保留了证据 token、置信度与撤销路径。';
+        }
         return 'Captured because this experience was marked important.';
       case MemoryDetailType.goal:
         return 'Captured to keep your active goals visible.';

@@ -94,6 +94,7 @@ class _V2MemoryApiService implements MemoryApiService {
         allowPreferences: true,
         allowGoals: true,
         allowEpisodic: true,
+        allowInferredEpisodic: true,
         captureLevel: 'medium',
         blockedPrefKeys: const [],
         blockedSources: const [],

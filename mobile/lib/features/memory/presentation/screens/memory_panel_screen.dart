@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/memory/memory_routes.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
+import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 
@@ -62,6 +63,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   MemorySort _sort = MemorySort.newest;
   MemoryViewMode _viewMode = MemoryViewMode.compact;
   final Set<String> _pinnedIds = {};
+  final Set<String> _revokingIds = {};
 
   @override
   void initState() {
@@ -174,10 +176,18 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             const _SectionHeader(title: '目标'),
             const SizedBox(height: DS.sm),
             ..._goals.map(_buildGoalCard),
+            if (_autoMemoryEntries.isNotEmpty) ...[
+              const SizedBox(height: DS.xl),
+              const _SectionHeader(title: 'AI 自动记忆'),
+              const SizedBox(height: DS.sm),
+              ..._autoMemoryEntries.map((item) => _buildEpisodicCard(item)),
+            ],
             const SizedBox(height: DS.xl),
             const _SectionHeader(title: '经历'),
             const SizedBox(height: DS.sm),
-            ..._episodic.map(_buildEpisodicCard),
+            ..._episodic
+                .where((item) => !_isInferredAutoMemory(item))
+                .map(_buildEpisodicCard),
           ],
         ),
       );
@@ -359,10 +369,11 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
 
   Widget _buildEpisodicCard(EpisodicMemoryItem item) => _MemoryCard(
         title: item.summary,
-        subtitle: _formatUpdated(item.occurredAt),
+        subtitle: _formatEpisodicSubtitle(item),
         badge: MemoryEvidenceBadge(
             status: _statusFor(item.evidenceMissing, item.evidenceRefs),),
         correctionCount: item.correctionCount,
+        footer: _buildEpisodicFooter(item),
         onTap: () => _openDetail(
           context,
           MemoryDetailArgs.episodic(item),
@@ -372,10 +383,13 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget _buildEntryCard(MemoryEntry entry) {
     final isPinned = _pinnedIds.contains(entry.id);
     final preference = entry.detailArgs.preference;
+    final episodic = entry.detailArgs.episodic;
     final showAdjust =
         preference?.sourceType == 'ai_inferred' && (preference?.adjustable ?? false);
+    final showUndo = episodic != null && _isInferredAutoMemory(episodic);
     final subtitle = [
       _entryTypeLabel(entry.type),
+      if (episodic != null && _isInferredAutoMemory(episodic)) 'AI 自动记忆',
       _formatUpdated(entry.updatedAt),
     ].where((value) => value.isNotEmpty).join(' · ');
     return Card(
@@ -393,7 +407,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 ],
               ),
         trailing: SizedBox(
-          width: showAdjust ? 240 : 176,
+          width: showAdjust || showUndo ? 260 : 176,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -407,6 +421,17 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 SparkleButton.ghost(
                   onPressed: () => _openPersonaAdjust(preference!),
                   label: '调整',
+                ),
+              ],
+              if (showUndo) ...[
+                const SizedBox(width: 6),
+                SparkleButton(
+                  label: _revokingIds.contains(entry.id) ? '撤销中' : '撤销',
+                  onPressed: _revokingIds.contains(entry.id)
+                      ? () {}
+                      : () => _revokeAutoMemory(episodic!),
+                  disabled: _revokingIds.contains(entry.id),
+                  variant: ButtonVariant.ghost,
                 ),
               ],
               const SizedBox(width: 4),
@@ -458,6 +483,10 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         MemoryEntryType.goal => '目标',
         MemoryEntryType.episodic => '经历',
       };
+
+  List<EpisodicMemoryItem> get _autoMemoryEntries => _episodic
+      .where((item) => _isInferredAutoMemory(item))
+      .toList(growable: false);
 
   String _formatMetrics(MemoryEntry entry) {
     final importance = entry.importance;
@@ -629,6 +658,14 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     return parts.join(' · ');
   }
 
+  String _formatEpisodicSubtitle(EpisodicMemoryItem item) {
+    final parts = <String>[
+      if (_isInferredAutoMemory(item)) item.declarationLabel ?? 'AI 自动记忆',
+      _formatUpdated(item.occurredAt),
+    ];
+    return parts.join(' · ');
+  }
+
   Widget? _buildPreferenceFooter(MemoryPreferenceItem item) {
     final parts = <Widget>[];
     if ((item.explanation ?? '').isNotEmpty) {
@@ -660,6 +697,94 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: parts,
     );
+  }
+
+  Widget? _buildEpisodicFooter(EpisodicMemoryItem item) {
+    if (!_isInferredAutoMemory(item)) {
+      return null;
+    }
+    final parts = <Widget>[
+      Text(
+        'AI 推断自聊天，默认仅作记忆展示，不参与下游决策。',
+        style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+      ),
+    ];
+    if ((item.decayPolicy ?? '').isNotEmpty) {
+      parts.add(
+        Padding(
+          padding: const EdgeInsets.only(top: DS.xs),
+          child: Text(
+            '有效期 ${item.decayPolicy}',
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+          ),
+        ),
+      );
+    }
+    parts.add(
+      Padding(
+        padding: const EdgeInsets.only(top: DS.sm),
+        child: Wrap(
+          spacing: DS.sm,
+          runSpacing: DS.sm,
+          children: [
+            SparkleButton(
+              label: _revokingIds.contains(item.id) ? '撤销中' : '撤销此条',
+              onPressed: _revokingIds.contains(item.id)
+                  ? () {}
+                  : () => _revokeAutoMemory(item),
+              disabled: _revokingIds.contains(item.id),
+              variant: ButtonVariant.ghost,
+            ),
+            if (AppFeatureFlags.enableEvidenceViewer)
+              SparkleButton.ghost(
+                onPressed: () => EvidenceDrawer.show(
+                  context,
+                  refs: item.evidenceRefs,
+                  evidenceMissing: item.evidenceMissing,
+                ),
+                label: '查看依据',
+              ),
+          ],
+        ),
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: parts,
+    );
+  }
+
+  bool _isInferredAutoMemory(EpisodicMemoryItem item) =>
+      item.sourceLane == 'inferred_extraction';
+
+  Future<void> _revokeAutoMemory(EpisodicMemoryItem item) async {
+    setState(() {
+      _revokingIds.add(item.id);
+    });
+    try {
+      final service = ref.read(memoryApiServiceProvider);
+      await service.retractMemory(
+        type: 'episodic',
+        id: item.id,
+        reason: 'user_revoked_ai_auto_memory',
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _episodic = _episodic.where((entry) => entry.id != item.id).toList();
+        _revokingIds.remove(item.id);
+      });
+      AppFeedback.success(context, '已撤销 AI 自动记忆');
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _revokingIds.remove(item.id);
+      });
+      AppFeedback.error(context, '撤销失败: $e');
+    }
   }
 
   void _openPersonaAdjust(MemoryPreferenceItem item) {

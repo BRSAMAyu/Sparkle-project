@@ -183,10 +183,16 @@ class EpisodicMemoryItem {
     required this.evidenceScore,
     required this.correctionCount,
     this.sourceId,
+    this.sourceLane,
     this.occurredAt,
     this.importanceScore,
+    this.confidence,
+    this.evidenceToken,
+    this.decayPolicy,
+    this.declarationLabel,
     this.updatedAt,
     this.retractedAt,
+    this.revokedAt,
   });
 
   factory EpisodicMemoryItem.fromJson(Map<String, dynamic> json) =>
@@ -195,28 +201,40 @@ class EpisodicMemoryItem {
         summary: json['summary'] as String? ?? '',
         sourceType: json['source_type'] as String? ?? '',
         sourceId: json['source_id'] as String?,
+        sourceLane: json['source_lane'] as String?,
         occurredAt: _parseDate(json['occurred_at']),
         importanceScore: (json['importance_score'] as num?)?.toDouble(),
+        confidence: (json['confidence'] as num?)?.toDouble(),
+        evidenceToken: json['evidence_token'] as String?,
+        decayPolicy: json['decay_policy'] as String?,
+        declarationLabel: json['declaration_label'] as String?,
         updatedAt: _parseDate(json['updated_at']),
         evidenceMissing: json['evidence_missing'] as bool? ?? false,
         evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
         evidenceScore: (json['evidence_score'] as num?)?.toDouble() ?? 0.0,
         correctionCount: json['correction_count'] as int? ?? 0,
         retractedAt: _parseDate(json['retracted_at']),
+        revokedAt: _parseDate(json['revoked_at']),
       );
 
   final String id;
   final String summary;
   final String sourceType;
   final String? sourceId;
+  final String? sourceLane;
   final DateTime? occurredAt;
   final double? importanceScore;
+  final double? confidence;
+  final String? evidenceToken;
+  final String? decayPolicy;
+  final String? declarationLabel;
   final DateTime? updatedAt;
   final bool evidenceMissing;
   final List<EvidenceRefModel> evidenceRefs;
   final double evidenceScore;
   final int correctionCount;
   final DateTime? retractedAt;
+  final DateTime? revokedAt;
 }
 
 class MemoryCorrectionResult {
@@ -256,6 +274,7 @@ class MemorySettingsModel {
     required this.allowPreferences,
     required this.allowGoals,
     required this.allowEpisodic,
+    required this.allowInferredEpisodic,
     required this.captureLevel,
     required this.blockedPrefKeys,
     required this.blockedSources,
@@ -267,6 +286,8 @@ class MemorySettingsModel {
         allowPreferences: json['allow_preferences'] as bool? ?? true,
         allowGoals: json['allow_goals'] as bool? ?? true,
         allowEpisodic: json['allow_episodic'] as bool? ?? true,
+        allowInferredEpisodic:
+            json['allow_inferred_episodic'] as bool? ?? true,
         captureLevel: json['capture_level'] as String? ?? 'medium',
         blockedPrefKeys: (json['blocked_pref_keys'] as List<dynamic>? ?? [])
             .whereType<String>()
@@ -280,6 +301,7 @@ class MemorySettingsModel {
   final bool allowPreferences;
   final bool allowGoals;
   final bool allowEpisodic;
+  final bool allowInferredEpisodic;
   final String captureLevel;
   final List<String> blockedPrefKeys;
   final List<String> blockedSources;
@@ -289,6 +311,7 @@ class MemorySettingsModel {
         'allow_preferences': allowPreferences,
         'allow_goals': allowGoals,
         'allow_episodic': allowEpisodic,
+        'allow_inferred_episodic': allowInferredEpisodic,
         'capture_level': captureLevel,
         'blocked_pref_keys': blockedPrefKeys,
         'blocked_sources': blockedSources,
@@ -306,7 +329,17 @@ class EvidenceResolveItem {
 
   factory EvidenceResolveItem.fromJson(Map<String, dynamic> json) {
     final payload = <String, dynamic>{};
-    const payloadKeys = ['event', 'state', 'error', 'practice_outcome', 'concept', 'strategy', 'task', 'summary'];
+    const payloadKeys = [
+      'event',
+      'chat_turn',
+      'state',
+      'error',
+      'practice_outcome',
+      'concept',
+      'strategy',
+      'task',
+      'summary',
+    ];
     for (final key in payloadKeys) {
       if (json[key] != null) {
         payload[key] = json[key] as Map<String, dynamic>;

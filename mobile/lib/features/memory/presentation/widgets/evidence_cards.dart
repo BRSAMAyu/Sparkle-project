@@ -63,6 +63,14 @@ class EvidenceCard extends StatelessWidget {
         'Timestamp': event['ts_ms']?.toString() ?? '-',
       },);
     }
+    if (payload['chat_turn'] != null) {
+      final chatTurn = payload['chat_turn'] as Map<String, dynamic>;
+      return _KeyValueList(items: {
+        'Role': chatTurn['role']?.toString() ?? '-',
+        'Created': chatTurn['created_at']?.toString() ?? '-',
+        'Content': chatTurn['content']?.toString() ?? '-',
+      },);
+    }
     if (payload['error'] != null) {
       final error = payload['error'] as Map<String, dynamic>;
       return _KeyValueList(items: {
@@ -158,6 +166,16 @@ class EvidenceCard extends StatelessWidget {
         return _EvidenceRouteAction(
           route: '/chat?session_id=$sessionId',
           label: '打开相关对话',
+        );
+      }
+    }
+    final chatTurn = payload['chat_turn'] as Map<String, dynamic>?;
+    if (chatTurn != null) {
+      final sessionId = (chatTurn['session_id'] ?? '').toString().trim();
+      if (sessionId.isNotEmpty) {
+        return _EvidenceRouteAction(
+          route: '/chat?session_id=$sessionId',
+          label: '打开原对话',
         );
       }
     }

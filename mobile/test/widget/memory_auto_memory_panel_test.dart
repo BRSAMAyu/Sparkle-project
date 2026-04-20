@@ -6,73 +6,58 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
-class _FakeMemoryApiService implements MemoryApiService {
+
+class _AutoMemoryApiService implements MemoryApiService {
+  String? lastRetractedId;
+
   @override
-  Future<List<MemoryPreferenceItem>> getPreferences() async => [
-        MemoryPreferenceItem(
-          id: 'pref_1',
-          prefKey: 'depth_preference',
-          prefValue: {'value': 0.8},
-          version: 2,
-          evidenceMissing: true,
-          evidenceRefs: [
-            EvidenceRefModel(type: 'event', id: 'evt_1'),
-          ],
-          evidenceScore: 0.4,
-          correctionCount: 1,
-        ),
-      ];
+  Future<List<MemoryPreferenceItem>> getPreferences() async => [];
 
   @override
   Future<List<MemoryGoalItem>> getGoals({
     String? status,
     bool includeExpired = false,
     int limit = 20,
-  }) async =>
-      [
-        MemoryGoalItem(
-          id: 'goal_1',
-          title: 'Goal',
-          status: 'active',
-          evidenceMissing: false,
-          evidenceRefs: [],
-          evidenceScore: 0.3,
-          correctionCount: 0,
-        ),
-      ];
+  }) async => [];
 
   @override
   Future<List<EpisodicMemoryItem>> getEpisodic({
     DateTime? start,
     DateTime? end,
     int limit = 20,
-  }) async =>
-      [
+  }) async => [
         EpisodicMemoryItem(
-          id: 'mem_1',
-          summary: 'Memory',
-          sourceType: 'analysis',
+          id: 'auto_1',
+          summary: '这周我要赶论文 ddl，今晚先把提纲补完',
+          sourceType: 'chat',
+          sourceLane: 'inferred_extraction',
+          declarationLabel: 'AI 推断',
+          decayPolicy: '7d',
+          evidenceToken: 'turn_1',
           evidenceMissing: false,
-          evidenceRefs: [],
-          evidenceScore: 0.5,
+          evidenceRefs: [
+            EvidenceRefModel(type: 'chat_turn', id: 'turn_1'),
+          ],
+          evidenceScore: 0.9,
           correctionCount: 0,
+          occurredAt: DateTime(2026, 4, 20),
         ),
       ];
 
   @override
   Future<List<MemoryPreferenceHistoryItem>> getPreferenceHistory(
     String prefKey,
-  ) async =>
-      [];
+  ) async => [];
 
   @override
   Future<void> retractMemory({
     required String type,
     required String id,
     String? reason,
-  }) async {}
+  }) async {
+    lastRetractedId = id;
+  }
 
   @override
   Future<MemoryCorrectionResult> correctMemory({
@@ -80,13 +65,12 @@ class _FakeMemoryApiService implements MemoryApiService {
     required String id,
     required String action,
     String? reason,
-  }) async =>
-      MemoryCorrectionResult(
+  }) async => MemoryCorrectionResult(
         id: id,
         evidenceRefs: const [],
         evidenceMissing: false,
-        evidenceScore: 0.6,
-        correctionCount: 2,
+        evidenceScore: 0.5,
+        correctionCount: 0,
       );
 
   @override
@@ -104,61 +88,63 @@ class _FakeMemoryApiService implements MemoryApiService {
   @override
   Future<MemorySettingsModel> updateMemorySettings(
     MemorySettingsModel settings,
-  ) async =>
-      settings;
+  ) async => settings;
 }
+
 
 class _FakeEvidenceResolveService implements EvidenceResolveService {
   @override
   Future<List<EvidenceResolveItem>> resolveEvidence(
     List<EvidenceRefModel> refs,
-  ) async =>
-      [
+  ) async => [
         EvidenceResolveItem(
-          type: 'event',
-          id: 'evt_1',
+          type: 'chat_turn',
+          id: 'turn_1',
           status: 'ok',
           payload: const {
-            'event': {'event_type': 'test'},
+            'chat_turn': {
+              'id': 'turn_1',
+              'session_id': 'session-1',
+              'role': 'user',
+              'content': '这周我要赶论文 ddl，今晚先把提纲补完',
+            },
           },
         ),
       ];
 }
 
+
 void main() {
-  testWidgets('Memory panel renders sections and opens detail',
-      (WidgetTester tester) async {
+  testWidgets('memory panel exposes AI auto memory section and revoke action', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1440, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     AppFeatureFlags.enableMemoryPanelV2 = false;
-    AppFeatureFlags.enableEvidenceViewer = false;
+    AppFeatureFlags.enableEvidenceViewer = true;
     AppFeatureFlags.enableMemoryExplain = false;
+
+    final api = _AutoMemoryApiService();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          memoryApiServiceProvider.overrideWithValue(_FakeMemoryApiService()),
+          memoryApiServiceProvider.overrideWithValue(api),
           evidenceResolveServiceProvider
               .overrideWithValue(_FakeEvidenceResolveService()),
         ],
-        child: const MaterialApp(
-          home: MemoryPanelScreen(),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: Locale('zh'),
-        ),
+        child: const MaterialApp(home: MemoryPanelScreen()),
       ),
     );
 
     await tester.pumpAndSettle();
 
-    expect(find.text('偏好'), findsOneWidget);
-    expect(find.text('目标'), findsOneWidget);
-    expect(find.text('经历'), findsOneWidget);
+    expect(find.text('AI 自动记忆'), findsOneWidget);
+    expect(find.text('撤销此条'), findsOneWidget);
 
-    await tester.tap(find.text('depth_preference'));
+    await tester.tap(find.text('撤销此条'));
     await tester.pumpAndSettle();
 
-    expect(find.text('版本历史'), findsOneWidget);
-    expect(find.text('缺失'), findsOneWidget);
+    expect(api.lastRetractedId, 'auto_1');
+    expect(find.text('这周我要赶论文 ddl，今晚先把提纲补完'), findsNothing);
   });
 }

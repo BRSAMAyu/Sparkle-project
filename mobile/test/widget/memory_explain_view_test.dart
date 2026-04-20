@@ -62,6 +62,7 @@ class _HistoryStubService implements MemoryApiService {
         allowPreferences: true,
         allowGoals: true,
         allowEpisodic: true,
+        allowInferredEpisodic: true,
         captureLevel: 'medium',
         blockedPrefKeys: const [],
         blockedSources: const [],

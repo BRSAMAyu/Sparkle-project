@@ -140,6 +140,51 @@ void main() {
     expect(routed, ['/chat?session_id=session-9']);
   });
 
+  testWidgets('chat turn evidence routes to original chat session', (tester) async {
+    final routed = <String>[];
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: EvidenceCard(
+              item: EvidenceResolveItem(
+                type: 'chat_turn',
+                id: 'turn-1',
+                status: 'ok',
+                payload: const {
+                  'chat_turn': {
+                    'id': 'turn-1',
+                    'session_id': 'session-42',
+                    'role': 'user',
+                    'content': '最近我在整理线代错题',
+                  },
+                },
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/chat',
+          builder: (context, state) {
+            final sessionId = state.uri.queryParameters['session_id'] ?? '';
+            routed.add('/chat?session_id=$sessionId');
+            return Scaffold(body: Text('chat:$sessionId'));
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.tap(find.text('打开原对话'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('chat:session-42'), findsOneWidget);
+    expect(routed, ['/chat?session_id=session-42']);
+  });
+
   testWidgets('unsupported evidence stays non-routable', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

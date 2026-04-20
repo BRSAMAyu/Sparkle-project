@@ -25,6 +25,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
   bool _allowPreferences = true;
   bool _allowGoals = true;
   bool _allowEpisodic = true;
+  bool _allowInferredEpisodic = true;
   String _captureLevel = 'medium';
   final Set<String> _blockedPrefKeys = {};
   final Set<String> _blockedSources = {};
@@ -82,6 +83,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         _allowPreferences = settings.allowPreferences;
         _allowGoals = settings.allowGoals;
         _allowEpisodic = settings.allowEpisodic;
+        _allowInferredEpisodic = settings.allowInferredEpisodic;
         _captureLevel = settings.captureLevel;
         _blockedPrefKeys
           ..clear()
@@ -114,6 +116,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         allowPreferences: _allowPreferences,
         allowGoals: _allowGoals,
         allowEpisodic: _allowEpisodic,
+        allowInferredEpisodic: _allowInferredEpisodic,
         captureLevel: _captureLevel,
         blockedPrefKeys: _blockedPrefKeys.toList(),
         blockedSources: _blockedSources.toList(),
@@ -127,6 +130,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         _allowPreferences = updated.allowPreferences;
         _allowGoals = updated.allowGoals;
         _allowEpisodic = updated.allowEpisodic;
+        _allowInferredEpisodic = updated.allowInferredEpisodic;
         _captureLevel = updated.captureLevel;
         _blockedPrefKeys
           ..clear()
@@ -294,9 +298,17 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                       description: '记录对后续决策有帮助的关键事件与反馈。',
                       value: _allowEpisodic,
                       enabled: _enabled,
-                      isLast: true,
                       onChanged: (value) =>
                           setState(() => _allowEpisodic = value),
+                    ),
+                    _buildToggleRow(
+                      title: 'AI 自动记忆',
+                      description: '允许系统从聊天中推断短期经历；每条都必须可见、可撤销。',
+                      value: _allowInferredEpisodic,
+                      enabled: _enabled && _allowEpisodic,
+                      isLast: true,
+                      onChanged: (value) =>
+                          setState(() => _allowInferredEpisodic = value),
                     ),
                   ],
                 ),

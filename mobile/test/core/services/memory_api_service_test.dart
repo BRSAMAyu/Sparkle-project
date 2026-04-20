@@ -122,6 +122,7 @@ void main() {
           allowPreferences: true,
           allowGoals: false,
           allowEpisodic: true,
+          allowInferredEpisodic: true,
           captureLevel: 'high',
           blockedPrefKeys: const ['response_style'],
           blockedSources: const ['chat'],

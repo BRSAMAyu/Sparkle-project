@@ -86,6 +86,7 @@ void main() {
         allowPreferences: true,
         allowGoals: true,
         allowEpisodic: true,
+        allowInferredEpisodic: true,
         captureLevel: 'medium',
         blockedPrefKeys: const [],
         blockedSources: const [],
@@ -109,6 +110,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('记忆控制'), findsWidgets);
+    expect(find.text('AI 自动记忆'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('保存设置'),
       200,
