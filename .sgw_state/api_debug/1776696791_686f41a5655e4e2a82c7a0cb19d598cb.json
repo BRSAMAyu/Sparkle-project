@@ -1,0 +1,20 @@
+{
+  "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+  "status": 200,
+  "payload": {
+    "model": "glm-4.7",
+    "temperature": 0.3,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a probe. Reply with one short line only."
+      },
+      {
+        "role": "user",
+        "content": "请只回复：SGW_API_CLIENT_OK"
+      }
+    ],
+    "clear_thinking": true
+  },
+  "response_text": "{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"SGW_API_CLIENT_OK\",\"reasoning_content\":\"The user has provided a specific instruction: \\\"Reply with one short line only\\\" in the first prompt, and then in the second prompt, they specified exactly what I should say: \\\"请只回复：SGW_API_CLIENT_OK\\\" (Please only reply: SGW_API_CLIENT_OK).\\n\\nThe user is role-playing or testing a specific system response, likely a health check or handshake for a client labeled \\\"SGW_API_CLIENT\\\".\\n\\nMy constraints are:\\n1. Be a \\\"probe\\\".\\n2. Reply with one short line only.\\n3. The content of that line must be \\\"SGW_API_CLIENT_OK\\\".\\n\\nTherefore, I will output exactly that string.\",\"role\":\"assistant\"}}],\"created\":1776696798,\"id\":\"202604202253118ab8a880c1964cf6\",\"model\":\"glm-4.7\",\"object\":\"chat.completion\",\"request_id\":\"202604202253118ab8a880c1964cf6\",\"usage\":{\"completion_tokens\":138,\"completion_tokens_details\":{\"reasoning_tokens\":131},\"prompt_tokens\":27,\"prompt_tokens_details\":{\"cached_tokens\":4},\"total_tokens\":165}}"
+}

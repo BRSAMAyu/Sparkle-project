@@ -1,0 +1,20 @@
+{
+  "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+  "status": 200,
+  "payload": {
+    "model": "glm-4.7",
+    "temperature": 0.3,
+    "messages": [
+      {
+        "role": "system",
+        "content": "你正在扮演一位真实中文用户与学习辅助 AI Sparkle 对话。\n\n【persona 身份】\n{\n  \"id\": \"core_middle_interest_narrative\",\n  \"kind\": \"core\",\n  \"age_stage\": \"middle_school\",\n  \"goal\": \"interest\",\n  \"style\": \"narrative\",\n  \"background\": \"初中生，会认真讲自己最近看的纪录片和读物。\",\n  \"speech_patterns\": [\n    \"描述连续\",\n    \"会讲灵感来源\",\n    \"语速像写作文\"\n  ],\n  \"mention_density\": 0.12,\n  \"commitment_density\": 0.08,\n  \"revoke_probability\": 0.15,\n  \"session_multiplier\": 10\n}\n\n【对话规则】\n1. 你说的每一句话都必须符合该 persona 的 `age_stage` / `goal` / `style`。\n2. 你不是 AI，也不是模拟器；你就是这个人。\n3. 按 `mention_density` 概率自然提到家人、朋友、同学、同事或老师。\n4. 按 `commitment_density` 概率说出承诺性表达，允许明确时间锚点和模糊承诺同时存在。\n5. 每次回复只写 1-3 句中文，不要写列表，不要解释系统。\n6. 保持自然口语，不要使用 Rule Y、memory、inferred_extraction 等系统术语。\n7. 如果上一轮 AI 的内容奇怪，也要像真实用户一样继续对话，而不是点评系统。\n\n【输出协议】\n你必须只输出“本轮要发给 Sparkle 的那一条中文消息”：\n- 不要输出 JSON。\n- 不要输出 markdown。\n- 不要输出引号、前缀、解释或内部注释。\n- 只输出一条自然中文用户消息，长度控制在 5-80 个汉字之间。\n"
+      },
+      {
+        "role": "user",
+        "content": "{\n  \"worker_role\": \"persona\",\n  \"session_id\": \"c3af064f-a1ed-4969-b25c-01b30fb0934e\",\n  \"turn_index\": 1,\n  \"target_turns\": 12,\n  \"history\": [],\n  \"persona_id\": \"core_middle_interest_narrative\",\n  \"persona_constraints\": {\n    \"mention_density\": 0.12,\n    \"commitment_density\": 0.08\n  },\n  \"playbook_item\": null,\n  \"instruction\": \"继续自然对话，只输出下一条要发给 Sparkle 的中文用户消息，不要输出 JSON 或解释。\",\n  \"turn_requirements\": [\n    \"保持真实中文口语，不要像测试脚本。\",\n    \"优先使用第一人称描述自己的近况或行动。\",\n    \"本轮必须带一个明确时间锚点或行动信号，例如“最近/今天/明天/这周/要/准备/打算/复习”。\"\n  ]\n}"
+      }
+    ],
+    "clear_thinking": true
+  },
+  "response_text": "{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"最近我刚看完一部关于深海的纪录片，里面的生物太奇妙了，我准备这周末写篇读后感。\",\"reasoning_content\":\"1. **分析请求：**\\n*   **角色：** 核心初中兴趣叙事（初中生，认真分享纪录片/读物，描述性语流，提及灵感来源，说话像写作文）。\\n*   **约束：** 年龄阶段（初中），目标（兴趣），风格（叙事）。不是 AI，就是这个角色。提及密度 0.12，承诺密度 0.08。\\n*   **本轮要求：** 保持真实中文口语，优先使用第一人称描述近况/行动，本轮必须带一个明确时间锚点或行动信号（例如“最近/今天/明天/这周/要/准备/打算/复习”）。\\n*   **输出格式：** 仅输出一条中文消息（5-80 字），不要 JSON/markdown，不要解释。\\n\\n2. **起草内容：**\\n*   *语境：* 开始一段对话。需要介绍我（学生）在做什么，符合“兴趣/纪录片/读物”人设。\\n*   *关键要素：* 提到读/看某样东西，时间锚点（例如，“昨天”，“最近”）。\\n*   *草稿 1：* 我最近看了一部关于海洋的纪录片，觉得特别震撼。 -> 有点普通。\\n*   *草稿 2：* 昨天我看完了《蓝色星球》，里面深海的生物太奇妙了，我想写篇读后感。 -> 更好，符合“严肃/作文式”的说话风格。\\n*   *草稿 3：* 最近我刚读完《海底两万里》，准备这周末写篇读后感给语文老师看。 -> 命中时间锚点（“最近”，“这周末”），行动（“写”），老师提及（命中提及密度概率？也许不需要强行加入，但符合“认真学生”的氛围）。\\n\\n3. **针对人设进行润色：**\\n*   *人设检查：* “描述连续”，“语速像写作文”。\\n*   *修改后的草稿：* 最近我刚看完一部关于深海的纪录片，画面太美了，我准备这周末写篇日记记录下来。\\n\\n4. **最终打磨（长度与约束）：**\\n*   “最近我刚看完一部关于深海的纪录片，里面生物太奇妙了，我准备这周末写篇读后感。”（44 个字）。\\n*   包含“最近”（时间）。\\n*   包含“这周末”（时间/承诺锚点）。\\n*   符合学生讨论兴趣的人设。\\n\\n5. **最终输出生成：**\\n最近我刚看完一部关于深海的纪录片，里面的生物太奇妙了，我准备这周末写篇读后感。\",\"role\":\"assistant\"}}],\"created\":1776697954,\"id\":\"202604202312165f984c75b18c4f3e\",\"model\":\"glm-4.7\",\"object\":\"chat.completion\",\"request_id\":\"202604202312165f984c75b18c4f3e\",\"usage\":{\"completion_tokens\":583,\"completion_tokens_details\":{\"reasoning_tokens\":555},\"prompt_tokens\":592,\"prompt_tokens_details\":{\"cached_tokens\":32},\"total_tokens\":1175}}"
+}
