@@ -200,14 +200,16 @@ def save_learning_state(self, user_id: str, state_data: dict):
     """
     import asyncio
 
-    from app.db.session import AsyncSessionLocal
+    from app.core.cache import cache_service
     from app.learning.multi_dimensional_learner import MultiDimensionalLearner
 
     async def _save():
-        async with AsyncSessionLocal() as session:
-            learner = MultiDimensionalLearner(session)
-            await learner.save_state(user_id, state_data)
-            return {"status": "success", "user_id": user_id}
+        redis_client = cache_service.redis
+        if redis_client is None:
+            raise RuntimeError("redis cache unavailable")
+        learner = MultiDimensionalLearner(redis_client, user_id=user_id)
+        await learner.save_state(state_data)
+        return {"status": "success", "user_id": user_id}
 
     try:
         return asyncio.run(_save())

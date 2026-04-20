@@ -1,10 +1,17 @@
 import asyncio
 import json
 from dataclasses import asdict, dataclass
+from typing import Any
 
 from loguru import logger
 
 from app.learning.bayesian_learner import BayesianLearner, RouteStats
+
+MULTI_DIMENSIONAL_LEARNER_TTL_SECONDS = 86400 * 7
+
+
+def build_multi_dimensional_learner_key(user_id: str) -> str:
+    return f"multi_learner:{user_id}"
 
 
 @dataclass
@@ -40,6 +47,9 @@ class MultiDimensionalLearner:
         }
         self._loaded = False
         self._pending_saves: set[asyncio.Task] = set()
+
+    def _key(self) -> str:
+        return build_multi_dimensional_learner_key(self.user_id)
 
     async def update(self, source: str, target: str, metrics: dict):
         """Update learners based on metrics."""
@@ -89,6 +99,65 @@ class MultiDimensionalLearner:
                 }
         return breakdown
 
+    def export_state(self) -> dict[str, Any]:
+        data: dict[str, Any] = {}
+        for dim, learner in self.dimensions.items():
+            dim_stats = {}
+            for key, stats in learner.stats.items():
+                dim_stats[key] = {"alpha": stats.alpha, "beta": stats.beta}
+            data[dim] = {"stats": dim_stats}
+        data["config"] = {"weights": asdict(self.weights)}
+        return data
+
+    def _normalize_persisted_state(self, state_data: dict[str, Any]) -> dict[str, Any]:
+        config = dict(state_data.get("config") or {})
+        weights_payload = dict(config.get("weights") or asdict(self.weights))
+        normalized_weights = DimensionWeights(**weights_payload)
+        normalized_weights.validate()
+
+        normalized: dict[str, Any] = {"config": {"weights": asdict(normalized_weights)}}
+        for dim in self.dimensions:
+            raw_dim = state_data.get(dim) or {}
+            raw_stats = raw_dim.get("stats") if isinstance(raw_dim, dict) else {}
+            normalized_stats: dict[str, dict[str, float]] = {}
+            for key, stats in (raw_stats or {}).items():
+                if not isinstance(stats, dict):
+                    continue
+                normalized_stats[key] = {
+                    "alpha": float(stats.get("alpha", 1.0)),
+                    "beta": float(stats.get("beta", 1.0)),
+                }
+            normalized[dim] = {"stats": normalized_stats}
+        return normalized
+
+    def _apply_persisted_state(self, state_data: dict[str, Any]) -> None:
+        weights = DimensionWeights(**dict(state_data.get("config", {}).get("weights", {})))
+        weights.validate()
+        self.weights = weights
+        for learner in self.dimensions.values():
+            learner.stats.clear()
+        for dim in self.dimensions:
+            stats_data = dict(state_data.get(dim, {}).get("stats", {}))
+            learner = self.dimensions[dim]
+            for key, stats in stats_data.items():
+                learner.stats[key] = RouteStats(
+                    alpha=float(stats["alpha"]),
+                    beta=float(stats["beta"]),
+                )
+
+    async def save_state(self, state_data: dict[str, Any]) -> None:
+        """Persist an explicit payload for background or recovery paths."""
+        if not self.redis:
+            return
+        normalized = self._normalize_persisted_state(state_data)
+        await self.redis.setex(
+            self._key(),
+            MULTI_DIMENSIONAL_LEARNER_TTL_SECONDS,
+            json.dumps(normalized),
+        )
+        self._apply_persisted_state(normalized)
+        self._loaded = True
+
     def _normalize_metrics(self, metrics: dict) -> dict[str, bool]:
         """Normalize metrics to boolean success/fail for Beta distribution."""
         normalized = {}
@@ -116,21 +185,7 @@ class MultiDimensionalLearner:
     async def _save(self):
         """Save to Redis."""
         try:
-            data = {}
-            for dim, learner in self.dimensions.items():
-                dim_stats = {}
-                for key, stats in learner.stats.items():
-                    dim_stats[key] = {'alpha': stats.alpha, 'beta': stats.beta}
-                data[dim] = {'stats': dim_stats}
-
-            # Also save current weights preference
-            data['config'] = {'weights': asdict(self.weights)}
-
-            await self.redis.setex(
-                f"multi_learner:{self.user_id}",
-                86400 * 7,
-                json.dumps(data)
-            )
+            await self.save_state(self.export_state())
         except Exception as e:
             logger.error(f"Failed to save multi-dimensional learner: {e}")
 
@@ -140,28 +195,20 @@ class MultiDimensionalLearner:
             return
 
         try:
-            data_str = await self.redis.get(f"multi_learner:{self.user_id}")
+            if not self.redis:
+                self._loaded = True
+                return
+            data_str = await self.redis.get(self._key())
             if not data_str:
                 self._loaded = True
                 return
 
-            loaded = json.loads(data_str)
-
-            for dim, dim_data in loaded.items():
-                if dim == 'config':
-                    if 'weights' in dim_data:
-                        self.weights = DimensionWeights(**dim_data['weights'])
-                    continue
-
-                if dim in self.dimensions:
-                    learner = self.dimensions[dim]
-                    stats_data = dim_data.get('stats', {})
-                    for key, s in stats_data.items():
-                        learner.stats[key] = RouteStats(alpha=s['alpha'], beta=s['beta'])
-
+            loaded = self._normalize_persisted_state(json.loads(data_str))
+            self._apply_persisted_state(loaded)
             self._loaded = True
         except Exception as e:
             logger.error(f"Failed to load multi-dimensional learner: {e}")
+            self._loaded = True
 
     def _schedule_save(self):
         """Track async persistence tasks to avoid fire-and-forget leakage."""
