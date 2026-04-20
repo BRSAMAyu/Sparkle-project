@@ -464,6 +464,15 @@ class Settings(BaseSettings):
     ENABLE_USER_MEMORY_CONTROLS: bool = True
     SPARKLE_MEMORY_INFERRED_WRITE_ENABLED: bool = False
     SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED: bool = False
+    SPARKLE_AGGREGATOR_ENABLED: bool = False
+    # This data is prompt context only, not a routing decision signal.
+    # Any if/switch logic based on it requires Stage 19B Sufficiency Judge acceptance.
+    SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED: bool = False
+    SPARKLE_ROUTER_USE_AGGREGATOR_PROVIDER: bool = False
+    SPARKLE_PUSH_POLICY_ENABLED: bool = False
+    SPARKLE_PUSH_DELIVERY_ENABLED: bool = False
+    # Legacy alias kept for Stage 17 compatibility with the prompt renderer.
+    SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED: bool = False
     MEMORY_INFERRED_MIN_CONFIDENCE: float = 0.9
     ENABLE_MEMORY_JOBS: bool = True
     ENABLE_EVIDENCE_SNAPSHOT_ON_WRITE: bool = True
