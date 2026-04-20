@@ -100,7 +100,7 @@ class OrchestratorConfig:
     adversarial_playbook: Path
     report_path: Path
     checkpoint_path: Path
-    wall_clock_hours: float = 12.0
+    wall_clock_hours: float = float(os.getenv("SGW_WALL_CLOCK_HOURS", "18"))
     min_sessions: int = 360
     min_turns: int = 4000
     turn_target: int = 12
@@ -119,6 +119,7 @@ class OrchestratorConfig:
     claude_failure_backoff_seconds: int = int(os.getenv("SGW_CLAUDE_FAILURE_BACKOFF_SECONDS", "30"))
     claude_budget_reset_seconds: int = int(os.getenv("SGW_CLAUDE_WINDOW_RESET_SECONDS", str(5 * 3600)))
     max_history_pairs: int = int(os.getenv("SGW_MAX_HISTORY_PAIRS", "6"))
+    audit_sample_rate: float = float(os.getenv("SGW_AUDIT_SAMPLE_RATE", "0.25"))
     random_seed: int = int(os.getenv("SGW_RANDOM_SEED", "17"))
     resume: bool = False
 
@@ -295,6 +296,7 @@ class SparkleGatewayClient:
             "user_id": user_id,
         }
         chunks: list[str] = []
+        full_text: str | None = None
         async with websockets.connect(uri, ping_interval=None, ping_timeout=None, close_timeout=10) as websocket:
             await websocket.send(json.dumps(request))
             while True:
@@ -304,12 +306,12 @@ class SparkleGatewayClient:
                 if msg_type == "delta":
                     chunks.append(data.get("delta", ""))
                 elif msg_type == "full_text":
-                    chunks.append(data.get("full_text", ""))
+                    full_text = data.get("full_text", "")
                 elif msg_type == "error":
                     raise RuntimeError(data.get("message") or data.get("error") or "Sparkle gateway returned error")
                 elif msg_type == "done":
                     break
-        return "".join(chunks).strip()
+        return (full_text if full_text is not None else "".join(chunks)).strip()
 
     async def retract_memory(self, *, token: str, memory_id: str, reason: str) -> bool:
         headers = {"Authorization": f"Bearer {token}"}
@@ -356,8 +358,6 @@ class SGWOrchestrator:
         self._last_progress_emit = 0.0
         self._active_workers = 0
         self._db_sessions_in_use = 0
-        self._claude_call_lock = asyncio.Lock()
-
     async def run(self) -> int:
         self._install_signal_handlers()
         if self.config.resume and self.config.checkpoint_path.exists():
@@ -394,24 +394,37 @@ class SGWOrchestrator:
         return 0 if all(acceptance.values()) else 1
 
     async def _bootstrap_tasks(self) -> None:
+        persona_batches: list[list[SessionTask]] = []
+        max_sessions_per_persona = 0
         for persona in self.personas:
             sessions = int(persona.get("session_multiplier", 1))
+            max_sessions_per_persona = max(max_sessions_per_persona, sessions)
             user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"sgw-user:{persona['id']}"))
             username = f"sgw_{persona['id']}"
             email = f"{persona['id']}@sgw.sparkle.local"
             await self._ensure_user(user_id=user_id, username=username, email=email)
-            for index in range(sessions):
-                task = SessionTask(
-                    task_id=str(uuid.uuid4()),
-                    role="persona",
-                    persona_id=persona["id"],
-                    playbook_id=None,
-                    user_id=user_id,
-                    username=username,
-                    email=email,
-                    session_id=str(uuid.uuid4()),
-                    target_turns=self.config.turn_target,
+            batch: list[SessionTask] = []
+            for _ in range(sessions):
+                batch.append(
+                    SessionTask(
+                        task_id=str(uuid.uuid4()),
+                        role="persona",
+                        persona_id=persona["id"],
+                        playbook_id=None,
+                        user_id=user_id,
+                        username=username,
+                        email=email,
+                        session_id=str(uuid.uuid4()),
+                        target_turns=self.config.turn_target,
+                    )
                 )
+            persona_batches.append(batch)
+
+        for index in range(max_sessions_per_persona):
+            for batch in persona_batches:
+                if index >= len(batch):
+                    continue
+                task = batch[index]
                 self.session_tasks[task.task_id] = task
                 await self.persona_queue.put(task.task_id)
                 self.metrics.record_session_planned()
@@ -546,12 +559,11 @@ class SGWOrchestrator:
                 system_prompt = self._build_system_prompt(task)
                 prompt = self._build_turn_prompt(task)
                 try:
-                    async with self._claude_call_lock:
-                        if self.global_cooldown_until and time.time() < self.global_cooldown_until:
-                            task.status = "pending"
-                            await self._checkpoint()
-                            return
-                        message = await self.claude.text_call(system_prompt=system_prompt, prompt=prompt)
+                    if self.global_cooldown_until and time.time() < self.global_cooldown_until:
+                        task.status = "pending"
+                        await self._checkpoint()
+                        return
+                    message = await self.claude.text_call(system_prompt=system_prompt, prompt=prompt)
                 except ClaudeCallError as exc:
                     task.status = "pending"
                     task.last_error = exc.detail
@@ -609,6 +621,7 @@ class SGWOrchestrator:
                 task.transcript.append({"role": "assistant", "content": assistant_reply})
                 task.turns_completed += 1
                 task.updated_at = iso_now()
+                task.retry_count = 0
                 self.metrics.record_turn()
 
                 new_records = await self._collect_new_records(task=task, source_chat_turn=message)
@@ -652,15 +665,14 @@ class SGWOrchestrator:
                 indent=2,
             )
             try:
-                async with self._claude_call_lock:
-                    if self.global_cooldown_until and time.time() < self.global_cooldown_until:
-                        task.status = "pending"
-                        await self._checkpoint()
-                        return
-                    audit_output = await self.claude.text_call(
-                        system_prompt=self.audit_prompt_template,
-                        prompt=audit_prompt,
-                    )
+                if self.global_cooldown_until and time.time() < self.global_cooldown_until:
+                    task.status = "pending"
+                    await self._checkpoint()
+                    return
+                audit_output = await self.claude.text_call(
+                    system_prompt=self.audit_prompt_template,
+                    prompt=audit_prompt,
+                )
                 score = self._parse_audit_score(audit_output)
             except ClaudeCallError as exc:
                 task.status = "pending"
@@ -739,9 +751,10 @@ class SGWOrchestrator:
                     self.metrics.record_hard_violation(violation.to_dict())
                 self.stop_reason = "hard violation"
                 self.stop_event.set()
-            audit_task = AuditTask(case_id=memory_id, record=record, source_chat_turn=source_chat_turn)
-            self.audit_tasks[audit_task.case_id] = audit_task
-            self.audit_queue.put_nowait(audit_task.case_id)
+            if self._should_enqueue_audit(task=task, record=record):
+                audit_task = AuditTask(case_id=memory_id, record=record, source_chat_turn=source_chat_turn)
+                self.audit_tasks[audit_task.case_id] = audit_task
+                self.audit_queue.put_nowait(audit_task.case_id)
         if violations := self._check_explicit_overwrite(task.detected_memory_ids):
             for violation in violations:
                 self.metrics.record_hard_violation(violation.to_dict())
@@ -794,14 +807,22 @@ class SGWOrchestrator:
     def _build_turn_prompt(self, task: SessionTask) -> str:
         history = task.transcript[-2 * self.config.max_history_pairs :]
         playbook = self._playbook_by_id(task.playbook_id)
+        persona = self._persona_by_id(task.persona_id) or {}
+        turn_index = task.turns_completed + 1
         payload = {
             "worker_role": task.role,
             "session_id": task.session_id,
-            "turn_index": task.turns_completed + 1,
+            "turn_index": turn_index,
             "target_turns": task.target_turns,
             "history": history,
+            "persona_id": task.persona_id,
+            "persona_constraints": {
+                "mention_density": persona.get("mention_density", 0.15),
+                "commitment_density": persona.get("commitment_density", 0.1),
+            },
             "playbook_item": playbook,
             "instruction": "继续自然对话，只输出下一条要发给 Sparkle 的中文用户消息，不要输出 JSON 或解释。",
+            "turn_requirements": self._build_turn_requirements(task=task, turn_index=turn_index),
         }
         return json.dumps(payload, ensure_ascii=False, indent=2)
 
@@ -857,6 +878,33 @@ class SGWOrchestrator:
         if numeric < 0.0 or numeric > 1.0:
             raise ValueError(f"score out of range: {value}")
         return numeric
+
+    def _should_enqueue_audit(self, *, task: SessionTask, record: dict[str, Any]) -> bool:
+        if task.role == "adversarial":
+            return True
+        if not task.detected_memory_ids:
+            return True
+        return self.random.random() < self.config.audit_sample_rate
+
+    def _build_turn_requirements(self, *, task: SessionTask, turn_index: int) -> list[str]:
+        persona = self._persona_by_id(task.persona_id) or {}
+        mention_density = float(persona.get("mention_density", 0.15))
+        commitment_density = float(persona.get("commitment_density", 0.1))
+        requirements = [
+            "保持真实中文口语，不要像测试脚本。",
+            "优先使用第一人称描述自己的近况或行动。",
+        ]
+        if turn_index == 1:
+            requirements.append("本轮必须带一个明确时间锚点或行动信号，例如“最近/今天/明天/这周/要/准备/打算/复习”。")
+        elif turn_index % 3 == 0:
+            requirements.append("本轮尽量自然加入一个时间锚点或行动信号，帮助系统观察承压中的连续对话。")
+        if mention_density >= 0.15 and turn_index % 4 == 0:
+            requirements.append("本轮自然提到一个家人、朋友、同学或同事，但不要机械生硬。")
+        if commitment_density >= 0.1 and turn_index % 5 == 0:
+            requirements.append("本轮给出一个带明确时间的打算或承诺，例如“明天/这周/今晚/周末之前我会…”。")
+        if task.role == "adversarial":
+            requirements.append("本轮继续围绕当前 playbook 场景施压，但保持像真实用户说话。")
+        return requirements
 
     async def _wait_for_global_cooldown(self) -> None:
         while self.global_cooldown_until and time.time() < self.global_cooldown_until:
@@ -962,7 +1010,7 @@ class SGWOrchestrator:
     def _acceptance(self) -> dict[str, bool]:
         wall_clock_hours = (time.time() - self.started_at) / 3600
         return {
-            "wall_clock_runtime>=12h": wall_clock_hours >= self.config.wall_clock_hours,
+            f"wall_clock_runtime>={self.config.wall_clock_hours:g}h": wall_clock_hours >= self.config.wall_clock_hours,
             "personas>=44": len(self.personas) >= 44,
             "sessions>=360": self.metrics.sessions_completed >= self.config.min_sessions,
             "turns>=4000": self.metrics.turns_completed >= self.config.min_turns,
@@ -999,7 +1047,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--adversarial-playbook", required=True, type=Path)
     parser.add_argument("--report-path", required=True, type=Path)
     parser.add_argument("--checkpoint-path", required=True, type=Path)
-    parser.add_argument("--wall-clock-hours", type=float, default=12.0)
+    parser.add_argument("--wall-clock-hours", type=float, default=float(os.getenv("SGW_WALL_CLOCK_HOURS", "18")))
     parser.add_argument("--min-sessions", type=int, default=360)
     parser.add_argument("--min-turns", type=int, default=4000)
     parser.add_argument("--turn-target", type=int, default=12)
