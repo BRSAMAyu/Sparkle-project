@@ -31,6 +31,7 @@ from app.core.context_budget import DEFAULT_BUDGETS, _apply_min_budget, _normali
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
 from app.services.budget_tuning_service import BudgetTuningService
+from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.ltm_health_snapshot import LtmHealthSnapshotService
 from app.services.ltm_release_gate import LtmReleaseGate
@@ -261,12 +262,32 @@ async def revoke_inferred_memory_lane(
     _ensure_governance_enabled()
     user_id_raw = (payload or {}).get("user_id")
     reason = (payload or {}).get("reason") or "admin_kill_switch"
+    subject_types = (payload or {}).get("subject_types")
     try:
         user_id = UUID(user_id_raw) if user_id_raw else None
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="invalid user_id") from exc
-    revoked = await revoke_inferred_lane(db, user_id=user_id, reason=reason)
+    revoked = await revoke_inferred_lane(db, user_id=user_id, reason=reason, subject_types=subject_types)
     return {"status": "ok", "revoked": revoked}
+
+
+@router.get("/stage18/killswitch")
+async def get_stage18_kill_switches():
+    service = AuroraStage18KillSwitchService()
+    return {"flags": await service.get_all()}
+
+
+@router.put("/stage18/killswitch")
+async def update_stage18_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage18KillSwitchService()
+    flags = await service.set_flags(
+        {
+            "aggregator_enabled": payload.get("aggregator_enabled"),
+            "push_policy_enabled": payload.get("push_policy_enabled"),
+            "push_delivery_enabled": payload.get("push_delivery_enabled"),
+        }
+    )
+    return {"status": "ok", "flags": flags}
 
 
 @router.get("/context-pack/stats")

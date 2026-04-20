@@ -1,6 +1,7 @@
 from datetime import timezone, datetime
 from uuid import uuid4
 
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -32,9 +33,7 @@ async def test_memory_admin_access_control(db_session, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_active_superuser] = override_superuser_forbidden
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/api/v1/admin/memory/stats")
         assert resp.status_code == 403
 
@@ -77,9 +76,7 @@ async def test_memory_admin_stats_shape(db_session, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_active_superuser] = override_superuser
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/api/v1/admin/memory/stats")
         assert resp.status_code == 200
         payload = resp.json()
@@ -115,9 +112,7 @@ async def test_memory_admin_health_snapshot(db_session, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_active_superuser] = override_superuser
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/api/v1/admin/memory/health-snapshot")
         assert resp.status_code == 200
         payload = resp.json()
@@ -166,13 +161,57 @@ async def test_memory_admin_revoke_inferred_lane(db_session, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_active_superuser] = override_superuser
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.post("/api/v1/admin/memory/inferred/revoke", json={})
         assert resp.status_code == 200
         assert resp.json()["revoked"] == 1
 
     await db_session.refresh(inferred)
     assert inferred.revoked_at is not None
+    app.dependency_overrides = {}
+
+
+@pytest.mark.asyncio
+async def test_memory_admin_stage18_kill_switches(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_MEMORY_GOVERNANCE", True, raising=False)
+
+    user_id = uuid4()
+    admin_user = User(
+        id=user_id,
+        username=f"admin_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+        is_active=True,
+        is_superuser=True,
+    )
+    db_session.add(admin_user)
+    await db_session.commit()
+
+    async def override_get_db():
+        yield db_session
+
+    async def override_superuser():
+        return admin_user
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_active_superuser] = override_superuser
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        get_resp = await ac.get("/api/v1/admin/memory/stage18/killswitch")
+        assert get_resp.status_code == 200
+        assert "flags" in get_resp.json()
+
+        put_resp = await ac.put(
+            "/api/v1/admin/memory/stage18/killswitch",
+            json={
+                "aggregator_enabled": True,
+                "push_policy_enabled": True,
+                "push_delivery_enabled": False,
+            },
+        )
+        assert put_resp.status_code == 200
+        assert put_resp.json()["flags"]["aggregator_enabled"] is True
+        assert put_resp.json()["flags"]["push_policy_enabled"] is True
+        assert put_resp.json()["flags"]["push_delivery_enabled"] is False
+
     app.dependency_overrides = {}
