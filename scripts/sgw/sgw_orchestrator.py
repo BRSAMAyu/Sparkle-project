@@ -3,10 +3,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import base64
 import contextlib
-import hashlib
-import hmac
 import json
 import os
 import random
@@ -36,6 +33,7 @@ from hard_violation_rules import HardViolation, check_inferred_record
 from metrics_collector import MetricsCollector
 
 from app.db.session import AsyncSessionLocal, engine
+from app.core.security import create_access_token
 from app.models.memory import EpisodicMemory
 from app.models.user import User
 
@@ -358,6 +356,7 @@ class SGWOrchestrator:
         self._last_progress_emit = 0.0
         self._active_workers = 0
         self._db_sessions_in_use = 0
+        self._claude_call_lock = asyncio.Lock()
 
     async def run(self) -> int:
         self._install_signal_handlers()
@@ -547,7 +546,12 @@ class SGWOrchestrator:
                 system_prompt = self._build_system_prompt(task)
                 prompt = self._build_turn_prompt(task)
                 try:
-                    message = await self.claude.text_call(system_prompt=system_prompt, prompt=prompt)
+                    async with self._claude_call_lock:
+                        if self.global_cooldown_until and time.time() < self.global_cooldown_until:
+                            task.status = "pending"
+                            await self._checkpoint()
+                            return
+                        message = await self.claude.text_call(system_prompt=system_prompt, prompt=prompt)
                 except ClaudeCallError as exc:
                     task.status = "pending"
                     task.last_error = exc.detail
@@ -648,7 +652,15 @@ class SGWOrchestrator:
                 indent=2,
             )
             try:
-                audit_output = await self.claude.text_call(system_prompt=self.audit_prompt_template, prompt=audit_prompt)
+                async with self._claude_call_lock:
+                    if self.global_cooldown_until and time.time() < self.global_cooldown_until:
+                        task.status = "pending"
+                        await self._checkpoint()
+                        return
+                    audit_output = await self.claude.text_call(
+                        system_prompt=self.audit_prompt_template,
+                        prompt=audit_prompt,
+                    )
                 score = self._parse_audit_score(audit_output)
             except ClaudeCallError as exc:
                 task.status = "pending"
@@ -761,38 +773,11 @@ class SGWOrchestrator:
             self._db_sessions_in_use = max(0, self._db_sessions_in_use - 1)
 
     def _issue_token(self, user_id: str) -> str:
-        secret = self._load_jwt_secret()
         payload = {
             "sub": user_id,
-            "exp": int(time.time()) + 3600,
-            "iat": int(time.time()),
-            "type": "access",
             "is_admin": False,
         }
-        header = {"alg": "HS256", "typ": "JWT"}
-        header_bytes = json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
-        payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
-        encoded_header = base64.urlsafe_b64encode(header_bytes).rstrip(b"=")
-        encoded_payload = base64.urlsafe_b64encode(payload_bytes).rstrip(b"=")
-        signing_input = encoded_header + b"." + encoded_payload
-        signature = hmac.new(secret.encode("utf-8"), signing_input, hashlib.sha256).digest()
-        encoded_signature = base64.urlsafe_b64encode(signature).rstrip(b"=")
-        return b".".join((encoded_header, encoded_payload, encoded_signature)).decode("utf-8")
-
-    @staticmethod
-    def _load_jwt_secret() -> str:
-        env_paths = [
-            REPO_ROOT / ".env",
-            REPO_ROOT / "backend" / ".env",
-            REPO_ROOT / "backend" / "gateway" / ".env",
-        ]
-        for path in env_paths:
-            if not path.exists():
-                continue
-            for line in path.read_text(encoding="utf-8").splitlines():
-                if line.startswith("JWT_SECRET="):
-                    return line.split("=", 1)[1].strip()
-        return os.getenv("JWT_SECRET", "dev-secret-key")
+        return create_access_token(payload)
 
     def _build_system_prompt(self, task: SessionTask) -> str:
         if task.role == "adversarial":
