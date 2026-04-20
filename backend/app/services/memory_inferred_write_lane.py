@@ -5,7 +5,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -39,6 +39,7 @@ class InferredEpisodicCandidate:
     source_lane: str
     semantic_key: str
     evidence_refs: list[dict[str, str]]
+    occurred_at: datetime
 
 
 class MemoryInferredWriteLaneService:
@@ -193,7 +194,7 @@ class MemoryInferredWriteLaneService:
             source_type="chat",
             source_id=str(session_id),
             source_lane=candidate.source_lane,
-            occurred_at=_utcnow(),
+            occurred_at=candidate.occurred_at,
             importance_score=candidate.confidence,
             confidence=candidate.confidence,
             tags=[
@@ -223,16 +224,21 @@ class MemoryInferredWriteLaneService:
         sentence = self._pick_candidate_sentence(user_message)
         if not sentence:
             return None
-        temporal = self._has_temporal_anchor(sentence)
+        occurred_at, temporal_kind = self._resolve_occurred_at(sentence)
+        temporal = temporal_kind is not None
         actionish = self._has_action_signal(sentence)
-        confidence = 0.88
+        confidence = 0.72
         if temporal:
-            confidence += 0.04
+            confidence += 0.08
         if actionish:
-            confidence += 0.04
+            confidence += 0.06
         if assistant_message:
             confidence += 0.01
-        confidence = min(confidence, 0.97)
+        if temporal_kind in {"tomorrow", "this_week", "weekend", "tonight"}:
+            confidence += 0.03
+        if actionish and any(token in sentence for token in ("今天", "明天", "今晚", "周末", "下周", "这周", "本周", "下午", "晚上", "早上")):
+            confidence += 0.03
+        confidence = min(confidence, 0.9)
         decay_policy = "7d" if temporal else "30d"
         semantic_key = hashlib.sha1(self._normalize_semantic(sentence).encode("utf-8")).hexdigest()
         return InferredEpisodicCandidate(
@@ -249,6 +255,7 @@ class MemoryInferredWriteLaneService:
                     "schema_version": "stage16.rule_y.v1",
                 }
             ],
+            occurred_at=occurred_at,
         )
 
     async def _load_latest_user_turn(
@@ -355,16 +362,30 @@ class MemoryInferredWriteLaneService:
     @staticmethod
     def _pick_candidate_sentence(user_message: str) -> str | None:
         sentences = re.split(r"[。！？!?\n]+", user_message)
+        best_sentence: str | None = None
+        best_score = -1.0
         for raw in sentences:
             sentence = raw.strip(" ，,；;")
             if not sentence:
                 continue
-            if len(sentence) < 8 or len(sentence) > 120:
+            if len(sentence) < 8 or len(sentence) > 180:
                 continue
             if not MemoryInferredWriteLaneService._looks_like_safe_context(sentence):
                 continue
-            return sentence
-        return None
+            score = 0.0
+            if "我" in sentence:
+                score += 2.0
+            if MemoryInferredWriteLaneService._has_temporal_anchor(sentence):
+                score += 2.0
+            if MemoryInferredWriteLaneService._has_action_signal(sentence):
+                score += 1.5
+            if any(token in sentence for token in ("明天", "今晚", "周末", "下周", "这周", "今天")):
+                score += 1.0
+            score += min(len(sentence), 80) / 80.0
+            if score > best_score:
+                best_score = score
+                best_sentence = sentence
+        return best_sentence
 
     @staticmethod
     def _looks_like_safe_context(sentence: str) -> bool:
@@ -390,7 +411,23 @@ class MemoryInferredWriteLaneService:
 
     @staticmethod
     def _has_temporal_anchor(sentence: str) -> bool:
-        temporal_tokens = ("最近", "今天", "这周", "本周", "明天", "今晚", "这两天", "刚刚", "现在")
+        temporal_tokens = (
+            "最近",
+            "今天",
+            "这周",
+            "本周",
+            "明天",
+            "今晚",
+            "这两天",
+            "刚刚",
+            "现在",
+            "周末",
+            "下周",
+            "月底",
+            "早上",
+            "下午",
+            "晚上",
+        )
         return any(token in sentence for token in temporal_tokens)
 
     @staticmethod
@@ -403,6 +440,45 @@ class MemoryInferredWriteLaneService:
         normalized = re.sub(r"\s+", "", value.strip().lower())
         normalized = re.sub(r"[，,。！？!?；;:：]", "", normalized)
         return normalized
+
+    @staticmethod
+    def _resolve_occurred_at(sentence: str) -> tuple[datetime, str | None]:
+        now = _utcnow()
+        lowered = sentence.lower()
+        if "明天晚上" in lowered or "明晚" in lowered:
+            base = now + timedelta(days=1)
+            return base.replace(hour=20, minute=0, second=0, microsecond=0), "tomorrow_evening"
+        if "明天下午" in lowered:
+            base = now + timedelta(days=1)
+            return base.replace(hour=15, minute=0, second=0, microsecond=0), "tomorrow_afternoon"
+        if "明天早上" in lowered:
+            base = now + timedelta(days=1)
+            return base.replace(hour=9, minute=0, second=0, microsecond=0), "tomorrow_morning"
+        if "明天" in lowered:
+            base = now + timedelta(days=1)
+            return base.replace(hour=9, minute=0, second=0, microsecond=0), "tomorrow"
+        if "今晚" in lowered:
+            return now.replace(hour=20, minute=0, second=0, microsecond=0), "tonight"
+        if "今天晚上" in lowered or "晚上" in lowered:
+            return now.replace(hour=20, minute=0, second=0, microsecond=0), "today_evening"
+        if "今天下午" in lowered or "下午" in lowered:
+            return now.replace(hour=15, minute=0, second=0, microsecond=0), "today_afternoon"
+        if "今天早上" in lowered or "早上" in lowered:
+            return now.replace(hour=9, minute=0, second=0, microsecond=0), "today_morning"
+        if "今天" in lowered or "现在" in lowered:
+            return now, "today"
+        if "周末" in lowered:
+            days_until_saturday = (5 - now.weekday()) % 7
+            target = now + timedelta(days=days_until_saturday)
+            return target.replace(hour=10, minute=0, second=0, microsecond=0), "weekend"
+        if "这周" in lowered or "本周" in lowered:
+            target = now + timedelta(days=max(0, 6 - now.weekday()))
+            return target.replace(hour=18, minute=0, second=0, microsecond=0), "this_week"
+        if "下周" in lowered:
+            days_until_next_monday = (7 - now.weekday()) % 7 or 7
+            target = now + timedelta(days=days_until_next_monday)
+            return target.replace(hour=9, minute=0, second=0, microsecond=0), "next_week"
+        return now, None
 
 
 async def revoke_inferred_lane(

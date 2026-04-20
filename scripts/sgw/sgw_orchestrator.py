@@ -133,6 +133,11 @@ class OrchestratorConfig:
     )
     max_history_pairs: int = int(os.getenv("SGW_MAX_HISTORY_PAIRS", "6"))
     audit_sample_rate: float = float(os.getenv("SGW_AUDIT_SAMPLE_RATE", "0.25"))
+    audit_backlog_soft_cap: int = int(os.getenv("SGW_AUDIT_BACKLOG_SOFT_CAP", "80"))
+    audit_start_after_turns: int = int(os.getenv("SGW_AUDIT_START_AFTER_TURNS", "240"))
+    audit_pause_backlog_threshold: int = int(os.getenv("SGW_AUDIT_PAUSE_BACKLOG_THRESHOLD", "120"))
+    audit_max_parallel: int = int(os.getenv("SGW_AUDIT_MAX_PARALLEL", "1"))
+    session_turn_slice: int = int(os.getenv("SGW_SESSION_TURN_SLICE", "1"))
     random_seed: int = int(os.getenv("SGW_RANDOM_SEED", "17"))
     resume: bool = False
 
@@ -549,6 +554,17 @@ class OpenAICompatibleApiClient:
             return before, self._effective_parallel
 
 
+def _clone_audit_client_config(config: OrchestratorConfig) -> OrchestratorConfig:
+    payload = asdict(config)
+    payload["claude_initial_parallel"] = 1
+    payload["claude_min_parallel"] = 1
+    payload["claude_max_parallel"] = max(1, config.audit_max_parallel)
+    payload["claude_scale_up_cooldown_seconds"] = max(config.claude_scale_up_cooldown_seconds, 1800)
+    payload["claude_ceiling_probe_cooldown_seconds"] = max(config.claude_ceiling_probe_cooldown_seconds, 3600)
+    payload["api_temperature"] = min(config.api_temperature, 0.2)
+    return OrchestratorConfig(**payload)
+
+
 class SparkleGatewayClient:
     def __init__(self, config: OrchestratorConfig):
         self._config = config
@@ -604,8 +620,10 @@ class SGWOrchestrator:
         self.metrics = MetricsCollector()
         if config.llm_provider == "api":
             self.claude = OpenAICompatibleApiClient(config)
+            self.audit_llm = OpenAICompatibleApiClient(_clone_audit_client_config(config))
         else:
             self.claude = ClaudeCliClient(config)
+            self.audit_llm = ClaudeCliClient(_clone_audit_client_config(config))
         self.gateway = SparkleGatewayClient(config)
         self.persona_prompt_template = (SCRIPT_DIR / "prompts" / "persona_system_prompt.md").read_text(encoding="utf-8")
         self.adversarial_prompt_template = (SCRIPT_DIR / "prompts" / "adversarial_system_prompt.md").read_text(
@@ -621,6 +639,7 @@ class SGWOrchestrator:
         self.audit_queue: asyncio.Queue[str] = asyncio.Queue()
         self.seen_memory_ids: set[str] = set()
         self.global_cooldown_until: float | None = None
+        self.audit_cooldown_until: float | None = None
         self.stop_reason = ""
         self.stop_event = asyncio.Event()
         self.started_at = time.time()
@@ -745,16 +764,26 @@ class SGWOrchestrator:
         }
         self.seen_memory_ids = set(payload.get("seen_memory_ids", []))
         self.global_cooldown_until = payload.get("global_cooldown_until")
+        self.audit_cooldown_until = payload.get("audit_cooldown_until")
         self.claude.restore_state(payload.get("claude_state"))
+        self.audit_llm.restore_state(payload.get("audit_llm_state"))
         self.started_at = payload.get("started_at", time.time())
+        persona_pending: list[SessionTask] = []
+        adversarial_pending: list[SessionTask] = []
         for task in self.session_tasks.values():
             if task.status in {"running", "retry"}:
                 task.status = "pending"
             if task.status == "pending":
                 if task.role == "adversarial":
-                    self.adversarial_queue.put_nowait(task.task_id)
+                    adversarial_pending.append(task)
                 else:
-                    self.persona_queue.put_nowait(task.task_id)
+                    persona_pending.append(task)
+        persona_pending.sort(key=lambda task: (task.turns_completed, task.retry_count, task.created_at, task.task_id))
+        adversarial_pending.sort(key=lambda task: (task.turns_completed, task.retry_count, task.created_at, task.task_id))
+        for task in persona_pending:
+            self.persona_queue.put_nowait(task.task_id)
+        for task in adversarial_pending:
+            self.adversarial_queue.put_nowait(task.task_id)
         for audit_task in self.audit_tasks.values():
             if audit_task.status in {"running", "retry"}:
                 audit_task.status = "pending"
@@ -765,7 +794,9 @@ class SGWOrchestrator:
         payload = {
             "started_at": self.started_at,
             "global_cooldown_until": self.global_cooldown_until,
+            "audit_cooldown_until": self.audit_cooldown_until,
             "claude_state": self.claude.state_dict(),
+            "audit_llm_state": self.audit_llm.state_dict(),
             "seen_memory_ids": sorted(self.seen_memory_ids),
             "metrics": self.metrics.to_dict(),
             "session_tasks": {task_id: task.to_dict() for task_id, task in self.session_tasks.items()},
@@ -815,6 +846,7 @@ class SGWOrchestrator:
         while not self.stop_event.is_set():
             try:
                 await self._wait_for_global_cooldown()
+                await self._wait_for_audit_cooldown()
                 case_id = await self._next_audit_case()
                 if case_id is None:
                     if self._should_stop():
@@ -834,7 +866,12 @@ class SGWOrchestrator:
         self._active_workers += 1
         try:
             token = self._issue_token(task.user_id)
-            while task.turns_completed < task.target_turns and not self.stop_event.is_set():
+            turns_this_lease = 0
+            while (
+                task.turns_completed < task.target_turns
+                and not self.stop_event.is_set()
+                and turns_this_lease < max(1, self.config.session_turn_slice)
+            ):
                 if self.global_cooldown_until and time.time() < self.global_cooldown_until:
                     task.status = "pending"
                     await self._checkpoint()
@@ -912,6 +949,7 @@ class SGWOrchestrator:
                 task.transcript.append({"role": "user", "content": message})
                 task.transcript.append({"role": "assistant", "content": assistant_reply})
                 task.turns_completed += 1
+                turns_this_lease += 1
                 task.updated_at = iso_now()
                 task.retry_count = 0
                 self.metrics.record_turn()
@@ -926,10 +964,15 @@ class SGWOrchestrator:
 
                 await self._checkpoint()
 
-            task.status = "completed"
-            task.updated_at = iso_now()
-            self.metrics.record_session_completed(role=task.role, persona_id=task.persona_id)
-            await self._checkpoint()
+            if task.turns_completed >= task.target_turns:
+                task.status = "completed"
+                task.updated_at = iso_now()
+                self.metrics.record_session_completed(role=task.role, persona_id=task.persona_id)
+                await self._checkpoint()
+            elif not self.stop_event.is_set():
+                task.status = "pending"
+                task.updated_at = iso_now()
+                await self._checkpoint()
         finally:
             self._active_workers = max(0, self._active_workers - 1)
 
@@ -961,7 +1004,7 @@ class SGWOrchestrator:
                     task.status = "pending"
                     await self._checkpoint()
                     return
-                audit_output = await self.claude.text_call(
+                audit_output = await self.audit_llm.text_call(
                     system_prompt=self.audit_prompt_template,
                     prompt=audit_prompt,
                 )
@@ -971,15 +1014,15 @@ class SGWOrchestrator:
                 task.retry_count += 1
                 if exc.kind == "rate_limit":
                     self.metrics.record_rate_limit()
-                    adjustment = await self.claude.back_off_after_rate_limit()
+                    adjustment = await self.audit_llm.back_off_after_rate_limit()
                     if adjustment:
                         before, after = adjustment
                         self.metrics.record_concurrency_adjustment(
                             before=before,
                             after=after,
-                            reason="rate_limit_backoff",
+                            reason="audit_rate_limit_backoff",
                         )
-                    cooldown_until = self._arm_rate_limit_cooldown(task.retry_count, reason=exc.detail)
+                    cooldown_until = self._arm_audit_rate_limit_cooldown(task.retry_count)
                     print(
                         f"[sgw] {worker_name} audit hit rate limit"
                         f"{f'; reducing Claude parallelism {adjustment[0]} -> {adjustment[1]}' if adjustment else ''}, cooling down until "
@@ -1183,6 +1226,12 @@ class SGWOrchestrator:
     def _should_enqueue_audit(self, *, task: SessionTask, record: dict[str, Any]) -> bool:
         if task.role == "adversarial":
             return True
+        if self.metrics.turns_completed < self.config.audit_start_after_turns:
+            return False
+        if self.persona_queue.qsize() + self.adversarial_queue.qsize() >= self.config.audit_pause_backlog_threshold:
+            return False
+        if self.audit_queue.qsize() >= self.config.audit_backlog_soft_cap:
+            return False
         if not task.detected_memory_ids:
             return True
         return self.random.random() < self.config.audit_sample_rate
@@ -1213,6 +1262,12 @@ class SGWOrchestrator:
         if self.global_cooldown_until and time.time() >= self.global_cooldown_until:
             self.global_cooldown_until = None
 
+    async def _wait_for_audit_cooldown(self) -> None:
+        while self.audit_cooldown_until and time.time() < self.audit_cooldown_until:
+            await asyncio.sleep(15)
+        if self.audit_cooldown_until and time.time() >= self.audit_cooldown_until:
+            self.audit_cooldown_until = None
+
     async def _next_task_id(self, queue_name: str) -> str | None:
         queue = self.adversarial_queue if queue_name == "adversarial" else self.persona_queue
         if queue.empty():
@@ -1220,6 +1275,10 @@ class SGWOrchestrator:
         return await queue.get()
 
     async def _next_audit_case(self) -> str | None:
+        if self.metrics.turns_completed < self.config.audit_start_after_turns:
+            return None
+        if self.persona_queue.qsize() + self.adversarial_queue.qsize() >= self.config.audit_pause_backlog_threshold:
+            return None
         if self.audit_queue.empty():
             return None
         return await self.audit_queue.get()
@@ -1261,6 +1320,17 @@ class SGWOrchestrator:
             self.audit_queue.put_nowait(audit_task.case_id)
             recovered += 1
         return recovered
+
+    def _arm_audit_rate_limit_cooldown(self, retry_count: int) -> float:
+        multiplier = min(max(retry_count, 1), 6)
+        seconds = min(
+            self.config.claude_rate_limit_backoff_seconds * multiplier,
+            self.config.claude_budget_reset_seconds,
+        )
+        cooldown_until = time.time() + seconds
+        existing = self.audit_cooldown_until or 0.0
+        self.audit_cooldown_until = max(existing, cooldown_until)
+        return self.audit_cooldown_until
 
     def _serialize_memory(self, item: EpisodicMemory) -> dict[str, Any]:
         return {
