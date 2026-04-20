@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-19
-> **版本**: v12（Stage 14 完成 + wire-safe 准备就绪 + Path A-blocked）
+> **版本**: v13（Stage 15 完成 + within-category bounded wire-on + Path A-on〔narrowed claim only〕）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
