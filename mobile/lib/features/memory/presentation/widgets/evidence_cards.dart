@@ -71,6 +71,15 @@ class EvidenceCard extends StatelessWidget {
         'Suggestion': error['study_suggestion']?.toString() ?? '-',
       },);
     }
+    if (payload['practice_outcome'] != null) {
+      final outcome = payload['practice_outcome'] as Map<String, dynamic>;
+      return _KeyValueList(items: {
+        'Performance': outcome['review_performance']?.toString() ?? '-',
+        'Mastery': outcome['mastery_level']?.toString() ?? '-',
+        'Reviewed': outcome['reviewed_at']?.toString() ?? '-',
+        'Summary': outcome['summary']?.toString() ?? '-',
+      },);
+    }
     if (payload['concept'] != null) {
       final concept = payload['concept'] as Map<String, dynamic>;
       return _KeyValueList(items: {
@@ -127,6 +136,17 @@ class EvidenceCard extends StatelessWidget {
         return _EvidenceRouteAction(
           route: '/errors/$errorId',
           label: '去错题本看',
+        );
+      }
+    }
+
+    final outcome = payload['practice_outcome'] as Map<String, dynamic>?;
+    if (outcome != null) {
+      final errorId = (outcome['error_id'] ?? item.id).toString().trim();
+      if (errorId.isNotEmpty) {
+        return _EvidenceRouteAction(
+          route: '/errors/$errorId',
+          label: '回到错题本看',
         );
       }
     }

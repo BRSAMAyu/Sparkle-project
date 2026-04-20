@@ -244,6 +244,61 @@ async def test_get_profile_front_door_tool_prefers_runtime_profile_context():
 
 
 @pytest.mark.asyncio
+async def test_get_profile_front_door_tool_surfaces_practice_outcome_refs_and_legend():
+    tool = GetProfileFrontDoorTool()
+    db_session = SimpleNamespace(
+        sync_session=SimpleNamespace(
+            info={
+                TOOL_RUNTIME_CONTEXT_KEY: {
+                    "profile_context": {
+                        "preference_version": 1,
+                        "knowledge_summary": {
+                            "weak_spots": [],
+                            "recent_mastery_changes": [],
+                        },
+                        "recent_errors": [
+                            {
+                                "id": "err-reviewed",
+                                "question_preview": "熵增方向判断错题",
+                                "review_count": 2,
+                                "last_reviewed_at": "2026-04-20T12:00:00",
+                            }
+                        ],
+                        "user_insight_state": {
+                            "version": "2.0",
+                            "signal_evidence": [
+                                {
+                                    "signal_id": "anti_patterns",
+                                    "family": "cognitive",
+                                    "label": "反模式",
+                                    "source": "error_summary",
+                                    "value": ["rush_to_answer"],
+                                    "confidence": 0.81,
+                                    "freshness": "fresh",
+                                    "surfaces": ["chat", "profile_surface"],
+                                    "status": "live",
+                                    "explanation": "最近做题时容易抢答。",
+                                }
+                            ],
+                        },
+                    }
+                }
+            }
+        )
+    )
+
+    result = await tool.execute(
+        GetProfileFrontDoorParams(),
+        user_id="00000000-0000-0000-0000-000000000000",
+        db_session=db_session,
+    )
+
+    payload = result.data["profile_front_door"]
+    assert any(item["id"] == "practice_outcome" for item in payload["evidence_legend"])
+    assert payload["claims"][0]["evidence_refs"][0]["type"] == "practice_outcome"
+
+
+@pytest.mark.asyncio
 async def test_apply_profile_correction_tool_uses_user_correction_lane(db_session, test_user):
     from app.models.memory import MemoryCorrection
     from app.models.user_preferences import UserPreferencesCenter

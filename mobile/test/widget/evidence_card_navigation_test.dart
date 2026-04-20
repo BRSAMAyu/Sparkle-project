@@ -166,4 +166,49 @@ void main() {
     expect(find.text('去错题本看'), findsNothing);
     expect(find.text('打开相关对话'), findsNothing);
   });
+
+  testWidgets('practice outcome evidence routes to error detail', (tester) async {
+    final routed = <String>[];
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: EvidenceCard(
+              item: EvidenceResolveItem(
+                type: 'practice_outcome',
+                id: 'err-2',
+                status: 'ok',
+                payload: const {
+                  'practice_outcome': {
+                    'error_id': 'err-2',
+                    'review_performance': 'remembered',
+                    'mastery_level': 0.7,
+                    'reviewed_at': '2026-04-20T12:00:00',
+                    'summary': '错题复习结果：remembered',
+                  },
+                },
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/errors/:id',
+          builder: (context, state) {
+            routed.add('/errors/${state.pathParameters['id']}');
+            return Scaffold(body: Text('error:${state.pathParameters['id']}'));
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.tap(find.text('回到错题本看'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('error:err-2'), findsOneWidget);
+    expect(routed, ['/errors/err-2']);
+  });
 }

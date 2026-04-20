@@ -26,6 +26,7 @@ ALLOWED_EVIDENCE_TYPES = {
     "event",
     "user_state",
     "error",
+    "practice_outcome",
     "concept",
     "strategy",
     "task",

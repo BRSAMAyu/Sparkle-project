@@ -156,6 +156,11 @@ class ProfileFrontDoorService:
                     "description": "这是面向下一步的风险或趋势判断，不是既成事实。",
                 },
                 {
+                    "id": "practice_outcome",
+                    "label": "练习结果",
+                    "description": "这是最近一次练习/复习的结果摘要，会回到错题详情而不是伪装成画像事实。",
+                },
+                {
                     "id": "user_correction",
                     "label": "用户纠正",
                     "description": "这是用户明确提交的修正，会优先影响后续读路径。",
@@ -308,11 +313,17 @@ class ProfileFrontDoorService:
             for item in list(profile_context.recent_errors or [])
             if _strip(item.get("id"))
         ]
+        recent_practice_outcomes = [
+            {"type": "practice_outcome", "id": str(item.get("id")), "schema_version": "practice_outcome.v1"}
+            for item in list(profile_context.recent_errors or [])
+            if _strip(item.get("id")) and int(item.get("review_count") or 0) > 0 and _strip(item.get("last_reviewed_at"))
+        ]
         return {
-            "status": "known" if any((weak_concepts, recent_concepts, recent_errors)) else "sparse",
+            "status": "known" if any((weak_concepts, recent_concepts, recent_errors, recent_practice_outcomes)) else "sparse",
             "weak_concepts": weak_concepts[:3],
             "recent_concepts": recent_concepts[:3],
             "recent_errors": recent_errors[:3],
+            "recent_practice_outcomes": recent_practice_outcomes[:3],
         }
 
     @staticmethod
@@ -340,12 +351,14 @@ class ProfileFrontDoorService:
             )
         if "error" in source or claim_id in {"anti_patterns", "cognitive_tendencies"} or family == "cognitive":
             return self._dedupe_evidence_refs(
+                evidence_catalog.get("recent_practice_outcomes") or [],
                 evidence_catalog.get("recent_errors") or [],
                 evidence_catalog.get("weak_concepts") or [],
             )
         if source in {"achievement_signals", "workflow_signals"}:
             return self._dedupe_evidence_refs(
                 evidence_catalog.get("recent_concepts") or [],
+                evidence_catalog.get("recent_practice_outcomes") or [],
                 evidence_catalog.get("recent_errors") or [],
             )
         return []
@@ -359,6 +372,7 @@ class ProfileFrontDoorService:
         evidence_signals = {str(item).strip() for item in list(prediction.get("evidence_signals") or []) if str(item).strip()}
         if "error_summary" in evidence_signals:
             return self._dedupe_evidence_refs(
+                evidence_catalog.get("recent_practice_outcomes") or [],
                 evidence_catalog.get("recent_errors") or [],
                 evidence_catalog.get("weak_concepts") or [],
             )

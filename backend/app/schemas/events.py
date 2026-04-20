@@ -78,6 +78,7 @@ class EvidenceResolveItem(BaseModel):
     event: EventDetailResponse | None = None
     state: UserStateSummary | None = None
     error: dict[str, Any] | None = None
+    practice_outcome: dict[str, Any] | None = None
     concept: dict[str, Any] | None = None
     strategy: dict[str, Any] | None = None
     task: dict[str, Any] | None = None

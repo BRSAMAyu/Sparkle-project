@@ -724,6 +724,8 @@ class ErrorBookService:
         if not error:
             raise ValueError(f"Error {error_id} not found")
 
+        previous_mastery = error.mastery_level or 0.0
+
         # Calculate new schedule
         new_mastery, new_ef, new_interval, next_review = self.review_scheduler.calculate_next_review(
             current_mastery=error.mastery_level or 0.0,
@@ -745,6 +747,16 @@ class ErrorBookService:
         await self.db.refresh(error)
 
         try:
+            await self._store_practice_outcome_memory(
+                user_id=user_id,
+                error=error,
+                performance=data.performance,
+                previous_mastery=previous_mastery,
+            )
+        except Exception as e:
+            logger.warning(f"Practice outcome memory write failed after review: {e}")
+
+        try:
             from app.services.error_book_signal_processor import ErrorBookSignalProcessor
 
             processor = ErrorBookSignalProcessor(self.db)
@@ -763,6 +775,40 @@ class ErrorBookService:
             logger.warning(f"Error book mastery sync (review) failed: {e}")
 
         return error
+
+    async def _store_practice_outcome_memory(
+        self,
+        *,
+        user_id: UUID,
+        error: ErrorRecord,
+        performance: ReviewPerformanceEnum,
+        previous_mastery: float,
+    ) -> None:
+        memory_service = MemoryService(self.db)
+        current_mastery = float(error.mastery_level or 0.0)
+        summary = (
+            f"错题复习结果：{performance.value}，掌握度 {previous_mastery:.2f} → "
+            f"{current_mastery:.2f}。"
+        )
+        tags = [
+            "practice_outcome",
+            f"performance:{performance.value}",
+            f"mastery_before:{previous_mastery:.2f}",
+            f"mastery_after:{current_mastery:.2f}",
+        ]
+        await memory_service.create_episodic_memory(
+            user_id=user_id,
+            summary=summary,
+            source_type="practice_outcome",
+            source_id=str(error.id),
+            occurred_at=error.last_reviewed_at or _utcnow(),
+            importance_score=0.55,
+            tags=tags,
+            evidence_refs=[
+                {"type": "practice_outcome", "id": str(error.id), "schema_version": "practice_outcome.v1"},
+                {"type": "error", "id": str(error.id), "schema_version": "error.v1"},
+            ],
+        )
 
     async def get_review_stats(self, user_id: UUID) -> dict:
         # Base query

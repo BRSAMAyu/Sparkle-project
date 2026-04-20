@@ -235,6 +235,8 @@ class ProfileContextService:
                     "subject": error.subject_code,
                     "error_type": error.latest_analysis.get("error_type_label") if error.latest_analysis else "Unknown",
                     "mastery": error.mastery_level,
+                    "review_count": error.review_count,
+                    "last_reviewed_at": error.last_reviewed_at.isoformat() if error.last_reviewed_at else None,
                 }
             )
         return {"summary": stats or {}, "recent": recent_errors}

@@ -1,12 +1,13 @@
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
 
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode
+from app.models.memory import EpisodicMemory
 from app.models.nightly_review import NightlyReview
 from app.models.semantic_memory import StrategyNode
 from app.models.task import Task
@@ -25,6 +26,21 @@ from app.services.event_service import EventService
 from app.services.state_estimator_service import StateEstimatorService
 
 router = APIRouter(prefix="/events", tags=["events"])
+
+
+def _tag_value(tags: list[str] | None, prefix: str) -> str:
+    for tag in tags or []:
+        value = str(tag or "")
+        if value.startswith(prefix):
+            return value.split(":", 1)[1].strip()
+    return ""
+
+
+def _coerce_uuid(raw: str):
+    try:
+        return UUID(str(raw))
+    except (TypeError, ValueError):
+        return None
 
 
 @router.post("/ingest", response_model=EventIngestResponse)
@@ -148,9 +164,15 @@ async def resolve_evidence(
                 continue
 
             if item.type == "error":
+                error_id = _coerce_uuid(item.id)
+                if error_id is None:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="invalid_id")
+                    )
+                    continue
                 result = await db.execute(
                     select(ErrorRecord).where(
-                        ErrorRecord.id == item.id,
+                        ErrorRecord.id == error_id,
                         ErrorRecord.user_id == current_user.id,
                         ErrorRecord.is_deleted.is_(False),
                     )
@@ -258,6 +280,63 @@ async def resolve_evidence(
                             "title": task.title,
                             "status": task.status.value if task.status else None,
                             "due_date": task.due_date,
+                        },
+                    )
+                )
+                continue
+
+            if item.type == "practice_outcome":
+                error_id = _coerce_uuid(item.id)
+                if error_id is None:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="invalid_id")
+                    )
+                    continue
+                memory_result = await db.execute(
+                    select(EpisodicMemory).where(
+                        EpisodicMemory.user_id == current_user.id,
+                        EpisodicMemory.source_type == "practice_outcome",
+                        EpisodicMemory.source_id == item.id,
+                        EpisodicMemory.deleted_at.is_(None),
+                        EpisodicMemory.archived_at.is_(None),
+                        EpisodicMemory.retracted_at.is_(None),
+                    ).order_by(EpisodicMemory.occurred_at.desc())
+                )
+                outcome = memory_result.scalars().first()
+                if not outcome:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
+                    )
+                    continue
+
+                error_result = await db.execute(
+                    select(ErrorRecord).where(
+                        ErrorRecord.id == error_id,
+                        ErrorRecord.user_id == current_user.id,
+                        ErrorRecord.is_deleted.is_(False),
+                    )
+                )
+                error = error_result.scalar_one_or_none()
+                if not error:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
+                    )
+                    continue
+
+                resolved.append(
+                    EvidenceResolveItem(
+                        type=item.type,
+                        id=item.id,
+                        status="ok",
+                        practice_outcome={
+                            "id": str(error.id),
+                            "error_id": str(error.id),
+                            "subject_code": error.subject_code,
+                            "review_performance": _tag_value(outcome.tags, "performance:"),
+                            "mastery_level": error.mastery_level,
+                            "review_count": error.review_count,
+                            "reviewed_at": outcome.occurred_at,
+                            "summary": outcome.summary,
                         },
                     )
                 )

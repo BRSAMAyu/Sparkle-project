@@ -306,7 +306,7 @@ class EvidenceResolveItem {
 
   factory EvidenceResolveItem.fromJson(Map<String, dynamic> json) {
     final payload = <String, dynamic>{};
-    const payloadKeys = ['event', 'state', 'error', 'concept', 'strategy', 'task', 'summary'];
+    const payloadKeys = ['event', 'state', 'error', 'practice_outcome', 'concept', 'strategy', 'task', 'summary'];
     for (final key in payloadKeys) {
       if (json[key] != null) {
         payload[key] = json[key] as Map<String, dynamic>;

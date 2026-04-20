@@ -182,6 +182,35 @@ void main() {
       expect(find.text('Sprint: active'), findsOneWidget);
     });
 
+    testWidgets('should render evidence card with practice outcome payload', (tester) async {
+      final item = EvidenceResolveItem(
+        type: 'practice_outcome',
+        id: 'err-2',
+        status: 'ok',
+        payload: {
+          'practice_outcome': {
+            'error_id': 'err-2',
+            'review_performance': 'remembered',
+            'mastery_level': 0.7,
+            'reviewed_at': '2026-04-20T12:00:00',
+            'summary': '错题复习结果：remembered',
+          },
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EvidenceCard(item: item),
+          ),
+        ),
+      );
+
+      expect(find.text('Performance: remembered'), findsOneWidget);
+      expect(find.text('Mastery: 0.7'), findsOneWidget);
+      expect(find.textContaining('错题复习结果：remembered'), findsOneWidget);
+    });
+
     testWidgets('should render redacted evidence with reason', (tester) async {
       final item = EvidenceResolveItem(
         type: 'sensitive',
@@ -1067,6 +1096,24 @@ void main() {
 
       expect(item.status, equals('redacted'));
       expect(item.redactionReason, equals('PII data'));
+    });
+
+    test('should create EvidenceResolveItem from JSON with practice outcome', () {
+      final json = {
+        'type': 'practice_outcome',
+        'id': 'err-2',
+        'status': 'ok',
+        'practice_outcome': {
+          'error_id': 'err-2',
+          'review_performance': 'remembered',
+          'summary': '错题复习结果：remembered',
+        },
+      };
+
+      final item = EvidenceResolveItem.fromJson(json);
+
+      expect(item.type, equals('practice_outcome'));
+      expect(item.payload?['practice_outcome']?['error_id'], equals('err-2'));
     });
 
     test('should handle null payload', () {
