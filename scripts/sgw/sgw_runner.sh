@@ -9,7 +9,7 @@ CHECKPOINT_PATH="${SGW_CHECKPOINT_PATH:-$STATE_DIR/sgw_checkpoint.json}"
 LOG_PATH="${SGW_LOG_PATH:-$STATE_DIR/sgw_runner.log}"
 MAX_RESTARTS="${SGW_MAX_RESTARTS:-12}"
 PYTHON_BIN="${SGW_PYTHON_BIN:-$ROOT_DIR/backend/.venv/bin/python}"
-RESTART_STACK_ON_BOOT="${SGW_RESTART_STACK_ON_BOOT:-true}"
+RESTART_STACK_ON_BOOT="${SGW_RESTART_STACK_ON_BOOT:-auto}"
 
 mkdir -p "$STATE_DIR"
 touch "$LOG_PATH"
@@ -59,7 +59,14 @@ if ! claude auth status >/dev/null 2>&1; then
   exit 1
 fi
 
+SHOULD_RESTART_STACK="false"
 if [[ "$RESTART_STACK_ON_BOOT" == "true" ]]; then
+  SHOULD_RESTART_STACK="true"
+elif [[ "$RESTART_STACK_ON_BOOT" == "auto" && ! -f "$CHECKPOINT_PATH" ]]; then
+  SHOULD_RESTART_STACK="true"
+fi
+
+if [[ "$SHOULD_RESTART_STACK" == "true" ]]; then
   echo "[sgw] restarting local stack with SGW env" | tee -a "$LOG_PATH"
   "$ROOT_DIR/scripts/dev_local_stack.sh" down >>"$LOG_PATH" 2>&1 || true
   "$ROOT_DIR/scripts/dev_local_stack.sh" up >>"$LOG_PATH" 2>&1
