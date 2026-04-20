@@ -113,8 +113,12 @@ class OrchestratorConfig:
     soft_violation_rate_limit: float = 0.05
     claude_model: str = os.getenv("SGW_CLAUDE_MODEL", "")
     claude_effort: str = os.getenv("SGW_CLAUDE_EFFORT", "medium")
-    claude_timeout_seconds: int = int(os.getenv("SGW_CLAUDE_TIMEOUT_SECONDS", "180"))
+    claude_timeout_seconds: int = int(os.getenv("SGW_CLAUDE_TIMEOUT_SECONDS", "45"))
+    claude_max_parallel: int = int(os.getenv("SGW_CLAUDE_MAX_PARALLEL", "1"))
+    claude_min_interval_seconds: float = float(os.getenv("SGW_CLAUDE_MIN_INTERVAL_SECONDS", "5"))
+    claude_rate_limit_backoff_seconds: int = int(os.getenv("SGW_CLAUDE_RATE_LIMIT_BACKOFF_SECONDS", "300"))
     claude_short_backoff_seconds: int = int(os.getenv("SGW_CLAUDE_SHORT_BACKOFF_SECONDS", "60"))
+    claude_failure_backoff_seconds: int = int(os.getenv("SGW_CLAUDE_FAILURE_BACKOFF_SECONDS", "30"))
     claude_budget_reset_seconds: int = int(os.getenv("SGW_CLAUDE_WINDOW_RESET_SECONDS", str(5 * 3600)))
     max_history_pairs: int = int(os.getenv("SGW_MAX_HISTORY_PAIRS", "6"))
     random_seed: int = int(os.getenv("SGW_RANDOM_SEED", "17"))
@@ -131,93 +135,153 @@ class ClaudeCallError(RuntimeError):
 class ClaudeCliClient:
     def __init__(self, config: OrchestratorConfig):
         self._config = config
+        self._call_semaphore = asyncio.Semaphore(max(1, config.claude_max_parallel))
+        self._call_pace_lock = asyncio.Lock()
+        self._last_call_started_at = 0.0
+        self._debug_dir = config.checkpoint_path.parent / "claude_debug"
+        self._debug_dir.mkdir(parents=True, exist_ok=True)
 
-    async def json_call(self, *, system_prompt: str, prompt: str) -> dict[str, Any]:
-        last_error: ClaudeCallError | None = None
-        for attempt in range(3):
-            try:
-                raw = await self._run_raw(system_prompt=system_prompt, prompt=prompt)
-                return self._parse_json(raw)
-            except ClaudeCallError as exc:
-                last_error = exc
-                if exc.kind in {"rate_limit", "quota"}:
-                    raise
-                if attempt == 2:
-                    raise
-                prompt = (
-                    prompt
-                    + "\n\n你的上一轮输出不是有效 JSON。请严格返回一个 JSON 对象，且不要输出任何额外文字。"
-                )
-                await asyncio.sleep(2)
-        raise last_error or ClaudeCallError("process", "claude call failed")
+    async def text_call(self, *, system_prompt: str, prompt: str) -> str:
+        raw = await self._run_raw(system_prompt=system_prompt, prompt=prompt)
+        cleaned = self._normalize_output(raw)
+        if not cleaned:
+            raise ClaudeCallError("process", "claude CLI returned empty output")
+        return cleaned
 
     async def _run_raw(self, *, system_prompt: str, prompt: str) -> str:
-        command = [
-            "claude",
-            "-p",
-            prompt,
-            "--system-prompt",
-            system_prompt,
-            "--output-format",
-            "text",
-            "--tools",
-            "",
-            "--effort",
-            self._config.claude_effort,
-        ]
-        if self._config.claude_model:
-            command.extend(["--model", self._config.claude_model])
+        async with self._call_semaphore:
+            await self._pace_calls()
+            debug_path = self._debug_dir / f"{int(time.time())}_{uuid.uuid4().hex}.log"
+            command = [
+                "claude",
+                "-p",
+                prompt,
+                "--system-prompt",
+                system_prompt,
+                "--output-format",
+                "text",
+                "--tools",
+                "",
+                "--effort",
+                self._config.claude_effort,
+                "--bare",
+                "--no-session-persistence",
+                "--permission-mode",
+                "bypassPermissions",
+                "--debug-file",
+                str(debug_path),
+            ]
+            if self._config.claude_model:
+                command.extend(["--model", self._config.claude_model])
 
-        process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        try:
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=self._config.claude_timeout_seconds,
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
-        except asyncio.TimeoutError as exc:
-            process.kill()
-            raise ClaudeCallError("timeout", "claude CLI timed out") from exc
+            timed_out = False
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=self._config.claude_timeout_seconds,
+                )
+            except asyncio.TimeoutError:
+                timed_out = True
+                with contextlib.suppress(ProcessLookupError):
+                    process.send_signal(signal.SIGINT)
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=3)
+                except asyncio.TimeoutError as exc:
+                    process.kill()
+                    stdout, stderr = await process.communicate()
+                    debug_text = self._read_debug_text(debug_path)
+                    classified = self._classify_failure(
+                        output=stdout.decode("utf-8", errors="replace").strip(),
+                        error_text=stderr.decode("utf-8", errors="replace").strip(),
+                        debug_text=debug_text,
+                        timed_out=True,
+                    )
+                    raise classified or ClaudeCallError("timeout", "claude CLI timed out") from exc
 
-        output = stdout.decode("utf-8", errors="replace").strip()
-        error_text = stderr.decode("utf-8", errors="replace").strip()
-        combined = f"{output}\n{error_text}".lower()
-        if process.returncode != 0:
-            if "429" in combined or "rate limit" in combined or "too many requests" in combined:
-                raise ClaudeCallError("rate_limit", error_text or output or "claude rate limited")
-            if (
-                "usage limit" in combined
-                or "quota" in combined
-                or "credit balance" in combined
-                or "try again later" in combined
-            ):
-                raise ClaudeCallError("quota", error_text or output or "claude quota exhausted")
-            raise ClaudeCallError("process", error_text or output or "claude CLI failed")
-        if not output:
-            raise ClaudeCallError("process", "claude CLI returned empty output")
-        return output
+            output = stdout.decode("utf-8", errors="replace").strip()
+            error_text = stderr.decode("utf-8", errors="replace").strip()
+            debug_text = self._read_debug_text(debug_path)
+            classified = self._classify_failure(
+                output=output,
+                error_text=error_text,
+                debug_text=debug_text,
+                timed_out=timed_out,
+            )
+            if classified:
+                raise classified
+            return output
+
+    async def _pace_calls(self) -> None:
+        async with self._call_pace_lock:
+            now = time.time()
+            wait_seconds = self._config.claude_min_interval_seconds - (now - self._last_call_started_at)
+            if wait_seconds > 0:
+                await asyncio.sleep(wait_seconds)
+            self._last_call_started_at = time.time()
 
     @staticmethod
-    def _parse_json(raw: str) -> dict[str, Any]:
+    def _read_debug_text(path: Path) -> str:
+        if not path.exists():
+            return ""
+        return path.read_text(encoding="utf-8", errors="replace")
+
+    @staticmethod
+    def _classify_failure(
+        *,
+        output: str,
+        error_text: str,
+        debug_text: str,
+        timed_out: bool,
+    ) -> ClaudeCallError | None:
+        combined = "\n".join([output, error_text, debug_text]).lower()
+        quota_markers = (
+            "usage limit",
+            "quota",
+            "credit balance",
+            "套餐",
+            "额度",
+            "five hour",
+            "5 hour",
+            "5-hour",
+        )
+        rate_limit_markers = (
+            "429",
+            "rate limit",
+            "too many requests",
+            "达到速率限制",
+            "请求频率",
+            '"code":"1302"',
+            '"code":"429"',
+        )
+        if any(marker in combined for marker in quota_markers):
+            return ClaudeCallError("quota", error_text or output or "claude quota exhausted")
+        if any(marker in combined for marker in rate_limit_markers):
+            return ClaudeCallError("rate_limit", error_text or output or "claude rate limited")
+        if timed_out:
+            return ClaudeCallError("timeout", error_text or output or "claude CLI timed out")
+        normalized = output.strip().lower()
+        if normalized == "execution error":
+            return ClaudeCallError("process", error_text or output or "claude CLI failed")
+        if not output.strip():
+            return ClaudeCallError("process", error_text or "claude CLI returned empty output")
+        return None
+
+    @staticmethod
+    def _normalize_output(raw: str) -> str:
         text = raw.strip()
         if text.startswith("```"):
             parts = text.split("```")
-            text = next((part for part in parts if part.strip().startswith("{")), text)
-        if not text.startswith("{"):
-            start = text.find("{")
-            end = text.rfind("}")
-            if start >= 0 and end > start:
-                text = text[start : end + 1]
-        try:
-            parsed = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise ClaudeCallError("parse", f"invalid json: {raw[:240]}") from exc
-        if not isinstance(parsed, dict):
-            raise ClaudeCallError("parse", "claude output must be a JSON object")
-        return parsed
+            text = next((part for part in parts if part.strip()), text)
+        text = text.strip().strip('"').strip("'").strip()
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        if not lines:
+            return ""
+        return "\n".join(lines)
 
 
 class SparkleGatewayClient:
@@ -313,6 +377,8 @@ class SGWOrchestrator:
 
         try:
             while not self._should_stop():
+                if self._recover_stalled_tasks():
+                    await self._checkpoint()
                 self.metrics.observe_queue_depth(
                     self.persona_queue.qsize() + self.adversarial_queue.qsize() + self.audit_queue.qsize()
                 )
@@ -437,6 +503,7 @@ class SGWOrchestrator:
                     continue
                 task = self.session_tasks[task_id]
                 task.status = "running"
+                task.last_error = None
                 task.updated_at = iso_now()
                 await self._checkpoint()
                 await self._run_session(task, worker_name=worker_name)
@@ -473,32 +540,41 @@ class SGWOrchestrator:
         try:
             token = self._issue_token(task.user_id)
             while task.turns_completed < task.target_turns and not self.stop_event.is_set():
+                if self.global_cooldown_until and time.time() < self.global_cooldown_until:
+                    task.status = "pending"
+                    await self._checkpoint()
+                    return
                 system_prompt = self._build_system_prompt(task)
                 prompt = self._build_turn_prompt(task)
                 try:
-                    worker_output = await self.claude.json_call(system_prompt=system_prompt, prompt=prompt)
+                    message = await self.claude.text_call(system_prompt=system_prompt, prompt=prompt)
                 except ClaudeCallError as exc:
                     task.status = "pending"
                     task.last_error = exc.detail
                     task.retry_count += 1
                     if exc.kind == "rate_limit":
                         self.metrics.record_rate_limit()
-                        print(f"[sgw] {worker_name} hit rate limit, backing off {self.config.claude_short_backoff_seconds}s")
-                        await asyncio.sleep(self.config.claude_short_backoff_seconds)
+                        cooldown_until = self._arm_rate_limit_cooldown(task.retry_count, reason=exc.detail)
+                        print(
+                            f"[sgw] {worker_name} hit rate limit, cooling down until "
+                            f"{datetime.fromtimestamp(cooldown_until).isoformat(timespec='seconds')}"
+                        )
                     elif exc.kind == "quota":
                         cooldown_until = time.time() + self.config.claude_budget_reset_seconds
                         self.global_cooldown_until = cooldown_until
-                        print(f"[sgw] {worker_name} hit quota window, cooling down until {datetime.fromtimestamp(cooldown_until).isoformat(timespec='seconds')}")
+                        print(
+                            f"[sgw] {worker_name} hit quota window, cooling down until "
+                            f"{datetime.fromtimestamp(cooldown_until).isoformat(timespec='seconds')}"
+                        )
                         self.metrics.record_quota_exhaustion(
                             cooldown_until=datetime.fromtimestamp(cooldown_until).isoformat(timespec="seconds"),
                             reason=exc.detail,
                         )
                     else:
-                        await asyncio.sleep(10)
+                        await asyncio.sleep(self.config.claude_failure_backoff_seconds)
                     await self._checkpoint()
                     return
 
-                message = str(worker_output.get("message", "")).strip()
                 if not message:
                     task.status = "pending"
                     task.last_error = "worker produced empty message"
@@ -506,7 +582,7 @@ class SGWOrchestrator:
                     await self._checkpoint()
                     return
 
-                task.last_note = str(worker_output.get("session_note") or worker_output.get("attack_guess") or "")
+                task.last_note = None
                 assistant_reply = ""
                 try:
                     assistant_reply = await self.gateway.chat_once(
@@ -538,9 +614,6 @@ class SGWOrchestrator:
                     if self.random.random() < revoke_probability:
                         task.revoke_scheduled = True
                         await self._run_revoke_probe(token=token, task=task)
-
-                if bool(worker_output.get("end_session")) and task.turns_completed >= max(6, task.target_turns // 2):
-                    break
 
                 await self._checkpoint()
 
@@ -575,24 +648,38 @@ class SGWOrchestrator:
                 indent=2,
             )
             try:
-                score = await self.claude.json_call(system_prompt=self.audit_prompt_template, prompt=audit_prompt)
+                audit_output = await self.claude.text_call(system_prompt=self.audit_prompt_template, prompt=audit_prompt)
+                score = self._parse_audit_score(audit_output)
             except ClaudeCallError as exc:
                 task.status = "pending"
                 task.retry_count += 1
                 if exc.kind == "rate_limit":
                     self.metrics.record_rate_limit()
-                    print(f"[sgw] {worker_name} audit hit rate limit, backing off {self.config.claude_short_backoff_seconds}s")
-                    await asyncio.sleep(self.config.claude_short_backoff_seconds)
+                    cooldown_until = self._arm_rate_limit_cooldown(task.retry_count, reason=exc.detail)
+                    print(
+                        f"[sgw] {worker_name} audit hit rate limit, cooling down until "
+                        f"{datetime.fromtimestamp(cooldown_until).isoformat(timespec='seconds')}"
+                    )
                 elif exc.kind == "quota":
                     cooldown_until = time.time() + self.config.claude_budget_reset_seconds
                     self.global_cooldown_until = cooldown_until
-                    print(f"[sgw] {worker_name} audit hit quota window, cooling down until {datetime.fromtimestamp(cooldown_until).isoformat(timespec='seconds')}")
+                    print(
+                        f"[sgw] {worker_name} audit hit quota window, cooling down until "
+                        f"{datetime.fromtimestamp(cooldown_until).isoformat(timespec='seconds')}"
+                    )
                     self.metrics.record_quota_exhaustion(
                         cooldown_until=datetime.fromtimestamp(cooldown_until).isoformat(timespec="seconds"),
                         reason=exc.detail,
                     )
                 else:
-                    await asyncio.sleep(10)
+                    await asyncio.sleep(self.config.claude_failure_backoff_seconds)
+                await self._checkpoint()
+                return
+            except ValueError as exc:
+                task.status = "pending"
+                task.retry_count += 1
+                await asyncio.sleep(self.config.claude_failure_backoff_seconds)
+                task.score = None
                 await self._checkpoint()
                 return
 
@@ -729,9 +816,62 @@ class SGWOrchestrator:
             "target_turns": task.target_turns,
             "history": history,
             "playbook_item": playbook,
-            "instruction": "继续自然对话，并返回协议要求的 JSON。",
+            "instruction": "继续自然对话，只输出下一条要发给 Sparkle 的中文用户消息，不要输出 JSON 或解释。",
         }
         return json.dumps(payload, ensure_ascii=False, indent=2)
+
+    def _arm_rate_limit_cooldown(self, retry_count: int, *, reason: str) -> float:
+        multiplier = min(max(retry_count, 1), 6)
+        seconds = min(
+            self.config.claude_rate_limit_backoff_seconds * multiplier,
+            self.config.claude_budget_reset_seconds,
+        )
+        cooldown_until = time.time() + seconds
+        existing = self.global_cooldown_until or 0.0
+        self.global_cooldown_until = max(existing, cooldown_until)
+        return self.global_cooldown_until
+
+    @staticmethod
+    def _parse_audit_score(raw: str) -> dict[str, Any]:
+        values: dict[str, str] = {}
+        for line in raw.splitlines():
+            stripped = line.strip()
+            if not stripped or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            values[key.strip()] = value.strip()
+
+        required = {
+            "metadata_correctness",
+            "semantic_fidelity",
+            "entity_boundary",
+            "time_anchor_validity",
+            "confidence_calibration",
+            "overall",
+            "reason",
+        }
+        missing = required - set(values)
+        if missing:
+            raise ValueError(f"audit output missing keys: {sorted(missing)}")
+
+        score = {
+            "metadata_correctness": SGWOrchestrator._parse_score_value(values["metadata_correctness"]),
+            "semantic_fidelity": SGWOrchestrator._parse_score_value(values["semantic_fidelity"]),
+            "entity_boundary": SGWOrchestrator._parse_score_value(values["entity_boundary"]),
+            "time_anchor_validity": SGWOrchestrator._parse_score_value(values["time_anchor_validity"]),
+            "confidence_calibration": SGWOrchestrator._parse_score_value(values["confidence_calibration"]),
+            "overall": SGWOrchestrator._parse_score_value(values["overall"]),
+            "reason": values["reason"],
+        }
+        score["soft_violation"] = bool(score["overall"] < 0.85)
+        return score
+
+    @staticmethod
+    def _parse_score_value(value: str) -> float:
+        numeric = float(value)
+        if numeric < 0.0 or numeric > 1.0:
+            raise ValueError(f"score out of range: {value}")
+        return numeric
 
     async def _wait_for_global_cooldown(self) -> None:
         while self.global_cooldown_until and time.time() < self.global_cooldown_until:
@@ -762,6 +902,31 @@ class SGWOrchestrator:
         if wall_clock_ok and sessions_ok and turns_ok and queues_empty and self._active_workers == 0:
             return True
         return False
+
+    def _recover_stalled_tasks(self) -> int:
+        recovered = 0
+        cutoff = utcnow() - timedelta(seconds=max(self.config.claude_timeout_seconds * 2, 90))
+        for task in self.session_tasks.values():
+            if task.status != "running":
+                continue
+            if datetime.fromisoformat(task.updated_at) >= cutoff:
+                continue
+            task.status = "pending"
+            if not task.last_error:
+                task.last_error = "stalled session recovered"
+            task.updated_at = iso_now()
+            target_queue = self.adversarial_queue if task.role == "adversarial" else self.persona_queue
+            target_queue.put_nowait(task.task_id)
+            recovered += 1
+        for audit_task in self.audit_tasks.values():
+            if audit_task.status != "running":
+                continue
+            if datetime.fromisoformat(audit_task.created_at) >= cutoff:
+                continue
+            audit_task.status = "pending"
+            self.audit_queue.put_nowait(audit_task.case_id)
+            recovered += 1
+        return recovered
 
     def _serialize_memory(self, item: EpisodicMemory) -> dict[str, Any]:
         return {

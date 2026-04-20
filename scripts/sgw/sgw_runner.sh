@@ -17,6 +17,15 @@ trap 'code=$?; echo "[sgw] runner failed at line $LINENO (exit $code)" | tee -a 
 export PYTHONPATH="$ROOT_DIR/backend${PYTHONPATH:+:$PYTHONPATH}"
 export SPARKLE_MEMORY_INFERRED_WRITE_ENABLED="${SPARKLE_MEMORY_INFERRED_WRITE_ENABLED:-true}"
 export SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED="${SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED:-false}"
+export DEBUG="${DEBUG:-false}"
+export DB_ECHO="${DB_ECHO:-false}"
+export DB_POOL_SIZE="${DB_POOL_SIZE:-30}"
+export DB_MAX_OVERFLOW="${DB_MAX_OVERFLOW:-0}"
+export SGW_CLAUDE_MAX_PARALLEL="${SGW_CLAUDE_MAX_PARALLEL:-1}"
+export SGW_CLAUDE_MIN_INTERVAL_SECONDS="${SGW_CLAUDE_MIN_INTERVAL_SECONDS:-5}"
+export SGW_CLAUDE_TIMEOUT_SECONDS="${SGW_CLAUDE_TIMEOUT_SECONDS:-45}"
+export SGW_CLAUDE_RATE_LIMIT_BACKOFF_SECONDS="${SGW_CLAUDE_RATE_LIMIT_BACKOFF_SECONDS:-300}"
+export PYTHONUNBUFFERED="${PYTHONUNBUFFERED:-1}"
 
 if ! command -v claude >/dev/null 2>&1; then
   echo "claude CLI not found in PATH" | tee -a "$LOG_PATH"
@@ -37,6 +46,12 @@ if ! curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1 || ! curl -fsS http:
   echo "[sgw] local stack not healthy, starting dev stack" | tee -a "$LOG_PATH"
   "$ROOT_DIR/scripts/dev_local_stack.sh" up >>"$LOG_PATH" 2>&1
 fi
+
+echo "[sgw] applying backend migrations" | tee -a "$LOG_PATH"
+(
+  cd "$ROOT_DIR/backend"
+  ./.venv/bin/alembic upgrade heads
+) >>"$LOG_PATH" 2>&1
 
 restart_count=0
 while true; do

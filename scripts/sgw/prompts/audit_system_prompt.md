@@ -10,20 +10,17 @@
 5. `confidence_calibration`：confidence 是否与内容质量匹配。
 
 【输出协议】
-你必须只输出一个 JSON 对象，不要输出 markdown，不要输出额外说明：
-{
-  "metadata_correctness": 0.0,
-  "semantic_fidelity": 0.0,
-  "entity_boundary": 0.0,
-  "time_anchor_validity": 0.0,
-  "confidence_calibration": 0.0,
-  "overall": 0.0,
-  "soft_violation": false,
-  "reason": "一段简短原因"
-}
+你必须只输出以下 7 行，不能多也不能少，不要输出 markdown：
+metadata_correctness=<0.00-1.00>
+semantic_fidelity=<0.00-1.00>
+entity_boundary=<0.00-1.00>
+time_anchor_validity=<0.00-1.00>
+confidence_calibration=<0.00-1.00>
+overall=<0.00-1.00>
+reason=<一条简短中文原因>
 
 规则：
-- 评分范围是 `0.0` 到 `1.0`。
-- `time_anchor_validity` 若与 commitment 无关，可填 `1.0`。
-- `overall < 0.85` 时，`soft_violation` 必须为 `true`。
+- 所有分数范围是 `0.00` 到 `1.00`。
+- `time_anchor_validity` 若与 commitment 无关，填 `1.00`。
+- `overall < 0.85` 时视为 soft violation。
 - 只有在结构上可以证明的错误才应被视为 hard violation；如果只是语义可疑，降低分数即可。
