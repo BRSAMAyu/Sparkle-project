@@ -267,6 +267,27 @@ MEMORY_SETTINGS_UPDATE_TOTAL = get_or_create_metric(
     'Memory settings update count',
 )
 
+MEMORY_INFERRED_EXTRACT_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_inferred_extract_total',
+    'Inferred episodic extraction outcomes',
+    ['mode', 'status']
+)
+
+MEMORY_INFERRED_WRITE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_inferred_write_total',
+    'Inferred episodic write outcomes',
+    ['status']
+)
+
+MEMORY_INFERRED_REVOKE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_inferred_revoke_total',
+    'Inferred episodic revoke outcomes',
+    ['scope']
+)
+
 # ========== Phase C Outcome Metrics ==========
 OUTCOME_RECORDS_TOTAL = get_or_create_metric(
     Counter,

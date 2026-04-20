@@ -5,6 +5,7 @@ from uuid import UUID
 
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
+from app.models.chat import ChatMessage, MessageRole
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode
 from app.models.memory import EpisodicMemory
@@ -115,6 +116,46 @@ async def resolve_evidence(
             )
             continue
         if item.type != "event":
+            if item.type == "chat_turn":
+                chat_id = _coerce_uuid(item.id)
+                if chat_id is None:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="invalid_id")
+                    )
+                    continue
+                result = await db.execute(
+                    select(ChatMessage).where(
+                        ChatMessage.id == chat_id,
+                        ChatMessage.user_id == current_user.id,
+                        ChatMessage.deleted_at.is_(None),
+                    )
+                )
+                chat_turn = result.scalar_one_or_none()
+                if not chat_turn:
+                    resolved.append(
+                        EvidenceResolveItem(type=item.type, id=item.id, status="not_found")
+                    )
+                    continue
+                resolved.append(
+                    EvidenceResolveItem(
+                        type=item.type,
+                        id=item.id,
+                        status="ok",
+                        chat_turn={
+                            "id": str(chat_turn.id),
+                            "session_id": str(chat_turn.session_id),
+                            "role": (
+                                chat_turn.role.value
+                                if isinstance(chat_turn.role, MessageRole)
+                                else str(chat_turn.role)
+                            ),
+                            "content": chat_turn.content,
+                            "created_at": chat_turn.created_at,
+                        },
+                    )
+                )
+                continue
+
             if item.type == "user_state":
                 estimator = StateEstimatorService(db)
                 try:

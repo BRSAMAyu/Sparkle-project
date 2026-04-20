@@ -66,6 +66,16 @@ VIOLATION_RULES = (
         pattern=re.compile(r"\bupsert_plan_state\s*\("),
         message="L3 control paths must not write PlanState directly.",
     ),
+    ViolationRule(
+        rule_id="RY001",
+        pattern=re.compile(r"\bMemoryInferredWriteLaneService\b|\brevoke_inferred_lane\b"),
+        message="L3 control paths must not call the inferred episodic write lane directly.",
+    ),
+    ViolationRule(
+        rule_id="RY002",
+        pattern=re.compile(r"source_lane\s*=\s*[\"']inferred_extraction[\"']"),
+        message="L3 control paths must not construct inferred_extraction writes inline.",
+    ),
 )
 
 

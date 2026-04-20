@@ -38,6 +38,7 @@ from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_eval_service import MemoryEvalService
 from app.services.memory_jobs import MemoryJobsService
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
+from app.services.memory_inferred_write_lane import revoke_inferred_lane
 from app.services.self_evolution_service import CohortPromotionService, MetricBaselineService, StrategyCalibrationService
 
 router = APIRouter(
@@ -98,6 +99,24 @@ async def memory_stats(db: AsyncSession = Depends(get_db)):
             "missing_rate": (missing / total) if total else 0.0,
             "recent_retractions": retracted,
         }
+    inferred_total = await db.execute(
+        select(func.count(EpisodicMemory.id)).where(
+            EpisodicMemory.deleted_at.is_(None),
+            EpisodicMemory.source_lane == "inferred_extraction",
+            EpisodicMemory.revoked_at.is_(None),
+        )
+    )
+    inferred_revoked = await db.execute(
+        select(func.count(EpisodicMemory.id)).where(
+            EpisodicMemory.deleted_at.is_(None),
+            EpisodicMemory.source_lane == "inferred_extraction",
+            EpisodicMemory.revoked_at.is_not(None),
+        )
+    )
+    counts["episodic_inferred"] = {
+        "total": inferred_total.scalar() or 0,
+        "revoked": inferred_revoked.scalar() or 0,
+    }
     return {"counts": counts}
 
 
@@ -232,6 +251,22 @@ async def run_memory_job(
         limit = payload.get("limit", 200)
         return await service.run_repair_job(limit=limit)
     raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="unsupported job")
+
+
+@router.post("/inferred/revoke")
+async def revoke_inferred_memory_lane(
+    payload: dict = Body(default={}),
+    db: AsyncSession = Depends(get_db),
+):
+    _ensure_governance_enabled()
+    user_id_raw = (payload or {}).get("user_id")
+    reason = (payload or {}).get("reason") or "admin_kill_switch"
+    try:
+        user_id = UUID(user_id_raw) if user_id_raw else None
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="invalid user_id") from exc
+    revoked = await revoke_inferred_lane(db, user_id=user_id, reason=reason)
+    return {"status": "ok", "revoked": revoked}
 
 
 @router.get("/context-pack/stats")

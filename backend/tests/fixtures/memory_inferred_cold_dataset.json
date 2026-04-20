@@ -1,0 +1,50 @@
+[
+  {
+    "label": "positive",
+    "user_message": "最近我在整理线代错题，明天要把特征值这章再复习一遍。"
+  },
+  {
+    "label": "positive",
+    "user_message": "这周我要赶论文 ddl，今晚先把提纲补完。"
+  },
+  {
+    "label": "positive",
+    "user_message": "我今天准备把英语阅读练两篇，然后再改口语卡片。"
+  },
+  {
+    "label": "positive",
+    "user_message": "本周我需要把概率论笔记重新整理成一页速记表。"
+  },
+  {
+    "label": "positive",
+    "user_message": "最近我在准备教资考试，周末想集中刷真题。"
+  },
+  {
+    "label": "positive",
+    "user_message": "明天我得先补完数据结构实验，再去复习图论。"
+  },
+  {
+    "label": "positive",
+    "user_message": "这两天我一直在赶项目汇报，今晚还要再练一下演示。"
+  },
+  {
+    "label": "positive",
+    "user_message": "我现在准备把化学实验报告补完，周三前必须交。"
+  },
+  {
+    "label": "negative",
+    "user_message": "我是不是天生就不适合学数学？"
+  },
+  {
+    "label": "negative",
+    "user_message": "我感觉自己就是很懒，做什么都会拖。"
+  },
+  {
+    "label": "negative",
+    "user_message": "你觉得我是不是一个外向的人？"
+  },
+  {
+    "label": "negative",
+    "user_message": "哈哈今天心情不错。"
+  }
+]

@@ -12,6 +12,7 @@ from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, MessageRole
 from app.orchestration.schemas import ExecutablePlan
 from app.services.llm_service import llm_service
+from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
 
 
 class PersistenceLayerMixin:
@@ -40,6 +41,12 @@ class PersistenceLayerMixin:
             )
             active_db.add(assistant_msg)
             await active_db.commit()
+            MemoryInferredWriteLaneService.enqueue_from_session(
+                user_id=uuid.UUID(str(user_id)),
+                session_id=self._coerce_session_uuid(session_id),
+                assistant_message_id=str(assistant_msg.id),
+                assistant_message=full_response,
+            )
         except Exception as e:
             logger.warning(f"Failed to persist assistant chat message: {e}")
             with contextlib.suppress(Exception):

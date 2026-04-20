@@ -223,14 +223,22 @@ async def list_episodic(
                 "summary": record.summary,
                 "source_type": record.source_type,
                 "source_id": record.source_id,
+                "source_lane": record.source_lane,
                 "occurred_at": record.occurred_at,
                 "importance_score": record.importance_score,
+                "confidence": record.confidence,
+                "evidence_token": record.evidence_token,
+                "decay_policy": record.decay_policy,
                 "evidence_score": record.evidence_score,
                 "correction_count": record.correction_count,
                 "evidence_missing": record.evidence_missing,
                 "evidence_refs": record.evidence_refs or [],
                 "updated_at": record.updated_at,
                 "retracted_at": record.retracted_at,
+                "revoked_at": record.revoked_at,
+                "declaration_label": (
+                    "AI 推断" if record.source_lane == "inferred_extraction" else None
+                ),
             }
         )
     return {"items": items}
@@ -358,6 +366,7 @@ async def export_memory(
         .where(
             EpisodicMemory.user_id == current_user.id,
             EpisodicMemory.deleted_at.is_(None),
+            EpisodicMemory.revoked_at.is_(None),
         )
         .order_by(EpisodicMemory.occurred_at.desc())
     )
@@ -408,13 +417,21 @@ def _serialize_episodic(record: EpisodicMemory) -> dict:
         "summary": record.summary,
         "source_type": record.source_type,
         "source_id": record.source_id,
+        "source_lane": record.source_lane,
         "occurred_at": record.occurred_at,
         "importance_score": record.importance_score,
+        "confidence": record.confidence,
+        "evidence_token": record.evidence_token,
+        "decay_policy": record.decay_policy,
         "evidence_score": record.evidence_score,
         "correction_count": record.correction_count,
         "evidence_missing": record.evidence_missing,
         "evidence_refs": record.evidence_refs or [],
         "retracted_at": record.retracted_at,
+        "revoked_at": record.revoked_at,
+        "declaration_label": (
+            "AI 推断" if record.source_lane == "inferred_extraction" else None
+        ),
     }
     if record.evidence_snapshot:
         payload["evidence_snapshot"] = record.evidence_snapshot

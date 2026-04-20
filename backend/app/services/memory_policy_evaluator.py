@@ -29,6 +29,7 @@ class MemoryPolicyEvaluator:
         kind: str,
         pref_key: str | None = None,
         source_type: str | None = None,
+        source_lane: str | None = None,
     ) -> MemoryPolicyDecision:
         settings_record = await self._get_settings(user_id)
         if settings_record is None:
@@ -43,6 +44,9 @@ class MemoryPolicyEvaluator:
             return MemoryPolicyDecision(allowed=False, reason="goals_disabled")
         if kind == "episodic" and not settings_record.allow_episodic:
             return MemoryPolicyDecision(allowed=False, reason="episodic_disabled")
+        if kind == "episodic" and source_lane == "inferred_extraction":
+            if not getattr(settings_record, "allow_inferred_episodic", True):
+                return MemoryPolicyDecision(allowed=False, reason="inferred_episodic_disabled")
 
         blocked_pref_keys = settings_record.blocked_pref_keys or []
         if kind == "preference" and pref_key:

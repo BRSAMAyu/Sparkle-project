@@ -25,6 +25,7 @@ from app.orchestration.executor import ToolExecutor
 from app.orchestration.prompts import build_system_prompt
 from app.services.analytics_service import AnalyticsService
 from app.services.llm_service import LLMResponse, llm_service
+from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
 from app.tools.registry import tool_registry
 
 router = APIRouter()
@@ -957,6 +958,14 @@ async def save_chat_message(
     db.add(assistant_msg_db)
 
     await db.commit()
+    MemoryInferredWriteLaneService.enqueue_from_chat_turn(
+        user_id=user_id,
+        session_id=session_id,
+        user_message=user_message,
+        assistant_message=assistant_message,
+        user_message_id=str(user_msg_db.id),
+        assistant_message_id=str(assistant_msg_db.id),
+    )
 
 
 # ============ Chat Session Management API ============

@@ -12,7 +12,7 @@ from httpx import AsyncClient, ASGITransport
 from app.api.v1.memory_admin import router
 from app.api.deps import get_current_active_superuser, get_db
 from app.config import settings
-from app.models.memory import MemoryPreference
+from app.models.memory import EpisodicMemory, MemoryPreference
 from app.models.user import User
 
 app = FastAPI()
@@ -123,4 +123,56 @@ async def test_memory_admin_health_snapshot(db_session, monkeypatch):
         payload = resp.json()
         assert "evidence_missing_rate" in payload
 
+    app.dependency_overrides = {}
+
+
+@pytest.mark.asyncio
+async def test_memory_admin_revoke_inferred_lane(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_MEMORY_GOVERNANCE", True, raising=False)
+
+    user_id = uuid4()
+    admin_user = User(
+        id=user_id,
+        username=f"admin_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+        is_active=True,
+        is_superuser=True,
+    )
+    db_session.add(admin_user)
+    inferred = EpisodicMemory(
+        user_id=user_id,
+        summary="AI auto memory",
+        source_type="chat",
+        source_id="session_1",
+        source_lane="inferred_extraction",
+        occurred_at=_utcnow(),
+        importance_score=0.9,
+        confidence=0.9,
+        evidence_refs=[{"type": "chat_turn", "id": str(uuid4())}],
+        evidence_token=str(uuid4()),
+        decay_policy="7d",
+        semantic_key="ai-auto-memory",
+    )
+    db_session.add(inferred)
+    await db_session.commit()
+
+    async def override_get_db():
+        yield db_session
+
+    async def override_superuser():
+        return admin_user
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_active_superuser] = override_superuser
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        resp = await ac.post("/api/v1/admin/memory/inferred/revoke", json={})
+        assert resp.status_code == 200
+        assert resp.json()["revoked"] == 1
+
+    await db_session.refresh(inferred)
+    assert inferred.revoked_at is not None
     app.dependency_overrides = {}

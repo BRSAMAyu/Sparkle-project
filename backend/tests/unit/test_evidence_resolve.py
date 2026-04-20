@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from app.api.v1 import events as events_api
+from app.models.chat import ChatMessage, MessageRole
 from app.models.error_book import ErrorRecord
 from app.models.memory import EpisodicMemory
 from app.models.nightly_review import NightlyReview
@@ -124,3 +125,33 @@ async def test_evidence_resolve_practice_outcome_returns_memory_backed_review_pa
     assert response.resolved[0].status == "ok"
     assert response.resolved[0].practice_outcome["error_id"] == str(error.id)
     assert response.resolved[0].practice_outcome["review_performance"] == "remembered"
+
+
+@pytest.mark.asyncio
+async def test_evidence_resolve_chat_turn_returns_session_payload(db_session):
+    user_id = uuid4()
+    session_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    turn = ChatMessage(
+        user_id=user_id,
+        session_id=session_id,
+        role=MessageRole.USER,
+        content="最近我在整理线代错题。",
+    )
+    db_session.add_all([user, turn])
+    await db_session.commit()
+    await db_session.refresh(turn)
+
+    payload = EvidenceResolveRequest(
+        items=[EvidenceRef(type="chat_turn", id=str(turn.id))]
+    )
+    response = await events_api.resolve_evidence(payload, db=db_session, current_user=user)
+
+    assert response.resolved[0].status == "ok"
+    assert response.resolved[0].chat_turn["id"] == str(turn.id)
+    assert response.resolved[0].chat_turn["session_id"] == str(session_id)

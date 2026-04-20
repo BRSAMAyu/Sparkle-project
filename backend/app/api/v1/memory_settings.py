@@ -55,6 +55,7 @@ def _serialize_settings(record: object) -> MemorySettingsResponse:
         allow_preferences=getattr(record, "allow_preferences", True),
         allow_goals=getattr(record, "allow_goals", True),
         allow_episodic=getattr(record, "allow_episodic", True),
+        allow_inferred_episodic=getattr(record, "allow_inferred_episodic", True),
         capture_level=getattr(record, "capture_level", "medium"),
         blocked_pref_keys=list(getattr(record, "blocked_pref_keys", []) or []),
         blocked_sources=list(getattr(record, "blocked_sources", []) or []),

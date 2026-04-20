@@ -15,6 +15,7 @@ class UserMemorySettings(BaseModel):
     allow_preferences = Column(Boolean, nullable=False, default=True)
     allow_goals = Column(Boolean, nullable=False, default=True)
     allow_episodic = Column(Boolean, nullable=False, default=True)
+    allow_inferred_episodic = Column(Boolean, nullable=False, default=True)
     capture_level = Column(String(20), nullable=False, default="medium")
     blocked_pref_keys = Column(JSONBCompat, nullable=False, default=list)
     blocked_sources = Column(JSONBCompat, nullable=False, default=list)

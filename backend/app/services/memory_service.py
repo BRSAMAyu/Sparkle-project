@@ -23,6 +23,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 ALLOWED_EVIDENCE_TYPES = {
     "ai_inferred",
+    "chat_turn",
     "event",
     "user_state",
     "error",
@@ -543,6 +544,7 @@ class MemoryService:
             EpisodicMemory.deleted_at.is_(None),
             EpisodicMemory.archived_at.is_(None),
             EpisodicMemory.retracted_at.is_(None),
+            EpisodicMemory.revoked_at.is_(None),
         )
         if start:
             stmt = stmt.where(EpisodicMemory.occurred_at >= start)
@@ -563,11 +565,18 @@ class MemoryService:
         tags: list[str] | None,
         evidence_refs: Iterable[Any],
         embedding: list[float] | None = None,
+        confidence: float | None = None,
+        evidence_token: str | None = None,
+        decay_policy: str | None = None,
+        source_lane: str = "direct_capture",
+        semantic_key: str | None = None,
+        emit_system_update: bool = True,
     ) -> EpisodicMemory | None:
         if not await self._allow_write(
             user_id=user_id,
             kind="episodic",
             source_type=source_type,
+            source_lane=source_lane,
         ):
             MEMORY_WRITE_TOTAL.labels(type="episodic", status="blocked").inc()
             return None
@@ -584,13 +593,18 @@ class MemoryService:
             summary=summary,
             source_type=source_type,
             source_id=source_id,
+            source_lane=source_lane,
             occurred_at=occurred_at,
             importance_score=importance_score,
+            confidence=confidence,
             tags=tags,
             normalized_refs=normalized_refs,
             evidence_snapshot=evidence_snapshot,
             embedding=embedding,
             evidence_score=evidence_score,
+            evidence_token=evidence_token,
+            decay_policy=decay_policy,
+            semantic_key=semantic_key,
         )
         self.db.add(record)
         try:
@@ -610,13 +624,18 @@ class MemoryService:
                     summary=summary,
                     source_type=source_type,
                     source_id=source_id,
+                    source_lane=source_lane,
                     occurred_at=occurred_at,
                     importance_score=importance_score,
+                    confidence=confidence,
                     tags=tags,
                     normalized_refs=normalized_refs,
                     evidence_snapshot=evidence_snapshot,
                     embedding=None,
                     evidence_score=evidence_score,
+                    evidence_token=evidence_token,
+                    decay_policy=decay_policy,
+                    semantic_key=semantic_key,
                 )
                 self.db.add(record)
                 try:
@@ -633,20 +652,22 @@ class MemoryService:
                 logger.warning(f"Skipping episodic memory write because vector runtime is unavailable: {exc}")
                 MEMORY_WRITE_TOTAL.labels(type="episodic", status="degraded").inc()
                 return None
-        await SystemUpdateService().enqueue(
-            user_id,
-            build_system_update(
-                update_type="memory_created",
-                category="memory",
-                title=f"记住了：{_truncate_summary(summary)}",
-                description="已写入长期记忆",
-                priority="low",
-                metadata={
-                    "memory_id": str(record.id),
-                    "source_type": source_type,
-                },
-            ),
-        )
+        if emit_system_update:
+            await SystemUpdateService().enqueue(
+                user_id,
+                build_system_update(
+                    update_type="memory_created",
+                    category="memory",
+                    title=f"记住了：{_truncate_summary(summary)}",
+                    description="已写入长期记忆",
+                    priority="low",
+                    metadata={
+                        "memory_id": str(record.id),
+                        "source_type": source_type,
+                        "source_lane": source_lane,
+                    },
+                ),
+            )
         MEMORY_WRITE_TOTAL.labels(type="episodic", status="ok").inc()
         return record
 
@@ -657,27 +678,37 @@ class MemoryService:
         summary: str,
         source_type: str,
         source_id: str | None,
+        source_lane: str,
         occurred_at: datetime,
         importance_score: float | None,
+        confidence: float | None,
         tags: list[str] | None,
         normalized_refs: list[dict[str, Any]],
         evidence_snapshot: dict[str, Any] | None,
         embedding: list[float] | None,
         evidence_score: float,
+        evidence_token: str | None,
+        decay_policy: str | None,
+        semantic_key: str | None,
     ) -> EpisodicMemory:
         return EpisodicMemory(
             user_id=user_id,
             summary=summary,
             source_type=source_type,
             source_id=source_id,
+            source_lane=source_lane,
             occurred_at=occurred_at,
             importance_score=importance_score,
+            confidence=confidence,
             tags=tags,
             evidence_refs=normalized_refs,
             evidence_snapshot=evidence_snapshot,
             embedding=embedding,
             evidence_score=evidence_score,
             correction_count=0,
+            evidence_token=evidence_token,
+            decay_policy=decay_policy,
+            semantic_key=semantic_key,
         )
 
     async def retract_memory(
@@ -728,6 +759,31 @@ class MemoryService:
             ),
         )
         return True
+
+    async def revoke_inferred_memories(
+        self,
+        *,
+        user_id: UUID | None = None,
+        reason: str | None = None,
+    ) -> int:
+        stmt = select(EpisodicMemory).where(
+            EpisodicMemory.deleted_at.is_(None),
+            EpisodicMemory.source_lane == "inferred_extraction",
+            EpisodicMemory.revoked_at.is_(None),
+        )
+        if user_id is not None:
+            stmt = stmt.where(EpisodicMemory.user_id == user_id)
+
+        result = await self.db.execute(stmt)
+        records = list(result.scalars().all())
+        if not records:
+            return 0
+
+        for record in records:
+            self._apply_retraction(record, reason or "admin_kill_switch")
+
+        await self.db.commit()
+        return len(records)
 
     async def apply_correction(
         self,
@@ -823,14 +879,21 @@ class MemoryService:
             updated_refs.append(ref_copy)
 
         record.evidence_refs = updated_refs
-        record.retracted_at = _utcnow()
+        now = _utcnow()
+        if isinstance(record, EpisodicMemory) and getattr(record, "source_lane", "") == "inferred_extraction":
+            record.revoked_at = now
+        else:
+            record.retracted_at = now
         record.updated_at = _utcnow()
 
         if isinstance(record, EpisodicMemory):
             snapshot = record.evidence_snapshot or {}
             if not isinstance(snapshot, dict):
                 snapshot = {"history": snapshot}
-            snapshot["retraction_reason"] = reason
+            if getattr(record, "source_lane", "") == "inferred_extraction":
+                snapshot["revocation_reason"] = reason
+            else:
+                snapshot["retraction_reason"] = reason
             snapshot["evidence_refs"] = updated_refs
             record.evidence_snapshot = snapshot
 
@@ -840,6 +903,7 @@ class MemoryService:
         kind: str,
         pref_key: str | None = None,
         source_type: str | None = None,
+        source_lane: str | None = None,
     ) -> bool:
         if not settings.ENABLE_USER_MEMORY_CONTROLS:
             return True
@@ -849,6 +913,7 @@ class MemoryService:
             kind=kind,
             pref_key=pref_key,
             source_type=source_type,
+            source_lane=source_lane,
         )
         if not decision.allowed:
             logger.info(

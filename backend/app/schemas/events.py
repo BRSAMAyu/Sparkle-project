@@ -76,6 +76,7 @@ class EvidenceResolveItem(BaseModel):
     id: str
     status: str
     event: EventDetailResponse | None = None
+    chat_turn: dict[str, Any] | None = None
     state: UserStateSummary | None = None
     error: dict[str, Any] | None = None
     practice_outcome: dict[str, Any] | None = None

@@ -47,6 +47,7 @@ async def test_memory_settings_get_and_update(db_session, enable_memory_controls
         assert resp.status_code == 200
         payload = resp.json()
         assert payload["enabled"] is True
+        assert payload["allow_inferred_episodic"] is True
         assert payload["capture_level"] == "medium"
 
         pref_key = sorted(PREFERENCE_KEYS)[0]
@@ -55,6 +56,7 @@ async def test_memory_settings_get_and_update(db_session, enable_memory_controls
             json={
                 "allow_preferences": False,
                 "capture_level": "low",
+                "allow_inferred_episodic": False,
                 "blocked_pref_keys": [pref_key],
                 "blocked_sources": ["chat"],
             },
@@ -62,6 +64,7 @@ async def test_memory_settings_get_and_update(db_session, enable_memory_controls
         assert update.status_code == 200
         updated_payload = update.json()
         assert updated_payload["allow_preferences"] is False
+        assert updated_payload["allow_inferred_episodic"] is False
         assert updated_payload["capture_level"] == "low"
         assert pref_key in updated_payload["blocked_pref_keys"]
         assert "chat" in updated_payload["blocked_sources"]

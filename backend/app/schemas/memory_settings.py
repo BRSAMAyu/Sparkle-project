@@ -12,6 +12,7 @@ class MemorySettingsUpdate(BaseModel):
     allow_preferences: bool | None = None
     allow_goals: bool | None = None
     allow_episodic: bool | None = None
+    allow_inferred_episodic: bool | None = None
     capture_level: str | None = None
     blocked_pref_keys: list[str] | None = None
     blocked_sources: list[str] | None = None
@@ -31,6 +32,7 @@ class MemorySettingsResponse(BaseModel):
     allow_preferences: bool
     allow_goals: bool
     allow_episodic: bool
+    allow_inferred_episodic: bool
     capture_level: str
     blocked_pref_keys: list[str]
     blocked_sources: list[str]
