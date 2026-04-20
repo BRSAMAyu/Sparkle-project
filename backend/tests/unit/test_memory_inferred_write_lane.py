@@ -82,6 +82,8 @@ async def test_memory_inferred_extractor_precision_fixture(db_session):
 async def test_memory_inferred_write_lane_respects_feature_flag(db_session, monkeypatch):
     monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED", False, raising=False)
     monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED", False, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_WORKING_MEMORY_ENABLED", False, raising=False)
+    monkeypatch.setattr("app.services.aurora_stage19_kill_switch_service.cache_service.redis", None)
 
     user = await _create_user(db_session)
     session_id = uuid4()
@@ -111,6 +113,8 @@ async def test_memory_inferred_write_lane_respects_feature_flag(db_session, monk
 async def test_memory_inferred_revoke_hides_from_prompt_read_path(db_session, monkeypatch):
     monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED", True, raising=False)
     monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED", False, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_WORKING_MEMORY_ENABLED", False, raising=False)
+    monkeypatch.setattr("app.services.aurora_stage19_kill_switch_service.cache_service.redis", None)
 
     user = await _create_user(db_session)
     session_id = uuid4()

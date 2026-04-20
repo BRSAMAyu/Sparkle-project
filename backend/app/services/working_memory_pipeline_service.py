@@ -4,6 +4,7 @@ from uuid import UUID
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.llm_extractor_service import LlmExtractorService
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate
 from app.services.working_memory_consolidation_service import WorkingMemoryConsolidationService
@@ -15,6 +16,7 @@ class WorkingMemoryPipelineService:
     def __init__(self, db) -> None:
         self.db = db
         self.working_memory = WorkingMemoryService(cache_service.redis)
+        self.kill_switches = AuroraStage19KillSwitchService()
         self.llm_extractor = LlmExtractorService()
         self.consolidation = WorkingMemoryConsolidationService(db, cache_service.redis)
 
@@ -30,8 +32,10 @@ class WorkingMemoryPipelineService:
     ) -> list[WorkingMemoryEntry]:
         accepted_entries: list[WorkingMemoryEntry] = []
         llm_candidates: list[InferredEpisodicCandidate] = []
+        wm_enabled = await self.kill_switches.is_enabled("working_memory_enabled")
+        llm_enabled = await self.kill_switches.is_enabled("llm_extractor_enabled")
 
-        if settings.SPARKLE_LLM_EXTRACTOR_ENABLED or settings.SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED:
+        if llm_enabled or settings.SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED:
             llm_candidates = await self.llm_extractor.dry_run_extract(
                 user_id=user_id,
                 session_id=session_id,
@@ -40,7 +44,7 @@ class WorkingMemoryPipelineService:
                 evidence_token=evidence_token,
             )
 
-        if not settings.SPARKLE_WORKING_MEMORY_ENABLED:
+        if not wm_enabled:
             return accepted_entries
 
         for candidate in [item for item in [rule_candidate, *llm_candidates] if item is not None]:

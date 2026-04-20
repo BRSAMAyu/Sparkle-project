@@ -32,6 +32,7 @@ from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
 from app.services.budget_tuning_service import BudgetTuningService
 from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
+from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.ltm_health_snapshot import LtmHealthSnapshotService
 from app.services.ltm_release_gate import LtmReleaseGate
@@ -285,6 +286,25 @@ async def update_stage18_kill_switches(payload: dict = Body(default={})):
             "aggregator_enabled": payload.get("aggregator_enabled"),
             "push_policy_enabled": payload.get("push_policy_enabled"),
             "push_delivery_enabled": payload.get("push_delivery_enabled"),
+        }
+    )
+    return {"status": "ok", "flags": flags}
+
+
+@router.get("/stage19/killswitch")
+async def get_stage19_kill_switches():
+    service = AuroraStage19KillSwitchService()
+    return {"flags": await service.get_all()}
+
+
+@router.put("/stage19/killswitch")
+async def update_stage19_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage19KillSwitchService()
+    flags = await service.set_flags(
+        {
+            "working_memory_enabled": payload.get("working_memory_enabled"),
+            "llm_extractor_enabled": payload.get("llm_extractor_enabled"),
+            "consolidation_enabled": payload.get("consolidation_enabled"),
         }
     )
     return {"status": "ok", "flags": flags}

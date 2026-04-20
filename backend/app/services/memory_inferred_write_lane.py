@@ -196,7 +196,9 @@ class MemoryInferredWriteLaneService:
             MEMORY_INFERRED_EXTRACT_TOTAL.labels(mode="chat", status="candidate").inc()
             await self._record_dry_run(user_id=user_id, session_id=session_id, candidate=candidate)
 
-        if settings.SPARKLE_WORKING_MEMORY_ENABLED:
+        from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
+
+        if await AuroraStage19KillSwitchService().is_enabled("working_memory_enabled"):
             from app.services.working_memory_pipeline_service import WorkingMemoryPipelineService
 
             pipeline = WorkingMemoryPipelineService(self.db)

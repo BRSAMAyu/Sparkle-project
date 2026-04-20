@@ -6,6 +6,7 @@ from uuid import UUID
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate, MemoryInferredWriteLaneService
 from app.services.memory_service import MemoryService
 from app.working_memory.schema import WorkingMemoryEntry
@@ -37,6 +38,7 @@ class WorkingMemoryConsolidationService:
     def __init__(self, db, redis_client=None, *, now_fn=_utcnow):
         self.db = db
         self.working_memory = WorkingMemoryService(redis_client or cache_service.redis, now_fn=now_fn)
+        self.kill_switches = AuroraStage19KillSwitchService()
         self._now_fn = now_fn
 
     @classmethod
@@ -66,7 +68,7 @@ class WorkingMemoryConsolidationService:
         session_id: UUID,
         explicit_confirmation: bool = False,
     ) -> list[WorkingMemoryEntry]:
-        if not settings.SPARKLE_CONSOLIDATION_ENABLED:
+        if not await self.kill_switches.is_enabled("consolidation_enabled"):
             return []
         now = self._now_fn()
         entries = await self.working_memory.list_entries(
