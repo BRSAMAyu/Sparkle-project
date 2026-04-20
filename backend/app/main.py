@@ -89,6 +89,16 @@ async def _run_intervention_outcome_verifier_loop() -> None:
 
         await asyncio.sleep(INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS)
 
+
+async def _run_working_memory_orphan_cleanup() -> None:
+    """Best-effort Stage 19 startup cleanup for orphaned working-memory namespaces."""
+    from app.services.working_memory_orphan_cleanup import WorkingMemoryOrphanCleanupService
+
+    async with AsyncSessionLocal() as db:
+        service = WorkingMemoryOrphanCleanupService(db, cache_service.redis)
+        deleted = await service.run_once()
+        logger.info("WorkingMemory orphan cleanup completed deleted={}", deleted)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -127,6 +137,10 @@ async def lifespan(app: FastAPI):
     pending_actions_store.set_redis(cache_service.redis)
     # Initialize WebSocket Redis
     await manager.init_redis()
+    try:
+        await _run_working_memory_orphan_cleanup()
+    except Exception as exc:
+        logger.warning("WorkingMemory orphan cleanup failed (non-fatal): {}", exc)
     if cache_service.redis:
         try:
             await redis_search_client.ensure_index()
