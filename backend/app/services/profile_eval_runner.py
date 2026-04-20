@@ -7,7 +7,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from app.services.profile_eval_llm_judge import JUDGE_CONTRACT_VERSION, build_profile_eval_llm_judge
+from app.services.profile_eval_llm_judge import (
+    JUDGE_CONTRACT_VERSION,
+    ProfileEvalJudgeConfig,
+    build_profile_eval_judge_config,
+    build_profile_eval_llm_judge,
+)
 
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "tests" / "profile" / "eval" / "fixtures"
 DEFAULT_FIXTURE_NAMES = (
@@ -40,12 +45,13 @@ LLMJudge = Callable[[dict[str, Any]], dict[str, Any]]
 class ProfileEvalRunner:
     """Read-only rubric runner for Stage 9 profile-eval fixtures."""
 
-    runner_version = "stage10.ev3.runner.v1"
+    runner_version = "stage11.ev4.runner.v1"
     write_scope = "evaluation_records_only"
-    rubric_version = "stage10.ev3.rubric.v1"
+    rubric_version = "stage11.ev4.rubric.v1"
 
-    def __init__(self, llm_judge: LLMJudge | None = None):
+    def __init__(self, llm_judge: LLMJudge | None = None, judge_config: ProfileEvalJudgeConfig | None = None):
         self.llm_judge = llm_judge
+        self.judge_config = judge_config or build_profile_eval_judge_config(enabled=llm_judge is not None)
 
     @property
     def llm_runtime(self) -> str:
@@ -63,9 +69,28 @@ class ProfileEvalRunner:
     def judge_contract_version(self) -> str | None:
         return JUDGE_CONTRACT_VERSION if self.llm_judge is not None else None
 
+    @property
+    def prompt_version(self) -> str | None:
+        return self.judge_config.prompt_version if self.llm_judge is not None else None
+
     @classmethod
-    def from_runtime(cls, *, enable_llm_judge: bool = False) -> "ProfileEvalRunner":
-        return cls(llm_judge=build_profile_eval_llm_judge(enabled=enable_llm_judge))
+    def from_runtime(
+        cls,
+        *,
+        enable_llm_judge: bool = False,
+        judge_weight: float | None = None,
+        timeout_ms: int | None = None,
+        budget_tokens: int | None = None,
+        prompt_version: str | None = None,
+    ) -> "ProfileEvalRunner":
+        config = build_profile_eval_judge_config(
+            enabled=enable_llm_judge,
+            judge_weight=judge_weight,
+            timeout_ms=timeout_ms,
+            budget_tokens=budget_tokens,
+            prompt_version=prompt_version,
+        )
+        return cls(llm_judge=build_profile_eval_llm_judge(enabled=enable_llm_judge, config=config), judge_config=config)
 
     def run_fixture_names(self, fixture_names: list[str] | None = None) -> dict[str, Any]:
         names = fixture_names or list(DEFAULT_FIXTURE_NAMES)
@@ -81,6 +106,7 @@ class ProfileEvalRunner:
             "scoring_mode": self.scoring_mode,
             "rubric_version": self.rubric_version,
             "judge_contract_version": self.judge_contract_version,
+            "judge_config": self.judge_config.as_payload() if self.llm_judge is not None else None,
             "evaluations": evaluations,
             "summary": {
                 "fixture_count": len(evaluations),
@@ -112,6 +138,8 @@ class ProfileEvalRunner:
             "scoring_mode": self.scoring_mode,
             "rubric_version": self.rubric_version,
             "judge_contract_version": self.judge_contract_version,
+            "prompt_version": self.prompt_version,
+            "judge_config": self.judge_config.as_payload() if self.llm_judge is not None else None,
             "evaluation_records": cases,
             "summary": {
                 "status": _score_label(average_score),
@@ -151,6 +179,7 @@ class ProfileEvalRunner:
             "scoring_mode": self.scoring_mode,
             "rubric_version": self.rubric_version,
             "judge_contract_version": self.judge_contract_version,
+            "prompt_version": self.prompt_version,
             "metric_records": metric_records,
             "expected_observation": expected_observation,
         }
@@ -192,7 +221,11 @@ class ProfileEvalRunner:
                 llm_score = float(llm_attachment.get("score"))
             except (TypeError, ValueError):
                 llm_score = rubric_score
-            final_score = round((rubric_score * 0.7) + (llm_score * 0.3), 3)
+            final_score = round(
+                (rubric_score * self.judge_config.rubric_weight)
+                + (llm_score * self.judge_config.judge_weight),
+                3,
+            )
 
         observed = (
             "; ".join(item.evidence for item in criteria if item.evidence) or "rubric produced no diagnostic evidence"
@@ -220,6 +253,9 @@ class ProfileEvalRunner:
             "llm_runtime": self.llm_runtime,
             "llm_attachment": llm_attachment,
             "judge_contract_version": self.judge_contract_version,
+            "prompt_version": self.prompt_version,
+            "judge_weight": self.judge_config.judge_weight if self.llm_judge is not None else None,
+            "rubric_weight": self.judge_config.rubric_weight if self.llm_judge is not None else None,
             "evidence_excerpt": {
                 "prompt_context_keys": sorted(prompt_context.keys()),
                 "verification_window": expected_observation.get("verification_window"),
@@ -417,7 +453,7 @@ class ProfileEvalRunner:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run the Stage 10 read-only profile evaluation runner.")
+    parser = argparse.ArgumentParser(description="Run the Stage 11 read-only profile evaluation runner.")
     parser.add_argument(
         "--fixture",
         dest="fixtures",
@@ -428,14 +464,22 @@ def main(argv: list[str] | None = None) -> int:
         "--llm-judge",
         choices=("disabled", "real"),
         default="disabled",
-        help="Attach the real Stage 10 LLM judge or keep rubric_only mode.",
+        help="Attach the real Stage 11 LLM judge or keep rubric_only mode.",
     )
+    parser.add_argument("--judge-weight", type=float, help="Judge score weight in [0.1, 0.9]")
+    parser.add_argument("--judge-timeout-ms", type=int, help="Judge timeout in milliseconds")
+    parser.add_argument("--judge-budget-tokens", type=int, help="Judge max token budget")
+    parser.add_argument("--judge-prompt-version", type=str, help="Committed judge prompt version label")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     args = parser.parse_args(argv)
 
-    payload = ProfileEvalRunner.from_runtime(enable_llm_judge=args.llm_judge == "real").run_fixture_names(
-        args.fixtures
-    )
+    payload = ProfileEvalRunner.from_runtime(
+        enable_llm_judge=args.llm_judge == "real",
+        judge_weight=args.judge_weight,
+        timeout_ms=args.judge_timeout_ms,
+        budget_tokens=args.judge_budget_tokens,
+        prompt_version=args.judge_prompt_version,
+    ).run_fixture_names(args.fixtures)
     json.dump(payload, sys.stdout, indent=2 if args.pretty else None)
     sys.stdout.write("\n")
     return 0

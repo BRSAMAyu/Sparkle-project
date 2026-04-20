@@ -13,7 +13,7 @@ def test_profile_eval_runner_executes_prediction_accuracy_fixture() -> None:
     assert payload["llm_runtime"] == "optional_not_attached"
     assert payload["runner_mode"] == "rubric_fixture_eval"
     assert payload["scoring_mode"] == "rubric_only"
-    assert payload["rubric_version"] == "stage10.ev3.rubric.v1"
+    assert payload["rubric_version"] == "stage11.ev4.rubric.v1"
     assert payload["judge_contract_version"] is None
     assert payload["evaluation_focus"] == "prediction_accuracy"
     assert payload["summary"]["status"] == "pass"
@@ -21,7 +21,7 @@ def test_profile_eval_runner_executes_prediction_accuracy_fixture() -> None:
     assert metric_record["metric_id"] == "overload_risk_precision"
     assert metric_record["diagnostic_summary"].startswith("matched:")
     assert metric_record["criterion_records"]
-    assert metric_record["rubric_version"] == "stage10.ev3.rubric.v1"
+    assert metric_record["rubric_version"] == "stage11.ev4.rubric.v1"
     assert metric_record["llm_attachment"] is None
 
 
@@ -39,22 +39,38 @@ def test_profile_eval_runner_cli_emits_json(capsys) -> None:
 
 
 def test_profile_eval_runner_supports_optional_llm_attachment() -> None:
-    payload = ProfileEvalRunner(llm_judge=lambda _: {"score": 0.9, "rationale": "mock attached judge"}).run_fixture(
-        "prediction_accuracy_baseline.json"
-    )
+    payload = ProfileEvalRunner(
+        llm_judge=lambda _: {"score": 0.9, "rationale": "mock attached judge"},
+        judge_config=ProfileEvalRunner.from_runtime(
+            enable_llm_judge=False,
+            judge_weight=0.4,
+            timeout_ms=6000,
+            budget_tokens=900,
+            prompt_version="stage11.ev4.judge.v1",
+        ).judge_config,
+    ).run_fixture("prediction_accuracy_baseline.json")
 
     assert payload["llm_runtime"] == "attached"
     assert payload["runner_mode"] == "llm_attached_rubric_eval"
     assert payload["scoring_mode"] == "llm_attached"
     assert payload["evaluation_records"][0]["metric_records"][0]["llm_attachment"]["rationale"] == "mock attached judge"
-    assert payload["judge_contract_version"] == "stage10.ev3.judge.v1"
+    assert payload["judge_contract_version"] == "stage11.ev4.judge.v1"
+    assert payload["evaluation_records"][0]["metric_records"][0]["judge_weight"] == 0.4
 
 
 def test_profile_eval_runner_runtime_factory_can_attach_real_judge() -> None:
     with patch("app.services.profile_eval_runner.build_profile_eval_llm_judge", return_value=lambda _: {"score": 0.82}):
-        payload = ProfileEvalRunner.from_runtime(enable_llm_judge=True).run_fixture(
+        payload = ProfileEvalRunner.from_runtime(
+            enable_llm_judge=True,
+            judge_weight=0.25,
+            timeout_ms=5000,
+            budget_tokens=700,
+            prompt_version="stage11.ev4.judge.v2",
+        ).run_fixture(
             "prediction_accuracy_baseline.json"
         )
 
     assert payload["llm_runtime"] == "attached"
     assert payload["scoring_mode"] == "llm_attached"
+    assert payload["judge_config"]["judge_weight"] == 0.25
+    assert payload["judge_config"]["prompt_version"] == "stage11.ev4.judge.v2"
