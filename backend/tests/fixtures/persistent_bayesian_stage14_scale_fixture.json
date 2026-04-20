@@ -1,0 +1,36 @@
+{
+  "observations": [
+    {"source": "state_plan", "target": "create_plan", "repeats": 9, "success": true, "was_helpful": false},
+    {"source": "state_plan", "target": "generate_tasks_for_plan", "repeats": 11, "success": true, "was_helpful": true},
+
+    {"source": "state_task", "target": "create_task", "repeats": 9, "success": true, "was_helpful": false},
+    {"source": "state_task", "target": "breakdown_task", "repeats": 11, "success": true, "was_helpful": true},
+
+    {"source": "state_focus", "target": "suggest_focus_session", "repeats": 9, "success": true, "was_helpful": false},
+    {"source": "state_focus", "target": "get_task_summary", "repeats": 11, "success": true, "was_helpful": true},
+
+    {"source": "state_growth", "target": "get_user_strategy_state", "repeats": 9, "success": true, "was_helpful": false},
+    {"source": "state_growth", "target": "get_situation_brief", "repeats": 11, "success": true, "was_helpful": true},
+
+    {"source": "state_query", "target": "get_persona_snapshot", "repeats": 9, "success": true, "user_satisfaction": 2},
+    {"source": "state_query", "target": "query_plan_tasks", "repeats": 11, "success": true, "user_satisfaction": 5},
+
+    {"source": "state_knowledge", "target": "create_knowledge_node", "repeats": 9, "success": true, "user_satisfaction": 2},
+    {"source": "state_knowledge", "target": "query_knowledge", "repeats": 11, "success": true, "user_satisfaction": 5},
+
+    {"source": "state_review", "target": "generate_learning_report", "repeats": 9, "success": true, "user_satisfaction": 2},
+    {"source": "state_review", "target": "query_error_history", "repeats": 11, "success": true, "user_satisfaction": 5},
+
+    {"source": "state_research", "target": "retrieve_user_material", "repeats": 9, "success": true, "user_satisfaction": 2},
+    {"source": "state_research", "target": "web_search_pro", "repeats": 11, "success": true, "user_satisfaction": 5},
+
+    {"source": "state_memory", "target": "get_graph_diagnostic_surface", "repeats": 9, "success": false},
+    {"source": "state_memory", "target": "get_profile_front_door", "repeats": 11, "success": true},
+
+    {"source": "state_cognitive", "target": "launch_prediction", "repeats": 9, "success": false},
+    {"source": "state_cognitive", "target": "get_user_behavior_patterns", "repeats": 11, "success": true},
+
+    {"source": "state_general", "target": "check_system_status", "repeats": 9, "success": false},
+    {"source": "state_general", "target": "translate", "repeats": 11, "success": true}
+  ]
+}

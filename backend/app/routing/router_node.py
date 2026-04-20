@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 import random
 import uuid
 
@@ -9,6 +10,7 @@ from app.learning.bayesian_learner import BayesianLearner
 from app.orchestration.statechart_engine import WorkflowState
 from app.routing.exploration_router import HybridExplorationRouter
 from app.routing.graph_router import GraphBasedRouter
+from app.routing.tool_preference_shadow import ToolPreferenceShadowRecorder
 from app.routing.tool_preference_router import ToolPreferenceRouter
 
 
@@ -21,6 +23,8 @@ class RouterNode:
     """
     def __init__(self, routes: list[str], redis_client=None, user_id: str | None = None):
         self.routes = routes
+        self.redis = redis_client
+        self.user_id = user_id
         self.graph_router = GraphBasedRouter()
 
         # Initialize semantic and hybrid routers
@@ -45,6 +49,7 @@ class RouterNode:
 
         # Initialize Exploration Router
         self.exploration_router = HybridExplorationRouter(self.learner, user_id)
+        self.shadow_recorder = ToolPreferenceShadowRecorder(redis_client) if redis_client else None
 
     async def __call__(self, state: WorkflowState) -> WorkflowState:
         """
@@ -63,7 +68,11 @@ class RouterNode:
         # 2. Apply Tool Preference Learning (if available)
         if user_id and db_session and hasattr(self, 'learner'):
             try:
-                pref_router = ToolPreferenceRouter(db_session, uuid.UUID(str(user_id)), redis_client=None)
+                pref_router = ToolPreferenceRouter(
+                    db_session,
+                    uuid.UUID(str(user_id)),
+                    redis_client=self.redis,
+                )
 
                 # 从历史记录更新学习器
                 await pref_router.update_learner_from_history()
@@ -87,12 +96,35 @@ class RouterNode:
 
         # 3. Exploration Selection
         if candidates:
-            # Use exploration router to pick one
-            next_route = await self.exploration_router.select_route(
-                source=current_node,
-                targets=candidates,
-                context=state.context_data
-            )
+            shadow_enabled = self._is_tool_preference_shadow_enabled()
+            fallback_choice = candidates[0]
+
+            if shadow_enabled and self.shadow_recorder and user_id:
+                learner_choice = await self.exploration_router.select_route(
+                    source=current_node,
+                    targets=candidates,
+                    context=state.context_data,
+                )
+                await self.shadow_recorder.record_decision(
+                    user_id=str(user_id),
+                    source_state=current_node,
+                    fallback_choice=fallback_choice,
+                    learner_choice=learner_choice,
+                    fallback_probability=await self.learner.get_probability(current_node, fallback_choice),
+                    learner_probability=(
+                        await self.learner.get_probability(current_node, learner_choice)
+                        if learner_choice
+                        else None
+                    ),
+                )
+                next_route = fallback_choice
+            else:
+                # Use exploration router to pick one
+                next_route = await self.exploration_router.select_route(
+                    source=current_node,
+                    targets=candidates,
+                    context=state.context_data
+                )
         else:
             # Fallback to simple logic if no candidates found via graph/exploration
             next_route = self._simple_route(last_msg)
@@ -112,6 +144,11 @@ class RouterNode:
         state.context_data['router_confidence'] = prob if next_route else 0.0
 
         return state
+
+    @staticmethod
+    def _is_tool_preference_shadow_enabled() -> bool:
+        raw = os.getenv("SPARKLE_CL1_SHADOW_MODE", "").strip().lower()
+        return raw in {"1", "true", "yes", "on"}
 
     def _extract_capability(self, message: str) -> str | None:
         """Lightweight capability extraction used for routing hints."""

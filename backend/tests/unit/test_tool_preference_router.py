@@ -9,6 +9,7 @@ import pytest
 
 from app.models.tool_history import UserToolPreference
 from app.routing.tool_preference_router import ToolPreferenceRouter, _utcnow
+from app.learning.persistent_bayesian_learner import PersistentBayesianLearner
 
 
 @pytest.fixture
@@ -49,6 +50,16 @@ async def test_get_preferred_tools_returns_ranked_names(router: ToolPreferenceRo
         limit=2,
         days=30,
     )
+
+
+def test_uses_persistent_bayesian_learner_when_redis_client_is_provided():
+    db_session = MagicMock()
+    user_id = uuid.uuid4()
+    redis_client = object()
+
+    router = ToolPreferenceRouter(db_session=db_session, user_id=user_id, redis_client=redis_client)
+
+    assert isinstance(router.learner, PersistentBayesianLearner)
 
 
 @pytest.mark.asyncio
