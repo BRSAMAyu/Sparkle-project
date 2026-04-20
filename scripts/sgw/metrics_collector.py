@@ -39,6 +39,12 @@ class MetricsCollector:
     quota_cooldowns: list[dict[str, Any]] = field(default_factory=list)
     concurrency_adjustments: list[dict[str, Any]] = field(default_factory=list)
 
+    # SGW v2: Authenticity audit metrics
+    authenticity_cases: int = 0
+    authenticity_failures: int = 0
+    authenticity_scores: list[float] = field(default_factory=list)
+    authenticity_failure_reasons: list[str] = field(default_factory=list)
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -121,6 +127,24 @@ class MetricsCollector:
 
     def record_hard_violation(self, payload: dict[str, Any]) -> None:
         self.hard_violations.append(payload)
+
+    # SGW v2: Authenticity audit recording
+    def record_authenticity(self, overall: float, is_authentic: bool, reason: str) -> None:
+        self.authenticity_cases += 1
+        self.authenticity_scores.append(overall)
+        if not is_authentic:
+            self.authenticity_failures += 1
+            self.authenticity_failure_reasons.append(reason)
+
+    def authenticity_mean(self) -> float:
+        if not self.authenticity_scores:
+            return 0.0
+        return sum(self.authenticity_scores) / len(self.authenticity_scores)
+
+    def authenticity_failure_rate(self) -> float:
+        if self.authenticity_cases == 0:
+            return 0.0
+        return self.authenticity_failures / self.authenticity_cases
 
     def soft_violation_rate(self) -> float:
         if self.audit_cases == 0:
@@ -215,4 +239,18 @@ class MetricsCollector:
         else:
             for cooldown in self.quota_cooldowns:
                 lines.append(f"- until `{cooldown['cooldown_until']}` :: {cooldown['reason']}")
+        # SGW v2: Authenticity section
+        lines.extend([
+            "",
+            "## Authenticity (SGW v2)",
+            "",
+            f"- Authenticity Cases: `{self.authenticity_cases}`",
+            f"- Authenticity Failures: `{self.authenticity_failures}`",
+            f"- Authenticity Mean Score: `{self.authenticity_mean():.4f}`",
+            f"- Authenticity Failure Rate: `{self.authenticity_failure_rate():.4f}`",
+        ])
+        if self.authenticity_failure_reasons:
+            lines.extend(["", "## Authenticity Failure Reasons", ""])
+            for reason in self.authenticity_failure_reasons[:30]:
+                lines.append(f"- {reason}")
         return "\n".join(lines) + "\n"
