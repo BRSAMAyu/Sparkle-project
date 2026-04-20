@@ -177,6 +177,8 @@ async def test_user_settings_service_ai_ops_dashboard_enriches_feedback(db_sessi
     assert item["negative_feedback_count"] == 1
     assert item["positive_feedback_rate_percent"] == 50.0
     assert item["feedback_coverage_percent"] == 100.0
+    assert item["avg_prompt_utilization_percent"] == 0.0
+    assert item["avg_inference_utilization_percent"] == 0.0
 
     token_tracker_module._token_tracker_instance = None
 
@@ -237,6 +239,8 @@ async def test_user_settings_service_ai_ops_export_returns_overview_and_trends(d
     assert payload["overview"]["success_rate_percent"] == 100.0
     assert payload["overview"]["fallback_rate_percent"] == 50.0
     assert payload["overview"]["execution_count"] == 2
+    assert payload["overview"]["avg_prompt_utilization_percent"] == 0.0
+    assert payload["overview"]["avg_inference_utilization_percent"] == 0.0
     assert len(payload["trend_series"]) == 2
     study_series = next(item for item in payload["trend_series"] if item["chat_mode"] == "study_plan")
     assert study_series["points"][0]["execution_conversion_rate_percent"] == 100.0
@@ -316,3 +320,81 @@ async def test_token_tracker_ai_ops_summary_surfaces_stage9_utilization_metrics(
     assert item["prompt_utilization_not_applicable_count"] == 1
     assert item["inference_utilization_known_count"] == 1
     assert item["inference_utilization_unknown_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_user_settings_service_ai_ops_export_rolls_up_utilization_metrics(db_session):
+    redis = FakeRedis()
+    token_tracker_module._token_tracker_instance = None
+    tracker = TokenTracker(redis)
+    token_tracker_module._token_tracker_instance = tracker
+
+    user_id = uuid.uuid4()
+    await tracker.record_usage(
+        user_id=str(user_id),
+        session_id="session-util-rollup",
+        request_id="req-ops-util-1",
+        prompt_tokens=60,
+        completion_tokens=90,
+        model="qwen3.5-flash",
+        cost=0.0012,
+        reasoning_mode="balanced",
+        model_tier="standard",
+        chat_mode="standard",
+        success=True,
+        fallback_used=False,
+        utilization_metrics={
+            "prompt_utilization": {
+                "status": "known",
+                "numerator": 4,
+                "denominator": 5,
+                "ratio": 0.8,
+            },
+            "inference_utilization": {
+                "status": "known",
+                "numerator": 3,
+                "denominator": 4,
+                "ratio": 0.75,
+            },
+        },
+    )
+    await tracker.record_usage(
+        user_id=str(user_id),
+        session_id="session-util-rollup",
+        request_id="req-ops-util-2",
+        prompt_tokens=30,
+        completion_tokens=20,
+        model="qwen3.5-flash",
+        cost=0.0004,
+        reasoning_mode="balanced",
+        model_tier="standard",
+        chat_mode="standard",
+        success=True,
+        fallback_used=False,
+        utilization_metrics={
+            "prompt_utilization": {
+                "status": "unknown",
+                "numerator": 0,
+                "denominator": 0,
+                "ratio": None,
+            },
+            "inference_utilization": {
+                "status": "not_applicable",
+                "numerator": 0,
+                "denominator": 0,
+                "ratio": None,
+            },
+        },
+    )
+
+    service = UserSettingsService(db_session, redis=redis)
+    payload = await service.get_ai_ops_export(user_id, days=7)
+
+    assert payload["overview"]["avg_prompt_utilization_percent"] == 80.0
+    assert payload["overview"]["avg_inference_utilization_percent"] == 75.0
+    assert payload["overview"]["prompt_utilization_known_count"] == 1
+    assert payload["overview"]["prompt_utilization_unknown_count"] == 1
+    assert payload["overview"]["inference_utilization_known_count"] == 1
+    assert payload["overview"]["inference_utilization_not_applicable_count"] == 1
+
+    token_tracker_module._token_tracker_instance = None

@@ -178,6 +178,16 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                     value:
                         '${((overview['execution_conversion_rate_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
                   ),
+                  _MetricChip(
+                    label: 'prompt 命中',
+                    value:
+                        '${((overview['avg_prompt_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
+                  ),
+                  _MetricChip(
+                    label: '推理命中',
+                    value:
+                        '${((overview['avg_inference_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
+                  ),
                 ],
               ),
             ],
@@ -592,6 +602,13 @@ class _ModeBreakdownRow extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             'fallback ${fallbackRate.toStringAsFixed(1)}% · 成本 \$${cost.toStringAsFixed(4)} · 执行转化 ${executionRate.toStringAsFixed(1)}%',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'prompt 命中 ${((item['avg_prompt_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}% · 推理命中 ${((item['avg_inference_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}% · known ${item['prompt_utilization_known_count'] ?? 0}/${item['inference_utilization_known_count'] ?? 0}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),

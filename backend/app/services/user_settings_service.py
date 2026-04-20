@@ -170,6 +170,26 @@ class UserSettingsService:
                         if requests_total > 0
                         else 0.0,
                     ),
+                    "avg_prompt_utilization_percent": float(item.get("avg_prompt_utilization_percent") or 0.0),
+                    "avg_inference_utilization_percent": float(
+                        item.get("avg_inference_utilization_percent") or 0.0
+                    ),
+                    "prompt_utilization_known_count": int(item.get("prompt_utilization_known_count") or 0),
+                    "prompt_utilization_unknown_count": int(
+                        item.get("prompt_utilization_unknown_count") or 0
+                    ),
+                    "prompt_utilization_not_applicable_count": int(
+                        item.get("prompt_utilization_not_applicable_count") or 0
+                    ),
+                    "inference_utilization_known_count": int(
+                        item.get("inference_utilization_known_count") or 0
+                    ),
+                    "inference_utilization_unknown_count": int(
+                        item.get("inference_utilization_unknown_count") or 0
+                    ),
+                    "inference_utilization_not_applicable_count": int(
+                        item.get("inference_utilization_not_applicable_count") or 0
+                    ),
                 }
             )
 
@@ -204,6 +224,14 @@ class UserSettingsService:
             "task_request_estimate": 0.0,
             "plan_request_estimate": 0.0,
             "execution_request_estimate": 0.0,
+            "prompt_utilization_known_count": 0,
+            "prompt_utilization_unknown_count": 0,
+            "prompt_utilization_not_applicable_count": 0,
+            "prompt_utilization_ratio_weighted_sum": 0.0,
+            "inference_utilization_known_count": 0,
+            "inference_utilization_unknown_count": 0,
+            "inference_utilization_not_applicable_count": 0,
+            "inference_utilization_ratio_weighted_sum": 0.0,
         }
 
         for item in dashboard["items"]:
@@ -236,6 +264,26 @@ class UserSettingsService:
             totals["execution_request_estimate"] += (
                 float(item.get("execution_conversion_rate_percent") or 0.0) * requests_total / 100.0
             )
+            prompt_known = int(item.get("prompt_utilization_known_count") or 0)
+            prompt_unknown = int(item.get("prompt_utilization_unknown_count") or 0)
+            prompt_not_applicable = int(item.get("prompt_utilization_not_applicable_count") or 0)
+            inference_known = int(item.get("inference_utilization_known_count") or 0)
+            inference_unknown = int(item.get("inference_utilization_unknown_count") or 0)
+            inference_not_applicable = int(item.get("inference_utilization_not_applicable_count") or 0)
+            totals["prompt_utilization_known_count"] += prompt_known
+            totals["prompt_utilization_unknown_count"] += prompt_unknown
+            totals["prompt_utilization_not_applicable_count"] += prompt_not_applicable
+            totals["inference_utilization_known_count"] += inference_known
+            totals["inference_utilization_unknown_count"] += inference_unknown
+            totals["inference_utilization_not_applicable_count"] += inference_not_applicable
+            if prompt_known > 0:
+                totals["prompt_utilization_ratio_weighted_sum"] += float(
+                    item.get("avg_prompt_utilization_percent") or 0.0
+                ) * prompt_known
+            if inference_known > 0:
+                totals["inference_utilization_ratio_weighted_sum"] += float(
+                    item.get("avg_inference_utilization_percent") or 0.0
+                ) * inference_known
 
         requests_total = int(totals["requests_total"])
         requests_success = int(totals["requests_success"])
@@ -316,6 +364,32 @@ class UserSettingsService:
                 )
                 if requests_total > 0
                 else 0.0,
+                "avg_prompt_utilization_percent": round(
+                    float(totals["prompt_utilization_ratio_weighted_sum"])
+                    / max(int(totals["prompt_utilization_known_count"]), 1),
+                    2,
+                )
+                if int(totals["prompt_utilization_known_count"]) > 0
+                else 0.0,
+                "avg_inference_utilization_percent": round(
+                    float(totals["inference_utilization_ratio_weighted_sum"])
+                    / max(int(totals["inference_utilization_known_count"]), 1),
+                    2,
+                )
+                if int(totals["inference_utilization_known_count"]) > 0
+                else 0.0,
+                "prompt_utilization_known_count": int(totals["prompt_utilization_known_count"]),
+                "prompt_utilization_unknown_count": int(totals["prompt_utilization_unknown_count"]),
+                "prompt_utilization_not_applicable_count": int(
+                    totals["prompt_utilization_not_applicable_count"]
+                ),
+                "inference_utilization_known_count": int(totals["inference_utilization_known_count"]),
+                "inference_utilization_unknown_count": int(
+                    totals["inference_utilization_unknown_count"]
+                ),
+                "inference_utilization_not_applicable_count": int(
+                    totals["inference_utilization_not_applicable_count"]
+                ),
             },
             "items": dashboard["items"],
             "trend_series": [

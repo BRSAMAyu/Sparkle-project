@@ -91,6 +91,14 @@ class AiOpsModeItem(BaseModel):
     task_conversion_rate_percent: float = 0.0
     plan_conversion_rate_percent: float = 0.0
     execution_conversion_rate_percent: float = 0.0
+    avg_prompt_utilization_percent: float = 0.0
+    avg_inference_utilization_percent: float = 0.0
+    prompt_utilization_known_count: int = 0
+    prompt_utilization_unknown_count: int = 0
+    prompt_utilization_not_applicable_count: int = 0
+    inference_utilization_known_count: int = 0
+    inference_utilization_unknown_count: int = 0
+    inference_utilization_not_applicable_count: int = 0
     reasoning_mode_breakdown: list[AiOpsReasoningBreakdownItem] = Field(default_factory=list)
 
 
@@ -110,6 +118,14 @@ class AiOpsOverviewItem(BaseModel):
     task_conversion_rate_percent: float = 0.0
     plan_conversion_rate_percent: float = 0.0
     execution_conversion_rate_percent: float = 0.0
+    avg_prompt_utilization_percent: float = 0.0
+    avg_inference_utilization_percent: float = 0.0
+    prompt_utilization_known_count: int = 0
+    prompt_utilization_unknown_count: int = 0
+    prompt_utilization_not_applicable_count: int = 0
+    inference_utilization_known_count: int = 0
+    inference_utilization_unknown_count: int = 0
+    inference_utilization_not_applicable_count: int = 0
 
 
 class AiOpsTrendPoint(BaseModel):

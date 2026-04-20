@@ -2867,6 +2867,32 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
     final fallbackRate =
         totalRequests > 0 ? weightedFallback / totalRequests : 0.0;
+    final promptKnown = items.fold<int>(
+      0,
+      (sum, item) => sum + ((item['prompt_utilization_known_count'] as num?)?.toInt() ?? 0),
+    );
+    final inferenceKnown = items.fold<int>(
+      0,
+      (sum, item) => sum + ((item['inference_utilization_known_count'] as num?)?.toInt() ?? 0),
+    );
+    final promptUtilWeighted = items.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (((item['avg_prompt_utilization_percent'] as num?)?.toDouble() ?? 0) *
+              ((item['prompt_utilization_known_count'] as num?)?.toDouble() ?? 0)),
+    );
+    final inferenceUtilWeighted = items.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (((item['avg_inference_utilization_percent'] as num?)?.toDouble() ?? 0) *
+              ((item['inference_utilization_known_count'] as num?)?.toDouble() ?? 0)),
+    );
+    final avgPromptUtil =
+        promptKnown > 0 ? promptUtilWeighted / promptKnown : 0.0;
+    final avgInferenceUtil =
+        inferenceKnown > 0 ? inferenceUtilWeighted / inferenceKnown : 0.0;
     final topActions = (predictionPayload?['top_actions'] as List<dynamic>? ??
             const <dynamic>[])
         .whereType<Map<String, dynamic>>()
@@ -2923,11 +2949,19 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 label: '总成本',
                 value: '\$${totalCost.toStringAsFixed(4)}',
               ),
+              _MetricChip(
+                label: 'prompt 命中',
+                value: '${avgPromptUtil.toStringAsFixed(1)}%',
+              ),
+              _MetricChip(
+                label: '推理命中',
+                value: '${avgInferenceUtil.toStringAsFixed(1)}%',
+              ),
             ],
           ),
           const SizedBox(height: DS.spacing10),
           Text(
-            '近 $windowDays 天里，当前最值得继续盯的预测动作是「$topAction」。',
+            '近 $windowDays 天里，当前最值得继续盯的预测动作是「$topAction」；同时 prompt / inference 命中率分别是 ${avgPromptUtil.toStringAsFixed(1)}% / ${avgInferenceUtil.toStringAsFixed(1)}%。',
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: DS.spacing12),
