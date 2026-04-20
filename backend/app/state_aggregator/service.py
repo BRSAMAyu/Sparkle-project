@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.achievement import UserStreakStats
+from app.models.chat import ChatSession
 from app.models.focus import FocusSession, FocusStatus
 from app.services.memory_service import MemoryService
 from app.services.predictive_service import PredictiveService
@@ -21,7 +22,10 @@ from app.state_aggregator.schema import (
     StateFieldEnvelope,
     UserStateFieldName,
     UserStateV1,
+    WorkingMemorySnapshotValue,
+    WorkingMemorySnapshotValueItem,
 )
+from app.working_memory.service import WorkingMemoryService
 
 
 def _utcnow() -> datetime:
@@ -36,12 +40,14 @@ class StateAggregatorService:
         "engagement_state": 60,
         "recent_person_mentions": 300,
         "learning_state": 60 * 60 * 24,
+        "working_memory_snapshot": 30,
     }
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.memory_service = MemoryService(db)
         self.predictive_service = PredictiveService(db)
+        self.working_memory_service = WorkingMemoryService()
         self._cache: dict[tuple[UUID, UserStateFieldName], tuple[StateFieldEnvelope[Any], datetime]] = {}
 
     async def get_user_state(
@@ -80,6 +86,7 @@ class StateAggregatorService:
             "recent_person_mentions": self._build_recent_person_mentions,
             "engagement_state": self._build_engagement_state,
             "learning_state": self._build_learning_state,
+            "working_memory_snapshot": self._build_working_memory_snapshot,
         }
         envelope = await fetcher[field_name](user_id, now)
         ttl_seconds = self.FIELD_TTLS_SECONDS[field_name]
@@ -195,3 +202,47 @@ class StateAggregatorService:
             freshness_seconds=0,
         )
 
+    async def _build_working_memory_snapshot(
+        self,
+        user_id: UUID,
+        now: datetime,
+    ) -> StateFieldEnvelope[WorkingMemorySnapshotValue]:
+        session_stmt = (
+            select(ChatSession)
+            .where(ChatSession.user_id == user_id, ChatSession.is_active.is_(True))
+            .order_by(ChatSession.last_message_at.desc().nullslast(), ChatSession.created_at.desc())
+            .limit(1)
+        )
+        session = (await self.db.execute(session_stmt)).scalar_one_or_none()
+        if session is None:
+            return StateFieldEnvelope(
+                value=WorkingMemorySnapshotValue(active_session_id=None, items=()),
+                computed_at=now,
+                source_snapshot_ids=(),
+                freshness_seconds=0,
+            )
+
+        snapshot = await self.working_memory_service.build_snapshot(
+            user_id=str(user_id),
+            session_id=str(session.id),
+            limit=5,
+        )
+        items = tuple(
+            WorkingMemorySnapshotValueItem(
+                summary=item.summary,
+                subject_type=item.subject_type,
+                mention_count=item.mention_count,
+                consolidated=item.consolidated,
+                last_seen_at=item.last_seen_at,
+            )
+            for item in snapshot
+        )
+        return StateFieldEnvelope(
+            value=WorkingMemorySnapshotValue(active_session_id=str(session.id), items=items),
+            computed_at=now,
+            source_snapshot_ids=tuple(
+                f"working_memory:{user_id}:{session.id}:{index}"
+                for index, _item in enumerate(items, start=1)
+            ),
+            freshness_seconds=0,
+        )

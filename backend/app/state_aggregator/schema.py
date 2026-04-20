@@ -12,6 +12,7 @@ UserStateFieldName = Literal[
     "recent_person_mentions",
     "engagement_state",
     "learning_state",
+    "working_memory_snapshot",
 ]
 
 
@@ -55,12 +56,27 @@ class LearningStateValue:
 
 
 @dataclass(frozen=True)
+class WorkingMemorySnapshotValueItem:
+    summary: str
+    subject_type: str
+    mention_count: int
+    consolidated: bool
+    last_seen_at: datetime
+
+
+@dataclass(frozen=True)
+class WorkingMemorySnapshotValue:
+    active_session_id: str | None
+    items: tuple[WorkingMemorySnapshotValueItem, ...]
+
+
+@dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1"
+    schema_version: str = "user_state.v1.1"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
     recent_person_mentions: StateFieldEnvelope[RecentPersonMentionsValue] | None = None
     engagement_state: StateFieldEnvelope[EngagementStateValue] | None = None
     learning_state: StateFieldEnvelope[LearningStateValue] | None = None
+    working_memory_snapshot: StateFieldEnvelope[WorkingMemorySnapshotValue] | None = None
     emotion_hint: StateFieldEnvelope[None] | None = None
-

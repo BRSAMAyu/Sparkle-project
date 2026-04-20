@@ -33,7 +33,6 @@ def test_user_state_v1_uses_expected_schema_version() -> None:
         ),
     )
 
-    assert state.schema_version == "user_state.v1"
+    assert state.schema_version == "user_state.v1.1"
     assert state.commitment_summary is not None
     assert state.commitment_summary.value.overdue_count == 1
-

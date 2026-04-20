@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package sparkle.userstate.v1;
 
+option go_package = "github.com/sparkle/gateway/gen/userstate/v1;userstatev1";
+
 import "google/protobuf/timestamp.proto";
 
 message StateFieldMetadata {
@@ -36,6 +38,19 @@ message LearningStateValue {
   string within_category_preference_json = 1;
 }
 
+message WorkingMemorySnapshotValueItem {
+  string summary = 1;
+  string subject_type = 2;
+  int32 mention_count = 3;
+  bool consolidated = 4;
+  google.protobuf.Timestamp last_seen_at = 5;
+}
+
+message WorkingMemorySnapshotValue {
+  string active_session_id = 1;
+  repeated WorkingMemorySnapshotValueItem items = 2;
+}
+
 message CommitmentSummaryField {
   CommitmentSummaryValue value = 1;
   StateFieldMetadata metadata = 2;
@@ -56,6 +71,11 @@ message LearningStateField {
   StateFieldMetadata metadata = 2;
 }
 
+message WorkingMemorySnapshotField {
+  WorkingMemorySnapshotValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
 message UserStateV1 {
   string user_id = 1;
   string schema_version = 2;
@@ -65,5 +85,5 @@ message UserStateV1 {
   LearningStateField learning_state = 6;
   // Reserved for Stage 19C emotion work; intentionally unset in Stage 18.
   string emotion_hint_reserved = 7;
+  WorkingMemorySnapshotField working_memory_snapshot = 8;
 }
-
