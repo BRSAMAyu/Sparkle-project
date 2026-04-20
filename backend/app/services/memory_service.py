@@ -538,6 +538,7 @@ class MemoryService:
         limit: int = 10,
         start: datetime | None = None,
         end: datetime | None = None,
+        subject_types: Iterable[str] | None = None,
     ) -> list[EpisodicMemory]:
         stmt = select(EpisodicMemory).where(
             EpisodicMemory.user_id == user_id,
@@ -550,6 +551,8 @@ class MemoryService:
             stmt = stmt.where(EpisodicMemory.occurred_at >= start)
         if end:
             stmt = stmt.where(EpisodicMemory.occurred_at <= end)
+        if subject_types:
+            stmt = stmt.where(EpisodicMemory.subject_type.in_(list(subject_types)))
         stmt = stmt.order_by(EpisodicMemory.occurred_at.desc()).limit(limit)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
@@ -570,6 +573,11 @@ class MemoryService:
         decay_policy: str | None = None,
         source_lane: str = "direct_capture",
         semantic_key: str | None = None,
+        subject_type: str = "self",
+        due_at: datetime | None = None,
+        resolved_at: datetime | None = None,
+        mentioned_entity_hash: str | None = None,
+        mentioned_entity_owner_user_id: UUID | None = None,
         emit_system_update: bool = True,
     ) -> EpisodicMemory | None:
         if not await self._allow_write(
@@ -605,6 +613,11 @@ class MemoryService:
             evidence_token=evidence_token,
             decay_policy=decay_policy,
             semantic_key=semantic_key,
+            subject_type=subject_type,
+            due_at=due_at,
+            resolved_at=resolved_at,
+            mentioned_entity_hash=mentioned_entity_hash,
+            mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
         )
         self.db.add(record)
         try:
@@ -636,6 +649,11 @@ class MemoryService:
                     evidence_token=evidence_token,
                     decay_policy=decay_policy,
                     semantic_key=semantic_key,
+                    subject_type=subject_type,
+                    due_at=due_at,
+                    resolved_at=resolved_at,
+                    mentioned_entity_hash=mentioned_entity_hash,
+                    mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
                 )
                 self.db.add(record)
                 try:
@@ -690,6 +708,11 @@ class MemoryService:
         evidence_token: str | None,
         decay_policy: str | None,
         semantic_key: str | None,
+        subject_type: str,
+        due_at: datetime | None,
+        resolved_at: datetime | None,
+        mentioned_entity_hash: str | None,
+        mentioned_entity_owner_user_id: UUID | None,
     ) -> EpisodicMemory:
         return EpisodicMemory(
             user_id=user_id,
@@ -697,7 +720,10 @@ class MemoryService:
             source_type=source_type,
             source_id=source_id,
             source_lane=source_lane,
+            subject_type=subject_type,
             occurred_at=occurred_at,
+            due_at=due_at,
+            resolved_at=resolved_at,
             importance_score=importance_score,
             confidence=confidence,
             tags=tags,
@@ -709,7 +735,56 @@ class MemoryService:
             evidence_token=evidence_token,
             decay_policy=decay_policy,
             semantic_key=semantic_key,
+            mentioned_entity_hash=mentioned_entity_hash,
+            mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
         )
+
+    async def list_pending_commitments(
+        self,
+        user_id: UUID,
+        *,
+        now: datetime | None = None,
+    ) -> list[EpisodicMemory]:
+        reference_time = now or _utcnow()
+        result = await self.db.execute(
+            select(EpisodicMemory).where(
+                EpisodicMemory.user_id == user_id,
+                EpisodicMemory.subject_type == "commitment",
+                EpisodicMemory.due_at.is_not(None),
+                EpisodicMemory.due_at <= reference_time,
+                EpisodicMemory.resolved_at.is_(None),
+                EpisodicMemory.deleted_at.is_(None),
+                EpisodicMemory.archived_at.is_(None),
+                EpisodicMemory.retracted_at.is_(None),
+                EpisodicMemory.revoked_at.is_(None),
+            )
+            .order_by(EpisodicMemory.due_at.asc())
+        )
+        return list(result.scalars().all())
+
+    async def resolve_commitment(
+        self,
+        *,
+        user_id: UUID,
+        memory_id: UUID,
+        resolved_at: datetime | None = None,
+    ) -> EpisodicMemory | None:
+        result = await self.db.execute(
+            select(EpisodicMemory).where(
+                EpisodicMemory.id == memory_id,
+                EpisodicMemory.user_id == user_id,
+                EpisodicMemory.subject_type == "commitment",
+                EpisodicMemory.deleted_at.is_(None),
+            )
+        )
+        record = result.scalar_one_or_none()
+        if record is None:
+            return None
+        record.resolved_at = resolved_at or _utcnow()
+        record.updated_at = _utcnow()
+        await self.db.commit()
+        await self.db.refresh(record)
+        return record
 
     async def retract_memory(
         self,
@@ -765,6 +840,7 @@ class MemoryService:
         *,
         user_id: UUID | None = None,
         reason: str | None = None,
+        subject_types: Iterable[str] | None = None,
     ) -> int:
         stmt = select(EpisodicMemory).where(
             EpisodicMemory.deleted_at.is_(None),
@@ -773,6 +849,8 @@ class MemoryService:
         )
         if user_id is not None:
             stmt = stmt.where(EpisodicMemory.user_id == user_id)
+        if subject_types:
+            stmt = stmt.where(EpisodicMemory.subject_type.in_(list(subject_types)))
 
         result = await self.db.execute(stmt)
         records = list(result.scalars().all())

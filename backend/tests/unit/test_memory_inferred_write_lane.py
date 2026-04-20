@@ -58,8 +58,10 @@ async def test_memory_inferred_extractor_precision_fixture(db_session):
     predicted_positive = 0
     true_positive = 0
     false_positive = 0
+    user_id = uuid4()
     for index, case in enumerate(cases):
         candidate = service.extract_candidate(
+            user_id=user_id,
             user_message=case["user_message"],
             assistant_message="好的，我会按这个节奏继续帮你安排。",
             evidence_token=f"turn_{index}",

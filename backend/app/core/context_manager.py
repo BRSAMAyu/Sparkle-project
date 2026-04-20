@@ -50,6 +50,7 @@ class CognitiveContext(BaseModel):
     preferences: dict[str, Any] = Field(default_factory=dict, description="Learning preferences")
     engagement_metrics: dict[str, Any] = Field(default_factory=dict, description="Engagement level and patterns")
     community_context: dict[str, Any] = Field(default_factory=dict, description="Active community participation snapshot")
+    social_context: dict[str, Any] = Field(default_factory=dict, description="Stage 17 isolated social context namespace")
     profile_context: dict[str, Any] | None = Field(default=None, description="Unified profile context payload")
 
     # Preference Version (for cache invalidation)
@@ -68,6 +69,17 @@ class ContextOrchestrator:
     """
 
     CACHE_TTL_SECONDS = 300  # 5 minutes cache
+    COMMUNITY_CONTEXT_ALLOWED_FIELDS = frozenset(
+        {
+            "active_group_count",
+            "active_group_types",
+            "sprint_progress",
+            "recent_interaction",
+            "has_pending_group_tasks",
+            "pending_group_task_count",
+            "summary_lines",
+        }
+    )
 
     def __init__(self, db_session: AsyncSession, redis_client):
         self.db = db_session
@@ -184,7 +196,8 @@ class ContextOrchestrator:
 
             preferences=preferences,
             engagement_metrics=metrics_data or {},
-            community_context=community_data or {},
+            community_context=self._assert_allowed_community_context(community_data or {}),
+            social_context={},
             profile_context=profile_context_payload,
 
             # 记录偏好版本用于缓存验证
@@ -206,6 +219,14 @@ class ContextOrchestrator:
         context.preferences = _clean(context.preferences)
         context.engagement_metrics = _clean(context.engagement_metrics)
         return context
+
+    def _assert_allowed_community_context(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            return {}
+        unexpected = sorted(set(payload.keys()) - set(self.COMMUNITY_CONTEXT_ALLOWED_FIELDS))
+        if unexpected:
+            raise ValueError(f"community_context field whitelist violated: {unexpected}")
+        return payload
 
     def _handle_result(self, result, name: str, default: Any) -> Any:
         if isinstance(result, Exception):

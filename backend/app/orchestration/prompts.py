@@ -34,6 +34,7 @@ from app.config import settings
 from app.core.user_insight_state import UserInsightState
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.context_focus import ContextFocusDecision
+from app.orchestration.social_context_renderer import render_social_context_lines
 from app.orchestration.situation_brief import format_situation_brief_section
 
 
@@ -2533,6 +2534,15 @@ def _render_user_context_content(
     if normalized.get("preferred_tools"):
         lines.append("【工具偏好】")
         lines.append(f"- 常用工具: {', '.join(normalized['preferred_tools'])}")
+
+    if (
+        settings.SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED
+        or settings.SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED
+    ):
+        social_context = context.get("social_context") if isinstance(context, dict) else None
+        social_lines = render_social_context_lines(social_context if isinstance(social_context, dict) else None)
+        if social_lines:
+            lines.extend(social_lines)
 
     if isinstance(normalized.get("exam_urgency"), dict):
         urgency = normalized["exam_urgency"]

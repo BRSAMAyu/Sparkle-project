@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.accountability import PendingCommitmentListOut, PendingCommitmentOut
 from app.api.deps import get_current_user, get_db
 from app.config import settings
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
+from app.services.accountability_mvp_service import AccountabilityMvpService
 from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
 from app.services.memory_service import MemoryService
 
@@ -224,7 +226,10 @@ async def list_episodic(
                 "source_type": record.source_type,
                 "source_id": record.source_id,
                 "source_lane": record.source_lane,
+                "subject_type": record.subject_type,
                 "occurred_at": record.occurred_at,
+                "due_at": record.due_at,
+                "resolved_at": record.resolved_at,
                 "importance_score": record.importance_score,
                 "confidence": record.confidence,
                 "evidence_token": record.evidence_token,
@@ -236,12 +241,57 @@ async def list_episodic(
                 "updated_at": record.updated_at,
                 "retracted_at": record.retracted_at,
                 "revoked_at": record.revoked_at,
+                "mentioned_entity_hash": record.mentioned_entity_hash,
                 "declaration_label": (
                     "AI 推断" if record.source_lane == "inferred_extraction" else None
                 ),
             }
         )
     return {"items": items}
+
+
+@router.get("/accountability/pending", response_model=PendingCommitmentListOut)
+async def list_pending_commitments(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+    service = AccountabilityMvpService(db)
+    items = await service.list_pending_commitments(user_id=current_user.id)
+    return PendingCommitmentListOut(
+        items=[
+            PendingCommitmentOut(
+                id=item.id,
+                summary=item.summary,
+                due_at=item.due_at,
+                subject_type=item.subject_type,
+                evidence_token=item.evidence_token,
+                resolved_at=item.resolved_at,
+            )
+            for item in items
+        ]
+    )
+
+
+@router.post("/accountability/pending/{memory_id}/resolve", response_model=PendingCommitmentOut)
+async def resolve_pending_commitment(
+    memory_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+    service = AccountabilityMvpService(db)
+    item = await service.resolve_commitment(user_id=current_user.id, memory_id=memory_id)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="commitment not found")
+    return PendingCommitmentOut(
+        id=item.id,
+        summary=item.summary,
+        due_at=item.due_at,
+        subject_type=item.subject_type,
+        evidence_token=item.evidence_token,
+        resolved_at=item.resolved_at,
+    )
 
 
 @router.post("/retract")

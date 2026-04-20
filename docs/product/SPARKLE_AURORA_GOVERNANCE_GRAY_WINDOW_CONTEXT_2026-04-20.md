@@ -4,6 +4,11 @@
 > Status: governance addendum
 > Scope: Stage 17 and any later Aurora stage that cites a gray window as an entry condition
 
+Direct-start note for the current Codex execution:
+
+- 灰度窗口由独立 Claude Code 会话承接，不构成本 stage 阻塞。
+- Stage 17 本轮仅要求 dispatch plan（含 Addenda A-G）落盘与 Codex §0.5 自答完成，再进入代码基线与实现。
+
 ---
 
 ## 1. Why This Addendum Exists

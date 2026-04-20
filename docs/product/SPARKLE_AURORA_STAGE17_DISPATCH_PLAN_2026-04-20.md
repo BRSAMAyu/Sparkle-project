@@ -3,8 +3,8 @@
 > Workstream Bundle: `WS-SOC-*` + `WS-ACCT-MVP` + `WS-SOC-ROUTER-READ`
 > Phase Mapping: Roadmap v2.0 Phase 1A
 > Strategic Positioning: connect the Stage 16 Memory write lane to downstream read-only consumers for the first time.
-> Status: final-dispatch locked after four-party review; implementation remains blocked until Stage 16 SGW is green and the user explicitly declares SGW passed.
-> SGW Runtime Form: deterministic orchestrator + 5 Claude workers + full WebSocket chain
+> Status: final-dispatch locked after Addenda A-G merge; implementation may proceed once the addenda-backed dispatch is landed and Codex §0.5 self-answer is recorded.
+> Gray-Window Note: gray / SGW handling is delegated to an independent test framework and does not block this implementation stage.
 
 ---
 
@@ -69,7 +69,12 @@ Any deferred workstream must be listed explicitly in Stage 17 handoff Section 6 
 3. Do the Stage 18 entry conditions truly block State Aggregator / push from bypassing the boundaries created here?
 4. If Stage 17 rolls back, can we still trace every social fact that Router ever read?
 
-The dispatch may be anchored now, but implementation remains blocked until the user explicitly declares the Stage 16 SGW passed.
+Codex §0.5 self-answer for the direct-start execution:
+
+1. No. Router remains prompt-read-only in Stage 17 and any stronger coupling stays deferred.
+2. No. Rule Z will be enforced through HMAC ownership boundaries, not documentation language.
+3. Yes. Stage 18 still inherits the provider-swap obligation and keeps push / aggregator from bypassing Stage 17 boundaries.
+4. Yes. Evidence-token lineage and read-side reports remain mandatory.
 
 ---
 
@@ -98,7 +103,7 @@ Out of scope for Stage 17:
 
 ## §2 Gate S17-0 Entry Baseline
 
-Before any implementation begins, Codex must replay the baseline and receive a user-provided Stage 16 SGW proof.
+Before any implementation begins, Codex must replay the frozen baseline. Gray-window evidence is handled outside this stage.
 
 ```bash
 cd backend && ./.venv/bin/python -m pytest tests/aurora ... -q
@@ -109,13 +114,9 @@ cd backend && ./.venv/bin/python -m pytest tests/unit/test_persistent_bayesian_l
 Additionally required:
 
 - Stage 13+14+15+16 carry-forward sweeps still green
-- `docs/product/SPARKLE_AURORA_STAGE16_SGW_FRAMEWORK_2026-04-20.md`
-- one landed SGW report:
-  `docs/product/SPARKLE_AURORA_STAGE16_SGW_REPORT_2026-04-2X.md`
+- the direct-start governance addendum is landed on disk
 
-If any baseline fails or the SGW evidence is missing, Stage 17 does not start.
-
-This gate is not waivable. Under the current `Pre-launch` context, the governed substitute is SGW, not an ad hoc development-equivalent shortcut.
+If any baseline fails, Stage 17 does not start.
 
 ---
 

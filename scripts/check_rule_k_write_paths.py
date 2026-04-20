@@ -30,6 +30,11 @@ CONTROLLED_PATH_PATTERNS = (
     "backend/app/services/capability_knob_governor.py",
 )
 
+RULE_Z_PATH_PATTERNS = (
+    "backend/app/**/*.py",
+    "backend/app/**/*.sql",
+)
+
 
 @dataclass(frozen=True)
 class RuleKViolation:
@@ -112,6 +117,21 @@ def iter_controlled_paths(repo_root: Path) -> list[Path]:
     return sorted(paths)
 
 
+def iter_rule_z_paths(repo_root: Path) -> list[Path]:
+    seen: set[Path] = set()
+    paths: list[Path] = []
+    for pattern in RULE_Z_PATH_PATTERNS:
+        for path in repo_root.glob(pattern):
+            if not path.is_file():
+                continue
+            resolved = path.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            paths.append(resolved)
+    return sorted(paths)
+
+
 def resolve_scan_paths(repo_root: Path, candidates: list[str] | None) -> list[Path]:
     if not candidates:
         return iter_controlled_paths(repo_root)
@@ -143,6 +163,50 @@ def scan_paths(paths: list[Path], repo_root: Path) -> list[RuleKViolation]:
         rel = path.resolve().relative_to(repo_root.resolve()).as_posix()
         for line_no, line in enumerate(content, start=1):
             for rule in VIOLATION_RULES:
+                if rule.pattern.search(line):
+                    violations.append(
+                        RuleKViolation(
+                            rule_id=rule.rule_id,
+                            path=rel,
+                            line_no=line_no,
+                            snippet=line.strip(),
+                            message=rule.message,
+                        )
+                    )
+    return violations
+
+
+def scan_rule_z_paths(paths: list[Path], repo_root: Path) -> list[RuleKViolation]:
+    rule_z_rules = (
+        ViolationRule(
+            rule_id="RZ001",
+            pattern=re.compile(r"mentioned_entity_hash.*sha1|sha1\s*\(.*mentioned_entity", re.IGNORECASE),
+            message="Rule Z forbids SHA-1 based mention hashing.",
+        ),
+        ViolationRule(
+            rule_id="RZ002",
+            pattern=re.compile(r"JOIN.+mentioned_entity_hash", re.IGNORECASE),
+            message="Rule Z forbids cross-user joins on mentioned_entity_hash.",
+        ),
+        ViolationRule(
+            rule_id="RZ003",
+            pattern=re.compile(
+                r"\b(?:mentioned_person_name|normalized_person_name)\s*=",
+                re.IGNORECASE,
+            ),
+            message="Rule Z forbids storing raw names as lookup-key assignments.",
+        ),
+    )
+
+    violations: list[RuleKViolation] = []
+    for path in paths:
+        try:
+            content = path.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            continue
+        rel = path.resolve().relative_to(repo_root.resolve()).as_posix()
+        for line_no, line in enumerate(content, start=1):
+            for rule in rule_z_rules:
                 if rule.pattern.search(line):
                     violations.append(
                         RuleKViolation(
@@ -209,18 +273,23 @@ def main(argv: list[str] | None = None) -> int:
 
     repo_root = Path(__file__).resolve().parents[1]
     scan_targets = resolve_scan_paths(repo_root, list(args.paths))
-    if not scan_targets:
+    rule_z_targets = iter_rule_z_paths(repo_root)
+    if not scan_targets and not rule_z_targets:
         print("✅ Rule K write-path guard passed (no controlled files to scan)")
         return 0
 
     violations = scan_paths(scan_targets, repo_root)
+    violations.extend(scan_rule_z_paths(rule_z_targets, repo_root))
     if not violations:
         production_gray_violation = asyncio.run(_production_gray_window_violation(repo_root))
         if production_gray_violation:
             print("❌ Rule K write-path guard failed.")
             print(f"- [GW001] {production_gray_violation}")
             return 1
-        print(f"✅ Rule K write-path guard passed ({len(scan_targets)} files scanned)")
+        print(
+            "✅ Rule K write-path guard passed "
+            f"({len(scan_targets)} controlled files + {len(rule_z_targets)} rule-z files scanned)"
+        )
         return 0
 
     print("❌ Rule K write-path guard failed.")

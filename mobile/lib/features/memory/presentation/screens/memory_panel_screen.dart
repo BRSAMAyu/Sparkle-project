@@ -12,6 +12,7 @@ import 'package:sparkle/features/memory/memory_routes.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
+import 'package:sparkle/features/memory/presentation/widgets/pending_commitments_section.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 
 enum MemoryEntryType { preference, goal, episodic }
@@ -57,6 +58,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   List<MemoryPreferenceItem> _preferences = [];
   List<MemoryGoalItem> _goals = [];
   List<EpisodicMemoryItem> _episodic = [];
+  List<PendingCommitmentItem> _pendingCommitments = [];
   MemoryEntryType? _filterType;
   MemoryEvidenceStatus? _filterEvidence;
   DateTimeRange? _dateRange;
@@ -64,6 +66,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   MemoryViewMode _viewMode = MemoryViewMode.compact;
   final Set<String> _pinnedIds = {};
   final Set<String> _revokingIds = {};
+  final Set<String> _processingCommitmentIds = {};
 
   @override
   void initState() {
@@ -83,6 +86,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         service.getPreferences(),
         service.getGoals(),
         service.getEpisodic(),
+        service.getPendingCommitments(),
       ]);
       if (!mounted) {
         return;
@@ -91,6 +95,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         _preferences = results[0] as List<MemoryPreferenceItem>;
         _goals = results[1] as List<MemoryGoalItem>;
         _episodic = results[2] as List<EpisodicMemoryItem>;
+        _pendingCommitments = results[3] as List<PendingCommitmentItem>;
         _loading = false;
       });
     } catch (e) {
@@ -182,6 +187,15 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               const SizedBox(height: DS.sm),
               ..._autoMemoryEntries.map((item) => _buildEpisodicCard(item)),
             ],
+            if (_pendingCommitments.isNotEmpty) ...[
+              const SizedBox(height: DS.xl),
+              PendingCommitmentsSection(
+                items: _pendingCommitments,
+                processingIds: _processingCommitmentIds,
+                onResolve: _resolvePendingCommitment,
+                onDismiss: _dismissPendingCommitment,
+              ),
+            ],
             const SizedBox(height: DS.xl),
             const _SectionHeader(title: '经历'),
             const SizedBox(height: DS.sm),
@@ -202,6 +216,14 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           children: [
             SparkleStaggerItem(index: 0, child: _buildFilterBar(context)),
             const SizedBox(height: DS.md),
+            if (_pendingCommitments.isNotEmpty)
+              PendingCommitmentsSection(
+                items: _pendingCommitments,
+                processingIds: _processingCommitmentIds,
+                onResolve: _resolvePendingCommitment,
+                onDismiss: _dismissPendingCommitment,
+              ),
+            if (_pendingCommitments.isNotEmpty) const SizedBox(height: DS.md),
             if (entries.isEmpty)
               _buildEmptyState()
             else
@@ -661,6 +683,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   String _formatEpisodicSubtitle(EpisodicMemoryItem item) {
     final parts = <String>[
       if (_isInferredAutoMemory(item)) item.declarationLabel ?? 'AI 自动记忆',
+      if ((item.subjectType ?? '').isNotEmpty) item.subjectType!,
       _formatUpdated(item.occurredAt),
     ];
     return parts.join(' · ');
@@ -784,6 +807,56 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         _revokingIds.remove(item.id);
       });
       AppFeedback.error(context, '撤销失败: $e');
+    }
+  }
+
+  Future<void> _resolvePendingCommitment(PendingCommitmentItem item) async {
+    setState(() => _processingCommitmentIds.add(item.id));
+    try {
+      final service = ref.read(memoryApiServiceProvider);
+      await service.resolvePendingCommitment(item.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _pendingCommitments =
+            _pendingCommitments.where((entry) => entry.id != item.id).toList();
+        _processingCommitmentIds.remove(item.id);
+      });
+      AppFeedback.success(context, '已标记为完成');
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _processingCommitmentIds.remove(item.id));
+      AppFeedback.error(context, '标记失败: $e');
+    }
+  }
+
+  Future<void> _dismissPendingCommitment(PendingCommitmentItem item) async {
+    setState(() => _processingCommitmentIds.add(item.id));
+    try {
+      final service = ref.read(memoryApiServiceProvider);
+      await service.retractMemory(
+        type: 'episodic',
+        id: item.id,
+        reason: 'stage17_dismiss_pending_commitment',
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _pendingCommitments =
+            _pendingCommitments.where((entry) => entry.id != item.id).toList();
+        _processingCommitmentIds.remove(item.id);
+      });
+      AppFeedback.success(context, '已忽略该承诺');
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _processingCommitmentIds.remove(item.id));
+      AppFeedback.error(context, '忽略失败: $e');
     }
   }
 

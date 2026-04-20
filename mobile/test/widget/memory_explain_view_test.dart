@@ -28,6 +28,18 @@ class _HistoryStubService implements MemoryApiService {
       [];
 
   @override
+  Future<List<PendingCommitmentItem>> getPendingCommitments() async => [];
+
+  @override
+  Future<PendingCommitmentItem> resolvePendingCommitment(String id) async =>
+      PendingCommitmentItem(
+        id: id,
+        summary: 'resolved',
+        dueAt: DateTime(2026, 4, 20),
+        subjectType: 'commitment',
+      );
+
+  @override
   Future<List<MemoryPreferenceHistoryItem>> getPreferenceHistory(
     String prefKey,
   ) async =>

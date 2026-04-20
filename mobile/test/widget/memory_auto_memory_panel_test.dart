@@ -10,6 +10,7 @@ import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen
 
 class _AutoMemoryApiService implements MemoryApiService {
   String? lastRetractedId;
+  String? lastResolvedId;
 
   @override
   Future<List<MemoryPreferenceItem>> getPreferences() async => [];
@@ -44,6 +45,28 @@ class _AutoMemoryApiService implements MemoryApiService {
           occurredAt: DateTime(2026, 4, 20),
         ),
       ];
+
+  @override
+  Future<List<PendingCommitmentItem>> getPendingCommitments() async => [
+        PendingCommitmentItem(
+          id: 'commit_1',
+          summary: '明天前补完提纲',
+          dueAt: DateTime(2026, 4, 20),
+          subjectType: 'commitment',
+        ),
+      ];
+
+  @override
+  Future<PendingCommitmentItem> resolvePendingCommitment(String id) async {
+    lastResolvedId = id;
+    return PendingCommitmentItem(
+      id: id,
+      summary: 'resolved',
+      dueAt: DateTime(2026, 4, 20),
+      subjectType: 'commitment',
+      resolvedAt: DateTime(2026, 4, 20, 18),
+    );
+  }
 
   @override
   Future<List<MemoryPreferenceHistoryItem>> getPreferenceHistory(
@@ -139,12 +162,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AI 自动记忆'), findsOneWidget);
+    expect(find.text('待跟进承诺'), findsOneWidget);
     expect(find.text('撤销此条'), findsOneWidget);
+    expect(find.text('已完成'), findsOneWidget);
 
     await tester.tap(find.text('撤销此条'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('已完成'));
+    await tester.pumpAndSettle();
+
     expect(api.lastRetractedId, 'auto_1');
+    expect(api.lastResolvedId, 'commit_1');
     expect(find.text('这周我要赶论文 ddl，今晚先把提纲补完'), findsNothing);
   });
 }
