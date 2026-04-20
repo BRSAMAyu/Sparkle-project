@@ -3,7 +3,7 @@
 > Workstream Bundle: `WS-SOC-*` + `WS-ACCT-MVP` + `WS-SOC-ROUTER-READ`
 > Phase Mapping: Roadmap v2.0 Phase 1A
 > Strategic Positioning: connect the Stage 16 Memory write lane to downstream read-only consumers for the first time.
-> Status: final-dispatch locked after four-party review; implementation remains blocked until the user explicitly declares the Stage 16 gray window passed.
+> Status: final-dispatch locked after four-party review; implementation remains blocked until Stage 16 SGW is green and the user explicitly declares SGW passed.
 
 ---
 
@@ -54,9 +54,9 @@ Any attempt to introduce LLM extraction in Sense, push in Reflect, or routing-br
 
 | Path | Trigger | Must Keep | May Defer To Stage 18 |
 | --- | --- | --- | --- |
-| A | Stage 16 gray window >= 7 days + Rule Y has no exception record | all 8 workstreams | — |
+| A | Stage 16 SGW is complete + `Hard violation = 0` + `Soft violation rate < 5%` + SGW report is landed | all 8 workstreams | — |
 | B1 | scope risk: any workstream fails Section 4 acceptance | `RULE-Z` + `NAMESPACE` + `EXTRACT` + `ACCT-MVP` | `COMMIT`, `ROUTER-READ`, `MOBILE`, `KILL` |
-| B2 | production `inferred_extraction` precision drops below `0.85` | `RULE-Z` + `NAMESPACE` + `EXTRACT(person_mention only)` | `COMMIT`, `ACCT-MVP`, `ROUTER-READ`, `MOBILE`, `KILL` |
+| B2 | SGW precision drops below `0.85` | `RULE-Z` + `NAMESPACE` + `EXTRACT(person_mention only)` | `COMMIT`, `ACCT-MVP`, `ROUTER-READ`, `MOBILE`, `KILL` |
 | C | Rule Y exception, Router social field enters a decision branch, or Rule Z hash design is bypassed | stop Stage 17 immediately | all workstreams |
 
 Any deferred workstream must be listed explicitly in Stage 17 handoff Section 6 and carried into the Stage 18 dispatch.
@@ -68,7 +68,7 @@ Any deferred workstream must be listed explicitly in Stage 17 handoff Section 6 
 3. Do the Stage 18 entry conditions truly block State Aggregator / push from bypassing the boundaries created here?
 4. If Stage 17 rolls back, can we still trace every social fact that Router ever read?
 
-The dispatch may be anchored now, but implementation remains blocked until the user explicitly declares the Stage 16 gray window passed.
+The dispatch may be anchored now, but implementation remains blocked until the user explicitly declares the Stage 16 SGW passed.
 
 ---
 
@@ -97,7 +97,7 @@ Out of scope for Stage 17:
 
 ## §2 Gate S17-0 Entry Baseline
 
-Before any implementation begins, Codex must replay the baseline and receive a user-provided Stage 16 gray-window proof.
+Before any implementation begins, Codex must replay the baseline and receive a user-provided Stage 16 SGW proof.
 
 ```bash
 cd backend && ./.venv/bin/python -m pytest tests/aurora ... -q
@@ -108,11 +108,13 @@ cd backend && ./.venv/bin/python -m pytest tests/unit/test_persistent_bayesian_l
 Additionally required:
 
 - Stage 13+14+15+16 carry-forward sweeps still green
-- at least one ops report covering 7 consecutive production days with inferred-extraction counts, precision spot checks, and zero Rule Y exceptions
+- `docs/product/SPARKLE_AURORA_STAGE16_SGW_FRAMEWORK_2026-04-20.md`
+- one landed SGW report:
+  `docs/product/SPARKLE_AURORA_STAGE16_SGW_REPORT_2026-04-2X.md`
 
-If any baseline fails or the gray-window evidence is missing, Stage 17 does not start.
+If any baseline fails or the SGW evidence is missing, Stage 17 does not start.
 
-This gate is not waivable and does not accept a "development-equivalent" substitute.
+This gate is not waivable. Under the current `Pre-launch` context, the governed substitute is SGW, not an ad hoc development-equivalent shortcut.
 
 ---
 
@@ -293,7 +295,7 @@ Mandatory contents:
 
 All of the following must be true, in order:
 
-1. Gate S17-0 baseline is green and the Stage 16 gray-window proof is attached.
+1. Gate S17-0 baseline is green and the Stage 16 SGW proof is attached.
 2. Rule Z definition doc is landed and the CI guard upgrade reports zero violations.
 3. `WS-SOC-NAMESPACE` is green before `WS-SOC-EXTRACT` or `WS-SOC-ROUTER-READ` are allowed to merge.
 4. Alembic migration for commitment fields is applied and rollback-tested.
@@ -310,6 +312,13 @@ All of the following must be true, in order:
    - the recall score is not a Stage 17 acceptance gate
    - if recall falls below `0.4`, Stage 19 LLM extraction priority must be formally reconsidered before Stage 18 starts
 9. Path A readiness statement includes the draft Stage 18 entry conditions for State Aggregator, plus the RouterContextReader-to-Aggregator refactor obligation.
+10. SGW report confirms:
+   - wall-clock runtime `>= 12h`
+   - personas `>= 20`
+   - sessions `>= 200`
+   - turns `>= 4000`
+   - `Hard violation = 0`
+   - `Soft violation rate < 5%`
 
 ---
 
@@ -349,8 +358,8 @@ Stage 18 must also carry one explicit refactor obligation:
 
 The following items are rejected and must later be recorded again in Stage 17 handoff Section 6:
 
-1. Gray-window waive by "development-equivalent" substitute:
-   permanently rejected. Aurora governance keeps the rule that gray observation is the gate.
+1. Unstructured gray-window waive by "development-equivalent" substitute:
+   permanently rejected. Aurora governance keeps the rule that gray observation is the gate; only contextualized SGW may replace PGW under explicit `Pre-launch` classification.
 2. Swapping Stage 17 and Stage 18:
    rejected. Stage 17 Router work is still prompt read-only, not decision-branch coupling; the ordered audit chain remains valid.
 3. Relaxing the `due_at` requirement for commitments:
@@ -362,10 +371,10 @@ The following items are rejected and must later be recorded again in Stage 17 ha
 
 1. Follow Rule G once implementation starts: at least 7 commits; Rule Z definition and Alembic migration each get their own commit.
 2. This dispatch file must be landed before any Stage 17 workstream starts.
-3. After landing this dispatch, wait for the user's explicit declaration that the Stage 16 gray window passed; do not self-authorize implementation.
+3. After landing this dispatch, wait for the user's explicit declaration that the Stage 16 SGW passed; do not self-authorize implementation.
 4. Any scope expansion in Section 3 requires a dispatch addendum.
 5. Closeout must produce:
    `docs/product/SPARKLE_AURORA_STAGE17_HANDOFF_2026-04-20.md`
 6. Final acceptance still requires independent review from GLM1, GLM-observer, and MIMO, followed by Chief Architect final-accept.
 
-Dispatch anchored. Implementation remains locked pending the gray-window declaration.
+Dispatch anchored. Implementation remains locked pending the SGW declaration.
