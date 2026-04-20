@@ -1,4 +1,4 @@
-# SPARKLE Aurora Gray Window Contextualization Addendum (2026-04-20)
+# SPARKLE Aurora Governance Gray Window Context Addendum (2026-04-20)
 
 > Purpose: adapt Aurora's gray-window governance to pre-launch products without weakening the discipline that gray observation is a real gate.
 > Status: governance addendum
@@ -28,7 +28,7 @@ Every Aurora stage that names a gray window must explicitly choose one and only 
 | Context | Gray Window Form | Minimum Requirement |
 | --- | --- | --- |
 | `Live` | Production Gray Window (`PGW`) | at least 7 natural days |
-| `Pre-launch` | Simulated Gray Window (`SGW`) | at least 12 hours wall-clock + at least 20 personas + at least 200 sessions + at least 4000 turns |
+| `Pre-launch` | Simulated Gray Window (`SGW`) | at least 12 hours wall-clock + 44 frozen personas + at least 360 sessions + at least 4000 turns + 5-worker cap |
 | `Skipped` | Explicit skip path | deferred-validation list plus explicit risk acknowledgement |
 
 ### 2.1 Live
@@ -60,7 +60,7 @@ Required evidence:
 Required evidence:
 
 - a deferred-validation list in handoff Section 6
-- an explicit acknowledgement record such as `SKIP_GRAY_WINDOW_ACKNOWLEDGED=1`
+- an explicit acknowledgement record such as `SPARKLE_SKIP_GRAY_WINDOW_ACK=<SHA256(user_identity||timestamp)>`
 - a mandatory follow-up run once the product has real users
 
 Document-only statements are not enough for `Skipped`.
@@ -110,6 +110,8 @@ This addendum is proposed and approved by the Chief Architect because the previo
 
 Once real users exist, Sparkle must compare `SGW -> PGW` gap and verify that the deferred validation items stayed within the declared limits of this addendum.
 
+If the first `SGW -> PGW` comparison shows a gap greater than `20%` on any shared metric, the governance rule must be reopened and the exception audited.
+
 ### 5.2 Frozen Method Before Measurement
 
 Any SGW run must freeze the following before execution:
@@ -133,6 +135,7 @@ For Stage 17 specifically, the following were already resolved in the dispatch a
 - `social_context` isolation from `community_context`
 - Router A/B prompt influence check
 - Accountability health audit
+- `RouterContextReader` as a temporary implementation of the future `SocialContextProvider` interface, with Stage 18 obligated to swap in the Aggregator-backed provider
 
 ---
 

@@ -4,6 +4,7 @@
 > Phase Mapping: Roadmap v2.0 Phase 1A
 > Strategic Positioning: connect the Stage 16 Memory write lane to downstream read-only consumers for the first time.
 > Status: final-dispatch locked after four-party review; implementation remains blocked until Stage 16 SGW is green and the user explicitly declares SGW passed.
+> SGW Runtime Form: deterministic orchestrator + 5 Claude workers + full WebSocket chain
 
 ---
 
@@ -245,26 +246,28 @@ Purpose: let Router render a bounded social snapshot into the prompt while keepi
 
 Mandatory contents:
 
-1. Add `RouterContextReader.fetch_social_snapshot(user_id)` returning:
+1. Add a `SocialContextProvider` compatibility interface returning `FrozenSocialSnapshot`.
+2. `RouterContextReader` is the temporary Stage 17 implementation of that interface and must expose `fetch(user_id, scope_hint)` plus the existing adapter method `fetch_social_snapshot(user_id)`.
+3. The returned `FrozenSocialSnapshot` must include:
    - `recent_person_mentions`: up to 3 items from the last 7 days
    - `pending_commitments_count`: overdue unresolved count, without raw text
-2. Hard token budget:
+4. Hard token budget:
    the serialized snapshot must stay within 200 tokens; truncate values, not fields.
-3. The snapshot is prompt context only; Router decision code may not branch on it.
-4. CI guard:
+5. The snapshot is prompt context only; Router decision code may not branch on it.
+6. CI guard:
    any import of `RouterContextReader` under router code must remain inside a prompt-render whitelist.
-5. Prompt influence A/B acceptance:
+7. Prompt influence A/B acceptance:
    - run at least 30 paired cold-start dialogues
    - each pair runs once with `social_snapshot`, once without
    - compare the LLM-generated routing-intent distributions
    - if KL divergence exceeds `0.3`, trigger Path C and require Stage 19B Sufficiency Judge to intervene before any further rollout
    - output:
      `docs/product/SPARKLE_AURORA_STAGE17_ROUTER_AB_REPORT_2026-04-20.md`
-6. Feature flag:
+8. Feature flag:
    `SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED`, default `OFF`
-7. Boundary warning must appear twice, once in the docstring and once in config comments:
+9. Boundary warning must appear twice, once in the docstring and once in config comments:
    "This data is prompt context only, not a routing decision signal. Any if/switch logic based on it requires Stage 19B Sufficiency Judge acceptance."
-8. Known limit to record explicitly:
+10. Known limit to record explicitly:
    even with CI import guards, prompt-level exposure can still indirectly influence LLM-generated tool calls or outputs. Stage 17 accepts this only as a documented limit.
 
 ### WS-SOC-MOBILE
@@ -314,8 +317,8 @@ All of the following must be true, in order:
 9. Path A readiness statement includes the draft Stage 18 entry conditions for State Aggregator, plus the RouterContextReader-to-Aggregator refactor obligation.
 10. SGW report confirms:
    - wall-clock runtime `>= 12h`
-   - personas `>= 20`
-   - sessions `>= 200`
+   - personas `>= 44`
+   - sessions `>= 360`
    - turns `>= 4000`
    - `Hard violation = 0`
    - `Soft violation rate < 5%`
@@ -350,7 +353,7 @@ Known limit carried forward from review:
 
 Stage 18 must also carry one explicit refactor obligation:
 
-- `RouterContextReader` becomes a consumer of the Stage 18 State Aggregator instead of a direct long-term endpoint. This obligation is mandatory and may not be postponed by engineering convenience.
+- `RouterContextReader` becomes a consumer of the Stage 18 State Aggregator instead of a direct long-term endpoint. The Stage 17 `SocialContextProvider -> FrozenSocialSnapshot` contract must stay source-compatible so Router prompt code does not need to be rewritten during the provider swap. This obligation is mandatory and may not be postponed by engineering convenience.
 
 ---
 

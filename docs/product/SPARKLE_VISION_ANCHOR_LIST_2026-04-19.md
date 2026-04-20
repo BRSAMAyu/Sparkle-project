@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-20
-> **版本**: v18（SGW 治理升版 + Stage 17 pre-launch gray gate 上下文化）
+> **版本**: v19（SGW v1.0 工程化 + 5 并发可恢复运行）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -15,7 +15,7 @@
 > - `SPARKLE_DATA_UTILIZATION_ANALYSIS_2026-04-06.md` — 数据利用分析
 > - `SPARKLE_AURORA_STAGE16_DISPATCH_PLAN_2026-04-20.md` — Stage 16 派发计划（WS-MWL-* 七个 Workstream + Rule Y）
 > - `SPARKLE_AURORA_STAGE17_DISPATCH_PLAN_2026-04-20.md` — Stage 17 派发计划（WS-SOC-* 社交脑 MVP + Rule Z + Accountability + Router 只读）
-> - `SPARKLE_AURORA_GRAY_WINDOW_CONTEXTUALIZATION_ADDENDUM_2026-04-20.md` — Gray Window 上下文化治理增补（PGW / SGW / Skipped）
+> - `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` — Gray Window 上下文化治理增补（PGW / SGW / Skipped）
 > - `SPARKLE_AURORA_STAGE16_RULE_Y_DEFINITION_2026-04-20.md` — Rule Y 正式定义（推断式画像写入治理）
 > - `SPARKLE_AURORA_STAGE16_READ_VERIFY_REPORT_2026-04-20.md` — Stage 16 读验证报告
 > - `SPARKLE_AURORA_STAGE16_EXTRACT_DRY_RUN_REPORT_2026-04-20.md` — Stage 16 冷数据 dry-run precision 报告
@@ -634,7 +634,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 ### 9.16 Stage 17 战略定位（社交脑 MVP + Accountability seed + Router 只读消费首次开口）
 
-**Stage 17 入场条件（三重锁）**：Stage 16 以 `Pre-launch` 语境走 SGW 路径（≥12h wall-clock + ≥20 persona + ≥200 会话 + ≥4000 turn）+ Rule Y `Hard violation = 0` 且 `Soft violation rate < 5%` + dispatch plan 已落盘并由用户显式宣告 SGW 通过。
+**Stage 17 入场条件（三重锁）**：Stage 16 以 `Pre-launch` 语境走 SGW 路径（≥12h wall-clock + 44 frozen persona + ≥360 会话 + ≥4000 turn + 5 worker cap）+ Rule Y `Hard violation = 0` 且 `Soft violation rate < 5%` + dispatch plan 已落盘并由用户显式宣告 SGW 通过。
 
 **Stage 17 总目标**：把 Stage 16 接通的 Memory 写入车道，第一次连到下游**只读**消费端，并正式确立"用户社交圈在画像系统中的位置"这一被推迟多个 stage 的边界问题。
 
@@ -892,7 +892,8 @@ Growth OS (Stage 23)
 | v15 | 2026-04-20 | Stage 16 engineering closeout 完成（Gate S16-0 baseline 144 green + Rule V 8 green + Rule K 35/0 + Stage 13/14/15 backend carry-forward 24 green + Stage 13/15 mobile carry-forward 53 green；Stage 16 targeted backend sweep 16 green；Stage 16 targeted mobile sweep 8 green）；Rule Y 正式落盘，chat -> EpisodicMemory `inferred_extraction` governed write lane 打通，并同时满足 read / declare / revoke / kill；`inferred_extraction` 经 grep 证明未进入 Router / Push / Skill / Accountability 下游消费路径；愿景覆盖表更新：持续学习三层结构升级为✅，但 Stage 17 仍受“一周生产灰度 + Rule Y 无破例”运营门约束 |
 | v16 | 2026-04-20 | Stage 16 final-accept 通过（GLM-observer + GLM1 双独立审计对齐）；Stage 17 dispatch plan 初版落盘（WS-SOC-* 七个 Workstream + Rule Z 跨用户隐私 + Accountability MVP + Router 只读上下文）；依赖链重排：Memory → Social → State Aggregator → LLM Extract → Skill → Wire-On → Dual Mode → Growth OS；Rule 编号顺延确认：Stage 16 Rule Y（推断式写入治理）→ Stage 17 Rule Z（跨用户隐私）→ Stage 20 Rule AA（Skill 跨用户共享）；Stage 17 入场三重锁：≥7 天生产灰度 + Rule Y 无破例 + dispatch plan 落盘；愿景覆盖表更新：社交脑从❌→🔶（dispatch 落盘待开工），Router 决策消费 Memory 延后至 Stage 19B+ |
 | v17 | 2026-04-20 | Stage 17 dispatch plan 根据最终裁决合并 Addenda A-G：Rule 命名表正式锁定；`WS-SOC-RULE-Z` 升格 P0 并要求 HMAC-SHA256 边界；新增 `WS-SOC-NAMESPACE` 阻断 `community_context` 隐式注入；Path 矩阵改为 A / B1 / B2 / C；`WS-SOC-ROUTER-READ` 增加 ≥30 组 A/B prompt 对照；`WS-SOC-EXTRACT` 增加 backpressure 约束；`WS-ACCT-MVP` 增加健康审计前置与 commitment recall 观测；Stage 18 明确承担 `RouterContextReader -> State Aggregator` 重构义务 |
-| v18 | 2026-04-20 | Aurora Gray Window 上下文化治理升版：新增 `PGW / SGW / Skipped` 三段式门控，Sparkle 当前 `Pre-launch` 语境改走 SGW；新增 `SPARKLE_AURORA_GRAY_WINDOW_CONTEXTUALIZATION_ADDENDUM_2026-04-20.md` 与 `SPARKLE_AURORA_STAGE16_SGW_FRAMEWORK_2026-04-20.md`；Stage 17 入场条件从物理上不可满足的 7 天生产灰度改为 SGW（≥12h wall-clock + ≥20 persona + ≥200 会话 + ≥4000 turn + `Hard violation = 0` + `Soft violation rate < 5%`）；同时保留真实用户接受度为延后验证项 |
+| v18 | 2026-04-20 | Aurora Gray Window 上下文化治理升版：新增 `PGW / SGW / Skipped` 三段式门控，Sparkle 当前 `Pre-launch` 语境改走 SGW；新增 `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` 与 `SPARKLE_AURORA_STAGE16_SGW_FRAMEWORK_2026-04-20.md`；Stage 17 入场条件从物理上不可满足的 7 天生产灰度改为 SGW（≥12h wall-clock + ≥20 persona + ≥200 会话 + ≥4000 turn + `Hard violation = 0` + `Soft violation rate < 5%`）；同时保留真实用户接受度为延后验证项 |
+| v19 | 2026-04-20 | SGW v1.0 工程化定稿：并发收敛为 5 个 Claude worker，运行改为可 checkpoint / resume 的确定性 orchestrator；persona 覆盖冻结为 44 条（36 矩阵 + 8 特殊），总会话阈值升级为 ≥360；治理 addendum 升格为 `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md`；Stage 17 dispatch 明确 `SocialContextProvider -> FrozenSocialSnapshot` 前瞻兼容契约，Stage 18 必须以 Aggregator provider 实现兑现该契约 |
 
 ---
 

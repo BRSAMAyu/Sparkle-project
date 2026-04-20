@@ -9,10 +9,17 @@ Rule K if used from those zones.
 from __future__ import annotations
 
 import argparse
+import asyncio
+import os
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+repo_root = Path(__file__).resolve().parents[1]
+backend_root = repo_root / "backend"
+if str(backend_root) not in sys.path:
+    sys.path.insert(0, str(backend_root))
 
 
 CONTROLLED_PATH_PATTERNS = (
@@ -77,6 +84,8 @@ VIOLATION_RULES = (
         message="L3 control paths must not construct inferred_extraction writes inline.",
     ),
 )
+
+PGW_REPORT_GLOB = "docs/product/SPARKLE_AURORA_STAGE16_PGW_REPORT_*.md"
 
 
 def is_controlled_path(path: Path, repo_root: Path) -> bool:
@@ -157,6 +166,43 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+async def _production_gray_window_violation(repo_root: Path) -> str | None:
+    runtime_env = str(os.getenv("SPARKLE_ENV", "")).strip().lower()
+    if runtime_env != "production":
+        return None
+
+    report_paths = sorted(repo_root.glob(PGW_REPORT_GLOB))
+    if report_paths:
+        return None
+
+    try:
+        from sqlalchemy import func, select
+
+        from app.db.session import AsyncSessionLocal
+        from app.models.memory import EpisodicMemory
+    except Exception as exc:  # noqa: BLE001
+        return f"Production PGW check could not import backend DB modules: {exc}"
+
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(func.count(EpisodicMemory.id)).where(
+                    EpisodicMemory.source_lane == "inferred_extraction",
+                    EpisodicMemory.deleted_at.is_(None),
+                )
+            )
+            inferred_count = int(result.scalar() or 0)
+    except Exception as exc:  # noqa: BLE001
+        return f"Production PGW check could not query episodic memories: {exc}"
+
+    if inferred_count > 0:
+        return (
+            f"Production environment has {inferred_count} inferred_extraction rows, but no PGW report matches "
+            f"{PGW_REPORT_GLOB}."
+        )
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -169,6 +215,11 @@ def main(argv: list[str] | None = None) -> int:
 
     violations = scan_paths(scan_targets, repo_root)
     if not violations:
+        production_gray_violation = asyncio.run(_production_gray_window_violation(repo_root))
+        if production_gray_violation:
+            print("❌ Rule K write-path guard failed.")
+            print(f"- [GW001] {production_gray_violation}")
+            return 1
         print(f"✅ Rule K write-path guard passed ({len(scan_targets)} files scanned)")
         return 0
 

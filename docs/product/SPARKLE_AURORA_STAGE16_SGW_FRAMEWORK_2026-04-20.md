@@ -4,6 +4,7 @@
 > Context Class: `Pre-launch`
 > Applies To: Stage 16 -> Stage 17 gate
 > Method Status: frozen before measurement
+> Runtime Model: deterministic orchestrator + Claude Code CLI workers + full WebSocket chain
 
 ---
 
@@ -24,10 +25,10 @@ It does **not** claim to replace real-user acceptance testing.
 The SGW run must satisfy all of the following:
 
 - wall-clock runtime: `>= 12 hours`
-- personas: `>= 20`
-- sessions: `>= 200`
+- frozen personas: `44`
+- sessions: `>= 360`
 - total turns: `>= 4000`
-- concurrent active sessions at peak: `>= 20`
+- concurrent active worker cap: `5`
 
 `12 hours` means real elapsed wall-clock time, not agent-hours.
 
@@ -37,7 +38,12 @@ The SGW run must satisfy all of the following:
 
 ### 3.1 Persona Matrix
 
-The persona set must cover:
+The persona set is frozen as:
+
+- `36` core matrix personas
+- `8` special personas
+
+The frozen matrix covers:
 
 - 4 age / learning stages:
   - middle school
@@ -55,29 +61,30 @@ The persona set must cover:
 
 Coverage rule:
 
-- every age bucket must appear
-- every goal bucket must appear
-- every style bucket must appear
-- at least 20 distinct age x goal x style cells must be occupied by the persona set
+- all `36` age x goal x style cells must be occupied
+- each core matrix persona runs `>= 10` sessions across the SGW program
+- each special persona runs at least one session
+- the orchestrator may add extra sessions after hour 12 if the `>= 360` session or `>= 4000` turn thresholds are still unmet
 
 ### 3.2 Special Persona Requirements
 
-At minimum:
+The `8` special personas are frozen as:
 
-- 5 personas must frequently mention family / friends / coworkers
-- 5 personas must frequently make casual commitments
-- 3 personas must use dialectal or non-standard expressions such as `俺`, `咱`, `贼难`, or similar non-canonical wording
+- `3` dialect / non-standard-expression personas
+- `3` high-frequency family / friend / coworker mention personas
+- `2` commitment-dense personas
 
 ---
 
 ## 4. Agent Roles
 
-| Agent | Minimum Count | Role |
+| Agent | Count | Role |
 | --- | --- | --- |
-| Persona Agent | 20 | run realistic multi-turn user conversations |
-| Adversarial Agent | 1-2 | generate Rule Y and Rule Z boundary cases |
-| Revoke Behavior Agent | 1 | simulate revoke and global-toggle behavior |
+| Persona Agent | 3 | run realistic multi-turn user conversations |
+| Adversarial Agent | 1 | generate Rule Y edge cases |
 | Audit Agent | 1 | independently score writes and classify violations |
+
+Revoke behavior does not occupy a dedicated worker. It is injected probabilistically by persona sessions at session end.
 
 ### 4.1 Persona Agent
 
@@ -108,15 +115,19 @@ Boundary families to target:
 - commitment-like phrasing without a real due anchor
 - relationship wording that looks like plain self-reflection
 
-### 4.3 Revoke Behavior Agent
+### 4.3 Revoke Behavior Injection
 
-The revoke behavior agent continuously samples inferred rows and performs:
+The orchestrator continuously samples inferred rows from completed persona sessions and performs:
 
 - single-item revoke
 - global inferred toggle off / on
 - delayed revoke after several more turns
 
-Its goal is not to simulate human emotion perfectly. Its goal is to verify technical correctness of revoke and visibility boundaries.
+Default policy:
+
+- each persona session has `15%` probability of scheduling a revoke probe
+- revoke probes verify that the row disappears from `/memory/export`
+- revoke probes are persisted in the checkpoint so they can resume after rate-limit or quota pauses
 
 ### 4.4 Audit Agent
 
@@ -126,9 +137,11 @@ Hard constraints:
 
 - separate model instance from the generator agents
 - separate system prompt
-- separate temperature
+- separate Claude process and session
 - no shared hidden context with the generators
 - must not read the generator prompt
+
+If the local Claude CLI does not expose a temperature flag, independence is still enforced through process separation, prompt separation, and zero shared session state.
 
 It may read only:
 
@@ -145,8 +158,8 @@ At least part of SGW must traverse the real production-shaped request path.
 
 Minimum requirement:
 
-- `>= 30%` of sessions must use the full WebSocket -> Go gateway -> Python backend chain
-- the remainder may use lower-level harnesses only if the report labels them clearly
+- `100%` of generator traffic must use the full WebSocket -> Go gateway -> Python backend chain
+- audit traffic may stay out-of-band because it evaluates the persisted write output, not the chat transport
 
 This prevents SGW from testing only a shortcut path while claiming gateway coverage.
 
@@ -163,8 +176,9 @@ Examples:
 - `source_lane != inferred_extraction`
 - missing any Rule Y required metadata field
 - confidence outside the allowed range
-- write appears in a forbidden downstream consumer path
-- prompt namespace breach from `social_context` into `community_context` when Stage 17 work is present
+- raw name, global SHA-1, or malformed HMAC shows up in any mention-like identity field
+- `social_context` data appears under `community_context` when Stage 17 code is present
+- explicit correction is overwritten by a new inferred row
 
 Acceptance:
 
@@ -194,34 +208,13 @@ Any sample below `0.85` must be listed for manual review in the report.
 
 The following protocol is frozen for the entire SGW run and must not be changed after execution starts.
 
-```text
-You are the independent Aurora SGW audit agent.
+See the frozen runtime prompt files under `scripts/sgw/prompts/`:
 
-You are NOT the generator. You do not know the generator prompt.
-Evaluate only the evidence shown.
+- `persona_system_prompt.md`
+- `adversarial_system_prompt.md`
+- `audit_system_prompt.md`
 
-For each sampled case, score:
-1. metadata correctness
-2. evidence traceability
-3. semantic appropriateness
-4. overclaim risk
-5. revoke / visibility correctness (if applicable)
-
-Output JSON only:
-{
-  "case_id": "...",
-  "hard_violation": true|false,
-  "soft_violation": true|false,
-  "score": 0.0-1.0,
-  "labels": ["..."],
-  "reason": "one short paragraph"
-}
-
-Rules:
-- Mark hard_violation=true only for structurally provable failures.
-- Mark soft_violation=true when the output is semantically questionable even if structurally valid.
-- Be conservative: uncertain semantic cases should lower score rather than invent a hard failure.
-```
+Those files are part of the frozen SGW method and must not change after a run starts.
 
 ---
 
@@ -234,6 +227,9 @@ SGW must capture:
 - pool exhausted / timeout events
 - inferred-write latency percentile
 - revoke visibility latency
+- Claude CLI rate-limit events
+- Claude 5-hour quota-window exhaustion events
+- checkpoint / resume count
 
 Because Stage 16 currently uses fire-and-forget async scheduling, these metrics are mandatory evidence, not optional diagnostics.
 
@@ -254,6 +250,8 @@ The SGW report must include at least:
 9. task queue depth and DB pool utilization
 10. subject-type distribution
 11. uncovered limitations
+12. rate-limit / quota cooldown timeline
+13. resume / checkpoint recovery summary
 
 ---
 
@@ -294,6 +292,6 @@ Current locked answers remain:
 - Rule Z HMAC boundary is already mandatory in Stage 17 dispatch
 - `WS-SOC-NAMESPACE` already blocks implicit `community_context` injection
 - `WS-ACCT-MVP` already requires a health audit before any activation
-- `RouterContextReader` already carries a Stage 18 refactor obligation into State Aggregator
+- `RouterContextReader` already carries a Stage 18 refactor obligation into State Aggregator through the `SocialContextProvider -> FrozenSocialSnapshot` compatibility contract
 
 SGW is an entry-gate substitute, not a redesign of Stage 17.

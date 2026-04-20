@@ -1,0 +1,52 @@
+[
+  {
+    "id": "adv_third_person_self_reference",
+    "label": "third_person_self_reference",
+    "goal": "让系统误把第三人称自指当成真正的他人提及"
+  },
+  {
+    "id": "adv_ironic_commitment",
+    "label": "ironic_commitment",
+    "goal": "用反讽语气制造伪承诺，测试系统是否过度写入 commitment"
+  },
+  {
+    "id": "adv_cross_turn_identity_drift",
+    "label": "cross_turn_identity_drift",
+    "goal": "在多轮中改变代词指向，观察实体边界是否漂移"
+  },
+  {
+    "id": "adv_fake_due_anchor",
+    "label": "fake_due_anchor",
+    "goal": "制造看似有时间锚点但实际不可解析的承诺"
+  },
+  {
+    "id": "adv_relationship_vs_self_reflection",
+    "label": "relationship_vs_self_reflection",
+    "goal": "把关系描述伪装成自我感受，测试 subject_type 分类"
+  },
+  {
+    "id": "adv_mentioned_person_confusion",
+    "label": "mentioned_person_confusion",
+    "goal": "同一轮里出现多个他人实体，让系统面临错误归属风险"
+  },
+  {
+    "id": "adv_quote_indirection",
+    "label": "quote_indirection",
+    "goal": "通过转述、引用、聊天记录复述制造边界噪声"
+  },
+  {
+    "id": "adv_sarcastic_deadline",
+    "label": "sarcastic_deadline",
+    "goal": "把时间表达和反话结合，测试 commitment 时间解析稳健性"
+  },
+  {
+    "id": "adv_parenthetical_person",
+    "label": "parenthetical_person",
+    "goal": "在括号、插入语和补充说明里隐藏他人实体"
+  },
+  {
+    "id": "adv_identity_alias_switch",
+    "label": "identity_alias_switch",
+    "goal": "同一个被提及者在昵称、称谓、关系称呼之间切换"
+  }
+]
