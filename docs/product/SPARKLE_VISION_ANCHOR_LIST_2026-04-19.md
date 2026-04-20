@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-19
-> **版本**: v9（Stage 11 完成 + evidence 二级导航 + judge 工程化 + CL0 审计）
+> **版本**: v10（Stage 12 完成 + learning substrate repair + CL0 rerun）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -494,17 +494,32 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 - prompt / inference utilization 第一次真正出现在运维 / 开发者可见面板里
 - 系统第一次对白己的连续学习资产做出“哪些绝不能接到用户前门”的硬审计结论
 
-### 9.9 显式延后挂牌（Stage 11 收尾后）
+### 9.9 Stage 12 完成（4 WS accept，learning substrate repair）
+
+| WS | 内容 | 状态 |
+|----|------|------|
+| WS-CL2a | `PersistentBayesianLearner` Redis key / TTL / compatibility 对齐 | ✅ accept |
+| WS-CL2b | `multi_dimensional_learner.save_state()` + Celery 调用链修复 | ✅ accept |
+| WS-MOB1 | mobile 老欠账 9 项终局收口（fix / isolate / delete） | ✅ accept |
+| WS-CL2c | `strategy_store` DB-backed durable L2 cache + migration | ✅ accept |
+
+**Stage 12 关键成果**：
+- Stage 11 CL0 找出的四个具体基座缺陷已经都被修掉，连续学习不再依赖明显坏掉或重启即丢的 seam
+- `PersistentBayesianLearner` key 合同第一次一致化，`multi_dimensional_learner` 不再存在缺失 `save_state()` 的假闭环
+- `strategy_store` 第一次成为真正 durable 的 L2 inference cache，而不是进程内 sidecar
+- Stage 12 重跑 CL0 后，结论也更诚实了：基座更健康，但**仍没有组件达到可直接接前门的 `wire` 状态**
+
+### 9.10 显式延后挂牌（Stage 12 收尾后）
 
 | 项目 | 来源 | 状态 | 下一归属 |
 |------|------|------|----------|
-| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 12 candidate |
-| continuous learning / distillation 用户面集成（WS-CL1） | CL0 审计结论阻塞 | deferred | Stage 12+ candidate |
-| evidence type 扩展（WS-EVD3） | EVD2 当前仅覆盖安全 resolver 类型 | deferred | Stage 12 candidate |
-| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 12 candidate |
-| dual interaction mode | 长期愿景 | deferred | Stage 12+ candidate |
+| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 13 candidate |
+| continuous learning / distillation 用户面集成（WS-CL1） | Stage 12 CL0 rerun = Path C，仍无组件达 `wire` | deferred | blocked pending deeper substrate / architecture decision |
+| evidence type 扩展（WS-EVD3） | EVD2 当前仅覆盖安全 resolver 类型 | deferred | Stage 13 candidate |
+| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 13 candidate |
+| dual interaction mode | 长期愿景 | deferred | Stage 13+ candidate |
 
-### 9.10 愿景锚点 vs 当前覆盖
+### 9.11 愿景锚点 vs 当前覆盖
 
 | 愿景锚点 | 覆盖度 | 说明 |
 |----------|--------|------|
@@ -519,10 +534,10 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | 数据泄漏修复 | 🔶 部分 | 渲染管线已修（WS-RP1）；utilization 已可观测，但 tokenizer-aware 精度尾债仍在 |
 | 双核协作闭环 | 🔶 0.6/1 | Stage 5 建了一条通路，非完整双向 |
 | graph-as-diagnostic | ✅ Stage 10 | chat-native “我哪里弱” 诊断面已落地；Galaxy 专页深化仍可继续 |
-| 持续学习三层结构 | 🔶 已审计未接线 | Stage 11 CL0 证明当前信号基座仍不足以上前门 |
+| 持续学习三层结构 | 🔶 已修基座，仍未接线 | Stage 12 修掉 key / save_state / restart-loss，但 CL0 rerun 仍证明当前没有组件足以上前门 |
 | 双交互模式 | ❌ 未来 | Stage 8+ |
 
-### 9.11 距离评估
+### 9.12 距离评估
 
 **用"7 阶段成长环"做标尺**：
 - Sense → Clarify → Plan：Stage 4 ✅
@@ -537,6 +552,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 - Stage 9 之后，用户不再只能去设置页看画像，而是能在聊天里直接问、直接纠，这是真正的“用户前门”
 - Stage 10 之后，用户不仅能看到系统怎么想，还能点开依据、并直接问“我哪里弱”，信任链和诊断链都更具体了
 - Stage 11 之后，系统对“可点击”“可跳转”“可学习”这些口头承诺变得更诚实了：已支持的路径能真走通，暂不可信的学习组件被明确挡在前门之外
+- Stage 12 之后，系统虽然没有新增前门能力，但“成长被系统记住”这件事第一次拥有了可重审的工程地基；诚实结论是地基已修、前门仍不能贸然接线
 - 从 Stage 4 "用户感知 Aurora 价值接近零" 到 Stage 9 "画像可见、可问、可纠，日常环能接住变化"，有实质跃迁
 
 **用"断点收口"做标尺**：
@@ -592,6 +608,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | v7 | 2026-04-20 | Stage 9 完成（4 WS accept，Stage 8 baseline 144 green，Stage 9 backend sweep 27 green，mobile Stage 9 sweep 15 green）；用户前门成立：canonical 画像可在聊天里直接查询与纠正；User Correction lane 明确与 Aurora / L3 / strategy lane 分离；prompt / inference utilization 有正式度量载体；evaluator 从硬编码 scorer 升级为 rubric-driven，支持 optional LLM-attached 元数据 |
 | v8 | 2026-04-20 | Stage 10 完成（3 WS accept，Stage 9 frozen baseline 144 green，Stage 10 backend sweep 31 green，mobile Stage 10 sweep 17 green，Rule K guard 35 files / 0 violation）；画像前门从 source markers 升级为 clickable L0 evidence refs；evaluator 接上 real LLM-judge attachment path 并具备 graceful fallback；graph-as-diagnostic 首次成为用户可见的“我哪里弱”诊断面 |
 | v9 | 2026-04-20 | Stage 11 完成（4 WS accept，Stage 10 frozen baseline 144 green，Stage 11 backend sweep 14 green，Stage 11 mobile sweep 51 green，Rule K guard 35 files / 0 violation）；evidence 二级导航闭环落地；judge 权重 / timeout / budget / prompt version 工程化；utilization metrics 进入 ai_ops / developer 可见面；CL0 审计明确持续学习五组件当前均不得直接接入用户前门 |
+| v10 | 2026-04-20 | Stage 12 完成（4 WS accept，Stage 11 frozen baseline 144 green，Stage 11 backend sweep 14 green，Stage 11 mobile sweep 51 green，Stage 12 backend sweep 20 green，Stage 12 mobile sweep 26 passed + 3 skipped，Rule K guard 35 files / 0 violation）；修复连续学习四个具体基座缺陷：Bayesian key 对齐、multi-dimensional save_state / Celery seam、strategy_store durable L2 cache、mobile 9 项老欠账终局收口；CL0 rerun 结论更新为“基座已修，但仍无组件达到可直接接前门的 wire 状态”，Stage 13 锁 Path C |
 
 ---
 
