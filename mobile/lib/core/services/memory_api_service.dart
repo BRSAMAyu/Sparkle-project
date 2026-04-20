@@ -109,6 +109,45 @@ class MemoryApiService {
     return PendingCommitmentItem.fromJson(response.data ?? <String, dynamic>{});
   }
 
+  Future<WorkingMemorySessionModel> getWorkingMemorySession({
+    String? sessionId,
+  }) async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/memory/working-memory/session',
+      queryParameters: {
+        if (sessionId != null && sessionId.isNotEmpty) 'session_id': sessionId,
+      },
+    );
+    return WorkingMemorySessionModel.fromJson(
+      response.data ?? <String, dynamic>{},
+    );
+  }
+
+  Future<void> forgetWorkingMemoryEntry(
+    String entryId, {
+    String? sessionId,
+  }) async {
+    await _apiClient.post<void>(
+      '/memory/working-memory/$entryId/forget',
+      queryParameters: {
+        if (sessionId != null && sessionId.isNotEmpty) 'session_id': sessionId,
+      },
+    );
+  }
+
+  Future<WorkingMemoryItem> markWorkingMemoryEntryCorrect(
+    String entryId, {
+    String? sessionId,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '/memory/working-memory/$entryId/mark-correct',
+      queryParameters: {
+        if (sessionId != null && sessionId.isNotEmpty) 'session_id': sessionId,
+      },
+    );
+    return WorkingMemoryItem.fromJson(response.data ?? <String, dynamic>{});
+  }
+
   Future<void> retractMemory({
     required String type,
     required String id,

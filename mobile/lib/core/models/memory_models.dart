@@ -274,6 +274,69 @@ class PendingCommitmentItem {
   final DateTime? resolvedAt;
 }
 
+class WorkingMemoryItem {
+  WorkingMemoryItem({
+    required this.id,
+    required this.summary,
+    required this.subjectType,
+    required this.mentionCount,
+    required this.salienceScore,
+    required this.sourceTurnIds,
+    required this.evidenceToken,
+    required this.confirmationStatus,
+    required this.rejected,
+    required this.lastSeenAt,
+    this.consolidatedToL1Id,
+  });
+
+  factory WorkingMemoryItem.fromJson(Map<String, dynamic> json) =>
+      WorkingMemoryItem(
+        id: json['id'] as String? ?? '',
+        summary: json['summary'] as String? ?? '',
+        subjectType: json['subject_type'] as String? ?? 'self',
+        mentionCount: json['mention_count'] as int? ?? 0,
+        salienceScore: (json['salience_score'] as num?)?.toDouble() ?? 0.0,
+        sourceTurnIds:
+            (json['source_turn_ids'] as List<dynamic>? ?? []).whereType<String>().toList(),
+        evidenceToken: json['evidence_token'] as String? ?? '',
+        confirmationStatus: json['confirmation_status'] as String? ?? 'none',
+        consolidatedToL1Id: json['consolidated_to_l1_id'] as String?,
+        rejected: json['rejected'] as bool? ?? false,
+        lastSeenAt: _parseDate(json['last_seen_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+      );
+
+  final String id;
+  final String summary;
+  final String subjectType;
+  final int mentionCount;
+  final double salienceScore;
+  final List<String> sourceTurnIds;
+  final String evidenceToken;
+  final String confirmationStatus;
+  final String? consolidatedToL1Id;
+  final bool rejected;
+  final DateTime lastSeenAt;
+}
+
+class WorkingMemorySessionModel {
+  WorkingMemorySessionModel({
+    required this.sessionId,
+    required this.items,
+  });
+
+  factory WorkingMemorySessionModel.fromJson(Map<String, dynamic> json) =>
+      WorkingMemorySessionModel(
+        sessionId: json['session_id'] as String?,
+        items: (json['items'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(WorkingMemoryItem.fromJson)
+            .toList(),
+      );
+
+  final String? sessionId;
+  final List<WorkingMemoryItem> items;
+}
+
 class MemoryCorrectionResult {
   MemoryCorrectionResult({
     required this.id,

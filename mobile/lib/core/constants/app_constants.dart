@@ -35,5 +35,6 @@ class AppFeatureFlags {
   static bool enableMemoryRetraction = true;
   static bool enableMemoryCorrection = true;
   static bool enableUserMemoryControls = true;
+  static bool enableWorkingMemoryDrawer = true;
   static bool enableTaskGuidanceV2 = false;
 }

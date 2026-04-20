@@ -9,11 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.accountability import PendingCommitmentListOut, PendingCommitmentOut
 from app.api.deps import get_current_user, get_db
 from app.config import settings
+from app.core.cache import cache_service
+from app.models.chat import ChatSession
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
 from app.services.accountability_mvp_service import AccountabilityMvpService
 from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
 from app.services.memory_service import MemoryService
+from app.services.working_memory_consolidation_service import WorkingMemoryConsolidationService
+from app.working_memory.service import WorkingMemoryService
 
 router = APIRouter(prefix="/memory", tags=["memory"])
 
@@ -80,6 +84,24 @@ def _serialize_preference_record(
         "explanation": explanation,
         "adjustable": adjustable,
     }
+
+
+async def _resolve_working_memory_session_id(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    session_id: str | None,
+) -> str | None:
+    if session_id:
+        return session_id
+    result = await db.execute(
+        select(ChatSession)
+        .where(ChatSession.user_id == user_id, ChatSession.is_active.is_(True))
+        .order_by(ChatSession.last_message_at.desc().nullslast(), ChatSession.created_at.desc())
+        .limit(1)
+    )
+    session = result.scalar_one_or_none()
+    return str(session.id) if session else None
 
 
 @router.get("/preferences")
@@ -248,6 +270,115 @@ async def list_episodic(
             }
         )
     return {"items": items}
+
+
+@router.get("/working-memory/session")
+async def get_working_memory_session(
+    session_id: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+    resolved_session_id = await _resolve_working_memory_session_id(
+        db,
+        user_id=current_user.id,
+        session_id=session_id,
+    )
+    if resolved_session_id is None:
+        return {"session_id": None, "items": []}
+
+    service = WorkingMemoryService(cache_service.redis)
+    items = await service.list_entries(
+        user_id=str(current_user.id),
+        session_id=resolved_session_id,
+        limit=10,
+        include_rejected=True,
+    )
+    return {
+        "session_id": resolved_session_id,
+        "items": [
+            {
+                "id": item.entry_id,
+                "summary": item.text,
+                "subject_type": item.subject_type,
+                "mention_count": item.mention_count,
+                "salience_score": item.salience_score,
+                "source_turn_ids": list(item.source_turn_ids),
+                "evidence_token": item.evidence_token,
+                "confirmation_status": item.confirmation_status,
+                "consolidated_to_l1_id": item.consolidated_to_l1_id,
+                "rejected": item.rejected,
+                "last_seen_at": item.last_seen_at,
+            }
+            for item in items
+        ],
+    }
+
+
+@router.post("/working-memory/{entry_id}/forget")
+async def forget_working_memory_entry(
+    entry_id: str,
+    session_id: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+    resolved_session_id = await _resolve_working_memory_session_id(
+        db,
+        user_id=current_user.id,
+        session_id=session_id,
+    )
+    if resolved_session_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active session working memory")
+    service = WorkingMemoryService(cache_service.redis)
+    deleted = await service.forget_entry(
+        user_id=str(current_user.id),
+        session_id=resolved_session_id,
+        entry_id=entry_id,
+    )
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Working memory entry not found")
+    return {"status": "ok"}
+
+
+@router.post("/working-memory/{entry_id}/mark-correct")
+async def mark_working_memory_entry_correct(
+    entry_id: str,
+    session_id: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+    resolved_session_id = await _resolve_working_memory_session_id(
+        db,
+        user_id=current_user.id,
+        session_id=session_id,
+    )
+    if resolved_session_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active session working memory")
+    service = WorkingMemoryService(cache_service.redis)
+    updated = await service.mark_correct(
+        user_id=str(current_user.id),
+        session_id=resolved_session_id,
+        entry_id=entry_id,
+    )
+    if updated is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Working memory entry not found")
+    consolidation = WorkingMemoryConsolidationService(db, cache_service.redis)
+    await consolidation.maybe_consolidate_recent_entries(
+        user_id=current_user.id,
+        session_id=UUID(resolved_session_id),
+        explicit_confirmation=True,
+    )
+    return {
+        "id": updated.entry_id,
+        "summary": updated.text,
+        "subject_type": updated.subject_type,
+        "mention_count": updated.mention_count,
+        "confirmation_status": updated.confirmation_status,
+        "consolidated_to_l1_id": updated.consolidated_to_l1_id,
+        "last_seen_at": updated.last_seen_at,
+    }
 
 
 @router.get("/accountability/pending", response_model=PendingCommitmentListOut)

@@ -35,6 +35,7 @@ import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
+import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/home_routes.dart';
@@ -549,6 +550,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             AlwaysStoppedAnimation<Color>(DS.primaryBase),
                         minHeight: 2,
                       ),
+                    ChatWorkingMemoryPanel(
+                      sessionId: chatState.conversationId,
+                      onViewSource: _showWorkingMemorySource,
+                    ),
                     Expanded(
                       child: messages.isEmpty &&
                               chatState.streamingContent.isEmpty &&
@@ -983,6 +988,46 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
     router.go('/home');
+  }
+
+  void _showWorkingMemorySource(String evidenceToken) {
+    final messages = ref.read(chatProvider).messages;
+    final matched = messages.where((message) => message.id == evidenceToken).toList();
+    if (matched.isEmpty) {
+      AppFeedback.info(context, '原始 turn 暂时不可见');
+      return;
+    }
+    final message = matched.first;
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        useRootNavigator: true,
+        builder: (sheetContext) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '原始 turn',
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightBold,
+                    fontSize: DS.fontSizeLg,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing12),
+                Text(
+                  message.content,
+                  style: TextStyle(color: DS.textPrimary),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildQuickActions(BuildContext context) => Center(
