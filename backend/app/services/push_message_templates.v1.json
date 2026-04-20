@@ -1,0 +1,35 @@
+[
+  {
+    "id": "commitment_follow_up_gentle",
+    "policy_id": "CommitmentFollowUp",
+    "category": "commitment_follow_up",
+    "title": "回看一下之前答应自己的事",
+    "body": "你之前提过要在{due_label}前完成一件事。现在要不要用 2 分钟确认一下进展？",
+    "variables": ["due_label"]
+  },
+  {
+    "id": "commitment_follow_up_brief",
+    "policy_id": "CommitmentFollowUp",
+    "category": "commitment_follow_up",
+    "title": "承诺回访",
+    "body": "那件约定在{due_label}已经到期了。要不要现在补一个最小进展？",
+    "variables": ["due_label"]
+  },
+  {
+    "id": "engagement_recovery_soft",
+    "policy_id": "EngagementRecovery",
+    "category": "engagement_recovery",
+    "title": "回来接一下上次的节奏",
+    "body": "你前一阵已经连着投入了{streak_days}天。现在如果愿意，可以先做一个 5 分钟的小动作。",
+    "variables": ["streak_days"]
+  },
+  {
+    "id": "engagement_recovery_resume",
+    "policy_id": "EngagementRecovery",
+    "category": "engagement_recovery",
+    "title": "先从最轻的一步重新开始",
+    "body": "你之前已经建立过连续{streak_days}天的节奏。今天只要重新接上一小步就够了。",
+    "variables": ["streak_days"]
+  }
+]
+
