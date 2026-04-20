@@ -2,8 +2,8 @@
 
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
-> **日期**: 2026-04-19
-> **版本**: v13（Stage 15 完成 + within-category bounded wire-on + Path A-on〔narrowed claim only〕）
+> **日期**: 2026-04-20
+> **版本**: v15（Stage 16 engineering closeout：Rule Y + governed Memory Write Lane 封板，Stage 17 仍受灰度门约束）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -13,6 +13,11 @@
 > - `SPARKLE_USER_MODEL_LAYERED_ARCHITECTURE_2026-04-19.md` — 用户模型五层架构
 > - `SPARKLE_GROWTH_SYSTEM_ROADMAP_2026-04-03.md` — 成长系统路线图
 > - `SPARKLE_DATA_UTILIZATION_ANALYSIS_2026-04-06.md` — 数据利用分析
+> - `SPARKLE_AURORA_STAGE16_DISPATCH_PLAN_2026-04-20.md` — Stage 16 派发计划（WS-MWL-* 七个 Workstream + Rule Y）
+> - `SPARKLE_AURORA_STAGE16_RULE_Y_DEFINITION_2026-04-20.md` — Rule Y 正式定义（推断式画像写入治理）
+> - `SPARKLE_AURORA_STAGE16_READ_VERIFY_REPORT_2026-04-20.md` — Stage 16 读验证报告
+> - `SPARKLE_AURORA_STAGE16_EXTRACT_DRY_RUN_REPORT_2026-04-20.md` — Stage 16 冷数据 dry-run precision 报告
+> - `SPARKLE_AURORA_STAGE16_HANDOFF_2026-04-20.md` — Stage 16 工程收尾与 Stage 17 约束锁定
 
 ---
 
@@ -589,9 +594,183 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 **用"断点收口"做标尺**：
 - 7 个断点已全部收口
-- Stage 9 不再存在“画像后端闭环但用户前门缺失”的主要产品断裂
-- Stage 13 解决的是“continuous learning 什么时候才配接前门”的制度断裂，而不是再加一个新入口
-- Stage 14 解决的是“wire-ready 是否足够可信到接线前”的工程断裂，同时把“还不能接线”的原因从模糊担忧收敛为 source-state 压缩这个明确问题
+- Stage 9 不再存在"画像后端闭环但用户前门缺失"的主要产品断裂
+- Stage 13 解决的是"continuous learning 什么时候才配接前门"的制度断裂，而不是再加一个新入口
+- Stage 14 解决的是"wire-ready 是否足够可信到接线前"的工程断裂，同时把"还不能接线"的原因从模糊担忧收敛为 source-state 压缩这个明确问题
+
+### 9.15 Stage 16 战略定位（能力轨转向 + Memory 写路径）
+
+**核心问题**：聊天流量 100% 不写 EpisodicMemory，使得 Reflect/Adapt 永远只能拿历史 review/error 等"被结构化过"的事实，无法看见用户当下"未结构化的生活线"。
+
+**Stage 16 总目标**：打通 Memory 写入通道，但**不开放下游消费**（入水但不开闸：水管接通，闸门锁死，下游设施还没建）。
+
+**7-Phase Growth Ring 映射**：
+
+| Phase | Stage 16 后的状态变化 |
+|-------|----------------------|
+| Sense | 聊天流量首次成为 episodic 记忆来源（受治理） |
+| Reflect | 拥有"用户在说什么 / 在意什么"的非结构化信号 |
+| Adapt | 拥有"用户最近说了什么"作为决策上下文 |
+| Clarify / Plan / Execute / Reinforce | 不变 |
+
+**七个 Workstream（WS-MWL-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-MWL-RULE** | 正式定义 Rule Y（推断式画像写入治理） | confidence + evidence_token + decay_policy + source_lane 四要素；Rule K 子规则 |
+| **WS-MWL-READ-VERIFY** | 修复"我以为读了"（MIMO 发现 orchestrator.py 中 Memory 读取仅在 USE_CONTEXT_PACK=True 时发生） | 读不通就不许写；必须新增集成测试 |
+| **WS-MWL-EXTRACT** | 推断抽取器（从 chat turn 抽取 episodic 候选） | 不阻塞 streaming；dry-run 一周影子产出；precision ≥ 0.90 |
+| **WS-MWL-CONFLICT** | 冲突与去重 | explicit_correction 优先；同语义近邻合并；decay 标记过期不物理删 |
+| **WS-MWL-WRITE** | 真正的写入路径 | feature flag default OFF；写入失败静默降级；写入计数指标暴露 |
+| **WS-MWL-KILL** | 杀闸 | 只能回滚 inferred_extraction；软删除 revoked_at；≤ 下一次 chat turn 生效 |
+| **WS-MWL-MOBILE-DECL** | 移动端声明与撤销 | 画像 front door "AI 自动记忆"区段；全局关闭开关；Rule Q/U 合规 |
+
+**Gate S16-FINAL 验收**：Rule Y 文档落盘 → READ-VERIFY 集成测试 green → EXTRACT dry-run precision ≥ 0.90 → WRITE default OFF 下 baseline 仍 green → KILL 回归测试 green → MOBILE-DECL widget-level 测试 green → 全代码库 grep 验证 inferred_extraction 不出现在任何下游消费路径。
+
+**Path B / C 兜底**：Path B 仅打通 read-verify + kill switch，不开真写入；Path C 若 extract precision < 0.85 则锁死写入、退回 Path B。
+
+### 9.16 Stage 17 战略定位（社交 → Router / Accountability）
+
+**Stage 17 入场条件**：Stage 16 全部 7 WS green + 至少一周生产灰度 + Rule Y 无破例事件。
+
+**Stage 17 总目标**：让 Memory 写入首次被下游消费——Router 路由决策开始参考 EpisodicMemory，Push 时机推荐开始使用 Memory 信号。
+
+**关键 WS**：
+
+| WS | 目的 |
+|----|------|
+| **WS-SOC-BASELINE** | 社交脑基线画像系统 + 关系图建模 |
+| **WS-ROUTER-MEM-INTEGRATION** | Router 路由决策开始消费 EpisodicMemory（Stage 16 写入的条目首次被读取用于路由） |
+| **WS-ACCOUNTABILITY-MVP** | Accountability MVP（承诺跟踪、进度可视化、自然语言问责） |
+| **WS-PUSH-MEM-SIGNAL** | Push 时机推荐开始使用 Memory 信号（连续 3 天无主动学习 → 自然触发） |
+
+**验收门**：Router 接入 Memory 后路由决策有可测量改善 → Accountability 承诺跟踪可验证 → Push 触发准确率 ≥ 70% → 全链路端到端测试 green。
+
+### 9.17 Stage 18 战略定位（Skill 知识蒸馏管道）
+
+**Stage 18 入场条件**：Stage 17 全部 WS green + Router/Accuracy/Push 全部有生产灰度数据。
+
+**Stage 18 总目标**：从"持续学习"升级为"知识蒸馏"——从用户成功案例中提取可复用 Skill，并支持跨用户共享（需用户显式授权）。
+
+**关键 WS**：
+
+| WS | 目的 |
+|----|------|
+| **WS-SKILL-EXTRACT** | Skill 提取器（从用户成功案例中自动抽取可复用 Skill） |
+| **WS-SKILL-VALIDATION** | Skill 质量评估（结构化验证 + LLM-judge） |
+| **WS-SKILL-SHARING** | Skill 跨用户共享机制（用户显式授权 + 隐私边界） |
+| **WS-SKILL-STORE** | Skill Store（持久化 + 版本管理 + 权限控制） |
+
+**验收门**：Skill 提取 precision ≥ 0.85 → 用户可预览、编辑、拒绝提取的 Skill → 跨用户共享有明确隐私边界 → Skill Store 有完整审计日志。
+
+### 9.18 Stage 19 战略定位（Wire-On 前门正式接线）
+
+**Stage 19 入场条件**：Stage 18 全部 WS green + Skill 提取有至少一周生产数据 + 用户反馈 positive。
+
+**Stage 19 总目标**：首次将持续学习组件正式接入用户前门（不再是 shadow / dry-run / inference-cache-only）。
+
+**关键 WS**：
+
+| WS | 目的 |
+|----|------|
+| **WS-WIRE-PERSISTENT-BAYESIAN** | PersistentBayesianLearner 正式接线到用户前门 |
+| **WS-WIRE-STRATEGY-STORE** | StrategyStore 正式接线到用户前门 |
+| **WS-WIRE-EVIDENCE-INTEGRATION** | 持续学习产出正式进入 evidence drawer |
+| **WS-WIRE-USER-CONTROL** | 用户可查看、撤销、关闭持续学习产出 |
+
+**验收门**：SQAM 四维全部 green → 用户可从 evidence drawer 追溯学习产出 → 用户可一键撤销学习产出 → 全链路端到端测试 green。
+
+### 9.19 Stage 20 战略定位（社交脑完整实现）
+
+**Stage 20 入场条件**：Stage 19 全部 WS green + 持续学习组件在用户前门有至少一周生产数据。
+
+**Stage 20 总目标**：社交脑从"基线画像"升级为"完整关系图 + 社交智能"。
+
+**关键 WS**：
+
+| WS | 目的 |
+|----|------|
+| **WS-SOCIAL-GRAPH-FULL** | 完整关系图（朋友、同学、导师、家人） |
+| **WS-SOCIAL-CONTEXT** | 社交上下文注入（聊天中自然引用社交关系） |
+| **WS-SOCIAL-INTERVENTION** | 社交干预语言（基于社交关系的个性化干预） |
+
+**验收门**：关系图可被用户确认/修正 → 社交上下文注入不触发隐私泄露 → 社交干预语言符合 §3.3 原则 → 全链路端到端测试 green。
+
+### 9.20 Stage 21 战略定位（Proactive 主动推送与时机推荐）
+
+**Stage 21 入场条件**：Stage 20 全部 WS green + 社交脑有至少一周生产数据。
+
+**Stage 21 总目标**：系统从"被动响应"升级为"主动推送"——基于 Memory + Social + Skill 综合判断推送时机。
+
+**关键 WS**：
+
+| WS | 目的 |
+|----|------|
+| **WS-PUSH-TIMING-ENGINE** | 推送时机引擎（综合 Memory/Social/Skill 信号） |
+| **WS-PUSH-CONTENT-GENERATOR** | 推送内容生成器（基于用户画像 + 当前状态） |
+| **WS-PUSH-USER-CONTROL** | 用户推送控制（频率、时段、类型偏好） |
+
+**验收门**：推送时机准确率 ≥ 75% → 推送内容个性化度可测量 → 用户可完全控制推送 → 全链路端到端测试 green。
+
+### 9.21 Stage 22-23 战略定位（双交互模式 + 成长操作系统）
+
+**Stage 22**：双交互模式实现（普通对话 + 深度模式）。
+**Stage 23**：成长操作系统雏形（所有子系统协同，首次端到端完整演示）。
+
+**当前覆盖**：Stage 22-23 仅战略定位，无具体 WS 设计。待 Stage 16-21 实际推进后再细化。
+
+### 9.22 依赖链（不可打乱顺序）
+
+```
+Memory Write (Stage 16)
+    ↓
+Social Brain (Stage 17/19/20)
+    ↓
+Proactive Push (Stage 21)
+    ↓
+Skill Distillation (Stage 18)
+    ↓
+Wire-On Formal (Stage 19)
+    ↓
+Dual Interaction Mode (Stage 22)
+    ↓
+Growth OS (Stage 23)
+```
+
+**硬约束**：任何 Stage 试图跳跃依赖链上游未完成的 Stage，默认拒绝。
+
+### 9.23 显式延后挂牌更新（Stage 16 路线图后）
+
+| 项目 | 来源 | 状态 | 下一归属 |
+|------|------|------|----------|
+| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 15+ candidate |
+| continuous learning / distillation 用户面集成（WS-CL1） | Stage 14 锁 `Path A-blocked` | deferred | Stage 15 source-state redesign / narrowed-claim amendment |
+| evidence type 扩展（WS-EVD3 full） | Stage 13 仅落了 `practice_outcome` lite | deferred | Stage 15+ candidate |
+| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 15+ candidate |
+| dual interaction mode | 长期愿景 | deferred | **Stage 22**（路线图锁定） |
+| growth OS 雏形 | 长期愿景 | deferred | **Stage 23**（路线图锁定） |
+
+### 9.24 愿景锚点 vs 当前覆盖更新（Stage 16 engineering closeout 后）
+
+| 愿景锚点 | 覆盖度 | 说明 |
+|----------|--------|------|
+| Aurora 异步化 | ✅ Stage 4 | 三时层 substrate + 路由分流 |
+| 对话分流 | ✅ Stage 4 | 三路 routing_mode + 会话中途升级 |
+| TaskGuidance 双版本 | ✅ Stage 4 | sidecar + UI |
+| 任务助手降级 | ✅ Stage 4 | 单核 + 5 项注入 + dormant |
+| 5-P 宪法执行 | ✅ Stage 4-8 | P1-P5 全部绿色 |
+| 用户模型五层架构 | ✅ Stage 6-10 | Rule K + 影子模型 + compiler 归一 + evaluator + CI guard + chat front door + judge/evidence deepen |
+| 交互式校准 | ✅ Stage 7-10 | 后端环 + 前端消费 + fallback telemetry + in-chat query/correction + clickable evidence |
+| 7 个产品断点 | ✅ Stage 8 | #1/#2/#3/#4/#5/#6 + 干预语言全部收口 |
+| 数据泄漏修复 | 🔶 部分 | 渲染管线已修（WS-RP1）；utilization 已可观测，但 tokenizer-aware 精度尾债仍在 |
+| 双核协作闭环 | 🔶 0.6/1 | Stage 5 建了一条通路，非完整双向 |
+| graph-as-diagnostic | ✅ Stage 10 | chat-native "我哪里弱" 诊断面已落地；Galaxy 专页深化仍可继续 |
+| 持续学习三层结构 | ✅（写路径已通，消费仍受后续阶段约束） | Stage 16 已打通 governed Memory 写路径，并补齐 read / revoke / declare / kill；Stage 17-19 才讨论下游接线 |
+| 双交互模式 | ❌→Stage 22 | 路线图已锁定 Stage 22 实现 |
+| 成长操作系统 | ❌→Stage 23 | 路线图已锁定 Stage 23 雏形 |
+| 社交脑 | ❌→Stage 17/19/20 | 路线图已锁定分三阶段实现 |
+| 主动推送 | ❌→Stage 21 | 路线图已锁定 Stage 21 实现 |
+| 知识蒸馏 | ❌→Stage 18 | 路线图已锁定 Stage 18 实现 |
 
 ---
 
@@ -645,6 +824,9 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | v10 | 2026-04-20 | Stage 12 完成（4 WS accept，Stage 11 frozen baseline 144 green，Stage 11 backend sweep 14 green，Stage 11 mobile sweep 51 green，Stage 12 backend sweep 20 green，Stage 12 mobile sweep 26 passed + 3 skipped，Rule K guard 35 files / 0 violation）；修复连续学习四个具体基座缺陷：Bayesian key 对齐、multi-dimensional save_state / Celery seam、strategy_store durable L2 cache、mobile 9 项老欠账终局收口；CL0 rerun 结论更新为“基座已修，但仍无组件达到可直接接前门的 wire 状态”，Stage 13 锁 Path C |
 | v11 | 2026-04-20 | Stage 13 完成（Gate S13-0 baseline 144 green + Rule V 8 green + Rule K 35/0，Stage 13 backend sweep 23 green，Stage 13 mobile sweep 50 green）；落地 `SQAM` + Rule W，将 continuous-learning 上线资格从主观判断改为四维量化门；`PersistentBayesianLearner` 在同一 frozen method 下从 `repair-first` 升级为 `wire-ready`；`WS-SQ-FEED` 修掉 reward-label fidelity collapse；`WS-EVD3-LITE` 以 memory lane 方式落地 `practice_outcome` 安全证据类型；Stage 14 入口从 Stage 12 Path C 升级为“可对单一组件提出 bounded `WS-CL1` 候选”的 Path A |
 | v12 | 2026-04-20 | Stage 14 完成（Gate S14-0 baseline replay 144 green + Rule V 8 green + Rule K 35/0 + Stage 13 backend sweep 23 green + Stage 13 mobile sweep 50 green；Stage 14 targeted backend sweep 23 green）；修复 `RouterNode` 的持久 learner 集成残缝；在 frozen `11` state / `220` observation proxy fixture 下重跑 SQAM，`PersistentBayesianLearner` 继续保持 `ID1 / ST1 / DP1 / SM1` 全绿；落地零用户感知、L2 inference-cache-only 的 shadow divergence pipe；但 `state_{tool_category}` 压缩被 Stage 14 审定为当前 wire-on 的 blocking 限制，因此 Stage 15 fork 被锁为 `Path A-blocked` |
+| v13 | 2026-04-20 | Stage 15 完成（within-category bounded wire-on，Path A-on narrowed claim only）；Stage 16-23 战略路线图 v2.0 锁定（四方审查通过，11 项调整合并）；Memory 写路径（Stage 16）确认为整个能力链路最大隐性瓶颈——聊天流量 100% 不写 EpisodicMemory，使得 Reflect/Adapt 永远只能拿历史 review/error 等"被结构化过"的事实；MIMO 独立发现 Memory 读路径也可能断裂（orchestrator.py 中 AgentMemoryService import 标记 noqa: F401）；依赖链 Memory → Proactive → Skill → Wire-On → Social 确认 |
+| v14 | 2026-04-20 | 多阶段战略路线图 v2.0 完整纳入愿景锚定清单；Stage 16 dispatch plan 落盘（WS-MWL-* 七个 Workstream + Rule Y + Path B/C 兜底）；Stage 16-23 各阶段战略目标、入场条件、关键 WS、验收门纳入 §9.15-§9.21；Stage 16 入场条件锁定（Gate S16-0 baseline + Codex §0.5 自答）；愿景覆盖表更新：持续学习三层结构从🔶升级为🔶→Stage 16 后预计✅ |
+| v15 | 2026-04-20 | Stage 16 engineering closeout 完成（Gate S16-0 baseline 144 green + Rule V 8 green + Rule K 35/0 + Stage 13/14/15 backend carry-forward 24 green + Stage 13/15 mobile carry-forward 53 green；Stage 16 targeted backend sweep 16 green；Stage 16 targeted mobile sweep 8 green）；Rule Y 正式落盘，chat -> EpisodicMemory `inferred_extraction` governed write lane 打通，并同时满足 read / declare / revoke / kill；`inferred_extraction` 经 grep 证明未进入 Router / Push / Skill / Accountability 下游消费路径；愿景覆盖表更新：持续学习三层结构升级为✅，但 Stage 17 仍受“一周生产灰度 + Rule Y 无破例”运营门约束 |
 
 ---
 
