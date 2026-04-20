@@ -192,62 +192,33 @@ class MemoryInferredWriteLaneService:
         )
         if candidate is None:
             MEMORY_INFERRED_EXTRACT_TOTAL.labels(mode="chat", status="no_candidate").inc()
+        else:
+            MEMORY_INFERRED_EXTRACT_TOTAL.labels(mode="chat", status="candidate").inc()
+            await self._record_dry_run(user_id=user_id, session_id=session_id, candidate=candidate)
+
+        if settings.SPARKLE_WORKING_MEMORY_ENABLED:
+            from app.services.working_memory_pipeline_service import WorkingMemoryPipelineService
+
+            pipeline = WorkingMemoryPipelineService(self.db)
+            await pipeline.process_chat_turn(
+                user_id=user_id,
+                session_id=session_id,
+                user_message=resolved_user_message,
+                assistant_message=assistant_message,
+                evidence_token=resolved_user_message_id,
+                rule_candidate=candidate,
+            )
+            return candidate
+
+        if candidate is None:
             return None
 
-        MEMORY_INFERRED_EXTRACT_TOTAL.labels(mode="chat", status="candidate").inc()
-        await self._record_dry_run(user_id=user_id, session_id=session_id, candidate=candidate)
-
-        if not self._within_rate_limit(user_id):
-            self._enqueue_degraded_candidate(user_id=user_id, session_id=session_id, candidate=candidate)
-            MEMORY_INFERRED_WRITE_TOTAL.labels(status="rate_limited").inc()
-            return candidate
-
-        if not settings.SPARKLE_MEMORY_INFERRED_WRITE_ENABLED:
-            MEMORY_INFERRED_WRITE_TOTAL.labels(status="disabled").inc()
-            return candidate
-
-        if candidate.confidence < settings.MEMORY_INFERRED_MIN_CONFIDENCE:
-            MEMORY_INFERRED_WRITE_TOTAL.labels(status="below_threshold").inc()
-            return candidate
-
-        if await self._is_user_disabled(user_id):
-            MEMORY_INFERRED_WRITE_TOTAL.labels(status="user_disabled").inc()
-            return candidate
-
-        if await self._is_duplicate(user_id=user_id, candidate=candidate):
-            MEMORY_INFERRED_WRITE_TOTAL.labels(status="duplicate").inc()
-            return candidate
-
-        if await self._has_blocking_conflict(user_id=user_id, candidate=candidate):
-            MEMORY_INFERRED_WRITE_TOTAL.labels(status="explicit_conflict").inc()
-            return candidate
-
-        memory_service = MemoryService(self.db)
-        record = await memory_service.create_episodic_memory(
+        record = await self.write_candidate_to_l1(
             user_id=user_id,
-            summary=candidate.candidate_text,
-            source_type="chat",
-            source_id=str(session_id),
-            source_lane=candidate.source_lane,
-            occurred_at=candidate.occurred_at,
-            importance_score=candidate.confidence,
-            confidence=candidate.confidence,
-            tags=[
-                "stage16:auto_memory",
-                f"decay:{candidate.decay_policy}",
-            ],
-            evidence_refs=candidate.evidence_refs,
-            evidence_token=candidate.evidence_token,
-            decay_policy=candidate.decay_policy,
-            semantic_key=candidate.semantic_key,
-            subject_type=candidate.subject_type,
-            due_at=candidate.due_at,
-            mentioned_entity_hash=candidate.mentioned_entity_hash,
-            mentioned_entity_owner_user_id=candidate.mentioned_entity_owner_user_id,
-            emit_system_update=False,
+            session_id=session_id,
+            candidate=candidate,
         )
         if record is None:
-            MEMORY_INFERRED_WRITE_TOTAL.labels(status="blocked").inc()
             return candidate
 
         MEMORY_INFERRED_WRITE_TOTAL.labels(status="written").inc()
@@ -439,6 +410,68 @@ class MemoryInferredWriteLaneService:
             )
         )
         return result.scalar_one_or_none() is not None
+
+    async def write_candidate_to_l1(
+        self,
+        *,
+        user_id: UUID,
+        session_id: UUID,
+        candidate: InferredEpisodicCandidate,
+        force_write: bool = False,
+    ) -> EpisodicMemory | None:
+        if not self._within_rate_limit(user_id):
+            self._enqueue_degraded_candidate(user_id=user_id, session_id=session_id, candidate=candidate)
+            MEMORY_INFERRED_WRITE_TOTAL.labels(status="rate_limited").inc()
+            return None
+
+        if not force_write and not settings.SPARKLE_MEMORY_INFERRED_WRITE_ENABLED:
+            MEMORY_INFERRED_WRITE_TOTAL.labels(status="disabled").inc()
+            return None
+
+        if candidate.confidence < settings.MEMORY_INFERRED_MIN_CONFIDENCE:
+            MEMORY_INFERRED_WRITE_TOTAL.labels(status="below_threshold").inc()
+            return None
+
+        if await self._is_user_disabled(user_id):
+            MEMORY_INFERRED_WRITE_TOTAL.labels(status="user_disabled").inc()
+            return None
+
+        if await self._is_duplicate(user_id=user_id, candidate=candidate):
+            MEMORY_INFERRED_WRITE_TOTAL.labels(status="duplicate").inc()
+            return None
+
+        if await self._has_blocking_conflict(user_id=user_id, candidate=candidate):
+            MEMORY_INFERRED_WRITE_TOTAL.labels(status="explicit_conflict").inc()
+            return None
+
+        memory_service = MemoryService(self.db)
+        record = await memory_service.create_episodic_memory(
+            user_id=user_id,
+            summary=candidate.candidate_text,
+            source_type="chat",
+            source_id=str(session_id),
+            source_lane=self.SOURCE_LANE,
+            occurred_at=candidate.occurred_at,
+            importance_score=candidate.confidence,
+            confidence=candidate.confidence,
+            tags=[
+                "stage16:auto_memory",
+                f"decay:{candidate.decay_policy}",
+            ],
+            evidence_refs=candidate.evidence_refs,
+            evidence_token=candidate.evidence_token,
+            decay_policy=candidate.decay_policy,
+            semantic_key=candidate.semantic_key,
+            subject_type=candidate.subject_type,
+            due_at=candidate.due_at,
+            mentioned_entity_hash=candidate.mentioned_entity_hash,
+            mentioned_entity_owner_user_id=candidate.mentioned_entity_owner_user_id,
+            emit_system_update=False,
+        )
+        if record is None:
+            MEMORY_INFERRED_WRITE_TOTAL.labels(status="blocked").inc()
+            return None
+        return record
 
     async def _has_blocking_conflict(
         self,
