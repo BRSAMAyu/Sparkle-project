@@ -227,14 +227,21 @@ def persist_bayesian_data(self, user_id: str, data: dict):
 
     from loguru import logger
 
-    from app.core.cache import redis_client
+    from app.core.cache import cache_service
+    from app.learning.persistent_bayesian_learner import (
+        PERSISTENT_BAYESIAN_TTL_SECONDS,
+        build_persistent_bayesian_key,
+    )
 
     async def _persist():
         try:
-            key = f"bayesian_learner:{user_id}"
+            redis_client = cache_service.redis
+            if redis_client is None:
+                raise RuntimeError("redis cache unavailable")
+            key = build_persistent_bayesian_key(user_id)
             await redis_client.setex(
                 key,
-                86400,  # 24小时
+                PERSISTENT_BAYESIAN_TTL_SECONDS,
                 json.dumps(data)
             )
             logger.info(f"✅ Persisted Bayesian data for {user_id}")

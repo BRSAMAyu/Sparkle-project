@@ -5,12 +5,24 @@ from loguru import logger
 
 from app.learning.bayesian_learner import BayesianLearner, RouteStats
 
+PERSISTENT_BAYESIAN_TTL_SECONDS = 86400 * 7
+PERSISTENT_BAYESIAN_KEY_PREFIX = "learner:"
+LEGACY_PERSISTENT_BAYESIAN_KEY_PREFIX = "bayesian_learner:"
+
+
+def build_persistent_bayesian_key(user_id: str) -> str:
+    return f"{PERSISTENT_BAYESIAN_KEY_PREFIX}{user_id}"
+
+
+def build_legacy_persistent_bayesian_key(user_id: str) -> str:
+    return f"{LEGACY_PERSISTENT_BAYESIAN_KEY_PREFIX}{user_id}"
+
 
 class PersistentBayesianLearner(BayesianLearner):
     """
     Bayesian Learner with Redis persistence.
     """
-    def __init__(self, redis_client, user_id: str, ttl: int = 86400 * 7):
+    def __init__(self, redis_client, user_id: str, ttl: int = PERSISTENT_BAYESIAN_TTL_SECONDS):
         super().__init__()
         self.redis = redis_client
         self.user_id = user_id
@@ -18,40 +30,64 @@ class PersistentBayesianLearner(BayesianLearner):
         self._loaded = False
         self._pending_saves: set[asyncio.Task] = set()
 
+    def _key(self) -> str:
+        return build_persistent_bayesian_key(self.user_id)
+
+    def _legacy_key(self) -> str:
+        return build_legacy_persistent_bayesian_key(self.user_id)
+
+    def _serialize_stats(self) -> dict[str, dict[str, float]]:
+        return {
+            key: {"alpha": stats.alpha, "beta": stats.beta}
+            for key, stats in self.stats.items()
+        }
+
+    def _load_serialized_stats(self, payload: dict) -> None:
+        for key, stats_data in payload.items():
+            self.stats[key] = RouteStats(
+                alpha=stats_data["alpha"],
+                beta=stats_data["beta"],
+            )
+
     async def _load_from_redis(self):
         """Lazy load learning history from Redis."""
         if self._loaded:
             return
+        if not self.redis:
+            self._loaded = True
+            return
 
         try:
-            data = await self.redis.get(f"learner:{self.user_id}")
+            data = await self.redis.get(self._key())
+            loaded_from_legacy = False
+            if not data:
+                data = await self.redis.get(self._legacy_key())
+                loaded_from_legacy = bool(data)
             if data:
                 loaded_stats = json.loads(data)
-                for key, stats_data in loaded_stats.items():
-                    self.stats[key] = RouteStats(
-                        alpha=stats_data['alpha'],
-                        beta=stats_data['beta']
+                self._load_serialized_stats(loaded_stats)
+                if loaded_from_legacy:
+                    await self.redis.setex(
+                        self._key(),
+                        self.ttl,
+                        json.dumps(self._serialize_stats()),
                     )
                 logger.info(f"Loaded {len(self.stats)} routes for user {self.user_id}")
             self._loaded = True
         except Exception as e:
             logger.error(f"Failed to load learner state: {e}")
+            self._loaded = True
 
     async def _save_to_redis(self):
         """Persist to Redis."""
-        if not self.stats:
+        if not self.stats or not self.redis:
             return
 
         try:
-            serializable_stats = {
-                key: {'alpha': stats.alpha, 'beta': stats.beta}
-                for key, stats in self.stats.items()
-            }
-
             await self.redis.setex(
-                f"learner:{self.user_id}",
+                self._key(),
                 self.ttl,
-                json.dumps(serializable_stats)
+                json.dumps(self._serialize_stats())
             )
             logger.debug(f"Saved {len(self.stats)} routes for user {self.user_id}")
         except Exception as e:
