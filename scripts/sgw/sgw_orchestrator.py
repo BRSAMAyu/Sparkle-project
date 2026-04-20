@@ -112,12 +112,15 @@ class OrchestratorConfig:
     claude_model: str = os.getenv("SGW_CLAUDE_MODEL", "")
     claude_effort: str = os.getenv("SGW_CLAUDE_EFFORT", "medium")
     claude_timeout_seconds: int = int(os.getenv("SGW_CLAUDE_TIMEOUT_SECONDS", "45"))
-    claude_max_parallel: int = int(os.getenv("SGW_CLAUDE_MAX_PARALLEL", "1"))
+    claude_min_parallel: int = int(os.getenv("SGW_CLAUDE_MIN_PARALLEL", "1"))
+    claude_max_parallel: int = int(os.getenv("SGW_CLAUDE_MAX_PARALLEL", "2"))
+    claude_initial_parallel: int = int(os.getenv("SGW_CLAUDE_INITIAL_PARALLEL", "2"))
     claude_min_interval_seconds: float = float(os.getenv("SGW_CLAUDE_MIN_INTERVAL_SECONDS", "5"))
     claude_rate_limit_backoff_seconds: int = int(os.getenv("SGW_CLAUDE_RATE_LIMIT_BACKOFF_SECONDS", "300"))
     claude_short_backoff_seconds: int = int(os.getenv("SGW_CLAUDE_SHORT_BACKOFF_SECONDS", "60"))
     claude_failure_backoff_seconds: int = int(os.getenv("SGW_CLAUDE_FAILURE_BACKOFF_SECONDS", "30"))
     claude_budget_reset_seconds: int = int(os.getenv("SGW_CLAUDE_WINDOW_RESET_SECONDS", str(5 * 3600)))
+    claude_scale_up_cooldown_seconds: int = int(os.getenv("SGW_CLAUDE_SCALE_UP_COOLDOWN_SECONDS", "1200"))
     max_history_pairs: int = int(os.getenv("SGW_MAX_HISTORY_PAIRS", "6"))
     audit_sample_rate: float = float(os.getenv("SGW_AUDIT_SAMPLE_RATE", "0.25"))
     random_seed: int = int(os.getenv("SGW_RANDOM_SEED", "17"))
@@ -134,9 +137,17 @@ class ClaudeCallError(RuntimeError):
 class ClaudeCliClient:
     def __init__(self, config: OrchestratorConfig):
         self._config = config
-        self._call_semaphore = asyncio.Semaphore(max(1, config.claude_max_parallel))
+        self._hard_cap = max(1, config.claude_max_parallel)
+        self._min_parallel = max(1, min(config.claude_min_parallel, self._hard_cap))
+        requested_initial = max(self._min_parallel, config.claude_initial_parallel)
+        self._effective_parallel = min(requested_initial, self._hard_cap)
+        self._call_semaphore = asyncio.Semaphore(self._hard_cap)
+        self._parallel_condition = asyncio.Condition()
+        self._inflight_calls = 0
         self._call_pace_lock = asyncio.Lock()
         self._last_call_started_at = 0.0
+        self._last_rate_limit_at = 0.0
+        self._last_scaled_up_at = time.time()
         self._debug_dir = config.checkpoint_path.parent / "claude_debug"
         self._debug_dir.mkdir(parents=True, exist_ok=True)
 
@@ -149,71 +160,85 @@ class ClaudeCliClient:
 
     async def _run_raw(self, *, system_prompt: str, prompt: str) -> str:
         async with self._call_semaphore:
-            await self._pace_calls()
-            debug_path = self._debug_dir / f"{int(time.time())}_{uuid.uuid4().hex}.log"
-            command = [
-                "claude",
-                "-p",
-                prompt,
-                "--system-prompt",
-                system_prompt,
-                "--output-format",
-                "text",
-                "--tools",
-                "",
-                "--effort",
-                self._config.claude_effort,
-                "--bare",
-                "--no-session-persistence",
-                "--permission-mode",
-                "bypassPermissions",
-                "--debug-file",
-                str(debug_path),
-            ]
-            if self._config.claude_model:
-                command.extend(["--model", self._config.claude_model])
-
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            timed_out = False
+            await self._acquire_effective_slot()
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=self._config.claude_timeout_seconds,
-                )
-            except asyncio.TimeoutError:
-                timed_out = True
-                with contextlib.suppress(ProcessLookupError):
-                    process.send_signal(signal.SIGINT)
-                try:
-                    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=3)
-                except asyncio.TimeoutError as exc:
-                    process.kill()
-                    stdout, stderr = await process.communicate()
-                    debug_text = self._read_debug_text(debug_path)
-                    classified = self._classify_failure(
-                        output=stdout.decode("utf-8", errors="replace").strip(),
-                        error_text=stderr.decode("utf-8", errors="replace").strip(),
-                        debug_text=debug_text,
-                        timed_out=True,
-                    )
-                    raise classified or ClaudeCallError("timeout", "claude CLI timed out") from exc
+                await self._pace_calls()
+                debug_path = self._debug_dir / f"{int(time.time())}_{uuid.uuid4().hex}.log"
+                command = [
+                    "claude",
+                    "-p",
+                    prompt,
+                    "--system-prompt",
+                    system_prompt,
+                    "--output-format",
+                    "text",
+                    "--tools",
+                    "",
+                    "--effort",
+                    self._config.claude_effort,
+                    "--bare",
+                    "--no-session-persistence",
+                    "--permission-mode",
+                    "bypassPermissions",
+                    "--debug-file",
+                    str(debug_path),
+                ]
+                if self._config.claude_model:
+                    command.extend(["--model", self._config.claude_model])
 
-            output = stdout.decode("utf-8", errors="replace").strip()
-            error_text = stderr.decode("utf-8", errors="replace").strip()
-            debug_text = self._read_debug_text(debug_path)
-            classified = self._classify_failure(
-                output=output,
-                error_text=error_text,
-                debug_text=debug_text,
-                timed_out=timed_out,
-            )
-            if classified:
-                raise classified
-            return output
+                process = await asyncio.create_subprocess_exec(
+                    *command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                timed_out = False
+                try:
+                    stdout, stderr = await asyncio.wait_for(
+                        process.communicate(),
+                        timeout=self._config.claude_timeout_seconds,
+                    )
+                except asyncio.TimeoutError:
+                    timed_out = True
+                    with contextlib.suppress(ProcessLookupError):
+                        process.send_signal(signal.SIGINT)
+                    try:
+                        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=3)
+                    except asyncio.TimeoutError as exc:
+                        process.kill()
+                        stdout, stderr = await process.communicate()
+                        debug_text = self._read_debug_text(debug_path)
+                        classified = self._classify_failure(
+                            output=stdout.decode("utf-8", errors="replace").strip(),
+                            error_text=stderr.decode("utf-8", errors="replace").strip(),
+                            debug_text=debug_text,
+                            timed_out=True,
+                        )
+                        raise classified or ClaudeCallError("timeout", "claude CLI timed out") from exc
+
+                output = stdout.decode("utf-8", errors="replace").strip()
+                error_text = stderr.decode("utf-8", errors="replace").strip()
+                debug_text = self._read_debug_text(debug_path)
+                classified = self._classify_failure(
+                    output=output,
+                    error_text=error_text,
+                    debug_text=debug_text,
+                    timed_out=timed_out,
+                )
+                if classified:
+                    raise classified
+                return output
+            finally:
+                await self._release_effective_slot()
+
+    async def _acquire_effective_slot(self) -> None:
+        async with self._parallel_condition:
+            await self._parallel_condition.wait_for(lambda: self._inflight_calls < self._effective_parallel)
+            self._inflight_calls += 1
+
+    async def _release_effective_slot(self) -> None:
+        async with self._parallel_condition:
+            self._inflight_calls = max(0, self._inflight_calls - 1)
+            self._parallel_condition.notify_all()
 
     async def _pace_calls(self) -> None:
         async with self._call_pace_lock:
@@ -222,6 +247,55 @@ class ClaudeCliClient:
             if wait_seconds > 0:
                 await asyncio.sleep(wait_seconds)
             self._last_call_started_at = time.time()
+
+    @property
+    def effective_parallel(self) -> int:
+        return self._effective_parallel
+
+    @property
+    def hard_cap(self) -> int:
+        return self._hard_cap
+
+    def state_dict(self) -> dict[str, Any]:
+        return {
+            "effective_parallel": self._effective_parallel,
+            "last_rate_limit_at": self._last_rate_limit_at,
+            "last_scaled_up_at": self._last_scaled_up_at,
+        }
+
+    def restore_state(self, payload: dict[str, Any] | None) -> None:
+        if not payload:
+            return
+        effective = int(payload.get("effective_parallel", self._effective_parallel))
+        self._effective_parallel = max(self._min_parallel, min(effective, self._hard_cap))
+        self._last_rate_limit_at = float(payload.get("last_rate_limit_at", self._last_rate_limit_at))
+        self._last_scaled_up_at = float(payload.get("last_scaled_up_at", self._last_scaled_up_at))
+
+    async def maybe_scale_up(self, *, queue_backlog: int) -> tuple[int, int] | None:
+        if queue_backlog <= 0 or self._effective_parallel >= self._hard_cap:
+            return None
+        now = time.time()
+        stable_since = max(self._last_rate_limit_at, self._last_scaled_up_at)
+        if now - stable_since < self._config.claude_scale_up_cooldown_seconds:
+            return None
+        async with self._parallel_condition:
+            if self._inflight_calls > self._effective_parallel:
+                return None
+            before = self._effective_parallel
+            self._effective_parallel = min(self._hard_cap, self._effective_parallel + 1)
+            self._last_scaled_up_at = now
+            self._parallel_condition.notify_all()
+            return before, self._effective_parallel
+
+    async def back_off_after_rate_limit(self) -> tuple[int, int] | None:
+        self._last_rate_limit_at = time.time()
+        async with self._parallel_condition:
+            before = self._effective_parallel
+            if before <= self._min_parallel:
+                return None
+            self._effective_parallel = max(self._min_parallel, before - 1)
+            self._parallel_condition.notify_all()
+            return before, self._effective_parallel
 
     @staticmethod
     def _read_debug_text(path: Path) -> str:
@@ -382,7 +456,19 @@ class SGWOrchestrator:
                     self.persona_queue.qsize() + self.adversarial_queue.qsize() + self.audit_queue.qsize()
                 )
                 self.metrics.observe_concurrency(self._active_workers)
+                self.metrics.observe_claude_parallel(self.claude.effective_parallel)
                 self.metrics.record_db_pool_peak(self._read_pool_in_use())
+                if adjustment := await self.claude.maybe_scale_up(
+                    queue_backlog=self.persona_queue.qsize() + self.adversarial_queue.qsize() + self.audit_queue.qsize()
+                ):
+                    before, after = adjustment
+                    self.metrics.record_concurrency_adjustment(
+                        before=before,
+                        after=after,
+                        reason="stable_window_probe",
+                    )
+                    print(f"[sgw] increasing Claude parallelism {before} -> {after} after stable window")
+                    await self._checkpoint()
                 self._emit_progress_if_needed()
                 await asyncio.sleep(2)
             self.stop_event.set()
@@ -464,6 +550,7 @@ class SGWOrchestrator:
         }
         self.seen_memory_ids = set(payload.get("seen_memory_ids", []))
         self.global_cooldown_until = payload.get("global_cooldown_until")
+        self.claude.restore_state(payload.get("claude_state"))
         self.started_at = payload.get("started_at", time.time())
         for task in self.session_tasks.values():
             if task.status in {"running", "retry"}:
@@ -483,6 +570,7 @@ class SGWOrchestrator:
         payload = {
             "started_at": self.started_at,
             "global_cooldown_until": self.global_cooldown_until,
+            "claude_state": self.claude.state_dict(),
             "seen_memory_ids": sorted(self.seen_memory_ids),
             "metrics": self.metrics.to_dict(),
             "session_tasks": {task_id: task.to_dict() for task_id, task in self.session_tasks.items()},
@@ -570,9 +658,18 @@ class SGWOrchestrator:
                     task.retry_count += 1
                     if exc.kind == "rate_limit":
                         self.metrics.record_rate_limit()
+                        adjustment = await self.claude.back_off_after_rate_limit()
+                        if adjustment:
+                            before, after = adjustment
+                            self.metrics.record_concurrency_adjustment(
+                                before=before,
+                                after=after,
+                                reason="rate_limit_backoff",
+                            )
                         cooldown_until = self._arm_rate_limit_cooldown(task.retry_count, reason=exc.detail)
                         print(
-                            f"[sgw] {worker_name} hit rate limit, cooling down until "
+                            f"[sgw] {worker_name} hit rate limit"
+                            f"{f'; reducing Claude parallelism {adjustment[0]} -> {adjustment[1]}' if adjustment else ''}, cooling down until "
                             f"{datetime.fromtimestamp(cooldown_until).isoformat(timespec='seconds')}"
                         )
                     elif exc.kind == "quota":
@@ -679,9 +776,18 @@ class SGWOrchestrator:
                 task.retry_count += 1
                 if exc.kind == "rate_limit":
                     self.metrics.record_rate_limit()
+                    adjustment = await self.claude.back_off_after_rate_limit()
+                    if adjustment:
+                        before, after = adjustment
+                        self.metrics.record_concurrency_adjustment(
+                            before=before,
+                            after=after,
+                            reason="rate_limit_backoff",
+                        )
                     cooldown_until = self._arm_rate_limit_cooldown(task.retry_count, reason=exc.detail)
                     print(
-                        f"[sgw] {worker_name} audit hit rate limit, cooling down until "
+                        f"[sgw] {worker_name} audit hit rate limit"
+                        f"{f'; reducing Claude parallelism {adjustment[0]} -> {adjustment[1]}' if adjustment else ''}, cooling down until "
                         f"{datetime.fromtimestamp(cooldown_until).isoformat(timespec='seconds')}"
                     )
                 elif exc.kind == "quota":
@@ -1031,7 +1137,8 @@ class SGWOrchestrator:
             f"soft_rate={self.metrics.soft_violation_rate():.4f} "
             f"hard={len(self.metrics.hard_violations)} "
             f"queues={self.persona_queue.qsize() + self.adversarial_queue.qsize() + self.audit_queue.qsize()} "
-            f"active={self._active_workers}"
+            f"active={self._active_workers} "
+            f"claude_parallel={self.claude.effective_parallel}/{self.claude.hard_cap}"
         )
 
     def _install_signal_handlers(self) -> None:

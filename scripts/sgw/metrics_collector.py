@@ -13,6 +13,8 @@ def utcnow_iso() -> str:
 class MetricsCollector:
     started_at: str = field(default_factory=utcnow_iso)
     peak_concurrency: int = 0
+    current_claude_parallel: int = 0
+    peak_claude_parallel: int = 0
     sessions_planned: int = 0
     sessions_completed: int = 0
     turns_completed: int = 0
@@ -35,6 +37,7 @@ class MetricsCollector:
     hard_violations: list[dict[str, Any]] = field(default_factory=list)
     soft_violation_reasons: list[str] = field(default_factory=list)
     quota_cooldowns: list[dict[str, Any]] = field(default_factory=list)
+    concurrency_adjustments: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -45,6 +48,10 @@ class MetricsCollector:
 
     def observe_concurrency(self, current: int) -> None:
         self.peak_concurrency = max(self.peak_concurrency, current)
+
+    def observe_claude_parallel(self, current: int) -> None:
+        self.current_claude_parallel = current
+        self.peak_claude_parallel = max(self.peak_claude_parallel, current)
 
     def observe_queue_depth(self, current: int) -> None:
         self.queue_peak_depth = max(self.queue_peak_depth, current)
@@ -85,6 +92,18 @@ class MetricsCollector:
         self.quota_exhaustion_events += 1
         self.quota_cooldowns.append({"cooldown_until": cooldown_until, "reason": reason})
 
+    def record_concurrency_adjustment(self, *, before: int, after: int, reason: str) -> None:
+        self.current_claude_parallel = after
+        self.peak_claude_parallel = max(self.peak_claude_parallel, after)
+        self.concurrency_adjustments.append(
+            {
+                "at": utcnow_iso(),
+                "before": before,
+                "after": after,
+                "reason": reason,
+            }
+        )
+
     def record_checkpoint(self) -> None:
         self.checkpoint_writes += 1
 
@@ -120,6 +139,8 @@ class MetricsCollector:
             f"- Sessions Completed: `{self.sessions_completed}`",
             f"- Turns Completed: `{self.turns_completed}`",
             f"- Peak Concurrency: `{self.peak_concurrency}`",
+            f"- Current Claude Parallelism: `{self.current_claude_parallel}`",
+            f"- Peak Claude Parallelism: `{self.peak_claude_parallel}`",
             f"- WebSocket Success Count: `{self.websocket_sessions}`",
             f"- WebSocket Failure Count: `{self.websocket_failures}`",
             f"- Audit Cases: `{self.audit_cases}`",
@@ -143,6 +164,20 @@ class MetricsCollector:
                 f"- Worker Restarts: `{self.worker_restarts}`",
                 f"- Claude Rate Limit Events: `{self.rate_limit_events}`",
                 f"- Claude Quota Exhaustion Events: `{self.quota_exhaustion_events}`",
+                "",
+                "## Concurrency Tuning",
+                "",
+            ]
+        )
+        if not self.concurrency_adjustments:
+            lines.append("- None")
+        else:
+            for item in self.concurrency_adjustments[-50:]:
+                lines.append(
+                    f"- `{item['at']}` `{item['before']} -> {item['after']}` :: {item['reason']}"
+                )
+        lines.extend(
+            [
                 "",
                 "## Infra",
                 "",
