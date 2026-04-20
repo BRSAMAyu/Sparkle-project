@@ -63,6 +63,17 @@ class InterventionNotificationActionRequest(BaseModel):
     )
 
 
+class PushNotificationActionRequest(BaseModel):
+    """Transition a notification-backed Stage 18 push record from mobile."""
+
+    action: str = Field(
+        ...,
+        pattern="^(seen|dismissed|acted|disable_category|retract)$",
+        description="Desired push action",
+    )
+    action_payload: dict[str, Any] = Field(default_factory=dict)
+
+
 class NotificationPreferencesUpdate(BaseModel):
     """Update notification preferences"""
     enable_system: bool | None = None

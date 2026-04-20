@@ -146,6 +146,7 @@ from app.models.next_action_selection import NextActionSelection
 from app.models.nightly_review import NightlyReview
 from app.models.notification import Notification, PushHistory
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
+from app.models.push_delivery_record import PushDeliveryRecord
 from app.models.plan import Plan, PlanStage, PlanType
 from app.models.plan_execution_record import PlanExecutionRecord
 from app.models.plan_state import PlanState, PlanStateStatus
@@ -186,6 +187,7 @@ from app.models.theater_candidate_bundle import TheaterCandidateBundle
 from app.models.theater_prediction import TheaterPrediction
 from app.models.user import PushPreference, User, UserDevice
 from app.models.user_memory_settings import UserMemorySettings
+from app.models.user_push_opt_in import UserPushOptIn
 from app.models.user_preferences import UserPreferencesCenter
 from app.models.user_settings import UserSettings
 from app.models.user_state import UserStateSnapshot
@@ -225,6 +227,7 @@ __all__ = [
     "IdempotencyKey",
     "Notification",
     "PushHistory",
+    "PushDeliveryRecord",
     "KnowledgeNode",
     "UserNodeStatus",
     "NodeRelation",
@@ -322,6 +325,7 @@ __all__ = [
     "LtmDailySnapshot",
     "MemoryRankPolicy",
     "UserMemorySettings",
+    "UserPushOptIn",
     "UserSettings",
     "UserPreferencesCenter",
     "DecisionRecord",

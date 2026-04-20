@@ -17,6 +17,7 @@ from app.schemas.unified_notification import (
     NotificationHistoryFilters,
     NotificationPreferencesResponse,
     NotificationPreferencesUpdate,
+    PushNotificationActionRequest,
     UnifiedNotificationResponse,
 )
 from app.services.notification_analytics_service import NotificationAnalyticsService
@@ -46,10 +47,10 @@ async def get_unified_notifications(
     service = NotificationCenterService(db)
 
     # Validate source_type
-    if source_type and source_type not in ['system', 'intervention']:
+    if source_type and source_type not in ['system', 'intervention', 'push']:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid source_type: {source_type}. Must be 'system' or 'intervention'"
+            detail=f"Invalid source_type: {source_type}. Must be 'system', 'intervention', or 'push'"
         )
 
     notifications = await service.get_unified_notifications(
@@ -78,7 +79,7 @@ async def mark_notification_read(
     """
     service = NotificationCenterService(db)
 
-    if notification_type not in ['system', 'intervention']:
+    if notification_type not in ['system', 'intervention', 'push']:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid notification_type: {notification_type}"
@@ -134,7 +135,7 @@ async def delete_notification(
     """
     service = NotificationCenterService(db)
 
-    if notification_type not in ['system', 'intervention']:
+    if notification_type not in ['system', 'intervention', 'push']:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid notification_type: {notification_type}"
@@ -187,6 +188,28 @@ async def transition_intervention_notification(
         )
 
     return {"message": f"Intervention action applied: {request.action}"}
+
+
+@router.post("/notifications/{notification_id}/push-action")
+async def transition_push_notification(
+    notification_id: UUID,
+    request: PushNotificationActionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = NotificationCenterService(db)
+    success = await service.transition_push_notification(
+        user_id=current_user.id,
+        notification_id=notification_id,
+        action=request.action,
+        action_payload=request.action_payload or {},
+    )
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Push notification not found: {notification_id}",
+        )
+    return {"message": f"Push action applied: {request.action}"}
 
 
 @router.post("/interventions/{record_id}/action")
