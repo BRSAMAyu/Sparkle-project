@@ -120,7 +120,10 @@ class OrchestratorConfig:
     claude_short_backoff_seconds: int = int(os.getenv("SGW_CLAUDE_SHORT_BACKOFF_SECONDS", "60"))
     claude_failure_backoff_seconds: int = int(os.getenv("SGW_CLAUDE_FAILURE_BACKOFF_SECONDS", "30"))
     claude_budget_reset_seconds: int = int(os.getenv("SGW_CLAUDE_WINDOW_RESET_SECONDS", str(5 * 3600)))
-    claude_scale_up_cooldown_seconds: int = int(os.getenv("SGW_CLAUDE_SCALE_UP_COOLDOWN_SECONDS", "1200"))
+    claude_scale_up_cooldown_seconds: int = int(os.getenv("SGW_CLAUDE_SCALE_UP_COOLDOWN_SECONDS", "600"))
+    claude_ceiling_probe_cooldown_seconds: int = int(
+        os.getenv("SGW_CLAUDE_CEILING_PROBE_COOLDOWN_SECONDS", "1800")
+    )
     max_history_pairs: int = int(os.getenv("SGW_MAX_HISTORY_PAIRS", "6"))
     audit_sample_rate: float = float(os.getenv("SGW_AUDIT_SAMPLE_RATE", "0.25"))
     random_seed: int = int(os.getenv("SGW_RANDOM_SEED", "17"))
@@ -148,6 +151,8 @@ class ClaudeCliClient:
         self._last_call_started_at = 0.0
         self._last_rate_limit_at = 0.0
         self._last_scaled_up_at = time.time()
+        self._stable_parallel_ceiling = self._hard_cap
+        self._last_ceiling_probe_at = 0.0
         self._debug_dir = config.checkpoint_path.parent / "claude_debug"
         self._debug_dir.mkdir(parents=True, exist_ok=True)
 
@@ -261,6 +266,8 @@ class ClaudeCliClient:
             "effective_parallel": self._effective_parallel,
             "last_rate_limit_at": self._last_rate_limit_at,
             "last_scaled_up_at": self._last_scaled_up_at,
+            "stable_parallel_ceiling": self._stable_parallel_ceiling,
+            "last_ceiling_probe_at": self._last_ceiling_probe_at,
         }
 
     def restore_state(self, payload: dict[str, Any] | None) -> None:
@@ -270,17 +277,28 @@ class ClaudeCliClient:
         self._effective_parallel = max(self._min_parallel, min(effective, self._hard_cap))
         self._last_rate_limit_at = float(payload.get("last_rate_limit_at", self._last_rate_limit_at))
         self._last_scaled_up_at = float(payload.get("last_scaled_up_at", self._last_scaled_up_at))
+        ceiling = int(payload.get("stable_parallel_ceiling", self._hard_cap))
+        self._stable_parallel_ceiling = max(self._min_parallel, min(ceiling, self._hard_cap))
+        self._last_ceiling_probe_at = float(payload.get("last_ceiling_probe_at", self._last_ceiling_probe_at))
 
     async def maybe_scale_up(self, *, queue_backlog: int) -> tuple[int, int] | None:
         if queue_backlog <= 0 or self._effective_parallel >= self._hard_cap:
             return None
         now = time.time()
         stable_since = max(self._last_rate_limit_at, self._last_scaled_up_at)
-        if now - stable_since < self._config.claude_scale_up_cooldown_seconds:
-            return None
         async with self._parallel_condition:
             if self._inflight_calls > self._effective_parallel:
                 return None
+            if self._effective_parallel < self._stable_parallel_ceiling:
+                if now - stable_since < self._config.claude_scale_up_cooldown_seconds:
+                    return None
+            else:
+                if self._stable_parallel_ceiling >= self._hard_cap:
+                    return None
+                if now - max(self._last_rate_limit_at, self._last_ceiling_probe_at) < self._config.claude_ceiling_probe_cooldown_seconds:
+                    return None
+                self._stable_parallel_ceiling = min(self._hard_cap, self._stable_parallel_ceiling + 1)
+                self._last_ceiling_probe_at = now
             before = self._effective_parallel
             self._effective_parallel = min(self._hard_cap, self._effective_parallel + 1)
             self._last_scaled_up_at = now
@@ -291,9 +309,11 @@ class ClaudeCliClient:
         self._last_rate_limit_at = time.time()
         async with self._parallel_condition:
             before = self._effective_parallel
+            new_effective = max(self._min_parallel, before - 1)
+            self._stable_parallel_ceiling = min(self._stable_parallel_ceiling, new_effective)
             if before <= self._min_parallel:
                 return None
-            self._effective_parallel = max(self._min_parallel, before - 1)
+            self._effective_parallel = new_effective
             self._parallel_condition.notify_all()
             return before, self._effective_parallel
 
