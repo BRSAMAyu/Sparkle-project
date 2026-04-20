@@ -399,7 +399,10 @@ class _FakeCommunityShareRepository extends CommunityShareRepository {
     required this.adoptResult,
     this.shareResult,
   })
-      : super(_UnusedApiClient(), AppEventStreamService(_UnusedApiClient()));
+      : super(
+          _UnusedApiClient(),
+          AppEventStreamService(_FakeRef(), _UnusedApiClient()),
+        );
 
   final Map<String, dynamic> adoptResult;
   final Map<String, dynamic>? shareResult;
@@ -501,6 +504,11 @@ class _FakeCommunityRepository extends CommunityRepository {
 }
 
 class _UnusedApiClient implements ApiClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeRef implements Ref {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

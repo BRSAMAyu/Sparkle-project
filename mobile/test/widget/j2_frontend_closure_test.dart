@@ -51,23 +51,23 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('数据结构 - 二叉树遍历算法'), findsOneWidget);
+      expect(find.text('理工课复盘 - 用自己的话讲清楚积分换元'), findsOneWidget);
 
       container.read(taskFilterProvider.notifier).state =
           TaskFilterOptions.completed;
       await tester.pump();
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('链表实现'), findsOneWidget);
-      expect(find.text('数据结构 - 二叉树遍历算法'), findsNothing);
+      expect(find.text('理工总结 - 线性代数错题回看'), findsOneWidget);
+      expect(find.text('理工课复盘 - 用自己的话讲清楚积分换元'), findsNothing);
 
       container.read(taskFilterProvider.notifier).state =
           TaskFilterOptions.inProgress;
       await tester.pump();
       await tester.pumpAndSettle();
 
-      expect(find.text('数据结构 - 二叉树遍历算法'), findsOneWidget);
-      expect(find.text('数据结构 - 链表实现与操作'), findsNothing);
+      expect(find.text('理工课复盘 - 用自己的话讲清楚积分换元'), findsOneWidget);
+      expect(find.text('理工总结 - 线性代数错题回看'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

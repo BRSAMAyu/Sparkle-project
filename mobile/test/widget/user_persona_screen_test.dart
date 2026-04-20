@@ -115,6 +115,17 @@ class _FakeUserRepository implements UserRepository {
   Future<Map<String, dynamic>> fetchProfileContext() async => _profileContext;
 
   @override
+  Future<Map<String, dynamic>> fetchProfileInsights() async =>
+      <String, dynamic>{
+        'claims': <dynamic>[],
+        'predictions': <dynamic>[],
+        'recent_changes': <dynamic>[],
+        'unknowns': <dynamic>[],
+        'calibration': <String, dynamic>{},
+        'current_profile': <String, dynamic>{},
+      };
+
+  @override
   Future<List<Map<String, dynamic>>> fetchInferredPreferences() async {
     if (inferredPreferencesError != null) {
       throw inferredPreferencesError!;
@@ -145,15 +156,21 @@ class _FakeUserRepository implements UserRepository {
   Future<void> rollbackTransparentPreference(String prefKey) async {}
 
   @override
-  Future<void> submitOnboarding(Map<String, dynamic> payload) async {}
+  Future<String?> submitOnboarding(Map<String, dynamic> payload) async => null;
 
   @override
   Future<void> submitProfileCorrection(Map<String, dynamic> payload) async {}
 
   @override
+  Future<void> submitInsightControl(Map<String, dynamic> payload) async {}
+
+  @override
   Future<List<Map<String, dynamic>>> fetchSystemUpdates(
           {int limit = 50, int offset = 0}) async =>
       <Map<String, dynamic>>[];
+
+  @override
+  Future<bool> hydrateChatOpening(String conversationId) async => false;
 
   @override
   Future<void> updateTransparentPreference(

@@ -21,6 +21,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh'),
         localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -34,6 +35,7 @@ void main() {
               node: node,
               onFocus: () {},
               onInspectConnections: () {},
+              onViewDetails: () {},
               onLaunchPrediction: () => launched = true,
             ),
           ),

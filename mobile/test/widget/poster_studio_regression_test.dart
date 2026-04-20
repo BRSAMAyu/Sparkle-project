@@ -64,7 +64,7 @@ void main() {
 
         bool? observedInside;
         final result =
-            await SharePosterService.runWithoutDebugTextGuides(() async {
+            await SharePosterService.runWithoutDebugPaintGuides(() async {
           observedInside = debugPaintBaselinesEnabled;
           return 42;
         });
