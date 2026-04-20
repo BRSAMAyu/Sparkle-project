@@ -5,12 +5,25 @@ import 'package:sparkle/features/home/data/repositories/dashboard_repository.dar
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 class _FakeDashboardRepository extends DashboardRepository {
-  _FakeDashboardRepository(this._handler) : super(_UnusedApiClient());
+  _FakeDashboardRepository(
+    this._dashboardHandler, {
+    Future<Map<String, dynamic>> Function()? predictiveHandler,
+  }) : _predictiveHandler = predictiveHandler,
+       super(_UnusedApiClient());
 
-  final Future<Map<String, dynamic>> Function() _handler;
+  final Future<Map<String, dynamic>> Function() _dashboardHandler;
+  final Future<Map<String, dynamic>> Function()? _predictiveHandler;
 
   @override
-  Future<Map<String, dynamic>> getDashboardStatus() => _handler();
+  Future<Map<String, dynamic>> getDashboardStatus() => _dashboardHandler();
+
+  @override
+  Future<Map<String, dynamic>> getPredictiveDashboard() async {
+    if (_predictiveHandler != null) {
+      return _predictiveHandler!();
+    }
+    return <String, dynamic>{};
+  }
 }
 
 class _UnusedApiClient implements ApiClient {
@@ -76,6 +89,37 @@ void main() {
               'days_to_deadline': 3,
             },
           },
+          predictiveHandler: () async => {
+            'next_intent_forecast': {
+              'prediction_id': 'prediction-1',
+              'horizon': 'long_horizon',
+              'title': '系统预测你接下来会继续推进重点任务',
+              'summary': '先推进 25 分钟最顺手。',
+              'confidence': 0.82,
+              'predicted_action_type': 'resume_priority_task',
+              'predicted_window': 'next_2h',
+              'reasons': ['当前仍有高优先级任务'],
+              'suggested_prompt': '帮我继续推进今天的重点任务',
+              'prediction_source': 'rules',
+              'prediction_tier': 'rules',
+              'fallback_used': true,
+              'recommended_actions': const [],
+              'tracking': {
+                'candidate_id': 'prediction-1',
+                'action_type': 'resume_priority_task',
+              },
+              'within_category_preference': {
+                'claim_scope': 'within_category_only',
+                'surface': 'dashboard.predicted_intent_card',
+                'request_category': 'task',
+                'preferred_tool': 'create_task',
+                'confidence': 0.79,
+                'support_count': 6,
+                'shadow_records': 7,
+                'divergence_rate': 0.14,
+              },
+            },
+          },
         ),
       );
       addTearDown(notifier.dispose);
@@ -92,6 +136,10 @@ void main() {
       expect(notifier.state.cognitive.hasNewInsight, isTrue);
       expect(notifier.state.whatChangedCard?.timeframeLabel, '最近 7 天');
       expect(notifier.state.nextMoveCard?.taskId, 'task-1');
+      expect(
+        notifier.state.nextIntentForecast?.withinCategoryPreference?.preferredTool,
+        'create_task',
+      );
     });
 
     test('fetchData surfaces failures as error state instead of hanging',

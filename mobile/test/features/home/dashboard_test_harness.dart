@@ -84,8 +84,48 @@ Widget buildDashboardTestHarness({
   ThemeData? theme,
   Size size = const Size(390, 844),
   Locale? locale = const Locale('en'),
+  DashboardState? dashboardState,
 }) {
-  final dashboardState = _sampleDashboardState();
+  return _buildDashboardProviderHarness(
+    theme: theme,
+    size: size,
+    locale: locale,
+    dashboardState: dashboardState,
+    child: const DashboardScreen(),
+  );
+}
+
+Widget buildDashboardWidgetHarness({
+  required Widget child,
+  ThemeData? theme,
+  Size size = const Size(390, 844),
+  Locale? locale = const Locale('en'),
+  DashboardState? dashboardState,
+}) {
+  return _buildDashboardProviderHarness(
+    theme: theme,
+    size: size,
+    locale: locale,
+    dashboardState: dashboardState,
+    child: Material(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: child,
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildDashboardProviderHarness({
+  required Widget child,
+  ThemeData? theme,
+  Size size = const Size(390, 844),
+  Locale? locale = const Locale('en'),
+  DashboardState? dashboardState,
+}) {
+  final effectiveDashboardState = dashboardState ?? _sampleDashboardState();
   final tasks = _sampleTasks();
 
   return ProviderScope(
@@ -101,7 +141,7 @@ Widget buildDashboardTestHarness({
         (ref) => _StaticHomeCloseToUnlockNotifier(),
       ),
       dashboardProvider.overrideWith(
-        (ref) => _StaticDashboardNotifier(dashboardState),
+        (ref) => _StaticDashboardNotifier(effectiveDashboardState),
       ),
       dashboardCardConfigProvider
           .overrideWith(_StaticDashboardCardConfigNotifier.new),
@@ -152,9 +192,9 @@ Widget buildDashboardTestHarness({
       supportedLocales: AppLocalizations.supportedLocales,
       home: MediaQuery(
         data: MediaQueryData(size: size),
-        child: const TickerMode(
+        child: TickerMode(
           enabled: false,
-          child: DashboardScreen(),
+          child: child,
         ),
       ),
     ),
@@ -502,6 +542,16 @@ DashboardState _sampleDashboardState() => DashboardState(
         recommendedActions: const [],
         trackingCandidateId: 'prediction-1',
         trackingActionType: 'continue_plan',
+        withinCategoryPreference: WithinCategoryPreferenceData(
+          claimScope: 'within_category_only',
+          surface: 'dashboard.predicted_intent_card',
+          requestCategory: 'plan',
+          preferredTool: 'create_plan',
+          confidence: 0.83,
+          supportCount: 8,
+          shadowRecords: 7,
+          divergenceRate: 0.14,
+        ),
       ),
       growthStatus: GrowthStatusData(
         headline: 'You are moving with more clarity this week.',

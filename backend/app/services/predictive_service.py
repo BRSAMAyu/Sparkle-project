@@ -32,6 +32,7 @@ from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.galaxy import StudyRecord
 from app.models.task import Task, TaskStatus
 from app.services.llm_service import get_llm_service_for_specific_model
+from app.services.within_category_preference_service import WithinCategoryPreferenceService
 from app.tools.entity_cards import build_prediction_entity_card
 
 
@@ -572,14 +573,17 @@ class PredictiveService:
         if cached is not None:
             return cached
 
-        rule_based = self._finalize_prediction(
+        rule_based = await self._maybe_attach_within_category_preference(
             user_id=user_id,
-            forecast=await self._build_rule_based_next_intent(user_id),
-            horizon="long_horizon",
-            source="rules",
-            tier="rules",
-            fallback_used=True,
-            surface="dashboard",
+            forecast=self._finalize_prediction(
+                user_id=user_id,
+                forecast=await self._build_rule_based_next_intent(user_id),
+                horizon="long_horizon",
+                source="rules",
+                tier="rules",
+                fallback_used=True,
+                surface="dashboard",
+            ),
         )
         await self._cache_forecast(
             cache_key,
@@ -642,14 +646,17 @@ class PredictiveService:
                         )
                         continue
 
-                    enriched = self._finalize_prediction(
+                    enriched = await self._maybe_attach_within_category_preference(
                         user_id=user_id,
-                        forecast=merged,
-                        horizon="long_horizon",
-                        source="glm_batch",
-                        tier=model_key,
-                        fallback_used=False,
-                        surface="dashboard",
+                        forecast=self._finalize_prediction(
+                            user_id=user_id,
+                            forecast=merged,
+                            horizon="long_horizon",
+                            source="glm_batch",
+                            tier=model_key,
+                            fallback_used=False,
+                            surface="dashboard",
+                        ),
                     )
                     await self._cache_forecast(
                         f"predictive:next_intent:{user_id}",
@@ -669,14 +676,17 @@ class PredictiveService:
         except Exception as exc:
             logger.warning(f"Long horizon prediction failed for user {user_id}: {exc}")
 
-        fallback = self._finalize_prediction(
+        fallback = await self._maybe_attach_within_category_preference(
             user_id=user_id,
-            forecast=base,
-            horizon="long_horizon",
-            source="rules",
-            tier="rules",
-            fallback_used=True,
-            surface="dashboard",
+            forecast=self._finalize_prediction(
+                user_id=user_id,
+                forecast=base,
+                horizon="long_horizon",
+                source="rules",
+                tier="rules",
+                fallback_used=True,
+                surface="dashboard",
+            ),
         )
         await self._cache_forecast(
             f"predictive:next_intent:{user_id}",
@@ -814,6 +824,48 @@ class PredictiveService:
             }
 
         return forecast
+
+    @staticmethod
+    def _map_prediction_action_to_request_category(action_type: str) -> str | None:
+        mapping = {
+            "study_plan": "plan",
+            "create_task": "task",
+            "resume_task": "task",
+            "resume_priority_task": "task",
+            "light_review": "review",
+            "error_diagnosis": "query",
+            "translate": "knowledge",
+        }
+        return mapping.get(action_type)
+
+    async def _maybe_attach_within_category_preference(
+        self,
+        *,
+        user_id: UUID,
+        forecast: dict[str, Any],
+    ) -> dict[str, Any]:
+        if str(forecast.get("surface") or "") != "dashboard":
+            return forecast
+
+        request_category = self._map_prediction_action_to_request_category(
+            str(forecast.get("predicted_action_type") or "").strip()
+        )
+        if request_category is None:
+            return forecast
+
+        hint = await WithinCategoryPreferenceService(
+            db=self.db,
+            redis_client=cache_service.redis,
+        ).build_hint(
+            user_id=user_id,
+            request_category=request_category,
+        )
+        if hint is None:
+            return forecast
+
+        enriched = dict(forecast)
+        enriched["within_category_preference"] = hint
+        return enriched
 
     async def _build_rule_based_realtime_next_step(
         self,

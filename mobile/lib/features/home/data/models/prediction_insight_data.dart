@@ -97,6 +97,44 @@ class PredictionActionData {
   final String? surface;
 }
 
+class WithinCategoryPreferenceData {
+  WithinCategoryPreferenceData({
+    required this.claimScope,
+    required this.surface,
+    required this.requestCategory,
+    required this.preferredTool,
+    required this.confidence,
+    required this.supportCount,
+    required this.shadowRecords,
+    required this.divergenceRate,
+  });
+
+  factory WithinCategoryPreferenceData.fromJson(Map<String, dynamic> json) =>
+      WithinCategoryPreferenceData(
+        claimScope: json['claim_scope']?.toString() ?? 'within_category_only',
+        surface: json['surface']?.toString() ?? '',
+        requestCategory: json['request_category']?.toString() ?? '',
+        preferredTool: json['preferred_tool']?.toString() ?? '',
+        confidence: _asDouble(json['confidence']),
+        supportCount: json['support_count'] is int
+            ? json['support_count'] as int
+            : int.tryParse(json['support_count']?.toString() ?? '') ?? 0,
+        shadowRecords: json['shadow_records'] is int
+            ? json['shadow_records'] as int
+            : int.tryParse(json['shadow_records']?.toString() ?? '') ?? 0,
+        divergenceRate: _asDouble(json['divergence_rate']),
+      );
+
+  final String claimScope;
+  final String surface;
+  final String requestCategory;
+  final String preferredTool;
+  final double confidence;
+  final int supportCount;
+  final int shadowRecords;
+  final double divergenceRate;
+}
+
 class PredictionInsightData {
   PredictionInsightData({
     required this.predictionId,
@@ -118,6 +156,7 @@ class PredictionInsightData {
     this.surface,
     this.generatedAt,
     this.entityCard,
+    this.withinCategoryPreference,
   });
 
   factory PredictionInsightData.fromJson(Map<String, dynamic> json) {
@@ -126,6 +165,8 @@ class PredictionInsightData {
     final explanationsMap =
         _asStringKeyedMap(json['explanations']) ?? const <String, dynamic>{};
     final entityCardMap = _asStringKeyedMap(json['entity_card']);
+    final withinCategoryPreferenceMap =
+        _asStringKeyedMap(json['within_category_preference']);
     return PredictionInsightData(
       predictionId: json['prediction_id']?.toString() ?? '',
       horizon: json['horizon']?.toString() ?? 'realtime',
@@ -166,6 +207,9 @@ class PredictionInsightData {
               fallbackType: 'prediction',
             )
           : null,
+      withinCategoryPreference: withinCategoryPreferenceMap != null
+          ? WithinCategoryPreferenceData.fromJson(withinCategoryPreferenceMap)
+          : null,
     );
   }
 
@@ -188,6 +232,7 @@ class PredictionInsightData {
   final String? surface;
   final DateTime? generatedAt;
   final EntityCardPayload? entityCard;
+  final WithinCategoryPreferenceData? withinCategoryPreference;
 
   List<String> get allExplanationLines => [
         ...?explanations['recent_24h'],

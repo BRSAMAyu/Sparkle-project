@@ -243,6 +243,14 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                   ],
                 ),
               ),
+              if (forecast.withinCategoryPreference != null) ...[
+                const SizedBox(height: DS.spacing12),
+                _WithinCategoryPreferencePanel(
+                  preference: forecast.withinCategoryPreference!,
+                  isChinese: isChinese,
+                  isDark: isDark,
+                ),
+              ],
               const SizedBox(height: DS.spacing12),
               Row(
                 children: [
@@ -567,6 +575,213 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
       return isChinese ? '${diff.inHours} 小时前' : '${diff.inHours} hr ago';
     }
     return isChinese ? '${diff.inDays} 天前' : '${diff.inDays} d ago';
+  }
+}
+
+class _WithinCategoryPreferencePanel extends StatelessWidget {
+  const _WithinCategoryPreferencePanel({
+    required this.preference,
+    required this.isChinese,
+    required this.isDark,
+  });
+
+  final WithinCategoryPreferenceData preference;
+  final bool isChinese;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.035)
+            : DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isChinese ? '同类请求里的近期偏好' : 'Recent same-category signal',
+            style: context.sparkleTypography.labelSmall.copyWith(
+              color: DS.textTertiary,
+              fontWeight: DS.fontWeightBold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing6),
+          Text(
+            _hintText(),
+            style: context.sparkleTypography.bodyMedium.copyWith(
+              color: DS.textPrimary,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            _caveatText(),
+            style: context.sparkleTypography.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _hintText() {
+    final categoryLabel = _categoryLabel(
+      preference.requestCategory,
+      isChinese: isChinese,
+    );
+    final toolLabel = _toolLabel(
+      preference.preferredTool,
+      isChinese: isChinese,
+    );
+    if (isChinese) {
+      return '在$categoryLabel里，近期结果更常把「$toolLabel」推到前面。';
+    }
+    return 'Inside $categoryLabel, recent results have more often favored "$toolLabel" first.';
+  }
+
+  String _caveatText() {
+    if (isChinese) {
+      return '仅基于同类请求里的近期结果，不代表 Sparkle 理解了你的完整工作流。';
+    }
+    return 'Based only on recent results inside this request category. It does not mean Sparkle understands your whole workflow.';
+  }
+
+  String _categoryLabel(String raw, {required bool isChinese}) {
+    final normalized = raw.trim().toLowerCase();
+    if (isChinese) {
+      switch (normalized) {
+        case 'plan':
+          return '规划类请求';
+        case 'task':
+          return '任务类请求';
+        case 'focus':
+          return '专注支持类请求';
+        case 'growth':
+          return '成长推进类请求';
+        case 'query':
+          return '查询类请求';
+        case 'knowledge':
+          return '知识类请求';
+        case 'review':
+          return '复盘类请求';
+        case 'research':
+          return '研究类请求';
+        case 'memory':
+          return '记忆整理类请求';
+        case 'cognitive':
+          return '认知整理类请求';
+        default:
+          return '同类请求';
+      }
+    }
+
+    switch (normalized) {
+      case 'plan':
+        return 'planning requests';
+      case 'task':
+        return 'task requests';
+      case 'focus':
+        return 'focus-support requests';
+      case 'growth':
+        return 'growth requests';
+      case 'query':
+        return 'query requests';
+      case 'knowledge':
+        return 'knowledge requests';
+      case 'review':
+        return 'review requests';
+      case 'research':
+        return 'research requests';
+      case 'memory':
+        return 'memory requests';
+      case 'cognitive':
+        return 'cognitive requests';
+      default:
+        return 'similar requests';
+    }
+  }
+
+  String _toolLabel(String raw, {required bool isChinese}) {
+    final normalized = raw.trim().toLowerCase();
+    if (isChinese) {
+      switch (normalized) {
+        case 'create_plan':
+          return '生成计划';
+        case 'generate_tasks_for_plan':
+          return '展开计划步骤';
+        case 'create_task':
+          return '落成任务';
+        case 'list_tasks':
+          return '查看任务列表';
+        case 'update_task':
+          return '更新任务';
+        case 'query_knowledge':
+          return '查询知识';
+        case 'explain_concept':
+          return '解释概念';
+        case 'review_progress':
+          return '复盘进度';
+        case 'generate_summary':
+          return '生成总结';
+        case 'suggest_schedule':
+          return '建议排期';
+        default:
+          return _humanizeSnakeCase(normalized, upperFirst: false);
+      }
+    }
+
+    switch (normalized) {
+      case 'create_plan':
+        return 'Create Plan';
+      case 'generate_tasks_for_plan':
+        return 'Expand Plan Steps';
+      case 'create_task':
+        return 'Create Task';
+      case 'list_tasks':
+        return 'List Tasks';
+      case 'update_task':
+        return 'Update Task';
+      case 'query_knowledge':
+        return 'Query Knowledge';
+      case 'explain_concept':
+        return 'Explain Concept';
+      case 'review_progress':
+        return 'Review Progress';
+      case 'generate_summary':
+        return 'Generate Summary';
+      case 'suggest_schedule':
+        return 'Suggest Schedule';
+      default:
+        return _humanizeSnakeCase(normalized, upperFirst: true);
+    }
+  }
+
+  String _humanizeSnakeCase(String raw, {required bool upperFirst}) {
+    final words = raw
+        .split('_')
+        .where((part) => part.trim().isNotEmpty)
+        .toList(growable: false);
+    if (words.isEmpty) {
+      return raw;
+    }
+    final normalized = words.map((word) {
+      if (!upperFirst) {
+        return word;
+      }
+      return '${word[0].toUpperCase()}${word.substring(1)}';
+    }).join(upperFirst ? ' ' : '');
+    if (!upperFirst) {
+      return normalized;
+    }
+    return normalized;
   }
 }
 
