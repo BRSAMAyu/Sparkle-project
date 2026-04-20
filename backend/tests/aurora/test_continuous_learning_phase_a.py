@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.aurora.schemas import DistilledStrategy, DistilledStrategyLifecycle, ProjectionPolicy, Shareability
 from app.learning.attributor import AttributionSignalBundle, detect_successful_attribution
@@ -12,7 +13,16 @@ from app.learning.pipeline import review_distilled_strategy, run_continuous_lear
 from app.learning.quality_gate import evaluate_strategy_quality
 from app.learning.retrieval import RetrievalQueryInput, build_distilled_strategy_refs
 from app.learning.seed_bridge import import_seed_library_content
-from app.learning.strategy_store import InMemoryDistilledStrategyStore, StrategyLifecycleError, StrategyQuery
+from app.learning.strategy_store import DistilledStrategyStore, StrategyLifecycleError, StrategyQuery
+
+
+def _store(db_session) -> DistilledStrategyStore:
+    session_factory = async_sessionmaker(
+        bind=db_session.bind,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    return DistilledStrategyStore(session_factory)
 
 
 def _bundle(**overrides):
@@ -38,22 +48,24 @@ def _strategy() -> DistilledStrategy:
     return imported[0]
 
 
-def test_strategy_store_crud_and_lifecycle_transitions() -> None:
+@pytest.mark.asyncio
+async def test_strategy_store_crud_and_lifecycle_transitions(db_session) -> None:
     strategy = _strategy().model_copy(update={"status": DistilledStrategyLifecycle.DISTILLED})
-    store = InMemoryDistilledStrategyStore()
-    created = store.create(strategy)
+    store = _store(db_session)
+    created = await store.create(strategy)
     assert created.status == DistilledStrategyLifecycle.DISTILLED
 
-    reviewed = store.transition(strategy.id, DistilledStrategyLifecycle.USER_REVIEWED, user_authorization=True)
+    reviewed = await store.transition(strategy.id, DistilledStrategyLifecycle.USER_REVIEWED, user_authorization=True)
     assert reviewed.status == DistilledStrategyLifecycle.USER_REVIEWED
     assert reviewed.user_authorization is True
 
-    community_shared = store.transition(strategy.id, DistilledStrategyLifecycle.COMMUNITY_SHARED)
+    community_shared = await store.transition(strategy.id, DistilledStrategyLifecycle.COMMUNITY_SHARED)
     assert community_shared.status == DistilledStrategyLifecycle.COMMUNITY_SHARED
-    assert store.list(StrategyQuery(statuses=(DistilledStrategyLifecycle.COMMUNITY_SHARED,)))[0].id == strategy.id
+    listed = await store.list(StrategyQuery(statuses=(DistilledStrategyLifecycle.COMMUNITY_SHARED,)))
+    assert listed[0].id == strategy.id
 
     with pytest.raises(StrategyLifecycleError):
-        store.transition(strategy.id, DistilledStrategyLifecycle.DISTILLED)
+        await store.transition(strategy.id, DistilledStrategyLifecycle.DISTILLED)
 
 
 def test_attribution_detector_identifies_successful_outcome() -> None:
@@ -84,32 +96,37 @@ def test_deidentifier_removes_sensitive_markers() -> None:
     assert "妈妈" not in result.sanitized_text
 
 
-def test_pipeline_stops_when_deidentifier_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_pipeline_stops_when_deidentifier_fails(monkeypatch: pytest.MonkeyPatch, db_session) -> None:
     monkeypatch.setenv("SPARKLE_WS7_DISTILLER_ENABLED", "true")
     bundle = _bundle(context_excerpt="请联系 13800138000 获取该用户更多信息。")
-    store = InMemoryDistilledStrategyStore()
-    result = run_continuous_learning_pipeline(bundle, store)
+    store = _store(db_session)
+    result = await run_continuous_learning_pipeline(bundle, store)
     assert result.status == "blocked_by_deidentifier"
-    assert store.list() == []
+    assert await store.list() == []
 
 
-def test_pipeline_creates_reviewable_strategy(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_pipeline_creates_reviewable_strategy(monkeypatch: pytest.MonkeyPatch, db_session) -> None:
     monkeypatch.setenv("SPARKLE_WS7_DISTILLER_ENABLED", "true")
     bundle = _bundle()
-    store = InMemoryDistilledStrategyStore()
-    result = run_continuous_learning_pipeline(bundle, store)
+    store = _store(db_session)
+    result = await run_continuous_learning_pipeline(bundle, store)
     assert result.status == "created"
     assert result.strategy is not None
     assert result.strategy.status == DistilledStrategyLifecycle.DISTILLED
-    reviewed = review_distilled_strategy(result.strategy.id, store, approved=True)
+    reviewed = await review_distilled_strategy(result.strategy.id, store, approved=True)
     assert reviewed.status == DistilledStrategyLifecycle.USER_REVIEWED
 
 
-def test_retrieval_integration_returns_signal_snapshot_refs(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_retrieval_integration_returns_signal_snapshot_refs(monkeypatch: pytest.MonkeyPatch, db_session) -> None:
     monkeypatch.setenv("SPARKLE_WS7_RETRIEVAL_ENABLED", "true")
     strategies = import_seed_library_content()
-    store = InMemoryDistilledStrategyStore(initial=strategies)
-    refs = build_distilled_strategy_refs(RetrievalQueryInput(text="一元二次方程 示例"), store)
+    store = _store(db_session)
+    for strategy in strategies:
+        await store.create(strategy)
+    refs = await build_distilled_strategy_refs(RetrievalQueryInput(text="一元二次方程 示例"), store)
     assert refs
 
 

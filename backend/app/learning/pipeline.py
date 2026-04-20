@@ -9,7 +9,7 @@ from app.learning.attributor import AttributionSignalBundle, detect_successful_a
 from app.learning.deidentifier import deidentify_text
 from app.learning.distiller import DistillationInput, distill_strategy
 from app.learning.quality_gate import QualityGateDecision, evaluate_strategy_quality
-from app.learning.strategy_store import InMemoryDistilledStrategyStore
+from app.learning.strategy_store import DistilledStrategyStore
 
 
 @dataclass(frozen=True)
@@ -19,9 +19,9 @@ class PipelineResult:
     reasons: tuple[str, ...] = ()
 
 
-def run_continuous_learning_pipeline(
+async def run_continuous_learning_pipeline(
     bundle: AttributionSignalBundle,
-    store: InMemoryDistilledStrategyStore,
+    store: DistilledStrategyStore,
 ) -> PipelineResult:
     """Run the Phase A continuous learning pipeline."""
 
@@ -58,13 +58,13 @@ def run_continuous_learning_pipeline(
     if not decision.passed:
         return PipelineResult(status="blocked_by_quality_gate", strategy=strategy, reasons=decision.reasons)
 
-    store.create(strategy)
+    await store.create(strategy)
     return PipelineResult(status="created", strategy=strategy, reasons=())
 
 
-def review_distilled_strategy(
+async def review_distilled_strategy(
     strategy_id,
-    store: InMemoryDistilledStrategyStore,
+    store: DistilledStrategyStore,
     *,
     approved: bool,
 ) -> DistilledStrategy:
@@ -73,4 +73,4 @@ def review_distilled_strategy(
     target_status = (
         DistilledStrategyLifecycle.USER_REVIEWED if approved else DistilledStrategyLifecycle.RETIRED
     )
-    return store.transition(strategy_id, target_status, user_authorization=approved)
+    return await store.transition(strategy_id, target_status, user_authorization=approved)

@@ -1,13 +1,13 @@
 # SPARKLE Aurora Stage 12 WS-CL2c Fix Design (2026-04-20)
 
 > **Status**: pre-implementation artifact for `WS-CL2c`
-> **Goal**: replace restart-loss-prone `InMemoryDistilledStrategyStore` with a durable DB-backed repository.
+> **Goal**: replace the restart-loss-prone pre-Stage 12 in-memory strategy store with a durable DB-backed repository.
 
 ## 1. Current Symptom
 
 Stage 11 CL0 proved that the current strategy store is process-local and restart-unsafe:
 
-- implementation is `InMemoryDistilledStrategyStore`
+- implementation is a pre-Stage 12 in-memory strategy store
 - restart drops all state
 - retrieval / pipeline seams cannot be trusted as a durable substrate
 
@@ -28,7 +28,7 @@ Stage 12 will introduce:
 
 1. a dedicated strategy-store table via Alembic
 2. a DB-backed repository that preserves the current CRUD / transition / query semantics
-3. an adapter or alias strategy so existing callers can move off `InMemoryDistilledStrategyStore`
+3. an adapter or migration strategy so existing callers can move off the in-memory store
 
 ## 4. Migration Note
 
@@ -49,7 +49,7 @@ It does **not** need an in-memory to DB backfill job.
 1. a strategy created through the DB-backed repository survives repository re-instantiation
 2. lifecycle transitions remain legal and durable
 3. retrieval still works against the durable repository
-4. no remaining runtime path depends on `InMemoryDistilledStrategyStore`
+4. no remaining runtime path depends on the pre-Stage 12 in-memory store
 
 ## 6. Out-of-Scope
 

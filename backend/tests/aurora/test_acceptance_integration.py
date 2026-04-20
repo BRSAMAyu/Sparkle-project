@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.aurora.engine import AuroraDecisionContext, AuroraEngine
 from app.aurora.profile_translator import ProfileProjectionContext, ProfileTranslator
@@ -25,7 +26,7 @@ from app.graph.runtime import GraphRuntime
 from app.learning.attributor import AttributionSignalBundle
 from app.learning.pipeline import run_continuous_learning_pipeline
 from app.learning.retrieval import RetrievalQueryInput, build_distilled_strategy_refs
-from app.learning.strategy_store import InMemoryDistilledStrategyStore
+from app.learning.strategy_store import DistilledStrategyStore
 from app.scenario_packs.registry import load_default_registry
 from app.social.accountability import PartnerReportInput, build_partner_report_claim
 
@@ -191,7 +192,11 @@ def test_acceptance_loop_conversational_modeling_drives_graph_and_profile_projec
 
 
 @pytest.mark.usefixtures("monkeypatch")
-def test_acceptance_loop_can_attach_social_and_learning_sidecars_without_new_endpoints(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_acceptance_loop_can_attach_social_and_learning_sidecars_without_new_endpoints(
+    monkeypatch: pytest.MonkeyPatch,
+    db_session,
+) -> None:
     monkeypatch.setenv("SPARKLE_WS7_DISTILLER_ENABLED", "true")
     monkeypatch.setenv("SPARKLE_WS7_RETRIEVAL_ENABLED", "true")
 
@@ -234,8 +239,13 @@ def test_acceptance_loop_can_attach_social_and_learning_sidecars_without_new_end
         )
     ).claim
 
-    store = InMemoryDistilledStrategyStore()
-    pipeline_result = run_continuous_learning_pipeline(
+    session_factory = async_sessionmaker(
+        bind=db_session.bind,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    store = DistilledStrategyStore(session_factory)
+    pipeline_result = await run_continuous_learning_pipeline(
         AttributionSignalBundle(
             user_id=user_id,
             scenario_pack_id="exam_prep_14d",
@@ -251,7 +261,7 @@ def test_acceptance_loop_can_attach_social_and_learning_sidecars_without_new_end
         ),
         store,
     )
-    refs = build_distilled_strategy_refs(
+    refs = await build_distilled_strategy_refs(
         RetrievalQueryInput(text="targeted drill nightly review"),
         store,
     )
@@ -264,4 +274,4 @@ def test_acceptance_loop_can_attach_social_and_learning_sidecars_without_new_end
     assert refs
     # WS8 keeps this bounded on current seams: retrieval refs exist, but no production
     # snapshot assembler writes them yet, so we assert the sidecar output directly.
-    assert store.list()
+    assert await store.list()

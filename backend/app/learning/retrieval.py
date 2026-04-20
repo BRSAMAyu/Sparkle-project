@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from app.aurora.schemas import DistilledStrategy
-from app.learning.strategy_store import InMemoryDistilledStrategyStore, StrategyQuery
+from app.learning.strategy_store import DistilledStrategyStore, StrategyQuery
 
 
 def retrieval_enabled() -> bool:
@@ -25,9 +25,9 @@ def _tokens(text: str) -> set[str]:
     return {token for token in re.split(r"[\s,.;:，。；：/|]+", text.casefold()) if token}
 
 
-def retrieve_strategies(
+async def retrieve_strategies(
     query: RetrievalQueryInput,
-    store: InMemoryDistilledStrategyStore,
+    store: DistilledStrategyStore,
 ) -> list[DistilledStrategy]:
     """Return relevant strategies using simple overlap scoring."""
 
@@ -37,7 +37,7 @@ def retrieve_strategies(
     tokens = _tokens(query.text)
     if not tokens:
         return []
-    candidates = store.list(StrategyQuery())
+    candidates = await store.list(StrategyQuery())
     scored: list[tuple[int, DistilledStrategy]] = []
     for strategy in candidates:
         haystack_text = f"{strategy.title} {strategy.description} {strategy.applicability_scope}".casefold()
@@ -52,10 +52,10 @@ def retrieve_strategies(
     return [strategy for _, strategy in scored[: query.limit]]
 
 
-def build_distilled_strategy_refs(
+async def build_distilled_strategy_refs(
     query: RetrievalQueryInput,
-    store: InMemoryDistilledStrategyStore,
+    store: DistilledStrategyStore,
 ) -> list[UUID]:
     """Return only strategy ids for SignalSnapshot integration."""
 
-    return [strategy.id for strategy in retrieve_strategies(query, store)]
+    return [strategy.id for strategy in await retrieve_strategies(query, store)]

@@ -85,6 +85,7 @@ from app.models.context_pack import ContextBudgetProfile, ContextPackFeedback, C
 from app.models.curiosity_capsule import CuriosityCapsule, DepthLevel
 from app.models.custom_expert import CustomExpertProfile, CustomExpertSource, CustomExpertTeam
 from app.models.decision_record import DecisionRecord
+from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry
 from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
 from app.models.event import TrackingEvent
@@ -324,6 +325,7 @@ __all__ = [
     "UserSettings",
     "UserPreferencesCenter",
     "DecisionRecord",
+    "DistilledStrategyCacheEntry",
     # Seed Content Library
     "SeedLibrary",
     "SeedItem",

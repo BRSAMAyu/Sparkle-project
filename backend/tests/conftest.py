@@ -34,6 +34,7 @@ from app.models.intervention_adaptive import (  # noqa: F401
     InterventionTemplate,
 )
 from app.models.intervention_strategy_outcome import InterventionStrategyOutcome  # noqa: F401
+from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
 from app.models.notification import Notification, PushHistory  # noqa: F401
 from app.models.galaxy import KnowledgeNode, UserNodeStatus, StudyRecord  # noqa: F401

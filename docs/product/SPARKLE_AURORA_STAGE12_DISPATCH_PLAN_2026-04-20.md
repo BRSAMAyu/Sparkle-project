@@ -67,7 +67,7 @@ Hard interpretation:
 | `Gate S12-0` | frozen baseline replay + per-WS fix-design artifacts | entry gate | low |
 | `WS-CL2a` | align `PersistentBayesianLearner` Redis key usage, TTL strategy, and compatibility path | CL0 Redis key mismatch | low |
 | `WS-CL2b` | repair `multi_dimensional_learner.save_state()` and the Celery invocation path | CL0 missing API / broken Celery seam | medium |
-| `WS-CL2c` | replace `InMemoryDistilledStrategyStore` with a DB-backed store plus migration | CL0 restart-loss / in-memory only | high |
+| `WS-CL2c` | replace the pre-Stage 12 in-memory strategy store with a DB-backed store plus migration | CL0 restart-loss / in-memory only | high |
 | `WS-MOB1` | close the 9 mobile old-debt failures with explicit `fix / isolate / delete` decisions | Stage 11 mobile triage | medium |
 
 ### Explicitly deferred beyond Stage 12
@@ -139,7 +139,7 @@ Artifact must lock:
    - `strategy_store` remains **L2 inference cache**
    - it is **not** a compiler, not a new inference engine, and not a new Aurora write surface
    - Aurora remains read-only to this store
-3. replacement plan for `InMemoryDistilledStrategyStore`
+3. replacement plan for the pre-Stage 12 in-memory strategy store
 4. data migration note:
    - there is no durable in-memory data to migrate; restart-loss is the problem, not historical conversion
 5. Rule V regression assertions
