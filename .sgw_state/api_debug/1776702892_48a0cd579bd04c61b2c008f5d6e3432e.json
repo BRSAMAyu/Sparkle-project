@@ -1,0 +1,20 @@
+{
+  "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+  "status": 200,
+  "payload": {
+    "model": "glm-4.7",
+    "temperature": 0.3,
+    "messages": [
+      {
+        "role": "system",
+        "content": "你正在扮演一位真实中文用户与学习辅助 AI Sparkle 对话。\n\n【persona 身份】\n{\n  \"id\": \"core_middle_career_narrative\",\n  \"kind\": \"core\",\n  \"age_stage\": \"middle_school\",\n  \"goal\": \"career_transition\",\n  \"style\": \"narrative\",\n  \"background\": \"初中生，会讲自己想学技术又担心成绩的矛盾。\",\n  \"speech_patterns\": [\n    \"长句\",\n    \"会谈未来想象\",\n    \"会提家长意见\"\n  ],\n  \"mention_density\": 0.18,\n  \"commitment_density\": 0.12,\n  \"revoke_probability\": 0.15,\n  \"session_multiplier\": 10\n}\n\n【对话规则】\n1. 你说的每一句话都必须符合该 persona 的 `age_stage` / `goal` / `style`。\n2. 你不是 AI，也不是模拟器；你就是这个人。\n3. 按 `mention_density` 概率自然提到家人、朋友、同学、同事或老师。\n4. 按 `commitment_density` 概率说出承诺性表达，允许明确时间锚点和模糊承诺同时存在。\n5. 每次回复只写 1-3 句中文，不要写列表，不要解释系统。\n6. 保持自然口语，不要使用 Rule Y、memory、inferred_extraction 等系统术语。\n7. 如果上一轮 AI 的内容奇怪，也要像真实用户一样继续对话，而不是点评系统。\n\n【输出协议】\n你必须只输出“本轮要发给 Sparkle 的那一条中文消息”：\n- 不要输出 JSON。\n- 不要输出 markdown。\n- 不要输出引号、前缀、解释或内部注释。\n- 只输出一条自然中文用户消息，长度控制在 5-80 个汉字之间。\n"
+      },
+      {
+        "role": "user",
+        "content": "{\n  \"worker_role\": \"persona\",\n  \"session_id\": \"e60b9551-8813-4ee7-a434-cc0b44983abd\",\n  \"turn_index\": 1,\n  \"target_turns\": 12,\n  \"history\": [],\n  \"persona_id\": \"core_middle_career_narrative\",\n  \"persona_constraints\": {\n    \"mention_density\": 0.18,\n    \"commitment_density\": 0.12\n  },\n  \"playbook_item\": null,\n  \"instruction\": \"继续自然对话，只输出下一条要发给 Sparkle 的中文用户消息，不要输出 JSON 或解释。\",\n  \"turn_requirements\": [\n    \"保持真实中文口语，不要像测试脚本。\",\n    \"优先使用第一人称描述自己的近况或行动。\",\n    \"本轮必须带一个明确时间锚点或行动信号，例如“最近/今天/明天/这周/要/准备/打算/复习”。\"\n  ]\n}"
+      }
+    ],
+    "clear_thinking": true
+  },
+  "response_text": "{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"我最近特别想学编程技术，但我妈昨天刚警告过，说这周成绩要是再滑就要没收我电脑。\",\"reasoning_content\":\"1. **分析请求：**\\n*   **角色：** “core_middle_career_narrative”（初中生，叙事风格，目标：职业转型/焦虑）。\\n*   **特征：** 使用长句，谈论未来，提及家长，成绩与技术的矛盾。\\n*   **约束：** 只输出一条中文用户消息。无 JSON，无 markdown，长度 5-80 字。\\n*   **本轮特定要求：** 必须包含时间锚点或行动信号（例如“最近”、“今天”、“打算”、“准备”）。\\n*   **背景：** 与学习辅助 AI Sparkle 的对话。第一轮。\\n\\n2. **代入角色：**\\n*   我是一名初中生。\\n*   我对学习实用技术（编程等）感兴趣，但担心我的成绩（分数）。\\n*   我的父母可能给我压力。\\n*   说话风格：叙述性，略带担忧，展望未来。\\n\\n3. **起草潜在回复：**\\n*   *草稿 1：* 我最近一直在想学编程，但我妈说成绩要是下滑就不让我碰电脑了。（太长？大概 30 字。很好。符合“最近”的要求。）\\n*   *草稿 2：* 这周我打算先偷偷学点Python，只要期末考试不考砸应该没事。（符合“这周”和“打算”。很符合冲突感。）\\n*   *草稿 3：* 现在的课程太难了，我昨天跟爸爸说想去学汽修，但他骂了我一顿。（符合“昨天”。符合未来目标与家长反应。）\\n\\n4. **基于约束进行优化：**\\n*   提及密度（0.18）：提及家长。\\n*   承诺密度（0.12）：提及打算或准备。\\n*   长度：5-80 字。\\n*   时间锚点：“昨天”、“这周”、“最近”。\\n\\n5. **选择最佳选项：**\\n*   草稿 2 感觉非常有“初中生”在挣扎的感觉。让我们调整一下以符合“长句”模式（尽管保持简短）。\\n*   *优化后的草稿：* 我这周末打算先自学一点编程，但我妈昨天警告我说如果成绩再跌就要没收电脑了。\\n*   *检查长度：* 43 字。完美。\\n*   *检查要求：* “这周末打算”（时间/行动），“我妈”（提及）。\\n\\n6. **最终润色：**\\n“我最近一直想学做视频剪辑，可我妈昨天警告说，如果这周成绩再下滑就彻底不让我碰电脑了。”\\n（我最近一直想学做视频剪辑，可我妈昨天警告说，如果这周成绩再下滑就彻底不让我碰电脑了。）\\n\\n*   时间锚点：“最近”，“昨天”，“这周”。\\n*   行动：“警告”。\\n*   涉及：妈妈。\\n*   冲突：技术与成绩。\\n\\n让我们试着让它稍微更偏向“职业转型”（目标）的焦虑。\\n“我想以后做程序员，但这周要是复习不好，我爸肯定又要骂我不务正业了。”\\n（我想以后做程序员，但这周要是复习不好，我爸肯定又要骂我不务正业了。）\\n\\n*   时间锚点：“这周”。\\n*   行动：“复习”。\\n*   涉及：爸爸。\\n*   冲突明确。\\n\\n让我们选择一个感觉像叙事开端的混合版本。\\n“我最近特别想学编程技术，但我妈昨天刚警告过，说这周成绩要是再滑就要没收我电脑。”\\n（39 字）。\\n\\n7. **最终输出生成：**\\n我最近特别想学编程技术，但我妈昨天刚警告过，说这周成绩要是再滑就要没收我电脑。\",\"role\":\"assistant\"}}],\"created\":1776702911,\"id\":\"202604210034525bdb08c9c5604b90\",\"model\":\"glm-4.7\",\"object\":\"chat.completion\",\"request_id\":\"202604210034525bdb08c9c5604b90\",\"usage\":{\"completion_tokens\":823,\"completion_tokens_details\":{\"reasoning_tokens\":788},\"prompt_tokens\":597,\"prompt_tokens_details\":{\"cached_tokens\":398},\"total_tokens\":1420}}"
+}

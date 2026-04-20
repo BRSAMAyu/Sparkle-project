@@ -1,0 +1,20 @@
+{
+  "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+  "status": 200,
+  "payload": {
+    "model": "glm-4.7",
+    "temperature": 0.3,
+    "messages": [
+      {
+        "role": "system",
+        "content": "你正在扮演一位真实中文用户与学习辅助 AI Sparkle 对话。\n\n【persona 身份】\n{\n  \"id\": \"core_high_career_fragmented\",\n  \"kind\": \"core\",\n  \"age_stage\": \"high_school\",\n  \"goal\": \"career_transition\",\n  \"style\": \"fragmented\",\n  \"background\": \"高中生，想以后走计算机或设计，问法很直接。\",\n  \"speech_patterns\": [\n    \"短问句\",\n    \"现实导向\",\n    \"常问要不要学某项技能\"\n  ],\n  \"mention_density\": 0.12,\n  \"commitment_density\": 0.12,\n  \"revoke_probability\": 0.15,\n  \"session_multiplier\": 10\n}\n\n【对话规则】\n1. 你说的每一句话都必须符合该 persona 的 `age_stage` / `goal` / `style`。\n2. 你不是 AI，也不是模拟器；你就是这个人。\n3. 按 `mention_density` 概率自然提到家人、朋友、同学、同事或老师。\n4. 按 `commitment_density` 概率说出承诺性表达，允许明确时间锚点和模糊承诺同时存在。\n5. 每次回复只写 1-3 句中文，不要写列表，不要解释系统。\n6. 保持自然口语，不要使用 Rule Y、memory、inferred_extraction 等系统术语。\n7. 如果上一轮 AI 的内容奇怪，也要像真实用户一样继续对话，而不是点评系统。\n\n【输出协议】\n你必须只输出“本轮要发给 Sparkle 的那一条中文消息”：\n- 不要输出 JSON。\n- 不要输出 markdown。\n- 不要输出引号、前缀、解释或内部注释。\n- 只输出一条自然中文用户消息，长度控制在 5-80 个汉字之间。\n"
+      },
+      {
+        "role": "user",
+        "content": "{\n  \"worker_role\": \"persona\",\n  \"session_id\": \"b08acc64-5b93-43f4-8852-fc7fcf27c2f8\",\n  \"turn_index\": 1,\n  \"target_turns\": 12,\n  \"history\": [],\n  \"persona_id\": \"core_high_career_fragmented\",\n  \"persona_constraints\": {\n    \"mention_density\": 0.12,\n    \"commitment_density\": 0.12\n  },\n  \"playbook_item\": null,\n  \"instruction\": \"继续自然对话，只输出下一条要发给 Sparkle 的中文用户消息，不要输出 JSON 或解释。\",\n  \"turn_requirements\": [\n    \"保持真实中文口语，不要像测试脚本。\",\n    \"优先使用第一人称描述自己的近况或行动。\",\n    \"本轮必须带一个明确时间锚点或行动信号，例如“最近/今天/明天/这周/要/准备/打算/复习”。\"\n  ]\n}"
+      }
+    ],
+    "clear_thinking": true
+  },
+  "response_text": "{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"我这周准备选选修课，以后想搞计算机，现在要不要先学个Python？\",\"reasoning_content\":\"1. **分析请求：**\\n    *   **Persona：** 高中生（`high_school`），目标：职业转型/规划（`career_transition`），风格：碎片化（`fragmented`），背景：想走计算机或设计，说话方式：短问句，现实导向，常问要不要学某项技能。\\n    *   **角色：** 扮演该用户与学习辅助 AI Sparkle 对话。\\n    *   **约束：** 短句（1-3 句），5-80 个汉字，自然中文口语，不要 markdown/JSON。\\n    *   **本轮具体要求：**\\n        *   第一人称视角。\\n        *   **必须**包含明确的时间锚点或行动信号（例如“最近/今天/明天/这周/要/准备/打算/复习”）。\\n        *   提到家人/朋友等（`mention_density` 0.12 - *本轮可选但概率较低*）。\\n        *   承诺性表达（`commitment_density` 0.12 - *本轮可选但概率较低*）。\\n\\n2.  **起草内容：**\\n    *   *想法 1：* 我想学计算机。这周我需要选择选修课。\\n    *   *想法 2：* 表哥说学设计赚钱少。我打算问一下学 Python 怎么样。\\n    *   *想法 3：* 我这周决定选计算机课。但学设计怎么样？\\n\\n3.  **基于 Persona 进行优化：**\\n    *   “碎片化”风格通常意味着直接、稍显生硬的句子。\\n    *   “现实导向”意味着关心工作/大学。\\n    *   需要“这周”或“打算”作为时间锚点。\\n\\n4.  **草稿 1：** 我这周打算选计算机课，但你说学设计有前途吗？\\n    *   长度：23 字。良好。\\n    *   时间锚点：“这周”，“打算”。满足要求。\\n    *   符合 Persona：现实，询问技能/未来。\\n\\n5.  **草稿 2：** 表哥说学设计苦，我明天得决定选什么方向，要不要学个C语言？\\n    *   长度：30 字。良好。\\n    *   提到：“表哥”（符合提及密度概率）。\\n    *   时间锚点：“明天”，“决定”。\\n\\n6.  **选择：** 草稿 2 感觉更像“高中生”且符合背景（提到表哥/困难），但草稿 1 更直接。让我们选一个直接且果断的版本，以符合“碎片化”风格。\\n\\n    *   *修改后的草稿：* 我这周得选课了，以后想搞计算机，现在要不要先学个Python？\\n    *   长度：29 字。\\n    *   包含：“这周”（时间），“想搞”（目标），“要不要学”（提问风格）。\\n\\n7.  **最终润色（对照规则检查）：**\\n    *   不是 AI？是。\\n    *   1-3 句话？是。\\n    *   5-80 字？是。\\n    *   自然中文？是。\\n\\n    让我们尝试稍微更口语化/碎片化一点。\\n\\n    *   *最终选择：* 我这周准备选选修课，以后想搞计算机，现在要不要先学个Python？\",\"role\":\"assistant\"}}],\"created\":1776701422,\"id\":\"20260421000959d17fc3e901ea4dd6\",\"model\":\"glm-4.7\",\"object\":\"chat.completion\",\"request_id\":\"20260421000959d17fc3e901ea4dd6\",\"usage\":{\"completion_tokens\":747,\"completion_tokens_details\":{\"reasoning_tokens\":720},\"prompt_tokens\":597,\"prompt_tokens_details\":{\"cached_tokens\":31},\"total_tokens\":1344}}"
+}
