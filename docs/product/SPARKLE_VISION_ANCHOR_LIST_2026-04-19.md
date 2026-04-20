@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-19
-> **版本**: v10（Stage 12 完成 + learning substrate repair + CL0 rerun）
+> **版本**: v11（Stage 13 完成 + SQAM 制度化 + Rule W 首次执法 + 首个 wire-ready CL 组件）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
