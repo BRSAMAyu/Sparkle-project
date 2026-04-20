@@ -103,6 +103,8 @@ Path A still requires:
 
 If those operational conditions are not met, Stage 17 must not claim Path A readiness.
 
+Stage 16 占用了 Rule Y 编号；Roadmap v2.0 中原计划用于跨用户隐私的 Rule Y 名称，已于 Stage 17 dispatch 重新分配为 Rule Z，Stage 20 原 Rule Z（技能跨用户共享）顺延为 Rule AA。
+
 ## 7. Stage 16 Outcome Lock
 
 Stage 16 is complete as an engineering stage.
