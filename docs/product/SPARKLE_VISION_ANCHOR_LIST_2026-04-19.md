@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-19
-> **版本**: v11（Stage 13 完成 + SQAM 制度化 + Rule W 首次执法 + 首个 wire-ready CL 组件）
+> **版本**: v12（Stage 14 完成 + wire-safe 准备就绪 + Path A-blocked）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -524,17 +524,32 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 - 这不是“持续学习已经接线”，而是“Stage 14 终于可以对单一组件提出 bounded `WS-CL1` 候选”
 - 用户面只做了一个刻意收敛的小递进：review 后的 `practice_outcome` 证据能在现有 evidence drawer / error detail 路径里被看见和点击
 
-### 9.11 显式延后挂牌（Stage 13 收尾后）
+### 9.11 Stage 14 完成（4 WS accept，wire-safe prep）
+
+| WS | 内容 | 状态 |
+|----|------|------|
+| WS-CL1-INTEG | 修复 `RouterNode -> ToolPreferenceRouter` 的持久 learner 集成残缝 | ✅ accept |
+| WS-CL1-SCALE | 用 `11` source states / `220` observations 的 frozen proxy fixture 重跑 SQAM | ✅ accept |
+| WS-CL1-SS-AUDIT | 审计 `state_{tool_category}` 是否阻塞 Stage 15 wire-on | ✅ accept |
+| WS-CL1-SHADOW | 落地零用户感知、L2 inference-cache-only 的 divergence shadow pipe | ✅ accept |
+
+**Stage 14 关键成果**：
+- `PersistentBayesianLearner` 不再只是 frozen fixture 下的 `wire-ready`，而是完成了 integration repair + scale rerun + shadow pipe 的 `wire-safe` 准备
+- Stage 13 的小 fixture 通过并不是偶然：在更大的 frozen proxy fixture 下，`ID1 / ST1 / DP1 / SM1` 仍全部保持绿色
+- 但 `state_{tool_category}` 压缩被明确审定为当前 Stage 15 wire-on 的 **blocking** 限制
+- 因此 Stage 14 的真实结论不是“可以接前门了”，而是“Stage 15 fork 被锁为 `Path A-blocked`”
+
+### 9.12 显式延后挂牌（Stage 14 收尾后）
 
 | 项目 | 来源 | 状态 | 下一归属 |
 |------|------|------|----------|
-| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 14 candidate |
-| continuous learning / distillation 用户面集成（WS-CL1） | Stage 13 SQAM 后仅 `PersistentBayesianLearner` 达 `wire-ready` | deferred | Stage 14 bounded candidate |
-| evidence type 扩展（WS-EVD3 full） | Stage 13 仅落了 `practice_outcome` lite | deferred | Stage 14 candidate |
-| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 14 candidate |
-| dual interaction mode | 长期愿景 | deferred | Stage 14+ candidate |
+| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 15+ candidate |
+| continuous learning / distillation 用户面集成（WS-CL1） | Stage 14 锁 `Path A-blocked` | deferred | Stage 15 source-state redesign / narrowed-claim amendment |
+| evidence type 扩展（WS-EVD3 full） | Stage 13 仅落了 `practice_outcome` lite | deferred | Stage 15+ candidate |
+| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 15+ candidate |
+| dual interaction mode | 长期愿景 | deferred | Stage 15+ candidate |
 
-### 9.12 愿景锚点 vs 当前覆盖
+### 9.13 愿景锚点 vs 当前覆盖
 
 | 愿景锚点 | 覆盖度 | 说明 |
 |----------|--------|------|
@@ -549,10 +564,10 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | 数据泄漏修复 | 🔶 部分 | 渲染管线已修（WS-RP1）；utilization 已可观测，但 tokenizer-aware 精度尾债仍在 |
 | 双核协作闭环 | 🔶 0.6/1 | Stage 5 建了一条通路，非完整双向 |
 | graph-as-diagnostic | ✅ Stage 10 | chat-native “我哪里弱” 诊断面已落地；Galaxy 专页深化仍可继续 |
-| 持续学习三层结构 | 🔶 已建立 SQAM，单组件达 wire-ready | Stage 13 首次把上线资格量化；仅 `PersistentBayesianLearner` 过线，尚未真正接入用户前门 |
+| 持续学习三层结构 | 🔶 已建立 SQAM + wire-safe prep，但 Stage 15 仍 blocked | Stage 14 证明单组件在 integration / scale / shadow 维度都更可信，但 source-state 压缩仍阻止 truthful wire-on |
 | 双交互模式 | ❌ 未来 | Stage 8+ |
 
-### 9.13 距离评估
+### 9.14 距离评估
 
 **用"7 阶段成长环"做标尺**：
 - Sense → Clarify → Plan：Stage 4 ✅
@@ -569,12 +584,14 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 - Stage 11 之后，系统对“可点击”“可跳转”“可学习”这些口头承诺变得更诚实了：已支持的路径能真走通，暂不可信的学习组件被明确挡在前门之外
 - Stage 12 之后，系统虽然没有新增前门能力，但“成长被系统记住”这件事第一次拥有了可重审的工程地基；诚实结论是地基已修、前门仍不能贸然接线
 - Stage 13 之后，系统第一次有了“continuous learning 何时才算够格上线”的正式标尺；用户面增量很小，但治理和可测性发生了质变
+- Stage 14 之后，系统第一次把 `wire-ready` 和 `wire-safe` 分开验证：集成、规模、shadow 都已补齐，但也更诚实地承认 source-state 压缩仍阻止前门接线
 - 从 Stage 4 "用户感知 Aurora 价值接近零" 到 Stage 9 "画像可见、可问、可纠，日常环能接住变化"，有实质跃迁
 
 **用"断点收口"做标尺**：
 - 7 个断点已全部收口
 - Stage 9 不再存在“画像后端闭环但用户前门缺失”的主要产品断裂
 - Stage 13 解决的是“continuous learning 什么时候才配接前门”的制度断裂，而不是再加一个新入口
+- Stage 14 解决的是“wire-ready 是否足够可信到接线前”的工程断裂，同时把“还不能接线”的原因从模糊担忧收敛为 source-state 压缩这个明确问题
 
 ---
 
@@ -627,6 +644,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | v9 | 2026-04-20 | Stage 11 完成（4 WS accept，Stage 10 frozen baseline 144 green，Stage 11 backend sweep 14 green，Stage 11 mobile sweep 51 green，Rule K guard 35 files / 0 violation）；evidence 二级导航闭环落地；judge 权重 / timeout / budget / prompt version 工程化；utilization metrics 进入 ai_ops / developer 可见面；CL0 审计明确持续学习五组件当前均不得直接接入用户前门 |
 | v10 | 2026-04-20 | Stage 12 完成（4 WS accept，Stage 11 frozen baseline 144 green，Stage 11 backend sweep 14 green，Stage 11 mobile sweep 51 green，Stage 12 backend sweep 20 green，Stage 12 mobile sweep 26 passed + 3 skipped，Rule K guard 35 files / 0 violation）；修复连续学习四个具体基座缺陷：Bayesian key 对齐、multi-dimensional save_state / Celery seam、strategy_store durable L2 cache、mobile 9 项老欠账终局收口；CL0 rerun 结论更新为“基座已修，但仍无组件达到可直接接前门的 wire 状态”，Stage 13 锁 Path C |
 | v11 | 2026-04-20 | Stage 13 完成（Gate S13-0 baseline 144 green + Rule V 8 green + Rule K 35/0，Stage 13 backend sweep 23 green，Stage 13 mobile sweep 50 green）；落地 `SQAM` + Rule W，将 continuous-learning 上线资格从主观判断改为四维量化门；`PersistentBayesianLearner` 在同一 frozen method 下从 `repair-first` 升级为 `wire-ready`；`WS-SQ-FEED` 修掉 reward-label fidelity collapse；`WS-EVD3-LITE` 以 memory lane 方式落地 `practice_outcome` 安全证据类型；Stage 14 入口从 Stage 12 Path C 升级为“可对单一组件提出 bounded `WS-CL1` 候选”的 Path A |
+| v12 | 2026-04-20 | Stage 14 完成（Gate S14-0 baseline replay 144 green + Rule V 8 green + Rule K 35/0 + Stage 13 backend sweep 23 green + Stage 13 mobile sweep 50 green；Stage 14 targeted backend sweep 23 green）；修复 `RouterNode` 的持久 learner 集成残缝；在 frozen `11` state / `220` observation proxy fixture 下重跑 SQAM，`PersistentBayesianLearner` 继续保持 `ID1 / ST1 / DP1 / SM1` 全绿；落地零用户感知、L2 inference-cache-only 的 shadow divergence pipe；但 `state_{tool_category}` 压缩被 Stage 14 审定为当前 wire-on 的 blocking 限制，因此 Stage 15 fork 被锁为 `Path A-blocked` |
 
 ---
 
