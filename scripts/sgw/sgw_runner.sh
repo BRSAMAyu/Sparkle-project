@@ -9,6 +9,7 @@ CHECKPOINT_PATH="${SGW_CHECKPOINT_PATH:-$STATE_DIR/sgw_checkpoint.json}"
 LOG_PATH="${SGW_LOG_PATH:-$STATE_DIR/sgw_runner.log}"
 MAX_RESTARTS="${SGW_MAX_RESTARTS:-12}"
 PYTHON_BIN="${SGW_PYTHON_BIN:-$ROOT_DIR/backend/.venv/bin/python}"
+RESTART_STACK_ON_BOOT="${SGW_RESTART_STACK_ON_BOOT:-true}"
 
 mkdir -p "$STATE_DIR"
 touch "$LOG_PATH"
@@ -21,6 +22,18 @@ export DEBUG="${DEBUG:-false}"
 export DB_ECHO="${DB_ECHO:-false}"
 export DB_POOL_SIZE="${DB_POOL_SIZE:-30}"
 export DB_MAX_OVERFLOW="${DB_MAX_OVERFLOW:-0}"
+export POSTGRES_HOST="${POSTGRES_HOST:-127.0.0.1}"
+export POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+export POSTGRES_USER="${POSTGRES_USER:-brsama}"
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-change-me}"
+export POSTGRES_DB="${POSTGRES_DB:-sparkle}"
+export DATABASE_URL="${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable}"
+export REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+export REDIS_PORT="${REDIS_PORT:-6379}"
+export REDIS_URL="${REDIS_URL:-redis://${REDIS_HOST}:${REDIS_PORT}/0}"
+export LOCAL_STACK_AGE_REQUIRED="${LOCAL_STACK_AGE_REQUIRED:-false}"
+export AGE_INIT_RETRIES="${AGE_INIT_RETRIES:-8}"
+export AGE_INIT_SLEEP_SECONDS="${AGE_INIT_SLEEP_SECONDS:-3}"
 export SGW_CLAUDE_MAX_PARALLEL="${SGW_CLAUDE_MAX_PARALLEL:-1}"
 export SGW_CLAUDE_MIN_INTERVAL_SECONDS="${SGW_CLAUDE_MIN_INTERVAL_SECONDS:-15}"
 export SGW_CLAUDE_TIMEOUT_SECONDS="${SGW_CLAUDE_TIMEOUT_SECONDS:-45}"
@@ -44,7 +57,11 @@ if ! claude auth status >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1 || ! curl -fsS http://127.0.0.1:8080/api/v1/health >/dev/null 2>&1; then
+if [[ "$RESTART_STACK_ON_BOOT" == "true" ]]; then
+  echo "[sgw] restarting local stack with SGW env" | tee -a "$LOG_PATH"
+  "$ROOT_DIR/scripts/dev_local_stack.sh" down >>"$LOG_PATH" 2>&1 || true
+  "$ROOT_DIR/scripts/dev_local_stack.sh" up >>"$LOG_PATH" 2>&1
+elif ! curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1 || ! curl -fsS http://127.0.0.1:8080/api/v1/health >/dev/null 2>&1; then
   echo "[sgw] local stack not healthy, starting dev stack" | tee -a "$LOG_PATH"
   "$ROOT_DIR/scripts/dev_local_stack.sh" up >>"$LOG_PATH" 2>&1
 fi

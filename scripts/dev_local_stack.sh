@@ -4,6 +4,21 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$ROOT_DIR/backend/logs/local"
 PID_DIR="$ROOT_DIR/backend/logs/local/pids"
+AGE_INIT_RETRIES="${AGE_INIT_RETRIES:-5}"
+AGE_INIT_SLEEP_SECONDS="${AGE_INIT_SLEEP_SECONDS:-3}"
+LOCAL_STACK_AGE_REQUIRED="${LOCAL_STACK_AGE_REQUIRED:-true}"
+POSTGRES_HOST="${POSTGRES_HOST:-127.0.0.1}"
+POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+POSTGRES_USER="${POSTGRES_USER:-brsama}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-change-me}"
+POSTGRES_DB="${POSTGRES_DB:-sparkle}"
+REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+REDIS_PORT="${REDIS_PORT:-6379}"
+DATABASE_URL="${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable}"
+REDIS_URL="${REDIS_URL:-redis://${REDIS_HOST}:${REDIS_PORT}/0}"
+
+export POSTGRES_HOST POSTGRES_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
+export REDIS_HOST REDIS_PORT DATABASE_URL REDIS_URL
 
 mkdir -p "$LOG_DIR" "$PID_DIR"
 
@@ -21,12 +36,27 @@ init_knowledge_index() {
 }
 
 init_age_schema() {
-  (
-    cd "$ROOT_DIR/backend" && \
-    export PATH="$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin" && \
-    .venv/bin/python scripts/init_age_extension.py >/dev/null
-  )
-  echo "apache age schema is ready"
+  local attempt
+  for ((attempt=1; attempt<=AGE_INIT_RETRIES; attempt++)); do
+    if (
+      cd "$ROOT_DIR/backend" && \
+      export PATH="$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin" && \
+      .venv/bin/python scripts/init_age_extension.py >/dev/null
+    ); then
+      echo "apache age schema is ready"
+      return 0
+    fi
+    echo "apache age schema init failed (attempt $attempt/$AGE_INIT_RETRIES)"
+    sleep "$AGE_INIT_SLEEP_SECONDS"
+  done
+
+  if [[ "$LOCAL_STACK_AGE_REQUIRED" == "true" ]]; then
+    echo "apache age schema failed after $AGE_INIT_RETRIES attempts"
+    return 1
+  fi
+
+  echo "apache age schema unavailable, continuing because LOCAL_STACK_AGE_REQUIRED=false"
+  return 0
 }
 
 service_port() {
@@ -71,6 +101,60 @@ wait_for_container_health() {
 
   echo "$container did not become ready"
   return 1
+}
+
+build_runtime_env_exports() {
+  python3 - <<'PY'
+import os
+import shlex
+
+postgres_host = os.getenv("POSTGRES_HOST", "127.0.0.1")
+postgres_port = os.getenv("POSTGRES_PORT", "5432")
+postgres_user = os.getenv("POSTGRES_USER", "brsama")
+postgres_password = os.getenv("POSTGRES_PASSWORD", "change-me")
+postgres_db = os.getenv("POSTGRES_DB", "sparkle")
+redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
+redis_port = os.getenv("REDIS_PORT", "6379")
+
+if os.getenv("DATABASE_URL") is None:
+    os.environ["DATABASE_URL"] = (
+        f"postgresql+asyncpg://{postgres_user}:{postgres_password}"
+        f"@{postgres_host}:{postgres_port}/{postgres_db}?sslmode=disable"
+    )
+
+if os.getenv("REDIS_URL") is None:
+    os.environ["REDIS_URL"] = f"redis://{redis_host}:{redis_port}/0"
+
+keys = [
+    "SERVICE_ROLE",
+    "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED",
+    "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED",
+    "DB_ECHO",
+    "DB_POOL_SIZE",
+    "DB_MAX_OVERFLOW",
+    "DEBUG",
+    "DATABASE_URL",
+    "POSTGRES_HOST",
+    "POSTGRES_PORT",
+    "POSTGRES_USER",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_DB",
+    "REDIS_URL",
+    "REDIS_HOST",
+    "REDIS_PORT",
+    "REDIS_PASSWORD",
+    "REDIS_DB",
+]
+
+parts = []
+for key in keys:
+    value = os.getenv(key)
+    if value is None:
+        continue
+    parts.append(f"export {key}={shlex.quote(value)}")
+
+print("; ".join(parts))
+PY
 }
 
 # Rotate log file if it exceeds MAX_LOG_SIZE (default 200MB)
@@ -211,8 +295,9 @@ case "${1:-}" in
     wait_for_container_health "sparkle_minio"
     init_age_schema
     init_knowledge_index
-    start_service "grpc" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; export PYTHONPATH='$ROOT_DIR/backend'; cd '$ROOT_DIR/backend' && exec /bin/bash scripts/run_grpc_with_env.sh"
-    start_service "api" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; cd '$ROOT_DIR/backend' && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env"
+    RUNTIME_EXPORTS="$(build_runtime_env_exports)"
+    start_service "grpc" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; export PYTHONPATH='$ROOT_DIR/backend'; export SERVICE_ROLE='grpc'; ${RUNTIME_EXPORTS}; cd '$ROOT_DIR/backend' && exec /bin/bash scripts/run_grpc_with_env.sh"
+    start_service "api" "export PATH='$ROOT_DIR/backend/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'; export PYTHONPATH='$ROOT_DIR/backend'; export SERVICE_ROLE='api'; ${RUNTIME_EXPORTS}; cd '$ROOT_DIR/backend' && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
     wait_for_http "http://127.0.0.1:8000/health" "api"
     start_service "gateway" "export PATH='/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin' LOG_DIR='$LOG_DIR'; cd '$ROOT_DIR/backend/gateway' && go build -o bin/gateway ./cmd/server && exec ./bin/gateway"
     wait_for_http "http://127.0.0.1:8080/api/v1/health" "gateway"
