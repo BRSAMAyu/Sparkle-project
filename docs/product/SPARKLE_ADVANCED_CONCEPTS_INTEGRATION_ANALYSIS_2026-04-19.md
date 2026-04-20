@@ -4,6 +4,7 @@
 > **范围**: 长期陪伴型Agent | Social Brain | Agent系统架构 | Skill自进化 | Model Router
 > **验证方式**: 5个并行Agent对全部关键子系统的代码级深度审查
 > **评审历史**: v2.0代码验证 → v3.0同行评审(6补充+3挑战) → v4.0关键事实修正(6项)
+> **锚定状态**: 已纳入 Stage 16 final-accept / Stage 17 dispatch 文档链路，作为 Roadmap v2.0 的前沿理念输入基线
 
 ---
 
