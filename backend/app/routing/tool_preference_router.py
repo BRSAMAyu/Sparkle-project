@@ -212,17 +212,36 @@ class ToolPreferenceRouter:
             # 对每条记录，更新学习器
             for record in records:
                 # 工具执行可以看作是 "当前状态" -> "该工具" 的转移
-                # success 表示该工具在此状态下是否有效
-                source = f"state_{record.tool_category or 'general'}"
+                # Prefer user-perceived usefulness when available so the learner
+                # optimizes for actually helpful routes, not only executable ones.
+                source = self._build_history_source(record)
                 target = record.tool_name
-
-                success = 1 if record.success else 0
-                await self.learner.update(source, target, success)
+                outcome = self._resolve_history_outcome(record)
+                await self.learner.update(source, target, outcome)
 
             logger.info(f"Updated learner from {len(records)} historical records")
 
         except Exception as e:
             logger.error(f"Failed to update learner from history: {e}")
+
+    @staticmethod
+    def _build_history_source(record: UserToolHistory) -> str:
+        return f"state_{record.tool_category or 'general'}"
+
+    @staticmethod
+    def _resolve_history_outcome(record: UserToolHistory) -> bool:
+        helpful = getattr(record, "was_helpful", None)
+        if helpful is not None:
+            return bool(helpful)
+
+        satisfaction = getattr(record, "user_satisfaction", None)
+        if satisfaction is not None:
+            try:
+                return int(satisfaction) >= 4
+            except (TypeError, ValueError):
+                logger.warning("Invalid user_satisfaction value in tool history: {}", satisfaction)
+
+        return bool(record.success)
 
     async def _get_all_used_tools(self) -> list[str]:
         """获取用户已使用过的所有工具"""

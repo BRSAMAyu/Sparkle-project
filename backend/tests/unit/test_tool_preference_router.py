@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -124,3 +125,90 @@ async def test_get_fallback_tools_excludes_primary_and_returns_best_candidates(r
 
     assert result == ["query_knowledge", "create_task"]
     router.rank_tools_by_success.assert_awaited_once()
+
+
+class _FakeScalarResult:
+    def __init__(self, records):
+        self._records = records
+
+    def scalars(self):
+        return self
+
+    def all(self):
+        return list(self._records)
+
+
+@pytest.mark.asyncio
+async def test_rule_v_reward_label_regression_explicit_unhelpful_success_does_not_outvote_helpful_tool():
+    db_session = MagicMock()
+    user_id = uuid.uuid4()
+    db_session.execute = AsyncMock(
+        return_value=_FakeScalarResult(
+            [
+                SimpleNamespace(
+                    tool_category="plan",
+                    tool_name="create_plan",
+                    success=True,
+                    was_helpful=False,
+                    user_satisfaction=2,
+                )
+                for _ in range(5)
+            ]
+            + [
+                SimpleNamespace(
+                    tool_category="plan",
+                    tool_name="break_down_task",
+                    success=True,
+                    was_helpful=True,
+                    user_satisfaction=5,
+                )
+                for _ in range(3)
+            ]
+        )
+    )
+
+    router = ToolPreferenceRouter(db_session=db_session, user_id=user_id)
+    await router.update_learner_from_history()
+
+    helpful_probability = await router.learner.get_probability("state_plan", "break_down_task")
+    unhelpful_probability = await router.learner.get_probability("state_plan", "create_plan")
+
+    assert helpful_probability > unhelpful_probability
+
+
+@pytest.mark.asyncio
+async def test_rule_v_reward_label_regression_satisfaction_fallback_beats_raw_success_only():
+    db_session = MagicMock()
+    user_id = uuid.uuid4()
+    db_session.execute = AsyncMock(
+        return_value=_FakeScalarResult(
+            [
+                SimpleNamespace(
+                    tool_category="review",
+                    tool_name="semantic_search",
+                    success=True,
+                    was_helpful=None,
+                    user_satisfaction=2,
+                )
+                for _ in range(4)
+            ]
+            + [
+                SimpleNamespace(
+                    tool_category="review",
+                    tool_name="reopen_error_book",
+                    success=True,
+                    was_helpful=None,
+                    user_satisfaction=5,
+                )
+                for _ in range(3)
+            ]
+        )
+    )
+
+    router = ToolPreferenceRouter(db_session=db_session, user_id=user_id)
+    await router.update_learner_from_history()
+
+    satisfied_probability = await router.learner.get_probability("state_review", "reopen_error_book")
+    low_satisfaction_probability = await router.learner.get_probability("state_review", "semantic_search")
+
+    assert satisfied_probability > low_satisfaction_probability
