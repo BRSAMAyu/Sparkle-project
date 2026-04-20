@@ -221,6 +221,12 @@ class _NotificationCenterScreenState
               onSnooze: notification.isIntervention
                   ? () => _snoozeIntervention(notification)
                   : null,
+              onPushDismiss:
+                  notification.isPush ? () => _dismissPush(notification) : null,
+              onPushDisableCategory:
+                  notification.isPush && notification.canDisablePushCategory
+                      ? () => _disablePushCategory(notification)
+                      : null,
             ),
           );
         },
@@ -296,6 +302,8 @@ class _NotificationCenterScreenState
       case SourceTypeFilter.intervention:
         filtered =
             filtered.where((n) => n.sourceType == 'intervention').toList();
+      case SourceTypeFilter.push:
+        filtered = filtered.where((n) => n.sourceType == 'push').toList();
       case SourceTypeFilter.all:
         break;
     }
@@ -322,6 +330,8 @@ class _NotificationCenterScreenState
         return context.l10n.notificationSourceSystem;
       case SourceTypeFilter.intervention:
         return context.l10n.notificationSourceIntervention;
+      case SourceTypeFilter.push:
+        return '主动提醒';
     }
   }
 
@@ -410,6 +420,26 @@ class _NotificationCenterScreenState
           notification.id,
           notification.sourceType,
         );
+  }
+
+  Future<void> _dismissPush(UnifiedNotification notification) async {
+    await ref
+        .read(notificationCenterProvider.notifier)
+        .dismissPush(notification);
+    if (!mounted) {
+      return;
+    }
+    AppFeedback.success(context, '这条主动提醒已收起');
+  }
+
+  Future<void> _disablePushCategory(UnifiedNotification notification) async {
+    await ref
+        .read(notificationCenterProvider.notifier)
+        .disablePushCategory(notification);
+    if (!mounted) {
+      return;
+    }
+    AppFeedback.success(context, '这类主动提醒已关闭');
   }
 
   Future<void> _clearReadNotifications() async {

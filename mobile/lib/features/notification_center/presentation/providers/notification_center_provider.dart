@@ -179,6 +179,44 @@ class NotificationCenter extends _$NotificationCenter {
     }
   }
 
+  Future<void> dismissPush(UnifiedNotification notification) async {
+    if (!notification.isPush) {
+      return;
+    }
+    try {
+      await _repository.sendPushAction(
+        notification.id,
+        'dismissed',
+        actionPayload: {
+          'source': 'notification_center_card',
+          'surface': 'notification_center',
+        },
+      );
+      _updatePushLocalState(notification.id, 'dismissed');
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> disablePushCategory(UnifiedNotification notification) async {
+    if (!notification.isPush) {
+      return;
+    }
+    try {
+      await _repository.sendPushAction(
+        notification.id,
+        'disable_category',
+        actionPayload: {
+          'source': 'notification_center_card',
+          'surface': 'notification_center',
+        },
+      );
+      _updatePushLocalState(notification.id, 'disable_category');
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
   /// Mark all notifications as read
   Future<void> markAllAsRead() async {
     try {
@@ -328,6 +366,29 @@ class NotificationCenter extends _$NotificationCenter {
     );
   }
 
+  void _updatePushLocalState(String notificationId, String action) {
+    final updatedNotifications =
+        action == 'dismissed' || action == 'disable_category'
+            ? state.notifications.where((n) => n.id != notificationId).toList()
+            : state.notifications.map((n) {
+                if (n.id != notificationId) {
+                  return n;
+                }
+                final metadata = Map<String, dynamic>.from(n.metadata)
+                  ..['push_status'] = action;
+                return n.copyWith(
+                  isRead: true,
+                  metadata: metadata,
+                );
+              }).toList();
+
+    final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
+    state = state.copyWith(
+      notifications: updatedNotifications,
+      unreadCount: unreadCount,
+    );
+  }
+
   List<UnifiedNotification> _dedupeNotifications(
     List<UnifiedNotification> notifications,
   ) {
@@ -391,4 +452,5 @@ enum SourceTypeFilter {
   all,
   system,
   intervention,
+  push,
 }

@@ -17,6 +17,14 @@ class MemorySettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
+  static const String _socialSourcePrefix = 'social:';
+  static const List<String> _socialSubjectTypes = [
+    'self',
+    'person_mention',
+    'relationship',
+    'commitment',
+  ];
+
   bool _loading = true;
   bool _saving = false;
   String? _error;
@@ -26,6 +34,18 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
   bool _allowGoals = true;
   bool _allowEpisodic = true;
   bool _allowInferredEpisodic = true;
+  bool _pushEnabled = false;
+  bool _allowCommitmentFollowUp = false;
+  bool _allowEngagementRecovery = false;
+  String _pushQuietStart = '22:00';
+  String _pushQuietEnd = '08:00';
+  String _pushTimezone = 'Asia/Shanghai';
+  final Map<String, bool> _socialTypeEnabled = {
+    'self': true,
+    'person_mention': true,
+    'relationship': true,
+    'commitment': true,
+  };
   String _captureLevel = 'medium';
   final Set<String> _blockedPrefKeys = {};
   final Set<String> _blockedSources = {};
@@ -74,7 +94,12 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     });
     try {
       final service = ref.read(memoryApiServiceProvider);
-      final settings = await service.getMemorySettings();
+      final results = await Future.wait<dynamic>([
+        service.getMemorySettings(),
+        service.getPushSettings(),
+      ]);
+      final settings = results[0] as MemorySettingsModel;
+      final pushSettings = results[1] as PushOptInSettingsModel;
       if (!mounted) {
         return;
       }
@@ -91,6 +116,13 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         _blockedSources
           ..clear()
           ..addAll(settings.blockedSources);
+        _pushEnabled = pushSettings.enabled;
+        _allowCommitmentFollowUp = pushSettings.allowCommitmentFollowUp;
+        _allowEngagementRecovery = pushSettings.allowEngagementRecovery;
+        _pushQuietStart = pushSettings.quietHoursStart;
+        _pushQuietEnd = pushSettings.quietHoursEnd;
+        _pushTimezone = pushSettings.timezone;
+        _hydrateSocialTypeFlags(settings.blockedSources);
         _loading = false;
       });
     } catch (e) {
@@ -119,9 +151,18 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         allowInferredEpisodic: _allowInferredEpisodic,
         captureLevel: _captureLevel,
         blockedPrefKeys: _blockedPrefKeys.toList(),
-        blockedSources: _blockedSources.toList(),
+        blockedSources: _resolvedBlockedSources(),
+      );
+      final pushSettings = PushOptInSettingsModel(
+        enabled: _pushEnabled,
+        allowCommitmentFollowUp: _allowCommitmentFollowUp,
+        allowEngagementRecovery: _allowEngagementRecovery,
+        quietHoursStart: _pushQuietStart,
+        quietHoursEnd: _pushQuietEnd,
+        timezone: _pushTimezone,
       );
       final updated = await service.updateMemorySettings(settings);
+      final updatedPush = await service.updatePushSettings(pushSettings);
       if (!mounted) {
         return;
       }
@@ -138,6 +179,13 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         _blockedSources
           ..clear()
           ..addAll(updated.blockedSources);
+        _pushEnabled = updatedPush.enabled;
+        _allowCommitmentFollowUp = updatedPush.allowCommitmentFollowUp;
+        _allowEngagementRecovery = updatedPush.allowEngagementRecovery;
+        _pushQuietStart = updatedPush.quietHoursStart;
+        _pushQuietEnd = updatedPush.quietHoursEnd;
+        _pushTimezone = updatedPush.timezone;
+        _hydrateSocialTypeFlags(updated.blockedSources);
         _saving = false;
       });
       AppFeedback.success(context, '记忆设置已更新');
@@ -274,6 +322,142 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      '社交语义子开关',
+                      style: DS.titleMedium.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: DS.sm),
+                    Text(
+                      'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。',
+                      style: DS.bodySmall.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: DS.md),
+                    _buildToggleRow(
+                      title: '自我记忆',
+                      description: 'self',
+                      value: _socialTypeEnabled['self'] ?? true,
+                      onChanged: (value) =>
+                          setState(() => _socialTypeEnabled['self'] = value),
+                    ),
+                    _buildToggleRow(
+                      title: '人物提及',
+                      description: 'person_mention',
+                      value: _socialTypeEnabled['person_mention'] ?? true,
+                      onChanged: (value) => setState(
+                        () => _socialTypeEnabled['person_mention'] = value,
+                      ),
+                    ),
+                    _buildToggleRow(
+                      title: '关系动态',
+                      description: 'relationship',
+                      value: _socialTypeEnabled['relationship'] ?? true,
+                      onChanged: (value) => setState(
+                        () => _socialTypeEnabled['relationship'] = value,
+                      ),
+                    ),
+                    _buildToggleRow(
+                      title: '承诺事项',
+                      description: 'commitment',
+                      value: _socialTypeEnabled['commitment'] ?? true,
+                      onChanged: (value) => setState(
+                        () => _socialTypeEnabled['commitment'] = value,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: DS.lg),
+            SparkleStaggerItem(
+              index: 3,
+              child: GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle(
+                      '主动提醒',
+                      subtitle: 'Stage 18 默认关闭。只有你显式开启后，系统才会发送承诺跟进或活跃恢复提醒。',
+                    ),
+                    _buildToggleRow(
+                      title: '启用主动提醒',
+                      description: '总开关。关闭后 Stage 18 主动提醒会全部停用。',
+                      value: _pushEnabled,
+                      onChanged: (value) =>
+                          setState(() => _pushEnabled = value),
+                    ),
+                    _buildToggleRow(
+                      title: '承诺跟进',
+                      description: '只针对你明确表达过、且已经逾期的承诺事项。',
+                      value: _allowCommitmentFollowUp,
+                      enabled: _pushEnabled,
+                      onChanged: (value) =>
+                          setState(() => _allowCommitmentFollowUp = value),
+                    ),
+                    _buildToggleRow(
+                      title: '活跃恢复',
+                      description: '只针对曾经连续活跃、且 72 小时未活跃的情况。',
+                      value: _allowEngagementRecovery,
+                      enabled: _pushEnabled,
+                      isLast: true,
+                      onChanged: (value) =>
+                          setState(() => _allowEngagementRecovery = value),
+                    ),
+                    const SizedBox(height: DS.md),
+                    _buildSectionTitle(
+                      '静默时段',
+                      subtitle: '你可以收窄系统默认的 22:00-08:00，但不能把提醒扩张到这段时间里。',
+                    ),
+                    _buildChoiceGroup(
+                      title: '开始时间',
+                      values: const ['22:00', '22:30', '23:00'],
+                      selected: _pushQuietStart,
+                      enabled: _pushEnabled,
+                      onSelected: (value) =>
+                          setState(() => _pushQuietStart = value),
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    _buildChoiceGroup(
+                      title: '结束时间',
+                      values: const ['07:00', '07:30', '08:00'],
+                      selected: _pushQuietEnd,
+                      enabled: _pushEnabled,
+                      onSelected: (value) =>
+                          setState(() => _pushQuietEnd = value),
+                    ),
+                    const SizedBox(height: DS.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '当前时区：$_pushTimezone',
+                            style: DS.bodySmall.copyWith(
+                              color: DS.textSecondary,
+                            ),
+                          ),
+                        ),
+                        SparkleButton.ghost(
+                          label: '查看提醒收件箱',
+                          onPressed: () => context.push('/notification-center'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: DS.lg),
+            SparkleStaggerItem(
+              index: 4,
+              child: GraphiteCardSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     _buildSectionTitle(
                       '记忆类型',
                       subtitle: '决定哪些内容会被长期记住。',
@@ -316,7 +500,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             ),
             const SizedBox(height: DS.lg),
             SparkleStaggerItem(
-              index: 3,
+              index: 5,
               child: GraphiteCardSurface(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,7 +538,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             ),
             const SizedBox(height: DS.lg),
             SparkleStaggerItem(
-              index: 4,
+              index: 6,
               child: GraphiteCardSurface(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,7 +568,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             ),
             const SizedBox(height: DS.lg),
             SparkleStaggerItem(
-              index: 5,
+              index: 7,
               child: GraphiteCardSurface(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,7 +598,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             ),
             const SizedBox(height: DS.xl),
             SparkleStaggerItem(
-              index: 6,
+              index: 8,
               child: SparkleButton.primary(
                 label: _saving ? '保存中...' : '保存设置',
                 onPressed: _saving ? () {} : _saveSettings,
@@ -531,6 +715,42 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         ),
       );
 
+  Widget _buildChoiceGroup({
+    required String title,
+    required List<String> values,
+    required String selected,
+    required bool enabled,
+    required ValueChanged<String> onSelected,
+  }) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: DS.bodyMedium.copyWith(
+              color: enabled ? DS.textPrimary : DS.textDisabled,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: values
+                .map(
+                  (value) => _MemoryChoiceChip(
+                    value: value,
+                    label: value,
+                    selected: selected == value,
+                    enabled: enabled,
+                    onSelected: () => onSelected(value),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      );
+
   void _togglePrefKey(String key, bool selected) {
     setState(() {
       if (selected) {
@@ -549,6 +769,25 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         _blockedSources.remove(source);
       }
     });
+  }
+
+  void _hydrateSocialTypeFlags(List<String> blockedSources) {
+    final blocked = Set<String>.from(blockedSources);
+    for (final key in _socialSubjectTypes) {
+      _socialTypeEnabled[key] = !blocked.contains('$_socialSourcePrefix$key');
+    }
+  }
+
+  List<String> _resolvedBlockedSources() {
+    final blocked = _blockedSources
+        .where((value) => !value.startsWith(_socialSourcePrefix))
+        .toSet();
+    for (final entry in _socialTypeEnabled.entries) {
+      if (!entry.value) {
+        blocked.add('$_socialSourcePrefix${entry.key}');
+      }
+    }
+    return blocked.toList()..sort();
   }
 }
 

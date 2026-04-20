@@ -106,6 +106,17 @@ class UnifiedNotification {
       }
     }
 
+    if (sourceType == 'push') {
+      switch (pushCategory) {
+        case 'commitment_follow_up':
+          return '⏰';
+        case 'engagement_recovery':
+          return '🌱';
+        default:
+          return '📨';
+      }
+    }
+
     // System notification icons
     switch (type) {
       case 'plan_archived':
@@ -155,6 +166,7 @@ class UnifiedNotification {
   }
 
   bool get isIntervention => sourceType == 'intervention';
+  bool get isPush => sourceType == 'push';
 
   String? get intentType => metadata['intent_type'] as String?;
 
@@ -167,6 +179,10 @@ class UnifiedNotification {
   String? get recordId => metadata['record_id'] as String?;
 
   String? get deliveryChannel => metadata['delivery_channel'] as String?;
+  String? get pushCategory => metadata['category'] as String?;
+  String? get evidenceToken => metadata['evidence_token'] as String?;
+  String? get retractableUntil => metadata['retractable_until'] as String?;
+  String? get pushStatus => metadata['push_status'] as String?;
 
   String? get interactionState =>
       metadata['client_intervention_state'] as String? ??
@@ -207,6 +223,8 @@ class UnifiedNotification {
       isIntervention &&
       interactionState != 'acted' &&
       interactionState != 'dismissed';
+
+  bool get canDisablePushCategory => isPush && pushCategory != null;
 
   String get previewText {
     final step = suggestedStep;

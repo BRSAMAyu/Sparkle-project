@@ -14,6 +14,8 @@ class UnifiedNotificationCard extends StatelessWidget {
     this.onAccept,
     this.onAct,
     this.onSnooze,
+    this.onPushDismiss,
+    this.onPushDisableCategory,
     super.key,
   });
 
@@ -23,12 +25,16 @@ class UnifiedNotificationCard extends StatelessWidget {
   final VoidCallback? onAccept;
   final VoidCallback? onAct;
   final VoidCallback? onSnooze;
+  final VoidCallback? onPushDismiss;
+  final VoidCallback? onPushDisableCategory;
 
   @override
   Widget build(BuildContext context) {
     final acceptAction = onAccept;
     final actAction = onAct;
     final snoozeAction = onSnooze;
+    final pushDismissAction = onPushDismiss;
+    final pushDisableCategoryAction = onPushDisableCategory;
 
     return Dismissible(
       key: Key(notification.id),
@@ -182,6 +188,26 @@ class UnifiedNotificationCard extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (notification.isPush) ...[
+                      const SizedBox(height: DS.sm),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: [
+                          if (pushDismissAction != null)
+                            SparkleButton.ghost(
+                              onPressed: pushDismissAction,
+                              label: '这次不用了',
+                            ),
+                          if (notification.canDisablePushCategory &&
+                              pushDisableCategoryAction != null)
+                            SparkleButton.outline(
+                              onPressed: pushDisableCategoryAction,
+                              label: '不再提醒这类',
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -216,6 +242,9 @@ class UnifiedNotificationCard extends StatelessWidget {
       case 'intervention':
         badgeColor = DS.warning;
         badgeLabel = context.l10n.notificationSourceIntervention;
+      case 'push':
+        badgeColor = DS.success;
+        badgeLabel = '主动提醒';
       default:
     }
 
@@ -350,6 +379,28 @@ class UnifiedNotificationCard extends StatelessWidget {
                   _buildEvidenceSummary(evidence),
                 ),
               ],
+              if (notification.isPush) ...[
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  context,
+                  '触发证据',
+                  notification.evidenceToken ?? '未提供',
+                ),
+                const SizedBox(height: 8),
+                _buildDetailRow(
+                  context,
+                  '提醒类别',
+                  _labelForPushCategory(notification.pushCategory),
+                ),
+                if (notification.retractableUntil != null) ...[
+                  const SizedBox(height: 8),
+                  _buildDetailRow(
+                    context,
+                    '可撤回至',
+                    notification.retractableUntil!,
+                  ),
+                ],
+              ],
               const SizedBox(height: 16),
               Text(
                 Formatters.formatRelativeTime(notification.createdAt),
@@ -450,5 +501,16 @@ class UnifiedNotificationCard extends StatelessWidget {
       ].where((item) => item.isNotEmpty).join('，');
     }
     return '系统已记录本次干预的后续证据';
+  }
+
+  String _labelForPushCategory(String? category) {
+    switch (category) {
+      case 'commitment_follow_up':
+        return '承诺跟进';
+      case 'engagement_recovery':
+        return '活跃恢复';
+      default:
+        return category ?? '未知';
+    }
   }
 }

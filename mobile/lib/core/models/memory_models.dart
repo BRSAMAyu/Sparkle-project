@@ -184,7 +184,10 @@ class EpisodicMemoryItem {
     required this.correctionCount,
     this.sourceId,
     this.sourceLane,
+    this.subjectType,
     this.occurredAt,
+    this.dueAt,
+    this.resolvedAt,
     this.importanceScore,
     this.confidence,
     this.evidenceToken,
@@ -202,7 +205,10 @@ class EpisodicMemoryItem {
         sourceType: json['source_type'] as String? ?? '',
         sourceId: json['source_id'] as String?,
         sourceLane: json['source_lane'] as String?,
+        subjectType: json['subject_type'] as String?,
         occurredAt: _parseDate(json['occurred_at']),
+        dueAt: _parseDate(json['due_at']),
+        resolvedAt: _parseDate(json['resolved_at']),
         importanceScore: (json['importance_score'] as num?)?.toDouble(),
         confidence: (json['confidence'] as num?)?.toDouble(),
         evidenceToken: json['evidence_token'] as String?,
@@ -222,7 +228,10 @@ class EpisodicMemoryItem {
   final String sourceType;
   final String? sourceId;
   final String? sourceLane;
+  final String? subjectType;
   final DateTime? occurredAt;
+  final DateTime? dueAt;
+  final DateTime? resolvedAt;
   final double? importanceScore;
   final double? confidence;
   final String? evidenceToken;
@@ -235,6 +244,34 @@ class EpisodicMemoryItem {
   final int correctionCount;
   final DateTime? retractedAt;
   final DateTime? revokedAt;
+}
+
+class PendingCommitmentItem {
+  PendingCommitmentItem({
+    required this.id,
+    required this.summary,
+    required this.dueAt,
+    required this.subjectType,
+    this.evidenceToken,
+    this.resolvedAt,
+  });
+
+  factory PendingCommitmentItem.fromJson(Map<String, dynamic> json) =>
+      PendingCommitmentItem(
+        id: json['id'] as String? ?? '',
+        summary: json['summary'] as String? ?? '',
+        dueAt: _parseDate(json['due_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+        subjectType: json['subject_type'] as String? ?? 'commitment',
+        evidenceToken: json['evidence_token'] as String?,
+        resolvedAt: _parseDate(json['resolved_at']),
+      );
+
+  final String id;
+  final String summary;
+  final DateTime dueAt;
+  final String subjectType;
+  final String? evidenceToken;
+  final DateTime? resolvedAt;
 }
 
 class MemoryCorrectionResult {
@@ -315,6 +352,45 @@ class MemorySettingsModel {
         'capture_level': captureLevel,
         'blocked_pref_keys': blockedPrefKeys,
         'blocked_sources': blockedSources,
+      };
+}
+
+class PushOptInSettingsModel {
+  PushOptInSettingsModel({
+    required this.enabled,
+    required this.allowCommitmentFollowUp,
+    required this.allowEngagementRecovery,
+    required this.quietHoursStart,
+    required this.quietHoursEnd,
+    required this.timezone,
+  });
+
+  factory PushOptInSettingsModel.fromJson(Map<String, dynamic> json) =>
+      PushOptInSettingsModel(
+        enabled: json['enabled'] as bool? ?? false,
+        allowCommitmentFollowUp:
+            json['allow_commitment_follow_up'] as bool? ?? false,
+        allowEngagementRecovery:
+            json['allow_engagement_recovery'] as bool? ?? false,
+        quietHoursStart: json['quiet_hours_start'] as String? ?? '22:00',
+        quietHoursEnd: json['quiet_hours_end'] as String? ?? '08:00',
+        timezone: json['timezone'] as String? ?? 'Asia/Shanghai',
+      );
+
+  final bool enabled;
+  final bool allowCommitmentFollowUp;
+  final bool allowEngagementRecovery;
+  final String quietHoursStart;
+  final String quietHoursEnd;
+  final String timezone;
+
+  Map<String, dynamic> toJson() => {
+        'enabled': enabled,
+        'allow_commitment_follow_up': allowCommitmentFollowUp,
+        'allow_engagement_recovery': allowEngagementRecovery,
+        'quiet_hours_start': quietHoursStart,
+        'quiet_hours_end': quietHoursEnd,
+        'timezone': timezone,
       };
 }
 

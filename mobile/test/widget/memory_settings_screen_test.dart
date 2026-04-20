@@ -8,10 +8,12 @@ import 'package:sparkle/features/memory/presentation/screens/memory_settings_scr
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class _MemorySettingsApiStub implements MemoryApiService {
-  _MemorySettingsApiStub(this.settings);
+  _MemorySettingsApiStub(this.settings, this.pushSettings);
 
   MemorySettingsModel settings;
+  PushOptInSettingsModel pushSettings;
   MemorySettingsModel? lastUpdate;
+  PushOptInSettingsModel? lastPushUpdate;
 
   @override
   Future<List<MemoryPreferenceItem>> getPreferences() async => [];
@@ -31,6 +33,18 @@ class _MemorySettingsApiStub implements MemoryApiService {
     int limit = 20,
   }) async =>
       [];
+
+  @override
+  Future<List<PendingCommitmentItem>> getPendingCommitments() async => [];
+
+  @override
+  Future<PendingCommitmentItem> resolvePendingCommitment(String id) async =>
+      PendingCommitmentItem(
+        id: id,
+        summary: 'resolved',
+        dueAt: DateTime(2026, 4, 20),
+        subjectType: 'commitment',
+      );
 
   @override
   Future<List<MemoryPreferenceHistoryItem>> getPreferenceHistory(
@@ -70,6 +84,17 @@ class _MemorySettingsApiStub implements MemoryApiService {
     lastUpdate = settings;
     return settings;
   }
+
+  @override
+  Future<PushOptInSettingsModel> getPushSettings() async => pushSettings;
+
+  @override
+  Future<PushOptInSettingsModel> updatePushSettings(
+    PushOptInSettingsModel settings,
+  ) async {
+    lastPushUpdate = settings;
+    return settings;
+  }
 }
 
 void main() {
@@ -91,6 +116,14 @@ void main() {
         blockedPrefKeys: const [],
         blockedSources: const [],
       ),
+      PushOptInSettingsModel(
+        enabled: false,
+        allowCommitmentFollowUp: false,
+        allowEngagementRecovery: false,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '08:00',
+        timezone: 'Asia/Shanghai',
+      ),
     );
 
     await tester.pumpWidget(
@@ -110,7 +143,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('记忆控制'), findsWidgets);
-    expect(find.text('AI 自动记忆'), findsOneWidget);
+    expect(find.text('自我记忆'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('主动提醒'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('主动提醒'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('保存设置'),
       200,
@@ -120,5 +159,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(stub.lastUpdate, isNotNull);
+    expect(stub.lastPushUpdate, isNotNull);
   });
 }
