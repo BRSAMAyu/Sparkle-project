@@ -1,6 +1,6 @@
 # SPARKLE Aurora Stage 13 Dispatch Plan (2026-04-20)
 
-> **Status**: Stage 13 dispatch baseline v0 after Stage 12 final-accept
+> **Status**: Stage 13 dispatch baseline v1 after Stage 12 final-accept and review incorporation
 > **Authority**: `SPARKLE_AURORA_STAGE12_HANDOFF_2026-04-20.md` is the only Stage 12 truth source; this plan starts from that frozen baseline and must not reopen completed Stage 5 through Stage 12 work.
 > **Depends on**:
 > - `SPARKLE_VISION_ANCHOR_LIST_2026-04-19.md`
@@ -74,14 +74,9 @@ Any continuous-learning component must not enter a user-visible decision path un
 Hard interpretation:
 
 1. the measurement method must be committed before measurement code or measurement reports
-2. every measured component must report four dimensions:
-   - information density
-   - stability
-   - discriminative power
-   - safety margin
-3. if a dimension cannot yet be computed, it must be explicitly marked `unmeasurable` with a reason
-4. wire-ready thresholds may not be silently lowered inside a single WS
-5. threshold changes require an explicit audit-method revision rather than an implementation-side convenience tweak
+2. SQAM thresholds must be locked in the `WS-SQ-METHOD` artifact **before** `WS-SQ-MEASURE` runs; measurement results may not retroactively tune the pass line
+3. if any dimension is `unmeasurable`, the component automatically remains **not wire-ready** without requiring additional arbitration
+4. threshold changes require an explicit audit-method revision rather than an implementation-side convenience tweak
 
 ## 2. Stage 13 Scope
 
@@ -91,7 +86,7 @@ Hard interpretation:
 | `WS-SQ-METHOD` | define the formal Signal Quality Audit Method (`SQAM`) | docs and worked example only | method artifact lands with metrics, thresholds, and one worked example |
 | `WS-SQ-MEASURE` | run `SQAM` on `PersistentBayesianLearner` | measurement-only, no learner redesign | audit report lands with 4 dimensions, scores or `unmeasurable`, and one ranked shortfall |
 | `WS-SQ-FEED` | fix the #1 upstream signal-fidelity shortfall identified by `WS-SQ-MEASURE` | input-data fidelity only; do not change learner semantics | rerun of the affected SQAM dimension improves, with Rule V regression proof |
-| `WS-EVD3-LITE` | add one new safe evidence type to the current evidence-card route system | display + route only; no continuous-learning write path | widget tests prove display and route for the new type |
+| `WS-EVD3-LITE` | add one new safe evidence type to the current evidence-card route system | memory-layer evidence write + display + route only; no continuous-learning write path | backend tests prove evidence creation, widget tests prove display and route for the new type |
 
 ### Explicitly deferred beyond Stage 13
 
@@ -160,9 +155,9 @@ Artifact must lock:
    - stability
    - discriminative power
    - safety margin
-2. one computable metric per dimension
-3. one wire-ready threshold per dimension
-4. `unmeasurable` handling rules
+2. at least one **computable metric definition** per dimension
+3. one **numeric wire-ready threshold** per dimension
+4. one **fallback rating rule** per dimension for no-data / low-data cases, including when to mark `unmeasurable`
 5. one worked example using a real Stage 12-repaired component
 6. a short subsection: "how future stages cite Rule W"
 
@@ -173,7 +168,7 @@ Artifact must lock:
 1. the chosen component:
    - `PersistentBayesianLearner`
 2. the exact production entrypoints being evaluated
-3. the four reported dimension values
+3. the four reported dimension values; all four dimensions must be present, even when one or more are marked `unmeasurable`
 4. the ranked shortfall list
 5. the chosen `#1` shortfall that `WS-SQ-FEED` is allowed to repair
 
@@ -193,16 +188,21 @@ Artifact must lock:
 
 1. the single new evidence type:
    - recommended: `PracticeOutcomeEvidence`
-2. the display payload shape
-3. the route mapping
-4. why the new type is safe to expose without touching continuous-learning write lanes
-5. the widget proof points required by Rule U
+2. backend memory-layer write path:
+   - extend `ALLOWED_EVIDENCE_TYPES` with `practice_outcome`
+   - create `practice_outcome` evidence records inside the existing `submit_review()` path
+   - do **not** introduce a new event-bus dependency or a new learning-lane write
+3. the display payload shape
+4. the route mapping
+5. the `evidence_legend` addition for `practice_outcome`, matching the existing Stage 10 EVD1 formatting style
+6. why the new type is safe to expose without touching continuous-learning write lanes
+7. the widget proof points required by Rule U
 
 ## 6. Non-Negotiable Constraints
 
 1. Stage 13 inherits Rule G through Rule W
 2. `WS-SQ-FEED` must satisfy Rule V with a regression test that directly reproduces the measured shortfall symptom
-3. `WS-EVD3-LITE` must remain pure display + route; it may not add a write path
+3. `WS-EVD3-LITE` may write only through the existing **memory-layer evidence lane** required to materialize the new evidence type; it may not touch any learner, strategy-store, or Aurora write path
 4. `WS-EVD3-LITE` may not use the new type as a backdoor to claim continuous-learning wire readiness
 5. `WS-SQ-FEED` may not "also fix" a second shortfall
 6. no Stage 13 change may introduce a new learner, a new strategy-store role, or a new compiler
@@ -220,7 +220,9 @@ Define a formal, reusable measurement method so future "can this component go us
 **In-scope**
 
 - formal definition of the four dimensions
-- metric and threshold declaration
+- per-dimension metric declaration
+- per-dimension numeric threshold declaration
+- per-dimension no-data / fallback rating rule
 - worked example
 - Rule W reference guidance
 
@@ -234,8 +236,9 @@ Define a formal, reusable measurement method so future "can this component go us
 
 1. artifact lands before measurement code
 2. all four dimensions are defined
-3. thresholds are explicit
-4. worked example is included
+3. each dimension has a computable metric, numeric threshold, and fallback rule
+4. thresholds are frozen before `WS-SQ-MEASURE`
+5. worked example is included
 
 ### 7.2 `WS-SQ-MEASURE` — PersistentBayesianLearner Baseline
 
@@ -259,7 +262,7 @@ Run `SQAM` against one repaired component and produce a baseline scorecard that 
 **Accept requires**
 
 1. report lands after `WS-SQ-METHOD`
-2. each dimension has either a score or `unmeasurable`
+2. each dimension has either a score or `unmeasurable`; Stage 13 may not ship a 2-of-4 or 3-of-4 partial SQAM
 3. the top shortfall is explicit
 4. no runtime mutation is hidden inside the measurement step
 
@@ -298,13 +301,16 @@ Keep product momentum with one bounded evidence-surface improvement that is inde
 **In-scope**
 
 - add one safe evidence type
+- create that evidence through the existing memory-layer review path
 - render it in the existing evidence-card system
 - route it using the existing `onRouteTap` pattern
+- add the matching `evidence_legend` entry
 - widget proof for display and route
 
 **Out-of-scope**
 
-- any write path
+- any learner / strategy-store / Aurora write path
+- any new event-bus requirement
 - any graph deepening
 - any broad evidence-card refactor
 - any claim that the new type reflects user-facing continuous-learning readiness
@@ -312,9 +318,10 @@ Keep product momentum with one bounded evidence-surface improvement that is inde
 **Accept requires**
 
 1. one new evidence type only
-2. widget proof covers display and route
-3. route follows the existing safe evidence-card pattern
-4. no new write lane exists
+2. backend proof covers memory-layer evidence creation for `practice_outcome`
+3. widget proof covers display and route
+4. route follows the existing safe evidence-card pattern
+5. no learner / strategy-store / Aurora write lane is opened
 
 ## 8. Gate S13-FINAL
 
