@@ -15,6 +15,7 @@
 > - `SPARKLE_DATA_UTILIZATION_ANALYSIS_2026-04-06.md` — 数据利用分析
 > - `SPARKLE_AURORA_STAGE16_DISPATCH_PLAN_2026-04-20.md` — Stage 16 派发计划（WS-MWL-* 七个 Workstream + Rule Y）
 > - `SPARKLE_AURORA_STAGE17_DISPATCH_PLAN_2026-04-20.md` — Stage 17 派发计划（WS-SOC-* 社交脑 MVP + Rule Z + Accountability + Router 只读）
+> - `SPARKLE_ADVANCED_CONCEPTS_INTEGRATION_ANALYSIS_2026-04-19.md` — 前沿理念融合分析（Stage 16/17 链路锚点）
 > - `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` — Gray Window 上下文化治理增补（PGW / SGW / Skipped）
 > - `SPARKLE_AURORA_STAGE16_RULE_Y_DEFINITION_2026-04-20.md` — Rule Y 正式定义（推断式画像写入治理）
 > - `SPARKLE_AURORA_STAGE16_READ_VERIFY_REPORT_2026-04-20.md` — Stage 16 读验证报告
@@ -706,6 +707,8 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 **Stage 19 入场条件**：Stage 18 全部 WS green + State Aggregator 状态判断有至少一周生产数据。
 
 **Stage 19 总目标**：从"规则式抽取"升级为"LLM 辅助抽取"，同时引入 Working Memory 作为短期记忆层。Stage 17 的规则式分类器精度天花板有限，Stage 19 通过 LLM 抽取 + Working Memory 短期上下文管理突破这一限制。
+
+**Stage 19A 前瞻兼容义务**：Working Memory 必须以 Stage 18 Aggregator 的 `engagement_state` / `commitment_summary` 作为输入来源，不得再自建平行状态聚合层。该义务已在 Stage 18 handoff 正式锁定，不可回退。
 
 **关键 WS**：
 
