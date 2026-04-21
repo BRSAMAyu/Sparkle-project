@@ -3,8 +3,8 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-21
-> **版本**: v24（Stage 23 closeout + Stage 24 in progress）
-> **v2.2 锁定**: Stage 22-23 ✅ / Stage 24 🔶 / Stage 25-32 ❌
+> **版本**: v25（Stage 25 closeout + Stage 26 in progress）
+> **v2.2 锁定**: Stage 22-25 ✅ / Stage 26 🔶 / Stage 27-32 ❌
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -881,9 +881,9 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 |------|------|-------|------|----------|------|
 | 22 | Baseline Repair | 6 | 修复 | AG | ✅ closeout |
 | 23 | Bayesian Wire-On | 6 | 重构 | AH | ✅ closeout |
-| 24 | Accountability Policy Compiler | 4 | 新增 | AI | 🔶 in progress |
-| 25 | Reflection Wire-On | 5 | 扩展 | AJ | ❌ pending |
-| 26 | Scene Consolidation | 5 | 新增 | AK | ❌ pending |
+| 24 | Accountability Policy Compiler | 4 | 新增 | AI | ✅ closeout |
+| 25 | Reflection Wire-On | 5 | 扩展 | AJ | ✅ closeout |
+| 26 | Scene Consolidation | 5 | 新增 | AK | 🔶 in progress |
 | 25 | Reflection Wire-On | 5 | 扩展 | AJ | ❌ pending |
 | 26 | Scene Consolidation | 5 | 新增 | AK | ❌ pending |
 | 27 | Foresight Engine | 5 | 扩展+新增 | AL | ❌ pending |
@@ -898,8 +898,9 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 ```
 AG  Baseline 前置       —— Stage 22 ✅
 AH  source-state 维度登记 —— Stage 23 ✅ closeout
-AI  Policy Compiler 纯规则 —— Stage 24 🔶 in progress
-AJ  Reflection 消费隔离   —— Stage 25
+AI  Policy Compiler 纯规则 —— Stage 24 ✅ closeout
+AJ  Reflection 消费隔离   —— Stage 25 ✅ closeout
+AK  Scene 合并幂等 + 算法约束 —— Stage 26 🔶 in progress
 ```
 AJ  Reflection 消费隔离   —— Stage 25
 AK  Scene 合并幂等 + 算法约束 —— Stage 26
@@ -999,7 +1000,64 @@ AP  Idiographic 仅关联不因果 —— Stage 31
 
 **Stage 24 义务锁定**：Stage 23 Bayesian Wire-On 已落地，Stage 24 Accountability Policy Compiler 可启动。
 
-### 9.24 依赖链（v2.2 锁定，不可打乱顺序）
+### 9.24 ✅ Stage 24 完成（Accountability Policy Compiler）
+
+**Stage 24 入场条件**：Stage 23 全部 WS green + Rule AH 无破例。
+
+**Stage 24 总目标**：实现"关系→行为约束"编译——从 accountability_partnership 表读取承诺状态，编译为 intervention 触发条件（纯规则，无 LLM）。
+
+**四个 Workstream（WS-AP-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-AP-IR** | 承诺数据提取 | partnership 表读取 + 状态解析 |
+| **WS-AP-COMPILER** | 规则编译器 | 纯规则，无 LLM |
+| **WS-AP-SCHEDULER** | 触发调度 | Celery beat 可执行 |
+| **WS-AP-GUARD** | 治理守卫 | 强制串行 |
+
+**新增治理规则**：**Rule AI**（Stage 24 新建）：Policy Compiler 纯规则，禁 LLM。
+
+**GLM1 独立验收**：ACCEPT - CLEAN
+
+**实现路径**：Path A（full implementation, default off）
+
+**Stage 25 义务锁定**：Stage 24 Accountability Policy Compiler 已落地，Stage 25 Reflection Wire-On 可启动。
+
+### 9.25 ✅ Stage 25 完成（Reflection Wire-On）
+
+**Stage 25 入场条件**：Stage 24 全部 WS green + Rule AI 无破例。
+
+**Stage 25 总目标**：将 route_history 从"纯写"变为"写+读"，消费 route_history 做反思触发。
+
+**五个 Workstream（WS-RF-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-RF-READ-API** | route_history 读 API | user_id 强隔离 |
+| **WS-RF-USER-CONTEXT** | ReflectionAgent user_id 签名 | assertion guard |
+| **WS-RF-INJECT** | route_history 证据注入 | token budget ≤800 |
+| **WS-RF-TRIGGER** | 6 类触发 | 新增 3 类 |
+| **WS-RF-QUALITY** | Rule Y 验证 + 降级 | 3 连 <95% → shadow |
+
+**新增治理规则**：**Rule AJ**（Stage 25 新建）：Reflection 消费隔离。
+
+**GLM1 独立验收**：ACCEPT - CLEAN
+
+| 验证项 | 结果 |
+|--------|------|
+| WS-RF-READ-API | PASS（user_id 隔离）|
+| WS-RF-USER-CONTEXT | PASS（assertion guard）|
+| WS-RF-INJECT | PASS（token budget）|
+| WS-RF-TRIGGER | PASS（6 类）|
+| WS-RF-QUALITY | PASS（自动降级）|
+| Aggregator v1.6 | PASS |
+| Tests | 50 backend + 3 mobile |
+
+**实现路径**：Path A（full implementation, default off）
+
+**Stage 26 义务锁定**：Stage 25 Reflection Wire-On 已落地，Stage 26 Scene Consolidation 可启动。
+
+### 9.26 依赖链（v2.2 锁定，不可打乱顺序）
 
 ```
 Memory Write (Stage 16 ✅)
@@ -1018,9 +1076,11 @@ Baseline Repair (Stage 22 ✅) ← 已 closeout
     ↓
 Bayesian Wire-On (Stage 23 ✅) ← 已 closeout
     ↓
-Accountability Policy Compiler (Stage 24 🔶) ← 当前执行
+Accountability Policy Compiler (Stage 24 ✅) ← 已 closeout
     ↓
-Reflection Wire-On (Stage 25)
+Reflection Wire-On (Stage 25 ✅) ← 已 closeout
+    ↓
+Scene Consolidation (Stage 26 🔶) ← 当前执行
     ↓
 Scene Consolidation (Stage 26)
     ↓

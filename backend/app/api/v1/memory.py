@@ -18,6 +18,7 @@ from app.services.conflict_resolver_service import ConflictResolverService
 from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
 from app.services.memory_service import MemoryService
 from app.services.working_memory_consolidation_service import WorkingMemoryConsolidationService
+from app.state_aggregator.service import StateAggregatorService
 from app.working_memory.service import WorkingMemoryService
 
 router = APIRouter(prefix="/memory", tags=["memory"])
@@ -403,6 +404,35 @@ async def list_pending_commitments(
             for item in items
         ]
     )
+
+
+@router.get("/accountability/recent-scenes")
+async def list_recent_scenes(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+    state = await StateAggregatorService(db).get_user_state(
+        current_user.id,
+        required_fields=("recent_scenes",),
+    )
+    field = state.recent_scenes
+    if field is None:
+        return {"schema_version": state.schema_version, "items": []}
+    return {
+        "schema_version": state.schema_version,
+        "items": [
+            {
+                "scene_id": item.scene_id,
+                "title": item.title,
+                "time_start": item.time_start,
+                "time_end": item.time_end,
+                "member_count": item.member_count,
+                "quality_score": item.quality_score,
+            }
+            for item in field.value.items
+        ],
+    }
 
 
 @router.post("/accountability/pending/{memory_id}/resolve", response_model=PendingCommitmentOut)

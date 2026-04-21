@@ -30,6 +30,19 @@ message RecentReflectionsSummaryValue {
   google.protobuf.Timestamp last_at = 3;
 }
 
+message RecentSceneItemValue {
+  string scene_id = 1;
+  string title = 2;
+  google.protobuf.Timestamp time_start = 3;
+  google.protobuf.Timestamp time_end = 4;
+  int32 member_count = 5;
+  double quality_score = 6;
+}
+
+message RecentScenesSummaryValue {
+  repeated RecentSceneItemValue items = 1;
+}
+
 message SocialMentionValue {
   string summary = 1;
   google.protobuf.Timestamp occurred_at = 2;
@@ -78,6 +91,11 @@ message RecentReflectionsSummaryField {
   StateFieldMetadata metadata = 2;
 }
 
+message RecentScenesSummaryField {
+  RecentScenesSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
 message RecentPersonMentionsField {
   RecentPersonMentionsValue value = 1;
   StateFieldMetadata metadata = 2;
@@ -122,4 +140,5 @@ message UserStateV1 {
   SufficiencySummaryField task_sufficiency_summary = 10;
   SufficiencySummaryField context_sufficiency_summary = 11;
   RecentReflectionsSummaryField recent_reflections = 12;
+  RecentScenesSummaryField recent_scenes = 13;
 }

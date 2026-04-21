@@ -275,6 +275,36 @@ class PendingCommitmentItem {
   final DateTime? resolvedAt;
 }
 
+class RecentSceneSummaryItem {
+  RecentSceneSummaryItem({
+    required this.sceneId,
+    required this.title,
+    required this.timeStart,
+    required this.timeEnd,
+    required this.memberCount,
+    required this.qualityScore,
+  });
+
+  factory RecentSceneSummaryItem.fromJson(Map<String, dynamic> json) =>
+      RecentSceneSummaryItem(
+        sceneId: json['scene_id'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        timeStart:
+            _parseDate(json['time_start']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+        timeEnd:
+            _parseDate(json['time_end']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+        memberCount: json['member_count'] as int? ?? 0,
+        qualityScore: (json['quality_score'] as num?)?.toDouble() ?? 0.0,
+      );
+
+  final String sceneId;
+  final String title;
+  final DateTime timeStart;
+  final DateTime timeEnd;
+  final int memberCount;
+  final double qualityScore;
+}
+
 class UnresolvedConflictCandidate {
   UnresolvedConflictCandidate({
     required this.summary,

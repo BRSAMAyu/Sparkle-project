@@ -58,6 +58,9 @@ class _AutoMemoryApiService implements MemoryApiService {
       ];
 
   @override
+  Future<List<RecentSceneSummaryItem>> getRecentScenes() async => [];
+
+  @override
   Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async => [];
 
   @override

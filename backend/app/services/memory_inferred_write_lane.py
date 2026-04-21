@@ -27,6 +27,7 @@ from app.models.user_memory_settings import UserMemorySettings
 from app.services.commitment_parser import parse_commitment_due_at
 from app.services.conflict_resolver_service import ConflictCandidate, ConflictResolverService
 from app.services.memory_service import MemoryService
+from app.services.scene_consolidation_service import SceneConsolidationService
 
 
 def _utcnow() -> datetime:
@@ -484,6 +485,10 @@ class MemoryInferredWriteLaneService:
                 decision=resolution,
                 new_record=record,
             )
+        try:
+            await SceneConsolidationService(self.db).consolidate_memory(record)
+        except Exception as exc:
+            logger.warning(f"Stage26 scene consolidation skipped for memory {record.id}: {exc}")
         return record
 
     async def _resolve_conflict(

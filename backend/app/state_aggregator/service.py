@@ -14,6 +14,7 @@ from app.models.calendar_event import CalendarEvent
 from app.models.focus import FocusSession, FocusStatus
 from app.models.memory import EpisodicMemory
 from app.services.memory_service import MemoryService
+from app.services.scene_consolidation_service import SceneConsolidationService
 from app.services.policy_scheduler_service import PolicySchedulerService
 from app.services.predictive_service import PredictiveService
 from app.services.skill_schema import SkillSelectionContext
@@ -34,6 +35,8 @@ from app.state_aggregator.schema import (
     LearningStateValue,
     PendingPoliciesSummaryValue,
     RecentReflectionsSummaryValue,
+    RecentSceneItemValue,
+    RecentScenesSummaryValue,
     RecentPersonMentionsValue,
     SocialMentionValue,
     SufficiencySummaryValue,
@@ -57,6 +60,7 @@ class StateAggregatorService:
         "commitment_summary": 30,
         "pending_policies": 30,
         "recent_reflections": 30,
+        "recent_scenes": 30,
         "engagement_state": 60,
         "recent_person_mentions": 300,
         "learning_state": 60 * 60 * 24,
@@ -128,6 +132,7 @@ class StateAggregatorService:
             "commitment_summary": self._build_commitment_summary,
             "pending_policies": self._build_pending_policies_summary,
             "recent_reflections": self._build_recent_reflections_summary,
+            "recent_scenes": self._build_recent_scenes_summary,
             "recent_person_mentions": self._build_recent_person_mentions,
             "engagement_state": self._build_engagement_state,
             "learning_state": self._build_learning_state,
@@ -263,6 +268,35 @@ class StateAggregatorService:
             ),
             computed_at=now,
             source_snapshot_ids=tuple(f"episodic:{row.id}" for row in rows[:10]),
+            freshness_seconds=0,
+        )
+
+    async def _build_recent_scenes_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[RecentScenesSummaryValue]:
+        items = await SceneConsolidationService(self.db).list_recent_scenes_for_aggregator(
+            user_id=user_id,
+            now=now,
+        )
+        return StateFieldEnvelope(
+            value=RecentScenesSummaryValue(
+                items=tuple(
+                    RecentSceneItemValue(
+                        scene_id=item.scene_id,
+                        title=item.title,
+                        time_start=item.time_start,
+                        time_end=item.time_end,
+                        member_count=item.member_count,
+                        quality_score=item.quality_score,
+                    )
+                    for item in items
+                )
+            ),
+            computed_at=now,
+            source_snapshot_ids=tuple(f"scene:{item.scene_id}" for item in items),
             freshness_seconds=0,
         )
 

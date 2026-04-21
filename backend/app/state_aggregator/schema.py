@@ -11,6 +11,7 @@ UserStateFieldName = Literal[
     "commitment_summary",
     "pending_policies",
     "recent_reflections",
+    "recent_scenes",
     "recent_person_mentions",
     "engagement_state",
     "learning_state",
@@ -50,6 +51,21 @@ class RecentReflectionsSummaryValue:
     count: int
     last_category: str | None
     last_at: datetime | None
+
+
+@dataclass(frozen=True)
+class RecentSceneItemValue:
+    scene_id: str
+    title: str
+    time_start: datetime
+    time_end: datetime
+    member_count: int
+    quality_score: float
+
+
+@dataclass(frozen=True)
+class RecentScenesSummaryValue:
+    items: tuple[RecentSceneItemValue, ...]
 
 
 @dataclass(frozen=True)
@@ -156,10 +172,11 @@ class CalendarContextValue:
 @dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1.6"
+    schema_version: str = "user_state.v1.7"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
     pending_policies: StateFieldEnvelope[PendingPoliciesSummaryValue] | None = None
     recent_reflections: StateFieldEnvelope[RecentReflectionsSummaryValue] | None = None
+    recent_scenes: StateFieldEnvelope[RecentScenesSummaryValue] | None = None
     recent_person_mentions: StateFieldEnvelope[RecentPersonMentionsValue] | None = None
     engagement_state: StateFieldEnvelope[EngagementStateValue] | None = None
     learning_state: StateFieldEnvelope[LearningStateValue] | None = None

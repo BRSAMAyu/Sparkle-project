@@ -6,21 +6,13 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 
-class _V2MemoryApiService implements MemoryApiService {
+class _SceneSummaryApiService implements MemoryApiService {
+  _SceneSummaryApiService({required this.recentScenes});
+
+  final List<RecentSceneSummaryItem> recentScenes;
+
   @override
-  Future<List<MemoryPreferenceItem>> getPreferences() async => [
-        MemoryPreferenceItem(
-          id: 'pref_1',
-          prefKey: 'depth_preference',
-          prefValue: {'value': 0.5},
-          version: 1,
-          evidenceMissing: false,
-          evidenceRefs: const [],
-          evidenceScore: 0.6,
-          correctionCount: 0,
-          updatedAt: DateTime(2025, 1, 2),
-        ),
-      ];
+  Future<List<MemoryPreferenceItem>> getPreferences() async => [];
 
   @override
   Future<List<MemoryGoalItem>> getGoals({
@@ -28,18 +20,7 @@ class _V2MemoryApiService implements MemoryApiService {
     bool includeExpired = false,
     int limit = 20,
   }) async =>
-      [
-        MemoryGoalItem(
-          id: 'goal_1',
-          title: 'Goal Alpha',
-          status: 'active',
-          evidenceMissing: false,
-          evidenceRefs: const [],
-          evidenceScore: 0.4,
-          correctionCount: 0,
-          updatedAt: DateTime(2025, 1, 3),
-        ),
-      ];
+      [];
 
   @override
   Future<List<EpisodicMemoryItem>> getEpisodic({
@@ -47,33 +28,13 @@ class _V2MemoryApiService implements MemoryApiService {
     DateTime? end,
     int limit = 20,
   }) async =>
-      [
-        EpisodicMemoryItem(
-          id: 'epi_1',
-          summary: 'Episodic Alpha',
-          sourceType: 'analysis',
-          evidenceMissing: false,
-          evidenceRefs: const [],
-          evidenceScore: 0.5,
-          correctionCount: 0,
-          occurredAt: DateTime(2025, 1, 4),
-        ),
-      ];
+      [];
 
   @override
   Future<List<PendingCommitmentItem>> getPendingCommitments() async => [];
 
   @override
-  Future<List<RecentSceneSummaryItem>> getRecentScenes() async => [
-        RecentSceneSummaryItem(
-          sceneId: 'scene_1',
-          title: '周末早晨学习场景 · 数学',
-          timeStart: DateTime(2025, 1, 4, 9),
-          timeEnd: DateTime(2025, 1, 4, 11),
-          memberCount: 3,
-          qualityScore: 0.82,
-        ),
-      ];
+  Future<List<RecentSceneSummaryItem>> getRecentScenes() async => recentScenes;
 
   @override
   Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async => [];
@@ -158,7 +119,7 @@ class _V2MemoryApiService implements MemoryApiService {
         evidenceRefs: const [],
         evidenceMissing: false,
         evidenceScore: 0.5,
-        correctionCount: 1,
+        correctionCount: 0,
       );
 
   @override
@@ -198,32 +159,57 @@ class _V2MemoryApiService implements MemoryApiService {
 }
 
 void main() {
-  testWidgets('Memory panel V2 shows filters and applies type filter',
-      (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 2200));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    AppFeatureFlags.enableMemoryPanelV2 = true;
-    AppFeatureFlags.enableEvidenceViewer = false;
-    AppFeatureFlags.enableMemoryExplain = false;
-
+  Future<void> pumpPanel(
+    WidgetTester tester, {
+    required bool v2,
+    required List<RecentSceneSummaryItem> scenes,
+  }) async {
+    AppFeatureFlags.enableMemoryPanelV2 = v2;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          memoryApiServiceProvider.overrideWithValue(_V2MemoryApiService()),
+          memoryApiServiceProvider.overrideWithValue(
+            _SceneSummaryApiService(recentScenes: scenes),
+          ),
         ],
         child: const MaterialApp(home: MemoryPanelScreen()),
       ),
     );
-
     await tester.pumpAndSettle();
+  }
 
-    expect(find.text('证据全部'), findsOneWidget);
-    expect(find.text('Episodic Alpha'), findsOneWidget);
+  final scenes = [
+    RecentSceneSummaryItem(
+      sceneId: 'scene_1',
+      title: '周末早晨学习场景 · 数学',
+      timeStart: DateTime(2026, 4, 19, 9),
+      timeEnd: DateTime(2026, 4, 19, 11),
+      memberCount: 3,
+      qualityScore: 0.82,
+    ),
+  ];
 
-    await tester.tap(find.text('经历'));
-    await tester.pumpAndSettle();
+  testWidgets('scene recent summary renders in V2 panel',
+      (WidgetTester tester) async {
+    await pumpPanel(tester, v2: true, scenes: scenes);
 
-    expect(find.text('Episodic Alpha'), findsOneWidget);
-    expect(find.text('depth_preference'), findsNothing);
+    expect(find.text('最近场景'), findsOneWidget);
+    expect(find.text('周末早晨学习场景 · 数学'), findsOneWidget);
+    expect(find.text('Q 0.82'), findsOneWidget);
+  });
+
+  testWidgets('scene recent summary renders in V1 panel',
+      (WidgetTester tester) async {
+    await pumpPanel(tester, v2: false, scenes: scenes);
+
+    expect(find.text('最近场景'), findsWidgets);
+    expect(find.textContaining('3 条记忆'), findsOneWidget);
+  });
+
+  testWidgets('scene recent summary stays hidden when empty',
+      (WidgetTester tester) async {
+    await pumpPanel(tester, v2: true, scenes: const []);
+
+    expect(find.text('最近场景'), findsNothing);
   });
 }

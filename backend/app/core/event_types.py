@@ -24,6 +24,8 @@ TOOL_EXECUTION_COMPLETED = "tool.execution.completed"
 TOOL_EXECUTION_FAILED = "tool.execution.failed"
 TOOL_EXECUTION_TIMED_OUT = "tool.execution.timed_out"
 PLAN_HEALTH_ALERTED = "plan.health.alerted"
+SCENE_CREATED = "scene.created"
+SCENE_UPDATED = "scene.updated"
 
 __all__ = [
     "CAPSULE_FEEDBACK_SUBMITTED",
@@ -48,4 +50,6 @@ __all__ = [
     "TOOL_EXECUTION_FAILED",
     "TOOL_EXECUTION_TIMED_OUT",
     "PLAN_HEALTH_ALERTED",
+    "SCENE_CREATED",
+    "SCENE_UPDATED",
 ]

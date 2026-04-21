@@ -121,6 +121,28 @@ Index("idx_episodic_memories_last_consumed_at", EpisodicMemory.last_consumed_at)
 Index("idx_episodic_memories_archived_at", EpisodicMemory.archived_at)
 
 
+class Scene(BaseModel):
+    __tablename__ = "scenes"
+
+    scene_id = Column(String(80), nullable=False, unique=True, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    summary = Column(String(200), nullable=False)
+    member_memory_ids = Column(JSONBCompat, nullable=False, default=list)
+    centroid_embedding = Column(VectorCompat, nullable=True)
+    time_start = Column(DateTime, nullable=False)
+    time_end = Column(DateTime, nullable=False)
+    quality_score = Column(Float, nullable=False, default=0.0)
+    version = Column(String(32), nullable=False, default="scene.v1")
+
+    user = relationship("User", backref="scenes")
+
+
+Index("idx_scenes_user_time_window", Scene.user_id, Scene.time_start, Scene.time_end)
+Index("idx_scenes_user_quality", Scene.user_id, Scene.quality_score)
+Index("idx_scenes_user_version", Scene.user_id, Scene.version)
+
+
 class MemoryCorrection(BaseModel):
     __tablename__ = "memory_corrections"
 

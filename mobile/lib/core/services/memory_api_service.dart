@@ -101,6 +101,17 @@ class MemoryApiService {
     return items;
   }
 
+  Future<List<RecentSceneSummaryItem>> getRecentScenes() async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/memory/accountability/recent-scenes',
+    );
+    final items = (response.data?['items'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(RecentSceneSummaryItem.fromJson)
+        .toList();
+    return items;
+  }
+
   Future<PendingCommitmentItem> resolvePendingCommitment(String id) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       '/memory/accountability/pending/$id/resolve',

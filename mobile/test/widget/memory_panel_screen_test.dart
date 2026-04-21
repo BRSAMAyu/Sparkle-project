@@ -65,6 +65,9 @@ class _FakeMemoryApiService implements MemoryApiService {
   Future<List<PendingCommitmentItem>> getPendingCommitments() async => [];
 
   @override
+  Future<List<RecentSceneSummaryItem>> getRecentScenes() async => [];
+
+  @override
   Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async => [];
 
   @override

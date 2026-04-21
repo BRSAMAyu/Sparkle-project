@@ -59,6 +59,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   List<MemoryPreferenceItem> _preferences = [];
   List<MemoryGoalItem> _goals = [];
   List<EpisodicMemoryItem> _episodic = [];
+  List<RecentSceneSummaryItem> _recentScenes = [];
   List<PendingCommitmentItem> _pendingCommitments = [];
   List<UnresolvedConflictItem> _unresolvedConflicts = [];
   MemoryEntryType? _filterType;
@@ -89,6 +90,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         service.getPreferences(),
         service.getGoals(),
         service.getEpisodic(),
+        service.getRecentScenes(),
         service.getPendingCommitments(),
         service.getUnresolvedConflicts(),
       ]);
@@ -99,8 +101,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         _preferences = results[0] as List<MemoryPreferenceItem>;
         _goals = results[1] as List<MemoryGoalItem>;
         _episodic = results[2] as List<EpisodicMemoryItem>;
-        _pendingCommitments = results[3] as List<PendingCommitmentItem>;
-        _unresolvedConflicts = results[4] as List<UnresolvedConflictItem>;
+        _recentScenes = results[3] as List<RecentSceneSummaryItem>;
+        _pendingCommitments = results[4] as List<PendingCommitmentItem>;
+        _unresolvedConflicts = results[5] as List<UnresolvedConflictItem>;
         _loading = false;
       });
     } catch (e) {
@@ -179,6 +182,12 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(DS.lg),
           children: [
+            if (_recentScenes.isNotEmpty) ...[
+              const _SectionHeader(title: '最近场景'),
+              const SizedBox(height: DS.sm),
+              _buildRecentScenesSection(),
+              const SizedBox(height: DS.xl),
+            ],
             const _SectionHeader(title: '偏好'),
             const SizedBox(height: DS.sm),
             ..._preferences.map(_buildPreferenceCard),
@@ -231,6 +240,10 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         children: [
           SparkleStaggerItem(index: 0, child: _buildFilterBar(context)),
           const SizedBox(height: DS.md),
+          if (_recentScenes.isNotEmpty) ...[
+            SparkleStaggerItem(index: 1, child: _buildRecentScenesSection()),
+            const SizedBox(height: DS.md),
+          ],
           if (_unresolvedConflicts.isNotEmpty)
             UnresolvedConflictsSection(
               items: _unresolvedConflicts,
@@ -253,7 +266,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           else
             ...entries.indexed.map(
               (entry) => SparkleStaggerItem(
-                index: entry.$1 + 1,
+                index: entry.$1 + (_recentScenes.isNotEmpty ? 2 : 1),
                 child: _buildEntryCard(entry.$2),
               ),
             ),
@@ -384,6 +397,77 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           child: Text(
             '暂无符合条件的记忆',
             style: TextStyle(color: DS.textSecondary),
+          ),
+        ),
+      );
+
+  Widget _buildRecentScenesSection() => Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(DS.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    '最近场景',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_recentScenes.length} 条',
+                    style: TextStyle(color: DS.textSecondary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.sm),
+              ..._recentScenes.map(_buildRecentSceneTile),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildRecentSceneTile(RecentSceneSummaryItem item) => Padding(
+        padding: const EdgeInsets.only(bottom: DS.sm),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: DS.surfaceSecondary,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_formatSceneTime(item.timeStart, item.timeEnd)} · ${item.memberCount} 条记忆',
+                        style: TextStyle(color: DS.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: DS.sm),
+                Chip(
+                  label: Text('Q ${item.qualityScore.toStringAsFixed(2)}'),
+                  backgroundColor: DS.semanticSuccess.withValues(alpha: 0.12),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -525,6 +609,14 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       return '未更新';
     }
     return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+  }
+
+  String _formatSceneTime(DateTime start, DateTime end) {
+    final startLabel =
+        '${start.month.toString().padLeft(2, '0')}/${start.day.toString().padLeft(2, '0')} ${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
+    final endLabel =
+        '${end.month.toString().padLeft(2, '0')}/${end.day.toString().padLeft(2, '0')} ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
+    return '$startLabel - $endLabel';
   }
 
   String _entryTypeLabel(MemoryEntryType type) => switch (type) {

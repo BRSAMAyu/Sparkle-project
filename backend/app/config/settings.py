@@ -237,6 +237,12 @@ class Settings(BaseSettings):
     AURORA_REFLECTION_TRIGGER_PLAN_STALL: bool = True
     AURORA_REFLECTION_TRIGGER_OVERLOAD: bool = True
 
+    # Aurora Stage 26
+    AURORA_SCENE_MODE: str = "off"  # off | shadow | live
+    AURORA_SCENE_SIMILARITY_THRESHOLD: float = 0.75
+    AURORA_SCENE_TIME_WINDOW_HOURS: int = 72
+    AURORA_SCENE_QUALITY_THRESHOLD: float = 0.6
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""
