@@ -24,6 +24,7 @@ from app.models.accountability import (
     AccountabilityStatus,
 )
 from app.models.user import User
+from app.services.policy_scheduler_service import PolicySchedulerService
 
 
 def _utcnow() -> datetime:
@@ -34,6 +35,27 @@ def _user_display_name(user: User | None, default: str) -> str:
     if not user:
         return default
     return user.nickname or user.full_name or user.username or default
+
+
+async def _missed_days_for_user(
+    db: AsyncSession,
+    *,
+    partnership_id: UUID,
+    user_id: UUID,
+) -> int:
+    result = await db.execute(
+        select(AccountabilityCheckin.created_at)
+        .where(
+            AccountabilityCheckin.partnership_id == partnership_id,
+            AccountabilityCheckin.user_id == user_id,
+        )
+        .order_by(AccountabilityCheckin.created_at.desc())
+        .limit(1)
+    )
+    last_checkin_at = result.scalar_one_or_none()
+    if last_checkin_at is None:
+        return 999
+    return max(0, (_utcnow().date() - last_checkin_at.date()).days)
 
 
 # ============================================================================
@@ -229,6 +251,20 @@ async def _send_daily_reminders(db: AsyncSession) -> dict[str, Any]:
                     db, user_id, partnership.id, partner_name
                 )
                 reminder_count += 1
+                missed_days = await _missed_days_for_user(
+                    db,
+                    partnership_id=partnership.id,
+                    user_id=user_id,
+                )
+                if missed_days >= 3:
+                    await PolicySchedulerService(db).handle_event(
+                        event_type="peer_missed",
+                        payload={
+                            "user_id": str(user_id),
+                            "partnership_id": str(partnership.id),
+                            "missed_days": missed_days,
+                        },
+                    )
 
             except Exception as e:
                 logger.warning(f"Failed to send reminder to user {user_id}: {e}")

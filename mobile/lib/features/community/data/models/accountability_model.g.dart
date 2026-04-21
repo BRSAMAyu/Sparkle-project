@@ -173,6 +173,27 @@ Map<String, dynamic> _$AccountabilityOverviewInfoToJson(
       'quick_actions': instance.quickActions,
     };
 
+PendingPoliciesSummaryInfo _$PendingPoliciesSummaryInfoFromJson(
+        Map<String, dynamic> json) =>
+    PendingPoliciesSummaryInfo(
+      count: (json['count'] as num).toInt(),
+      nextTriggerAt: json['next_trigger_at'] == null
+          ? null
+          : DateTime.parse(json['next_trigger_at'] as String),
+      policyIds: (json['policy_ids'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$PendingPoliciesSummaryInfoToJson(
+        PendingPoliciesSummaryInfo instance) =>
+    <String, dynamic>{
+      'count': instance.count,
+      'next_trigger_at': instance.nextTriggerAt?.toIso8601String(),
+      'policy_ids': instance.policyIds,
+    };
+
 AccountabilityDashboardInfo _$AccountabilityDashboardInfoFromJson(
         Map<String, dynamic> json) =>
     AccountabilityDashboardInfo(
@@ -180,6 +201,10 @@ AccountabilityDashboardInfo _$AccountabilityDashboardInfoFromJson(
           json['partnership'] as Map<String, dynamic>),
       stats: AccountabilityStatsInfo.fromJson(
           json['stats'] as Map<String, dynamic>),
+      pendingPolicies: json['pending_policies'] == null
+          ? null
+          : PendingPoliciesSummaryInfo.fromJson(
+              json['pending_policies'] as Map<String, dynamic>),
       timeline: (json['timeline'] as List<dynamic>?)
               ?.map((e) =>
                   AccountabilityCheckinInfo.fromJson(e as Map<String, dynamic>))
@@ -203,6 +228,7 @@ Map<String, dynamic> _$AccountabilityDashboardInfoToJson(
     <String, dynamic>{
       'partnership': instance.partnership,
       'stats': instance.stats,
+      'pending_policies': instance.pendingPolicies,
       'timeline': instance.timeline,
       'heatmap': instance.heatmap,
       'achievements': instance.achievements,

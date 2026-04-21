@@ -34,6 +34,7 @@ class AccountabilityNotificationType(str, Enum):
     PARTNER_CHECKED_IN = "accountability_partner_checked_in"
     PARTNERSHIP_ENDED = "accountability_partnership_ended"
     MANUAL_NUDGE = "accountability_manual_nudge"
+    POLICY_TRIGGERED = "accountability_policy_triggered"
 
 
 def _utcnow() -> datetime:
@@ -417,6 +418,71 @@ class AccountabilityNotificationService:
         )
         logger.info(f"Sent manual nudge to {user_id} for partnership {partnership_id}")
         return notification
+
+    async def send_policy_notification(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: UUID,
+        policy_id: str,
+        template_id: str,
+        commitment_summary: str,
+        due_at: datetime | None,
+        partnership_id: UUID | None = None,
+        actor_user_id: UUID | None = None,
+    ) -> Notification:
+        actor_name = None
+        if actor_user_id is not None:
+            actor = await db.get(User, actor_user_id)
+            actor_name = _user_display_name(actor, "你的伙伴")
+        due_label = due_at.strftime("%m-%d %H:%M") if due_at else "约定时间"
+
+        title, content = self._render_policy_template(
+            template_id=template_id,
+            commitment_summary=commitment_summary,
+            due_label=due_label,
+            actor_name=actor_name,
+        )
+        notification_data = NotificationCreate(
+            title=title,
+            content=content,
+            type=AccountabilityNotificationType.POLICY_TRIGGERED.value,
+            data={
+                "policy_id": policy_id,
+                "template_id": template_id,
+                "partnership_id": str(partnership_id) if partnership_id else None,
+                "commitment_summary": commitment_summary,
+                "due_at": due_at.isoformat() if due_at else None,
+            },
+        )
+        notification = await notification_service.create(
+            db, user_id, notification_data, push_via_websocket=True
+        )
+        logger.info(f"Sent policy notification {policy_id} to {user_id}")
+        return notification
+
+    @staticmethod
+    def _render_policy_template(
+        *,
+        template_id: str,
+        commitment_summary: str,
+        due_label: str,
+        actor_name: str | None = None,
+    ) -> tuple[str, str]:
+        if template_id == "policy_due_reminder_3d":
+            return "🗓️ 承诺提醒", f"还有 3 天到期：{commitment_summary}\n目标时间：{due_label}"
+        if template_id == "policy_due_reminder_1d":
+            return "⏰ 明日到期提醒", f"明天就到期了：{commitment_summary}\n目标时间：{due_label}"
+        if template_id == "policy_due_reminder_due_today":
+            return "📌 今日承诺提醒", f"今天要收口这件事：{commitment_summary}\n目标时间：{due_label}"
+        if template_id == "policy_peer_missed_3d":
+            partner_name = actor_name or "你的伙伴"
+            return "🤝 伙伴协同提醒", f"{partner_name} 连续 3 天没有推进这项承诺：{commitment_summary}"
+        if template_id == "policy_success_streak_7d":
+            return "🌟 连续兑现 7 天", f"你已经连续 7 天稳稳推进了承诺：{commitment_summary}"
+        if template_id == "policy_retro_request_due_without_outcome":
+            return "📝 到期复盘请求", f"这项承诺已到期且还没有结果记录：{commitment_summary}\n花 2 分钟补一个复盘吧。"
+        return "📣 承诺策略提醒", f"{commitment_summary}\n目标时间：{due_label}"
 
 
 # 单例实例

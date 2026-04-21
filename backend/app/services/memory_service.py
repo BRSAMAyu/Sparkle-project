@@ -15,6 +15,7 @@ from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.evidence_health_service import EvidenceHealthService
+from app.services.policy_compiler_service import PolicyCompilerService
 from app.services.evidence_scoring import compute_score
 from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_evolution_service import MemoryEvolutionService
@@ -686,6 +687,11 @@ class MemoryService:
                     },
                 ),
             )
+        if record.subject_type == "commitment" and record.due_at is not None:
+            try:
+                await PolicyCompilerService(self.db).compile_for_commitment(record, persist=True)
+            except Exception as exc:
+                logger.warning(f"Failed to compile accountability policies for commitment {record.id}: {exc}")
         MEMORY_WRITE_TOTAL.labels(type="episodic", status="ok").inc()
         return record
 
@@ -784,6 +790,10 @@ class MemoryService:
         record.updated_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(record)
+        try:
+            await PolicyCompilerService(self.db).revoke_for_commitment(commitment_id=record.id)
+        except Exception as exc:
+            logger.warning(f"Failed to revoke accountability policies for commitment {record.id}: {exc}")
         return record
 
     async def retract_memory(

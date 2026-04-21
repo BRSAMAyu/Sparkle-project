@@ -316,6 +316,11 @@ class _DashboardView extends StatelessWidget {
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
                 index: 1,
+                child: _PendingPoliciesCard(summary: dashboard.pendingPolicies),
+              ),
+              const SizedBox(height: DS.spacing12),
+              SparkleStaggerItem(
+                index: 2,
                 child: _GoalPanel(
                   title: '我的目标',
                   goal: isInitiator
@@ -325,7 +330,7 @@ class _DashboardView extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
-                index: 2,
+                index: 3,
                 child: _GoalPanel(
                   title: '$partnerName 的目标',
                   goal: isInitiator
@@ -335,7 +340,7 @@ class _DashboardView extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
-                index: 3,
+                index: 4,
                 child: _SectionCard(
                   title: '伙伴共成长',
                   child: _GrowthSummary(
@@ -348,7 +353,7 @@ class _DashboardView extends StatelessWidget {
               if (dashboard.recentShares.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing12),
                 SparkleStaggerItem(
-                  index: 4,
+                  index: 5,
                   child: _SectionCard(
                     title: '最近分享',
                     child: Column(
@@ -864,6 +869,55 @@ class _GoalPanel extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _PendingPoliciesCard extends StatelessWidget {
+  const _PendingPoliciesCard({required this.summary});
+
+  final PendingPoliciesSummaryInfo? summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = summary?.count ?? 0;
+    final nextTriggerAt = summary?.nextTriggerAt;
+    final subtitle = count <= 0
+        ? '当前没有待执行的问责策略。'
+        : nextTriggerAt == null
+            ? '已有 $count 条策略就绪，等待事件触发。'
+            : '已有 $count 条策略待执行，下一次触发在 ${DateFormat('M月d日 HH:mm').format(nextTriggerAt)}。';
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.policy_outlined, color: DS.brandPrimary),
+              const SizedBox(width: DS.spacing8),
+              Text(
+                '待执行策略',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            count <= 0 ? '0 条' : '$count 条',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            subtitle,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SectionCard extends StatelessWidget {

@@ -880,8 +880,8 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | 阶段 | 主题 | WS 数 | 定性 | 关键规则 | 状态 |
 |------|------|-------|------|----------|------|
 | 22 | Baseline Repair | 6 | 修复 | AG | ✅ closeout |
-| 23 | Bayesian Wire-On | 6 | 重构 | AH | 🔶 in progress |
-| 24 | Accountability Policy Compiler | 4 | 新增 | AI | ❌ pending |
+| 23 | Bayesian Wire-On | 6 | 重构 | AH | ✅ closeout |
+| 24 | Accountability Policy Compiler | 4 | 新增 | AI | 🔶 in progress |
 | 25 | Reflection Wire-On | 5 | 扩展 | AJ | ❌ pending |
 | 26 | Scene Consolidation | 5 | 新增 | AK | ❌ pending |
 | 27 | Foresight Engine | 5 | 扩展+新增 | AL | ❌ pending |

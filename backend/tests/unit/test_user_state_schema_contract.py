@@ -10,6 +10,7 @@ from app.state_aggregator.schema import (
     AchievementSummaryValue,
     CalendarContextValue,
     CommitmentSummaryValue,
+    PendingPoliciesSummaryValue,
     StateFieldEnvelope,
     SufficiencySummaryValue,
     UserStateV1,
@@ -38,7 +39,7 @@ def test_user_state_v1_uses_expected_schema_version() -> None:
         ),
     )
 
-    assert state.schema_version == "user_state.v1.4"
+    assert state.schema_version == "user_state.v1.5"
     assert state.commitment_summary is not None
     assert state.commitment_summary.value.overdue_count == 1
 
@@ -113,3 +114,23 @@ def test_user_state_v1_4_exposes_achievement_and_calendar_contracts() -> None:
     assert state.achievement_summary.value.total_achievement_score == 4.5
     assert state.calendar_context is not None
     assert state.calendar_context.value.workload_density == "medium"
+
+
+def test_user_state_v1_5_exposes_pending_policies_contract() -> None:
+    state = UserStateV1(
+        user_id=uuid4(),
+        pending_policies=StateFieldEnvelope(
+            value=PendingPoliciesSummaryValue(
+                count=2,
+                next_trigger_at=datetime(2026, 4, 22, 9, 0, 0),
+                policy_ids=("policy-1", "policy-2"),
+            ),
+            computed_at=datetime(2026, 4, 21, 10, 0, 0),
+            source_snapshot_ids=("policy:policy-1",),
+            freshness_seconds=0,
+        ),
+    )
+
+    assert state.pending_policies is not None
+    assert state.pending_policies.value.count == 2
+    assert state.pending_policies.value.policy_ids == ("policy-1", "policy-2")

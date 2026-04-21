@@ -221,6 +221,11 @@ class Settings(BaseSettings):
     AURORA_BAYESIAN_LIVE_CANARY_PERCENT: int = 5
     AURORA_BAYESIAN_TTL_DAYS: int = 30
 
+    # Aurora Stage 24
+    AURORA_POLICY_COMPILER_MODE: str = "off"  # off | shadow | live
+    AURORA_POLICY_DAILY_BUDGET: int = 2
+    AURORA_POLICY_COOLDOWN_HOURS: int = 24
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

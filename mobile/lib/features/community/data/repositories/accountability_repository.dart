@@ -386,6 +386,15 @@ class AccountabilityRepository {
       return AccountabilityDashboardInfo(
         partnership: partnership!,
         stats: _statsFromPartnership(partnership),
+        pendingPolicies: PendingPoliciesSummaryInfo(
+          count: partnership.status == AccountabilityStatus.active ? 3 : 0,
+          nextTriggerAt: partnership.status == AccountabilityStatus.active
+              ? DateTime.now().add(const Duration(hours: 12))
+              : null,
+          policyIds: partnership.status == AccountabilityStatus.active
+              ? const ['demo-policy-1', 'demo-policy-2', 'demo-policy-3']
+              : const <String>[],
+        ),
         timeline: [...?_demoTimelineByPartnership?[partnershipId]],
         heatmap: {
           'year': DateTime.now().year,

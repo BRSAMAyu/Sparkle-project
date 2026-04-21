@@ -13,6 +13,7 @@ from app.models.chat import ChatSession
 from app.models.calendar_event import CalendarEvent
 from app.models.focus import FocusSession, FocusStatus
 from app.services.memory_service import MemoryService
+from app.services.policy_scheduler_service import PolicySchedulerService
 from app.services.predictive_service import PredictiveService
 from app.services.skill_schema import SkillSelectionContext
 from app.services.skill_selection_service import SkillSelectionService
@@ -30,6 +31,7 @@ from app.state_aggregator.schema import (
     CommitmentSummaryValue,
     EngagementStateValue,
     LearningStateValue,
+    PendingPoliciesSummaryValue,
     RecentPersonMentionsValue,
     SocialMentionValue,
     SufficiencySummaryValue,
@@ -51,6 +53,7 @@ class StateAggregatorService:
 
     FIELD_TTLS_SECONDS: dict[UserStateFieldName, int] = {
         "commitment_summary": 30,
+        "pending_policies": 30,
         "engagement_state": 60,
         "recent_person_mentions": 300,
         "learning_state": 60 * 60 * 24,
@@ -120,6 +123,7 @@ class StateAggregatorService:
             Callable[[UUID, datetime, CurrentTurnParseResult | None], Awaitable[StateFieldEnvelope[Any]]],
         ] = {
             "commitment_summary": self._build_commitment_summary,
+            "pending_policies": self._build_pending_policies_summary,
             "recent_person_mentions": self._build_recent_person_mentions,
             "engagement_state": self._build_engagement_state,
             "learning_state": self._build_learning_state,
@@ -155,6 +159,32 @@ class StateAggregatorService:
             value=value,
             computed_at=now,
             source_snapshot_ids=tuple(f"episodic:{row.id}" for row in rows[:10]),
+            freshness_seconds=0,
+        )
+
+    async def _build_pending_policies_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[PendingPoliciesSummaryValue]:
+        policies = await PolicySchedulerService(self.db).ensure_policies_for_user(user_id=user_id, now=now)
+        active = [
+            row for row in policies
+            if row.is_enabled and row.revoked_at is None
+        ]
+        value = PendingPoliciesSummaryValue(
+            count=len(active),
+            next_trigger_at=min(
+                (row.next_trigger_at for row in active if row.next_trigger_at is not None),
+                default=None,
+            ),
+            policy_ids=tuple(row.policy_id for row in active[:10]),
+        )
+        return StateFieldEnvelope(
+            value=value,
+            computed_at=now,
+            source_snapshot_ids=tuple(f"policy:{row.policy_id}" for row in active[:10]),
             freshness_seconds=0,
         )
 

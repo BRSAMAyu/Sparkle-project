@@ -1,0 +1,237 @@
+{
+  "$defs": {
+    "PolicyAction": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/PolicyActionType"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "PolicyAction",
+      "type": "object"
+    },
+    "PolicyActionType": {
+      "enum": [
+        "notify_user",
+        "notify_partner",
+        "downgrade_priority",
+        "lower_difficulty"
+      ],
+      "title": "PolicyActionType",
+      "type": "string"
+    },
+    "PolicyConstraints": {
+      "additionalProperties": false,
+      "properties": {
+        "daily_budget": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Daily Budget"
+        },
+        "cooldown_hours": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cooldown Hours"
+        },
+        "partner_consent_required": {
+          "default": false,
+          "title": "Partner Consent Required",
+          "type": "boolean"
+        }
+      },
+      "title": "PolicyConstraints",
+      "type": "object"
+    },
+    "PolicyContext": {
+      "additionalProperties": false,
+      "properties": {
+        "commitment_summary": {
+          "title": "Commitment Summary",
+          "type": "string"
+        },
+        "commitment_due_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commitment Due At"
+        },
+        "commitment_created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commitment Created At"
+        },
+        "evidence_token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Token"
+        },
+        "partnership_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Partnership Id"
+        },
+        "partner_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Partner Id"
+        },
+        "partner_consent_granted": {
+          "default": false,
+          "title": "Partner Consent Granted",
+          "type": "boolean"
+        },
+        "tags": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "commitment_summary"
+      ],
+      "title": "PolicyContext",
+      "type": "object"
+    },
+    "PolicyTrigger": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/PolicyTriggerType"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "PolicyTrigger",
+      "type": "object"
+    },
+    "PolicyTriggerType": {
+      "enum": [
+        "time_before_due",
+        "streak_break",
+        "overdue_by",
+        "peer_missed",
+        "success_streak"
+      ],
+      "title": "PolicyTriggerType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "policy_id": {
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "commitment_id": {
+      "format": "uuid",
+      "title": "Commitment Id",
+      "type": "string"
+    },
+    "user_id": {
+      "format": "uuid",
+      "title": "User Id",
+      "type": "string"
+    },
+    "trigger": {
+      "$ref": "#/$defs/PolicyTrigger"
+    },
+    "action": {
+      "$ref": "#/$defs/PolicyAction"
+    },
+    "constraints": {
+      "$ref": "#/$defs/PolicyConstraints"
+    },
+    "context": {
+      "$ref": "#/$defs/PolicyContext"
+    },
+    "version": {
+      "default": "v1",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "policy_id",
+    "commitment_id",
+    "user_id",
+    "trigger",
+    "action",
+    "context"
+  ],
+  "title": "PolicyRule",
+  "type": "object"
+}

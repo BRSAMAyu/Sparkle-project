@@ -19,6 +19,13 @@ from app.models.achievement import (
     VisualEffectType,
 )
 from app.models.analytics import UserDailyMetric
+from app.models.accountability import (
+    AccountabilityCheckin,
+    AccountabilityPartnership,
+    AccountabilitySlotType,
+    AccountabilityStatus,
+)
+from app.models.accountability_policy import AccountabilityPolicy
 from app.models.aurora_stage20 import (
     AuroraJudgmentRecord,
     ConflictResolutionRecord,
@@ -211,6 +218,11 @@ from app.models.visual_element import (
 __all__ = [
     "BaseModel",
     "GUID",
+    "AccountabilityPartnership",
+    "AccountabilityCheckin",
+    "AccountabilitySlotType",
+    "AccountabilityStatus",
+    "AccountabilityPolicy",
     "AuroraJudgmentRecord",
     "ConflictResolutionRecord",
     "UnresolvedConflict",

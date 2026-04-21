@@ -49,6 +49,7 @@ celery_app = Celery(
     include=[
         "app.core.celery_tasks",
         "app.tasks.accountability_tasks",
+        "app.tasks.policy_tasks",
         "workers.signals_learning_worker",
     ]
 )
@@ -123,6 +124,7 @@ celery_app.conf.update(
         "tasks.accountability.evaluate_achievements": {"queue": "low_priority"},
         "tasks.accountability.send_milestone_notification": {"queue": "default"},
         "tasks.accountability.notify_partner_checkin": {"queue": "default"},
+        "tasks.policy.process_due_policies": {"queue": "default"},
         "verify_intervention_outcomes_engaged": {"queue": "low_priority"},
         "verify_intervention_outcomes_full": {"queue": "low_priority"},
         "app.core.celery_tasks.generate_weekly_growth_digests": {"queue": "default"},
@@ -957,6 +959,12 @@ celery_app.conf.beat_schedule = {
         "task": "app.core.celery_tasks.health_check_task",
         "schedule": 3600.0,
         "options": {"queue": "low_priority"}
+    },
+
+    "policy-compiler-due-scan": {
+        "task": "tasks.policy.process_due_policies",
+        "schedule": 30.0,
+        "options": {"queue": "default"}
     },
 
     "intervention-outcomes-engaged": {

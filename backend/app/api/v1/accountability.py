@@ -32,6 +32,8 @@ from app.schemas.community import UserBrief as CommunityUserBrief
 from app.services.accountability_notification_service import _user_display_name
 from app.services.community_service import UserBlockService
 from app.services.leaderboard_service import LeaderboardService
+from app.services.policy_scheduler_service import PolicySchedulerService
+from app.state_aggregator.service import StateAggregatorService
 
 router = APIRouter()
 
@@ -172,6 +174,7 @@ class AccountabilityOverviewOut(BaseModel):
 class AccountabilityDashboardOut(BaseModel):
     partnership: PartnershipOut
     stats: PartnershipStatsOut
+    pending_policies: dict = Field(default_factory=dict)
     timeline: list[CheckinOut] = Field(default_factory=list)
     heatmap: dict = Field(default_factory=dict)
     achievements: dict = Field(default_factory=dict)
@@ -713,6 +716,25 @@ async def _build_relationship_summary(
     }
 
 
+async def _build_pending_policies_summary(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+) -> dict:
+    state = await StateAggregatorService(db).get_user_state(
+        user_id,
+        required_fields=("pending_policies",),
+    )
+    field = state.pending_policies
+    if field is None:
+        return {"count": 0, "next_trigger_at": None}
+    return {
+        "count": field.value.count,
+        "next_trigger_at": field.value.next_trigger_at.isoformat() if field.value.next_trigger_at else None,
+        "policy_ids": list(field.value.policy_ids),
+    }
+
+
 async def _build_quick_actions_payload(
     db: AsyncSession,
     partnership: AccountabilityPartnership | None,
@@ -1015,6 +1037,7 @@ async def get_accountability_dashboard(
     return AccountabilityDashboardOut(
         partnership=await _build_partnership_out(db, partnership, current_user),
         stats=await _build_partnership_stats_payload(db, partnership, current_user),
+        pending_policies=await _build_pending_policies_summary(db, user_id=current_user.id),
         timeline=await _build_partnership_timeline_payload(db, partnership_id),
         heatmap=await _build_partnership_heatmap_payload(db, partnership),
         achievements=await _build_partnership_achievements_payload(db, partnership, current_user),
@@ -1200,6 +1223,24 @@ async def daily_checkin(
         checkin_id=checkin.id,
         action="created",
     )
+    try:
+        my_streak = await _calculate_streak_for_user(
+            db,
+            partnership_id=partnership_id,
+            user_id=current_user.id,
+            timezone_name=timezone_name,
+        )
+        await PolicySchedulerService(db).handle_event(
+            event_type="success_streak",
+            payload={
+                "user_id": str(current_user.id),
+                "partnership_id": str(partnership.id),
+                "success_days": my_streak,
+                "checkin_id": str(checkin.id),
+            },
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to evaluate Stage 24 success-streak policies for partnership {partnership.id}: {exc}")
 
     return await _build_checkin_out(db, checkin)
 

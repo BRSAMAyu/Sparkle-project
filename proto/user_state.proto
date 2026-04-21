@@ -18,6 +18,12 @@ message CommitmentSummaryValue {
   repeated string pending_commitment_ids = 3;
 }
 
+message PendingPoliciesSummaryValue {
+  int32 count = 1;
+  google.protobuf.Timestamp next_trigger_at = 2;
+  repeated string policy_ids = 3;
+}
+
 message SocialMentionValue {
   string summary = 1;
   google.protobuf.Timestamp occurred_at = 2;
@@ -56,6 +62,11 @@ message CommitmentSummaryField {
   StateFieldMetadata metadata = 2;
 }
 
+message PendingPoliciesSummaryField {
+  PendingPoliciesSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
 message RecentPersonMentionsField {
   RecentPersonMentionsValue value = 1;
   StateFieldMetadata metadata = 2;
@@ -90,12 +101,13 @@ message UserStateV1 {
   string user_id = 1;
   string schema_version = 2;
   CommitmentSummaryField commitment_summary = 3;
-  RecentPersonMentionsField recent_person_mentions = 4;
-  EngagementStateField engagement_state = 5;
-  LearningStateField learning_state = 6;
+  PendingPoliciesSummaryField pending_policies = 4;
+  RecentPersonMentionsField recent_person_mentions = 5;
+  EngagementStateField engagement_state = 6;
+  LearningStateField learning_state = 7;
   // Reserved for Stage 19C emotion work; intentionally unset in Stage 18.
-  string emotion_hint_reserved = 7;
-  WorkingMemorySnapshotField working_memory_snapshot = 8;
-  SufficiencySummaryField task_sufficiency_summary = 9;
-  SufficiencySummaryField context_sufficiency_summary = 10;
+  string emotion_hint_reserved = 8;
+  WorkingMemorySnapshotField working_memory_snapshot = 9;
+  SufficiencySummaryField task_sufficiency_summary = 10;
+  SufficiencySummaryField context_sufficiency_summary = 11;
 }

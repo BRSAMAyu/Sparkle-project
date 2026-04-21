@@ -236,10 +236,31 @@ class AccountabilityOverviewInfo {
 }
 
 @JsonSerializable()
+class PendingPoliciesSummaryInfo {
+  PendingPoliciesSummaryInfo({
+    required this.count,
+    this.nextTriggerAt,
+    this.policyIds = const [],
+  });
+
+  factory PendingPoliciesSummaryInfo.fromJson(Map<String, dynamic> json) =>
+      _$PendingPoliciesSummaryInfoFromJson(json);
+
+  final int count;
+  @JsonKey(name: 'next_trigger_at')
+  final DateTime? nextTriggerAt;
+  @JsonKey(name: 'policy_ids')
+  final List<String> policyIds;
+
+  Map<String, dynamic> toJson() => _$PendingPoliciesSummaryInfoToJson(this);
+}
+
+@JsonSerializable()
 class AccountabilityDashboardInfo {
   AccountabilityDashboardInfo({
     required this.partnership,
     required this.stats,
+    this.pendingPolicies,
     this.timeline = const [],
     this.heatmap = const {},
     this.achievements = const {},
@@ -254,6 +275,8 @@ class AccountabilityDashboardInfo {
 
   final AccountabilityPartnershipInfo partnership;
   final AccountabilityStatsInfo stats;
+  @JsonKey(name: 'pending_policies')
+  final PendingPoliciesSummaryInfo? pendingPolicies;
   final List<AccountabilityCheckinInfo> timeline;
   final Map<String, dynamic> heatmap;
   final Map<String, dynamic> achievements;

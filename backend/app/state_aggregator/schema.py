@@ -9,6 +9,7 @@ from uuid import UUID
 T = TypeVar("T")
 UserStateFieldName = Literal[
     "commitment_summary",
+    "pending_policies",
     "recent_person_mentions",
     "engagement_state",
     "learning_state",
@@ -34,6 +35,13 @@ class CommitmentSummaryValue:
     overdue_count: int
     next_due_at: datetime | None
     pending_commitment_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PendingPoliciesSummaryValue:
+    count: int
+    next_trigger_at: datetime | None
+    policy_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -140,8 +148,9 @@ class CalendarContextValue:
 @dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1.4"
+    schema_version: str = "user_state.v1.5"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
+    pending_policies: StateFieldEnvelope[PendingPoliciesSummaryValue] | None = None
     recent_person_mentions: StateFieldEnvelope[RecentPersonMentionsValue] | None = None
     engagement_state: StateFieldEnvelope[EngagementStateValue] | None = None
     learning_state: StateFieldEnvelope[LearningStateValue] | None = None
