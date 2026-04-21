@@ -1,11 +1,11 @@
 {
   "audit_id": "aurora-full-audit-2026-04-21",
   "status": "complete",
-  "current_loop": 7,
+  "current_loop": 8,
   "total_loops": 7,
   "time_budget_minutes": 90,
   "started_at": "2026-04-21T00:00:00Z",
-  "last_updated_at": "2026-04-21T01:30:00Z",
+  "last_updated_at": "2026-04-21T02:00:00Z",
   "protocol_file": "docs/product/audit_protocol.md",
   "findings_dir": "docs/product/audit_findings/",
   "final_report": "docs/product/SPARKLE_AURORA_FULL_AUDIT_STAGE4-29_2026-04-21.md",
@@ -76,24 +76,24 @@
       "loop": 7,
       "status": "done",
       "output_file": "docs/product/SPARKLE_AURORA_FULL_AUDIT_STAGE4-29_2026-04-21.md",
-      "findings": {"p0": 0, "p1": 7, "p2": 8, "verified_ok": 116},
+      "findings": {"p0": 0, "p1": 4, "p2": 10, "verified_ok": 116},
       "started_at": "2026-04-21T01:12:00Z",
       "completed_at": "2026-04-21T01:30:00Z"
     }
   ],
   "findings_total": {
     "p0": 0,
-    "p1": 7,
-    "p2": 8,
-    "false_positives": 5,
+    "p1": 4,
+    "p2": 10,
+    "false_positives": 6,
     "verified_ok": 116
   },
   "cross_validation": {
     "status": "complete",
     "re_examined_count": 18,
-    "confirmed_count": 12,
-    "false_positive_count": 1,
-    "downgraded": 1,
+    "confirmed_count": 9,
+    "false_positive_count": 6,
+    "downgraded": 3,
     "not_verified": 5
   },
   "coverage": {
