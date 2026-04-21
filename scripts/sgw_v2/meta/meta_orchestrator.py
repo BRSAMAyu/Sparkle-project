@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS iterations (
     outcome         TEXT NOT NULL DEFAULT 'pending',
     summary_before  TEXT NOT NULL DEFAULT '{}',
     summary_after   TEXT NOT NULL DEFAULT '{}',
+    pre_change_config TEXT,
     created_at      TEXT NOT NULL
 );
 
@@ -110,8 +111,13 @@ class MetaOrchestrator:
         self._iteration_count = self._count_iterations()
 
     def _ensure_phase4_schema(self) -> None:
-        """Create Phase 4 tables if they don't exist."""
+        """Create Phase 4 tables if they don't exist, and migrate older schemas."""
         self.run_db.conn.executescript(_PHASE4_SCHEMA)
+        # Migration: add pre_change_config column if missing
+        try:
+            self.run_db.conn.execute("ALTER TABLE iterations ADD COLUMN pre_change_config TEXT")
+        except Exception:  # noqa: BLE001
+            pass  # Column already exists
         self.run_db.conn.commit()
 
     def _count_iterations(self) -> int:
@@ -168,7 +174,8 @@ class MetaOrchestrator:
         # Step 3: Persist experiment
         self._save_experiment(plan)
 
-        # Step 4: Record iteration
+        # Step 4: Record iteration with pre-change config snapshot
+        pre_change_config = dict(self.current_config)
         iteration = IterationResult(
             iteration_id=f"iter_{uuid.uuid4().hex[:12]}",
             run_id=run_id,
@@ -181,7 +188,7 @@ class MetaOrchestrator:
             summary_after={},  # Will be filled after next run
         )
 
-        self._save_iteration(iteration)
+        self._save_iteration(iteration, pre_change_config=pre_change_config)
 
         # Step 5: Update config for next run
         new_config = self.planner.apply_plan(plan)
@@ -245,9 +252,9 @@ class MetaOrchestrator:
             )
             self.run_db.conn.commit()
 
-        # If significantly regressed, revert config
+        # If significantly regressed, revert config from saved snapshot
         if outcome.startswith("regressed_sig"):
-            self._revert_config(summary_before)
+            self._revert_config(iteration_id)
 
         return iteration
 
@@ -328,7 +335,13 @@ class MetaOrchestrator:
             regressed_dimensions += 2
             sig_regressed += 1
 
-        # Final classification
+        # One-vote veto: authenticity or hard violations regressing significantly
+        # is a deal-breaker regardless of soft violation improvements
+        auth_sig_regressed = z_auth is not None and z_auth > alpha
+        if auth_sig_regressed or hard_delta > 0:
+            return "regressed_sig"
+
+        # Final classification (no veto triggered)
         if sig_regressed > 0 and regressed_dimensions > improved_dimensions:
             return "regressed_sig"
         if sig_improved > 0 and improved_dimensions > regressed_dimensions:
@@ -379,10 +392,19 @@ class MetaOrchestrator:
             return "regressed_nonsig"
         return "neutral"
 
-    def _revert_config(self, previous_summary: dict[str, Any]) -> None:
-        """Revert config to pre-iteration state."""
-        # Reset planner to current config (which was the pre-change config)
-        self.planner = ExperimentPlanner(self.current_config)
+    def _revert_config(self, iteration_id: str) -> None:
+        """Revert config to pre-iteration state by reading saved snapshot."""
+        row = self.run_db.conn.execute(
+            "SELECT pre_change_config FROM iterations WHERE iteration_id = ?",
+            (iteration_id,),
+        ).fetchone()
+        if row and row[0]:
+            saved = json.loads(row[0])
+            self.current_config = saved
+            self.planner = ExperimentPlanner(saved)
+            print(f"[meta] Reverted config to pre-change state ({len(saved)} params)")
+        else:
+            print(f"[meta] WARNING: no pre_change_config found for iteration {iteration_id}")
 
     def _save_experiment(self, plan: ExperimentPlan) -> None:
         self.run_db.conn.execute(
@@ -406,12 +428,12 @@ class MetaOrchestrator:
         )
         self.run_db.conn.commit()
 
-    def _save_iteration(self, iteration: IterationResult) -> None:
+    def _save_iteration(self, iteration: IterationResult, *, pre_change_config: dict[str, Any] | None = None) -> None:
         self.run_db.conn.execute(
             """INSERT OR REPLACE INTO iterations
                (iteration_id, run_id, iteration_number, plan_id, hypotheses_count,
-                changes_applied, outcome, summary_before, summary_after, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                changes_applied, outcome, summary_before, summary_after, pre_change_config, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 iteration.iteration_id,
                 iteration.run_id,
@@ -422,6 +444,7 @@ class MetaOrchestrator:
                 iteration.outcome,
                 json.dumps(iteration.summary_before, ensure_ascii=False),
                 json.dumps(iteration.summary_after, ensure_ascii=False),
+                json.dumps(pre_change_config, ensure_ascii=False) if pre_change_config else None,
                 iteration.created_at,
             ),
         )

@@ -2,6 +2,14 @@
 
 你看不到生成方 prompt、persona 卡、对抗策略，也不能假设生成器意图。你只能根据输入中的聊天原文和最终写入记录打分。
 
+【输入说明】
+输入会包含以下字段：
+- `source_chat_turn`：触发记忆写入的那条用户消息。
+- `inferred_record`：系统推断写入的记忆记录。
+- `conversation_context`：上下文最近 3 对对话（用户和 AI 交替）。
+
+如果 `source_chat_turn` 的语义依赖上下文才能判断（例如"他"指的是谁、时间锚点指向哪个事件、"那个"指的是什么），你必须据此调整 `semantic_fidelity` 和 `entity_boundary` 的评分。不要只看单条消息——脱离上下文的判断会导致误判。
+
 【评分维度】
 1. `metadata_correctness`：结构字段是否完整、可信、与规则一致。
 2. `semantic_fidelity`：写入内容是否忠实反映了 source_chat_turn。

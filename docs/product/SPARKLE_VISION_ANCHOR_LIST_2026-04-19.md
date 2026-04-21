@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-20
-> **版本**: v20（Stage 17 + 18 engineering closeout：社交脑 MVP + Aggregator 单一状态源 + 确定性 push 环闭合）
+> **版本**: v21（Stage 19 engineering closeout：Working Memory + LLM 抽取 dry-run pipeline + Rule AC）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -19,6 +19,8 @@
 > - `SPARKLE_AURORA_STAGE18_DISPATCH_PLAN_2026-04-20.md` — Stage 18 派发计划（State Aggregator + 确定性 push + Rule AB）
 > - `SPARKLE_AURORA_STAGE18_HANDOFF_2026-04-20.md` — Stage 18 工程收尾（8 WS accept + 97 baseline + 42 backend）
 > - `SPARKLE_AURORA_STAGE18_RULE_AB_DEFINITION_2026-04-20.md` — Rule AB 正式定义（push 治理：evidence/cap/quiet-hours/retraction）
+> - `SPARKLE_AURORA_STAGE19_HANDOFF_2026-04-20.md` — Stage 19 工程收尾（7 WS accept + 30 tests + Working Memory Redis-only + LLM dry-run）
+> - `SPARKLE_AURORA_STAGE19_RULE_AC_DEFINITION_2026-04-20.md` — Rule AC 正式定义（Working Memory 治理：Redis-only / 无 SQL/Alembic / consolidation 不触发 push）
 > - `SPARKLE_ADVANCED_CONCEPTS_INTEGRATION_ANALYSIS_2026-04-19.md` — 前沿理念融合分析（Stage 16/17 链路锚点）
 > - `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` — Gray Window 上下文化治理增补（PGW / SGW / Skipped）
 > - `SPARKLE_AURORA_STAGE16_RULE_Y_DEFINITION_2026-04-20.md` — Rule Y 正式定义（推断式画像写入治理）
@@ -751,23 +753,43 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 **Stage 19 义务锁定**：19A Working Memory 必须消费 Aggregator 的 `engagement_state` / `commitment_summary`，不得自建平行层；19B 扩展 Router 消费前需通过 sufficiency governance。
 
-### 9.18 Stage 19 战略定位（LLM 抽取 + Working Memory）
+### 9.18 ✅ Stage 19 完成（Working Memory + LLM 抽取 dry-run pipeline + Rule AC）
 
 **Stage 19 入场条件**：Stage 18 全部 WS green + Aggregator 在生产流量下有至少一周稳定运行 + Rule AB 无破例。
 
-**Stage 19 总目标**：从"规则式抽取"升级为"LLM 辅助抽取"，同时引入 Working Memory 作为短期记忆层。Stage 17 的规则式分类器精度天花板有限，Stage 19 通过 LLM 抽取 + Working Memory 短期上下文管理突破这一限制。
+**Stage 19 总目标**：引入 Working Memory 作为对话级短期记忆层（Redis-only，无持久化），并落地 LLM 抽取 dry-run pipeline 作为规则式抽取的精度提升路径。Stage 19 采用"pipeline 协调"模式——`WorkingMemoryPipelineService` 统一协调规则式与 LLM 两条抽取路径，去重在 Working Memory 层完成。
 
-**Stage 19A 前瞻兼容义务**：Working Memory 必须以 Stage 18 Aggregator 的 `engagement_state` / `commitment_summary` 作为输入来源，不得再自建平行状态聚合层。该义务已在 Stage 18 handoff 正式锁定，不可回退。
+**七个 Workstream（WS-WM-*)**：
 
-**关键 WS**：
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-WM-RULE-AC** | 正式定义 Rule AC（Working Memory 治理） | Redis-only / 无 SQL / 无 Alembic / consolidation 不触发 push |
+| **WS-WM-CORE** | Working Memory 核心服务 | 对话级上下文管理，TTL 生命周期 |
+| **WS-WM-LLM-DRY-RUN** | LLM 抽取 dry-run pipeline | Rule Y 四要素对账；banned inferences 含 emotion/mood/personality；prompt 白名单守卫 |
+| **WS-WM-CONSOLIDATE** | Working Memory consolidation 流程 | explicit confirmation 检测有时间邻近约束；不触发 push（grep guard 0 命中） |
+| **WS-WM-AGGREGATOR-INTEGRATE** | Working Memory 接入 Aggregator schema | Aggregator v1.1 升级，新增 `working_memory_snapshot`；proto-gen clean + KL ≤ 0.03 |
+| **WS-WM-MOBILE** | Working Memory 透明度 | 用户可查看 WM 快照内容，6 widget tests |
+| **WS-WM-KILL** | 三级 kill switch | working_memory / llm_extractor / consolidation 独立可杀 |
 
-| WS | 目的 |
-|----|------|
-| **WS-LLM-EXTRACT** | LLM 辅助抽取器（替代 Stage 17 规则式分类器，精度更高） |
-| **WS-WORKING-MEMORY** | Working Memory 短期记忆层（对话级上下文管理） |
-| **WS-EXTRACT-PRECISION** | 抽取精度验证（LLM vs 规则式 A/B 测试） |
+**Stage 19 硬边界**：
+1. Working Memory 仅 Redis 存储——grep guard 验证 models/alembic 零命中
+2. LLM 抽取走 Rule Y 四要素——InferredEpisodicCandidate 对账 + dry-run
+3. Consolidation 不触发 Push——grep guard 0 命中
+4. Aggregator 只读——Rule AB guard passed
 
-**验收门**：LLM 抽取 precision ≥ 0.90（冷数据集）→ Working Memory 生命周期管理正确 → 全链路端到端测试 green。
+**Stage 19 完成状态**：
+
+| 维度 | 结果 |
+|------|------|
+| commits | 8 原子提交，按 WS 边界拆分 |
+| backend tests | 24 passed |
+| mobile tests | 6 passed（widget） |
+| Rule AC/AB/K 三重 guard | 全部 passed |
+| Aggregator schema | v1.1 升级，向后兼容（KL ≤ 0.03） |
+| proto-gen | clean |
+| 独立审计 | GLM1 accept clean，无 carry-forward debt |
+
+**Stage 20 义务锁定**：Gate S20-0 前置条件（Stage 19 final-accept）已满足，Stage 20 dispatch 可直接交付执行。
 
 ### 9.19 Stage 20 战略定位（Skill 知识蒸馏管道）
 
@@ -779,31 +801,32 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 | WS | 目的 |
 |----|------|
-| **WS-SKILL-EXTRACT** | Skill 提取器（从用户成功案例中自动抽取可复用 Skill） |
-| **WS-SKILL-VALIDATION** | Skill 质量评估（结构化验证 + LLM-judge） |
-| **WS-SKILL-SHARING** | Skill 跨用户共享机制（用户显式授权 + Rule AA 隐私边界） |
-| **WS-SKILL-STORE** | Skill Store（持久化 + 版本管理 + 权限控制） |
+| **WS-SJ-CORE** | Sufficiency Judge（task/context 双路分离） |
+| **WS-CR-CORE** | Conflict Resolver（冻结优先级链 + 审计） |
+| **WS-RH-CORE** | Route History（routing decision + outcome 配对落库） |
 
-**新增治理规则**：**Rule AA**（Stage 20 新建）：Skill 跨用户共享治理（用户显式授权 + 共享范围控制 + 审计日志）。
+**新增治理规则**：**Rule AD**（Sufficiency）+ **Rule AE**（Conflict）。
 
-**验收门**：Skill 提取 precision ≥ 0.85 → 用户可预览、编辑、拒绝提取的 Skill → 跨用户共享有明确 Rule AA 边界 → Skill Store 有完整审计日志。
+**验收门**：Sufficiency task/context 分离精度 ≥ 0.80 → Conflict Resolver 审计完整 → Route History 写入性能达标。
 
-### 9.20 Stage 21 战略定位（Wire-On 前门正式接线）
+### 9.20 Stage 21 战略定位（Skill 知识蒸馏管道）
 
-**Stage 21 入场条件**：Stage 20 全部 WS green + Skill 提取有至少一周生产数据 + 用户反馈 positive + SQAM 四维重新评估。
+**Stage 21 入场条件**：Stage 20 全部 WS green + Route History 已积累足够可信样本。
 
-**Stage 21 总目标**：首次将持续学习组件正式接入用户前门（不再是 shadow / dry-run / inference-cache-only）。
+**Stage 21 总目标**：从"持续学习"升级为"知识蒸馏"——从用户成功案例中提取可复用 Skill，并支持跨用户共享（需用户显式授权，受 Rule AF 治理）。
 
 **关键 WS**：
 
 | WS | 目的 |
 |----|------|
-| **WS-WIRE-PERSISTENT-BAYESIAN** | PersistentBayesianLearner 正式接线到用户前门 |
-| **WS-WIRE-STRATEGY-STORE** | StrategyStore 正式接线到用户前门 |
-| **WS-WIRE-EVIDENCE-INTEGRATION** | 持续学习产出正式进入 evidence drawer |
-| **WS-WIRE-USER-CONTROL** | 用户可查看、撤销、关闭持续学习产出 |
+| **WS-SKILL-EXTRACT** | Skill 提取器（从用户成功案例中自动抽取可复用 Skill） |
+| **WS-SKILL-VALIDATION** | Skill 质量评估（结构化验证 + LLM-judge） |
+| **WS-SKILL-SHARING** | Skill 跨用户共享机制（用户显式授权 + Rule AF 隐私边界） |
+| **WS-SKILL-STORE** | Skill Store（持久化 + 版本管理 + 权限控制） |
 
-**验收门**：SQAM 四维全部 green → 用户可从 evidence drawer 追溯学习产出 → 用户可一键撤销学习产出 → 全链路端到端测试 green。
+**新增治理规则**：**Rule AF**（Stage 21 新建）：Skill 跨用户共享治理。
+
+**验收门**：Skill 提取 precision ≥ 0.85 → 用户可预览、编辑、拒绝提取的 Skill → 跨用户共享有明确 Rule AF 边界 → Skill Store 有完整审计日志。
 
 ### 9.21 Stage 22-23 战略定位（双交互模式 + 成长操作系统）
 
@@ -821,7 +844,7 @@ Social Brain + Accountability + Router Read-Only (Stage 17 ✅)
     ↓
 State Aggregator + State-Driven Push (Stage 18 ✅)
     ↓
-LLM Extraction + Working Memory (Stage 19)
+LLM Extraction + Working Memory (Stage 19 ✅)
     ↓
 Skill Distillation + Rule AA (Stage 20)
     ↓
@@ -848,22 +871,22 @@ Growth OS (Stage 23)
 
 **硬约束**：任何 Stage 试图跳跃依赖链上游未完成的 Stage，默认拒绝。
 
-### 9.23 显式延后挂牌更新（Stage 18 closeout 后）
+### 9.23 显式延后挂牌更新（Stage 19 closeout 后）
 
 | 项目 | 来源 | 状态 | 下一归属 |
 |------|------|------|----------|
-| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 19+ candidate |
-| evidence type 扩展（WS-EVD3 full） | Stage 13 仅落了 `practice_outcome` lite | deferred | Stage 19+ candidate |
-| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 19+ candidate |
+| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 20+ candidate |
+| evidence type 扩展（WS-EVD3 full） | Stage 13 仅落了 `practice_outcome` lite | deferred | Stage 20+ candidate |
+| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 20+ candidate |
 | APNs / FCM 真实设备推送 | Stage 18 仅 WebSocket channel | deferred | 真实用户上线阶段 |
-| Aggregator event-driven fan-out | Stage 18 仅 pull-only | deferred | Stage 19+ candidate |
-| LLM 抽取替代规则式分类器 | Stage 17 仅规则式 | deferred | **Stage 19A**（路线图锁定） |
-| Working Memory 短期记忆层 | 长期愿景 | deferred | **Stage 19A**（路线图锁定） |
-| Router 扩展消费（sufficiency governance） | Stage 17/18 仅读不决策 | deferred | **Stage 19B**（需 sufficiency judge 验收） |
-| Skill 跨用户共享 | 长期愿景 | deferred | **Stage 20**（路线图锁定，Rule AA） |
-| 持续学习前门正式接线 | Stage 14 wire-safe prep | deferred | **Stage 21**（路线图锁定） |
-| dual interaction mode | 长期愿景 | deferred | **Stage 22**（路线图锁定） |
-| growth OS 雏形 | 长期愿景 | deferred | **Stage 23**（路线图锁定） |
+| Aggregator event-driven fan-out | Stage 18 仅 pull-only | deferred | Stage 20+ candidate |
+| LLM 抽取正式接线（从 dry-run 升级为 live） | Stage 19 仅 dry-run | deferred | **Stage 20+** candidate |
+
+| Router 扩展消费（sufficiency governance） | Stage 17/18/19 仅读不决策 | deferred | **Stage 20+**（需 sufficiency judge 验收） |
+| Skill 跨用户共享 | 长期愿景 | deferred | **Stage 21**（路线图锁定，Rule AF） |
+| 持续学习前门正式接线 | Stage 14 wire-safe prep | deferred | **Stage 22**（路线图锁定） |
+| dual interaction mode | 长期愿景 | deferred | **Stage 23**（路线图锁定） |
+| growth OS 雏形 | 长期愿景 | deferred | **Stage 24**（路线图锁定） |
 
 ### 9.24 愿景锚点 vs 当前覆盖更新（Stage 17 dispatch 后）
 
@@ -885,8 +908,8 @@ Growth OS (Stage 23)
 | 成长操作系统 | ❌→Stage 23 | 路线图已锁定 Stage 23 雏形 |
 | 社交脑 | 🔶→Stage 17 | dispatch 落盘，8 WS 待开工；Rule Z 治理跨用户隐私；`social_context` namespace 独立于 `community_context`；入场 gate 改为 SGW |
 | 主动推送 | ❌→Stage 18 | 路线图已锁定 Stage 18（State Aggregator + State-Driven Push） |
-| 知识蒸馏 | ❌→Stage 20 | 路线图已锁定 Stage 20（Rule AA 跨用户共享） |
-| 持续学习前门接线 | ❌→Stage 21 | 路线图已锁定 Stage 21（SQAM 四维 green 后正式 wire-on） |
+| 知识蒸馏 | ❌→Stage 21 | 路线图已锁定 Stage 21（Rule AF 跨用户共享） |
+| 持续学习前门接线 | ❌→Stage 21 | 路线图已锁定 Stage 21（SQAM 四维重新评估 + wire-on） |
 | Router 决策消费 Memory | ❌→Stage 19B+ | Stage 17 仅读不决策；需 Sufficiency Judge 验收后才允许决策分支 |
 | LLM 辅助抽取 | ❌→Stage 19 | 路线图已锁定 Stage 19（Working Memory 配套） |
 
@@ -950,6 +973,7 @@ Growth OS (Stage 23)
 | v18 | 2026-04-20 | Aurora Gray Window 上下文化治理升版：新增 `PGW / SGW / Skipped` 三段式门控，Sparkle 当前 `Pre-launch` 语境改走 SGW；新增 `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` 与 `SPARKLE_AURORA_STAGE16_SGW_FRAMEWORK_2026-04-20.md`；Stage 17 入场条件从物理上不可满足的 7 天生产灰度改为 SGW（≥12h wall-clock + ≥20 persona + ≥200 会话 + ≥4000 turn + `Hard violation = 0` + `Soft violation rate < 5%`）；同时保留真实用户接受度为延后验证项 |
 | v19 | 2026-04-20 | SGW v1.0 工程化定稿：并发收敛为 5 个 Claude worker，运行改为可 checkpoint / resume 的确定性 orchestrator；persona 覆盖冻结为 44 条（36 矩阵 + 8 特殊），总会话阈值升级为 ≥360；治理 addendum 升格为 `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md`；Stage 17 dispatch 明确 `SocialContextProvider -> FrozenSocialSnapshot` 前瞻兼容契约，Stage 18 必须以 Aggregator provider 实现兑现该契约 |
 | v20 | 2026-04-20 | Stage 17 + 18 engineering closeout 完成；Stage 17：8 WS accept（Rule Z 落盘 + 社交主语分类器 + commitment parser + Accountability MVP + Router 只读 seam + per-type kill switch），27 backend + 51 mobile green；Stage 18：8 WS accept（`user_state.v1` frozen schema + pull-only Aggregator + 确定性 push policy + WebSocket channel + Rule AB + 三级 kill switch + mobile opt-in），42 backend green + GLM1 独立审计通过；Aggregator-backed Router 迁移保持 Stage 17 公共合约不变；愿景覆盖表更新：社交脑从🔶→✅，主动推送从❌→✅，状态聚合从❌→✅；7 阶段成长环 5/7（Reinforce 仍弱，Stage 19 预计首次触达）；治理规则达 19 条（G-Z + Y + Z + AB） |
+| v21 | 2026-04-20 | Stage 19 engineering closeout 完成（GLM1 accept clean，无 carry-forward debt）；7 WS accept：Working Memory Redis-only 核心服务 + LLM 抽取 dry-run pipeline（Rule Y 四要素对账 + banned inferences emotion/mood/personality）+ pipeline 协调模式（WorkingMemoryPipelineService 统一规则式与 LLM 两条路径）+ consolidation 流程（不触发 push）+ Aggregator v1.1 升级（新增 working_memory_snapshot，proto-gen clean + KL ≤ 0.03）+ mobile 透明度 + 三级 kill switch（working_memory / llm_extractor / consolidation 独立可杀）；Rule AC 落盘；24 backend + 6 mobile tests green；7 阶段成长环 6/7（Reinforce 从🔶升为✅）；治理规则达 20 条（+ Rule AC） |
 
 ---
 

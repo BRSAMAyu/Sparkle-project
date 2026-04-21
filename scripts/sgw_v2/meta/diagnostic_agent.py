@@ -128,19 +128,30 @@ class DiagnosticAgent:
         self.run_db = run_db
 
     def diagnose(self, run_id: str) -> list[DiagnosticHypothesis]:
-        """Analyze a run and return diagnostic hypotheses from both layers."""
+        """Analyze a run and return diagnostic hypotheses from both layers.
+
+        Deduplicates against hypotheses from the last 10 runs to prevent
+        the same hypothesis being counted as "new" repeatedly.
+        """
         summary = self.run_db.run_summary(run_id)
         if not summary:
             return []
+
+        # Load previously-seen hypothesis signatures for dedup
+        seen = self._load_seen_hypotheses(limit_runs=10)
 
         hypotheses: list[DiagnosticHypothesis] = []
 
         # Layer 1: Global threshold rules
         for rule in _DIAGNOSTIC_RULES:
             if rule["trigger"](summary):
+                hid = rule["id"]
+                if hid in seen:
+                    seen[hid] = seen[hid] + 1
+                    continue  # Skip duplicate
                 hypotheses.append(
                     DiagnosticHypothesis(
-                        hypothesis_id=rule["id"],
+                        hypothesis_id=hid,
                         category=rule["category"],
                         severity=rule["severity"],
                         description=rule["description"],
@@ -152,12 +163,38 @@ class DiagnosticAgent:
                 )
 
         # Layer 2: Cross-slice attribution (no LLM needed)
-        hypotheses.extend(self._cross_slice_diagnose(run_id, summary))
+        hypotheses.extend(self._cross_slice_diagnose(run_id, summary, seen))
 
         return hypotheses
 
-    def _cross_slice_diagnose(self, run_id: str, summary: dict[str, Any]) -> list[DiagnosticHypothesis]:
-        """Find cells where failure rate is >2x overall using GROUP BY."""
+    def _load_seen_hypotheses(self, limit_runs: int = 10) -> dict[str, int]:
+        """Load hypothesis_ids from recent iterations to detect duplicates.
+
+        Returns dict mapping hypothesis_id -> occurrence_count.
+        """
+        seen: dict[str, int] = {}
+        # Check experiments table for hypothesis IDs
+        rows = self.run_db.conn.execute(
+            """SELECT hypothesis_ids FROM experiments
+               ORDER BY created_at DESC LIMIT ?""",
+            (limit_runs,),
+        ).fetchall()
+        for row in rows:
+            if not row[0]:
+                continue
+            try:
+                ids = json.loads(row[0])
+                for hid in ids:
+                    seen[hid] = seen.get(hid, 0) + 1
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return seen
+
+    def _cross_slice_diagnose(self, run_id: str, summary: dict[str, Any], seen: dict[str, int]) -> list[DiagnosticHypothesis]:
+        """Find cells where failure rate is >2x overall using GROUP BY.
+
+        Deduplicates against seen hypotheses by including persona+behavior in the ID.
+        """
         hypotheses: list[DiagnosticHypothesis] = []
 
         # Overall compliance violation rate
@@ -183,9 +220,13 @@ class DiagnosticAgent:
             persona_id, behavior_class, total, violations = row
             cell_rate = (violations or 0) / total
             if cell_rate > overall_rate * 2 and cell_rate > 0.10:
+                hid = f"slice_{persona_id[:8]}_{behavior_class}"
+                if hid in seen:
+                    seen[hid] = seen[hid] + 1
+                    continue  # Already reported in previous run
                 hypotheses.append(
                     DiagnosticHypothesis(
-                        hypothesis_id=f"slice_{persona_id[:8]}_{behavior_class}",
+                        hypothesis_id=hid,
                         category="attribution",
                         severity="major",
                         description=(
@@ -227,9 +268,13 @@ class DiagnosticAgent:
             persona_id, total, failures, mean_score = row
             cell_rate = (failures or 0) / total
             if cell_rate > overall_auth_failure_rate * 2 and cell_rate > 0.20:
+                hid = f"auth_slice_{persona_id[:8]}"
+                if hid in seen:
+                    seen[hid] = seen[hid] + 1
+                    continue  # Already reported
                 hypotheses.append(
                     DiagnosticHypothesis(
-                        hypothesis_id=f"auth_slice_{persona_id[:8]}",
+                        hypothesis_id=hid,
                         category="authenticity",
                         severity="major",
                         description=(
