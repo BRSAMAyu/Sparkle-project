@@ -1,0 +1,32 @@
+[
+  {
+    "template_id": "task_need_target",
+    "category": "task_sufficiency",
+    "message": "我先不急着给方案。你现在最想推进的具体对象是什么？"
+  },
+  {
+    "template_id": "task_need_constraint",
+    "category": "task_sufficiency",
+    "message": "为了不把建议说空，我还缺一个约束条件：你最在意的是时间、难度，还是资源限制？"
+  },
+  {
+    "template_id": "task_need_goal_boundary",
+    "category": "task_sufficiency",
+    "message": "我先帮你收口目标。你希望这次回答最终落成什么结果？"
+  },
+  {
+    "template_id": "task_need_scope",
+    "category": "task_sufficiency",
+    "message": "我还需要知道这件事的范围。你想先解决其中哪一部分？"
+  },
+  {
+    "template_id": "task_need_priority",
+    "category": "task_sufficiency",
+    "message": "我先确认优先级。现在最不能拖的是哪一项？"
+  },
+  {
+    "template_id": "task_need_time_anchor",
+    "category": "task_sufficiency",
+    "message": "为了把建议排进现实里，我还需要一个时间锚点：你希望什么时候开始或完成？"
+  }
+]

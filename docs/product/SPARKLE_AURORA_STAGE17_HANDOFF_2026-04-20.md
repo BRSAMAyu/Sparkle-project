@@ -2,7 +2,7 @@
 
 > Status: engineering closeout baseline after autonomous Stage 17 execution
 > Scope note: Stage 17 was executed under the explicit governance addendum that the gray-window framework is owned by a separate Claude Code stream and does not block this stage's engineering gate.
-> Repository note: Stage 17 work is landed in the workspace and validated locally; Rule G atomic git slicing is still pending, so `stage17_progress.md` intentionally keeps `commits: pending`.
+> Repository note: the closeout baseline was reconfirmed during Stage 20 preparation; Rule G atomic git slicing is still pending, so `stage17_progress.md` intentionally keeps `commits: pending`.
 
 ## 1. Final Accept Matrix
 

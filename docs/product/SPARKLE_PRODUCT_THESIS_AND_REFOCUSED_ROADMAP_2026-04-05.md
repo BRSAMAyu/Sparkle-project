@@ -219,6 +219,21 @@ It means their right to exist depends on user benefit.
 
 ## 6. The Core User Experience
 
+## 6.5 Aurora Stage Naming Update
+
+The Aurora implementation roadmap is now locked as:
+
+1. Stage 19: Working Memory + LLM extract dry-run + consolidation
+2. Stage 20: Sufficiency Judge + Conflict Resolver + Route History
+3. Stage 21: Skill distillation
+4. Stage 22: Bayesian wire-on
+
+Rule naming is correspondingly locked as:
+
+1. Rule AD: Sufficiency Judge governance
+2. Rule AE: Conflict Resolver governance
+3. Rule AF: Skill cross-user sharing governance
+
 The core user experience is not:
 
 - “Sparkle is smart”

@@ -48,3 +48,13 @@ Stage 17 enforces Rule Z through:
 1. static CI guard extensions in `scripts/check_rule_k_write_paths.py`
 2. namespace isolation via `social_context`
 3. ownership-bound read-side filtering
+
+## 7. HMAC Upgrade Path
+
+Stage 17 intentionally uses the ownership-bound key form `f"{user_id}:null"` because the mentioned party is not yet resolved to a registered Sparkle user.
+
+If a future governed upgrade resolves the mentioned party to a Sparkle account, the key form must upgrade to `f"{user_id}:{mentioned_user_id}"`. That upgrade is only allowed with:
+
+1. a one-time historical hash recomputation pass
+2. a dedup step over the owner's existing mention rows
+3. an explicit governance review confirming the Rule Z no-cross-user-join boundary still holds
