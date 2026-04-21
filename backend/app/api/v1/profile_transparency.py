@@ -31,6 +31,7 @@ from app.services.profile_insight_control_service import ProfileInsightControlSe
 from app.services.profile_write_service import ProfileWriteService
 from app.services.insight_copy import present_pattern_name
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.services.traits_coldstart_service import COLDSTART_QUESTIONS, TraitsColdStartService
 from app.services.user_insight_transparency_service import UserInsightTransparencyService
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -434,6 +435,11 @@ class OnboardingPreviewResponse(BaseModel):
     message: str
     source: str = "fallback"
     fallback_used: bool = True
+
+
+class TraitsColdstartRequest(BaseModel):
+    answers: dict[str, str] = Field(default_factory=dict)
+    skip: bool = False
 
 
 class CorrectionRequest(BaseModel):
@@ -1217,6 +1223,36 @@ async def preview_onboarding(
         source=source,
         fallback_used=fallback_used,
     )
+
+
+@router.get("/traits/coldstart/questions")
+async def get_traits_coldstart_questions(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    _ = current_user
+    return {
+        "questions": list(COLDSTART_QUESTIONS),
+        "allow_skip": True,
+        "prompt": "初始画像只作为弱先验，后续会被真实互动逐步修正。",
+    }
+
+
+@router.post("/traits/coldstart")
+async def submit_traits_coldstart(
+    payload: TraitsColdstartRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    service = TraitsColdStartService(db, cache_service.redis)
+    traits = await service.submit_answers(
+        current_user.id,
+        answers={} if payload.skip else dict(payload.answers or {}),
+    )
+    return {
+        "status": "ok",
+        "skipped": bool(payload.skip or not traits.active_dimensions()),
+        "traits_prior": traits.model_dump(mode="json", exclude_none=True),
+    }
 
 
 @router.put("/preferences")

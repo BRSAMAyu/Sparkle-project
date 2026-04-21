@@ -17,8 +17,11 @@ from app.core.event_bus import event_bus
 from app.core.metrics import get_or_create_metric
 from app.models.task import Task
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
+from app.models.user_preferences import UserPreferencesCenter
 from app.services.aurora_stage25_reflection_kill_switch_service import AuroraStage25ReflectionKillSwitchService
 from app.services.cognitive_service import CognitiveService
+from app.services.srl_phase_traits import derive_reflection_prompt_style
+from app.event_publishers.srl_events import publish_srl_event
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate, MemoryInferredWriteLaneService
 from app.services.route_history_service import RouteHistoryService
 from app.services.rule_y_adapter import RuleYAdapter
@@ -150,11 +153,12 @@ class TaskReflectionService:
         if await self._on_cooldown(user_id=user_id, plan_id=task.plan_id):
             return None
 
-        prompt = self._build_prompt(
+        prompt = await self._build_prompt(
             category=normalized,
             task_id=task.id,
             plan_id=task.plan_id,
             feedback_id=getattr(feedback, "id", None),
+            user_id=user_id,
             task_title=task.title,
         )
         try:
@@ -355,11 +359,12 @@ class TaskReflectionService:
             raise ValueError("Feedback not found")
         feedback, task = row
 
-        prompt = self._build_prompt(
+        prompt = await self._build_prompt(
             category=str(feedback.category or "").strip().lower() or "abandoned",
             task_id=task.id,
             plan_id=task.plan_id,
             feedback_id=feedback.id,
+            user_id=user_id,
             task_title=task.title,
         )
         payload = {
@@ -413,27 +418,61 @@ class TaskReflectionService:
                 )
             except Exception as exc:
                 logger.warning(f"Failed to refresh Phase4 reflection report: {exc}")
+        from app.core.event_bus import ReflectionCompletedEvent
+
+        reflection_event = ReflectionCompletedEvent(
+            user_id=str(user_id),
+            feedback_id=str(feedback.id),
+            task_id=str(task.id),
+            plan_id=str(task.plan_id) if task.plan_id else None,
+        )
+        await event_bus.publish("reflection.completed", reflection_event.to_dict())
+        await publish_srl_event(
+            user_id=user_id,
+            trigger_event_type="reflection.completed",
+            evidence_id=str(feedback.id),
+            metadata={"plan_id": str(task.plan_id) if task.plan_id else None},
+        )
         return payload
 
-    def _build_prompt(
+    async def _build_prompt(
         self,
         *,
         category: str,
         task_id: UUID,
         plan_id: UUID | None,
         feedback_id: UUID | None,
+        user_id: UUID | None = None,
         task_title: str,
     ) -> dict[str, object]:
         template = self.PROMPT_TEMPLATES.get(category) or self.PROMPT_TEMPLATES["abandoned"]
+        reflection_prompt_style = await self._get_reflection_prompt_style(user_id) if user_id else "default"
+        question = str(template["question"])
+        options = list(template["options"])
+        if reflection_prompt_style == "alternative_exploration":
+            question = f"{question} 也可以顺手看看有没有另一条更顺的做法。"
+            options = [*options, "换个做法试试"]
+        elif reflection_prompt_style == "single_path_deepening":
+            question = f"{question} 我们先沿着一条最稳的路径往下拆。"
         return {
             "task_id": str(task_id),
             "plan_id": str(plan_id) if plan_id else "",
             "feedback_id": str(feedback_id) if feedback_id else "",
             "task_title": task_title,
             "category": category,
-            "question": template["question"],
-            "options": template["options"],
+            "question": question,
+            "options": options,
+            "reflection_prompt_style": reflection_prompt_style,
         }
+
+    async def _get_reflection_prompt_style(self, user_id: UUID | None) -> str:
+        if user_id is None:
+            return "default"
+        result = await self.db.execute(
+            select(UserPreferencesCenter.traits_prior).where(UserPreferencesCenter.user_id == user_id)
+        )
+        traits_prior = result.scalar_one_or_none()
+        return derive_reflection_prompt_style(dict(traits_prior or {}))
 
     async def _on_cooldown(self, *, user_id: UUID, plan_id: UUID) -> bool:
         if not self.redis:

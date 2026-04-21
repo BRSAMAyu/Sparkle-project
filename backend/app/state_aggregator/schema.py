@@ -22,6 +22,8 @@ UserStateFieldName = Literal[
     "active_skills_summary",
     "achievement_summary",
     "calendar_context",
+    "traits_prior",
+    "srl_phase",
 ]
 
 
@@ -185,9 +187,30 @@ class CalendarContextValue:
 
 
 @dataclass(frozen=True)
+class TraitPriorDimensionValue:
+    dim: str
+    value: float
+    confidence: float
+    source: str
+
+
+@dataclass(frozen=True)
+class TraitsPriorSummaryValue:
+    items: tuple[TraitPriorDimensionValue, ...]
+
+
+@dataclass(frozen=True)
+class SRLPhaseSummaryValue:
+    current_phase: str
+    phase_started_at: datetime | None
+    confidence: float
+    source: str
+
+
+@dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1.8"
+    schema_version: str = "user_state.v1.10"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
     pending_policies: StateFieldEnvelope[PendingPoliciesSummaryValue] | None = None
     recent_reflections: StateFieldEnvelope[RecentReflectionsSummaryValue] | None = None
@@ -202,4 +225,6 @@ class UserStateV1:
     active_skills_summary: StateFieldEnvelope[ActiveSkillsSummaryValue] | None = None
     achievement_summary: StateFieldEnvelope[AchievementSummaryValue] | None = None
     calendar_context: StateFieldEnvelope[CalendarContextValue] | None = None
+    traits_prior: StateFieldEnvelope[TraitsPriorSummaryValue] | None = None
+    srl_phase: StateFieldEnvelope[SRLPhaseSummaryValue] | None = None
     emotion_hint: StateFieldEnvelope[None] | None = None

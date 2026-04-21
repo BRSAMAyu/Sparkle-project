@@ -153,6 +153,115 @@ class TaskAbandoned(Event):
         }
 
 
+class TaskStartedEvent(Event):
+    def __init__(
+        self,
+        user_id: str,
+        task_id: str,
+        plan_id: str | None = None,
+        source: str = "task_service",
+    ):
+        self.user_id = user_id
+        self.task_id = task_id
+        self.plan_id = plan_id
+        self.source = source
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "task.started",
+            "user_id": self.user_id,
+            "task_id": self.task_id,
+            "plan_id": self.plan_id,
+            "source": self.source,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class PlanCreatedEvent(Event):
+    def __init__(
+        self,
+        user_id: str,
+        plan_id: str,
+        evidence_id: str | None = None,
+        source: str = "discovery_manager",
+        metadata: dict[str, Any] | None = None,
+    ):
+        self.user_id = user_id
+        self.plan_id = plan_id
+        self.evidence_id = evidence_id
+        self.source = source
+        self.metadata = metadata or {}
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "plan.created",
+            "user_id": self.user_id,
+            "plan_id": self.plan_id,
+            "evidence_id": self.evidence_id,
+            "source": self.source,
+            "metadata": self.metadata,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class ReflectionCompletedEvent(Event):
+    def __init__(
+        self,
+        user_id: str,
+        feedback_id: str,
+        task_id: str,
+        plan_id: str | None = None,
+        source: str = "task_reflection_service",
+    ):
+        self.user_id = user_id
+        self.feedback_id = feedback_id
+        self.task_id = task_id
+        self.plan_id = plan_id
+        self.source = source
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "reflection.completed",
+            "user_id": self.user_id,
+            "feedback_id": self.feedback_id,
+            "task_id": self.task_id,
+            "plan_id": self.plan_id,
+            "source": self.source,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class SRLPhaseTransitionEvent(Event):
+    def __init__(
+        self,
+        user_id: str,
+        trigger_event_type: str,
+        evidence_id: str,
+        metadata: dict[str, Any] | None = None,
+        published_at: str | None = None,
+    ):
+        self.user_id = user_id
+        self.trigger_event_type = trigger_event_type
+        self.evidence_id = evidence_id
+        self.metadata = metadata or {}
+        self.published_at = published_at or datetime.now(timezone.utc).isoformat()
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "srl.phase.transition",
+            "user_id": self.user_id,
+            "trigger_event_type": self.trigger_event_type,
+            "evidence_id": self.evidence_id,
+            "metadata": self.metadata,
+            "published_at": self.published_at,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class ProfilePreferenceUpdated(Event):
     def __init__(
         self,
@@ -196,6 +305,47 @@ class ProfilePreferenceDeleted(Event):
             "user_id": self.user_id,
             "pref_key": self.pref_key,
             "preference_version": self.preference_version,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class TraitObserved(Event):
+    def __init__(
+        self,
+        user_id: str,
+        evidence_id: str,
+        source: str,
+    ):
+        self.user_id = user_id
+        self.evidence_id = evidence_id
+        self.source = source
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "trait_observed",
+            "user_id": self.user_id,
+            "evidence_id": self.evidence_id,
+            "source": self.source,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class TraitsColdstartCompleted(Event):
+    def __init__(
+        self,
+        user_id: str,
+        completed_at: str,
+    ):
+        self.user_id = user_id
+        self.completed_at = completed_at
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "coldstart_completed",
+            "user_id": self.user_id,
+            "completed_at": self.completed_at,
             "timestamp": self.timestamp.isoformat(),
         }
 

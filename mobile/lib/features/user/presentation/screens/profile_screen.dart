@@ -7,6 +7,11 @@ import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
+import 'package:sparkle/features/user/presentation/widgets/srl_phase_badge_card.dart';
+import 'package:sparkle/features/user/presentation/widgets/traits_coldstart_questionnaire.dart';
+import 'package:sparkle/features/user/presentation/widgets/traits_prior_card.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
@@ -22,6 +27,7 @@ class ProfileScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final achievementState = ref.watch(achievementProvider);
     final visualState = ref.watch(visualElementProvider);
+    final profileContextAsync = ref.watch(profileContextProvider);
     final l10n = AppLocalizations.of(context)!;
     final screenHeight = MediaQuery.of(context).size.height;
     final headerHeight = screenHeight < 720 ? 164.0 : 198.0;
@@ -42,6 +48,16 @@ class ProfileScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     const StatisticsCard(),
+                    const SizedBox(height: DS.spacing12),
+                    profileContextAsync.when(
+                      data: (profileContext) => _buildTraitsSection(
+                        context,
+                        ref,
+                        profileContext,
+                      ),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
                     const SizedBox(height: DS.spacing12),
                     _buildPrestigeShowcase(
                       context,
@@ -252,6 +268,82 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
       );
+
+  Widget _buildTraitsSection(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> profileContext,
+  ) {
+    final userInsightState =
+        profileContext['user_insight_state'] as Map<String, dynamic>? ?? const {};
+    final coldstartCompletedAt =
+        userInsightState['traits_coldstart_completed_at']?.toString();
+    final traits = TraitsPriorCard.fromProfileContext(profileContext);
+    final srlPhase = SrlPhaseBadgeCard.fromProfileContext(profileContext);
+
+    return Column(
+      children: [
+        if (srlPhase != null)
+          SrlPhaseBadgeCard(
+            phase: srlPhase['phase'] ?? 'UNKNOWN',
+            helperText: srlPhase['helperText'] ?? '',
+          ),
+        if (srlPhase != null) const SizedBox(height: DS.spacing12),
+        TraitsPriorCard(traits: traits),
+        if ((coldstartCompletedAt == null || coldstartCompletedAt.isEmpty) &&
+            traits.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing12),
+            child: TraitsColdstartQuestionnaire(
+              questions: const [
+                {
+                  'id': 'q1',
+                  'title': '开始新目标时，你更像哪种方式？',
+                  'options': [
+                    {'id': 'structured', 'label': '先搭结构再行动'},
+                    {'id': 'mixed', 'label': '先有框架，再边做边调'},
+                    {'id': 'explore', 'label': '先试试看，让方向自己浮现'},
+                    {'id': 'skip', 'label': '跳过'},
+                  ],
+                },
+                {
+                  'id': 'q2',
+                  'title': '遇到难题时，你更容易从哪里补能量？',
+                  'options': [
+                    {'id': 'solo', 'label': '先自己想清楚'},
+                    {'id': 'small_group', 'label': '找一两个人讨论'},
+                    {'id': 'group', 'label': '边聊边想最有感觉'},
+                    {'id': 'skip', 'label': '跳过'},
+                  ],
+                },
+                {
+                  'id': 'q3',
+                  'title': '当计划被打乱时，你通常最先出现什么反应？',
+                  'options': [
+                    {'id': 'replan', 'label': '马上重排，尽快回正'},
+                    {'id': 'pause', 'label': '会卡一下，但能慢慢拉回来'},
+                    {'id': 'swing', 'label': '情绪和节奏都会受影响'},
+                    {'id': 'skip', 'label': '跳过'},
+                  ],
+                },
+              ],
+              onSubmit: (answers) async {
+                await ref.read(userRepositoryProvider).submitTraitsColdstart(
+                      answers: answers,
+                    );
+                ref.invalidate(profileContextProvider);
+              },
+              onSkip: () async {
+                await ref.read(userRepositoryProvider).submitTraitsColdstart(
+                      skip: true,
+                    );
+                ref.invalidate(profileContextProvider);
+              },
+            ),
+          ),
+      ],
+    );
+  }
 
   Color _colorFromElement(dynamic element) {
     final colors = (element.config['colors'] as List<dynamic>?) ??

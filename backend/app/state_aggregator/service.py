@@ -8,11 +8,15 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models.achievement import Achievement, AchievementRarity, UserAchievement, UserStreakStats
 from app.models.chat import ChatSession
 from app.models.calendar_event import CalendarEvent
 from app.models.focus import FocusSession, FocusStatus
 from app.models.memory import EpisodicMemory
+from app.models.srl_phase_state import SRLPhaseStateRecord
+from app.models.user_preferences import UserPreferencesCenter
+from app.core.user_insight_state import BigFiveTraits
 from app.services.memory_service import MemoryService
 from app.services.scene_consolidation_service import SceneConsolidationService
 from app.services.policy_scheduler_service import PolicySchedulerService
@@ -40,9 +44,12 @@ from app.state_aggregator.schema import (
     RecentSceneItemValue,
     RecentScenesSummaryValue,
     RecentPersonMentionsValue,
+    SRLPhaseSummaryValue,
     SocialMentionValue,
     SufficiencySummaryValue,
     StateFieldEnvelope,
+    TraitPriorDimensionValue,
+    TraitsPriorSummaryValue,
     UserStateFieldName,
     UserStateV1,
     WorkingMemorySnapshotValue,
@@ -73,6 +80,8 @@ class StateAggregatorService:
         "active_skills_summary": 30,
         "achievement_summary": 300,
         "calendar_context": 300,
+        "traits_prior": 30,
+        "srl_phase": settings.AURORA_SRL_AGGREGATOR_TTL_SECONDS,
     }
 
     def __init__(self, db: AsyncSession) -> None:
@@ -146,6 +155,8 @@ class StateAggregatorService:
             "active_skills_summary": self._build_active_skills_summary,
             "achievement_summary": self._build_achievement_summary,
             "calendar_context": self._build_calendar_context,
+            "traits_prior": self._build_traits_prior_summary,
+            "srl_phase": self._build_srl_phase_summary,
         }
         envelope = await fetcher[field_name](
             user_id,
@@ -659,6 +670,69 @@ class StateAggregatorService:
             value=value,
             computed_at=now,
             source_snapshot_ids=tuple(f"calendar_event:{event.id}" for event in week_events[:10]),
+            freshness_seconds=0,
+        )
+
+    async def _build_traits_prior_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[TraitsPriorSummaryValue]:
+        del current_turn_parse
+        row = (
+            await self.db.execute(
+                select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
+            )
+        ).scalar_one_or_none()
+        traits = BigFiveTraits.model_validate(dict(getattr(row, "traits_prior", {}) or {}))
+        observation_state = dict(getattr(row, "trait_observation_state", {}) or {})
+        latest_evidence_ids = dict(observation_state.get("latest_evidence_ids") or {})
+        items = tuple(
+            TraitPriorDimensionValue(
+                dim=dim,
+                value=value.value,
+                confidence=value.confidence,
+                source=value.source,
+            )
+            for dim, value in traits.active_dimensions().items()
+            if float(value.confidence) >= 0.1
+        )
+        return StateFieldEnvelope(
+            value=TraitsPriorSummaryValue(items=items),
+            computed_at=now,
+            source_snapshot_ids=tuple(
+                str(latest_evidence_ids.get(item.dim) or f"trait:{item.dim}")
+                for item in items
+            ),
+            freshness_seconds=0,
+        )
+
+    async def _build_srl_phase_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[SRLPhaseSummaryValue]:
+        del current_turn_parse
+        row = (
+            await self.db.execute(
+                select(SRLPhaseStateRecord).where(SRLPhaseStateRecord.user_id == user_id)
+            )
+        ).scalar_one_or_none()
+        value = SRLPhaseSummaryValue(
+            current_phase=str(getattr(row, "current_phase", "UNKNOWN") or "UNKNOWN"),
+            phase_started_at=getattr(row, "phase_started_at", None),
+            confidence=float(getattr(row, "confidence", 0.0) or 0.0),
+            source=str(getattr(row, "source", "default") or "default"),
+        )
+        snapshot_ids = tuple()
+        if row is not None:
+            snapshot_ids = (f"srl_phase:{row.user_id}",)
+        return StateFieldEnvelope(
+            value=value,
+            computed_at=now,
+            source_snapshot_ids=snapshot_ids,
             freshness_seconds=0,
         )
 

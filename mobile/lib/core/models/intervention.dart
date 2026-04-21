@@ -23,6 +23,9 @@ class InterventionContent {
     required this.intentType,
     required this.templateId,
     required this.scaffoldingLevel,
+    required this.srlPhaseHint,
+    required this.srlPhaseMessage,
+    required this.reflectionPromptStyle,
     required this.contextVariables,
   });
 
@@ -41,6 +44,9 @@ class InterventionContent {
       intentType: json['intent_type'] as String? ?? '',
       templateId: json['template_id'] as String? ?? '',
       scaffoldingLevel: (json['scaffolding_level'] as num?)?.toInt() ?? 0,
+      srlPhaseHint: json['srl_phase_hint'] as String? ?? '',
+      srlPhaseMessage: json['srl_phase_message'] as String? ?? '',
+      reflectionPromptStyle: json['reflection_prompt_style'] as String? ?? '',
       contextVariables: context,
     );
   }
@@ -48,7 +54,26 @@ class InterventionContent {
   final String intentType;
   final String templateId;
   final int scaffoldingLevel;
+  final String srlPhaseHint;
+  final String srlPhaseMessage;
+  final String reflectionPromptStyle;
   final Map<String, String> contextVariables;
+
+  bool get hasSrlPhaseHint =>
+      srlPhaseHint.isNotEmpty && srlPhaseHint.toUpperCase() != 'UNKNOWN';
+
+  String get srlPhaseLabel {
+    switch (srlPhaseHint.toUpperCase()) {
+      case 'FORETHOUGHT':
+        return '规划中';
+      case 'PERFORMANCE':
+        return '执行中';
+      case 'SELF_REFLECTION':
+        return '复盘中';
+      default:
+        return srlPhaseHint;
+    }
+  }
 }
 
 enum InterventionLevel {
@@ -128,6 +153,9 @@ InterventionPushMessage buildLocalFallback({
       intentType: 'local',
       templateId: 'local',
       scaffoldingLevel: 0,
+      srlPhaseHint: '',
+      srlPhaseMessage: '',
+      reflectionPromptStyle: '',
       contextVariables: const {},
     ),
     actions: const [

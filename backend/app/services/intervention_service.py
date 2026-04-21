@@ -29,6 +29,8 @@ from app.schemas.intervention import (
 )
 from app.services.template_registry import TemplateRegistry
 from app.services.template_service import TemplateService
+from app.services.aurora_stage29_srl_kill_switch_service import AuroraStage29SRLKillSwitchService
+from app.state_aggregator.service import StateAggregatorService
 
 _NON_SILENT_LEVELS = {
     InterventionLevel.TOAST.value,
@@ -271,13 +273,26 @@ class InterventionService:
     ) -> tuple[InterventionRequest, DeliveryResult]:
         fsm = ScaffoldingFSM(self.db)
         scaffolding_state = await fsm.get_state(user_id)
+        trait_guidance = await fsm.get_trait_scaffolding_preferences(user_id)
+        srl_state = await StateAggregatorService(self.db).get_user_state(
+            user_id,
+            required_fields=("srl_phase",),
+        )
+        srl_phase_hint = srl_state.srl_phase.value.current_phase if srl_state.srl_phase else None
+        scaffolding_consume_mode = await AuroraStage29SRLKillSwitchService().get_scaffolding_consume_mode()
+        scaffolding_snapshot = fsm.snapshot(
+            scaffolding_state,
+            phase_value=srl_phase_hint,
+            consume_mode=scaffolding_consume_mode,
+            reflection_prompt_style=trait_guidance["reflection_prompt_style"],
+        )
         generator = IntentGenerator()
         intent = generator.generate_intent(
             trigger_event=trigger_event,
             urgency=urgency,
             context=context,
             edge_state=edge_state or {},
-            scaffolding_state=fsm.snapshot(scaffolding_state),
+            scaffolding_state=scaffolding_snapshot,
         )
 
         registry = TemplateRegistry()
@@ -285,7 +300,7 @@ class InterventionService:
         template_service = TemplateService(registry, bandit)
         selected = await template_service.select_variant(
             intent_type=intent.intent_type,
-            support_level=scaffolding_state.support_level,
+            support_level=scaffolding_snapshot["support_level"],
             user_id=str(user_id),
         )
         rendered_message = template_service.render(selected, intent.context_variables)
@@ -313,7 +328,10 @@ class InterventionService:
                 "rendered_message": rendered_message,
                 "intent_type": intent.intent_type,
                 "template_id": selected.template_id,
-                "scaffolding_level": scaffolding_state.support_level,
+                "scaffolding_level": scaffolding_snapshot["support_level"],
+                "srl_phase_hint": scaffolding_snapshot["srl_phase"],
+                "srl_phase_message": self._srl_phase_message(scaffolding_snapshot["srl_phase"]),
+                "reflection_prompt_style": scaffolding_snapshot["reflection_prompt_style"],
                 "context_variables": intent.context_variables,
             },
             context=None,
@@ -321,7 +339,7 @@ class InterventionService:
             delivery_method="websocket",
             template_id=selected.template_id,
             template_variant_id=selected.variant_id,
-            scaffolding_level=scaffolding_state.support_level,
+            scaffolding_level=scaffolding_snapshot["support_level"],
             intent_type=intent.intent_type,
         )
 
@@ -532,6 +550,7 @@ class InterventionService:
             success=success,
             feedback=feedback_type.value,
             weight=1.0,
+            srl_phase=await self._load_srl_phase_hint(user_id),
         )
 
     async def _update_template_bandit(
@@ -576,3 +595,26 @@ class InterventionService:
             else:
                 sanitized[key] = str(value)
         return sanitized
+
+    async def _load_srl_phase_hint(self, user_id: UUID) -> str | None:
+        try:
+            user_state = await StateAggregatorService(self.db).get_user_state(
+                user_id,
+                required_fields=("srl_phase",),
+            )
+            if user_state.srl_phase is None:
+                return None
+            return user_state.srl_phase.value.current_phase
+        except Exception:
+            return None
+
+    @staticmethod
+    def _srl_phase_message(phase: str | None) -> str:
+        normalized = str(phase or "").strip().upper()
+        if normalized == "FORETHOUGHT":
+            return "当前更适合把下一步计划说清楚。"
+        if normalized == "SELF_REFLECTION":
+            return "当前更适合回看阻力和调整策略。"
+        if normalized == "PERFORMANCE":
+            return "当前更适合保持执行节奏。"
+        return "当前阶段信息不足，维持默认支持强度。"

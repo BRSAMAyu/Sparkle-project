@@ -36,6 +36,7 @@ from app.models.intervention_adaptive import (  # noqa: F401
 from app.models.intervention_strategy_outcome import InterventionStrategyOutcome  # noqa: F401
 from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
+from app.models.srl_phase_state import SRLPhaseStateRecord  # noqa: F401
 from app.models.notification import Notification, PushHistory  # noqa: F401
 from app.models.push_delivery_record import PushDeliveryRecord  # noqa: F401
 from app.models.aurora_stage20 import (  # noqa: F401

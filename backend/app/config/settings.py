@@ -256,6 +256,26 @@ class Settings(BaseSettings):
     AURORA_FORESIGHT_JITAI_COOLDOWN_HOURS: int = 24
     AURORA_FORESIGHT_JITAI_MISFIRE_THRESHOLD: float = 0.15
 
+    # Aurora Stage 28
+    AURORA_TRAITS_MODE: str = "off"  # off | shadow | live
+    AURORA_TRAITS_NLP_MODE: str = "off"  # off | shadow | live
+    AURORA_TRAITS_COLDSTART_MODE: str = "off"  # off | shadow | live
+    AURORA_TRAITS_NLP_COOLDOWN_HOURS: int = 24
+    AURORA_TRAITS_NLP_BIAS_THRESHOLD: float = 0.10
+    AURORA_TRAITS_NLP_MAX_DAYS: int = 30
+    AURORA_TRAITS_NLP_MAX_COST_USD: float = 0.003
+    AURORA_TRAITS_NLP_P95_MS_BUDGET: int = 800
+
+    # Aurora Stage 29
+    AURORA_SRL_MODE: str = "off"  # off | shadow | live
+    AURORA_SRL_TRACKER_MODE: str = "off"  # off | shadow | live
+    AURORA_SRL_BRIDGE_MODE: str = "off"  # off | shadow | live
+    AURORA_SRL_SCAFFOLDING_CONSUME_MODE: str = "off"  # off | shadow | live
+    AURORA_SRL_EVENT_LAG_P95_THRESHOLD_SECONDS: float = 5.0
+    AURORA_SRL_MISJUDGMENT_THRESHOLD: float = 0.20
+    AURORA_SRL_TRACKER_P95_MS_BUDGET: int = 20
+    AURORA_SRL_AGGREGATOR_TTL_SECONDS: int = 15
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

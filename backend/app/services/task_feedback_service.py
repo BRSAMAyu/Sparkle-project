@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
 from app.core.event_bus import event_bus
+from app.event_publishers.srl_events import publish_srl_event
 from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
@@ -168,6 +169,12 @@ class TaskFeedbackService:
                 "category": feedback.category or "",
                 "feedback_text": feedback.feedback_text or "",
             },
+        )
+        await publish_srl_event(
+            user_id=user_id,
+            trigger_event_type="task.feedback_submitted",
+            evidence_id=str(feedback.id),
+            metadata={"plan_id": str(task.plan_id) if task.plan_id else None},
         )
 
         return feedback, reflection_prompt

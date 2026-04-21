@@ -28,6 +28,7 @@ from app.core.business_metrics import (
 )
 from app.core.event_bus import event_bus
 from app.core.pending_actions import pending_actions_store
+from app.event_publishers.srl_events import publish_srl_event
 from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
 from app.orchestration.plan_quality_gate import PlanQualityGate
 from app.orchestration.schemas import ExecutablePlan
@@ -1926,6 +1927,22 @@ Please review this plan and provide your assessment."""
                 "plan_id": new_plan_id,
                 "feedback": feedback,
             },
+        )
+        from app.core.event_bus import PlanCreatedEvent
+
+        plan_created = PlanCreatedEvent(
+            user_id=str(user_id),
+            plan_id=str(new_plan_id),
+            evidence_id=str(new_plan_id),
+            source="plan_review_service",
+            metadata={"original_plan_id": str(plan_id), "feedback": feedback},
+        )
+        await event_bus.publish("plan.created", plan_created.to_dict())
+        await publish_srl_event(
+            user_id=user_id,
+            trigger_event_type="plan.created",
+            evidence_id=str(new_plan_id),
+            metadata={"plan_id": str(new_plan_id), "original_plan_id": str(plan_id)},
         )
 
         return {

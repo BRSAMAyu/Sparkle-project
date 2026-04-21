@@ -50,6 +50,7 @@ from app.services.main_chain_artifact_consumer import MainChainArtifactConsumer
 from app.services.cognitive_event_consumer import CognitiveEventConsumer
 from app.services.nudge_event_consumer import NudgeEventConsumer
 from app.services.scheduler_service import scheduler_service
+from app.services.srl_phase_tracker_service import SRLPhaseTrackerService
 from app.services.subject_service import SubjectService
 from app.services.task_event_consumer import TaskEventConsumer
 from app.services.user_service import UserService
@@ -169,6 +170,12 @@ async def lifespan(app: FastAPI):
         task_consumer = TaskEventConsumer(event_bus=event_bus)
         task_consumer_task = asyncio.create_task(task_consumer.start())
         app.state.task_consumer_task = task_consumer_task
+
+    srl_phase_tracker_task = None
+    if cache_service.redis and event_bus is not None:
+        srl_phase_tracker = SRLPhaseTrackerService(event_bus=event_bus, redis=cache_service.redis)
+        srl_phase_tracker_task = asyncio.create_task(srl_phase_tracker.start())
+        app.state.srl_phase_tracker_task = srl_phase_tracker_task
 
     achievement_consumer_task = None
     if cache_service.redis:
@@ -364,6 +371,12 @@ async def lifespan(app: FastAPI):
         task_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await task_consumer_task
+
+    srl_phase_tracker_task = getattr(app.state, "srl_phase_tracker_task", None)
+    if srl_phase_tracker_task:
+        srl_phase_tracker_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await srl_phase_tracker_task
 
     achievement_consumer_task = getattr(app.state, "achievement_consumer_task", None)
     if achievement_consumer_task:

@@ -51,6 +51,10 @@ class CardIntervention extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: DS.md),
+              if (intervention.content.hasSrlPhaseHint) ...[
+                _SrlPhaseBadge(content: intervention.content),
+                const SizedBox(height: DS.spacing12),
+              ],
               Text(
                 intervention.content.renderedMessage,
                 style: theme.textTheme.bodyLarge,
@@ -74,6 +78,31 @@ class CardIntervention extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SrlPhaseBadge extends StatelessWidget {
+  const _SrlPhaseBadge({required this.content});
+
+  final InterventionContent content;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '${content.srlPhaseLabel} · ${content.srlPhaseMessage}',
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: theme.colorScheme.primary,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

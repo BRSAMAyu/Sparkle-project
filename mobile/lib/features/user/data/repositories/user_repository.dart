@@ -126,6 +126,45 @@ class UserRepository {
     );
   }
 
+  Future<Map<String, dynamic>> fetchTraitsColdstartQuestions() async {
+    if (DemoDataService.isDemoMode) {
+      return {
+        'questions': <Map<String, dynamic>>[],
+        'allow_skip': true,
+      };
+    }
+    final response =
+        await _apiClient.get<Map<String, dynamic>>('/profile/traits/coldstart/questions');
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'fetchTraitsColdstartQuestions',
+    );
+  }
+
+  Future<Map<String, dynamic>> submitTraitsColdstart({
+    Map<String, String> answers = const <String, String>{},
+    bool skip = false,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return {
+        'status': 'ok',
+        'skipped': skip,
+        'traits_prior': <String, dynamic>{},
+      };
+    }
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '/profile/traits/coldstart',
+      data: <String, dynamic>{
+        'answers': answers,
+        'skip': skip,
+      },
+    );
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'submitTraitsColdstart',
+    );
+  }
+
   Future<List<Map<String, dynamic>>> fetchInferredPreferences() async {
     if (DemoDataService.isDemoMode) {
       return [];

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus
+from app.event_publishers.srl_events import publish_srl_event
 from app.gen.sparkle.inference.v1 import inference_pb2
 from app.gen.sparkle.signals.v1 import signals_pb2
 from app.models.task import Task, TaskStatus
@@ -223,6 +224,21 @@ class TaskService:
             except Exception as e:
                 logger.warning(f"Failed to sync task start with plan state: {e}")
 
+        from app.core.event_bus import TaskStartedEvent
+
+        event = TaskStartedEvent(
+            user_id=str(db_obj.user_id),
+            task_id=str(db_obj.id),
+            plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
+        )
+        await event_bus.publish("task.started", event.to_dict())
+        await publish_srl_event(
+            user_id=db_obj.user_id,
+            trigger_event_type="task.started",
+            evidence_id=str(db_obj.id),
+            metadata={"plan_id": str(db_obj.plan_id) if db_obj.plan_id else None},
+        )
+
         return db_obj
 
     @staticmethod
@@ -375,6 +391,12 @@ class TaskService:
             source_metadata=source_metadata,
         )
         await event_bus.publish("task.completed", event.to_dict())
+        await publish_srl_event(
+            user_id=db_obj.user_id,
+            trigger_event_type="task.completed",
+            evidence_id=str(db_obj.id),
+            metadata={"plan_id": str(db_obj.plan_id) if db_obj.plan_id else None},
+        )
 
         return db_obj
 
@@ -458,6 +480,12 @@ class TaskService:
             plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
         )
         await event_bus.publish("task.abandoned", event.to_dict())
+        await publish_srl_event(
+            user_id=db_obj.user_id,
+            trigger_event_type="task.abandoned",
+            evidence_id=str(db_obj.id),
+            metadata={"plan_id": str(db_obj.plan_id) if db_obj.plan_id else None},
+        )
 
         return db_obj
 

@@ -154,6 +154,65 @@ INTERVENTION_PARAMETER_COMPILATION_TOTAL = get_or_create_metric(
     ["result"],
 )
 
+SRL_EVENT_PUBLISHED_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_srl_event_published_total",
+    "Total SRL transition events published by trigger and mode",
+    ["trigger_event_type", "mode"],
+)
+
+SRL_EVENT_CONSUMED_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_srl_event_consumed_total",
+    "Total SRL transition events consumed by trigger and status",
+    ["trigger_event_type", "status"],
+)
+
+SRL_EVENT_LAG_P95 = get_or_create_metric(
+    Gauge,
+    "sparkle_srl_event_lag_p95_seconds",
+    "Latest p95 lag for SRL transition events in seconds",
+)
+
+SRL_PHASE_TRANSITION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_srl_phase_transition_total",
+    "SRL phase transitions by from/to phase and source",
+    ["from_phase", "to_phase", "source"],
+)
+
+SRL_PHASE_UNKNOWN_RATE = get_or_create_metric(
+    Gauge,
+    "sparkle_srl_phase_unknown_rate",
+    "Latest rate of users in UNKNOWN SRL phase",
+)
+
+SRL_SCAFFOLDING_ADJUSTED_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_srl_scaffolding_adjusted_total",
+    "Scaffolding support adjustments from SRL phase hints",
+    ["phase", "mode", "applied"],
+)
+
+SRL_ROUTER_ZERO_HIT = get_or_create_metric(
+    Gauge,
+    "sparkle_srl_router_zero_hit",
+    "Stage 29 Rule AN router zero-hit status",
+)
+
+SRL_TRACKER_LOCK_CONTENTION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_srl_tracker_lock_contention_total",
+    "SRL tracker lock contention count",
+    ["mode"],
+)
+
+SRL_DLQ_SIZE = get_or_create_metric(
+    Gauge,
+    "sparkle_srl_dlq_size",
+    "Current SRL DLQ size",
+)
+
 SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO = get_or_create_metric(
     Gauge,
     "sparkle_prompt_field_render_coverage_ratio",

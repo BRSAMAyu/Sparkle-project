@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
 from app.core.event_bus import EventBus
+from app.event_publishers.srl_events import publish_srl_event
 from app.models.card_protocol import ArtifactType, Card, CardCreatedBy, CardType
 from app.models.plan import PlanType
 from app.schemas.plan import PlanCreate
@@ -136,6 +137,8 @@ class DiscoveryManager:
         await self._delete_session(user_id, session_id)
 
         if self.event_bus:
+            from app.core.event_bus import PlanCreatedEvent
+
             await self.event_bus.publish(
                 "planning.discovery.finalized",
                 {
@@ -145,6 +148,23 @@ class DiscoveryManager:
                     "dossier_artifact_id": str(dossier_artifact.id),
                     "compass_artifact_id": str(compass_artifact.id),
                 },
+            )
+            plan_created = PlanCreatedEvent(
+                user_id=str(user_id),
+                plan_id=str(plan.id),
+                evidence_id=str(dossier_artifact.id),
+                source="discovery_manager",
+                metadata={
+                    "plan_card_id": str(plan_card.id),
+                    "compass_artifact_id": str(compass_artifact.id),
+                },
+            )
+            await self.event_bus.publish("plan.created", plan_created.to_dict())
+            await publish_srl_event(
+                user_id=user_id,
+                trigger_event_type="plan.created",
+                evidence_id=str(plan.id),
+                metadata={"plan_id": str(plan.id), "plan_card_id": str(plan_card.id)},
             )
 
         return {

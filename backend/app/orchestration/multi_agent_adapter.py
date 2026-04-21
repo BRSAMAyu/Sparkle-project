@@ -276,7 +276,7 @@ class MultiAgentWorkflowAdapter:
             f"{base_system_prompt}\n\n"
             "## 多Agent综合约束\n"
             f"{synthesis_guidance}\n\n"
-            "你必须同时遵守以下要求：\n"
+            "请同时参考以下要点：\n"
             "1. 最终回答必须以已执行完成的工具结果为事实基础。\n"
             "2. 保留用户画像、历史上下文、当前计划上下文的一致性。\n"
             "3. 如果执行结果与用户期待有偏差，要明确指出边界与下一步。"

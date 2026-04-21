@@ -88,6 +88,24 @@ message WorkingMemorySnapshotValue {
   repeated WorkingMemorySnapshotValueItem items = 2;
 }
 
+message TraitPriorDimensionValue {
+  string dim = 1;
+  double value = 2;
+  double confidence = 3;
+  string source = 4;
+}
+
+message TraitsPriorSummaryValue {
+  repeated TraitPriorDimensionValue items = 1;
+}
+
+message SRLPhaseSummaryValue {
+  string current_phase = 1;
+  google.protobuf.Timestamp phase_started_at = 2;
+  double confidence = 3;
+  string source = 4;
+}
+
 message CommitmentSummaryField {
   CommitmentSummaryValue value = 1;
   StateFieldMetadata metadata = 2;
@@ -133,6 +151,16 @@ message WorkingMemorySnapshotField {
   StateFieldMetadata metadata = 2;
 }
 
+message TraitsPriorSummaryField {
+  TraitsPriorSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message SRLPhaseSummaryField {
+  SRLPhaseSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
 message SufficiencySummaryValue {
   double score = 1;
   repeated string top_missing_dimensions = 2;
@@ -159,4 +187,6 @@ message UserStateV1 {
   RecentReflectionsSummaryField recent_reflections = 12;
   RecentScenesSummaryField recent_scenes = 13;
   ForesightHintSummaryField foresight_hint = 14;
+  TraitsPriorSummaryField traits_prior = 15;
+  SRLPhaseSummaryField srl_phase = 16;
 }
