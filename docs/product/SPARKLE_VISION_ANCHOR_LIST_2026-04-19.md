@@ -3,8 +3,8 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-21
-> **版本**: v26（Stage 26 closeout + Stage 27 in progress）
-> **v2.2 锁定**: Stage 22-26 ✅ / Stage 27 🔶 / Stage 28-32 ❌
+> **版本**: v27（Stage 27 closeout + Stage 28 in progress）
+> **v2.2 锁定**: Stage 22-27 ✅ / Stage 28 🔶 / Stage 29-32 ❌
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -884,8 +884,8 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | 24 | Accountability Policy Compiler | 4 | 新增 | AI | ✅ closeout |
 | 25 | Reflection Wire-On | 5 | 扩展 | AJ | ✅ closeout |
 | 26 | Scene Consolidation | 5 | 新增 | AK | ✅ closeout |
-| 27 | Foresight Engine | 5 | 扩展+新增 | AL | 🔶 in progress |
-| 28 | Traits 弱先验 | 5 | 扩展+新增 | AM | ❌ pending |
+| 27 | Foresight Engine | 5 | 扩展+新增 | AL | ✅ closeout |
+| 28 | Traits 弱先验 | 5 | 扩展+新增 | AM | 🔶 in progress |
 | 29 | SRL 三阶段独立 Tracker | 6 | 重构+新增 | AN | ❌ pending |
 | 30 | Metacognition 扩展 | 4 | 扩展 | AO | ❌ pending |
 | 31 | Idiographic Lite | 4 | 扩展+新增 | AP | ❌ pending |
@@ -899,7 +899,8 @@ AH  source-state 维度登记 —— Stage 23 ✅ closeout
 AI  Policy Compiler 纯规则 —— Stage 24 ✅ closeout
 AJ  Reflection 消费隔离   —— Stage 25 ✅ closeout
 AK  Scene 合并幂等 + 算法约束 —— Stage 26 ✅ closeout
-AL  Foresight 非 Router 分支 —— Stage 27 🔶 in progress
+AL  Foresight 非 Router 分支 —— Stage 27 ✅ closeout
+AM  Traits 置信度 ≤0.3 + 冲突优先级 —— Stage 28 🔶 in progress
 ```
 AJ  Reflection 消费隔离   —— Stage 25
 AK  Scene 合并幂等 + 算法约束 —— Stage 26
@@ -1089,7 +1090,43 @@ AP  Idiographic 仅关联不因果 —— Stage 31
 
 **Stage 27 义务锁定**：Stage 26 Scene Consolidation 已落地，Stage 27 Foresight Engine 可启动。
 
-### 9.27 依赖链（v2.2 锁定，不可打乱顺序）
+### 9.27 ✅ Stage 27 完成（Foresight Engine）
+
+**Stage 27 入场条件**：Stage 26 全部 WS green + Rule AK 无破例。
+
+**Stage 27 总目标**：利用已存在的 PredictiveService 扩展 Foresight Engine——PersDyn attractor + deviation detection + JITAI trigger。
+
+**五个 Workstream（WS-FS-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-FS-EXTEND** | PredictiveService 扩展 | build_foresight_snapshot() |
+| **WS-FS-ATTRACTOR** | PersDyn attractor | baseline/variability/recovery |
+| **WS-FS-DEVIATION** | 行为偏离预测 | 阈值检测 |
+| **WS-FS-JITAI** | JITAI 触发 | 模板 + rate counter |
+| **WS-FS-GUARD** | 治理守卫 | Rule AL 零 Router 分支 |
+
+**新增治理规则**：**Rule AL**（Stage 27 新建）：Foresight 输出仅供提示，不得进入 Router 分支。
+
+**GLM1 验收**：ACCEPT - CLEAN（Path A 全量实现）
+
+| 验证项 | 结果 |
+|--------|------|
+| WS-FS-EXTEND | PASS（build_foresight_snapshot）|
+| WS-FS-ATTRACTOR | PASS（PersDyn）|
+| WS-FS-DEVIATION | PASS（偏离检测）|
+| WS-FS-JITAI | PASS（模板 + auto-downgrade）|
+| WS-FS-GUARD | PASS（零 Router 分支）|
+| Backend tests | 56 passed |
+| Mobile tests | 3 passed |
+| Proto sync | PASS |
+| Bug fix | JITAI rate counter → RATE_RETENTION_DAYS=4 |
+
+**实现路径**：Path A（full implementation, default off）
+
+**Stage 28 义务锁定**：Stage 27 Foresight Engine 已落地，Stage 28 Traits 弱先验可启动。
+
+### 9.28 依赖链（v2.2 锁定，不可打乱顺序）
 
 ```
 Memory Write (Stage 16 ✅)
@@ -1114,9 +1151,9 @@ Reflection Wire-On (Stage 25 ✅) ← 已 closeout
     ↓
 Scene Consolidation (Stage 26 ✅) ← 已 closeout
     ↓
-Foresight Engine (Stage 27 🔶) ← 当前执行
+Foresight Engine (Stage 27 ✅) ← 已 closeout
     ↓
-Traits 弱先验 (Stage 28)
+Traits 弱先验 (Stage 28 🔶) ← 当前执行
     ↓
 SRL 三阶段独立 Tracker (Stage 29)
     ↓
@@ -1172,8 +1209,8 @@ CL SQAM 扫尾 (Stage 32)
 | Accountability Policy Compiler | ✅ Stage 24 | closeout（纯规则） |
 | Reflection Wire-On | ✅ Stage 25 | closeout（6 类 trigger） |
 | Scene Consolidation | ✅ Stage 26 | closeout（cosine + time window） |
-| Foresight Engine | 🔶 Stage 27 | 当前执行 |
-| Traits 弱先验 | ❌→Stage 28 | 路线图已锁定 |
+| Foresight Engine | ✅ Stage 27 | closeout（PersDyn + JITAI） |
+| Traits 弱先验 | 🔶 Stage 28 | 当前执行 |
 | SRL Tracker | ❌→Stage 29 | 路线图已锁定 |
 | Metacognition 扩展 | ❌→Stage 30 | 路线图已锁定 |
 | Idiographic Lite | ❌→Stage 31 | 路线图已锁定 |
