@@ -207,15 +207,34 @@ class ThompsonSamplingBandit:
             changes[param] = proposed
         return Action(changes=changes, source=PolicyStage.BANDIT, exploration=True)
 
-    def update(self, action: Action, reward: float) -> None:
-        """Update arms based on action and observed reward."""
+    def update(self, action: Action, reward: float, *, prior_config: dict[str, Any] | None = None) -> None:
+        """Update arms based on action and observed reward.
+
+        If `prior_config` is supplied, only the arm matching the actual
+        direction of each change is updated. Otherwise we fall back to updating
+        every arm for the parameter with half credit so callers that cannot
+        supply the prior state do not corrupt arm statistics.
+        """
+        prior_config = prior_config or {}
         for param, new_value in action.changes.items():
-            current_config_value = 0  # We don't track old value here
-            # Find matching arms
+            prior = prior_config.get(param)
+            direction: int | None = None
+            if prior is not None:
+                try:
+                    delta = float(new_value) - float(prior)
+                    if delta != 0:
+                        direction = 1 if delta > 0 else -1
+                except (TypeError, ValueError):
+                    direction = None
+
             for arm in self.arms.values():
-                if arm.parameter == param:
-                    # Determine if this arm's direction matches
-                    arm.update(reward * 0.5)  # Partial credit for direction match
+                if arm.parameter != param:
+                    continue
+                if direction is None:
+                    # Unknown direction: split credit evenly across both arms.
+                    arm.update(reward * 0.5)
+                elif arm.direction == direction:
+                    arm.update(reward)
 
     def get_arm_stats(self) -> list[dict[str, Any]]:
         """Return statistics for all arms."""
@@ -484,22 +503,44 @@ class PolicyRouter:
         else:
             action = self.contextual.select_action(state, current_config, history)
 
-        # Validate action novelty (Guardrail 1)
-        new_config = dict(current_config)
-        new_config.update(action.changes)
-        new_hash = compute_config_hash(new_config)
-        recent_hashes = [compute_config_hash(h.get("config_after", {})) for h in history[-10:]]
-        if not check_config_novelty(new_hash, recent_hashes):
-            # Config not novel — try exploration instead
-            action = self.bandit.select_action(
-                current_config, history, exploration=True,
-            )
+        # Validate action novelty (Guardrail 1). Try up to 3 random fallbacks
+        # before giving up; tight parameter spaces could otherwise loop.
+        recent_hashes = [
+            compute_config_hash(h.get("config_after", {}))
+            for h in history[-10:]
+            if h.get("config_after")
+        ]
+
+        def _is_novel(candidate: Action) -> bool:
+            if not candidate.changes:
+                return True
+            merged = dict(current_config)
+            merged.update(candidate.changes)
+            return check_config_novelty(compute_config_hash(merged), recent_hashes)
+
+        if not _is_novel(action):
+            for _ in range(3):
+                action = self.bandit.select_action(
+                    current_config, history, exploration=True,
+                )
+                if _is_novel(action):
+                    break
+            else:
+                # Surrender: emit an empty no-op action rather than duplicating history.
+                action = Action(changes={}, source=action.source, exploration=True)
 
         return action
 
-    def update(self, action: Action, state: StateVector, reward: float) -> None:
+    def update(
+        self,
+        action: Action,
+        state: StateVector,
+        reward: float,
+        *,
+        prior_config: dict[str, Any] | None = None,
+    ) -> None:
         """Update all policy models with observation."""
-        self.bandit.update(action, reward)
+        self.bandit.update(action, reward, prior_config=prior_config)
         self.contextual.update(action, state, reward)
 
     def _determine_stage(self, iteration: int, history: list[dict[str, Any]]) -> PolicyStage:

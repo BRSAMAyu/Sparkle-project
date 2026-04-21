@@ -295,18 +295,38 @@ def check_direction_history(
 ) -> bool:
     """Guardrail 2: reject if same parameter moved same direction N times in a row.
 
+    Supports two history encodings used across the RL layer:
+      1) Flat: entry["changes"] = {param: new_value} — direction is inferred
+         by diffing against the preceding entry's config_after or changes.
+      2) Nested: entry["changes"] = {param: {"previous": x, "current": y}}
+
     Returns True if the action is ALLOWED (no violation).
     """
-    recent = []
-    for entry in history[-window:]:
-        changes = entry.get("changes", {})
+    recent: list[int] = []
+    # Walk from oldest→newest so we can use prior entries as the baseline.
+    prior_value: float | None = None
+    tail = history[-(window + 1):] if len(history) > window else history
+    for entry in tail:
+        changes = entry.get("changes", {}) or {}
+        config_after = entry.get("config_after", {}) or {}
+
         if parameter in changes:
-            prev_val = changes[parameter].get("previous", changes[parameter]) if isinstance(changes[parameter], dict) else changes[parameter]
-            curr_val = changes[parameter].get("current", changes[parameter]) if isinstance(changes[parameter], dict) else changes[parameter]
+            raw = changes[parameter]
+            if isinstance(raw, dict) and "previous" in raw and "current" in raw:
+                prev_val = float(raw["previous"])
+                curr_val = float(raw["current"])
+            else:
+                curr_val = float(raw)
+                prev_val = float(prior_value) if prior_value is not None else curr_val
             delta = curr_val - prev_val
             if delta != 0:
                 recent.append(1 if delta > 0 else -1)
+            prior_value = curr_val
+        elif parameter in config_after:
+            prior_value = float(config_after[parameter])
 
+    # Only the last `window` direction changes matter for the guardrail.
+    recent = recent[-window:]
     if len(recent) >= window:
         return not all(d == direction for d in recent)
     return True
@@ -317,13 +337,20 @@ def clamp_amplitude(
     current_value: float,
     proposed_value: float,
 ) -> float:
-    """Guardrail 3: clamp single-iteration change to 15% of parameter range."""
+    """Guardrail 3: clamp single-iteration change to 15% of range or step_size (whichever is larger).
+
+    For int parameters the result is coerced back to int so downstream config
+    consumers that expect ints (e.g. turn_target, claude_timeout_seconds) never
+    receive floats from the guardrail layer.
+    """
     spec = ACTION_SPECS.get(parameter)
     if spec is None:
         return proposed_value  # Unknown parameter, pass through
 
     range_size = spec.range_max - spec.range_min
-    max_step = range_size * 0.15
+    # Spec step_size represents the smallest meaningful unit of change;
+    # 15% of range is the hard safety cap. Use the larger so one step is always allowed.
+    max_step = max(range_size * 0.15, spec.step_size)
     delta = proposed_value - current_value
 
     # Clamp delta
@@ -331,7 +358,13 @@ def clamp_amplitude(
 
     # Apply and clamp to valid range
     result = current_value + delta
-    return max(spec.range_min, min(spec.range_max, result))
+    result = max(spec.range_min, min(spec.range_max, result))
+
+    if spec.param_type == "int":
+        # Round toward current_value to avoid runaway bias, then re-clamp
+        rounded = int(round(result))
+        return max(int(spec.range_min), min(int(spec.range_max), rounded))
+    return result
 
 
 def should_explore(iteration_number: int, explore_every: int = 10) -> bool:

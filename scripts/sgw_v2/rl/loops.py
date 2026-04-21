@@ -15,9 +15,10 @@ from typing import Any
 from .spec import (
     StateVector, Action, EpisodeConfig, EpisodeResult,
     PolicyStage, IterationOutcome, EpisodeTerminationReason,
+    PopulationStats,
     compute_config_hash, should_explore,
 )
-from .reward import compute_reward, RewardComponents
+from .reward import compute_reward, RewardComponents  # noqa: F401 — used in _record_trajectory type hint
 from .features import FeatureExtractor
 from .policy import PolicyRouter
 from .overfitting import (
@@ -124,6 +125,8 @@ class MetaLoopCoordinator:
         current_config: dict[str, Any],
         diversity: DiversityMetrics | None = None,
         auth_z: float | None = None,
+        run_id: str | None = None,
+        iteration_id: str | None = None,
     ) -> OuterLoopResult:
         """Record and process an iteration result.
 
@@ -168,12 +171,24 @@ class MetaLoopCoordinator:
         # Temperature annealing
         self.temperature.anneal()
 
-        # Record trajectory
-        self._record_trajectory(result, current_config)
+        # Record trajectory (in-memory + DB persistence)
+        self._record_trajectory(
+            result,
+            current_config,
+            components=components,
+            veto_reason=veto_reason,
+            run_id=run_id,
+            iteration_id=iteration_id,
+        )
 
-        # Update policy models
+        # Update policy models (pass prior_config so bandit credits the right arm)
         if state_after is not None:
-            self.policy.update(action, state_after, reward_norm)
+            self.policy.update(
+                action,
+                state_after,
+                reward_norm,
+                prior_config=current_config,
+            )
 
         # Track convergence/regression for termination
         if outcome == IterationOutcome.NEUTRAL:
@@ -231,8 +246,23 @@ class MetaLoopCoordinator:
             iteration_history=self._iteration_history,
         )
 
-    def _record_trajectory(self, result: OuterLoopResult, config: dict[str, Any]) -> None:
-        """Record iteration to internal history."""
+    def _record_trajectory(
+        self,
+        result: OuterLoopResult,
+        config: dict[str, Any],
+        *,
+        components: "RewardComponents | None" = None,
+        veto_reason: str | None = None,
+        run_id: str | None = None,
+        iteration_id: str | None = None,
+    ) -> None:
+        """Record iteration to internal history AND persist to rl_trajectories."""
+        config_after = dict(config)
+        if result.config_changed and result.new_config:
+            config_after = dict(result.new_config)
+        elif result.config_changed:
+            config_after.update(result.action.changes)
+
         entry = {
             "iteration": result.iteration_number,
             "action": result.action.to_dict(),
@@ -240,7 +270,8 @@ class MetaLoopCoordinator:
             "reward_normalized": result.reward_normalized,
             "outcome": result.outcome.value,
             "veto": result.veto_applied,
-            "config_after": dict(config) | result.action.changes if result.config_changed else dict(config),
+            "veto_reason": veto_reason,
+            "config_after": config_after,
             "state_after_stats": (
                 result.state_after.population_stats if result.state_after else {}
             ),
@@ -254,6 +285,42 @@ class MetaLoopCoordinator:
         else:
             self._training_rewards.append(result.reward_normalized)
 
-
-# Import PopulationStats for type usage
-from .spec import PopulationStats  # noqa: E402
+        # Persist to rl_trajectories so off-policy evaluation and restarts work.
+        if run_id is None:
+            return
+        state_vec = (
+            result.state_after.to_feature_vector()
+            if result.state_after is not None
+            else (
+                result.state_before.to_feature_vector()
+                if result.state_before is not None
+                else []
+            )
+        )
+        reward_components_dict = (
+            {
+                "soft_violation": components.soft_violation,
+                "authenticity": components.authenticity,
+                "hard_violation": components.hard_violation,
+                "session": components.session,
+                "diversity": components.diversity,
+            }
+            if components is not None
+            else None
+        )
+        try:
+            self.features.record_trajectory(
+                run_id=run_id,
+                iteration_id=iteration_id,
+                state_vector=state_vec,
+                config_snapshot=config_after,
+                action_taken=result.action.changes,
+                action_source=result.action.source.value,
+                reward_raw=result.reward_raw,
+                reward_normalized=result.reward_normalized,
+                reward_components=reward_components_dict,
+                outcome=result.outcome.value,
+            )
+        except Exception:  # noqa: BLE001
+            # Persistence is best-effort; the in-memory history is authoritative for the episode.
+            pass
