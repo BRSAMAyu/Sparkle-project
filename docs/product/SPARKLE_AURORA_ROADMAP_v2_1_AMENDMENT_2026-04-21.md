@@ -196,9 +196,9 @@ Current lock:
 As of 2026-04-21:
 
 1. Stage 21 is accepted clean.
-2. Stage 22 dispatch has **not** yet been issued.
-3. The next allowed move is:
-   - maintain this amendment in roadmap memory
-   - wait for an explicit user trigger for Stage 22 dispatch
+2. Stage 22 dispatch is now issued through:
+   - [SPARKLE_AURORA_STAGE22_DISPATCH_PLAN_2026-04-21.md](/Users/brsama/code/GitHub/Sparkle-project/docs/product/SPARKLE_AURORA_STAGE22_DISPATCH_PLAN_2026-04-21.md)
+   - [SPARKLE_AURORA_ROADMAP_v2_1_FAST_DEV_LOCK_2026-04-21.md](/Users/brsama/code/GitHub/Sparkle-project/docs/product/SPARKLE_AURORA_ROADMAP_v2_1_FAST_DEV_LOCK_2026-04-21.md)
+3. Stage 23 obligations are now locked by Stage 22 dispatch §6 and inherited by fast-dev execution.
 
-This amendment is therefore the active source of truth for Aurora roadmap sequencing until a later amendment supersedes it.
+This amendment remains the stage-ladder source of truth for Aurora roadmap sequencing until a later amendment supersedes it; dispatch and fast-dev execution now hang off this amendment rather than replacing it.

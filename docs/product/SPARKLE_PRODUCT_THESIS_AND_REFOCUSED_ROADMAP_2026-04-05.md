@@ -224,6 +224,8 @@ It means their right to exist depends on user benefit.
 The Aurora implementation roadmap is now governed by the accepted v2.1 amendment record:
 
 - [SPARKLE_AURORA_ROADMAP_v2_1_AMENDMENT_2026-04-21.md](/Users/brsama/code/GitHub/Sparkle-project/docs/product/SPARKLE_AURORA_ROADMAP_v2_1_AMENDMENT_2026-04-21.md)
+- [SPARKLE_AURORA_STAGE22_DISPATCH_PLAN_2026-04-21.md](/Users/brsama/code/GitHub/Sparkle-project/docs/product/SPARKLE_AURORA_STAGE22_DISPATCH_PLAN_2026-04-21.md)
+- [SPARKLE_AURORA_ROADMAP_v2_1_FAST_DEV_LOCK_2026-04-21.md](/Users/brsama/code/GitHub/Sparkle-project/docs/product/SPARKLE_AURORA_ROADMAP_v2_1_FAST_DEV_LOCK_2026-04-21.md)
 
 The active stage ladder is:
 
@@ -263,6 +265,7 @@ Operational locks from the amendment are:
 3. Stage 25 and Stage 26 are parallelizable in theory, but the default order under constrained execution bandwidth is `25 → 26`.
 4. Stage 29 does not rename `ScaffoldingFSM`; it adds a separate `SRLPhaseTracker`.
 5. Stage 31 is intentionally Lite: it may discover user-specific associations but may not claim causality.
+6. Stage 23 source-state obligations are now locked by the Stage 22 dispatch package: it must consume `achievement + calendar + cohort_profile + seed outcome` without creating a parallel history collector.
 
 The core user experience is not:
 
