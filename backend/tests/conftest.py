@@ -44,6 +44,7 @@ from app.models.aurora_stage20 import (  # noqa: F401
     RoutingDecisionLog,
     UnresolvedConflict,
 )
+from app.models.aurora_stage21 import SharedSkill, SkillShareModerationQueue, UserSkill  # noqa: F401
 from app.models.user_push_opt_in import UserPushOptIn  # noqa: F401
 from app.models.galaxy import KnowledgeNode, UserNodeStatus, StudyRecord  # noqa: F401
 from app.models.community import (  # noqa: F401

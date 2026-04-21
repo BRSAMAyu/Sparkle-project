@@ -28,6 +28,7 @@ class RouteHistoryService:
         input_aggregator_snapshot_id: str,
         decision_type: str,
         decision_payload: dict[str, Any],
+        skills_injected: list[UUID] | None = None,
         sufficiency_judgment_id: UUID | None = None,
         decided_at: datetime | None = None,
         decision_id: UUID | None = None,
@@ -43,6 +44,7 @@ class RouteHistoryService:
             sufficiency_judgment_id=sufficiency_judgment_id,
             decision_type=decision_type,
             decision_payload=decision_payload,
+            skills_injected=[str(item) for item in (skills_injected or [])],
         )
         self.db.add(record)
         await self.db.commit()

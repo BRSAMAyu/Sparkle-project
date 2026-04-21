@@ -33,6 +33,7 @@ async def test_route_history_average_write_stays_under_five_ms(db_session):
             input_aggregator_snapshot_id=f"aggregator:{index}",
             decision_type="balanced",
             decision_payload={"sample": index},
+            skills_injected=[],
         )
     elapsed = time.perf_counter() - started_at
     average_ms = (elapsed / samples) * 1000

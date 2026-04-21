@@ -15,6 +15,7 @@ UserStateFieldName = Literal[
     "working_memory_snapshot",
     "task_sufficiency_summary",
     "context_sufficiency_summary",
+    "active_skills_summary",
 ]
 
 
@@ -79,9 +80,21 @@ class SufficiencySummaryValue:
 
 
 @dataclass(frozen=True)
+class ActiveSkillSummaryItemValue:
+    skill_id: str
+    name: str
+    activation_match_score: float
+
+
+@dataclass(frozen=True)
+class ActiveSkillsSummaryValue:
+    items: tuple[ActiveSkillSummaryItemValue, ...]
+
+
+@dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1.2"
+    schema_version: str = "user_state.v1.3"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
     recent_person_mentions: StateFieldEnvelope[RecentPersonMentionsValue] | None = None
     engagement_state: StateFieldEnvelope[EngagementStateValue] | None = None
@@ -89,4 +102,5 @@ class UserStateV1:
     working_memory_snapshot: StateFieldEnvelope[WorkingMemorySnapshotValue] | None = None
     task_sufficiency_summary: StateFieldEnvelope[SufficiencySummaryValue] | None = None
     context_sufficiency_summary: StateFieldEnvelope[SufficiencySummaryValue] | None = None
+    active_skills_summary: StateFieldEnvelope[ActiveSkillsSummaryValue] | None = None
     emotion_hint: StateFieldEnvelope[None] | None = None

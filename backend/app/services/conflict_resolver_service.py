@@ -82,6 +82,25 @@ class ConflictResolverService:
         )
         return list(result.scalars().all())
 
+    async def has_unresolved_conflict(
+        self,
+        *,
+        user_id: UUID,
+        topic_keys: tuple[str, ...],
+    ) -> bool:
+        normalized = tuple(key.strip().lower() for key in topic_keys if key and key.strip())
+        if not normalized:
+            return False
+        result = await self.db.execute(
+            select(UnresolvedConflict.conflict_key).where(
+                UnresolvedConflict.user_id == user_id,
+                UnresolvedConflict.deleted_at.is_(None),
+                UnresolvedConflict.status == "pending_user",
+            )
+        )
+        keys = [str(item or "").strip().lower() for item in result.scalars().all()]
+        return any(topic in conflict_key or conflict_key in topic for conflict_key in keys for topic in normalized)
+
     def resolve(
         self,
         *,

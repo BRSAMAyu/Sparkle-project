@@ -68,6 +68,7 @@ from app.api.v1 import (
     recommendations,
     seed_libraries,
     shop,
+    skills,
     signals,
     simulation,
     statistics,
@@ -137,6 +138,7 @@ api_router.include_router(health_production.router, prefix="/health", tags=["Hea
 api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
+api_router.include_router(skills.router)
 api_router.include_router(preferences.router)
 api_router.include_router(push_interaction.router)
 api_router.include_router(seed_libraries.router, tags=["seed-libraries"])

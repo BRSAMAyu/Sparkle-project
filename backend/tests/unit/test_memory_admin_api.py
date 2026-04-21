@@ -262,3 +262,50 @@ async def test_memory_admin_stage19_kill_switches(db_session, monkeypatch):
         assert put_resp.json()["flags"]["consolidation_enabled"] is False
 
     app.dependency_overrides = {}
+
+
+@pytest.mark.asyncio
+async def test_memory_admin_stage21_kill_switches(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_MEMORY_GOVERNANCE", True, raising=False)
+    monkeypatch.setattr("app.services.aurora_stage21_kill_switch_service.cache_service.redis", None)
+
+    user_id = uuid4()
+    admin_user = User(
+        id=user_id,
+        username=f"admin_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+        is_active=True,
+        is_superuser=True,
+    )
+    db_session.add(admin_user)
+    await db_session.commit()
+
+    async def override_get_db():
+        yield db_session
+
+    async def override_superuser():
+        return admin_user
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_active_superuser] = override_superuser
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        get_resp = await ac.get("/api/v1/admin/memory/stage21/killswitch")
+        assert get_resp.status_code == 200
+        assert "flags" in get_resp.json()
+
+        put_resp = await ac.put(
+            "/api/v1/admin/memory/stage21/killswitch",
+            json={
+                "skill_store_enabled": True,
+                "skill_selection_enabled": True,
+                "skill_share_enabled": False,
+            },
+        )
+        assert put_resp.status_code == 200
+        assert put_resp.json()["flags"]["skill_store_enabled"] is True
+        assert put_resp.json()["flags"]["skill_selection_enabled"] is True
+        assert put_resp.json()["flags"]["skill_share_enabled"] is False
+
+    app.dependency_overrides = {}

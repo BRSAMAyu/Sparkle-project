@@ -33,9 +33,13 @@ from app.services.insight_copy import canonical_pattern_key, present_pattern_des
 from app.services.plan_progress_service import PlanProgressService
 from app.services.route_history_service import RouteHistoryService
 from app.services.routing_profile_service import RoutingProfileService
+from app.services.skill_content_reader import SkillContentReader
+from app.services.skill_schema import SkillSelectionContext
+from app.services.skill_selection_service import SkillSelectionService
+from app.services.skill_store import SkillStoreService
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult
 from app.services.sufficiency_judge_service import SufficiencyJudgeService
-from app.state_aggregator.schema import SufficiencySummaryValue
+from app.state_aggregator.schema import ActiveSkillsSummaryValue, SufficiencySummaryValue
 from app.state_aggregator.service import StateAggregatorService
 
 
@@ -335,6 +339,53 @@ class RoutingEngineMixin:
             context_caveat = service.render_context_caveat(context_summary)
         return follow_up_question, context_caveat
 
+    async def _collect_stage21_skills(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        routing_input: DualCoreRoutingInput,
+        route_decision: RouteDecision,
+    ) -> tuple[ActiveSkillsSummaryValue | None, str, list[uuid.UUID]]:
+        if active_db is None:
+            return None, "", []
+
+        selection_context = SkillSelectionContext(
+            intent=routing_input.intent,
+            tool_category=route_decision.execution_mode,
+            current_time=_utcnow(),
+        )
+        aggregator = StateAggregatorService(active_db)
+        user_state = await aggregator.get_user_state(
+            uuid.UUID(user_id),
+            required_fields=("active_skills_summary",),
+            skill_selection_context=selection_context,
+            now=_utcnow(),
+        )
+        summary = user_state.active_skills_summary.value if user_state.active_skills_summary else None
+        matches, blocked_caveats = await SkillSelectionService(active_db).resolve_prompt_payload(
+            user_id=uuid.UUID(user_id),
+            selection_context=selection_context,
+        )
+
+        selected_ids = [uuid.UUID(item.skill_id) for item in matches]
+        prompt_context = ""
+        if settings.SPARKLE_SKILL_SELECTION_ENABLED and selected_ids:
+            reader = SkillContentReader(active_db)
+            rendered_skills: list[dict[str, str]] = []
+            for skill_id in selected_ids:
+                skill = await reader.fetch(skill_id=skill_id, user_id=uuid.UUID(user_id))
+                if skill is None:
+                    continue
+                rendered_skills.append({"name": skill.name, "pattern_template": skill.pattern_template})
+            prompt_context = SkillSelectionService.render_prompt_context(
+                skills=rendered_skills,
+                blocked_caveats=blocked_caveats,
+            )
+        elif blocked_caveats:
+            prompt_context = SkillSelectionService.render_prompt_context(skills=(), blocked_caveats=blocked_caveats)
+        return summary, prompt_context, selected_ids
+
     async def _apply_dual_core_routing(
         self,
         *,
@@ -370,6 +421,12 @@ class RoutingEngineMixin:
         follow_up_question, context_caveat = self._build_stage20_prompt_additions(
             task_summary=task_summary_value,
             context_summary=ctx_summary_value,
+        )
+        active_skills_summary, skill_prompt_context, selected_skill_ids = await self._collect_stage21_skills(
+            active_db=active_db,
+            user_id=user_id,
+            routing_input=routing_input,
+            route_decision=route_decision,
         )
         cutover_state = resolve_cutover_state(user_id)
 
@@ -447,6 +504,8 @@ class RoutingEngineMixin:
             prompt_instruction = "\n\n".join(
                 part for part in [prompt_instruction, *stage20_prompt_parts] if part
             ).strip()
+        if skill_prompt_context:
+            prompt_instruction = "\n\n".join(part for part in [prompt_instruction, skill_prompt_context] if part).strip()
 
         state.context_data["dual_core_prompt_instruction"] = prompt_instruction
         if task_summary_value is not None:
@@ -461,6 +520,17 @@ class RoutingEngineMixin:
             }
         if follow_up_question:
             state.context_data["follow_up_question"] = follow_up_question
+        if active_skills_summary is not None:
+            state.context_data["active_skills_summary"] = {
+                "items": [
+                    {
+                        "skill_id": item.skill_id,
+                        "name": item.name,
+                        "activation_match_score": item.activation_match_score,
+                    }
+                    for item in active_skills_summary.items
+                ]
+            }
         state.context_data["dual_core_signal_snapshot"] = {
             "intent": routing_input.intent,
             "intent_confidence": routing_input.intent_confidence,
@@ -490,10 +560,20 @@ class RoutingEngineMixin:
                         "route_reason": route_decision.reason,
                         "follow_up_question": follow_up_question,
                     },
+                    skills_injected=selected_skill_ids,
                 )
                 state.context_data["route_history_decision_id"] = str(decision_id)
             except Exception as exc:
                 logger.warning("Stage20 route history write failed: {}", exc)
+        if active_db is not None and selected_skill_ids:
+            try:
+                await SkillStoreService(active_db).increment_usage(
+                    user_id=uuid.UUID(user_id),
+                    skill_ids=selected_skill_ids,
+                    activated_at=_utcnow(),
+                )
+            except Exception as exc:
+                logger.warning("Stage21 skill usage update failed: {}", exc)
         await self._persist_dual_core_decision_snapshot(
             user_id=user_id,
             decision=decision,

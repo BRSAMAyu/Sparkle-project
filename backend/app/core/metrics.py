@@ -547,3 +547,30 @@ EVENT_BUS_CONSUMER_LAG_SECONDS = get_or_create_metric(
     "Time lag in seconds between stream head and consumer group position",
     ["stream", "consumer_group"],
 )
+
+SPARKLE_SKILL_COUNT_PER_USER = get_or_create_metric(
+    Histogram,
+    "sparkle_skill_count_per_user",
+    "Observed skill counts per user against the Stage 21 cap",
+    buckets=[0, 1, 3, 5, 10, 20, 30, 40, 50],
+)
+
+SPARKLE_SKILL_EXTRACT_DRAFT_ACCEPT_RATE = get_or_create_metric(
+    Gauge,
+    "sparkle_skill_extract_draft_accept_rate",
+    "Acceptance ratio for Stage 21 skill drafts",
+)
+
+SPARKLE_SKILL_SELECTION_ACTIVATION_RATE = get_or_create_metric(
+    Histogram,
+    "sparkle_skill_selection_activation_rate",
+    "Distribution of how many skills activate per routing turn",
+    buckets=[0, 1, 2, 3],
+)
+
+SPARKLE_SKILL_SHARE_PIPELINE_LATENCY_SECONDS = get_or_create_metric(
+    Histogram,
+    "sparkle_skill_share_pipeline_latency_seconds",
+    "End-to-end latency for the Stage 21 skill share pipeline",
+    buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0],
+)

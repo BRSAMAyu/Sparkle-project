@@ -32,6 +32,7 @@ async def test_route_history_records_and_backfills_by_decision_id(db_session):
         input_aggregator_snapshot_id="aggregator:user-1:snap-1",
         decision_type="cognitive_first",
         decision_payload={"mode": "cognitive_first", "reason": "need clarification"},
+        skills_injected=[],
         decided_at=datetime(2026, 4, 21, 12, 0, 0),
     )
     updated = await service.record_follow_up_input(
@@ -49,6 +50,7 @@ async def test_route_history_records_and_backfills_by_decision_id(db_session):
     ).scalar_one()
     assert stored.outcome_signal_id == "turn:follow-up"
     assert stored.input_aggregator_snapshot_id == "aggregator:user-1:snap-1"
+    assert stored.skills_injected == []
 
 
 @pytest.mark.asyncio
@@ -61,12 +63,14 @@ async def test_route_history_records_explicit_feedback_and_timeout(db_session):
         input_aggregator_snapshot_id="aggregator:user-2:snap-1",
         decision_type="execution_first",
         decision_payload={"mode": "execution_first"},
+        skills_injected=[],
     )
     timeout_id = await service.record_decision(
         user_id=user.id,
         input_aggregator_snapshot_id="aggregator:user-2:snap-2",
         decision_type="follow_up_question",
         decision_payload={"question": "你最想推进什么？"},
+        skills_injected=[],
     )
 
     thumbs_up = await service.record_explicit_feedback(

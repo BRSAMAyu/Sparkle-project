@@ -10,6 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 APP_ROOT = ROOT / "backend" / "app"
 SHARE_ROOT = APP_ROOT / "services" / "skill_share"
 STORE_ROOT = APP_ROOT / "services" / "skill_store"
+SELECTION_TARGETS = [
+    APP_ROOT / "services" / "skill_selection_service.py",
+]
 AUTHOR_REFERENCE_PATTERN = re.compile(r"\bauthor_user_id\b")
 
 
@@ -35,6 +38,15 @@ def main() -> int:
                 violations.append(
                     f"{path.relative_to(ROOT)}:{lineno}: adopted Skill path must not preserve author_user_id"
                 )
+
+    for path in SELECTION_TARGETS:
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8").lower()
+        if "sufficiency" in text:
+            violations.append(
+                f"{path.relative_to(ROOT)}: Stage 21 selection path must not consume sufficiency signals"
+            )
 
     if violations:
         print("[Rule AF Isolation] FAIL")

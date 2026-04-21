@@ -13,9 +13,13 @@ from app.models.chat import ChatSession
 from app.models.focus import FocusSession, FocusStatus
 from app.services.memory_service import MemoryService
 from app.services.predictive_service import PredictiveService
+from app.services.skill_schema import SkillSelectionContext
+from app.services.skill_selection_service import SkillSelectionService
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult
 from app.services.sufficiency_judge_service import SufficiencyJudgeService
 from app.state_aggregator.schema import (
+    ActiveSkillSummaryItemValue,
+    ActiveSkillsSummaryValue,
     CommitmentSummaryValue,
     EngagementStateValue,
     LearningStateValue,
@@ -46,6 +50,7 @@ class StateAggregatorService:
         "working_memory_snapshot": 30,
         "task_sufficiency_summary": 30,
         "context_sufficiency_summary": 30,
+        "active_skills_summary": 30,
     }
 
     def __init__(self, db: AsyncSession) -> None:
@@ -63,6 +68,7 @@ class StateAggregatorService:
         *,
         now: datetime | None = None,
         current_turn_parse: CurrentTurnParseResult | None = None,
+        skill_selection_context: SkillSelectionContext | None = None,
     ) -> UserStateV1:
         reference_time = now or _utcnow()
         state = UserStateV1(user_id=user_id)
@@ -72,6 +78,7 @@ class StateAggregatorService:
                 field_name=field_name,
                 now=reference_time,
                 current_turn_parse=current_turn_parse,
+                skill_selection_context=skill_selection_context,
             )
             state = replace(state, **{field_name: envelope})
         return state
@@ -83,8 +90,13 @@ class StateAggregatorService:
         field_name: UserStateFieldName,
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None,
+        skill_selection_context: SkillSelectionContext | None,
     ) -> StateFieldEnvelope[Any]:
-        cache_key = (user_id, field_name, self._turn_parse_fingerprint(field_name, current_turn_parse))
+        cache_key = (
+            user_id,
+            field_name,
+            self._turn_parse_fingerprint(field_name, current_turn_parse, skill_selection_context),
+        )
         cached = self._cache.get(cache_key)
         if cached is not None:
             envelope, expires_at = cached
@@ -105,8 +117,13 @@ class StateAggregatorService:
             "working_memory_snapshot": self._build_working_memory_snapshot,
             "task_sufficiency_summary": self._build_task_sufficiency_summary,
             "context_sufficiency_summary": self._build_context_sufficiency_summary,
+            "active_skills_summary": self._build_active_skills_summary,
         }
-        envelope = await fetcher[field_name](user_id, now, current_turn_parse)
+        envelope = await fetcher[field_name](
+            user_id,
+            now,
+            current_turn_parse if field_name != "active_skills_summary" else skill_selection_context,
+        )
         ttl_seconds = self.FIELD_TTLS_SECONDS[field_name]
         self._cache[cache_key] = (envelope, envelope.computed_at + timedelta(seconds=ttl_seconds))
         return envelope
@@ -304,6 +321,39 @@ class StateAggregatorService:
             freshness_seconds=0,
         )
 
+    async def _build_active_skills_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        skill_selection_context: SkillSelectionContext | None = None,
+    ) -> StateFieldEnvelope[ActiveSkillsSummaryValue]:
+        if skill_selection_context is None:
+            return StateFieldEnvelope(
+                value=ActiveSkillsSummaryValue(items=()),
+                computed_at=now,
+                source_snapshot_ids=(),
+                freshness_seconds=0,
+            )
+
+        matches, _blocked = await SkillSelectionService(self.db).resolve_prompt_payload(
+            user_id=user_id,
+            selection_context=skill_selection_context,
+        )
+        items = tuple(
+            ActiveSkillSummaryItemValue(
+                skill_id=item.skill_id,
+                name=item.name,
+                activation_match_score=item.activation_match_score,
+            )
+            for item in matches
+        )
+        return StateFieldEnvelope(
+            value=ActiveSkillsSummaryValue(items=items),
+            computed_at=now,
+            source_snapshot_ids=tuple(f"user_skill:{item.skill_id}" for item in items),
+            freshness_seconds=0,
+        )
+
     async def _evaluate_sufficiency(
         self,
         *,
@@ -331,9 +381,21 @@ class StateAggregatorService:
     def _turn_parse_fingerprint(
         field_name: UserStateFieldName,
         current_turn_parse: CurrentTurnParseResult | None,
+        skill_selection_context: SkillSelectionContext | None = None,
     ) -> str:
         if field_name not in {"task_sufficiency_summary", "context_sufficiency_summary"}:
-            return ""
+            if field_name != "active_skills_summary":
+                return ""
+            if skill_selection_context is None:
+                return "missing"
+            return ":".join(
+                [
+                    skill_selection_context.intent,
+                    skill_selection_context.tool_category,
+                    str(skill_selection_context.current_time.hour),
+                    str(skill_selection_context.current_time.weekday()),
+                ]
+            )
         if current_turn_parse is None:
             return "missing"
         return ":".join(

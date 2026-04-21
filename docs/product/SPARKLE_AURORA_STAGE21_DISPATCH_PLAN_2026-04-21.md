@@ -59,7 +59,7 @@
 2. Rule V `8`
 3. Rule K + Z + AB + AC + AD + AE `0 violation`
 4. Stage 13-20 carry-forward sweep 全绿
-5. Stage 20 Conflict Resolver 稳定性证明完成
+5. Stage 20 Conflict Resolver shadow 模式并行比较稳定性证明完成
 6. Roadmap v2.0 命名表已更新：Rule AF 锁定为 Skill sharing governance
 
 ## §3 Workstreams
@@ -73,6 +73,19 @@
 | `WS-SK-SHARE` | Cross-user 共享流水线 + fork / 撤回 |
 | `WS-SK-MOBILE` | “我的方式” 管理 UI + draft / share / catalog / fork |
 | `WS-SK-KILL` | Store / Selection / Share 三级 kill 独立开关 |
+
+### Stage 21 Architectural Reinforcements
+
+1. Skill Selection must consume **Aggregator + Conflict Resolver** together. Before prompt injection, unresolved conflicts on matched topic keys hard-block activation and only emit a caveat.
+2. Skill Selection remains permanently independent from `task_sufficiency` and `context_sufficiency`.
+3. Gate S21-0 shadow proof inherits Stage 20 reality: Conflict Resolver must remain in **shadow comparison mode**, not assumed live-cutover.
+4. Stage 22 Bayesian input is pre-wired by extending `routing_decision_log` with nullable `skills_injected`; Stage 21 writes it and does not read it.
+5. Forked Skills are frozen snapshots. Source edits, withdrawal, or deletion never propagate to existing forks.
+6. Rule AA remains permanently skipped and never reused.
+7. Aggregator `v1.3` must remain backward compatible with `v1.2` consumers and re-pass Rule AB guard.
+8. Extract trigger recognition is pure rule matching frozen in `skill_extract_trigger_keywords.v1.json`; LLM is only used after trigger acceptance.
+9. Aggregator may only query `user_skills`; it may never query `shared_skills`.
+10. Stage 21 must expose the minimum Prometheus metric set before final accept.
 
 ## §4 Rule AF 正式表述
 
@@ -100,6 +113,11 @@ CI 入口：
    - `activation_match_score` 在 Router 决策分支 `0 hit`
    - `skill_share/` import `skill_store/` 内部模块 `0 hit`
    - adopted Skill 路径上 `author_user_id` `0 hit`
+12. Stage 21 observability 最低集上线：
+   - `sparkle_skill_count_per_user`
+   - `sparkle_skill_extract_draft_accept_rate`
+   - `sparkle_skill_selection_activation_rate`
+   - `sparkle_skill_share_pipeline_latency_seconds`
 
 ## §6 延后到 Stage 22+
 
@@ -111,9 +129,10 @@ CI 入口：
 
 ## §7 Stage 22 入场义务
 
-- Stage 22 Bayesian 必须消费 `Route History + Skill usage_count + Sufficiency Judge`
+- Stage 22 Bayesian 必须消费 `Route History.skills_injected + Sufficiency Judge`
 - Stage 22 必须重做 Stage 14 SQAM 四维测量
 - Stage 23 Accountability 规则号预留为 **Rule AG**
+- Stage 22 必须从 `routing_decision_log.skills_injected` 读取 Skill 注入历史，不得另建平行激活历史表
 
 ## §8 自动化执行模式
 
@@ -133,6 +152,7 @@ CI 入口：
 7. 单用户 Skill 上限 `50`；最多 top `3` 注入 prompt
 8. 共享流水线三步缺一不可：PII scanner + injection detector + moderation queue
 9. Adopted Skill 即解耦，严禁 telemetry 回链原作者
+10. Skill Selection 永禁消费 `task_sufficiency` / `context_sufficiency` 任一信号作为激活 / 抑制条件
 
 ## §10 执行令
 
@@ -141,3 +161,4 @@ CI 入口：
 3. 实现 Stage 21 全 7 WS
 4. 通过 Gate S21-FINAL 后产出 `SPARKLE_AURORA_STAGE21_HANDOFF_2026-04-21.md`
 5. Stage 22 dispatch 由架构师下一轮发起，Codex 不自造
+6. Stage 21 commit 链必须至少保持治理 / backend / mobile 三切面分离，禁止压成单一提交

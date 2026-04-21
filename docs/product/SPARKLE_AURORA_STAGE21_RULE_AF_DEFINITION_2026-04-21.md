@@ -3,6 +3,12 @@
 > Status: locked for Stage 21 implementation
 > Scope: cross-user Skill sharing, fork adoption, and public catalog boundaries
 
+Numbering history note:
+
+Memory roadmap drafts once reserved `Rule AA` for cross-user Skill sharing. After Stage 18 introduced `Rule AB`, that early placeholder was permanently skipped and is never reused. The live governance sequence is now:
+
+`Rule Y -> Rule Z -> Rule AB -> Rule AC -> Rule AD -> Rule AE -> Rule AF -> Rule AG`
+
 ## 1. Rule AF
 
 One-sentence definition:
@@ -25,7 +31,7 @@ Forbidden scenarios:
 3. Preserving `author_user_id` in any adopted fork path
 4. Exposing cross-user usage statistics in the shared catalog
 5. Any user-to-user recommendation such as “someone like you uses this Skill”
-6. Referencing shared Skill content from Aggregator fields
+6. Referencing `shared_skills` pool content from Aggregator fields. Only forked copies in `user_skills` may contribute metadata to Aggregator.
 7. Reusing shared Skill content as LLM extractor few-shot material
 8. Showing cross-user aggregated usage counters to end users
 

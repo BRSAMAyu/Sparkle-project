@@ -33,6 +33,7 @@ from app.models.user import User
 from app.services.budget_tuning_service import BudgetTuningService
 from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
+from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.ltm_health_snapshot import LtmHealthSnapshotService
 from app.services.ltm_release_gate import LtmReleaseGate
@@ -305,6 +306,25 @@ async def update_stage19_kill_switches(payload: dict = Body(default={})):
             "working_memory_enabled": payload.get("working_memory_enabled"),
             "llm_extractor_enabled": payload.get("llm_extractor_enabled"),
             "consolidation_enabled": payload.get("consolidation_enabled"),
+        }
+    )
+    return {"status": "ok", "flags": flags}
+
+
+@router.get("/stage21/killswitch")
+async def get_stage21_kill_switches():
+    service = AuroraStage21KillSwitchService()
+    return {"flags": await service.get_all()}
+
+
+@router.put("/stage21/killswitch")
+async def update_stage21_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage21KillSwitchService()
+    flags = await service.set_flags(
+        {
+            "skill_store_enabled": payload.get("skill_store_enabled"),
+            "skill_selection_enabled": payload.get("skill_selection_enabled"),
+            "skill_share_enabled": payload.get("skill_share_enabled"),
         }
     )
     return {"status": "ok", "flags": flags}

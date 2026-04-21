@@ -103,6 +103,7 @@ class RoutingDecisionLog(Base):
     sufficiency_judgment_id = Column(GUID(), nullable=True)
     decision_type = Column(String(64), nullable=False)
     decision_payload = Column(JSONBCompat, nullable=False, default=dict)
+    skills_injected = Column(JSONBCompat, nullable=True, default=list)
     outcome_signal_id = Column(String(128), nullable=True)
     outcome_type = Column(String(32), nullable=True)
     outcome_collected_at = Column(DateTime, nullable=True)
