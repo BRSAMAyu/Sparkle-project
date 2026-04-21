@@ -54,10 +54,22 @@ Forbidden scenarios:
 4. Hard-deleting overridden records instead of soft-retracting them
 5. Feeding Conflict Resolver output into Stage 18 push policy or delivery
 
+Implementation note:
+
+Stage 20 shadow mode is defined as a parallel comparison mode.
+
+1. the legacy blocker path still determines the real write outcome
+2. `ConflictResolver.resolve()` runs alongside it and writes shadow audit data
+3. only after shadow disagreement is accepted may the resolver become the live decision path
+
 ## 3. CI Guard Entry Points
 
 1. `scripts/check_rule_ad_sufficiency_split.py`
 2. `scripts/check_rule_ae_conflict_audit.py`
+
+Additional Route History interaction constraint:
+
+`routing_decision_log` remains write-only for Stage 20 except a single-row outcome backfill keyed by `decision_id`. Range reads, aggregation reads, and any non-audit consumer queries remain forbidden until Stage 22.
 
 ## 4. Stage 17 Carry-Forward Note
 

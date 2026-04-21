@@ -55,6 +55,6 @@ Stage 17 intentionally uses the ownership-bound key form `f"{user_id}:null"` bec
 
 If a future governed upgrade resolves the mentioned party to a Sparkle account, the key form must upgrade to `f"{user_id}:{mentioned_user_id}"`. That upgrade is only allowed with:
 
-1. a one-time historical hash recomputation pass
-2. a dedup step over the owner's existing mention rows
+1. a one-time historical hash recomputation pass covering the owner's existing Stage 17 rows
+2. a dedup step over the owner's existing mention rows after recomputation
 3. an explicit governance review confirming the Rule Z no-cross-user-join boundary still holds

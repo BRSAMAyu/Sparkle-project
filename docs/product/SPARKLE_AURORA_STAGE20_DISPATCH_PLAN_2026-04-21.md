@@ -35,14 +35,14 @@
 | --- | --- | --- |
 | **A** | Stage 19 final-accept + LLM 抽取 precision ≥ 0.85 | 全 7 WS |
 | **B1** | task/context 分离精度 < 0.80 | Sufficiency logging-only |
-| **B2** | Conflict Resolver 替换路径退化 | 回滚替换，保留影子模式 |
+| **B2** | Conflict Resolver 影子比对显示新旧决策不一致率超阈值，或真替换后基线退化 | 保留并行影子模式，暂停真替换 |
 | **C** | Route History 写入退化 > 20% | 停库写，转 Redis buffer |
 
 ### 0.5 Codex 自答四题
 
 1. Sufficiency Judge 必须是纯规则，不得 LLM 化。
 2. Conflict Resolver 任一覆盖都必须留下审计记录。
-3. Route History 本期只写；除按 `decision_id` 回填 outcome 外，不允许在线读取。
+3. Route History 本期只写；除按 `decision_id` 做单条 outcome 回填外，不允许在线读取。
 4. Router 只能基于 `task_sufficiency` 分支；`context_sufficiency` 只能进入 prompt caveat。
 
 ## §1 Stage 20 总目标
@@ -78,13 +78,19 @@
 
 > **Rule AE**: Conflict Resolver 是确定性优先级裁决器，优先级链 frozen 为 `explicit_correction > inferred_extraction(rule-based) > inferred_extraction(LLM) > working_memory`。任一覆盖必须留下 `conflict_resolution_record`，被覆盖记录软撤销保留审计，禁止跨用户仲裁。
 
+Stage 20 v1 task-scoring formula is frozen as:
+
+`task_score = intent_clarity * 0.40 + target_object_resolved * 0.35 + constraint_explicit * 0.25`
+
+Each sub-dimension is discretized to `0.0 / 0.5 / 1.0` before measurement.
+
 ## §5 Gate S20-FINAL
 
 1. Gate S20-0 全绿
 2. Rule AD + AE 文档 + guard `0 violation`
 3. Sufficiency 分离精度 ≥ `0.80`
-4. Conflict Resolver 替换后 Stage 16 inferred-write 测试 `100%` 通过
-5. Route History 写入 < `5ms`
+4. Conflict Resolver 并行影子比对 + 真替换路径均保持 Stage 16 inferred-write 测试 `100%` 通过
+5. Route History 写入 < `5ms`，且 outcome 回填仅允许 `UPDATE ... WHERE decision_id = ?`
 6. Aggregator 加 sufficiency 字段后 Router migrate 等价性 KL 增量 ≤ `0.03`
 7. Stage 20 backend sweep ≥ `22 passed`
 8. Stage 20 mobile sweep ≥ `5 passed`
@@ -120,7 +126,18 @@
 5. Route History 本期只写不读，允许按 `decision_id` 单条回填 outcome
 6. Push 永禁消费 Sufficiency / Conflict / Route History
 
-## §10 执行令
+## §10 实施备注（吸收独立审计）
+
+1. Conflict Resolver 影子模式必须是“并行比对 + 旧逻辑仍负责真实返回值”，不是“假替换”。
+2. `MemoryInferredWriteLane._has_blocking_conflict()` 的 Stage 20 落地方式是：
+   - shadow mode: 运行旧逻辑与 `ConflictResolver.resolve()`，记录差异，真实行为仍返回旧逻辑
+   - non-shadow mode: 真正以 `ConflictResolver.resolve()` 返回值驱动写入
+3. Route History outcome 回填不得做范围查询。
+   - Router 写入时生成并透传 `decision_id`
+   - 后续显式反馈或隐式 follow-up 只允许按该 `decision_id` 做单条更新
+4. `intent_clarity` 应直接复用现有路由解析信号（`intent_confidence`），避免重复解析造成双轨不一致。
+
+## §11 执行令
 
 1. 落盘 Stage 20 dispatch、Rule AD/AE、follow-up 模板、`scripts/stage20/`
 2. 更新 Stage 21+ 命名表（Skill Rule = AF）

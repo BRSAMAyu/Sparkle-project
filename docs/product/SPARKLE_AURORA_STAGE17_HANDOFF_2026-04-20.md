@@ -103,14 +103,25 @@ It does not prove:
 3. Rule G atomic git commits are still pending.
    The code and tests are landed locally, but the final commit slicing by workstream has not yet been performed.
 
-## 7. Stage 18 Obligations
+## 7. Carry-Forward Debt Resolution Status
+
+1. Handoff closeout baseline expansion: completed in Stage 20 governance closeout.
+   This handoff now carries the same closeout-baseline structure used by later Aurora stages instead of the earlier minimal handoff shape.
+2. Router A/B placeholder evidence: explicitly deferred to the real-user gate.
+   Stage 17 no longer owes a development-time live prompt benchmark; the existing source-based engineering audit remains the accepted artifact for this stage.
+3. SGW gray-window gap: formally removed from this governance chain.
+   That verification path is owned by a separate independent framework and is not re-litigated in Aurora Stage 20.
+4. Rule Z HMAC upgrade note: synchronized with the Stage 20 Rule AD/AE governance package.
+   The `f"{user_id}:null"` to `f"{user_id}:{mentioned_user_id}"` migration path is now explicitly documented as a governed future upgrade requiring one-time recompute and dedup.
+
+## 8. Stage 18 Obligations
 
 1. `RouterContextReader` must be replaced by an Aggregator-backed `SocialContextProvider` implementation without changing the public provider contract.
 2. Stage 18 must establish a pull-only frozen `user_state.v1` surface rather than expanding Router-local decision logic.
 3. If any future live prompt-drift benchmark shows KL divergence in `[0.2, 0.3]`, Stage 19B must front-load a Sufficiency Judge before stronger consumption is allowed.
 4. Working Memory in Stage 19A must treat Aggregator output as its upstream source instead of building a parallel ad-hoc state view.
 
-## 8. Stage 17 Outcome Lock
+## 9. Stage 17 Outcome Lock
 
 Stage 17 is complete as an engineering stage.
 
