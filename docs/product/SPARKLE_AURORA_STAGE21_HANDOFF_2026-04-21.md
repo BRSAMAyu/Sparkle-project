@@ -58,9 +58,9 @@ It does not prove:
 
 ### Stage 21 targeted mobile sweep
 
-- `9 passed`
+- `10 passed`
   - `skill_models_test.dart`
-  - `skill_management_screen_test.dart` (`7` widget scenarios)
+  - `skill_management_screen_test.dart` (`8` widget scenarios)
   - `skill_management_route_test.dart`
 
 ### Governance Guards
