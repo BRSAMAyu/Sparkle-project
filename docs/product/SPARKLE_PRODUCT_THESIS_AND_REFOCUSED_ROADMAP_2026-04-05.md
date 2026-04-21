@@ -227,12 +227,20 @@ The Aurora implementation roadmap is now locked as:
 2. Stage 20: Sufficiency Judge + Conflict Resolver + Route History
 3. Stage 21: Skill distillation
 4. Stage 22: Bayesian wire-on
+5. Stage 23: Accountability compiler closeout
 
 Rule naming is correspondingly locked as:
 
 1. Rule AD: Sufficiency Judge governance
 2. Rule AE: Conflict Resolver governance
 3. Rule AF: Skill cross-user sharing governance
+4. Rule AG: Accountability compiler governance
+
+Stage 22 entry obligations are now locked as:
+
+1. Bayesian wire-on must consume `Route History + Skill usage_count + Sufficiency Judge`
+2. Stage 22 must rerun the Stage 14 SQAM four-dimensional measurement set
+3. Bayesian may not build a parallel history collector outside the Stage 20 / 21 substrate
 
 The core user experience is not:
 
