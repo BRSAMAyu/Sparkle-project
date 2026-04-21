@@ -43,6 +43,25 @@ class _SubjectTypeApiService implements MemoryApiService {
   Future<List<PendingCommitmentItem>> getPendingCommitments() async => [];
 
   @override
+  Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async => [];
+
+  @override
+  Future<UnresolvedConflictItem> arbitrateUnresolvedConflict(
+    String id, {
+    required String selection,
+  }) async =>
+      UnresolvedConflictItem(
+        id: id,
+        conflictKey: 'stub',
+        status: 'resolved',
+        selectedSide: selection,
+        leftCandidate: UnresolvedConflictCandidate(
+            summary: 'A', lane: 'inferred_extraction'),
+        rightCandidate: UnresolvedConflictCandidate(
+            summary: 'B', lane: 'inferred_extraction'),
+      );
+
+  @override
   Future<List<MemoryPreferenceHistoryItem>> getPreferenceHistory(
     String prefKey,
   ) async =>
@@ -89,6 +108,36 @@ class _SubjectTypeApiService implements MemoryApiService {
         summary: 'resolved',
         dueAt: DateTime(2026, 4, 20),
         subjectType: 'commitment',
+      );
+
+  @override
+  Future<WorkingMemorySessionModel> getWorkingMemorySession({
+    String? sessionId,
+  }) async =>
+      WorkingMemorySessionModel(sessionId: sessionId, items: const []);
+
+  @override
+  Future<void> forgetWorkingMemoryEntry(
+    String entryId, {
+    String? sessionId,
+  }) async {}
+
+  @override
+  Future<WorkingMemoryItem> markWorkingMemoryEntryCorrect(
+    String entryId, {
+    String? sessionId,
+  }) async =>
+      WorkingMemoryItem(
+        id: entryId,
+        summary: 'correct',
+        subjectType: 'self',
+        mentionCount: 1,
+        salienceScore: 0.5,
+        sourceTurnIds: const [],
+        evidenceToken: 'turn',
+        confirmationStatus: 'correct',
+        rejected: false,
+        lastSeenAt: DateTime(2026, 4, 21),
       );
 
   @override

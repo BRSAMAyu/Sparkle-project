@@ -8,26 +8,25 @@ class MemoryApiService {
 
   final ApiClient _apiClient;
 
-  static final MemorySettingsModel _defaultMemorySettings =
-      MemorySettingsModel(
-        enabled: true,
-        allowPreferences: true,
-        allowGoals: true,
-        allowEpisodic: true,
-        allowInferredEpisodic: true,
-        captureLevel: 'medium',
-        blockedPrefKeys: <String>[],
-        blockedSources: <String>[],
-      );
+  static final MemorySettingsModel _defaultMemorySettings = MemorySettingsModel(
+    enabled: true,
+    allowPreferences: true,
+    allowGoals: true,
+    allowEpisodic: true,
+    allowInferredEpisodic: true,
+    captureLevel: 'medium',
+    blockedPrefKeys: <String>[],
+    blockedSources: <String>[],
+  );
   static final PushOptInSettingsModel _defaultPushSettings =
       PushOptInSettingsModel(
-        enabled: false,
-        allowCommitmentFollowUp: false,
-        allowEngagementRecovery: false,
-        quietHoursStart: '22:00',
-        quietHoursEnd: '08:00',
-        timezone: 'Asia/Shanghai',
-      );
+    enabled: false,
+    allowCommitmentFollowUp: false,
+    allowEngagementRecovery: false,
+    quietHoursStart: '22:00',
+    quietHoursEnd: '08:00',
+    timezone: 'Asia/Shanghai',
+  );
 
   Future<List<MemoryPreferenceItem>> getPreferences() async {
     final response =
@@ -107,6 +106,30 @@ class MemoryApiService {
       '/memory/accountability/pending/$id/resolve',
     );
     return PendingCommitmentItem.fromJson(response.data ?? <String, dynamic>{});
+  }
+
+  Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/memory/unresolved-conflicts',
+    );
+    final items = (response.data?['items'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(UnresolvedConflictItem.fromJson)
+        .toList();
+    return items;
+  }
+
+  Future<UnresolvedConflictItem> arbitrateUnresolvedConflict(
+    String id, {
+    required String selection,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '/memory/unresolved-conflicts/$id/arbitrate',
+      data: {'selection': selection},
+    );
+    return UnresolvedConflictItem.fromJson(
+      response.data ?? <String, dynamic>{},
+    );
   }
 
   Future<WorkingMemorySessionModel> getWorkingMemorySession({

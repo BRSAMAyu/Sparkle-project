@@ -3,13 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/models/memory_models.dart';
-import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 
-class _AutoMemoryApiService implements MemoryApiService {
-  String? lastRetractedId;
-  String? lastResolvedId;
+class _MemoryPanelApiService implements MemoryApiService {
+  String? lastSelection;
 
   @override
   Future<List<MemoryPreferenceItem>> getPreferences() async => [];
@@ -31,62 +29,65 @@ class _AutoMemoryApiService implements MemoryApiService {
       [
         EpisodicMemoryItem(
           id: 'auto_1',
-          summary: '这周我要赶论文 ddl，今晚先把提纲补完',
+          summary: '系统记录到一条自动记忆',
           sourceType: 'chat',
           sourceLane: 'inferred_extraction',
-          declarationLabel: 'AI 推断',
-          decayPolicy: '7d',
-          evidenceToken: 'turn_1',
           evidenceMissing: false,
-          evidenceRefs: [
-            EvidenceRefModel(type: 'chat_turn', id: 'turn_1'),
-          ],
-          evidenceScore: 0.9,
+          evidenceRefs: const [],
+          evidenceScore: 0.8,
           correctionCount: 0,
-          occurredAt: DateTime(2026, 4, 20),
+          occurredAt: DateTime(2026, 4, 21),
         ),
       ];
 
   @override
-  Future<List<PendingCommitmentItem>> getPendingCommitments() async => [
-        PendingCommitmentItem(
-          id: 'commit_1',
-          summary: '明天前补完提纲',
-          dueAt: DateTime(2026, 4, 20),
-          subjectType: 'commitment',
-        ),
-      ];
+  Future<List<PendingCommitmentItem>> getPendingCommitments() async => [];
 
   @override
-  Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async => [];
+  Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async => [
+        UnresolvedConflictItem(
+          id: 'conflict_1',
+          conflictKey: 'commitment:probability',
+          status: 'pending_user',
+          leftCandidate: UnresolvedConflictCandidate(
+            summary: '准备今晚复习概率论',
+            lane: 'inferred_extraction',
+            evidenceToken: 'turn-left',
+          ),
+          rightCandidate: UnresolvedConflictCandidate(
+            summary: '今晚先刷概率论错题',
+            lane: 'inferred_extraction',
+            evidenceToken: 'turn-right',
+          ),
+        ),
+      ];
 
   @override
   Future<UnresolvedConflictItem> arbitrateUnresolvedConflict(
     String id, {
     required String selection,
-  }) async =>
-      UnresolvedConflictItem(
-        id: id,
-        conflictKey: 'stub',
-        status: 'resolved',
-        selectedSide: selection,
-        leftCandidate: UnresolvedConflictCandidate(
-            summary: 'A', lane: 'inferred_extraction'),
-        rightCandidate: UnresolvedConflictCandidate(
-            summary: 'B', lane: 'inferred_extraction'),
-      );
-
-  @override
-  Future<PendingCommitmentItem> resolvePendingCommitment(String id) async {
-    lastResolvedId = id;
-    return PendingCommitmentItem(
+  }) async {
+    lastSelection = selection;
+    return UnresolvedConflictItem(
       id: id,
-      summary: 'resolved',
-      dueAt: DateTime(2026, 4, 20),
-      subjectType: 'commitment',
-      resolvedAt: DateTime(2026, 4, 20, 18),
+      conflictKey: 'commitment:probability',
+      status: 'resolved',
+      selectedSide: selection,
+      leftCandidate: UnresolvedConflictCandidate(
+          summary: 'A', lane: 'inferred_extraction'),
+      rightCandidate: UnresolvedConflictCandidate(
+          summary: 'B', lane: 'inferred_extraction'),
     );
   }
+
+  @override
+  Future<PendingCommitmentItem> resolvePendingCommitment(String id) async =>
+      PendingCommitmentItem(
+        id: id,
+        summary: 'resolved',
+        dueAt: DateTime(2026, 4, 20),
+        subjectType: 'commitment',
+      );
 
   @override
   Future<WorkingMemorySessionModel> getWorkingMemorySession({
@@ -129,9 +130,7 @@ class _AutoMemoryApiService implements MemoryApiService {
     required String type,
     required String id,
     String? reason,
-  }) async {
-    lastRetractedId = id;
-  }
+  }) async {}
 
   @override
   Future<MemoryCorrectionResult> correctMemory({
@@ -184,45 +183,20 @@ class _AutoMemoryApiService implements MemoryApiService {
       settings;
 }
 
-class _FakeEvidenceResolveService implements EvidenceResolveService {
-  @override
-  Future<List<EvidenceResolveItem>> resolveEvidence(
-    List<EvidenceRefModel> refs,
-  ) async =>
-      [
-        EvidenceResolveItem(
-          type: 'chat_turn',
-          id: 'turn_1',
-          status: 'ok',
-          payload: const {
-            'chat_turn': {
-              'id': 'turn_1',
-              'session_id': 'session-1',
-              'role': 'user',
-              'content': '这周我要赶论文 ddl，今晚先把提纲补完',
-            },
-          },
-        ),
-      ];
-}
-
 void main() {
-  testWidgets('memory panel exposes AI auto memory section and revoke action', (
+  testWidgets('memory panel shows unresolved conflicts and handles arbitration',
+      (
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1440, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     AppFeatureFlags.enableMemoryPanelV2 = false;
-    AppFeatureFlags.enableEvidenceViewer = true;
-    AppFeatureFlags.enableMemoryExplain = false;
+    final api = _MemoryPanelApiService();
 
-    final api = _AutoMemoryApiService();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           memoryApiServiceProvider.overrideWithValue(api),
-          evidenceResolveServiceProvider
-              .overrideWithValue(_FakeEvidenceResolveService()),
         ],
         child: const MaterialApp(home: MemoryPanelScreen()),
       ),
@@ -231,18 +205,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AI 自动记忆'), findsOneWidget);
-    expect(find.text('待跟进承诺'), findsOneWidget);
-    expect(find.text('撤销此条'), findsOneWidget);
-    expect(find.text('已完成'), findsOneWidget);
+    expect(find.text('待你确认'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('选 A'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('选 A'));
+    expect(find.text('选 A'), findsOneWidget);
 
-    await tester.tap(find.text('撤销此条'));
+    await tester.tap(find.text('选 A'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('已完成'));
-    await tester.pumpAndSettle();
-
-    expect(api.lastRetractedId, 'auto_1');
-    expect(api.lastResolvedId, 'commit_1');
-    expect(find.text('这周我要赶论文 ddl，今晚先把提纲补完'), findsNothing);
+    expect(api.lastSelection, 'left');
+    expect(find.text('待你确认'), findsNothing);
   });
 }

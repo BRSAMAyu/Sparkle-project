@@ -13,6 +13,7 @@ import 'package:sparkle/features/memory/presentation/screens/memory_detail_scree
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
 import 'package:sparkle/features/memory/presentation/widgets/pending_commitments_section.dart';
+import 'package:sparkle/features/memory/presentation/widgets/unresolved_conflicts_section.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 
 enum MemoryEntryType { preference, goal, episodic }
@@ -59,6 +60,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   List<MemoryGoalItem> _goals = [];
   List<EpisodicMemoryItem> _episodic = [];
   List<PendingCommitmentItem> _pendingCommitments = [];
+  List<UnresolvedConflictItem> _unresolvedConflicts = [];
   MemoryEntryType? _filterType;
   MemoryEvidenceStatus? _filterEvidence;
   DateTimeRange? _dateRange;
@@ -67,6 +69,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   final Set<String> _pinnedIds = {};
   final Set<String> _revokingIds = {};
   final Set<String> _processingCommitmentIds = {};
+  final Set<String> _processingConflictIds = {};
 
   @override
   void initState() {
@@ -87,6 +90,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         service.getGoals(),
         service.getEpisodic(),
         service.getPendingCommitments(),
+        service.getUnresolvedConflicts(),
       ]);
       if (!mounted) {
         return;
@@ -96,6 +100,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         _goals = results[1] as List<MemoryGoalItem>;
         _episodic = results[2] as List<EpisodicMemoryItem>;
         _pendingCommitments = results[3] as List<PendingCommitmentItem>;
+        _unresolvedConflicts = results[4] as List<UnresolvedConflictItem>;
         _loading = false;
       });
     } catch (e) {
@@ -187,6 +192,16 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               const SizedBox(height: DS.sm),
               ..._autoMemoryEntries.map((item) => _buildEpisodicCard(item)),
             ],
+            if (_unresolvedConflicts.isNotEmpty) ...[
+              const SizedBox(height: DS.xl),
+              UnresolvedConflictsSection(
+                items: _unresolvedConflicts,
+                processingIds: _processingConflictIds,
+                onSelectLeft: _selectConflictLeft,
+                onSelectRight: _selectConflictRight,
+                onSelectNone: _selectConflictNone,
+              ),
+            ],
             if (_pendingCommitments.isNotEmpty) ...[
               const SizedBox(height: DS.xl),
               PendingCommitmentsSection(
@@ -210,29 +225,38 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     final entries = _applySort(_applyFilters(_buildEntries()));
     return RefreshIndicator(
       onRefresh: _loadAll,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(DS.lg),
-          children: [
-            SparkleStaggerItem(index: 0, child: _buildFilterBar(context)),
-            const SizedBox(height: DS.md),
-            if (_pendingCommitments.isNotEmpty)
-              PendingCommitmentsSection(
-                items: _pendingCommitments,
-                processingIds: _processingCommitmentIds,
-                onResolve: _resolvePendingCommitment,
-                onDismiss: _dismissPendingCommitment,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(DS.lg),
+        children: [
+          SparkleStaggerItem(index: 0, child: _buildFilterBar(context)),
+          const SizedBox(height: DS.md),
+          if (_unresolvedConflicts.isNotEmpty)
+            UnresolvedConflictsSection(
+              items: _unresolvedConflicts,
+              processingIds: _processingConflictIds,
+              onSelectLeft: _selectConflictLeft,
+              onSelectRight: _selectConflictRight,
+              onSelectNone: _selectConflictNone,
+            ),
+          if (_unresolvedConflicts.isNotEmpty) const SizedBox(height: DS.md),
+          if (_pendingCommitments.isNotEmpty)
+            PendingCommitmentsSection(
+              items: _pendingCommitments,
+              processingIds: _processingCommitmentIds,
+              onResolve: _resolvePendingCommitment,
+              onDismiss: _dismissPendingCommitment,
+            ),
+          if (_pendingCommitments.isNotEmpty) const SizedBox(height: DS.md),
+          if (entries.isEmpty)
+            _buildEmptyState()
+          else
+            ...entries.indexed.map(
+              (entry) => SparkleStaggerItem(
+                index: entry.$1 + 1,
+                child: _buildEntryCard(entry.$2),
               ),
-            if (_pendingCommitments.isNotEmpty) const SizedBox(height: DS.md),
-            if (entries.isEmpty)
-              _buildEmptyState()
-            else
-              ...entries.indexed.map(
-                (entry) => SparkleStaggerItem(
-                  index: entry.$1 + 1,
-                  child: _buildEntryCard(entry.$2),
-                ),
-              ),
+            ),
         ],
       ),
     );
@@ -368,7 +392,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         title: item.prefKey,
         subtitle: _formatPreferenceSubtitle(item),
         badge: MemoryEvidenceBadge(
-            status: _statusFor(item.evidenceMissing, item.evidenceRefs),),
+          status: _statusFor(item.evidenceMissing, item.evidenceRefs),
+        ),
         correctionCount: item.correctionCount,
         footer: _buildPreferenceFooter(item),
         onTap: () => _openDetail(
@@ -381,7 +406,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         title: item.title,
         subtitle: item.status,
         badge: MemoryEvidenceBadge(
-            status: _statusFor(item.evidenceMissing, item.evidenceRefs),),
+          status: _statusFor(item.evidenceMissing, item.evidenceRefs),
+        ),
         correctionCount: item.correctionCount,
         onTap: () => _openDetail(
           context,
@@ -393,7 +419,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         title: item.summary,
         subtitle: _formatEpisodicSubtitle(item),
         badge: MemoryEvidenceBadge(
-            status: _statusFor(item.evidenceMissing, item.evidenceRefs),),
+          status: _statusFor(item.evidenceMissing, item.evidenceRefs),
+        ),
         correctionCount: item.correctionCount,
         footer: _buildEpisodicFooter(item),
         onTap: () => _openDetail(
@@ -406,8 +433,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     final isPinned = _pinnedIds.contains(entry.id);
     final preference = entry.detailArgs.preference;
     final episodic = entry.detailArgs.episodic;
-    final showAdjust =
-        preference?.sourceType == 'ai_inferred' && (preference?.adjustable ?? false);
+    final showAdjust = preference?.sourceType == 'ai_inferred' &&
+        (preference?.adjustable ?? false);
     final showUndo = episodic != null && _isInferredAutoMemory(episodic);
     final subtitle = [
       _entryTypeLabel(entry.type),
@@ -857,6 +884,51 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       }
       setState(() => _processingCommitmentIds.remove(item.id));
       AppFeedback.error(context, '忽略失败: $e');
+    }
+  }
+
+  Future<void> _selectConflictLeft(UnresolvedConflictItem item) async {
+    await _arbitrateConflict(item,
+        selection: 'left', successMessage: '已按候选 A 处理');
+  }
+
+  Future<void> _selectConflictRight(UnresolvedConflictItem item) async {
+    await _arbitrateConflict(item,
+        selection: 'right', successMessage: '已按候选 B 处理');
+  }
+
+  Future<void> _selectConflictNone(UnresolvedConflictItem item) async {
+    await _arbitrateConflict(item,
+        selection: 'none', successMessage: '已撤销这组冲突候选');
+  }
+
+  Future<void> _arbitrateConflict(
+    UnresolvedConflictItem item, {
+    required String selection,
+    required String successMessage,
+  }) async {
+    setState(() => _processingConflictIds.add(item.id));
+    try {
+      final service = ref.read(memoryApiServiceProvider);
+      await service.arbitrateUnresolvedConflict(
+        item.id,
+        selection: selection,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _unresolvedConflicts =
+            _unresolvedConflicts.where((entry) => entry.id != item.id).toList();
+        _processingConflictIds.remove(item.id);
+      });
+      AppFeedback.success(context, successMessage);
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _processingConflictIds.remove(item.id));
+      AppFeedback.error(context, '处理冲突失败: $e');
     }
   }
 

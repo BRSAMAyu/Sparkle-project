@@ -260,7 +260,8 @@ class PendingCommitmentItem {
       PendingCommitmentItem(
         id: json['id'] as String? ?? '',
         summary: json['summary'] as String? ?? '',
-        dueAt: _parseDate(json['due_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+        dueAt: _parseDate(json['due_at']) ??
+            DateTime.fromMillisecondsSinceEpoch(0),
         subjectType: json['subject_type'] as String? ?? 'commitment',
         evidenceToken: json['evidence_token'] as String?,
         resolvedAt: _parseDate(json['resolved_at']),
@@ -272,6 +273,69 @@ class PendingCommitmentItem {
   final String subjectType;
   final String? evidenceToken;
   final DateTime? resolvedAt;
+}
+
+class UnresolvedConflictCandidate {
+  UnresolvedConflictCandidate({
+    required this.summary,
+    required this.lane,
+    this.recordId,
+    this.evidenceToken,
+  });
+
+  factory UnresolvedConflictCandidate.fromJson(Map<String, dynamic> json) =>
+      UnresolvedConflictCandidate(
+        recordId: json['record_id'] as String?,
+        summary: json['summary'] as String? ?? '',
+        lane: json['lane'] as String? ?? '',
+        evidenceToken: json['evidence_token'] as String?,
+      );
+
+  final String? recordId;
+  final String summary;
+  final String lane;
+  final String? evidenceToken;
+}
+
+class UnresolvedConflictItem {
+  UnresolvedConflictItem({
+    required this.id,
+    required this.conflictKey,
+    required this.status,
+    required this.leftCandidate,
+    required this.rightCandidate,
+    this.selectedSide,
+    this.resolutionReason,
+    this.surfacedAt,
+    this.resolvedAt,
+  });
+
+  factory UnresolvedConflictItem.fromJson(Map<String, dynamic> json) =>
+      UnresolvedConflictItem(
+        id: json['id'] as String? ?? '',
+        conflictKey: json['conflict_key'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending_user',
+        selectedSide: json['selected_side'] as String?,
+        resolutionReason: json['resolution_reason'] as String?,
+        surfacedAt: _parseDate(json['surfaced_at']),
+        resolvedAt: _parseDate(json['resolved_at']),
+        leftCandidate: UnresolvedConflictCandidate.fromJson(
+          (json['left_candidate'] as Map<String, dynamic>? ?? const {}),
+        ),
+        rightCandidate: UnresolvedConflictCandidate.fromJson(
+          (json['right_candidate'] as Map<String, dynamic>? ?? const {}),
+        ),
+      );
+
+  final String id;
+  final String conflictKey;
+  final String status;
+  final String? selectedSide;
+  final String? resolutionReason;
+  final DateTime? surfacedAt;
+  final DateTime? resolvedAt;
+  final UnresolvedConflictCandidate leftCandidate;
+  final UnresolvedConflictCandidate rightCandidate;
 }
 
 class WorkingMemoryItem {
@@ -296,13 +360,15 @@ class WorkingMemoryItem {
         subjectType: json['subject_type'] as String? ?? 'self',
         mentionCount: json['mention_count'] as int? ?? 0,
         salienceScore: (json['salience_score'] as num?)?.toDouble() ?? 0.0,
-        sourceTurnIds:
-            (json['source_turn_ids'] as List<dynamic>? ?? []).whereType<String>().toList(),
+        sourceTurnIds: (json['source_turn_ids'] as List<dynamic>? ?? [])
+            .whereType<String>()
+            .toList(),
         evidenceToken: json['evidence_token'] as String? ?? '',
         confirmationStatus: json['confirmation_status'] as String? ?? 'none',
         consolidatedToL1Id: json['consolidated_to_l1_id'] as String?,
         rejected: json['rejected'] as bool? ?? false,
-        lastSeenAt: _parseDate(json['last_seen_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+        lastSeenAt: _parseDate(json['last_seen_at']) ??
+            DateTime.fromMillisecondsSinceEpoch(0),
       );
 
   final String id;
@@ -386,8 +452,7 @@ class MemorySettingsModel {
         allowPreferences: json['allow_preferences'] as bool? ?? true,
         allowGoals: json['allow_goals'] as bool? ?? true,
         allowEpisodic: json['allow_episodic'] as bool? ?? true,
-        allowInferredEpisodic:
-            json['allow_inferred_episodic'] as bool? ?? true,
+        allowInferredEpisodic: json['allow_inferred_episodic'] as bool? ?? true,
         captureLevel: json['capture_level'] as String? ?? 'medium',
         blockedPrefKeys: (json['blocked_pref_keys'] as List<dynamic>? ?? [])
             .whereType<String>()

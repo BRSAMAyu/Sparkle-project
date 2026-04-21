@@ -65,12 +65,61 @@ class _FakeMemoryApiService implements MemoryApiService {
   Future<List<PendingCommitmentItem>> getPendingCommitments() async => [];
 
   @override
+  Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async => [];
+
+  @override
+  Future<UnresolvedConflictItem> arbitrateUnresolvedConflict(
+    String id, {
+    required String selection,
+  }) async =>
+      UnresolvedConflictItem(
+        id: id,
+        conflictKey: 'stub',
+        status: 'resolved',
+        selectedSide: selection,
+        leftCandidate: UnresolvedConflictCandidate(
+            summary: 'A', lane: 'inferred_extraction'),
+        rightCandidate: UnresolvedConflictCandidate(
+            summary: 'B', lane: 'inferred_extraction'),
+      );
+
+  @override
   Future<PendingCommitmentItem> resolvePendingCommitment(String id) async =>
       PendingCommitmentItem(
         id: id,
         summary: 'resolved',
         dueAt: DateTime(2026, 4, 20),
         subjectType: 'commitment',
+      );
+
+  @override
+  Future<WorkingMemorySessionModel> getWorkingMemorySession({
+    String? sessionId,
+  }) async =>
+      WorkingMemorySessionModel(sessionId: sessionId, items: const []);
+
+  @override
+  Future<void> forgetWorkingMemoryEntry(
+    String entryId, {
+    String? sessionId,
+  }) async {}
+
+  @override
+  Future<WorkingMemoryItem> markWorkingMemoryEntryCorrect(
+    String entryId, {
+    String? sessionId,
+  }) async =>
+      WorkingMemoryItem(
+        id: entryId,
+        summary: 'correct',
+        subjectType: 'self',
+        mentionCount: 1,
+        salienceScore: 0.5,
+        sourceTurnIds: const [],
+        evidenceToken: 'turn',
+        confirmationStatus: 'correct',
+        rejected: false,
+        lastSeenAt: DateTime(2026, 4, 21),
       );
 
   @override
@@ -116,6 +165,23 @@ class _FakeMemoryApiService implements MemoryApiService {
   @override
   Future<MemorySettingsModel> updateMemorySettings(
     MemorySettingsModel settings,
+  ) async =>
+      settings;
+
+  @override
+  Future<PushOptInSettingsModel> getPushSettings() async =>
+      PushOptInSettingsModel(
+        enabled: false,
+        allowCommitmentFollowUp: false,
+        allowEngagementRecovery: false,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '08:00',
+        timezone: 'Asia/Shanghai',
+      );
+
+  @override
+  Future<PushOptInSettingsModel> updatePushSettings(
+    PushOptInSettingsModel settings,
   ) async =>
       settings;
 }
