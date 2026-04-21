@@ -23,7 +23,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.profile.projection_contract import UserProjectionContract
-from app.core.user_insight_state import UserInsightState
+from app.core.user_insight_state import BigFiveTraits, UserInsightState
 
 
 class WeakSpot(BaseModel):
@@ -68,6 +68,9 @@ class ProfileContext(BaseModel):
     cognitive_summary: CognitiveSummary = Field(default_factory=CognitiveSummary)
     error_summary: dict[str, Any] = Field(default_factory=dict)
     recent_errors: list[dict[str, Any]] = Field(default_factory=list)
+    traits_prior: BigFiveTraits = Field(default_factory=BigFiveTraits)
+    trait_observation_state: dict[str, Any] = Field(default_factory=dict)
+    traits_coldstart_completed_at: datetime | None = None
     user_insight_state: UserInsightState | None = None
     user_projection_contract: UserProjectionContract | None = None
 

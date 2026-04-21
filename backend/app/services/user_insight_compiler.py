@@ -307,6 +307,12 @@ class UserInsightCompiler:
             constraints=constraints,
             stable_preferences=stable_preferences,
             current_state=current_state,
+            traits_prior=profile_context.traits_prior.model_copy(deep=True),
+            traits_coldstart_completed_at=(
+                profile_context.traits_coldstart_completed_at.isoformat()
+                if profile_context.traits_coldstart_completed_at is not None
+                else None
+            ),
             active_bottlenecks=active_bottlenecks,
             confidence_metadata=confidence_metadata,
             freshness_metadata=freshness_metadata,

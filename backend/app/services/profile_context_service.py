@@ -19,6 +19,7 @@ from app.core.profile_context import (
     ProfileContext,
     WeakSpot,
 )
+from app.core.user_insight_state import BigFiveTraits
 from app.models.cognitive import BehaviorPattern
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.subject import Subject
@@ -27,6 +28,7 @@ from app.services.error_book_service import ErrorBookService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_name
 from app.services.personalization.preference_service import PreferenceService
 from app.services.report.report_tools import LearningReportTools
+from app.state_aggregator.service import StateAggregatorService
 from app.services.user_insight_compiler import UserInsightCompiler
 
 
@@ -122,6 +124,7 @@ class ProfileContextService:
                     context = ProfileContext(**data)
                     current_version = await self.pref_service.get_preference_version(user_id)
                     if context.preference_version == current_version and context.user_insight_state is not None:
+                        await self._attach_srl_phase_summary(user_id, context)
                         return context
                     logger.info(
                         "ProfileContext cache stale for %s: cached_version=%s current_version=%s has_insight=%s",
@@ -145,6 +148,9 @@ class ProfileContextService:
             cognitive_summary=cognitive_summary,
             error_summary=error_payload.get("summary") or {},
             recent_errors=error_payload.get("recent") or [],
+            traits_prior=BigFiveTraits.model_validate(preferences.get("traits_prior") or {}),
+            trait_observation_state=preferences.get("trait_observation_state") or {},
+            traits_coldstart_completed_at=preferences.get("traits_coldstart_completed_at"),
         )
         contract = await UserInsightCompiler(self.db).compile(
             user_id=user_id,
@@ -152,6 +158,7 @@ class ProfileContextService:
         )
         context.user_projection_contract = contract
         context.user_insight_state = contract.canonical_state
+        await self._attach_srl_phase_summary(user_id, context)
 
         if self.redis:
             try:
@@ -164,6 +171,30 @@ class ProfileContextService:
             await self._write_inline_snapshot_cache(user_id, context.user_insight_state.to_inline_snapshot())
 
         return context
+
+    async def _attach_srl_phase_summary(self, user_id: UUID, context: ProfileContext) -> None:
+        if context.user_insight_state is None:
+            return
+        try:
+            aggregator_state = await StateAggregatorService(self.db).get_user_state(
+                user_id,
+                required_fields=("srl_phase",),
+            )
+            if aggregator_state.srl_phase is None:
+                return
+            context.user_insight_state.srl_phase = {
+                "current_phase": aggregator_state.srl_phase.value.current_phase,
+                "phase_started_at": (
+                    aggregator_state.srl_phase.value.phase_started_at.isoformat()
+                    if aggregator_state.srl_phase.value.phase_started_at
+                    else None
+                ),
+                "confidence": aggregator_state.srl_phase.value.confidence,
+                "source": aggregator_state.srl_phase.value.source,
+                "freshness_seconds": aggregator_state.srl_phase.freshness_seconds,
+            }
+        except Exception as exc:
+            logger.warning(f"Failed to attach SRL phase summary: {exc}")
 
     async def get_inline_snapshot(self, user_id: UUID) -> dict[str, Any] | None:
         """Retrieve the cached inline snapshot for a user, if available.
@@ -208,6 +239,11 @@ class ProfileContextService:
             "explicit": merged,
             "inferred": inferred,
             "version": prefs.version if prefs else 0,
+            "traits_prior": dict(prefs.traits_prior or {}) if prefs else {},
+            "trait_observation_state": dict(prefs.trait_observation_state or {}) if prefs else {},
+            "traits_coldstart_completed_at": (
+                prefs.traits_coldstart_completed_at if prefs else None
+            ),
         }
 
     async def _get_error_summary(self, user_id: UUID) -> dict[str, Any]:

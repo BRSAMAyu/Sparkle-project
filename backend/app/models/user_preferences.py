@@ -20,9 +20,12 @@ class UserPreferencesCenter(BaseModel):
 
     explicit = Column(JSONBCompat, nullable=False, default=dict)
     inferred = Column(JSONBCompat, nullable=False, default=dict)
+    traits_prior = Column(JSONBCompat, nullable=False, default=dict)
+    trait_observation_state = Column(JSONBCompat, nullable=False, default=dict)
 
     last_explicit_update = Column(DateTime, nullable=True)
     last_inferred_update = Column(DateTime, nullable=True)
+    traits_coldstart_completed_at = Column(DateTime, nullable=True)
 
     def increment_version(self) -> int:
         self.version += 1

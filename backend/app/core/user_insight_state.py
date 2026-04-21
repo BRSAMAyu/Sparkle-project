@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 def _utcnow_iso() -> str:
@@ -23,6 +23,77 @@ class InsightSignalEvidence(BaseModel):
     explanation: str | None = None
 
 
+class BigFiveDimension(BaseModel):
+    value: float = 0.0
+    confidence: float = 0.0
+    evidence_count: int = 0
+    last_observed_at: str | None = None
+    source: Literal["coldstart", "nlp_observed", "merged"] = "coldstart"
+
+    @field_validator("value")
+    @classmethod
+    def _validate_value(cls, value: float) -> float:
+        numeric = float(value)
+        if numeric < -1.0 or numeric > 1.0:
+            raise ValueError("trait value must be within [-1, 1]")
+        return round(numeric, 4)
+
+    @field_validator("confidence")
+    @classmethod
+    def _validate_confidence(cls, value: float) -> float:
+        numeric = float(value)
+        if numeric < 0.0 or numeric > 0.3:
+            raise ValueError("trait confidence must be within [0, 0.3]")
+        return round(numeric, 4)
+
+    @field_validator("evidence_count")
+    @classmethod
+    def _validate_evidence_count(cls, value: int) -> int:
+        numeric = int(value)
+        if numeric < 0:
+            raise ValueError("evidence_count must be non-negative")
+        return numeric
+
+
+class BigFiveTraits(BaseModel):
+    openness: BigFiveDimension | None = None
+    conscientiousness: BigFiveDimension | None = None
+    extraversion: BigFiveDimension | None = None
+    agreeableness: BigFiveDimension | None = None
+    neuroticism: BigFiveDimension | None = None
+
+    DIMENSIONS: ClassVar[tuple[str, ...]] = (
+        "openness",
+        "conscientiousness",
+        "extraversion",
+        "agreeableness",
+        "neuroticism",
+    )
+
+    def active_dimensions(self) -> dict[str, BigFiveDimension]:
+        return {
+            dim: value
+            for dim in self.DIMENSIONS
+            if (value := getattr(self, dim)) is not None
+        }
+
+    def summary(self, *, min_confidence: float = 0.0) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        for dim in self.DIMENSIONS:
+            value = getattr(self, dim)
+            if value is None or float(value.confidence) < min_confidence:
+                continue
+            items.append(
+                {
+                    "dim": dim,
+                    "value": value.value,
+                    "confidence": value.confidence,
+                    "source": value.source,
+                }
+            )
+        return items
+
+
 class UserInsightState(BaseModel):
     """Canonical compiled insight state shared across orchestration and product surfaces."""
 
@@ -39,6 +110,9 @@ class UserInsightState(BaseModel):
     stable_preferences: dict[str, Any] = Field(default_factory=dict)
     current_state: dict[str, Any] = Field(default_factory=dict)
     inferred_work_style: dict[str, Any] = Field(default_factory=dict)
+    traits_prior: BigFiveTraits = Field(default_factory=BigFiveTraits)
+    traits_coldstart_completed_at: str | None = None
+    srl_phase: dict[str, Any] = Field(default_factory=dict)
 
     active_bottlenecks: list[dict[str, Any]] = Field(default_factory=list)
     active_contradictions: list[dict[str, Any]] = Field(default_factory=list)
@@ -76,6 +150,9 @@ class UserInsightState(BaseModel):
             "current_state": dict(self.current_state or {}),
             "active_constraints": list(self.constraints or []),
             "active_bottlenecks": list(self.active_bottlenecks or []),
+            "traits_prior": self.traits_prior.model_dump(mode="json"),
+            "traits_coldstart_completed_at": self.traits_coldstart_completed_at,
+            "srl_phase": dict(self.srl_phase or {}),
             "key_uncertainties": list(self.uncertainty_markers or []),
             "missing_information": list(self.missing_information or []),
             "confidence_map": dict(self.confidence_metadata or {}),

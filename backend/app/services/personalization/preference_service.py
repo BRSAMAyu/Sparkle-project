@@ -188,24 +188,61 @@ class PreferenceService:
 
         explicit = dict((prefs_center.explicit or {}))
         inferred = dict((prefs_center.inferred or {}))
+        traits_prior = dict((prefs_center.traits_prior or {}))
+        trait_observation_state = dict((prefs_center.trait_observation_state or {}))
 
         explicit_changed = explicit != (stored.explicit or {})
         inferred_changed = inferred != (stored.inferred or {})
+        traits_changed = traits_prior != (stored.traits_prior or {})
+        observation_state_changed = trait_observation_state != (stored.trait_observation_state or {})
+        coldstart_changed = prefs_center.traits_coldstart_completed_at != stored.traits_coldstart_completed_at
 
         stored.explicit = explicit
         stored.inferred = inferred
+        stored.traits_prior = traits_prior
+        stored.trait_observation_state = trait_observation_state
+        stored.traits_coldstart_completed_at = prefs_center.traits_coldstart_completed_at
 
         if explicit_changed:
             stored.last_explicit_update = _utcnow()
         if inferred_changed:
             stored.last_inferred_update = _utcnow()
-        if explicit_changed or inferred_changed:
+        if explicit_changed or inferred_changed or traits_changed or observation_state_changed or coldstart_changed:
             stored.version = (stored.version or 0) + 1
             stored.updated_at = _utcnow()
 
         await self.db.commit()
         await self._invalidate_cache(user_id)
         return self._fill_defaults(stored)
+
+    async def update_traits(
+        self,
+        user_id: UUID,
+        *,
+        traits_prior: dict,
+        trait_observation_state: dict | None = None,
+        traits_coldstart_completed_at: datetime | None = None,
+    ) -> UserPreferencesCenter:
+        prefs = await self._get_or_create(user_id)
+        prefs.traits_prior = dict(traits_prior or {})
+        if trait_observation_state is not None:
+            prefs.trait_observation_state = dict(trait_observation_state or {})
+        if traits_coldstart_completed_at is not None:
+            prefs.traits_coldstart_completed_at = traits_coldstart_completed_at
+        prefs.version = (prefs.version or 0) + 1
+        prefs.updated_at = _utcnow()
+        await self.db.commit()
+        await self._invalidate_cache(user_id)
+        return self._fill_defaults(prefs)
+
+    async def update_trait_observation_state(self, user_id: UUID, state: dict) -> UserPreferencesCenter:
+        prefs = await self._get_or_create(user_id)
+        prefs.trait_observation_state = dict(state or {})
+        prefs.version = (prefs.version or 0) + 1
+        prefs.updated_at = _utcnow()
+        await self.db.commit()
+        await self._invalidate_cache(user_id)
+        return self._fill_defaults(prefs)
 
     async def _get_db_version(self, user_id: UUID) -> int:
         """获取数据库中的版本号"""
@@ -236,6 +273,8 @@ class PreferenceService:
             version=1,
             explicit=self.DEFAULT_EXPLICIT.copy(),
             inferred={},
+            traits_prior={},
+            trait_observation_state={},
         )
         self.db.add(prefs)
         await self.db.commit()
@@ -245,6 +284,12 @@ class PreferenceService:
         """填充默认值"""
         if prefs.explicit is None:
             prefs.explicit = {}
+        if prefs.inferred is None:
+            prefs.inferred = {}
+        if prefs.traits_prior is None:
+            prefs.traits_prior = {}
+        if prefs.trait_observation_state is None:
+            prefs.trait_observation_state = {}
         for key, default in self.DEFAULT_EXPLICIT.items():
             if key not in prefs.explicit or prefs.explicit[key] is None:
                 prefs.explicit[key] = default
@@ -256,14 +301,29 @@ class PreferenceService:
             "version": prefs.version,
             "explicit": prefs.explicit,
             "inferred": prefs.inferred,
+            "traits_prior": prefs.traits_prior,
+            "trait_observation_state": prefs.trait_observation_state,
+            "traits_coldstart_completed_at": (
+                prefs.traits_coldstart_completed_at.isoformat()
+                if prefs.traits_coldstart_completed_at is not None
+                else None
+            ),
         }
 
     def _dict_to_model(self, data: dict) -> UserPreferencesCenter:
+        coldstart_completed_at = data.get("traits_coldstart_completed_at")
+        if isinstance(coldstart_completed_at, str) and coldstart_completed_at.strip():
+            coldstart_completed_at = datetime.fromisoformat(coldstart_completed_at)
+        else:
+            coldstart_completed_at = None
         return UserPreferencesCenter(
             user_id=UUID(data["user_id"]),
             version=data.get("version", 1),
             explicit=data.get("explicit", {}),
             inferred=data.get("inferred", {}),
+            traits_prior=data.get("traits_prior", {}),
+            trait_observation_state=data.get("trait_observation_state", {}),
+            traits_coldstart_completed_at=coldstart_completed_at,
         )
 
     async def _invalidate_cache(self, user_id: UUID) -> None:
