@@ -132,9 +132,12 @@ class PolicyCompilerService:
             )
         return rules
 
-    async def revoke_for_commitment(self, *, commitment_id: UUID) -> int:
+    async def revoke_for_commitment(self, *, commitment_id: UUID, user_id: UUID) -> int:
         result = await self.db.execute(
-            select(AccountabilityPolicy).where(AccountabilityPolicy.commitment_id == commitment_id)
+            select(AccountabilityPolicy).where(
+                AccountabilityPolicy.commitment_id == commitment_id,
+                AccountabilityPolicy.user_id == user_id,
+            )
         )
         updated = 0
         for row in result.scalars().all():

@@ -207,7 +207,10 @@ class ConflictResolverService:
         if decision.action == "accept":
             if new_record is None or not decision.loser_record_ids:
                 return decision
-            records = await self._load_records(decision.loser_record_ids)
+            records = await self._load_records(
+                decision.loser_record_ids,
+                user_id=candidate.user_id,
+            )
             for record in records:
                 record.retracted_at = _utcnow()
                 record.updated_at = _utcnow()
@@ -421,11 +424,14 @@ class ConflictResolverService:
         tokens.extend(record.evidence_token for record in records if record.evidence_token)
         return tuple(dict.fromkeys(token for token in tokens if token))
 
-    async def _load_records(self, record_ids: tuple[UUID, ...]) -> list[EpisodicMemory]:
+    async def _load_records(self, record_ids: tuple[UUID, ...], *, user_id: UUID) -> list[EpisodicMemory]:
         if not record_ids:
             return []
         result = await self.db.execute(
-            select(EpisodicMemory).where(EpisodicMemory.id.in_(record_ids))
+            select(EpisodicMemory).where(
+                EpisodicMemory.id.in_(record_ids),
+                EpisodicMemory.user_id == user_id,
+            )
         )
         return list(result.scalars().all())
 

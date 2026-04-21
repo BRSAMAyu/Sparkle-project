@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_STATE_DIMENSION_ORDER = (
     "tool_category",
     "sufficiency_level",
@@ -14,7 +15,7 @@ SOURCE_STATE_DIMENSION_ORDER = (
 
 
 def main() -> int:
-    doc_path = Path("docs/aurora/rule_ah_dimension_registry.md")
+    doc_path = REPO_ROOT / "docs/aurora/rule_ah_dimension_registry.md"
     if not doc_path.exists():
         raise SystemExit("FAIL rule ah registry: markdown missing")
 
@@ -23,7 +24,7 @@ def main() -> int:
     if missing:
         raise SystemExit(f"FAIL rule ah registry: missing markdown entries for {missing}")
 
-    encoder_path = Path("backend/app/services/source_state_encoder.py")
+    encoder_path = REPO_ROOT / "backend/app/services/source_state_encoder.py"
     encoder_text = encoder_path.read_text(encoding="utf-8")
     for name in SOURCE_STATE_DIMENSION_ORDER:
         if f'"{name}"' not in encoder_text:

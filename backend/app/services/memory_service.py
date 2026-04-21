@@ -791,7 +791,10 @@ class MemoryService:
         await self.db.commit()
         await self.db.refresh(record)
         try:
-            await PolicyCompilerService(self.db).revoke_for_commitment(commitment_id=record.id)
+            await PolicyCompilerService(self.db).revoke_for_commitment(
+                commitment_id=record.id,
+                user_id=user_id,
+            )
         except Exception as exc:
             logger.warning(f"Failed to revoke accountability policies for commitment {record.id}: {exc}")
         return record

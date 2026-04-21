@@ -3,8 +3,8 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-21
-> **版本**: v28（Stage 29 closeout + Stage 30 in progress）
-> **v2.2 锁定**: Stage 22-29 ✅ / Stage 30 🔶 / Stage 31-32 ❌
+> **版本**: v29（Stage 29.5 closeout + Stage 30 in progress）
+> **v2.2 锁定**: Stage 22-29.5 ✅ / Stage 30 🔶 / Stage 31-32 ❌
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -887,6 +887,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | 27 | Foresight Engine | 5 | 扩展+新增 | AL | ✅ closeout |
 | 28 | Traits 弱先验 | 5 | 扩展+新增 | AM | ✅ closeout |
 | 29 | SRL 三阶段独立 Tracker | 6 | 重构+新增 | AN | ✅ closeout |
+| 29.5 | Repo Hygiene | 6 | 卫生 | AQ | ✅ closeout |
 | 30 | Metacognition 扩展 | 4 | 扩展 | AO | 🔶 in progress |
 | 30 | Metacognition 扩展 | 4 | 扩展 | AO | ❌ pending |
 | 31 | Idiographic Lite | 4 | 扩展+新增 | AP | ❌ pending |
@@ -903,6 +904,7 @@ AK  Scene 合并幂等 + 算法约束 —— Stage 26 ✅ closeout
 AL  Foresight 非 Router 分支 —— Stage 27 ✅ closeout
 AM  Traits 置信度 ≤0.3 + 冲突优先级 —— Stage 28 ✅ closeout
 AN  SRL 解耦（EventBus + Aggregator）—— Stage 29 ✅ closeout
+AQ  Proto/Python 同步    —— Stage 29.5 ✅ closeout
 AO  Metacognition 禁诊断词 —— Stage 30 🔶 in progress
 ```
 AJ  Reflection 消费隔离   —— Stage 25
@@ -1184,7 +1186,33 @@ AP  Idiographic 仅关联不因果 —— Stage 31
 
 **Note**：目标环境上线前需应用 Stage 28/29 migration 到目标库。
 
-**Stage 30 义务锁定**：Stage 29 SRL Tracker 已落地，Stage 30 Metacognition 扩展可启动。
+### 9.29.5 ✅ Stage 29.5 完成（Repo Hygiene）
+
+**Stage 29.5 入场条件**：Stage 29 全部 WS green。
+
+**Stage 29.5 总目标**：基础设施卫生检查——Proto 同步 + CI guards + Alembic 链完整。
+
+**六项并行验证**：
+
+| WS | 目的 | 结果 |
+|----|------|------|
+| **WS-HG-PROTO-SYNC** | 3 proto 字段 + 11 消息类型 | ✅ PASS |
+| **WS-HG-CI-GUARDS** | 17 条规则 + manifest + CI 集成 | ✅ PASS |
+| **WS-HG-RULE-Y-AG-GUARDS** | AST 级别 guard | ✅ PASS |
+| **WS-HG-AB-EXEMPTION** | Rule AB 白名单强制 | ✅ PASS |
+| **WS-HG-MIGRATION-FILL** | Alembic 链完整 | ✅ PASS |
+| 测试计数 | 78 backend 精确匹配 | ✅ PASS |
+
+**GLM1 验收**：ACCEPT - CLEAN
+
+**移交事项**：⚠️ 未提交更改——必须在进入 Stage 30 之前提交
+- Proto 扩展 + 生成的 pb2 文件
+- 17 个 guard 脚本 + manifest + runner
+- 2 个无操作迁移 + 1 个合并迁移
+- CI yml 集成
+- 78+ 新测试文件
+
+**Stage 30 义务锁定**：Stage 29.5 repo hygiene 已验证 + 更改已提交，Stage 30 Metacognition 扩展可启动。
 
 ### 9.30 依赖链（v2.2 锁定，不可打乱顺序）
 

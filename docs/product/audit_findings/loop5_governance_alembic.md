@@ -4,6 +4,8 @@
 > Sub-agents used: 3 Explore agents (Rules K-M, Rules AE-AL, Rules AM-AN + missing guards)
 > Duration: ~12 min
 
+> Normalization note: this file is a raw per-loop record. Final severity, dedupe, and closeout status are maintained in the full report. Rule AH's CWD fragility was subsequently fixed during closeout.
+
 ## Findings
 
 | # | Severity | Stage | Category | Finding | File:Line | Evidence |

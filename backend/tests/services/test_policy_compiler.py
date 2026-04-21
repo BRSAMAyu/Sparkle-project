@@ -140,11 +140,58 @@ async def test_policy_compiler_reconciles_removed_rules(db_session, monkeypatch)
     await db_session.commit()
 
     await service.compile_for_commitment(commitment, persist=True)
-    await service.revoke_for_commitment(commitment_id=commitment.id)
+    await service.revoke_for_commitment(commitment_id=commitment.id, user_id=commitment.user_id)
     rows = (await db_session.execute(select(AccountabilityPolicy))).scalars().all()
 
     assert rows
     assert all(row.is_enabled is False for row in rows)
+
+
+@pytest.mark.asyncio
+async def test_policy_compiler_revoke_for_commitment_stays_user_scoped(db_session, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "AURORA_POLICY_COMPILER_MODE", "live")
+    service = PolicyCompilerService(db_session)
+    commitment = _commitment()
+    db_session.add(commitment)
+    await db_session.commit()
+
+    await service.compile_for_commitment(commitment, persist=True)
+    owned_policy = (
+        await db_session.execute(
+            select(AccountabilityPolicy)
+            .where(
+                AccountabilityPolicy.commitment_id == commitment.id,
+                AccountabilityPolicy.user_id == commitment.user_id,
+            )
+            .order_by(AccountabilityPolicy.policy_id)
+        )
+    ).scalars().first()
+    foreign_policy = AccountabilityPolicy(
+        policy_id=f"foreign:{uuid4()}",
+        user_id=uuid4(),
+        commitment_id=commitment.id,
+        policy_version="v1",
+        policy_type="deadline_nudge",
+        trigger_type="time_based",
+        action_type="notify_user",
+        ir_payload={},
+        ir_hash="f" * 64,
+        is_enabled=True,
+    )
+    db_session.add(foreign_policy)
+    await db_session.commit()
+
+    updated = await service.revoke_for_commitment(
+        commitment_id=commitment.id,
+        user_id=commitment.user_id,
+    )
+    await db_session.refresh(owned_policy)
+    await db_session.refresh(foreign_policy)
+
+    assert owned_policy is not None
+    assert updated >= 1
+    assert owned_policy.is_enabled is False
+    assert foreign_policy.is_enabled is True
 
 
 @pytest.mark.asyncio

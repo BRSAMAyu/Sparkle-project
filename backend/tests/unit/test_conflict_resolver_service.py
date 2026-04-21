@@ -240,3 +240,44 @@ async def test_memory_inferred_write_lane_shadow_mode_preserves_legacy_blocking_
     assert record is None
     audits = (await db_session.execute(select(ConflictResolutionRecord))).scalars().all()
     assert any(audit.resolution_reason.startswith("shadow_compare:") for audit in audits)
+
+
+@pytest.mark.asyncio
+async def test_conflict_resolver_load_records_stays_user_scoped(db_session):
+    owner = await _create_user(db_session)
+    other = await _create_user(db_session)
+    owner_record = EpisodicMemory(
+        user_id=owner.id,
+        summary="owner record",
+        source_type="chat",
+        source_id="session-owner",
+        source_lane="working_memory",
+        subject_type="self",
+        occurred_at=datetime(2026, 4, 21, 12, 0, 0),
+        confidence=0.6,
+        evidence_refs=[{"type": "chat_turn", "id": "owner"}],
+        evidence_token="owner",
+        semantic_key="owner:key",
+    )
+    foreign_record = EpisodicMemory(
+        user_id=other.id,
+        summary="foreign record",
+        source_type="chat",
+        source_id="session-foreign",
+        source_lane="working_memory",
+        subject_type="self",
+        occurred_at=datetime(2026, 4, 21, 12, 5, 0),
+        confidence=0.6,
+        evidence_refs=[{"type": "chat_turn", "id": "foreign"}],
+        evidence_token="foreign",
+        semantic_key="foreign:key",
+    )
+    db_session.add_all([owner_record, foreign_record])
+    await db_session.commit()
+
+    records = await ConflictResolverService(db_session)._load_records(
+        (owner_record.id, foreign_record.id),
+        user_id=owner.id,
+    )
+
+    assert [record.id for record in records] == [owner_record.id]

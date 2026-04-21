@@ -4,6 +4,8 @@
 > Sub-agents used: 3 Explore agents (Stages 24+23, Stages 22+21, Stage 20)
 > Duration: ~12 min
 
+> Normalization note: this file is a raw per-loop record. Final severity, dedupe, and closeout status are maintained in the full report.
+
 ## Findings
 
 | # | Severity | Stage | Category | Finding | File:Line | Evidence |

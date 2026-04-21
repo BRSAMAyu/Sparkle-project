@@ -4,6 +4,8 @@
 > Sub-agents used: 4 Explore agents (Schema-Proto sync, Service-Router coverage, CI guard coverage, Proto generated code)
 > Duration: ~12 min
 
+> Normalization note: this file preserves the raw Loop 1 output. Final normalized severity lives in the full report and `audit_state.json`. In particular, `L1-1` was later downgraded from provisional P0 to an intentional placeholder drift, not a live serialization failure.
+
 ## Findings
 
 | # | Severity | Stage | Category | Finding | File:Line | Evidence |
