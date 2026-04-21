@@ -216,6 +216,11 @@ class Settings(BaseSettings):
     OPENCLAW_TRUST_AUTO_PROMOTE_SUCCESS_RATE: float = 0.85
     TOOL_EXECUTION_TIMEOUT_SECONDS: float = 120.0
 
+    # Aurora Stage 23
+    AURORA_BAYESIAN_MODE: str = "off"  # off | shadow | live_canary
+    AURORA_BAYESIAN_LIVE_CANARY_PERCENT: int = 5
+    AURORA_BAYESIAN_TTL_DAYS: int = 30
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

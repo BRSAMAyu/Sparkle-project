@@ -2,8 +2,9 @@
 
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
-> **日期**: 2026-04-20
-> **版本**: v22（Stage 20 engineering closeout：Sufficiency Judge + Conflict Resolver + Route History + Rule AD/AE）
+> **日期**: 2026-04-21
+> **版本**: v23（Stage 22 closeout + Stage 23 in progress）
+> **v2.2 锁定**: Stage 22 ✅ / Stage 23 🔶 / Stage 24-32 ❌
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -21,8 +22,13 @@
 > - `SPARKLE_AURORA_STAGE18_RULE_AB_DEFINITION_2026-04-20.md` — Rule AB 正式定义（push 治理：evidence/cap/quiet-hours/retraction）
 > - `SPARKLE_AURORA_STAGE19_HANDOFF_2026-04-20.md` — Stage 19 工程收尾（7 WS accept + 30 tests + Working Memory Redis-only + LLM dry-run）
 > - `SPARKLE_AURORA_STAGE19_RULE_AC_DEFINITION_2026-04-20.md` — Rule AC 正式定义（Working Memory 治理：Redis-only / 无 SQL/Alembic / consolidation 不触发 push）
-> - `SPARKLE_AURORA_STAGE20_HANDOFF_2026-04-20.md` — Stage 20 工程收尾（7 WS accept + Sufficiency Judge + Conflict Resolver + Route History）
+> - `SPARKLE_AURORA_STAGE20_HANDOFF_2026-04-21.md` — Stage 20 工程收尾（7 WS accept + Sufficiency Judge + Conflict Resolver + Route History）
+> - `SPARKLE_AURORA_STAGE20_RULE_AD_AE_DEFINITION_2026-04-21.md` — Rule AD/AE 正式定义
+> - `SPARKLE_AURORA_STAGE21_HANDOFF_2026-04-21.md` — Stage 21 工程收尾（8 WS accept + Skill 蒸馏 + Rule AF）
+> - `SPARKLE_AURORA_STAGE21_RULE_AF_DEFINITION_2026-04-21.md` — Rule AF 正式定义
 > - `SPARKLE_ADVANCED_CONCEPTS_INTEGRATION_ANALYSIS_2026-04-19.md` — 前沿理念融合分析（Stage 16/17 链路锚点）
+> - `SPARKLE_AURORA_ROADMAP_v2_2_FINAL_LOCK_2026-04-21.md` — Aurora 路线图 v2.2 最终锁定（Stage 22-32）
+> - `SPARKLE_AURORA_STAGE22_DISPATCH_PLAN_2026-04-21.md` — Stage 22 派发计划（v2.1 修订版）
 > - `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` — Gray Window 上下文化治理增补（PGW / SGW / Skipped）
 > - `SPARKLE_AURORA_STAGE16_RULE_Y_DEFINITION_2026-04-20.md` — Rule Y 正式定义（推断式画像写入治理）
 > - `SPARKLE_AURORA_STAGE16_READ_VERIFY_REPORT_2026-04-20.md` — Stage 16 读验证报告
@@ -833,34 +839,129 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 **Stage 21 义务锁定**：Sufficiency Judge + Conflict Resolver + Route History 全部落地，Stage 21 Skill MVP 前置条件已满足。Rule AF 锁定为 Skill 跨用户共享治理位。
 
-### 9.20 Stage 21 战略定位（Skill 知识蒸馏管道）
+### 9.20 ✅ Stage 21 完成（Skill 知识蒸馏管道 + Rule AF）
 
 **Stage 21 入场条件**：Stage 20 全部 WS green + Route History 已积累足够可信样本。
 
 **Stage 21 总目标**：从"持续学习"升级为"知识蒸馏"——从用户成功案例中提取可复用 Skill，并支持跨用户共享（需用户显式授权，受 Rule AF 治理）。
 
-**关键 WS**：
+**八个 Workstream（WS-SK-*)**：
 
-| WS | 目的 |
-|----|------|
-| **WS-SKILL-EXTRACT** | Skill 提取器（从用户成功案例中自动抽取可复用 Skill） |
-| **WS-SKILL-VALIDATION** | Skill 质量评估（结构化验证 + LLM-judge） |
-| **WS-SKILL-SHARING** | Skill 跨用户共享机制（用户显式授权 + Rule AF 隐私边界） |
-| **WS-SKILL-STORE** | Skill Store（持久化 + 版本管理 + 权限控制） |
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-SK-RULE-AF** | Rule AF 定义 | numbered-history + frozen prompts + trigger keyword + CI guards |
+| **WS-SK-SCHEMA** | Skill V1 schema | user_skills / shared_skills + moderation queue + 50-item cap |
+| **WS-SK-EXTRACT** | Skill 提取器 | explicit-trigger-only + keyword matcher + user-confirmed draft |
+| **WS-SK-SELECTION** | Skill 选择器 | Aggregator 暴露 metadata + Router prompt-only injection |
+| **WS-SK-SHARE** | 跨用户共享 | private-vs-shared 物理隔离 + PII check + anonymous publish |
+| **WS-SK-MOBILE** | 移动端 UI | profile 入口 + "我的方式" manager + shared catalog |
+| **WS-SK-KILL** | 杀闸 | Store / Selection / Share 三级独立可杀 |
 
 **新增治理规则**：**Rule AF**（Stage 21 新建）：Skill 跨用户共享治理。
 
-**验收门**：Skill 提取 precision ≥ 0.85 → 用户可预览、编辑、拒绝提取的 Skill → 跨用户共享有明确 Rule AF 边界 → Skill Store 有完整审计日志。
+**Stage 21 完成状态**：
 
-### 9.21 Stage 22-24 战略定位（Wire-On + 双交互模式 + 成长操作系统）
+| 维度 | 结果 |
+|------|------|
+| commits | 8 原子提交 |
+| backend sweep | 31 passed |
+| mobile sweep | 6 passed |
+| Rule AF | 正式落盘，四要素 + 5 条硬违规守卫 |
+| Skill 物理隔离 | content 分离于 Aggregator state，summaries 进 `user_state.v1.3` |
+| 共享机制 | opt-in per skill + anonymous + fork snapshot |
+| 独立审计 | GLM1 accept clean |
 
-**Stage 22**：Wire-On 前门正式接线（持续学习组件正式接入用户前门）。
-**Stage 23**：双交互模式实现（普通对话 + 深度模式）。
-**Stage 24**：成长操作系统雏形（所有子系统协同，首次端到端完整演示）。
+### 9.21 ✅ Aurora 路线图 v2.2 锁定（Stage 22-32）
 
-**当前覆盖**：Stage 22-24 仅战略定位，无具体 WS 设计。待 Stage 21 实际推进后再细化。
+**v2.2 生效日期**：2026-04-21
 
-### 9.22 依赖链（不可打乱顺序）
+**总览**：11 阶段 / 54 WS / 10 条规则（AG-AP）/ 4 条跨 Stage 基线（B1-B4）
+
+| 阶段 | 主题 | WS 数 | 定性 | 关键规则 | 状态 |
+|------|------|-------|------|----------|------|
+| 22 | Baseline Repair | 6 | 修复 | AG | ✅ closeout |
+| 23 | Bayesian Wire-On | 6 | 重构 | AH | 🔶 in progress |
+| 24 | Accountability Policy Compiler | 4 | 新增 | AI | ❌ pending |
+| 25 | Reflection Wire-On | 5 | 扩展 | AJ | ❌ pending |
+| 26 | Scene Consolidation | 5 | 新增 | AK | ❌ pending |
+| 27 | Foresight Engine | 5 | 扩展+新增 | AL | ❌ pending |
+| 28 | Traits 弱先验 | 5 | 扩展+新增 | AM | ❌ pending |
+| 29 | SRL 三阶段独立 Tracker | 6 | 重构+新增 | AN | ❌ pending |
+| 30 | Metacognition 扩展 | 4 | 扩展 | AO | ❌ pending |
+| 31 | Idiographic Lite | 4 | 扩展+新增 | AP | ❌ pending |
+| 32 | CL SQAM 扫尾 | 4 | 测量 | 复用 W | ❌ pending |
+
+**规则锁定表**（Stage 22-32）：
+
+```
+AG  Baseline 前置       —— Stage 22 ✅
+AH  source-state 维度登记 —— Stage 23 🔶 in progress
+AI  Policy Compiler 纯规则 —— Stage 24
+AJ  Reflection 消费隔离   —— Stage 25
+AK  Scene 合并幂等 + 算法约束 —— Stage 26
+AL  Foresight 非 Router 分支 —— Stage 27
+AM  Traits 置信度 ≤0.3 + 冲突优先级 —— Stage 28
+AN  SRL 解耦（EventBus + Aggregator）—— Stage 29
+AO  Metacognition 禁诊断词 —— Stage 30
+AP  Idiographic 仅关联不因果 —— Stage 31
+```
+
+**跨 Stage 基线**（Stage 22 完成后、Stage 23 启动前必须建立）：
+
+| 基线 | 来源 | 锁定内容 |
+|------|------|----------|
+| B1 Aggregator schema 漂移控制 | GLM1 风险 1 | 每次 schema bump 必走 proto-gen 三端传播 + backward compat 测试 |
+| B2 EventBus 负载基线 | GLM1 风险 2 | 当前 120+ event types 基线测量；新增 event type 前须验证 consumer lag |
+| B3 LLM 调用预算 | GLM1 风险 3 | 每请求 LLM 调用次数上限登记；p95 延迟与成本回归测试 |
+| B4 跨 Stage 数据质量门 | GLM1 风险 4 | Stage 25/27/29 启动前须验证其上游 Stage 产出数据质量 |
+
+**快速开发模式**：
+- Codex 按 v2.2 执行
+- GLM1 + GLM-observer 阶段性验收
+- 首席架构师不参与每次 gate_final
+- 仅以下情形触发人工介入：
+  1. GLM1 与 GLM-observer 判断冲突
+  2. 发现需新增或修改规则
+  3. Stage 23 / Stage 29 任一 shadow 数据偏离预期 >20%
+  4. 跨 Stage 基线 B1-B4 任一项回归失败
+
+**Stage 22 义务锁定**：Skill 全链路落地，Stage 22 Bayesian Wire-On 前置条件已满足。
+
+### 9.22 ✅ Stage 22 完成（Baseline Repair）
+
+**Stage 22 入场条件**：Stage 21 全部 WS green + Rule AF 无破例。
+
+**Stage 22 总目标**：修复"AI 可见度"基线——将"AI 可见"从 3-4/10 拉到 ≥ 7/10，为后续 Bayesian / Reflection / Foresight / Traits / SRL 组件建立可信的数据供给管道。
+
+**六个 Workstream（WS-BR-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-BR-PROMPT-VERIFY** | prompt 渲染覆盖率验证 | 检查achievement/calendar/intervention/error_replan 是否真正进入 prompt |
+| **WS-BR-LOOP-CLOSURE** | 闭环断裂修复 | achievement/calendar → AI prompt 通道打通 |
+| **WS-BR-ACHIEVEMENT-WIRE** | Achievement → AI | completion → milestone_achieved → prompt 注入 |
+| **WS-BR-CALENDAR-WIRE** | Calendar → AI | calendar_event → upcoming_deadline → prompt 注入 |
+| **WS-BR-INTERVENTION-Q** | Intervention 质量 | feedback collection → outcome backfill |
+| **WS-BR-SEED-VERIFY** | 种子验证闭环 | seed 验证数据真实性 + backfill 策略 |
+
+**新增治理规则**：**Rule AG**（Stage 22 新建）：Baseline 修复前禁止任何新消费者上线。
+
+**GLM1 独立验收**：ACCEPT - CLEAN
+
+| 验证项 | 结果 |
+|--------|------|
+| WS-BR-PROMPT-VERIFY | PASS（覆盖率 0.909，10/11 字段已渲染）|
+| WS-BR-ACHIEVEMENT-WIRE | PASS（成就→AI 只读单向） |
+| WS-BR-CALENDAR-WIRE | PASS（日历扩展 3 新字段） |
+| WS-BR-LOOP-CLOSURE | PASS（触发器 6 种 + cooldown 24h + Celery） |
+| WS-BR-INTERVENTION-Q | PASS（cohort_profile 补全） |
+| WS-BR-SEED-VERIFY | PASS（adoption_id + 闭环 + 撤回） |
+| Backend tests | 30+ passed |
+| Mobile tests | 7+ passed |
+
+**Stage 23 义务锁定**：Stage 22 Baseline Repair 已落地，Stage 23 Bayesian Wire-On 可启动。
+
+### 9.23 依赖链（v2.2 锁定，不可打乱顺序）
 
 ```
 Memory Write (Stage 16 ✅)
@@ -873,49 +974,51 @@ LLM Extraction + Working Memory (Stage 19 ✅)
     ↓
 Sufficiency Governance + Conflict Resolution + Route History (Stage 20 ✅)
     ↓
-Skill Distillation + Rule AF (Stage 21)
+Skill Distillation + Rule AF (Stage 21 ✅)
     ↓
-Wire-On Formal (Stage 22)
+Baseline Repair (Stage 22 ✅) ← 已 closeout
     ↓
-Dual Interaction Mode (Stage 23)
+Bayesian Wire-On (Stage 23 🔶) ← 当前执行
     ↓
-Growth OS (Stage 24)
-```
-Memory Write (Stage 16)
+Accountability Policy Compiler (Stage 24)
     ↓
-Social Brain (Stage 17/19/20)
+Reflection Wire-On (Stage 25)
     ↓
-Proactive Push (Stage 21)
+Scene Consolidation (Stage 26)
     ↓
-Skill Distillation (Stage 18)
+Foresight Engine (Stage 27)
     ↓
-Wire-On Formal (Stage 19)
+Traits 弱先验 (Stage 28)
     ↓
-Dual Interaction Mode (Stage 22)
+SRL 三阶段独立 Tracker (Stage 29)
     ↓
-Growth OS (Stage 23)
+Metacognition 扩展 (Stage 30)
+    ↓
+Idiographic Lite (Stage 31)
+    ↓
+CL SQAM 扫尾 (Stage 32)
 ```
 
 **硬约束**：任何 Stage 试图跳跃依赖链上游未完成的 Stage，默认拒绝。
 
-### 9.23 显式延后挂牌更新（Stage 20 closeout 后）
+### 9.25 显式延后挂牌更新（v2.2 锁定后）
 
 | 项目 | 来源 | 状态 | 下一归属 |
 |------|------|------|----------|
-| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 20+ candidate |
-| evidence type 扩展（WS-EVD3 full） | Stage 13 仅落了 `practice_outcome` lite | deferred | Stage 20+ candidate |
-| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 20+ candidate |
+| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 22+ candidate |
+| evidence type 扩展（WS-EVD3 full） | Stage 13 仅落了 `practice_outcome` lite | deferred | Stage 22+ candidate |
+| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 22+ candidate |
 | APNs / FCM 真实设备推送 | Stage 18 仅 WebSocket channel | deferred | 真实用户上线阶段 |
-| Aggregator event-driven fan-out | Stage 18 仅 pull-only | deferred | Stage 20+ candidate |
-| LLM 抽取正式接线（从 dry-run 升级为 live） | Stage 19 仅 dry-run | deferred | **Stage 20+** candidate |
+| Aggregator event-driven fan-out | Stage 18 仅 pull-only | deferred | Stage 22+ candidate |
+| LLM 抽取正式接线（从 dry-run 升级为 live） | Stage 19 仅 dry-run | deferred | Stage 22+ candidate |
+| Router 扩展消费（sufficiency governance） | Stage 17/18/19 仅读不决策 | deferred | Stage 22+ |
+| Skill 跨用户共享 | 长期愿景 | deferred | ✅ Stage 21 已落盘 |
+| AI 可见度基线修复 | v2.2 | 🔶 Stage 22 执行中 | Stage 23 |
+| Bayesian Wire-On | v2.2 | ❌ Stage 23 | Stage 24 |
+| 双交互模式 | 长期愿景 | deferred | Stage 23+ |
+| 成长操作系统 | 长期愿景 | deferred | Stage 32+ |
 
-| Router 扩展消费（sufficiency governance） | Stage 17/18/19 仅读不决策 | deferred | **Stage 20+**（需 sufficiency judge 验收） |
-| Skill 跨用户共享 | 长期愿景 | deferred | **Stage 21**（路线图锁定，Rule AF） |
-| 持续学习前门正式接线 | Stage 14 wire-safe prep | deferred | **Stage 22**（路线图锁定） |
-| dual interaction mode | 长期愿景 | deferred | **Stage 23**（路线图锁定） |
-| growth OS 雏形 | 长期愿景 | deferred | **Stage 24**（路线图锁定） |
-
-### 9.24 愿景锚点 vs 当前覆盖更新（Stage 17 dispatch 后）
+### 9.24 愿景锚点 vs 当前覆盖更新（v2.2 锁定后）
 
 | 愿景锚点 | 覆盖度 | 说明 |
 |----------|--------|------|
@@ -930,15 +1033,23 @@ Growth OS (Stage 23)
 | 数据泄漏修复 | 🔶 部分 | 渲染管线已修（WS-RP1）；utilization 已可观测，但 tokenizer-aware 精度尾债仍在 |
 | 双核协作闭环 | 🔶 0.6/1 | Stage 5 建了一条通路，非完整双向 |
 | graph-as-diagnostic | ✅ Stage 10 | chat-native "我哪里弱" 诊断面已落地；Galaxy 专页深化仍可继续 |
-| 持续学习三层结构 | ✅ Stage 16 | Memory governed write lane 打通；Rule Y 落盘；read/declare/revoke/kill 全满足；Stage 17 灰度门约束中 |
-| 双交互模式 | ❌→Stage 23 | 路线图已锁定 Stage 23 实现 |
-| 成长操作系统 | ❌→Stage 24 | 路线图已锁定 Stage 24 雏形 |
-| 社交脑 | 🔶→Stage 17 | dispatch 落盘，8 WS 待开工；Rule Z 治理跨用户隐私；`social_context` namespace 独立于 `community_context`；入场 gate 改为 SGW |
-| 主动推送 | ❌→Stage 18 | 路线图已锁定 Stage 18（State Aggregator + State-Driven Push） |
-| 知识蒸馏 | ❌→Stage 21 | 路线图已锁定 Stage 21（Rule AF 跨用户共享） |
-| 持续学习前门接线 | ❌→Stage 22 | 路线图已锁定 Stage 22（SQAM 四维重新评估 + wire-on） |
-| Router 决策消费 Memory | ❌→Stage 19B+ | Stage 17 仅读不决策；需 Sufficiency Judge 验收后才允许决策分支 |
-| LLM 辅助抽取 | ❌→Stage 19 | 路线图已锁定 Stage 19（Working Memory 配套） |
+| 持续学习三层结构 | ✅ Stage 16 | Memory governed write lane 打通；Rule Y 落盘 |
+| 社交脑 | ✅ Stage 17 | Rule Z 落盘；social_context namespace 独立 |
+| 主动推送 | ✅ Stage 18 | State Aggregator + State-Driven Push |
+| LLM 辅助抽取 | ✅ Stage 19 | Working Memory + dry-run pipeline |
+| Sufficiency + Conflict + History | ✅ Stage 20 | Rule AD/AE 落盘 |
+| 知识蒸馏 | ✅ Stage 21 | Rule AF + Skill Store |
+| AI 可见度基线修复 | ✅ Stage 22 | closeout（prompt 覆盖率 0.909） |
+| Bayesian Wire-On | 🔶 Stage 23 | 当前执行（6 WS） |
+| Accountability Policy Compiler | ❌→Stage 24 | 路线图已锁定 |
+| Reflection Wire-On | ❌→Stage 25 | 路线图已锁定 |
+| Scene Consolidation | ❌→Stage 26 | 路线图已锁定 |
+| Foresight Engine | ❌→Stage 27 | 路线图已锁定 |
+| Traits 弱先验 | ❌→Stage 28 | 路线图已锁定 |
+| SRL Tracker | ❌→Stage 29 | 路线图已锁定 |
+| Metacognition 扩展 | ❌→Stage 30 | 路线图已锁定 |
+| Idiographic Lite | ❌→Stage 31 | 路线图已锁定 |
+| CL SQAM 扫尾 | ❌→Stage 32 | 路线图已锁定 |
 
 ---
 

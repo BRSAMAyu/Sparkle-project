@@ -160,6 +160,35 @@ SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO = get_or_create_metric(
     "Prompt field render coverage ratio for normalized user-context fields",
 )
 
+SOURCE_STATE_ENCODER_LATENCY = get_or_create_metric(
+    Histogram,
+    "sparkle_source_state_encoder_seconds",
+    "Source-state encoder latency in seconds",
+    buckets=[0.001, 0.003, 0.005, 0.008, 0.01, 0.015, 0.03, 0.05],
+)
+
+ROUTING_OUTCOME_BACKFILL_LATENCY = get_or_create_metric(
+    Histogram,
+    "sparkle_routing_outcome_backfill_seconds",
+    "Routing decision outcome backfill latency in seconds",
+    ["outcome"],
+    buckets=[1, 5, 15, 30, 60, 120, 300, 600, 1800],
+)
+
+BAYESIAN_RECOMMENDATION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_bayesian_recommendation_total",
+    "Bayesian routing recommendations by event and mode",
+    ["event", "mode"],
+)
+
+BAYESIAN_SHADOW_DIVERGENCE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_bayesian_shadow_divergence_total",
+    "Bayesian shadow divergences from fallback routing",
+    ["mode"],
+)
+
 # 5b. Proto v2 Migration Metrics
 PROTO_FIELD_READ_TOTAL = get_or_create_metric(
     Counter,

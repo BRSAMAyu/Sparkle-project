@@ -29,6 +29,7 @@ from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
 from app.services.cognitive_service import CognitiveService
 from app.services.follow_up_question_service import FollowUpQuestionService
+from app.services.bayesian_routing_wire_service import BayesianRoutingWireService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
 from app.services.plan_progress_service import PlanProgressService
 from app.services.route_history_service import RouteHistoryService
@@ -37,6 +38,7 @@ from app.services.skill_content_reader import SkillContentReader
 from app.services.skill_schema import SkillSelectionContext
 from app.services.skill_selection_service import SkillSelectionService
 from app.services.skill_store import SkillStoreService
+from app.services.source_state_encoder import SourceStateEncoder
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult
 from app.services.sufficiency_judge_service import SufficiencyJudgeService
 from app.state_aggregator.schema import ActiveSkillsSummaryValue, SufficiencySummaryValue
@@ -531,6 +533,40 @@ class RoutingEngineMixin:
                     for item in active_skills_summary.items
                 ]
             }
+        source_state_encoder = SourceStateEncoder()
+        source_state_v2 = source_state_encoder.build(
+            routing_input=routing_input,
+            task_summary=task_summary_value,
+            context_summary=ctx_summary_value,
+            user_context_payload=user_context_payload,
+            plan_context=plan_context,
+            active_skills_summary=active_skills_summary,
+            selected_skill_names=[item.name for item in active_skills_summary.items] if active_skills_summary else [],
+            state_context_data=state.context_data,
+        )
+        source_state_v2_key = source_state_encoder.key_for(source_state_v2)
+        state.context_data["source_state_v2"] = source_state_v2
+        state.context_data["source_state_v2_key"] = source_state_v2_key
+        bayesian_wire_result = None
+        if active_db is not None:
+            try:
+                route_decision, bayesian_wire_result = await BayesianRoutingWireService(self.redis).apply(
+                    user_id=user_id,
+                    route_decision=route_decision,
+                    source_state_key=source_state_v2_key,
+                )
+            except Exception as exc:
+                logger.warning("Stage23 bayesian wire skipped: {}", exc)
+        if bayesian_wire_result is not None:
+            state.context_data["bayesian_wire"] = {
+                "mode": bayesian_wire_result.mode,
+                "source_state_key": bayesian_wire_result.source_state_key,
+                "fallback_target": bayesian_wire_result.fallback_target,
+                "recommended_target": bayesian_wire_result.recommended_target,
+                "applied_target": bayesian_wire_result.applied_target,
+                "divergence": bayesian_wire_result.divergence,
+                "scores": [dict(item) for item in bayesian_wire_result.scores],
+            }
         state.context_data["dual_core_signal_snapshot"] = {
             "intent": routing_input.intent,
             "intent_confidence": routing_input.intent_confidence,
@@ -559,8 +595,15 @@ class RoutingEngineMixin:
                         "route_execution_mode": route_decision.execution_mode,
                         "route_reason": route_decision.reason,
                         "follow_up_question": follow_up_question,
+                        "source_state_v2_key": source_state_v2_key,
+                        "bayesian_mode": bayesian_wire_result.mode if bayesian_wire_result is not None else "off",
+                        "bayesian_recommended_target": (
+                            bayesian_wire_result.recommended_target if bayesian_wire_result is not None else None
+                        ),
                     },
                     skills_injected=selected_skill_ids,
+                    source_state_v2=source_state_v2,
+                    source_state_v2_key=source_state_v2_key,
                 )
                 state.context_data["route_history_decision_id"] = str(decision_id)
             except Exception as exc:

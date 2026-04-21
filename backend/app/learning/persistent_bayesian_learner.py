@@ -3,9 +3,10 @@ import json
 
 from loguru import logger
 
+from app.config import settings
 from app.learning.bayesian_learner import BayesianLearner, RouteStats
 
-PERSISTENT_BAYESIAN_TTL_SECONDS = 86400 * 7
+PERSISTENT_BAYESIAN_TTL_SECONDS = max(1, int(getattr(settings, "AURORA_BAYESIAN_TTL_DAYS", 30))) * 86400
 PERSISTENT_BAYESIAN_KEY_PREFIX = "learner:"
 LEGACY_PERSISTENT_BAYESIAN_KEY_PREFIX = "bayesian_learner:"
 
@@ -48,6 +49,14 @@ class PersistentBayesianLearner(BayesianLearner):
                 alpha=stats_data["alpha"],
                 beta=stats_data["beta"],
             )
+
+    @staticmethod
+    def _coerce_source_key(source_state: str | dict[str, str]) -> str:
+        if isinstance(source_state, dict):
+            from app.services.source_state_encoder import encode_source_state_key
+
+            return encode_source_state_key(source_state)
+        return str(source_state)
 
     async def _load_from_redis(self):
         """Lazy load learning history from Redis."""
@@ -99,10 +108,35 @@ class PersistentBayesianLearner(BayesianLearner):
         await super().update(source, target, success)
         self._schedule_save()
 
+    async def update_for_state(self, source_state: str | dict[str, str], target: str, success: bool):
+        await self.update(self._coerce_source_key(source_state), target, success)
+
     async def get_probability(self, source: str, target: str) -> float:
         """Get probability (ensuring loaded)."""
         await self._load_from_redis()
         return await super().get_probability(source, target)
+
+    async def get_probability_for_state(self, source_state: str | dict[str, str], target: str) -> float:
+        return await self.get_probability(self._coerce_source_key(source_state), target)
+
+    async def rank_targets(self, source_state: str | dict[str, str], targets: list[str]) -> list[dict[str, float | str | int]]:
+        await self._load_from_redis()
+        source_key = self._coerce_source_key(source_state)
+        ranked: list[dict[str, float | str | int]] = []
+        for target in targets:
+            key = self._get_key(source_key, target)
+            stats = self.stats.get(key, RouteStats())
+            ranked.append(
+                {
+                    "target": target,
+                    "probability": stats.mean,
+                    "observations": max(0, int((stats.alpha + stats.beta) - 2)),
+                    "alpha": stats.alpha,
+                    "beta": stats.beta,
+                }
+            )
+        ranked.sort(key=lambda item: (float(item["probability"]), int(item["observations"])), reverse=True)
+        return ranked
 
     async def get_stats(self) -> dict:
         """Get full stats."""

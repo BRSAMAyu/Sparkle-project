@@ -103,8 +103,12 @@ class RoutingDecisionLog(Base):
     sufficiency_judgment_id = Column(GUID(), nullable=True)
     decision_type = Column(String(64), nullable=False)
     decision_payload = Column(JSONBCompat, nullable=False, default=dict)
+    source_state_v2 = Column(JSONBCompat, nullable=True, default=dict)
+    source_state_v2_key = Column(String(255), nullable=True)
     skills_injected = Column(JSONBCompat, nullable=True, default=list)
     outcome_signal_id = Column(String(128), nullable=True)
+    outcome = Column(String(32), nullable=True)
+    outcome_timestamp = Column(DateTime, nullable=True)
     outcome_type = Column(String(32), nullable=True)
     outcome_collected_at = Column(DateTime, nullable=True)
 
@@ -113,3 +117,5 @@ class RoutingDecisionLog(Base):
 
 Index("idx_routing_decision_log_user_decided", RoutingDecisionLog.user_id, RoutingDecisionLog.decided_at)
 Index("idx_routing_decision_log_user_outcome", RoutingDecisionLog.user_id, RoutingDecisionLog.outcome_collected_at)
+Index("idx_routing_decision_log_user_outcome_v2", RoutingDecisionLog.user_id, RoutingDecisionLog.outcome_timestamp)
+Index("idx_routing_decision_log_source_state_v2_key", RoutingDecisionLog.source_state_v2_key)
