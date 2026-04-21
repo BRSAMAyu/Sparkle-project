@@ -1,0 +1,51 @@
+# SGW RL Reward Configuration
+# Adjust these weights to change the optimization objective.
+# All weights must be non-negative. They are normalized internally.
+
+reward_weights:
+  soft_violation: 0.30     # Weight for Δ(-soft_violation_rate)
+  authenticity: 0.35       # Weight for Δ(authenticity_mean)
+  hard_violation: 0.20     # Weight for hard violation penalty
+  session_completion: 0.10 # Weight for Δ(session_completion_rate)
+  diversity: 0.05          # Weight for persona/behavior diversity bonus
+
+# Reward normalization
+reward_scale: 0.3          # tanh(raw / scale) — smaller = sharper sensitivity
+
+# One-vote veto thresholds
+veto:
+  hard_violations_any: true           # Any hard violation → immediate -1.0
+  auth_significance_threshold: 1.96   # z-statistic > this → veto
+
+# Statistical significance
+significance:
+  alpha: 1.96              # 95% confidence for z-test
+  min_sample_size: 200     # Minimum audits for significance testing
+
+# Policy progression thresholds
+policy_transition:
+  rule_to_bandit:
+    min_iterations: 20
+    rule_success_rate_below: 0.6
+  bandit_to_contextual:
+    min_iterations: 50
+    min_state_clusters: 3
+
+# Anti-overfitting parameters
+anti_overfitting:
+  holdout_ratio: 0.2
+  holdout_gap_threshold: 0.1
+  min_exploration_rate: 0.1
+  exploration_window: 10
+  temperature_start: 1.0
+  temperature_end: 0.1
+  temperature_decay: 0.95
+  adversarial_worst_k: 5
+  adversarial_test_every: 5
+
+# Episode configuration
+episode:
+  max_iterations: 20
+  convergence_window: 5
+  explore_every_n: 10
+  critical_regression_limit: 2
