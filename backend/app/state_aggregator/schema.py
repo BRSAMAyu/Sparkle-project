@@ -13,6 +13,8 @@ UserStateFieldName = Literal[
     "engagement_state",
     "learning_state",
     "working_memory_snapshot",
+    "task_sufficiency_summary",
+    "context_sufficiency_summary",
 ]
 
 
@@ -71,12 +73,20 @@ class WorkingMemorySnapshotValue:
 
 
 @dataclass(frozen=True)
+class SufficiencySummaryValue:
+    score: float
+    top_missing_dimensions: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1.1"
+    schema_version: str = "user_state.v1.2"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
     recent_person_mentions: StateFieldEnvelope[RecentPersonMentionsValue] | None = None
     engagement_state: StateFieldEnvelope[EngagementStateValue] | None = None
     learning_state: StateFieldEnvelope[LearningStateValue] | None = None
     working_memory_snapshot: StateFieldEnvelope[WorkingMemorySnapshotValue] | None = None
+    task_sufficiency_summary: StateFieldEnvelope[SufficiencySummaryValue] | None = None
+    context_sufficiency_summary: StateFieldEnvelope[SufficiencySummaryValue] | None = None
     emotion_hint: StateFieldEnvelope[None] | None = None

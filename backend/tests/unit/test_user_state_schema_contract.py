@@ -7,6 +7,7 @@ import pytest
 from app.state_aggregator.schema import (
     CommitmentSummaryValue,
     StateFieldEnvelope,
+    SufficiencySummaryValue,
     UserStateV1,
 )
 
@@ -33,6 +34,22 @@ def test_user_state_v1_uses_expected_schema_version() -> None:
         ),
     )
 
-    assert state.schema_version == "user_state.v1.1"
+    assert state.schema_version == "user_state.v1.2"
     assert state.commitment_summary is not None
     assert state.commitment_summary.value.overdue_count == 1
+
+
+def test_user_state_v1_2_exposes_sufficiency_summary_contract() -> None:
+    state = UserStateV1(
+        user_id=uuid4(),
+        task_sufficiency_summary=StateFieldEnvelope(
+            value=SufficiencySummaryValue(score=0.6, top_missing_dimensions=("constraint_explicit",)),
+            computed_at=datetime(2026, 4, 21, 10, 0, 0),
+            source_snapshot_ids=("sufficiency:task",),
+            freshness_seconds=0,
+        ),
+    )
+
+    assert state.task_sufficiency_summary is not None
+    assert state.task_sufficiency_summary.value.score == 0.6
+    assert state.task_sufficiency_summary.value.top_missing_dimensions == ("constraint_explicit",)

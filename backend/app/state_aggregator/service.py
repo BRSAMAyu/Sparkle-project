@@ -13,12 +13,15 @@ from app.models.chat import ChatSession
 from app.models.focus import FocusSession, FocusStatus
 from app.services.memory_service import MemoryService
 from app.services.predictive_service import PredictiveService
+from app.services.sufficiency_judge_schema import CurrentTurnParseResult
+from app.services.sufficiency_judge_service import SufficiencyJudgeService
 from app.state_aggregator.schema import (
     CommitmentSummaryValue,
     EngagementStateValue,
     LearningStateValue,
     RecentPersonMentionsValue,
     SocialMentionValue,
+    SufficiencySummaryValue,
     StateFieldEnvelope,
     UserStateFieldName,
     UserStateV1,
@@ -41,6 +44,8 @@ class StateAggregatorService:
         "recent_person_mentions": 300,
         "learning_state": 60 * 60 * 24,
         "working_memory_snapshot": 30,
+        "task_sufficiency_summary": 30,
+        "context_sufficiency_summary": 30,
     }
 
     def __init__(self, db: AsyncSession) -> None:
@@ -48,7 +53,8 @@ class StateAggregatorService:
         self.memory_service = MemoryService(db)
         self.predictive_service = PredictiveService(db)
         self.working_memory_service = WorkingMemoryService()
-        self._cache: dict[tuple[UUID, UserStateFieldName], tuple[StateFieldEnvelope[Any], datetime]] = {}
+        self.sufficiency_judge = SufficiencyJudgeService()
+        self._cache: dict[tuple[UUID, UserStateFieldName, str], tuple[StateFieldEnvelope[Any], datetime]] = {}
 
     async def get_user_state(
         self,
@@ -56,11 +62,17 @@ class StateAggregatorService:
         required_fields: tuple[UserStateFieldName, ...] | list[UserStateFieldName],
         *,
         now: datetime | None = None,
+        current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> UserStateV1:
         reference_time = now or _utcnow()
         state = UserStateV1(user_id=user_id)
         for field_name in tuple(dict.fromkeys(required_fields)):
-            envelope = await self._get_field(user_id=user_id, field_name=field_name, now=reference_time)
+            envelope = await self._get_field(
+                user_id=user_id,
+                field_name=field_name,
+                now=reference_time,
+                current_turn_parse=current_turn_parse,
+            )
             state = replace(state, **{field_name: envelope})
         return state
 
@@ -70,8 +82,9 @@ class StateAggregatorService:
         user_id: UUID,
         field_name: UserStateFieldName,
         now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None,
     ) -> StateFieldEnvelope[Any]:
-        cache_key = (user_id, field_name)
+        cache_key = (user_id, field_name, self._turn_parse_fingerprint(field_name, current_turn_parse))
         cached = self._cache.get(cache_key)
         if cached is not None:
             envelope, expires_at = cached
@@ -81,14 +94,19 @@ class StateAggregatorService:
                     freshness_seconds=max(0, int((now - envelope.computed_at).total_seconds())),
                 )
 
-        fetcher: dict[UserStateFieldName, Callable[[UUID, datetime], Awaitable[StateFieldEnvelope[Any]]]] = {
+        fetcher: dict[
+            UserStateFieldName,
+            Callable[[UUID, datetime, CurrentTurnParseResult | None], Awaitable[StateFieldEnvelope[Any]]],
+        ] = {
             "commitment_summary": self._build_commitment_summary,
             "recent_person_mentions": self._build_recent_person_mentions,
             "engagement_state": self._build_engagement_state,
             "learning_state": self._build_learning_state,
             "working_memory_snapshot": self._build_working_memory_snapshot,
+            "task_sufficiency_summary": self._build_task_sufficiency_summary,
+            "context_sufficiency_summary": self._build_context_sufficiency_summary,
         }
-        envelope = await fetcher[field_name](user_id, now)
+        envelope = await fetcher[field_name](user_id, now, current_turn_parse)
         ttl_seconds = self.FIELD_TTLS_SECONDS[field_name]
         self._cache[cache_key] = (envelope, envelope.computed_at + timedelta(seconds=ttl_seconds))
         return envelope
@@ -97,6 +115,7 @@ class StateAggregatorService:
         self,
         user_id: UUID,
         now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[CommitmentSummaryValue]:
         rows = await self.memory_service.list_pending_commitments(user_id=user_id, now=now)
         value = CommitmentSummaryValue(
@@ -115,6 +134,7 @@ class StateAggregatorService:
         self,
         user_id: UUID,
         now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[RecentPersonMentionsValue]:
         rows = await self.memory_service.list_recent_episodic(
             user_id=user_id,
@@ -143,6 +163,7 @@ class StateAggregatorService:
         self,
         user_id: UUID,
         now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[EngagementStateValue]:
         last_7d = now - timedelta(days=7)
         focus_count_stmt = select(func.count(FocusSession.id)).where(
@@ -186,6 +207,7 @@ class StateAggregatorService:
         self,
         user_id: UUID,
         now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[LearningStateValue]:
         forecast = await self.predictive_service.get_next_intent_forecast(user_id)
         within_category = forecast.get("within_category_preference")
@@ -206,6 +228,7 @@ class StateAggregatorService:
         self,
         user_id: UUID,
         now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[WorkingMemorySnapshotValue]:
         session_stmt = (
             select(ChatSession)
@@ -245,4 +268,80 @@ class StateAggregatorService:
                 for index, _item in enumerate(items, start=1)
             ),
             freshness_seconds=0,
+        )
+
+    async def _build_task_sufficiency_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[SufficiencySummaryValue]:
+        judgment = await self._evaluate_sufficiency(user_id=user_id, now=now, current_turn_parse=current_turn_parse)
+        return StateFieldEnvelope(
+            value=SufficiencySummaryValue(
+                score=judgment.task_sufficiency.score,
+                top_missing_dimensions=judgment.task_sufficiency.missing_dimensions[:3],
+            ),
+            computed_at=now,
+            source_snapshot_ids=("sufficiency:task",),
+            freshness_seconds=0,
+        )
+
+    async def _build_context_sufficiency_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[SufficiencySummaryValue]:
+        judgment = await self._evaluate_sufficiency(user_id=user_id, now=now, current_turn_parse=current_turn_parse)
+        return StateFieldEnvelope(
+            value=SufficiencySummaryValue(
+                score=judgment.context_sufficiency.score,
+                top_missing_dimensions=judgment.context_sufficiency.missing_dimensions[:3],
+            ),
+            computed_at=now,
+            source_snapshot_ids=("sufficiency:context",),
+            freshness_seconds=0,
+        )
+
+    async def _evaluate_sufficiency(
+        self,
+        *,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None,
+    ):
+        parse_result = current_turn_parse or CurrentTurnParseResult(
+            intent="chat",
+            intent_confidence=0.0,
+            information_sufficient=False,
+            target_object_resolved=False,
+            constraint_explicit=False,
+        )
+        base_state = UserStateV1(
+            user_id=user_id,
+            commitment_summary=await self._build_commitment_summary(user_id, now),
+            recent_person_mentions=await self._build_recent_person_mentions(user_id, now),
+            engagement_state=await self._build_engagement_state(user_id, now),
+            working_memory_snapshot=await self._build_working_memory_snapshot(user_id, now),
+        )
+        return self.sufficiency_judge.evaluate(user_state=base_state, current_turn=parse_result)
+
+    @staticmethod
+    def _turn_parse_fingerprint(
+        field_name: UserStateFieldName,
+        current_turn_parse: CurrentTurnParseResult | None,
+    ) -> str:
+        if field_name not in {"task_sufficiency_summary", "context_sufficiency_summary"}:
+            return ""
+        if current_turn_parse is None:
+            return "missing"
+        return ":".join(
+            [
+                current_turn_parse.intent,
+                f"{current_turn_parse.intent_confidence:.2f}",
+                "1" if current_turn_parse.information_sufficient else "0",
+                "1" if current_turn_parse.target_object_resolved else "0",
+                "1" if current_turn_parse.constraint_explicit else "0",
+            ]
         )

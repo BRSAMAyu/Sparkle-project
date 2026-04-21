@@ -76,6 +76,16 @@ message WorkingMemorySnapshotField {
   StateFieldMetadata metadata = 2;
 }
 
+message SufficiencySummaryValue {
+  double score = 1;
+  repeated string top_missing_dimensions = 2;
+}
+
+message SufficiencySummaryField {
+  SufficiencySummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
 message UserStateV1 {
   string user_id = 1;
   string schema_version = 2;
@@ -86,4 +96,6 @@ message UserStateV1 {
   // Reserved for Stage 19C emotion work; intentionally unset in Stage 18.
   string emotion_hint_reserved = 7;
   WorkingMemorySnapshotField working_memory_snapshot = 8;
+  SufficiencySummaryField task_sufficiency_summary = 9;
+  SufficiencySummaryField context_sufficiency_summary = 10;
 }
