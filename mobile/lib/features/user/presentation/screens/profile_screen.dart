@@ -231,26 +231,27 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildIdentityChip({
     required String label,
     required Color color,
-  }) => Container(
-      constraints: const BoxConstraints(maxWidth: 188),
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing10,
-        vertical: DS.spacing6,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: DS.borderRadius12,
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: DS.labelSmall.copyWith(
-          color: color,
-          fontWeight: DS.fontWeightMedium,
+  }) =>
+      Container(
+        constraints: const BoxConstraints(maxWidth: 188),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
         ),
-      ),
-    );
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadius12,
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: DS.labelSmall.copyWith(
+            color: color,
+            fontWeight: DS.fontWeightMedium,
+          ),
+        ),
+      );
 
   Color _colorFromElement(dynamic element) {
     final colors = (element.config['colors'] as List<dynamic>?) ??
@@ -528,6 +529,14 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFF7087A6),
                   onTap: () => context.push(UserRoutes.settings),
                 ),
+                const Divider(height: 1, indent: 60),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.auto_awesome_motion_rounded,
+                  title: '我的方式',
+                  accentColor: const Color(0xFF6F8F86),
+                  onTap: () => context.push(UserRoutes.skills),
+                ),
               ],
             ),
           ),
@@ -745,6 +754,8 @@ class ProfileScreen extends ConsumerWidget {
       case '偏好设置':
       case '日程偏好':
         return '管理感官反馈、学习模式与推送偏好';
+      case '我的方式':
+        return '管理私有 Skill、共享与匿名 fork';
       case '账号安全':
         return '查看安全信息、设备与隐私控制';
       case '记忆管理':

@@ -22,6 +22,7 @@ import 'package:sparkle/features/user/presentation/screens/persona_onboarding_sc
 import 'package:sparkle/features/user/presentation/screens/poster_studio_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/security_log_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/session_management_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/skill_management_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/social_accounts_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/system_updates_screen.dart';
@@ -49,6 +50,7 @@ class UserRoutes {
   static const String guestUpgrade = '/profile/upgrade-guest';
   static const String adminOperations = '/profile/admin-operations';
   static const String taskReminders = '/profile/task-reminders';
+  static const String skills = '/profile/skills';
 
   static void popOrGo(BuildContext context, {required String fallback}) {
     final navigator = Navigator.of(context);
@@ -237,6 +239,20 @@ class UserRoutes {
                 trackOverride: BgmTrack.profile,
               ),
               child: const AdminOperationsScreen(),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: skills,
+          name: 'skillManagement',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: const SceneAudioScope(
+              policy: SceneAudioPolicy(
+                track: BgmTrack.profile,
+                atmosphere: ExperienceAtmosphere.insightsMist,
+              ),
+              child: SkillManagementScreen(),
             ),
           ),
         ),
