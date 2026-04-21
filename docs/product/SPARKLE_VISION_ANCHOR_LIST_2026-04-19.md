@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-20
-> **版本**: v21（Stage 19 engineering closeout：Working Memory + LLM 抽取 dry-run pipeline + Rule AC）
+> **版本**: v22（Stage 20 engineering closeout：Sufficiency Judge + Conflict Resolver + Route History + Rule AD/AE）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -21,6 +21,7 @@
 > - `SPARKLE_AURORA_STAGE18_RULE_AB_DEFINITION_2026-04-20.md` — Rule AB 正式定义（push 治理：evidence/cap/quiet-hours/retraction）
 > - `SPARKLE_AURORA_STAGE19_HANDOFF_2026-04-20.md` — Stage 19 工程收尾（7 WS accept + 30 tests + Working Memory Redis-only + LLM dry-run）
 > - `SPARKLE_AURORA_STAGE19_RULE_AC_DEFINITION_2026-04-20.md` — Rule AC 正式定义（Working Memory 治理：Redis-only / 无 SQL/Alembic / consolidation 不触发 push）
+> - `SPARKLE_AURORA_STAGE20_HANDOFF_2026-04-20.md` — Stage 20 工程收尾（7 WS accept + Sufficiency Judge + Conflict Resolver + Route History）
 > - `SPARKLE_ADVANCED_CONCEPTS_INTEGRATION_ANALYSIS_2026-04-19.md` — 前沿理念融合分析（Stage 16/17 链路锚点）
 > - `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` — Gray Window 上下文化治理增补（PGW / SGW / Skipped）
 > - `SPARKLE_AURORA_STAGE16_RULE_Y_DEFINITION_2026-04-20.md` — Rule Y 正式定义（推断式画像写入治理）
@@ -791,23 +792,46 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 **Stage 20 义务锁定**：Gate S20-0 前置条件（Stage 19 final-accept）已满足，Stage 20 dispatch 可直接交付执行。
 
-### 9.19 Stage 20 战略定位（Skill 知识蒸馏管道）
+### 9.19 ✅ Stage 20 完成（Sufficiency Judge + Conflict Resolver + Route History + 治理层强化）
 
-**Stage 20 入场条件**：Stage 19 全部 WS green + LLM 抽取有至少一周生产数据 + 用户反馈 positive。
+****Stage 20 入场条件**：Stage 19 全部 WS green + Working Memory 在生产流量下有至少一周稳定运行 + Rule AC 无破例。
 
-**Stage 20 总目标**：从"持续学习"升级为"知识蒸馏"——从用户成功案例中提取可复用 Skill，并支持跨用户共享（需用户显式授权，受 Rule AA 治理）。
+**Stage 20 总目标**：建立路由决策的治理基础设施——Sufficiency Judge 判断信息是否足够支撑决策、Conflict Resolver 处理多源冲突的优先级仲裁、Route History 记录决策日志供后续审计。Stage 20 不涉及 Skill 蒸馏（原规划延后），而是为 Stage 21 Skill MVP 铺设决策治理地基。
 
-**关键 WS**：
+**七个 Workstream**：
 
-| WS | 目的 |
-|----|------|
-| **WS-SJ-CORE** | Sufficiency Judge（task/context 双路分离） |
-| **WS-CR-CORE** | Conflict Resolver（冻结优先级链 + 审计） |
-| **WS-RH-CORE** | Route History（routing decision + outcome 配对落库） |
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-S1** | Sufficiency Judge 核心 | 纯规则式加权算术，零 LLM import；judge_version="v1" frozen |
+| **WS-S2** | task/context split | Router 仅在 task_sufficiency 分支决策，context_sufficiency 仅输出不参与路由（Rule AD） |
+| **WS-C1** | Conflict Resolver 优先级链 | frozen immutable：working_memory(1) < llm(2) < rule(3) < explicit(4) |
+| **WS-C2** | Shadow mode | 并行比较非替换，record_shadow_comparison() 记录两路结果 |
+| **WS-H1** | Route History 写入 | write-only 决策日志，零 read-for-routing 方法 |
+| **WS-H2** | outcome backfill | mark_timeout() / record_follow_up_input() / record_explicit_feedback() 通过 decision_id 单行更新 |
+| **WS-Audit** | Alembic + CI guard | 4 张审计表 + Rule AD/AE 两个 CI 守卫脚本 |
 
-**新增治理规则**：**Rule AD**（Sufficiency）+ **Rule AE**（Conflict）。
+**新增治理规则**：
+- **Rule AD**：task/context split 治理——Router 仅在 task_sufficiency 分支决策，context_sufficiency 不得参与路由分支
+- **Rule AE**：conflict audit——每次 override 必须伴随 conflict_resolution_records 审计
+- **Rule AF**（Stage 21 预留）：Skill 跨用户共享治理
 
-**验收门**：Sufficiency task/context 分离精度 ≥ 0.80 → Conflict Resolver 审计完整 → Route History 写入性能达标。
+**Stage 20 硬边界**：
+1. Sufficiency Judge 纯规则式——CI guard 扫描零 LLM import
+2. task/context split——Rule AD CI guard 扫描无 context_sufficiency 分支
+3. Conflict Resolver 优先级链 frozen——immutable dict，无动态变更
+4. Aggregator 只读不变——Rule AB guard maintained
+
+**Stage 20 完成状态**：
+
+| 维度 | 结果 |
+|------|------|
+| commits | 3 原子提交 |
+| workstreams | 7 全部 PASS（WS-S1/S2/C1/C2/H1/H2/Audit） |
+| governance | Rule AD/AE/AC/AB/Y 全部 enforced/preserved/extended |
+| carry-forward | Stage 17 handoff 升级为 closeout baseline，Rule Z HMAC 升级注释补齐 |
+| 独立审计 | GLM1 accept clean，无 carry-forward debt |
+
+**Stage 21 义务锁定**：Sufficiency Judge + Conflict Resolver + Route History 全部落地，Stage 21 Skill MVP 前置条件已满足。Rule AF 锁定为 Skill 跨用户共享治理位。
 
 ### 9.20 Stage 21 战略定位（Skill 知识蒸馏管道）
 
@@ -828,12 +852,13 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 **验收门**：Skill 提取 precision ≥ 0.85 → 用户可预览、编辑、拒绝提取的 Skill → 跨用户共享有明确 Rule AF 边界 → Skill Store 有完整审计日志。
 
-### 9.21 Stage 22-23 战略定位（双交互模式 + 成长操作系统）
+### 9.21 Stage 22-24 战略定位（Wire-On + 双交互模式 + 成长操作系统）
 
-**Stage 22**：双交互模式实现（普通对话 + 深度模式）。
-**Stage 23**：成长操作系统雏形（所有子系统协同，首次端到端完整演示）。
+**Stage 22**：Wire-On 前门正式接线（持续学习组件正式接入用户前门）。
+**Stage 23**：双交互模式实现（普通对话 + 深度模式）。
+**Stage 24**：成长操作系统雏形（所有子系统协同，首次端到端完整演示）。
 
-**当前覆盖**：Stage 22-23 仅战略定位，无具体 WS 设计。待 Stage 16-21 实际推进后再细化。
+**当前覆盖**：Stage 22-24 仅战略定位，无具体 WS 设计。待 Stage 21 实际推进后再细化。
 
 ### 9.22 依赖链（不可打乱顺序）
 
@@ -846,13 +871,15 @@ State Aggregator + State-Driven Push (Stage 18 ✅)
     ↓
 LLM Extraction + Working Memory (Stage 19 ✅)
     ↓
-Skill Distillation + Rule AA (Stage 20)
+Sufficiency Governance + Conflict Resolution + Route History (Stage 20 ✅)
     ↓
-Wire-On Formal (Stage 21)
+Skill Distillation + Rule AF (Stage 21)
     ↓
-Dual Interaction Mode (Stage 22)
+Wire-On Formal (Stage 22)
     ↓
-Growth OS (Stage 23)
+Dual Interaction Mode (Stage 23)
+    ↓
+Growth OS (Stage 24)
 ```
 Memory Write (Stage 16)
     ↓
@@ -871,7 +898,7 @@ Growth OS (Stage 23)
 
 **硬约束**：任何 Stage 试图跳跃依赖链上游未完成的 Stage，默认拒绝。
 
-### 9.23 显式延后挂牌更新（Stage 19 closeout 后）
+### 9.23 显式延后挂牌更新（Stage 20 closeout 后）
 
 | 项目 | 来源 | 状态 | 下一归属 |
 |------|------|------|----------|
@@ -904,12 +931,12 @@ Growth OS (Stage 23)
 | 双核协作闭环 | 🔶 0.6/1 | Stage 5 建了一条通路，非完整双向 |
 | graph-as-diagnostic | ✅ Stage 10 | chat-native "我哪里弱" 诊断面已落地；Galaxy 专页深化仍可继续 |
 | 持续学习三层结构 | ✅ Stage 16 | Memory governed write lane 打通；Rule Y 落盘；read/declare/revoke/kill 全满足；Stage 17 灰度门约束中 |
-| 双交互模式 | ❌→Stage 22 | 路线图已锁定 Stage 22 实现 |
-| 成长操作系统 | ❌→Stage 23 | 路线图已锁定 Stage 23 雏形 |
+| 双交互模式 | ❌→Stage 23 | 路线图已锁定 Stage 23 实现 |
+| 成长操作系统 | ❌→Stage 24 | 路线图已锁定 Stage 24 雏形 |
 | 社交脑 | 🔶→Stage 17 | dispatch 落盘，8 WS 待开工；Rule Z 治理跨用户隐私；`social_context` namespace 独立于 `community_context`；入场 gate 改为 SGW |
 | 主动推送 | ❌→Stage 18 | 路线图已锁定 Stage 18（State Aggregator + State-Driven Push） |
 | 知识蒸馏 | ❌→Stage 21 | 路线图已锁定 Stage 21（Rule AF 跨用户共享） |
-| 持续学习前门接线 | ❌→Stage 21 | 路线图已锁定 Stage 21（SQAM 四维重新评估 + wire-on） |
+| 持续学习前门接线 | ❌→Stage 22 | 路线图已锁定 Stage 22（SQAM 四维重新评估 + wire-on） |
 | Router 决策消费 Memory | ❌→Stage 19B+ | Stage 17 仅读不决策；需 Sufficiency Judge 验收后才允许决策分支 |
 | LLM 辅助抽取 | ❌→Stage 19 | 路线图已锁定 Stage 19（Working Memory 配套） |
 
@@ -974,6 +1001,7 @@ Growth OS (Stage 23)
 | v19 | 2026-04-20 | SGW v1.0 工程化定稿：并发收敛为 5 个 Claude worker，运行改为可 checkpoint / resume 的确定性 orchestrator；persona 覆盖冻结为 44 条（36 矩阵 + 8 特殊），总会话阈值升级为 ≥360；治理 addendum 升格为 `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md`；Stage 17 dispatch 明确 `SocialContextProvider -> FrozenSocialSnapshot` 前瞻兼容契约，Stage 18 必须以 Aggregator provider 实现兑现该契约 |
 | v20 | 2026-04-20 | Stage 17 + 18 engineering closeout 完成；Stage 17：8 WS accept（Rule Z 落盘 + 社交主语分类器 + commitment parser + Accountability MVP + Router 只读 seam + per-type kill switch），27 backend + 51 mobile green；Stage 18：8 WS accept（`user_state.v1` frozen schema + pull-only Aggregator + 确定性 push policy + WebSocket channel + Rule AB + 三级 kill switch + mobile opt-in），42 backend green + GLM1 独立审计通过；Aggregator-backed Router 迁移保持 Stage 17 公共合约不变；愿景覆盖表更新：社交脑从🔶→✅，主动推送从❌→✅，状态聚合从❌→✅；7 阶段成长环 5/7（Reinforce 仍弱，Stage 19 预计首次触达）；治理规则达 19 条（G-Z + Y + Z + AB） |
 | v21 | 2026-04-20 | Stage 19 engineering closeout 完成（GLM1 accept clean，无 carry-forward debt）；7 WS accept：Working Memory Redis-only 核心服务 + LLM 抽取 dry-run pipeline（Rule Y 四要素对账 + banned inferences emotion/mood/personality）+ pipeline 协调模式（WorkingMemoryPipelineService 统一规则式与 LLM 两条路径）+ consolidation 流程（不触发 push）+ Aggregator v1.1 升级（新增 working_memory_snapshot，proto-gen clean + KL ≤ 0.03）+ mobile 透明度 + 三级 kill switch（working_memory / llm_extractor / consolidation 独立可杀）；Rule AC 落盘；24 backend + 6 mobile tests green；7 阶段成长环 6/7（Reinforce 从🔶升为✅）；治理规则达 20 条（+ Rule AC） |
+| v22 | 2026-04-20 | Stage 20 engineering closeout 完成（GLM1 accept clean，无 carry-forward debt）；7 WS accept：Sufficiency Judge（纯规则式，judge_version="v1" frozen）+ task/context split（Rule AD）+ Conflict Resolver（frozen 优先级链 working_memory < llm < rule < explicit）+ shadow mode 并行比较 + Route History write-only 决策日志 + outcome backfill + 4 张 Alembic 审计表 + 2 个 CI 守卫；Rule AD/AE 落盘；Stage 17 carry-forward 债务清零（handoff 升级为 closeout baseline + Rule Z HMAC 升级注释补齐）；路线图调整：原 Stage 20 Skill 蒸馏延后至 Stage 21，Stage 20 改为 Sufficiency 治理层；Stage 21-24 顺延；治理规则达 22 条（+ Rule AD/AE），Rule AF 锁定为 Stage 21 Skill 跨用户共享 |
 
 ---
 
