@@ -423,6 +423,30 @@ class _SeedLibraryDetailScreenState
                                   icon: const Icon(Icons.vertical_align_top),
                                 ),
                                 SparkleButton.ghost(
+                                  onPressed: () async {
+                                    try {
+                                      await ref
+                                          .read(seedLibraryDetailProvider(
+                                                  widget.libraryId)
+                                              .notifier)
+                                          .markNotSuitable();
+                                      if (!context.mounted) return;
+                                      AppFeedback.success(
+                                        context,
+                                        '已记录“此种子不适合我”',
+                                      );
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      AppFeedback.error(
+                                        context,
+                                        '记录失败：${_friendlyActionError(e)}',
+                                      );
+                                    }
+                                  },
+                                  label: '此种子不适合我',
+                                  icon: const Icon(Icons.thumb_down_alt_outlined),
+                                ),
+                                SparkleButton.ghost(
                                   onPressed: () =>
                                       _showRatingSheet(context, state),
                                   label: library.currentUserRating != null

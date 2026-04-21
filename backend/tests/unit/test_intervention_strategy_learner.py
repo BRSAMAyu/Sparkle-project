@@ -211,3 +211,54 @@ async def test_strategy_learner_uses_cohort_profile_when_personal_data_is_sparse
     )
 
     assert best == DeliveryStrategy.SUPPORTIVE
+
+
+@pytest.mark.asyncio
+async def test_strategy_learner_falls_back_to_goal_type_only_when_cohort_is_sparse(db_session, test_user):
+    learner = InterventionStrategyLearner(db_session)
+    cohort_user_id = uuid4()
+
+    from app.models.user import User
+
+    db_session.add(
+        User(
+            id=cohort_user_id,
+            username="goal_only_user",
+            email="goal-only@example.com",
+            hashed_password="hashed",
+            photon_balance=0,
+        )
+    )
+    await db_session.commit()
+
+    for _ in range(5):
+        record = await _create_record(
+            db_session,
+            user_id=cohort_user_id,
+            trigger_type=InterventionTriggerType.CONCEPT_GAP,
+            strategy=DeliveryStrategy.SUPPORTIVE,
+            outcome=InterventionOutcomeStatus.EFFECTIVE,
+            acted=True,
+        )
+        await learner.record_outcome(
+            user_id=cohort_user_id,
+            intervention_id=record.id,
+            outcome_status=record.outcome_status,
+            context_snapshot={
+                "goal_type": "exam",
+                "knowledge_level": "advanced",
+                "learning_style": "balanced",
+            },
+        )
+
+    best = await learner.get_best_strategy(
+        test_user.id,
+        InterventionTriggerType.CONCEPT_GAP,
+        cohort_profile={
+            "goal_type": "exam",
+            "knowledge_level": "intermediate",
+            "learning_style": "structured",
+        },
+    )
+
+    assert best == DeliveryStrategy.SUPPORTIVE

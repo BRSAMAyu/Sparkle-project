@@ -16,6 +16,8 @@ UserStateFieldName = Literal[
     "task_sufficiency_summary",
     "context_sufficiency_summary",
     "active_skills_summary",
+    "achievement_summary",
+    "calendar_context",
 ]
 
 
@@ -92,9 +94,53 @@ class ActiveSkillsSummaryValue:
 
 
 @dataclass(frozen=True)
+class AchievementUnlockSummaryItemValue:
+    achievement_id: str
+    name: str
+    rarity: str
+    unlocked_at: datetime
+
+
+@dataclass(frozen=True)
+class AchievementProgressSummaryItemValue:
+    achievement_id: str
+    name: str
+    progress: float
+
+
+@dataclass(frozen=True)
+class AchievementSummaryValue:
+    recent_unlocks: tuple[AchievementUnlockSummaryItemValue, ...]
+    in_progress_achievements: tuple[AchievementProgressSummaryItemValue, ...]
+    total_achievement_score: float
+
+
+@dataclass(frozen=True)
+class CalendarDeadlineItemValue:
+    title: str
+    start_time: datetime
+    end_time: datetime
+    source: str
+
+
+@dataclass(frozen=True)
+class CalendarTimeBlockItemValue:
+    start: str
+    end: str
+
+
+@dataclass(frozen=True)
+class CalendarContextValue:
+    upcoming_deadlines: tuple[CalendarDeadlineItemValue, ...]
+    time_blocks_today: tuple[CalendarTimeBlockItemValue, ...]
+    workload_density: str
+    exam_urgency: dict[str, Any] | None
+
+
+@dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1.3"
+    schema_version: str = "user_state.v1.4"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
     recent_person_mentions: StateFieldEnvelope[RecentPersonMentionsValue] | None = None
     engagement_state: StateFieldEnvelope[EngagementStateValue] | None = None
@@ -103,4 +149,6 @@ class UserStateV1:
     task_sufficiency_summary: StateFieldEnvelope[SufficiencySummaryValue] | None = None
     context_sufficiency_summary: StateFieldEnvelope[SufficiencySummaryValue] | None = None
     active_skills_summary: StateFieldEnvelope[ActiveSkillsSummaryValue] | None = None
+    achievement_summary: StateFieldEnvelope[AchievementSummaryValue] | None = None
+    calendar_context: StateFieldEnvelope[CalendarContextValue] | None = None
     emotion_hint: StateFieldEnvelope[None] | None = None

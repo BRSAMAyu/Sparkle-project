@@ -1040,6 +1040,7 @@ class SeedLibraryService:
             priority=subscription_data.priority,
             notes=subscription_data.notes,
             subscribed_at=_utcnow(),
+            last_used_at=_utcnow() if str(subscription_data.notes or "").strip().lower() in {"applied", "primary"} else None,
         )
         db.add(subscription)
         await db.flush()
@@ -1156,11 +1157,35 @@ class SeedLibraryService:
             subscription.priority = update_data.priority
         if update_data.notes is not None:
             subscription.notes = update_data.notes
+            await self._apply_subscription_feedback(db, subscription)
+        if update_data.is_enabled:
+            subscription.last_used_at = _utcnow()
 
         await db.flush()
         await db.refresh(subscription)
         logger.info(f"Updated subscription for user {user_id} to library {library_id}")
         return subscription
+
+    async def _apply_subscription_feedback(
+        self,
+        db: AsyncSession,
+        subscription: UserLibrarySubscription,
+    ) -> None:
+        notes = str(subscription.notes or "").strip().lower()
+        if not notes:
+            return
+        library = await self.get_library(db, subscription.library_id)
+        if library is None:
+            return
+
+        if notes in {"applied", "primary"}:
+            subscription.last_used_at = _utcnow()
+            return
+
+        if notes in {"not_suitable", "withdrawn", "not_for_me"}:
+            current = float(library.quality_score or 5.0)
+            library.quality_score = round(max(0.0, current - 0.5), 2)
+            subscription.is_enabled = False
 
     # ============ 查询/检索 ============
 

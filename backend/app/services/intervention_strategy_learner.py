@@ -116,6 +116,17 @@ class InterventionStrategyLearner:
             )
             if len(cohort_outcomes) >= self.MIN_PERSONALIZED_SAMPLES:
                 return self._select_best(cohort_outcomes)
+            goal_type_only = cohort_profile.get("goal_type")
+            if goal_type_only:
+                coarse_outcomes = await self._load_cohort_outcomes(
+                    trigger_type=trigger_type,
+                    goal_type=goal_type_only,
+                    knowledge_level=None,
+                    learning_style=None,
+                    exclude_user_id=user_id,
+                )
+                if len(coarse_outcomes) >= self.MIN_PERSONALIZED_SAMPLES:
+                    return self._select_best(coarse_outcomes)
 
         return None
 

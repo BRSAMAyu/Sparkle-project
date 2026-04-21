@@ -628,7 +628,7 @@ class InterventionOutcomeVerifier:
         improvement = dict(evidence.get("improvement") or {})
         diagnosis = dict(record.diagnosis_payload or {})
         context = dict(diagnosis.get("context") or {})
-        cohort_profile = dict(diagnosis.get("cohort_profile") or {})
+        cohort_profile = cls._extract_cohort_profile(diagnosis)
         return {
             "evaluation_method": evidence.get("evaluation_method"),
             "plan_health_recovered": improvement.get("plan_health_recovered"),
@@ -643,6 +643,23 @@ class InterventionOutcomeVerifier:
             "knowledge_level": cohort_profile.get("knowledge_level"),
             "learning_style": cohort_profile.get("learning_style"),
         }
+
+    @staticmethod
+    def _extract_cohort_profile(diagnosis: dict[str, Any]) -> dict[str, Any]:
+        raw = diagnosis.get("cohort_profile")
+        if isinstance(raw, dict):
+            profile = dict(raw)
+        else:
+            profile = {}
+        context = diagnosis.get("context")
+        if isinstance(context, dict):
+            for key in ("goal_type", "knowledge_level", "learning_style"):
+                if not profile.get(key) and context.get(key) is not None:
+                    profile[key] = context.get(key)
+        for key in ("goal_type", "knowledge_level", "learning_style"):
+            if not profile.get(key) and diagnosis.get(key) is not None:
+                profile[key] = diagnosis.get(key)
+        return profile
 
     @classmethod
     def _parameter_compilation_result(cls, record: InterventionRecord) -> str | None:

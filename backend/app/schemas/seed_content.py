@@ -221,6 +221,7 @@ class RatingInfo(BaseModel):
 class SubscriptionInfo(BaseModel):
     """订阅信息响应"""
     id: UUID = Field(..., description="订阅ID")
+    adoption_id: UUID | None = Field(default=None, description="显式采纳ID（与订阅ID对齐）")
     user_id: UUID = Field(..., description="用户ID")
     library_id: UUID = Field(..., description="库ID")
     library_name: str = Field(..., description="库名称")

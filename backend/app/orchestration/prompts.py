@@ -29,6 +29,7 @@ from loguru import logger
 from app.core.agent_persona import build_agent_persona_prompt_section
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
+from app.core.metrics import SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO
 from app.core.plan_context import merge_plan_context
 from app.config import settings
 from app.core.user_insight_state import UserInsightState
@@ -1250,16 +1251,11 @@ def build_system_prompt(
             section for section in (situation_brief_section, formatted_user_context) if str(section or "").strip()
         )
     if isinstance(prompt_signal_telemetry, dict):
-        visible_fields: list[str] = []
-        if "【近期痛点】" in rendered_user_context:
-            if prompt_signal_telemetry["high_value_fields"].get("error_summary", {}).get("rendered"):
-                visible_fields.append("error_summary")
-            if prompt_signal_telemetry["high_value_fields"].get("recent_errors", {}).get("rendered"):
-                visible_fields.append("recent_errors")
-        if "【近期进展】" in rendered_user_context and prompt_signal_telemetry["high_value_fields"].get(
-            "recent_mastery_changes", {}
-        ).get("rendered"):
-            visible_fields.append("recent_mastery_changes")
+        visible_fields = [
+            key
+            for key, meta in prompt_signal_telemetry.get("high_value_fields", {}).items()
+            if meta.get("rendered")
+        ]
         prompt_signal_telemetry["prompt_visible_high_value_fields"] = visible_fields
         for key in prompt_signal_telemetry["tracked_fields"]:
             meta = prompt_signal_telemetry["high_value_fields"].get(key, {})
@@ -1277,6 +1273,15 @@ def build_system_prompt(
             model_facing_section_map=section_map,
             prompt_signal_telemetry=prompt_signal_telemetry,
         )
+        collected_count = sum(
+            1 for meta in prompt_signal_telemetry["high_value_fields"].values() if meta.get("collected")
+        )
+        rendered_count = sum(
+            1 for meta in prompt_signal_telemetry["high_value_fields"].values() if meta.get("rendered")
+        )
+        coverage_ratio = (rendered_count / collected_count) if collected_count else 1.0
+        prompt_signal_telemetry["field_render_coverage_ratio"] = coverage_ratio
+        SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO.set(coverage_ratio)
         if isinstance(user_context, dict):
             user_context["prompt_signal_telemetry"] = prompt_signal_telemetry
 
@@ -2227,7 +2232,18 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
     cognitive_context = _extract_cognitive_context_payload(context)
     profile_context = _extract_profile_context_payload(context)
     canonical_insight = _extract_canonical_insight_state(context)
-    tracked_fields = ("error_summary", "recent_errors", "recent_mastery_changes")
+    tracked_fields = (
+        "preferences",
+        "knowledge_summary",
+        "error_summary",
+        "recent_errors",
+        "recent_mastery_changes",
+        "active_tasks",
+        "focus_stats",
+        "achievement_summary",
+        "calendar_context",
+        "social_context",
+    )
     field_status: dict[str, Any] = {}
     for key in tracked_fields:
         sources: list[str] = []
@@ -2324,6 +2340,76 @@ def _format_error_summary_line(summary: dict[str, Any]) -> str:
     return "；".join(parts)
 
 
+def _format_achievement_context_line(summary: dict[str, Any]) -> str:
+    if not isinstance(summary, dict) or not summary:
+        return ""
+    parts: list[str] = []
+    recent_unlocks = summary.get("recent_unlocks") or []
+    if recent_unlocks:
+        recent_names = "、".join(
+            str(item.get("name") or item.get("achievement_id") or "").strip()
+            for item in recent_unlocks[:2]
+            if isinstance(item, dict)
+        )
+        if recent_names:
+            parts.append(f"最近解锁 {recent_names}")
+    progress_items = summary.get("in_progress_achievements") or []
+    if progress_items:
+        top = progress_items[0] if isinstance(progress_items[0], dict) else {}
+        if top:
+            progress = top.get("progress")
+            if progress is not None:
+                try:
+                    parts.append(f"{top.get('name') or '一项成就'} 进度 {float(progress):.0%}")
+                except Exception:
+                    parts.append(f"{top.get('name') or '一项成就'} 正在推进")
+    score = summary.get("total_achievement_score")
+    if score is not None:
+        try:
+            parts.append(f"成就总分 {float(score):.1f}")
+        except Exception:
+            parts.append(f"成就总分 {score}")
+    return "；".join(parts)
+
+
+def _format_calendar_context_lines(calendar_context: dict[str, Any]) -> list[str]:
+    if not isinstance(calendar_context, dict) or not calendar_context:
+        return []
+    lines: list[str] = []
+    workload_density = str(calendar_context.get("workload_density") or "").strip()
+    if workload_density:
+        lines.append(f"- 本周任务密度: {workload_density}")
+    deadlines = calendar_context.get("upcoming_deadlines") or []
+    if deadlines:
+        labels: list[str] = []
+        for item in deadlines[:3]:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or "未命名日程").strip()
+            start_time = str(item.get("start_time") or "")
+            date_label = start_time[5:10] if len(start_time) >= 10 else start_time
+            labels.append(f"{title}({date_label})" if date_label else title)
+        if labels:
+            lines.append(f"- 近 7 天截止: {'、'.join(labels)}")
+    time_blocks = calendar_context.get("time_blocks_today") or []
+    if time_blocks:
+        slots = []
+        for block in time_blocks[:3]:
+            if not isinstance(block, dict):
+                continue
+            start = str(block.get("start") or "").strip()
+            end = str(block.get("end") or "").strip()
+            if start and end:
+                slots.append(f"{start}-{end}")
+        if slots:
+            lines.append(f"- 今日可用时间段: {'、'.join(slots)}")
+    exam_urgency = calendar_context.get("exam_urgency")
+    if isinstance(exam_urgency, dict) and exam_urgency.get("days_left") is not None:
+        urgency_label = "紧急" if exam_urgency.get("urgent") else "一般"
+        lines.append(f"- 考试倒计时: {exam_urgency.get('days_left')} 天 ({urgency_label})")
+    return lines
+
+
 def _format_recent_error_line(item: dict[str, Any]) -> str:
     if not isinstance(item, dict):
         return ""
@@ -2418,6 +2504,7 @@ def _render_user_context_content(
         else:
             lines.append(f"- 深度: {prefs.get('depth_preference', 0.5):.1f}")
             lines.append(f"- 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
+        _mark_rendered("preferences")
 
     knowledge_summary = normalized.get("knowledge_summary")
     if knowledge_summary and section_weights.get("knowledge", "medium") != "off":
@@ -2439,6 +2526,7 @@ def _render_user_context_content(
                     except Exception:
                         lines.append(f"- {node_name}: 掌握度 {mastery}")
             lines.append("如果用户的问题涉及以上知识点，请提供更详细的基础解释。")
+            _mark_rendered("knowledge_summary")
 
     learning_gaps_summary = normalized.get("learning_gaps_summary")
     if learning_gaps_summary:
@@ -2482,6 +2570,13 @@ def _render_user_context_content(
             "approx_tokens": _estimate_prompt_tokens("\n".join(win_lines)),
         }
 
+    achievement_line = _format_achievement_context_line(normalized.get("achievement_summary") or {})
+    if achievement_line:
+        if "【近期进展】" not in lines:
+            lines.append("【近期进展】")
+        lines.append(f"- {achievement_line}")
+        _mark_rendered("achievement_summary")
+
     next_actions = normalized.get("next_actions") or []
     task_weight = section_weights.get("task_summary", "medium")
     if next_actions and task_weight != "off":
@@ -2490,12 +2585,14 @@ def _render_user_context_content(
         lines.append(f"Top {limit}:")
         for task in next_actions[:limit]:
             lines.append(f"- {task.get('title')} ({task.get('estimated_minutes')}m, {task.get('type')})")
+        _mark_rendered("active_tasks")
 
     if normalized.get("focus_stats"):
         stats = normalized["focus_stats"]
         lines.append("【专注统计】")
         lines.append(f"- 今日专注: {stats.get('total_minutes', 0)} 分钟")
         lines.append(f"- 番茄钟次数: {stats.get('pomodoro_count', 0)}")
+        _mark_rendered("focus_stats")
 
     understanding_depth = normalized.get("understanding_depth")
     if isinstance(understanding_depth, dict) and understanding_depth.get("level"):
@@ -2543,8 +2640,14 @@ def _render_user_context_content(
         social_lines = render_social_context_lines(social_context if isinstance(social_context, dict) else None)
         if social_lines:
             lines.extend(social_lines)
+            _mark_rendered("social_context")
 
-    if isinstance(normalized.get("exam_urgency"), dict):
+    calendar_lines = _format_calendar_context_lines(normalized.get("calendar_context") or {})
+    if calendar_lines:
+        lines.append("【时间约束】")
+        lines.extend(calendar_lines)
+        _mark_rendered("calendar_context")
+    elif isinstance(normalized.get("exam_urgency"), dict):
         urgency = normalized["exam_urgency"]
         days_left = urgency.get("days_left")
         if days_left is not None:
@@ -2747,9 +2850,23 @@ def _normalize_user_context(context: dict) -> dict:
 
     if context.get("next_actions"):
         normalized["next_actions"] = context["next_actions"]
+    if context.get("active_tasks"):
+        normalized["active_tasks"] = context["active_tasks"]
+        if not normalized.get("next_actions"):
+            normalized["next_actions"] = context["active_tasks"]
 
     if context.get("focus_stats"):
         normalized["focus_stats"] = context["focus_stats"]
+
+    if isinstance(context.get("achievement_summary"), dict):
+        normalized["achievement_summary"] = context["achievement_summary"]
+
+    if isinstance(context.get("calendar_context"), dict):
+        normalized["calendar_context"] = context["calendar_context"]
+        if not normalized.get("exam_urgency"):
+            exam_urgency = context["calendar_context"].get("exam_urgency")
+            if isinstance(exam_urgency, dict):
+                normalized["exam_urgency"] = exam_urgency
 
     if context.get("active_plans"):
         normalized["active_plans"] = context["active_plans"]
@@ -2781,6 +2898,8 @@ def _normalize_user_context(context: dict) -> dict:
         normalized["residual_decision_context"] = context["residual_decision_context"]
     if isinstance(context.get("user_material_grounding"), dict):
         normalized["user_material_grounding"] = context["user_material_grounding"]
+    if isinstance(context.get("social_context"), dict):
+        normalized["social_context"] = context["social_context"]
 
     # --- Canonical insight state enrichment ---
     if canonical_insight is not None:

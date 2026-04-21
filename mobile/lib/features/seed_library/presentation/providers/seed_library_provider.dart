@@ -406,6 +406,41 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
     }
   }
 
+  Future<void> markNotSuitable() async {
+    if (state.library == null) {
+      return;
+    }
+    try {
+      await loadLibrary();
+      final current = state.subscription ??
+          await _repository.findMySubscriptionForLibrary(libraryId) ??
+          await _repository.subscribeToLibrary(
+            libraryId,
+            priority: 0,
+            notes: 'applied',
+          );
+      final updated = await _repository.updateSubscription(
+        libraryId,
+        UpdateSubscriptionRequest(
+          isEnabled: false,
+          notes: 'not_suitable',
+        ),
+      );
+      state = state.copyWith(
+        subscription: updated,
+        isSubscribed: true,
+        activeSubscriptions: state.activeSubscriptions
+            .where((item) => item.libraryId != current.libraryId)
+            .toList()
+          ..sort((a, b) => b.priority.compareTo(a.priority)),
+        error: null,
+      );
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      rethrow;
+    }
+  }
+
   Future<void> submitRating({
     required double score,
     String? comment,

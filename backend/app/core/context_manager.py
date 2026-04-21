@@ -1,7 +1,8 @@
 from __future__ import annotations
 import asyncio
 import json
-from datetime import timezone, datetime
+from collections import defaultdict
+from datetime import date, timedelta, timezone, datetime
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +11,8 @@ from sqlalchemy import Integer, cast, func, select
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.models.achievement import Achievement, AchievementRarity, UserAchievement
+from app.models.calendar_event import CalendarEvent
 from app.models.community import Group, GroupMember, GroupTaskClaim
 from app.schemas.error_book import ErrorQueryParams
 from app.schemas.task import TaskListQuery, TaskStatus
@@ -52,6 +55,8 @@ class CognitiveContext(BaseModel):
     community_context: dict[str, Any] = Field(default_factory=dict, description="Active community participation snapshot")
     social_context: dict[str, Any] = Field(default_factory=dict, description="Stage 17 isolated social context namespace")
     profile_context: dict[str, Any] | None = Field(default=None, description="Unified profile context payload")
+    achievement_summary: dict[str, Any] = Field(default_factory=dict, description="Read-only achievement summary")
+    calendar_context: dict[str, Any] = Field(default_factory=dict, description="Read-only calendar constraints")
 
     # Preference Version (for cache invalidation)
     preference_version: int = Field(default=0, description="Preference version for cache validation")
@@ -155,6 +160,8 @@ class ContextOrchestrator:
             _with_session(lambda db: self._get_task_profile(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_user_metrics(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_community_profile(uid, db)),  # type: ignore[misc]
+            _with_session(lambda db: self._get_achievement_context(uid, db)),  # type: ignore[misc]
+            _with_session(lambda db: self._get_calendar_context(uid, db)),  # type: ignore[misc]
             return_exceptions=True
         )
 
@@ -164,6 +171,8 @@ class ContextOrchestrator:
         task_data = self._handle_result(results[2], "task", {})
         metrics_data = self._handle_result(results[3], "metrics", {})
         community_data = self._handle_result(results[4], "community", {})
+        achievement_data = self._handle_result(results[5], "achievement", {})
+        calendar_data = self._handle_result(results[6], "calendar", {})
 
         knowledge_summary = {}
         preference_version = 0
@@ -199,6 +208,8 @@ class ContextOrchestrator:
             community_context=self._assert_allowed_community_context(community_data or {}),
             social_context={},
             profile_context=profile_context_payload,
+            achievement_summary=achievement_data or {},
+            calendar_context=calendar_data or {},
 
             # 记录偏好版本用于缓存验证
             preference_version=preference_version,
@@ -218,6 +229,8 @@ class ContextOrchestrator:
 
         context.preferences = _clean(context.preferences)
         context.engagement_metrics = _clean(context.engagement_metrics)
+        context.achievement_summary = _clean(context.achievement_summary)
+        context.calendar_context = _clean(context.calendar_context)
         return context
 
     def _assert_allowed_community_context(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -356,6 +369,149 @@ class ContextOrchestrator:
     async def _get_profile_context(self, user_id: UUID, db_session: AsyncSession | None = None):
         return await self._get_profile_context_service(db_session).get_profile_context(user_id)
 
+    async def _get_achievement_context(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
+        db = db_session if db_session is not None else self.db
+        recent_cutoff = _utcnow() - timedelta(days=14)
+
+        recent_result = await db.execute(
+            select(UserAchievement, Achievement)
+            .join(Achievement, Achievement.id == UserAchievement.achievement_id)
+            .where(
+                UserAchievement.user_id == user_id,
+                UserAchievement.unlocked_at.is_not(None),
+                UserAchievement.unlocked_at >= recent_cutoff,
+            )
+            .order_by(UserAchievement.unlocked_at.desc())
+            .limit(5)
+        )
+
+        progress_result = await db.execute(
+            select(UserAchievement, Achievement)
+            .join(Achievement, Achievement.id == UserAchievement.achievement_id)
+            .where(
+                UserAchievement.user_id == user_id,
+                UserAchievement.unlocked_at.is_(None),
+                UserAchievement.progress > 0.5,
+            )
+            .order_by(UserAchievement.progress.desc(), UserAchievement.last_progress_update.desc().nullslast())
+            .limit(5)
+        )
+
+        score_result = await db.execute(
+            select(UserAchievement, Achievement)
+            .join(Achievement, Achievement.id == UserAchievement.achievement_id)
+            .where(UserAchievement.user_id == user_id)
+        )
+
+        recent_unlocks = [
+            {
+                "achievement_id": achievement.id,
+                "name": achievement.name,
+                "rarity": (
+                    achievement.rarity.value
+                    if hasattr(achievement.rarity, "value")
+                    else str(achievement.rarity or "common")
+                ),
+                "unlocked_at": user_achievement.unlocked_at.isoformat() if user_achievement.unlocked_at else None,
+            }
+            for user_achievement, achievement in recent_result.all()
+        ]
+        in_progress = [
+            {
+                "achievement_id": achievement.id,
+                "name": achievement.name,
+                "progress": round(float(user_achievement.progress or 0.0), 3),
+                "progress_value": int(user_achievement.progress_value or 0),
+                "progress_target": int(user_achievement.progress_target or 0),
+            }
+            for user_achievement, achievement in progress_result.all()
+        ]
+
+        rarity_weights = {
+            AchievementRarity.COMMON.value: 1.0,
+            AchievementRarity.RARE.value: 2.0,
+            AchievementRarity.EPIC.value: 3.0,
+            AchievementRarity.LEGENDARY.value: 4.0,
+        }
+        total_score = 0.0
+        for user_achievement, achievement in score_result.all():
+            rarity = achievement.rarity.value if hasattr(achievement.rarity, "value") else str(achievement.rarity or "common")
+            weight = rarity_weights.get(rarity, 1.0)
+            progress = float(user_achievement.progress or 0.0)
+            total_score += weight if user_achievement.unlocked_at else (progress * weight)
+
+        if not recent_unlocks and not in_progress and total_score <= 0:
+            return {}
+
+        return {
+            "recent_unlocks": recent_unlocks,
+            "in_progress_achievements": in_progress,
+            "total_achievement_score": round(total_score, 2),
+        }
+
+    async def _get_calendar_context(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
+        db = db_session if db_session is not None else self.db
+        now = _utcnow()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        week_end = now + timedelta(days=7)
+
+        today_result = await db.execute(
+            select(CalendarEvent)
+            .where(
+                CalendarEvent.user_id == user_id,
+                CalendarEvent.deleted_at.is_(None),
+                CalendarEvent.start_time < today_end,
+                CalendarEvent.end_time > today_start,
+            )
+            .order_by(CalendarEvent.start_time)
+        )
+        week_result = await db.execute(
+            select(CalendarEvent)
+            .where(
+                CalendarEvent.user_id == user_id,
+                CalendarEvent.deleted_at.is_(None),
+                CalendarEvent.start_time >= now,
+                CalendarEvent.start_time <= week_end,
+            )
+            .order_by(CalendarEvent.start_time)
+        )
+
+        today_events = list(today_result.scalars().all())
+        week_events = list(week_result.scalars().all())
+        preferences = await self._get_preference_service(db).get_preferences(user_id)
+        merged_prefs: dict[str, Any] = {}
+        if preferences:
+            merged_prefs.update(dict(preferences.inferred or {}))
+            merged_prefs.update(dict(preferences.explicit or {}))
+        exam_urgency = merged_prefs.get("exam_urgency") if isinstance(merged_prefs.get("exam_urgency"), dict) else {}
+
+        upcoming_deadlines = []
+        for event in week_events[:6]:
+            if event.task_id is None and event.plan_id is None:
+                continue
+            upcoming_deadlines.append(
+                {
+                    "title": event.title,
+                    "start_time": event.start_time.isoformat(),
+                    "end_time": event.end_time.isoformat(),
+                    "source": "task" if event.task_id else "plan",
+                }
+            )
+
+        time_blocks_today = self._derive_available_time_blocks(today_events, reference_day=today_start.date())
+        workload_density = self._derive_workload_density(week_events)
+
+        if not upcoming_deadlines and not time_blocks_today and not workload_density and not exam_urgency:
+            return {}
+
+        return {
+            "upcoming_deadlines": upcoming_deadlines,
+            "time_blocks_today": time_blocks_today,
+            "workload_density": workload_density,
+            "exam_urgency": exam_urgency or {},
+        }
+
     async def _get_preference_version(self, user_id: str) -> int:
         """
         获取用户偏好的当前版本号。
@@ -454,3 +610,51 @@ class ContextOrchestrator:
             "pending_group_task_count": pending_group_tasks,
             "summary_lines": summary_lines,
         }
+
+    @staticmethod
+    def _derive_available_time_blocks(events: list[CalendarEvent], *, reference_day: date) -> list[dict[str, str]]:
+        day_start = datetime.combine(reference_day, datetime.min.time()).replace(hour=7)
+        day_end = datetime.combine(reference_day, datetime.min.time()).replace(hour=22)
+        blocks: list[tuple[datetime, datetime]] = []
+        for event in events:
+            start = event.start_time.replace(tzinfo=None) if event.start_time.tzinfo else event.start_time
+            end = event.end_time.replace(tzinfo=None) if event.end_time.tzinfo else event.end_time
+            start = max(start, day_start)
+            end = min(end, day_end)
+            if start >= end:
+                continue
+            blocks.append((start, end))
+
+        free_blocks: list[dict[str, str]] = []
+        cursor = day_start
+        for start, end in sorted(blocks, key=lambda item: item[0]):
+            if start > cursor:
+                free_blocks.append(
+                    {
+                        "start": cursor.strftime("%H:%M"),
+                        "end": start.strftime("%H:%M"),
+                    }
+                )
+            cursor = max(cursor, end)
+        if cursor < day_end:
+            free_blocks.append({"start": cursor.strftime("%H:%M"), "end": day_end.strftime("%H:%M")})
+        return free_blocks[:4]
+
+    @staticmethod
+    def _derive_workload_density(events: list[CalendarEvent]) -> str:
+        if not events:
+            return "low"
+        by_day: defaultdict[date, int] = defaultdict(int)
+        total_minutes = 0
+        for event in events:
+            event_day = event.start_time.date()
+            by_day[event_day] += 1
+            total_minutes += max(0, int((event.end_time - event.start_time).total_seconds() / 60))
+        active_days = max(len(by_day), 1)
+        avg_events = sum(by_day.values()) / active_days
+        avg_minutes = total_minutes / active_days
+        if avg_events >= 4 or avg_minutes >= 240:
+            return "high"
+        if avg_events >= 2 or avg_minutes >= 120:
+            return "medium"
+        return "low"

@@ -41,6 +41,29 @@ async def test_context_orchestrator_aggregation(db_session):
         )
         m.setattr(orchestrator, "_get_user_metrics", AsyncMock(return_value={"level": 5}))
         m.setattr(orchestrator, "_get_community_profile", AsyncMock(return_value={"active_group_count": 1}))
+        m.setattr(
+            orchestrator,
+            "_get_achievement_context",
+            AsyncMock(
+                return_value={
+                    "recent_unlocks": [{"achievement_id": "streak_7", "name": "七日连胜"}],
+                    "in_progress_achievements": [{"achievement_id": "study_100hours", "name": "百小时学习", "progress": 0.62}],
+                    "total_achievement_score": 3.6,
+                }
+            ),
+        )
+        m.setattr(
+            orchestrator,
+            "_get_calendar_context",
+            AsyncMock(
+                return_value={
+                    "upcoming_deadlines": [{"title": "热力学计划复盘"}],
+                    "time_blocks_today": [{"start": "19:00", "end": "21:00"}],
+                    "workload_density": "medium",
+                    "exam_urgency": {"days_left": 12, "urgent": True},
+                }
+            ),
+        )
 
         user_id = str(uuid.uuid4())
         context = await orchestrator.get_user_context(user_id)
@@ -57,6 +80,8 @@ async def test_context_orchestrator_aggregation(db_session):
     assert context.active_tasks[0]["title"] == "Test Task"
     assert context.preferences == {"depth": "high"}
     assert context.preference_version == 7
+    assert context.achievement_summary["recent_unlocks"][0]["name"] == "七日连胜"
+    assert context.calendar_context["workload_density"] == "medium"
     assert redis_client.setex.called
 
 
@@ -67,7 +92,7 @@ async def test_context_orchestrator_uses_isolated_sessions_for_service_backed_he
     redis_client.get.return_value = None
     orchestrator = ContextOrchestrator(shared_db, redis_client)
 
-    created_sessions = [object(), object(), object(), object(), object()]
+    created_sessions = [object(), object(), object(), object(), object(), object(), object()]
     issued_sessions: list[object] = []
     service_dbs: dict[str, list[object]] = {"profile": [], "error": [], "user": []}
 
@@ -118,6 +143,8 @@ async def test_context_orchestrator_uses_isolated_sessions_for_service_backed_he
         m.setattr("app.core.context_manager.UserService", FakeUserService)
         m.setattr(orchestrator, "_get_task_profile", AsyncMock(return_value={"tasks": [], "focus": {}}))
         m.setattr(orchestrator, "_get_community_profile", AsyncMock(return_value={}))
+        m.setattr(orchestrator, "_get_achievement_context", AsyncMock(return_value={}))
+        m.setattr(orchestrator, "_get_calendar_context", AsyncMock(return_value={}))
 
         await orchestrator.get_user_context(str(uuid.uuid4()))
 

@@ -491,6 +491,7 @@ async def subscribe_library(
         library = await service.get_library(db, library_id)
         sub_info = SubscriptionInfo(
             id=subscription.id,
+            adoption_id=subscription.id,
             user_id=subscription.user_id,
             library_id=subscription.library_id,
             library_name=library.name if library else "",
@@ -550,6 +551,7 @@ async def update_library_subscription(
     return SubscriptionResponse(
         data=SubscriptionInfo(
             id=subscription.id,
+            adoption_id=subscription.id,
             user_id=subscription.user_id,
             library_id=subscription.library_id,
             library_name=library.name if library else "",
@@ -652,6 +654,7 @@ async def get_my_subscriptions(
     for sub in subscriptions:
         sub_info = SubscriptionInfo(
             id=sub.id,
+            adoption_id=sub.id,
             user_id=sub.user_id,
             library_id=sub.library_id,
             library_name=sub.library.name if sub.library else "",

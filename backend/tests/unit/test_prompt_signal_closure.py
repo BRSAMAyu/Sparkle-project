@@ -185,3 +185,29 @@ def test_canonical_insight_state_via_profile_context_dict() -> None:
     normalized = _normalize_user_context(context)
 
     assert normalized["error_summary"]["total_errors"] == 4
+
+
+def test_build_system_prompt_renders_stage22_achievement_and_calendar_context() -> None:
+    user_context = {
+        "achievement_summary": {
+            "recent_unlocks": [{"name": "七日连胜"}],
+            "in_progress_achievements": [{"name": "百小时学习", "progress": 0.62}],
+            "total_achievement_score": 4.5,
+        },
+        "calendar_context": {
+            "upcoming_deadlines": [{"title": "热力学计划复盘", "start_time": "2026-04-23T19:00:00"}],
+            "time_blocks_today": [{"start": "19:00", "end": "21:00"}],
+            "workload_density": "medium",
+            "exam_urgency": {"days_left": 12, "urgent": True},
+        },
+    }
+
+    prompt = build_system_prompt(user_context=user_context, conversation_history={"messages": []})
+    telemetry = user_context["prompt_signal_telemetry"]
+
+    assert "七日连胜" in prompt
+    assert "【时间约束】" in prompt
+    assert "19:00-21:00" in prompt
+    assert telemetry["high_value_fields"]["achievement_summary"]["rendered"] is True
+    assert telemetry["high_value_fields"]["calendar_context"]["rendered"] is True
+    assert telemetry["field_render_coverage_ratio"] > 0

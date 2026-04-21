@@ -154,6 +154,12 @@ INTERVENTION_PARAMETER_COMPILATION_TOTAL = get_or_create_metric(
     ["result"],
 )
 
+SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO = get_or_create_metric(
+    Gauge,
+    "sparkle_prompt_field_render_coverage_ratio",
+    "Prompt field render coverage ratio for normalized user-context fields",
+)
+
 # 5b. Proto v2 Migration Metrics
 PROTO_FIELD_READ_TOTAL = get_or_create_metric(
     Counter,

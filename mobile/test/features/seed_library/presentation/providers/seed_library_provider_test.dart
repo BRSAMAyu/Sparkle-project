@@ -31,6 +31,28 @@ void main() {
       expect(state.isSubscribed, isTrue);
     },
   );
+
+  test('markNotSuitable disables the subscription and records explicit feedback',
+      () async {
+    final repo = _PagedSubscriptionSeedLibraryRepository();
+    final container = ProviderContainer(
+      overrides: [
+        seedLibraryRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(
+      seedLibraryDetailProvider('seed-lib-1').notifier,
+    );
+
+    await notifier.loadLibrary();
+    await notifier.markNotSuitable();
+
+    final state = container.read(seedLibraryDetailProvider('seed-lib-1'));
+    expect(repo.lastNotes, 'not_suitable');
+    expect(state.subscription?.isEnabled, isFalse);
+  });
 }
 
 class _PagedSubscriptionSeedLibraryRepository extends SeedLibraryRepository {
@@ -38,6 +60,7 @@ class _PagedSubscriptionSeedLibraryRepository extends SeedLibraryRepository {
 
   int subscribeCalls = 0;
   int updateCalls = 0;
+  String? lastNotes;
 
   final SeedLibrary _library = SeedLibrary(
     id: 'seed-lib-1',
@@ -111,7 +134,10 @@ class _PagedSubscriptionSeedLibraryRepository extends SeedLibraryRepository {
     UpdateSubscriptionRequest request,
   ) async {
     updateCalls += 1;
-    return _subscription(enabled: request.isEnabled ?? true);
+    lastNotes = request.notes;
+    return _subscription(enabled: request.isEnabled ?? true).copyWith(
+      notes: request.notes,
+    );
   }
 
   @override

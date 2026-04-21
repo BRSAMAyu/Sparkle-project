@@ -7,6 +7,8 @@ import pytest
 from app.state_aggregator.schema import (
     ActiveSkillSummaryItemValue,
     ActiveSkillsSummaryValue,
+    AchievementSummaryValue,
+    CalendarContextValue,
     CommitmentSummaryValue,
     StateFieldEnvelope,
     SufficiencySummaryValue,
@@ -36,7 +38,7 @@ def test_user_state_v1_uses_expected_schema_version() -> None:
         ),
     )
 
-    assert state.schema_version == "user_state.v1.3"
+    assert state.schema_version == "user_state.v1.4"
     assert state.commitment_summary is not None
     assert state.commitment_summary.value.overdue_count == 1
 
@@ -79,3 +81,35 @@ def test_user_state_v1_3_exposes_active_skills_summary_contract() -> None:
     assert state.active_skills_summary is not None
     assert state.active_skills_summary.value.items[0].skill_id == "skill-1"
     assert state.active_skills_summary.value.items[0].activation_match_score == 1.0
+
+
+def test_user_state_v1_4_exposes_achievement_and_calendar_contracts() -> None:
+    state = UserStateV1(
+        user_id=uuid4(),
+        achievement_summary=StateFieldEnvelope(
+            value=AchievementSummaryValue(
+                recent_unlocks=(),
+                in_progress_achievements=(),
+                total_achievement_score=4.5,
+            ),
+            computed_at=datetime(2026, 4, 21, 10, 0, 0),
+            source_snapshot_ids=("achievement:streak_7",),
+            freshness_seconds=0,
+        ),
+        calendar_context=StateFieldEnvelope(
+            value=CalendarContextValue(
+                upcoming_deadlines=(),
+                time_blocks_today=(),
+                workload_density="medium",
+                exam_urgency={"days_left": 12, "urgent": True},
+            ),
+            computed_at=datetime(2026, 4, 21, 10, 0, 0),
+            source_snapshot_ids=("calendar_event:1",),
+            freshness_seconds=0,
+        ),
+    )
+
+    assert state.achievement_summary is not None
+    assert state.achievement_summary.value.total_achievement_score == 4.5
+    assert state.calendar_context is not None
+    assert state.calendar_context.value.workload_density == "medium"

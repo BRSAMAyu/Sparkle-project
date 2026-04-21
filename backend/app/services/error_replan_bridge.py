@@ -6,6 +6,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import desc, select
 
+from app.models.card_protocol import InterventionRecord
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import UserNodeStatus
 from app.models.plan import Plan
@@ -26,7 +27,15 @@ class ErrorReplanBridge:
     LOW_MASTERY_THRESHOLD = 50.0
     ERROR_PRESSURE_LOOKBACK_DAYS = 7
     ERROR_PRESSURE_TRIGGER_COUNT = 3
-    TRIGGERING_ERROR_TYPES = {"concept_confusion", "knowledge_gap"}
+    COOLDOWN_HOURS = 24
+    TRIGGERING_ERROR_TYPES = {
+        "concept_confusion",
+        "knowledge_gap",
+        "procedural_error",
+        "careless_mistake",
+        "time_management",
+        "strategy_mismatch",
+    }
 
     def __init__(self, db, redis=None) -> None:
         self.db = db
@@ -47,13 +56,21 @@ class ErrorReplanBridge:
         if error is None or error.user_id != user_id:
             return {"triggered": False, "reason": "error_not_found", "plan_ids": []}
 
-        error_type = self._extract_error_type(error)
-        if error_type not in self.TRIGGERING_ERROR_TYPES:
-            return {"triggered": False, "reason": f"unsupported_error_type:{error_type}", "plan_ids": []}
+        error_type = self._classify_trigger_type(error)
+        if error_type is None:
+            return {"triggered": False, "reason": f"unsupported_error_type:{self._extract_error_type(error)}", "plan_ids": []}
 
         plan_ids = await self._find_relevant_active_plan_ids(user_id=user_id, node_ids=normalized_node_ids)
         if not plan_ids:
             return {"triggered": False, "reason": "no_relevant_active_plan", "plan_ids": []}
+
+        eligible_plan_ids = await self._filter_plan_ids_by_cooldown(
+            user_id=user_id,
+            plan_ids=plan_ids,
+            error_type=error_type,
+        )
+        if not eligible_plan_ids:
+            return {"triggered": False, "reason": "trigger_cooldown_active", "plan_ids": []}
 
         low_mastery_nodes = await self._find_low_mastery_nodes(user_id=user_id, node_ids=normalized_node_ids)
         if not low_mastery_nodes:
@@ -74,7 +91,7 @@ class ErrorReplanBridge:
 
         replanner = AdaptiveReplanner(self.db, self.redis)
         triggered_plan_ids: list[str] = []
-        for plan_id in sorted(plan_ids, key=str):
+        for plan_id in sorted(eligible_plan_ids, key=str):
             await replanner.evaluate_plan_health_now(
                 user_id=user_id,
                 plan_id=plan_id,
@@ -88,6 +105,7 @@ class ErrorReplanBridge:
             low_mastery_nodes=low_mastery_nodes,
             recent_error_count=recent_error_count,
             plan_ids=triggered_plan_ids,
+            error_type=error_type,
         )
 
         # Emit a visible system update so the user knows the plan was adjusted.
@@ -121,9 +139,11 @@ class ErrorReplanBridge:
         low_mastery_nodes: list[UUID],
         recent_error_count: int,
         plan_ids: list[str],
+        error_type: str,
     ) -> str | None:
         try:
             node_name = await self._resolve_node_name(low_mastery_nodes)
+            cohort_profile = await self._get_cohort_profile(user_id)
             record = await InterventionRecordService(self.db).create_record(
                 user_id=user_id,
                 trigger_type=InterventionTriggerType.CONCEPT_GAP,
@@ -135,6 +155,8 @@ class ErrorReplanBridge:
                     "node_name": node_name,
                     "recent_error_count": recent_error_count,
                     "plan_ids": plan_ids,
+                    "error_type": error_type,
+                    "cohort_profile": cohort_profile or {},
                     "trigger": "error_replan_bridge",
                 },
                 outcome_window_days=14,
@@ -205,6 +227,31 @@ class ErrorReplanBridge:
         analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
         return str(analysis.get("error_type") or "other").strip().lower()
 
+    def _classify_trigger_type(self, error: ErrorRecord) -> str | None:
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        return self._classify_trigger_type_from_analysis(analysis)
+
+    def _classify_trigger_type_from_analysis(self, analysis: dict[str, object]) -> str | None:
+        raw_error_type = str(analysis.get("error_type") or "other").strip().lower()
+        if raw_error_type in {"concept_confusion", "knowledge_gap"}:
+            return raw_error_type
+        if raw_error_type in {"procedural_error", "method_wrong"}:
+            return "procedural_error"
+        if raw_error_type in {"careless_mistake", "reading_careless", "calculation_error"}:
+            return "careless_mistake"
+
+        root_cause = str(analysis.get("root_cause") or "").strip().lower()
+        study_suggestions = str(analysis.get("study_suggestions") or "").strip().lower()
+        if raw_error_type == "time_management" or any(
+            token in f"{root_cause} {study_suggestions}" for token in ("time", "rush", "pace", "deadline")
+        ):
+            return "time_management"
+        if raw_error_type in {"strategy_mismatch", "logic_error"} or any(
+            token in f"{root_cause} {study_suggestions}" for token in ("strategy", "approach", "method selection")
+        ):
+            return "strategy_mismatch"
+        return None
+
     async def _find_low_mastery_nodes(self, *, user_id: UUID, node_ids: list[UUID]) -> list[UUID]:
         result = await self.db.execute(
             select(UserNodeStatus.node_id)
@@ -261,7 +308,7 @@ class ErrorReplanBridge:
                 continue
 
             analysis = latest_analysis if isinstance(latest_analysis, dict) else {}
-            error_type = str(analysis.get("error_type") or "other").strip().lower()
+            error_type = self._classify_trigger_type_from_analysis(analysis)
             if error_type not in self.TRIGGERING_ERROR_TYPES:
                 continue
 
@@ -270,3 +317,58 @@ class ErrorReplanBridge:
                 continue
             seen_error_ids.add(error_id)
         return len(seen_error_ids)
+
+    async def _filter_plan_ids_by_cooldown(
+        self,
+        *,
+        user_id: UUID,
+        plan_ids: set[UUID],
+        error_type: str,
+    ) -> set[UUID]:
+        if not plan_ids:
+            return set()
+        cutoff = _utcnow() - timedelta(hours=self.COOLDOWN_HOURS)
+        records = list(
+            (
+                await self.db.execute(
+                    select(InterventionRecord)
+                    .where(
+                        InterventionRecord.user_id == user_id,
+                        InterventionRecord.trigger_source_ref == "error_replan_bridge",
+                        InterventionRecord.created_at >= cutoff,
+                    )
+                )
+            ).scalars().all()
+        )
+        cooled_plan_ids = set(plan_ids)
+        for record in records:
+            diagnosis = dict(record.diagnosis_payload or {})
+            if str(diagnosis.get("error_type") or "").strip().lower() != error_type:
+                continue
+            recent_plan_ids = {
+                UUID(plan_id)
+                for plan_id in (diagnosis.get("plan_ids") or [])
+                if isinstance(plan_id, str)
+            }
+            cooled_plan_ids -= recent_plan_ids
+        return cooled_plan_ids
+
+    async def _get_cohort_profile(self, user_id: UUID) -> dict[str, str] | None:
+        try:
+            from app.models.user_preferences import UserPreferencesCenter
+
+            result = await self.db.execute(
+                select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
+            )
+            prefs = result.scalar_one_or_none()
+            if prefs is None:
+                return None
+            explicit = dict(getattr(prefs, "explicit", None) or getattr(prefs, "explicit_preferences", None) or {})
+            goal_mem = dict(prefs.goal_memory or {}) if hasattr(prefs, "goal_memory") else {}
+            return {
+                "goal_type": str(goal_mem.get("learning_goal_type") or explicit.get("learning_goal_type") or "").strip(),
+                "knowledge_level": str(explicit.get("knowledge_level") or "").strip(),
+                "learning_style": str(explicit.get("learning_style") or "").strip(),
+            }
+        except Exception:
+            return None

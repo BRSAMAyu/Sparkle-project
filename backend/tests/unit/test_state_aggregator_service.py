@@ -6,6 +6,8 @@ from uuid import uuid4
 
 import pytest
 
+from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement
+from app.models.calendar_event import CalendarEvent
 from app.models.achievement import UserStreakStats
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.memory import EpisodicMemory
@@ -127,3 +129,61 @@ async def test_state_aggregator_builds_social_engagement_and_learning_fields(db_
         "preferred_tool": "reopen_error_book",
         "confidence": 0.82,
     }
+
+
+@pytest.mark.asyncio
+async def test_state_aggregator_builds_achievement_and_calendar_fields(db_session, monkeypatch) -> None:
+    user_id = uuid4()
+    now = datetime.utcnow()
+    achievement = Achievement(
+        id="streak_7",
+        name="七日连胜",
+        type=AchievementType.STREAK,
+        rarity=AchievementRarity.RARE,
+        trigger_code="STREAK_DAYS",
+    )
+    db_session.add(achievement)
+    await db_session.flush()
+
+    db_session.add(
+        UserAchievement(
+            user_id=user_id,
+            achievement_id=achievement.id,
+            progress=1.0,
+            progress_value=7,
+            progress_target=7,
+            unlocked_at=now - timedelta(days=1),
+        )
+    )
+    db_session.add(
+        CalendarEvent(
+            user_id=user_id,
+            title="热力学复盘",
+            start_time=now + timedelta(hours=3),
+            end_time=now + timedelta(hours=4),
+            plan_id=None,
+            task_id=uuid4(),
+            source="manual",
+        )
+    )
+    await db_session.commit()
+
+    service = StateAggregatorService(db_session)
+    monkeypatch.setattr(
+        service.predictive_service,
+        "get_next_intent_forecast",
+        AsyncMock(return_value={"exam_urgency": {"days_left": 9, "urgent": True}}),
+    )
+
+    state = await service.get_user_state(
+        user_id,
+        required_fields=("achievement_summary", "calendar_context"),
+    )
+
+    assert state.schema_version == "user_state.v1.4"
+    assert state.achievement_summary is not None
+    assert state.achievement_summary.value.recent_unlocks[0].achievement_id == "streak_7"
+    assert state.achievement_summary.value.total_achievement_score >= 2.0
+    assert state.calendar_context is not None
+    assert state.calendar_context.value.workload_density in {"low", "medium", "high"}
+    assert state.calendar_context.value.exam_urgency == {"days_left": 9, "urgent": True}
