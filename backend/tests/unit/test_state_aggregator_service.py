@@ -180,10 +180,52 @@ async def test_state_aggregator_builds_achievement_and_calendar_fields(db_sessio
         required_fields=("achievement_summary", "calendar_context"),
     )
 
-    assert state.schema_version == "user_state.v1.5"
+    assert state.schema_version == "user_state.v1.6"
     assert state.achievement_summary is not None
     assert state.achievement_summary.value.recent_unlocks[0].achievement_id == "streak_7"
     assert state.achievement_summary.value.total_achievement_score >= 2.0
     assert state.calendar_context is not None
     assert state.calendar_context.value.workload_density in {"low", "medium", "high"}
     assert state.calendar_context.value.exam_urgency == {"days_left": 9, "urgent": True}
+
+
+@pytest.mark.asyncio
+async def test_state_aggregator_builds_recent_reflections_summary(db_session) -> None:
+    user_id = uuid4()
+    now = datetime.utcnow()
+    db_session.add_all(
+        [
+            EpisodicMemory(
+                user_id=user_id,
+                summary="最近一段时间计划推进反复停住，说明当前推进颗粒度仍然偏重。",
+                source_type="reflection",
+                source_id="reflection-1",
+                source_lane="inferred_extraction",
+                subject_type="self",
+                occurred_at=now - timedelta(hours=2),
+                tags=["stage25:reflection", "reflection_category:plan_stall"],
+                evidence_refs=[{"type": "summary", "id": "reflection-1"}],
+            ),
+            EpisodicMemory(
+                user_id=user_id,
+                summary="同一天连续失败说明当前负荷已经溢出。",
+                source_type="reflection",
+                source_id="reflection-2",
+                source_lane="inferred_extraction",
+                subject_type="self",
+                occurred_at=now - timedelta(days=1),
+                tags=["stage25:reflection", "reflection_category:overload"],
+                evidence_refs=[{"type": "summary", "id": "reflection-2"}],
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    state = await StateAggregatorService(db_session).get_user_state(
+        user_id,
+        required_fields=("recent_reflections",),
+    )
+
+    assert state.recent_reflections is not None
+    assert state.recent_reflections.value.count == 2
+    assert state.recent_reflections.value.last_category == "plan_stall"

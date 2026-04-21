@@ -10,6 +10,7 @@ T = TypeVar("T")
 UserStateFieldName = Literal[
     "commitment_summary",
     "pending_policies",
+    "recent_reflections",
     "recent_person_mentions",
     "engagement_state",
     "learning_state",
@@ -42,6 +43,13 @@ class PendingPoliciesSummaryValue:
     count: int
     next_trigger_at: datetime | None
     policy_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class RecentReflectionsSummaryValue:
+    count: int
+    last_category: str | None
+    last_at: datetime | None
 
 
 @dataclass(frozen=True)
@@ -148,9 +156,10 @@ class CalendarContextValue:
 @dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1.5"
+    schema_version: str = "user_state.v1.6"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
     pending_policies: StateFieldEnvelope[PendingPoliciesSummaryValue] | None = None
+    recent_reflections: StateFieldEnvelope[RecentReflectionsSummaryValue] | None = None
     recent_person_mentions: StateFieldEnvelope[RecentPersonMentionsValue] | None = None
     engagement_state: StateFieldEnvelope[EngagementStateValue] | None = None
     learning_state: StateFieldEnvelope[LearningStateValue] | None = None

@@ -175,6 +175,7 @@ class AccountabilityDashboardOut(BaseModel):
     partnership: PartnershipOut
     stats: PartnershipStatsOut
     pending_policies: dict = Field(default_factory=dict)
+    recent_reflections: dict = Field(default_factory=dict)
     timeline: list[CheckinOut] = Field(default_factory=list)
     heatmap: dict = Field(default_factory=dict)
     achievements: dict = Field(default_factory=dict)
@@ -735,6 +736,25 @@ async def _build_pending_policies_summary(
     }
 
 
+async def _build_recent_reflections_summary(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+) -> dict:
+    state = await StateAggregatorService(db).get_user_state(
+        user_id,
+        required_fields=("recent_reflections",),
+    )
+    field = state.recent_reflections
+    if field is None:
+        return {"count": 0, "last_category": None, "last_at": None}
+    return {
+        "count": field.value.count,
+        "last_category": field.value.last_category,
+        "last_at": field.value.last_at.isoformat() if field.value.last_at else None,
+    }
+
+
 async def _build_quick_actions_payload(
     db: AsyncSession,
     partnership: AccountabilityPartnership | None,
@@ -1038,6 +1058,7 @@ async def get_accountability_dashboard(
         partnership=await _build_partnership_out(db, partnership, current_user),
         stats=await _build_partnership_stats_payload(db, partnership, current_user),
         pending_policies=await _build_pending_policies_summary(db, user_id=current_user.id),
+        recent_reflections=await _build_recent_reflections_summary(db, user_id=current_user.id),
         timeline=await _build_partnership_timeline_payload(db, partnership_id),
         heatmap=await _build_partnership_heatmap_payload(db, partnership),
         achievements=await _build_partnership_achievements_payload(db, partnership, current_user),

@@ -35,7 +35,7 @@ async def test_user_state_v1_5_exposes_pending_policies_field(db_session, monkey
         now=datetime(2026, 4, 21, 9, 0, 0),
     )
 
-    assert state.schema_version == "user_state.v1.5"
+    assert state.schema_version == "user_state.v1.6"
     assert state.pending_policies is not None
     assert state.pending_policies.value.count >= 1
 

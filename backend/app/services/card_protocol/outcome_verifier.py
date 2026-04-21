@@ -28,6 +28,7 @@ from app.models.card_protocol import (
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.card_service import CardService
 from app.services.intervention_strategy_learner import InterventionStrategyLearner
+from app.services.task_reflection_service import TaskReflectionService
 from app.core.event_bus import EventBus
 
 
@@ -399,6 +400,8 @@ class InterventionOutcomeVerifier:
         except Exception as exc:
             logger.debug("Phase4 reflection materialization failed (non-fatal): {}", exc)
 
+        await self._request_reflection_follow_up(record, outcome, evidence)
+
     async def _phase_e_drift_check(self, record: InterventionRecord) -> None:
         """Phase E: detect long-horizon drift and create MISALIGNMENT interventions."""
         if not record.plan_card_id:
@@ -461,6 +464,76 @@ class InterventionOutcomeVerifier:
             )
         except Exception as exc:
             logger.debug("PhaseE drift check failed (non-fatal): {}", exc)
+
+    async def _request_reflection_follow_up(
+        self,
+        record: InterventionRecord,
+        outcome: InterventionOutcomeStatus,
+        evidence: dict[str, Any],
+    ) -> None:
+        category = self._derive_reflection_category(record, outcome, evidence)
+        if category is None or record.user_id is None:
+            return
+
+        payload = {
+            "event_type": "reflection_trigger_requested",
+            "user_id": str(record.user_id),
+            "category": category,
+            "intervention_id": str(record.id),
+            "plan_card_id": str(record.plan_card_id) if record.plan_card_id else "",
+            "trigger_type": record.trigger_type.value if record.trigger_type else "",
+            "acceptance_status": record.acceptance_status.value if record.acceptance_status else "",
+            "outcome_status": outcome.value,
+            "window_days": int(record.outcome_window_days or 0),
+            "decision_id": (
+                evidence.get("improvement", {}) or {}
+            ).get("decision_log_entry_id")
+            or (
+                evidence.get("improvement", {}) or {}
+            ).get("compilation_decision_log_entry_id")
+            or evidence.get("decision_log_entry_id"),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        try:
+            if self.event_bus is not None:
+                await self.event_bus.publish("reflection_trigger_requested", payload)
+            await TaskReflectionService(self.db).handle_triggered_reflection(
+                user_id=record.user_id,
+                category=category,
+                trigger_payload=payload,
+            )
+        except Exception as exc:
+            logger.debug("Stage25 reflection request failed (non-fatal): {}", exc)
+
+    @staticmethod
+    def _derive_reflection_category(
+        record: InterventionRecord,
+        outcome: InterventionOutcomeStatus,
+        evidence: dict[str, Any],
+    ) -> str | None:
+        if (
+            outcome == InterventionOutcomeStatus.INEFFECTIVE
+            and record.acceptance_status in {
+                InterventionAcceptanceStatus.ACCEPTED,
+                InterventionAcceptanceStatus.ACTED,
+                InterventionAcceptanceStatus.SEEN,
+            }
+        ):
+            return "intervention_ineffective"
+
+        improvement = evidence.get("improvement", {}) if isinstance(evidence, dict) else {}
+        negative_feedback_count = int(improvement.get("post_intervention_negative_feedback_count") or 0)
+        if record.trigger_type == InterventionTriggerType.STALL_PATTERN and (
+            outcome in {InterventionOutcomeStatus.INEFFECTIVE, InterventionOutcomeStatus.UNKNOWN}
+            or negative_feedback_count >= 2
+        ):
+            return "plan_stall"
+        if record.trigger_type == InterventionTriggerType.OVERLOAD and (
+            outcome in {InterventionOutcomeStatus.INEFFECTIVE, InterventionOutcomeStatus.UNKNOWN}
+            or negative_feedback_count >= 1
+        ):
+            return "overload"
+        return None
 
     async def _update_decision_log(
         self,

@@ -256,11 +256,32 @@ class PendingPoliciesSummaryInfo {
 }
 
 @JsonSerializable()
+class RecentReflectionsSummaryInfo {
+  RecentReflectionsSummaryInfo({
+    required this.count,
+    this.lastCategory,
+    this.lastAt,
+  });
+
+  factory RecentReflectionsSummaryInfo.fromJson(Map<String, dynamic> json) =>
+      _$RecentReflectionsSummaryInfoFromJson(json);
+
+  final int count;
+  @JsonKey(name: 'last_category')
+  final String? lastCategory;
+  @JsonKey(name: 'last_at')
+  final DateTime? lastAt;
+
+  Map<String, dynamic> toJson() => _$RecentReflectionsSummaryInfoToJson(this);
+}
+
+@JsonSerializable()
 class AccountabilityDashboardInfo {
   AccountabilityDashboardInfo({
     required this.partnership,
     required this.stats,
     this.pendingPolicies,
+    this.recentReflections,
     this.timeline = const [],
     this.heatmap = const {},
     this.achievements = const {},
@@ -277,6 +298,8 @@ class AccountabilityDashboardInfo {
   final AccountabilityStatsInfo stats;
   @JsonKey(name: 'pending_policies')
   final PendingPoliciesSummaryInfo? pendingPolicies;
+  @JsonKey(name: 'recent_reflections')
+  final RecentReflectionsSummaryInfo? recentReflections;
   final List<AccountabilityCheckinInfo> timeline;
   final Map<String, dynamic> heatmap;
   final Map<String, dynamic> achievements;

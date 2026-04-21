@@ -421,6 +421,8 @@ class MemoryInferredWriteLaneService:
         session_id: UUID,
         candidate: InferredEpisodicCandidate,
         force_write: bool = False,
+        source_type: str = "chat",
+        extra_tags: list[str] | None = None,
     ) -> EpisodicMemory | None:
         if not self._within_rate_limit(user_id):
             self._enqueue_degraded_candidate(user_id=user_id, session_id=session_id, candidate=candidate)
@@ -452,7 +454,7 @@ class MemoryInferredWriteLaneService:
         record = await memory_service.create_episodic_memory(
             user_id=user_id,
             summary=candidate.candidate_text,
-            source_type="chat",
+            source_type=source_type,
             source_id=str(session_id),
             source_lane=self.SOURCE_LANE,
             occurred_at=candidate.occurred_at,
@@ -461,6 +463,7 @@ class MemoryInferredWriteLaneService:
             tags=[
                 "stage16:auto_memory",
                 f"decay:{candidate.decay_policy}",
+                *(extra_tags or []),
             ],
             evidence_refs=candidate.evidence_refs,
             evidence_token=candidate.evidence_token,

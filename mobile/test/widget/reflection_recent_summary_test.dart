@@ -18,50 +18,48 @@ import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 void main() {
-  testWidgets('detail screen shows pending policy summary count and next trigger',
-      (tester) async {
+  testWidgets('detail screen shows recent reflection summary', (tester) async {
     await _pumpHarness(
       tester,
       repository: _FakeAccountabilityRepository(
-        pendingPolicies: PendingPoliciesSummaryInfo(
-          count: 3,
-          nextTriggerAt: DateTime(2026, 4, 22, 9, 30),
-          policyIds: const ['p1', 'p2', 'p3'],
+        recentReflections: RecentReflectionsSummaryInfo(
+          count: 2,
+          lastCategory: 'plan_stall',
+          lastAt: DateTime(2026, 4, 21, 15, 0),
         ),
       ),
     );
 
-    expect(find.text('待执行策略'), findsOneWidget);
-    expect(find.text('3 条'), findsOneWidget);
-    expect(find.textContaining('下一次触发在'), findsOneWidget);
+    expect(find.text('近期反思'), findsOneWidget);
+    expect(find.text('2 条'), findsOneWidget);
+    expect(find.text('计划停滞'), findsOneWidget);
   });
 
-  testWidgets('detail screen renders zero-state policy summary', (tester) async {
+  testWidgets('detail screen renders recent reflection zero state', (tester) async {
     await _pumpHarness(
       tester,
       repository: _FakeAccountabilityRepository(
-        pendingPolicies: PendingPoliciesSummaryInfo(count: 0),
+        recentReflections: RecentReflectionsSummaryInfo(count: 0),
       ),
     );
 
     expect(find.text('0 条'), findsWidgets);
-    expect(find.text('当前没有待执行的问责策略。'), findsOneWidget);
+    expect(find.text('最近还没有新的跨事件反思。'), findsOneWidget);
   });
 
-  testWidgets('detail screen shows event-waiting copy when next trigger is empty',
-      (tester) async {
+  testWidgets('detail screen falls back when category is unknown', (tester) async {
     await _pumpHarness(
       tester,
       repository: _FakeAccountabilityRepository(
-        pendingPolicies: PendingPoliciesSummaryInfo(
-          count: 2,
-          policyIds: const ['p1', 'p2'],
+        recentReflections: RecentReflectionsSummaryInfo(
+          count: 1,
+          lastCategory: 'mystery',
+          lastAt: DateTime(2026, 4, 21, 15, 0),
         ),
       ),
     );
 
-    expect(find.text('2 条'), findsOneWidget);
-    expect(find.textContaining('等待事件触发'), findsOneWidget);
+    expect(find.text('反思摘要'), findsOneWidget);
   });
 }
 
@@ -106,10 +104,10 @@ Future<void> _pumpHarness(
 }
 
 class _FakeAccountabilityRepository extends AccountabilityRepository {
-  _FakeAccountabilityRepository({required this.pendingPolicies})
+  _FakeAccountabilityRepository({required this.recentReflections})
       : super(_UnusedApiClient());
 
-  final PendingPoliciesSummaryInfo pendingPolicies;
+  final RecentReflectionsSummaryInfo recentReflections;
 
   @override
   Future<AccountabilityDashboardInfo> getDashboard(String partnershipId) async {
@@ -137,7 +135,8 @@ class _FakeAccountabilityRepository extends AccountabilityRepository {
         partnerCheckedInToday: true,
         totalCheckins: 9,
       ),
-      pendingPolicies: pendingPolicies,
+      pendingPolicies: PendingPoliciesSummaryInfo(count: 1),
+      recentReflections: recentReflections,
       achievements: const {'achievements': []},
       leaderboardSummary: const {},
       relationshipSummary: const {},

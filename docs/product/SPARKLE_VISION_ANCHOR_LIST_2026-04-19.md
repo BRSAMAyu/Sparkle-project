@@ -3,8 +3,8 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-21
-> **版本**: v23（Stage 22 closeout + Stage 23 in progress）
-> **v2.2 锁定**: Stage 22 ✅ / Stage 23 🔶 / Stage 24-32 ❌
+> **版本**: v24（Stage 23 closeout + Stage 24 in progress）
+> **v2.2 锁定**: Stage 22-23 ✅ / Stage 24 🔶 / Stage 25-32 ❌
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -884,6 +884,8 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | 24 | Accountability Policy Compiler | 4 | 新增 | AI | 🔶 in progress |
 | 25 | Reflection Wire-On | 5 | 扩展 | AJ | ❌ pending |
 | 26 | Scene Consolidation | 5 | 新增 | AK | ❌ pending |
+| 25 | Reflection Wire-On | 5 | 扩展 | AJ | ❌ pending |
+| 26 | Scene Consolidation | 5 | 新增 | AK | ❌ pending |
 | 27 | Foresight Engine | 5 | 扩展+新增 | AL | ❌ pending |
 | 28 | Traits 弱先验 | 5 | 扩展+新增 | AM | ❌ pending |
 | 29 | SRL 三阶段独立 Tracker | 6 | 重构+新增 | AN | ❌ pending |
@@ -895,8 +897,10 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 ```
 AG  Baseline 前置       —— Stage 22 ✅
-AH  source-state 维度登记 —— Stage 23 🔶 in progress
-AI  Policy Compiler 纯规则 —— Stage 24
+AH  source-state 维度登记 —— Stage 23 ✅ closeout
+AI  Policy Compiler 纯规则 —— Stage 24 🔶 in progress
+AJ  Reflection 消费隔离   —— Stage 25
+```
 AJ  Reflection 消费隔离   —— Stage 25
 AK  Scene 合并幂等 + 算法约束 —— Stage 26
 AL  Foresight 非 Router 分支 —— Stage 27
@@ -959,9 +963,43 @@ AP  Idiographic 仅关联不因果 —— Stage 31
 | Backend tests | 30+ passed |
 | Mobile tests | 7+ passed |
 
-**Stage 23 义务锁定**：Stage 22 Baseline Repair 已落地，Stage 23 Bayesian Wire-On 可启动。
+### 9.23 ✅ Stage 23 完成（Bayesian Wire-On）
 
-### 9.23 依赖链（v2.2 锁定，不可打乱顺序）
+**Stage 23 入场条件**：Stage 22 全部 WS green + Rule AG 无破例。
+
+**Stage 23 总目标**：将 Bayesian 推荐从 shadow 模式正式接入 Router——通过三层 rollout（off/shadow/live_canary）实现渐进式上线。
+
+**六个 Workstream（WS-BY-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-BY-SOURCE-STATE-DESIGN** | 多维 source-state 设计 | 7 维 + Rule AH registry + 128 budget |
+| **WS-BY-SOURCE-STATE-IMPL** | Learner 消费多维 state | backfill + SQAM 重跑 |
+| **WS-BY-WIRE** | 三档 rollout | off/shadow/live_canary |
+| **WS-BY-OUTCOME** | outcome 规范化 backfill | 6 canonical types |
+| **WS-BY-KILL** | Redis kill-switch | fallback to off |
+| **WS-BY-DATA-BOOTSTRAP** | 合成数据集 | 3 users × 150 pairs × 7 dims |
+
+**新增治理规则**：**Rule AH**（Stage 23 新建）：source-state 维度登记。
+
+**GLM1 独立验收**：ACCEPT - CLEAN
+
+| 验证项 | 结果 |
+|--------|------|
+| WS-BY-SOURCE-STATE-DESIGN | PASS（7 维 + 128 budget）|
+| WS-BY-SOURCE-STATE-IMPL | PASS（Learner 消费 + TTL 7d→30d）|
+| WS-BY-WIRE | PASS（off/shadow/live_canary 三档）|
+| WS-BY-OUTCOME | PASS（6 outcome types）|
+| WS-BY-KILL | PASS（Redis override）|
+| WS-BY-DATA-BOOTSTRAP | PASS（3×150×7）|
+| Guards | 3/3 PASS |
+| Tests | 49 passed |
+
+**实现路径**：Path B（infrastructure wired, default off, shadow/canary controlled rollout）
+
+**Stage 24 义务锁定**：Stage 23 Bayesian Wire-On 已落地，Stage 24 Accountability Policy Compiler 可启动。
+
+### 9.24 依赖链（v2.2 锁定，不可打乱顺序）
 
 ```
 Memory Write (Stage 16 ✅)
@@ -978,9 +1016,9 @@ Skill Distillation + Rule AF (Stage 21 ✅)
     ↓
 Baseline Repair (Stage 22 ✅) ← 已 closeout
     ↓
-Bayesian Wire-On (Stage 23 🔶) ← 当前执行
+Bayesian Wire-On (Stage 23 ✅) ← 已 closeout
     ↓
-Accountability Policy Compiler (Stage 24)
+Accountability Policy Compiler (Stage 24 🔶) ← 当前执行
     ↓
 Reflection Wire-On (Stage 25)
     ↓
@@ -1040,7 +1078,7 @@ CL SQAM 扫尾 (Stage 32)
 | Sufficiency + Conflict + History | ✅ Stage 20 | Rule AD/AE 落盘 |
 | 知识蒸馏 | ✅ Stage 21 | Rule AF + Skill Store |
 | AI 可见度基线修复 | ✅ Stage 22 | closeout（prompt 覆盖率 0.909） |
-| Bayesian Wire-On | 🔶 Stage 23 | 当前执行（6 WS） |
+| Bayesian Wire-On | ✅ Stage 23 | closeout（6 WS + Path B 三档 rollout） |
 | Accountability Policy Compiler | ❌→Stage 24 | 路线图已锁定 |
 | Reflection Wire-On | ❌→Stage 25 | 路线图已锁定 |
 | Scene Consolidation | ❌→Stage 26 | 路线图已锁定 |

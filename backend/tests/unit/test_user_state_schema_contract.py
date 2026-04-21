@@ -11,6 +11,7 @@ from app.state_aggregator.schema import (
     CalendarContextValue,
     CommitmentSummaryValue,
     PendingPoliciesSummaryValue,
+    RecentReflectionsSummaryValue,
     StateFieldEnvelope,
     SufficiencySummaryValue,
     UserStateV1,
@@ -39,7 +40,7 @@ def test_user_state_v1_uses_expected_schema_version() -> None:
         ),
     )
 
-    assert state.schema_version == "user_state.v1.5"
+    assert state.schema_version == "user_state.v1.6"
     assert state.commitment_summary is not None
     assert state.commitment_summary.value.overdue_count == 1
 
@@ -134,3 +135,23 @@ def test_user_state_v1_5_exposes_pending_policies_contract() -> None:
     assert state.pending_policies is not None
     assert state.pending_policies.value.count == 2
     assert state.pending_policies.value.policy_ids == ("policy-1", "policy-2")
+
+
+def test_user_state_v1_6_exposes_recent_reflections_contract() -> None:
+    state = UserStateV1(
+        user_id=uuid4(),
+        recent_reflections=StateFieldEnvelope(
+            value=RecentReflectionsSummaryValue(
+                count=3,
+                last_category="plan_stall",
+                last_at=datetime(2026, 4, 21, 13, 0, 0),
+            ),
+            computed_at=datetime(2026, 4, 21, 13, 5, 0),
+            source_snapshot_ids=("episodic:r1",),
+            freshness_seconds=0,
+        ),
+    )
+
+    assert state.recent_reflections is not None
+    assert state.recent_reflections.value.count == 3
+    assert state.recent_reflections.value.last_category == "plan_stall"

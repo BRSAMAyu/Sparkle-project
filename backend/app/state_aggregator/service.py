@@ -12,6 +12,7 @@ from app.models.achievement import Achievement, AchievementRarity, UserAchieveme
 from app.models.chat import ChatSession
 from app.models.calendar_event import CalendarEvent
 from app.models.focus import FocusSession, FocusStatus
+from app.models.memory import EpisodicMemory
 from app.services.memory_service import MemoryService
 from app.services.policy_scheduler_service import PolicySchedulerService
 from app.services.predictive_service import PredictiveService
@@ -32,6 +33,7 @@ from app.state_aggregator.schema import (
     EngagementStateValue,
     LearningStateValue,
     PendingPoliciesSummaryValue,
+    RecentReflectionsSummaryValue,
     RecentPersonMentionsValue,
     SocialMentionValue,
     SufficiencySummaryValue,
@@ -54,6 +56,7 @@ class StateAggregatorService:
     FIELD_TTLS_SECONDS: dict[UserStateFieldName, int] = {
         "commitment_summary": 30,
         "pending_policies": 30,
+        "recent_reflections": 30,
         "engagement_state": 60,
         "recent_person_mentions": 300,
         "learning_state": 60 * 60 * 24,
@@ -124,6 +127,7 @@ class StateAggregatorService:
         ] = {
             "commitment_summary": self._build_commitment_summary,
             "pending_policies": self._build_pending_policies_summary,
+            "recent_reflections": self._build_recent_reflections_summary,
             "recent_person_mentions": self._build_recent_person_mentions,
             "engagement_state": self._build_engagement_state,
             "learning_state": self._build_learning_state,
@@ -214,6 +218,51 @@ class StateAggregatorService:
             value=value,
             computed_at=now,
             source_snapshot_ids=tuple(f"episodic:{row.id}" for row in rows[:12]),
+            freshness_seconds=0,
+        )
+
+    async def _build_recent_reflections_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[RecentReflectionsSummaryValue]:
+        window_start = now - timedelta(days=7)
+        stmt = (
+            select(EpisodicMemory)
+            .where(
+                EpisodicMemory.user_id == user_id,
+                EpisodicMemory.deleted_at.is_(None),
+                EpisodicMemory.archived_at.is_(None),
+                EpisodicMemory.retracted_at.is_(None),
+                EpisodicMemory.revoked_at.is_(None),
+                EpisodicMemory.source_type == "reflection",
+                EpisodicMemory.source_lane == "inferred_extraction",
+                EpisodicMemory.occurred_at >= window_start,
+            )
+            .order_by(EpisodicMemory.occurred_at.desc())
+            .limit(20)
+        )
+        rows = list((await self.db.execute(stmt)).scalars().all())
+        last_category = None
+        if rows:
+            tags = rows[0].tags or []
+            last_category = next(
+                (
+                    str(tag).split(":", 1)[1]
+                    for tag in tags
+                    if str(tag).startswith("reflection_category:")
+                ),
+                None,
+            )
+        return StateFieldEnvelope(
+            value=RecentReflectionsSummaryValue(
+                count=len(rows),
+                last_category=last_category,
+                last_at=rows[0].occurred_at if rows else None,
+            ),
+            computed_at=now,
+            source_snapshot_ids=tuple(f"episodic:{row.id}" for row in rows[:10]),
             freshness_seconds=0,
         )
 

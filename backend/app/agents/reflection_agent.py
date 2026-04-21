@@ -16,6 +16,9 @@ Reflection Agent - 自我反思与修正Agent
 """
 
 import uuid
+import json
+import math
+import time
 from dataclasses import dataclass
 from datetime import timezone, datetime
 from enum import Enum
@@ -93,6 +96,23 @@ class ReflectionResult:
     issue_delta: int = 0
     review_profile_id: str = "default_response"
     best_review_result: dict[str, Any] | None = None
+
+
+@dataclass
+class TriggeredReflectionResult:
+    """Stage 25 trigger-based reflection output."""
+    reflection_id: str
+    user_id: str
+    category: str
+    summary: str
+    confidence: float
+    reasoning: str
+    evidence: list[str]
+    llm_latency_ms: int
+    estimated_cost_usd: float
+    context_tokens: int
+    context_truncated: bool
+    raw_payload: dict[str, Any]
 
 
 # ============================================
@@ -176,6 +196,42 @@ TARGETED_REFINE_PROMPT = """请精准优化以下内容中的特定部分：
 只修改需要优化的部分，保持其他内容不变。输出完整修正后的内容。"""
 
 
+TRIGGER_REFLECTION_SYSTEM_PROMPT = """你是一位学习反思分析师，负责基于用户自己的历史决策→结果链做跨事件归因。
+
+硬规则：
+1. 只根据提供的 route_history 证据和触发事件推断，不得补造事实。
+2. 不得使用诊断性标签，不得做跨用户比较。
+3. 输出必须稳定、克制、可被用户纠正。
+4. 如果证据不足，明确说明不足，不要强行归因。
+
+请输出 JSON：
+{
+  "summary": "一条可写入长期记忆的简短反思",
+  "reasoning": "为什么得出这个归因",
+  "confidence": 0.0,
+  "evidence": ["证据1", "证据2", "证据3"]
+}
+"""
+
+
+TRIGGER_REFLECTION_PROMPT = """请基于以下触发事件和最近历史，生成一次反思归因。
+
+【触发类别】
+{trigger_category}
+
+【触发事件】
+{trigger_payload}
+
+【最近 route_history 证据】
+{route_history_context}
+
+要求：
+- `summary` 必须是关于“最近一段时间可观察到的模式”，不能使用人格化或永久性表述
+- `confidence` 控制在 0.55-0.9
+- `evidence` 最多 3 条，必须来自给定历史
+"""
+
+
 # ============================================
 # ReflectionAgent 实现
 # ============================================
@@ -234,8 +290,68 @@ class ReflectionAgent:
             f"min_improvement={min_improvement}, target_score={target_score}"
         )
 
+    async def reflect(
+        self,
+        *,
+        user_id: str | None = None,
+        user_query: str | None = None,
+        original_content: str | None = None,
+        review_result: ReviewResult | None = None,
+        trigger_category: str | None = None,
+        trigger_payload: dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,
+        review_profile_id: str | None = None,
+        workflow_context: dict[str, Any] | None = None,
+    ) -> ReflectionResult | TriggeredReflectionResult:
+        assert str(user_id or "").strip(), "ReflectionAgent.reflect requires a non-empty user_id"
+        if review_result is not None:
+            assert user_query is not None and original_content is not None, (
+                "Review-mode reflection requires user_query and original_content"
+            )
+            return await self._reflect_review_fix(
+                user_id=user_id,
+                user_query=user_query,
+                original_content=original_content,
+                review_result=review_result,
+                context=context,
+                review_profile_id=review_profile_id,
+                workflow_context=workflow_context,
+            )
+        assert str(trigger_category or "").strip(), "Trigger-mode reflection requires trigger_category"
+        return await self._reflect_trigger(
+            user_id=user_id,
+            trigger_category=str(trigger_category),
+            trigger_payload=trigger_payload or {},
+            context=context or {},
+        )
+
     async def reflect_and_fix(
         self,
+        *,
+        user_id: str | None = None,
+        user_query: str,
+        original_content: str,
+        review_result: ReviewResult,
+        context: dict[str, Any] | None = None,
+        review_profile_id: str | None = None,
+        workflow_context: dict[str, Any] | None = None,
+    ) -> ReflectionResult:
+        result = await self.reflect(
+            user_id=user_id,
+            user_query=user_query,
+            original_content=original_content,
+            review_result=review_result,
+            context=context,
+            review_profile_id=review_profile_id,
+            workflow_context=workflow_context,
+        )
+        assert isinstance(result, ReflectionResult)
+        return result
+
+    async def _reflect_review_fix(
+        self,
+        *,
+        user_id: str,
         user_query: str,
         original_content: str,
         review_result: ReviewResult,
@@ -294,6 +410,7 @@ class ReflectionAgent:
                 strategy=strategy,
                 context={
                     **(context or {}),
+                    "user_id": user_id,
                     "review_profile_id": profile.id,
                     "workflow_context": workflow_context or review_result.workflow_context or {},
                 },
@@ -427,6 +544,57 @@ class ReflectionAgent:
 
         return result
 
+    async def _reflect_trigger(
+        self,
+        *,
+        user_id: str,
+        trigger_category: str,
+        trigger_payload: dict[str, Any],
+        context: dict[str, Any],
+    ) -> TriggeredReflectionResult:
+        reflection_id = f"reflection_trigger_{uuid.uuid4().hex[:12]}"
+        route_history_context = str(context.get("route_history_context") or "No route history context.")
+        context_tokens = int(context.get("route_history_context_tokens") or self._estimate_tokens(route_history_context))
+        context_truncated = bool(context.get("route_history_context_truncated"))
+        prompt = TRIGGER_REFLECTION_PROMPT.format(
+            trigger_category=trigger_category,
+            trigger_payload=json.dumps(trigger_payload, ensure_ascii=False, sort_keys=True),
+            route_history_context=route_history_context,
+        )
+        started = time.monotonic()
+        raw_response = await self.generator.chat(
+            system_prompt=TRIGGER_REFLECTION_SYSTEM_PROMPT,
+            user_message=prompt,
+            temperature=0.3,
+        )
+        latency_ms = int((time.monotonic() - started) * 1000)
+        payload = self._parse_trigger_response(
+            trigger_category=trigger_category,
+            raw_response=raw_response,
+            route_history_context=route_history_context,
+        )
+        estimated_cost_usd = self._estimate_cost_usd(
+            total_tokens=(
+                self._estimate_tokens(TRIGGER_REFLECTION_SYSTEM_PROMPT)
+                + self._estimate_tokens(prompt)
+                + self._estimate_tokens(raw_response)
+            ),
+        )
+        return TriggeredReflectionResult(
+            reflection_id=reflection_id,
+            user_id=str(user_id),
+            category=trigger_category,
+            summary=str(payload.get("summary") or "").strip(),
+            confidence=float(payload.get("confidence") or 0.0),
+            reasoning=str(payload.get("reasoning") or "").strip(),
+            evidence=[str(item) for item in (payload.get("evidence") or []) if str(item).strip()],
+            llm_latency_ms=latency_ms,
+            estimated_cost_usd=estimated_cost_usd,
+            context_tokens=context_tokens,
+            context_truncated=context_truncated,
+            raw_payload=payload,
+        )
+
     def _select_strategy(
         self,
         review_result: ReviewResult,
@@ -543,7 +711,7 @@ class ReflectionAgent:
                     )
                 ),
                 user_message=prompt,
-                temperature=0.6  # 略低于原始生成，保持一致性
+                temperature=0.3
             )
 
             return fixed_content, reasoning
@@ -684,6 +852,67 @@ class ReflectionAgent:
 
         return "\n".join(parts)
 
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        return max(1, math.ceil(len(text or "") / 4))
+
+    def _estimate_cost_usd(self, *, total_tokens: int) -> float:
+        selection = getattr(self.generator, "get_current_selection", lambda: None)()
+        estimated_cost_per_1k = float(getattr(selection, "estimated_cost_per_1k", 0.0) or 0.0)
+        if estimated_cost_per_1k <= 0:
+            return 0.0
+        return round((float(total_tokens) / 1000.0) * estimated_cost_per_1k, 6)
+
+    def _parse_trigger_response(
+        self,
+        *,
+        trigger_category: str,
+        raw_response: str,
+        route_history_context: str,
+    ) -> dict[str, Any]:
+        try:
+            parsed = json.loads(raw_response)
+        except Exception:
+            parsed = {}
+
+        summary = str(parsed.get("summary") or "").strip()
+        reasoning = str(parsed.get("reasoning") or "").strip()
+        evidence = parsed.get("evidence")
+        if not isinstance(evidence, list):
+            evidence = []
+        if not summary:
+            summary = self._fallback_trigger_summary(trigger_category, route_history_context)
+        if not reasoning:
+            reasoning = "Evidence-backed attribution was generated from the recent route history slice."
+        confidence = parsed.get("confidence")
+        try:
+            bounded_confidence = max(0.55, min(0.9, float(confidence)))
+        except (TypeError, ValueError):
+            bounded_confidence = 0.62
+        if not evidence:
+            evidence = [line for line in route_history_context.splitlines() if line.strip()][:3]
+        return {
+            "summary": summary,
+            "reasoning": reasoning,
+            "confidence": round(bounded_confidence, 2),
+            "evidence": evidence[:3],
+        }
+
+    @staticmethod
+    def _fallback_trigger_summary(trigger_category: str, route_history_context: str) -> str:
+        first_line = next((line.strip("- ").strip() for line in route_history_context.splitlines() if line.strip()), "")
+        category_map = {
+            "intervention_ineffective": "最近接受建议后，执行结果仍然没有稳定转正，说明当前干预路径还没有真正贴合你的阻力点。",
+            "plan_stall": "最近一段时间计划推进反复停住，说明当前推进颗粒度或节奏仍然偏重。",
+            "overload": "最近失败和取消集中在同一天出现，说明负荷压力已经在影响实际执行。",
+            "too_difficult": "最近遇到的阻力更像是任务门槛偏高，而不是单次状态波动。",
+            "unclear": "最近停滞更多来自起步不清晰，说明任务入口还不够明确。",
+            "abandoned": "最近放下任务的模式更像是阻力积累，而不是单次临时放弃。",
+        }
+        if first_line:
+            return f"{category_map.get(trigger_category, '最近的执行模式出现了重复阻力。')} 相关证据：{first_line}"
+        return category_map.get(trigger_category, "最近的执行模式出现了重复阻力。")
+
 
 # ============================================
 # 全局单例
@@ -743,7 +972,8 @@ if __name__ == "__main__":
 
         reflector = ReflectionAgent()
 
-        result = await reflector.reflect_and_fix(
+        result = await reflector.reflect(
+            user_id="example-user",
             user_query="什么是机器学习？",
             original_content="机器学习是人工智能的一个分支。",
             review_result=mock_review

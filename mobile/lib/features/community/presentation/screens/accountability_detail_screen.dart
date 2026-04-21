@@ -321,6 +321,13 @@ class _DashboardView extends StatelessWidget {
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
                 index: 2,
+                child: _RecentReflectionsCard(
+                  summary: dashboard.recentReflections,
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              SparkleStaggerItem(
+                index: 3,
                 child: _GoalPanel(
                   title: '我的目标',
                   goal: isInitiator
@@ -330,7 +337,7 @@ class _DashboardView extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
-                index: 3,
+                index: 4,
                 child: _GoalPanel(
                   title: '$partnerName 的目标',
                   goal: isInitiator
@@ -340,7 +347,7 @@ class _DashboardView extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
-                index: 4,
+                index: 5,
                 child: _SectionCard(
                   title: '伙伴共成长',
                   child: _GrowthSummary(
@@ -353,7 +360,7 @@ class _DashboardView extends StatelessWidget {
               if (dashboard.recentShares.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing12),
                 SparkleStaggerItem(
-                  index: 5,
+                  index: 6,
                   child: _SectionCard(
                     title: '最近分享',
                     child: Column(
@@ -408,7 +415,7 @@ class _DashboardView extends StatelessWidget {
               ],
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
-                index: 5,
+                index: 7,
                 child: _SectionCard(
                   title: '月度打卡热力图',
                   child: AccountabilityHeatmap(
@@ -917,6 +924,79 @@ class _PendingPoliciesCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _RecentReflectionsCard extends StatelessWidget {
+  const _RecentReflectionsCard({required this.summary});
+
+  final RecentReflectionsSummaryInfo? summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = summary?.count ?? 0;
+    final lastCategory = summary?.lastCategory;
+    final lastAt = summary?.lastAt;
+    final subtitle = count <= 0
+        ? '最近还没有新的跨事件反思。'
+        : lastAt == null
+            ? '最近已生成 $count 条反思摘要。'
+            : '最近一次聚焦 ${_labelForCategory(lastCategory)}，更新时间 ${DateFormat('M月d日 HH:mm').format(lastAt)}。';
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_stories_outlined, color: DS.taskReflection),
+              const SizedBox(width: DS.spacing8),
+              Text(
+                '近期反思',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            count <= 0 ? '0 条' : '$count 条',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          if ((lastCategory ?? '').isNotEmpty) ...[
+            const SizedBox(height: DS.spacing6),
+            _TinyMetric(label: _labelForCategory(lastCategory)),
+          ],
+          const SizedBox(height: DS.spacing4),
+          Text(
+            subtitle,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _labelForCategory(String? category) {
+    switch (category) {
+      case 'intervention_ineffective':
+        return '干预未奏效';
+      case 'plan_stall':
+        return '计划停滞';
+      case 'overload':
+        return '负荷过载';
+      case 'too_difficult':
+        return '任务过难';
+      case 'unclear':
+        return '任务不清晰';
+      case 'abandoned':
+        return '中途放下';
+      default:
+        return '反思摘要';
+    }
   }
 }
 

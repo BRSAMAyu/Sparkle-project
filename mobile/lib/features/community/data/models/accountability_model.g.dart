@@ -194,6 +194,24 @@ Map<String, dynamic> _$PendingPoliciesSummaryInfoToJson(
       'policy_ids': instance.policyIds,
     };
 
+RecentReflectionsSummaryInfo _$RecentReflectionsSummaryInfoFromJson(
+        Map<String, dynamic> json) =>
+    RecentReflectionsSummaryInfo(
+      count: (json['count'] as num?)?.toInt() ?? 0,
+      lastCategory: json['last_category'] as String?,
+      lastAt: json['last_at'] == null
+          ? null
+          : DateTime.parse(json['last_at'] as String),
+    );
+
+Map<String, dynamic> _$RecentReflectionsSummaryInfoToJson(
+        RecentReflectionsSummaryInfo instance) =>
+    <String, dynamic>{
+      'count': instance.count,
+      'last_category': instance.lastCategory,
+      'last_at': instance.lastAt?.toIso8601String(),
+    };
+
 AccountabilityDashboardInfo _$AccountabilityDashboardInfoFromJson(
         Map<String, dynamic> json) =>
     AccountabilityDashboardInfo(
@@ -205,6 +223,10 @@ AccountabilityDashboardInfo _$AccountabilityDashboardInfoFromJson(
           ? null
           : PendingPoliciesSummaryInfo.fromJson(
               json['pending_policies'] as Map<String, dynamic>),
+      recentReflections: json['recent_reflections'] == null
+          ? null
+          : RecentReflectionsSummaryInfo.fromJson(
+              json['recent_reflections'] as Map<String, dynamic>),
       timeline: (json['timeline'] as List<dynamic>?)
               ?.map((e) =>
                   AccountabilityCheckinInfo.fromJson(e as Map<String, dynamic>))
@@ -229,6 +251,7 @@ Map<String, dynamic> _$AccountabilityDashboardInfoToJson(
       'partnership': instance.partnership,
       'stats': instance.stats,
       'pending_policies': instance.pendingPolicies,
+      'recent_reflections': instance.recentReflections,
       'timeline': instance.timeline,
       'heatmap': instance.heatmap,
       'achievements': instance.achievements,

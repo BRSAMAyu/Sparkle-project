@@ -395,6 +395,14 @@ class AccountabilityRepository {
               ? const ['demo-policy-1', 'demo-policy-2', 'demo-policy-3']
               : const <String>[],
         ),
+        recentReflections: RecentReflectionsSummaryInfo(
+          count: partnership.status == AccountabilityStatus.active ? 2 : 0,
+          lastCategory:
+              partnership.status == AccountabilityStatus.active ? 'plan_stall' : null,
+          lastAt: partnership.status == AccountabilityStatus.active
+              ? DateTime.now().subtract(const Duration(hours: 6))
+              : null,
+        ),
         timeline: [...?_demoTimelineByPartnership?[partnershipId]],
         heatmap: {
           'year': DateTime.now().year,

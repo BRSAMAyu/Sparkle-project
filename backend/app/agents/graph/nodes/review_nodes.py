@@ -878,12 +878,12 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
         run_ledger = context_data.get("run_ledger")
 
         # 执行反思修正
-        reflection_result = await reflector.reflect_and_fix(
+        reflection_result = await reflector.reflect(
+            user_id=str(_state_get(state, "user_id") or ""),
             user_query=user_query,
             original_content=original_content,
             review_result=review_result,
             context={
-                "user_id": _state_get(state, "user_id"),
                 "session_id": _state_get(state, "session_id"),
                 "messages": messages,
             },

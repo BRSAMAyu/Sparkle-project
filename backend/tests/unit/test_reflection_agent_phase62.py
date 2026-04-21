@@ -70,7 +70,8 @@ async def test_reflection_agent_stops_early_on_low_second_round_gain():
     generator = _FakeGenerator()
     reflector = ReflectionAgent(generator_llm=generator, reviewer=reviewer, max_rounds=3, min_improvement=0.05)
 
-    result = await reflector.reflect_and_fix(
+    result = await reflector.reflect(
+        user_id="user-1",
         user_query="解释反向传播为什么这样推导",
         original_content="原始回答",
         review_result=initial_review,

@@ -24,6 +24,12 @@ message PendingPoliciesSummaryValue {
   repeated string policy_ids = 3;
 }
 
+message RecentReflectionsSummaryValue {
+  int32 count = 1;
+  string last_category = 2;
+  google.protobuf.Timestamp last_at = 3;
+}
+
 message SocialMentionValue {
   string summary = 1;
   google.protobuf.Timestamp occurred_at = 2;
@@ -64,6 +70,11 @@ message CommitmentSummaryField {
 
 message PendingPoliciesSummaryField {
   PendingPoliciesSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message RecentReflectionsSummaryField {
+  RecentReflectionsSummaryValue value = 1;
   StateFieldMetadata metadata = 2;
 }
 
@@ -110,4 +121,5 @@ message UserStateV1 {
   WorkingMemorySnapshotField working_memory_snapshot = 9;
   SufficiencySummaryField task_sufficiency_summary = 10;
   SufficiencySummaryField context_sufficiency_summary = 11;
+  RecentReflectionsSummaryField recent_reflections = 12;
 }
