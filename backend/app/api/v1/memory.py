@@ -435,6 +435,40 @@ async def list_recent_scenes(
     }
 
 
+@router.get("/accountability/foresight-hint")
+async def get_foresight_hint(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+    state = await StateAggregatorService(db).get_user_state(
+        current_user.id,
+        required_fields=("foresight_hint",),
+    )
+    field = state.foresight_hint
+    if field is None:
+        return {
+            "schema_version": state.schema_version,
+            "hint_text": None,
+            "generated_at": None,
+            "deviation_count": 0,
+            "attractor_confidences": [],
+        }
+    return {
+        "schema_version": state.schema_version,
+        "hint_text": field.value.hint_text,
+        "generated_at": field.value.generated_at,
+        "deviation_count": field.value.deviation_count,
+        "attractor_confidences": [
+            {
+                "dim": item.dim,
+                "confidence": item.confidence,
+            }
+            for item in field.value.attractor_confidences
+        ],
+    }
+
+
 @router.post("/accountability/pending/{memory_id}/resolve", response_model=PendingCommitmentOut)
 async def resolve_pending_commitment(
     memory_id: UUID,

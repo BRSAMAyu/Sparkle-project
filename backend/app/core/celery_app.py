@@ -1042,6 +1042,12 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "low_priority"}
     },
 
+    "persdyn-attractor-recompute-daily": {
+        "task": "app.core.celery_tasks.recompute_persdyn_attractors",
+        "schedule": crontab(hour=0, minute=5),
+        "options": {"queue": "low_priority"}
+    },
+
     "perceptible-cohort-promotion-biweekly": {
         "task": "app.core.celery_tasks.promote_perceptible_cohort",
         "schedule": crontab(day_of_week="mon", hour=10, minute=0),

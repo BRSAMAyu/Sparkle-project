@@ -60,6 +60,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   List<MemoryGoalItem> _goals = [];
   List<EpisodicMemoryItem> _episodic = [];
   List<RecentSceneSummaryItem> _recentScenes = [];
+  ForesightHintSummaryItem? _foresightHint;
   List<PendingCommitmentItem> _pendingCommitments = [];
   List<UnresolvedConflictItem> _unresolvedConflicts = [];
   MemoryEntryType? _filterType;
@@ -91,6 +92,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         service.getGoals(),
         service.getEpisodic(),
         service.getRecentScenes(),
+        service.getForesightHintSummary(),
         service.getPendingCommitments(),
         service.getUnresolvedConflicts(),
       ]);
@@ -102,8 +104,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         _goals = results[1] as List<MemoryGoalItem>;
         _episodic = results[2] as List<EpisodicMemoryItem>;
         _recentScenes = results[3] as List<RecentSceneSummaryItem>;
-        _pendingCommitments = results[4] as List<PendingCommitmentItem>;
-        _unresolvedConflicts = results[5] as List<UnresolvedConflictItem>;
+        _foresightHint = results[4] as ForesightHintSummaryItem?;
+        _pendingCommitments = results[5] as List<PendingCommitmentItem>;
+        _unresolvedConflicts = results[6] as List<UnresolvedConflictItem>;
         _loading = false;
       });
     } catch (e) {
@@ -182,6 +185,12 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(DS.lg),
           children: [
+            if (_foresightHint?.hintText?.isNotEmpty ?? false) ...[
+              const _SectionHeader(title: '前瞻提示'),
+              const SizedBox(height: DS.sm),
+              _buildForesightHintSection(),
+              const SizedBox(height: DS.xl),
+            ],
             if (_recentScenes.isNotEmpty) ...[
               const _SectionHeader(title: '最近场景'),
               const SizedBox(height: DS.sm),
@@ -240,8 +249,15 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         children: [
           SparkleStaggerItem(index: 0, child: _buildFilterBar(context)),
           const SizedBox(height: DS.md),
+          if (_foresightHint?.hintText?.isNotEmpty ?? false) ...[
+            SparkleStaggerItem(index: 1, child: _buildForesightHintSection()),
+            const SizedBox(height: DS.md),
+          ],
           if (_recentScenes.isNotEmpty) ...[
-            SparkleStaggerItem(index: 1, child: _buildRecentScenesSection()),
+            SparkleStaggerItem(
+              index: _foresightHint?.hintText?.isNotEmpty ?? false ? 2 : 1,
+              child: _buildRecentScenesSection(),
+            ),
             const SizedBox(height: DS.md),
           ],
           if (_unresolvedConflicts.isNotEmpty)
@@ -266,7 +282,10 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           else
             ...entries.indexed.map(
               (entry) => SparkleStaggerItem(
-                index: entry.$1 + (_recentScenes.isNotEmpty ? 2 : 1),
+                index:
+                    entry.$1 +
+                    (_recentScenes.isNotEmpty ? 2 : 1) +
+                    ((_foresightHint?.hintText?.isNotEmpty ?? false) ? 1 : 0),
                 child: _buildEntryCard(entry.$2),
               ),
             ),
@@ -400,6 +419,70 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           ),
         ),
       );
+
+  Widget _buildForesightHintSection() {
+    final item = _foresightHint;
+    if (item == null || (item.hintText?.isEmpty ?? true)) {
+      return const SizedBox.shrink();
+    }
+    final subtitleParts = [
+      if (item.deviationCount > 0) '检测到 ${item.deviationCount} 个偏离',
+      if (item.generatedAt != null) _formatUpdated(item.generatedAt),
+    ];
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(DS.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.visibility_outlined),
+                const SizedBox(width: DS.sm),
+                Text(
+                  '前瞻提示',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.sm),
+            Text(
+              item.hintText ?? '',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            if (subtitleParts.isNotEmpty) ...[
+              const SizedBox(height: DS.xs),
+              Text(
+                subtitleParts.join(' · '),
+                style: TextStyle(color: DS.textSecondary),
+              ),
+            ],
+            if (item.attractorConfidences.isNotEmpty) ...[
+              const SizedBox(height: DS.sm),
+              Wrap(
+                spacing: DS.xs,
+                runSpacing: DS.xs,
+                children: item.attractorConfidences
+                    .take(3)
+                    .map(
+                      (confidence) => Chip(
+                        label: Text(
+                          '${_labelForForesightDim(confidence.dim)} ${confidence.confidence.toStringAsFixed(2)}',
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildRecentScenesSection() => Card(
         margin: EdgeInsets.zero,
@@ -617,6 +700,23 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     final endLabel =
         '${end.month.toString().padLeft(2, '0')}/${end.day.toString().padLeft(2, '0')} ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
     return '$startLabel - $endLabel';
+  }
+
+  String _labelForForesightDim(String dim) {
+    switch (dim) {
+      case 'study_pace':
+        return '节奏';
+      case 'completion_rate':
+        return '完成率';
+      case 'engagement_level':
+        return '投入度';
+      case 'mood_valence':
+        return '情绪';
+      case 'plan_adherence':
+        return '计划跟随';
+      default:
+        return dim;
+    }
   }
 
   String _entryTypeLabel(MemoryEntryType type) => switch (type) {

@@ -276,12 +276,53 @@ class RecentReflectionsSummaryInfo {
 }
 
 @JsonSerializable()
+class ForesightConfidenceInfo {
+  ForesightConfidenceInfo({
+    required this.dim,
+    required this.confidence,
+  });
+
+  factory ForesightConfidenceInfo.fromJson(Map<String, dynamic> json) =>
+      _$ForesightConfidenceInfoFromJson(json);
+
+  final String dim;
+  final double confidence;
+
+  Map<String, dynamic> toJson() => _$ForesightConfidenceInfoToJson(this);
+}
+
+@JsonSerializable()
+class ForesightHintSummaryInfo {
+  ForesightHintSummaryInfo({
+    required this.deviationCount,
+    this.hintText,
+    this.generatedAt,
+    this.attractorConfidences = const [],
+  });
+
+  factory ForesightHintSummaryInfo.fromJson(Map<String, dynamic> json) =>
+      _$ForesightHintSummaryInfoFromJson(json);
+
+  @JsonKey(name: 'hint_text')
+  final String? hintText;
+  @JsonKey(name: 'generated_at')
+  final DateTime? generatedAt;
+  @JsonKey(name: 'deviation_count')
+  final int deviationCount;
+  @JsonKey(name: 'attractor_confidences')
+  final List<ForesightConfidenceInfo> attractorConfidences;
+
+  Map<String, dynamic> toJson() => _$ForesightHintSummaryInfoToJson(this);
+}
+
+@JsonSerializable()
 class AccountabilityDashboardInfo {
   AccountabilityDashboardInfo({
     required this.partnership,
     required this.stats,
     this.pendingPolicies,
     this.recentReflections,
+    this.foresightHint,
     this.timeline = const [],
     this.heatmap = const {},
     this.achievements = const {},
@@ -300,6 +341,8 @@ class AccountabilityDashboardInfo {
   final PendingPoliciesSummaryInfo? pendingPolicies;
   @JsonKey(name: 'recent_reflections')
   final RecentReflectionsSummaryInfo? recentReflections;
+  @JsonKey(name: 'foresight_hint')
+  final ForesightHintSummaryInfo? foresightHint;
   final List<AccountabilityCheckinInfo> timeline;
   final Map<String, dynamic> heatmap;
   final Map<String, dynamic> achievements;

@@ -212,6 +212,44 @@ Map<String, dynamic> _$RecentReflectionsSummaryInfoToJson(
       'last_at': instance.lastAt?.toIso8601String(),
     };
 
+ForesightConfidenceInfo _$ForesightConfidenceInfoFromJson(
+        Map<String, dynamic> json) =>
+    ForesightConfidenceInfo(
+      dim: json['dim'] as String? ?? '',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+    );
+
+Map<String, dynamic> _$ForesightConfidenceInfoToJson(
+        ForesightConfidenceInfo instance) =>
+    <String, dynamic>{
+      'dim': instance.dim,
+      'confidence': instance.confidence,
+    };
+
+ForesightHintSummaryInfo _$ForesightHintSummaryInfoFromJson(
+        Map<String, dynamic> json) =>
+    ForesightHintSummaryInfo(
+      hintText: json['hint_text'] as String?,
+      generatedAt: json['generated_at'] == null
+          ? null
+          : DateTime.parse(json['generated_at'] as String),
+      deviationCount: (json['deviation_count'] as num?)?.toInt() ?? 0,
+      attractorConfidences: (json['attractor_confidences'] as List<dynamic>?)
+              ?.map((e) =>
+                  ForesightConfidenceInfo.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$ForesightHintSummaryInfoToJson(
+        ForesightHintSummaryInfo instance) =>
+    <String, dynamic>{
+      'hint_text': instance.hintText,
+      'generated_at': instance.generatedAt?.toIso8601String(),
+      'deviation_count': instance.deviationCount,
+      'attractor_confidences': instance.attractorConfidences,
+    };
+
 AccountabilityDashboardInfo _$AccountabilityDashboardInfoFromJson(
         Map<String, dynamic> json) =>
     AccountabilityDashboardInfo(
@@ -227,6 +265,10 @@ AccountabilityDashboardInfo _$AccountabilityDashboardInfoFromJson(
           ? null
           : RecentReflectionsSummaryInfo.fromJson(
               json['recent_reflections'] as Map<String, dynamic>),
+      foresightHint: json['foresight_hint'] == null
+          ? null
+          : ForesightHintSummaryInfo.fromJson(
+              json['foresight_hint'] as Map<String, dynamic>),
       timeline: (json['timeline'] as List<dynamic>?)
               ?.map((e) =>
                   AccountabilityCheckinInfo.fromJson(e as Map<String, dynamic>))
@@ -252,6 +294,7 @@ Map<String, dynamic> _$AccountabilityDashboardInfoToJson(
       'stats': instance.stats,
       'pending_policies': instance.pendingPolicies,
       'recent_reflections': instance.recentReflections,
+      'foresight_hint': instance.foresightHint,
       'timeline': instance.timeline,
       'heatmap': instance.heatmap,
       'achievements': instance.achievements,

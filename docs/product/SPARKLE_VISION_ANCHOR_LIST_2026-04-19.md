@@ -3,8 +3,8 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-21
-> **版本**: v25（Stage 25 closeout + Stage 26 in progress）
-> **v2.2 锁定**: Stage 22-25 ✅ / Stage 26 🔶 / Stage 27-32 ❌
+> **版本**: v26（Stage 26 closeout + Stage 27 in progress）
+> **v2.2 锁定**: Stage 22-26 ✅ / Stage 27 🔶 / Stage 28-32 ❌
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -883,10 +883,8 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | 23 | Bayesian Wire-On | 6 | 重构 | AH | ✅ closeout |
 | 24 | Accountability Policy Compiler | 4 | 新增 | AI | ✅ closeout |
 | 25 | Reflection Wire-On | 5 | 扩展 | AJ | ✅ closeout |
-| 26 | Scene Consolidation | 5 | 新增 | AK | 🔶 in progress |
-| 25 | Reflection Wire-On | 5 | 扩展 | AJ | ❌ pending |
-| 26 | Scene Consolidation | 5 | 新增 | AK | ❌ pending |
-| 27 | Foresight Engine | 5 | 扩展+新增 | AL | ❌ pending |
+| 26 | Scene Consolidation | 5 | 新增 | AK | ✅ closeout |
+| 27 | Foresight Engine | 5 | 扩展+新增 | AL | 🔶 in progress |
 | 28 | Traits 弱先验 | 5 | 扩展+新增 | AM | ❌ pending |
 | 29 | SRL 三阶段独立 Tracker | 6 | 重构+新增 | AN | ❌ pending |
 | 30 | Metacognition 扩展 | 4 | 扩展 | AO | ❌ pending |
@@ -900,7 +898,8 @@ AG  Baseline 前置       —— Stage 22 ✅
 AH  source-state 维度登记 —— Stage 23 ✅ closeout
 AI  Policy Compiler 纯规则 —— Stage 24 ✅ closeout
 AJ  Reflection 消费隔离   —— Stage 25 ✅ closeout
-AK  Scene 合并幂等 + 算法约束 —— Stage 26 🔶 in progress
+AK  Scene 合并幂等 + 算法约束 —— Stage 26 ✅ closeout
+AL  Foresight 非 Router 分支 —— Stage 27 🔶 in progress
 ```
 AJ  Reflection 消费隔离   —— Stage 25
 AK  Scene 合并幂等 + 算法约束 —— Stage 26
@@ -1057,7 +1056,40 @@ AP  Idiographic 仅关联不因果 —— Stage 31
 
 **Stage 26 义务锁定**：Stage 25 Reflection Wire-On 已落地，Stage 26 Scene Consolidation 可启动。
 
-### 9.26 依赖链（v2.2 锁定，不可打乱顺序）
+### 9.26 ✅ Stage 26 完成（Scene Consolidation）
+
+**Stage 26 入场条件**：Stage 25 全部 WS green + Rule AJ 无破例。
+
+**Stage 26 总目标**：将零散的 EpisodicMemory 聚合为 Scene——提供时间维度的高层次抽象。
+
+**五个 Workstream（WS-SC-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-SC-MODEL** | Scene 模型 | scene_id + member_memory_ids + time |
+| **WS-SC-CLUSTER** | 聚类算法 | cosine + 时间窗口，禁 K-means |
+| **WS-SC-QUALITY** | 质量评分 | 0.35×member + 0.45×cohesion + 0.20×time |
+| **WS-SC-AGGREGATOR** | Aggregator v1.7 | recent_scenes |
+| **WS-SC-KILL** | 杀闸 | off/shadow/live + 自动降级 |
+
+**新增治理规则**：**Rule AK**（Stage 26 新建）：Scene 合并幂等 + 算法约束。
+
+**GLM1 独立验收**：ACCEPT - CLEAN
+
+| 验证项 | 结果 |
+|--------|------|
+| WS-SC-MODEL | PASS（Alembic migration）|
+| WS-SC-CLUSTER | PASS（cosine + time window）|
+| WS-SC-QUALITY | PASS（公式 + 幂等）|
+| WS-SC-AGGREGATOR | PASS（v1.7 + proto）|
+| WS-SC-KILL | PASS（自动降级）|
+| Tests | 46 backend + 3 mobile |
+
+**Carry-forward**：Scene 缺 evidence_token（可选补）——member_memory_ids 已实现治理意图
+
+**Stage 27 义务锁定**：Stage 26 Scene Consolidation 已落地，Stage 27 Foresight Engine 可启动。
+
+### 9.27 依赖链（v2.2 锁定，不可打乱顺序）
 
 ```
 Memory Write (Stage 16 ✅)
@@ -1080,11 +1112,9 @@ Accountability Policy Compiler (Stage 24 ✅) ← 已 closeout
     ↓
 Reflection Wire-On (Stage 25 ✅) ← 已 closeout
     ↓
-Scene Consolidation (Stage 26 🔶) ← 当前执行
+Scene Consolidation (Stage 26 ✅) ← 已 closeout
     ↓
-Scene Consolidation (Stage 26)
-    ↓
-Foresight Engine (Stage 27)
+Foresight Engine (Stage 27 🔶) ← 当前执行
     ↓
 Traits 弱先验 (Stage 28)
     ↓
@@ -1139,10 +1169,10 @@ CL SQAM 扫尾 (Stage 32)
 | 知识蒸馏 | ✅ Stage 21 | Rule AF + Skill Store |
 | AI 可见度基线修复 | ✅ Stage 22 | closeout（prompt 覆盖率 0.909） |
 | Bayesian Wire-On | ✅ Stage 23 | closeout（6 WS + Path B 三档 rollout） |
-| Accountability Policy Compiler | ❌→Stage 24 | 路线图已锁定 |
-| Reflection Wire-On | ❌→Stage 25 | 路线图已锁定 |
-| Scene Consolidation | ❌→Stage 26 | 路线图已锁定 |
-| Foresight Engine | ❌→Stage 27 | 路线图已锁定 |
+| Accountability Policy Compiler | ✅ Stage 24 | closeout（纯规则） |
+| Reflection Wire-On | ✅ Stage 25 | closeout（6 类 trigger） |
+| Scene Consolidation | ✅ Stage 26 | closeout（cosine + time window） |
+| Foresight Engine | 🔶 Stage 27 | 当前执行 |
 | Traits 弱先验 | ❌→Stage 28 | 路线图已锁定 |
 | SRL Tracker | ❌→Stage 29 | 路线图已锁定 |
 | Metacognition 扩展 | ❌→Stage 30 | 路线图已锁定 |

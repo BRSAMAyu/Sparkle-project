@@ -176,6 +176,7 @@ class AccountabilityDashboardOut(BaseModel):
     stats: PartnershipStatsOut
     pending_policies: dict = Field(default_factory=dict)
     recent_reflections: dict = Field(default_factory=dict)
+    foresight_hint: dict = Field(default_factory=dict)
     timeline: list[CheckinOut] = Field(default_factory=list)
     heatmap: dict = Field(default_factory=dict)
     achievements: dict = Field(default_factory=dict)
@@ -755,6 +756,37 @@ async def _build_recent_reflections_summary(
     }
 
 
+async def _build_foresight_hint_summary(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+) -> dict:
+    state = await StateAggregatorService(db).get_user_state(
+        user_id,
+        required_fields=("foresight_hint",),
+    )
+    field = state.foresight_hint
+    if field is None:
+        return {
+            "hint_text": None,
+            "generated_at": None,
+            "deviation_count": 0,
+            "attractor_confidences": [],
+        }
+    return {
+        "hint_text": field.value.hint_text,
+        "generated_at": field.value.generated_at.isoformat() if field.value.generated_at else None,
+        "deviation_count": field.value.deviation_count,
+        "attractor_confidences": [
+            {
+                "dim": item.dim,
+                "confidence": item.confidence,
+            }
+            for item in field.value.attractor_confidences
+        ],
+    }
+
+
 async def _build_quick_actions_payload(
     db: AsyncSession,
     partnership: AccountabilityPartnership | None,
@@ -1059,6 +1091,7 @@ async def get_accountability_dashboard(
         stats=await _build_partnership_stats_payload(db, partnership, current_user),
         pending_policies=await _build_pending_policies_summary(db, user_id=current_user.id),
         recent_reflections=await _build_recent_reflections_summary(db, user_id=current_user.id),
+        foresight_hint=await _build_foresight_hint_summary(db, user_id=current_user.id),
         timeline=await _build_partnership_timeline_payload(db, partnership_id),
         heatmap=await _build_partnership_heatmap_payload(db, partnership),
         achievements=await _build_partnership_achievements_payload(db, partnership, current_user),

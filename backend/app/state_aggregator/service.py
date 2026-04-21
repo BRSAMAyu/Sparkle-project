@@ -32,6 +32,8 @@ from app.state_aggregator.schema import (
     CalendarTimeBlockItemValue,
     CommitmentSummaryValue,
     EngagementStateValue,
+    ForesightConfidenceItemValue,
+    ForesightHintSummaryValue,
     LearningStateValue,
     PendingPoliciesSummaryValue,
     RecentReflectionsSummaryValue,
@@ -61,6 +63,7 @@ class StateAggregatorService:
         "pending_policies": 30,
         "recent_reflections": 30,
         "recent_scenes": 30,
+        "foresight_hint": 30,
         "engagement_state": 60,
         "recent_person_mentions": 300,
         "learning_state": 60 * 60 * 24,
@@ -133,6 +136,7 @@ class StateAggregatorService:
             "pending_policies": self._build_pending_policies_summary,
             "recent_reflections": self._build_recent_reflections_summary,
             "recent_scenes": self._build_recent_scenes_summary,
+            "foresight_hint": self._build_foresight_hint_summary,
             "recent_person_mentions": self._build_recent_person_mentions,
             "engagement_state": self._build_engagement_state,
             "learning_state": self._build_learning_state,
@@ -297,6 +301,37 @@ class StateAggregatorService:
             ),
             computed_at=now,
             source_snapshot_ids=tuple(f"scene:{item.scene_id}" for item in items),
+            freshness_seconds=0,
+        )
+
+    async def _build_foresight_hint_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[ForesightHintSummaryValue]:
+        snapshot = await self.predictive_service.build_foresight_snapshot(user_id)
+        latest_hint = snapshot.hints[0] if snapshot.hints else None
+        confidence_items = tuple(
+            ForesightConfidenceItemValue(dim=dim, confidence=state.confidence)
+            for dim, state in sorted(
+                snapshot.attractors.items(),
+                key=lambda item: (-float(item[1].confidence), item[0]),
+            )[:5]
+        )
+        source_ids = []
+        if latest_hint is not None:
+            source_ids.append(f"foresight_hint:{latest_hint.hint_id}")
+        source_ids.extend(f"persdyn:{item.dim}" for item in confidence_items)
+        return StateFieldEnvelope(
+            value=ForesightHintSummaryValue(
+                hint_text=latest_hint.message if latest_hint is not None else None,
+                generated_at=latest_hint.generated_at if latest_hint is not None else None,
+                deviation_count=len(snapshot.deviations),
+                attractor_confidences=confidence_items,
+            ),
+            computed_at=now,
+            source_snapshot_ids=tuple(source_ids),
             freshness_seconds=0,
         )
 

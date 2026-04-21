@@ -112,6 +112,18 @@ class MemoryApiService {
     return items;
   }
 
+  Future<ForesightHintSummaryItem?> getForesightHintSummary() async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/memory/accountability/foresight-hint',
+    );
+    final payload = response.data ?? <String, dynamic>{};
+    final hintText = payload['hint_text'] as String?;
+    if (hintText == null || hintText.isEmpty) {
+      return null;
+    }
+    return ForesightHintSummaryItem.fromJson(payload);
+  }
+
   Future<PendingCommitmentItem> resolvePendingCommitment(String id) async {
     final response = await _apiClient.post<Map<String, dynamic>>(
       '/memory/accountability/pending/$id/resolve',

@@ -325,9 +325,18 @@ class _DashboardView extends StatelessWidget {
                   summary: dashboard.recentReflections,
                 ),
               ),
+              if (dashboard.foresightHint?.hintText?.isNotEmpty ?? false) ...[
+                const SizedBox(height: DS.spacing12),
+                SparkleStaggerItem(
+                  index: 3,
+                  child: _ForesightHintCard(summary: dashboard.foresightHint),
+                ),
+              ],
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
-                index: 3,
+                index: dashboard.foresightHint?.hintText?.isNotEmpty ?? false
+                    ? 4
+                    : 3,
                 child: _GoalPanel(
                   title: '我的目标',
                   goal: isInitiator
@@ -337,7 +346,9 @@ class _DashboardView extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
-                index: 4,
+                index: dashboard.foresightHint?.hintText?.isNotEmpty ?? false
+                    ? 5
+                    : 4,
                 child: _GoalPanel(
                   title: '$partnerName 的目标',
                   goal: isInitiator
@@ -347,7 +358,9 @@ class _DashboardView extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing12),
               SparkleStaggerItem(
-                index: 5,
+                index: dashboard.foresightHint?.hintText?.isNotEmpty ?? false
+                    ? 6
+                    : 5,
                 child: _SectionCard(
                   title: '伙伴共成长',
                   child: _GrowthSummary(
@@ -360,7 +373,9 @@ class _DashboardView extends StatelessWidget {
               if (dashboard.recentShares.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing12),
                 SparkleStaggerItem(
-                  index: 6,
+                  index: dashboard.foresightHint?.hintText?.isNotEmpty ?? false
+                      ? 7
+                      : 6,
                   child: _SectionCard(
                     title: '最近分享',
                     child: Column(
@@ -996,6 +1011,89 @@ class _RecentReflectionsCard extends StatelessWidget {
         return '中途放下';
       default:
         return '反思摘要';
+    }
+  }
+}
+
+class _ForesightHintCard extends StatelessWidget {
+  const _ForesightHintCard({required this.summary});
+
+  final ForesightHintSummaryInfo? summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final hintText = summary?.hintText;
+    final generatedAt = summary?.generatedAt;
+    final deviationCount = summary?.deviationCount ?? 0;
+    final confidenceItems = summary?.attractorConfidences ?? const [];
+    final subtitle = [
+      if (deviationCount > 0) '检测到 $deviationCount 个偏离',
+      if (generatedAt != null) '更新时间 ${DateFormat('M月d日 HH:mm').format(generatedAt)}',
+    ].join(' · ');
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.visibility_outlined, color: DS.brandPrimary),
+              const SizedBox(width: DS.spacing8),
+              Text(
+                '前瞻提示',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            hintText ?? '暂无前瞻提示。',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing6),
+            Text(
+              subtitle,
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            ),
+          ],
+          if (confidenceItems.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: confidenceItems
+                  .take(3)
+                  .map(
+                    (item) => _TinyMetric(
+                      label:
+                          '${_labelForDim(item.dim)} ${item.confidence.toStringAsFixed(2)}',
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _labelForDim(String dim) {
+    switch (dim) {
+      case 'study_pace':
+        return '节奏';
+      case 'completion_rate':
+        return '完成率';
+      case 'engagement_level':
+        return '投入度';
+      case 'mood_valence':
+        return '情绪';
+      case 'plan_adherence':
+        return '计划跟随';
+      default:
+        return dim;
     }
   }
 }

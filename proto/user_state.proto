@@ -43,6 +43,18 @@ message RecentScenesSummaryValue {
   repeated RecentSceneItemValue items = 1;
 }
 
+message ForesightConfidenceItemValue {
+  string dim = 1;
+  double confidence = 2;
+}
+
+message ForesightHintSummaryValue {
+  string hint_text = 1;
+  google.protobuf.Timestamp generated_at = 2;
+  int32 deviation_count = 3;
+  repeated ForesightConfidenceItemValue attractor_confidences = 4;
+}
+
 message SocialMentionValue {
   string summary = 1;
   google.protobuf.Timestamp occurred_at = 2;
@@ -96,6 +108,11 @@ message RecentScenesSummaryField {
   StateFieldMetadata metadata = 2;
 }
 
+message ForesightHintSummaryField {
+  ForesightHintSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
 message RecentPersonMentionsField {
   RecentPersonMentionsValue value = 1;
   StateFieldMetadata metadata = 2;
@@ -141,4 +158,5 @@ message UserStateV1 {
   SufficiencySummaryField context_sufficiency_summary = 11;
   RecentReflectionsSummaryField recent_reflections = 12;
   RecentScenesSummaryField recent_scenes = 13;
+  ForesightHintSummaryField foresight_hint = 14;
 }

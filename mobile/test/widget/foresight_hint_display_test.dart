@@ -6,21 +6,13 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 
-class _V2MemoryApiService implements MemoryApiService {
+class _ForesightMemoryApiService implements MemoryApiService {
+  _ForesightMemoryApiService({this.foresightHint});
+
+  final ForesightHintSummaryItem? foresightHint;
+
   @override
-  Future<List<MemoryPreferenceItem>> getPreferences() async => [
-        MemoryPreferenceItem(
-          id: 'pref_1',
-          prefKey: 'depth_preference',
-          prefValue: {'value': 0.5},
-          version: 1,
-          evidenceMissing: false,
-          evidenceRefs: const [],
-          evidenceScore: 0.6,
-          correctionCount: 0,
-          updatedAt: DateTime(2025, 1, 2),
-        ),
-      ];
+  Future<List<MemoryPreferenceItem>> getPreferences() async => [];
 
   @override
   Future<List<MemoryGoalItem>> getGoals({
@@ -28,18 +20,7 @@ class _V2MemoryApiService implements MemoryApiService {
     bool includeExpired = false,
     int limit = 20,
   }) async =>
-      [
-        MemoryGoalItem(
-          id: 'goal_1',
-          title: 'Goal Alpha',
-          status: 'active',
-          evidenceMissing: false,
-          evidenceRefs: const [],
-          evidenceScore: 0.4,
-          correctionCount: 0,
-          updatedAt: DateTime(2025, 1, 3),
-        ),
-      ];
+      [];
 
   @override
   Future<List<EpisodicMemoryItem>> getEpisodic({
@@ -47,36 +28,17 @@ class _V2MemoryApiService implements MemoryApiService {
     DateTime? end,
     int limit = 20,
   }) async =>
-      [
-        EpisodicMemoryItem(
-          id: 'epi_1',
-          summary: 'Episodic Alpha',
-          sourceType: 'analysis',
-          evidenceMissing: false,
-          evidenceRefs: const [],
-          evidenceScore: 0.5,
-          correctionCount: 0,
-          occurredAt: DateTime(2025, 1, 4),
-        ),
-      ];
+      [];
 
   @override
   Future<List<PendingCommitmentItem>> getPendingCommitments() async => [];
 
   @override
-  Future<List<RecentSceneSummaryItem>> getRecentScenes() async => [
-        RecentSceneSummaryItem(
-          sceneId: 'scene_1',
-          title: '周末早晨学习场景 · 数学',
-          timeStart: DateTime(2025, 1, 4, 9),
-          timeEnd: DateTime(2025, 1, 4, 11),
-          memberCount: 3,
-          qualityScore: 0.82,
-        ),
-      ];
+  Future<List<RecentSceneSummaryItem>> getRecentScenes() async => [];
 
   @override
-  Future<ForesightHintSummaryItem?> getForesightHintSummary() async => null;
+  Future<ForesightHintSummaryItem?> getForesightHintSummary() async =>
+      foresightHint;
 
   @override
   Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async => [];
@@ -92,9 +54,13 @@ class _V2MemoryApiService implements MemoryApiService {
         status: 'resolved',
         selectedSide: selection,
         leftCandidate: UnresolvedConflictCandidate(
-            summary: 'A', lane: 'inferred_extraction'),
+          summary: 'A',
+          lane: 'inferred_extraction',
+        ),
         rightCandidate: UnresolvedConflictCandidate(
-            summary: 'B', lane: 'inferred_extraction'),
+          summary: 'B',
+          lane: 'inferred_extraction',
+        ),
       );
 
   @override
@@ -161,7 +127,7 @@ class _V2MemoryApiService implements MemoryApiService {
         evidenceRefs: const [],
         evidenceMissing: false,
         evidenceScore: 0.5,
-        correctionCount: 1,
+        correctionCount: 0,
       );
 
   @override
@@ -200,33 +166,75 @@ class _V2MemoryApiService implements MemoryApiService {
       settings;
 }
 
-void main() {
-  testWidgets('Memory panel V2 shows filters and applies type filter',
-      (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 2200));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    AppFeatureFlags.enableMemoryPanelV2 = true;
-    AppFeatureFlags.enableEvidenceViewer = false;
-    AppFeatureFlags.enableMemoryExplain = false;
+Widget _buildApp(MemoryApiService service) => ProviderScope(
+      overrides: [
+        memoryApiServiceProvider.overrideWithValue(service),
+      ],
+      child: const MaterialApp(home: MemoryPanelScreen()),
+    );
 
+void main() {
+  setUp(() {
+    AppFeatureFlags.enableMemoryPanelV2 = false;
+  });
+
+  testWidgets('shows foresight hint content on memory panel', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          memoryApiServiceProvider.overrideWithValue(_V2MemoryApiService()),
-        ],
-        child: const MaterialApp(home: MemoryPanelScreen()),
+      _buildApp(
+        _ForesightMemoryApiService(
+          foresightHint: ForesightHintSummaryItem(
+            hintText: '你最近学习节奏低于常态，先把目标缩成 15 分钟再启动。',
+            generatedAt: DateTime(2026, 4, 21, 9, 0),
+            deviationCount: 2,
+            attractorConfidences: const [],
+          ),
+        ),
       ),
     );
 
     await tester.pumpAndSettle();
 
-    expect(find.text('证据全部'), findsOneWidget);
-    expect(find.text('Episodic Alpha'), findsOneWidget);
+    expect(find.text('前瞻提示'), findsWidgets);
+    expect(find.text('你最近学习节奏低于常态，先把目标缩成 15 分钟再启动。'), findsOneWidget);
+    expect(find.textContaining('检测到 2 个偏离'), findsOneWidget);
+  });
 
-    await tester.tap(find.text('经历'));
+  testWidgets('shows mapped attractor confidence chips', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(
+        _ForesightMemoryApiService(
+          foresightHint: ForesightHintSummaryItem(
+            hintText: '你最近有些偏离原计划，先把今天的主线重新钉住。',
+            generatedAt: DateTime(2026, 4, 21, 9, 0),
+            deviationCount: 1,
+            attractorConfidences: [
+              ForesightConfidenceItem(dim: 'study_pace', confidence: 0.81),
+              ForesightConfidenceItem(dim: 'plan_adherence', confidence: 0.74),
+            ],
+          ),
+        ),
+      ),
+    );
+
     await tester.pumpAndSettle();
 
-    expect(find.text('Episodic Alpha'), findsOneWidget);
-    expect(find.text('depth_preference'), findsNothing);
+    expect(find.text('节奏 0.81'), findsOneWidget);
+    expect(find.text('计划跟随 0.74'), findsOneWidget);
+  });
+
+  testWidgets('hides foresight section when hint is absent', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(_ForesightMemoryApiService()),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('前瞻提示'), findsNothing);
   });
 }

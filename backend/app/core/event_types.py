@@ -26,6 +26,8 @@ TOOL_EXECUTION_TIMED_OUT = "tool.execution.timed_out"
 PLAN_HEALTH_ALERTED = "plan.health.alerted"
 SCENE_CREATED = "scene.created"
 SCENE_UPDATED = "scene.updated"
+ATTRACTOR_UPDATED = "attractor_updated"
+JITAI_TRIGGERED = "jitai_triggered"
 
 __all__ = [
     "CAPSULE_FEEDBACK_SUBMITTED",
@@ -52,4 +54,6 @@ __all__ = [
     "PLAN_HEALTH_ALERTED",
     "SCENE_CREATED",
     "SCENE_UPDATED",
+    "ATTRACTOR_UPDATED",
+    "JITAI_TRIGGERED",
 ]

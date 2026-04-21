@@ -14,26 +14,50 @@ import json
 import statistics
 from collections import defaultdict
 from datetime import timezone, datetime, timedelta
+from time import perf_counter
 from typing import Any
 from uuid import UUID, uuid4
 
 from loguru import logger
+from prometheus_client import Counter as PrometheusCounter
+from prometheus_client import Histogram
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.cache import cache_service
 from app.core.llm_router import llm_router
+from app.core.metrics import get_or_create_metric
 from app.config import settings
 from app.models.candidate_action_feedback import CandidateActionFeedback
 from app.models.event import TrackingEvent
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.memory import Scene
 from app.models.galaxy import StudyRecord
 from app.models.task import Task, TaskStatus
+from app.schemas.foresight import ForesightSnapshot
+from app.services.aurora_stage27_foresight_kill_switch_service import AuroraStage27ForesightKillSwitchService
+from app.services.foresight_deviation_service import DeviationDetector
+from app.services.jitai_trigger_service import JITAITrigger
 from app.services.llm_service import get_llm_service_for_specific_model
+from app.services.persdyn_attractor_service import PersDynAttractorService
 from app.services.within_category_preference_service import WithinCategoryPreferenceService
 from app.tools.entity_cards import build_prediction_entity_card
+
+FORESIGHT_SNAPSHOT_GENERATED_TOTAL = get_or_create_metric(
+    PrometheusCounter,
+    "sparkle_foresight_snapshot_generated_total",
+    "Total foresight snapshots generated",
+    ["cache", "mode"],
+)
+FORESIGHT_SNAPSHOT_LATENCY_SECONDS = get_or_create_metric(
+    Histogram,
+    "sparkle_foresight_snapshot_latency_seconds",
+    "Foresight snapshot generation latency",
+    ["mode"],
+    buckets=[0.01, 0.025, 0.05, 0.08, 0.12, 0.15, 0.2, 0.35, 0.5, 1.0],
+)
 
 
 class EngagementForecast:
@@ -108,6 +132,125 @@ class PredictiveService:
     @staticmethod
     def _get_current_time() -> datetime:
         return datetime.now(timezone.utc)
+
+    async def build_foresight_snapshot(self, user_id: UUID) -> ForesightSnapshot:
+        normalized_user_id = self._require_user_id(user_id)
+        kill_switch = AuroraStage27ForesightKillSwitchService()
+        mode = await kill_switch.get_mode()
+        cache_key = await self._build_foresight_cache_key(normalized_user_id, kill_switch=kill_switch)
+        cached = await cache_service.get(cache_key)
+        if isinstance(cached, dict):
+            FORESIGHT_SNAPSHOT_GENERATED_TOTAL.labels(cache="hit", mode=mode).inc()
+            return ForesightSnapshot.from_dict(cached)
+
+        started_at = perf_counter()
+        now = self._get_current_time().replace(tzinfo=None)
+        engagement = await self.predict_engagement(normalized_user_id)
+        optimal_time = await self.recommend_optimal_time(normalized_user_id)
+        dropout_risk = await self.detect_dropout_risk(normalized_user_id)
+        next_intent = await self.get_next_intent_forecast(normalized_user_id)
+        subject_difficulty = await self._build_subject_difficulty_projection(normalized_user_id)
+
+        attractors = {}
+        deviations = ()
+        hints = ()
+        if mode != "off":
+            attractor_service = PersDynAttractorService(self.db)
+            if await kill_switch.is_feature_enabled("attractor"):
+                attractors = await attractor_service.get_snapshot_attractors(user_id=normalized_user_id)
+            if attractors and await kill_switch.is_feature_enabled("deviation"):
+                current_observation = await attractor_service.build_current_observation(user_id=normalized_user_id, now=now)
+                deviations = DeviationDetector().detect(
+                    attractors=attractors,
+                    current_observations=current_observation,
+                )
+            if deviations and await kill_switch.is_feature_live("jitai"):
+                hints = await JITAITrigger().generate_hints(
+                    user_id=normalized_user_id,
+                    deviations=deviations,
+                    now=now,
+                    mutate_state=True,
+                )
+
+        snapshot = ForesightSnapshot(
+            existing_predictions={
+                "next_active_time": engagement.to_dict(),
+                "optimal_learning_time": optimal_time,
+                "subject_difficulty": subject_difficulty,
+                "next_intent": next_intent,
+                "dropout_risk": dropout_risk,
+            },
+            attractors=attractors,
+            deviations=deviations,
+            hints=hints,
+            generated_at=now,
+            user_id=str(normalized_user_id),
+            version="v1",
+        )
+        await cache_service.set(
+            cache_key,
+            snapshot.to_dict(),
+            ttl=int(settings.AURORA_FORESIGHT_CACHE_TTL_SECONDS),
+        )
+        FORESIGHT_SNAPSHOT_GENERATED_TOTAL.labels(cache="miss", mode=mode).inc()
+        FORESIGHT_SNAPSHOT_LATENCY_SECONDS.labels(mode=mode).observe(max(0.0, perf_counter() - started_at))
+        return snapshot
+
+    @staticmethod
+    def _require_user_id(user_id: UUID | str) -> UUID:
+        if isinstance(user_id, UUID):
+            return user_id
+        normalized = str(user_id or "").strip()
+        if not normalized:
+            raise ValueError("PredictiveService.build_foresight_snapshot requires a non-empty user_id")
+        return UUID(normalized)
+
+    async def _build_foresight_cache_key(
+        self,
+        user_id: UUID,
+        *,
+        kill_switch: AuroraStage27ForesightKillSwitchService,
+    ) -> str:
+        modes = await kill_switch.get_all()
+        return (
+            f"foresight:snapshot:{user_id}:v1:"
+            f"{modes['mode']}:{modes['attractor']}:{modes['deviation']}:{modes['jitai']}"
+        )
+
+    async def _build_subject_difficulty_projection(self, user_id: UUID) -> dict[str, Any] | None:
+        topic_id = await self._resolve_subject_difficulty_topic(user_id)
+        if topic_id is None:
+            return None
+        prediction = await self.predict_difficulty(user_id=user_id, topic_id=topic_id)
+        return prediction.to_dict()
+
+    async def _resolve_subject_difficulty_topic(self, user_id: UUID) -> UUID | None:
+        latest_study_stmt = (
+            select(StudyRecord.node_id)
+            .where(
+                StudyRecord.user_id == user_id,
+                StudyRecord.deleted_at.is_(None),
+            )
+            .order_by(StudyRecord.created_at.desc())
+            .limit(1)
+        )
+        latest_study_topic = (await self.db.execute(latest_study_stmt)).scalar_one_or_none()
+        if isinstance(latest_study_topic, UUID):
+            return latest_study_topic
+
+        pending_task_stmt = (
+            select(Task.knowledge_node_id)
+            .where(
+                Task.user_id == user_id,
+                Task.deleted_at.is_(None),
+                Task.knowledge_node_id.is_not(None),
+                Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]),
+            )
+            .order_by(Task.priority.desc(), Task.updated_at.desc())
+            .limit(1)
+        )
+        task_topic = (await self.db.execute(pending_task_stmt)).scalar_one_or_none()
+        return task_topic if isinstance(task_topic, UUID) else None
 
     async def predict_engagement(self, user_id: UUID) -> EngagementForecast:
         """

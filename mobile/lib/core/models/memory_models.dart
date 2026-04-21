@@ -305,6 +305,48 @@ class RecentSceneSummaryItem {
   final double qualityScore;
 }
 
+class ForesightConfidenceItem {
+  ForesightConfidenceItem({
+    required this.dim,
+    required this.confidence,
+  });
+
+  factory ForesightConfidenceItem.fromJson(Map<String, dynamic> json) =>
+      ForesightConfidenceItem(
+        dim: json['dim'] as String? ?? '',
+        confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      );
+
+  final String dim;
+  final double confidence;
+}
+
+class ForesightHintSummaryItem {
+  ForesightHintSummaryItem({
+    required this.deviationCount,
+    required this.attractorConfidences,
+    this.hintText,
+    this.generatedAt,
+  });
+
+  factory ForesightHintSummaryItem.fromJson(Map<String, dynamic> json) =>
+      ForesightHintSummaryItem(
+        hintText: json['hint_text'] as String?,
+        generatedAt: _parseDate(json['generated_at']),
+        deviationCount: json['deviation_count'] as int? ?? 0,
+        attractorConfidences:
+            (json['attractor_confidences'] as List<dynamic>? ?? [])
+                .whereType<Map<String, dynamic>>()
+                .map(ForesightConfidenceItem.fromJson)
+                .toList(),
+      );
+
+  final String? hintText;
+  final DateTime? generatedAt;
+  final int deviationCount;
+  final List<ForesightConfidenceItem> attractorConfidences;
+}
+
 class UnresolvedConflictCandidate {
   UnresolvedConflictCandidate({
     required this.summary,

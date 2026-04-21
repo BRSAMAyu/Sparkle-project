@@ -243,6 +243,19 @@ class Settings(BaseSettings):
     AURORA_SCENE_TIME_WINDOW_HOURS: int = 72
     AURORA_SCENE_QUALITY_THRESHOLD: float = 0.6
 
+    # Aurora Stage 27
+    AURORA_FORESIGHT_MODE: str = "off"  # off | shadow | live
+    AURORA_FORESIGHT_ATTRACTOR: str = "live"  # off | shadow | live
+    AURORA_FORESIGHT_DEVIATION: str = "live"  # off | shadow | live
+    AURORA_FORESIGHT_JITAI: str = "live"  # off | shadow | live
+    AURORA_FORESIGHT_CACHE_TTL_SECONDS: int = 60
+    AURORA_FORESIGHT_ATTRACTOR_ALPHA: float = 0.1
+    AURORA_FORESIGHT_ATTRACTOR_MIN_CONFIDENCE: float = 0.3
+    AURORA_FORESIGHT_DEVIATION_Z_THRESHOLD: float = 1.5
+    AURORA_FORESIGHT_JITAI_DAILY_BUDGET: int = 3
+    AURORA_FORESIGHT_JITAI_COOLDOWN_HOURS: int = 24
+    AURORA_FORESIGHT_JITAI_MISFIRE_THRESHOLD: float = 0.15
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

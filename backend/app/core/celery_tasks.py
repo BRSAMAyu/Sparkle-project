@@ -839,3 +839,25 @@ def retry_achievement_photon_reward(
         if attempt > max_retries:
             raise
         raise self.retry(exc=exc, countdown=30 * (2 ** int(self.request.retries or 0)))
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.recompute_persdyn_attractors")
+def recompute_persdyn_attractors(self):
+    """Recompute Stage 27 PersDyn attractors for all users."""
+    import asyncio
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.persdyn_attractor_service import PersDynAttractorService
+
+    async def _recompute():
+        async with AsyncSessionLocal() as session:
+            service = PersDynAttractorService(session)
+            updated = await service.recompute_all_users()
+            logger.info("✅ Recomputed PersDyn attractors for {} users", updated)
+            return {"status": "success", "updated_users": updated}
+
+    try:
+        return asyncio.run(_recompute())
+    except Exception as exc:
+        logger.error("❌ Failed to recompute PersDyn attractors: {}", exc)
+        raise self.retry(exc=exc, countdown=60 * (2 ** int(self.request.retries or 0)))

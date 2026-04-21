@@ -46,6 +46,9 @@ class _SubjectTypeApiService implements MemoryApiService {
   Future<List<RecentSceneSummaryItem>> getRecentScenes() async => [];
 
   @override
+  Future<ForesightHintSummaryItem?> getForesightHintSummary() async => null;
+
+  @override
   Future<List<UnresolvedConflictItem>> getUnresolvedConflicts() async => [];
 
   @override
