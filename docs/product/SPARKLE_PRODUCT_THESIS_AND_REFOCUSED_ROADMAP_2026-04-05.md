@@ -219,15 +219,28 @@ It means their right to exist depends on user benefit.
 
 ## 6. The Core User Experience
 
-## 6.5 Aurora Stage Naming Update
+## 6.5 Aurora Stage Naming Update (Amended 2026-04-21)
 
-The Aurora implementation roadmap is now locked as:
+The Aurora implementation roadmap is now governed by the accepted v2.1 amendment record:
+
+- [SPARKLE_AURORA_ROADMAP_v2_1_AMENDMENT_2026-04-21.md](/Users/brsama/code/GitHub/Sparkle-project/docs/product/SPARKLE_AURORA_ROADMAP_v2_1_AMENDMENT_2026-04-21.md)
+
+The active stage ladder is:
 
 1. Stage 19: Working Memory + LLM extract dry-run + consolidation
 2. Stage 20: Sufficiency Judge + Conflict Resolver + Route History
-3. Stage 21: Skill distillation
-4. Stage 22: Bayesian wire-on
-5. Stage 23: Accountability compiler closeout
+3. Stage 21: Skill MVP
+4. Stage 22: Baseline Repair
+5. Stage 23: Bayesian wire-on + SS-AUDIT
+6. Stage 24: Accountability Policy Compiler
+7. Stage 25: Reflection Wire-On
+8. Stage 26: Scene Consolidation
+9. Stage 27: Foresight Engine
+10. Stage 28: Traits weak-prior layer
+11. Stage 29: SRLPhaseTracker beside ScaffoldingFSM
+12. Stage 30: Metacognition three-axis expansion
+13. Stage 31: Idiographic Lite
+14. Stage 32: CL SQAM tail closeout
 
 Rule naming is correspondingly locked as:
 
@@ -235,12 +248,21 @@ Rule naming is correspondingly locked as:
 2. Rule AE: Conflict Resolver governance
 3. Rule AF: Skill cross-user sharing governance
 4. Rule AG: Accountability compiler governance
+5. Rule AH: reflection-loop contamination guard
+6. Rule AI: scene clustering idempotence + temporal anchoring
+7. Rule AJ: prediction cannot become control flow
+8. Rule AK: traits remain low-confidence and non-exposed
+9. Rule AL: SRL / SDT language governance + empathy budget
+10. Rule AM: metacognition outputs may not use diagnostic labels
+11. Rule AN: idiographic association may not cross users or claim causality
 
-Stage 22 entry obligations are now locked as:
+Operational locks from the amendment are:
 
-1. Bayesian wire-on must consume `Route History + Skill usage_count + Sufficiency Judge`
-2. Stage 22 must rerun the Stage 14 SQAM four-dimensional measurement set
-3. Bayesian may not build a parallel history collector outside the Stage 20 / 21 substrate
+1. Stage 22 is a repair stage, not a Bayesian stage, and introduces no new rule family.
+2. Stage 23 is the first stage allowed to consume `Route History + Sufficiency + Skill injection evidence` for Bayesian wiring, and it may not build a parallel history collector.
+3. Stage 25 and Stage 26 are parallelizable in theory, but the default order under constrained execution bandwidth is `25 → 26`.
+4. Stage 29 does not rename `ScaffoldingFSM`; it adds a separate `SRLPhaseTracker`.
+5. Stage 31 is intentionally Lite: it may discover user-specific associations but may not claim causality.
 
 The core user experience is not:
 
