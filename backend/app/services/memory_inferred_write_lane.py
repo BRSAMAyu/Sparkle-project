@@ -25,6 +25,7 @@ from app.models.chat import ChatMessage, MessageRole
 from app.models.memory import EpisodicMemory
 from app.models.user_memory_settings import UserMemorySettings
 from app.services.commitment_parser import parse_commitment_due_at
+from app.services.conflict_resolver_service import ConflictCandidate, ConflictResolverService
 from app.services.memory_service import MemoryService
 
 
@@ -442,7 +443,8 @@ class MemoryInferredWriteLaneService:
             MEMORY_INFERRED_WRITE_TOTAL.labels(status="duplicate").inc()
             return None
 
-        if await self._has_blocking_conflict(user_id=user_id, candidate=candidate):
+        resolution = await self._resolve_conflict(user_id=user_id, candidate=candidate)
+        if resolution is not None and resolution.action in {"reject", "surface_to_user"}:
             MEMORY_INFERRED_WRITE_TOTAL.labels(status="explicit_conflict").inc()
             return None
 
@@ -473,9 +475,64 @@ class MemoryInferredWriteLaneService:
         if record is None:
             MEMORY_INFERRED_WRITE_TOTAL.labels(status="blocked").inc()
             return None
+        if resolution is not None and resolution.action == "accept" and resolution.loser_record_ids:
+            await ConflictResolverService(self.db).apply_live_decision(
+                candidate=self._to_conflict_candidate(user_id=user_id, session_id=session_id, candidate=candidate),
+                decision=resolution,
+                new_record=record,
+            )
         return record
 
-    async def _has_blocking_conflict(
+    async def _resolve_conflict(
+        self,
+        *,
+        user_id: UUID,
+        candidate: InferredEpisodicCandidate,
+    ):
+        resolver = ConflictResolverService(self.db)
+        existing_records = await resolver.load_conflicting_records(
+            user_id=user_id,
+            semantic_key=candidate.semantic_key,
+        )
+        if not existing_records:
+            return None
+
+        conflict_candidate = self._to_conflict_candidate(
+            user_id=user_id,
+            session_id=None,
+            candidate=candidate,
+        )
+        decision = resolver.resolve(candidate=conflict_candidate, existing_records=existing_records)
+
+        if settings.SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE:
+            legacy_blocked = await self._legacy_has_blocking_conflict(user_id=user_id, candidate=candidate)
+            await resolver.record_shadow_comparison(
+                user_id=user_id,
+                legacy_blocked=legacy_blocked,
+                decision=decision,
+            )
+            if legacy_blocked:
+                return decision.__class__(
+                    action="reject",
+                    reason="legacy_blocked_shadow_mode",
+                    winner_record_id=decision.winner_record_id,
+                    winner_lane=decision.winner_lane,
+                    loser_record_ids=decision.loser_record_ids,
+                    loser_lanes=decision.loser_lanes,
+                    evidence_tokens=decision.evidence_tokens,
+                    conflict_key=decision.conflict_key,
+                    metadata={
+                        **decision.metadata,
+                        "shadow_resolver_action": decision.action,
+                    },
+                )
+            return None
+
+        if decision.action in {"reject", "surface_to_user"}:
+            await resolver.apply_live_decision(candidate=conflict_candidate, decision=decision)
+        return decision
+
+    async def _legacy_has_blocking_conflict(
         self,
         *,
         user_id: UUID,
@@ -492,6 +549,29 @@ class MemoryInferredWriteLaneService:
             )
         )
         return result.scalar_one_or_none() is not None
+
+    @staticmethod
+    def _to_conflict_candidate(
+        *,
+        user_id: UUID,
+        session_id: UUID | None,
+        candidate: InferredEpisodicCandidate,
+    ) -> ConflictCandidate:
+        return ConflictCandidate(
+            user_id=user_id,
+            summary=candidate.candidate_text,
+            source_lane=candidate.source_lane,
+            confidence=candidate.confidence,
+            occurred_at=candidate.occurred_at,
+            evidence_token=candidate.evidence_token,
+            semantic_key=candidate.semantic_key,
+            subject_type=candidate.subject_type,
+            due_at=candidate.due_at,
+            evidence_refs=tuple(candidate.evidence_refs),
+            mentioned_entity_hash=candidate.mentioned_entity_hash,
+            mentioned_entity_owner_user_id=candidate.mentioned_entity_owner_user_id,
+            source_id=str(session_id) if session_id is not None else None,
+        )
 
     @staticmethod
     def _pick_candidate_sentence(user_message: str) -> str | None:

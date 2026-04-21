@@ -19,6 +19,7 @@ from app.aurora.migration import (
 )
 from app.aurora.schemas import SignalSnapshot
 from app.config import aurora_flags
+from app.config import settings
 from app.core.metrics import ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL, ROUTING_SUMMARY_CONTEXT_TOTAL
 from app.core.unified_intent_router import UnifiedIntentType
 from app.gen.agent.v1 import agent_service_pb2
@@ -27,9 +28,15 @@ from app.orchestration.mode_workflow_config import get_mode_strategy
 from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
 from app.services.cognitive_service import CognitiveService
+from app.services.follow_up_question_service import FollowUpQuestionService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
 from app.services.plan_progress_service import PlanProgressService
+from app.services.route_history_service import RouteHistoryService
 from app.services.routing_profile_service import RoutingProfileService
+from app.services.sufficiency_judge_schema import CurrentTurnParseResult
+from app.services.sufficiency_judge_service import SufficiencyJudgeService
+from app.state_aggregator.schema import SufficiencySummaryValue
+from app.state_aggregator.service import StateAggregatorService
 
 
 def _utcnow() -> datetime:
@@ -247,6 +254,87 @@ class RoutingEngineMixin:
             )
         )
 
+    async def _collect_stage20_sufficiency(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        routing_input: DualCoreRoutingInput,
+        plan_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+    ) -> tuple[SufficiencySummaryValue | None, SufficiencySummaryValue | None, str | None]:
+        if active_db is None:
+            return None, None, None
+
+        facts = (plan_context or {}).get("facts") if isinstance(plan_context, dict) else None
+        target_object_resolved = bool(
+            routing_input.has_active_plan
+            or routing_input.primary_challenge_area
+            or (isinstance(facts, dict) and facts.get("topic"))
+            or (isinstance(user_context_payload, dict) and user_context_payload.get("active_plans"))
+        )
+        constraint_explicit = bool(
+            routing_input.session_length_preference
+            or routing_input.difficulty_preference is not None
+            or routing_input.plan_health_status
+            or (isinstance(facts, dict) and (facts.get("target_date") or facts.get("daily_hours")))
+        )
+        parse_result = CurrentTurnParseResult(
+            intent=routing_input.intent,
+            intent_confidence=routing_input.intent_confidence,
+            information_sufficient=routing_input.information_sufficient,
+            target_object_resolved=target_object_resolved,
+            constraint_explicit=constraint_explicit,
+        )
+        aggregator = StateAggregatorService(active_db)
+        user_state = await aggregator.get_user_state(
+            uuid.UUID(user_id),
+            required_fields=("task_sufficiency_summary", "context_sufficiency_summary"),
+            current_turn_parse=parse_result,
+            now=_utcnow(),
+        )
+        task_summary = user_state.task_sufficiency_summary.value if user_state.task_sufficiency_summary else None
+        context_summary = (
+            user_state.context_sufficiency_summary.value if user_state.context_sufficiency_summary else None
+        )
+        judgment_id = None
+        if task_summary is not None and context_summary is not None:
+            judge = SufficiencyJudgeService()
+            full_state = await aggregator.get_user_state(
+                uuid.UUID(user_id),
+                required_fields=(
+                    "commitment_summary",
+                    "recent_person_mentions",
+                    "engagement_state",
+                    "working_memory_snapshot",
+                ),
+                current_turn_parse=parse_result,
+                now=_utcnow(),
+            )
+            judgment = judge.evaluate(user_state=full_state, current_turn=parse_result)
+            judgment_id = await judge.persist_judgment(active_db, user_state=full_state, judgment=judgment)
+        return task_summary, context_summary, judgment_id
+
+    def _build_stage20_prompt_additions(
+        self,
+        *,
+        task_summary: SufficiencySummaryValue | None,
+        context_summary: SufficiencySummaryValue | None,
+    ) -> tuple[str | None, str]:
+        service = FollowUpQuestionService()
+        follow_up_question = None
+        if (
+            settings.SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED
+            and task_summary is not None
+            and task_summary.score < 0.6
+        ):
+            follow_up_question = service.select_question(task_summary)
+
+        context_caveat = ""
+        if context_summary is not None:
+            context_caveat = service.render_context_caveat(context_summary)
+        return follow_up_question, context_caveat
+
     async def _apply_dual_core_routing(
         self,
         *,
@@ -269,6 +357,19 @@ class RoutingEngineMixin:
             plan_context=plan_context,
             unified_routing_result=unified_routing_result,
             information_sufficient=information_sufficient,
+        )
+        task_summary_value, ctx_summary_value, sufficiency_judgment_id = (
+            await self._collect_stage20_sufficiency(
+                active_db=active_db,
+                user_id=user_id,
+                routing_input=routing_input,
+                plan_context=plan_context,
+                user_context_payload=user_context_payload,
+            )
+        )
+        follow_up_question, context_caveat = self._build_stage20_prompt_additions(
+            task_summary=task_summary_value,
+            context_summary=ctx_summary_value,
         )
         cutover_state = resolve_cutover_state(user_id)
 
@@ -337,7 +438,29 @@ class RoutingEngineMixin:
             transition_hint = f"\n\n【开场过渡提示】{phrase}"
             prompt_instruction = (prompt_instruction + transition_hint).strip()
 
+        stage20_prompt_parts: list[str] = []
+        if follow_up_question:
+            stage20_prompt_parts.append(f"## Sufficiency Follow-Up\n在给出方案前，先只问这一句：{follow_up_question}")
+        if context_caveat:
+            stage20_prompt_parts.append(f"## Context Caveat\n可以自然提一句：{context_caveat}")
+        if stage20_prompt_parts:
+            prompt_instruction = "\n\n".join(
+                part for part in [prompt_instruction, *stage20_prompt_parts] if part
+            ).strip()
+
         state.context_data["dual_core_prompt_instruction"] = prompt_instruction
+        if task_summary_value is not None:
+            state.context_data["task_sufficiency_summary"] = {
+                "score": task_summary_value.score,
+                "top_missing_dimensions": list(task_summary_value.top_missing_dimensions),
+            }
+        if ctx_summary_value is not None:
+            state.context_data["context_sufficiency_summary"] = {
+                "score": ctx_summary_value.score,
+                "top_missing_dimensions": list(ctx_summary_value.top_missing_dimensions),
+            }
+        if follow_up_question:
+            state.context_data["follow_up_question"] = follow_up_question
         state.context_data["dual_core_signal_snapshot"] = {
             "intent": routing_input.intent,
             "intent_confidence": routing_input.intent_confidence,
@@ -352,6 +475,25 @@ class RoutingEngineMixin:
             "current_guidance": routing_input.current_guidance,
             "routing_debug": (decision.routing_debug or {}),
         }
+        if active_db is not None:
+            try:
+                decision_id = await RouteHistoryService(active_db).record_decision(
+                    user_id=uuid.UUID(user_id),
+                    input_aggregator_snapshot_id=(
+                        f"aggregator:{user_id}:{_utcnow().isoformat(timespec='seconds')}"
+                    ),
+                    sufficiency_judgment_id=uuid.UUID(sufficiency_judgment_id) if sufficiency_judgment_id else None,
+                    decision_type=decision.mode,
+                    decision_payload={
+                        **decision.to_dict(),
+                        "route_execution_mode": route_decision.execution_mode,
+                        "route_reason": route_decision.reason,
+                        "follow_up_question": follow_up_question,
+                    },
+                )
+                state.context_data["route_history_decision_id"] = str(decision_id)
+            except Exception as exc:
+                logger.warning("Stage20 route history write failed: {}", exc)
         await self._persist_dual_core_decision_snapshot(
             user_id=user_id,
             decision=decision,

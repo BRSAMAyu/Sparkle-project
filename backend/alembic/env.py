@@ -25,6 +25,7 @@ from app.models import (
     # Core models
     User, PushPreference, Task, Plan, ChatMessage, ErrorRecord,
     Job, Subject, IdempotencyKey, Notification, PushHistory,
+    AuroraJudgmentRecord, ConflictResolutionRecord, UnresolvedConflict, RoutingDecisionLog,
     # Galaxy models
     KnowledgeNode, UserNodeStatus, NodeRelation, StudyRecord, NodeExpansionQueue, ExpansionFeedback,
     # Community models

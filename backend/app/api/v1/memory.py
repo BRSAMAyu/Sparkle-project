@@ -14,6 +14,7 @@ from app.models.chat import ChatSession
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
 from app.services.accountability_mvp_service import AccountabilityMvpService
+from app.services.conflict_resolver_service import ConflictResolverService
 from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
 from app.services.memory_service import MemoryService
 from app.services.working_memory_consolidation_service import WorkingMemoryConsolidationService
@@ -425,6 +426,39 @@ async def resolve_pending_commitment(
     )
 
 
+@router.get("/unresolved-conflicts")
+async def list_unresolved_conflicts(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+    service = ConflictResolverService(db)
+    items = await service.list_unresolved_conflicts(user_id=current_user.id)
+    return {"items": [_serialize_unresolved_conflict(item) for item in items]}
+
+
+@router.post("/unresolved-conflicts/{conflict_id}/arbitrate")
+async def arbitrate_unresolved_conflict(
+    conflict_id: UUID,
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _ensure_memory_panel_enabled()
+    selection = str(payload.get("selection") or "").strip().lower()
+    if selection not in {"left", "right", "none"}:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="selection must be left/right/none")
+    service = ConflictResolverService(db)
+    item = await service.arbitrate_unresolved_conflict(
+        user_id=current_user.id,
+        conflict_id=conflict_id,
+        selection=selection,
+    )
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unresolved conflict not found")
+    return _serialize_unresolved_conflict(item)
+
+
 @router.post("/retract")
 async def retract_memory(
     payload: dict,
@@ -627,3 +661,27 @@ def _serialize_corrected_memory(kind: str, record: object) -> dict:
     if kind == "episodic":
         return _serialize_episodic(record)
     return {"id": str(getattr(record, "id", ""))}
+
+
+def _serialize_unresolved_conflict(record) -> dict[str, object]:
+    return {
+        "id": str(record.id),
+        "conflict_key": record.conflict_key,
+        "status": record.status,
+        "surfaced_at": record.surfaced_at,
+        "resolved_at": record.resolved_at,
+        "resolution_reason": record.resolution_reason,
+        "selected_side": record.selected_side,
+        "left_candidate": {
+            "record_id": str(record.left_record_id) if record.left_record_id else None,
+            "summary": record.left_summary,
+            "lane": record.left_lane,
+            "evidence_token": record.left_evidence_token,
+        },
+        "right_candidate": {
+            "record_id": str(record.right_record_id) if record.right_record_id else None,
+            "summary": record.right_summary,
+            "lane": record.right_lane,
+            "evidence_token": record.right_evidence_token,
+        },
+    }

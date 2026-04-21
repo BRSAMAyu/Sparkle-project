@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.aurora_stage20 import AuroraJudgmentRecord
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult, ScoreBucket, SufficiencyJudgment, SufficiencyScore
 from app.state_aggregator.schema import UserStateV1
 
@@ -107,3 +110,24 @@ class SufficiencyJudgeService:
         if social is None:
             return 0.5
         return 1.0
+
+    @staticmethod
+    async def persist_judgment(
+        db: AsyncSession,
+        *,
+        user_state: UserStateV1,
+        judgment: SufficiencyJudgment,
+    ) -> str:
+        record = AuroraJudgmentRecord(
+            user_id=user_state.user_id,
+            task_sufficiency_score=judgment.task_sufficiency.score,
+            task_missing_dimensions=list(judgment.task_sufficiency.missing_dimensions),
+            context_sufficiency_score=judgment.context_sufficiency.score,
+            context_missing_dimensions=list(judgment.context_sufficiency.missing_dimensions),
+            judge_version=judgment.judge_version,
+            computed_at=judgment.computed_at,
+        )
+        db.add(record)
+        await db.commit()
+        await db.refresh(record)
+        return str(record.id)

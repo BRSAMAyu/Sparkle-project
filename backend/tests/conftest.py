@@ -38,6 +38,12 @@ from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry  # n
 from app.models.task_feedback import TaskFeedback  # noqa: F401
 from app.models.notification import Notification, PushHistory  # noqa: F401
 from app.models.push_delivery_record import PushDeliveryRecord  # noqa: F401
+from app.models.aurora_stage20 import (  # noqa: F401
+    AuroraJudgmentRecord,
+    ConflictResolutionRecord,
+    RoutingDecisionLog,
+    UnresolvedConflict,
+)
 from app.models.user_push_opt_in import UserPushOptIn  # noqa: F401
 from app.models.galaxy import KnowledgeNode, UserNodeStatus, StudyRecord  # noqa: F401
 from app.models.community import (  # noqa: F401
