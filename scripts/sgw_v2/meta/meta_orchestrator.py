@@ -10,6 +10,7 @@ This module provides:
 from __future__ import annotations
 
 import json
+import math
 import sqlite3
 import uuid
 from dataclasses import dataclass, field
@@ -235,43 +236,147 @@ class MetaOrchestrator:
         )
         self.run_db.conn.commit()
 
-        # If regressed, revert config
-        if outcome == "regressed":
+        # Update experiment status based on outcome
+        if iteration.plan_id:
+            exp_status = "completed" if outcome.startswith("improved") else "rejected"
+            self.run_db.conn.execute(
+                "UPDATE experiments SET status = ?, updated_at = ? WHERE plan_id = ?",
+                (exp_status, _utcnow_iso(), iteration.plan_id),
+            )
+            self.run_db.conn.commit()
+
+        # If significantly regressed, revert config
+        if outcome.startswith("regressed_sig"):
             self._revert_config(summary_before)
 
         return iteration
 
     def _judge_outcome(self, before: dict[str, Any], after: dict[str, Any]) -> str:
-        """Judge whether the iteration improved, regressed, or was neutral."""
+        """Judge outcome with statistical significance testing.
+
+        Returns one of:
+        - improved_sig: Significant improvement (auto-adopt)
+        - improved_nonsig: Improvement but not significant (adopt cautiously)
+        - regressed_sig: Significant regression (auto-rollback)
+        - regressed_nonsig: Regression but not significant
+        - neutral: No meaningful change
+        """
+        # Minimum sample size gate
+        min_audits = min(
+            before.get("audits_total", 0) + before.get("authenticity_total", 0),
+            after.get("audits_total", 0) + after.get("authenticity_total", 0),
+        )
+        if min_audits < 200:
+            # Not enough samples for significance — fall back to direction-only
+            return self._judge_direction_only(before, after)
+
+        # Two-proportion z-test for soft violation rate
+        soft_before_n = before.get("audits_total", 0)
+        soft_after_n = after.get("audits_total", 0)
+        soft_before_x = before.get("soft_violations", 0)
+        soft_after_x = after.get("soft_violations", 0)
+
+        z_soft = self._z_test_two_proportions(soft_before_x, soft_before_n, soft_after_x, soft_after_n)
+        # Negative z means after has lower rate (improvement)
+
+        # Two-proportion z-test for authenticity failure rate
+        auth_before_n = before.get("authenticity_total", 0)
+        auth_after_n = after.get("authenticity_total", 0)
+        auth_before_x = before.get("authenticity_failures", 0)
+        auth_after_x = after.get("authenticity_failures", 0)
+
+        z_auth = self._z_test_two_proportions(auth_before_x, auth_before_n, auth_after_x, auth_after_n)
+
+        # Hard violations: any increase is always significant
+        hard_delta = after.get("hard_violations", 0) - before.get("hard_violations", 0)
+
+        # Compute composite score and significance
+        alpha = 1.96  # 95% confidence
+        improved_dimensions = 0
+        regressed_dimensions = 0
+        sig_improved = 0
+        sig_regressed = 0
+
+        # Soft violations: z_soft > 0 means after has higher rate (regression)
+        if z_soft is not None and abs(z_soft) > 0.01:
+            if z_soft > alpha:
+                regressed_dimensions += 1
+                sig_regressed += 1
+            elif z_soft < -alpha:
+                improved_dimensions += 1
+                sig_improved += 1
+            elif z_soft > 0:
+                regressed_dimensions += 1
+            else:
+                improved_dimensions += 1
+
+        # Authenticity failures: z_auth > 0 means after has higher failure rate (regression)
+        if z_auth is not None and abs(z_auth) > 0.01:
+            if z_auth > alpha:
+                regressed_dimensions += 1
+                sig_regressed += 1
+            elif z_auth < -alpha:
+                improved_dimensions += 1
+                sig_improved += 1
+            elif z_auth > 0:
+                regressed_dimensions += 1
+            else:
+                improved_dimensions += 1
+
+        # Hard violations override
+        if hard_delta > 0:
+            regressed_dimensions += 2
+            sig_regressed += 1
+
+        # Final classification
+        if sig_regressed > 0 and regressed_dimensions > improved_dimensions:
+            return "regressed_sig"
+        if sig_improved > 0 and improved_dimensions > regressed_dimensions:
+            return "improved_sig"
+        if improved_dimensions > regressed_dimensions:
+            return "improved_nonsig"
+        if regressed_dimensions > improved_dimensions:
+            return "regressed_nonsig"
+        return "neutral"
+
+    @staticmethod
+    def _z_test_two_proportions(x1: int, n1: int, x2: int, n2: int) -> float | None:
+        """Two-proportion z-test. Returns z-statistic or None if insufficient data."""
+        if n1 < 10 or n2 < 10:
+            return None
+        p1 = x1 / n1
+        p2 = x2 / n2
+        p_pool = (x1 + x2) / (n1 + n2)
+        if p_pool == 0 or p_pool == 1:
+            return 0.0
+        se = math.sqrt(p_pool * (1 - p_pool) * (1 / n1 + 1 / n2))
+        if se < 1e-10:
+            return 0.0
+        return (p2 - p1) / se
+
+    def _judge_direction_only(self, before: dict[str, Any], after: dict[str, Any]) -> str:
+        """Fallback judge when sample size is insufficient for significance testing."""
         score = 0
 
-        # Soft violation rate: lower is better
         delta_soft = before.get("soft_violation_rate", 0) - after.get("soft_violation_rate", 0)
         if delta_soft > 0.02:
             score += 2
         elif delta_soft < -0.02:
             score -= 2
 
-        # Authenticity mean: higher is better
         delta_auth = after.get("authenticity_mean", 0) - before.get("authenticity_mean", 0)
         if delta_auth > 0.03:
             score += 2
         elif delta_auth < -0.03:
             score -= 2
 
-        # Hard violations: fewer is better
         if after.get("hard_violations", 0) > before.get("hard_violations", 0):
             score -= 3
 
-        # Session completion: more is better
-        delta_sessions = after.get("sessions_completed", 0) - before.get("sessions_completed", 0)
-        if delta_sessions > 10:
-            score += 1
-
         if score >= 2:
-            return "improved"
+            return "improved_nonsig"
         elif score <= -2:
-            return "regressed"
+            return "regressed_nonsig"
         return "neutral"
 
     def _revert_config(self, previous_summary: dict[str, Any]) -> None:

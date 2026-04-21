@@ -3,7 +3,7 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-20
-> **版本**: v19（SGW v1.0 工程化 + 5 并发可恢复运行）
+> **版本**: v20（Stage 17 + 18 engineering closeout：社交脑 MVP + Aggregator 单一状态源 + 确定性 push 环闭合）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -15,6 +15,10 @@
 > - `SPARKLE_DATA_UTILIZATION_ANALYSIS_2026-04-06.md` — 数据利用分析
 > - `SPARKLE_AURORA_STAGE16_DISPATCH_PLAN_2026-04-20.md` — Stage 16 派发计划（WS-MWL-* 七个 Workstream + Rule Y）
 > - `SPARKLE_AURORA_STAGE17_DISPATCH_PLAN_2026-04-20.md` — Stage 17 派发计划（WS-SOC-* 社交脑 MVP + Rule Z + Accountability + Router 只读）
+> - `SPARKLE_AURORA_STAGE17_HANDOFF_2026-04-20.md` — Stage 17 工程收尾（8 WS accept + 144 baseline + 27 backend + 51 mobile）
+> - `SPARKLE_AURORA_STAGE18_DISPATCH_PLAN_2026-04-20.md` — Stage 18 派发计划（State Aggregator + 确定性 push + Rule AB）
+> - `SPARKLE_AURORA_STAGE18_HANDOFF_2026-04-20.md` — Stage 18 工程收尾（8 WS accept + 97 baseline + 42 backend）
+> - `SPARKLE_AURORA_STAGE18_RULE_AB_DEFINITION_2026-04-20.md` — Rule AB 正式定义（push 治理：evidence/cap/quiet-hours/retraction）
 > - `SPARKLE_ADVANCED_CONCEPTS_INTEGRATION_ANALYSIS_2026-04-19.md` — 前沿理念融合分析（Stage 16/17 链路锚点）
 > - `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` — Gray Window 上下文化治理增补（PGW / SGW / Skipped）
 > - `SPARKLE_AURORA_STAGE16_RULE_Y_DEFINITION_2026-04-20.md` — Rule Y 正式定义（推断式画像写入治理）
@@ -602,7 +606,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 - Stage 13 解决的是"continuous learning 什么时候才配接前门"的制度断裂，而不是再加一个新入口
 - Stage 14 解决的是"wire-ready 是否足够可信到接线前"的工程断裂，同时把"还不能接线"的原因从模糊担忧收敛为 source-state 压缩这个明确问题
 
-### 9.15 Stage 16 战略定位（能力轨转向 + Memory 写路径）
+### 9.15 ✅ Stage 16 完成（能力轨转向 + Memory governed write lane）
 
 **核心问题**：聊天流量 100% 不写 EpisodicMemory，使得 Reflect/Adapt 永远只能拿历史 review/error 等"被结构化过"的事实，无法看见用户当下"未结构化的生活线"。
 
@@ -633,7 +637,19 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 **Path B / C 兜底**：Path B 仅打通 read-verify + kill switch，不开真写入；Path C 若 extract precision < 0.85 则锁死写入、退回 Path B。
 
-### 9.16 Stage 17 战略定位（社交脑 MVP + Accountability seed + Router 只读消费首次开口）
+**Stage 16 完成状态**：
+
+| 维度 | 结果 |
+|------|------|
+| baseline | Gate S16-0 144 green + Rule V 8 + Rule K 35/0 |
+| backend sweep | 16 green + Stage 13/14/15 carry-forward 24 green |
+| mobile sweep | 8 green + Stage 13/15 carry-forward 53 green |
+| Rule Y | 正式落盘，四要素 + 7 条硬违规守卫 |
+| 下游隔离 | grep 验证 inferred_extraction 未进入 Router/Push/Skill/Accumability |
+| 独立审计 | GLM-observer + GLM1 双审计对齐，final-accept 通过 |
+| SGW | 以 Pre-launch 语境走 SGW 路径（44 persona + ≥360 session + ≥4000 turn） |
+
+### 9.16 ✅ Stage 17 完成（社交脑 MVP + Accountability seed + Router 只读消费首次开口）
 
 **Stage 17 入场条件（三重锁）**：Stage 16 以 `Pre-launch` 语境走 SGW 路径（≥12h wall-clock + 44 frozen persona + ≥360 会话 + ≥4000 turn + 5 worker cap）+ Rule Y `Hard violation = 0` 且 `Soft violation rate < 5%` + dispatch plan 已落盘并由用户显式宣告 SGW 通过。
 
@@ -665,7 +681,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | Rule | 主题 | 引入 Stage | 状态 |
 |------|------|------------|------|
 | **Rule Y** | 推断式画像写入治理 | Stage 16 | locked |
-| **Rule Z** | 跨用户隐私边界 | Stage 17 | drafting |
+| **Rule Z** | 跨用户隐私边界 | Stage 17 | locked |
 | **Rule AA** | Skill 跨用户共享治理 | Stage 20 | reserved |
 
 **Stage 17 不做清单**：主动推送 → Stage 18；Router 把社交事实作为决策分支 → Stage 19B+；LLM 抽取 → Stage 19A+；Skill 系统读 Memory → Stage 20；cross-user 数据流动 → 永不。
@@ -681,30 +697,63 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 **Gate S17-FINAL 验收**：Rule Z 文档 + CI 守卫升级 → `WS-SOC-NAMESPACE` 先于 EXTRACT / ROUTER-READ green → Alembic migration apply → backend sweep ≥ 14 → mobile sweep ≥ 6 → Router A/B 报告落盘 → commitment recall 观测完成 → 全代码库 grep 验证 `subject_type` / `social_context` / `RouterContextReader` / `recent_person_mentions` 无越界消费。
 
-### 9.17 Stage 18 战略定位（State Aggregator + State-Driven Push）
+**Stage 17 完成状态**：
+
+| 维度 | 结果 |
+|------|------|
+| baseline | Gate S17-0 144 green + Rule V 8 + Rule K/Z 0 violation |
+| backend sweep | 27 green（Rule Z guard / namespace isolation / subject_type extraction / commitment parser / accountability MVP / router context reader / social kill / inferred write lane） |
+| mobile sweep | 51 green（memory features + home features） |
+| carry-forward | Stage 13-16 backend 28 green |
+| Rule Z | 正式落盘，HMAC-SHA256 边界 + CI 守卫 + 5 个禁止场景 |
+| Social namespace | `social_context` 独立于 `community_context`，prompt 渲染 bounded + default OFF |
+| Accountability | overdue commitments 前门可见 + resolved/dismiss 动作，无 push |
+| Router seam | `SocialContextProvider → FrozenSocialSnapshot` 契约建立，Stage 18 可迁移 |
+| 独立审计 | 8 WS 全部 accept，handoff 为 final 状态 |
+
+### 9.17 ✅ Stage 18 完成（State Aggregator 单一状态源 + 确定性 push 环）
 
 **Stage 18 入场条件（三重锁）**：Stage 17 全 8 WS green + 至少一周生产灰度 + Rule Z 无破例 + Accountability MVP 用户 resolve/dismiss 行为有真实数据样本（≥ 50 条事件）。
 
-**Stage 18 总目标**：从"被动展示"升级为"主动推送"——基于 Memory + Social 综合状态判断推送时机与内容。State Aggregator 负责聚合多源信号生成用户综合状态画像，State-Driven Push 基于状态变化触发精准推送。
+**Stage 18 总目标**：把 Stage 17 的社交与承诺只读 seam 转化为受治理的单一状态源层，并用该层驱动首个确定性主动触达环。State Aggregator 负责聚合多源信号生成 `user_state.v1`，确定性 push 基于状态变化触发有证据支撑的提醒。
 
-**关键 WS**：
+**八个 Workstream（WS-SA-*)**：
 
-| WS | 目的 |
-|----|------|
-| **WS-STATE-AGGREGATOR** | 状态聚合器（综合 Memory / Social / Learning 多源信号生成用户综合状态） |
-| **WS-STATE-DRIVEN-PUSH** | 状态驱动推送（基于 State Aggregator 输出判断推送时机与内容） |
-| **WS-PUSH-USER-CONTROL** | 用户推送控制（频率、时段、类型偏好） |
-| **WS-PUSH-CONTENT-GENERATOR** | 推送内容生成器（基于用户画像 + 当前状态） |
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-SA-RULE-AB** | 正式定义 Rule AB（push 治理） | evidence-backed + daily cap + quiet-hours + retraction |
+| **WS-SA-CORE** | frozen `user_state.v1` + pull-only Aggregator 服务 | 无 write-back 到 L0/L1；protobuf mirror |
+| **WS-SA-ROUTER-MIGRATE** | Router 从 Stage 17 直连迁移至 Aggregator-backed provider | 保持 `SocialContextProvider` 公共合约不变；20 组冷场景等价验证 |
+| **WS-SA-PUSH-POLICY** | 确定性 push policy compiler | 模板冻结、日频上限、静默时段调度；无 LLM free-text |
+| **WS-SA-PUSH-CHANNEL** | push 投递通道 + WebSocket channel | 投递记录、可撤回窗口、投递侧冗余守卫 |
+| **WS-SA-MOBILE** | opt-in + 分类控制 + inbox | default OFF、分类开关、触发证据展示 |
+| **WS-SA-KILL** | 三级 kill switch | 单策略 / 全局 / Aggregator 层级独立关停 |
 
-**Path B**：Accountability 用户行为样本不足 → 仅做 State Aggregator 不做 Push。
+**新增治理规则**：**Rule AB**（Stage 18 新建）：push 治理——每条 push 必须有触发证据、受日频上限约束、支持静默时段、可撤回。
 
-**Stage 18 强制重构义务**：Stage 17 的 `RouterContextReader` 在 Stage 18 必须重构为 State Aggregator 的消费者，而不是继续直连。
+**Stage 18 硬边界**：
+1. Aggregator pull-only：无 write-back 到 L0/L1 源数据
+2. Push 确定性：模板绑定，无 LLM free-text 生成
+3. Opt-in default OFF：所有 Stage 18 push 需用户显式开启
+4. 禁止类目：emotion / motivation / social pressure / new-goal proposal 不可触发
 
-**验收门**：State Aggregator 状态判断准确率可测量 → 推送时机准确率 ≥ 75% → 用户可完全控制推送 → 全链路端到端测试 green。
+**Stage 18 完成状态**：
+
+| 维度 | 结果 |
+|------|------|
+| baseline | Gate S18-0 97 green（Aurora baseline） |
+| backend sweep | 42 green（schema / aggregator / router migrate / push policy / push delivery / kill switch / state-driven push / memory settings / memory admin） |
+| mobile sweep | 2 direct + carry-forward（memory_settings_screen + unified_notification_push_card） |
+| Stage 17 carry-forward | 4 green（Rule Z guard + namespace isolation） |
+| Rule AB | 正式落盘 |
+| Router 迁移 | `AggregatorBackedSocialContextProvider` 保持 Stage 17 公共合约，20 组冷场景等价 |
+| 独立审计 | GLM1 审计结论：8 commits 原子拆分 + hard boundary 四条全过 + handoff final |
+
+**Stage 19 义务锁定**：19A Working Memory 必须消费 Aggregator 的 `engagement_state` / `commitment_summary`，不得自建平行层；19B 扩展 Router 消费前需通过 sufficiency governance。
 
 ### 9.18 Stage 19 战略定位（LLM 抽取 + Working Memory）
 
-**Stage 19 入场条件**：Stage 18 全部 WS green + State Aggregator 状态判断有至少一周生产数据。
+**Stage 19 入场条件**：Stage 18 全部 WS green + Aggregator 在生产流量下有至少一周稳定运行 + Rule AB 无破例。
 
 **Stage 19 总目标**：从"规则式抽取"升级为"LLM 辅助抽取"，同时引入 Working Memory 作为短期记忆层。Stage 17 的规则式分类器精度天花板有限，Stage 19 通过 LLM 抽取 + Working Memory 短期上下文管理突破这一限制。
 
@@ -741,7 +790,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 
 ### 9.20 Stage 21 战略定位（Wire-On 前门正式接线）
 
-**Stage 21 入场条件**：Stage 20 全部 WS green + Skill 提取有至少一周生产数据 + 用户反馈 positive。
+**Stage 21 入场条件**：Stage 20 全部 WS green + Skill 提取有至少一周生产数据 + 用户反馈 positive + SQAM 四维重新评估。
 
 **Stage 21 总目标**：首次将持续学习组件正式接入用户前门（不再是 shadow / dry-run / inference-cache-only）。
 
@@ -768,9 +817,9 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 ```
 Memory Write (Stage 16 ✅)
     ↓
-Social Brain + Accountability + Router Read-Only (Stage 17)
+Social Brain + Accountability + Router Read-Only (Stage 17 ✅)
     ↓
-State Aggregator + State-Driven Push (Stage 18)
+State Aggregator + State-Driven Push (Stage 18 ✅)
     ↓
 LLM Extraction + Working Memory (Stage 19)
     ↓
@@ -799,15 +848,18 @@ Growth OS (Stage 23)
 
 **硬约束**：任何 Stage 试图跳跃依赖链上游未完成的 Stage，默认拒绝。
 
-### 9.23 显式延后挂牌更新（Stage 17 dispatch 后）
+### 9.23 显式延后挂牌更新（Stage 18 closeout 后）
 
 | 项目 | 来源 | 状态 | 下一归属 |
 |------|------|------|----------|
-| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 18+ candidate |
-| evidence type 扩展（WS-EVD3 full） | Stage 13 仅落了 `practice_outcome` lite | deferred | Stage 18+ candidate |
-| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 18+ candidate |
-| LLM 抽取替代规则式分类器 | Stage 17 仅规则式 | deferred | **Stage 19**（路线图锁定） |
-| Working Memory 短期记忆层 | 长期愿景 | deferred | **Stage 19**（路线图锁定） |
+| RB1 tokenizer-aware inline budget | WS-RP1 精度尾债 | deferred | Stage 19+ candidate |
+| evidence type 扩展（WS-EVD3 full） | Stage 13 仅落了 `practice_outcome` lite | deferred | Stage 19+ candidate |
+| graph diagnostic 从 chat card 深化为完整 Galaxy 诊断面 | WS-G2D 深化 | deferred | Stage 19+ candidate |
+| APNs / FCM 真实设备推送 | Stage 18 仅 WebSocket channel | deferred | 真实用户上线阶段 |
+| Aggregator event-driven fan-out | Stage 18 仅 pull-only | deferred | Stage 19+ candidate |
+| LLM 抽取替代规则式分类器 | Stage 17 仅规则式 | deferred | **Stage 19A**（路线图锁定） |
+| Working Memory 短期记忆层 | 长期愿景 | deferred | **Stage 19A**（路线图锁定） |
+| Router 扩展消费（sufficiency governance） | Stage 17/18 仅读不决策 | deferred | **Stage 19B**（需 sufficiency judge 验收） |
 | Skill 跨用户共享 | 长期愿景 | deferred | **Stage 20**（路线图锁定，Rule AA） |
 | 持续学习前门正式接线 | Stage 14 wire-safe prep | deferred | **Stage 21**（路线图锁定） |
 | dual interaction mode | 长期愿景 | deferred | **Stage 22**（路线图锁定） |
@@ -897,6 +949,7 @@ Growth OS (Stage 23)
 | v17 | 2026-04-20 | Stage 17 dispatch plan 根据最终裁决合并 Addenda A-G：Rule 命名表正式锁定；`WS-SOC-RULE-Z` 升格 P0 并要求 HMAC-SHA256 边界；新增 `WS-SOC-NAMESPACE` 阻断 `community_context` 隐式注入；Path 矩阵改为 A / B1 / B2 / C；`WS-SOC-ROUTER-READ` 增加 ≥30 组 A/B prompt 对照；`WS-SOC-EXTRACT` 增加 backpressure 约束；`WS-ACCT-MVP` 增加健康审计前置与 commitment recall 观测；Stage 18 明确承担 `RouterContextReader -> State Aggregator` 重构义务 |
 | v18 | 2026-04-20 | Aurora Gray Window 上下文化治理升版：新增 `PGW / SGW / Skipped` 三段式门控，Sparkle 当前 `Pre-launch` 语境改走 SGW；新增 `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` 与 `SPARKLE_AURORA_STAGE16_SGW_FRAMEWORK_2026-04-20.md`；Stage 17 入场条件从物理上不可满足的 7 天生产灰度改为 SGW（≥12h wall-clock + ≥20 persona + ≥200 会话 + ≥4000 turn + `Hard violation = 0` + `Soft violation rate < 5%`）；同时保留真实用户接受度为延后验证项 |
 | v19 | 2026-04-20 | SGW v1.0 工程化定稿：并发收敛为 5 个 Claude worker，运行改为可 checkpoint / resume 的确定性 orchestrator；persona 覆盖冻结为 44 条（36 矩阵 + 8 特殊），总会话阈值升级为 ≥360；治理 addendum 升格为 `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md`；Stage 17 dispatch 明确 `SocialContextProvider -> FrozenSocialSnapshot` 前瞻兼容契约，Stage 18 必须以 Aggregator provider 实现兑现该契约 |
+| v20 | 2026-04-20 | Stage 17 + 18 engineering closeout 完成；Stage 17：8 WS accept（Rule Z 落盘 + 社交主语分类器 + commitment parser + Accountability MVP + Router 只读 seam + per-type kill switch），27 backend + 51 mobile green；Stage 18：8 WS accept（`user_state.v1` frozen schema + pull-only Aggregator + 确定性 push policy + WebSocket channel + Rule AB + 三级 kill switch + mobile opt-in），42 backend green + GLM1 独立审计通过；Aggregator-backed Router 迁移保持 Stage 17 公共合约不变；愿景覆盖表更新：社交脑从🔶→✅，主动推送从❌→✅，状态聚合从❌→✅；7 阶段成长环 5/7（Reinforce 仍弱，Stage 19 预计首次触达）；治理规则达 19 条（G-Z + Y + Z + AB） |
 
 ---
 

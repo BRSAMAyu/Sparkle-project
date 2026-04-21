@@ -7,11 +7,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from .spec import ScenarioSpec, BUILTIN_SCENARIOS
+
+# Fix import path: sgw_orchestrator is in scripts/sgw/, not a package
+_SGW_DIR = Path(__file__).resolve().parents[2] / "sgw"
+if str(_SGW_DIR) not in sys.path:
+    sys.path.insert(0, str(_SGW_DIR))
 
 
 @dataclass
@@ -82,7 +88,7 @@ class ScenarioRunner:
 
     async def run_scenario(self, spec: ScenarioSpec) -> ScenarioResult:
         """Run a single scenario and return results."""
-        from sgw.orchestrator import SGWOrchestrator, OrchestratorConfig
+        from sgw_orchestrator import SGWOrchestrator, OrchestratorConfig
 
         config_kwargs = self.build_config(spec)
         config = OrchestratorConfig(**config_kwargs)

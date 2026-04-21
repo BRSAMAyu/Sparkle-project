@@ -314,7 +314,12 @@ def sample_behavior_from_persona(
     persona: dict[str, Any],
     rng: random.Random | None = None,
 ) -> BehaviorSample:
-    """Sample behavior axis values from a seed persona definition."""
+    """Sample behavior axes using independent Beta distributions.
+
+    Persona fields seed the Beta distribution parameters (alpha, beta),
+    but each axis is sampled independently. This gives ~5000+ distinct
+    behavioral combinations across the 5 axes rather than just persona+noise.
+    """
     rng = rng or random.Random()
 
     age = persona.get("age_stage", "university")
@@ -323,22 +328,38 @@ def sample_behavior_from_persona(
     mention_density = float(persona.get("mention_density", 0.15))
     commitment_density = float(persona.get("commitment_density", 0.1))
 
-    # Base values from persona fields
-    base_compliance = _AGE_STAGE_COMPLIANCE.get(age, 0.5)
-    base_challenge = _GOAL_CHALLENGE.get(goal, 0.3)
-    base_emotion = _STYLE_EMOTION.get(style, 0.5)
-    base_digression = _STYLE_DIGRESSION.get(style, 0.2)
+    # Seed Beta parameters from persona (higher alpha = higher expected value)
+    # Beta(alpha, beta) has mean alpha/(alpha+beta)
+    compliance_alpha = _AGE_STAGE_COMPLIANCE.get(age, 0.5) * 4 + commitment_density * 2
+    compliance_beta = (1 - _AGE_STAGE_COMPLIANCE.get(age, 0.5)) * 4 + 1
 
-    # Add noise (±20% of base)
-    def jitter(val: float, scale: float = 0.2) -> float:
-        return max(0.0, min(1.0, val + rng.gauss(0, val * scale)))
+    challenge_alpha = _GOAL_CHALLENGE.get(goal, 0.3) * 4 + 0.5
+    challenge_beta = (1 - _GOAL_CHALLENGE.get(goal, 0.3)) * 4 + 1
+
+    emotion_alpha = _STYLE_EMOTION.get(style, 0.5) * 4 + 0.5
+    emotion_beta = (1 - _STYLE_EMOTION.get(style, 0.5)) * 4 + 1
+
+    digression_alpha = _STYLE_DIGRESSION.get(style, 0.2) * 4 + mention_density * 2
+    digression_beta = (1 - _STYLE_DIGRESSION.get(style, 0.2)) * 4 + 1
+
+    resp_base = 0.6 if style != "fragmented" else 0.4
+    responsiveness_alpha = resp_base * 4 + 1
+    responsiveness_beta = (1 - resp_base) * 4 + 1
+
+    def sample_beta(a: float, b: float) -> float:
+        """Sample from Beta distribution using gamma variates."""
+        a = max(0.1, a)
+        b = max(0.1, b)
+        x = rng.gammavariate(a, 1.0)
+        y = rng.gammavariate(b, 1.0)
+        return max(0.0, min(1.0, x / (x + y)))
 
     return BehaviorSample(
-        compliance=jitter(base_compliance + commitment_density * 0.3),
-        digression_rate=jitter(base_digression + mention_density * 0.2),
-        challenge_tendency=jitter(base_challenge),
-        responsiveness=jitter(0.6 if style != "fragmented" else 0.4),
-        emotion_intensity=jitter(base_emotion),
+        compliance=sample_beta(compliance_alpha, compliance_beta),
+        digression_rate=sample_beta(digression_alpha, digression_beta),
+        challenge_tendency=sample_beta(challenge_alpha, challenge_beta),
+        responsiveness=sample_beta(responsiveness_alpha, responsiveness_beta),
+        emotion_intensity=sample_beta(emotion_alpha, emotion_beta),
     )
 
 

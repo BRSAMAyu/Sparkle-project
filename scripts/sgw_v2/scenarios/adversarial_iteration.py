@@ -170,6 +170,22 @@ class AdversarialIterator:
         seeds.extend(self.find_violation_patterns(run_id))
         return self.generate_playbook_entries(seeds)
 
+    def prune_ineffective_playbooks(self, playbook: list[dict[str, Any]], min_triggers: int = 20, min_rate: float = 0.05) -> list[dict[str, Any]]:
+        """Remove playbook entries that have been triggered many times with low violation rate.
+
+        An entry is pruned if trigger_count >= min_triggers AND violation_rate < min_rate.
+        """
+        effective = []
+        for entry in playbook:
+            entry_id = entry.get("id", "")
+            stats = entry.get("_stats", {})
+            trigger_count = stats.get("trigger_count", 0)
+            violation_rate = stats.get("violation_rate", 0.0)
+            if trigger_count >= min_triggers and violation_rate < min_rate:
+                continue  # Prune ineffective entry
+            effective.append(entry)
+        return effective
+
     def save_playbook(self, entries: list[PlaybookEntry], path: Path) -> None:
         """Save generated playbook entries to JSON file."""
         existing: list[dict] = []

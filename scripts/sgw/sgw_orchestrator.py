@@ -163,6 +163,8 @@ class OrchestratorConfig:
     audit_max_parallel: int = int(os.getenv("SGW_AUDIT_MAX_PARALLEL", "1"))
     authenticity_sample_rate: float = float(os.getenv("SGW_AUTHENTICITY_SAMPLE_RATE", "0.20"))
     authenticity_threshold: float = float(os.getenv("SGW_AUTHENTICITY_THRESHOLD", "0.70"))
+    expression_validation_retries: int = int(os.getenv("SGW_EXPRESSION_VALIDATION_RETRIES", "2"))
+    audit_providers: str = os.getenv("SGW_AUDIT_PROVIDERS", "")  # comma-separated list e.g. "glm-4.7,claude-cli"
     session_turn_slice: int = int(os.getenv("SGW_SESSION_TURN_SLICE", "1"))
     random_seed: int = int(os.getenv("SGW_RANDOM_SEED", "17"))
     resume: bool = False
@@ -650,6 +652,19 @@ class SGWOrchestrator:
         else:
             self.claude = ClaudeCliClient(config)
             self.audit_llm = ClaudeCliClient(_clone_audit_client_config(config))
+
+        # Audit provider rotation: if audit_providers is configured,
+        # create additional audit clients for round-robin selection
+        self._audit_clients: list[Any] = [self.audit_llm]
+        self._audit_client_index = 0
+        if config.audit_providers:
+            for provider_name in config.audit_providers.split(","):
+                provider_name = provider_name.strip()
+                if not provider_name or provider_name == config.api_model:
+                    continue
+                rotated_config = _clone_audit_client_config(config)
+                rotated_config.api_model = provider_name
+                self._audit_clients.append(OpenAICompatibleApiClient(rotated_config))
         self.gateway = SparkleGatewayClient(config)
         self.persona_prompt_template = (SCRIPT_DIR / "prompts" / "persona_system_prompt.md").read_text(encoding="utf-8")
         self.adversarial_prompt_template = (SCRIPT_DIR / "prompts" / "adversarial_system_prompt.md").read_text(
@@ -687,6 +702,14 @@ class SGWOrchestrator:
         self._session_state_machines: dict[str, Any] = {}
         self._session_behavior_samples: dict[str, Any] = {}
         self._pending_turn_decisions: dict[str, Any] = {}
+
+    def _rotate_audit_client(self) -> Any:
+        """Round-robin select an audit client to avoid single-provider bias."""
+        if len(self._audit_clients) <= 1:
+            return self.audit_llm
+        client = self._audit_clients[self._audit_client_index % len(self._audit_clients)]
+        self._audit_client_index += 1
+        return client
     async def run(self) -> int:
         self._install_signal_handlers()
 
@@ -1014,6 +1037,17 @@ class SGWOrchestrator:
                     await self._checkpoint()
                     return
 
+                # SGW v2: Expression validation with retry
+                message = await self._validate_and_regenerate(
+                    task=task, message=message, system_prompt=system_prompt, prompt=prompt, worker_name=worker_name,
+                )
+                if not message:
+                    task.status = "pending"
+                    task.last_error = "expression validation exhausted retries"
+                    task.retry_count += 1
+                    await self._checkpoint()
+                    return
+
                 task.last_note = None
                 assistant_reply = ""
                 try:
@@ -1093,21 +1127,28 @@ class SGWOrchestrator:
     async def _run_audit(self, task: AuditTask, *, worker_name: str) -> None:
         self._active_workers += 1
         try:
-            audit_prompt = json.dumps(
-                {
-                    "case_id": task.case_id,
-                    "source_chat_turn": task.source_chat_turn,
-                    "inferred_record": task.record,
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
+            # Build audit prompt with conversation context
+            audit_payload: dict[str, Any] = {
+                "case_id": task.case_id,
+                "source_chat_turn": task.source_chat_turn,
+                "inferred_record": task.record,
+            }
+            # Add surrounding conversation context (±2-3 turns) for better audit accuracy
+            parent_session = self._find_session_for_audit_task(task)
+            if parent_session and parent_session.transcript:
+                context_turns = parent_session.transcript[-6:]  # Last 3 pairs
+                audit_payload["conversation_context"] = [
+                    {"role": "user" if e["role"] == "user" else "AI", "content": e["content"][:200]}
+                    for e in context_turns
+                ]
+            audit_prompt = json.dumps(audit_payload, ensure_ascii=False, indent=2)
             try:
                 if self.global_cooldown_until and time.time() < self.global_cooldown_until:
                     task.status = "pending"
                     await self._checkpoint()
                     return
-                audit_output = await self.audit_llm.text_call(
+                audit_client = self._rotate_audit_client()
+                audit_output = await audit_client.text_call(
                     system_prompt=self.audit_prompt_template,
                     prompt=audit_prompt,
                 )
@@ -1224,7 +1265,8 @@ class SGWOrchestrator:
                     task.status = "pending"
                     await self._checkpoint()
                     return
-                audit_output = await self.audit_llm.text_call(
+                auth_client = self._rotate_audit_client()
+                audit_output = await auth_client.text_call(
                     system_prompt=self.authenticity_prompt_template,
                     prompt=prompt,
                 )
@@ -1421,9 +1463,25 @@ class SGWOrchestrator:
         sm = ConversationStateMachine(beats, self.random)
         self._session_state_machines[task.session_id] = sm
 
-        # Sample behavior axes
+        # Sample behavior axes (independent Beta distributions)
         behavior = sample_behavior_from_persona(persona, self.random)
         self._session_behavior_samples[task.session_id] = behavior
+
+        # Persist persona_sample and arc_id to SQLite for later cross-slice attribution
+        if self.run_id:
+            from dataclasses import asdict
+            self.run_db.upsert_session(
+                session_id=task.session_id,
+                run_id=self.run_id,
+                task_id=task.task_id,
+                role=task.role,
+                seed_persona_id=task.persona_id,
+                persona_sample=asdict(behavior),
+                arc_id=arc_shape,
+                target_turns=task.target_turns,
+                turns_completed=task.turns_completed,
+                status=task.status,
+            )
 
     def _build_turn_prompt(self, task: SessionTask) -> str:
         history = task.transcript[-2 * self.config.max_history_pairs :]
@@ -1446,6 +1504,60 @@ class SGWOrchestrator:
             "turn_requirements": self._build_turn_requirements(task=task, turn_index=turn_index),
         }
         return json.dumps(payload, ensure_ascii=False, indent=2)
+
+    async def _validate_and_regenerate(
+        self,
+        *,
+        task: SessionTask,
+        message: str,
+        system_prompt: str,
+        prompt: str,
+        worker_name: str,
+    ) -> str | None:
+        """Validate expression against TurnDecision constraints. Retry on failure."""
+        if task.role == "adversarial":
+            return message
+
+        decision = self._pending_turn_decisions.get(task.session_id)
+        if not decision:
+            return message
+
+        from sgw_v2.sim.expression_validator import validate_expression
+
+        passed, reason = validate_expression(message, decision.must_include, decision.must_avoid)
+        if passed:
+            return message
+
+        # Constraint violated — retry with explicit correction hint
+        retries_left = self.config.expression_validation_retries
+        for attempt in range(retries_left):
+            correction_prompt = (
+                f"上一条消息被拒绝，原因：{reason}。\n"
+                f"要求：direction={decision.direction}, must_include={decision.must_include}, "
+                f"must_avoid={decision.must_avoid}。\n"
+                "请重新生成一条满足所有约束的中文消息。只输出消息内容，不要解释。"
+            )
+            try:
+                message = await self.claude.text_call(system_prompt=system_prompt, prompt=correction_prompt)
+            except ClaudeCallError:
+                return None
+
+            passed, reason = validate_expression(message, decision.must_include, decision.must_avoid)
+            if passed:
+                return message
+
+        # All retries exhausted — log expression failure
+        if self.run_id:
+            self.run_db.insert_violation(
+                run_id=self.run_id,
+                session_id=task.session_id,
+                code="expression_validation_failure",
+                severity="soft",
+                context={"reason": reason, "direction": decision.direction, "turn": task.turns_completed + 1},
+            )
+        self.metrics.record_audit(soft_violation=True, reason=f"expression_failure:{reason}")
+        print(f"[sgw] {worker_name} expression validation failed after {retries_left} retries: {reason}")
+        return message  # Still send it, but the violation is recorded
 
     def _arm_rate_limit_cooldown(self, retry_count: int, *, reason: str) -> float:
         multiplier = min(max(retry_count, 1), 6)
@@ -1520,6 +1632,16 @@ class SGWOrchestrator:
             return self._build_v2_turn_requirements(task=task, turn_index=turn_index)
 
         # Fallback: legacy turn_index % N logic
+        # Log degradation violation so fallback usage is visible
+        if self.run_id:
+            self.run_db.insert_violation(
+                run_id=self.run_id,
+                session_id=task.session_id,
+                code="SGW-FALLBACK-DEGRADE",
+                severity="soft",
+                context={"reason": "state_machine_not_initialized", "turn_index": turn_index},
+            )
+        print(f"[sgw] WARNING: session {task.session_id[:8]} using legacy turn requirements (state machine missing)")
         persona = self._persona_by_id(task.persona_id) or {}
         mention_density = float(persona.get("mention_density", 0.15))
         commitment_density = float(persona.get("commitment_density", 0.1))
@@ -1703,6 +1825,17 @@ class SGWOrchestrator:
             "evidence_refs": item.evidence_refs or [],
         }
 
+    def _find_session_for_audit_task(self, audit_task: AuditTask) -> SessionTask | None:
+        """Find the session that produced a given audit task's memory record."""
+        for session in self.session_tasks.values():
+            if audit_task.case_id in session.detected_memory_ids:
+                return session
+        # Fallback: find by matching source_chat_turn in transcript
+        for session in self.session_tasks.values():
+            if any(e.get("content") == audit_task.source_chat_turn for e in session.transcript):
+                return session
+        return None
+
     def _persona_by_id(self, persona_id: str | None) -> dict[str, Any] | None:
         if persona_id is None:
             return None
@@ -1733,7 +1866,12 @@ class SGWOrchestrator:
         return []
 
     def _build_scenario_config(self) -> dict[str, Any]:
-        """Build a deterministic config dict for config_hash computation."""
+        """Build a deterministic config dict for config_hash computation.
+
+        Includes persona_library, adversarial_playbook, and all prompt templates
+        so that any change to these inputs produces a different config_hash.
+        """
+        prompt_dir = SCRIPT_DIR / "prompts"
         return {
             "wall_clock_hours": self.config.wall_clock_hours,
             "min_sessions": self.config.min_sessions,
@@ -1745,8 +1883,11 @@ class SGWOrchestrator:
             "soft_violation_threshold": self.config.soft_violation_threshold,
             "soft_violation_rate_limit": self.config.soft_violation_rate_limit,
             "audit_sample_rate": self.config.audit_sample_rate,
+            "authenticity_sample_rate": self.config.authenticity_sample_rate,
+            "expression_validation_retries": self.config.expression_validation_retries,
             "persona_library_hash": compute_file_hash(self.config.persona_library),
             "adversarial_playbook_hash": compute_file_hash(self.config.adversarial_playbook),
+            "prompt_hashes": compute_prompt_hashes(prompt_dir),
         }
 
     @staticmethod

@@ -101,12 +101,68 @@ DEFAULT_ALERT_RULES: list[AlertRule] = [
 ]
 
 
+class Notifier:
+    """Simple notification transport for alerts.
+
+    Supports: stdout (always), file append, and optional webhook.
+    """
+
+    def __init__(
+        self,
+        *,
+        log_file: Path | None = None,
+        webhook_url: str | None = None,
+    ):
+        self.log_file = log_file
+        self.webhook_url = webhook_url
+
+    def notify(self, alert: dict[str, Any]) -> None:
+        """Send alert through all configured transports."""
+        msg = f"[{alert['severity'].upper()}] {alert['message']} (run={alert.get('run_id', '?')[:12]})"
+
+        # Always print to stdout
+        print(f"[sgw-alert] {msg}")
+
+        # Append to log file
+        if self.log_file:
+            self.log_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.log_file, "a", encoding="utf-8") as f:
+                f.write(f"{alert['created_at']} {msg}\n")
+
+        # Webhook (best-effort, non-blocking)
+        if self.webhook_url:
+            self._send_webhook(alert)
+
+    def _send_webhook(self, alert: dict[str, Any]) -> None:
+        """Best-effort webhook notification."""
+        try:
+            import urllib.request
+            import urllib.error
+            data = json.dumps(alert, ensure_ascii=False).encode("utf-8")
+            req = urllib.request.Request(
+                self.webhook_url,
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                pass  # Best effort
+        except Exception:  # noqa: BLE001
+            pass  # Silently ignore webhook failures
+
+
 class AlertManager:
     """Monitors run metrics and raises alerts."""
 
-    def __init__(self, run_db: RunDB, rules: list[AlertRule] | None = None):
+    def __init__(
+        self,
+        run_db: RunDB,
+        rules: list[AlertRule] | None = None,
+        notifier: Notifier | None = None,
+    ):
         self.run_db = run_db
         self.rules = rules or DEFAULT_ALERT_RULES
+        self.notifier = notifier or Notifier()
         self._ensure_schema()
 
     def _ensure_schema(self) -> None:
@@ -157,6 +213,7 @@ class AlertManager:
         return triggered
 
     def _save_alert(self, alert: dict[str, Any]) -> None:
+        # Persist to SQLite
         self.run_db.conn.execute(
             """INSERT INTO alerts
                (alert_id, run_id, severity, category, message, metric_name,
@@ -176,6 +233,10 @@ class AlertManager:
             ),
         )
         self.run_db.conn.commit()
+
+        # Notify via transport (stdout/file/webhook)
+        if alert.get("severity") in ("critical", "warning"):
+            self.notifier.notify(alert)
 
     def get_active_alerts(self) -> list[dict[str, Any]]:
         """Return all non-dismissed alerts."""

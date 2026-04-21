@@ -54,4 +54,93 @@ void main() {
     await tester.pump();
     expect(sourceToken, 'turn-1');
   });
+
+  testWidgets('drawer stays hidden without session id', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ChatWorkingMemoryPanel(
+              sessionId: null,
+              onViewSource: _noopViewSource,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.text('AI 当前记住'), findsNothing);
+  });
+
+  testWidgets('drawer renders empty state when no items', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ChatWorkingMemoryPanel(
+              sessionId: 'session-empty',
+              onViewSource: _noopViewSource,
+              loader: (_) async => WorkingMemorySessionModel(
+                sessionId: 'session-empty',
+                items: const [],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('AI 当前记住'));
+    await tester.pumpAndSettle();
+    expect(find.text('当前 session 里还没有可见的工作记忆。'), findsOneWidget);
+  });
+
+  testWidgets('drawer calls forget action', (tester) async {
+    var forgetCount = 0;
+    final payload = WorkingMemorySessionModel(
+      sessionId: 'session-1',
+      items: [
+        WorkingMemoryItem(
+          id: 'entry-1',
+          summary: '准备周末补完高数真题',
+          subjectType: 'commitment',
+          mentionCount: 3,
+          salienceScore: 0.9,
+          sourceTurnIds: const ['turn-1'],
+          evidenceToken: 'turn-1',
+          confirmationStatus: 'none',
+          consolidatedToL1Id: null,
+          rejected: false,
+          lastSeenAt: DateTime(2026, 4, 21, 10, 0, 0),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ChatWorkingMemoryPanel(
+              sessionId: 'session-1',
+              onViewSource: _noopViewSource,
+              loader: (_) async => payload,
+              onForgetEntry: (_, __) async => forgetCount += 1,
+              onMarkCorrectEntry: (_, __) async => payload.items.first,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('AI 当前记住'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('手动忘记'));
+    await tester.pumpAndSettle();
+
+    expect(forgetCount, 1);
+  });
 }
+
+void _noopViewSource(String _) {}

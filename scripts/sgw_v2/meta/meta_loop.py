@@ -1,0 +1,278 @@
+#!/usr/bin/env python3
+"""SGW v2 Meta Loop: continuous improvement cycle.
+
+Runs SGW orchestrator in a subprocess, evaluates results, adjusts parameters,
+and repeats. Supports random exploration injection and convergence detection.
+
+Usage:
+    python -m sgw_v2.meta.meta_loop \\
+        --db-path ./sgw_runs.db \\
+        --persona-library ./persona_library.json \\
+        --adversarial-playbook ./adversarial_playbook.json \\
+        --max-iterations 100 \\
+        --exploration-every-n 5
+
+The loop:
+  1. Run SGW with current config (subprocess)
+  2. Diagnose failures
+  3. Plan parameter changes
+  4. Evaluate (compare before/after with significance test)
+  5. Adopt or rollback
+  6. Inject random exploration every N iterations
+  7. Repeat until convergence or max_iterations
+"""
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import random
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+# Ensure sgw_v2 is importable
+META_DIR = Path(__file__).resolve().parent
+SGW_V2_DIR = META_DIR.parent
+SCRIPTS_DIR = SGW_V2_DIR.parent
+SGW_DIR = SCRIPTS_DIR / "sgw"
+
+for p in [str(SCRIPTS_DIR), str(SGW_V2_DIR), str(SGW_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from sgw_v2.storage.db import RunDB
+from sgw_v2.meta.meta_orchestrator import MetaOrchestrator
+
+
+def _load_config(db: RunDB) -> dict[str, Any]:
+    """Load the most recent run's config, or return defaults."""
+    run_id = db.latest_run_id()
+    if run_id:
+        run_data = db.get_run(run_id)
+        if run_data:
+            return json.loads(run_data.get("scenario_config", "{}"))
+    return {
+        "wall_clock_hours": 0.5,
+        "min_sessions": 20,
+        "min_turns": 200,
+        "turn_target": 12,
+        "adversarial_sessions": 4,
+        "soft_violation_threshold": 0.85,
+        "soft_violation_rate_limit": 0.05,
+        "audit_sample_rate": 0.25,
+        "authenticity_sample_rate": 0.20,
+    }
+
+
+def _run_sgw_subprocess(
+    *,
+    persona_library: Path,
+    adversarial_playbook: Path,
+    output_dir: Path,
+    config: dict[str, Any],
+) -> int:
+    """Run the SGW orchestrator as a subprocess. Returns exit code."""
+    report_path = output_dir / "report.md"
+    checkpoint_path = output_dir / "checkpoint.json"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    cmd = [
+        sys.executable,
+        str(SGW_DIR / "sgw_orchestrator.py"),
+        "--persona-library", str(persona_library),
+        "--adversarial-playbook", str(adversarial_playbook),
+        "--report-path", str(report_path),
+        "--checkpoint-path", str(checkpoint_path),
+        "--wall-clock-hours", str(config.get("wall_clock_hours", 0.5)),
+        "--min-sessions", str(config.get("min_sessions", 20)),
+        "--min-turns", str(config.get("min_turns", 200)),
+        "--turn-target", str(config.get("turn_target", 12)),
+        "--adversarial-sessions", str(config.get("adversarial_sessions", 4)),
+    ]
+
+    print(f"[meta-loop] Launching SGW subprocess...")
+    print(f"[meta-loop]   cmd: {' '.join(cmd[:6])}...")
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+
+    if result.returncode != 0:
+        print(f"[meta-loop] SGW exited with code {result.returncode}")
+        if result.stderr:
+            print(f"[meta-loop] stderr: {result.stderr[-500:]}")
+
+    return result.returncode
+
+
+def _inject_random_exploration(config: dict[str, Any], rng: random.Random) -> dict[str, Any]:
+    """Inject random parameter perturbation for exploration."""
+    new_config = dict(config)
+
+    # Pick 1-2 parameters to perturb
+    params = [
+        ("soft_violation_threshold", 0.80, 0.95, 0.05),
+        ("audit_sample_rate", 0.10, 0.50, 0.05),
+        ("authenticity_sample_rate", 0.10, 0.50, 0.05),
+        ("turn_target", 8, 16, 1),
+    ]
+
+    n_perturb = rng.randint(1, 2)
+    chosen = rng.sample(params, min(n_perturb, len(params)))
+    for param, lo, hi, step in chosen:
+        current = new_config.get(param, (lo + hi) / 2)
+        delta = rng.choice([-step, step])
+        new_val = round(max(lo, min(hi, current + delta)), 4)
+        if new_val != current:
+            new_config[param] = new_val
+            print(f"[meta-loop] Exploration: {param} {current} -> {new_val}")
+
+    return new_config
+
+
+def _check_convergence(db: RunDB, window: int = 5) -> bool:
+    """Check if the last N iterations show convergence (all neutral)."""
+    rows = db.conn.execute(
+        "SELECT outcome FROM iterations ORDER BY created_at DESC LIMIT ?",
+        (window,),
+    ).fetchall()
+    if len(rows) < window:
+        return False
+    outcomes = [row[0] for row in rows]
+    # Converged if all recent outcomes are neutral or improved_sig
+    non_neutral = [o for o in outcomes if o not in ("neutral", "improved_sig")]
+    return len(non_neutral) == 0
+
+
+def run_meta_loop(
+    *,
+    db_path: Path,
+    persona_library: Path,
+    adversarial_playbook: Path,
+    max_iterations: int = 100,
+    exploration_every_n: int = 5,
+    convergence_window: int = 5,
+    seed: int = 42,
+) -> int:
+    """Run the full meta-orchestration loop."""
+    db = RunDB(db_path)
+    rng = random.Random(seed)
+    output_dir = db_path.parent / "meta_loop_output"
+
+    current_config = _load_config(db)
+    print(f"[meta-loop] Starting with config: {json.dumps(current_config, indent=2)}")
+
+    consecutive_neutral = 0
+
+    for iteration in range(1, max_iterations + 1):
+        print(f"\n{'='*60}")
+        print(f"[meta-loop] Iteration {iteration}/{max_iterations}")
+        print(f"{'='*60}")
+
+        # Step 1: Run SGW with current config
+        exit_code = _run_sgw_subprocess(
+            persona_library=persona_library,
+            adversarial_playbook=adversarial_playbook,
+            output_dir=output_dir / f"iter_{iteration}",
+            config=current_config,
+        )
+
+        if exit_code != 0:
+            print(f"[meta-loop] SGW failed with exit code {exit_code}, skipping diagnosis")
+            continue
+
+        # Step 2: Get latest run from DB
+        latest_run_id = db.latest_run_id()
+        if not latest_run_id:
+            print("[meta-loop] No run found in DB after subprocess, skipping")
+            continue
+
+        print(f"[meta-loop] Latest run: {latest_run_id[:12]}")
+
+        # Step 3: Run meta-iteration (diagnose -> plan)
+        meta = MetaOrchestrator(db, current_config)
+        result = meta.run_iteration(latest_run_id)
+
+        if result is None:
+            print("[meta-loop] No iteration produced, continuing")
+            continue
+
+        print(f"[meta-loop] Iteration result: {result.outcome}, hypotheses={result.hypotheses_count}, changes={result.changes_applied}")
+
+        # Step 4: Evaluate if we have a previous run to compare against
+        if result.plan_id and result.changes_applied > 0:
+            evaluation = meta.evaluate_iteration(result.iteration_id, latest_run_id)
+            if evaluation:
+                print(f"[meta-loop] Evaluation: {evaluation.outcome}")
+                current_config = meta.current_config
+
+                if evaluation.outcome == "regressed":
+                    consecutive_neutral = 0
+                    print("[meta-loop] Regressed — keeping original config")
+                elif evaluation.outcome == "improved_sig":
+                    consecutive_neutral = 0
+                    print("[meta-loop] Significant improvement — adopted new config")
+                elif evaluation.outcome == "improved_nonsig":
+                    print("[meta-loop] Non-significant improvement — adopting cautiously")
+                    consecutive_neutral += 1
+                else:
+                    consecutive_neutral += 1
+            else:
+                consecutive_neutral += 1
+        else:
+            consecutive_neutral += 1
+
+        # Step 5: Random exploration injection
+        if iteration % exploration_every_n == 0:
+            print("[meta-loop] Injecting random exploration...")
+            current_config = _inject_random_exploration(current_config, rng)
+
+        # Step 6: Check convergence
+        if consecutive_neutral >= convergence_window:
+            print(f"[meta-loop] {consecutive_neutral} consecutive neutral iterations, checking convergence...")
+            if _check_convergence(db, convergence_window):
+                print("[meta-loop] CONVERGED — system stable, exiting loop")
+                break
+
+        # Print current config state
+        print(f"[meta-loop] Current config: {json.dumps(current_config, indent=2)}")
+
+    print(f"\n[meta-loop] Completed {iteration} iterations")
+    print(f"[meta-loop] Final config: {json.dumps(current_config, indent=2)}")
+
+    # Print iteration history
+    meta_final = MetaOrchestrator(db, current_config)
+    history = meta_final.get_iteration_history()
+    print(f"\n[meta-loop] Iteration history ({len(history)} iterations):")
+    for record in history:
+        print(f"  #{record.get('iteration_number', '?')}: {record.get('outcome', '?')} "
+              f"(hypotheses={record.get('hypotheses_count', 0)}, changes={record.get('changes_applied', 0)})")
+
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="SGW v2 meta-orchestration loop")
+    parser.add_argument("--db-path", required=True, type=Path, help="Path to sgw_runs.db")
+    parser.add_argument("--persona-library", required=True, type=Path)
+    parser.add_argument("--adversarial-playbook", required=True, type=Path)
+    parser.add_argument("--max-iterations", type=int, default=100)
+    parser.add_argument("--exploration-every-n", type=int, default=5)
+    parser.add_argument("--convergence-window", type=int, default=5)
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+
+    return run_meta_loop(
+        db_path=args.db_path,
+        persona_library=args.persona_library,
+        adversarial_playbook=args.adversarial_playbook,
+        max_iterations=args.max_iterations,
+        exploration_every_n=args.exploration_every_n,
+        convergence_window=args.convergence_window,
+        seed=args.seed,
+    )
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

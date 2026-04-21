@@ -116,18 +116,26 @@ _DIAGNOSTIC_RULES: list[dict[str, Any]] = [
 
 
 class DiagnosticAgent:
-    """Rule-based diagnostic agent that analyzes run data and produces hypotheses."""
+    """Rule-based diagnostic agent that analyzes run data and produces hypotheses.
+
+    Two layers:
+    1. Global threshold rules (existing _DIAGNOSTIC_RULES)
+    2. Cross-slice attribution: GROUP BY (persona, behavior_class) to find
+       cells where failure rate is >2x the overall rate
+    """
 
     def __init__(self, run_db: RunDB):
         self.run_db = run_db
 
     def diagnose(self, run_id: str) -> list[DiagnosticHypothesis]:
-        """Analyze a run and return diagnostic hypotheses."""
+        """Analyze a run and return diagnostic hypotheses from both layers."""
         summary = self.run_db.run_summary(run_id)
         if not summary:
             return []
 
         hypotheses: list[DiagnosticHypothesis] = []
+
+        # Layer 1: Global threshold rules
         for rule in _DIAGNOSTIC_RULES:
             if rule["trigger"](summary):
                 hypotheses.append(
@@ -140,6 +148,101 @@ class DiagnosticAgent:
                         suggested_action=rule["action"],
                         affected_parameters=rule["parameters"],
                         confidence=self._compute_confidence(rule, summary),
+                    )
+                )
+
+        # Layer 2: Cross-slice attribution (no LLM needed)
+        hypotheses.extend(self._cross_slice_diagnose(run_id, summary))
+
+        return hypotheses
+
+    def _cross_slice_diagnose(self, run_id: str, summary: dict[str, Any]) -> list[DiagnosticHypothesis]:
+        """Find cells where failure rate is >2x overall using GROUP BY."""
+        hypotheses: list[DiagnosticHypothesis] = []
+
+        # Overall compliance violation rate
+        overall_rate = summary.get("soft_violation_rate", 0)
+        if overall_rate == 0:
+            return hypotheses
+
+        # Cross-slice: (seed_persona_id, ai_behavior_class) -> violation rate
+        rows = self.run_db.conn.execute(
+            """SELECT s.seed_persona_id, t.ai_behavior_class,
+                      COUNT(*) as total,
+                      SUM(CASE WHEN a.is_violation = 1 THEN 1 ELSE 0 END) as violations
+               FROM turns t
+               JOIN sessions s ON s.session_id = t.session_id
+               LEFT JOIN audits a ON a.session_id = s.session_id AND a.audit_type = 'compliance'
+               WHERE s.run_id = ? AND s.seed_persona_id IS NOT NULL AND t.ai_behavior_class IS NOT NULL
+               GROUP BY s.seed_persona_id, t.ai_behavior_class
+               HAVING COUNT(*) >= 10""",
+            (run_id,),
+        ).fetchall()
+
+        for row in rows:
+            persona_id, behavior_class, total, violations = row
+            cell_rate = (violations or 0) / total
+            if cell_rate > overall_rate * 2 and cell_rate > 0.10:
+                hypotheses.append(
+                    DiagnosticHypothesis(
+                        hypothesis_id=f"slice_{persona_id[:8]}_{behavior_class}",
+                        category="attribution",
+                        severity="major",
+                        description=(
+                            f"Persona {persona_id} under {behavior_class} AI behavior "
+                            f"has {cell_rate:.2%} violation rate (2x overall {overall_rate:.2%})"
+                        ),
+                        evidence=[
+                            f"cell: persona={persona_id}, behavior={behavior_class}",
+                            f"violations={violations}/{total} ({cell_rate:.4f})",
+                            f"overall_rate={overall_rate:.4f}",
+                        ],
+                        suggested_action=(
+                            f"Investigate why {persona_id} conversations degrade when "
+                            f"AI uses {behavior_class} strategy"
+                        ),
+                        affected_parameters=["persona_prompt_template", "state_machine_transitions"],
+                        confidence=min(1.0, total / 50),
+                    )
+                )
+
+        # Cross-slice: per-persona authenticity failure rate
+        auth_rows = self.run_db.conn.execute(
+            """SELECT s.seed_persona_id,
+                      COUNT(*) as total,
+                      SUM(CASE WHEN a.is_violation = 1 THEN 1 ELSE 0 END) as failures,
+                      AVG(a.overall) as mean_score
+               FROM audits a
+               JOIN sessions s ON s.session_id = a.session_id
+               WHERE a.run_id = ? AND a.audit_type = 'authenticity'
+               AND s.seed_persona_id IS NOT NULL
+               GROUP BY s.seed_persona_id
+               HAVING COUNT(*) >= 5""",
+            (run_id,),
+        ).fetchall()
+
+        overall_auth_failure_rate = summary.get("authenticity_failures", 0) / max(summary.get("authenticity_total", 1), 1)
+
+        for row in auth_rows:
+            persona_id, total, failures, mean_score = row
+            cell_rate = (failures or 0) / total
+            if cell_rate > overall_auth_failure_rate * 2 and cell_rate > 0.20:
+                hypotheses.append(
+                    DiagnosticHypothesis(
+                        hypothesis_id=f"auth_slice_{persona_id[:8]}",
+                        category="authenticity",
+                        severity="major",
+                        description=(
+                            f"Persona {persona_id} has {cell_rate:.2%} authenticity failure rate "
+                            f"(mean={mean_score:.2f}), 2x overall {overall_auth_failure_rate:.2%}"
+                        ),
+                        evidence=[
+                            f"persona={persona_id}, failures={failures}/{total}",
+                            f"mean_score={mean_score:.4f}",
+                        ],
+                        suggested_action=f"Review arc templates for persona {persona_id}",
+                        affected_parameters=["arc_templates", "persona_library"],
+                        confidence=min(1.0, total / 30),
                     )
                 )
 
