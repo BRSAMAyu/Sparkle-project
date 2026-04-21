@@ -13,7 +13,7 @@ def test_big_five_dimension_accepts_boundary_values() -> None:
 
 def test_big_five_dimension_rejects_confidence_above_cap() -> None:
     with pytest.raises(ValueError, match="trait confidence"):
-        BigFiveDimension(value=0.1, confidence=0.31, evidence_count=1, source="merged")
+        BigFiveDimension(value=0.1, confidence=0.31, evidence_count=1, source="merged")  # rule-am-dynamic-ok
 
 
 def test_big_five_dimension_rejects_value_out_of_range() -> None:

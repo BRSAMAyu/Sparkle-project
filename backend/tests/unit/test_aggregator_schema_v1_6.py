@@ -32,7 +32,7 @@ async def test_aggregator_schema_v1_6_reports_recent_reflections(db_session) -> 
         required_fields=("recent_reflections",),
     )
 
-    assert state.schema_version == "user_state.v1.8"
+    assert state.schema_version == "user_state.v1.10"
     assert state.recent_reflections is not None
     assert state.recent_reflections.value.last_category == "plan_stall"
 

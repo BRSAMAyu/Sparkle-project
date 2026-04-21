@@ -5,6 +5,7 @@ package sparkle.userstate.v1;
 option go_package = "github.com/sparkle/gateway/gen/userstate/v1;userstatev1";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
 
 message StateFieldMetadata {
   google.protobuf.Timestamp computed_at = 1;
@@ -171,6 +172,69 @@ message SufficiencySummaryField {
   StateFieldMetadata metadata = 2;
 }
 
+message ActiveSkillSummaryItemValue {
+  string skill_id = 1;
+  string name = 2;
+  double activation_match_score = 3;
+}
+
+message ActiveSkillsSummaryValue {
+  repeated ActiveSkillSummaryItemValue items = 1;
+}
+
+message ActiveSkillsSummaryField {
+  ActiveSkillsSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message AchievementUnlockSummaryItemValue {
+  string achievement_id = 1;
+  string name = 2;
+  string rarity = 3;
+  google.protobuf.Timestamp unlocked_at = 4;
+}
+
+message AchievementProgressSummaryItemValue {
+  string achievement_id = 1;
+  string name = 2;
+  double progress = 3;
+}
+
+message AchievementSummaryValue {
+  repeated AchievementUnlockSummaryItemValue recent_unlocks = 1;
+  repeated AchievementProgressSummaryItemValue in_progress_achievements = 2;
+  double total_achievement_score = 3;
+}
+
+message AchievementSummaryField {
+  AchievementSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message CalendarDeadlineItemValue {
+  string title = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  string source = 4;
+}
+
+message CalendarTimeBlockItemValue {
+  string start = 1;
+  string end = 2;
+}
+
+message CalendarContextValue {
+  repeated CalendarDeadlineItemValue upcoming_deadlines = 1;
+  repeated CalendarTimeBlockItemValue time_blocks_today = 2;
+  string workload_density = 3;
+  google.protobuf.Struct exam_urgency = 4;
+}
+
+message CalendarContextField {
+  CalendarContextValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
 message UserStateV1 {
   string user_id = 1;
   string schema_version = 2;
@@ -189,4 +253,7 @@ message UserStateV1 {
   ForesightHintSummaryField foresight_hint = 14;
   TraitsPriorSummaryField traits_prior = 15;
   SRLPhaseSummaryField srl_phase = 16;
+  ActiveSkillsSummaryField active_skills_summary = 17;
+  AchievementSummaryField achievement_summary = 18;
+  CalendarContextField calendar_context = 19;
 }

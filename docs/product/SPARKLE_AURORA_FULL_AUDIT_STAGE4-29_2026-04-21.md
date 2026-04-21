@@ -9,24 +9,24 @@
 
 ## §0 Executive Summary
 
-**Overall Health Rating: ADEQUATE**
+**Overall Health Rating: ADEQUATE+**
 
-The Sparkle Aurora adaptive cognitive kernel (Stages 4-29) is structurally sound with strong governance infrastructure and comprehensive test coverage. No P0 (critical) findings survived cross-validation. The primary risks are defense-in-depth gaps in service-layer user_id filtering and governance guard fragility.
+The Sparkle Aurora adaptive cognitive kernel (Stages 4-29) is structurally sound with strong governance infrastructure and comprehensive test coverage. No P0 (critical) findings survived cross-validation. Cross-user security is well-protected by API-layer auth; service-layer defense-in-depth gaps are minor. The primary risks are governance guard fragility and missing automated enforcement for base rules.
 
-**Total Findings (after cross-validation):**
+**Total Findings (after strict re-verification):**
 - P0 (Critical): **0** — original P0 downgraded to P2 (intentional placeholder)
-- P1 (High): **7** — 3 security defense-in-depth gaps + 2 missing guards + 2 fragile guards
-- P2 (Medium): **8** — doc drift, naming inconsistency, test count ambiguity
+- P1 (High): **4** — 2 missing guards + 2 fragile guards (security gaps downgraded after caller-side verification)
+- P2 (Medium): **10** — 2 defense-in-depth gaps + doc drift + naming inconsistency + test count ambiguity
 
 **Key Risks:**
-1. Service-layer queries lack explicit `user_id` filters in 3 subsystems (mitigated by API-layer auth)
-2. Rules G/H (commit discipline, agent allowlist) have no automated guard enforcement
-3. 5 guard scripts use fragile string-matching that bypassable via import aliasing
+1. Rules G/H (commit discipline, agent allowlist) have no automated guard enforcement
+2. 5 guard scripts use fragile string-matching bypassable via import aliasing / multi-line constructs
+3. 2 service-layer methods lack defense-in-depth user_id filters (caller-side validation exists)
 
 **Immediate Action Items:**
-1. Add `user_id` filters to `policy_compiler_service.revoke_for_commitment()`, `conflict_resolver._load_records()`, `route_history._load_decision()`
-2. Create guard scripts for Rules G and H
-3. Upgrade string-match guards (AC, AD, AF-pipeline, AI, AH) to AST-based analysis
+1. Create guard scripts for Rules G and H
+2. Upgrade fragile guards (AI, NLP-no-direct-write priority; then AC, AD, AH)
+3. Add `user_id` filters to `policy_compiler.revoke_for_commitment()` and `conflict_resolver._load_records()` for defense-in-depth
 
 ---
 
@@ -207,36 +207,46 @@ S16 → S17(merge) → S18 → S19(no-op) ────────────�
 | 14 | Traits | 0 | N/A | None |
 | 15 | SRL Tracker | 2 | YES | None |
 
-**10/15 subsystems have full user_id filtering.** 3 have defense-in-depth gaps (P1). 2 are Redis-only with no SQL queries.
+**12/15 subsystems have full user_id filtering.** 2 have defense-in-depth gaps (P2) where caller-side validation exists but service layer lacks explicit filter. 1 subsystem (route_history) was a false positive — method not reachable from external API.
 
 ---
 
 ## §9 Confirmed Findings
 
-### P1 (High Priority — 7 findings)
+### P1 (High Priority — 4 findings)
 
 | # | Stage | Category | Finding | File | Action Required |
 |---|-------|----------|---------|------|-----------------|
-| F-1 | S24 | Security | `revoke_for_commitment()` lacks `user_id` filter | policy_compiler_service.py:135 | Add user_id to WHERE clause |
-| F-2 | S20 | Security | `_load_records()` lacks `user_id` filter | conflict_resolver_service.py:424 | Add user_id to WHERE clause |
-| F-3 | S20 | Security | `_load_decision()` lacks `user_id` filter | route_history_service.py:289 | Add user_id to WHERE clause |
-| F-4 | S4 | Governance | Rules G/H have no automated guard scripts | scripts/stage4/ (missing) | Create guard scripts |
-| F-5 | S17 | Governance | Rules P/Q/U have no automated enforcement | — | Document or automate |
-| F-6 | S28 | Governance | `check_nlp_no_direct_write.py` is string-match fragile | scripts/stage28/ | Upgrade to AST |
-| F-7 | S24 | Governance | `check_rule_ai_policy_purity.py` is string-match fragile | scripts/stage24/ | Upgrade to AST |
+| F-1 | S4 | Governance | Rules G/H have no automated guard scripts | scripts/stage4/ (missing) | Create guard scripts |
+| F-2 | S17 | Governance | Rules P/Q/U have no automated enforcement | — | Document or automate |
+| F-3 | S28 | Governance | `check_nlp_no_direct_write.py` is string-match fragile | scripts/stage28/ | Upgrade to AST |
+| F-4 | S24 | Governance | `check_rule_ai_policy_purity.py` is string-match fragile | scripts/stage24/ | Upgrade to AST |
 
-### P2 (Medium Priority — 8 findings)
+### P2 (Medium Priority — 10 findings)
 
-| # | Stage | Category | Finding | File |
-|---|-------|----------|---------|------|
-| F-8 | S18 | Proto Sync | `emotion_hint` vs `emotion_hint_reserved` mismatch (intentional placeholder) | schema.py:230 vs proto:247 |
-| F-9 | S18 | Aggregator | `emotion_hint` has no builder method | service.py (missing) |
-| F-10 | S16 | CI | No gate_final.sh (predates standardized structure) | scripts/stage16/ (missing) |
-| F-11 | S26 | Doc Drift | Migration filename differs from handoff | handoff vs alembic/versions/ |
-| F-12 | S25 | Doc Drift | `reflection.generated` event not documented in handoff | task_reflection_service.py:328 |
-| F-13 | S26 | Security | Scene `assert_user_isolation` validates post-query | scene_consolidation_service.py:308 |
-| F-14 | S23 | Guard | Rule AH has CWD dependency | check_rule_ah_dimension_registry.py |
-| F-15 | S22-25 | Tests | Test count discrepancies in 3 handoffs | Multiple |
+| # | Stage | Category | Finding | File | Notes |
+|---|-------|----------|---------|------|-------|
+| F-5 | S24 | Security | `revoke_for_commitment()` lacks `user_id` filter (caller validates) | policy_compiler_service.py:135 | Caller `memory_service.resolve_commitment()` validates at line 780-781 |
+| F-6 | S20 | Security | `_load_records()` lacks `user_id` filter (upstream validates) | conflict_resolver_service.py:424 | `resolve()` validates all records belong to candidate.user_id |
+| F-7 | S18 | Proto Sync | `emotion_hint` vs `emotion_hint_reserved` mismatch (intentional placeholder) | schema.py:230 vs proto:247 | Rule AQ excludes both from parity check |
+| F-8 | S18 | Aggregator | `emotion_hint` has no builder method | service.py (missing) | Never populated in production |
+| F-9 | S16 | CI | No gate_final.sh (predates standardized structure) | scripts/stage16/ (missing) | Expected per architecture age |
+| F-10 | S26 | Doc Drift | Migration filename differs from handoff | handoff vs alembic/versions/ | Implementation exists |
+| F-11 | S25 | Doc Drift | `reflection.generated` event not documented in handoff | task_reflection_service.py:328 | Minor gap |
+| F-12 | S26 | Security | Scene `assert_user_isolation` validates post-query | scene_consolidation_service.py:308 | Defense-in-depth gap |
+| F-13 | S23 | Guard | Rule AH has CWD dependency | check_rule_ah_dimension_registry.py | CI mitigates via PYTHONPATH |
+| F-14 | S22-25 | Tests | Test count discrepancies in 3 handoffs | Multiple | Likely parametrized/inherited tests |
+
+### False Positives (6 items resolved)
+
+| # | Original Finding | Why False Positive | Verified By |
+|---|-----------------|-------------------|-------------|
+| FP-1 | "3 proto fields missing" | Only 1 mismatch (intentional), not 3 | Loop 1 + re-verification |
+| FP-2 | "Python proto gen missing" | All 3 languages have fresh generated code | Loop 1 (user_state_pb2.py confirmed) |
+| FP-3 | "CI only checks Rule K" | 23 rule guard scripts via manifest | Loop 1 |
+| FP-4 | "AB router whitelist missing" | Rule AB has AST-based whitelist guard | Loop 1 + Loop 5 |
+| FP-5 | "emotion_hint P0 serialization" | Intentional placeholder, never populated | Loop 6 + re-verification |
+| FP-6 | "route_history._load_decision cross-user leak" | Method not reachable from external API | Strict re-verification |
 
 ---
 
@@ -264,13 +274,12 @@ S16 → S17(merge) → S18 → S19(no-op) ────────────�
 ## §12 Recommendations (Prioritized)
 
 ### Immediate (This Week)
-1. **Add user_id filters** to 3 service methods (policy_compiler, conflict_resolver, route_history)
-2. **Create guard scripts** for Rules G and H (commit discipline, agent allowlist)
+1. **Create guard scripts** for Rules G and H (commit discipline, agent allowlist)
 
 ### Short-Term (Next Sprint)
-3. **Upgrade fragile guards** (AC, AD, AF-pipeline, AI, AH) from string-match to AST-based analysis
-4. **Fix Rule AH CWD dependency** — use `Path(__file__).resolve()` pattern
-5. **Add user_id filter** to scene `assert_user_isolation` query (defense-in-depth)
+2. **Upgrade fragile guards** — priority: AI (policy purity), NLP-no-direct-write; then AC, AD, AH
+3. **Fix Rule AH CWD dependency** — use `Path(__file__).resolve()` pattern
+4. **Add user_id filters** to `revoke_for_commitment()` and `_load_records()` for defense-in-depth
 
 ### Process Improvements
 6. Standardize test counting methodology across handoffs

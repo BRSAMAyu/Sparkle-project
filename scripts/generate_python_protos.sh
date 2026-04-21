@@ -47,7 +47,8 @@ mkdir -p backend/app/gen
   proto/sparkle/inference/v1/inference.proto \
   proto/sparkle/rag/v1/evidence.proto \
   proto/sparkle/signals/v1/signals.proto \
-  proto/stt_service.proto
+  proto/stt_service.proto \
+  proto/user_state.proto
 
 "${PYTHON_BIN}" -m grpc_tools.protoc \
   --proto_path=proto \

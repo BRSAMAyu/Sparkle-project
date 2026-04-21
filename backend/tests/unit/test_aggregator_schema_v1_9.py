@@ -32,7 +32,7 @@ async def test_aggregator_schema_v1_9_exposes_traits_prior_summary(db_session) -
 
     state = await StateAggregatorService(db_session).get_user_state(user_id, required_fields=("traits_prior",))
 
-    assert state.schema_version == "user_state.v1.9"
+    assert state.schema_version == "user_state.v1.10"
     assert state.traits_prior is not None
     assert state.traits_prior.value.items[0].dim == "conscientiousness"
 

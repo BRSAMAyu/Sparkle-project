@@ -6,7 +6,7 @@
 ## Stage 25
 
 - verdict: Reflection wire-on remains required
-- evidence: `backend/app/agents/reflection_agent.py` exists with 756 lines, but Stage 22 code still exposes no read-path from intervention outcomes into reflection prompts.
+- evidence: `backend/app/agents/reflection_agent.py` exists with 986 lines, but Stage 22 code still exposes no read-path from intervention outcomes into reflection prompts.
 - dispatch implication: keep 4 WS lock; do not compress to 3.
 
 ## Stage 27
@@ -18,5 +18,14 @@
 ## Stage 29
 
 - verdict: SRL remains refactor + new service
-- evidence: `backend/app/scaffolding/scaffolding_fsm.py` exists with 109 lines and only tracks scaffolding zones, not explicit Forethought / Performance / Reflection phases.
+- evidence: `backend/app/scaffolding/scaffolding_fsm.py` exists with 195 lines and only tracks scaffolding zones, not explicit Forethought / Performance / Reflection phases.
 - dispatch implication: keep `SRLPhaseTracker` beside `ScaffoldingFSM`, not inside orchestrator transitions.
+
+## Baseline Registration
+
+| item | status | evidence |
+| --- | --- | --- |
+| trigger_type_count | PASS | `6` registered in `ErrorReplanBridge.TRIGGERING_ERROR_TYPES` |
+| registered_trigger_types | PASS | `careless_mistake`, `concept_confusion`, `knowledge_gap`, `procedural_error`, `strategy_mismatch`, `time_management` |
+| cohort_fallback_registered | PASS | `InterventionStrategyLearner` keeps goal-type fallback and `OutcomeVerifier` preserves cohort snapshot keys |
+| baseline_gate | PASS | Stage 23 baseline prerequisites are registered in code and artifacts |

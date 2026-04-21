@@ -17,6 +17,8 @@ SYNC_MAP = {
     "backend/app/gen/galaxy_service_pb2_grpc.py": "backend/app/gen/galaxy/v1/galaxy_service_pb2_grpc.py",
     "backend/app/gen/stt_service_pb2.py": "backend/app/gen/stt/v1/stt_service_pb2.py",
     "backend/app/gen/stt_service_pb2_grpc.py": "backend/app/gen/stt/v1/stt_service_pb2_grpc.py",
+    "backend/app/gen/user_state_pb2.py": "backend/app/gen/userstate/v1/user_state_pb2.py",
+    "backend/app/gen/user_state_pb2.pyi": "backend/app/gen/userstate/v1/user_state_pb2.pyi",
     "backend/app/gen/websocket_pb2.py": "backend/app/gen/ws/websocket_pb2.py",
     "backend/app/gen/websocket_pb2.pyi": "backend/app/gen/ws/websocket_pb2.pyi",
 }

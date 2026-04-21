@@ -24,8 +24,6 @@ class RuleYAdapter:
             return None
         if candidate.source_lane.strip() == "":
             return None
-        if candidate.subject_type == "commitment" and candidate.due_at is None:
-            return None
         if candidate.occurred_at is None:
             return None
         return candidate

@@ -78,6 +78,35 @@ jobs:
       - name: Technical Debt Budget Gate
         run: python3 scripts/check_tech_debt_budget.py
 
+  # ==================== JOB 1B: RULE GUARDS ====================
+  all-rule-guards:
+    name: All Rule Guards
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Install Guard Runtime Deps
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Run Stage 22 Baseline Artifact Refresh
+        run: |
+          python3 scripts/check_prompt_render_coverage.py --write
+          python3 scripts/render_stage22_precheck.py
+
+      - name: Run All Rule Guards
+        run: bash scripts/run_all_rule_guards.sh --jobs 4
+
   # ==================== JOB 2: BACKEND TEST ====================
   backend-test:
     name: Backend Tests
@@ -368,7 +397,7 @@ jobs:
   build:
     name: Build Artifacts
     runs-on: ubuntu-latest
-    needs: [backend-test, flutter-test, security-scan, db-schema-check, proto-check]
+    needs: [all-rule-guards, backend-test, flutter-test, security-scan, db-schema-check, proto-check]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
     steps:
       - uses: actions/checkout@v4

@@ -3,8 +3,8 @@
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
 > **日期**: 2026-04-21
-> **版本**: v27（Stage 27 closeout + Stage 28 in progress）
-> **v2.2 锁定**: Stage 22-27 ✅ / Stage 28 🔶 / Stage 29-32 ❌
+> **版本**: v28（Stage 29 closeout + Stage 30 in progress）
+> **v2.2 锁定**: Stage 22-29 ✅ / Stage 30 🔶 / Stage 31-32 ❌
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -885,8 +885,9 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 | 25 | Reflection Wire-On | 5 | 扩展 | AJ | ✅ closeout |
 | 26 | Scene Consolidation | 5 | 新增 | AK | ✅ closeout |
 | 27 | Foresight Engine | 5 | 扩展+新增 | AL | ✅ closeout |
-| 28 | Traits 弱先验 | 5 | 扩展+新增 | AM | 🔶 in progress |
-| 29 | SRL 三阶段独立 Tracker | 6 | 重构+新增 | AN | ❌ pending |
+| 28 | Traits 弱先验 | 5 | 扩展+新增 | AM | ✅ closeout |
+| 29 | SRL 三阶段独立 Tracker | 6 | 重构+新增 | AN | ✅ closeout |
+| 30 | Metacognition 扩展 | 4 | 扩展 | AO | 🔶 in progress |
 | 30 | Metacognition 扩展 | 4 | 扩展 | AO | ❌ pending |
 | 31 | Idiographic Lite | 4 | 扩展+新增 | AP | ❌ pending |
 | 32 | CL SQAM 扫尾 | 4 | 测量 | 复用 W | ❌ pending |
@@ -900,7 +901,9 @@ AI  Policy Compiler 纯规则 —— Stage 24 ✅ closeout
 AJ  Reflection 消费隔离   —— Stage 25 ✅ closeout
 AK  Scene 合并幂等 + 算法约束 —— Stage 26 ✅ closeout
 AL  Foresight 非 Router 分支 —— Stage 27 ✅ closeout
-AM  Traits 置信度 ≤0.3 + 冲突优先级 —— Stage 28 🔶 in progress
+AM  Traits 置信度 ≤0.3 + 冲突优先级 —— Stage 28 ✅ closeout
+AN  SRL 解耦（EventBus + Aggregator）—— Stage 29 ✅ closeout
+AO  Metacognition 禁诊断词 —— Stage 30 🔶 in progress
 ```
 AJ  Reflection 消费隔离   —— Stage 25
 AK  Scene 合并幂等 + 算法约束 —— Stage 26
@@ -1126,7 +1129,64 @@ AP  Idiographic 仅关联不因果 —— Stage 31
 
 **Stage 28 义务锁定**：Stage 27 Foresight Engine 已落地，Stage 28 Traits 弱先验可启动。
 
-### 9.28 依赖链（v2.2 锁定，不可打乱顺序）
+### 9.28 ✅ Stage 28 完成（Traits 弱先验）
+
+**Stage 28 入场条件**：Stage 27 全部 WS green + Rule AL 无破例。
+
+**Stage 28 总目标**：在已有 UserInsightState 基础上新增 Big Five 层 Traits——置信度上限 0.3。
+
+**五个 Workstream（WS-TR-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-TR-MODEL** | Traits 模型 | Big Five + 置信度 ≤0.3 |
+| **WS-TR-NLP-OBSERVE** | NLP 观察 | 跨文化基线校准 |
+| **WS-TR-COLDSTART** | 冷启动 3 问 | 用户主动提供 |
+| **WS-TR-AGGREGATOR** | Aggregator v1.9 | traits_summary |
+| **WS-TR-GUARD** | 治理守卫 | 置信度 + 冲突优先级 |
+
+**新增治理规则**：**Rule AM**（Stage 28 新建）：Traits 置信度 ≤0.3 + 冲突时 Dynamic States 优先。
+
+**GLM1 验收**：ACCEPT - CLEAN（Path A 全量实现）
+
+**Stage 29 义务锁定**：Stage 28 Traits 弱先验已落地，Stage 29 SRL Tracker 可启动。
+
+### 9.29 ✅ Stage 29 完成（SRL 三阶段独立 Tracker）
+
+**Stage 29 入场条件**：Stage 28 全部 WS green + Rule AM 无破例。
+
+**Stage 29 总目标**：将 SRL（Self-Regulated Learning）阶段追踪从耦合转为独立服务——通过 EventBus 解耦。
+
+**六个 Workstream（WS-SR-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-SR-MODEL** | SRL 阶段状态机 | forethought/performance/reflection |
+| **WS-SR-TRACKER** | 独立 SRLPhaseTracker | 订阅 EventBus |
+| **WS-SR-EVENT-BRIDGE** | EventBus 集成 | SRLPhaseTransitionEvent |
+| **WS-SR-SCAFFOLDING-EXTEND** | Scaffolding FSM | 消费阶段调整 support_level |
+| **WS-SR-AGGREGATOR** | Aggregator v1.10 | srl_phase_summary |
+| **WS-SR-GUARD** | 治理守卫 | Rule AN/AL 零冲突 |
+
+**新增治理规则**：**Rule AN**（Stage 29 新建）：SRL 阶段状态经 EventBus + Aggregator 解耦。
+
+**GLM1 验收**：ACCEPT - CLEAN（Path A 全量实现）
+
+| 验证项 | 结果 |
+|--------|------|
+| Backend tests | 73 passed |
+| Mobile tests | 6 passed |
+| EventBus throughput | 24693.97 events/min |
+| Lag p95 | 0.17s |
+| Proto sync | PASS |
+
+**实现路径**：Path A（full implementation）
+
+**Note**：目标环境上线前需应用 Stage 28/29 migration 到目标库。
+
+**Stage 30 义务锁定**：Stage 29 SRL Tracker 已落地，Stage 30 Metacognition 扩展可启动。
+
+### 9.30 依赖链（v2.2 锁定，不可打乱顺序）
 
 ```
 Memory Write (Stage 16 ✅)
@@ -1153,9 +1213,11 @@ Scene Consolidation (Stage 26 ✅) ← 已 closeout
     ↓
 Foresight Engine (Stage 27 ✅) ← 已 closeout
     ↓
-Traits 弱先验 (Stage 28 🔶) ← 当前执行
+Traits 弱先验 (Stage 28 ✅) ← 已 closeout
     ↓
-SRL 三阶段独立 Tracker (Stage 29)
+SRL 三阶段独立 Tracker (Stage 29 ✅) ← 已 closeout
+    ↓
+Metacognition 扩展 (Stage 30 🔶) ← 当前执行
     ↓
 Metacognition 扩展 (Stage 30)
     ↓
@@ -1210,7 +1272,9 @@ CL SQAM 扫尾 (Stage 32)
 | Reflection Wire-On | ✅ Stage 25 | closeout（6 类 trigger） |
 | Scene Consolidation | ✅ Stage 26 | closeout（cosine + time window） |
 | Foresight Engine | ✅ Stage 27 | closeout（PersDyn + JITAI） |
-| Traits 弱先验 | 🔶 Stage 28 | 当前执行 |
+| Traits 弱先验 | ✅ Stage 28 | closeout（Big Five + 置信度 ≤0.3） |
+| SRL Tracker | ✅ Stage 29 | closeout（EventBus 解耦） |
+| Metacognition 扩展 | 🔶 Stage 30 | 当前执行 |
 | SRL Tracker | ❌→Stage 29 | 路线图已锁定 |
 | Metacognition 扩展 | ❌→Stage 30 | 路线图已锁定 |
 | Idiographic Lite | ❌→Stage 31 | 路线图已锁定 |

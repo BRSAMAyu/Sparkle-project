@@ -406,6 +406,7 @@ class MemoryInferredWriteLaneService:
                 EpisodicMemory.user_id == user_id,
                 EpisodicMemory.deleted_at.is_(None),
                 EpisodicMemory.source_lane == self.SOURCE_LANE,
+                EpisodicMemory.retracted_at.is_(None),
                 EpisodicMemory.revoked_at.is_(None),
                 (
                     (EpisodicMemory.evidence_token == candidate.evidence_token)
@@ -422,9 +423,18 @@ class MemoryInferredWriteLaneService:
         session_id: UUID,
         candidate: InferredEpisodicCandidate,
         force_write: bool = False,
+        bypass_min_confidence: bool = False,
         source_type: str = "chat",
         extra_tags: list[str] | None = None,
     ) -> EpisodicMemory | None:
+        from app.services.rule_y_adapter import RuleYAdapter
+
+        validated_candidate = RuleYAdapter.validate(candidate)
+        if validated_candidate is None:
+            MEMORY_INFERRED_WRITE_TOTAL.labels(status="rule_y_rejected").inc()
+            return None
+        candidate = validated_candidate
+
         if not self._within_rate_limit(user_id):
             self._enqueue_degraded_candidate(user_id=user_id, session_id=session_id, candidate=candidate)
             MEMORY_INFERRED_WRITE_TOTAL.labels(status="rate_limited").inc()
@@ -434,7 +444,7 @@ class MemoryInferredWriteLaneService:
             MEMORY_INFERRED_WRITE_TOTAL.labels(status="disabled").inc()
             return None
 
-        if candidate.confidence < settings.MEMORY_INFERRED_MIN_CONFIDENCE:
+        if not bypass_min_confidence and candidate.confidence < settings.MEMORY_INFERRED_MIN_CONFIDENCE:
             MEMORY_INFERRED_WRITE_TOTAL.labels(status="below_threshold").inc()
             return None
 

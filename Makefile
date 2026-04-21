@@ -222,6 +222,7 @@ proto-gen-legacy:
 	mkdir -p backend/gateway/gen/agent/v1
 	mkdir -p backend/gateway/gen/galaxy/v1
 	mkdir -p backend/gateway/gen/stt/v1
+	mkdir -p backend/gateway/gen/userstate/v1
 	protoc --proto_path=proto \
 	       --go_out=backend/gateway/gen/agent/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/agent/v1 --go-grpc_opt=paths=source_relative \
@@ -234,6 +235,9 @@ proto-gen-legacy:
 	       --go_out=backend/gateway/gen/stt/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/stt/v1 --go-grpc_opt=paths=source_relative \
 	       proto/stt_service.proto
+	protoc --proto_path=proto \
+	       --go_out=backend/gateway/gen/userstate/v1 --go_opt=paths=source_relative \
+	       proto/user_state.proto
 	@echo "  → WebSocket..."
 	mkdir -p backend/gateway/gen/ws
 	protoc --proto_path=proto \
@@ -243,6 +247,7 @@ proto-gen-legacy:
 	mkdir -p backend/app/gen/agent/v1
 	mkdir -p backend/app/gen/galaxy/v1
 	mkdir -p backend/app/gen/stt/v1
+	mkdir -p backend/app/gen/userstate/v1
 	python3 -m grpc_tools.protoc \
 	       --proto_path=proto \
 	       --python_out=backend/app/gen/agent/v1 \
@@ -265,12 +270,17 @@ proto-gen-legacy:
 	       --proto_path=proto \
 	       --python_out=backend/app/gen \
 	       --pyi_out=backend/app/gen \
+	       proto/user_state.proto
+	python3 -m grpc_tools.protoc \
+	       --proto_path=proto \
+	       --python_out=backend/app/gen \
+	       --pyi_out=backend/app/gen \
 	       proto/websocket.proto
 	@echo "  → Dart..."
 	@if [ -x "$$HOME/.pub-cache/bin/protoc-gen-dart" ]; then \
 		if PATH="$$HOME/.pub-cache/bin:$$PATH" protoc --proto_path=proto \
 			--dart_out=grpc:mobile/lib/gen \
-			proto/agent_service.proto proto/websocket.proto proto/galaxy_service.proto proto/stt_service.proto; then \
+			proto/agent_service.proto proto/websocket.proto proto/galaxy_service.proto proto/stt_service.proto proto/user_state.proto; then \
 			echo "✅ Dart protobuf generated"; \
 		else \
 			echo "⚠️  Dart protobuf generation failed in current environment"; \

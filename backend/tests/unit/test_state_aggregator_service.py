@@ -180,7 +180,7 @@ async def test_state_aggregator_builds_achievement_and_calendar_fields(db_sessio
         required_fields=("achievement_summary", "calendar_context"),
     )
 
-    assert state.schema_version == "user_state.v1.8"
+    assert state.schema_version == "user_state.v1.10"
     assert state.achievement_summary is not None
     assert state.achievement_summary.value.recent_unlocks[0].achievement_id == "streak_7"
     assert state.achievement_summary.value.total_achievement_score >= 2.0

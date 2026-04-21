@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -332,11 +332,11 @@ class ConflictResolverService:
 
         winner_record_id: UUID | None = None
         if selection == "left":
-            winner_record_id = await self._materialize_side(conflict.left_payload, user_id=user_id)
             await self._retract_if_present(conflict.right_record_id, user_id=user_id)
+            winner_record_id = await self._materialize_side(conflict.left_payload, user_id=user_id)
         elif selection == "right":
-            winner_record_id = await self._materialize_side(conflict.right_payload, user_id=user_id)
             await self._retract_if_present(conflict.left_record_id, user_id=user_id)
+            winner_record_id = await self._materialize_side(conflict.right_payload, user_id=user_id)
         else:
             await self._retract_if_present(conflict.left_record_id, user_id=user_id)
             await self._retract_if_present(conflict.right_record_id, user_id=user_id)
@@ -451,27 +451,73 @@ class ConflictResolverService:
             return UUID(str(record_id))
         if not payload:
             return None
+        source_lane = str(payload.get("source_lane") or "inferred_extraction")
+        source_type = str(payload.get("source_type") or "chat")
+        source_id = payload.get("source_id")
+        occurred_at = datetime.fromisoformat(str(payload["occurred_at"]))
+        confidence = float(payload.get("confidence") or 0.0)
+        evidence_refs = list(payload.get("evidence_refs") or [])
+        evidence_token = payload.get("evidence_token")
+        semantic_key = payload.get("semantic_key")
+        due_at = datetime.fromisoformat(str(payload["due_at"])) if payload.get("due_at") else None
+        mentioned_entity_owner_user_id = (
+            UUID(str(payload["mentioned_entity_owner_user_id"]))
+            if payload.get("mentioned_entity_owner_user_id")
+            else None
+        )
+
+        if source_lane == "inferred_extraction":
+            from app.services.memory_inferred_write_lane import InferredEpisodicCandidate, MemoryInferredWriteLaneService
+
+            try:
+                session_id = UUID(str(source_id))
+            except (TypeError, ValueError):
+                session_id = uuid4()
+
+            lane = MemoryInferredWriteLaneService(self.db)
+            record = await lane.write_candidate_to_l1(
+                user_id=user_id,
+                session_id=session_id,
+                candidate=InferredEpisodicCandidate(
+                    candidate_text=str(payload.get("summary") or ""),
+                    subject_type=str(payload.get("subject_type") or "self"),
+                    confidence=confidence,
+                    evidence_token=str(evidence_token or f"conflict:{uuid4()}"),
+                    decay_policy=str(payload.get("decay_policy") or "30d"),
+                    source_lane=source_lane,
+                    semantic_key=str(semantic_key or uuid4()),
+                    evidence_refs=evidence_refs,
+                    occurred_at=occurred_at,
+                    due_at=due_at,
+                    mentioned_entity_hash=payload.get("mentioned_entity_hash"),
+                    mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
+                ),
+                force_write=True,
+                bypass_min_confidence=True,
+                source_type=source_type,
+                extra_tags=["stage20:user_arbitrated_conflict"],
+            )
+            return UUID(str(record.id)) if record is not None else None
+
         memory_service = MemoryService(self.db)
         record = await memory_service.create_episodic_memory(
             user_id=user_id,
             summary=str(payload.get("summary") or ""),
-            source_type=str(payload.get("source_type") or "chat"),
-            source_id=payload.get("source_id"),
-            source_lane=str(payload.get("source_lane") or "inferred_extraction"),
-            occurred_at=datetime.fromisoformat(str(payload["occurred_at"])),
-            importance_score=float(payload.get("confidence") or 0.0),
-            confidence=float(payload.get("confidence") or 0.0),
+            source_type=source_type,
+            source_id=source_id,
+            source_lane=source_lane,
+            occurred_at=occurred_at,
+            importance_score=confidence,
+            confidence=confidence,
             tags=["stage20:user_arbitrated_conflict"],
-            evidence_refs=list(payload.get("evidence_refs") or []),
-            evidence_token=payload.get("evidence_token"),
+            evidence_refs=evidence_refs,
+            evidence_token=evidence_token,
             decay_policy=payload.get("decay_policy"),
-            semantic_key=payload.get("semantic_key"),
+            semantic_key=semantic_key,
             subject_type=str(payload.get("subject_type") or "self"),
-            due_at=datetime.fromisoformat(str(payload["due_at"])) if payload.get("due_at") else None,
+            due_at=due_at,
             mentioned_entity_hash=payload.get("mentioned_entity_hash"),
-            mentioned_entity_owner_user_id=UUID(str(payload["mentioned_entity_owner_user_id"]))
-            if payload.get("mentioned_entity_owner_user_id")
-            else None,
+            mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
             emit_system_update=False,
         )
         return record.id if record is not None else None

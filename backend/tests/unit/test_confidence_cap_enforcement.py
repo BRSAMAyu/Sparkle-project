@@ -12,7 +12,7 @@ def test_confidence_cap_allows_exact_point_three() -> None:
 
 def test_confidence_cap_rejects_point_three_one() -> None:
     with pytest.raises(ValueError):
-        BigFiveDimension(value=0.1, confidence=0.31, evidence_count=1, source="merged")
+        BigFiveDimension(value=0.1, confidence=0.31, evidence_count=1, source="merged")  # rule-am-dynamic-ok
 
 
 def test_confidence_cap_allows_zero() -> None:
@@ -22,4 +22,4 @@ def test_confidence_cap_allows_zero() -> None:
 
 def test_confidence_cap_rejects_negative_confidence() -> None:
     with pytest.raises(ValueError):
-        BigFiveDimension(value=0.1, confidence=-0.01, evidence_count=1, source="merged")
+        BigFiveDimension(value=0.1, confidence=-0.01, evidence_count=1, source="merged")  # rule-am-dynamic-ok
