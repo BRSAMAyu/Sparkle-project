@@ -53,6 +53,7 @@ from app.models import (
     NightlyReview,
     # Seed Content Library
     SeedLibrary, SeedItem, UserLibrarySubscription,
+    SessionCompletion,
 )  # noqa: F401
 
 # this is the Alembic Config object

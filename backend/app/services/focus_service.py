@@ -142,6 +142,7 @@ class FocusService:
             await event_bus.publish("focus.session.completed", {
                 "event_type": "focus.session.completed",
                 "user_id": str(user_id),
+                "session_id": session_id,
                 "duration_minutes": duration_minutes,
                 "started_at": start_time.isoformat(),
                 "completed": status == FocusStatus.COMPLETED,

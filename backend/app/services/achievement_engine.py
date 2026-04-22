@@ -11,6 +11,9 @@ from typing import Any, Awaitable, Callable
 from loguru import logger
 from sqlalchemy import event
 from sqlalchemy import and_, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -30,6 +33,7 @@ from app.models.achievement import (
 )
 from app.models.community import GroupTaskClaim
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
+from app.models.session_completion import SessionCompletion
 from app.models.subject import Subject
 from app.services.achievement_reward_observability import AchievementRewardObservability
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -157,6 +161,74 @@ class AchievementEngine:
             return value.date()
         return value
 
+    @staticmethod
+    def _build_session_completion_key(
+        user_id: str,
+        event_type: str,
+        **kwargs,
+    ) -> tuple[str, str] | None:
+        session_id = kwargs.get("session_id")
+        if session_id and event_type in {
+            AchievementEvent.STUDY_MINUTES_ACCUMULATED,
+            AchievementEvent.NIGHT_STUDY,
+            AchievementEvent.EARLY_BIRD,
+        }:
+            return (f"{user_id}:{event_type}:focus:{session_id}", "focus_session")
+
+        if event_type == AchievementEvent.TASK_COMPLETED:
+            task_id = kwargs.get("task_id")
+            if task_id:
+                return (f"{user_id}:{event_type}:task:{task_id}", "task_completion")
+
+            group_task_id = kwargs.get("group_task_id")
+            if group_task_id:
+                return (f"{user_id}:{event_type}:group_task:{group_task_id}", "group_task_completion")
+
+        return None
+
+    async def _reserve_session_completion(
+        self,
+        user_id: str,
+        event_type: str,
+        **kwargs,
+    ) -> bool:
+        completion_key = self._build_session_completion_key(user_id, event_type, **kwargs)
+        if completion_key is None:
+            return True
+
+        scoped_session_id, completion_type = completion_key
+        values = {
+            "session_id": scoped_session_id,
+            "user_id": user_id,
+            "completion_type": completion_type,
+            "source_event": event_type,
+        }
+
+        bind = self.db.sync_session.get_bind()
+        dialect_name = bind.dialect.name if bind is not None else ""
+
+        if dialect_name == "postgresql":
+            stmt = pg_insert(SessionCompletion).values(**values).on_conflict_do_nothing(
+                index_elements=[SessionCompletion.session_id]
+            )
+            result = await self.db.execute(stmt)
+            return bool(result.rowcount)
+
+        if dialect_name == "sqlite":
+            stmt = sqlite_insert(SessionCompletion).values(**values).on_conflict_do_nothing(
+                index_elements=[SessionCompletion.session_id]
+            )
+            result = await self.db.execute(stmt)
+            return bool(result.rowcount)
+
+        try:
+            async with self.db.begin_nested():
+                self.db.add(SessionCompletion(**values))
+                await self.db.flush()
+            return True
+        except IntegrityError:
+            return False
+
     async def _refresh_achievement_cache(self):
         """刷新成就定义缓存"""
         now = _utcnow()
@@ -211,6 +283,9 @@ class AchievementEngine:
         )
 
         async with transaction_context:
+            if not await self._reserve_session_completion(user_id, event_type, **kwargs):
+                return []
+
             # 1. 更新连胜统计
             await self._update_streak_stats(user_id, event_type, **kwargs)
 
