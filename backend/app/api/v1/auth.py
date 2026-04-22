@@ -31,6 +31,7 @@ from app.core.event_bus import UserRegisteredEvent
 from app.core.email_service import email_service
 from app.db.session import get_db
 from app.models.auth_security import AuthAuditAction
+from app.models.community import GroupRole
 from app.models.user import User
 from app.schemas.user import (
     ForgotPasswordRequest,
@@ -47,6 +48,7 @@ from app.schemas.user import (
     VerifyEmailRequest,
 )
 from app.api.deps import get_current_user
+from app.services.permission_service import PermissionService
 from app.services.auth_session_service import auth_session_service
 from app.services.stage33_journey_event_service import Stage33JourneyEventService
 
@@ -109,6 +111,13 @@ def _apply_terms_acceptance(
     user.tos_version = tos_version or "v1"
     user.privacy_version = privacy_version or "v1"
     user.agreed_locale = agreed_locale
+
+
+def _default_community_permissions() -> list[str]:
+    return sorted(
+        permission.value
+        for permission in PermissionService.get_role_permissions(GroupRole.MEMBER)
+    )
 
 
 async def _issue_auth_tokens(
@@ -364,7 +373,10 @@ async def register(
         AuthAuditAction.REGISTER,
         user_id=str(user.id),
         request=request,
-        metadata={"registration_source": "email"},
+        metadata={
+            "registration_source": "email",
+            "default_community_permissions": _default_community_permissions(),
+        },
     )
     await Stage33JourneyEventService.publish(
         "user.registered",
@@ -372,7 +384,10 @@ async def register(
             user_id=str(user.id),
             username=user.username,
             registration_source="email",
-            metadata={"nickname": user.nickname or user.username},
+            metadata={
+                "nickname": user.nickname or user.username,
+                "default_community_permissions": _default_community_permissions(),
+            },
         ).to_dict(),
     )
 
