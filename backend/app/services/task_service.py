@@ -16,7 +16,7 @@ from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.cache import cache_service
-from app.core.event_bus import event_bus
+from app.core.event_bus import event_bus, event_bus_reliable
 from app.event_publishers.srl_events import publish_srl_event
 from app.gen.sparkle.inference.v1 import inference_pb2
 from app.gen.sparkle.signals.v1 import signals_pb2
@@ -231,7 +231,7 @@ class TaskService:
             task_id=str(db_obj.id),
             plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
         )
-        await event_bus.publish("task.started", event.to_dict())
+        await event_bus_reliable.publish("task.started", event.to_dict())
         await publish_srl_event(
             user_id=db_obj.user_id,
             trigger_event_type="task.started",
@@ -390,7 +390,7 @@ class TaskService:
             source=source,
             source_metadata=source_metadata,
         )
-        await event_bus.publish("task.completed", event.to_dict())
+        await event_bus_reliable.publish("task.completed", event.to_dict())
         await publish_srl_event(
             user_id=db_obj.user_id,
             trigger_event_type="task.completed",
@@ -479,7 +479,7 @@ class TaskService:
             time_spent=time_spent,
             plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
         )
-        await event_bus.publish("task.abandoned", event.to_dict())
+        await event_bus_reliable.publish("task.abandoned", event.to_dict())
         await publish_srl_event(
             user_id=db_obj.user_id,
             trigger_event_type="task.abandoned",
@@ -612,7 +612,7 @@ class TaskService:
                 task_id=str(task.id),
                 plan_id=str(task.plan_id) if task.plan_id else None,
             )
-            await event_bus.publish("task.started", event.to_dict())
+            await event_bus_reliable.publish("task.started", event.to_dict())
             await publish_srl_event(
                 user_id=task.user_id,
                 trigger_event_type="task.started",

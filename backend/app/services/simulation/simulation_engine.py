@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
-from app.core.event_bus import event_bus
+from app.core.event_bus import event_bus_reliable
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.simulation.simulation_run_store import SimulationRunStore
@@ -177,7 +177,7 @@ class SimulationEngine:
 
     def __init__(self, db: AsyncSession | None = None):
         self.db = db
-        self.event_bus = event_bus
+        self.event_bus_reliable = event_bus_reliable
 
     async def get_session(
         self,
@@ -1711,7 +1711,7 @@ class SimulationEngine:
 
         for gap in knowledge_gaps:
             try:
-                await self.event_bus.publish(
+                await self.event_bus_reliable.publish(
                     "SimulationGapRevealed",
                     {
                         "event_type": "SimulationGapRevealed",

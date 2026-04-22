@@ -330,7 +330,7 @@ class TestTaskStatusChanges:
         mock_db.execute.return_value = claim_result
         
         # Mock event bus
-        with patch('app.core.event_bus.event_bus.publish', new_callable=AsyncMock) as mock_publish:
+        with patch('app.core.event_bus.event_bus_reliable.publish', new_callable=AsyncMock) as mock_publish:
             with patch.object(TaskService, 'get_by_id', return_value=task):
                 result = await TaskService.complete_task(mock_db, task.id, user_id, actual_minutes=25)
 
@@ -368,7 +368,7 @@ class TestTaskStatusChanges:
         mock_db.refresh = AsyncMock()
 
         with patch("app.services.task_service._sync_task_card_projection", new=AsyncMock()) as mock_projection:
-            with patch("app.services.task_service.event_bus.publish", new_callable=AsyncMock) as mock_publish:
+            with patch("app.services.task_service.event_bus_reliable.publish", new_callable=AsyncMock) as mock_publish:
                 with patch("app.services.task_service.publish_srl_event", new_callable=AsyncMock) as mock_srl:
                     confirmed = await TaskService.confirm_tasks_by_tool_result(
                         mock_db,

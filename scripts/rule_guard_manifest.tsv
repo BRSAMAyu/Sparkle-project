@@ -6,6 +6,8 @@ Z-SOCIAL	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_z_social_cross_
 Z-THEATER	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_z_theater_user_scope.py"
 AS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_as_vision_compliance.py"
 AW	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_aw_rate_limiter_sanity.py"
+AZ	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_az_eventbus_reliability.py"
+BA	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_ba_gateway_contract_parity.py"
 AT	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_at_no_orphan.py"
 AU	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_au_mobile_parity.py"
 AU-METACOG	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_metacog_hint_user_scope.py"

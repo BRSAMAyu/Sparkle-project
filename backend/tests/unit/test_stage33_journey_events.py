@@ -41,7 +41,7 @@ async def test_stage33_journey_event_service_publishes_shadow_event_with_audit_m
             ),
         ),
         patch(
-            "app.services.stage33_journey_event_service.event_bus.publish",
+            "app.services.stage33_journey_event_service.event_bus_reliable.publish",
             AsyncMock(return_value="1-0"),
         ) as publish_mock,
     ):
@@ -76,7 +76,7 @@ async def test_stage33_journey_event_service_skips_when_events_mode_is_off() -> 
             ),
         ),
         patch(
-            "app.services.stage33_journey_event_service.event_bus.publish",
+            "app.services.stage33_journey_event_service.event_bus_reliable.publish",
             AsyncMock(),
         ) as publish_mock,
     ):

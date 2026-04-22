@@ -218,7 +218,7 @@ async def test_stage35_error_journey_smoke(db_session, monkeypatch) -> None:
             await db_session.execute(
                 select(RoutingDecisionLog).where(
                     RoutingDecisionLog.user_id == user.id,
-                    RoutingDecisionLog.decision_type == "stage34_error_replan_bridge_shadow",
+                    RoutingDecisionLog.decision_type == "stage38_error_replan_bridge_shadow",
                 )
             )
         ).scalar_one()

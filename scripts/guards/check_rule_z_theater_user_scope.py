@@ -28,7 +28,10 @@ def scan_rule_z_theater() -> list[str]:
 
     if "message=\"resource access denied\"" not in text:
         violations.append("ZT002 theater denial message must stay fixed as `resource access denied`")
-    if 'event_bus.publish("theater.access_denied"' not in text:
+    if (
+        'event_bus.publish("theater.access_denied"' not in text
+        and 'event_bus_reliable.publish("theater.access_denied"' not in text
+    ):
         violations.append("ZT003 theater access denial audit event is missing")
 
     return violations

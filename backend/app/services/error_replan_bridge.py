@@ -27,6 +27,10 @@ from app.services.intervention_record_service import InterventionRecordService
 from app.services.route_history_service import RouteHistoryService
 
 
+# Preserve the Stage 34 patch target while Stage 38 owns the live kill-switch path.
+AuroraStage34KillSwitchService = AuroraStage38KillSwitchService
+
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 

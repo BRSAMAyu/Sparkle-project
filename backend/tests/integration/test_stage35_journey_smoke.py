@@ -122,7 +122,7 @@ async def test_stage35_journey_smoke_main_path(db_session, monkeypatch) -> None:
     _bind_consumer_session(monkeypatch, db_session)
 
     monkeypatch.setattr("app.services.profile_write_service.event_bus.publish", events.publish)
-    monkeypatch.setattr("app.services.task_service.event_bus.publish", events.publish)
+    monkeypatch.setattr("app.services.task_service.event_bus_reliable.publish", events.publish)
     monkeypatch.setattr("app.services.task_feedback_service.event_bus.publish", events.publish)
     monkeypatch.setattr("app.orchestration.plan_review_service.event_bus.publish", events.publish)
 
