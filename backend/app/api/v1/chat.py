@@ -750,7 +750,10 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
             try:
                 from app.services.profile_context_service import ProfileContextService
 
-                profile_context = await ProfileContextService(db, cache_service.redis).get_profile_context(user_id)
+                profile_context = await ProfileContextService(db, cache_service.redis).get_profile_context(
+                    user_id,
+                    include_metacognition_prompt_extensions=True,
+                )
                 prompt_context["profile_context"] = profile_context.to_prompt_context()
             except Exception as exc:
                 logger.warning(f"Failed to attach profile context: {exc}")
@@ -789,7 +792,10 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
         try:
             from app.services.profile_context_service import ProfileContextService
 
-            profile_context = await ProfileContextService(db, cache_service.redis).get_profile_context(user_id)
+            profile_context = await ProfileContextService(db, cache_service.redis).get_profile_context(
+                user_id,
+                include_metacognition_prompt_extensions=True,
+            )
             context["profile_context"] = profile_context.to_prompt_context()
         except Exception as exc:
             logger.warning(f"Failed to attach profile context: {exc}")

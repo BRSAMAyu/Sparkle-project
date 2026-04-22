@@ -97,6 +97,26 @@ class UserRepository {
           'dominant_pattern_type': null,
           'risk_signals': <dynamic>[],
         },
+        'metacognition_dashboard': {
+          'available': true,
+          'hidden': false,
+          'generated_at': '2026-04-22T10:00:00',
+          'cards': [
+            {
+              'dim': 'time_estimation_bias',
+              'title': '时间预估',
+              'status': 'ready',
+              'body': '你过去 10 次对完成时间估得偏乐观 2.3 小时。',
+              'trend_text': '最近几周正在变稳。',
+            },
+          ],
+        },
+        'idiographic_summary': {
+          'mode': 'shadow',
+          'confidence': 0.42,
+          'disclaimer_text': '这只是你数据中的模式，不代表因果关系。',
+          'top_associations': <dynamic>[],
+        },
       };
     }
     final response =
@@ -133,8 +153,8 @@ class UserRepository {
         'allow_skip': true,
       };
     }
-    final response =
-        await _apiClient.get<Map<String, dynamic>>('/profile/traits/coldstart/questions');
+    final response = await _apiClient
+        .get<Map<String, dynamic>>('/profile/traits/coldstart/questions');
     return ApiResponseParser.unwrapMap(
       response.data,
       action: 'fetchTraitsColdstartQuestions',
@@ -241,6 +261,22 @@ class UserRepository {
     await _apiClient.post<Map<String, dynamic>>(
       '/profile/insights/control',
       data: payload,
+    );
+  }
+
+  Future<Map<String, dynamic>> updateMetacognitionPanelPreference({
+    required bool hidden,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return {'hidden': hidden};
+    }
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '/profile/metacognition/panel',
+      data: <String, dynamic>{'hidden': hidden},
+    );
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'updateMetacognitionPanelPreference',
     );
   }
 

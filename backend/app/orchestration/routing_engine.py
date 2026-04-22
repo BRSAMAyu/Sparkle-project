@@ -581,6 +581,43 @@ class RoutingEngineMixin:
             "current_guidance": routing_input.current_guidance,
             "routing_debug": (decision.routing_debug or {}),
         }
+        idiographic_associations_injected: list[dict[str, object]] = []
+        profile_context_payload = (
+            user_context_payload.get("profile_context")
+            if isinstance(user_context_payload, dict)
+            else None
+        )
+        idiographic_summary_payload = (
+            profile_context_payload.get("idiographic_summary")
+            if isinstance(profile_context_payload, dict)
+            else None
+        )
+        if (
+            isinstance(idiographic_summary_payload, dict)
+            and str(idiographic_summary_payload.get("mode") or "off").strip().lower()
+            == "live"
+            and float(idiographic_summary_payload.get("confidence") or 0.0) >= 0.5
+            and str(idiographic_summary_payload.get("disclaimer_text") or "").strip()
+        ):
+            for item in idiographic_summary_payload.get("top_associations") or []:
+                if not isinstance(item, dict) or not bool(item.get("displayed")):
+                    continue
+                rendered_text = str(item.get("rendered_text") or "").strip()
+                if not rendered_text:
+                    continue
+                idiographic_associations_injected.append(
+                    {
+                        "dim_pair": str(item.get("dim_pair") or "").strip(),
+                        "r_rounded": round(float(item.get("correlation") or 0.0), 2),
+                        "displayed": True,
+                    }
+                )
+                if len(idiographic_associations_injected) >= 3:
+                    break
+        if isinstance(user_context_payload, dict):
+            user_context_payload["idiographic_associations_injected"] = (
+                idiographic_associations_injected
+            )
         if active_db is not None:
             try:
                 decision_id = await RouteHistoryService(active_db).record_decision(
@@ -604,6 +641,11 @@ class RoutingEngineMixin:
                     skills_injected=selected_skill_ids,
                     source_state_v2=source_state_v2,
                     source_state_v2_key=source_state_v2_key,
+                    idiographic_associations_injected=[
+                        item
+                        for item in idiographic_associations_injected
+                        if isinstance(item, dict)
+                    ],
                 )
                 state.context_data["route_history_decision_id"] = str(decision_id)
             except Exception as exc:

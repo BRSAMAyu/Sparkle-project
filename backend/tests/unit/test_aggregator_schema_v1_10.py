@@ -25,7 +25,7 @@ async def test_aggregator_schema_v1_10_exposes_srl_phase(db_session, test_user) 
 
     state = await StateAggregatorService(db_session).get_user_state(test_user.id, required_fields=("srl_phase",))
 
-    assert state.schema_version == "user_state.v1.10"
+    assert state.schema_version == "user_state.v1.12"
     assert state.srl_phase is not None
     assert state.srl_phase.value.current_phase == "PERFORMANCE"
 

@@ -29,7 +29,12 @@ from app.schemas.intervention import (
 )
 from app.services.template_registry import TemplateRegistry
 from app.services.template_service import TemplateService
-from app.services.aurora_stage29_srl_kill_switch_service import AuroraStage29SRLKillSwitchService
+from app.services.aurora_stage29_srl_kill_switch_service import (
+    AuroraStage29SRLKillSwitchService,
+)
+from app.services.aurora_stage30_metacognition_kill_switch_service import (
+    AuroraStage30MetacognitionKillSwitchService,
+)
 from app.state_aggregator.service import StateAggregatorService
 
 _NON_SILENT_LEVELS = {
@@ -61,9 +66,13 @@ class InterventionService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_or_create_settings(self, user_id: UUID, timezone_name: str | None) -> UserInterventionSettings:
+    async def get_or_create_settings(
+        self, user_id: UUID, timezone_name: str | None
+    ) -> UserInterventionSettings:
         result = await self.db.execute(
-            select(UserInterventionSettings).where(UserInterventionSettings.user_id == user_id)
+            select(UserInterventionSettings).where(
+                UserInterventionSettings.user_id == user_id
+            )
         )
         settings_row = result.scalar_one_or_none()
         if settings_row:
@@ -123,14 +132,20 @@ class InterventionService:
     ) -> InterventionRequest:
         target_user_id = payload.user_id or actor_id
         if payload.user_id and payload.user_id != actor_id and not actor_is_admin:
-            raise PermissionError("Insufficient privileges to create intervention for other user")
+            raise PermissionError(
+                "Insufficient privileges to create intervention for other user"
+            )
 
-        settings_row = await self.get_or_create_settings(target_user_id, default_timezone)
+        settings_row = await self.get_or_create_settings(
+            target_user_id, default_timezone
+        )
         errors = self.validate_contract(payload)
         now = _utcnow()
 
         if errors:
-            decision = GuardrailDecision(action="block", final_level=payload.level.value, reasons=errors)
+            decision = GuardrailDecision(
+                action="block", final_level=payload.level.value, reasons=errors
+            )
             status = "blocked"
         else:
             decision = await self._evaluate_guardrails(payload, settings_row, now)
@@ -149,7 +164,11 @@ class InterventionService:
             status=status,
             reason=payload.reason.model_dump(),
             content=payload.content,
-            cooldown_policy=payload.cooldown_policy.model_dump() if payload.cooldown_policy else None,
+            cooldown_policy=(
+                payload.cooldown_policy.model_dump()
+                if payload.cooldown_policy
+                else None
+            ),
             delivery_method=payload.delivery_method,
             template_id=payload.template_id,
             template_variant_id=payload.template_variant_id,
@@ -182,13 +201,17 @@ class InterventionService:
         self.db.add(audit)
 
         if status in ("delivered", "degraded"):
-            await self._record_budget_if_needed(target_user_id, decision.final_level, now)
+            await self._record_budget_if_needed(
+                target_user_id, decision.final_level, now
+            )
 
         await self.db.commit()
         await self.db.refresh(request)
         return request
 
-    async def list_recent(self, user_id: UUID, limit: int = 20) -> list[InterventionRequest]:
+    async def list_recent(
+        self, user_id: UUID, limit: int = 20
+    ) -> list[InterventionRequest]:
         result = await self.db.execute(
             select(InterventionRequest)
             .where(InterventionRequest.user_id == user_id)
@@ -240,7 +263,9 @@ class InterventionService:
             raise
 
         await self._apply_feedback_policy(request, feedback_type)
-        await self._apply_scaffolding_feedback(request, user_id, feedback_type, extra_data)
+        await self._apply_scaffolding_feedback(
+            request, user_id, feedback_type, extra_data
+        )
         await self._update_template_bandit(request, feedback_type)
 
         await self.db.commit()
@@ -276,13 +301,28 @@ class InterventionService:
         trait_guidance = await fsm.get_trait_scaffolding_preferences(user_id)
         srl_state = await StateAggregatorService(self.db).get_user_state(
             user_id,
-            required_fields=("srl_phase",),
+            required_fields=("srl_phase", "metacognition_profile"),
         )
-        srl_phase_hint = srl_state.srl_phase.value.current_phase if srl_state.srl_phase else None
-        scaffolding_consume_mode = await AuroraStage29SRLKillSwitchService().get_scaffolding_consume_mode()
+        srl_phase_hint = (
+            srl_state.srl_phase.value.current_phase if srl_state.srl_phase else None
+        )
+        metacognition_mode = (
+            await AuroraStage30MetacognitionKillSwitchService().get_feature_mode(
+                "fsm_combine"
+            )
+        )
+        metacognition_profile = (
+            srl_state.metacognition_profile.value
+            if metacognition_mode == "live" and srl_state.metacognition_profile
+            else None
+        )
+        scaffolding_consume_mode = (
+            await AuroraStage29SRLKillSwitchService().get_scaffolding_consume_mode()
+        )
         scaffolding_snapshot = fsm.snapshot(
             scaffolding_state,
             phase_value=srl_phase_hint,
+            metacognition_profile=metacognition_profile,
             consume_mode=scaffolding_consume_mode,
             reflection_prompt_style=trait_guidance["reflection_prompt_style"],
         )
@@ -300,7 +340,7 @@ class InterventionService:
         template_service = TemplateService(registry, bandit)
         selected = await template_service.select_variant(
             intent_type=intent.intent_type,
-            support_level=scaffolding_snapshot["support_level"],
+            support_level=scaffolding_snapshot["template_support_level"],
             user_id=str(user_id),
         )
         rendered_message = template_service.render(selected, intent.context_variables)
@@ -330,8 +370,16 @@ class InterventionService:
                 "template_id": selected.template_id,
                 "scaffolding_level": scaffolding_snapshot["support_level"],
                 "srl_phase_hint": scaffolding_snapshot["srl_phase"],
-                "srl_phase_message": self._srl_phase_message(scaffolding_snapshot["srl_phase"]),
-                "reflection_prompt_style": scaffolding_snapshot["reflection_prompt_style"],
+                "srl_phase_message": self._srl_phase_message(
+                    scaffolding_snapshot["srl_phase"]
+                ),
+                "reflection_prompt_style": scaffolding_snapshot[
+                    "reflection_prompt_style"
+                ],
+                "metacognition_delta": scaffolding_snapshot[
+                    "metacognition_support_delta"
+                ],
+                "scaffolding_combine_state": scaffolding_snapshot["combine_state"],
                 "context_variables": intent.context_variables,
             },
             context=None,
@@ -339,7 +387,7 @@ class InterventionService:
             delivery_method="websocket",
             template_id=selected.template_id,
             template_variant_id=selected.variant_id,
-            scaffolding_level=scaffolding_snapshot["support_level"],
+            scaffolding_level=scaffolding_snapshot["template_support_level"],
             intent_type=intent.intent_type,
         )
 
@@ -357,7 +405,9 @@ class InterventionService:
             template_variant_id=selected.variant_id,
         )
 
-        delivery = await self.deliver_intervention_realtime(user_id, request, rendered_message)
+        delivery = await self.deliver_intervention_realtime(
+            user_id, request, rendered_message
+        )
         return request, delivery
 
     async def deliver_intervention_realtime(
@@ -366,8 +416,12 @@ class InterventionService:
         request: InterventionRequest,
         rendered_message: str,
     ) -> DeliveryResult:
-        if not settings.INTERNAL_API_KEY or not getattr(settings, "GATEWAY_INTERNAL_URL", ""):
-            return DeliveryResult(delivered=False, method="websocket", error="gateway_not_configured")
+        if not settings.INTERNAL_API_KEY or not getattr(
+            settings, "GATEWAY_INTERNAL_URL", ""
+        ):
+            return DeliveryResult(
+                delivered=False, method="websocket", error="gateway_not_configured"
+            )
 
         payload = {
             "user_id": str(user_id),
@@ -379,12 +433,18 @@ class InterventionService:
                     "intent_type": request.intent_type or "",
                     "template_id": request.template_id or "",
                     "scaffolding_level": request.scaffolding_level or 0,
-                    "context_variables": request.content.get("context_variables", {})
-                    if isinstance(request.content, dict)
-                    else {},
+                    "context_variables": (
+                        request.content.get("context_variables", {})
+                        if isinstance(request.content, dict)
+                        else {}
+                    ),
                 },
                 "actions": self._default_actions(request.intent_type),
-                "expires_at": int(request.expires_at.timestamp() * 1000) if request.expires_at else 0,
+                "expires_at": (
+                    int(request.expires_at.timestamp() * 1000)
+                    if request.expires_at
+                    else 0
+                ),
             },
         }
 
@@ -413,13 +473,25 @@ class InterventionService:
         final_level = payload.level.value
 
         if settings_row.do_not_disturb:
-            return GuardrailDecision(action="block", final_level=final_level, reasons=["do_not_disturb"])
+            return GuardrailDecision(
+                action="block", final_level=final_level, reasons=["do_not_disturb"]
+            )
 
-        if payload.topic and settings_row.topic_blocklist and payload.topic in settings_row.topic_blocklist:
-            return GuardrailDecision(action="block", final_level=final_level, reasons=["topic_blocked"])
+        if (
+            payload.topic
+            and settings_row.topic_blocklist
+            and payload.topic in settings_row.topic_blocklist
+        ):
+            return GuardrailDecision(
+                action="block", final_level=final_level, reasons=["topic_blocked"]
+            )
 
-        if payload.topic and await self._is_cooldown_active(payload.topic, settings_row.user_id):
-            return GuardrailDecision(action="block", final_level=final_level, reasons=["cooldown_active"])
+        if payload.topic and await self._is_cooldown_active(
+            payload.topic, settings_row.user_id
+        ):
+            return GuardrailDecision(
+                action="block", final_level=final_level, reasons=["cooldown_active"]
+            )
 
         if self._is_quiet_hours(now, settings_row.quiet_hours):
             reasons.append("quiet_hours")
@@ -430,7 +502,9 @@ class InterventionService:
                 reasons.append("low_interruptibility")
                 final_level = InterventionLevel.SILENT_MARKER.value
 
-        if await self._is_budget_exceeded(settings_row.user_id, settings_row.daily_interrupt_budget, now):
+        if await self._is_budget_exceeded(
+            settings_row.user_id, settings_row.daily_interrupt_budget, now
+        ):
             reasons.append("budget_exceeded")
             final_level = InterventionLevel.SILENT_MARKER.value
 
@@ -438,9 +512,13 @@ class InterventionService:
         if final_level != payload.level.value:
             action = "degrade"
 
-        return GuardrailDecision(action=action, final_level=final_level, reasons=reasons)
+        return GuardrailDecision(
+            action=action, final_level=final_level, reasons=reasons
+        )
 
-    def _is_quiet_hours(self, now: datetime, quiet_hours: dict[str, Any] | None) -> bool:
+    def _is_quiet_hours(
+        self, now: datetime, quiet_hours: dict[str, Any] | None
+    ) -> bool:
         if not quiet_hours:
             return False
 
@@ -471,7 +549,9 @@ class InterventionService:
         except Exception:
             return None
 
-    async def _is_budget_exceeded(self, user_id: UUID, budget: int, now: datetime) -> bool:
+    async def _is_budget_exceeded(
+        self, user_id: UUID, budget: int, now: datetime
+    ) -> bool:
         if budget <= 0:
             return True
         key = self._budget_key(user_id, now)
@@ -482,7 +562,9 @@ class InterventionService:
             current_value = 0
         return current_value >= budget
 
-    async def _record_budget_if_needed(self, user_id: UUID, final_level: str, now: datetime) -> None:
+    async def _record_budget_if_needed(
+        self, user_id: UUID, final_level: str, now: datetime
+    ) -> None:
         if final_level not in _NON_SILENT_LEVELS:
             return
         key = self._budget_key(user_id, now)
@@ -512,7 +594,10 @@ class InterventionService:
         request: InterventionRequest,
         feedback_type: InterventionFeedbackType,
     ) -> None:
-        if feedback_type not in (InterventionFeedbackType.REJECT, InterventionFeedbackType.MUTE_TOPIC):
+        if feedback_type not in (
+            InterventionFeedbackType.REJECT,
+            InterventionFeedbackType.MUTE_TOPIC,
+        ):
             return
 
         policy = request.cooldown_policy or {}
@@ -522,15 +607,23 @@ class InterventionService:
         if until_ms:
             until_dt = datetime.utcfromtimestamp(until_ms / 1000.0)
         else:
-            until_dt = _utcnow() + timedelta(minutes=settings.INTERVENTION_DEFAULT_COOLDOWN_MINUTES)
+            until_dt = _utcnow() + timedelta(
+                minutes=settings.INTERVENTION_DEFAULT_COOLDOWN_MINUTES
+            )
 
         ttl_seconds = max(60, int((until_dt - _utcnow()).total_seconds()))
         if feedback_type == InterventionFeedbackType.MUTE_TOPIC:
-            topic_key = f"intervention:cooldown:{request.user_id}:{request.topic or 'global'}"
-            await cache_service.set(topic_key, policy_name or "mute_topic", ttl=ttl_seconds)
+            topic_key = (
+                f"intervention:cooldown:{request.user_id}:{request.topic or 'global'}"
+            )
+            await cache_service.set(
+                topic_key, policy_name or "mute_topic", ttl=ttl_seconds
+            )
         else:
             global_key = f"intervention:cooldown:{request.user_id}"
-            await cache_service.set(global_key, policy_name or "mute_all", ttl=ttl_seconds)
+            await cache_service.set(
+                global_key, policy_name or "mute_all", ttl=ttl_seconds
+            )
 
     async def _apply_scaffolding_feedback(
         self,
@@ -558,10 +651,21 @@ class InterventionService:
         request: InterventionRequest,
         feedback_type: InterventionFeedbackType,
     ) -> None:
-        if not request.template_variant_id or not request.intent_type or not cache_service.redis:
+        if (
+            not request.template_variant_id
+            or not request.intent_type
+            or not cache_service.redis
+        ):
             return
-        reward = 1 if feedback_type in (InterventionFeedbackType.ACCEPT, InterventionFeedbackType.OPEN_DETAIL) else 0
-        workflow_id = f"intervention:{request.intent_type}:{request.scaffolding_level or 3}"
+        reward = (
+            1
+            if feedback_type
+            in (InterventionFeedbackType.ACCEPT, InterventionFeedbackType.OPEN_DETAIL)
+            else 0
+        )
+        workflow_id = (
+            f"intervention:{request.intent_type}:{request.scaffolding_level or 3}"
+        )
         bandit = PromptBandit(redis_client=cache_service.redis)
         await bandit.update(workflow_id, request.template_variant_id, reward)
 
@@ -585,7 +689,9 @@ class InterventionService:
             {"id": "dismiss", "label": "关闭", "type": "secondary"},
         ]
 
-    def _sanitize_extra_data(self, extra_data: dict[str, Any] | None) -> dict[str, Any] | None:
+    def _sanitize_extra_data(
+        self, extra_data: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
         if not extra_data:
             return extra_data
         sanitized: dict[str, Any] = {}

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Sparkle Celery 应用配置
 
@@ -32,6 +33,7 @@ def _run_async(coro):
         asyncio.set_event_loop(_worker_event_loop)
     return _worker_event_loop.run_until_complete(coro)
 
+
 # =============================================================================
 # Celery 配置
 # =============================================================================
@@ -51,7 +53,7 @@ celery_app = Celery(
         "app.tasks.accountability_tasks",
         "app.tasks.policy_tasks",
         "workers.signals_learning_worker",
-    ]
+    ],
 )
 
 # 配置
@@ -60,23 +62,18 @@ celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
-
     # 时区
     timezone="Asia/Shanghai",
     enable_utc=True,
-
     # 任务配置
     task_track_started=True,
     task_send_sent_event=True,
     task_ignore_result=False,
-
     # 重试配置
     task_reject_on_worker_lost=True,
     task_acks_late=True,
-
     # 任务名称配置（支持短名称和完整路径）
     task_create_missing_queues=True,
-
     # 队列配置
     task_queues={
         "high_priority": {
@@ -100,7 +97,6 @@ celery_app.conf.update(
             "priority": 10,
         },
     },
-
     # 默认路由
     task_routes={
         "app.core.celery_tasks.generate_embedding": {"queue": "high_priority"},
@@ -115,6 +111,7 @@ celery_app.conf.update(
         "generate_daily_capsules_for_all": {"queue": "default"},
         "app.core.celery_tasks.check_prediction_accuracy": {"queue": "low_priority"},
         "app.core.celery_tasks.cleanup_stale_simulation_sessions": {"queue": "low_priority"},
+        "app.core.celery_tasks.recompute_idiographic_associations": {"queue": "low_priority"},
         # P1: Knowledge Galaxy auto-update tasks
         "update_knowledge_galaxy": {"queue": "default"},
         "sync_plan_progress_to_galaxy": {"queue": "low_priority"},
@@ -130,13 +127,10 @@ celery_app.conf.update(
         "app.core.celery_tasks.generate_weekly_growth_digests": {"queue": "default"},
         "app.core.celery_tasks.deliver_weekly_growth_digests": {"queue": "default"},
     },
-
     # 监控
     worker_send_task_events=True,
-
     # 结果过期时间 (24小时)
     result_expires=86400,
-
     # 日志级别
     worker_log_level="INFO",
 )
@@ -147,6 +141,7 @@ from app.core import celery_tasks  # noqa: F401
 # =============================================================================
 # 任务定义
 # =============================================================================
+
 
 @celery_app.task(bind=True, max_retries=3, name="generate_embedding")
 def generate_embedding(self, node_id: str, text: str, user_id: str | None = None):
@@ -183,11 +178,7 @@ def generate_embedding(self, node_id: str, text: str, user_id: str | None = None
                     await session.commit()
 
                     logger.info(f"✅ Celery: Generated embedding for node {node_id}")
-                    return {
-                        "status": "success",
-                        "node_id": node_id,
-                        "embedding_length": len(embedding)
-                    }
+                    return {"status": "success", "node_id": node_id, "embedding_length": len(embedding)}
                 else:
                     raise ValueError(f"Node {node_id} not found")
 
@@ -199,7 +190,7 @@ def generate_embedding(self, node_id: str, text: str, user_id: str | None = None
         return _run_async(_generate())
     except Exception as exc:
         logger.error(f"Task failed, attempt {self.request.retries + 1}: {exc}")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=3, name="batch_error_analysis")
@@ -241,14 +232,14 @@ def batch_error_analysis(self, error_ids: list[str], user_id: str):
                 "total": len(error_ids),
                 "success": sum(1 for r in results if r["status"] == "success"),
                 "failed": sum(1 for r in results if r["status"] == "failed"),
-                "results": results
+                "results": results,
             }
 
     try:
         return _run_async(_analyze())
     except Exception as exc:
         logger.error(f"Batch analysis failed: {exc}")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=3, name="cleanup_old_data")
@@ -276,20 +267,14 @@ def cleanup_old_data(self, days_to_keep: int = 30):
 
             # 清理过期幂等键
             result = await session.execute(
-                IdempotencyKey.__table__.delete().where(
-                    IdempotencyKey.created_at < cutoff_date
-                )
+                IdempotencyKey.__table__.delete().where(IdempotencyKey.created_at < cutoff_date)
             )
             deleted = result.rowcount
 
             await session.commit()
 
             logger.info(f"✅ Celery: Cleaned up {deleted} old records")
-            return {
-                "status": "success",
-                "deleted_records": deleted,
-                "cutoff_date": cutoff_date.isoformat()
-            }
+            return {"status": "success", "deleted_records": deleted, "cutoff_date": cutoff_date.isoformat()}
 
     try:
         return _run_async(_cleanup())
@@ -320,9 +305,7 @@ def notify_user(self, user_id: str, message: str, notification_type: str = "syst
             service = NotificationService(session)
             try:
                 await service.create_system_notification(
-                    user_id=user_id,
-                    message=message,
-                    notification_type=notification_type
+                    user_id=user_id, message=message, notification_type=notification_type
                 )
                 logger.info(f"✅ Celery: Notification sent to {user_id}")
                 return {"status": "success", "user_id": user_id}
@@ -465,7 +448,7 @@ def generate_capsules_batch(
     except Exception as exc:
         logger.error(f"Capsule generation task failed: {exc}")
         # 指数退避重试
-        countdown = 60 * (2 ** self.request.retries)
+        countdown = 60 * (2**self.request.retries)
         raise self.retry(exc=exc, countdown=countdown)
 
 
@@ -496,7 +479,7 @@ def analyze_cognitive_fragment_batch(
         return _run_async(_analyze())
     except Exception as exc:
         logger.error(f"Cognitive batch analysis task failed: {exc}")
-        countdown = 60 * (2 ** self.request.retries)
+        countdown = 60 * (2**self.request.retries)
         raise self.retry(exc=exc, countdown=countdown)
 
 
@@ -526,7 +509,7 @@ def classify_node_sector_batch(
         return _run_async(_classify())
     except Exception as exc:
         logger.error(f"Node sector batch classification failed: {exc}")
-        countdown = 60 * (2 ** self.request.retries)
+        countdown = 60 * (2**self.request.retries)
         raise self.retry(exc=exc, countdown=countdown)
 
 
@@ -601,9 +584,7 @@ def update_knowledge_galaxy(
                 for concept in concepts:
                     try:
                         # Check if node exists
-                        existing_node = await knowledge_service.find_node_by_name(
-                            user_uuid, concept["name"]
-                        )
+                        existing_node = await knowledge_service.find_node_by_name(user_uuid, concept["name"])
 
                         if existing_node:
                             # Update mastery level
@@ -687,37 +668,45 @@ def update_knowledge_galaxy(
 
         # Extract from plan name and description
         if plan.name:
-            concepts.append({
-                "name": plan.name,
-                "description": plan.description or "",
-                "mastery_delta": 0.2 if milestone_data else 0.1,
-                "tags": [plan.subject] if plan.subject else [],
-            })
+            concepts.append(
+                {
+                    "name": plan.name,
+                    "description": plan.description or "",
+                    "mastery_delta": 0.2 if milestone_data else 0.1,
+                    "tags": [plan.subject] if plan.subject else [],
+                }
+            )
 
         # Extract from milestone data if available
         if milestone_data:
             milestone_name = milestone_data.get("name", "")
             if milestone_name:
-                concepts.append({
-                    "name": milestone_name,
-                    "description": milestone_data.get("description", ""),
-                    "mastery_delta": 0.15,
-                    "tags": milestone_data.get("tags", []),
-                })
+                concepts.append(
+                    {
+                        "name": milestone_name,
+                        "description": milestone_data.get("description", ""),
+                        "mastery_delta": 0.15,
+                        "tags": milestone_data.get("tags", []),
+                    }
+                )
 
             # Extract learning outcomes
             for outcome in milestone_data.get("learning_outcomes", []):
                 if isinstance(outcome, str):
-                    concepts.append({
-                        "name": outcome,
-                        "mastery_delta": 0.1,
-                    })
+                    concepts.append(
+                        {
+                            "name": outcome,
+                            "mastery_delta": 0.1,
+                        }
+                    )
                 elif isinstance(outcome, dict):
-                    concepts.append({
-                        "name": outcome.get("name", ""),
-                        "description": outcome.get("description", ""),
-                        "mastery_delta": outcome.get("mastery_delta", 0.1),
-                    })
+                    concepts.append(
+                        {
+                            "name": outcome.get("name", ""),
+                            "description": outcome.get("description", ""),
+                            "mastery_delta": outcome.get("mastery_delta", 0.1),
+                        }
+                    )
 
         return [c for c in concepts if c.get("name")]
 
@@ -725,7 +714,7 @@ def update_knowledge_galaxy(
         return _run_async(_update_galaxy())
     except Exception as exc:
         logger.error(f"Galaxy update task failed: {exc}")
-        countdown = 30 * (2 ** self.request.retries)
+        countdown = 30 * (2**self.request.retries)
         raise self.retry(exc=exc, countdown=countdown)
 
 
@@ -888,7 +877,7 @@ def verify_intervention_outcomes_engaged(self):
         return _run_async(_verify())
     except Exception as exc:
         logger.error(f"Engaged intervention outcome verification failed: {exc}")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=3, name="verify_intervention_outcomes_full")
@@ -907,7 +896,7 @@ def verify_intervention_outcomes_full(self):
         return _run_async(_verify())
     except Exception as exc:
         logger.error(f"Full intervention outcome verification failed: {exc}")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=3, name="sweep_profile_outcome_learning")
@@ -930,7 +919,7 @@ def sweep_profile_outcome_learning(self):
         return _run_async(_sweep())
     except Exception as exc:
         logger.error(f"Profile outcome learning sweep failed: {exc}")
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 # =============================================================================
@@ -943,147 +932,132 @@ celery_app.conf.beat_schedule = {
         "task": "cleanup_old_data",
         "schedule": 86400.0,  # 24小时
         "args": (30,),  # 保留30天
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
     # 每天早上8点生成日报
-    "daily-report": {
-        "task": "daily_report",
-        "schedule": 86400.0,
-        "args": (),
-        "options": {"queue": "default"}
-    },
-
+    "daily-report": {"task": "daily_report", "schedule": 86400.0, "args": (), "options": {"queue": "default"}},
     # 每小时检查一次系统健康
     "health-check": {
         "task": "app.core.celery_tasks.health_check_task",
         "schedule": 3600.0,
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
     "policy-compiler-due-scan": {
         "task": "tasks.policy.process_due_policies",
         "schedule": 30.0,
-        "options": {"queue": "default"}
+        "options": {"queue": "default"},
     },
-
     "intervention-outcomes-engaged": {
         "task": "verify_intervention_outcomes_engaged",
         "schedule": crontab(minute=0, hour="*/4"),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
     "intervention-outcomes-full": {
         "task": "verify_intervention_outcomes_full",
         "schedule": crontab(minute=0, hour=2),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
     "profile-outcome-learning-sweep": {
         "task": "sweep_profile_outcome_learning",
         "schedule": crontab(minute=20, hour="*/6"),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
     # ========== 胶囊生成任务 ==========
-
     # 每天早上8点生成每日胶囊
     "daily-capsules-generation": {
         "task": "generate_daily_capsules_for_all",
         "schedule": 86400.0,  # 每天
         "args": (),
-        "options": {"queue": "default"}
+        "options": {"queue": "default"},
     },
-
     # 每周日上午9点生成深度胶囊
     "weekly-deep-capsules": {
         "task": "generate_daily_capsules_for_all",
         "schedule": 604800.0,  # 7天
         "args": (),
-        "options": {"queue": "default"}
+        "options": {"queue": "default"},
     },
-
     # 每周一上午9点生成学习报告
     "weekly-learning-report": {
         "task": "app.core.celery_tasks.generate_weekly_learning_reports",
         "schedule": crontab(day_of_week="mon", hour=9, minute=0),
-        "options": {"queue": "default"}
+        "options": {"queue": "default"},
     },
-
     "weekly-growth-digest-generation": {
         "task": "app.core.celery_tasks.generate_weekly_growth_digests",
         "schedule": crontab(day_of_week="sun", hour=22, minute=0),
         "args": (200, False),
-        "options": {"queue": "default"}
+        "options": {"queue": "default"},
     },
-
     "weekly-growth-digest-delivery": {
         "task": "app.core.celery_tasks.deliver_weekly_growth_digests",
         "schedule": crontab(day_of_week="mon", hour=8, minute=0),
-        "options": {"queue": "default"}
+        "options": {"queue": "default"},
     },
-
     "theater-prediction-accuracy-daily": {
         "task": "app.core.celery_tasks.check_prediction_accuracy",
         "schedule": crontab(hour=4, minute=10),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
     "cleanup-stale-simulation-sessions-hourly": {
         "task": "app.core.celery_tasks.cleanup_stale_simulation_sessions",
         "schedule": 3600.0,
         "args": (6,),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
     "ai-metric-baseline-daily": {
         "task": "app.core.celery_tasks.capture_ai_metric_baseline",
         "schedule": crontab(hour=3, minute=15),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
     "persdyn-attractor-recompute-daily": {
         "task": "app.core.celery_tasks.recompute_persdyn_attractors",
         "schedule": crontab(hour=0, minute=5),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
+    "metacognition-snapshot-refresh-daily": {
+        "task": "app.core.celery_tasks.refresh_metacognition_snapshots",
+        "schedule": crontab(hour=4, minute=30),
+        "args": (500,),
+        "options": {"queue": "low_priority"},
+    },
+    "idiographic-association-weekly-recompute": {
+        "task": "app.core.celery_tasks.recompute_idiographic_associations",
+        "schedule": crontab(day_of_week="mon", hour=1, minute=0),
+        "options": {"queue": "low_priority"},
+    },
     "perceptible-cohort-promotion-biweekly": {
         "task": "app.core.celery_tasks.promote_perceptible_cohort",
         "schedule": crontab(day_of_week="mon", hour=10, minute=0),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
-
     # ========== P1: 知识星图自动更新 ==========
-
     # 注意: update_knowledge_galaxy 任务由 PlanService 在计划完成/里程碑达成时触发
     # 此处仅包含定期同步任务，不包含事件触发任务
-
     # ========== 责任伙伴系统任务 ==========
-
     # 每天早上9点发送打卡提醒
     "accountability-daily-reminders-morning": {
         "task": "tasks.accountability.send_daily_reminders",
         "schedule": crontab(hour=9, minute=0),
-        "options": {"queue": "default"}
+        "options": {"queue": "default"},
     },
     # 每天晚上9点再次发送提醒
     "accountability-daily-reminders-evening": {
         "task": "tasks.accountability.send_daily_reminders",
         "schedule": crontab(hour=21, minute=0),
-        "options": {"queue": "default"}
+        "options": {"queue": "default"},
     },
     # 每天晚上11:59检查进度
     "accountability-progress-check": {
         "task": "tasks.accountability.check_partner_progress",
         "schedule": crontab(hour=23, minute=59),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
     # 每天晚上11:59评估成就
     "accountability-achievement-evaluation": {
         "task": "tasks.accountability.evaluate_achievements",
         "schedule": crontab(hour=23, minute=59),
-        "options": {"queue": "low_priority"}
+        "options": {"queue": "low_priority"},
     },
 }
 
@@ -1091,6 +1065,7 @@ celery_app.conf.beat_schedule = {
 # =============================================================================
 # 工具函数
 # =============================================================================
+
 
 def get_celery_status():
     """获取 Celery 状态"""
@@ -1112,11 +1087,7 @@ def get_celery_status():
             "scheduled_tasks": len(celery_app.conf.beat_schedule),
         }
     except Exception as e:
-        return {
-            "status": "unhealthy",
-            "broker": "disconnected",
-            "error": str(e)
-        }
+        return {"status": "unhealthy", "broker": "disconnected", "error": str(e)}
 
 
 def get_celery_queue_status(queue_name: str):
@@ -1175,12 +1146,7 @@ def schedule_long_task(task_name: str, args: tuple = (), kwargs: dict = None, qu
         kwargs = {}
 
     try:
-        task = celery_app.send_task(
-            task_name,
-            args=args,
-            kwargs=kwargs,
-            queue=queue
-        )
+        task = celery_app.send_task(task_name, args=args, kwargs=kwargs, queue=queue)
     except Exception as exc:
         raise RuntimeError(f"Broker connection error: {exc}") from exc
 
@@ -1204,17 +1170,9 @@ def get_task_result(task_id: str, timeout: float = 10.0):
     result = AsyncResult(task_id, app=celery_app)
 
     if result.ready():
-        return {
-            "status": result.status,
-            "result": result.result,
-            "ready": True
-        }
+        return {"status": result.status, "result": result.result, "ready": True}
     else:
-        return {
-            "status": result.status,
-            "result": None,
-            "ready": False
-        }
+        return {"status": result.status, "result": None, "ready": False}
 
 
 # =============================================================================

@@ -34,6 +34,11 @@ from app.models.aurora_stage20 import (
 )
 from app.models.aurora_stage21 import SharedSkill, SkillShareModerationQueue, UserSkill
 from app.models.aurora_stage27 import PersDynAttractor
+from app.models.aurora_stage31 import (
+    DailyBehaviorVector,
+    IdiographicAssociation,
+    IdiographicChangepoint,
+)
 from app.models.auth_security import AuthAuditAction, AuthAuditLog, UserSession
 from app.models.audit_log import ComplianceCheckLog, DataAccessLog, SecurityAuditLog, SystemConfigChangeLog
 from app.models.base import GUID, BaseModel
@@ -228,6 +233,9 @@ __all__ = [
     "ConflictResolutionRecord",
     "UnresolvedConflict",
     "RoutingDecisionLog",
+    "DailyBehaviorVector",
+    "IdiographicAssociation",
+    "IdiographicChangepoint",
     "UserSkill",
     "SharedSkill",
     "SkillShareModerationQueue",

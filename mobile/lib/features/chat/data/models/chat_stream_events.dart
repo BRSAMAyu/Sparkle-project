@@ -520,6 +520,9 @@ class StateChangeEvent extends ChatStreamEvent {
           intentType: changeType,
           templateId: 'state_change_$changeType',
           scaffoldingLevel: 0,
+          srlPhaseHint: '',
+          srlPhaseMessage: '',
+          reflectionPromptStyle: '',
           contextVariables: {
             'change_type': changeType,
             'change_id': changeId,

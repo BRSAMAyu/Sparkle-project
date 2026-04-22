@@ -17,11 +17,13 @@ def test_generated_python_user_state_pb2_is_available() -> None:
     assert hasattr(user_state_pb2, "UserStateV1")
 
 
-def test_proto_exposes_stage29_5_wire_fields() -> None:
+def test_proto_exposes_stage31_wire_fields() -> None:
     fields = user_state_pb2.UserStateV1.DESCRIPTOR.fields_by_name
     assert fields["active_skills_summary"].number == 17
     assert fields["achievement_summary"].number == 18
     assert fields["calendar_context"].number == 19
+    assert fields["metacognition_profile"].number == 20
+    assert fields["idiographic_summary"].number == 21
 
 
 def test_proto_wrapper_types_match_expected_messages() -> None:
@@ -29,13 +31,15 @@ def test_proto_wrapper_types_match_expected_messages() -> None:
     assert fields["active_skills_summary"].message_type.name == "ActiveSkillsSummaryField"
     assert fields["achievement_summary"].message_type.name == "AchievementSummaryField"
     assert fields["calendar_context"].message_type.name == "CalendarContextField"
+    assert fields["idiographic_summary"].message_type.name == "IdiographicSummaryField"
 
 
-def test_python_schema_exposes_stage29_5_fields() -> None:
+def test_python_schema_exposes_stage31_fields() -> None:
     annotations = UserStateV1.__annotations__
     assert "active_skills_summary" in annotations
     assert "achievement_summary" in annotations
     assert "calendar_context" in annotations
+    assert "idiographic_summary" in annotations
 
 
 def test_calendar_context_keeps_struct_exam_urgency() -> None:

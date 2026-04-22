@@ -42,6 +42,7 @@ from app.services.execution_event_consumer import ExecutionEventConsumer
 from app.services.galaxy_execution_consumer import GalaxyExecutionConsumer
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.job_service import JobService
+from app.services.idiographic_association_service import IdiographicAssociationService
 from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.services.profile_event_consumer import ProfileEventConsumer
 from app.services.plan_health_event_consumer import PlanHealthEventConsumer
@@ -176,6 +177,19 @@ async def lifespan(app: FastAPI):
         srl_phase_tracker = SRLPhaseTrackerService(event_bus=event_bus, redis=cache_service.redis)
         srl_phase_tracker_task = asyncio.create_task(srl_phase_tracker.start())
         app.state.srl_phase_tracker_task = srl_phase_tracker_task
+
+    idiographic_association_task = None
+    idiographic_association_service = None
+    if cache_service.redis and event_bus is not None:
+        idiographic_association_service = IdiographicAssociationService(
+            event_bus=event_bus,
+            redis=cache_service.redis,
+        )
+        idiographic_association_task = asyncio.create_task(
+            idiographic_association_service.start()
+        )
+        app.state.idiographic_association_service = idiographic_association_service
+        app.state.idiographic_association_task = idiographic_association_task
 
     achievement_consumer_task = None
     if cache_service.redis:
@@ -377,6 +391,18 @@ async def lifespan(app: FastAPI):
         srl_phase_tracker_task.cancel()
         with suppress(asyncio.CancelledError):
             await srl_phase_tracker_task
+    idiographic_association_service = getattr(
+        app.state, "idiographic_association_service", None
+    )
+    idiographic_association_task = getattr(
+        app.state, "idiographic_association_task", None
+    )
+    if idiographic_association_service:
+        idiographic_association_service.stop()
+    if idiographic_association_task:
+        idiographic_association_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await idiographic_association_task
 
     achievement_consumer_task = getattr(app.state, "achievement_consumer_task", None)
     if achievement_consumer_task:

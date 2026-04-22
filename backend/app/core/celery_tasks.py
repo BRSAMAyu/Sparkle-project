@@ -61,18 +61,11 @@ def generate_node_embedding(self, node_id: str, title: str, summary: str, user_i
 
                 for sim in similar:
                     if sim.id != UUID(node_id):
-                        logger.warning(
-                            f"⚠️ Potential duplicate found for {node_id}: "
-                            f"{sim.id} ({sim.name})"
-                        )
+                        logger.warning(f"⚠️ Potential duplicate found for {node_id}: " f"{sim.id} ({sim.name})")
                         # 可以在这里触发通知
                         break
 
-                return {
-                    "status": "success",
-                    "node_id": node_id,
-                    "has_duplicate": len(similar) > 1
-                }
+                return {"status": "success", "node_id": node_id, "has_duplicate": len(similar) > 1}
 
             except Exception as e:
                 logger.error(f"❌ Failed to process node {node_id}: {e}")
@@ -81,7 +74,7 @@ def generate_node_embedding(self, node_id: str, title: str, summary: str, user_i
     try:
         return asyncio.run(_process())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=3, name="analyze_error_batch")
@@ -112,13 +105,13 @@ def analyze_error_batch(self, error_ids: list, user_id: str):
             return {
                 "total": len(error_ids),
                 "success": sum(1 for r in results if r["status"] == "success"),
-                "results": results
+                "results": results,
             }
 
     try:
         return asyncio.run(_analyze())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=2, name="process_stored_file")
@@ -156,11 +149,20 @@ def process_stored_file(
     try:
         return asyncio.run(_process())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
+
 
 @celery_app.task(bind=True, max_retries=2, name="record_token_usage")
-def record_token_usage(self, user_id: str, session_id: str, request_id: str,
-                      prompt_tokens: int, completion_tokens: int, model: str, cost: float):
+def record_token_usage(
+    self,
+    user_id: str,
+    session_id: str,
+    request_id: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    model: str,
+    cost: float,
+):
     """
     记录 Token 使用量 (异步)
 
@@ -181,7 +183,7 @@ def record_token_usage(self, user_id: str, session_id: str, request_id: str,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 model=model,
-                cost=cost
+                cost=cost,
             )
             return {"status": "success", "user_id": user_id}
 
@@ -214,7 +216,7 @@ def save_learning_state(self, user_id: str, state_data: dict):
     try:
         return asyncio.run(_save())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=3, name="persist_bayesian_data")
@@ -241,11 +243,7 @@ def persist_bayesian_data(self, user_id: str, data: dict):
             if redis_client is None:
                 raise RuntimeError("redis cache unavailable")
             key = build_persistent_bayesian_key(user_id)
-            await redis_client.setex(
-                key,
-                PERSISTENT_BAYESIAN_TTL_SECONDS,
-                json.dumps(data)
-            )
+            await redis_client.setex(key, PERSISTENT_BAYESIAN_TTL_SECONDS, json.dumps(data))
             logger.info(f"✅ Persisted Bayesian data for {user_id}")
             return {"status": "success", "user_id": user_id}
         except Exception as e:
@@ -255,7 +253,36 @@ def persist_bayesian_data(self, user_id: str, data: dict):
     try:
         return asyncio.run(_persist())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
+
+
+@celery_app.task(
+    bind=True,
+    max_retries=2,
+    name="app.core.celery_tasks.recompute_idiographic_associations",
+)
+def recompute_idiographic_associations(self, user_id: str | None = None):
+    """Recompute Stage 31 idiographic associations for one user or all active users."""
+    import asyncio
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.idiographic_association_service import (
+        IdiographicAssociationService,
+    )
+
+    async def _recompute():
+        async with AsyncSessionLocal() as session:
+            service = IdiographicAssociationService(session)
+            if user_id:
+                return await service.recompute_user(UUID(user_id), publish_event=False)
+            updated = await service.recompute_all_users()
+            return {"status": "success", "updated_users": updated}
+
+    try:
+        return asyncio.run(_recompute())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=2, name="invalidate_cache")
@@ -301,11 +328,7 @@ def cleanup_pending_actions(self):
         async with AsyncSessionLocal() as session:
             cutoff = datetime.now() - timedelta(hours=24)
 
-            result = await session.execute(
-                PendingAction.__table__.delete().where(
-                    PendingAction.created_at < cutoff
-                )
-            )
+            result = await session.execute(PendingAction.__table__.delete().where(PendingAction.created_at < cutoff))
             deleted = result.rowcount
 
             await session.commit()
@@ -340,7 +363,7 @@ def rerank_documents(self, query: str, doc_ids: list, user_id: str):
     try:
         return asyncio.run(_rerank())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=3, name="expansion_worker_task")
@@ -375,7 +398,7 @@ def expansion_worker_task(self, node_id: str, operation: str):
     try:
         return asyncio.run(_expand())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=2, name="visualize_graph")
@@ -397,7 +420,7 @@ def visualize_graph(self, user_id: str, graph_data: dict):
     try:
         return asyncio.run(_visualize())
     except Exception as exc:
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=2**self.request.retries)
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_learning_reports")
@@ -580,6 +603,44 @@ def promote_perceptible_cohort(self):
         raise self.retry(exc=exc, countdown=120)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.refresh_metacognition_snapshots")
+def refresh_metacognition_snapshots(self, limit: int = 500):
+    """Refresh Stage 30 metacognition snapshots for recently active users."""
+    import asyncio
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.task import Task
+    from app.models.theater_prediction import TheaterPrediction
+    from app.services.metacognition_service import MetacognitionService
+    from sqlalchemy import select
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            task_rows = await session.execute(
+                select(Task.user_id).where(Task.deleted_at.is_(None)).distinct().limit(limit)
+            )
+            prediction_rows = await session.execute(
+                select(TheaterPrediction.user_id).where(TheaterPrediction.deleted_at.is_(None)).distinct().limit(limit)
+            )
+            user_ids = {user_id for (user_id,) in task_rows.all() + prediction_rows.all() if user_id is not None}
+
+            refreshed = 0
+            service = MetacognitionService(session)
+            for user_id in sorted(user_ids, key=str):
+                await service.refresh_snapshot(user_id, publish_event=False)
+                refreshed += 1
+
+            return {"status": "success", "refreshed_users": refreshed}
+
+    try:
+        result = asyncio.run(_run())
+        logger.info(f"✅ Refreshed metacognition snapshots: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to refresh metacognition snapshots: {exc}")
+        raise self.retry(exc=exc, countdown=120)
+
+
 @celery_app.task(bind=True, max_retries=2, name="generate_long_horizon_prediction")
 def generate_long_horizon_prediction(self, user_id: str):
     """使用 GLM batch 生成后台长期行为预测，并写入缓存。"""
@@ -608,7 +669,7 @@ def generate_long_horizon_prediction(self, user_id: str):
     max_retries=3,
     default_retry_delay=60,
     rate_limit="10/m",  # M2 Security Fix: 每分钟最多10封邮件
-    name="send_verification_email_task"
+    name="send_verification_email_task",
 )
 def send_verification_email_task(self, to_email: str, verify_token: str, username: str):
     """
@@ -622,11 +683,7 @@ def send_verification_email_task(self, to_email: str, verify_token: str, usernam
 
     async def _send():
         try:
-            await email_service.send_verification_email(
-                to_email=to_email,
-                verify_token=verify_token,
-                username=username
-            )
+            await email_service.send_verification_email(to_email=to_email, verify_token=verify_token, username=username)
             logger.info(f"✅ Verification email sent to {to_email}")
             return {"status": "success", "to_email": to_email}
         except Exception as e:
@@ -663,6 +720,7 @@ def send_task_reminders(self):
 # 任务监控装饰器
 # =============================================================================
 
+
 def monitor_task_execution(task_func):
     """
     任务执行监控装饰器
@@ -684,11 +742,8 @@ def monitor_task_execution(task_func):
             # 记录成功指标
             try:
                 from app.core.llm_monitoring import LLMMonitor
-                LLMMonitor.record_performance_metric(
-                    f"celery_{task_name}_duration",
-                    duration,
-                    {"status": "success"}
-                )
+
+                LLMMonitor.record_performance_metric(f"celery_{task_name}_duration", duration, {"status": "success"})
             except Exception as exc:
                 logger.debug(f"Skip celery success metric for {task_name}: {exc}")
                 pass
@@ -702,11 +757,8 @@ def monitor_task_execution(task_func):
             # 记录失败指标
             try:
                 from app.core.llm_monitoring import LLMMonitor
-                LLMMonitor.record_performance_metric(
-                    f"celery_{task_name}_duration",
-                    duration,
-                    {"status": "failed"}
-                )
+
+                LLMMonitor.record_performance_metric(f"celery_{task_name}_duration", duration, {"status": "failed"})
             except Exception as exc:
                 logger.debug(f"Skip celery failure metric for {task_name}: {exc}")
                 pass
@@ -720,7 +772,7 @@ def monitor_task_execution(task_func):
 # 应用装饰器到所有任务
 for task_name in dir():
     task_obj = globals().get(task_name)
-    if hasattr(task_obj, 'apply_async'):
+    if hasattr(task_obj, "apply_async"):
         # 可以在这里应用装饰器
         pass
 
@@ -739,14 +791,16 @@ def sleep_probe_task(self, seconds: float = 2.0):
     }
 
 
-@celery_app.task(bind=True, max_retries=3, default_retry_delay=60, name="app.core.celery_tasks.schedule_push_notification")
+@celery_app.task(
+    bind=True, max_retries=3, default_retry_delay=60, name="app.core.celery_tasks.schedule_push_notification"
+)
 def schedule_push_notification(self, user_id: str, intervention_id: str, payload: dict):
     """
     Schedule a push notification delivery to the mobile app (APNs/FCM).
     This acts as the PUSH delivery channel for InterventionRecords.
     """
     import asyncio
-    
+
     async def _send():
         # In a real system, this would call APNs/FCM APIs.
         logger.info(f"Push notification sent successfully to user {user_id} for intervention {intervention_id}")
@@ -754,6 +808,7 @@ def schedule_push_notification(self, user_id: str, intervention_id: str, payload
         return True
 
     return _run_async(_send())
+
 
 @celery_app.task(bind=True, max_retries=1, default_retry_delay=1, name="acceptance.fail_probe_task")
 def fail_probe_task(self):

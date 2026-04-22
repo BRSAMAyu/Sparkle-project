@@ -1011,6 +1011,8 @@ def build_system_prompt(
     decision_policy_section = _format_decision_policy_section(user_context=user_context)
     planning_strategy_section = _format_planning_strategy_section(user_context=user_context)
     user_material_grounding_section = _format_user_material_grounding_section(user_context=user_context)
+    process_scaffolding_section = _format_process_scaffolding_section(user_context=user_context)
+    idiographic_section = _format_idiographic_section(user_context=user_context)
     intervention_language_contract_section = _format_intervention_language_contract_section(
         user_context=user_context,
         prompt_signal_telemetry=prompt_signal_telemetry,
@@ -1145,6 +1147,8 @@ def build_system_prompt(
         "decision_policy_section": decision_policy_section,
         "planning_strategy_section": planning_strategy_section,
         "user_material_grounding_section": user_material_grounding_section,
+        "process_scaffolding_section": process_scaffolding_section,
+        "idiographic_section": idiographic_section,
         "intervention_language_contract_section": intervention_language_contract_section,
         "context_briefing_section": context_briefing_section,
         "visible_intelligence_section": visible_intelligence_section,
@@ -1191,6 +1195,8 @@ def build_system_prompt(
             "decision_policy_section": 1,
             "planning_strategy_section": 1,
             "user_material_grounding_section": 1,
+            "process_scaffolding_section": 1,
+            "idiographic_section": 1,
             "intervention_language_contract_section": 1,
             "context_briefing_section": 0,
             "visible_intelligence_section": 1,
@@ -1220,6 +1226,8 @@ def build_system_prompt(
     decision_policy_section = section_map["decision_policy_section"]
     planning_strategy_section = section_map["planning_strategy_section"]
     user_material_grounding_section = section_map["user_material_grounding_section"]
+    process_scaffolding_section = section_map["process_scaffolding_section"]
+    idiographic_section = section_map["idiographic_section"]
     intervention_language_contract_section = section_map["intervention_language_contract_section"]
     context_briefing_section = section_map["context_briefing_section"]
     visible_intelligence_section = section_map["visible_intelligence_section"]
@@ -1311,6 +1319,8 @@ def build_system_prompt(
                 decision_policy_section=decision_policy_section,
                 planning_strategy_section=planning_strategy_section,
                 user_material_grounding_section=user_material_grounding_section,
+                process_scaffolding_section=process_scaffolding_section,
+                idiographic_section=idiographic_section,
                 intervention_language_contract_section=intervention_language_contract_section,
                 context_briefing_section=context_briefing_section,
                 task_awareness_section=task_awareness_section,
@@ -1330,6 +1340,8 @@ def build_system_prompt(
                 decision_policy_section,
                 planning_strategy_section,
                 user_material_grounding_section,
+                process_scaffolding_section,
+                idiographic_section,
                 intervention_language_contract_section,
                 plan_context_section,
                 conversation_history_section,
@@ -1367,6 +1379,8 @@ def build_system_prompt(
                 decision_policy_section=decision_policy_section,
                 planning_strategy_section=planning_strategy_section,
                 user_material_grounding_section=user_material_grounding_section,
+                process_scaffolding_section=process_scaffolding_section,
+                idiographic_section=idiographic_section,
                 intervention_language_contract_section=intervention_language_contract_section,
             )
         )
@@ -1382,6 +1396,8 @@ def build_system_prompt(
             decision_policy_section,
             planning_strategy_section,
             user_material_grounding_section,
+            process_scaffolding_section,
+            idiographic_section,
             intervention_language_contract_section,
             plan_context_section,
             conversation_history_section,
@@ -1989,6 +2005,81 @@ def _format_user_material_grounding_section(*, user_context: dict) -> str:
     return "\n" + "\n".join(lines)
 
 
+def _format_process_scaffolding_section(*, user_context: dict) -> str:
+    profile_context = _extract_profile_context_payload(user_context)
+    payload = None
+    if isinstance(profile_context, dict):
+        payload = profile_context.get("metacognition_process_scaffolding")
+    if not isinstance(payload, dict) and isinstance(user_context, dict):
+        payload = user_context.get("metacognition_process_scaffolding")
+    if not isinstance(payload, dict):
+        return ""
+
+    body = str(payload.get("body") or "").strip()
+    if not body:
+        return ""
+
+    lines = [
+        "## 过程复盘支架 [L2 引导]",
+        f"- {body}",
+        "- 只帮助用户回看判断过程，不要把这类观察写成人格、身份或诊断结论。",
+    ]
+    return "\n" + "\n".join(lines)
+
+
+def _format_idiographic_section(*, user_context: dict) -> str:
+    profile_context = _extract_profile_context_payload(user_context)
+    payload = profile_context.get("idiographic_summary") if isinstance(profile_context, dict) else None
+    if not isinstance(payload, dict):
+        return ""
+
+    if str(payload.get("mode") or "off").strip().lower() != "live":
+        if isinstance(user_context, dict):
+            user_context["idiographic_associations_injected"] = []
+        return ""
+
+    disclaimer_text = str(payload.get("disclaimer_text") or "").strip()
+    confidence = float(payload.get("confidence") or 0.0)
+    if confidence < 0.5 or not disclaimer_text:
+        if isinstance(user_context, dict):
+            user_context["idiographic_associations_injected"] = []
+        return ""
+
+    injected_rows: list[dict[str, Any]] = []
+    rendered_lines: list[str] = []
+    for item in payload.get("top_associations") or []:
+        if not isinstance(item, dict):
+            continue
+        if not bool(item.get("displayed")):
+            continue
+        rendered_text = str(item.get("rendered_text") or "").strip()
+        if not rendered_text:
+            continue
+        rendered_lines.append(f"- {rendered_text}")
+        injected_rows.append(
+            {
+                "dim_pair": str(item.get("dim_pair") or "").strip(),
+                "r_rounded": round(float(item.get("correlation") or 0.0), 2),
+                "displayed": True,
+            }
+        )
+        if len(rendered_lines) >= 3:
+            break
+
+    if isinstance(user_context, dict):
+        user_context["idiographic_associations_injected"] = injected_rows
+
+    if not rendered_lines:
+        return ""
+
+    lines = [
+        "## 个体内关联观察 [L2 引导]",
+        "- 这些观察只能当作近期模式参考，不能写成因果判断、诊断或路由条件。",
+        *rendered_lines,
+    ]
+    return "\n" + "\n".join(lines)
+
+
 def _resolve_preference_instructions(
     *,
     user_context: dict,
@@ -2242,6 +2333,7 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
         "focus_stats",
         "achievement_summary",
         "calendar_context",
+        "idiographic_summary",
         "social_context",
     )
     field_status: dict[str, Any] = {}

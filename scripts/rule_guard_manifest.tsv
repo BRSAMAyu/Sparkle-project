@@ -14,5 +14,7 @@ AJ	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage25/check_rule_aj_user_id_isolation
 AK	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage26/check_rule_ak_algorithm_constraint.py"
 AL	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage27/check_rule_al_foresight_not_router.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_rule_al_sdt_language.py"
 AM	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage28/check_rule_am_confidence_cap.py"
-AN	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_rule_an_orchestrator_isolation.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_rule_an_orchestrator_no_hardcoded_phase.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_scaffolding_aggregator_only.py"
+AN	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_rule_an_orchestrator_isolation.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_rule_an_orchestrator_no_hardcoded_phase.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_scaffolding_aggregator_only.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_an_cross_user_isolation.py"
 AQ	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_aq_python_proto_parity.py"
+AO	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ao_no_diagnostic_labels.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ao_not_in_router.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_metacognition_scaffolding_decoupled.py"
+AP	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ap_idiographic_association.py"

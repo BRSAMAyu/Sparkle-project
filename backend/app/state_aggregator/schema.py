@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Generic, Literal, TypeVar
 from uuid import UUID
-
 
 T = TypeVar("T")
 UserStateFieldName = Literal[
@@ -24,6 +23,8 @@ UserStateFieldName = Literal[
     "calendar_context",
     "traits_prior",
     "srl_phase",
+    "metacognition_profile",
+    "idiographic_summary",
 ]
 
 
@@ -208,9 +209,55 @@ class SRLPhaseSummaryValue:
 
 
 @dataclass(frozen=True)
+class MetacognitionDimensionSummaryValue:
+    dim: str
+    sample_size: int
+    bias_mean: float
+    trend: str
+
+
+@dataclass(frozen=True)
+class MetacognitionProfileSummaryValue:
+    items: tuple[MetacognitionDimensionSummaryValue, ...]
+
+
+@dataclass(frozen=True)
+class AssociationPairValue:
+    dim_pair: str
+    dim_a: str
+    dim_b: str
+    correlation: float
+    q_value: float
+    confidence: float
+    direction: str
+    strength_label: str
+    rendered_text: str
+    displayed: bool
+    density_insufficient: bool
+    sample_days: int
+
+
+@dataclass(frozen=True)
+class ChangePointItemValue:
+    dim: str
+    change_date: date
+    confidence: float
+    rendered_text: str
+
+
+@dataclass(frozen=True)
+class IdiographicSummaryValue:
+    top_associations: tuple[AssociationPairValue, ...]
+    change_points_30d: tuple[ChangePointItemValue, ...]
+    sample_days: int
+    confidence: float
+    disclaimer_text: str
+
+
+@dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1.10"
+    schema_version: str = "user_state.v1.12"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
     pending_policies: StateFieldEnvelope[PendingPoliciesSummaryValue] | None = None
     recent_reflections: StateFieldEnvelope[RecentReflectionsSummaryValue] | None = None
@@ -219,12 +266,20 @@ class UserStateV1:
     recent_person_mentions: StateFieldEnvelope[RecentPersonMentionsValue] | None = None
     engagement_state: StateFieldEnvelope[EngagementStateValue] | None = None
     learning_state: StateFieldEnvelope[LearningStateValue] | None = None
-    working_memory_snapshot: StateFieldEnvelope[WorkingMemorySnapshotValue] | None = None
+    working_memory_snapshot: StateFieldEnvelope[WorkingMemorySnapshotValue] | None = (
+        None
+    )
     task_sufficiency_summary: StateFieldEnvelope[SufficiencySummaryValue] | None = None
-    context_sufficiency_summary: StateFieldEnvelope[SufficiencySummaryValue] | None = None
+    context_sufficiency_summary: StateFieldEnvelope[SufficiencySummaryValue] | None = (
+        None
+    )
     active_skills_summary: StateFieldEnvelope[ActiveSkillsSummaryValue] | None = None
     achievement_summary: StateFieldEnvelope[AchievementSummaryValue] | None = None
     calendar_context: StateFieldEnvelope[CalendarContextValue] | None = None
     traits_prior: StateFieldEnvelope[TraitsPriorSummaryValue] | None = None
     srl_phase: StateFieldEnvelope[SRLPhaseSummaryValue] | None = None
+    metacognition_profile: (
+        StateFieldEnvelope[MetacognitionProfileSummaryValue] | None
+    ) = None
+    idiographic_summary: StateFieldEnvelope[IdiographicSummaryValue] | None = None
     emotion_hint: StateFieldEnvelope[None] | None = None

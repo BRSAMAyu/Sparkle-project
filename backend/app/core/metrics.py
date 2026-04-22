@@ -194,6 +194,48 @@ SRL_SCAFFOLDING_ADJUSTED_TOTAL = get_or_create_metric(
     ["phase", "mode", "applied"],
 )
 
+METACOG_BIAS_UPDATED_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_metacognition_bias_updated_total",
+    "Metacognition snapshot refresh results",
+    ["result"],
+)
+
+METACOG_SAMPLE_BELOW_THRESHOLD_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_metacognition_sample_below_threshold_total",
+    "Dimensions filtered because sample size is below threshold",
+    ["dim"],
+)
+
+METACOG_PROCESS_SCAFFOLD_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_metacognition_process_scaffold_total",
+    "Process scaffolding trigger and skip reasons",
+    ["status", "reason"],
+)
+
+METACOG_DIAGNOSTIC_WORD_HIT_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_metacognition_diagnostic_word_hit_total",
+    "Diagnostic label hits detected in metacognition text",
+    ["source"],
+)
+
+METACOG_DASHBOARD_VIEW_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_metacognition_dashboard_view_total",
+    "Dashboard payload exposures for the metacognition panel",
+    ["visibility"],
+)
+
+METACOG_SCAFFOLDING_COMBINE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_metacognition_scaffolding_combine_total",
+    "Final combine states for SRL and metacognition scaffolding deltas",
+    ["combine_state"],
+)
+
 SRL_ROUTER_ZERO_HIT = get_or_create_metric(
     Gauge,
     "sparkle_srl_router_zero_hit",

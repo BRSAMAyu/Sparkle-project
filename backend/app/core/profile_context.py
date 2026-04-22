@@ -73,6 +73,10 @@ class ProfileContext(BaseModel):
     traits_coldstart_completed_at: datetime | None = None
     user_insight_state: UserInsightState | None = None
     user_projection_contract: UserProjectionContract | None = None
+    metacognition_profile: dict[str, Any] = Field(default_factory=dict)
+    metacognition_dashboard: dict[str, Any] = Field(default_factory=dict)
+    metacognition_process_scaffolding: dict[str, Any] | None = None
+    idiographic_summary: dict[str, Any] | None = None
 
     def to_prompt_context(self) -> dict[str, Any]:
         return self.model_dump(mode="json")

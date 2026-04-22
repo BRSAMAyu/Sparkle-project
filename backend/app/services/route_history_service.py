@@ -44,6 +44,7 @@ class RouteHistoryDecisionView:
     source_state_v2: dict[str, str]
     source_state_v2_key: str | None
     skills_injected: tuple[str, ...]
+    idiographic_associations_injected: tuple[dict[str, Any], ...]
     outcome: str | None
     outcome_timestamp: datetime | None
     outcome_signal_id: str | None
@@ -60,6 +61,11 @@ class RouteHistoryDecisionView:
             source_state_v2=dict(record.source_state_v2 or {}),
             source_state_v2_key=str(record.source_state_v2_key or "").strip() or None,
             skills_injected=tuple(str(item) for item in (record.skills_injected or [])),
+            idiographic_associations_injected=tuple(
+                item
+                for item in (record.idiographic_associations_injected or [])
+                if isinstance(item, dict)
+            ),
             outcome=str(record.outcome or "").strip() or None,
             outcome_timestamp=record.outcome_timestamp,
             outcome_signal_id=str(record.outcome_signal_id or "").strip() or None,
@@ -143,6 +149,7 @@ class RouteHistoryService:
         decision_id: UUID | None = None,
         source_state_v2: dict[str, str] | None = None,
         source_state_v2_key: str | None = None,
+        idiographic_associations_injected: list[dict[str, Any]] | None = None,
     ) -> UUID:
         now = decided_at or _utcnow()
         resolved_source_state = source_state_v2 or build_backfill_source_state(
@@ -163,6 +170,12 @@ class RouteHistoryService:
             source_state_v2=resolved_source_state,
             source_state_v2_key=source_state_v2_key or encode_source_state_key(resolved_source_state),
             skills_injected=[str(item) for item in (skills_injected or [])],
+            idiographic_associations_injected=[
+                item
+                for item in (idiographic_associations_injected or [])
+                if isinstance(item, dict)
+            ]
+            or None,
         )
         self.db.add(record)
         await self.db.commit()

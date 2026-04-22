@@ -46,7 +46,7 @@ async def test_state_aggregator_returns_working_memory_snapshot(db_session) -> N
         now=now,
     )
 
-    assert state.schema_version == "user_state.v1.10"
+    assert state.schema_version == "user_state.v1.12"
     assert state.working_memory_snapshot is not None
     assert state.working_memory_snapshot.value.active_session_id == str(session_id)
     assert len(state.working_memory_snapshot.value.items) == 1

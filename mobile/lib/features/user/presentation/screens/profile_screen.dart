@@ -9,6 +9,7 @@ import 'package:sparkle/features/achievement/presentation/providers/achievement_
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
+import 'package:sparkle/features/user/presentation/widgets/metacognition_panel_card.dart';
 import 'package:sparkle/features/user/presentation/widgets/srl_phase_badge_card.dart';
 import 'package:sparkle/features/user/presentation/widgets/traits_coldstart_questionnaire.dart';
 import 'package:sparkle/features/user/presentation/widgets/traits_prior_card.dart';
@@ -28,6 +29,7 @@ class ProfileScreen extends ConsumerWidget {
     final achievementState = ref.watch(achievementProvider);
     final visualState = ref.watch(visualElementProvider);
     final profileContextAsync = ref.watch(profileContextProvider);
+    final profileContext = profileContextAsync.valueOrNull;
     final l10n = AppLocalizations.of(context)!;
     final screenHeight = MediaQuery.of(context).size.height;
     final headerHeight = screenHeight < 720 ? 164.0 : 198.0;
@@ -59,13 +61,23 @@ class ProfileScreen extends ConsumerWidget {
                       error: (_, __) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: DS.spacing12),
+                    if (profileContext != null)
+                      _buildMetacognitionSection(context, ref, profileContext),
+                    if (profileContext != null)
+                      const SizedBox(height: DS.spacing12),
                     _buildPrestigeShowcase(
                       context,
                       achievementState,
                       visualState,
                     ),
                     const SizedBox(height: DS.spacing16),
-                    _buildSettingsSection(context, ref, l10n, user),
+                    _buildSettingsSection(
+                      context,
+                      ref,
+                      l10n,
+                      user,
+                      profileContext,
+                    ),
                     const SizedBox(height: 56),
                   ],
                 ),
@@ -275,7 +287,8 @@ class ProfileScreen extends ConsumerWidget {
     Map<String, dynamic> profileContext,
   ) {
     final userInsightState =
-        profileContext['user_insight_state'] as Map<String, dynamic>? ?? const {};
+        profileContext['user_insight_state'] as Map<String, dynamic>? ??
+            const {};
     final coldstartCompletedAt =
         userInsightState['traits_coldstart_completed_at']?.toString();
     final traits = TraitsPriorCard.fromProfileContext(profileContext);
@@ -342,6 +355,30 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildMetacognitionSection(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> profileContext,
+  ) {
+    final panel = MetacognitionPanelCard.fromProfileContext(profileContext);
+    if (panel == null) {
+      return const SizedBox.shrink();
+    }
+    final cards = (panel['cards'] as List<dynamic>)
+        .whereType<Map<String, dynamic>>()
+        .toList();
+    return MetacognitionPanelCard(
+      cards: cards,
+      generatedAt: panel['generatedAt']?.toString(),
+      onHide: () async {
+        await ref
+            .read(userRepositoryProvider)
+            .updateMetacognitionPanelPreference(hidden: true);
+        ref.invalidate(profileContextProvider);
+      },
     );
   }
 
@@ -539,6 +576,7 @@ class ProfileScreen extends ConsumerWidget {
     WidgetRef ref,
     AppLocalizations l10n,
     UserModel user,
+    Map<String, dynamic>? profileContext,
   ) =>
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -628,6 +666,27 @@ class ProfileScreen extends ConsumerWidget {
                   title: '我的方式',
                   accentColor: const Color(0xFF6F8F86),
                   onTap: () => context.push(UserRoutes.skills),
+                ),
+                const Divider(height: 1, indent: 60),
+                _buildToggleTile(
+                  context,
+                  icon: Icons.insights_outlined,
+                  title: '自我认识面板',
+                  subtitle: ((profileContext?['metacognition_dashboard']
+                              as Map<String, dynamic>?)?['hidden'] ==
+                          true)
+                      ? '已隐藏，后台仍会继续计算'
+                      : '显示过去样本里的判断偏差摘要',
+                  accentColor: const Color(0xFF4A7A58),
+                  value: ((profileContext?['metacognition_dashboard']
+                          as Map<String, dynamic>?)?['hidden'] !=
+                      true),
+                  onChanged: (value) async {
+                    await ref
+                        .read(userRepositoryProvider)
+                        .updateMetacognitionPanelPreference(hidden: !value);
+                    ref.invalidate(profileContextProvider);
+                  },
                 ),
               ],
             ),
@@ -828,6 +887,59 @@ class ProfileScreen extends ConsumerWidget {
         size: 16,
         color: DS.neutral400,
       ),
+    );
+  }
+
+  Widget _buildToggleTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color accentColor,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SwitchListTile.adaptive(
+      value: value,
+      onChanged: onChanged,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing16,
+        vertical: DS.spacing6,
+      ),
+      secondary: Container(
+        padding: const EdgeInsets.all(DS.sm),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              accentColor.withValues(alpha: isDark ? 0.28 : 0.20),
+              Color.lerp(accentColor, DS.surfacePrimaryElevated, 0.68)!,
+            ],
+          ),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(
+            color: accentColor.withValues(alpha: isDark ? 0.36 : 0.18),
+          ),
+        ),
+        child: Icon(icon, color: accentColor, size: 20),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: DS.textPrimary,
+          fontWeight: DS.fontWeightMedium,
+        ),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: DS.spacing4),
+        child: Text(
+          subtitle,
+          style: DS.bodySmall.copyWith(color: DS.textSecondary),
+        ),
+      ),
+      activeColor: accentColor,
     );
   }
 

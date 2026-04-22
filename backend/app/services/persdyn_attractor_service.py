@@ -125,6 +125,30 @@ class PersDynAttractorService:
         rows = await self._load_signal_rows(normalized_user_id, reference_time)
         return self._build_observation_for_day(rows=rows, reference_day=reference_time.date())
 
+    async def build_daily_observations(
+        self,
+        *,
+        user_id: UUID,
+        now: datetime | None = None,
+        days: int = 45,
+    ) -> dict[date, dict[str, float]]:
+        normalized_user_id = self._require_user_id(user_id)
+        reference_time = now or _utcnow()
+        lookback_days = max(1, int(days or self.HISTORY_DAYS))
+        rows = await self._load_signal_rows(
+            normalized_user_id,
+            reference_time,
+            lookback_days=lookback_days,
+        )
+        observations: dict[date, dict[str, float]] = {}
+        for offset in range(lookback_days - 1, -1, -1):
+            reference_day = reference_time.date() - timedelta(days=offset)
+            observations[reference_day] = self._build_observation_for_day(
+                rows=rows,
+                reference_day=reference_day,
+            )
+        return observations
+
     async def recompute_user_attractors(
         self,
         *,
@@ -195,8 +219,15 @@ class PersDynAttractorService:
         )
         return list((await self.db.execute(stmt)).scalars().all())
 
-    async def _load_signal_rows(self, user_id: UUID, reference_time: datetime) -> _SignalRows:
-        earliest_start = _start_of_day(reference_time.date() - timedelta(days=self.CONFIDENCE_LOOKBACK_DAYS - 1))
+    async def _load_signal_rows(
+        self,
+        user_id: UUID,
+        reference_time: datetime,
+        *,
+        lookback_days: int | None = None,
+    ) -> _SignalRows:
+        requested_days = max(1, int(lookback_days or self.CONFIDENCE_LOOKBACK_DAYS))
+        earliest_start = _start_of_day(reference_time.date() - timedelta(days=requested_days - 1))
 
         study_records = tuple(
             (
@@ -272,9 +303,16 @@ class PersDynAttractorService:
             reflections=reflections,
         )
 
-    def _build_series(self, *, rows: _SignalRows, reference_time: datetime) -> dict[str, list[float]]:
+    def _build_series(
+        self,
+        *,
+        rows: _SignalRows,
+        reference_time: datetime,
+        days: int | None = None,
+    ) -> dict[str, list[float]]:
+        window_days = max(1, int(days or self.HISTORY_DAYS))
         series = {dim: [] for dim in self.DIMENSIONS}
-        for offset in range(self.HISTORY_DAYS - 1, -1, -1):
+        for offset in range(window_days - 1, -1, -1):
             reference_day = reference_time.date() - timedelta(days=offset)
             observation = self._build_observation_for_day(rows=rows, reference_day=reference_day)
             for dim in self.DIMENSIONS:

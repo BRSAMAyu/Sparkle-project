@@ -16,6 +16,7 @@ from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.behavior_signal_collector import BehaviorSignalCollector
 from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.community_signal_bridge import CommunitySignalBridge
+from app.services.metacognition_service import MetacognitionService
 
 
 class TaskEventConsumer:
@@ -86,6 +87,7 @@ class TaskEventConsumer:
                 if completion_rate is None:
                     completion_rate = actual / estimated if estimated > 0 else 1.0
                 await collector.handle_task_completed_event(event)
+                await MetacognitionService(db, cache_service.redis, self.event_bus).refresh_snapshot(user_id)
                 await bridge.handle_group_task_completed(event)
 
                 try:

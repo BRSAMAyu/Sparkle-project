@@ -25,7 +25,9 @@ from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.subject import Subject
 from app.schemas.error_book import ErrorQueryParams
 from app.services.error_book_service import ErrorBookService
+from app.services.idiographic_association_service import IdiographicAssociationService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_name
+from app.services.metacognition_service import MetacognitionService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.report.report_tools import LearningReportTools
 from app.state_aggregator.service import StateAggregatorService
@@ -114,7 +116,12 @@ class ProfileContextService:
         self.error_book_service = ErrorBookService(db)
         self.report_tools = LearningReportTools(db)
 
-    async def get_profile_context(self, user_id: UUID) -> ProfileContext:
+    async def get_profile_context(
+        self,
+        user_id: UUID,
+        *,
+        include_metacognition_prompt_extensions: bool = False,
+    ) -> ProfileContext:
         cache_key = f"user:profile_context:{user_id}"
         if self.redis:
             try:
@@ -122,9 +129,18 @@ class ProfileContextService:
                 if cached:
                     data = json.loads(cached)
                     context = ProfileContext(**data)
-                    current_version = await self.pref_service.get_preference_version(user_id)
-                    if context.preference_version == current_version and context.user_insight_state is not None:
-                        await self._attach_srl_phase_summary(user_id, context)
+                    current_version = await self.pref_service.get_preference_version(
+                        user_id
+                    )
+                    if (
+                        context.preference_version == current_version
+                        and context.user_insight_state is not None
+                    ):
+                        await self._attach_live_extensions(
+                            user_id,
+                            context,
+                            include_metacognition_prompt_extensions=include_metacognition_prompt_extensions,
+                        )
                         return context
                     logger.info(
                         "ProfileContext cache stale for %s: cached_version=%s current_version=%s has_insight=%s",
@@ -148,9 +164,13 @@ class ProfileContextService:
             cognitive_summary=cognitive_summary,
             error_summary=error_payload.get("summary") or {},
             recent_errors=error_payload.get("recent") or [],
-            traits_prior=BigFiveTraits.model_validate(preferences.get("traits_prior") or {}),
+            traits_prior=BigFiveTraits.model_validate(
+                preferences.get("traits_prior") or {}
+            ),
             trait_observation_state=preferences.get("trait_observation_state") or {},
-            traits_coldstart_completed_at=preferences.get("traits_coldstart_completed_at"),
+            traits_coldstart_completed_at=preferences.get(
+                "traits_coldstart_completed_at"
+            ),
         )
         contract = await UserInsightCompiler(self.db).compile(
             user_id=user_id,
@@ -158,21 +178,46 @@ class ProfileContextService:
         )
         context.user_projection_contract = contract
         context.user_insight_state = contract.canonical_state
-        await self._attach_srl_phase_summary(user_id, context)
 
         if self.redis:
             try:
-                await self.redis.setex(cache_key, self.CACHE_TTL_SECONDS, context.model_dump_json())
+                await self.redis.setex(
+                    cache_key, self.CACHE_TTL_SECONDS, context.model_dump_json()
+                )
             except Exception as exc:
                 logger.warning(f"ProfileContext cache write failed: {exc}")
 
         # Write inline snapshot cache as a side-effect of compilation
         if context.user_insight_state is not None:
-            await self._write_inline_snapshot_cache(user_id, context.user_insight_state.to_inline_snapshot())
+            await self._write_inline_snapshot_cache(
+                user_id, context.user_insight_state.to_inline_snapshot()
+            )
 
+        await self._attach_live_extensions(
+            user_id,
+            context,
+            include_metacognition_prompt_extensions=include_metacognition_prompt_extensions,
+        )
         return context
 
-    async def _attach_srl_phase_summary(self, user_id: UUID, context: ProfileContext) -> None:
+    async def _attach_live_extensions(
+        self,
+        user_id: UUID,
+        context: ProfileContext,
+        *,
+        include_metacognition_prompt_extensions: bool,
+    ) -> None:
+        await self._attach_srl_phase_summary(user_id, context)
+        await self._attach_metacognition_context(
+            user_id,
+            context,
+            include_prompt_extensions=include_metacognition_prompt_extensions,
+        )
+        await self._attach_idiographic_summary(user_id, context)
+
+    async def _attach_srl_phase_summary(
+        self, user_id: UUID, context: ProfileContext
+    ) -> None:
         if context.user_insight_state is None:
             return
         try:
@@ -196,6 +241,83 @@ class ProfileContextService:
         except Exception as exc:
             logger.warning(f"Failed to attach SRL phase summary: {exc}")
 
+    async def _attach_metacognition_context(
+        self,
+        user_id: UUID,
+        context: ProfileContext,
+        *,
+        include_prompt_extensions: bool,
+    ) -> None:
+        try:
+            service = MetacognitionService(self.db, redis=self.redis)
+            context.metacognition_profile = await service.get_snapshot(user_id)
+            context.metacognition_dashboard = await service.build_dashboard_payload(
+                user_id
+            )
+            context.metacognition_process_scaffolding = (
+                await service.build_prompt_process_scaffolding(user_id, consume=True)
+                if include_prompt_extensions
+                else None
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to attach metacognition context: {exc}")
+
+    async def _attach_idiographic_summary(
+        self,
+        user_id: UUID,
+        context: ProfileContext,
+    ) -> None:
+        try:
+            service = IdiographicAssociationService(
+                self.db, redis=self.redis
+            )
+            summary = await service.build_aggregator_summary(user_id)
+            context.idiographic_summary = (
+                self._serialize_idiographic_summary(
+                    summary,
+                    mode=await service.kill_switch.get_mode(),
+                )
+                if summary is not None
+                else None
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to attach idiographic summary: {exc}")
+
+    @staticmethod
+    def _serialize_idiographic_summary(summary: Any, *, mode: str) -> dict[str, Any]:
+        return {
+            "top_associations": [
+                {
+                    "dim_pair": item.dim_pair,
+                    "dim_a": item.dim_a,
+                    "dim_b": item.dim_b,
+                    "correlation": item.correlation,
+                    "q_value": item.q_value,
+                    "confidence": item.confidence,
+                    "direction": item.direction,
+                    "strength_label": item.strength_label,
+                    "rendered_text": item.rendered_text,
+                    "displayed": item.displayed,
+                    "density_insufficient": item.density_insufficient,
+                    "sample_days": item.sample_days,
+                }
+                for item in summary.top_associations
+            ],
+            "change_points_30d": [
+                {
+                    "dim": item.dim,
+                    "change_date": item.change_date.isoformat(),
+                    "confidence": item.confidence,
+                    "rendered_text": item.rendered_text,
+                }
+                for item in summary.change_points_30d
+            ],
+            "sample_days": summary.sample_days,
+            "confidence": summary.confidence,
+            "disclaimer_text": summary.disclaimer_text,
+            "mode": mode,
+        }
+
     async def get_inline_snapshot(self, user_id: UUID) -> dict[str, Any] | None:
         """Retrieve the cached inline snapshot for a user, if available.
 
@@ -213,19 +335,25 @@ class ProfileContextService:
             cached = await self.redis.get(cache_key)
             if cached:
                 import json as _json
+
                 return _json.loads(cached)
         except Exception as exc:
             logger.warning(f"Inline snapshot cache read failed: {exc}")
         return None
 
-    async def _write_inline_snapshot_cache(self, user_id: UUID, snapshot: dict[str, Any]) -> None:
+    async def _write_inline_snapshot_cache(
+        self, user_id: UUID, snapshot: dict[str, Any]
+    ) -> None:
         """Write the inline snapshot to Redis. Called internally after compilation."""
         if not self.redis:
             return
         cache_key = f"user:inline_snapshot:{user_id}"
         try:
             import json as _json
-            await self.redis.setex(cache_key, self.INLINE_SNAPSHOT_CACHE_TTL_SECONDS, _json.dumps(snapshot))
+
+            await self.redis.setex(
+                cache_key, self.INLINE_SNAPSHOT_CACHE_TTL_SECONDS, _json.dumps(snapshot)
+            )
         except Exception as exc:
             logger.warning(f"Inline snapshot cache write failed: {exc}")
 
@@ -240,7 +368,9 @@ class ProfileContextService:
             "inferred": inferred,
             "version": prefs.version if prefs else 0,
             "traits_prior": dict(prefs.traits_prior or {}) if prefs else {},
-            "trait_observation_state": dict(prefs.trait_observation_state or {}) if prefs else {},
+            "trait_observation_state": (
+                dict(prefs.trait_observation_state or {}) if prefs else {}
+            ),
             "traits_coldstart_completed_at": (
                 prefs.traits_coldstart_completed_at if prefs else None
             ),
@@ -267,12 +397,24 @@ class ProfileContextService:
             recent_errors.append(
                 {
                     "id": str(error.id),
-                    "question_preview": error.question_text[:50] if error.question_text else "Image Question",
+                    "question_preview": (
+                        error.question_text[:50]
+                        if error.question_text
+                        else "Image Question"
+                    ),
                     "subject": error.subject_code,
-                    "error_type": error.latest_analysis.get("error_type_label") if error.latest_analysis else "Unknown",
+                    "error_type": (
+                        error.latest_analysis.get("error_type_label")
+                        if error.latest_analysis
+                        else "Unknown"
+                    ),
                     "mastery": error.mastery_level,
                     "review_count": error.review_count,
-                    "last_reviewed_at": error.last_reviewed_at.isoformat() if error.last_reviewed_at else None,
+                    "last_reviewed_at": (
+                        error.last_reviewed_at.isoformat()
+                        if error.last_reviewed_at
+                        else None
+                    ),
                 }
             )
         return {"summary": stats or {}, "recent": recent_errors}
@@ -298,7 +440,10 @@ class ProfileContextService:
                 .join(KnowledgeNode, KnowledgeNode.id == UserNodeStatus.node_id)
                 .where(UserNodeStatus.user_id == user_id)
                 .where(UserNodeStatus.is_unlocked.is_(True))
-                .order_by(UserNodeStatus.mastery_score.asc(), nullslast(UserNodeStatus.last_study_at.desc()))
+                .order_by(
+                    UserNodeStatus.mastery_score.asc(),
+                    nullslast(UserNodeStatus.last_study_at.desc()),
+                )
                 .limit(self.WEAK_SPOT_LIMIT)
             )
             weak_result = await self.db.execute(weak_stmt)
@@ -365,7 +510,8 @@ class ProfileContextService:
             if fallback_mastery:
                 if overall_mastery <= 0.0:
                     overall_mastery = sum(
-                        float(item.get("mastery_score") or 0.0) for item in fallback_mastery
+                        float(item.get("mastery_score") or 0.0)
+                        for item in fallback_mastery
                     ) / max(len(fallback_mastery), 1)
                 if not weak_spots:
                     weak_spots = [
@@ -400,9 +546,9 @@ class ProfileContextService:
                 changed_at = _utcnow()
                 if isinstance(created_at_raw, str) and created_at_raw.strip():
                     try:
-                        changed_at = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00")).replace(
-                            tzinfo=None
-                        )
+                        changed_at = datetime.fromisoformat(
+                            created_at_raw.replace("Z", "+00:00")
+                        ).replace(tzinfo=None)
                     except ValueError:
                         changed_at = _utcnow()
                 recent_changes.append(
@@ -462,7 +608,9 @@ class ProfileContextService:
 
             pattern_type = str(pattern.pattern_type or "")
             if pattern_type:
-                type_scores[pattern_type] = type_scores.get(pattern_type, 0.0) + confidence_val
+                type_scores[pattern_type] = (
+                    type_scores.get(pattern_type, 0.0) + confidence_val
+                )
 
         if type_scores:
             dominant_pattern_type = max(type_scores, key=type_scores.get)

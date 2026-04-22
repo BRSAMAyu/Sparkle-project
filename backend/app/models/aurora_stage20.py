@@ -106,6 +106,9 @@ class RoutingDecisionLog(Base):
     source_state_v2 = Column(JSONBCompat, nullable=True, default=dict)
     source_state_v2_key = Column(String(255), nullable=True)
     skills_injected = Column(JSONBCompat, nullable=True, default=list)
+    idiographic_associations_injected = Column(
+        JSONBCompat, nullable=True, default=list
+    )
     outcome_signal_id = Column(String(128), nullable=True)
     outcome = Column(String(32), nullable=True)
     outcome_timestamp = Column(DateTime, nullable=True)

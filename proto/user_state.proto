@@ -235,6 +235,57 @@ message CalendarContextField {
   StateFieldMetadata metadata = 2;
 }
 
+message MetacognitionDimensionSummaryValue {
+  string dim = 1;
+  int32 sample_size = 2;
+  double bias_mean = 3;
+  string trend = 4;
+}
+
+message MetacognitionProfileSummaryValue {
+  repeated MetacognitionDimensionSummaryValue items = 1;
+}
+
+message MetacognitionProfileField {
+  MetacognitionProfileSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message AssociationPairValue {
+  string dim_pair = 1;
+  string dim_a = 2;
+  string dim_b = 3;
+  double correlation = 4;
+  double q_value = 5;
+  double confidence = 6;
+  string direction = 7;
+  string strength_label = 8;
+  string rendered_text = 9;
+  bool displayed = 10;
+  bool density_insufficient = 11;
+  int32 sample_days = 12;
+}
+
+message ChangePointItemValue {
+  string dim = 1;
+  google.protobuf.Timestamp change_date = 2;
+  double confidence = 3;
+  string rendered_text = 4;
+}
+
+message IdiographicSummaryValue {
+  repeated AssociationPairValue top_associations = 1;
+  repeated ChangePointItemValue change_points_30d = 2;
+  int32 sample_days = 3;
+  double confidence = 4;
+  string disclaimer_text = 5;
+}
+
+message IdiographicSummaryField {
+  IdiographicSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
 message UserStateV1 {
   string user_id = 1;
   string schema_version = 2;
@@ -256,4 +307,6 @@ message UserStateV1 {
   ActiveSkillsSummaryField active_skills_summary = 17;
   AchievementSummaryField achievement_summary = 18;
   CalendarContextField calendar_context = 19;
+  MetacognitionProfileField metacognition_profile = 20;
+  IdiographicSummaryField idiographic_summary = 21;
 }

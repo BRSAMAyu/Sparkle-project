@@ -73,7 +73,9 @@ def test_reset_override_requires_key(profile_client):
     assert response.json()["detail"] == "key required"
 
 
-def test_inferred_preferences_returns_behavioral_baseline_for_sparse_user(profile_client):
+def test_inferred_preferences_returns_behavioral_baseline_for_sparse_user(
+    profile_client,
+):
     client, state = profile_client
     state["current_user"] = type("UserStub", (), {"id": uuid4()})()
 
@@ -139,15 +141,21 @@ async def test_preference_rollback_restores_inferred_backup(profile_client, db_s
 
     try:
         pref_service = PreferenceService(db_session, redis=redis)
-        await pref_service.update_explicit(user_id, {"community_engagement_level": "low"})
-        await pref_service.update_inferred(user_id, {"community_engagement_level": "moderate"})
+        await pref_service.update_explicit(
+            user_id, {"community_engagement_level": "low"}
+        )
+        await pref_service.update_inferred(
+            user_id, {"community_engagement_level": "moderate"}
+        )
 
         service = ProfileWriteService(db_session, redis=redis)
         await service.override_inferred_preference(
             user_id=user_id,
             pref_key="community_engagement_level",
             pref_value={"value": "high"},
-            evidence_refs=[{"type": "user_state", "id": "override", "schema_version": "test.v1"}],
+            evidence_refs=[
+                {"type": "user_state", "id": "override", "schema_version": "test.v1"}
+            ],
             source="override_test",
         )
         memory_service = MemoryService(db_session)
@@ -185,7 +193,9 @@ async def test_preference_rollback_restores_inferred_backup(profile_client, db_s
 
 
 @pytest.mark.asyncio
-async def test_chat_opening_creates_visible_assistant_message(profile_client, db_session):
+async def test_chat_opening_creates_visible_assistant_message(
+    profile_client, db_session
+):
     client, state = profile_client
     user_id = uuid4()
     user = User(
@@ -263,7 +273,9 @@ async def test_chat_opening_creates_visible_assistant_message(profile_client, db
 
 
 @pytest.mark.asyncio
-async def test_profile_insights_returns_claims_predictions_and_unknowns(profile_client, db_session, monkeypatch):
+async def test_profile_insights_returns_claims_predictions_and_unknowns(
+    profile_client, db_session, monkeypatch
+):
     client, state = profile_client
     user_id = uuid4()
     user = User(
@@ -312,11 +324,18 @@ async def test_profile_insights_returns_claims_predictions_and_unknowns(profile_
                     }
                 },
                 calibration_summary={"calibration_posture": "uncalibrated"},
-                uncertainty_markers=[{"id": "uncertainty:capacity_hours", "description": "Capacity is still unclear."}],
+                uncertainty_markers=[
+                    {
+                        "id": "uncertainty:capacity_hours",
+                        "description": "Capacity is still unclear.",
+                    }
+                ],
             ),
         )
 
-    monkeypatch.setattr(ProfileContextService, "get_profile_context", _fake_profile_context)
+    monkeypatch.setattr(
+        ProfileContextService, "get_profile_context", _fake_profile_context
+    )
 
     response = client.get("/profile/insights")
 
@@ -328,7 +347,9 @@ async def test_profile_insights_returns_claims_predictions_and_unknowns(profile_
 
 
 @pytest.mark.asyncio
-async def test_profile_context_embeds_transparency_payload_for_ui_consumers(profile_client, db_session, monkeypatch):
+async def test_profile_context_embeds_transparency_payload_for_ui_consumers(
+    profile_client, db_session, monkeypatch
+):
     client, state = profile_client
     user_id = uuid4()
     user = User(
@@ -371,7 +392,9 @@ async def test_profile_context_embeds_transparency_payload_for_ui_consumers(prof
             ),
         )
 
-    monkeypatch.setattr(ProfileContextService, "get_profile_context", _fake_profile_context)
+    monkeypatch.setattr(
+        ProfileContextService, "get_profile_context", _fake_profile_context
+    )
 
     response = client.get("/profile/context")
 
@@ -379,12 +402,50 @@ async def test_profile_context_embeds_transparency_payload_for_ui_consumers(prof
     payload = response.json()
     assert payload["preference_version"] == 3
     assert "user_insight_transparency" in payload
-    assert payload["user_insight_transparency"]["claims"][0]["id"] == "achievement_motivation_response"
-    assert payload["user_insight_transparency"]["calibration"]["calibration_posture"] == "stable"
+    assert (
+        payload["user_insight_transparency"]["claims"][0]["id"]
+        == "achievement_motivation_response"
+    )
+    assert (
+        payload["user_insight_transparency"]["calibration"]["calibration_posture"]
+        == "stable"
+    )
 
 
 @pytest.mark.asyncio
-async def test_profile_insight_control_removes_inferred_signal_and_logs_correction(profile_client, db_session):
+async def test_profile_metacognition_panel_preference_updates_explicit_state(
+    profile_client, db_session
+):
+    client, state = profile_client
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = type("UserStub", (), {"id": user_id})()
+
+    response = client.post("/profile/metacognition/panel", json={"hidden": True})
+
+    assert response.status_code == 200
+    assert response.json()["hidden"] is True
+    row = (
+        await db_session.execute(
+            select(UserPreferencesCenter).where(
+                UserPreferencesCenter.user_id == user_id
+            )
+        )
+    ).scalar_one()
+    assert row.explicit["metacognition_dashboard_hidden"] is True
+
+
+@pytest.mark.asyncio
+async def test_profile_insight_control_removes_inferred_signal_and_logs_correction(
+    profile_client, db_session
+):
     client, state = profile_client
     user_id = uuid4()
     user = User(
@@ -416,20 +477,28 @@ async def test_profile_insight_control_removes_inferred_signal_and_logs_correcti
     )
 
     assert response.status_code == 200
-    prefs = await PreferenceService(db_session, cache_service.redis).get_preferences(user_id)
+    prefs = await PreferenceService(db_session, cache_service.redis).get_preferences(
+        user_id
+    )
     assert "achievement_motivation_response" not in (prefs.inferred or {})
 
     corrections = (
-        await db_session.execute(
-            select(MemoryCorrection).where(MemoryCorrection.user_id == user_id)
+        (
+            await db_session.execute(
+                select(MemoryCorrection).where(MemoryCorrection.user_id == user_id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert corrections
     assert corrections[0].action == "wrong"
 
 
 @pytest.mark.asyncio
-async def test_profile_insight_control_exam_mode_only_persists_scope_override(profile_client, db_session):
+async def test_profile_insight_control_exam_mode_only_persists_scope_override(
+    profile_client, db_session
+):
     client, state = profile_client
     user_id = uuid4()
     user = User(
@@ -459,13 +528,17 @@ async def test_profile_insight_control_exam_mode_only_persists_scope_override(pr
     )
 
     assert response.status_code == 200
-    prefs = await PreferenceService(db_session, cache_service.redis).get_preferences(user_id)
+    prefs = await PreferenceService(db_session, cache_service.redis).get_preferences(
+        user_id
+    )
     overrides = (prefs.explicit or {}).get("insight_scope_overrides") or {}
     assert overrides["achievement_motivation_response"]["scope"] == "exam_mode_only"
 
 
 @pytest.mark.asyncio
-async def test_submit_correction_creates_memory_correction_and_enqueues_update(profile_client, db_session):
+async def test_submit_correction_creates_memory_correction_and_enqueues_update(
+    profile_client, db_session
+):
     client, state = profile_client
     user_id = uuid4()
     user = User(
@@ -506,10 +579,14 @@ async def test_submit_correction_creates_memory_correction_and_enqueues_update(p
 
     assert response.status_code == 200
     corrections = (
-        await db_session.execute(
-            select(MemoryCorrection).where(MemoryCorrection.user_id == user_id)
+        (
+            await db_session.execute(
+                select(MemoryCorrection).where(MemoryCorrection.user_id == user_id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(corrections) == 1
     assert corrections[0].action == "suggest_update"
     assert fake_service.enqueued

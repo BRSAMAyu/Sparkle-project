@@ -9,7 +9,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models.achievement import Achievement, AchievementRarity, UserAchievement, UserStreakStats
+from app.models.achievement import (
+    Achievement,
+    AchievementRarity,
+    UserAchievement,
+    UserStreakStats,
+)
 from app.models.chat import ChatSession
 from app.models.calendar_event import CalendarEvent
 from app.models.focus import FocusSession, FocusStatus
@@ -21,10 +26,12 @@ from app.services.memory_service import MemoryService
 from app.services.scene_consolidation_service import SceneConsolidationService
 from app.services.policy_scheduler_service import PolicySchedulerService
 from app.services.predictive_service import PredictiveService
+from app.services.idiographic_association_service import IdiographicAssociationService
 from app.services.skill_schema import SkillSelectionContext
 from app.services.skill_selection_service import SkillSelectionService
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult
 from app.services.sufficiency_judge_service import SufficiencyJudgeService
+from app.services.metacognition_service import MetacognitionService
 from app.state_aggregator.schema import (
     ActiveSkillSummaryItemValue,
     ActiveSkillsSummaryValue,
@@ -38,7 +45,9 @@ from app.state_aggregator.schema import (
     EngagementStateValue,
     ForesightConfidenceItemValue,
     ForesightHintSummaryValue,
+    IdiographicSummaryValue,
     LearningStateValue,
+    MetacognitionProfileSummaryValue,
     PendingPoliciesSummaryValue,
     RecentReflectionsSummaryValue,
     RecentSceneItemValue,
@@ -82,6 +91,8 @@ class StateAggregatorService:
         "calendar_context": 300,
         "traits_prior": 30,
         "srl_phase": settings.AURORA_SRL_AGGREGATOR_TTL_SECONDS,
+        "metacognition_profile": settings.AURORA_METACOG_CACHE_TTL_SECONDS,
+        "idiographic_summary": settings.AURORA_IDIOGRAPHIC_TTL_SECONDS,
     }
 
     def __init__(self, db: AsyncSession) -> None:
@@ -90,7 +101,10 @@ class StateAggregatorService:
         self.predictive_service = PredictiveService(db)
         self.working_memory_service = WorkingMemoryService()
         self.sufficiency_judge = SufficiencyJudgeService()
-        self._cache: dict[tuple[UUID, UserStateFieldName, str], tuple[StateFieldEnvelope[Any], datetime]] = {}
+        self._cache: dict[
+            tuple[UUID, UserStateFieldName, str],
+            tuple[StateFieldEnvelope[Any] | None, datetime],
+        ] = {}
 
     async def get_user_state(
         self,
@@ -122,24 +136,33 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None,
         skill_selection_context: SkillSelectionContext | None,
-    ) -> StateFieldEnvelope[Any]:
+    ) -> StateFieldEnvelope[Any] | None:
         cache_key = (
             user_id,
             field_name,
-            self._turn_parse_fingerprint(field_name, current_turn_parse, skill_selection_context),
+            self._turn_parse_fingerprint(
+                field_name, current_turn_parse, skill_selection_context
+            ),
         )
         cached = self._cache.get(cache_key)
         if cached is not None:
             envelope, expires_at = cached
             if expires_at > now:
+                if envelope is None:
+                    return None
                 return replace(
                     envelope,
-                    freshness_seconds=max(0, int((now - envelope.computed_at).total_seconds())),
+                    freshness_seconds=max(
+                        0, int((now - envelope.computed_at).total_seconds())
+                    ),
                 )
 
         fetcher: dict[
             UserStateFieldName,
-            Callable[[UUID, datetime, CurrentTurnParseResult | None], Awaitable[StateFieldEnvelope[Any]]],
+            Callable[
+                [UUID, datetime, CurrentTurnParseResult | None],
+                Awaitable[StateFieldEnvelope[Any] | None],
+            ],
         ] = {
             "commitment_summary": self._build_commitment_summary,
             "pending_policies": self._build_pending_policies_summary,
@@ -157,14 +180,23 @@ class StateAggregatorService:
             "calendar_context": self._build_calendar_context,
             "traits_prior": self._build_traits_prior_summary,
             "srl_phase": self._build_srl_phase_summary,
+            "metacognition_profile": self._build_metacognition_profile_summary,
+            "idiographic_summary": self._build_idiographic_summary,
         }
         envelope = await fetcher[field_name](
             user_id,
             now,
-            current_turn_parse if field_name != "active_skills_summary" else skill_selection_context,
+            (
+                current_turn_parse
+                if field_name != "active_skills_summary"
+                else skill_selection_context
+            ),
         )
         ttl_seconds = self.FIELD_TTLS_SECONDS[field_name]
-        self._cache[cache_key] = (envelope, envelope.computed_at + timedelta(seconds=ttl_seconds))
+        expires_at = now + timedelta(seconds=ttl_seconds)
+        if envelope is not None:
+            expires_at = envelope.computed_at + timedelta(seconds=ttl_seconds)
+        self._cache[cache_key] = (envelope, expires_at)
         return envelope
 
     async def _build_commitment_summary(
@@ -173,7 +205,9 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[CommitmentSummaryValue]:
-        rows = await self.memory_service.list_pending_commitments(user_id=user_id, now=now)
+        rows = await self.memory_service.list_pending_commitments(
+            user_id=user_id, now=now
+        )
         value = CommitmentSummaryValue(
             overdue_count=len(rows),
             next_due_at=rows[0].due_at if rows else None,
@@ -192,15 +226,18 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[PendingPoliciesSummaryValue]:
-        policies = await PolicySchedulerService(self.db).ensure_policies_for_user(user_id=user_id, now=now)
-        active = [
-            row for row in policies
-            if row.is_enabled and row.revoked_at is None
-        ]
+        policies = await PolicySchedulerService(self.db).ensure_policies_for_user(
+            user_id=user_id, now=now
+        )
+        active = [row for row in policies if row.is_enabled and row.revoked_at is None]
         value = PendingPoliciesSummaryValue(
             count=len(active),
             next_trigger_at=min(
-                (row.next_trigger_at for row in active if row.next_trigger_at is not None),
+                (
+                    row.next_trigger_at
+                    for row in active
+                    if row.next_trigger_at is not None
+                ),
                 default=None,
             ),
             policy_ids=tuple(row.policy_id for row in active[:10]),
@@ -229,7 +266,9 @@ class StateAggregatorService:
             for row in rows
             if row.subject_type == "person_mention"
         )[:3]
-        relationship_count = sum(1 for row in rows if row.subject_type == "relationship")
+        relationship_count = sum(
+            1 for row in rows if row.subject_type == "relationship"
+        )
         value = RecentPersonMentionsValue(
             mentions=mentions,
             relationship_count=relationship_count,
@@ -292,7 +331,9 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[RecentScenesSummaryValue]:
-        items = await SceneConsolidationService(self.db).list_recent_scenes_for_aggregator(
+        items = await SceneConsolidationService(
+            self.db
+        ).list_recent_scenes_for_aggregator(
             user_id=user_id,
             now=now,
         )
@@ -337,7 +378,9 @@ class StateAggregatorService:
         return StateFieldEnvelope(
             value=ForesightHintSummaryValue(
                 hint_text=latest_hint.message if latest_hint is not None else None,
-                generated_at=latest_hint.generated_at if latest_hint is not None else None,
+                generated_at=(
+                    latest_hint.generated_at if latest_hint is not None else None
+                ),
                 deviation_count=len(snapshot.deviations),
                 attractor_confidences=confidence_items,
             ),
@@ -362,16 +405,28 @@ class StateAggregatorService:
 
         latest_focus_stmt = (
             select(FocusSession.end_time)
-            .where(FocusSession.user_id == user_id, FocusSession.status == FocusStatus.COMPLETED)
+            .where(
+                FocusSession.user_id == user_id,
+                FocusSession.status == FocusStatus.COMPLETED,
+            )
             .order_by(FocusSession.end_time.desc())
             .limit(1)
         )
-        latest_focus_at = (await self.db.execute(latest_focus_stmt)).scalar_one_or_none()
+        latest_focus_at = (
+            await self.db.execute(latest_focus_stmt)
+        ).scalar_one_or_none()
 
         streak_stmt = select(UserStreakStats).where(UserStreakStats.user_id == user_id)
         streak_row = (await self.db.execute(streak_stmt)).scalar_one_or_none()
         streak = int(streak_row.current_streak or 0) if streak_row is not None else 0
-        last_active_candidates = [value for value in [latest_focus_at, getattr(streak_row, "last_activity_date", None)] if value]
+        last_active_candidates = [
+            value
+            for value in [
+                latest_focus_at,
+                getattr(streak_row, "last_activity_date", None),
+            ]
+            if value
+        ]
         last_active_at = max(last_active_candidates) if last_active_candidates else None
         source_ids = []
         if streak_row is not None:
@@ -399,7 +454,9 @@ class StateAggregatorService:
         forecast = await self.predictive_service.get_next_intent_forecast(user_id)
         within_category = forecast.get("within_category_preference")
         value = LearningStateValue(
-            within_category_preference=within_category if isinstance(within_category, dict) else None,
+            within_category_preference=(
+                within_category if isinstance(within_category, dict) else None
+            ),
         )
         source_ids = ["predictive:next_intent"]
         if value.within_category_preference:
@@ -420,7 +477,10 @@ class StateAggregatorService:
         session_stmt = (
             select(ChatSession)
             .where(ChatSession.user_id == user_id, ChatSession.is_active.is_(True))
-            .order_by(ChatSession.last_message_at.desc().nullslast(), ChatSession.created_at.desc())
+            .order_by(
+                ChatSession.last_message_at.desc().nullslast(),
+                ChatSession.created_at.desc(),
+            )
             .limit(1)
         )
         session = (await self.db.execute(session_stmt)).scalar_one_or_none()
@@ -448,7 +508,9 @@ class StateAggregatorService:
             for item in snapshot
         )
         return StateFieldEnvelope(
-            value=WorkingMemorySnapshotValue(active_session_id=str(session.id), items=items),
+            value=WorkingMemorySnapshotValue(
+                active_session_id=str(session.id), items=items
+            ),
             computed_at=now,
             source_snapshot_ids=tuple(
                 f"working_memory:{user_id}:{session.id}:{index}"
@@ -463,7 +525,9 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[SufficiencySummaryValue]:
-        judgment = await self._evaluate_sufficiency(user_id=user_id, now=now, current_turn_parse=current_turn_parse)
+        judgment = await self._evaluate_sufficiency(
+            user_id=user_id, now=now, current_turn_parse=current_turn_parse
+        )
         return StateFieldEnvelope(
             value=SufficiencySummaryValue(
                 score=judgment.task_sufficiency.score,
@@ -480,11 +544,15 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[SufficiencySummaryValue]:
-        judgment = await self._evaluate_sufficiency(user_id=user_id, now=now, current_turn_parse=current_turn_parse)
+        judgment = await self._evaluate_sufficiency(
+            user_id=user_id, now=now, current_turn_parse=current_turn_parse
+        )
         return StateFieldEnvelope(
             value=SufficiencySummaryValue(
                 score=judgment.context_sufficiency.score,
-                top_missing_dimensions=judgment.context_sufficiency.missing_dimensions[:3],
+                top_missing_dimensions=judgment.context_sufficiency.missing_dimensions[
+                    :3
+                ],
             ),
             computed_at=now,
             source_snapshot_ids=("sufficiency:context",),
@@ -553,7 +621,10 @@ class StateAggregatorService:
                     UserAchievement.unlocked_at.is_(None),
                     UserAchievement.progress > 0.5,
                 )
-                .order_by(UserAchievement.progress.desc(), UserAchievement.last_progress_update.desc().nullslast())
+                .order_by(
+                    UserAchievement.progress.desc(),
+                    UserAchievement.last_progress_update.desc().nullslast(),
+                )
                 .limit(5)
             )
         ).all()
@@ -574,10 +645,16 @@ class StateAggregatorService:
         total_score = 0.0
         source_ids: list[str] = []
         for user_achievement, achievement in score_rows:
-            rarity = achievement.rarity.value if hasattr(achievement.rarity, "value") else str(achievement.rarity or "common")
+            rarity = (
+                achievement.rarity.value
+                if hasattr(achievement.rarity, "value")
+                else str(achievement.rarity or "common")
+            )
             weight = rarity_weights.get(rarity, 1.0)
             progress = float(user_achievement.progress or 0.0)
-            total_score += weight if user_achievement.unlocked_at else (progress * weight)
+            total_score += (
+                weight if user_achievement.unlocked_at else (progress * weight)
+            )
             source_ids.append(f"achievement:{achievement.id}")
 
         value = AchievementSummaryValue(
@@ -585,7 +662,11 @@ class StateAggregatorService:
                 AchievementUnlockSummaryItemValue(
                     achievement_id=achievement.id,
                     name=achievement.name,
-                    rarity=achievement.rarity.value if hasattr(achievement.rarity, "value") else str(achievement.rarity),
+                    rarity=(
+                        achievement.rarity.value
+                        if hasattr(achievement.rarity, "value")
+                        else str(achievement.rarity)
+                    ),
                     unlocked_at=user_achievement.unlocked_at,
                 )
                 for user_achievement, achievement in recent_rows
@@ -629,7 +710,9 @@ class StateAggregatorService:
                     )
                     .order_by(CalendarEvent.start_time)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         week_events = list(
             (
@@ -643,10 +726,17 @@ class StateAggregatorService:
                     )
                     .order_by(CalendarEvent.start_time)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         forecast = await self.predictive_service.get_next_intent_forecast(user_id)
-        exam_urgency = forecast.get("exam_urgency") if isinstance(forecast, dict) and isinstance(forecast.get("exam_urgency"), dict) else None
+        exam_urgency = (
+            forecast.get("exam_urgency")
+            if isinstance(forecast, dict)
+            and isinstance(forecast.get("exam_urgency"), dict)
+            else None
+        )
 
         value = CalendarContextValue(
             upcoming_deadlines=tuple(
@@ -654,14 +744,20 @@ class StateAggregatorService:
                     title=event.title,
                     start_time=event.start_time,
                     end_time=event.end_time,
-                    source="task" if event.task_id else ("plan" if event.plan_id else "calendar"),
+                    source=(
+                        "task"
+                        if event.task_id
+                        else ("plan" if event.plan_id else "calendar")
+                    ),
                 )
                 for event in week_events[:6]
                 if event.task_id is not None or event.plan_id is not None
             ),
             time_blocks_today=tuple(
                 CalendarTimeBlockItemValue(start=item["start"], end=item["end"])
-                for item in self._derive_available_time_blocks(today_events, reference_day=today_start.date())
+                for item in self._derive_available_time_blocks(
+                    today_events, reference_day=today_start.date()
+                )
             ),
             workload_density=self._derive_workload_density(week_events),
             exam_urgency=exam_urgency,
@@ -669,7 +765,9 @@ class StateAggregatorService:
         return StateFieldEnvelope(
             value=value,
             computed_at=now,
-            source_snapshot_ids=tuple(f"calendar_event:{event.id}" for event in week_events[:10]),
+            source_snapshot_ids=tuple(
+                f"calendar_event:{event.id}" for event in week_events[:10]
+            ),
             freshness_seconds=0,
         )
 
@@ -682,10 +780,14 @@ class StateAggregatorService:
         del current_turn_parse
         row = (
             await self.db.execute(
-                select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
+                select(UserPreferencesCenter).where(
+                    UserPreferencesCenter.user_id == user_id
+                )
             )
         ).scalar_one_or_none()
-        traits = BigFiveTraits.model_validate(dict(getattr(row, "traits_prior", {}) or {}))
+        traits = BigFiveTraits.model_validate(
+            dict(getattr(row, "traits_prior", {}) or {})
+        )
         observation_state = dict(getattr(row, "trait_observation_state", {}) or {})
         latest_evidence_ids = dict(observation_state.get("latest_evidence_ids") or {})
         items = tuple(
@@ -717,7 +819,9 @@ class StateAggregatorService:
         del current_turn_parse
         row = (
             await self.db.execute(
-                select(SRLPhaseStateRecord).where(SRLPhaseStateRecord.user_id == user_id)
+                select(SRLPhaseStateRecord).where(
+                    SRLPhaseStateRecord.user_id == user_id
+                )
             )
         ).scalar_one_or_none()
         value = SRLPhaseSummaryValue(
@@ -733,6 +837,47 @@ class StateAggregatorService:
             value=value,
             computed_at=now,
             source_snapshot_ids=snapshot_ids,
+            freshness_seconds=0,
+        )
+
+    async def _build_metacognition_profile_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[MetacognitionProfileSummaryValue]:
+        value = await MetacognitionService(self.db).build_aggregator_summary(user_id)
+        source_ids = tuple(f"metacognition:{item.dim}" for item in value.items)
+        return StateFieldEnvelope(
+            value=value,
+            computed_at=now,
+            source_snapshot_ids=source_ids,
+            freshness_seconds=0,
+        )
+
+    async def _build_idiographic_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[IdiographicSummaryValue] | None:
+        del current_turn_parse
+        value = await IdiographicAssociationService(self.db).build_aggregator_summary(
+            user_id,
+            now=now,
+        )
+        if value is None:
+            return None
+        source_ids = tuple(
+            f"idiographic:{item.dim_pair}" for item in value.top_associations
+        ) or tuple(
+            f"idiographic:changepoint:{item.dim}:{item.change_date.isoformat()}"
+            for item in value.change_points_30d
+        )
+        return StateFieldEnvelope(
+            value=value,
+            computed_at=now,
+            source_snapshot_ids=source_ids,
             freshness_seconds=0,
         )
 
@@ -753,11 +898,17 @@ class StateAggregatorService:
         base_state = UserStateV1(
             user_id=user_id,
             commitment_summary=await self._build_commitment_summary(user_id, now),
-            recent_person_mentions=await self._build_recent_person_mentions(user_id, now),
+            recent_person_mentions=await self._build_recent_person_mentions(
+                user_id, now
+            ),
             engagement_state=await self._build_engagement_state(user_id, now),
-            working_memory_snapshot=await self._build_working_memory_snapshot(user_id, now),
+            working_memory_snapshot=await self._build_working_memory_snapshot(
+                user_id, now
+            ),
         )
-        return self.sufficiency_judge.evaluate(user_state=base_state, current_turn=parse_result)
+        return self.sufficiency_judge.evaluate(
+            user_state=base_state, current_turn=parse_result
+        )
 
     @staticmethod
     def _turn_parse_fingerprint(
@@ -765,7 +916,10 @@ class StateAggregatorService:
         current_turn_parse: CurrentTurnParseResult | None,
         skill_selection_context: SkillSelectionContext | None = None,
     ) -> str:
-        if field_name not in {"task_sufficiency_summary", "context_sufficiency_summary"}:
+        if field_name not in {
+            "task_sufficiency_summary",
+            "context_sufficiency_summary",
+        }:
             if field_name != "active_skills_summary":
                 return ""
             if skill_selection_context is None:
@@ -791,13 +945,23 @@ class StateAggregatorService:
         )
 
     @staticmethod
-    def _derive_available_time_blocks(events: list[CalendarEvent], *, reference_day: date) -> list[dict[str, str]]:
+    def _derive_available_time_blocks(
+        events: list[CalendarEvent], *, reference_day: date
+    ) -> list[dict[str, str]]:
         day_start = datetime.combine(reference_day, datetime.min.time()).replace(hour=7)
         day_end = datetime.combine(reference_day, datetime.min.time()).replace(hour=22)
         busy: list[tuple[datetime, datetime]] = []
         for event in events:
-            start = event.start_time.replace(tzinfo=None) if event.start_time.tzinfo else event.start_time
-            end = event.end_time.replace(tzinfo=None) if event.end_time.tzinfo else event.end_time
+            start = (
+                event.start_time.replace(tzinfo=None)
+                if event.start_time.tzinfo
+                else event.start_time
+            )
+            end = (
+                event.end_time.replace(tzinfo=None)
+                if event.end_time.tzinfo
+                else event.end_time
+            )
             start = max(start, day_start)
             end = min(end, day_end)
             if start < end:
@@ -807,10 +971,14 @@ class StateAggregatorService:
         cursor = day_start
         for start, end in sorted(busy, key=lambda item: item[0]):
             if start > cursor:
-                blocks.append({"start": cursor.strftime("%H:%M"), "end": start.strftime("%H:%M")})
+                blocks.append(
+                    {"start": cursor.strftime("%H:%M"), "end": start.strftime("%H:%M")}
+                )
             cursor = max(cursor, end)
         if cursor < day_end:
-            blocks.append({"start": cursor.strftime("%H:%M"), "end": day_end.strftime("%H:%M")})
+            blocks.append(
+                {"start": cursor.strftime("%H:%M"), "end": day_end.strftime("%H:%M")}
+            )
         return blocks[:4]
 
     @staticmethod
@@ -822,7 +990,9 @@ class StateAggregatorService:
         for event in events:
             key = event.start_time.date()
             by_day[key] = by_day.get(key, 0) + 1
-            total_minutes += max(0, int((event.end_time - event.start_time).total_seconds() / 60))
+            total_minutes += max(
+                0, int((event.end_time - event.start_time).total_seconds() / 60)
+            )
         active_days = max(len(by_day), 1)
         avg_events = sum(by_day.values()) / active_days
         avg_minutes = total_minutes / active_days

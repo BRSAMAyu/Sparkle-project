@@ -6,7 +6,6 @@ from pathlib import Path
 
 from ast_guard_utils import call_name, literal_string, parse_module, walk_parents
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AGGREGATOR_ROOT = REPO_ROOT / "backend/app/state_aggregator"
 ROUTER_TARGETS = [
@@ -44,6 +43,8 @@ ALL_AGGREGATOR_FIELDS = {
     "calendar_context",
     "traits_prior",
     "srl_phase",
+    "metacognition_profile",
+    "idiographic_summary",
     "emotion_hint",
 }
 SAFE_USER_STATE_FIELDS = {"user_id", "schema_version"}
@@ -51,7 +52,9 @@ WRITE_METHODS = {"save", "update", "insert", "delete", "add", "commit", "flush"}
 SQL_WRITE_TOKENS = ("INSERT ", "UPDATE ", "DELETE ")
 
 
-def scan_aggregator_read_only(paths: list[Path] | None = None, repo_root: Path = REPO_ROOT) -> list[str]:
+def scan_aggregator_read_only(
+    paths: list[Path] | None = None, repo_root: Path = REPO_ROOT
+) -> list[str]:
     violations: list[str] = []
     scan_paths = paths or sorted(AGGREGATOR_ROOT.rglob("*.py"))
     for path in scan_paths:
@@ -81,13 +84,21 @@ def scan_aggregator_read_only(paths: list[Path] | None = None, repo_root: Path =
 
 
 def _field_name_from_read(node: ast.AST) -> str | None:
-    if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "user_state":
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "user_state"
+    ):
         if node.attr == "get":
             return None
         if node.attr in SAFE_USER_STATE_FIELDS:
             return None
         return node.attr
-    if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id == "user_state":
+    if (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "user_state"
+    ):
         return literal_string(node.slice)
     if (
         isinstance(node, ast.Call)
@@ -114,7 +125,9 @@ def _is_branch_condition(node: ast.AST) -> bool:
     return False
 
 
-def scan_router_reads(paths: list[Path] | None = None, repo_root: Path = REPO_ROOT) -> list[str]:
+def scan_router_reads(
+    paths: list[Path] | None = None, repo_root: Path = REPO_ROOT
+) -> list[str]:
     violations: list[str] = []
     scan_paths = paths or ROUTER_TARGETS
     for path in scan_paths:
@@ -131,7 +144,9 @@ def scan_router_reads(paths: list[Path] | None = None, repo_root: Path = REPO_RO
                     f"router read on non-whitelisted field `{field_name}`"
                 )
                 continue
-            if field_name == "context_sufficiency_summary" and _is_branch_condition(node):
+            if field_name == "context_sufficiency_summary" and _is_branch_condition(
+                node
+            ):
                 violations.append(
                     f"AB102 {path.relative_to(repo_root)}:{getattr(node, 'lineno', '?')} "
                     "context_sufficiency_summary may not be used in a branch condition"
@@ -148,7 +163,9 @@ def main() -> int:
             print(item)
         return 1
 
-    print("[Rule AB] PASS - aggregator remains read-only and router reads stay within the whitelist")
+    print(
+        "[Rule AB] PASS - aggregator remains read-only and router reads stay within the whitelist"
+    )
     return 0
 
 

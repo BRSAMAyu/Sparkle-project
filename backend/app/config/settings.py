@@ -276,6 +276,24 @@ class Settings(BaseSettings):
     AURORA_SRL_TRACKER_P95_MS_BUDGET: int = 20
     AURORA_SRL_AGGREGATOR_TTL_SECONDS: int = 15
 
+    # Aurora Stage 30
+    AURORA_METACOG_MODE: str = "off"  # off | shadow | live
+    AURORA_METACOG_DASHBOARD_MODE: str = "live"  # off | shadow | live
+    AURORA_METACOG_PROCESS_SCAFFOLDING_MODE: str = "live"  # off | shadow | live
+    AURORA_METACOG_FSM_COMBINE_MODE: str = "live"  # off | shadow | live
+    AURORA_METACOG_CACHE_TTL_SECONDS: int = 60
+    AURORA_METACOG_MIN_SAMPLE_SIZE: int = 20
+    AURORA_METACOG_PROCESS_TRIGGER_ABS_BIAS: float = 0.30
+    AURORA_METACOG_PROCESS_COOLDOWN_HOURS: int = 72
+    AURORA_METACOG_P95_MS_BUDGET: int = 100
+    AURORA_METACOG_PROXY_REVISION_FREQUENCY: str = "live"
+    AURORA_METACOG_PROXY_SELF_CORRECTION_RATE: str = "live"
+    AURORA_METACOG_PROXY_QUESTION_TO_STATEMENT_RATIO: str = "live"
+    AURORA_METACOG_PROXY_TIME_TO_FIRST_ACTION: str = "live"
+    AURORA_METACOG_PROXY_COMPLETION_VS_ESTIMATE_DELTA_SIGN: str = "live"
+    AURORA_IDIOGRAPHIC_MODE: str = "shadow"  # off | shadow | live
+    AURORA_IDIOGRAPHIC_TTL_SECONDS: int = 300
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""
