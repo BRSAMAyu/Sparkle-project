@@ -893,6 +893,20 @@ class AdaptiveReplanner:
             or patch_result.inserted_task_ids
             or patch_result.hidden_task_ids
         ):
+            await self._enqueue_adaptation_update(
+                report.user_id,
+                AdaptationRecord(
+                    what_changed="评估了当前计划，但本轮没有生成需要落地的任务级调整。",
+                    why="系统检测到了波动信号，但暂时只更新了内部参数和回顾记录。",
+                    expected_effect="保留当前执行面不被频繁扰动，同时把这次评估结果纳入后续重规划依据。",
+                    user_facing_message=(
+                        "我已经重新检查了你的计划，这一轮先保留当前任务安排，"
+                        "并把评估结果记入后续校准。"
+                    ),
+                    source="adaptive_replanner",
+                ),
+                update_type="plan_adaptation_evaluated",
+            )
             return []
 
         await self._enqueue_adaptation_update(report.user_id, record, update_type="plan_adaptation")

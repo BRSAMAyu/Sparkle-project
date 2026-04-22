@@ -1,24 +1,44 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import desc, select
 
+from app.core.metrics import ERROR_REPLAN_BRIDGE_ERROR_TOTAL
 from app.models.card_protocol import InterventionRecord
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
+from app.models.user import User
 from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionTriggerType
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
+from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
 from app.services.intervention_record_service import InterventionRecordService
+from app.services.route_history_service import RouteHistoryService
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+class BridgeEvaluationError(RuntimeError):
+    """Raised when Stage34 bridge evaluation cannot be computed safely."""
+
+
+class PlanHealthError(RuntimeError):
+    """Raised when AdaptiveReplanner evaluation fails for an eligible plan."""
+
+
+@dataclass(frozen=True)
+class ErrorPressureDecision:
+    triggered: bool
+    threshold: int
+    recent_error_count: int
 
 
 class ErrorReplanBridge:
@@ -48,89 +68,152 @@ class ErrorReplanBridge:
         error_id: UUID,
         linked_node_ids: list[UUID],
     ) -> dict[str, object]:
-        normalized_node_ids = [node_id for node_id in linked_node_ids if node_id]
-        if not normalized_node_ids:
-            return {"triggered": False, "reason": "no_linked_nodes", "plan_ids": []}
+        mode = "off"
+        try:
+            normalized_node_ids = [node_id for node_id in linked_node_ids if node_id]
+            if not normalized_node_ids:
+                return {"triggered": False, "reason": "no_linked_nodes", "plan_ids": []}
 
-        error = await self.db.get(ErrorRecord, error_id)
-        if error is None or error.user_id != user_id:
-            return {"triggered": False, "reason": "error_not_found", "plan_ids": []}
+            error = await self.db.get(ErrorRecord, error_id)
+            if error is None or error.user_id != user_id:
+                return {"triggered": False, "reason": "error_not_found", "plan_ids": []}
 
-        error_type = self._classify_trigger_type(error)
-        if error_type is None:
-            return {"triggered": False, "reason": f"unsupported_error_type:{self._extract_error_type(error)}", "plan_ids": []}
+            error_type = self._classify_trigger_type(error)
+            if error_type is None:
+                return {
+                    "triggered": False,
+                    "reason": f"unsupported_error_type:{self._extract_error_type(error)}",
+                    "plan_ids": [],
+                }
 
-        plan_ids = await self._find_relevant_active_plan_ids(user_id=user_id, node_ids=normalized_node_ids)
-        if not plan_ids:
-            return {"triggered": False, "reason": "no_relevant_active_plan", "plan_ids": []}
+            plan_ids = await self._find_relevant_active_plan_ids(user_id=user_id, node_ids=normalized_node_ids)
+            if not plan_ids:
+                return {"triggered": False, "reason": "no_relevant_active_plan", "plan_ids": []}
 
-        eligible_plan_ids = await self._filter_plan_ids_by_cooldown(
-            user_id=user_id,
-            plan_ids=plan_ids,
-            error_type=error_type,
-        )
-        if not eligible_plan_ids:
-            return {"triggered": False, "reason": "trigger_cooldown_active", "plan_ids": []}
-
-        low_mastery_nodes = await self._find_low_mastery_nodes(user_id=user_id, node_ids=normalized_node_ids)
-        if not low_mastery_nodes:
-            return {"triggered": False, "reason": "mastery_not_low", "plan_ids": []}
-
-        recent_error_count = await self._count_recent_triggering_errors(
-            user_id=user_id,
-            node_ids=low_mastery_nodes,
-            days=self.ERROR_PRESSURE_LOOKBACK_DAYS,
-        )
-        if recent_error_count < self.ERROR_PRESSURE_TRIGGER_COUNT:
-            return {
-                "triggered": False,
-                "reason": "insufficient_error_pressure",
-                "plan_ids": [],
-                "recent_error_count": recent_error_count,
-            }
-
-        replanner = AdaptiveReplanner(self.db, self.redis)
-        triggered_plan_ids: list[str] = []
-        for plan_id in sorted(eligible_plan_ids, key=str):
-            await replanner.evaluate_plan_health_now(
+            eligible_plan_ids = await self._filter_plan_ids_by_cooldown(
                 user_id=user_id,
-                plan_id=plan_id,
-                trigger="error_created_bridge",
-                feedback_category="concept_gap_repeated",
+                plan_ids=plan_ids,
+                error_type=error_type,
             )
-            triggered_plan_ids.append(str(plan_id))
+            if not eligible_plan_ids:
+                return {"triggered": False, "reason": "trigger_cooldown_active", "plan_ids": []}
 
-        intervention_id = await self._create_error_intervention_record(
-            user_id=user_id,
-            low_mastery_nodes=low_mastery_nodes,
-            recent_error_count=recent_error_count,
-            plan_ids=triggered_plan_ids,
-            error_type=error_type,
-        )
+            low_mastery_nodes = await self._find_low_mastery_nodes(user_id=user_id, node_ids=normalized_node_ids)
+            if not low_mastery_nodes:
+                return {"triggered": False, "reason": "mastery_not_low", "plan_ids": []}
 
-        # Emit a visible system update so the user knows the plan was adjusted.
-        # This powers "stickiness moment 2": next chat open shows an AI bubble explaining
-        # what changed, making the system feel like it's paying attention.
-        await self._notify_plan_adjusted(
-            user_id=user_id,
-            low_mastery_nodes=low_mastery_nodes,
-            recent_error_count=recent_error_count,
-            intervention_id=intervention_id,
-        )
+            try:
+                mode = await AuroraStage34KillSwitchService().get_feature_mode("error_bridge")
+                is_new_user = await self._is_new_user(user_id)
+                recent_error_count = await self._count_recent_triggering_errors(
+                    user_id=user_id,
+                    node_ids=low_mastery_nodes,
+                    days=self.ERROR_PRESSURE_LOOKBACK_DAYS,
+                )
+            except Exception as exc:
+                raise BridgeEvaluationError("stage34_bridge_evaluation_failed") from exc
 
-        logger.info(
-            "ErrorReplanBridge: triggered immediate plan-health evaluation for user={} error={} plans={} count={}",
-            user_id,
-            error_id,
-            len(triggered_plan_ids),
-            recent_error_count,
-        )
-        return {
-            "triggered": True,
-            "reason": "error_pressure_bridge",
-            "plan_ids": triggered_plan_ids,
-            "recent_error_count": recent_error_count,
-        }
+            legacy_decision = ErrorPressureDecision(
+                triggered=recent_error_count >= self.ERROR_PRESSURE_TRIGGER_COUNT,
+                threshold=self.ERROR_PRESSURE_TRIGGER_COUNT,
+                recent_error_count=recent_error_count,
+            )
+            stage34_threshold = 1 if is_new_user else self.ERROR_PRESSURE_TRIGGER_COUNT
+            stage34_decision = ErrorPressureDecision(
+                triggered=recent_error_count >= stage34_threshold,
+                threshold=stage34_threshold,
+                recent_error_count=recent_error_count,
+            )
+
+            if mode == "shadow":
+                await self._record_shadow_decision(
+                    user_id=user_id,
+                    error_id=error_id,
+                    error_type=error_type,
+                    plan_ids=eligible_plan_ids,
+                    is_new_user=is_new_user,
+                    legacy_decision=legacy_decision,
+                    stage34_decision=stage34_decision,
+                )
+                effective_decision = legacy_decision
+            elif mode == "live":
+                effective_decision = stage34_decision
+            else:
+                effective_decision = legacy_decision
+
+            if not effective_decision.triggered:
+                return {
+                    "triggered": False,
+                    "reason": "insufficient_error_pressure",
+                    "plan_ids": [],
+                    "recent_error_count": recent_error_count,
+                    "threshold_applied": effective_decision.threshold,
+                    "is_new_user": is_new_user,
+                    "mode": mode,
+                }
+
+            replanner = AdaptiveReplanner(self.db, self.redis)
+            triggered_plan_ids: list[str] = []
+            for plan_id in sorted(eligible_plan_ids, key=str):
+                try:
+                    await replanner.evaluate_plan_health_now(
+                        user_id=user_id,
+                        plan_id=plan_id,
+                        trigger="error_created_bridge",
+                        feedback_category="concept_gap_repeated",
+                    )
+                except Exception as exc:
+                    raise PlanHealthError(f"plan_health_eval_failed:{plan_id}") from exc
+                triggered_plan_ids.append(str(plan_id))
+
+            intervention_id = await self._create_error_intervention_record(
+                user_id=user_id,
+                low_mastery_nodes=low_mastery_nodes,
+                recent_error_count=recent_error_count,
+                plan_ids=triggered_plan_ids,
+                error_type=error_type,
+            )
+
+            await self._notify_plan_adjusted(
+                user_id=user_id,
+                low_mastery_nodes=low_mastery_nodes,
+                recent_error_count=recent_error_count,
+                intervention_id=intervention_id,
+            )
+
+            logger.info(
+                "ErrorReplanBridge: triggered immediate plan-health evaluation for user={} error={} plans={} count={} mode={} threshold={}",
+                user_id,
+                error_id,
+                len(triggered_plan_ids),
+                recent_error_count,
+                mode,
+                effective_decision.threshold,
+            )
+            return {
+                "triggered": True,
+                "reason": "error_pressure_bridge",
+                "plan_ids": triggered_plan_ids,
+                "recent_error_count": recent_error_count,
+                "threshold_applied": effective_decision.threshold,
+                "is_new_user": is_new_user,
+                "mode": mode,
+            }
+        except BridgeEvaluationError as exc:
+            ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="BridgeEvaluationError", mode=mode).inc()
+            logger.warning("ErrorReplanBridge evaluation failed for user {}: {}", user_id, exc)
+            await self._notify_bridge_failure(user_id=user_id, category="BridgeEvaluationError", error=str(exc))
+            return {"triggered": False, "reason": "bridge_evaluation_error", "plan_ids": []}
+        except PlanHealthError as exc:
+            ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="PlanHealthError", mode=mode).inc()
+            logger.warning("ErrorReplanBridge plan-health evaluation failed for user {}: {}", user_id, exc)
+            await self._notify_bridge_failure(user_id=user_id, category="PlanHealthError", error=str(exc))
+            return {"triggered": False, "reason": "plan_health_error", "plan_ids": []}
+        except Exception as exc:
+            ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="UnknownError", mode=mode).inc()
+            logger.exception("ErrorReplanBridge unknown failure for user {}", user_id)
+            await self._notify_bridge_failure(user_id=user_id, category="UnknownError", error=str(exc))
+            return {"triggered": False, "reason": "unknown_error", "plan_ids": []}
 
     async def _create_error_intervention_record(
         self,
@@ -207,6 +290,77 @@ class ErrorReplanBridge:
             )
         except Exception as exc:
             logger.warning("ErrorReplanBridge: failed to enqueue plan_adjusted system update: {}", exc)
+
+    async def _notify_bridge_failure(
+        self,
+        *,
+        user_id: UUID,
+        category: str,
+        error: str,
+    ) -> None:
+        try:
+            from app.services.system_update_service import SystemUpdateService, build_system_update
+
+            await SystemUpdateService(self.redis).enqueue(
+                user_id,
+                build_system_update(
+                    update_type="error_bridge_failure",
+                    category="system",
+                    title="计划校准暂时未完成",
+                    description="系统识别到了新的错题压力信号，但这次自动校准没有完整执行，稍后会继续重试。",
+                    priority="medium",
+                    metadata={
+                        "trigger": "error_replan_bridge",
+                        "error_category": category,
+                        "error": error,
+                    },
+                ),
+            )
+        except Exception as exc:
+            logger.warning("ErrorReplanBridge: failed to enqueue failure update: {}", exc)
+
+    async def _record_shadow_decision(
+        self,
+        *,
+        user_id: UUID,
+        error_id: UUID,
+        error_type: str,
+        plan_ids: set[UUID],
+        is_new_user: bool,
+        legacy_decision: ErrorPressureDecision,
+        stage34_decision: ErrorPressureDecision,
+    ) -> None:
+        await RouteHistoryService(self.db).record_decision(
+            user_id=user_id,
+            input_aggregator_snapshot_id="stage34:error_replan_bridge",
+            decision_type="stage34_error_replan_bridge_shadow",
+            decision_payload={
+                "trigger": "error_created_bridge",
+                "error_id": str(error_id),
+                "error_type": error_type,
+                "is_new_user": is_new_user,
+                "legacy_threshold": legacy_decision.threshold,
+                "legacy_triggered": legacy_decision.triggered,
+                "stage34_threshold": stage34_decision.threshold,
+                "stage34_triggered": stage34_decision.triggered,
+                "recent_error_count": stage34_decision.recent_error_count,
+                "plan_ids": [str(plan_id) for plan_id in sorted(plan_ids, key=str)],
+            },
+            source_state_v2={
+                "stage": "34",
+                "feature": "error_bridge_shadow",
+                "mode": "shadow",
+            },
+        )
+
+    async def _is_new_user(self, user_id: UUID) -> bool:
+        user = await self.db.get(User, user_id)
+        if user is None or getattr(user, "created_at", None) is None:
+            return False
+        created_at = user.created_at
+        if created_at.tzinfo is not None:
+            created_at = created_at.replace(tzinfo=None)
+        return (_utcnow() - created_at) < timedelta(days=7)
 
     async def _resolve_node_name(self, node_ids: list[UUID]) -> str:
         if not node_ids:
