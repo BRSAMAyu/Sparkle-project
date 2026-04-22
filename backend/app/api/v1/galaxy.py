@@ -1,7 +1,12 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 Knowledge Galaxy API
 知识星图相关接口
 """
+
 from __future__ import annotations
 
 from datetime import datetime

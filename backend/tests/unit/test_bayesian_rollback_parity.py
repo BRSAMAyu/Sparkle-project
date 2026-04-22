@@ -11,7 +11,7 @@ from app.services.bayesian_routing_wire_service import BayesianRoutingWireServic
 @pytest.mark.asyncio
 async def test_bayesian_rollback_parity_keeps_fallback_when_no_signal() -> None:
     service = BayesianRoutingWireService(None)
-    service.kill_switch.get_mode = AsyncMock(return_value="live_canary")
+    service.kill_switch.get_mode = AsyncMock(return_value="live")
 
     original = RouteDecision(execution_mode="langgraph", reason="fallback", risk_level="medium", confidence=0.7)
     updated, result = await service.apply(user_id="u1", route_decision=original, source_state_key="unknown")

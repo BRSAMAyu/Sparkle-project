@@ -1,7 +1,12 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 AgentService gRPC Implementation
 实现 gRPC 服务端，对接现有的 LLM 服务和 RAG 能力
 """
+
 from __future__ import annotations
 
 

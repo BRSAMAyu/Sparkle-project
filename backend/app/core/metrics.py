@@ -1,3 +1,9 @@
+"""
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+"""
+
 import time
 from asyncio import iscoroutinefunction
 from functools import wraps
@@ -650,6 +656,13 @@ FSM_CONTEXT_EVICTION_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_fsm_context_eviction_total",
     "Total FSM context_data evictions triggered by Stage38 guardrails",
+)
+
+CALENDAR_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_calendar_fallback_total",
+    "Stage40 calendar prompt-path fallbacks by reason and mode",
+    ["reason", "mode"],
 )
 
 KILL_SWITCH_MODE = get_or_create_metric(

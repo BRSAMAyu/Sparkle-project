@@ -1,4 +1,8 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 Celery 任务模块 - 任务包装器
 
 提供与应用服务的集成,确保任务可以访问应用上下文
@@ -6,6 +10,7 @@ Celery 任务模块 - 任务包装器
 作者: Claude Code (Opus 4.5)
 创建时间: 2026-01-03
 """
+
 
 from loguru import logger
 

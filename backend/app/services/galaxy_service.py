@@ -1,9 +1,15 @@
-"""知识星图核心服务 (Galaxy Service) - Facade Pattern
+"""
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
+知识星图核心服务 (Galaxy Service) - Facade Pattern
 Refactored to delegate to specialized services:
 - GraphStructureService: CRUD, Relations
 - KnowledgeRetrievalService: Search, Embedding
 - GalaxyStatsService: Spark, Stats, Prediction
 """
+
 from __future__ import annotations
 
 import json

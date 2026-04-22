@@ -1,3 +1,9 @@
+"""
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+"""
+
 from __future__ import annotations
 
 """
@@ -29,6 +35,7 @@ from loguru import logger
 from app.core.agent_persona import build_agent_persona_prompt_section
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
+from app.core.kill_switch import normalize_mode
 from app.core.metrics import SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO
 from app.core.plan_context import merge_plan_context
 from app.config import settings
@@ -2796,6 +2803,14 @@ def _format_calendar_context_lines(calendar_context: dict[str, Any]) -> list[str
     return lines
 
 
+def _resolve_stage40_calendar_mode(calendar_context: dict[str, Any] | None) -> str:
+    if isinstance(calendar_context, dict):
+        raw = calendar_context.get("_stage40_mode")
+        if raw is not None:
+            return normalize_mode(raw, fallback="live")
+    return normalize_mode(getattr(settings, "AURORA_STAGE40_CALENDAR_MODE", "live"), fallback="live")
+
+
 def _format_recent_error_line(item: dict[str, Any]) -> str:
     if not isinstance(item, dict):
         return ""
@@ -3077,12 +3092,14 @@ def _render_user_context_content(
                 "approx_tokens": _estimate_prompt_tokens(working_memory_section),
             }
 
-    calendar_lines = _format_calendar_context_lines(normalized.get("calendar_context") or {})
-    if calendar_lines:
+    calendar_context = normalized.get("calendar_context") or {}
+    calendar_mode = _resolve_stage40_calendar_mode(calendar_context if isinstance(calendar_context, dict) else None)
+    calendar_lines = _format_calendar_context_lines(calendar_context if isinstance(calendar_context, dict) else {})
+    if calendar_mode == "live" and calendar_lines:
         lines.append("【时间约束】")
         lines.extend(calendar_lines)
         _mark_rendered("calendar_context")
-    elif isinstance(normalized.get("exam_urgency"), dict):
+    elif calendar_mode == "live" and isinstance(normalized.get("exam_urgency"), dict):
         urgency = normalized["exam_urgency"]
         days_left = urgency.get("days_left")
         if days_left is not None:

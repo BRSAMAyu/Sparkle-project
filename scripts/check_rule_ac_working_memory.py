@@ -20,8 +20,8 @@ FORBIDDEN_PATTERNS = {
 
 def main() -> int:
     if not WORKING_MEMORY_ROOT.exists():
-        print(f"[Rule AC] PASS - {WORKING_MEMORY_ROOT.relative_to(REPO_ROOT)} not present yet")
-        return 0
+        print(f"[Rule AC] FAIL - missing working-memory runtime: {WORKING_MEMORY_ROOT.relative_to(REPO_ROOT)}")
+        return 1
 
     violations: list[str] = []
     for path in sorted(WORKING_MEMORY_ROOT.rglob("*.py")):

@@ -1,7 +1,12 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 Application Configuration Management
 使用 pydantic-settings 管理配置
 """
+
 
 import json
 import logging
@@ -217,8 +222,23 @@ class Settings(BaseSettings):
     OPENCLAW_TRUST_AUTO_PROMOTE_SUCCESS_RATE: float = 0.85
     TOOL_EXECUTION_TIMEOUT_SECONDS: float = 120.0
 
+    # Aurora Stage 18
+    AURORA_STAGE18_AGGREGATOR_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE18_PUSH_POLICY_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE18_PUSH_DELIVERY_MODE: str = "off"  # off | shadow | live
+
+    # Aurora Stage 19
+    AURORA_STAGE19_WORKING_MEMORY_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE19_LLM_EXTRACTOR_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE19_CONSOLIDATION_MODE: str = "off"  # off | shadow | live
+
+    # Aurora Stage 21
+    AURORA_STAGE21_SKILL_STORE_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE21_SKILL_SELECTION_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE21_SKILL_SHARE_MODE: str = "off"  # off | shadow | live
+
     # Aurora Stage 23
-    AURORA_BAYESIAN_MODE: str = "off"  # off | shadow | live_canary
+    AURORA_BAYESIAN_MODE: str = "off"  # off | shadow | live
     AURORA_BAYESIAN_LIVE_CANARY_PERCENT: int = 5
     AURORA_BAYESIAN_TTL_DAYS: int = 30
 
@@ -320,6 +340,9 @@ class Settings(BaseSettings):
     AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE39_COGLOAD_ROUTE_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE39_GALAXY_INJECT_MODE: str = "shadow"  # off | shadow | live
+
+    # Aurora Stage 40
+    AURORA_STAGE40_CALENDAR_MODE: str = "live"  # off | shadow | live
 
     # Email (SMTP)
     EMAIL_ENABLED: bool = False

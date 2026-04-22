@@ -2,46 +2,65 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.config import settings
 from app.core.cache import cache_service
+from app.core.kill_switch import (
+    KillSwitchBinding,
+    is_enabled_mode,
+    is_live_mode,
+    read_mode,
+    write_mode,
+)
 
 
 class AuroraStage19KillSwitchService:
     PREFIX = "aurora:stage19:killswitch:"
-    DEFAULTS = {
-        "working_memory_enabled": lambda: settings.SPARKLE_WORKING_MEMORY_ENABLED,
-        "llm_extractor_enabled": lambda: settings.SPARKLE_LLM_EXTRACTOR_ENABLED,
-        "consolidation_enabled": lambda: settings.SPARKLE_CONSOLIDATION_ENABLED,
+    BINDINGS = {
+        "working_memory_enabled": KillSwitchBinding(
+            stage="19",
+            feature="working_memory",
+            redis_key="working_memory_mode",
+            settings_attr="AURORA_STAGE19_WORKING_MEMORY_MODE",
+            legacy_bool_attr="SPARKLE_WORKING_MEMORY_ENABLED",
+        ),
+        "llm_extractor_enabled": KillSwitchBinding(
+            stage="19",
+            feature="llm_extractor",
+            redis_key="llm_extractor_mode",
+            settings_attr="AURORA_STAGE19_LLM_EXTRACTOR_MODE",
+            legacy_bool_attr="SPARKLE_LLM_EXTRACTOR_ENABLED",
+        ),
+        "consolidation_enabled": KillSwitchBinding(
+            stage="19",
+            feature="consolidation",
+            redis_key="consolidation_mode",
+            settings_attr="AURORA_STAGE19_CONSOLIDATION_MODE",
+            legacy_bool_attr="SPARKLE_CONSOLIDATION_ENABLED",
+        ),
     }
 
+    async def get_feature_mode(self, key: str) -> str:
+        return await read_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.BINDINGS[key],
+        )
+
     async def is_enabled(self, key: str) -> bool:
-        default_getter = self.DEFAULTS[key]
-        redis_client = cache_service.redis
-        if redis_client is None:
-            return bool(default_getter())
-        raw = await redis_client.get(f"{self.PREFIX}{key}")
-        if raw is None:
-            return bool(default_getter())
-        return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+        return is_enabled_mode(await self.get_feature_mode(key))
 
-    async def get_all(self) -> dict[str, bool]:
-        return {key: await self.is_enabled(key) for key in self.DEFAULTS}
+    async def is_live(self, key: str) -> bool:
+        return is_live_mode(await self.get_feature_mode(key))
 
-    async def set_flags(self, updates: dict[str, Any]) -> dict[str, bool]:
-        redis_client = cache_service.redis
-        if redis_client is not None:
-            for key, value in updates.items():
-                if key in self.DEFAULTS and value is not None:
-                    await redis_client.set(
-                        f"{self.PREFIX}{key}",
-                        "true" if bool(value) else "false",
-                    )
-        else:
-            for key, value in updates.items():
-                if key == "working_memory_enabled" and value is not None:
-                    settings.SPARKLE_WORKING_MEMORY_ENABLED = bool(value)
-                if key == "llm_extractor_enabled" and value is not None:
-                    settings.SPARKLE_LLM_EXTRACTOR_ENABLED = bool(value)
-                if key == "consolidation_enabled" and value is not None:
-                    settings.SPARKLE_CONSOLIDATION_ENABLED = bool(value)
+    async def get_all(self) -> dict[str, str]:
+        return {key: await self.get_feature_mode(key) for key in self.BINDINGS}
+
+    async def set_flags(self, updates: dict[str, Any]) -> dict[str, str]:
+        for key, value in updates.items():
+            if key in self.BINDINGS and value is not None:
+                await write_mode(
+                    redis_client=cache_service.redis,
+                    prefix=self.PREFIX,
+                    binding=self.BINDINGS[key],
+                    mode=value,
+                )
         return await self.get_all()

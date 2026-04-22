@@ -2,44 +2,66 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.config import settings
 from app.core.cache import cache_service
+from app.core.kill_switch import (
+    KillSwitchBinding,
+    is_enabled_mode,
+    is_live_mode,
+    read_mode,
+    write_mode,
+)
 
 
 class AuroraStage18KillSwitchService:
     PREFIX = "aurora:stage18:killswitch:"
-    DEFAULTS = {
-        "aggregator_enabled": lambda: settings.SPARKLE_AGGREGATOR_ENABLED,
-        "push_policy_enabled": lambda: settings.SPARKLE_PUSH_POLICY_ENABLED,
-        "push_delivery_enabled": lambda: settings.SPARKLE_PUSH_DELIVERY_ENABLED,
+    BINDINGS = {
+        "aggregator_enabled": KillSwitchBinding(
+            stage="18",
+            feature="aggregator",
+            redis_key="aggregator_mode",
+            settings_attr="AURORA_STAGE18_AGGREGATOR_MODE",
+            legacy_bool_attr="SPARKLE_AGGREGATOR_ENABLED",
+        ),
+        "push_policy_enabled": KillSwitchBinding(
+            stage="18",
+            feature="push_policy",
+            redis_key="push_policy_mode",
+            settings_attr="AURORA_STAGE18_PUSH_POLICY_MODE",
+            legacy_bool_attr="SPARKLE_PUSH_POLICY_ENABLED",
+        ),
+        "push_delivery_enabled": KillSwitchBinding(
+            stage="18",
+            feature="push_delivery",
+            redis_key="push_delivery_mode",
+            settings_attr="AURORA_STAGE18_PUSH_DELIVERY_MODE",
+            legacy_bool_attr="SPARKLE_PUSH_DELIVERY_ENABLED",
+            enabled_legacy_modes=frozenset({"live"}),
+        ),
     }
 
+    async def get_feature_mode(self, key: str) -> str:
+        return await read_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.BINDINGS[key],
+        )
+
     async def is_enabled(self, key: str) -> bool:
-        default_getter = self.DEFAULTS[key]
-        redis_client = cache_service.redis
-        if redis_client is None:
-            return bool(default_getter())
-        raw = await redis_client.get(f"{self.PREFIX}{key}")
-        if raw is None:
-            return bool(default_getter())
-        return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+        return is_enabled_mode(await self.get_feature_mode(key))
 
-    async def get_all(self) -> dict[str, bool]:
-        return {key: await self.is_enabled(key) for key in self.DEFAULTS}
+    async def is_live(self, key: str) -> bool:
+        return is_live_mode(await self.get_feature_mode(key))
 
-    async def set_flags(self, updates: dict[str, Any]) -> dict[str, bool]:
-        redis_client = cache_service.redis
-        if redis_client is not None:
-            for key, value in updates.items():
-                if key in self.DEFAULTS and value is not None:
-                    await redis_client.set(f"{self.PREFIX}{key}", "true" if bool(value) else "false")
-        else:
-            for key, value in updates.items():
-                if key == "aggregator_enabled" and value is not None:
-                    settings.SPARKLE_AGGREGATOR_ENABLED = bool(value)
-                if key == "push_policy_enabled" and value is not None:
-                    settings.SPARKLE_PUSH_POLICY_ENABLED = bool(value)
-                if key == "push_delivery_enabled" and value is not None:
-                    settings.SPARKLE_PUSH_DELIVERY_ENABLED = bool(value)
+    async def get_all(self) -> dict[str, str]:
+        return {key: await self.get_feature_mode(key) for key in self.BINDINGS}
+
+    async def set_flags(self, updates: dict[str, Any]) -> dict[str, str]:
+        for key, value in updates.items():
+            if key in self.BINDINGS and value is not None:
+                await write_mode(
+                    redis_client=cache_service.redis,
+                    prefix=self.PREFIX,
+                    binding=self.BINDINGS[key],
+                    mode=value,
+                )
         return await self.get_all()
-

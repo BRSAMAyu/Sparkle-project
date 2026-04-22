@@ -2,10 +2,16 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON_BIN="${REPO_ROOT}/backend/.venv/bin/python"
+PYTHON_BIN="${PYTHON_BIN:-${REPO_ROOT}/backend/.venv/bin/python}"
 if [[ ! -x "${PYTHON_BIN}" ]]; then
-  PYTHON_BIN="python3"
+  if command -v python3.11 >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python3.11)"
+  else
+    PYTHON_BIN="python3"
+  fi
 fi
+export SECRET_KEY="${SECRET_KEY:-rule-guard-secret-0123456789abcdef}"
+export JWT_SECRET="${JWT_SECRET:-rule-guard-jwt-0123456789abcdef}"
 
 MANIFEST_PATH="${REPO_ROOT}/scripts/rule_guard_manifest.tsv"
 RULE_FILTER=""

@@ -40,9 +40,7 @@ def main() -> int:
 
     seen_keys: set[str] = set()
     for return_node in return_nodes:
-        for key_node, value_node in zip(
-            return_node.value.keys, return_node.value.values, strict=False
-        ):
+        for key_node, value_node in zip(return_node.value.keys, return_node.value.values):
             if not isinstance(key_node, ast.Constant) or not isinstance(
                 key_node.value, str
             ):

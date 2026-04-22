@@ -5,6 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 find_python_with_grpc_tools() {
+  if [[ -n "${PYTHON_BIN:-}" ]] && [[ -x "${PYTHON_BIN}" ]] && "${PYTHON_BIN}" - <<'PY' >/dev/null 2>&1
+import grpc_tools  # noqa: F401
+PY
+  then
+    echo "${PYTHON_BIN}"
+    return 0
+  fi
+
   if python3 - <<'PY' >/dev/null 2>&1
 import grpc_tools  # noqa: F401
 PY

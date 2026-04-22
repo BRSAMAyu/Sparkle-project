@@ -1,4 +1,8 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 User Service - 生产级实现
 用户服务封装，提供用户上下文和偏好数据
 
@@ -8,6 +12,7 @@ User Service - 生产级实现
 - 缓存失效: 用户更新时自动失效
 - 容错降级: 缓存/DB 故障时优雅降级
 """
+
 from __future__ import annotations
 import json
 from datetime import timezone, datetime, timedelta

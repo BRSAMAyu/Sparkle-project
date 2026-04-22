@@ -32,10 +32,10 @@ class WorkingMemoryPipelineService:
     ) -> list[WorkingMemoryEntry]:
         accepted_entries: list[WorkingMemoryEntry] = []
         llm_candidates: list[InferredEpisodicCandidate] = []
-        wm_enabled = await self.kill_switches.is_enabled("working_memory_enabled")
-        llm_enabled = await self.kill_switches.is_enabled("llm_extractor_enabled")
+        wm_mode = await self.kill_switches.get_feature_mode("working_memory_enabled")
+        llm_mode = await self.kill_switches.get_feature_mode("llm_extractor_enabled")
 
-        if llm_enabled or settings.SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED:
+        if llm_mode in {"shadow", "live"} or settings.SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED:
             llm_candidates = await self.llm_extractor.dry_run_extract(
                 user_id=user_id,
                 session_id=session_id,
@@ -44,10 +44,14 @@ class WorkingMemoryPipelineService:
                 evidence_token=evidence_token,
             )
 
-        if not wm_enabled:
+        if wm_mode == "off":
             return accepted_entries
 
-        for candidate in [item for item in [rule_candidate, *llm_candidates] if item is not None]:
+        effective_candidates = [item for item in [rule_candidate] if item is not None]
+        if llm_mode == "live":
+            effective_candidates.extend(llm_candidates)
+
+        for candidate in effective_candidates:
             entry = await self.working_memory.upsert_entry(
                 user_id=str(user_id),
                 session_id=str(session_id),

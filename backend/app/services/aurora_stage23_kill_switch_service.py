@@ -2,32 +2,33 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.config import settings
 from app.core.cache import cache_service
+from app.core.kill_switch import KillSwitchBinding, read_mode, write_mode
 
 
 class AuroraStage23KillSwitchService:
     PREFIX = "aurora:stage23:killswitch:"
-    MODE_KEY = "bayesian_mode"
-    DEFAULT_MODES = {"off", "shadow", "live_canary"}
+    BINDING = KillSwitchBinding(
+        stage="23",
+        feature="mode",
+        redis_key="bayesian_mode",
+        settings_attr="AURORA_BAYESIAN_MODE",
+    )
 
     async def get_mode(self) -> str:
-        redis_client = cache_service.redis
-        if redis_client is None:
-            return self._normalize_mode(settings.AURORA_BAYESIAN_MODE)
-        raw = await redis_client.get(f"{self.PREFIX}{self.MODE_KEY}")
-        if raw is None:
-            return self._normalize_mode(settings.AURORA_BAYESIAN_MODE)
-        return self._normalize_mode(raw)
+        return await read_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.BINDING,
+        )
 
     async def set_mode(self, mode: str) -> str:
-        normalized = self._normalize_mode(mode)
-        redis_client = cache_service.redis
-        if redis_client is not None:
-            await redis_client.set(f"{self.PREFIX}{self.MODE_KEY}", normalized)
-        else:
-            settings.AURORA_BAYESIAN_MODE = normalized
-        return normalized
+        return await write_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.BINDING,
+            mode=mode,
+        )
 
     async def get_all(self) -> dict[str, Any]:
         return {
@@ -37,14 +38,9 @@ class AuroraStage23KillSwitchService:
 
     @staticmethod
     def live_canary_percent() -> int:
+        from app.config import settings
+
         try:
-            return max(0, min(5, int(settings.AURORA_BAYESIAN_LIVE_CANARY_PERCENT)))
+            return max(0, min(100, int(settings.AURORA_BAYESIAN_LIVE_CANARY_PERCENT)))
         except (TypeError, ValueError):
             return 0
-
-    @classmethod
-    def _normalize_mode(cls, value: str | Any) -> str:
-        normalized = str(value or "off").strip().lower()
-        if normalized not in cls.DEFAULT_MODES:
-            return "off"
-        return normalized

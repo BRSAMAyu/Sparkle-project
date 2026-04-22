@@ -11,52 +11,52 @@ from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwi
 @pytest.mark.asyncio
 async def test_stage19_kill_switch_defaults_follow_settings(monkeypatch) -> None:
     monkeypatch.setattr("app.services.aurora_stage19_kill_switch_service.cache_service.redis", None)
-    monkeypatch.setattr(settings, "SPARKLE_WORKING_MEMORY_ENABLED", False, raising=False)
-    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_ENABLED", True, raising=False)
-    monkeypatch.setattr(settings, "SPARKLE_CONSOLIDATION_ENABLED", False, raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE19_WORKING_MEMORY_MODE", "shadow", raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE19_LLM_EXTRACTOR_MODE", "live", raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE19_CONSOLIDATION_MODE", "off", raising=False)
 
     flags = await AuroraStage19KillSwitchService().get_all()
 
     assert flags == {
-        "working_memory_enabled": False,
-        "llm_extractor_enabled": True,
-        "consolidation_enabled": False,
+        "working_memory_enabled": "shadow",
+        "llm_extractor_enabled": "live",
+        "consolidation_enabled": "off",
     }
 
 
 @pytest.mark.asyncio
 async def test_stage19_kill_switch_can_flip_flags_without_cross_pollution(monkeypatch) -> None:
     monkeypatch.setattr("app.services.aurora_stage19_kill_switch_service.cache_service.redis", None)
-    monkeypatch.setattr(settings, "SPARKLE_WORKING_MEMORY_ENABLED", False, raising=False)
-    monkeypatch.setattr(settings, "SPARKLE_LLM_EXTRACTOR_ENABLED", False, raising=False)
-    monkeypatch.setattr(settings, "SPARKLE_CONSOLIDATION_ENABLED", False, raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE19_WORKING_MEMORY_MODE", "off", raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE19_LLM_EXTRACTOR_MODE", "off", raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE19_CONSOLIDATION_MODE", "off", raising=False)
 
     service = AuroraStage19KillSwitchService()
     updated = await service.set_flags(
         {
-            "working_memory_enabled": True,
-            "llm_extractor_enabled": False,
-            "consolidation_enabled": True,
+            "working_memory_enabled": "shadow",
+            "llm_extractor_enabled": "off",
+            "consolidation_enabled": "live",
         }
     )
 
-    assert updated["working_memory_enabled"] is True
-    assert updated["llm_extractor_enabled"] is False
-    assert updated["consolidation_enabled"] is True
+    assert updated["working_memory_enabled"] == "shadow"
+    assert updated["llm_extractor_enabled"] == "off"
+    assert updated["consolidation_enabled"] == "live"
 
 
 @pytest.mark.asyncio
 async def test_stage19_kill_switch_reads_redis_override(monkeypatch) -> None:
     fake_redis = AsyncMock()
-    fake_redis.get.side_effect = ["false", "true", None]
-    monkeypatch.setattr(settings, "SPARKLE_CONSOLIDATION_ENABLED", True, raising=False)
+    fake_redis.get.side_effect = ["shadow", "live", None]
+    monkeypatch.setattr(settings, "AURORA_STAGE19_CONSOLIDATION_MODE", "live", raising=False)
     monkeypatch.setattr("app.services.aurora_stage19_kill_switch_service.cache_service.redis", fake_redis)
 
     service = AuroraStage19KillSwitchService()
     flags = await service.get_all()
 
     assert flags == {
-        "working_memory_enabled": False,
-        "llm_extractor_enabled": True,
-        "consolidation_enabled": True,
+        "working_memory_enabled": "shadow",
+        "llm_extractor_enabled": "live",
+        "consolidation_enabled": "live",
     }

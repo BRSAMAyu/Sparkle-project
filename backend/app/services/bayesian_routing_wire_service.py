@@ -67,7 +67,7 @@ class BayesianRoutingWireService:
                 scores=scores,
             )
 
-        if mode == "live_canary" and self._in_canary_bucket(user_id):
+        if mode == "live" and self._in_canary_bucket(user_id):
             if recommended_target and recommended_target != fallback_target:
                 route_decision.execution_mode = recommended_target
                 route_decision.reason = (
@@ -112,6 +112,8 @@ class BayesianRoutingWireService:
 
     def _in_canary_bucket(self, user_id: str) -> bool:
         percent = self.kill_switch.live_canary_percent()
+        if percent >= 100:
+            return True
         if percent <= 0:
             return False
         digest = hashlib.sha256(user_id.encode("utf-8")).hexdigest()
