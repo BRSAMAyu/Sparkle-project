@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -20,11 +21,11 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "user_push_opt_in",
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("allow_commitment_follow_up", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("allow_engagement_recovery", sa.Boolean(), nullable=False, server_default=sa.false()),
@@ -39,12 +40,12 @@ def upgrade() -> None:
 
     op.create_table(
         "push_delivery_records",
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
-        sa.Column("notification_id", sa.String(length=36), nullable=True),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("notification_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("policy_id", sa.String(length=64), nullable=False),
         sa.Column("category", sa.String(length=64), nullable=False),
         sa.Column("message_template_id", sa.String(length=128), nullable=False),
@@ -81,4 +82,3 @@ def downgrade() -> None:
     op.drop_table("push_delivery_records")
     op.drop_index("idx_user_push_opt_in_user", table_name="user_push_opt_in")
     op.drop_table("user_push_opt_in")
-

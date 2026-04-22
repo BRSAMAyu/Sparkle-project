@@ -142,7 +142,8 @@ class TestModelLoading:
     def test_classifier_initialization_without_transformers(self):
         """测试 transformers 不可用时抛出错误"""
         with patch('app.orchestration.bert_intent_classifier.TRANSFORMERS_AVAILABLE', False):
-            with pytest.raises(ImportError, match="transformers library not available"):
+            # drift-fix: implementation now reports both missing dependencies, not only transformers.
+            with pytest.raises(ImportError, match="transformers and torch libraries not available"):
                 BERTIntentClassifier()
 
     def test_device_detection_auto(self, mock_transformers, mock_torch):

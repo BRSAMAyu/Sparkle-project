@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision = "s21a1b2c3d4"
@@ -20,13 +21,13 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "user_skills",
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
-        sa.Column("forked_from_share_id", sa.String(length=36), nullable=True),
-        sa.Column("shared_catalog_id", sa.String(length=36), nullable=True),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("forked_from_share_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("shared_catalog_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("name", sa.String(length=40), nullable=False),
         sa.Column("pattern_template", sa.String(length=4000), nullable=False),
         sa.Column("activation_conditions", sa.JSON(), nullable=False, server_default=sa.text("'[]'")),
@@ -34,7 +35,7 @@ def upgrade() -> None:
         sa.Column("privacy_level", sa.String(length=16), nullable=False, server_default="private"),
         sa.Column("usage_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("last_activated_at", sa.DateTime(), nullable=True),
-        sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
+        sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("forked_at", sa.DateTime(), nullable=True),
         sa.Column("schema_version", sa.String(length=16), nullable=False, server_default="skill.v1"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
@@ -47,7 +48,7 @@ def upgrade() -> None:
 
     op.create_table(
         "shared_skills",
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
@@ -66,12 +67,12 @@ def upgrade() -> None:
 
     op.create_table(
         "skill_share_moderation_queue",
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
-        sa.Column("owner_user_id", sa.String(length=36), nullable=False),
-        sa.Column("user_skill_id", sa.String(length=36), nullable=False),
+        sa.Column("owner_user_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("user_skill_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("staged_name", sa.String(length=40), nullable=False),
         sa.Column("staged_pattern_template", sa.String(length=4000), nullable=False),
         sa.Column("staged_activation_conditions", sa.JSON(), nullable=False, server_default=sa.text("'[]'")),
@@ -81,7 +82,7 @@ def upgrade() -> None:
         sa.Column("moderation_status", sa.String(length=32), nullable=False, server_default="pending"),
         sa.Column("reviewer_label", sa.String(length=64), nullable=True),
         sa.Column("reviewed_at", sa.DateTime(), nullable=True),
-        sa.Column("published_shared_skill_id", sa.String(length=36), nullable=True),
+        sa.Column("published_shared_skill_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("rejection_reason", sa.String(length=512), nullable=True),
         sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision = "s24a1b2c3d4"
@@ -21,8 +22,8 @@ def upgrade() -> None:
     op.create_table(
         "accountability_policies",
         sa.Column("policy_id", sa.String(length=128), nullable=False),
-        sa.Column("user_id", sa.CHAR(length=36), nullable=False),
-        sa.Column("commitment_id", sa.CHAR(length=36), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("commitment_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("policy_version", sa.String(length=32), nullable=False),
         sa.Column("policy_type", sa.String(length=64), nullable=False),
         sa.Column("trigger_type", sa.String(length=64), nullable=False),
@@ -38,7 +39,7 @@ def upgrade() -> None:
         sa.Column("is_shadow", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("revoked_at", sa.DateTime(), nullable=True),
         sa.Column("last_skip_reason", sa.String(length=64), nullable=True),
-        sa.Column("id", sa.CHAR(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),

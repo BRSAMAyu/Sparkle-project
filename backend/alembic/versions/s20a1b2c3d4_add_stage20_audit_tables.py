@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision = "s20a1b2c3d4"
@@ -20,11 +21,11 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "aurora_judgment_records",
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("task_sufficiency_score", sa.Float(), nullable=False),
         sa.Column("task_missing_dimensions", sa.JSON(), nullable=False, server_default=sa.text("'[]'")),
         sa.Column("context_sufficiency_score", sa.Float(), nullable=False),
@@ -43,13 +44,13 @@ def upgrade() -> None:
 
     op.create_table(
         "conflict_resolution_records",
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
-        sa.Column("loser_record_id", sa.String(length=36), nullable=True),
-        sa.Column("winner_record_id", sa.String(length=36), nullable=True),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("loser_record_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("winner_record_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("loser_lane", sa.String(length=40), nullable=True),
         sa.Column("winner_lane", sa.String(length=40), nullable=True),
         sa.Column("resolution_action", sa.String(length=32), nullable=False),
@@ -76,14 +77,14 @@ def upgrade() -> None:
 
     op.create_table(
         "unresolved_conflicts",
-        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("conflict_key", sa.String(length=64), nullable=False),
-        sa.Column("left_record_id", sa.String(length=36), nullable=True),
-        sa.Column("right_record_id", sa.String(length=36), nullable=True),
+        sa.Column("left_record_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("right_record_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("left_summary", sa.String(length=2000), nullable=False),
         sa.Column("right_summary", sa.String(length=2000), nullable=False),
         sa.Column("left_lane", sa.String(length=40), nullable=False),
@@ -115,13 +116,13 @@ def upgrade() -> None:
 
     op.create_table(
         "routing_decision_log",
-        sa.Column("decision_id", sa.String(length=36), nullable=False),
+        sa.Column("decision_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("decided_at", sa.DateTime(), nullable=False),
         sa.Column("input_aggregator_snapshot_id", sa.String(length=128), nullable=False),
-        sa.Column("sufficiency_judgment_id", sa.String(length=36), nullable=True),
+        sa.Column("sufficiency_judgment_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("decision_type", sa.String(length=64), nullable=False),
         sa.Column("decision_payload", sa.JSON(), nullable=False, server_default=sa.text("'{}'")),
         sa.Column("outcome_signal_id", sa.String(length=128), nullable=True),

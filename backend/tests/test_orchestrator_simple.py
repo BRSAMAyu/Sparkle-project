@@ -1,9 +1,10 @@
-import pytest
 import asyncio
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.orchestration.orchestrator import ChatOrchestrator, STATE_DONE
+from app.orchestration.schemas import RouteDecision
 from app.gen.agent.v1 import agent_service_pb2
+import pytest
 
 
 async def _yield_responses(responses):
@@ -41,6 +42,66 @@ async def test_orchestrator_basic_flow():
 
                 orchestrator = ChatOrchestrator(db_session=mock_db, redis_client=mock_redis)
                 orchestrator._hydrate_companion_runtime_context = AsyncMock(return_value={})
+                orchestrator._validate_request = AsyncMock(return_value=None)
+                orchestrator._check_idempotency_response = AsyncMock(return_value=None)
+                orchestrator._acquire_session_lock = AsyncMock(return_value=True)
+                orchestrator.state_manager.start_lock_renewal = AsyncMock(return_value=(None, None))
+                orchestrator._build_full_context = AsyncMock(return_value=({}, None, False, {}, {"messages": []}, None))
+                orchestrator._detect_session_feedback = AsyncMock(return_value=(None, None, None))
+                orchestrator._apply_cohort_to_session_feedback_signal = MagicMock(side_effect=lambda signal, cohort: signal)
+                orchestrator._maybe_enqueue_perceptible_insight = AsyncMock(return_value=None)
+                orchestrator._maybe_enqueue_understanding_depth = AsyncMock(return_value=None)
+                orchestrator._drain_system_updates = AsyncMock(
+                    return_value=([], [], [], [], None, None, {
+                        "proactive_opening_message": "",
+                        "pending_observation": "",
+                        "post_adaptation_question": "",
+                    })
+                )
+                orchestrator._check_sufficiency = AsyncMock(return_value=(False, "chat"))
+                orchestrator._check_goal_quality = AsyncMock(return_value=False)
+                orchestrator._load_context_versions = AsyncMock(return_value={})
+                orchestrator._prepare_runtime_context = AsyncMock(return_value=(None, lambda *args, **kwargs: None))
+                orchestrator._notify_pending_milestone_proposals = AsyncMock(return_value=None)
+                orchestrator._apply_context_focus_overlay = AsyncMock(side_effect=lambda **kwargs: kwargs["user_context_payload"])
+                orchestrator._apply_dual_core_routing = AsyncMock(
+                    return_value=RouteDecision(execution_mode="direct", reason="simple_chat", risk_level="low")
+                )
+                orchestrator._route_and_classify = AsyncMock(
+                    return_value=(RouteDecision(execution_mode="direct", reason="simple_chat", risk_level="low"), None)
+                )
+                orchestrator._plan_and_validate = AsyncMock(side_effect=lambda **kwargs: (
+                    kwargs["route_decision"],
+                    None,
+                    None,
+                    False,
+                ))
+                orchestrator._cache_response = AsyncMock(return_value=True)
+                orchestrator._persist_assistant_message = AsyncMock(return_value=None)
+                orchestrator._record_decision = AsyncMock(return_value=None)
+                orchestrator._cleanup = AsyncMock(return_value=None)
+
+                async def execute_graph(*, result_holder, **kwargs):
+                    yield agent_service_pb2.ChatResponse(
+                        status_update=agent_service_pb2.AgentStatus(
+                            state=agent_service_pb2.AgentStatus.THINKING,
+                            details="理解问题中",
+                        )
+                    )
+                    yield agent_service_pb2.ChatResponse(delta="Hello, I am Sparkle AI.")
+                    result_holder["final_state"] = MagicMock()
+
+                orchestrator._execute_graph = execute_graph
+                orchestrator._build_final_response = AsyncMock(
+                    return_value=(
+                        agent_service_pb2.ChatResponse(
+                            session_id="test_sess",
+                            full_text="Hello, I am Sparkle AI.",
+                            finish_reason=agent_service_pb2.STOP,
+                        ),
+                        {"message": "Hello, I am Sparkle AI."},
+                    )
+                )
 
                 request = agent_service_pb2.ChatRequest(
                     request_id="test_req",

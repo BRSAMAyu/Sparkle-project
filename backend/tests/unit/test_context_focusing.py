@@ -349,8 +349,10 @@ def test_build_system_prompt_includes_decision_policy_section() -> None:
     assert "规划前置信号: low / ask" in prompt
     assert "计划前仍需补齐: baseline_mastery, capacity_hours" in prompt
     assert "若要追问，优先问: 你目前对这个主题的掌握大概在哪个水平？" in prompt
-    assert "本轮模式: explain / understanding_repair / medium" in prompt
-    assert "retrieval_emphasis -> user_materials (session)" in prompt
+    # drift-fix: the decision policy renderer now expands semantic control into
+    # natural-language guidance instead of exposing the compact mode tuple.
+    assert "解释模式：先修复理解，最好用用户材料落地，再给下一步。" in prompt
+    assert "先把 retrieval_emphasis 调整到更贴近「user_materials」" in prompt
 
 
 def test_build_system_prompt_uses_soul_runtime_driven_companion_section() -> None:

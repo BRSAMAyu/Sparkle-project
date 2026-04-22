@@ -27,6 +27,9 @@ class _RunLedgerStub:
     async def record_event(self, *args, **kwargs) -> None:
         return None
 
+    def to_metadata_payload(self) -> dict[str, object]:
+        return {}
+
 
 class _ChatSignalCollectorStub:
     def __init__(self, redis_client):
@@ -191,6 +194,10 @@ def _install_import_stubs() -> None:
             @staticmethod
             def get_plan_summary(plan) -> str:
                 return str(getattr(plan, "plan_id", "stub-plan"))
+
+            def pop_rendered_plan_artifact(self, session_id=None):
+                del session_id
+                return None
 
         planner_module.LangGraphPlanner = _LangGraphPlannerStub
         sys.modules["app.orchestration.lang_graph_planner"] = planner_module
@@ -368,7 +375,11 @@ def orchestrator_factory(monkeypatch):
     orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
     circuit_breaker_module = importlib.import_module("app.orchestration.circuit_breaker")
 
-    monkeypatch.setattr(orchestrator_module, "create_standard_chat_graph", lambda: MagicMock())
+    class _GraphStub:
+        async def invoke(self, state):
+            return state
+
+    monkeypatch.setattr(orchestrator_module, "create_standard_chat_graph", lambda: _GraphStub())
     monkeypatch.setattr(orchestrator_module, "RunLedgerRecorder", _RunLedgerStub)
     monkeypatch.setattr(orchestrator_module, "ChatSignalCollector", _ChatSignalCollectorStub)
 
@@ -659,6 +670,7 @@ async def test_process_stream_review_required_drains_queue_before_return(orchest
         reasoning_summary="",
         reasoning_details=[],
         reasoning_source="stubbed_review",
+        quality_report={},
         user_facing_reason="建议先确认执行节奏。",
         review_id="review-42",
         plan_id="plan-review-1",

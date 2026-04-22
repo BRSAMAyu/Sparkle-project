@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -788,10 +788,11 @@ async def test_adopt_prediction_enqueues_update_and_writes_back_to_chat(db_sessi
 
     monkeypatch.setattr(
         service,
-        "_get_prediction_or_raise",
+        "_get_prediction_for_user_or_raise",
         AsyncMock(
             return_value={
                 "prediction_id": prediction_id,
+                "user_id": str(test_user.id),
                 "topic": "特征值",
                 "target_name": "特征值",
                 "target_node_id": target_node_id,
@@ -1095,8 +1096,18 @@ async def test_learning_report_uses_actual_mastery_values_without_fabrication(mo
     assert payload["timeline"][0]["mastery_delta"] is None
 
 
-async def test_learning_report_builds_structured_dashboard_payload():
+async def test_learning_report_builds_structured_dashboard_payload(monkeypatch):
     agent = LearningReportAgent(db=AsyncMock())
+    fixed_now = datetime(2026, 4, 1, 8, 0, 0, tzinfo=UTC)
+
+    class _FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now if tz is not None else fixed_now.replace(tzinfo=None)
+
+    # drift-fix: freeze trend bucketing so dashboard expectations do not drift
+    # with the wall clock date of the test run.
+    monkeypatch.setattr("app.services.report.learning_report_agent.datetime", _FixedDateTime)
 
     diagnosis_cards = agent._build_diagnosis_cards(
         mastery=[
@@ -1175,8 +1186,17 @@ async def test_learning_report_builds_structured_dashboard_payload():
     assert any(card["kind"] == "spaced_review" for card in action_cards)
 
 
-def test_build_trend_overview_handles_sparse_week_buckets():
+def test_build_trend_overview_handles_sparse_week_buckets(monkeypatch):
     agent = LearningReportAgent(db=AsyncMock())
+    fixed_now = datetime(2026, 4, 1, 8, 0, 0, tzinfo=UTC)
+
+    class _FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now if tz is not None else fixed_now.replace(tzinfo=None)
+
+    # drift-fix: keep week labels deterministic across later calendar dates.
+    monkeypatch.setattr("app.services.report.learning_report_agent.datetime", _FixedDateTime)
 
     trend_overview = agent._build_trend_overview(
         mastery=[

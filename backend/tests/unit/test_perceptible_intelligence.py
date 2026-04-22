@@ -12,6 +12,7 @@ from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback
 from app.models.user import User
+from app.orchestration.plan_quality_gate import PlanQualityReport
 from app.orchestration.plan_review_service import PlanReviewService
 from app.orchestration.schemas import ExecutablePlan, ToolCallSpec
 from app.services.perceptible_intelligence_service import (
@@ -255,6 +256,20 @@ async def test_plan_review_service_adds_reasoning_summary(monkeypatch):
     monkeypatch.setattr(settings, "ENABLE_PLAN_REASONING_SUMMARY", True)
     service = PlanReviewService()
     monkeypatch.setattr(service, "_quick_rule_check", AsyncMock(return_value="read_only_safe"))
+    monkeypatch.setattr(
+        service.quality_gate,
+        "evaluate",
+        lambda **kwargs: PlanQualityReport(
+            overall_score=0.91,
+            fit_score=0.9,
+            feasibility_score=0.9,
+            grounding_score=0.9,
+            next_action_score=0.9,
+            adaptation_score=0.9,
+            outcome_learning_score=0.9,
+            decision="approve",
+        ),
+    )
 
     plan = ExecutablePlan(
         plan_id="plan-1",
@@ -301,6 +316,20 @@ async def test_plan_review_service_marks_llm_fallback_reasoning_source(monkeypat
     service = PlanReviewService()
     monkeypatch.setattr(service, "_quick_rule_check", AsyncMock(return_value=None))
     monkeypatch.setattr(
+        service.quality_gate,
+        "evaluate",
+        lambda **kwargs: PlanQualityReport(
+            overall_score=0.88,
+            fit_score=0.88,
+            feasibility_score=0.88,
+            grounding_score=0.88,
+            next_action_score=0.88,
+            adaptation_score=0.88,
+            outcome_learning_score=0.88,
+            decision="approve",
+        ),
+    )
+    monkeypatch.setattr(
         service,
         "_llm_review",
         AsyncMock(
@@ -325,6 +354,8 @@ async def test_plan_review_service_marks_llm_fallback_reasoning_source(monkeypat
         user_context={"plan_context": {"facts": {"avg_task_duration_minutes": 26}}},
     )
 
+    # drift-fix: quality gate now runs ahead of reasoning-summary assertions, so
+    # keep this test focused on the fallback reasoning source path.
     assert result.reasoning_summary
     assert result.reasoning_source == "llm_fallback"
 

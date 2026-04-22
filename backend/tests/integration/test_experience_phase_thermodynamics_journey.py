@@ -73,7 +73,7 @@ def _baseline_user_context() -> dict[str, object]:
         "context_focus": {"focus_mode": "knowledge_focus", "route_intent": "knowledge"},
         "profile_context": {
             "knowledge_summary": {
-                "weak_spots": [{"node_name": "熵增方向判断", "mastery": 39}],
+                "weak_spots": [{"node_id": "thermo-entropy-direction", "node_name": "熵增方向判断", "mastery": 39}],
             },
             "cognitive_summary": {
                 "active_patterns": [{"pattern_name": "启动困难", "pattern_type": "execution", "confidence": 0.81}]
@@ -173,7 +173,7 @@ async def test_phase5_thermodynamics_component_journey_scores_judgment_layers(mo
     turn_context = _baseline_user_context()
 
     turn_context["current_query"] = "用我上传的热力学笔记解释熵增方向判断。"
-    brief1 = builder.build(
+    brief1 = (await builder.build(
         user_context_payload=turn_context,
         plan_context=_base_plan_context(plan),
         focused_memory={},
@@ -183,7 +183,7 @@ async def test_phase5_thermodynamics_component_journey_scores_judgment_layers(mo
         session_feedback_signal={},
         progress_snapshot={},
         adaptation_records=[],
-    ).to_dict()
+    )).to_dict()
     turn_context["situation_brief"] = brief1
     turn_context["residual_decision_context"] = brief1["decision_context"]
     runtime1 = await actuator.apply(
@@ -221,7 +221,7 @@ async def test_phase5_thermodynamics_component_journey_scores_judgment_layers(mo
         },
         "user_strategy_state": _baseline_user_context()["user_strategy_state"],
     }
-    brief2 = builder.build(
+    brief2 = (await builder.build(
         user_context_payload=turn_context,
         plan_context=_base_plan_context(plan),
         focused_memory={},
@@ -231,7 +231,7 @@ async def test_phase5_thermodynamics_component_journey_scores_judgment_layers(mo
         session_feedback_signal={},
         progress_snapshot={"attention_areas": ["Load is too high this week."]},
         adaptation_records=[],
-    ).to_dict()
+    )).to_dict()
     turn_context["situation_brief"] = brief2
     turn_context["residual_decision_context"] = brief2["decision_context"]
     runtime2 = await actuator.apply(
@@ -266,7 +266,7 @@ async def test_phase5_thermodynamics_component_journey_scores_judgment_layers(mo
         "active_interventions": [{"intervention_id": str(intervention.id), "source": "runtime_context"}],
         "user_strategy_state": _baseline_user_context()["user_strategy_state"],
     }
-    brief3 = builder.build(
+    brief3 = (await builder.build(
         user_context_payload=turn_context,
         plan_context=_base_plan_context(plan),
         focused_memory={},
@@ -276,7 +276,7 @@ async def test_phase5_thermodynamics_component_journey_scores_judgment_layers(mo
         session_feedback_signal={},
         progress_snapshot={"highlights": ["用户已经能重新启动。"]},
         adaptation_records=[],
-    ).to_dict()
+    )).to_dict()
     turn_context["situation_brief"] = brief3
     turn_context["residual_decision_context"] = brief3["decision_context"]
     runtime3 = await actuator.apply(

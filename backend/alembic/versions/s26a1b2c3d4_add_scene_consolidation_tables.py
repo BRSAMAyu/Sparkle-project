@@ -12,6 +12,7 @@ from typing import Sequence, Union
 from alembic import op
 import pgvector.sqlalchemy
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = "s26a1b2c3d4"
@@ -36,7 +37,7 @@ def upgrade() -> None:
         op.create_table(
             "scenes",
             sa.Column("scene_id", sa.String(length=80), nullable=False),
-            sa.Column("user_id", sa.CHAR(length=36), nullable=False),
+            sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("title", sa.String(length=200), nullable=False),
             sa.Column("summary", sa.String(length=200), nullable=False),
             sa.Column(
@@ -54,7 +55,7 @@ def upgrade() -> None:
             sa.Column("time_end", sa.DateTime(), nullable=False),
             sa.Column("quality_score", sa.Float(), nullable=False, server_default="0"),
             sa.Column("version", sa.String(length=32), nullable=False, server_default="scene.v1"),
-            sa.Column("id", sa.CHAR(length=36), nullable=False),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
             sa.Column("deleted_at", sa.DateTime(), nullable=True),

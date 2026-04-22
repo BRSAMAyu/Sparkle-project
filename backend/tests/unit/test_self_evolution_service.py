@@ -200,7 +200,7 @@ async def test_cohort_promotion_service_promotes_after_two_consistent_cycles(mon
     monkeypatch.setattr(
         self_evolution_module,
         "_utcnow",
-        lambda: datetime(2026, 3, 10, 10, 0, 0),
+        lambda: datetime(2026, 3, 16, 10, 0, 0),
     )
 
     recommendation = {
@@ -217,6 +217,8 @@ async def test_cohort_promotion_service_promotes_after_two_consistent_cycles(mon
     second = await service.evaluate_and_promote()
     baseline = await _redis_json_get(redis, service.BASELINE_KEY, None)
 
+    # drift-fix: promotion only runs on non-off weeks, so pin this test to an
+    # evaluation week that exercises the promotion path.
     assert first["recommendation"]["recommended_default"] == "B"
     assert second["recommendation"]["recommended_default"] == "B"
     assert baseline["baseline_strategy"] == "B"

@@ -174,8 +174,10 @@ async def test_user_strategy_state_write_changes_subsequent_prompt_context(db_se
         conversation_history={"messages": []},
     )
 
-    assert "【当前策略状态】" in prompt
-    assert "session_mode: recovery" in prompt
-    assert "先减负和稳住节奏" in prompt
-    assert "按步骤拆开" in prompt
-    assert "优先依赖用户自己的材料与当前计划" in prompt
+    # drift-fix: prompt rendering now exposes the adaptive strategy section
+    # through the user-facing interaction strategy copy instead of the old
+    # raw state dump header.
+    assert "【当前交互策略】" in prompt
+    assert "优先保护可重启性并降低负担" in prompt  # drift-fix
+    assert "按步骤解释，把推理链条拆开，不要跳步" in prompt  # drift-fix
+    assert "优先依赖用户自己的材料和当前计划来校准内容" in prompt  # drift-fix

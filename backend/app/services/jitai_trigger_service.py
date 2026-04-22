@@ -222,19 +222,22 @@ class JITAITrigger:
 
     async def _daily_budget_used(self, user_id: str, *, now: datetime) -> int:
         key = self._budget_key(user_id, now=now)
-        return int(await self._get_state_value(key, default=0))
+        return int(await self._get_state_value(key, default=0, now=now))
 
     async def _increment_budget(self, *, user_id: str, now: datetime) -> int:
         key = self._budget_key(user_id, now=now)
         return int(
             await self._increment_state_value(
-                key, expire_at=self._day_expiry(now), amount=1
+                key,
+                expire_at=self._day_expiry(now),
+                amount=1,
+                now=now,
             )
         )
 
     async def _is_on_cooldown(self, user_id: str, dim: str, *, now: datetime) -> bool:
         key = self._cooldown_key(user_id=user_id, dim=dim)
-        expires_at = await self._get_state_value(key, default=None)
+        expires_at = await self._get_state_value(key, default=None, now=now)
         if expires_at is None:
             return False
         if isinstance(expires_at, str):
@@ -254,6 +257,7 @@ class JITAITrigger:
             self._cooldown_key(user_id=user_id, dim=dim),
             expires_at=expires_at,
             value=expires_at.isoformat(),
+            now=now,
         )
 
     async def _increment_rate_counter(self, kind: str, *, now: datetime) -> int:
@@ -262,12 +266,13 @@ class JITAITrigger:
                 self._rate_key(kind, now=now),
                 expire_at=self._rate_expiry(now),
                 amount=1,
+                now=now,
             )
         )
 
     async def _get_rate_counter(self, kind: str, *, now: datetime) -> int:
         return int(
-            await self._get_state_value(self._rate_key(kind, now=now), default=0)
+            await self._get_state_value(self._rate_key(kind, now=now), default=0, now=now)
         )
 
     @classmethod
@@ -299,21 +304,22 @@ class JITAITrigger:
             microsecond=0,
         )
 
-    async def _get_state_value(self, key: str, *, default: Any) -> Any:
+    async def _get_state_value(self, key: str, *, default: Any, now: datetime | None = None) -> Any:
         redis_client = cache_service.redis
         if redis_client is not None:
             value = await redis_client.get(f"aurora:stage27:{key}")
             return default if value is None else value
         store = self._local_store()
         expires_at = store["expirations"].get(key)
-        if expires_at is not None and expires_at <= _utcnow():
+        reference_now = now or _utcnow()
+        if expires_at is not None and expires_at <= reference_now:
             store["values"].pop(key, None)
             store["expirations"].pop(key, None)
             return default
         return store["values"].get(key, default)
 
     async def _set_state_value(
-        self, key: str, *, value: Any, expires_at: datetime
+        self, key: str, *, value: Any, expires_at: datetime, now: datetime | None = None
     ) -> None:
         redis_client = cache_service.redis
         if redis_client is not None:
@@ -321,6 +327,7 @@ class JITAITrigger:
             await redis_client.set(f"aurora:stage27:{key}", value, ex=ttl)
             return
         store = self._local_store()
+        self._prune_local_store(store, now=now)
         store["values"][key] = value
         store["expirations"][key] = expires_at
 
@@ -334,7 +341,7 @@ class JITAITrigger:
         store["expirations"].pop(key, None)
 
     async def _increment_state_value(
-        self, key: str, *, expire_at: datetime, amount: int
+        self, key: str, *, expire_at: datetime, amount: int, now: datetime | None = None
     ) -> int:
         redis_client = cache_service.redis
         if redis_client is not None:
@@ -345,7 +352,7 @@ class JITAITrigger:
             )
             return int(value)
         store = self._local_store()
-        self._prune_local_store(store)
+        self._prune_local_store(store, now=now)
         store["values"][key] = int(store["values"].get(key, 0)) + amount
         store["expirations"][key] = expire_at
         return int(store["values"][key])
@@ -360,12 +367,12 @@ class JITAITrigger:
         return store
 
     @staticmethod
-    def _prune_local_store(store: dict[str, dict[str, Any]]) -> None:
-        now = _utcnow()
+    def _prune_local_store(store: dict[str, dict[str, Any]], *, now: datetime | None = None) -> None:
+        reference_now = now or _utcnow()
         expired = [
             key
             for key, expires_at in dict(store.get("expirations", {})).items()
-            if isinstance(expires_at, datetime) and expires_at <= now
+            if isinstance(expires_at, datetime) and expires_at <= reference_now
         ]
         for key in expired:
             store["values"].pop(key, None)

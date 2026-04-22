@@ -11,6 +11,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = "s27a1b2c3d4"
@@ -34,13 +35,13 @@ def upgrade() -> None:
     if not _table_exists(inspector, "persdyn_attractors"):
         op.create_table(
             "persdyn_attractors",
-            sa.Column("user_id", sa.CHAR(length=36), nullable=False),
+            sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("dim", sa.String(length=40), nullable=False),
             sa.Column("baseline", sa.Float(), nullable=False, server_default="0"),
             sa.Column("variability", sa.Float(), nullable=False, server_default="0"),
             sa.Column("recovery_rate", sa.Float(), nullable=False, server_default="0"),
             sa.Column("confidence", sa.Float(), nullable=False, server_default="0"),
-            sa.Column("id", sa.CHAR(length=36), nullable=False),
+            sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
             sa.Column("deleted_at", sa.DateTime(), nullable=True),

@@ -98,6 +98,9 @@ class TestTaskServiceCreate:
 
         mock_db.commit.return_value = None
         mock_db.refresh.return_value = None
+        min_result = Mock()
+        min_result.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = min_result
 
         with patch('app.services.task_service.get_personalization_engine'):
             task = await TaskService.create(mock_db, task_in, user_id)
@@ -123,6 +126,9 @@ class TestTaskServiceCreate:
 
         mock_db.commit.return_value = None
         mock_db.refresh.return_value = None
+        min_result = Mock()
+        min_result.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = min_result
 
         with patch('app.services.task_service.get_personalization_engine') as mock_engine:
             # Mock personalization profile
@@ -152,6 +158,9 @@ class TestTaskServiceCreate:
 
         mock_db.commit.return_value = None
         mock_db.refresh.return_value = None
+        min_result = Mock()
+        min_result.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = min_result
 
         with patch('app.services.task_service.get_personalization_engine') as mock_engine:
             # Personalization raises exception
@@ -178,6 +187,9 @@ class TestTaskServiceCreate:
 
         mock_db.commit.return_value = None
         mock_db.refresh.return_value = None
+        min_result = Mock()
+        min_result.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = min_result
 
         # Mock TaskStateSyncService
         with patch('app.services.task_state_sync.TaskStateSyncService') as MockSyncService:
@@ -280,6 +292,9 @@ class TestTaskStatusChanges:
 
         mock_db.commit.return_value = None
         mock_db.refresh.return_value = None
+        claim_result = Mock()
+        claim_result.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = claim_result
         
         # Mock event bus
         with patch('app.core.event_bus.event_bus.publish', new_callable=AsyncMock) as mock_publish:

@@ -397,8 +397,7 @@ class TestDatabasePersistence:
     @pytest.mark.asyncio
     async def test_message_persistence(self, database, flutter_client):
         """Test message persistence in database"""
-        session_id = "session-123"
-        await database.create_session("user-123")
+        session_id = await database.create_session("user-123")
 
         message = {
             "user_id": "user-123",
@@ -419,8 +418,7 @@ class TestDatabasePersistence:
     @pytest.mark.asyncio
     async def test_conversation_history_retrieval(self, database):
         """Test retrieving full conversation history"""
-        session_id = "session-123"
-        await database.create_session("user-123")
+        session_id = await database.create_session("user-123")
 
         # Add multiple messages
         messages = [

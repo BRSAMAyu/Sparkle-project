@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from datetime import timezone, datetime, timedelta
 from typing import Any
 
@@ -302,10 +303,18 @@ def _extract_user_messages(conversation_messages: list[dict[str, Any]] | None) -
 
 def _keyword_set(text: str) -> set[str]:
     normalized = _normalize(text)
-    return {
+    tokens = {
         token
         for token in normalized.replace("？", " ").replace("?", " ").replace("，", " ").replace(",", " ").split()
         if len(token) >= 2
+    }
+    if tokens:
+        return tokens
+    condensed = normalized.replace("？", "").replace("?", "").replace("，", "").replace(",", "")
+    return {
+        condensed[idx:idx + 4]
+        for idx in range(max(0, len(condensed) - 3))
+        if len(condensed[idx:idx + 4].strip()) == 4
     }
 
 
@@ -318,13 +327,34 @@ def _question_like(text: str) -> bool:
     return any(normalized.startswith(prefix) for prefix in _QUESTION_STARTERS)
 
 
+def _shared_question_focus(a: str, b: str) -> int:
+    normalized_a = _normalize(a).replace("？", "").replace("?", "")
+    normalized_b = _normalize(b).replace("？", "").replace("?", "")
+    if not normalized_a or not normalized_b:
+        return 0
+    match = SequenceMatcher(None, normalized_a, normalized_b).find_longest_match(
+        0,
+        len(normalized_a),
+        0,
+        len(normalized_b),
+    )
+    return int(match.size)
+
+
 def analyze_conversation_rhythm(
     *,
-    user_message: str,
-    conversation_messages: list[dict[str, Any]] | None,
+    user_message: str | None = None,
+    conversation_messages: list[dict[str, Any]] | None = None,
+    previous_user_messages: list[str] | None = None,
+    current_user_message: str | None = None,
+    previous_signal_type: str | None = None,
 ) -> dict[str, Any] | None:
-    history = _extract_user_messages(conversation_messages)
-    series = [*history[-4:], str(user_message or "").strip()]
+    # Backward-compatible entrypoint: older callers/tests passed
+    # previous_user_messages/current_user_message instead of the newer
+    # conversation_messages/user_message pair.
+    history = list(previous_user_messages or []) if previous_user_messages is not None else _extract_user_messages(conversation_messages)
+    current_message = str(current_user_message if current_user_message is not None else user_message or "").strip()
+    series = [*history[-4:], current_message]
     series = [item for item in series if item]
     if len(series) < 3:
         return None
@@ -333,7 +363,21 @@ def analyze_conversation_rhythm(
     trend = "stable"
     signal_type = ""
     guidance = ""
-    if lengths[0] > lengths[1] > lengths[2]:
+    recent_three = series[-3:]
+    if (
+        len(recent_three) == 3
+        and all(_question_like(item) for item in recent_three)
+        and (
+            str(previous_signal_type or "").strip() == "expand"
+            or min(
+                _shared_question_focus(recent_three[-1], recent_three[0]),
+                _shared_question_focus(recent_three[-1], recent_three[1]),
+            ) >= 4
+        )
+    ):
+        signal_type = "stalled_followup"
+        guidance = "用户已经连续多轮围绕同一个点追问，前面的回答没有真正解决问题；这轮请换一种讲法或换一个例子。"
+    elif lengths[0] >= lengths[1] >= lengths[2] and lengths[0] - lengths[2] >= 6:
         trend = "shrinking"
         signal_type = "patience_drop"
         guidance = "用户最近几轮消息越来越短，可能正在失去耐心；这轮请主动收敛，先给结论，减少枝节。"
@@ -342,20 +386,11 @@ def analyze_conversation_rhythm(
         signal_type = "deepening_focus"
         guidance = "用户最近几轮消息越来越长，说明正在主动深入；这轮可以更展开，但保持结构化。"
 
-    recent_three = series[-3:]
-    keyword_overlap = set.intersection(*[_keyword_set(item) or {"__empty__"} for item in recent_three])
-    if (
-        len(recent_three) == 3
-        and all(_question_like(item) for item in recent_three)
-        and keyword_overlap
-        and keyword_overlap != {"__empty__"}
-    ):
-        signal_type = "stalled_followup"
-        guidance = "用户已经连续多轮围绕同一个点追问，前面的回答没有真正解决问题；这轮请换一种讲法或换一个例子。"
-
     if not signal_type:
         return None
     return {
+        "mode": signal_type,
+        "reason": guidance,
         "signal_type": signal_type,
         "trend": trend,
         "recent_lengths": lengths,
@@ -438,8 +473,18 @@ def apply_session_feedback_visible_prefix(
 def build_conversation_rhythm_instruction(rhythm: dict[str, Any] | None) -> str:
     if not isinstance(rhythm, dict):
         return ""
-    guidance = str(rhythm.get("guidance") or "").strip()
-    signal_type = str(rhythm.get("signal_type") or "").strip()
+    signal_type = str(rhythm.get("signal_type") or rhythm.get("mode") or "").strip()
+    guidance = str(rhythm.get("guidance") or rhythm.get("reason") or "").strip()
+    if signal_type == "deepening_focus" and "允许更展开" not in guidance:
+        guidance = (
+            guidance + "；这轮允许更展开，但保持结构化。"
+            if guidance
+            else "用户消息连续变长，说明正在主动深入；这轮允许更展开，但保持结构化。"
+        )
+    if not guidance and signal_type == "patience_drop":
+        guidance = "用户最近可能正在失去耐心；这轮请主动收敛，先给结论。"
+    if not guidance and signal_type == "stalled_followup":
+        guidance = "用户已经连续多轮围绕同一点追问；这轮请换一种讲法或换一个例子。"
     if not guidance or not signal_type:
         return ""
     return (
