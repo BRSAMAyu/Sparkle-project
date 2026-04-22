@@ -32,6 +32,7 @@ from app.services.skill_selection_service import SkillSelectionService
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult
 from app.services.sufficiency_judge_service import SufficiencyJudgeService
 from app.services.metacognition_service import MetacognitionService
+from app.services.social_signal_bridge import SocialSignalBridge
 from app.state_aggregator.schema import (
     ActiveSkillSummaryItemValue,
     ActiveSkillsSummaryValue,
@@ -54,6 +55,7 @@ from app.state_aggregator.schema import (
     RecentScenesSummaryValue,
     RecentPersonMentionsValue,
     SRLPhaseSummaryValue,
+    SocialSignalsSummaryValue,
     SocialMentionValue,
     SufficiencySummaryValue,
     StateFieldEnvelope,
@@ -82,6 +84,7 @@ class StateAggregatorService:
         "foresight_hint": 30,
         "engagement_state": 60,
         "recent_person_mentions": 300,
+        "social_signals_summary": 300,
         "learning_state": 60 * 60 * 24,
         "working_memory_snapshot": 30,
         "task_sufficiency_summary": 30,
@@ -170,6 +173,7 @@ class StateAggregatorService:
             "recent_scenes": self._build_recent_scenes_summary,
             "foresight_hint": self._build_foresight_hint_summary,
             "recent_person_mentions": self._build_recent_person_mentions,
+            "social_signals_summary": self._build_social_signals_summary,
             "engagement_state": self._build_engagement_state,
             "learning_state": self._build_learning_state,
             "working_memory_snapshot": self._build_working_memory_snapshot,
@@ -322,6 +326,35 @@ class StateAggregatorService:
             ),
             computed_at=now,
             source_snapshot_ids=tuple(f"episodic:{row.id}" for row in rows[:10]),
+            freshness_seconds=0,
+        )
+
+    async def _build_social_signals_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[SocialSignalsSummaryValue] | None:
+        del current_turn_parse
+        signals = await SocialSignalBridge(self.db).build_social_signals_v1(user_id)
+        if signals is None:
+            return None
+
+        source_ids = [f"social_signals:{user_id}"]
+        if signals.community_engagement_level is not None:
+            source_ids.append(f"user_prefs:{user_id}")
+        return StateFieldEnvelope(
+            value=SocialSignalsSummaryValue(
+                summary_text=signals.to_summary_text(max_chars=400),
+                mention_count=signals.mention_count,
+                relationship_count=signals.relationship_count,
+                pending_commitments_count=signals.pending_commitments_count,
+                community_engagement_level=signals.community_engagement_level,
+                social_learning_preference=signals.social_learning_preference,
+                content_contribution_rate=signals.content_contribution_rate,
+            ),
+            computed_at=now,
+            source_snapshot_ids=tuple(source_ids),
             freshness_seconds=0,
         )
 

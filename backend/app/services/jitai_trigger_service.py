@@ -1,21 +1,24 @@
 from __future__ import annotations
 
+import math
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from prometheus_client import Counter as PrometheusCounter
 
+from app.aurora.privacy import sha256_token
 from app.config import settings
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus
 from app.core.event_types import JITAI_TRIGGERED
 from app.core.metrics import get_or_create_metric
 from app.schemas.foresight import Deviation, ForesightHint
-from app.services.aurora_stage27_foresight_kill_switch_service import AuroraStage27ForesightKillSwitchService
-
+from app.services.aurora_stage27_foresight_kill_switch_service import (
+    AuroraStage27ForesightKillSwitchService,
+)
 
 JITAI_TRIGGERED_TOTAL = get_or_create_metric(
     PrometheusCounter,
@@ -75,7 +78,7 @@ TEMPLATE_REGISTRY: dict[str, dict[str, str]] = {
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class JITAITrigger:
@@ -98,20 +101,38 @@ class JITAITrigger:
         hints: list[ForesightHint] = []
 
         for deviation in deviations:
-            if abs(float(deviation.z_score)) < float(settings.AURORA_FORESIGHT_DEVIATION_Z_THRESHOLD) or float(deviation.confidence) < 0.5:
+            z_score = float(deviation.z_score)
+            confidence = float(deviation.confidence)
+            if not math.isfinite(z_score) or not math.isfinite(confidence):
+                JITAI_SKIPPED_TOTAL.labels(reason="non_finite").inc()
+                continue
+            if (
+                abs(z_score) < float(settings.AURORA_FORESIGHT_DEVIATION_Z_THRESHOLD)
+                or confidence < 0.5
+            ):
                 JITAI_SKIPPED_TOTAL.labels(reason="low_confidence").inc()
                 continue
 
-            template = self._resolve_template(dim=deviation.dim, direction=deviation.direction)
+            template = self._resolve_template(
+                dim=deviation.dim, direction=deviation.direction
+            )
             if template is None:
-                logger.warning("Missing JITAI template for dim={} direction={}", deviation.dim, deviation.direction)
+                logger.warning(
+                    "Missing JITAI template for dim={} direction={}",
+                    deviation.dim,
+                    deviation.direction,
+                )
                 continue
 
             if mutate_state:
-                if await self._is_on_cooldown(normalized_user_id, deviation.dim, now=reference_time):
+                if await self._is_on_cooldown(
+                    normalized_user_id, deviation.dim, now=reference_time
+                ):
                     JITAI_SKIPPED_TOTAL.labels(reason="cooldown").inc()
                     continue
-                if await self._daily_budget_used(normalized_user_id, now=reference_time) >= int(settings.AURORA_FORESIGHT_JITAI_DAILY_BUDGET):
+                if await self._daily_budget_used(
+                    normalized_user_id, now=reference_time
+                ) >= int(settings.AURORA_FORESIGHT_JITAI_DAILY_BUDGET):
                     JITAI_SKIPPED_TOTAL.labels(reason="budget").inc()
                     continue
 
@@ -119,8 +140,8 @@ class JITAITrigger:
                 hint_id=f"jitai_{uuid.uuid4().hex}",
                 dim=deviation.dim,
                 message=template["message"],
-                z_score=round(float(deviation.z_score), 4),
-                confidence=round(float(deviation.confidence), 4),
+                z_score=round(z_score, 4),
+                confidence=round(confidence, 4),
                 generated_at=reference_time,
                 template_id=template["template_id"],
             )
@@ -136,11 +157,15 @@ class JITAITrigger:
         await self._increment_rate_counter("misfires", now=reference_time)
         return await self._evaluate_auto_downgrade(now=reference_time)
 
-    async def get_daily_budget_usage(self, *, user_id: UUID, now: datetime | None = None) -> int:
+    async def get_daily_budget_usage(
+        self, *, user_id: UUID, now: datetime | None = None
+    ) -> int:
         normalized_user_id = self._require_user_id(user_id)
         return await self._daily_budget_used(normalized_user_id, now=now or _utcnow())
 
-    async def get_misfire_rate(self, *, days_ago: int = 0, now: datetime | None = None) -> float:
+    async def get_misfire_rate(
+        self, *, days_ago: int = 0, now: datetime | None = None
+    ) -> float:
         reference_time = (now or _utcnow()) - timedelta(days=max(0, int(days_ago)))
         triggered = await self._get_rate_counter("triggered", now=reference_time)
         if triggered <= 0:
@@ -159,7 +184,9 @@ class JITAITrigger:
     def _resolve_template(*, dim: str, direction: str) -> dict[str, str] | None:
         return TEMPLATE_REGISTRY.get(f"{dim}:{direction}")
 
-    async def _mark_triggered(self, user_id: str, hint: ForesightHint, *, now: datetime) -> None:
+    async def _mark_triggered(
+        self, user_id: str, hint: ForesightHint, *, now: datetime
+    ) -> None:
         await self._set_cooldown(user_id=user_id, dim=hint.dim, now=now)
         await self._increment_budget(user_id=user_id, now=now)
         await self._increment_rate_counter("triggered", now=now)
@@ -170,7 +197,7 @@ class JITAITrigger:
                 JITAI_TRIGGERED,
                 {
                     "event_type": JITAI_TRIGGERED,
-                    "user_id": user_id,
+                    "user_id_hash": sha256_token(user_id),
                     "dim": hint.dim,
                     "hint_id": hint.hint_id,
                     "template_id": hint.template_id,
@@ -181,8 +208,13 @@ class JITAITrigger:
             logger.warning("Failed to publish jitai_triggered event: {}", exc)
 
     async def _evaluate_auto_downgrade(self, *, now: datetime) -> float:
-        rates = [await self.get_misfire_rate(days_ago=offset, now=now) for offset in range(3)]
-        if all(rate > float(settings.AURORA_FORESIGHT_JITAI_MISFIRE_THRESHOLD) for rate in rates):
+        rates = [
+            await self.get_misfire_rate(days_ago=offset, now=now) for offset in range(3)
+        ]
+        if all(
+            rate > float(settings.AURORA_FORESIGHT_JITAI_MISFIRE_THRESHOLD)
+            for rate in rates
+        ):
             if await self.kill_switch.get_mode() == "live":
                 await self.kill_switch.set_feature_mode("deviation", "shadow")
                 await self.kill_switch.set_feature_mode("jitai", "shadow")
@@ -194,7 +226,11 @@ class JITAITrigger:
 
     async def _increment_budget(self, *, user_id: str, now: datetime) -> int:
         key = self._budget_key(user_id, now=now)
-        return int(await self._increment_state_value(key, expire_at=self._day_expiry(now), amount=1))
+        return int(
+            await self._increment_state_value(
+                key, expire_at=self._day_expiry(now), amount=1
+            )
+        )
 
     async def _is_on_cooldown(self, user_id: str, dim: str, *, now: datetime) -> bool:
         key = self._cooldown_key(user_id=user_id, dim=dim)
@@ -211,8 +247,14 @@ class JITAITrigger:
         return True
 
     async def _set_cooldown(self, *, user_id: str, dim: str, now: datetime) -> None:
-        expires_at = now + timedelta(hours=int(settings.AURORA_FORESIGHT_JITAI_COOLDOWN_HOURS))
-        await self._set_state_value(self._cooldown_key(user_id=user_id, dim=dim), expires_at=expires_at, value=expires_at.isoformat())
+        expires_at = now + timedelta(
+            hours=int(settings.AURORA_FORESIGHT_JITAI_COOLDOWN_HOURS)
+        )
+        await self._set_state_value(
+            self._cooldown_key(user_id=user_id, dim=dim),
+            expires_at=expires_at,
+            value=expires_at.isoformat(),
+        )
 
     async def _increment_rate_counter(self, kind: str, *, now: datetime) -> int:
         return int(
@@ -224,7 +266,9 @@ class JITAITrigger:
         )
 
     async def _get_rate_counter(self, kind: str, *, now: datetime) -> int:
-        return int(await self._get_state_value(self._rate_key(kind, now=now), default=0))
+        return int(
+            await self._get_state_value(self._rate_key(kind, now=now), default=0)
+        )
 
     @classmethod
     def _rate_key(cls, kind: str, *, now: datetime) -> str:
@@ -240,7 +284,9 @@ class JITAITrigger:
 
     @staticmethod
     def _day_expiry(now: datetime) -> datetime:
-        return (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        return (now + timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
     @classmethod
     def _rate_expiry(cls, now: datetime) -> datetime:
@@ -266,7 +312,9 @@ class JITAITrigger:
             return default
         return store["values"].get(key, default)
 
-    async def _set_state_value(self, key: str, *, value: Any, expires_at: datetime) -> None:
+    async def _set_state_value(
+        self, key: str, *, value: Any, expires_at: datetime
+    ) -> None:
         redis_client = cache_service.redis
         if redis_client is not None:
             ttl = max(1, int((expires_at - _utcnow()).total_seconds()))
@@ -285,12 +333,16 @@ class JITAITrigger:
         store["values"].pop(key, None)
         store["expirations"].pop(key, None)
 
-    async def _increment_state_value(self, key: str, *, expire_at: datetime, amount: int) -> int:
+    async def _increment_state_value(
+        self, key: str, *, expire_at: datetime, amount: int
+    ) -> int:
         redis_client = cache_service.redis
         if redis_client is not None:
             redis_key = f"aurora:stage27:{key}"
             value = await redis_client.incrby(redis_key, amount)
-            await redis_client.expire(redis_key, max(1, int((expire_at - _utcnow()).total_seconds())))
+            await redis_client.expire(
+                redis_key, max(1, int((expire_at - _utcnow()).total_seconds()))
+            )
             return int(value)
         store = self._local_store()
         self._prune_local_store(store)

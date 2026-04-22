@@ -11,6 +11,7 @@ from app.models.calendar_event import CalendarEvent
 from app.models.achievement import UserStreakStats
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.memory import EpisodicMemory
+from app.services.social_signal_types import SocialSignalsV1
 from app.state_aggregator.service import StateAggregatorService
 
 
@@ -132,6 +133,45 @@ async def test_state_aggregator_builds_social_engagement_and_learning_fields(db_
 
 
 @pytest.mark.asyncio
+async def test_state_aggregator_builds_social_signals_summary_field(db_session, monkeypatch) -> None:
+    user_id = uuid4()
+    service = StateAggregatorService(db_session)
+    monkeypatch.setattr(
+        service.predictive_service,
+        "get_next_intent_forecast",
+        AsyncMock(return_value={}),
+    )
+    monkeypatch.setattr(
+        "app.state_aggregator.service.SocialSignalBridge.build_social_signals_v1",
+        AsyncMock(
+            return_value=SocialSignalsV1(
+                mention_count=2,
+                relationship_count=1,
+                pending_commitments_count=1,
+                community_engagement_level="medium",
+                social_learning_preference=0.72,
+                content_contribution_rate=0.18,
+                summary_lines=(
+                    "最近 7 天提到过 2 位学习相关人物。",
+                    "目前有 1 条到期承诺待跟进。",
+                ),
+            )
+        ),
+    )
+
+    state = await service.get_user_state(
+        user_id,
+        required_fields=("social_signals_summary",),
+    )
+
+    assert state.schema_version == "user_state.v1.13"
+    assert state.social_signals_summary is not None
+    assert state.social_signals_summary.value.mention_count == 2
+    assert state.social_signals_summary.value.relationship_count == 1
+    assert "到期承诺" in state.social_signals_summary.value.summary_text
+
+
+@pytest.mark.asyncio
 async def test_state_aggregator_builds_achievement_and_calendar_fields(db_session, monkeypatch) -> None:
     user_id = uuid4()
     now = datetime.utcnow()
@@ -180,7 +220,7 @@ async def test_state_aggregator_builds_achievement_and_calendar_fields(db_sessio
         required_fields=("achievement_summary", "calendar_context"),
     )
 
-    assert state.schema_version == "user_state.v1.12"
+    assert state.schema_version == "user_state.v1.13"
     assert state.achievement_summary is not None
     assert state.achievement_summary.value.recent_unlocks[0].achievement_id == "streak_7"
     assert state.achievement_summary.value.total_achievement_score >= 2.0

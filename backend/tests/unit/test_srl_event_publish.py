@@ -8,7 +8,9 @@ import pytest
 from app.config import settings
 from app.core.cache import cache_service
 from app.event_publishers.srl_events import publish_srl_event
-from app.services.aurora_stage29_srl_kill_switch_service import AuroraStage29SRLKillSwitchService
+from app.services.aurora_stage29_srl_kill_switch_service import (
+    AuroraStage29SRLKillSwitchService,
+)
 
 
 @pytest.mark.asyncio
@@ -16,12 +18,14 @@ async def test_publish_srl_event_skips_when_main_mode_off(monkeypatch) -> None:
     monkeypatch.setattr(cache_service, "redis", None)
     settings.AURORA_SRL_MODE = "off"
     publish_mock = AsyncMock()
-    monkeypatch.setattr("app.event_publishers.srl_events.event_bus.publish", publish_mock)
+    monkeypatch.setattr(
+        "app.event_publishers.srl_events.event_bus.publish", publish_mock
+    )
 
     result = await publish_srl_event(
         user_id=uuid4(),
         trigger_event_type="task.started",
-        evidence_id="task-1",
+        evidence_id="task:1",
     )
 
     assert result is None
@@ -35,12 +39,14 @@ async def test_publish_srl_event_skips_when_bridge_mode_off(monkeypatch) -> None
     await service.set_mode("live")
     await service.set_bridge_mode("off")
     publish_mock = AsyncMock()
-    monkeypatch.setattr("app.event_publishers.srl_events.event_bus.publish", publish_mock)
+    monkeypatch.setattr(
+        "app.event_publishers.srl_events.event_bus.publish", publish_mock
+    )
 
     result = await publish_srl_event(
         user_id=uuid4(),
         trigger_event_type="task.started",
-        evidence_id="task-1",
+        evidence_id="task:1",
     )
 
     assert result is None
@@ -53,12 +59,14 @@ async def test_publish_srl_event_publishes_transition_payload(monkeypatch) -> No
     service = AuroraStage29SRLKillSwitchService()
     await service.ordered_startup("live")
     publish_mock = AsyncMock(return_value="1-0")
-    monkeypatch.setattr("app.event_publishers.srl_events.event_bus.publish", publish_mock)
+    monkeypatch.setattr(
+        "app.event_publishers.srl_events.event_bus.publish", publish_mock
+    )
 
     result = await publish_srl_event(
         user_id=uuid4(),
         trigger_event_type="task.completed",
-        evidence_id="task-2",
+        evidence_id="task:2",
         metadata={"plan_id": "plan-1"},
     )
 
@@ -77,12 +85,14 @@ async def test_publish_srl_event_keeps_shadow_mode_active(monkeypatch) -> None:
     await service.set_mode("live")
     await service.set_bridge_mode("shadow")
     publish_mock = AsyncMock(return_value="2-0")
-    monkeypatch.setattr("app.event_publishers.srl_events.event_bus.publish", publish_mock)
+    monkeypatch.setattr(
+        "app.event_publishers.srl_events.event_bus.publish", publish_mock
+    )
 
     result = await publish_srl_event(
         user_id=uuid4(),
         trigger_event_type="plan.created",
-        evidence_id="plan-2",
+        evidence_id="plan:2",
     )
 
     assert result == "2-0"

@@ -2,9 +2,10 @@
 
 > **文档性质**: MIMO 战略对齐工具
 > **维护者**: MIMO
-> **日期**: 2026-04-21
-> **版本**: v29（Stage 29.5 closeout + Stage 30 in progress）
-> **v2.2 锁定**: Stage 22-29.5 ✅ / Stage 30 🔶 / Stage 31-32 ❌
+> **日期**: 2026-04-22
+> **版本**: v32（Phase I 启动：Stage 33-36）
+> **v2.2 完成度**: 100%（代码）/ 0%（运行时）
+> **Phase I**: Stage 33 派工中（Vision Compliance）
 > **用途**: 锚定长期多阶段工作的方向，每次派卡前核对是否偏离
 > **权威来源**: 本清单中的每一条均可追溯至以下已签字文档
 > - `SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md` — 产品核心共识
@@ -28,7 +29,11 @@
 > - `SPARKLE_AURORA_STAGE21_RULE_AF_DEFINITION_2026-04-21.md` — Rule AF 正式定义
 > - `SPARKLE_ADVANCED_CONCEPTS_INTEGRATION_ANALYSIS_2026-04-19.md` — 前沿理念融合分析（Stage 16/17 链路锚点）
 > - `SPARKLE_AURORA_ROADMAP_v2_2_FINAL_LOCK_2026-04-21.md` — Aurora 路线图 v2.2 最终锁定（Stage 22-32）
-> - `SPARKLE_AURORA_STAGE22_DISPATCH_PLAN_2026-04-21.md` — Stage 22 派发计划（v2.1 修订版）
+> - `SPARKLE_AURORA_STAGE33_DISPATCH_PLAN_2026-04-22.md` — Stage 33 派发计划（Phase I）
+> - `docs/aurora/rule_as_vision_compliance.md` — Rule AS  Vision Compliance
+> - `docs/aurora/rule_at_data_pipeline.md` — Rule AT 数据流水治理（Stage 34）
+> - `docs/aurora/rule_au_mobile_parity.md` — Rule AU Mobile 对等治理（Stage 35）
+> - `docs/aurora/rule_av_engineering_hardening.md` — Rule AV 工程硬化治理（Stage 36）
 > - `SPARKLE_AURORA_GOVERNANCE_GRAY_WINDOW_CONTEXT_2026-04-20.md` — Gray Window 上下文化治理增补（PGW / SGW / Skipped）
 > - `SPARKLE_AURORA_STAGE16_RULE_Y_DEFINITION_2026-04-20.md` — Rule Y 正式定义（推断式画像写入治理）
 > - `SPARKLE_AURORA_STAGE16_READ_VERIFY_REPORT_2026-04-20.md` — Stage 16 读验证报告
@@ -881,14 +886,16 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 |------|------|-------|------|----------|------|
 | 22 | Baseline Repair | 6 | 修复 | AG | ✅ closeout |
 | 23 | Bayesian Wire-On | 6 | 重构 | AH | ✅ closeout |
-| 24 | Accountability Policy Compiler | 4 | 新增 | AI | ✅ closeout |
+| 24 | Accountability Policy Editor | 4 | 新增 | AI | ✅ closeout |
 | 25 | Reflection Wire-On | 5 | 扩展 | AJ | ✅ closeout |
 | 26 | Scene Consolidation | 5 | 新增 | AK | ✅ closeout |
 | 27 | Foresight Engine | 5 | 扩展+新增 | AL | ✅ closeout |
 | 28 | Traits 弱先验 | 5 | 扩展+新增 | AM | ✅ closeout |
 | 29 | SRL 三阶段独立 Tracker | 6 | 重构+新增 | AN | ✅ closeout |
 | 29.5 | Repo Hygiene | 6 | 卫生 | AQ | ✅ closeout |
-| 30 | Metacognition 扩展 | 4 | 扩展 | AO | 🔶 in progress |
+| 30 | Metacognition 扩展 | 4 | 扩展 | AO | ✅ closeout |
+| 31 | Idiographic Lite | 4 | 扩展+新增 | AP | ✅ closeout |
+| 32 | CL SQAM 扫尾 | 4 | 测量 | 复用 W | ✅ closeout |
 | 30 | Metacognition 扩展 | 4 | 扩展 | AO | ❌ pending |
 | 31 | Idiographic Lite | 4 | 扩展+新增 | AP | ❌ pending |
 | 32 | CL SQAM 扫尾 | 4 | 测量 | 复用 W | ❌ pending |
@@ -896,7 +903,7 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 **规则锁定表**（Stage 22-32）：
 
 ```
-AG  Baseline 前置       —— Stage 22 ✅
+AG  Baseline 前置       —— Stage 22 ✅ closeout
 AH  source-state 维度登记 —— Stage 23 ✅ closeout
 AI  Policy Compiler 纯规则 —— Stage 24 ✅ closeout
 AJ  Reflection 消费隔离   —— Stage 25 ✅ closeout
@@ -905,7 +912,13 @@ AL  Foresight 非 Router 分支 —— Stage 27 ✅ closeout
 AM  Traits 置信度 ≤0.3 + 冲突优先级 —— Stage 28 ✅ closeout
 AN  SRL 解耦（EventBus + Aggregator）—— Stage 29 ✅ closeout
 AQ  Proto/Python 同步    —— Stage 29.5 ✅ closeout
-AO  Metacognition 禁诊断词 —— Stage 30 🔶 in progress
+AO  Metacognition 禁诊断词 —— Stage 30 ✅ closeout
+AP  Idiographic 仅关联不因果 —— Stage 31 ✅ closeout
+AR  CL SQAM 治理         —— Stage 32 ✅ closeout
+AS  Vision Compliance   —— Stage 33 🔶 in progress
+AT  数据流水治理        —— Stage 34
+AU  Mobile 对等治理     —— Stage 35
+AV  工程硬化治理        —— Stage 36
 ```
 AJ  Reflection 消费隔离   —— Stage 25
 AK  Scene 合并幂等 + 算法约束 —— Stage 26
@@ -1212,9 +1225,106 @@ AP  Idiographic 仅关联不因果 —— Stage 31
 - CI yml 集成
 - 78+ 新测试文件
 
-**Stage 30 义务锁定**：Stage 29.5 repo hygiene 已验证 + 更改已提交，Stage 30 Metacognition 扩展可启动。
+**Stage 30 义务锁定**：Stage 29.5 repo hygiene 已验证，Stage 30 Metacognition 扩展可启动。
 
-### 9.30 依赖链（v2.2 锁定，不可打乱顺序）
+### 9.30 ✅ Stage 30 完成（Metacognition 扩展）
+
+**Stage 30 入场条件**：Stage 29.5 全部 WS green + 更改已提交。
+
+**Stage 30 总目标**：引入元认知追踪——3 个偏差维度 + 5 个置信度代理 + 行为模式诊断。
+
+**四个 Workstream（WS-MC-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-MC-BIAS-UNIFY** | 偏差维度统一 | completion/mastery/confidence |
+| **WS-MC-CONFIDENCE** | 置信度代理 | 5 个代理 |
+| **WS-MC-DASHBOARD** | 用户可见面板 | 后端控制可见性 |
+| **WS-MC-GUARD** | 治理守卫 | Rule AO 禁诊断词 |
+
+**新增治理规则**：**Rule AO**（Stage 30 新建）：Metacognition 输出禁诊断词——仅描述行为模式不给人格标签。
+
+**GLM1 验收**：ACCEPT - CLEAN
+
+| 验证项 | 结果 |
+|--------|------|
+| MetacognitionService | PASS（879 行，零 orchestrator 依赖）|
+| Kill switch | PASS（off/shadow/live + 自动禁用）|
+| Rule AO guards | PASS（AST 级别）|
+| Router 零命中 | PASS |
+| Tests | 59 backend + 3 mobile |
+
+**Stage 31 义务锁定**：Stage 30 Metacognition 已落地，Stage 31 Idiographic Lite 可启动。
+
+### 9.31 ✅ Stage 31 完成（Idiographic Lite）
+
+**Stage 31 入场条件**：Stage 30 全部 WS green + Rule AO 无破例。
+
+**Stage 31 总目标**：引入个体化关联分析——滚动 Spearman + 变点检测 + "仅关联不因果"约束。
+
+**四个 Workstream（WS-ID-*)**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **WS-ID-NODE-STANDARDIZE** | 节点标准化 | 5 节点 |
+| **WS-ID-ASSOCIATION** | Spearman/MIC/共现 | BH 校正 |
+| **WS-ID-CENTRALITY** | 中心性度量 | degree/closeness/betweenness |
+| **WS-ID-GUARD** | 治理守卫 | Rule AP 零因果 |
+
+**新增治理规则**：**Rule AP**（Stage 31 新建）：Idiographic 仅关联不因果——数据密度门 ≥150 对。
+
+**GLM1 验收**：ACCEPT - CLEAN
+
+| 验证项 | 结果 |
+|--------|------|
+| IdiographicAssociationService | PASS（1057 行）|
+| EventBus 集成 | PASS（4 种事件）|
+| Aggregator v1.12 | PASS |
+| Kill switch | PASS（auto shadow at 30% falsify）|
+| Rule AP guards | PASS（4 错误码）|
+| Tests | 16 passed |
+
+**黄色待跟进**：Alembic 多头分支——建议在提交前合并
+
+### 9.32 ✅ Stage 32 完成（CL SQAM 扫尾）
+
+**Stage 32 入场条件**：Stage 31 全部 WS green + Rule AP 无破例。
+
+**Stage 32 总目标**：CL 组件 SQAM 四维评估扫尾——建立持续学习的信号质量审计基础设施。
+
+**四个 Workstream（SQAM 守卫 × 4 组件）**：
+
+| WS | 目的 | 关键约束 |
+|----|------|----------|
+| **PersDyn SQAM** | 4 维度 ID1/ST1/DP1/SM1 | 13 个 AST guard |
+| **JITAI SQAM** | 2 维度 | 运行时代码 |
+| **预测性 SQAM** | 4 维度 | 运行时验证 |
+| **SRL/Traits SQAM** | 3 维度 | 运行时验证 |
+
+**新增治理规则**：**Rule AR**（Stage 32 新建）：CL SQAM 治理框架。
+
+**GLM1 验收**：ACCEPT - CONDITIONAL
+
+| 验证项 | 结果 |
+|--------|------|
+| 13 SQAM guards | PASS（AST 级别）|
+| 4 个关键补丁 | PASS（PII/CTR/抑制/user_id_hash）|
+| SQAM 套件运行器 | PASS（37 行）|
+| 规则 AR 框架 | PASS（8 管理条款）|
+| CI 集成 | PASS |
+| Grafana 仪表盘 | PASS（6 面板）|
+| 21 条规则清单 | PASS |
+
+**未完成项（诚实声明，非阻塞）**：
+- 14 天影子运行（运行时验证）
+- AlertManager 部署验证（基础设施）
+- Grafana 现场遥测验证（基础设施）
+- 架构师签署（治理仪式）
+- Flutter/移动套件（并行轨道）
+
+**Stage 32 义务锁定**：Stage 32 CL SQAM 扫尾已完成，v2.2 路线图全部 Stage 验证通过。
+
+### 9.32 依赖链（v2.2 锁定，不可打乱顺序）
 
 ```
 Memory Write (Stage 16 ✅)
@@ -1245,13 +1355,11 @@ Traits 弱先验 (Stage 28 ✅) ← 已 closeout
     ↓
 SRL 三阶段独立 Tracker (Stage 29 ✅) ← 已 closeout
     ↓
-Metacognition 扩展 (Stage 30 🔶) ← 当前执行
+Metacognition 扩展 (Stage 30 ✅) ← 已 closeout
     ↓
-Metacognition 扩展 (Stage 30)
+Idiographic Lite (Stage 31 ✅) ← 已 closeout
     ↓
-Idiographic Lite (Stage 31)
-    ↓
-CL SQAM 扫尾 (Stage 32)
+CL SQAM 扫尾 (Stage 32 ✅) ← 已 closeout
 ```
 
 **硬约束**：任何 Stage 试图跳跃依赖链上游未完成的 Stage，默认拒绝。
@@ -1302,7 +1410,9 @@ CL SQAM 扫尾 (Stage 32)
 | Foresight Engine | ✅ Stage 27 | closeout（PersDyn + JITAI） |
 | Traits 弱先验 | ✅ Stage 28 | closeout（Big Five + 置信度 ≤0.3） |
 | SRL Tracker | ✅ Stage 29 | closeout（EventBus 解耦） |
-| Metacognition 扩展 | 🔶 Stage 30 | 当前执行 |
+| Metacognition 扩展 | ✅ Stage 30 | closeout（3 偏差维度） |
+| Idiographic Lite | ✅ Stage 31 | closeout（仅关联不因果） |
+| CL SQAM 扫尾 | ✅ Stage 32 | closeout（13 SQAM guards） |
 | SRL Tracker | ❌→Stage 29 | 路线图已锁定 |
 | Metacognition 扩展 | ❌→Stage 30 | 路线图已锁定 |
 | Idiographic Lite | ❌→Stage 31 | 路线图已锁定 |
@@ -1380,6 +1490,76 @@ CL SQAM 扫尾 (Stage 32)
 1. **任何架构提案必须同时带可验证条件**。否则 kick back 重写。"让系统更温暖"这类表述本身就应该被 block。
 2. **不修改签字定义**。如果觉得产品共识需要改，必须走 amendment 流程，不能在日常讨论里静默 reframe。
 3. **每次提出新概念前，先问自己：这在实际工程里能分解成可执行的 task card 吗？如果不能，它就不是架构，是散文。** 散文可以在内部思考，但不放进产出。
+
+---
+
+## 十一、Phase I 执行（Stage 33-36）
+
+### 11.1 审计结论基线锁定（v2.3 起点）
+
+基于 2026-04-22 十份 Audit 终稿，锁定的硬事实：
+
+| F# | 事实 | 严重度 |
+|----|------|--------|
+| F1 | Social→Router 物理断路 | P0 |
+| F2 | SRLPhase 全链路断 | P0 |
+| F3 | WorkingMemory LLM 不可见 | P0 |
+| F4 | normalize 提取 bug | P0 |
+| F5 | Hop 1/2 无 EventBus | P0 |
+| F6 | Calendar→Prompt 裸管道 | P0 |
+| F7 | 23 guard 脚本 CI 不持续执行 | P0 |
+| F8 | Kill Switch 无三态 | P0 |
+| F9 | Mobile 黑洞率 67% | P1 |
+| F10 | ErrorReplanBridge 门槛过保守 | P1 |
+| F11 | 零文件有 Core/Phase 声明头 | P2 |
+| F12 | 21 个待决死件 | P2 |
+| F13 | Metacognition 入 prompt 但不入 router | P1 |
+| F14 | Kill Switch 零演练文档 | P1 |
+| F15 | Push 仍为定时批处理 | P1 |
+
+### 11.2 Phase I 执行顺序
+
+```
+Stage 33 (愿景补全) ──▶ Stage 34 (数据流水) ──▶ Stage 35 (Mobile 对等) ──▶ Stage 36 (工程硬化)
+     4 WS                 5 WS                   4 WS                   4 WS
+     Rule AS              Rule AT                Rule AU                Rule AV
+```
+
+**序贯锁**：Stage 34 不得在 Stage 33 Accept 前启动，Stage 35 不得在 Stage 34 Accept 前启动。
+
+### 11.3 Stage 33 Dispatch（已派工）
+
+**主题**：愿景补全与断点收尾
+
+**核心目标**：
+1. Social 数据进入 Router + Prompt（WS-33-01）
+2. SRL Phase 进入 Router + Prompt（WS-33-02）
+3. Working Memory 进入 Prompt（WS-33-03）
+4. Journey Event 补全（WS-33-04）
+
+**规则**：
+- **Rule AS**（Vision Compliance）：任何声称"入 ProfileContext"的字段必须同时满足：
+  - 在 routing_engine.py 或 prompts.py 被显式消费
+  - 消费路径有 feature flag 或 kill switch
+  - shadow 模式时 diff 写入审计表
+
+**新规则锁定**：Rule AS（Vision Compliance）→ Rule AT → Rule AU → Rule AV
+
+### 11.4 Stage 34-36 框架概览
+
+| Stage | 主题 | 驱动 F# |
+|--------|------|--------|
+| 34 | 数据流水补齐 | F4/F5/F10/F12 |
+| 35 | Mobile 对等 + Metacognition Router | F9/F13 |
+| 36 | 工程硬化 | F6/F7/F8/F11/F14 |
+
+### 11.5 Phase I Exit Gate
+
+全部闭合或写入明确例外表：
+- F1-F15 全部闭合
+- Rule AS/AT/AU/AV 全部入 manifest 且 CI 连续 14 天零违规
+- Mobile 黑洞率 ≤ 10%
+- 12 个 Kill Switch 三态齐全 + 演练文档覆盖率 100%
 
 ---
 

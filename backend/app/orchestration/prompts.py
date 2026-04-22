@@ -37,6 +37,7 @@ from app.orchestration.ai_strategy_renderer import build_semantic_control, forma
 from app.orchestration.context_focus import ContextFocusDecision
 from app.orchestration.social_context_renderer import render_social_context_lines
 from app.orchestration.situation_brief import format_situation_brief_section
+from app.services.srl_phase_types import SRLPhaseHint
 
 
 class _SafeFormatDict(dict):
@@ -2311,6 +2312,176 @@ def _extract_profile_context_payload(context: dict[str, Any] | None) -> dict[str
     return payload if isinstance(payload, dict) else {}
 
 
+def _resolve_stage33_feature_mode(context: dict[str, Any] | None, feature: str) -> str:
+    payload = context if isinstance(context, dict) else {}
+    modes = payload.get("aurora_stage33_modes")
+    if isinstance(modes, dict):
+        raw = str(modes.get(feature) or modes.get("mode") or "").strip().lower()
+        if raw in {"off", "shadow", "live"}:
+            return raw
+    fallback_attr = {
+        "social": "AURORA_STAGE33_SOCIAL_MODE",
+        "srl": "AURORA_STAGE33_SRL_MODE",
+        "wm_prompt": "AURORA_STAGE33_WM_PROMPT_MODE",
+        "events": "AURORA_STAGE33_EVENTS_MODE",
+    }.get(feature)
+    raw = str(getattr(settings, fallback_attr or "", "off") or "off").strip().lower()
+    return raw if raw in {"off", "shadow", "live"} else "off"
+
+
+def _extract_stage33_social_payload(context: dict[str, Any] | None) -> dict[str, Any]:
+    payload = context if isinstance(context, dict) else {}
+    cognitive_context = _extract_cognitive_context_payload(payload)
+    for candidate in (
+        payload.get("social_signals_summary"),
+        payload.get("social_context_v1"),
+        cognitive_context.get("social_signals_summary"),
+        cognitive_context.get("social_context_v1"),
+    ):
+        if isinstance(candidate, dict) and candidate:
+            nested_value = candidate.get("value")
+            if isinstance(nested_value, dict) and nested_value:
+                return nested_value
+            return candidate
+
+    legacy_social = payload.get("social_context")
+    if not isinstance(legacy_social, dict) or not legacy_social:
+        return {}
+
+    mention_count = len(legacy_social.get("recent_person_mentions") or [])
+    relationship_count = int(legacy_social.get("relationship_count") or 0)
+    pending_commitments_count = int(legacy_social.get("pending_commitments_count") or 0)
+    summary_lines: list[str] = []
+    if mention_count > 0:
+        summary_lines.append(f"最近 7 天提到过 {mention_count} 位学习相关人物。")
+    if relationship_count > 0:
+        summary_lines.append(f"当前有 {relationship_count} 条关系型背景需要在建议里保持边界感。")
+    if pending_commitments_count > 0:
+        summary_lines.append(f"目前有 {pending_commitments_count} 条到期承诺待跟进。")
+    if not summary_lines:
+        return {}
+    return {
+        "mention_count": mention_count,
+        "relationship_count": relationship_count,
+        "pending_commitments_count": pending_commitments_count,
+        "summary_lines": summary_lines,
+        "summary_text": "；".join(summary_lines),
+    }
+
+
+def _extract_stage33_srl_payload(context: dict[str, Any] | None) -> dict[str, Any]:
+    payload = context if isinstance(context, dict) else {}
+    cognitive_context = _extract_cognitive_context_payload(payload)
+    profile_context = _extract_profile_context_payload(payload)
+    insight_state = (
+        profile_context.get("user_insight_state")
+        if isinstance(profile_context, dict)
+        else None
+    )
+    insight_state = insight_state if isinstance(insight_state, dict) else {}
+
+    for candidate in (
+        payload.get("srl_phase"),
+        cognitive_context.get("srl_phase"),
+        profile_context.get("srl_phase") if isinstance(profile_context, dict) else None,
+        insight_state.get("srl_phase"),
+    ):
+        if isinstance(candidate, dict) and candidate:
+            nested_value = candidate.get("value")
+            if isinstance(nested_value, dict) and nested_value:
+                return nested_value
+            return candidate
+    return {}
+
+
+def _format_stage33_social_signal_section(payload: dict[str, Any] | None) -> str:
+    if not isinstance(payload, dict) or not payload:
+        return ""
+
+    summary_lines = [
+        str(item).strip()
+        for item in (payload.get("summary_lines") or [])
+        if str(item).strip()
+    ]
+    if not summary_lines and str(payload.get("summary_text") or "").strip():
+        summary_lines = [
+            part.strip()
+            for part in str(payload.get("summary_text") or "").split("；")
+            if part.strip()
+        ]
+    if not summary_lines:
+        mention_count = int(payload.get("mention_count") or 0)
+        relationship_count = int(payload.get("relationship_count") or 0)
+        pending_commitments_count = int(payload.get("pending_commitments_count") or 0)
+        if mention_count > 0:
+            summary_lines.append(f"最近 7 天提到过 {mention_count} 位学习相关人物。")
+        if relationship_count > 0:
+            summary_lines.append(f"当前有 {relationship_count} 条关系型背景需要在建议里保持边界感。")
+        if pending_commitments_count > 0:
+            summary_lines.append(f"目前有 {pending_commitments_count} 条到期承诺待跟进。")
+    if not summary_lines:
+        return ""
+
+    lines = ["## 社群信号 [L2 引导]"]
+    lines.extend(f"- {item}" for item in summary_lines[:3])
+    lines.append("- 这些信号只用于帮助保持协作边界和启动方式，不代表必须把学习社交化。")
+    return "\n".join(lines)
+
+
+def _format_stage33_srl_phase_section(payload: dict[str, Any] | None) -> str:
+    hint = SRLPhaseHint.from_payload(payload if isinstance(payload, dict) else None)
+    if hint is None:
+        return ""
+
+    lines = ["## 学习自调节阶段"]
+    lines.extend(f"- {item}" for item in hint.to_summary_lines()[:4])
+    lines.append("- 仅把它当作当前引导姿态，不把阶段标签说教式地压给用户。")
+    return "\n".join(lines)
+
+
+def _extract_working_memory_payload(context: dict[str, Any] | None) -> dict[str, Any]:
+    payload = context if isinstance(context, dict) else {}
+    cognitive_context = _extract_cognitive_context_payload(payload)
+    for candidate in (
+        payload.get("working_memory_snapshot"),
+        cognitive_context.get("working_memory_snapshot"),
+    ):
+        if isinstance(candidate, dict) and candidate:
+            nested_value = candidate.get("value")
+            if isinstance(nested_value, dict) and nested_value:
+                return nested_value
+            return candidate
+    return {}
+
+
+def _format_working_memory_section(payload: dict[str, Any] | None) -> str:
+    if not isinstance(payload, dict) or not payload:
+        return ""
+
+    items = payload.get("items")
+    if not isinstance(items, list) or not items:
+        return ""
+
+    lines = ["## 工作记忆（近 30 分钟）"]
+    kept_items = 0
+    for item in items[:5]:
+        if not isinstance(item, dict):
+            continue
+        summary = str(item.get("summary") or "").strip()
+        if not summary:
+            continue
+        subject_type = str(item.get("subject_type") or "").strip()
+        prefix = f"{subject_type}: " if subject_type else ""
+        lines.append(f"- {prefix}{summary}")
+        kept_items += 1
+
+    if kept_items == 0:
+        return ""
+
+    lines.append("- 这些内容只用于保持短时连续性，过期或无关内容不要强行引用。")
+    return _truncate_section("\n".join(lines), target_tokens=300)
+
+
 def _has_signal_payload(value: Any) -> bool:
     if value is None:
         return False
@@ -2335,9 +2506,33 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
         "calendar_context",
         "idiographic_summary",
         "social_context",
+        "social_signals_summary",
+        "srl_phase",
+        "working_memory_snapshot",
     )
     field_status: dict[str, Any] = {}
     for key in tracked_fields:
+        stage33_feature = {
+            "social_signals_summary": "social",
+            "srl_phase": "srl",
+            "working_memory_snapshot": "wm_prompt",
+        }.get(key)
+        if stage33_feature and _resolve_stage33_feature_mode(context, stage33_feature) != "live":
+            normalized_value = normalized.get(key)
+            item_count = 0
+            if isinstance(normalized_value, (list, dict)):
+                item_count = len(normalized_value)
+            elif _has_signal_payload(normalized_value):
+                item_count = 1
+            field_status[key] = {
+                "collected": False,
+                "collected_sources": [],
+                "normalized": _has_signal_payload(normalized_value),
+                "rendered": False,
+                "item_count": item_count,
+            }
+            continue
+
         sources: list[str] = []
         if _has_signal_payload(_extract_canonical_signal(canonical_insight, key)):
             sources.append("canonical_insight_state")
@@ -2354,6 +2549,18 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
             and _has_signal_payload(knowledge_summary.get("recent_mastery_changes"))
         ):
             sources.append("profile_context.knowledge_summary")
+        if key == "social_signals_summary":
+            social_payload = _extract_stage33_social_payload(context)
+            if _has_signal_payload(social_payload):
+                sources.append("stage33_social_payload")
+        if key == "srl_phase":
+            srl_payload = _extract_stage33_srl_payload(context)
+            if _has_signal_payload(srl_payload):
+                sources.append("stage33_srl_payload")
+        if key == "working_memory_snapshot":
+            working_memory_payload = _extract_working_memory_payload(context)
+            if _has_signal_payload(working_memory_payload):
+                sources.append("working_memory_payload")
 
         normalized_value = normalized.get(key)
         item_count = 0
@@ -2724,7 +2931,26 @@ def _render_user_context_content(
         lines.append("【工具偏好】")
         lines.append(f"- 常用工具: {', '.join(normalized['preferred_tools'])}")
 
-    if (
+    stage33_social_mode = _resolve_stage33_feature_mode(context, "social")
+    if stage33_social_mode == "live":
+        social_signal_section = _format_stage33_social_signal_section(
+            normalized.get("social_signals_summary")
+        )
+        if social_signal_section:
+            lines.append(social_signal_section)
+            _mark_rendered("social_signals_summary")
+            telemetry["section_sizes"]["social_signals"] = {
+                "items": len(
+                    [
+                        item
+                        for item in str(normalized.get("social_signals_summary", {}).get("summary_text") or "").split("；")
+                        if item.strip()
+                    ]
+                )
+                or len((normalized.get("social_signals_summary") or {}).get("summary_lines") or []),
+                "approx_tokens": _estimate_prompt_tokens(social_signal_section),
+            }
+    elif (
         settings.SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED
         or settings.SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED
     ):
@@ -2733,6 +2959,36 @@ def _render_user_context_content(
         if social_lines:
             lines.extend(social_lines)
             _mark_rendered("social_context")
+
+    stage33_srl_mode = _resolve_stage33_feature_mode(context, "srl")
+    if stage33_srl_mode == "live":
+        srl_section = _format_stage33_srl_phase_section(normalized.get("srl_phase"))
+        if srl_section:
+            lines.append(srl_section)
+            _mark_rendered("srl_phase")
+            telemetry["section_sizes"]["srl_phase"] = {
+                "items": len(srl_section.splitlines()) - 1,
+                "approx_tokens": _estimate_prompt_tokens(srl_section),
+            }
+
+    working_memory_mode = _resolve_stage33_feature_mode(context, "wm_prompt")
+    if working_memory_mode == "live":
+        working_memory_section = _format_working_memory_section(
+            normalized.get("working_memory_snapshot")
+        )
+        if working_memory_section:
+            lines.append(working_memory_section)
+            _mark_rendered("working_memory_snapshot")
+            telemetry["section_sizes"]["working_memory_snapshot"] = {
+                "items": len(
+                    [
+                        item
+                        for item in (normalized.get("working_memory_snapshot") or {}).get("items", [])
+                        if isinstance(item, dict) and str(item.get("summary") or "").strip()
+                    ]
+                ),
+                "approx_tokens": _estimate_prompt_tokens(working_memory_section),
+            }
 
     calendar_lines = _format_calendar_context_lines(normalized.get("calendar_context") or {})
     if calendar_lines:
@@ -2990,6 +3246,15 @@ def _normalize_user_context(context: dict) -> dict:
         normalized["residual_decision_context"] = context["residual_decision_context"]
     if isinstance(context.get("user_material_grounding"), dict):
         normalized["user_material_grounding"] = context["user_material_grounding"]
+    stage33_social_payload = _extract_stage33_social_payload(context)
+    if isinstance(stage33_social_payload, dict) and stage33_social_payload:
+        normalized["social_signals_summary"] = stage33_social_payload
+    stage33_srl_payload = _extract_stage33_srl_payload(context)
+    if isinstance(stage33_srl_payload, dict) and stage33_srl_payload:
+        normalized["srl_phase"] = stage33_srl_payload
+    working_memory_snapshot = _extract_working_memory_payload(context)
+    if isinstance(working_memory_snapshot, dict) and working_memory_snapshot:
+        normalized["working_memory_snapshot"] = working_memory_snapshot
     if isinstance(context.get("social_context"), dict):
         normalized["social_context"] = context["social_context"]
 

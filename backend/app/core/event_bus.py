@@ -206,6 +206,31 @@ class PlanCreatedEvent(Event):
         }
 
 
+class UserRegisteredEvent(Event):
+    def __init__(
+        self,
+        user_id: str,
+        username: str,
+        registration_source: str = "email",
+        metadata: dict[str, Any] | None = None,
+    ):
+        self.user_id = user_id
+        self.username = username
+        self.registration_source = registration_source
+        self.metadata = metadata or {}
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "user.registered",
+            "user_id": self.user_id,
+            "username": self.username,
+            "registration_source": self.registration_source,
+            "metadata": self.metadata,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class ReflectionCompletedEvent(Event):
     def __init__(
         self,

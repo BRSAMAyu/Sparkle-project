@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import math
 import os
+import re
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -13,7 +14,6 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.core.cache import cache_service
 from app.core.event_bus import EventBus
 from app.core.metrics import (
@@ -25,11 +25,19 @@ from app.core.metrics import (
     SRL_TRACKER_LOCK_CONTENTION_TOTAL,
 )
 from app.db.session import AsyncSessionLocal
+from app.models.aurora_stage20 import RoutingDecisionLog
 from app.models.srl_phase_state import SRLPhaseStateRecord
 from app.models.user_preferences import UserPreferencesCenter
-from app.services.aurora_stage29_srl_kill_switch_service import AuroraStage29SRLKillSwitchService
+from app.services.aurora_stage29_srl_kill_switch_service import (
+    AuroraStage29SRLKillSwitchService,
+)
 from app.services.srl_phase_traits import derive_coldstart_phase_from_traits
-from app.services.srl_phase_types import INACTIVE_TIMEOUT_HOURS, SRLPhase, SRLPhaseState, get_transition_rule
+from app.services.srl_phase_types import (
+    INACTIVE_TIMEOUT_HOURS,
+    SRLPhase,
+    SRLPhaseState,
+    get_transition_rule,
+)
 
 
 def _utcnow() -> datetime:
@@ -42,6 +50,8 @@ class SRLPhaseTrackerService:
     CACHE_PREFIX = "aurora:stage29:srl:state:"
     CACHE_TTL_SECONDS = 60 * 60 * 24
     MAX_EVIDENCE_IDS = 12
+    FORCE_RESET_CONFIDENCE_CAP = 0.8
+    EVIDENCE_ID_PATTERN = re.compile(r"^[a-zA-Z_]+:[A-Za-z0-9\-:.]+$")
 
     def __init__(
         self,
@@ -81,7 +91,9 @@ class SRLPhaseTrackerService:
                         callback=self.handle_event,
                     )
                     self._subscribed = True
-                    logger.info("SRLPhaseTrackerService subscribed to {}", self.STREAM_NAME)
+                    logger.info(
+                        "SRLPhaseTrackerService subscribed to {}", self.STREAM_NAME
+                    )
                 await asyncio.sleep(1)
             except Exception as exc:
                 self._subscribed = False
@@ -99,8 +111,13 @@ class SRLPhaseTrackerService:
             return None
         return await self.handle_transition_event(event)
 
-    async def handle_transition_event(self, event: dict[str, Any]) -> SRLPhaseState | None:
-        if await self.kill_switch.get_mode() == "off" or await self.kill_switch.get_tracker_mode() == "off":
+    async def handle_transition_event(
+        self, event: dict[str, Any]
+    ) -> SRLPhaseState | None:
+        if (
+            await self.kill_switch.get_mode() == "off"
+            or await self.kill_switch.get_tracker_mode() == "off"
+        ):
             return None
 
         event_type = str(event.get("event_type") or "").strip()
@@ -112,7 +129,11 @@ class SRLPhaseTrackerService:
         if not trigger_event_type:
             raise ValueError("trigger_event_type is required")
 
-        evidence_id = str(event.get("evidence_id") or f"{trigger_event_type}:{self.now_factory().isoformat()}").strip()
+        evidence_id = str(
+            event.get("evidence_id") or self._default_evidence_id(trigger_event_type)
+        ).strip()
+        if not self._is_valid_evidence_id(evidence_id):
+            raise ValueError(f"invalid evidence_id: {evidence_id}")
         metadata = dict(event.get("metadata") or {})
         published_at = self._coerce_datetime(event.get("published_at"))
 
@@ -122,7 +143,9 @@ class SRLPhaseTrackerService:
                     current_state = await self._get_current_phase_internal(db, user_id)
                     current_state = self._apply_inactivity_if_needed(current_state)
 
-                    rule = get_transition_rule(current_state.current_phase, trigger_event_type)
+                    rule = get_transition_rule(
+                        current_state.current_phase, trigger_event_type
+                    )
                     if rule is None:
                         SRL_EVENT_CONSUMED_TOTAL.labels(
                             trigger_event_type=trigger_event_type,
@@ -170,28 +193,48 @@ class SRLPhaseTrackerService:
         self,
         user_id: UUID | str,
         phase: SRLPhase | str,
-        reason: str,
+        justification: str,
     ) -> SRLPhaseState:
         normalized_user_id = self._normalize_user_id(user_id)
-        next_phase = phase if isinstance(phase, SRLPhase) else SRLPhase(str(phase).strip().upper())
+        next_phase = (
+            phase
+            if isinstance(phase, SRLPhase)
+            else SRLPhase(str(phase).strip().upper())
+        )
+        cleaned_justification = str(justification or "").strip()
+        if not cleaned_justification:
+            raise ValueError("justification is required")
+        evidence_id = self._force_reset_evidence_id(cleaned_justification)
         async with self._user_lock(str(normalized_user_id)):
             async with self._distributed_lock(str(normalized_user_id)):
                 async with self._session_scope() as (db, owns_session):
-                    current_state = await self._get_current_phase_internal(db, normalized_user_id)
+                    current_state = await self._get_current_phase_internal(
+                        db, normalized_user_id
+                    )
+                    decided_at = self.now_factory()
                     forced_state = SRLPhaseState(
                         user_id=normalized_user_id,
                         current_phase=next_phase,
                         previous_phase=current_state.current_phase,
-                        phase_started_at=self.now_factory(),
+                        phase_started_at=decided_at,
                         transition_evidence_ids=self._append_evidence_ids(
                             current_state.transition_evidence_ids,
-                            f"force_reset:{reason.strip() or 'manual'}",
+                            evidence_id,
                         ),
-                        confidence=1.0,
+                        confidence=self.FORCE_RESET_CONFIDENCE_CAP,
                         source="default",
-                        updated_at=self.now_factory(),
+                        updated_at=decided_at,
                     )
                     await self._persist_state(db, forced_state)
+                    await self._write_force_reset_audit(
+                        db,
+                        user_id=normalized_user_id,
+                        previous_phase=current_state.current_phase,
+                        next_phase=next_phase,
+                        justification=cleaned_justification,
+                        confidence=forced_state.confidence,
+                        decided_at=decided_at,
+                    )
                     if owns_session:
                         await db.commit()
                     self._record_transition_metrics(current_state, forced_state)
@@ -201,7 +244,9 @@ class SRLPhaseTrackerService:
         if self.event_bus is None:
             return {"lag_p95": 0.0, "dlq_size": 0}
 
-        lag_info = await self.event_bus.get_consumer_lag(stream=self.STREAM_NAME, group_name=self.GROUP_NAME)
+        lag_info = await self.event_bus.get_consumer_lag(
+            stream=self.STREAM_NAME, group_name=self.GROUP_NAME
+        )
         lag_values = [
             float(group.get("lag_time_seconds") or 0.0)
             for group in lag_info.get("groups", [])
@@ -234,7 +279,9 @@ class SRLPhaseTrackerService:
     async def _distributed_lock(self, user_id: str):
         lock_context = None
         try:
-            lock_context = cache_service.distributed_lock(f"srl-phase:{user_id}", expire=10)
+            lock_context = cache_service.distributed_lock(
+                f"srl-phase:{user_id}", expire=10
+            )
             await lock_context.__aenter__()
         except Exception:
             SRL_TRACKER_LOCK_CONTENTION_TOTAL.labels(mode="fallback").inc()
@@ -246,7 +293,9 @@ class SRLPhaseTrackerService:
             if lock_context is not None:
                 await lock_context.__aexit__(None, None, None)
 
-    async def _get_current_phase_internal(self, db: AsyncSession, user_id: UUID) -> SRLPhaseState:
+    async def _get_current_phase_internal(
+        self, db: AsyncSession, user_id: UUID
+    ) -> SRLPhaseState:
         cached = await self._load_cached_state(user_id)
         if cached is not None:
             return cached
@@ -258,20 +307,28 @@ class SRLPhaseTrackerService:
             return state
 
         traits_prior = await self._load_traits_prior(db, user_id)
-        coldstart_state = derive_coldstart_phase_from_traits(user_id=user_id, traits_prior=traits_prior)
+        coldstart_state = derive_coldstart_phase_from_traits(
+            user_id=user_id, traits_prior=traits_prior
+        )
         await self._persist_state(db, coldstart_state)
         await self._persist_cache(coldstart_state)
         return coldstart_state
 
-    async def _get_state_record(self, db: AsyncSession, user_id: UUID) -> SRLPhaseStateRecord | None:
+    async def _get_state_record(
+        self, db: AsyncSession, user_id: UUID
+    ) -> SRLPhaseStateRecord | None:
         result = await db.execute(
             select(SRLPhaseStateRecord).where(SRLPhaseStateRecord.user_id == user_id)
         )
         return result.scalar_one_or_none()
 
-    async def _load_traits_prior(self, db: AsyncSession, user_id: UUID) -> dict[str, Any]:
+    async def _load_traits_prior(
+        self, db: AsyncSession, user_id: UUID
+    ) -> dict[str, Any]:
         result = await db.execute(
-            select(UserPreferencesCenter.traits_prior).where(UserPreferencesCenter.user_id == user_id)
+            select(UserPreferencesCenter.traits_prior).where(
+                UserPreferencesCenter.user_id == user_id
+            )
         )
         traits_prior = result.scalar_one_or_none()
         return dict(traits_prior or {})
@@ -299,7 +356,9 @@ class SRLPhaseTrackerService:
                 user_id=state.user_id,
                 current_phase=state.current_phase.value,
                 phase_started_at=state.phase_started_at,
-                previous_phase=state.previous_phase.value if state.previous_phase else None,
+                previous_phase=(
+                    state.previous_phase.value if state.previous_phase else None
+                ),
                 transition_evidence_ids=list(state.transition_evidence_ids),
                 confidence=state.confidence,
                 source=state.source,
@@ -309,7 +368,9 @@ class SRLPhaseTrackerService:
         else:
             record.current_phase = state.current_phase.value
             record.phase_started_at = state.phase_started_at
-            record.previous_phase = state.previous_phase.value if state.previous_phase else None
+            record.previous_phase = (
+                state.previous_phase.value if state.previous_phase else None
+            )
             record.transition_evidence_ids = list(state.transition_evidence_ids)
             record.confidence = state.confidence
             record.source = state.source
@@ -331,9 +392,13 @@ class SRLPhaseTrackerService:
         if next_phase != current_state.current_phase:
             phase_started_at = now
 
-        evidence_ids = self._append_evidence_ids(current_state.transition_evidence_ids, evidence_id)
+        evidence_ids = self._append_evidence_ids(
+            current_state.transition_evidence_ids, evidence_id
+        )
         if metadata.get("plan_id"):
-            evidence_ids = self._append_evidence_ids(evidence_ids, f"plan:{metadata['plan_id']}")
+            evidence_ids = self._append_evidence_ids(
+                evidence_ids, f"plan:{metadata['plan_id']}"
+            )
 
         return SRLPhaseState(
             user_id=current_state.user_id,
@@ -341,7 +406,9 @@ class SRLPhaseTrackerService:
             previous_phase=previous_phase,
             phase_started_at=phase_started_at,
             transition_evidence_ids=evidence_ids,
-            confidence=self._confidence_for_transition(next_phase=next_phase, same_phase=next_phase == previous_phase),
+            confidence=self._confidence_for_transition(
+                next_phase=next_phase, same_phase=next_phase == previous_phase
+            ),
             source="event_triggered",
             updated_at=now,
         )
@@ -356,19 +423,25 @@ class SRLPhaseTrackerService:
             current_phase=SRLPhase.UNKNOWN,
             previous_phase=state.current_phase,
             phase_started_at=now,
-            transition_evidence_ids=self._append_evidence_ids(state.transition_evidence_ids, "inactive_timeout"),
+            transition_evidence_ids=self._append_evidence_ids(
+                state.transition_evidence_ids, "inactive_timeout"
+            ),
             confidence=0.0,
             source="default",
             updated_at=now,
         )
 
-    def _record_transition_metrics(self, previous: SRLPhaseState, current: SRLPhaseState) -> None:
+    def _record_transition_metrics(
+        self, previous: SRLPhaseState, current: SRLPhaseState
+    ) -> None:
         SRL_PHASE_TRANSITION_TOTAL.labels(
             from_phase=previous.current_phase.value,
             to_phase=current.current_phase.value,
             source=current.source,
         ).inc()
-        SRL_PHASE_UNKNOWN_RATE.set(1.0 if current.current_phase == SRLPhase.UNKNOWN else 0.0)
+        SRL_PHASE_UNKNOWN_RATE.set(
+            1.0 if current.current_phase == SRLPhase.UNKNOWN else 0.0
+        )
 
     def _record_lag_metrics(self, published_at: datetime | None) -> None:
         if published_at is None:
@@ -385,7 +458,43 @@ class SRLPhaseTrackerService:
             normalized.append(evidence_id)
         return normalized[-self.MAX_EVIDENCE_IDS :]
 
-    def _confidence_for_transition(self, *, next_phase: SRLPhase, same_phase: bool) -> float:
+    async def _write_force_reset_audit(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: UUID,
+        previous_phase: SRLPhase,
+        next_phase: SRLPhase,
+        justification: str,
+        confidence: float,
+        decided_at: datetime,
+    ) -> None:
+        db.add(
+            RoutingDecisionLog(
+                created_at=decided_at,
+                updated_at=decided_at,
+                user_id=user_id,
+                decided_at=decided_at,
+                input_aggregator_snapshot_id="aurora_stage29_srl_force_reset",
+                decision_type="aurora_srl_force_reset",
+                decision_payload={
+                    "previous_phase": previous_phase.value,
+                    "next_phase": next_phase.value,
+                    "justification": justification,
+                    "confidence": round(float(confidence), 4),
+                    "rule": "AR",
+                },
+                source_state_v2={
+                    "component": "srl_phase_tracker",
+                    "mode": "manual_override",
+                },
+                source_state_v2_key="aurora.stage29.srl.force_reset",
+            )
+        )
+
+    def _confidence_for_transition(
+        self, *, next_phase: SRLPhase, same_phase: bool
+    ) -> float:
         if next_phase == SRLPhase.UNKNOWN:
             return 0.0
         if same_phase:
@@ -403,7 +512,9 @@ class SRLPhaseTrackerService:
             user_id=record.user_id,
             current_phase=SRLPhase(record.current_phase),
             phase_started_at=record.phase_started_at,
-            previous_phase=SRLPhase(record.previous_phase) if record.previous_phase else None,
+            previous_phase=(
+                SRLPhase(record.previous_phase) if record.previous_phase else None
+            ),
             transition_evidence_ids=list(record.transition_evidence_ids or []),
             confidence=float(record.confidence or 0.0),
             source=record.source,
@@ -433,6 +544,39 @@ class SRLPhaseTrackerService:
         if parsed.tzinfo is not None:
             return parsed.astimezone(UTC).replace(tzinfo=None)
         return parsed
+
+    @classmethod
+    def _default_evidence_id(cls, trigger_event_type: str) -> str:
+        prefix = (
+            re.sub(r"[^A-Za-z_]+", "_", str(trigger_event_type or "").strip()).strip(
+                "_"
+            )
+            or "event"
+        )
+        return f"{prefix}:{_utcnow().isoformat()}"
+
+    @classmethod
+    def _force_reset_evidence_id(cls, justification: str) -> str:
+        suffix = (
+            re.sub(r"[^A-Za-z0-9\-:.]+", "_", str(justification or "").strip()).strip(
+                "_"
+            )
+            or "manual"
+        )
+        return f"force_reset:{suffix}"
+
+    @classmethod
+    def _is_valid_evidence_id(cls, evidence_id: str) -> bool:
+        normalized = str(evidence_id or "").strip()
+        if not normalized:
+            return False
+        if cls.EVIDENCE_ID_PATTERN.match(normalized):
+            return True
+        try:
+            UUID(normalized)
+            return True
+        except (TypeError, ValueError):
+            return False
 
     @staticmethod
     def _p95(values: list[float]) -> float:

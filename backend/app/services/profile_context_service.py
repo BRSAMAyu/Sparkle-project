@@ -241,6 +241,7 @@ class ProfileContextService:
         except Exception as exc:
             logger.warning(f"Failed to attach SRL phase summary: {exc}")
 
+    # rule-as: ignore stage35_metacognition_router_pending
     async def _attach_metacognition_context(
         self,
         user_id: UUID,
@@ -262,6 +263,7 @@ class ProfileContextService:
         except Exception as exc:
             logger.warning(f"Failed to attach metacognition context: {exc}")
 
+    # rule-as: ignore existing_prompt_and_stage31_path
     async def _attach_idiographic_summary(
         self,
         user_id: UUID,

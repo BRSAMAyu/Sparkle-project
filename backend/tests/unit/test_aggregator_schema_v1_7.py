@@ -22,7 +22,7 @@ async def test_aggregator_schema_v1_7_reports_recent_scenes(db_session) -> None:
         required_fields=("recent_scenes",),
     )
 
-    assert state.schema_version == "user_state.v1.12"
+    assert state.schema_version == "user_state.v1.13"
     assert state.recent_scenes is not None
     assert len(state.recent_scenes.value.items) == 1
 

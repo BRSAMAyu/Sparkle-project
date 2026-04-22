@@ -1,4 +1,6 @@
 from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router
+from app.services.social_signal_types import SocialSignalsV1
+from app.services.srl_phase_types import SRLPhaseHint
 
 
 def test_dual_core_router_selects_cognitive_first_for_repeated_difficulty_feedback() -> None:
@@ -150,3 +152,62 @@ def test_dual_core_router_emits_bounded_strategy_adjustments_for_high_friction_t
     assert adjustments["difficulty_level"] == 2
     assert adjustments["explanation_style"] == "step_by_step"
     assert adjustments["push_vs_support"] == 0.25
+
+
+def test_dual_core_router_adds_social_constraints_when_social_signals_are_present() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.84,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+            social_signals=SocialSignalsV1(
+                mention_count=2,
+                relationship_count=1,
+                pending_commitments_count=1,
+                social_learning_preference=0.81,
+                summary_lines=(
+                    "最近 7 天提到过 2 位学习相关人物。",
+                    "目前有 1 条到期承诺待跟进。",
+                ),
+            ),
+        )
+    )
+
+    rendered = "\n".join(decision.cognitive_adjustments + decision.execution_constraints)
+    assert "边界感" in rendered
+    assert "对外承诺" in rendered
+    assert "同伴或群组" in rendered
+    assert decision.routing_debug["explicit_social_signal"] is True
+    assert decision.routing_debug["social_pending_commitments_count"] == 1
+
+
+def test_dual_core_router_uses_srl_reflection_hint_to_prefer_cognitive_first() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.9,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+            srl_phase_hint=SRLPhaseHint(
+                current_phase="reflection",
+                confidence=0.78,
+                source="aggregator",
+                freshness_seconds=12,
+            ),
+        )
+    )
+
+    rendered = "\n".join(decision.cognitive_adjustments + decision.execution_constraints)
+    assert decision.mode == "cognitive_first"
+    assert "复盘反思阶段" in rendered
+    assert decision.routing_debug["explicit_srl_signal"] is True
+    assert decision.routing_debug["srl_phase"] == "reflection"

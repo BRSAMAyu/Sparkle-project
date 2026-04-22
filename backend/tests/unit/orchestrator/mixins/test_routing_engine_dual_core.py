@@ -6,9 +6,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.orchestration.dual_core_router import DualCoreDecision
+from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRoutingInput
 from app.orchestration.routing_engine import RoutingEngineMixin
 from app.orchestration.schemas import RouteDecision
+from app.services.social_signal_types import SocialSignalsV1
+from app.services.srl_phase_types import SRLPhaseHint
 
 
 class MinimalRoutingOrchestrator(RoutingEngineMixin):
@@ -146,6 +148,70 @@ async def test_build_dual_core_input_includes_cognitive_patterns_and_routing_pro
 
 
 @pytest.mark.asyncio
+async def test_build_dual_core_input_extracts_stage33_social_signals_from_cognitive_context(orchestrator):
+    routing_input = await orchestrator._build_dual_core_input(
+        active_db=None,
+        user_id=str(uuid.uuid4()),
+        plan_id=None,
+        user_context_payload={
+            "cognitive_context": {
+                "social_context_v1": {
+                    "mention_count": 2,
+                    "relationship_count": 1,
+                    "pending_commitments_count": 1,
+                    "summary_lines": [
+                        "最近 7 天提到过 2 位学习相关人物。",
+                        "目前有 1 条到期承诺待跟进。",
+                    ],
+                }
+            }
+        },
+        plan_context=None,
+        unified_routing_result=SimpleNamespace(
+            primary_intent=SimpleNamespace(value="plan"),
+            confidence=0.77,
+        ),
+        information_sufficient=True,
+    )
+
+    assert routing_input.social_signals is not None
+    assert routing_input.social_signals.mention_count == 2
+    assert routing_input.social_signals.relationship_count == 1
+    assert routing_input.social_signals.pending_commitments_count == 1
+
+
+@pytest.mark.asyncio
+async def test_build_dual_core_input_extracts_stage33_srl_hint_from_profile_context(orchestrator):
+    routing_input = await orchestrator._build_dual_core_input(
+        active_db=None,
+        user_id=str(uuid.uuid4()),
+        plan_id=None,
+        user_context_payload={
+            "profile_context": {
+                "user_insight_state": {
+                    "srl_phase": {
+                        "current_phase": "SELF_REFLECTION",
+                        "confidence": 0.81,
+                        "source": "aggregator",
+                        "freshness_seconds": 9,
+                    }
+                }
+            }
+        },
+        plan_context=None,
+        unified_routing_result=SimpleNamespace(
+            primary_intent=SimpleNamespace(value="plan"),
+            confidence=0.77,
+        ),
+        information_sufficient=True,
+    )
+
+    assert routing_input.srl_phase_hint is not None
+    assert routing_input.srl_phase_hint.current_phase == "reflection"
+    assert routing_input.srl_phase_hint.confidence == pytest.approx(0.81)
+
+
+@pytest.mark.asyncio
 async def test_apply_dual_core_routing_for_cognitive_first_rewrites_langgraph_route(orchestrator):
     decision = DualCoreDecision(
         mode="cognitive_first",
@@ -210,17 +276,26 @@ async def test_apply_dual_core_routing_persists_current_guidance_in_snapshot(orc
         orchestrator,
         "_build_dual_core_input",
         AsyncMock(
-            return_value=SimpleNamespace(
+            return_value=DualCoreRoutingInput(
                 intent="plan",
                 intent_confidence=0.76,
+                information_sufficient=True,
                 primary_challenge_area="execution",
                 recent_sentiment_distribution={"neutral": 2},
+                has_active_plan=False,
+                plan_health_status="warning",
                 recent_task_feedback_distribution={"too_long": 1},
                 behavior_pattern_names=["完美主义回避循环"],
                 behavior_pattern_details=[{"pattern_name": "完美主义回避循环"}],
                 behavior_pattern_types={"execution": 1},
-                plan_health_status="warning",
+                session_length_preference=None,
+                difficulty_preference=None,
+                emotional_block_detected=False,
+                procrastination_pattern=False,
+                cognitive_mode_suggested=False,
+                suggested_verbosity=None,
                 routing_profile={"procrastination_threshold": 0.6},
+                adaptive_adjustments={},
                 current_guidance="优先先搭桥，再给任务。",
             )
         ),
@@ -342,6 +417,206 @@ async def test_apply_dual_core_routing_records_shadow_comparison_without_taking_
     assert state.context_data["aurora_shadow_comparison"]["legacy_mode"] == "execution_first"
     assert state.context_data["aurora_shadow_comparison"]["diverged"] is True
     divergence_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_apply_dual_core_routing_records_stage33_social_shadow_delta(orchestrator):
+    orchestrator.dual_core_router.route.side_effect = [
+        DualCoreDecision(
+            mode="execution_first",
+            reason="legacy route",
+            cognitive_adjustments=[],
+            execution_constraints=[],
+        ),
+        DualCoreDecision(
+            mode="execution_first",
+            reason="social-aware route",
+            cognitive_adjustments=["涉及他人或协作情境时，保持边界感，不要替用户许诺或推断他人立场。"],
+            execution_constraints=["若要安排下一步，请先兼容用户已有的对外承诺，避免叠加新的长期负债。"],
+        ),
+    ]
+    state = SimpleNamespace(context_data={"plan_metadata": {}})
+    user_context_payload = {}
+
+    with (
+        patch(
+            "app.orchestration.routing_engine.AuroraStage33KillSwitchService.summary",
+            AsyncMock(
+                return_value={
+                    "mode": "shadow",
+                    "social": "shadow",
+                    "srl": "shadow",
+                    "wm_prompt": "shadow",
+                    "events": "shadow",
+                }
+            ),
+        ),
+        patch(
+            "app.orchestration.routing_engine.resolve_cutover_state",
+            return_value=SimpleNamespace(mode="control", reason="test_control"),
+        ),
+        patch.object(
+            orchestrator,
+            "_build_dual_core_input",
+            AsyncMock(
+                return_value=DualCoreRoutingInput(
+                    intent="plan",
+                    intent_confidence=0.82,
+                    information_sufficient=True,
+                    primary_challenge_area="execution",
+                    recent_sentiment_distribution={"neutral": 2},
+                    has_active_plan=True,
+                    plan_health_status="healthy",
+                    recent_task_feedback_distribution={"just_right": 1},
+                    behavior_pattern_names=[],
+                    behavior_pattern_types={},
+                    behavior_pattern_details=[],
+                    session_length_preference=25,
+                    difficulty_preference=0.5,
+                    emotional_block_detected=False,
+                    procrastination_pattern=False,
+                    cognitive_mode_suggested=False,
+                    suggested_verbosity=None,
+                    current_guidance=None,
+                    routing_profile={},
+                    adaptive_adjustments={},
+                    social_signals=SocialSignalsV1(
+                        mention_count=2,
+                        relationship_count=1,
+                        pending_commitments_count=1,
+                        summary_lines=(
+                            "最近 7 天提到过 2 位学习相关人物。",
+                            "目前有 1 条到期承诺待跟进。",
+                        ),
+                    ),
+                )
+            ),
+        ),
+    ):
+        updated = await orchestrator._apply_dual_core_routing(
+            route_decision=RouteDecision(
+                execution_mode="hybrid",
+                reason="legacy route",
+                risk_level="medium",
+                confidence=0.7,
+            ),
+            state=state,
+            active_db=None,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=user_context_payload,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.82,
+            ),
+            information_sufficient=True,
+            stream_callback=AsyncMock(),
+        )
+
+    assert updated.reason.endswith("dual_core:execution_first")
+    assert user_context_payload["aurora_stage33_modes"]["social"] == "shadow"
+    assert state.context_data["stage33_shadow_delta"]["social"]["mode_changed"] is False
+    assert state.context_data["stage33_shadow_delta"]["social"]["added_execution_constraints"]
+    assert state.context_data["stage33_shadow_delta"]["social"]["signal_payload"]["mention_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_apply_dual_core_routing_records_stage33_srl_shadow_delta(orchestrator):
+    orchestrator.dual_core_router.route.side_effect = [
+        DualCoreDecision(
+            mode="execution_first",
+            reason="legacy route",
+            cognitive_adjustments=[],
+            execution_constraints=[],
+        ),
+        DualCoreDecision(
+            mode="cognitive_first",
+            reason="reflection-aware route",
+            cognitive_adjustments=["用户当前处在复盘反思阶段，先帮助总结哪里有效、哪里失灵，再决定下一轮怎么改。"],
+            execution_constraints=[],
+        ),
+    ]
+    state = SimpleNamespace(context_data={"plan_metadata": {}})
+    user_context_payload = {}
+
+    with (
+        patch(
+            "app.orchestration.routing_engine.AuroraStage33KillSwitchService.summary",
+            AsyncMock(
+                return_value={
+                    "mode": "shadow",
+                    "social": "off",
+                    "srl": "shadow",
+                    "wm_prompt": "shadow",
+                    "events": "shadow",
+                }
+            ),
+        ),
+        patch(
+            "app.orchestration.routing_engine.resolve_cutover_state",
+            return_value=SimpleNamespace(mode="control", reason="test_control"),
+        ),
+        patch.object(
+            orchestrator,
+            "_build_dual_core_input",
+            AsyncMock(
+                return_value=DualCoreRoutingInput(
+                    intent="plan",
+                    intent_confidence=0.82,
+                    information_sufficient=True,
+                    primary_challenge_area="execution",
+                    recent_sentiment_distribution={"neutral": 2},
+                    has_active_plan=True,
+                    plan_health_status="healthy",
+                    recent_task_feedback_distribution={"just_right": 1},
+                    behavior_pattern_names=[],
+                    behavior_pattern_types={},
+                    behavior_pattern_details=[],
+                    session_length_preference=25,
+                    difficulty_preference=0.5,
+                    emotional_block_detected=False,
+                    procrastination_pattern=False,
+                    cognitive_mode_suggested=False,
+                    suggested_verbosity=None,
+                    current_guidance=None,
+                    routing_profile={},
+                    adaptive_adjustments={},
+                    srl_phase_hint=SRLPhaseHint(
+                        current_phase="reflection",
+                        confidence=0.79,
+                        source="aggregator",
+                        freshness_seconds=8,
+                    ),
+                )
+            ),
+        ),
+    ):
+        updated = await orchestrator._apply_dual_core_routing(
+            route_decision=RouteDecision(
+                execution_mode="hybrid",
+                reason="legacy route",
+                risk_level="medium",
+                confidence=0.7,
+            ),
+            state=state,
+            active_db=None,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=user_context_payload,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.82,
+            ),
+            information_sufficient=True,
+            stream_callback=AsyncMock(),
+        )
+
+    assert updated.reason.endswith("dual_core:execution_first")
+    assert user_context_payload["aurora_stage33_modes"]["srl"] == "shadow"
+    assert state.context_data["stage33_shadow_delta"]["srl"]["mode_changed"] is True
+    assert state.context_data["stage33_shadow_delta"]["srl"]["signal_payload"]["current_phase"] == "reflection"
 
 
 @pytest.mark.asyncio

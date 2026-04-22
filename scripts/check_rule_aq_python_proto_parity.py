@@ -38,6 +38,7 @@ EXPECTED_PROTO_TYPES = {
     "srl_phase": ("TYPE_MESSAGE", "SRLPhaseSummaryField", True),
     "metacognition_profile": ("TYPE_MESSAGE", "MetacognitionProfileField", True),
     "idiographic_summary": ("TYPE_MESSAGE", "IdiographicSummaryField", True),
+    "social_signals_summary": ("TYPE_MESSAGE", "SocialSignalsSummaryField", True),
 }
 
 

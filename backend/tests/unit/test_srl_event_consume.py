@@ -3,7 +3,9 @@ from __future__ import annotations
 import pytest
 
 from app.core.cache import cache_service
-from app.services.aurora_stage29_srl_kill_switch_service import AuroraStage29SRLKillSwitchService
+from app.services.aurora_stage29_srl_kill_switch_service import (
+    AuroraStage29SRLKillSwitchService,
+)
 from app.services.srl_phase_tracker_service import SRLPhaseTrackerService
 from app.services.srl_phase_types import SRLPhase
 
@@ -15,17 +17,23 @@ async def _enable_live(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_tracker_handle_event_ignores_non_srl_messages(db_session, test_user, monkeypatch) -> None:
+async def test_tracker_handle_event_ignores_non_srl_messages(
+    db_session, test_user, monkeypatch
+) -> None:
     await _enable_live(monkeypatch)
     tracker = SRLPhaseTrackerService(db_session)
 
-    result = await tracker.handle_event({"event_type": "task.completed", "user_id": str(test_user.id)})
+    result = await tracker.handle_event(
+        {"event_type": "task.completed", "user_id": str(test_user.id)}
+    )
 
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_tracker_handle_event_consumes_transition_message(db_session, test_user, monkeypatch) -> None:
+async def test_tracker_handle_event_consumes_transition_message(
+    db_session, test_user, monkeypatch
+) -> None:
     await _enable_live(monkeypatch)
     tracker = SRLPhaseTrackerService(db_session)
 
@@ -34,7 +42,7 @@ async def test_tracker_handle_event_consumes_transition_message(db_session, test
             "event_type": "srl.phase.transition",
             "user_id": str(test_user.id),
             "trigger_event_type": "task.started",
-            "evidence_id": "task-1",
+            "evidence_id": "task:1",
         }
     )
 
@@ -43,7 +51,9 @@ async def test_tracker_handle_event_consumes_transition_message(db_session, test
 
 
 @pytest.mark.asyncio
-async def test_tracker_handle_event_filters_self_published_non_transition_srl_events(db_session, test_user, monkeypatch) -> None:
+async def test_tracker_handle_event_filters_self_published_non_transition_srl_events(
+    db_session, test_user, monkeypatch
+) -> None:
     await _enable_live(monkeypatch)
     tracker = SRLPhaseTrackerService(db_session)
 
@@ -60,7 +70,9 @@ async def test_tracker_handle_event_filters_self_published_non_transition_srl_ev
 
 
 @pytest.mark.asyncio
-async def test_tracker_handle_event_records_reflection_phase(db_session, test_user, monkeypatch) -> None:
+async def test_tracker_handle_event_records_reflection_phase(
+    db_session, test_user, monkeypatch
+) -> None:
     await _enable_live(monkeypatch)
     tracker = SRLPhaseTrackerService(db_session)
 
@@ -69,7 +81,7 @@ async def test_tracker_handle_event_records_reflection_phase(db_session, test_us
             "event_type": "srl.phase.transition",
             "user_id": str(test_user.id),
             "trigger_event_type": "task.started",
-            "evidence_id": "task-1",
+            "evidence_id": "task:1",
         }
     )
     state = await tracker.handle_event(
@@ -77,7 +89,7 @@ async def test_tracker_handle_event_records_reflection_phase(db_session, test_us
             "event_type": "srl.phase.transition",
             "user_id": str(test_user.id),
             "trigger_event_type": "task.completed",
-            "evidence_id": "task-1",
+            "evidence_id": "task:1",
         }
     )
 
@@ -86,7 +98,9 @@ async def test_tracker_handle_event_records_reflection_phase(db_session, test_us
 
 
 @pytest.mark.asyncio
-async def test_tracker_handle_event_accepts_published_at_for_lag_tracking(db_session, test_user, monkeypatch) -> None:
+async def test_tracker_handle_event_accepts_published_at_for_lag_tracking(
+    db_session, test_user, monkeypatch
+) -> None:
     await _enable_live(monkeypatch)
     tracker = SRLPhaseTrackerService(db_session)
 
@@ -95,7 +109,7 @@ async def test_tracker_handle_event_accepts_published_at_for_lag_tracking(db_ses
             "event_type": "srl.phase.transition",
             "user_id": str(test_user.id),
             "trigger_event_type": "plan.created",
-            "evidence_id": "plan-1",
+            "evidence_id": "plan:1",
             "published_at": "2026-04-21T10:00:00+00:00",
         }
     )

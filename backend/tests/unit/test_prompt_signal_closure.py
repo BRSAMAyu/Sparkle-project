@@ -211,3 +211,80 @@ def test_build_system_prompt_renders_stage22_achievement_and_calendar_context() 
     assert telemetry["high_value_fields"]["achievement_summary"]["rendered"] is True
     assert telemetry["high_value_fields"]["calendar_context"]["rendered"] is True
     assert telemetry["field_render_coverage_ratio"] > 0
+
+
+def test_build_system_prompt_renders_stage33_social_signal_section_when_live() -> None:
+    user_context = {
+        "aurora_stage33_modes": {"mode": "shadow", "social": "live"},
+        "cognitive_context": {
+            "social_context_v1": {
+                "mention_count": 2,
+                "relationship_count": 1,
+                "pending_commitments_count": 1,
+                "summary_lines": [
+                    "最近 7 天提到过 2 位学习相关人物。",
+                    "目前有 1 条到期承诺待跟进。",
+                ],
+            }
+        },
+    }
+
+    prompt = build_system_prompt(user_context=user_context, conversation_history={"messages": []})
+    telemetry = user_context["prompt_signal_telemetry"]
+
+    assert "## 社群信号 [L2 引导]" in prompt
+    assert "最近 7 天提到过 2 位学习相关人物。" in prompt
+    assert "social_signals_summary" in telemetry["prompt_visible_high_value_fields"]
+    assert telemetry["high_value_fields"]["social_signals_summary"]["rendered"] is True
+
+
+def test_build_system_prompt_renders_stage33_srl_phase_section_when_live() -> None:
+    user_context = {
+        "aurora_stage33_modes": {"mode": "shadow", "srl": "live"},
+        "profile_context": {
+            "user_insight_state": {
+                "srl_phase": {
+                    "current_phase": "SELF_REFLECTION",
+                    "confidence": 0.82,
+                    "source": "aggregator",
+                    "freshness_seconds": 11,
+                }
+            }
+        },
+    }
+
+    prompt = build_system_prompt(user_context=user_context, conversation_history={"messages": []})
+    telemetry = user_context["prompt_signal_telemetry"]
+
+    assert "## 学习自调节阶段" in prompt
+    assert "当前阶段：复盘反思（reflection）" in prompt
+    assert "srl_phase" in telemetry["prompt_visible_high_value_fields"]
+    assert telemetry["high_value_fields"]["srl_phase"]["rendered"] is True
+
+
+def test_build_system_prompt_renders_stage33_working_memory_section_with_budget_cap() -> None:
+    user_context = {
+        "aurora_stage33_modes": {"mode": "shadow", "wm_prompt": "live"},
+        "working_memory_snapshot": {
+            "active_session_id": "session-1",
+            "items": [
+                {
+                    "summary": "准备本周末补完高数真题，并且先把错题按题型重新归档，避免继续混在一起导致复盘效率太低。",
+                    "subject_type": "commitment",
+                },
+                {
+                    "summary": "和同学约好今晚对一遍热力学公式推导，看看到底卡在概念还是计算。",
+                    "subject_type": "social",
+                },
+            ],
+        },
+    }
+
+    prompt = build_system_prompt(user_context=user_context, conversation_history={"messages": []})
+    telemetry = user_context["prompt_signal_telemetry"]
+
+    assert "## 工作记忆（近 30 分钟）" in prompt
+    assert "commitment:" in prompt
+    assert "working_memory_snapshot" in telemetry["prompt_visible_high_value_fields"]
+    assert telemetry["high_value_fields"]["working_memory_snapshot"]["rendered"] is True
+    assert telemetry["section_sizes"]["working_memory_snapshot"]["approx_tokens"] <= 300

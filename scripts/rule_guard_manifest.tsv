@@ -2,6 +2,8 @@
 K	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_k_write_paths.py"
 Y	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_y_inferred_extraction.py"
 Z	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_z_social_boundary.py"
+Z-SOCIAL	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_z_social_cross_user.py"
+AS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_as_vision_compliance.py"
 AB	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ab_aggregator_integrity.py"
 AC	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ac_working_memory.py"
 AD	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ad_sufficiency_split.py"
@@ -18,3 +20,4 @@ AN	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_rule_an_orchestrator_isol
 AQ	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_aq_python_proto_parity.py"
 AO	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ao_no_diagnostic_labels.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ao_not_in_router.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_metacognition_scaffolding_decoupled.py"
 AP	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ap_idiographic_association.py"
+AR	bash "${REPO_ROOT}/scripts/stage32/run_sqam_suite.sh"

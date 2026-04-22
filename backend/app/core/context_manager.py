@@ -21,6 +21,7 @@ from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
+from app.services.social_signal_bridge import SocialSignalBridge
 from app.services.task_service import TaskService
 from app.services.user_service import UserService
 
@@ -54,6 +55,7 @@ class CognitiveContext(BaseModel):
     engagement_metrics: dict[str, Any] = Field(default_factory=dict, description="Engagement level and patterns")
     community_context: dict[str, Any] = Field(default_factory=dict, description="Active community participation snapshot")
     social_context: dict[str, Any] = Field(default_factory=dict, description="Stage 17 isolated social context namespace")
+    social_context_v1: dict[str, Any] = Field(default_factory=dict, description="Stage 33 read-only social signal summary")
     profile_context: dict[str, Any] | None = Field(default=None, description="Unified profile context payload")
     achievement_summary: dict[str, Any] = Field(default_factory=dict, description="Read-only achievement summary")
     calendar_context: dict[str, Any] = Field(default_factory=dict, description="Read-only calendar constraints")
@@ -160,6 +162,7 @@ class ContextOrchestrator:
             _with_session(lambda db: self._get_task_profile(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_user_metrics(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_community_profile(uid, db)),  # type: ignore[misc]
+            _with_session(lambda db: self._get_social_context_v1(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_achievement_context(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_calendar_context(uid, db)),  # type: ignore[misc]
             return_exceptions=True
@@ -171,8 +174,9 @@ class ContextOrchestrator:
         task_data = self._handle_result(results[2], "task", {})
         metrics_data = self._handle_result(results[3], "metrics", {})
         community_data = self._handle_result(results[4], "community", {})
-        achievement_data = self._handle_result(results[5], "achievement", {})
-        calendar_data = self._handle_result(results[6], "calendar", {})
+        social_data = self._handle_result(results[5], "social", {})
+        achievement_data = self._handle_result(results[6], "achievement", {})
+        calendar_data = self._handle_result(results[7], "calendar", {})
 
         knowledge_summary = {}
         preference_version = 0
@@ -206,7 +210,8 @@ class ContextOrchestrator:
             preferences=preferences,
             engagement_metrics=metrics_data or {},
             community_context=self._assert_allowed_community_context(community_data or {}),
-            social_context={},
+            social_context=social_data or {},
+            social_context_v1=social_data or {},
             profile_context=profile_context_payload,
             achievement_summary=achievement_data or {},
             calendar_context=calendar_data or {},
@@ -232,6 +237,15 @@ class ContextOrchestrator:
         context.achievement_summary = _clean(context.achievement_summary)
         context.calendar_context = _clean(context.calendar_context)
         return context
+
+    async def _get_social_context_v1(
+        self,
+        user_id: UUID,
+        db_session: AsyncSession | None = None,
+    ) -> dict[str, Any]:
+        service = SocialSignalBridge(db_session or self.db, self.redis)
+        signals = await service.build_social_signals_v1(user_id)
+        return signals.to_payload() if signals is not None else {}
 
     def _assert_allowed_community_context(self, payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(payload, dict):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Literal
@@ -39,6 +40,93 @@ class SRLPhaseState(BaseModel):
         if normalized < 0.0 or normalized > 1.0:
             raise ValueError("confidence must be within [0, 1]")
         return round(normalized, 4)
+
+
+@dataclass(frozen=True)
+class SRLPhaseHint:
+    current_phase: str
+    confidence: float
+    source: str | None = None
+    phase_started_at: str | None = None
+    freshness_seconds: int | None = None
+
+    PHASE_ALIASES = {
+        "FORETHOUGHT": "forethought",
+        "PERFORMANCE": "performance",
+        "SELF_REFLECTION": "reflection",
+        "REFLECTION": "reflection",
+        "UNKNOWN": "unknown",
+    }
+    PHASE_LABELS = {
+        "forethought": "前瞻准备",
+        "performance": "执行监控",
+        "reflection": "复盘反思",
+        "unknown": "未知",
+    }
+
+    @classmethod
+    def from_payload(cls, payload: dict[str, object] | None) -> "SRLPhaseHint | None":
+        if not isinstance(payload, dict) or not payload:
+            return None
+        nested = payload.get("value")
+        if isinstance(nested, dict) and nested:
+            payload = nested
+
+        raw_phase = str(payload.get("current_phase") or "").strip().upper()
+        normalized_phase = cls.PHASE_ALIASES.get(raw_phase, "unknown")
+        if normalized_phase == "unknown":
+            return None
+
+        try:
+            confidence = round(float(payload.get("confidence") or 0.0), 4)
+        except Exception:
+            confidence = 0.0
+
+        freshness_seconds = payload.get("freshness_seconds")
+        if freshness_seconds is not None:
+            try:
+                freshness_seconds = int(freshness_seconds)
+            except Exception:
+                freshness_seconds = None
+
+        phase_started_at = payload.get("phase_started_at")
+        return cls(
+            current_phase=normalized_phase,
+            confidence=confidence,
+            source=str(payload.get("source") or "").strip() or None,
+            phase_started_at=str(phase_started_at).strip() or None if phase_started_at else None,
+            freshness_seconds=freshness_seconds,
+        )
+
+    @property
+    def phase_label(self) -> str:
+        return self.PHASE_LABELS.get(self.current_phase, "未知")
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "current_phase": self.current_phase,
+            "phase_label": self.phase_label,
+            "confidence": self.confidence,
+            "source": self.source,
+            "phase_started_at": self.phase_started_at,
+            "freshness_seconds": self.freshness_seconds,
+        }
+
+    def to_summary_lines(self) -> tuple[str, ...]:
+        phase_guidance = {
+            "forethought": "当前更适合先收紧目标、约束和启动标准，再展开具体方案。",
+            "performance": "当前更适合维持执行节奏，给出能立刻开始的下一步，不把用户拉回大范围重规划。",
+            "reflection": "当前更适合先复盘哪里有效、哪里失灵，再决定下一轮要怎么改。",
+        }
+        lines = [f"当前阶段：{self.phase_label}（{self.current_phase}）"]
+        guidance = phase_guidance.get(self.current_phase)
+        if guidance:
+            lines.append(guidance)
+        if self.confidence > 0:
+            lines.append(f"阶段置信度：{self.confidence:.0%}")
+        if self.freshness_seconds is not None:
+            lines.append(f"新鲜度：{int(self.freshness_seconds)} 秒内")
+        return tuple(lines)
 
 
 class SRLTransitionRule(BaseModel):

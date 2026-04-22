@@ -39,6 +39,7 @@ from app.services.perceptible_intelligence_service import (
 )
 from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.user_service import UserService
+from app.state_aggregator.service import StateAggregatorService
 
 
 # ---------------------------------------------------------------------------
@@ -311,6 +312,46 @@ class ContextBuilderMixin:
             return None
         return summary[:300]
 
+    async def _build_stage33_working_memory_snapshot(
+        self,
+        user_id: str,
+        db_session: AsyncSession,
+    ) -> dict[str, Any]:
+        try:
+            state = await StateAggregatorService(db_session).get_user_state(
+                uuid.UUID(user_id),
+                required_fields=("working_memory_snapshot",),
+                now=_utcnow(),
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to build stage33 working memory snapshot for {user_id}: {exc}")
+            return {}
+
+        envelope = getattr(state, "working_memory_snapshot", None)
+        if envelope is None or getattr(envelope, "value", None) is None:
+            return {}
+
+        items = []
+        for item in envelope.value.items:
+            summary = str(item.summary or "").strip()
+            if not summary:
+                continue
+            items.append(
+                {
+                    "summary": summary,
+                    "subject_type": item.subject_type,
+                    "mention_count": item.mention_count,
+                    "consolidated": item.consolidated,
+                    "last_seen_at": item.last_seen_at.isoformat() if item.last_seen_at else None,
+                }
+            )
+
+        return {
+            "active_session_id": envelope.value.active_session_id,
+            "items": items,
+            "freshness_seconds": envelope.freshness_seconds,
+        }
+
     # ------------------------------------------------------------------
     # _get_recent_sentiment_distribution
     # ------------------------------------------------------------------
@@ -479,6 +520,10 @@ class ContextBuilderMixin:
                 # P1: 种子库 few-shot 示例注入
                 seed_library_context = await self._get_seed_library_context(user_id, db_session)
                 learning_gaps_summary = await self._build_learning_gaps_summary(user_id, db_session)
+                working_memory_snapshot = await self._build_stage33_working_memory_snapshot(
+                    user_id,
+                    db_session,
+                )
 
                 profile_payload = self._build_profile_payload(
                     user_context_data=user_context_data,
@@ -490,6 +535,12 @@ class ContextBuilderMixin:
 
                 if getattr(cognitive_context, "profile_context", None):
                     profile_context_payload = cognitive_context.profile_context
+
+                cognitive_context_payload = cognitive_context.model_dump(
+                    exclude={"user_id", "timestamp"}
+                )
+                if working_memory_snapshot:
+                    cognitive_context_payload["working_memory_snapshot"] = working_memory_snapshot
 
                 return {
                     "user_context": user_context_data, # Legacy field
@@ -510,9 +561,10 @@ class ContextBuilderMixin:
                     "understanding_depth": understanding_depth,
                     "profile": profile_payload,
                     "profile_context": profile_context_payload,
+                    "working_memory_snapshot": working_memory_snapshot,
 
                     # New field for full context injection
-                    "cognitive_context": cognitive_context.model_dump(exclude={'user_id', 'timestamp'}),
+                    "cognitive_context": cognitive_context_payload,
 
                     # 认知棱镜数据
                     "cognitive_insights": cognitive_insights,

@@ -5,6 +5,7 @@ import hashlib
 import inspect
 import json
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -20,13 +21,18 @@ from app.aurora.migration import (
 from app.aurora.schemas import SignalSnapshot
 from app.config import aurora_flags
 from app.config import settings
-from app.core.metrics import ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL, ROUTING_SUMMARY_CONTEXT_TOTAL
+from app.core.metrics import (
+    ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL,
+    AURORA_STAGE33_FALLBACK_TOTAL,
+    ROUTING_SUMMARY_CONTEXT_TOTAL,
+)
 from app.core.unified_intent_router import UnifiedIntentType
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRoutingInput
 from app.orchestration.mode_workflow_config import get_mode_strategy
 from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
+from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.cognitive_service import CognitiveService
 from app.services.follow_up_question_service import FollowUpQuestionService
 from app.services.bayesian_routing_wire_service import BayesianRoutingWireService
@@ -38,7 +44,9 @@ from app.services.skill_content_reader import SkillContentReader
 from app.services.skill_schema import SkillSelectionContext
 from app.services.skill_selection_service import SkillSelectionService
 from app.services.skill_store import SkillStoreService
+from app.services.social_signal_types import SocialSignalsV1
 from app.services.source_state_encoder import SourceStateEncoder
+from app.services.srl_phase_types import SRLPhaseHint
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult
 from app.services.sufficiency_judge_service import SufficiencyJudgeService
 from app.state_aggregator.schema import ActiveSkillsSummaryValue, SufficiencySummaryValue
@@ -150,6 +158,268 @@ class RoutingEngineMixin:
             counts[raw] = counts.get(raw, 0) + 1
         return counts
 
+    @staticmethod
+    def _stage33_as_dict(payload: Any) -> dict[str, Any]:
+        if hasattr(payload, "model_dump"):
+            payload = payload.model_dump(mode="json")
+        return payload if isinstance(payload, dict) else {}
+
+    @classmethod
+    def _extract_stage33_social_payload(
+        cls,
+        user_context_payload: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        root = cls._stage33_as_dict(user_context_payload)
+        cognitive_context = cls._stage33_as_dict(root.get("cognitive_context"))
+
+        for candidate in (
+            root.get("social_signals_summary"),
+            root.get("social_context_v1"),
+            cognitive_context.get("social_signals_summary"),
+            cognitive_context.get("social_context_v1"),
+        ):
+            if isinstance(candidate, dict) and candidate:
+                return candidate
+
+        legacy_social_context = cls._stage33_as_dict(root.get("social_context"))
+        if not legacy_social_context:
+            return {}
+
+        mention_count = len(legacy_social_context.get("recent_person_mentions") or [])
+        relationship_count = int(legacy_social_context.get("relationship_count") or 0)
+        pending_commitments_count = int(legacy_social_context.get("pending_commitments_count") or 0)
+        summary_lines: list[str] = []
+        if mention_count > 0:
+            summary_lines.append(f"最近 7 天提到过 {mention_count} 位学习相关人物。")
+        if relationship_count > 0:
+            summary_lines.append(f"当前有 {relationship_count} 条关系型背景需要在建议里保持边界感。")
+        if pending_commitments_count > 0:
+            summary_lines.append(f"目前有 {pending_commitments_count} 条到期承诺待跟进。")
+
+        return {
+            "mention_count": mention_count,
+            "relationship_count": relationship_count,
+            "pending_commitments_count": pending_commitments_count,
+            "summary_lines": summary_lines,
+            "summary_text": "；".join(summary_lines),
+        }
+
+    @classmethod
+    def _extract_stage33_srl_payload(
+        cls,
+        user_context_payload: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        root = cls._stage33_as_dict(user_context_payload)
+        cognitive_context = cls._stage33_as_dict(root.get("cognitive_context"))
+        profile_context = cls._stage33_as_dict(root.get("profile_context"))
+        insight_state = cls._stage33_as_dict(profile_context.get("user_insight_state"))
+
+        for candidate in (
+            root.get("srl_phase"),
+            cognitive_context.get("srl_phase"),
+            profile_context.get("srl_phase"),
+            insight_state.get("srl_phase"),
+        ):
+            if isinstance(candidate, dict) and candidate:
+                nested_value = candidate.get("value")
+                if isinstance(nested_value, dict) and nested_value:
+                    return nested_value
+                return candidate
+        return {}
+
+    @staticmethod
+    def _merge_stage33_lines(
+        existing: list[str],
+        additions: list[str],
+        *,
+        limit: int,
+    ) -> list[str]:
+        merged = [str(item).strip() for item in existing if str(item).strip()]
+        for item in additions:
+            normalized = str(item).strip()
+            if not normalized or normalized in merged:
+                continue
+            merged.append(normalized)
+            if len(merged) >= limit:
+                break
+        return merged[:limit]
+
+    @staticmethod
+    def _merge_stage33_strategy_adjustments(
+        existing: list[dict[str, Any]],
+        additions: list[dict[str, Any]],
+        *,
+        limit: int = 5,
+    ) -> list[dict[str, Any]]:
+        merged = [dict(item) for item in existing if isinstance(item, dict)]
+        seen_keys = {
+            str(item.get("field") or json.dumps(item, ensure_ascii=False, sort_keys=True))
+            for item in merged
+        }
+        for item in additions:
+            if not isinstance(item, dict):
+                continue
+            dedupe_key = str(item.get("field") or json.dumps(item, ensure_ascii=False, sort_keys=True))
+            if dedupe_key in seen_keys:
+                continue
+            merged.append(dict(item))
+            seen_keys.add(dedupe_key)
+            if len(merged) >= limit:
+                break
+        return merged[:limit]
+
+    @classmethod
+    def _build_stage33_social_delta(
+        cls,
+        *,
+        baseline_decision: DualCoreDecision,
+        candidate_decision: DualCoreDecision,
+        signals: SocialSignalsV1,
+    ) -> dict[str, Any]:
+        baseline_strategy_fields = {
+            str(item.get("field") or "").strip()
+            for item in baseline_decision.strategy_adjustments
+            if isinstance(item, dict)
+        }
+        added_strategy_adjustments = [
+            dict(item)
+            for item in candidate_decision.strategy_adjustments
+            if isinstance(item, dict)
+            and str(item.get("field") or "").strip() not in baseline_strategy_fields
+        ]
+        return {
+            "baseline_mode": baseline_decision.mode,
+            "candidate_mode": candidate_decision.mode,
+            "mode_changed": baseline_decision.mode != candidate_decision.mode,
+            "added_cognitive_adjustments": [
+                item
+                for item in candidate_decision.cognitive_adjustments
+                if item not in baseline_decision.cognitive_adjustments
+            ],
+            "added_execution_constraints": [
+                item
+                for item in candidate_decision.execution_constraints
+                if item not in baseline_decision.execution_constraints
+            ],
+            "added_strategy_adjustments": added_strategy_adjustments,
+            "signal_payload": signals.to_payload(),
+        }
+
+    @classmethod
+    def _build_stage33_srl_delta(
+        cls,
+        *,
+        baseline_decision: DualCoreDecision,
+        candidate_decision: DualCoreDecision,
+        hint: SRLPhaseHint,
+    ) -> dict[str, Any]:
+        baseline_strategy_fields = {
+            str(item.get("field") or "").strip()
+            for item in baseline_decision.strategy_adjustments
+            if isinstance(item, dict)
+        }
+        added_strategy_adjustments = [
+            dict(item)
+            for item in candidate_decision.strategy_adjustments
+            if isinstance(item, dict)
+            and str(item.get("field") or "").strip() not in baseline_strategy_fields
+        ]
+        return {
+            "baseline_mode": baseline_decision.mode,
+            "candidate_mode": candidate_decision.mode,
+            "mode_changed": baseline_decision.mode != candidate_decision.mode,
+            "added_cognitive_adjustments": [
+                item
+                for item in candidate_decision.cognitive_adjustments
+                if item not in baseline_decision.cognitive_adjustments
+            ],
+            "added_execution_constraints": [
+                item
+                for item in candidate_decision.execution_constraints
+                if item not in baseline_decision.execution_constraints
+            ],
+            "added_strategy_adjustments": added_strategy_adjustments,
+            "signal_payload": hint.to_payload(),
+        }
+
+    @classmethod
+    def _overlay_stage33_social_constraints(
+        cls,
+        *,
+        decision: DualCoreDecision,
+        added_cognitive: list[str],
+        added_execution: list[str],
+        added_strategy_adjustments: list[dict[str, Any]],
+        candidate_mode: str,
+    ) -> DualCoreDecision:
+        if not added_cognitive and not added_execution and not added_strategy_adjustments:
+            return decision
+
+        routing_debug = dict(decision.routing_debug or {})
+        routing_debug["stage33_social_overlay"] = True
+        routing_debug["stage33_social_candidate_mode"] = candidate_mode
+        routing_debug["stage33_social_added_cognitive"] = len(added_cognitive)
+        routing_debug["stage33_social_added_execution"] = len(added_execution)
+        return DualCoreDecision(
+            mode=decision.mode,
+            reason=decision.reason,
+            cognitive_adjustments=cls._merge_stage33_lines(
+                list(decision.cognitive_adjustments),
+                added_cognitive,
+                limit=3,
+            ),
+            execution_constraints=cls._merge_stage33_lines(
+                list(decision.execution_constraints),
+                added_execution,
+                limit=3,
+            ),
+            routing_debug=routing_debug,
+            strategy_adjustments=cls._merge_stage33_strategy_adjustments(
+                list(decision.strategy_adjustments),
+                added_strategy_adjustments,
+                limit=5,
+            ),
+        )
+
+    @classmethod
+    def _overlay_stage33_srl_constraints(
+        cls,
+        *,
+        decision: DualCoreDecision,
+        added_cognitive: list[str],
+        added_execution: list[str],
+        added_strategy_adjustments: list[dict[str, Any]],
+        candidate_mode: str,
+    ) -> DualCoreDecision:
+        if not added_cognitive and not added_execution and not added_strategy_adjustments:
+            return decision
+
+        routing_debug = dict(decision.routing_debug or {})
+        routing_debug["stage33_srl_overlay"] = True
+        routing_debug["stage33_srl_candidate_mode"] = candidate_mode
+        routing_debug["stage33_srl_added_cognitive"] = len(added_cognitive)
+        routing_debug["stage33_srl_added_execution"] = len(added_execution)
+        return DualCoreDecision(
+            mode=decision.mode,
+            reason=decision.reason,
+            cognitive_adjustments=cls._merge_stage33_lines(
+                list(decision.cognitive_adjustments),
+                added_cognitive,
+                limit=3,
+            ),
+            execution_constraints=cls._merge_stage33_lines(
+                list(decision.execution_constraints),
+                added_execution,
+                limit=3,
+            ),
+            routing_debug=routing_debug,
+            strategy_adjustments=cls._merge_stage33_strategy_adjustments(
+                list(decision.strategy_adjustments),
+                added_strategy_adjustments,
+                limit=5,
+            ),
+        )
+
     # ------------------------------------------------------------------
     # Dual-core routing
     # ------------------------------------------------------------------
@@ -199,6 +469,12 @@ class RoutingEngineMixin:
             user_id=user_id,
             plan_context=plan_context,
         )
+        social_signals = SocialSignalsV1.from_payload(
+            self._extract_stage33_social_payload(user_context_payload)
+        )
+        srl_phase_hint = SRLPhaseHint.from_payload(
+            self._extract_stage33_srl_payload(user_context_payload)
+        )
 
         return DualCoreRoutingInput(
             intent=(
@@ -225,6 +501,8 @@ class RoutingEngineMixin:
             current_guidance=cognitive_routing_signals["current_guidance"],
             routing_profile=routing_profile,
             adaptive_adjustments=adaptive_adjustments,
+            social_signals=social_signals,
+            srl_phase_hint=srl_phase_hint,
         )
 
     async def _emit_dual_core_status(self, decision, stream_callback) -> None:
@@ -411,11 +689,72 @@ class RoutingEngineMixin:
             unified_routing_result=unified_routing_result,
             information_sufficient=information_sufficient,
         )
+        stage33_modes = {
+            "mode": "shadow",
+            "social": "shadow",
+            "srl": "shadow",
+            "wm_prompt": "shadow",
+            "events": "shadow",
+        }
+        try:
+            stage33_modes = await AuroraStage33KillSwitchService().summary()
+        except Exception as exc:
+            logger.warning("Stage33 kill switch lookup failed: {}", exc)
+            AURORA_STAGE33_FALLBACK_TOTAL.labels(feature="social", reason="mode_lookup_failed").inc()
+
+        if isinstance(user_context_payload, dict):
+            user_context_payload["aurora_stage33_modes"] = dict(stage33_modes)
+            if routing_input.social_signals is not None:
+                user_context_payload.setdefault(
+                    "social_signals_summary",
+                    routing_input.social_signals.to_payload(),
+                )
+            if routing_input.srl_phase_hint is not None:
+                user_context_payload.setdefault(
+                    "srl_phase",
+                    routing_input.srl_phase_hint.to_payload(),
+                )
+        state.context_data["aurora_stage33_modes"] = dict(stage33_modes)
+
+        social_mode = str(stage33_modes.get("social") or "off").strip().lower()
+        srl_mode = str(stage33_modes.get("srl") or "off").strip().lower()
+        effective_routing_input = routing_input
+        social_candidate_input: DualCoreRoutingInput | None = None
+        srl_candidate_input: DualCoreRoutingInput | None = None
+        if social_mode == "off":
+            AURORA_STAGE33_FALLBACK_TOTAL.labels(feature="social", reason="off").inc()
+            effective_routing_input = replace(effective_routing_input, social_signals=None)
+        elif routing_input.social_signals is None:
+            AURORA_STAGE33_FALLBACK_TOTAL.labels(feature="social", reason="missing_payload").inc()
+            effective_routing_input = replace(effective_routing_input, social_signals=None)
+        elif social_mode == "shadow":
+            effective_routing_input = replace(effective_routing_input, social_signals=None)
+
+        if srl_mode == "off":
+            AURORA_STAGE33_FALLBACK_TOTAL.labels(feature="srl", reason="off").inc()
+            effective_routing_input = replace(effective_routing_input, srl_phase_hint=None)
+        elif routing_input.srl_phase_hint is None:
+            AURORA_STAGE33_FALLBACK_TOTAL.labels(feature="srl", reason="missing_payload").inc()
+            effective_routing_input = replace(effective_routing_input, srl_phase_hint=None)
+        elif srl_mode == "shadow":
+            effective_routing_input = replace(effective_routing_input, srl_phase_hint=None)
+
+        if routing_input.social_signals is not None and social_mode in {"shadow", "live"}:
+            social_candidate_input = replace(
+                effective_routing_input,
+                social_signals=routing_input.social_signals,
+            )
+        if routing_input.srl_phase_hint is not None and srl_mode in {"shadow", "live"}:
+            srl_candidate_input = replace(
+                effective_routing_input,
+                srl_phase_hint=routing_input.srl_phase_hint,
+            )
+
         task_summary_value, ctx_summary_value, sufficiency_judgment_id = (
             await self._collect_stage20_sufficiency(
                 active_db=active_db,
                 user_id=user_id,
-                routing_input=routing_input,
+                routing_input=effective_routing_input,
                 plan_context=plan_context,
                 user_context_payload=user_context_payload,
             )
@@ -427,26 +766,31 @@ class RoutingEngineMixin:
         active_skills_summary, skill_prompt_context, selected_skill_ids = await self._collect_stage21_skills(
             active_db=active_db,
             user_id=user_id,
-            routing_input=routing_input,
+            routing_input=effective_routing_input,
             route_decision=route_decision,
         )
         cutover_state = resolve_cutover_state(user_id)
+        stage33_shadow_delta: dict[str, Any] = {}
+        stage33_contributions: dict[str, Any] = {}
+
+        def _route_with_shortcuts(candidate_input: DualCoreRoutingInput) -> DualCoreDecision:
+            if candidate_input.intent == "chat" and route_decision.execution_mode == "direct":
+                return DualCoreDecision(
+                    mode="execution_first",
+                    reason="通用知识问答优先直接回答，避免把认知调制或任务背景混入基础解释。",
+                    cognitive_adjustments=[],
+                    execution_constraints=[],
+                )
+            return self.dual_core_router.route(candidate_input)
 
         legacy_decision: DualCoreDecision | None = None
-        if routing_input.intent == "chat" and route_decision.execution_mode == "direct":
-            legacy_decision = DualCoreDecision(
-                mode="execution_first",
-                reason="通用知识问答优先直接回答，避免把认知调制或任务背景混入基础解释。",
-                cognitive_adjustments=[],
-                execution_constraints=[],
-            )
-        elif cutover_state.mode != "active":
-            legacy_decision = self.dual_core_router.route(routing_input)
+        if cutover_state.mode != "active":
+            legacy_decision = _route_with_shortcuts(effective_routing_input)
 
         aurora_projection = None
         if cutover_state.mode in {"shadow", "active"}:
             aurora_projection = route_dual_core_via_aurora(
-                routing_input,
+                effective_routing_input,
                 user_id=user_id,
             )
 
@@ -459,8 +803,6 @@ class RoutingEngineMixin:
                 cognitive_adjustments=[],
                 execution_constraints=[],
             )
-
-        state.context_data["dual_core_decision"] = decision.to_dict()
         state.context_data["aurora_cutover_state"] = {
             "mode": cutover_state.mode,
             "reason": cutover_state.reason,
@@ -483,6 +825,84 @@ class RoutingEngineMixin:
                 "impact_class": aurora_projection.transition_decision.impact_class.value,
                 "diverged": shadow_diverged,
             }
+
+        if social_candidate_input is not None and routing_input.social_signals is not None:
+            social_baseline_input = replace(effective_routing_input, social_signals=None)
+            if legacy_decision is not None and social_baseline_input == effective_routing_input:
+                social_baseline_decision = legacy_decision
+            else:
+                social_baseline_decision = _route_with_shortcuts(social_baseline_input)
+            if social_mode == "live" and cutover_state.mode != "active" and legacy_decision is not None:
+                social_candidate_decision = legacy_decision
+            else:
+                social_candidate_decision = _route_with_shortcuts(social_candidate_input)
+
+            social_delta = self._build_stage33_social_delta(
+                baseline_decision=social_baseline_decision,
+                candidate_decision=social_candidate_decision,
+                signals=routing_input.social_signals,
+            )
+            if social_mode == "shadow":
+                stage33_shadow_delta["social"] = social_delta
+            elif social_mode == "live":
+                stage33_contributions["social"] = {
+                    "applied": True,
+                    **social_delta,
+                }
+                if cutover_state.mode == "active":
+                    decision = self._overlay_stage33_social_constraints(
+                        decision=decision,
+                        added_cognitive=list(social_delta.get("added_cognitive_adjustments") or []),
+                        added_execution=list(social_delta.get("added_execution_constraints") or []),
+                        added_strategy_adjustments=[
+                            item
+                            for item in (social_delta.get("added_strategy_adjustments") or [])
+                            if isinstance(item, dict)
+                        ],
+                        candidate_mode=social_candidate_decision.mode,
+                    )
+
+        if srl_candidate_input is not None and routing_input.srl_phase_hint is not None:
+            srl_baseline_input = replace(effective_routing_input, srl_phase_hint=None)
+            if legacy_decision is not None and srl_baseline_input == effective_routing_input:
+                srl_baseline_decision = legacy_decision
+            else:
+                srl_baseline_decision = _route_with_shortcuts(srl_baseline_input)
+            if srl_mode == "live" and cutover_state.mode != "active" and legacy_decision is not None:
+                srl_candidate_decision = legacy_decision
+            else:
+                srl_candidate_decision = _route_with_shortcuts(srl_candidate_input)
+
+            srl_delta = self._build_stage33_srl_delta(
+                baseline_decision=srl_baseline_decision,
+                candidate_decision=srl_candidate_decision,
+                hint=routing_input.srl_phase_hint,
+            )
+            if srl_mode == "shadow":
+                stage33_shadow_delta["srl"] = srl_delta
+            elif srl_mode == "live":
+                stage33_contributions["srl"] = {
+                    "applied": True,
+                    **srl_delta,
+                }
+                if cutover_state.mode == "active":
+                    decision = self._overlay_stage33_srl_constraints(
+                        decision=decision,
+                        added_cognitive=list(srl_delta.get("added_cognitive_adjustments") or []),
+                        added_execution=list(srl_delta.get("added_execution_constraints") or []),
+                        added_strategy_adjustments=[
+                            item
+                            for item in (srl_delta.get("added_strategy_adjustments") or [])
+                            if isinstance(item, dict)
+                        ],
+                        candidate_mode=srl_candidate_decision.mode,
+                    )
+
+        if stage33_shadow_delta:
+            state.context_data["stage33_shadow_delta"] = stage33_shadow_delta
+        if stage33_contributions:
+            state.context_data["stage33_contributions"] = stage33_contributions
+        state.context_data["dual_core_decision"] = decision.to_dict()
         prompt_instruction = decision.prompt_instruction
 
         # Stickiness Moment 3: detect mode-shift and inject a natural transition phrase
@@ -535,7 +955,7 @@ class RoutingEngineMixin:
             }
         source_state_encoder = SourceStateEncoder()
         source_state_v2 = source_state_encoder.build(
-            routing_input=routing_input,
+            routing_input=effective_routing_input,
             task_summary=task_summary_value,
             context_summary=ctx_summary_value,
             user_context_payload=user_context_payload,
@@ -568,17 +988,24 @@ class RoutingEngineMixin:
                 "scores": [dict(item) for item in bayesian_wire_result.scores],
             }
         state.context_data["dual_core_signal_snapshot"] = {
-            "intent": routing_input.intent,
-            "intent_confidence": routing_input.intent_confidence,
-            "primary_challenge_area": routing_input.primary_challenge_area,
-            "recent_sentiment_distribution": routing_input.recent_sentiment_distribution,
-            "recent_task_feedback_distribution": routing_input.recent_task_feedback_distribution,
-            "behavior_pattern_names": routing_input.behavior_pattern_names[:5],
-            "behavior_pattern_details": routing_input.behavior_pattern_details[:2],
-            "behavior_pattern_types": routing_input.behavior_pattern_types,
-            "plan_health_status": routing_input.plan_health_status,
-            "routing_profile": routing_input.routing_profile,
-            "current_guidance": routing_input.current_guidance,
+            "intent": effective_routing_input.intent,
+            "intent_confidence": effective_routing_input.intent_confidence,
+            "primary_challenge_area": effective_routing_input.primary_challenge_area,
+            "recent_sentiment_distribution": effective_routing_input.recent_sentiment_distribution,
+            "recent_task_feedback_distribution": effective_routing_input.recent_task_feedback_distribution,
+            "behavior_pattern_names": effective_routing_input.behavior_pattern_names[:5],
+            "behavior_pattern_details": effective_routing_input.behavior_pattern_details[:2],
+            "behavior_pattern_types": effective_routing_input.behavior_pattern_types,
+            "plan_health_status": effective_routing_input.plan_health_status,
+            "routing_profile": effective_routing_input.routing_profile,
+            "current_guidance": effective_routing_input.current_guidance,
+            "aurora_stage33_modes": stage33_modes,
+            "social_signal_payload": (
+                routing_input.social_signals.to_payload() if routing_input.social_signals is not None else None
+            ),
+            "srl_phase_payload": (
+                routing_input.srl_phase_hint.to_payload() if routing_input.srl_phase_hint is not None else None
+            ),
             "routing_debug": (decision.routing_debug or {}),
         }
         idiographic_associations_injected: list[dict[str, object]] = []
@@ -637,6 +1064,11 @@ class RoutingEngineMixin:
                         "bayesian_recommended_target": (
                             bayesian_wire_result.recommended_target if bayesian_wire_result is not None else None
                         ),
+                        "stage33_modes": stage33_modes,
+                        "stage33_shadow_delta": stage33_shadow_delta or None,
+                        "stage33_contributions": stage33_contributions or None,
+                        "social_shadow_delta": stage33_shadow_delta.get("social"),
+                        "srl_shadow_delta": stage33_shadow_delta.get("srl"),
                     },
                     skills_injected=selected_skill_ids,
                     source_state_v2=source_state_v2,
@@ -662,7 +1094,7 @@ class RoutingEngineMixin:
         await self._persist_dual_core_decision_snapshot(
             user_id=user_id,
             decision=decision,
-            routing_input=routing_input,
+            routing_input=effective_routing_input,
         )
 
         await self._emit_dual_core_status(decision, stream_callback)

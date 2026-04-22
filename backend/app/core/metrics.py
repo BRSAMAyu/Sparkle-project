@@ -598,6 +598,13 @@ ROUTING_SUMMARY_CONTEXT_TOTAL = get_or_create_metric(
     Counter, "sparkle_routing_summary_context_total", "Summary context usage in routing", ["phase"]
 )
 
+AURORA_STAGE33_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_stage33_fallback_total",
+    "Stage33 fallbacks by feature and reason",
+    ["feature", "reason"],
+)
+
 RESPONSE_FALLBACK_GENERATED_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_response_fallback_generated_total",

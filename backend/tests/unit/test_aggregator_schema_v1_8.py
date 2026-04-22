@@ -60,7 +60,7 @@ async def test_aggregator_schema_v1_8_reports_foresight_hint(db_session, monkeyp
         required_fields=("foresight_hint",),
     )
 
-    assert state.schema_version == "user_state.v1.12"
+    assert state.schema_version == "user_state.v1.13"
     assert state.foresight_hint is not None
     assert state.foresight_hint.value.hint_text is not None
 

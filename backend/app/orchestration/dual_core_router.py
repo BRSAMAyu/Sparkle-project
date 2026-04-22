@@ -4,6 +4,9 @@ from dataclasses import dataclass, field
 from datetime import timezone, datetime
 from typing import Any
 
+from app.services.social_signal_types import SocialSignalsV1
+from app.services.srl_phase_types import SRLPhaseHint
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -55,6 +58,8 @@ class DualCoreRoutingInput:
     current_guidance: str | None = None
     routing_profile: dict[str, float] = field(default_factory=dict)
     adaptive_adjustments: dict[str, Any] = field(default_factory=dict)
+    social_signals: SocialSignalsV1 | None = None
+    srl_phase_hint: SRLPhaseHint | None = None
 
 
 @dataclass(frozen=True)
@@ -225,6 +230,44 @@ class DualCoreRouter:
                 0.25,
                 reason="Supportive delivery should reduce pressure and keep the tone on the user's side.",
             )
+        social_signals = routing_input.social_signals
+        if social_signals is not None:
+            if social_signals.pending_commitments_count > 0:
+                execution_constraints.append("若要安排下一步，请先兼容用户已有的对外承诺，避免叠加新的长期负债。")
+            if (
+                social_signals.social_learning_preference is not None
+                and social_signals.social_learning_preference >= 0.65
+                and social_signals.mention_count > 0
+            ):
+                execution_constraints.append("若任务天然适合协作，可允许用户借助同伴或群组来启动，但不要把社交化当成硬要求。")
+            if social_signals.relationship_count > 0:
+                cognitive_adjustments.append("涉及他人或协作情境时，保持边界感，不要替用户许诺或推断他人立场。")
+
+        srl_phase_hint = routing_input.srl_phase_hint
+        reflection_phase_detected = False
+        if srl_phase_hint is not None:
+            if srl_phase_hint.current_phase == "forethought":
+                cognitive_adjustments.append("用户当前处在前瞻准备阶段，先帮他明确目标、约束和启动标准，再展开细节。")
+                recommend_strategy(
+                    "planning_granularity",
+                    "startup_ready",
+                    reason="Forethought users benefit from tighter success criteria and a clear launch point before more detail is added.",
+                )
+            elif srl_phase_hint.current_phase == "performance":
+                execution_constraints.append("用户当前处在执行监控阶段，优先维持连续执行，给出能立刻开始的短步动作。")
+                recommend_strategy(
+                    "execution_window",
+                    "momentum_preserving",
+                    reason="Performance-phase support should preserve momentum instead of reopening broad planning loops.",
+                )
+            elif srl_phase_hint.current_phase == "reflection":
+                reflection_phase_detected = srl_phase_hint.confidence >= 0.55
+                cognitive_adjustments.append("用户当前处在复盘反思阶段，先帮助总结哪里有效、哪里失灵，再决定下一轮怎么改。")
+                recommend_strategy(
+                    "session_mode",
+                    "reflection",
+                    reason="Reflection-phase turns should surface what worked or failed before pushing the user back into execution.",
+                )
 
         if routing_input.session_length_preference and routing_input.session_length_preference <= 25:
             execution_constraints.append(
@@ -275,7 +318,18 @@ class DualCoreRouter:
             "explicit_procrastination_signal": bool(routing_input.procrastination_pattern),
             "explicit_emotional_signal": bool(routing_input.emotional_block_detected),
             "explicit_cognitive_signal": cognitive_mode_suggested,
+            "explicit_social_signal": social_signals is not None,
+            "social_signal_payload": social_signals.to_payload() if social_signals is not None else None,
+            "explicit_srl_signal": srl_phase_hint is not None,
+            "srl_phase_payload": srl_phase_hint.to_payload() if srl_phase_hint is not None else None,
         }
+        if social_signals is not None:
+            routing_debug["social_relationship_count"] = social_signals.relationship_count
+            routing_debug["social_pending_commitments_count"] = social_signals.pending_commitments_count
+            routing_debug["social_learning_preference"] = social_signals.social_learning_preference
+        if srl_phase_hint is not None:
+            routing_debug["srl_phase"] = srl_phase_hint.current_phase
+            routing_debug["srl_confidence"] = srl_phase_hint.confidence
 
         if (
             goal_clear
@@ -283,6 +337,7 @@ class DualCoreRouter:
             and not emotional_block
             and not procrastination_pattern
             and not cognitive_mode_suggested
+            and not reflection_phase_detected
         ):
             return DualCoreDecision(
                 mode="execution_first",
@@ -297,6 +352,7 @@ class DualCoreRouter:
             not routing_input.information_sufficient
             or emotional_block
             or procrastination_pattern
+            or reflection_phase_detected
             or (cognitive_mode_suggested and not goal_clear)
             or (not goal_clear and routing_input.intent_confidence < low_conf_threshold)
         ):

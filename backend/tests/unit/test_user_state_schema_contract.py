@@ -12,6 +12,7 @@ from app.state_aggregator.schema import (
     CommitmentSummaryValue,
     PendingPoliciesSummaryValue,
     RecentReflectionsSummaryValue,
+    SocialSignalsSummaryValue,
     StateFieldEnvelope,
     SufficiencySummaryValue,
     UserStateV1,
@@ -40,7 +41,7 @@ def test_user_state_v1_uses_expected_schema_version() -> None:
         ),
     )
 
-    assert state.schema_version == "user_state.v1.12"
+    assert state.schema_version == "user_state.v1.13"
     assert state.commitment_summary is not None
     assert state.commitment_summary.value.overdue_count == 1
 
@@ -155,3 +156,28 @@ def test_user_state_v1_6_exposes_recent_reflections_contract() -> None:
     assert state.recent_reflections is not None
     assert state.recent_reflections.value.count == 3
     assert state.recent_reflections.value.last_category == "plan_stall"
+
+
+def test_user_state_v1_13_exposes_social_signals_summary_contract() -> None:
+    state = UserStateV1(
+        user_id=uuid4(),
+        social_signals_summary=StateFieldEnvelope(
+            value=SocialSignalsSummaryValue(
+                summary_text="最近 7 天提到过 2 位学习相关人物；目前有 1 条到期承诺待跟进。",
+                mention_count=2,
+                relationship_count=1,
+                pending_commitments_count=1,
+                community_engagement_level="medium",
+                social_learning_preference=0.74,
+                content_contribution_rate=0.22,
+            ),
+            computed_at=datetime(2026, 4, 22, 10, 0, 0),
+            source_snapshot_ids=("social_signals:u-1",),
+            freshness_seconds=0,
+        ),
+    )
+
+    assert state.social_signals_summary is not None
+    assert state.social_signals_summary.value.mention_count == 2
+    assert state.social_signals_summary.value.relationship_count == 1
+    assert "到期承诺" in state.social_signals_summary.value.summary_text

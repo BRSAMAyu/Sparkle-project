@@ -13,6 +13,7 @@ UserStateFieldName = Literal[
     "recent_scenes",
     "foresight_hint",
     "recent_person_mentions",
+    "social_signals_summary",
     "engagement_state",
     "learning_state",
     "working_memory_snapshot",
@@ -96,6 +97,17 @@ class SocialMentionValue:
 class RecentPersonMentionsValue:
     mentions: tuple[SocialMentionValue, ...]
     relationship_count: int
+
+
+@dataclass(frozen=True)
+class SocialSignalsSummaryValue:
+    summary_text: str
+    mention_count: int
+    relationship_count: int
+    pending_commitments_count: int
+    community_engagement_level: str | None = None
+    social_learning_preference: float | None = None
+    content_contribution_rate: float | None = None
 
 
 @dataclass(frozen=True)
@@ -257,13 +269,14 @@ class IdiographicSummaryValue:
 @dataclass(frozen=True)
 class UserStateV1:
     user_id: UUID
-    schema_version: str = "user_state.v1.12"
+    schema_version: str = "user_state.v1.13"
     commitment_summary: StateFieldEnvelope[CommitmentSummaryValue] | None = None
     pending_policies: StateFieldEnvelope[PendingPoliciesSummaryValue] | None = None
     recent_reflections: StateFieldEnvelope[RecentReflectionsSummaryValue] | None = None
     recent_scenes: StateFieldEnvelope[RecentScenesSummaryValue] | None = None
     foresight_hint: StateFieldEnvelope[ForesightHintSummaryValue] | None = None
     recent_person_mentions: StateFieldEnvelope[RecentPersonMentionsValue] | None = None
+    social_signals_summary: StateFieldEnvelope[SocialSignalsSummaryValue] | None = None
     engagement_state: StateFieldEnvelope[EngagementStateValue] | None = None
     learning_state: StateFieldEnvelope[LearningStateValue] | None = None
     working_memory_snapshot: StateFieldEnvelope[WorkingMemorySnapshotValue] | None = (

@@ -66,6 +66,16 @@ message RecentPersonMentionsValue {
   int32 relationship_count = 2;
 }
 
+message SocialSignalsSummaryValue {
+  string summary_text = 1;
+  int32 mention_count = 2;
+  int32 relationship_count = 3;
+  int32 pending_commitments_count = 4;
+  string community_engagement_level = 5;
+  double social_learning_preference = 6;
+  double content_contribution_rate = 7;
+}
+
 message EngagementStateValue {
   google.protobuf.Timestamp last_active_at = 1;
   int32 session_count_7d = 2;
@@ -134,6 +144,11 @@ message ForesightHintSummaryField {
 
 message RecentPersonMentionsField {
   RecentPersonMentionsValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message SocialSignalsSummaryField {
+  SocialSignalsSummaryValue value = 1;
   StateFieldMetadata metadata = 2;
 }
 
@@ -309,4 +324,5 @@ message UserStateV1 {
   CalendarContextField calendar_context = 19;
   MetacognitionProfileField metacognition_profile = 20;
   IdiographicSummaryField idiographic_summary = 21;
+  SocialSignalsSummaryField social_signals_summary = 22;
 }

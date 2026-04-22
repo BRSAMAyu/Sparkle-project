@@ -43,6 +43,11 @@ async def test_context_orchestrator_aggregation(db_session):
         m.setattr(orchestrator, "_get_community_profile", AsyncMock(return_value={"active_group_count": 1}))
         m.setattr(
             orchestrator,
+            "_get_social_context_v1",
+            AsyncMock(return_value={"mention_count": 1, "summary_lines": ["最近 7 天提到过 1 位学习相关人物。"]}),
+        )
+        m.setattr(
+            orchestrator,
             "_get_achievement_context",
             AsyncMock(
                 return_value={
@@ -80,6 +85,7 @@ async def test_context_orchestrator_aggregation(db_session):
     assert context.active_tasks[0]["title"] == "Test Task"
     assert context.preferences == {"depth": "high"}
     assert context.preference_version == 7
+    assert context.social_context_v1["mention_count"] == 1
     assert context.achievement_summary["recent_unlocks"][0]["name"] == "七日连胜"
     assert context.calendar_context["workload_density"] == "medium"
     assert redis_client.setex.called
@@ -92,7 +98,7 @@ async def test_context_orchestrator_uses_isolated_sessions_for_service_backed_he
     redis_client.get.return_value = None
     orchestrator = ContextOrchestrator(shared_db, redis_client)
 
-    created_sessions = [object(), object(), object(), object(), object(), object(), object()]
+    created_sessions = [object(), object(), object(), object(), object(), object(), object(), object()]
     issued_sessions: list[object] = []
     service_dbs: dict[str, list[object]] = {"profile": [], "error": [], "user": []}
 
@@ -143,6 +149,7 @@ async def test_context_orchestrator_uses_isolated_sessions_for_service_backed_he
         m.setattr("app.core.context_manager.UserService", FakeUserService)
         m.setattr(orchestrator, "_get_task_profile", AsyncMock(return_value={"tasks": [], "focus": {}}))
         m.setattr(orchestrator, "_get_community_profile", AsyncMock(return_value={}))
+        m.setattr(orchestrator, "_get_social_context_v1", AsyncMock(return_value={}))
         m.setattr(orchestrator, "_get_achievement_context", AsyncMock(return_value={}))
         m.setattr(orchestrator, "_get_calendar_context", AsyncMock(return_value={}))
 

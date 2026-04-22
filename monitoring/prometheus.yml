@@ -10,6 +10,7 @@ rule_files:
   - "celery_alerts.yml"
   - "sparkle_slo_alerts.yml"
   - "sparkle_production_baseline_alerts.yml"
+  - "sqam_alerts.yml"
 
 scrape_configs:
   - job_name: 'prometheus'

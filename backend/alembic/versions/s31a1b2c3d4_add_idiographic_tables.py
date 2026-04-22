@@ -1,7 +1,7 @@
 """add stage31 idiographic tables
 
 Revision ID: s31a1b2c3d4
-Revises: s29a1b2c3d4
+Revises: s295a1b2c3d4
 Create Date: 2026-04-22 16:40:00
 """
 
@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 
 
 revision: str = "s31a1b2c3d4"
-down_revision: Union[str, None] = "s29a1b2c3d4"
+down_revision: Union[str, None] = "s295a1b2c3d4"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -27,6 +27,7 @@ from app.core.security import (
     verify_password,
 )
 from app.core.cache import cache_service
+from app.core.event_bus import UserRegisteredEvent
 from app.core.email_service import email_service
 from app.db.session import get_db
 from app.models.auth_security import AuthAuditAction
@@ -47,6 +48,7 @@ from app.schemas.user import (
 )
 from app.api.deps import get_current_user
 from app.services.auth_session_service import auth_session_service
+from app.services.stage33_journey_event_service import Stage33JourneyEventService
 
 router = APIRouter()
 
@@ -363,6 +365,15 @@ async def register(
         user_id=str(user.id),
         request=request,
         metadata={"registration_source": "email"},
+    )
+    await Stage33JourneyEventService.publish(
+        "user.registered",
+        UserRegisteredEvent(
+            user_id=str(user.id),
+            username=user.username,
+            registration_source="email",
+            metadata={"nickname": user.nickname or user.username},
+        ).to_dict(),
     )
 
     return {

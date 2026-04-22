@@ -104,7 +104,7 @@ jobs:
           python3 scripts/check_prompt_render_coverage.py --write
           python3 scripts/render_stage22_precheck.py
 
-      - name: Run All Rule Guards
+      - name: Run All Rule Guards (includes Rule AR SQAM)
         run: bash scripts/run_all_rule_guards.sh --jobs 4
 
   # ==================== JOB 2: BACKEND TEST ====================

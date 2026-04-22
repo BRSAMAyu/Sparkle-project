@@ -24,6 +24,7 @@ def test_proto_exposes_stage31_wire_fields() -> None:
     assert fields["calendar_context"].number == 19
     assert fields["metacognition_profile"].number == 20
     assert fields["idiographic_summary"].number == 21
+    assert fields["social_signals_summary"].number == 22
 
 
 def test_proto_wrapper_types_match_expected_messages() -> None:
@@ -32,6 +33,7 @@ def test_proto_wrapper_types_match_expected_messages() -> None:
     assert fields["achievement_summary"].message_type.name == "AchievementSummaryField"
     assert fields["calendar_context"].message_type.name == "CalendarContextField"
     assert fields["idiographic_summary"].message_type.name == "IdiographicSummaryField"
+    assert fields["social_signals_summary"].message_type.name == "SocialSignalsSummaryField"
 
 
 def test_python_schema_exposes_stage31_fields() -> None:
@@ -40,6 +42,7 @@ def test_python_schema_exposes_stage31_fields() -> None:
     assert "achievement_summary" in annotations
     assert "calendar_context" in annotations
     assert "idiographic_summary" in annotations
+    assert "social_signals_summary" in annotations
 
 
 def test_calendar_context_keeps_struct_exam_urgency() -> None:

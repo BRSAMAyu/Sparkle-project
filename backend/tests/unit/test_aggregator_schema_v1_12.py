@@ -55,7 +55,7 @@ def test_user_state_v1_12_exposes_idiographic_contract() -> None:
         ),
     )
 
-    assert state.schema_version == "user_state.v1.12"
+    assert state.schema_version == "user_state.v1.13"
     assert state.idiographic_summary is not None
     assert state.idiographic_summary.value.top_associations[0].displayed is True
     assert state.idiographic_summary.value.disclaimer_text
@@ -99,6 +99,6 @@ async def test_aggregator_builds_idiographic_summary_field(
         required_fields=("idiographic_summary",),
     )
 
-    assert state.schema_version == "user_state.v1.12"
+    assert state.schema_version == "user_state.v1.13"
     assert state.idiographic_summary is not None
     assert state.idiographic_summary.value.top_associations[0].sample_days == 41

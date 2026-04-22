@@ -9,10 +9,11 @@ from loguru import logger
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.event_bus import event_bus
+from app.core.event_bus import PlanCreatedEvent, event_bus
 from app.models.plan import Plan, PlanPriority, PlanStage
 from app.models.task import Task, TaskStatus
 from app.schemas.plan import PlanCreate, PlanUpdate
+from app.services.stage33_journey_event_service import Stage33JourneyEventService
 
 
 async def _sync_plan_card_projection(db: AsyncSession, plan: Plan) -> None:
@@ -105,6 +106,19 @@ class PlanService:
         logger.info(
             f"Plan created: {db_obj.id} for user {user_id}, "
             f"is_primary={db_obj.is_primary}, priority={db_obj.priority}"
+        )
+        await Stage33JourneyEventService.publish(
+            "plan.created",
+            PlanCreatedEvent(
+                user_id=str(user_id),
+                plan_id=str(db_obj.id),
+                source="plan_service.create",
+                metadata={
+                    "plan_type": db_obj.type.value if db_obj.type else None,
+                    "plan_stage": db_obj.plan_stage.value if db_obj.plan_stage else None,
+                    "is_primary": db_obj.is_primary,
+                },
+            ).to_dict(),
         )
 
         return db_obj

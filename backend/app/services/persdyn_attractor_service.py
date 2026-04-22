@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from statistics import fmean, pstdev
@@ -19,9 +20,8 @@ from app.models.aurora_stage27 import PersDynAttractor
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import StudyRecord
 from app.models.memory import EpisodicMemory, Scene
-from app.models.task import Task, TaskStatus
+from app.models.task import Task
 from app.schemas.foresight import AttractorState
-
 
 PERSDYN_ATTRACTOR_UPDATED_TOTAL = get_or_create_metric(
     PrometheusCounter,
@@ -60,11 +60,23 @@ def _linear_regression_slope(values: Iterable[float]) -> float:
     xs = list(range(count))
     mean_x = fmean(xs)
     mean_y = fmean(materialized)
-    numerator = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, materialized, strict=False))
+    numerator = sum(
+        (x - mean_x) * (y - mean_y) for x, y in zip(xs, materialized, strict=False)
+    )
     denominator = sum((x - mean_x) ** 2 for x in xs)
     if denominator <= 0:
         return 0.0
     return numerator / denominator
+
+
+def _clamp_unit_interval(value: float, *, default: float = 0.0) -> float:
+    try:
+        normalized = float(value)
+    except (TypeError, ValueError):
+        return default
+    if not math.isfinite(normalized):
+        return default
+    return max(0.0, min(normalized, 1.0))
 
 
 class PersDynAttractorService:
@@ -100,18 +112,24 @@ class PersDynAttractorService:
         normalized_user_id = self._require_user_id(user_id)
         reference_time = now or _utcnow()
         rows = await self._load_rows(normalized_user_id)
-        if len(rows) < len(self.DIMENSIONS) or any(self._is_stale(row, reference_time) for row in rows):
-            states = await self.recompute_user_attractors(user_id=normalized_user_id, now=reference_time)
+        if len(rows) < len(self.DIMENSIONS) or any(
+            self._is_stale(row, reference_time) for row in rows
+        ):
+            states = await self.recompute_user_attractors(
+                user_id=normalized_user_id, now=reference_time
+            )
         else:
-            states = {row.dim: self._to_state(row) for row in rows if row.dim in self.DIMENSIONS}
+            states = {
+                row.dim: self._to_state(row)
+                for row in rows
+                if row.dim in self.DIMENSIONS
+            }
 
         if include_low_confidence:
             return states
         threshold = float(settings.AURORA_FORESIGHT_ATTRACTOR_MIN_CONFIDENCE)
         return {
-            dim: state
-            for dim, state in states.items()
-            if state.confidence >= threshold
+            dim: state for dim, state in states.items() if state.confidence >= threshold
         }
 
     async def build_current_observation(
@@ -123,7 +141,9 @@ class PersDynAttractorService:
         normalized_user_id = self._require_user_id(user_id)
         reference_time = now or _utcnow()
         rows = await self._load_signal_rows(normalized_user_id, reference_time)
-        return self._build_observation_for_day(rows=rows, reference_day=reference_time.date())
+        return self._build_observation_for_day(
+            rows=rows, reference_day=reference_time.date()
+        )
 
     async def build_daily_observations(
         self,
@@ -169,27 +189,35 @@ class PersDynAttractorService:
             )
             for dim in self.DIMENSIONS
         }
-        await self._upsert_rows(user_id=normalized_user_id, states=states, now=reference_time)
+        await self._upsert_rows(
+            user_id=normalized_user_id, states=states, now=reference_time
+        )
         return states
 
     async def recompute_all_users(self, *, now: datetime | None = None) -> int:
         reference_time = now or _utcnow()
         user_ids = {
             item[0]
-            for item in (await self.db.execute(select(StudyRecord.user_id).distinct())).all()
+            for item in (
+                await self.db.execute(select(StudyRecord.user_id).distinct())
+            ).all()
             if item and item[0] is not None
         }
         user_ids.update(
             {
                 item[0]
-                for item in (await self.db.execute(select(Task.user_id).distinct())).all()
+                for item in (
+                    await self.db.execute(select(Task.user_id).distinct())
+                ).all()
                 if item and item[0] is not None
             }
         )
         user_ids.update(
             {
                 item[0]
-                for item in (await self.db.execute(select(Scene.user_id).distinct())).all()
+                for item in (
+                    await self.db.execute(select(Scene.user_id).distinct())
+                ).all()
                 if item and item[0] is not None
             }
         )
@@ -210,7 +238,9 @@ class PersDynAttractorService:
 
     @staticmethod
     def _is_stale(row: PersDynAttractor, reference_time: datetime) -> bool:
-        return (reference_time - (row.updated_at or reference_time)).total_seconds() > 24 * 60 * 60
+        return (
+            reference_time - (row.updated_at or reference_time)
+        ).total_seconds() > 24 * 60 * 60
 
     async def _load_rows(self, user_id: UUID) -> list[PersDynAttractor]:
         stmt = select(PersDynAttractor).where(
@@ -227,7 +257,9 @@ class PersDynAttractorService:
         lookback_days: int | None = None,
     ) -> _SignalRows:
         requested_days = max(1, int(lookback_days or self.CONFIDENCE_LOOKBACK_DAYS))
-        earliest_start = _start_of_day(reference_time.date() - timedelta(days=requested_days - 1))
+        earliest_start = _start_of_day(
+            reference_time.date() - timedelta(days=requested_days - 1)
+        )
 
         study_records = tuple(
             (
@@ -239,7 +271,9 @@ class PersDynAttractorService:
                         StudyRecord.created_at < reference_time + timedelta(days=1),
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         tasks = tuple(
             (
@@ -250,7 +284,9 @@ class PersDynAttractorService:
                         Task.created_at < reference_time + timedelta(days=1),
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         focus_sessions = tuple(
             (
@@ -264,7 +300,9 @@ class PersDynAttractorService:
                         FocusSession.end_time < reference_time + timedelta(days=1),
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         scenes = tuple(
             (
@@ -276,7 +314,9 @@ class PersDynAttractorService:
                         Scene.time_end < reference_time + timedelta(days=1),
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         reflections = tuple(
             (
@@ -293,7 +333,9 @@ class PersDynAttractorService:
                         EpisodicMemory.occurred_at < reference_time + timedelta(days=1),
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         return _SignalRows(
             study_records=study_records,
@@ -314,12 +356,16 @@ class PersDynAttractorService:
         series = {dim: [] for dim in self.DIMENSIONS}
         for offset in range(window_days - 1, -1, -1):
             reference_day = reference_time.date() - timedelta(days=offset)
-            observation = self._build_observation_for_day(rows=rows, reference_day=reference_day)
+            observation = self._build_observation_for_day(
+                rows=rows, reference_day=reference_day
+            )
             for dim in self.DIMENSIONS:
                 series[dim].append(float(observation[dim]))
         return series
 
-    def _build_observation_for_day(self, *, rows: _SignalRows, reference_day: date) -> dict[str, float]:
+    def _build_observation_for_day(
+        self, *, rows: _SignalRows, reference_day: date
+    ) -> dict[str, float]:
         day_end = _end_exclusive(reference_day)
         start_3d = _start_of_day(reference_day - timedelta(days=2))
         start_7d = _start_of_day(reference_day - timedelta(days=6))
@@ -330,25 +376,35 @@ class PersDynAttractorService:
             if start_3d <= record.created_at < day_end
         )
         study_records_3d = [
-            record for record in rows.study_records if start_3d <= record.created_at < day_end
+            record
+            for record in rows.study_records
+            if start_3d <= record.created_at < day_end
         ]
         tasks_7d = [
             task for task in rows.tasks if start_7d <= task.created_at < day_end
         ]
         completed_tasks_7d = [
-            task for task in tasks_7d if task.completed_at is not None and task.completed_at < day_end
+            task
+            for task in tasks_7d
+            if task.completed_at is not None and task.completed_at < day_end
         ]
         focus_3d = [
-            session for session in rows.focus_sessions if session.end_time is not None and start_3d <= session.end_time < day_end
+            session
+            for session in rows.focus_sessions
+            if session.end_time is not None and start_3d <= session.end_time < day_end
         ]
         scenes_7d = [
             scene for scene in rows.scenes if start_7d <= scene.time_end < day_end
         ]
         reflections_7d = [
-            reflection for reflection in rows.reflections if start_7d <= reflection.occurred_at < day_end
+            reflection
+            for reflection in rows.reflections
+            if start_7d <= reflection.occurred_at < day_end
         ]
         plan_tasks = [
-            task for task in rows.tasks if task.plan_id is not None and task.created_at < day_end
+            task
+            for task in rows.tasks
+            if task.plan_id is not None and task.created_at < day_end
         ]
         overdue_plan_tasks = [
             task
@@ -359,26 +415,56 @@ class PersDynAttractorService:
         ]
 
         valence_values = [
-            self.REFLECTION_VALENCE_MAP.get(self._extract_reflection_category(reflection), 0.4)
+            self.REFLECTION_VALENCE_MAP.get(
+                self._extract_reflection_category(reflection), 0.4
+            )
             for reflection in reflections_7d
         ]
 
         return {
-            "study_pace": round((study_minutes / 60.0) / 3.0, 4),
-            "completion_rate": round((len(completed_tasks_7d) / len(tasks_7d)) if tasks_7d else 0.5, 4),
-            "engagement_level": round(
-                len(study_records_3d)
-                + (len(focus_3d) * 1.5)
-                + sum(max(0.0, min(1.0, float(scene.quality_score))) for scene in scenes_7d)
-                + (len(reflections_7d) * 0.5),
+            "study_pace": round(_clamp_unit_interval((study_minutes / 60.0) / 3.0), 4),
+            "completion_rate": round(
+                _clamp_unit_interval(
+                    (len(completed_tasks_7d) / len(tasks_7d)) if tasks_7d else 0.5,
+                    default=0.5,
+                ),
                 4,
             ),
-            "mood_valence": round(fmean(valence_values) if valence_values else 0.5, 4),
-            "plan_adherence": round(1.0 - (len(overdue_plan_tasks) / len(plan_tasks)) if plan_tasks else 0.5, 4),
+            "engagement_level": round(
+                _clamp_unit_interval(
+                    len(study_records_3d)
+                    + (len(focus_3d) * 1.5)
+                    + sum(
+                        max(0.0, min(1.0, float(scene.quality_score)))
+                        for scene in scenes_7d
+                    )
+                    + (len(reflections_7d) * 0.5)
+                ),
+                4,
+            ),
+            "mood_valence": round(
+                _clamp_unit_interval(
+                    fmean(valence_values) if valence_values else 0.5, default=0.5
+                ),
+                4,
+            ),
+            "plan_adherence": round(
+                _clamp_unit_interval(
+                    (
+                        1.0 - (len(overdue_plan_tasks) / len(plan_tasks))
+                        if plan_tasks
+                        else 0.5
+                    ),
+                    default=0.5,
+                ),
+                4,
+            ),
         }
 
     def _count_active_days(self, *, rows: _SignalRows, reference_time: datetime) -> int:
-        window_start = reference_time.date() - timedelta(days=self.CONFIDENCE_LOOKBACK_DAYS - 1)
+        window_start = reference_time.date() - timedelta(
+            days=self.CONFIDENCE_LOOKBACK_DAYS - 1
+        )
         active_days: set[date] = set()
         for record in rows.study_records:
             active_days.add(record.created_at.date())
@@ -393,7 +479,9 @@ class PersDynAttractorService:
             active_days.add(scene.time_end.date())
         for reflection in rows.reflections:
             active_days.add(reflection.occurred_at.date())
-        return sum(1 for day in active_days if window_start <= day <= reference_time.date())
+        return sum(
+            1 for day in active_days if window_start <= day <= reference_time.date()
+        )
 
     def _estimate_state(
         self,
@@ -423,16 +511,28 @@ class PersDynAttractorService:
         capped = min(active_days, self.CONFIDENCE_LOOKBACK_DAYS)
         return min(
             0.95,
-            0.3 + ((capped - self.HISTORY_DAYS) / max(1, self.CONFIDENCE_LOOKBACK_DAYS - self.HISTORY_DAYS)) * 0.65,
+            0.3
+            + (
+                (capped - self.HISTORY_DAYS)
+                / max(1, self.CONFIDENCE_LOOKBACK_DAYS - self.HISTORY_DAYS)
+            )
+            * 0.65,
         )
 
     def _ema(self, values: list[float]) -> float:
         if not values:
             return 0.0
-        ema = float(values[0])
-        for value in values[1:]:
-            ema = (self.alpha * float(value)) + ((1.0 - self.alpha) * ema)
-        return ema
+        finite_values = [
+            float(value) for value in values if math.isfinite(float(value))
+        ]
+        if not finite_values:
+            return 0.0
+        ema = finite_values[0]
+        for value in finite_values[1:]:
+            ema = (self.alpha * value) + ((1.0 - self.alpha) * ema)
+            if not math.isfinite(ema):
+                return 0.0
+        return ema if math.isfinite(ema) else 0.0
 
     async def _upsert_rows(
         self,
@@ -441,10 +541,7 @@ class PersDynAttractorService:
         states: dict[str, AttractorState],
         now: datetime,
     ) -> None:
-        existing = {
-            row.dim: row
-            for row in await self._load_rows(user_id)
-        }
+        existing = {row.dim: row for row in await self._load_rows(user_id)}
         updated_dims: list[str] = []
         for dim, state in states.items():
             row = existing.get(dim)

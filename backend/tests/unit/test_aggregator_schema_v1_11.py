@@ -35,7 +35,7 @@ def test_user_state_v1_11_exposes_metacognition_contract() -> None:
         ),
     )
 
-    assert state.schema_version == "user_state.v1.12"
+    assert state.schema_version == "user_state.v1.13"
     assert state.metacognition_profile is not None
     assert state.metacognition_profile.value.items[0].dim == "time_estimation_bias"
 
@@ -66,6 +66,6 @@ async def test_aggregator_builds_metacognition_profile_field(
         required_fields=("metacognition_profile",),
     )
 
-    assert state.schema_version == "user_state.v1.12"
+    assert state.schema_version == "user_state.v1.13"
     assert state.metacognition_profile is not None
     assert state.metacognition_profile.value.items[0].sample_size == 24

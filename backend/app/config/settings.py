@@ -294,6 +294,13 @@ class Settings(BaseSettings):
     AURORA_IDIOGRAPHIC_MODE: str = "shadow"  # off | shadow | live
     AURORA_IDIOGRAPHIC_TTL_SECONDS: int = 300
 
+    # Aurora Stage 33
+    AURORA_STAGE33_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE33_SOCIAL_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE33_SRL_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE33_WM_PROMPT_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE33_EVENTS_MODE: str = "shadow"  # off | shadow | live
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

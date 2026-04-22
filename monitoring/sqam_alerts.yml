@@ -1,0 +1,97 @@
+groups:
+  - name: aurora_sqam
+    interval: 30s
+    rules:
+      - alert: SQAMPersDynDrift
+        expr: |
+          sum by (dim) (increase(sparkle_persdyn_attractor_updated_total[7d]))
+            < 0.5 * clamp_min(sum by (dim) (increase(sparkle_persdyn_attractor_updated_total[14d] offset 7d)), 1)
+        for: 6h
+        labels:
+          severity: warning
+          tier: P3
+          service: aurora
+          component: persdyn
+        annotations:
+          summary: "PersDyn 更新率异常下滑"
+          description: "某个 PersDyn 维度最近 7 天更新率低于上一窗口基线的 50%。"
+          runbook: "monitoring/runbooks/incident_response.md"
+
+      - alert: SQAMJITAITriggerCollapse
+        expr: |
+          max(
+            sum by (dim) (increase(sparkle_jitai_triggered_total[7d]))
+            / clamp_min(sum(increase(sparkle_jitai_triggered_total[7d])), 1)
+          ) > 0.8
+        for: 7d
+        labels:
+          severity: warning
+          tier: P3
+          service: aurora
+          component: jitai
+        annotations:
+          summary: "JITAI 触发维度塌缩"
+          description: "最近 7 天单一 JITAI 维度占比超过 80%。"
+          runbook: "monitoring/runbooks/incident_response.md"
+
+      - alert: SQAMJITAIBurdenHigh
+        expr: |
+          increase(sparkle_jitai_skipped_total{reason="budget"}[1d])
+            / clamp_min(
+              increase(sparkle_jitai_skipped_total{reason="budget"}[1d])
+              + sum(increase(sparkle_jitai_triggered_total[1d])),
+              1
+            ) > 0.3
+        for: 3h
+        labels:
+          severity: warning
+          tier: P2
+          service: aurora
+          component: jitai
+        annotations:
+          summary: "JITAI 预算压负过高"
+          description: "预算耗尽导致的 JITAI skip 占比在近 1 天超过 30%（基于现有事件计数近似）。"
+          runbook: "monitoring/runbooks/incident_response.md"
+
+      - alert: SQAMPredictiveCTRDrop
+        expr: |
+          avg_over_time(sparkle_predictive_ctr_percent[5d])
+            < 0.8 * clamp_min(avg_over_time(sparkle_predictive_ctr_percent[14d] offset 5d), 1)
+        for: 6h
+        labels:
+          severity: warning
+          tier: P2
+          service: aurora
+          component: predictive
+        annotations:
+          summary: "Predictive CTR 明显下滑"
+          description: "CTR 5 日均值较历史窗口下滑超过 20%。该规则依赖既有 CandidateActionFeedback 指标导出。"
+          runbook: "monitoring/runbooks/incident_response.md"
+
+      - alert: SQAMSRLUnknownRate
+        expr: sparkle_srl_phase_unknown_rate > 0.4
+        for: 3d
+        labels:
+          severity: warning
+          tier: P3
+          service: aurora
+          component: srl
+        annotations:
+          summary: "SRL UNKNOWN 比例偏高"
+          description: "SRL UNKNOWN rate 持续超过 0.4。"
+          runbook: "monitoring/runbooks/incident_response.md"
+
+      - alert: SQAMSRLOscillation
+        expr: |
+          sum(increase(sparkle_srl_phase_transition_total[24h]))
+            > 4 * clamp_min(sum(increase(sparkle_srl_phase_transition_total[7d])) / 7, 1)
+        for: 6h
+        labels:
+          severity: warning
+          tier: P2
+          service: aurora
+          component: srl
+        annotations:
+          summary: "SRL 转换振荡代理告警"
+          description: "现有指标不保留 user 维；此规则使用系统级 phase transition surge 作为振荡代理。"
+          runbook: "monitoring/runbooks/incident_response.md"

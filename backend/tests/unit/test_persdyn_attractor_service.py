@@ -40,7 +40,9 @@ def test_persdyn_confidence_marks_cold_start_below_threshold(db_session) -> None
     assert service._confidence(10) < 0.3
 
 
-def test_persdyn_confidence_scales_to_high_confidence_after_full_window(db_session) -> None:
+def test_persdyn_confidence_scales_to_high_confidence_after_full_window(
+    db_session,
+) -> None:
     service = PersDynAttractorService(db_session)
 
     assert service._confidence(28) == 0.95
@@ -51,19 +53,25 @@ async def test_persdyn_build_observation_maps_reflection_valence(db_session) -> 
     user_id = uuid4()
     now = datetime(2026, 4, 21, 9, 0, 0)
     db_session.add(
-        make_reflection(user_id=user_id, occurred_at=now - timedelta(hours=1), category="overload")
+        make_reflection(
+            user_id=user_id, occurred_at=now - timedelta(hours=1), category="overload"
+        )
     )
     await db_session.commit()
 
     service = PersDynAttractorService(db_session)
     rows = await service._load_signal_rows(user_id, now)
-    observation = service._build_observation_for_day(rows=rows, reference_day=now.date())
+    observation = service._build_observation_for_day(
+        rows=rows, reference_day=now.date()
+    )
 
     assert observation["mood_valence"] == 0.1
 
 
 @pytest.mark.asyncio
-async def test_persdyn_build_observation_penalizes_overdue_plan_tasks(db_session) -> None:
+async def test_persdyn_build_observation_penalizes_overdue_plan_tasks(
+    db_session,
+) -> None:
     user_id = uuid4()
     plan_id = uuid4()
     now = datetime(2026, 4, 21, 9, 0, 0)
@@ -80,13 +88,17 @@ async def test_persdyn_build_observation_penalizes_overdue_plan_tasks(db_session
 
     service = PersDynAttractorService(db_session)
     rows = await service._load_signal_rows(user_id, now)
-    observation = service._build_observation_for_day(rows=rows, reference_day=now.date())
+    observation = service._build_observation_for_day(
+        rows=rows, reference_day=now.date()
+    )
 
     assert observation["plan_adherence"] == 0.0
 
 
 @pytest.mark.asyncio
-async def test_persdyn_build_observation_averages_study_pace_over_three_days(db_session) -> None:
+async def test_persdyn_build_observation_averages_study_pace_over_three_days(
+    db_session,
+) -> None:
     user_id = uuid4()
     node_id = uuid4()
     now = datetime(2026, 4, 21, 9, 0, 0)
@@ -103,9 +115,11 @@ async def test_persdyn_build_observation_averages_study_pace_over_three_days(db_
 
     service = PersDynAttractorService(db_session)
     rows = await service._load_signal_rows(user_id, now)
-    observation = service._build_observation_for_day(rows=rows, reference_day=now.date())
+    observation = service._build_observation_for_day(
+        rows=rows, reference_day=now.date()
+    )
 
-    assert observation["study_pace"] == 1.5
+    assert observation["study_pace"] == 1.0
 
 
 @pytest.mark.asyncio
@@ -124,10 +138,14 @@ async def test_persdyn_recompute_persists_rows_per_dimension(db_session) -> None
     )
 
     rows = (
-        await db_session.execute(
-            select(PersDynAttractor).where(PersDynAttractor.user_id == user_id)
+        (
+            await db_session.execute(
+                select(PersDynAttractor).where(PersDynAttractor.user_id == user_id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(states) == 5
     assert len(rows) == 5
 
