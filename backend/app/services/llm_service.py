@@ -14,6 +14,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.core.llm_secure_io import (
+    refresh_llm_safety_mode,
+    sanitize_llm_output,
+    sanitize_text_for_llm,
+    sanitize_tool_payload,
+    secure_messages,
+    wrap_tool_result,
+    wrap_user_message,
+)
 from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
@@ -451,6 +460,18 @@ class LLMService:
             "如果你愿意，可以提供更多上下文（目标、时间、基础），我会给出更细的计划。"
         )
 
+    @staticmethod
+    def _resolve_user_id(**kwargs: Any) -> str | None:
+        user_id = kwargs.get("user_id")
+        if user_id:
+            return str(user_id)
+        user_context = kwargs.get("user_context")
+        if isinstance(user_context, dict):
+            candidate = user_context.get("user_id") or user_context.get("uid")
+            if candidate:
+                return str(candidate)
+        return None
+
     async def chat(
         self,
         messages: list[dict[str, str]],
@@ -461,6 +482,15 @@ class LLMService:
         """
         Send a chat request to the LLM with automatic fallback support.
         """
+        await refresh_llm_safety_mode()
+        kwargs = dict(kwargs)
+        user_id = self._resolve_user_id(**kwargs)
+        kwargs.pop("user_id", None)
+        safe_messages = secure_messages(
+            messages,
+            user_id=user_id,
+            wrap_user_messages=True,
+        )
         model = model or self.chat_model
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
@@ -489,12 +519,15 @@ class LLMService:
                 try:
                     async with llm_concurrency.acquire(provider_name):
                         response = await current_provider.chat(
-                            messages,
+                            safe_messages,
                             model=selection.config.model_name,
                             temperature=selection.config.temperature,
                             **request_kwargs
                         )
-                        return response
+                        return sanitize_llm_output(
+                            response,
+                            context={"user_id": user_id, "type": "chat"},
+                        )
                 except Exception as e:
                     # 让回退管理器判断是否需要重试
                     reason = llm_fallback_manager._detect_fallback_reason(e)
@@ -685,6 +718,15 @@ class LLMService:
         """
         Send a deep reasoning request to the LLM.
         """
+        await refresh_llm_safety_mode()
+        kwargs = dict(kwargs)
+        user_id = self._resolve_user_id(**kwargs)
+        kwargs.pop("user_id", None)
+        safe_messages = secure_messages(
+            messages,
+            user_id=user_id,
+            wrap_user_messages=True,
+        )
         requested_model = model
         resolved_model = model or self.reason_model
         with tracer.start_as_current_span("llm_reason") as span:
@@ -717,7 +759,7 @@ class LLMService:
                             merged_kwargs.setdefault(key, value)
                         async with llm_concurrency.acquire(provider_name):
                             return await current_provider.chat(
-                                messages,
+                                safe_messages,
                                 model=current_selection.config.model_name,
                                 temperature=current_selection.config.temperature,
                                 **merged_kwargs,
@@ -730,13 +772,16 @@ class LLMService:
                     )
                 else:
                     response = await self.provider.chat(
-                        messages,
+                        safe_messages,
                         model=resolved_model,
                         temperature=temperature,
                         **kwargs,
                     )
                 await circuit_breaker_service.record_success("primary_llm")
-                return response
+                return sanitize_llm_output(
+                    response,
+                    context={"user_id": user_id, "type": "reason"},
+                )
             except CircuitBreakerOpenException:
                 logger.warning("Circuit breaker OPEN for primary_llm. Fast failing.")
                 raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)")
@@ -804,6 +849,13 @@ class LLMService:
         """
         Stream chat response from the LLM with automatic fallback support.
         """
+        await refresh_llm_safety_mode()
+        user_id = self._resolve_user_id(user_context=user_context, **kwargs)
+        safe_messages = secure_messages(
+            messages,
+            user_id=user_id,
+            wrap_user_messages=True,
+        )
         with tracer.start_as_current_span("llm_stream_chat") as span:
             # 🎭 Demo Mode 拦截 - 流式返回预设响应
             mock_response = self._check_demo_match(messages)
@@ -852,7 +904,7 @@ class LLMService:
                 try:
                     async with llm_concurrency.acquire(provider_name):
                         async for chunk in current_provider.stream_chat(
-                            messages,
+                            safe_messages,
                             model=selection.config.model_name,
                             temperature=selection.config.temperature,
                             **request_kwargs
@@ -883,7 +935,7 @@ class LLMService:
 
                 else:
                     # 没有当前选择，直接调用
-                    async for chunk in self.provider.stream_chat(messages, model=model, temperature=temperature, **kwargs):
+                    async for chunk in self.provider.stream_chat(safe_messages, model=model, temperature=temperature, **kwargs):
                         chunk_count += 1
                         if first_chunk_time is None:
                             first_chunk_time = _time.perf_counter()
@@ -913,13 +965,25 @@ class LLMService:
         """
         带工具调用的聊天
         """
-        messages = [{"role": "system", "content": system_prompt}]
+        await refresh_llm_safety_mode()
+        user_id = self._resolve_user_id(user_id=None)
+        safe_system_prompt = sanitize_text_for_llm(system_prompt, user_id=user_id)
+        safe_user_message = wrap_user_message(sanitize_text_for_llm(user_message, user_id=user_id))
+
+        messages = [{"role": "system", "content": safe_system_prompt}]
 
         if conversation_history:
-            messages.extend(conversation_history)
+            messages.extend(
+                secure_messages(
+                    conversation_history,
+                    user_id=user_id,
+                    wrap_user_messages=True,
+                    wrap_tool_messages=True,
+                )
+            )
 
         if not self._history_ends_with_user_message(conversation_history, user_message):
-            messages.append({"role": "user", "content": user_message})
+            messages.append({"role": "user", "content": safe_user_message})
 
         if not self.provider:
             raise HTTPException(
@@ -975,7 +1039,10 @@ class LLMService:
                         })
 
                 return LLMResponse(
-                    content=message.content or "",
+                    content=sanitize_llm_output(
+                        message.content or "",
+                        context={"user_id": user_id, "type": "chat_with_tools"},
+                    ),
                     tool_calls=tool_calls_dicts,
                     finish_reason=choice.finish_reason
                 )
@@ -990,7 +1057,12 @@ class LLMService:
         """
         将工具执行结果反馈给 LLM，获取最终回复
         """
-        messages = conversation_history[:]
+        await refresh_llm_safety_mode()
+        messages = secure_messages(
+            conversation_history,
+            wrap_user_messages=True,
+            wrap_tool_messages=True,
+        )
         fallback_tool_call_ids: list[str] = []
         for msg in reversed(messages):
             if msg.get("role") != "assistant":
@@ -1004,13 +1076,14 @@ class LLMService:
                 break
 
         for idx, result in enumerate(tool_results):
+            safe_result = sanitize_tool_payload(result)
             tool_message = {
                 "role": "tool",
-                "content": json.dumps(result, ensure_ascii=False)
+                "content": wrap_tool_result(json.dumps(safe_result, ensure_ascii=False))
             }
             tool_call_id = (
-                (result.get("tool_call_id") if isinstance(result, dict) else None)
-                or (result.get("id") if isinstance(result, dict) else None)
+                (safe_result.get("tool_call_id") if isinstance(safe_result, dict) else None)
+                or (safe_result.get("id") if isinstance(safe_result, dict) else None)
                 or (fallback_tool_call_ids[idx] if idx < len(fallback_tool_call_ids) else None)
             )
             if tool_call_id:
@@ -1056,7 +1129,10 @@ class LLMService:
                     span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
 
                 return LLMResponse(
-                    content=message.content or "",
+                    content=sanitize_llm_output(
+                        message.content or "",
+                        context={"type": "continue_with_tool_results"},
+                    ),
                     tool_calls=None,
                     finish_reason=choice.finish_reason
                 )
@@ -1075,11 +1151,20 @@ class LLMService:
         """
         流式聊天（支持工具调用）
         """
-        messages = [{"role": "system", "content": system_prompt}]
+        await refresh_llm_safety_mode()
+        safe_system_prompt = sanitize_text_for_llm(system_prompt)
+        safe_user_message = wrap_user_message(sanitize_text_for_llm(user_message))
+        messages = [{"role": "system", "content": safe_system_prompt}]
         if conversation_history:
-            messages.extend(conversation_history)
+            messages.extend(
+                secure_messages(
+                    conversation_history,
+                    wrap_user_messages=True,
+                    wrap_tool_messages=True,
+                )
+            )
         if not self._history_ends_with_user_message(conversation_history, user_message):
-            messages.append({"role": "user", "content": user_message})
+            messages.append({"role": "user", "content": safe_user_message})
         temperature = self._resolve_temperature(user_context, temperature)
 
         if not self.provider:

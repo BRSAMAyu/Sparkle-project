@@ -14,11 +14,11 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import settings
 from app.core.cache import cache_service
+from app.core.llm_client import SecureLLMClient
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm_service import llm_service
 from app.services.vocabulary_service import vocabulary_service
@@ -312,12 +312,12 @@ class TranslationService:
                 continue
             try:
                 await circuit_breaker_service.check(self._circuit_key(provider_name))
-                translate_client = AsyncOpenAI(
+                translate_client = SecureLLMClient.get(
                     api_key=config["api_key"],
                     base_url=config["base_url"],
-                    timeout=settings.TRANSLATION_PROVIDER_TIMEOUT_SECONDS,
+                    timeout_seconds=settings.TRANSLATION_PROVIDER_TIMEOUT_SECONDS,
                 )
-                response = await translate_client.chat.completions.create(
+                translation = await translate_client.chat(
                     model=config["model"],
                     messages=[
                         {"role": "system", "content": system_prompt},
@@ -325,7 +325,7 @@ class TranslationService:
                     ],
                     temperature=0.3,
                 )
-                translation = response.choices[0].message.content.strip()
+                translation = translation.strip()
                 if not self._is_valid_translation_output(
                     translation,
                     segment.text,

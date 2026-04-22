@@ -626,6 +626,13 @@ KILL_SWITCH_MODE = get_or_create_metric(
     ["stage", "feature"],
 )
 
+LLM_SAFETY_BYPASS_TOTAL = get_or_create_metric(
+    Counter,
+    "llm_safety_bypass_total",
+    "Total LLM safety bypass events by surface",
+    ["surface"],
+)
+
 RESPONSE_FALLBACK_GENERATED_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_response_fallback_generated_total",

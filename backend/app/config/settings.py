@@ -312,6 +312,9 @@ class Settings(BaseSettings):
     AURORA_STAGE35_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE35_METACOG_ROUTER_MODE: str = "shadow"  # off | shadow | live
 
+    # Aurora Stage 37
+    AURORA_STAGE37_LLM_SAFETY_ENABLED: bool = True
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

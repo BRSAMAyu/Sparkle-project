@@ -5,6 +5,11 @@ Agent 错误处理器
 import json
 from typing import Any
 
+from app.core.llm_secure_io import (
+    refresh_llm_safety_mode,
+    sanitize_exception_message,
+    sanitize_tool_payload,
+)
 from app.tools.base import ToolResult
 from app.tools.registry import tool_registry
 
@@ -40,6 +45,7 @@ class AgentErrorHandler:
         Returns:
             ToolResult: 修正后的执行结果或原始错误
         """
+        await refresh_llm_safety_mode()
         # 超过最大重试次数，返回原始错误
         if retry_count >= self.MAX_RETRY_COUNT:
             return tool_result
@@ -89,7 +95,8 @@ class AgentErrorHandler:
 
         except Exception as e:
             # 修正过程出错，返回原始错误并附加修正失败信息
-            tool_result.suggestion = f"{tool_result.suggestion or ''}\n自动修正失败: {str(e)}"
+            safe_failure = sanitize_exception_message(str(e), fallback="自动修正失败，请稍后重试。")
+            tool_result.suggestion = f"{tool_result.suggestion or ''}\n{safe_failure}".strip()
             return tool_result
 
     def _build_correction_prompt(
@@ -115,14 +122,23 @@ class AgentErrorHandler:
                 )
             except (json.JSONDecodeError, KeyError):
                 original_params = original_request.get("function", {}).get("arguments", {})
+        original_params = sanitize_tool_payload(original_params)
+        safe_error_message = sanitize_exception_message(tool_result.error_message)
+        safe_suggestion = (
+            sanitize_exception_message(
+                tool_result.suggestion,
+                fallback="请检查参数后重试。",
+            )
+            if tool_result.suggestion else "无"
+        )
 
         prompt = f"""工具调用失败，需要你分析错误原因并修正参数后重新调用。
 
 **失败的工具**: {tool_result.tool_name}
 
-**错误信息**: {tool_result.error_message}
+**错误信息**: {safe_error_message}
 
-**建议**: {tool_result.suggestion or '无'}
+**建议**: {safe_suggestion}
 
 **原始参数**:
 ```json

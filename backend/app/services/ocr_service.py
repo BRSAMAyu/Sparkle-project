@@ -9,10 +9,10 @@ from typing import Any
 
 import httpx
 from loguru import logger
-from openai import AsyncOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
+from app.core.llm_client import SecureLLMClient
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 
 
@@ -303,14 +303,17 @@ class OCRService:
         }
 
     async def _siliconflow_ocr_from_url(self, image_url: str, prompt: str = "") -> str:
-        base_url = self.siliconflow_base_url
-        client = AsyncOpenAI(
+        client = SecureLLMClient.get(
             api_key=self.siliconflow_api_key,
-            base_url=base_url,
-            timeout=self.siliconflow_timeout.read or settings.SILICONFLOW_OCR_TIMEOUT_SECONDS,
+            base_url=self.siliconflow_base_url,
+            timeout_seconds=self.siliconflow_timeout.read or settings.SILICONFLOW_OCR_TIMEOUT_SECONDS,
         )
-        response = await client.chat.completions.create(**self._build_siliconflow_payload(image_url, prompt=prompt))
-        return self._extract_chat_text(response)
+        payload = self._build_siliconflow_payload(image_url, prompt=prompt)
+        return await client.chat(
+            messages=payload["messages"],
+            model=payload["model"],
+            temperature=float(payload.get("temperature", 0.0) or 0.0),
+        )
 
     def _siliconflow_ocr_from_base64_sync(self, image_b64: str, prompt: str = "") -> str:
         url = f"{self.siliconflow_base_url}/chat/completions"

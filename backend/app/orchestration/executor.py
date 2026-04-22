@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from app.config import settings
 from app.core.business_metrics import COMPENSATION_TRIGGERED
 from app.core.event_bus import event_bus
+from app.core.llm_secure_io import refresh_llm_safety_mode, sanitize_exception_message
 from app.core.event_types import (
     TOOL_EXECUTION_COMPLETED,
     TOOL_EXECUTION_FAILED,
@@ -193,6 +194,7 @@ class ToolExecutor:
         Returns:
             ToolResult: 执行结果
         """
+        await refresh_llm_safety_mode()
         if db_session is None:
             async with AsyncSessionLocal() as session:
                 return await self._execute_tool_call_with_session(
@@ -278,7 +280,10 @@ class ToolExecutor:
                     success=False,
                     tool_name=tool_name,
                     tool_call_id=tool_call_id,
-                    error_message=f"参数验证失败: {str(e)}",
+                    error_message=sanitize_exception_message(
+                        f"参数验证失败: {str(e)}",
+                        fallback="参数验证失败，请检查输入格式。",
+                    ),
                     suggestion="请检查参数格式是否正确",
                 )
                 await self._publish_tool_event(
@@ -341,6 +346,13 @@ class ToolExecutor:
                 result = await asyncio.wait_for(execution_coro, timeout=timeout_seconds)
                 if result.tool_call_id is None:
                     result.tool_call_id = tool_call_id
+                if not result.success:
+                    result.error_message = sanitize_exception_message(result.error_message)
+                    if result.suggestion:
+                        result.suggestion = sanitize_exception_message(
+                            result.suggestion,
+                            fallback="请稍后重试。",
+                        )
 
                 execution_time_ms = int((time.time() - start_time) * 1000)
                 TOOL_EXECUTION_COUNT.labels(
@@ -444,6 +456,7 @@ class ToolExecutor:
                 )
             except Exception as e:
                 execution_time_ms = int((time.time() - start_time) * 1000)
+                safe_error = sanitize_exception_message(str(e))
                 logger.error(f"Tool execution error: {tool_name} - {str(e)}", exc_info=True)
                 TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="error").inc()
                 await self._safe_rollback(db_session)
@@ -466,7 +479,7 @@ class ToolExecutor:
                         "tool_name": tool_name,
                         "tool_call_id": tool_call_id,
                         "duration_ms": execution_time_ms,
-                        "error_message": str(e),
+                        "error_message": safe_error,
                         "error_type": type(e).__name__,
                         "timestamp": self._utcnow_iso(),
                     },
@@ -483,7 +496,7 @@ class ToolExecutor:
                     success=False,
                     tool_name=tool_name,
                     tool_call_id=tool_call_id,
-                    error_message=f"工具执行异常: {str(e)}",
+                    error_message=safe_error,
                     error_type=type(e).__name__,
                     suggestion="请稍后重试或联系支持",
                 )
