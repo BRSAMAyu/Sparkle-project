@@ -471,7 +471,7 @@ Python Engine ←→ Database
 - **JWT (HS256)**: Access + Refresh tokens with exp/iat/jti/type/iss/aud claims
 - **Token Blacklist**: JTI-based revocation + user-level revocation (user_revoked_before)
 - **Fail-Closed**: Non-development boots force `REDIS_FAIL_CLOSED=true` when unset; development defaults remain fail-open for local debugging
-- **Timing-Attack Resistant**: `subtle.ConstantTimeCompare` for all secret comparisons
+- **Timing-Attack Resistant**: Gateway secret checks use constant-time comparison when secrets are configured; backend internal endpoints still depend on a non-empty `INTERNAL_API_KEY` to enforce validation
 
 ### Multi-Layer Rate Limiting
 - IP-based: 10 req/s, burst 30

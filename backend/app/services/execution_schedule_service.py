@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import event_bus
 from app.models.execution_schedule import ExecutionSchedule, ExecutionScheduleTriggerType
+from app.services.openclaw.url_guard import SSRFBlocked, validate_external_url
 
 
 def _utcnow() -> datetime:
@@ -258,9 +259,13 @@ class ExecutionScheduleService:
         if not check_url or not condition:
             return False
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.get(check_url)
+            safe_url = validate_external_url(check_url)
+            async with httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=30.0, write=30.0, pool=5.0)) as client:
+                response = await client.get(safe_url)
                 response.raise_for_status()
+        except SSRFBlocked as exc:
+            logger.warning("Scheduled condition check blocked for {}: {}", check_url, exc)
+            return False
         except Exception as exc:
             logger.warning("Scheduled condition check failed for {}: {}", check_url, exc)
             return False
@@ -323,7 +328,10 @@ class ExecutionScheduleService:
             condition = str(config.get("condition") or "").strip()
             if not check_url or not condition:
                 raise ValueError("condition trigger requires check_url and condition")
-            config["check_url"] = check_url
+            try:
+                config["check_url"] = validate_external_url(check_url)
+            except SSRFBlocked as exc:
+                raise ValueError("condition trigger check_url is not allowed") from exc
             config["condition"] = condition
             config["interval_minutes"] = max(5, int(config.get("interval_minutes") or 5))
         return config

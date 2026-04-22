@@ -8,7 +8,6 @@ import os
 import tempfile
 from uuid import UUID
 
-import httpx
 from loguru import logger
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +19,7 @@ from app.models.background_task import BackgroundTaskStatus, BackgroundTaskType
 from app.core.task_monitor import task_monitor_service
 from app.services.document_service import document_service
 from app.services.embedding_service import embedding_service
+from app.services.openclaw.url_guard import stream_download_to_path
 from app.services.thumbnail_service import thumbnail_service
 
 
@@ -121,14 +121,7 @@ class FileProcessingOrchestrator:
         suffix = os.path.splitext(file_name)[1] or ".bin"
         handle, temp_path = tempfile.mkstemp(prefix="file_process_", suffix=suffix)
         os.close(handle)
-
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.get(download_url)
-            resp.raise_for_status()
-            with open(temp_path, "wb") as outfile:
-                async for chunk in resp.aiter_bytes():
-                    outfile.write(chunk)
-
+        await stream_download_to_path(download_url, temp_path)
         return temp_path
 
     async def _replace_chunks(self, file_id: UUID) -> None:
