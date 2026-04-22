@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -29,6 +30,41 @@ Map<String, dynamic>? _decodeMapOrString(dynamic value) {
     } catch (_) {}
   }
   return null;
+}
+
+Map<String, dynamic>? _normalizeMetadata(dynamic raw) {
+  final metadata = _decodeMapOrString(raw);
+  if (metadata == null) {
+    return null;
+  }
+
+  final normalized = Map<String, dynamic>.from(metadata);
+  final directUserState = _decodeUserStatePayload(normalized['user_state_v1']);
+  if (directUserState != null) {
+    normalized['user_state_v1'] = directUserState;
+  }
+
+  final profileContext = _decodeMapOrString(normalized['profile_context']);
+  if (profileContext != null) {
+    final userState = _decodeUserStatePayload(profileContext['user_state_v1']);
+    normalized['profile_context'] = {
+      ...profileContext,
+      if (userState != null) 'user_state_v1': userState,
+    };
+  }
+
+  return normalized;
+}
+
+Map<String, dynamic>? _decodeUserStatePayload(dynamic value) {
+  final payload = _decodeMapOrString(value);
+  if (payload == null || payload.isEmpty) {
+    return null;
+  }
+
+  // Run the Stage 35 typed parser here so REST/WS payloads share one schema path.
+  UserStateV1Model.fromJson(payload);
+  return payload;
 }
 
 bool _isTrue(dynamic value) {
@@ -88,7 +124,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
     switch (type) {
       case 'delta':
-        final metadata = data['metadata'] as Map<String, dynamic>?;
+        final metadata = _normalizeMetadata(data['metadata']);
         final dagData = _extractDagExecutionMetadata(metadata);
         final dagSignal = DagExecutionSignal.fromDynamic(dagData);
         final deltaContent = data['delta'] as String? ?? '';
@@ -1050,8 +1086,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   Timer? _heartbeatTimer;
   Timer? _heartbeatTimeoutTimer;
   static const Duration _heartbeatInterval = Duration(seconds: 30);
-  static const Duration _heartbeatTimeout =
-      Duration(seconds: 60); // 从 90s 降低到 60s
+  static const Duration _heartbeatTimeout = Duration(
+    seconds: 60,
+  ); // 从 90s 降低到 60s
   int _consecutiveHeartbeatFailures = 0;
   static const int _maxConsecutiveHeartbeatFailures = 3;
   DateTime? _lastPongReceivedTime;
@@ -1095,10 +1132,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   /// 是否已连接
   bool get isConnected => _connectionState == WsConnectionState.connected;
 
-  Future<void> ensureConnected({
-    required String userId,
-    String? token,
-  }) async {
+  Future<void> ensureConnected({required String userId, String? token}) async {
     if (_disposed) {
       return;
     }
@@ -1361,9 +1395,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         queryParameters['token'] = effectiveToken;
       }
 
-      final wsUri = Uri.parse('$effectiveBaseUrl/ws/chat').replace(
-        queryParameters: queryParameters,
-      );
+      final wsUri = Uri.parse(
+        '$effectiveBaseUrl/ws/chat',
+      ).replace(queryParameters: queryParameters);
       _log('🔌 Connecting to: $wsUri');
 
       // Note: We still send Authorization header for reference, but WS uses query param
@@ -1431,9 +1465,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
   Future<String?> _issueWsTicket() async {
     try {
-      final response = await _container.read(apiClientProvider).post<dynamic>(
-            '/ws/ticket',
-          );
+      final response =
+          await _container.read(apiClientProvider).post<dynamic>('/ws/ticket');
       final data = response.data;
       if (data is Map<String, dynamic>) {
         final ticket = data['ticket']?.toString();
@@ -1479,26 +1512,18 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       return;
     }
     _cancelTerminalFallback(requestId);
-    _terminalFallbackTimers[requestId] = Timer(
-      _terminalDoneFallbackDelay,
-      () {
-        final controller = _requestControllers[requestId];
-        if (controller == null || controller.isClosed || _disposed) {
-          _terminalFallbackTimers.remove(requestId);
-          return;
-        }
-        _safeAdd(
-          controller,
-          DoneEvent(
-            finishReason: 'full_text_idle_fallback',
-          ),
-        );
-        _requestControllers.remove(requestId);
+    _terminalFallbackTimers[requestId] = Timer(_terminalDoneFallbackDelay, () {
+      final controller = _requestControllers[requestId];
+      if (controller == null || controller.isClosed || _disposed) {
         _terminalFallbackTimers.remove(requestId);
-        _safeClose(controller);
-        _isStreamActive = false;
-      },
-    );
+        return;
+      }
+      _safeAdd(controller, DoneEvent(finishReason: 'full_text_idle_fallback'));
+      _requestControllers.remove(requestId);
+      _terminalFallbackTimers.remove(requestId);
+      _safeClose(controller);
+      _isStreamActive = false;
+    });
   }
 
   String? _extractRequestIdFromRawMessage(String data) {
@@ -1579,10 +1604,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _routeEventToRequest(requestId, event);
   }
 
-  void _failPendingMessages({
-    required String code,
-    required String message,
-  }) {
+  void _failPendingMessages({required String code, required String message}) {
     if (_pendingMessages.isEmpty) {
       return;
     }
@@ -1591,11 +1613,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     for (final payload in pending) {
       _notifyPendingPayloadFailure(
         payload,
-        ErrorEvent(
-          code: code,
-          message: message,
-          retryable: false,
-        ),
+        ErrorEvent(code: code, message: message, retryable: false),
       );
     }
   }
@@ -1644,9 +1662,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   }
 
   /// 检测错误是否为401认证失败
-  bool _is401Error(dynamic error) {
-    return looksLikeAuthFailure(error);
-  }
+  bool _is401Error(dynamic error) => looksLikeAuthFailure(error);
 
   @visibleForTesting
   static bool looksLikeAuthFailure(dynamic error) {
@@ -1690,9 +1706,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       // 执行登出
       try {
-        await _container.read(authRepositoryProvider).logout(
-              keepDemoMode: DemoDataService.isDemoMode,
-            );
+        await _container
+            .read(authRepositoryProvider)
+            .logout(keepDemoMode: DemoDataService.isDemoMode);
       } catch (e) {
         _log('❌ Logout failed: $e');
       }
@@ -1756,9 +1772,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       // 执行登出
       try {
-        await _container.read(authRepositoryProvider).logout(
-              keepDemoMode: DemoDataService.isDemoMode,
-            );
+        await _container
+            .read(authRepositoryProvider)
+            .logout(keepDemoMode: DemoDataService.isDemoMode);
       } catch (logoutErr) {
         _log('❌ Logout failed: $logoutErr');
       }

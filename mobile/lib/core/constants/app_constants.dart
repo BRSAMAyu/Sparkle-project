@@ -37,4 +37,5 @@ class AppFeatureFlags {
   static bool enableUserMemoryControls = true;
   static bool enableWorkingMemoryDrawer = true;
   static bool enableTaskGuidanceV2 = false;
+  static bool enableStage35ProfileCards = true;
 }

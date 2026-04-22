@@ -1,19 +1,27 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
+import 'package:sparkle/features/user/presentation/widgets/achievement_summary_card.dart';
+import 'package:sparkle/features/user/presentation/widgets/active_skills_card.dart';
+import 'package:sparkle/features/user/presentation/widgets/engagement_state_badge.dart';
+import 'package:sparkle/features/user/presentation/widgets/foresight_card.dart';
 import 'package:sparkle/features/user/presentation/widgets/metacognition_panel_card.dart';
 import 'package:sparkle/features/user/presentation/widgets/srl_phase_badge_card.dart';
+import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/features/user/presentation/widgets/traits_coldstart_questionnaire.dart';
 import 'package:sparkle/features/user/presentation/widgets/traits_prior_card.dart';
-import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
+import 'package:sparkle/features/user/presentation/widgets/working_memory_card.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -30,6 +38,9 @@ class ProfileScreen extends ConsumerWidget {
     final visualState = ref.watch(visualElementProvider);
     final profileContextAsync = ref.watch(profileContextProvider);
     final profileContext = profileContextAsync.valueOrNull;
+    final userState = profileContext == null
+        ? UserStateV1Model()
+        : UserStateV1Model.fromProfileContext(profileContext);
     final l10n = AppLocalizations.of(context)!;
     final screenHeight = MediaQuery.of(context).size.height;
     final headerHeight = screenHeight < 720 ? 164.0 : 198.0;
@@ -52,18 +63,26 @@ class ProfileScreen extends ConsumerWidget {
                     const StatisticsCard(),
                     const SizedBox(height: DS.spacing12),
                     profileContextAsync.when(
-                      data: (profileContext) => _buildTraitsSection(
-                        context,
-                        ref,
-                        profileContext,
-                      ),
+                      data: (profileContext) =>
+                          _buildTraitsSection(context, ref, profileContext),
                       loading: () => const SizedBox.shrink(),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: DS.spacing12),
                     if (profileContext != null)
-                      _buildMetacognitionSection(context, ref, profileContext),
+                      _buildMetacognitionSection(
+                        context,
+                        ref,
+                        profileContext,
+                        userState,
+                      ),
                     if (profileContext != null)
+                      const SizedBox(height: DS.spacing12),
+                    if (profileContext != null &&
+                        AppFeatureFlags.enableStage35ProfileCards)
+                      _buildStage35Section(userState),
+                    if (profileContext != null &&
+                        AppFeatureFlags.enableStage35ProfileCards)
                       const SizedBox(height: DS.spacing12),
                     _buildPrestigeShowcase(
                       context,
@@ -94,18 +113,18 @@ class ProfileScreen extends ConsumerWidget {
     AchievementState achievementState,
     VisualElementState visualState,
   ) {
-    final unlockedAchievements = achievementState.achievements
-        .where((item) => item.isUnlocked)
-        .toList()
-      ..sort((a, b) {
-        final rarityCompare =
-            b.achievement.rarity.index.compareTo(a.achievement.rarity.index);
-        if (rarityCompare != 0) return rarityCompare;
-        final aTime = a.userProgress?.unlockedAt;
-        final bTime = b.userProgress?.unlockedAt;
-        if (aTime == null || bTime == null) return 0;
-        return bTime.compareTo(aTime);
-      });
+    final unlockedAchievements =
+        achievementState.achievements.where((item) => item.isUnlocked).toList()
+          ..sort((a, b) {
+            final rarityCompare = b.achievement.rarity.index.compareTo(
+              a.achievement.rarity.index,
+            );
+            if (rarityCompare != 0) return rarityCompare;
+            final aTime = a.userProgress?.unlockedAt;
+            final bTime = b.userProgress?.unlockedAt;
+            if (aTime == null || bTime == null) return 0;
+            return bTime.compareTo(aTime);
+          });
 
     final featured = unlockedAchievements.take(3).toList();
     final equippedTitle =
@@ -213,14 +232,16 @@ class ProfileScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(DS.spacing12),
                   decoration: BoxDecoration(
                     color: Color.alphaBlend(
-                      _rarityColor(item.achievement.rarity)
-                          .withValues(alpha: 0.06),
+                      _rarityColor(
+                        item.achievement.rarity,
+                      ).withValues(alpha: 0.06),
                       DS.surfacePrimary.withValues(alpha: 0.9),
                     ),
                     borderRadius: DS.borderRadius16,
                     border: Border.all(
-                      color: _rarityColor(item.achievement.rarity)
-                          .withValues(alpha: 0.14),
+                      color: _rarityColor(
+                        item.achievement.rarity,
+                      ).withValues(alpha: 0.14),
                     ),
                   ),
                   child: Row(
@@ -256,10 +277,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildIdentityChip({
-    required String label,
-    required Color color,
-  }) =>
+  Widget _buildIdentityChip({required String label, required Color color}) =>
       Container(
         constraints: const BoxConstraints(maxWidth: 188),
         padding: const EdgeInsets.symmetric(
@@ -341,15 +359,15 @@ class ProfileScreen extends ConsumerWidget {
                 },
               ],
               onSubmit: (answers) async {
-                await ref.read(userRepositoryProvider).submitTraitsColdstart(
-                      answers: answers,
-                    );
+                await ref
+                    .read(userRepositoryProvider)
+                    .submitTraitsColdstart(answers: answers);
                 ref.invalidate(profileContextProvider);
               },
               onSkip: () async {
-                await ref.read(userRepositoryProvider).submitTraitsColdstart(
-                      skip: true,
-                    );
+                await ref
+                    .read(userRepositoryProvider)
+                    .submitTraitsColdstart(skip: true);
                 ref.invalidate(profileContextProvider);
               },
             ),
@@ -362,6 +380,7 @@ class ProfileScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Map<String, dynamic> profileContext,
+    UserStateV1Model userState,
   ) {
     final panel = MetacognitionPanelCard.fromProfileContext(profileContext);
     if (panel == null) {
@@ -373,6 +392,7 @@ class ProfileScreen extends ConsumerWidget {
     return MetacognitionPanelCard(
       cards: cards,
       generatedAt: panel['generatedAt']?.toString(),
+      profileDimensionCount: userState.metacognitionProfile?.value.items.length,
       onHide: () async {
         await ref
             .read(userRepositoryProvider)
@@ -381,6 +401,20 @@ class ProfileScreen extends ConsumerWidget {
       },
     );
   }
+
+  Widget _buildStage35Section(UserStateV1Model userState) => Column(
+        children: [
+          WorkingMemoryCard(snapshot: userState.workingMemorySnapshot),
+          const SizedBox(height: DS.spacing12),
+          AchievementSummaryCard(summary: userState.achievementSummary),
+          const SizedBox(height: DS.spacing12),
+          ActiveSkillsCard(summary: userState.activeSkillsSummary),
+          const SizedBox(height: DS.spacing12),
+          EngagementStateBadge(state: userState.engagementState),
+          const SizedBox(height: DS.spacing12),
+          ForesightCard(hint: userState.foresightHint),
+        ],
+      );
 
   Color _colorFromElement(dynamic element) {
     final colors = (element.config['colors'] as List<dynamic>?) ??
@@ -444,10 +478,16 @@ class ProfileScreen extends ConsumerWidget {
                   DS.brandPrimary,
                   0.04,
                 )!,
-                middleColor:
-                    Color.lerp(DS.surfaceCanvas, DS.surfaceSecondary, 0.54)!,
-                endColor:
-                    Color.lerp(DS.surfaceCanvas, DS.brandSecondary, 0.06)!,
+                middleColor: Color.lerp(
+                  DS.surfaceCanvas,
+                  DS.surfaceSecondary,
+                  0.54,
+                )!,
+                endColor: Color.lerp(
+                  DS.surfaceCanvas,
+                  DS.brandSecondary,
+                  0.06,
+                )!,
               ),
             ),
           ),
@@ -468,10 +508,7 @@ class ProfileScreen extends ConsumerWidget {
                       DecoratedBox(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: DS.borderStrong,
-                            width: 3,
-                          ),
+                          border: Border.all(color: DS.borderStrong, width: 3),
                           boxShadow: DS.shadowMd,
                         ),
                         child: SparkleAvatar(
@@ -551,9 +588,7 @@ class ProfileScreen extends ConsumerWidget {
             DS.surfaceOverlay,
           ),
           borderRadius: DS.borderRadius20,
-          border: Border.all(
-            color: accent.withValues(alpha: 0.14),
-          ),
+          border: Border.all(color: accent.withValues(alpha: 0.14)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -678,9 +713,9 @@ class ProfileScreen extends ConsumerWidget {
                       ? '已隐藏，后台仍会继续计算'
                       : '显示过去样本里的判断偏差摘要',
                   accentColor: const Color(0xFF4A7A58),
-                  value: ((profileContext?['metacognition_dashboard']
+                  value: (profileContext?['metacognition_dashboard']
                           as Map<String, dynamic>?)?['hidden'] !=
-                      true),
+                      true,
                   onChanged: (value) async {
                     await ref
                         .read(userRepositoryProvider)
@@ -755,47 +790,50 @@ class ProfileScreen extends ConsumerWidget {
     WidgetRef ref,
     AppLocalizations l10n,
   ) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        child: GraphiteModalSurface(
-          title: l10n.logout,
-          showHandle: false,
-          borderRadius: BorderRadius.circular(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.confirmLogout,
-                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-              ),
-              const SizedBox(height: DS.lg),
-              Row(
-                children: [
-                  Expanded(
-                    child: SparkleButton.ghost(
-                      onPressed: () => Navigator.pop(context),
-                      label: l10n.cancel,
+    unawaited(
+      showDialog<void>(
+        context: context,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: GraphiteModalSurface(
+            title: l10n.logout,
+            showHandle: false,
+            borderRadius: BorderRadius.circular(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.confirmLogout,
+                  style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+                ),
+                const SizedBox(height: DS.lg),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SparkleButton.ghost(
+                        onPressed: () => Navigator.pop(context),
+                        label: l10n.cancel,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: DS.sm),
-                  Expanded(
-                    child: SparkleButton.destructive(
-                      onPressed: () async {
-                        Navigator.pop(context);
-                        await ref.read(authProvider.notifier).logout();
-                        if (!context.mounted) return;
-                        context.go('/login');
-                      },
-                      label: l10n.confirm,
+                    const SizedBox(width: DS.sm),
+                    Expanded(
+                      child: SparkleButton.destructive(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await ref.read(authProvider.notifier).logout();
+                          if (!context.mounted) return;
+                          context.go('/login');
+                        },
+                        label: l10n.confirm,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -817,9 +855,9 @@ class ProfileScreen extends ConsumerWidget {
     BuildContext context, {
     required IconData icon,
     required String title,
-    String? subtitle,
     required Color accentColor,
     required VoidCallback onTap,
+    String? subtitle,
     bool isDestructive = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -877,9 +915,7 @@ class ProfileScreen extends ConsumerWidget {
           subtitle ?? _settingsSubtitle(title),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: DS.bodySmall.copyWith(
-            color: DS.textSecondary,
-          ),
+          style: DS.bodySmall.copyWith(color: DS.textSecondary),
         ),
       ),
       trailing: Icon(
@@ -991,14 +1027,8 @@ class _WaveHeaderPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          startColor,
-          middleColor,
-          endColor,
-        ],
-      ).createShader(
-        Rect.fromLTWH(0, 0, size.width, size.height),
-      );
+        colors: [startColor, middleColor, endColor],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     final path = Path();
     path.lineTo(0, size.height - 60);

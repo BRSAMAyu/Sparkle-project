@@ -56,10 +56,7 @@ class UserRepository {
   Future<Map<String, dynamic>> fetchTransparentProfile() async {
     if (DemoDataService.isDemoMode) {
       return {
-        'layer_1': {
-          'preferences': <String>[],
-          'goals': <String>[],
-        },
+        'layer_1': {'preferences': <String>[], 'goals': <String>[]},
         'layer_2': {
           'persona': {
             'tags': ['demo'],
@@ -73,8 +70,9 @@ class UserRepository {
         },
       };
     }
-    final response =
-        await _apiClient.get<Map<String, dynamic>>('/profile/transparent');
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/profile/transparent',
+    );
     return ApiResponseParser.unwrapMap(
       response.data,
       action: 'fetchTransparentProfile',
@@ -111,6 +109,136 @@ class UserRepository {
             },
           ],
         },
+        'user_state_v1': {
+          'schema_version': 'user_state.v1.13',
+          'working_memory_snapshot': {
+            'value': {
+              'active_session_id': 'session-stage35-demo',
+              'items': [
+                {
+                  'summary': '英语长难句拆解还卡在倒装句，下一次练习先回看第 3 题。',
+                  'subject_type': 'study_focus',
+                  'mention_count': 3,
+                  'consolidated': false,
+                  'last_seen_at': '2026-04-22T09:40:00',
+                },
+                {
+                  'summary': '这周要把概率论错题本整理成 2 页复盘卡片。',
+                  'subject_type': 'task',
+                  'mention_count': 2,
+                  'consolidated': true,
+                  'last_seen_at': '2026-04-22T08:20:00',
+                },
+              ],
+            },
+            'computed_at': '2026-04-22T10:00:00',
+            'source_snapshot_ids': ['wm-demo-1'],
+            'freshness_seconds': 90,
+          },
+          'achievement_summary': {
+            'value': {
+              'recent_unlocks': [
+                {
+                  'achievement_id': 'weekly-streak',
+                  'name': '七日连学',
+                  'rarity': 'rare',
+                  'unlocked_at': '2026-04-21T21:00:00',
+                },
+              ],
+              'in_progress_achievements': [
+                {
+                  'achievement_id': 'deep-work-10',
+                  'name': '深度专注 10 次',
+                  'progress': 0.7,
+                },
+              ],
+              'total_achievement_score': 18.5,
+            },
+            'computed_at': '2026-04-22T10:00:00',
+            'source_snapshot_ids': ['achievement-demo-1'],
+            'freshness_seconds': 120,
+          },
+          'active_skills_summary': {
+            'value': {
+              'items': [
+                {
+                  'skill_id': 'chunking',
+                  'name': '分块推进',
+                  'activation_match_score': 0.92,
+                },
+                {
+                  'skill_id': 'replan',
+                  'name': '轻量重排',
+                  'activation_match_score': 0.78,
+                },
+              ],
+            },
+            'computed_at': '2026-04-22T10:00:00',
+            'source_snapshot_ids': ['skills-demo-1'],
+            'freshness_seconds': 75,
+          },
+          'engagement_state': {
+            'value': {
+              'last_active_at': '2026-04-22T09:50:00',
+              'session_count_7d': 6,
+              'streak': 4,
+            },
+            'computed_at': '2026-04-22T10:00:00',
+            'source_snapshot_ids': ['engagement-demo-1'],
+            'freshness_seconds': 60,
+          },
+          'foresight_hint': {
+            'value': {
+              'hint_text': '你今天后半段更容易被切碎，先把最难的一题压到午前完成。',
+              'generated_at': '2026-04-22T09:55:00',
+              'deviation_count': 2,
+              'attractor_confidences': [
+                {'dim': 'execution_stability', 'confidence': 0.84},
+                {'dim': 'overload_risk', 'confidence': 0.66},
+              ],
+            },
+            'computed_at': '2026-04-22T10:00:00',
+            'source_snapshot_ids': ['foresight-demo-1'],
+            'freshness_seconds': 45,
+          },
+          'metacognition_profile': {
+            'value': {
+              'items': [
+                {
+                  'dim': 'time_estimation_bias',
+                  'sample_size': 10,
+                  'bias_mean': -2.3,
+                  'trend': 'improving',
+                },
+                {
+                  'dim': 'difficulty_calibration',
+                  'sample_size': 8,
+                  'bias_mean': -0.4,
+                  'trend': 'stable',
+                },
+              ],
+            },
+            'computed_at': '2026-04-22T10:00:00',
+            'source_snapshot_ids': ['metacog-demo-1'],
+            'freshness_seconds': 180,
+          },
+        },
+        'metacognition_profile': {
+          'items': [
+            {
+              'dim': 'time_estimation_bias',
+              'sample_size': 10,
+              'bias_mean': -2.3,
+              'trend': 'improving',
+            },
+            {
+              'dim': 'difficulty_calibration',
+              'sample_size': 8,
+              'bias_mean': -0.4,
+              'trend': 'stable',
+            },
+          ],
+        },
         'idiographic_summary': {
           'mode': 'shadow',
           'confidence': 0.42,
@@ -119,8 +247,9 @@ class UserRepository {
         },
       };
     }
-    final response =
-        await _apiClient.get<Map<String, dynamic>>('/profile/context');
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/profile/context',
+    );
     return ApiResponseParser.unwrapMap(
       response.data,
       action: 'fetchProfileContext',
@@ -138,8 +267,9 @@ class UserRepository {
         'current_profile': <String, dynamic>{},
       };
     }
-    final response =
-        await _apiClient.get<Map<String, dynamic>>('/profile/insights');
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/profile/insights',
+    );
     return ApiResponseParser.unwrapMap(
       response.data,
       action: 'fetchProfileInsights',
@@ -148,13 +278,11 @@ class UserRepository {
 
   Future<Map<String, dynamic>> fetchTraitsColdstartQuestions() async {
     if (DemoDataService.isDemoMode) {
-      return {
-        'questions': <Map<String, dynamic>>[],
-        'allow_skip': true,
-      };
+      return {'questions': <Map<String, dynamic>>[], 'allow_skip': true};
     }
-    final response = await _apiClient
-        .get<Map<String, dynamic>>('/profile/traits/coldstart/questions');
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/profile/traits/coldstart/questions',
+    );
     return ApiResponseParser.unwrapMap(
       response.data,
       action: 'fetchTraitsColdstartQuestions',
@@ -174,10 +302,7 @@ class UserRepository {
     }
     final response = await _apiClient.post<Map<String, dynamic>>(
       '/profile/traits/coldstart',
-      data: <String, dynamic>{
-        'answers': answers,
-        'skip': skip,
-      },
+      data: <String, dynamic>{'answers': answers, 'skip': skip},
     );
     return ApiResponseParser.unwrapMap(
       response.data,
@@ -189,8 +314,9 @@ class UserRepository {
     if (DemoDataService.isDemoMode) {
       return [];
     }
-    final response =
-        await _apiClient.get<List<dynamic>>('/profile/inferred-preferences');
+    final response = await _apiClient.get<List<dynamic>>(
+      '/profile/inferred-preferences',
+    );
     final items = response.data ?? <dynamic>[];
     return items.whereType<Map<String, dynamic>>().toList();
   }
@@ -199,8 +325,9 @@ class UserRepository {
     if (DemoDataService.isDemoMode) {
       return [];
     }
-    final response =
-        await _apiClient.get<List<dynamic>>('/profile/active-policies');
+    final response = await _apiClient.get<List<dynamic>>(
+      '/profile/active-policies',
+    );
     final items = response.data ?? <dynamic>[];
     return items.whereType<Map<String, dynamic>>().toList();
   }
@@ -289,10 +416,7 @@ class UserRepository {
     }
     final response = await _apiClient.get<Map<String, dynamic>>(
       '/profile/system-updates',
-      queryParameters: {
-        'limit': limit,
-        'offset': offset,
-      },
+      queryParameters: {'limit': limit, 'offset': offset},
     );
     final payload = response.data;
     if (payload == null) {
@@ -319,9 +443,7 @@ class UserRepository {
 
     final response = await _apiClient.post<Map<String, dynamic>>(
       ApiEndpoints.profileChatOpening,
-      data: {
-        'conversation_id': normalizedConversationId,
-      },
+      data: {'conversation_id': normalizedConversationId},
     );
     final payload = ApiResponseParser.unwrapMap(
       response.data,
@@ -339,10 +461,7 @@ class UserRepository {
     }
     await _apiClient.put<Map<String, dynamic>>(
       '/profile/preferences',
-      data: {
-        'pref_key': prefKey,
-        'value': value,
-      },
+      data: {'pref_key': prefKey, 'value': value},
     );
   }
 
@@ -352,9 +471,7 @@ class UserRepository {
     }
     await _apiClient.post<Map<String, dynamic>>(
       '/profile/preferences/rollback',
-      data: {
-        'pref_key': prefKey,
-      },
+      data: {'pref_key': prefKey},
     );
   }
 
@@ -414,8 +531,9 @@ class UserRepository {
         'task_reminder_times': [1440, 60, 15],
       };
     }
-    final response =
-        await _apiClient.get<Map<String, dynamic>>('/user/settings');
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/user/settings',
+    );
     return ApiResponseParser.unwrapMap(
       response.data,
       action: 'fetchUserSettings',
@@ -427,10 +545,7 @@ class UserRepository {
       return;
     }
     // Use PUT for idempotent update operation
-    await _apiClient.put<Map<String, dynamic>>(
-      '/user/settings',
-      data: payload,
-    );
+    await _apiClient.put<Map<String, dynamic>>('/user/settings', data: payload);
   }
 
   Future<Map<String, dynamic>> fetchAiUsageSummary() async {
@@ -480,8 +595,9 @@ class UserRepository {
         ],
       };
     }
-    final response =
-        await _apiClient.get<Map<String, dynamic>>('/user/settings/ai-usage');
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/user/settings/ai-usage',
+    );
     return ApiResponseParser.unwrapMap(
       response.data,
       action: 'fetchAiUsageSummary',
@@ -838,11 +954,7 @@ class UserRepository {
           'maxmemory_human': '0B',
           'connected_clients': 29,
         },
-        'queues': {
-          'summarization': 18,
-          'billing': 0,
-          'expansion': 7,
-        },
+        'queues': {'summarization': 18, 'billing': 0, 'expansion': 7},
         'disk': {
           'total_gb': 512.0,
           'used_gb': 324.2,
@@ -855,13 +967,12 @@ class UserRepository {
           'queue_critical_total': 500,
           'db_probe_warning_ms': 200,
         },
-        'recommendations': <String>[
-          '当前容量健康，可继续观察 AI 高峰时段的首包时延。',
-        ],
+        'recommendations': <String>['当前容量健康，可继续观察 AI 高峰时段的首包时延。'],
       };
     }
-    final response =
-        await _apiClient.get<Map<String, dynamic>>(ApiEndpoints.healthCapacity);
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      ApiEndpoints.healthCapacity,
+    );
     return ApiResponseParser.unwrapMap(
       response.data,
       action: 'fetchHealthCapacity',

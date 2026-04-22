@@ -3,15 +3,17 @@ import 'package:sparkle/core/design/design_system.dart';
 
 class MetacognitionPanelCard extends StatelessWidget {
   const MetacognitionPanelCard({
-    super.key,
     required this.cards,
     required this.generatedAt,
     required this.onHide,
+    this.profileDimensionCount,
+    super.key,
   });
 
   final List<Map<String, dynamic>> cards;
   final String? generatedAt;
   final VoidCallback onHide;
+  final int? profileDimensionCount;
 
   static Map<String, dynamic>? fromProfileContext(
     Map<String, dynamic> profileContext,
@@ -27,75 +29,79 @@ class MetacognitionPanelCard extends StatelessWidget {
     if (!available || hidden || cards.isEmpty) {
       return null;
     }
-    return {
-      'cards': cards,
-      'generatedAt': payload['generated_at']?.toString(),
-    };
+    return {'cards': cards, 'generatedAt': payload['generated_at']?.toString()};
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(DS.spacing16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(DS.spacing8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F1EA),
-                    borderRadius: DS.borderRadius12,
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        child: Padding(
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(DS.spacing8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE8F1EA),
+                      borderRadius: DS.borderRadius12,
+                    ),
+                    child: const Icon(
+                      Icons.insights_rounded,
+                      color: Color(0xFF4A7A58),
+                      size: 18,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.insights_rounded,
-                    color: Color(0xFF4A7A58),
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '自我认识',
-                        style: DS.titleMedium.copyWith(
-                          color: DS.textPrimary,
-                          fontWeight: DS.fontWeightBold,
+                  const SizedBox(width: DS.spacing10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '自我认识',
+                          style: DS.titleMedium.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: DS.spacing2),
-                      Text(
-                        '这里只展示过去样本里的判断偏差，不给你贴标签。',
-                        style: DS.bodySmall.copyWith(color: DS.textSecondary),
-                      ),
-                    ],
+                        const SizedBox(height: DS.spacing2),
+                        Text(
+                          '这里只展示过去样本里的判断偏差，不给你贴标签。',
+                          style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                        ),
+                        if ((profileDimensionCount ?? 0) > 0) ...[
+                          const SizedBox(height: DS.spacing4),
+                          Text(
+                            '已观察 ${profileDimensionCount!} 个元认知维度',
+                            style: DS.labelSmall.copyWith(
+                              color: const Color(0xFF4A7A58),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  tooltip: '隐藏此面板',
-                  onPressed: onHide,
-                  icon: const Icon(Icons.visibility_off_outlined),
+                  IconButton(
+                    tooltip: '隐藏此面板',
+                    onPressed: onHide,
+                    icon: const Icon(Icons.visibility_off_outlined),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing12),
+              ...cards.map(_buildCard),
+              if (generatedAt != null && generatedAt!.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing8),
+                Text(
+                  '更新于 $generatedAt',
+                  style: DS.labelSmall.copyWith(color: DS.textTertiary),
                 ),
               ],
-            ),
-            const SizedBox(height: DS.spacing12),
-            ...cards.map(_buildCard),
-            if (generatedAt != null && generatedAt!.isNotEmpty) ...[
-              const SizedBox(height: DS.spacing8),
-              Text(
-                '更新于 $generatedAt',
-                style: DS.labelSmall.copyWith(color: DS.textTertiary),
-              ),
             ],
-          ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   Widget _buildCard(Map<String, dynamic> card) {
     final status = card['status']?.toString() ?? 'ready';
@@ -130,16 +136,10 @@ class MetacognitionPanelCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: DS.spacing6),
-            Text(
-              body,
-              style: DS.bodyMedium.copyWith(color: DS.textPrimary),
-            ),
+            Text(body, style: DS.bodyMedium.copyWith(color: DS.textPrimary)),
             if (trendText.isNotEmpty) ...[
               const SizedBox(height: DS.spacing8),
-              Text(
-                trendText,
-                style: DS.bodySmall.copyWith(color: toneColor),
-              ),
+              Text(trendText, style: DS.bodySmall.copyWith(color: toneColor)),
             ],
           ],
         ),
