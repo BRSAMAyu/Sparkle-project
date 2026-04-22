@@ -307,6 +307,10 @@ class Settings(BaseSettings):
     AURORA_STAGE34_CAPSULE_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED: str = "live"  # off | shadow | live
 
+    # Aurora Stage 35
+    AURORA_STAGE35_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE35_METACOG_ROUTER_MODE: str = "shadow"  # off | shadow | live
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

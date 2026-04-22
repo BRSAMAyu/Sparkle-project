@@ -25,6 +25,10 @@ ROUTER_WHITELIST = {
         "stage": "Stage 21",
         "boundary": "Skill selection input only; may not expand beyond skill routing.",
     },
+    "metacognition_profile": {
+        "stage": "Stage 35",
+        "boundary": "Router may derive MetacognitionHintV1 only; raw profile may not drive unrelated branches.",
+    },
 }
 ALL_AGGREGATOR_FIELDS = {
     "commitment_summary",

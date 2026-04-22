@@ -1,4 +1,5 @@
 from datetime import datetime
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -8,6 +9,15 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
+from app.state_aggregator.schema import (
+    MetacognitionDimensionSummaryValue,
+    MetacognitionProfileSummaryValue,
+    SRLPhaseSummaryValue,
+    StateFieldEnvelope,
+    UserStateV1,
+    WorkingMemorySnapshotValue,
+    WorkingMemorySnapshotValueItem,
+)
 
 
 @pytest.mark.asyncio
@@ -142,3 +152,83 @@ async def test_profile_context_service_refreshes_stale_cached_preference_version
 
     assert refreshed.preference_version == 2
     assert refreshed.preferences["depth_preference"] == 0.2
+
+
+@pytest.mark.asyncio
+async def test_profile_context_service_embeds_user_state_v1_payload(db_session, test_user, monkeypatch):
+    async def _fake_get_user_state(self, user_id, required_fields, **kwargs):
+        assert user_id == test_user.id
+        if tuple(required_fields) == ("srl_phase",):
+            return UserStateV1(
+                user_id=user_id,
+                srl_phase=StateFieldEnvelope(
+                    value=SRLPhaseSummaryValue(
+                        current_phase="performance",
+                        phase_started_at=datetime(2026, 4, 22, 9, 0, 0),
+                        confidence=0.81,
+                        source="aggregator",
+                    ),
+                    computed_at=datetime(2026, 4, 22, 9, 5, 0),
+                    source_snapshot_ids=("srl_phase:test",),
+                    freshness_seconds=0,
+                ),
+            )
+        return UserStateV1(
+            user_id=user_id,
+            working_memory_snapshot=StateFieldEnvelope(
+                value=WorkingMemorySnapshotValue(
+                    active_session_id="session-1",
+                    items=(
+                        WorkingMemorySnapshotValueItem(
+                            summary="今天先把错题复盘完。",
+                            subject_type="task",
+                            mention_count=2,
+                            consolidated=False,
+                            last_seen_at=datetime(2026, 4, 22, 9, 0, 0),
+                        ),
+                    ),
+                ),
+                computed_at=datetime(2026, 4, 22, 9, 5, 0),
+                source_snapshot_ids=("wm:test",),
+                freshness_seconds=0,
+            ),
+            metacognition_profile=StateFieldEnvelope(
+                value=MetacognitionProfileSummaryValue(
+                    items=(
+                        MetacognitionDimensionSummaryValue(
+                            dim="time_estimation_bias",
+                            sample_size=28,
+                            bias_mean=0.18,
+                            trend="improving",
+                        ),
+                    )
+                ),
+                computed_at=datetime(2026, 4, 22, 9, 6, 0),
+                source_snapshot_ids=("metacognition:time_estimation_bias",),
+                freshness_seconds=0,
+            ),
+        )
+
+    monkeypatch.setattr(
+        "app.services.profile_context_service.StateAggregatorService.get_user_state",
+        _fake_get_user_state,
+    )
+    monkeypatch.setattr(
+        "app.services.profile_context_service.MetacognitionService.get_snapshot",
+        AsyncMock(return_value={"generated_at": "2026-04-22T09:06:00", "dimensions": []}),
+    )
+    monkeypatch.setattr(
+        "app.services.profile_context_service.MetacognitionService.build_dashboard_payload",
+        AsyncMock(return_value={"available": False, "cards": []}),
+    )
+    monkeypatch.setattr(
+        "app.services.profile_context_service.MetacognitionService.build_prompt_process_scaffolding",
+        AsyncMock(return_value=None),
+    )
+
+    context = await ProfileContextService(db_session, redis=None).get_profile_context(test_user.id)
+
+    assert context.user_state_v1 is not None
+    assert context.user_state_v1["schema_version"] == "user_state.v1.13"
+    assert context.user_state_v1["working_memory_snapshot"]["value"]["items"][0]["summary"] == "今天先把错题复盘完。"
+    assert context.user_state_v1["metacognition_profile"]["value"]["items"][0]["dim"] == "time_estimation_bias"

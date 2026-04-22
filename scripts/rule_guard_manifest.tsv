@@ -6,6 +6,7 @@ Z-SOCIAL	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_z_social_cross_
 AS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_as_vision_compliance.py"
 AT	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_at_no_orphan.py"
 AU	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_au_mobile_parity.py"
+AU-METACOG	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_metacog_hint_user_scope.py"
 Z-EPISODIC	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_episodic_user_scope.py"
 AB	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ab_aggregator_integrity.py"
 AC	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ac_working_memory.py"

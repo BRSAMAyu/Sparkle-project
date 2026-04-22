@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -11,6 +12,12 @@ from app.orchestration.routing_engine import RoutingEngineMixin
 from app.orchestration.schemas import RouteDecision
 from app.services.social_signal_types import SocialSignalsV1
 from app.services.srl_phase_types import SRLPhaseHint
+from app.state_aggregator.schema import (
+    MetacognitionDimensionSummaryValue,
+    MetacognitionProfileSummaryValue,
+    StateFieldEnvelope,
+    UserStateV1,
+)
 
 
 class MinimalRoutingOrchestrator(RoutingEngineMixin):
@@ -209,6 +216,66 @@ async def test_build_dual_core_input_extracts_stage33_srl_hint_from_profile_cont
     assert routing_input.srl_phase_hint is not None
     assert routing_input.srl_phase_hint.current_phase == "reflection"
     assert routing_input.srl_phase_hint.confidence == pytest.approx(0.81)
+
+
+@pytest.mark.asyncio
+async def test_build_metacognition_hint_derives_accuracy_from_user_scoped_aggregator(orchestrator):
+    user_id = str(uuid.uuid4())
+
+    with patch(
+        "app.orchestration.routing_engine.StateAggregatorService.get_user_state",
+        AsyncMock(
+            return_value=UserStateV1(
+                user_id=uuid.UUID(user_id),
+                metacognition_profile=StateFieldEnvelope(
+                    value=MetacognitionProfileSummaryValue(
+                        items=(
+                            MetacognitionDimensionSummaryValue(
+                                dim="time_estimation_bias",
+                                sample_size=32,
+                                bias_mean=0.18,
+                                trend="improving",
+                            ),
+                            MetacognitionDimensionSummaryValue(
+                                dim="completion_bias",
+                                sample_size=30,
+                                bias_mean=0.12,
+                                trend="stable",
+                            ),
+                        )
+                    ),
+                    computed_at=datetime(2026, 4, 22, 9, 6, 0),
+                    source_snapshot_ids=("metacognition:time_estimation_bias",),
+                    freshness_seconds=0,
+                ),
+            )
+        ),
+    ):
+        hint = await orchestrator._build_metacognition_hint(
+            active_db=object(),
+            user_id=user_id,
+            user_context_payload=None,
+        )
+
+    assert hint is not None
+    assert hint.accuracy == pytest.approx(0.85, abs=0.01)
+    assert hint.awareness == "strong"
+    assert hint.last_updated == datetime(2026, 4, 22, 9, 6, 0)
+
+
+@pytest.mark.asyncio
+async def test_build_metacognition_hint_returns_none_when_profile_is_empty(orchestrator):
+    with patch(
+        "app.orchestration.routing_engine.StateAggregatorService.get_user_state",
+        AsyncMock(return_value=UserStateV1(user_id=uuid.uuid4())),
+    ):
+        hint = await orchestrator._build_metacognition_hint(
+            active_db=object(),
+            user_id=str(uuid.uuid4()),
+            user_context_payload=None,
+        )
+
+    assert hint is None
 
 
 @pytest.mark.asyncio
@@ -617,6 +684,112 @@ async def test_apply_dual_core_routing_records_stage33_srl_shadow_delta(orchestr
     assert user_context_payload["aurora_stage33_modes"]["srl"] == "shadow"
     assert state.context_data["stage33_shadow_delta"]["srl"]["mode_changed"] is True
     assert state.context_data["stage33_shadow_delta"]["srl"]["signal_payload"]["current_phase"] == "reflection"
+
+
+@pytest.mark.asyncio
+async def test_apply_dual_core_routing_records_stage35_metacognition_shadow_delta(orchestrator):
+    orchestrator.dual_core_router.route.side_effect = [
+        DualCoreDecision(
+            mode="execution_first",
+            reason="legacy route",
+            cognitive_adjustments=[],
+            execution_constraints=[],
+        ),
+        DualCoreDecision(
+            mode="cognitive_first",
+            reason="metacog-aware route",
+            cognitive_adjustments=["用户最近对自己状态或耗时的判断偏差较大，先校准判断，再进入执行推进。"],
+            execution_constraints=[],
+        ),
+    ]
+    state = SimpleNamespace(context_data={"plan_metadata": {}})
+    user_context_payload = {}
+
+    with (
+        patch(
+            "app.orchestration.routing_engine.AuroraStage33KillSwitchService.summary",
+            AsyncMock(
+                return_value={
+                    "mode": "shadow",
+                    "social": "off",
+                    "srl": "off",
+                    "wm_prompt": "shadow",
+                    "events": "shadow",
+                }
+            ),
+        ),
+        patch(
+            "app.orchestration.routing_engine.AuroraStage35KillSwitchService.summary",
+            AsyncMock(return_value={"mode": "shadow", "metacog_router_mode": "shadow"}),
+        ),
+        patch(
+            "app.orchestration.routing_engine.resolve_cutover_state",
+            return_value=SimpleNamespace(mode="control", reason="test_control"),
+        ),
+        patch.object(
+            orchestrator,
+            "_build_dual_core_input",
+            AsyncMock(
+                return_value=DualCoreRoutingInput(
+                    intent="plan",
+                    intent_confidence=0.82,
+                    information_sufficient=True,
+                    primary_challenge_area="execution",
+                    recent_sentiment_distribution={"neutral": 2},
+                    has_active_plan=True,
+                    plan_health_status="healthy",
+                    recent_task_feedback_distribution={"just_right": 1},
+                    behavior_pattern_names=[],
+                    behavior_pattern_types={},
+                    behavior_pattern_details=[],
+                    session_length_preference=25,
+                    difficulty_preference=0.5,
+                    emotional_block_detected=False,
+                    procrastination_pattern=False,
+                    cognitive_mode_suggested=False,
+                    suggested_verbosity=None,
+                    current_guidance=None,
+                    routing_profile={},
+                    adaptive_adjustments={},
+                    metacognition_hint=RoutingEngineMixin._derive_metacognition_hint_from_payload(
+                        {
+                            "computed_at": "2026-04-22T09:06:00",
+                            "value": {
+                                "items": [
+                                    {"dim": "time_estimation_bias", "sample_size": 24, "bias_mean": 0.66},
+                                ]
+                            },
+                        }
+                    ),
+                )
+            ),
+        ),
+    ):
+        updated = await orchestrator._apply_dual_core_routing(
+            route_decision=RouteDecision(
+                execution_mode="hybrid",
+                reason="legacy route",
+                risk_level="medium",
+                confidence=0.7,
+            ),
+            state=state,
+            active_db=None,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=user_context_payload,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.82,
+            ),
+            information_sufficient=True,
+            stream_callback=AsyncMock(),
+        )
+
+    assert updated.reason.endswith("dual_core:execution_first")
+    assert user_context_payload["aurora_stage35_modes"]["metacog_router_mode"] == "shadow"
+    assert state.context_data["stage35_metacognition_shadow_delta"]["mode_changed"] is True
+    assert state.context_data["stage35_metacognition_shadow_delta"]["hint_payload"]["awareness"] == "moderate"
 
 
 @pytest.mark.asyncio

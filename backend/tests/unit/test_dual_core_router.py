@@ -1,6 +1,9 @@
+from datetime import datetime
+
 from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router
 from app.services.social_signal_types import SocialSignalsV1
 from app.services.srl_phase_types import SRLPhaseHint
+from app.state_aggregator.schema import MetacognitionHintV1
 
 
 def test_dual_core_router_selects_cognitive_first_for_repeated_difficulty_feedback() -> None:
@@ -211,3 +214,53 @@ def test_dual_core_router_uses_srl_reflection_hint_to_prefer_cognitive_first() -
     assert "复盘反思阶段" in rendered
     assert decision.routing_debug["explicit_srl_signal"] is True
     assert decision.routing_debug["srl_phase"] == "reflection"
+
+
+def test_dual_core_router_prefers_cognitive_first_when_metacognition_accuracy_is_low() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.88,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+            metacognition_hint=MetacognitionHintV1(
+                accuracy=0.34,
+                awareness="moderate",
+                last_updated=datetime(2026, 4, 22, 9, 0, 0),
+            ),
+        )
+    )
+
+    rendered = "\n".join(decision.cognitive_adjustments + decision.execution_constraints)
+    assert decision.mode == "cognitive_first"
+    assert "校准判断" in rendered
+    assert decision.routing_debug["metacognition_accuracy"] == 0.34
+
+
+def test_dual_core_router_prefers_execution_first_when_metacognition_awareness_is_strong() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="chat",
+            intent_confidence=0.72,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+            metacognition_hint=MetacognitionHintV1(
+                accuracy=0.92,
+                awareness="strong",
+                last_updated=datetime(2026, 4, 22, 9, 0, 0),
+            ),
+        )
+    )
+
+    rendered = "\n".join(decision.cognitive_adjustments + decision.execution_constraints)
+    assert decision.mode == "execution_first"
+    assert "减少重复确认与打扰" in rendered
+    assert decision.routing_debug["metacognition_awareness"] == "strong"

@@ -10,7 +10,6 @@ ROUTER_TARGETS = [
     *sorted((REPO_ROOT / "backend/app/routing").glob("*.py")),
 ]
 FORBIDDEN_TOKENS = {
-    "metacognition_profile",
     "metacognition_dashboard",
     "metacognition_process_scaffolding",
 }
@@ -22,7 +21,7 @@ def _string_hits(path: Path) -> list[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             value = node.value.strip()
-            if value in FORBIDDEN_TOKENS or value.startswith("metacognition"):
+            if value in FORBIDDEN_TOKENS:
                 hits.append(
                     f"{path.relative_to(REPO_ROOT)}:{getattr(node, 'lineno', '?')}:{value}"
                 )
@@ -34,14 +33,7 @@ def main() -> int:
     for path in ROUTER_TARGETS:
         if not path.exists():
             continue
-        text = path.read_text(encoding="utf-8")
-        if "metacognition_" in text:
-            violations.extend(f"AO101 {item}" for item in _string_hits(path))
-        if "Metacognition" in text or "metacognition" in text:
-            if "metacognition_" not in text:
-                violations.append(
-                    f"AO102 {path.relative_to(REPO_ROOT)} generic metacognition reference detected"
-                )
+        violations.extend(f"AO101 {item}" for item in _string_hits(path))
 
     if violations:
         print("[Rule AO Router] FAIL")
@@ -49,7 +41,7 @@ def main() -> int:
             print(item)
         return 1
 
-    print("[Rule AO Router] PASS - router remains blind to metacognition fields")
+    print("[Rule AO Router] PASS - router only consumes the bounded Stage35 metacognition hint path")
     return 0
 
 

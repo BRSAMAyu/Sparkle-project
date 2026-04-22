@@ -234,6 +234,13 @@ class MetacognitionProfileSummaryValue:
 
 
 @dataclass(frozen=True)
+class MetacognitionHintV1:
+    accuracy: float
+    awareness: Literal["weak", "moderate", "strong"]
+    last_updated: datetime
+
+
+@dataclass(frozen=True)
 class AssociationPairValue:
     dim_pair: str
     dim_a: str

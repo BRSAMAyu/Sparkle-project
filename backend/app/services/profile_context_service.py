@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from dataclasses import fields, is_dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, get_args
 from uuid import UUID
 
 from loguru import logger
@@ -31,6 +32,7 @@ from app.services.insight_copy import canonical_pattern_key, present_pattern_nam
 from app.services.metacognition_service import MetacognitionService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.report.report_tools import LearningReportTools
+from app.state_aggregator.schema import UserStateFieldName
 from app.state_aggregator.service import StateAggregatorService
 from app.services.user_insight_compiler import UserInsightCompiler
 
@@ -46,6 +48,7 @@ class ProfileContextService:
     CHANGE_LIMIT = 5
     PATTERN_LIMIT = 5
     SUBJECT_LIMIT = 5
+    USER_STATE_V1_FIELDS = tuple(get_args(UserStateFieldName))
 
     PATTERN_POLICY_MAP: dict[str, list[str]] = {
         "planning_optimism": [
@@ -212,11 +215,12 @@ class ProfileContextService:
         *,
         include_metacognition_prompt_extensions: bool,
     ) -> None:
+        await self._populate_user_state_v1_payload(user_id, context)
         await self._attach_srl_phase_summary(user_id, context)
-        await self._attach_metacognition_context(
-            user_id,
-            context,
-            include_prompt_extensions=include_metacognition_prompt_extensions,
+        await self._attach_metacognition_profile(user_id, context)
+        await self._attach_metacognition_dashboard(user_id, context)
+        await self._attach_metacognition_process_scaffolding(
+            user_id, context, include_prompt_extensions=include_metacognition_prompt_extensions
         )
         await self._attach_idiographic_summary(user_id, context)
 
@@ -246,8 +250,33 @@ class ProfileContextService:
         except Exception as exc:
             logger.warning(f"Failed to attach SRL phase summary: {exc}")
 
-    # rule-as: ignore stage35_metacognition_router_pending
-    async def _attach_metacognition_context(
+    async def _attach_metacognition_profile(
+        self,
+        user_id: UUID,
+        context: ProfileContext,
+    ) -> None:
+        try:
+            service = MetacognitionService(self.db, redis=self.redis)
+            context.metacognition_profile = await service.get_snapshot(user_id)
+        except Exception as exc:
+            logger.warning(f"Failed to attach metacognition profile: {exc}")
+
+    # rule-as: ignore stage35_dashboard_existing_path
+    async def _attach_metacognition_dashboard(
+        self,
+        user_id: UUID,
+        context: ProfileContext,
+    ) -> None:
+        try:
+            service = MetacognitionService(self.db, redis=self.redis)
+            context.metacognition_dashboard = await service.build_dashboard_payload(
+                user_id
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to attach metacognition dashboard: {exc}")
+
+    # rule-as: ignore existing_prompt_and_stage30_path
+    async def _attach_metacognition_process_scaffolding(
         self,
         user_id: UUID,
         context: ProfileContext,
@@ -256,17 +285,13 @@ class ProfileContextService:
     ) -> None:
         try:
             service = MetacognitionService(self.db, redis=self.redis)
-            context.metacognition_profile = await service.get_snapshot(user_id)
-            context.metacognition_dashboard = await service.build_dashboard_payload(
-                user_id
-            )
             context.metacognition_process_scaffolding = (
                 await service.build_prompt_process_scaffolding(user_id, consume=True)
                 if include_prompt_extensions
                 else None
             )
         except Exception as exc:
-            logger.warning(f"Failed to attach metacognition context: {exc}")
+            logger.warning(f"Failed to attach metacognition process scaffolding: {exc}")
 
     # rule-as: ignore existing_prompt_and_stage31_path
     async def _attach_idiographic_summary(
@@ -289,6 +314,54 @@ class ProfileContextService:
             )
         except Exception as exc:
             logger.warning(f"Failed to attach idiographic summary: {exc}")
+
+    async def _populate_user_state_v1_payload(
+        self,
+        user_id: UUID,
+        context: ProfileContext,
+    ) -> None:
+        try:
+            user_state = await StateAggregatorService(self.db).get_user_state(
+                user_id,
+                required_fields=self.USER_STATE_V1_FIELDS,
+                now=_utcnow(),
+            )
+            payload = {
+                "schema_version": user_state.schema_version,
+            }
+            for field_name in self.USER_STATE_V1_FIELDS:
+                envelope = getattr(user_state, field_name, None)
+                if envelope is None:
+                    continue
+                payload[field_name] = self._serialize_user_state_value(envelope)
+            context.user_state_v1 = payload
+        except Exception as exc:
+            logger.warning(f"Failed to populate user_state_v1 payload: {exc}")
+
+    @classmethod
+    def _serialize_user_state_value(cls, value: Any) -> Any:
+        if is_dataclass(value):
+            return {
+                field.name: cls._serialize_user_state_value(getattr(value, field.name))
+                for field in fields(value)
+            }
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if hasattr(value, "isoformat") and not isinstance(value, str):
+            with_json = getattr(value, "isoformat", None)
+            if callable(with_json):
+                return value.isoformat()
+        if isinstance(value, UUID):
+            return str(value)
+        if isinstance(value, dict):
+            return {
+                str(key): cls._serialize_user_state_value(item)
+                for key, item in value.items()
+                if item is not None
+            }
+        if isinstance(value, (list, tuple)):
+            return [cls._serialize_user_state_value(item) for item in value]
+        return value
 
     @staticmethod
     def _serialize_idiographic_summary(summary: Any, *, mode: str) -> dict[str, Any]:

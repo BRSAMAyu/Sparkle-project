@@ -77,6 +77,7 @@ class ProfileContext(BaseModel):
     metacognition_dashboard: dict[str, Any] = Field(default_factory=dict)
     metacognition_process_scaffolding: dict[str, Any] | None = None
     idiographic_summary: dict[str, Any] | None = None
+    user_state_v1: dict[str, Any] | None = None
 
     def to_prompt_context(self) -> dict[str, Any]:
         return self.model_dump(mode="json")

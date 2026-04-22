@@ -26,6 +26,14 @@ EXPECTATIONS: dict[str, dict[Path, tuple[str, ...]]] = {
             "AURORA_STAGE33_SRL_MODE",
         ),
     },
+    "metacognition_profile": {
+        ROUTING_ENGINE: (
+            "_build_metacognition_hint",
+            'required_fields=("metacognition_profile",)',
+            "metacognition_hint",
+            'stage35_metacognition_shadow_delta',
+        ),
+    },
     "active_goals": {
         CONTEXT_BUILDER: (
             "_attach_stage34_memory_context",

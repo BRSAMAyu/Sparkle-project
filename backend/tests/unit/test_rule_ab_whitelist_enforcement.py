@@ -46,6 +46,14 @@ def test_rule_ab_allows_active_skills_summary_get_read(tmp_path) -> None:
     assert scan_router_reads([path], tmp_path) == []
 
 
+def test_rule_ab_allows_metacognition_profile_router_read_for_hint_derivation(tmp_path) -> None:
+    path = _write(
+        tmp_path / "backend/app/orchestration/routing_engine.py",
+        "value = user_state.metacognition_profile\n",
+    )
+    assert scan_router_reads([path], tmp_path) == []
+
+
 def test_rule_ab_blocks_non_whitelisted_router_field_reads(tmp_path) -> None:
     path = _write(
         tmp_path / "backend/app/orchestration/routing_engine.py",

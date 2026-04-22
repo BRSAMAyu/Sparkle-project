@@ -17,9 +17,9 @@ Rule AS 用来阻止“字段已经挂到画像，但 Router / Prompt 根本不�
 | 字段 | 状态 | 消费位置 | Gate |
 | --- | --- | --- | --- |
 | `srl_phase` | 已接通 | `routing_engine.py` + `prompts.py` | `AURORA_STAGE33_SRL_MODE` |
-| `metacognition_profile` | 例外 | Stage 35 再入 Router | `rule-as: ignore stage35_metacognition_router_pending` |
-| `metacognition_dashboard` | 例外 | 现有路径保留 | `rule-as: ignore stage35_metacognition_router_pending` |
-| `metacognition_process_scaffolding` | 例外 | 现有路径保留 | `rule-as: ignore stage35_metacognition_router_pending` |
+| `metacognition_profile` | 已接通 | `routing_engine.py` (`_build_metacognition_hint`) | `AURORA_STAGE35_METACOG_ROUTER_MODE` |
+| `metacognition_dashboard` | 例外 | 现有 dashboard 路径保留，不进入 Router | `rule-as: ignore stage35_dashboard_existing_path` |
+| `metacognition_process_scaffolding` | 例外 | 继续沿用 Stage 30 prompt 路径 | `rule-as: ignore existing_prompt_and_stage30_path` |
 | `idiographic_summary` | 例外 | Stage 31/现有 prompt 路径 | `rule-as: ignore existing_prompt_and_stage31_path` |
 
 ## Guard

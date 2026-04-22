@@ -33,6 +33,7 @@ from app.orchestration.mode_workflow_config import get_mode_strategy
 from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
+from app.services.aurora_stage35_kill_switch_service import AuroraStage35KillSwitchService
 from app.services.cognitive_service import CognitiveService
 from app.services.follow_up_question_service import FollowUpQuestionService
 from app.services.bayesian_routing_wire_service import BayesianRoutingWireService
@@ -49,7 +50,13 @@ from app.services.source_state_encoder import SourceStateEncoder
 from app.services.srl_phase_types import SRLPhaseHint
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult
 from app.services.sufficiency_judge_service import SufficiencyJudgeService
-from app.state_aggregator.schema import ActiveSkillsSummaryValue, SufficiencySummaryValue
+from app.state_aggregator.schema import (
+    ActiveSkillsSummaryValue,
+    MetacognitionHintV1,
+    MetacognitionProfileSummaryValue,
+    StateFieldEnvelope,
+    SufficiencySummaryValue,
+)
 from app.state_aggregator.service import StateAggregatorService
 
 
@@ -226,6 +233,133 @@ class RoutingEngineMixin:
                     return nested_value
                 return candidate
         return {}
+
+    @classmethod
+    def _extract_stage35_metacognition_payload(
+        cls,
+        user_context_payload: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        root = cls._stage33_as_dict(user_context_payload)
+        profile_context = cls._stage33_as_dict(root.get("profile_context"))
+        user_state_v1 = cls._stage33_as_dict(profile_context.get("user_state_v1"))
+
+        for candidate in (
+            root.get("metacognition_profile"),
+            profile_context.get("metacognition_profile"),
+            user_state_v1.get("metacognition_profile"),
+        ):
+            if isinstance(candidate, dict) and candidate:
+                nested_value = candidate.get("value")
+                if isinstance(nested_value, dict) and nested_value:
+                    return candidate
+                return {"value": candidate} if "items" in candidate else candidate
+        return {}
+
+    @classmethod
+    def _build_stage35_metacognition_delta(
+        cls,
+        *,
+        baseline_decision: DualCoreDecision,
+        candidate_decision: DualCoreDecision,
+        hint: MetacognitionHintV1,
+    ) -> dict[str, Any]:
+        baseline_strategy_fields = {
+            str(item.get("field") or "").strip()
+            for item in baseline_decision.strategy_adjustments
+            if isinstance(item, dict)
+        }
+        added_strategy_adjustments = [
+            dict(item)
+            for item in candidate_decision.strategy_adjustments
+            if isinstance(item, dict)
+            and str(item.get("field") or "").strip() not in baseline_strategy_fields
+        ]
+        return {
+            "baseline_mode": baseline_decision.mode,
+            "candidate_mode": candidate_decision.mode,
+            "mode_changed": baseline_decision.mode != candidate_decision.mode,
+            "added_cognitive_adjustments": [
+                item
+                for item in candidate_decision.cognitive_adjustments
+                if item not in baseline_decision.cognitive_adjustments
+            ],
+            "added_execution_constraints": [
+                item
+                for item in candidate_decision.execution_constraints
+                if item not in baseline_decision.execution_constraints
+            ],
+            "added_strategy_adjustments": added_strategy_adjustments,
+            "hint_payload": {
+                "accuracy": round(hint.accuracy, 4),
+                "awareness": hint.awareness,
+                "last_updated": hint.last_updated.isoformat(),
+            },
+        }
+
+    @staticmethod
+    def _derive_metacognition_hint_from_envelope(
+        envelope: StateFieldEnvelope[MetacognitionProfileSummaryValue] | None,
+    ) -> MetacognitionHintV1 | None:
+        if envelope is None:
+            return None
+        items = list(envelope.value.items or ())
+        if not items:
+            return None
+        mean_abs_bias = sum(abs(float(item.bias_mean or 0.0)) for item in items) / len(items)
+        accuracy = max(0.0, min(1.0, 1.0 - min(1.0, mean_abs_bias)))
+        total_samples = sum(int(item.sample_size or 0) for item in items)
+        if len(items) >= 2 and total_samples >= 60:
+            awareness = "strong"
+        elif total_samples >= 20:
+            awareness = "moderate"
+        else:
+            awareness = "weak"
+        return MetacognitionHintV1(
+            accuracy=round(accuracy, 4),
+            awareness=awareness,
+            last_updated=envelope.computed_at,
+        )
+
+    @classmethod
+    def _derive_metacognition_hint_from_payload(
+        cls,
+        payload: dict[str, Any] | None,
+    ) -> MetacognitionHintV1 | None:
+        candidate = cls._stage33_as_dict(payload)
+        if not candidate:
+            return None
+        value = candidate.get("value")
+        if isinstance(value, dict):
+            candidate = value
+        items = candidate.get("items")
+        if not isinstance(items, list) or not items:
+            return None
+        bias_values = [abs(float(item.get("bias_mean") or 0.0)) for item in items if isinstance(item, dict)]
+        if not bias_values:
+            return None
+        total_samples = sum(int(item.get("sample_size") or 0) for item in items if isinstance(item, dict))
+        accuracy = max(0.0, min(1.0, 1.0 - min(1.0, sum(bias_values) / len(bias_values))))
+        if len(bias_values) >= 2 and total_samples >= 60:
+            awareness = "strong"
+        elif total_samples >= 20:
+            awareness = "moderate"
+        else:
+            awareness = "weak"
+        raw_updated = candidate.get("computed_at") or candidate.get("generated_at") or candidate.get("last_updated")
+        if isinstance(payload, dict):
+            raw_updated = payload.get("computed_at") or raw_updated
+        with contextlib.suppress(ValueError, TypeError):
+            last_updated = datetime.fromisoformat(str(raw_updated))
+            return MetacognitionHintV1(
+                accuracy=round(accuracy, 4),
+                awareness=awareness,
+                last_updated=last_updated.replace(tzinfo=None) if last_updated.tzinfo else last_updated,
+            )
+        return MetacognitionHintV1(
+            accuracy=round(accuracy, 4),
+            awareness=awareness,
+            last_updated=_utcnow(),
+        )
 
     @staticmethod
     def _merge_stage33_lines(
@@ -475,6 +609,11 @@ class RoutingEngineMixin:
         srl_phase_hint = SRLPhaseHint.from_payload(
             self._extract_stage33_srl_payload(user_context_payload)
         )
+        metacognition_hint = await self._build_metacognition_hint(
+            active_db=active_db,
+            user_id=user_id,
+            user_context_payload=user_context_payload,
+        )
 
         return DualCoreRoutingInput(
             intent=(
@@ -503,6 +642,29 @@ class RoutingEngineMixin:
             adaptive_adjustments=adaptive_adjustments,
             social_signals=social_signals,
             srl_phase_hint=srl_phase_hint,
+            metacognition_hint=metacognition_hint,
+        )
+
+    async def _build_metacognition_hint(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        user_context_payload: dict[str, Any] | None,
+    ) -> MetacognitionHintV1 | None:
+        if active_db is not None:
+            aggregator = StateAggregatorService(active_db)
+            metacog_state = await aggregator.get_user_state(
+                uuid.UUID(user_id),
+                required_fields=("metacognition_profile",),
+                now=_utcnow(),
+            )
+            return self._derive_metacognition_hint_from_envelope(
+                metacog_state.metacognition_profile
+            )
+
+        return self._derive_metacognition_hint_from_payload(
+            self._extract_stage35_metacognition_payload(user_context_payload)
         )
 
     async def _emit_dual_core_status(self, decision, stream_callback) -> None:
@@ -696,14 +858,23 @@ class RoutingEngineMixin:
             "wm_prompt": "shadow",
             "events": "shadow",
         }
+        stage35_modes = {
+            "mode": "shadow",
+            "metacog_router_mode": "shadow",
+        }
         try:
             stage33_modes = await AuroraStage33KillSwitchService().summary()
         except Exception as exc:
             logger.warning("Stage33 kill switch lookup failed: {}", exc)
             AURORA_STAGE33_FALLBACK_TOTAL.labels(feature="social", reason="mode_lookup_failed").inc()
+        try:
+            stage35_modes = await AuroraStage35KillSwitchService().summary()
+        except Exception as exc:
+            logger.warning("Stage35 kill switch lookup failed: {}", exc)
 
         if isinstance(user_context_payload, dict):
             user_context_payload["aurora_stage33_modes"] = dict(stage33_modes)
+            user_context_payload["aurora_stage35_modes"] = dict(stage35_modes)
             if routing_input.social_signals is not None:
                 user_context_payload.setdefault(
                     "social_signals_summary",
@@ -715,12 +886,15 @@ class RoutingEngineMixin:
                     routing_input.srl_phase_hint.to_payload(),
                 )
         state.context_data["aurora_stage33_modes"] = dict(stage33_modes)
+        state.context_data["aurora_stage35_modes"] = dict(stage35_modes)
 
         social_mode = str(stage33_modes.get("social") or "off").strip().lower()
         srl_mode = str(stage33_modes.get("srl") or "off").strip().lower()
+        metacog_mode = str(stage35_modes.get("metacog_router_mode") or "off").strip().lower()
         effective_routing_input = routing_input
         social_candidate_input: DualCoreRoutingInput | None = None
         srl_candidate_input: DualCoreRoutingInput | None = None
+        metacog_candidate_input: DualCoreRoutingInput | None = None
         if social_mode == "off":
             AURORA_STAGE33_FALLBACK_TOTAL.labels(feature="social", reason="off").inc()
             effective_routing_input = replace(effective_routing_input, social_signals=None)
@@ -739,6 +913,13 @@ class RoutingEngineMixin:
         elif srl_mode == "shadow":
             effective_routing_input = replace(effective_routing_input, srl_phase_hint=None)
 
+        if metacog_mode == "off":
+            effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
+        elif routing_input.metacognition_hint is None:
+            effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
+        elif metacog_mode == "shadow":
+            effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
+
         if routing_input.social_signals is not None and social_mode in {"shadow", "live"}:
             social_candidate_input = replace(
                 effective_routing_input,
@@ -748,6 +929,11 @@ class RoutingEngineMixin:
             srl_candidate_input = replace(
                 effective_routing_input,
                 srl_phase_hint=routing_input.srl_phase_hint,
+            )
+        if routing_input.metacognition_hint is not None and metacog_mode in {"shadow", "live"}:
+            metacog_candidate_input = replace(
+                effective_routing_input,
+                metacognition_hint=routing_input.metacognition_hint,
             )
 
         task_summary_value, ctx_summary_value, sufficiency_judgment_id = (
@@ -772,6 +958,7 @@ class RoutingEngineMixin:
         cutover_state = resolve_cutover_state(user_id)
         stage33_shadow_delta: dict[str, Any] = {}
         stage33_contributions: dict[str, Any] = {}
+        stage35_metacognition_shadow_delta: dict[str, Any] | None = None
 
         def _route_with_shortcuts(candidate_input: DualCoreRoutingInput) -> DualCoreDecision:
             if candidate_input.intent == "chat" and route_decision.execution_mode == "direct":
@@ -825,6 +1012,23 @@ class RoutingEngineMixin:
                 "impact_class": aurora_projection.transition_decision.impact_class.value,
                 "diverged": shadow_diverged,
             }
+
+        if metacog_candidate_input is not None and routing_input.metacognition_hint is not None:
+            metacog_baseline_input = replace(effective_routing_input, metacognition_hint=None)
+            if legacy_decision is not None and metacog_baseline_input == effective_routing_input:
+                metacog_baseline_decision = legacy_decision
+            else:
+                metacog_baseline_decision = _route_with_shortcuts(metacog_baseline_input)
+            metacog_candidate_decision = _route_with_shortcuts(metacog_candidate_input)
+            metacog_delta = self._build_stage35_metacognition_delta(
+                baseline_decision=metacog_baseline_decision,
+                candidate_decision=metacog_candidate_decision,
+                hint=routing_input.metacognition_hint,
+            )
+            if metacog_mode == "shadow":
+                stage35_metacognition_shadow_delta = metacog_delta
+            elif metacog_mode == "live" and cutover_state.mode != "active":
+                decision = metacog_candidate_decision
 
         if social_candidate_input is not None and routing_input.social_signals is not None:
             social_baseline_input = replace(effective_routing_input, social_signals=None)
@@ -900,6 +1104,8 @@ class RoutingEngineMixin:
 
         if stage33_shadow_delta:
             state.context_data["stage33_shadow_delta"] = stage33_shadow_delta
+        if stage35_metacognition_shadow_delta:
+            state.context_data["stage35_metacognition_shadow_delta"] = stage35_metacognition_shadow_delta
         if stage33_contributions:
             state.context_data["stage33_contributions"] = stage33_contributions
         state.context_data["dual_core_decision"] = decision.to_dict()
@@ -1000,12 +1206,23 @@ class RoutingEngineMixin:
             "routing_profile": effective_routing_input.routing_profile,
             "current_guidance": effective_routing_input.current_guidance,
             "aurora_stage33_modes": stage33_modes,
+            "aurora_stage35_modes": stage35_modes,
             "social_signal_payload": (
                 routing_input.social_signals.to_payload() if routing_input.social_signals is not None else None
             ),
             "srl_phase_payload": (
                 routing_input.srl_phase_hint.to_payload() if routing_input.srl_phase_hint is not None else None
             ),
+            "metacognition_hint_payload": (
+                {
+                    "accuracy": round(routing_input.metacognition_hint.accuracy, 4),
+                    "awareness": routing_input.metacognition_hint.awareness,
+                    "last_updated": routing_input.metacognition_hint.last_updated.isoformat(),
+                }
+                if routing_input.metacognition_hint is not None
+                else None
+            ),
+            "stage35_metacognition_shadow_delta": stage35_metacognition_shadow_delta,
             "routing_debug": (decision.routing_debug or {}),
         }
         idiographic_associations_injected: list[dict[str, object]] = []
@@ -1065,10 +1282,12 @@ class RoutingEngineMixin:
                             bayesian_wire_result.recommended_target if bayesian_wire_result is not None else None
                         ),
                         "stage33_modes": stage33_modes,
+                        "stage35_modes": stage35_modes,
                         "stage33_shadow_delta": stage33_shadow_delta or None,
                         "stage33_contributions": stage33_contributions or None,
                         "social_shadow_delta": stage33_shadow_delta.get("social"),
                         "srl_shadow_delta": stage33_shadow_delta.get("srl"),
+                        "stage35_metacognition_shadow_delta": stage35_metacognition_shadow_delta,
                     },
                     skills_injected=selected_skill_ids,
                     source_state_v2=source_state_v2,

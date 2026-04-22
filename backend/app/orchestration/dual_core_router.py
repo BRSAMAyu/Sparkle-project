@@ -6,6 +6,7 @@ from typing import Any
 
 from app.services.social_signal_types import SocialSignalsV1
 from app.services.srl_phase_types import SRLPhaseHint
+from app.state_aggregator.schema import MetacognitionHintV1
 
 
 def _utcnow() -> datetime:
@@ -60,6 +61,7 @@ class DualCoreRoutingInput:
     adaptive_adjustments: dict[str, Any] = field(default_factory=dict)
     social_signals: SocialSignalsV1 | None = None
     srl_phase_hint: SRLPhaseHint | None = None
+    metacognition_hint: MetacognitionHintV1 | None = None
 
 
 @dataclass(frozen=True)
@@ -231,6 +233,7 @@ class DualCoreRouter:
                 reason="Supportive delivery should reduce pressure and keep the tone on the user's side.",
             )
         social_signals = routing_input.social_signals
+        metacognition_hint = routing_input.metacognition_hint
         if social_signals is not None:
             if social_signals.pending_commitments_count > 0:
                 execution_constraints.append("若要安排下一步，请先兼容用户已有的对外承诺，避免叠加新的长期负债。")
@@ -267,6 +270,38 @@ class DualCoreRouter:
                     "session_mode",
                     "reflection",
                     reason="Reflection-phase turns should surface what worked or failed before pushing the user back into execution.",
+                )
+
+        low_metacognition_accuracy = False
+        strong_metacognition_execution_bias = False
+        if metacognition_hint is not None:
+            low_metacognition_accuracy = metacognition_hint.accuracy < 0.5
+            strong_metacognition_execution_bias = (
+                metacognition_hint.accuracy > 0.8 and metacognition_hint.awareness == "strong"
+            )
+            if low_metacognition_accuracy:
+                cognitive_adjustments.append("用户最近对自己状态或耗时的判断偏差较大，先校准判断，再进入执行推进。")
+                recommend_strategy(
+                    "intervention_intensity",
+                    "low",
+                    reason="Low metacognitive accuracy means the system should reduce proactive pushing and recalibrate first.",
+                )
+                recommend_strategy(
+                    "push_vs_support",
+                    0.2,
+                    reason="When self-monitoring is noisy, the delivery should skew toward support instead of pressure.",
+                )
+            elif strong_metacognition_execution_bias:
+                execution_constraints.append("用户对自身状态的觉察较强，减少重复确认与打扰，直接给出可执行下一步。")
+                recommend_strategy(
+                    "check_in_frequency",
+                    "minimal",
+                    reason="Strong metacognitive awareness allows the system to reduce interruptions and trust the user to self-monitor.",
+                )
+                recommend_strategy(
+                    "intervention_intensity",
+                    "low",
+                    reason="High metacognitive accuracy supports a lower-friction execution path with fewer interruptions.",
                 )
 
         if routing_input.session_length_preference and routing_input.session_length_preference <= 25:
@@ -322,6 +357,16 @@ class DualCoreRouter:
             "social_signal_payload": social_signals.to_payload() if social_signals is not None else None,
             "explicit_srl_signal": srl_phase_hint is not None,
             "srl_phase_payload": srl_phase_hint.to_payload() if srl_phase_hint is not None else None,
+            "explicit_metacognition_signal": metacognition_hint is not None,
+            "metacognition_hint_payload": (
+                {
+                    "accuracy": round(metacognition_hint.accuracy, 4),
+                    "awareness": metacognition_hint.awareness,
+                    "last_updated": metacognition_hint.last_updated.isoformat(),
+                }
+                if metacognition_hint is not None
+                else None
+            ),
         }
         if social_signals is not None:
             routing_debug["social_relationship_count"] = social_signals.relationship_count
@@ -330,18 +375,26 @@ class DualCoreRouter:
         if srl_phase_hint is not None:
             routing_debug["srl_phase"] = srl_phase_hint.current_phase
             routing_debug["srl_confidence"] = srl_phase_hint.confidence
+        if metacognition_hint is not None:
+            routing_debug["metacognition_accuracy"] = round(metacognition_hint.accuracy, 4)
+            routing_debug["metacognition_awareness"] = metacognition_hint.awareness
 
         if (
-            goal_clear
+            (goal_clear or strong_metacognition_execution_bias)
             and routing_input.information_sufficient
             and not emotional_block
             and not procrastination_pattern
             and not cognitive_mode_suggested
             and not reflection_phase_detected
+            and not low_metacognition_accuracy
         ):
             return DualCoreDecision(
                 mode="execution_first",
-                reason="目标清晰、信息充分，且当前没有明显情绪或执行阻塞，适合直接推进执行路径。",
+                reason=(
+                    "用户对自身状态觉察稳定，且当前没有明显情绪或执行阻塞，适合减少打扰并直接推进执行路径。"
+                    if strong_metacognition_execution_bias
+                    else "目标清晰、信息充分，且当前没有明显情绪或执行阻塞，适合直接推进执行路径。"
+                ),
                 cognitive_adjustments=cognitive_adjustments[:2],
                 execution_constraints=execution_constraints[:3],
                 routing_debug=routing_debug,
@@ -353,6 +406,7 @@ class DualCoreRouter:
             or emotional_block
             or procrastination_pattern
             or reflection_phase_detected
+            or low_metacognition_accuracy
             or (cognitive_mode_suggested and not goal_clear)
             or (not goal_clear and routing_input.intent_confidence < low_conf_threshold)
         ):
