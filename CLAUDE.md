@@ -470,7 +470,7 @@ Python Engine ←→ Database
 ### Authentication Flow
 - **JWT (HS256)**: Access + Refresh tokens with exp/iat/jti/type/iss/aud claims
 - **Token Blacklist**: JTI-based revocation + user-level revocation (user_revoked_before)
-- **Fail-Closed**: Rejects tokens when Redis unavailable
+- **Fail-Closed**: Non-development boots force `REDIS_FAIL_CLOSED=true` when unset; development defaults remain fail-open for local debugging
 - **Timing-Attack Resistant**: `subtle.ConstantTimeCompare` for all secret comparisons
 
 ### Multi-Layer Rate Limiting

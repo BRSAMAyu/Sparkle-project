@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +26,54 @@ var (
 		Name: "sparkle_rate_limiter_redis_errors_total",
 		Help: "Total Redis errors in rate limiter by error type",
 	}, []string{"error_type"})
+
+	rateLimiterTokensCurrent = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "rate_limiter_tokens_current",
+		Help: "Current token count left in the distributed token bucket",
+	}, []string{"key"})
+
+	rateLimiterRejectionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "rate_limiter_rejections_total",
+		Help: "Total distributed token bucket rejections by key and reason",
+	}, []string{"key", "reason"})
 )
+
+var distributedTokenBucketScript = redis.NewScript(`
+	local key = KEYS[1]
+	local rate_per_s = tonumber(ARGV[1])
+	local burst = tonumber(ARGV[2])
+	local now_ms = tonumber(ARGV[3])
+	local initial_tokens = tonumber(ARGV[4])
+
+	local last_ms = redis.call('HGET', key, 'last')
+	local tokens = redis.call('HGET', key, 'tokens')
+
+	-- Initialize if not exists.
+	if last_ms == false then
+		last_ms = now_ms
+		tokens = initial_tokens
+	end
+
+	-- elapsed_unit=ms, rate_unit=tokens/s
+	local elapsed_ms = now_ms - tonumber(last_ms)
+	-- tokens_added = (elapsed_ms / 1000.0) * (rate_per_s)
+	local tokens_added = (elapsed_ms / 1000.0) * rate_per_s
+	local new_tokens = math.min(burst, tonumber(tokens) + tokens_added)
+
+	local allowed = 0
+	local remaining = new_tokens
+
+	if new_tokens >= 1 then
+		new_tokens = new_tokens - 1
+		allowed = 1
+		remaining = new_tokens
+	end
+
+	redis.call('HMSET', key, 'last', now_ms, 'tokens', new_tokens)
+	redis.call('PEXPIRE', key, 300000)
+
+	return {allowed, tostring(remaining)}
+`)
 
 // DistributedRateLimiter implements Token Bucket algorithm using Redis
 // This ensures rate limiting works across multiple gateway instances
@@ -34,6 +83,7 @@ type DistributedRateLimiter struct {
 	burst         int     // max bucket size
 	initialTokens int     // initial tokens in bucket (default: 0 to prevent burst abuse)
 	keyPrefix     string
+	nowFn         func() time.Time
 }
 
 // NewDistributedRateLimiter creates a Redis-backed rate limiter using Token Bucket algorithm
@@ -46,6 +96,7 @@ func NewDistributedRateLimiter(rdb *redis.Client, rate float64, burst int, keyPr
 		// sessions and low-frequency pages to get sporadic first-request 429s.
 		initialTokens: burst,
 		keyPrefix:     keyPrefix,
+		nowFn:         time.Now,
 	}
 }
 
@@ -57,67 +108,100 @@ func NewDistributedRateLimiterWithInitialTokens(rdb *redis.Client, rate float64,
 		burst:         burst,
 		initialTokens: initialTokens,
 		keyPrefix:     keyPrefix,
+		nowFn:         time.Now,
+	}
+}
+
+// tokensAddedForElapsed aligns the token bucket units explicitly for Rule AW.
+// elapsed_unit=ms, rate_unit=tokens/s
+// tokens_added = (elapsed_ms / 1000.0) * (rate_per_s)
+func tokensAddedForElapsed(elapsedMs int64, ratePerSecond float64) float64 {
+	if elapsedMs <= 0 || ratePerSecond <= 0 {
+		return 0
+	}
+	return (float64(elapsedMs) / 1000.0) * ratePerSecond
+}
+
+func parseScriptFloat(result any) (float64, error) {
+	switch value := result.(type) {
+	case float64:
+		return value, nil
+	case int64:
+		return float64(value), nil
+	case string:
+		return strconv.ParseFloat(value, 64)
+	case []byte:
+		return strconv.ParseFloat(string(value), 64)
+	default:
+		return 0, fmt.Errorf("unsupported numeric script result type %T", result)
+	}
+}
+
+func parseScriptInt(result any) (int64, error) {
+	switch value := result.(type) {
+	case int64:
+		return value, nil
+	case float64:
+		return int64(value), nil
+	case string:
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err == nil {
+			return parsed, nil
+		}
+		floatParsed, floatErr := strconv.ParseFloat(value, 64)
+		if floatErr != nil {
+			return 0, err
+		}
+		return int64(floatParsed), nil
+	case []byte:
+		return parseScriptInt(string(value))
+	default:
+		return 0, fmt.Errorf("unsupported integer script result type %T", result)
 	}
 }
 
 // Allow checks if a request is allowed using Token Bucket algorithm
 // The Lua script ensures atomicity across multiple gateway instances
 func (d *DistributedRateLimiter) Allow(ctx context.Context, key string) (bool, int64, error) {
+	allowed, remaining, err := d.allowAtMillis(ctx, key, d.nowFn().UnixMilli())
+	if err != nil {
+		return false, 0, err
+	}
+	return allowed, int64(math.Floor(remaining)), nil
+}
+
+func (d *DistributedRateLimiter) allowAtMillis(ctx context.Context, key string, nowMillis int64) (bool, float64, error) {
 	fullKey := fmt.Sprintf("%s:%s", d.keyPrefix, key)
 
-	// Token Bucket Lua script
-	// Returns: [allowed (0/1), remaining_tokens]
-	// Fixed: Use configurable initial_tokens instead of burst to prevent burst abuse
-	script := redis.NewScript(`
-		local key = KEYS[1]
-		local rate = tonumber(ARGV[1])
-		local burst = tonumber(ARGV[2])
-		local now = tonumber(ARGV[3])
-		local initial_tokens = tonumber(ARGV[4])
-
-		local last = redis.call('HGET', key, 'last')
-		local tokens = redis.call('HGET', key, 'tokens')
-
-		-- Initialize if not exists
-		if last == false then
-			last = now
-			tokens = initial_tokens
-		end
-
-		-- Calculate token replenishment
-		local elapsed = now - tonumber(last)
-		local new_tokens = math.min(burst, tonumber(tokens) + elapsed * rate)
-
-		local allowed = 0
-		local remaining = new_tokens
-
-		-- Check if we can consume a token
-		if new_tokens >= 1 then
-			new_tokens = new_tokens - 1
-			allowed = 1
-			remaining = new_tokens
-		end
-
-		-- Update state
-		redis.call('HMSET', key, 'last', now, 'tokens', new_tokens)
-		redis.call('PEXPIRE', key, 300000) -- 5 minute TTL
-
-		return {allowed, remaining}
-	`)
-
-	result, err := script.Run(ctx, d.rdb, []string{fullKey},
-		d.rate, d.burst, float64(time.Now().UnixMilli()), d.initialTokens).Slice()
+	result, err := distributedTokenBucketScript.Run(ctx, d.rdb, []string{fullKey},
+		d.rate, d.burst, nowMillis, d.initialTokens).Slice()
 	if err != nil {
 		// Log and increment Prometheus metrics for Redis errors
 		log.Printf("[ALERT] Rate limiter Redis error: %v, falling back to local", err)
 		redisFallbackCounter.Inc()
 		redisErrorCounter.WithLabelValues("script_error").Inc()
+		rateLimiterRejectionsTotal.WithLabelValues(fullKey, "redis_error").Inc()
 		return false, 0, fmt.Errorf("redis script execution failed: %w", err)
 	}
 
-	allowed := result[0].(int64) == 1
-	remaining := result[1].(int64)
+	if len(result) != 2 {
+		return false, 0, fmt.Errorf("unexpected redis script result length: %d", len(result))
+	}
 
+	allowedValue, err := parseScriptInt(result[0])
+	if err != nil {
+		return false, 0, fmt.Errorf("parse allowed flag: %w", err)
+	}
+	remaining, err := parseScriptFloat(result[1])
+	if err != nil {
+		return false, 0, fmt.Errorf("parse remaining tokens: %w", err)
+	}
+
+	rateLimiterTokensCurrent.WithLabelValues(fullKey).Set(remaining)
+	allowed := allowedValue == 1
+	if !allowed {
+		rateLimiterRejectionsTotal.WithLabelValues(fullKey, "insufficient_tokens").Inc()
+	}
 	return allowed, remaining, nil
 }
 
