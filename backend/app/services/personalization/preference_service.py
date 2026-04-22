@@ -8,7 +8,7 @@ from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -17,6 +17,10 @@ from app.models.user_preferences import UserPreferencesCenter
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+class ConcurrentModificationError(RuntimeError):
+    """Raised when optimistic concurrency control detects a stale preference version."""
 
 
 class PreferenceService:
@@ -126,14 +130,10 @@ class PreferenceService:
 
     async def update_inferred_raw(self, user_id: UUID, inferred: dict) -> UserPreferencesCenter:
         """以完整快照替换推断偏好并递增版本"""
-        prefs = await self._get_or_create(user_id)
-        prefs.inferred = dict(inferred or {})
-        prefs.version = (prefs.version or 0) + 1
-        prefs.last_inferred_update = _utcnow()
-        prefs.updated_at = _utcnow()
-        await self.db.commit()
-        await self._invalidate_cache(user_id)
-        return self._fill_defaults(prefs)
+        return await self._update_inferred_with_retry(
+            user_id,
+            merge_fn=lambda _current: dict(inferred or {}),
+        )
 
     async def update_inferred(self, user_id: UUID, updates: dict) -> UserPreferencesCenter:
         """
@@ -147,40 +147,79 @@ class PreferenceService:
         if not updates:
             return await self.get_preferences(user_id)
 
-        # 重试循环：处理并发冲突
-        max_retries = 3
+        return await self._update_inferred_with_retry(
+            user_id,
+            merge_fn=lambda current: {**current, **updates},
+        )
 
+    async def _update_inferred_with_retry(
+        self,
+        user_id: UUID,
+        *,
+        merge_fn,
+        max_retries: int = 3,
+    ) -> UserPreferencesCenter:
         for attempt in range(max_retries):
             prefs = await self._get_or_create(user_id)
-            current_version = prefs.version or 0
-
-            inferred = dict(prefs.inferred or {})
-            inferred.update(updates)
-            prefs.inferred = inferred
-            prefs.version = current_version + 1
-            prefs.last_inferred_update = _utcnow()
-            prefs.updated_at = _utcnow()
+            current_version = int(prefs.version or 0)
+            merged_inferred = merge_fn(dict(prefs.inferred or {}))
 
             try:
-                await self.db.commit()
-                await self.db.refresh(prefs)
-
-                # 验证版本号确实是预期的（无并发冲突）
-                if prefs.version == current_version + 1:
-                    await self._invalidate_cache(user_id)
-                    return self._fill_defaults(prefs)
-
-            except Exception as e:
+                return await self._update_inferred_with_occ(
+                    user_id=user_id,
+                    inferred=merged_inferred,
+                    expected_version=current_version,
+                )
+            except ConcurrentModificationError as exc:
                 await self.db.rollback()
-                if attempt < max_retries - 1:
-                    logger.warning(f"Concurrent preference update for user {user_id}, retrying (attempt {attempt + 1})")
-                    await asyncio.sleep(0.01 * (attempt + 1))  # 指数退避
-                    continue
-                else:
-                    logger.error(f"Failed to update preferences after {max_retries} attempts: {e}")
+                if attempt >= max_retries - 1:
+                    logger.error(
+                        "Preference OCC exhausted for user {} after {} attempts: {}",
+                        user_id,
+                        max_retries,
+                        exc,
+                    )
                     raise
+                logger.warning(
+                    "Preference OCC conflict for user {}, retrying ({}/{})",
+                    user_id,
+                    attempt + 1,
+                    max_retries,
+                )
+                await asyncio.sleep(0.01 * (attempt + 1))
 
-        return await self.get_preferences(user_id)
+        raise ConcurrentModificationError(f"Failed to update preferences for {user_id}")
+
+    async def _update_inferred_with_occ(
+        self,
+        *,
+        user_id: UUID,
+        inferred: dict,
+        expected_version: int,
+    ) -> UserPreferencesCenter:
+        now = _utcnow()
+        result = await self.db.execute(
+            update(UserPreferencesCenter)
+            .where(
+                UserPreferencesCenter.user_id == user_id,
+                UserPreferencesCenter.version == expected_version,
+            )
+            .values(
+                inferred=dict(inferred or {}),
+                version=expected_version + 1,
+                last_inferred_update=now,
+                updated_at=now,
+            )
+        )
+        if result.rowcount == 0:
+            raise ConcurrentModificationError(
+                f"Preference version conflict for user {user_id}: expected {expected_version}"
+            )
+
+        await self.db.commit()
+        refreshed = await self._get_or_create(user_id)
+        await self._invalidate_cache(user_id)
+        return self._fill_defaults(refreshed)
 
     async def save_preferences(self, user_id: UUID, prefs_center: UserPreferencesCenter) -> UserPreferencesCenter:
         """持久化偏好快照并递增版本。"""
@@ -253,7 +292,11 @@ class PreferenceService:
         return version or 0
 
     async def _get_or_create(self, user_id: UUID) -> UserPreferencesCenter:
-        result = await self.db.execute(select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id))
+        result = await self.db.execute(
+            select(UserPreferencesCenter)
+            .where(UserPreferencesCenter.user_id == user_id)
+            .execution_options(populate_existing=True)
+        )
         prefs = result.scalar_one_or_none()
         if prefs:
             return prefs
