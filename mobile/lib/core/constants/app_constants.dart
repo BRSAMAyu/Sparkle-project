@@ -37,5 +37,8 @@ class AppFeatureFlags {
   static bool enableUserMemoryControls = true;
   static bool enableWorkingMemoryDrawer = true;
   static bool enableTaskGuidanceV2 = false;
-  static bool enableStage35ProfileCards = true;
+  static bool enableStage35ProfileCards = const bool.fromEnvironment(
+    'mobile.stage35_cards_enabled',
+    defaultValue: true,
+  );
 }
