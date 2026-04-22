@@ -59,6 +59,35 @@ func TestShouldBypassGlobalRateLimit(t *testing.T) {
 	}
 }
 
+func TestAdminRateLimitMiddleware(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(AdminRateLimitMiddleware(nil))
+	router.GET("/admin/probe", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	blocked := false
+	for i := 0; i < 11; i++ {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/admin/probe", nil)
+		req.RemoteAddr = "127.0.0.1:34567"
+		router.ServeHTTP(recorder, req)
+		if i < 10 && recorder.Code != http.StatusOK {
+			t.Fatalf("request %d should pass, got %d", i+1, recorder.Code)
+		}
+		if i == 10 {
+			blocked = recorder.Code == http.StatusTooManyRequests
+		}
+	}
+
+	if !blocked {
+		t.Fatalf("expected admin rate limiter to reject burst above 10 requests")
+	}
+}
+
 func TestNormalizeRateLimitRoutePath(t *testing.T) {
 	t.Parallel()
 

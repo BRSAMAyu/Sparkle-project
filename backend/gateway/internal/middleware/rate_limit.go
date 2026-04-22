@@ -355,6 +355,12 @@ func AuthRateLimitMiddleware() gin.HandlerFunc {
 	)
 }
 
+// AdminRateLimitMiddleware protects low-volume control-plane endpoints against
+// brute-force and password-spraying attempts while keeping normal admin use fast.
+func AdminRateLimitMiddleware(rdb *redis.Client) gin.HandlerFunc {
+	return HybridRateLimitMiddlewareSimple(rdb, 10.0/60.0, 10)
+}
+
 // WebSocketRateLimitMiddleware WebSocket连接速率限制
 func WebSocketRateLimitMiddleware() gin.HandlerFunc {
 	// WebSocket连接限制按分钟计算

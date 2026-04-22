@@ -411,6 +411,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	authMiddleware := middleware.AuthMiddleware(cfg, rdb)
 	authRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 5.0, 15)
 	apiRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 30, 60)
+	adminRateLimit := middleware.AdminRateLimitMiddleware(rdb)
 
 	requestTimeout := 30
 	if cfg.RequestTimeoutSeconds > 0 {
@@ -497,7 +498,8 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	admin := r.Group("/admin", middleware.AdminAuthMiddleware(cfg))
+	// route-tier: internal
+	admin := r.Group("/admin", middleware.AdminAuthMiddleware(cfg), adminRateLimit)
 	{
 		chaosRoutes := admin.Group("/chaos", middleware.ChaosGuardMiddleware(cfg))
 		chaosRoutes.POST("/inject", dbh.chaosManager.HandleInject)
@@ -721,6 +723,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		})
 	}
 
+	// route-tier: deprecated
 	r.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 		method := c.Request.Method
@@ -731,16 +734,10 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			zap.String("method", method),
 			zap.String("query", c.Request.URL.RawQuery))
 
-		if strings.HasPrefix(path, "/api/v1/auth") ||
-			path == "/api/v1/health" ||
-			strings.HasPrefix(path, "/docs") ||
-			strings.HasPrefix(path, "/redoc") ||
-			strings.HasPrefix(path, "/openapi.json") {
-			if strings.HasPrefix(path, "/api/v1/auth") {
-				authRateLimit(c)
-				if c.IsAborted() {
-					return
-				}
+		if shouldProxyNoRoutePath(path) {
+			authRateLimit(c)
+			if c.IsAborted() {
+				return
 			}
 			proxy.proxy.ServeHTTP(c.Writer, c.Request)
 
@@ -755,6 +752,10 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	})
 
 	return r
+}
+
+func shouldProxyNoRoutePath(path string) bool {
+	return strings.HasPrefix(path, "/api/v1/auth")
 }
 
 func setupProxy(cfg *config.Config, logger *zap.Logger) (*proxyBundle, error) {

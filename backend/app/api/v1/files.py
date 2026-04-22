@@ -3,6 +3,7 @@ File processing API
 文件处理 API
 """
 from __future__ import annotations
+import secrets
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -19,7 +20,9 @@ router = APIRouter()
 
 
 async def verify_internal_token(x_internal_token: str | None = Header(None)) -> None:
-    if settings.INTERNAL_API_KEY and x_internal_token != settings.INTERNAL_API_KEY:
+    if not settings.INTERNAL_API_KEY:
+        raise HTTPException(status_code=503, detail="Internal API key not configured")
+    if not x_internal_token or not secrets.compare_digest(x_internal_token, settings.INTERNAL_API_KEY):
         raise HTTPException(status_code=401, detail="Invalid internal token")
 
 
@@ -32,6 +35,7 @@ class FileProcessRequest(BaseModel):
     thumbnail_upload_url: AnyUrl | None = None
 
 
+# route-tier: internal
 @router.post("/files/process", summary="Trigger file processing")
 async def process_file(
     payload: FileProcessRequest,
@@ -62,6 +66,7 @@ async def process_file(
     return {"status": "queued", "task_id": task.id}
 
 
+# route-tier: internal
 @router.get("/files/{file_id}/status", summary="Get file processing status")
 async def get_file_status(
     file_id: UUID,

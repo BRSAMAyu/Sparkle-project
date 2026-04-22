@@ -214,3 +214,28 @@ def test_unlock_internal_requires_internal_token(visual_client):
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid internal token"
+
+
+def test_unlock_internal_fails_closed_when_key_missing(visual_client):
+    from unittest.mock import patch
+
+    client, state = visual_client
+    state["current_user"] = User(
+        id="00000000-0000-0000-0000-000000000001",
+        username="visual_internal_missing_key",
+        email="visual_internal_missing_key@example.com",
+        hashed_password="hashed",
+    )
+
+    with patch("app.api.v1.visual_elements.settings.INTERNAL_API_KEY", ""):
+        response = client.post(
+            "/visual-elements/unlock",
+            json={
+                "element_id": "bg_default_dark",
+                "source": "system",
+                "source_id": "seed",
+            },
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Internal API key not configured"

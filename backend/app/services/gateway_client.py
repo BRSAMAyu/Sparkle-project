@@ -16,6 +16,9 @@ class GatewayClient:
         if not candidate_set.user_id:
             logger.warning("Skipping push: missing user_id")
             return False
+        if not self.base_url or not self.api_key:
+            logger.warning("Skipping push: gateway internal channel not configured")
+            return False
         payload = {
             "user_id": candidate_set.user_id,
             "request_id": candidate_set.request_id,
@@ -27,9 +30,7 @@ class GatewayClient:
                 including_default_value_fields=False,
             ),
         }
-        headers = {}
-        if self.api_key:
-            headers["X-Internal-API-Key"] = self.api_key
+        headers = {"X-Internal-API-Key": self.api_key}
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 resp = await client.post(

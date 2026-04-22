@@ -3,6 +3,7 @@ Achievements API Endpoints
 成就系统 API 端点
 """
 from __future__ import annotations
+import secrets
 from datetime import timezone, datetime
 from typing import Any
 
@@ -62,7 +63,7 @@ async def verify_internal_token(x_internal_token: str | None = Header(None)) -> 
     """Protect internal-only achievement endpoints with a shared key."""
     if not settings.INTERNAL_API_KEY:
         raise HTTPException(status_code=503, detail="Internal API key not configured")
-    if not x_internal_token or x_internal_token != settings.INTERNAL_API_KEY:
+    if not x_internal_token or not secrets.compare_digest(x_internal_token, settings.INTERNAL_API_KEY):
         raise HTTPException(status_code=401, detail="Invalid internal token")
 
 
@@ -549,6 +550,7 @@ async def equip_title(
 
 # ========== Internal Event Endpoint ==========
 
+# route-tier: internal
 @router.post("/events/process", response_model=AchievementEventProcessResponse)
 async def process_achievement_event(
     user_id: str = Query(..., description="Target user ID"),
