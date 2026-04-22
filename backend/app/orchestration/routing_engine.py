@@ -34,6 +34,7 @@ from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.aurora_stage35_kill_switch_service import AuroraStage35KillSwitchService
+from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
 from app.services.cognitive_service import CognitiveService
 from app.services.follow_up_question_service import FollowUpQuestionService
 from app.services.bayesian_routing_wire_service import BayesianRoutingWireService
@@ -128,6 +129,26 @@ class RoutingEngineMixin:
             raw = preferences.get("difficulty_preference")
             if isinstance(raw, (int, float)):
                 return float(raw)
+        return None
+
+    @staticmethod
+    def _extract_cognitive_load(
+        user_context_payload: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+    ) -> float | None:
+        user_profile = (plan_context or {}).get("user_profile") if isinstance(plan_context, dict) else None
+        cognitive_state = user_profile.get("cognitive_state") if isinstance(user_profile, dict) else None
+        if isinstance(cognitive_state, dict):
+            raw = cognitive_state.get("cognitive_load")
+            if isinstance(raw, (int, float)):
+                return max(0.0, min(1.0, float(raw)))
+
+        profile_context = (user_context_payload or {}).get("profile_context") if isinstance(user_context_payload, dict) else None
+        user_state_v1 = profile_context.get("user_state_v1") if isinstance(profile_context, dict) else None
+        if isinstance(user_state_v1, dict):
+            raw = user_state_v1.get("cognitive_load")
+            if isinstance(raw, (int, float)):
+                return max(0.0, min(1.0, float(raw)))
         return None
 
     @staticmethod
@@ -477,6 +498,43 @@ class RoutingEngineMixin:
         }
 
     @classmethod
+    def _build_stage39_cognitive_load_delta(
+        cls,
+        *,
+        baseline_decision: DualCoreDecision,
+        candidate_decision: DualCoreDecision,
+        cognitive_load: float,
+    ) -> dict[str, Any]:
+        baseline_strategy_fields = {
+            str(item.get("field") or "").strip()
+            for item in baseline_decision.strategy_adjustments
+            if isinstance(item, dict)
+        }
+        added_strategy_adjustments = [
+            dict(item)
+            for item in candidate_decision.strategy_adjustments
+            if isinstance(item, dict)
+            and str(item.get("field") or "").strip() not in baseline_strategy_fields
+        ]
+        return {
+            "baseline_mode": baseline_decision.mode,
+            "candidate_mode": candidate_decision.mode,
+            "mode_changed": baseline_decision.mode != candidate_decision.mode,
+            "added_cognitive_adjustments": [
+                item
+                for item in candidate_decision.cognitive_adjustments
+                if item not in baseline_decision.cognitive_adjustments
+            ],
+            "added_execution_constraints": [
+                item
+                for item in candidate_decision.execution_constraints
+                if item not in baseline_decision.execution_constraints
+            ],
+            "added_strategy_adjustments": added_strategy_adjustments,
+            "cognitive_load": round(float(cognitive_load), 4),
+        }
+
+    @classmethod
     def _overlay_stage33_social_constraints(
         cls,
         *,
@@ -643,6 +701,7 @@ class RoutingEngineMixin:
             social_signals=social_signals,
             srl_phase_hint=srl_phase_hint,
             metacognition_hint=metacognition_hint,
+            cognitive_load=self._extract_cognitive_load(user_context_payload, plan_context),
         )
 
     async def _build_metacognition_hint(
@@ -862,6 +921,12 @@ class RoutingEngineMixin:
             "mode": "shadow",
             "metacog_router_mode": "shadow",
         }
+        stage39_modes = {
+            "mode": "live",
+            "scaffolding_prompt_mode": "live",
+            "cogload_route_mode": "shadow",
+            "galaxy_inject_mode": "shadow",
+        }
         try:
             stage33_modes = await AuroraStage33KillSwitchService().summary()
         except Exception as exc:
@@ -871,10 +936,15 @@ class RoutingEngineMixin:
             stage35_modes = await AuroraStage35KillSwitchService().summary()
         except Exception as exc:
             logger.warning("Stage35 kill switch lookup failed: {}", exc)
+        try:
+            stage39_modes = await AuroraStage39KillSwitchService().summary()
+        except Exception as exc:
+            logger.warning("Stage39 kill switch lookup failed: {}", exc)
 
         if isinstance(user_context_payload, dict):
             user_context_payload["aurora_stage33_modes"] = dict(stage33_modes)
             user_context_payload["aurora_stage35_modes"] = dict(stage35_modes)
+            user_context_payload["aurora_stage39_modes"] = dict(stage39_modes)
             if routing_input.social_signals is not None:
                 user_context_payload.setdefault(
                     "social_signals_summary",
@@ -887,14 +957,17 @@ class RoutingEngineMixin:
                 )
         state.context_data["aurora_stage33_modes"] = dict(stage33_modes)
         state.context_data["aurora_stage35_modes"] = dict(stage35_modes)
+        state.context_data["aurora_stage39_modes"] = dict(stage39_modes)
 
         social_mode = str(stage33_modes.get("social") or "off").strip().lower()
         srl_mode = str(stage33_modes.get("srl") or "off").strip().lower()
         metacog_mode = str(stage35_modes.get("metacog_router_mode") or "off").strip().lower()
+        cogload_mode = str(stage39_modes.get("cogload_route_mode") or "off").strip().lower()
         effective_routing_input = routing_input
         social_candidate_input: DualCoreRoutingInput | None = None
         srl_candidate_input: DualCoreRoutingInput | None = None
         metacog_candidate_input: DualCoreRoutingInput | None = None
+        cogload_candidate_input: DualCoreRoutingInput | None = None
         if social_mode == "off":
             AURORA_STAGE33_FALLBACK_TOTAL.labels(feature="social", reason="off").inc()
             effective_routing_input = replace(effective_routing_input, social_signals=None)
@@ -919,6 +992,12 @@ class RoutingEngineMixin:
             effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
         elif metacog_mode == "shadow":
             effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
+        if cogload_mode == "off":
+            effective_routing_input = replace(effective_routing_input, cognitive_load=None)
+        elif routing_input.cognitive_load is None:
+            effective_routing_input = replace(effective_routing_input, cognitive_load=None)
+        elif cogload_mode == "shadow":
+            effective_routing_input = replace(effective_routing_input, cognitive_load=None)
 
         if routing_input.social_signals is not None and social_mode in {"shadow", "live"}:
             social_candidate_input = replace(
@@ -934,6 +1013,11 @@ class RoutingEngineMixin:
             metacog_candidate_input = replace(
                 effective_routing_input,
                 metacognition_hint=routing_input.metacognition_hint,
+            )
+        if routing_input.cognitive_load is not None and cogload_mode in {"shadow", "live"}:
+            cogload_candidate_input = replace(
+                effective_routing_input,
+                cognitive_load=routing_input.cognitive_load,
             )
 
         task_summary_value, ctx_summary_value, sufficiency_judgment_id = (
@@ -959,6 +1043,7 @@ class RoutingEngineMixin:
         stage33_shadow_delta: dict[str, Any] = {}
         stage33_contributions: dict[str, Any] = {}
         stage35_metacognition_shadow_delta: dict[str, Any] | None = None
+        stage39_cognitive_load_shadow_delta: dict[str, Any] | None = None
 
         def _route_with_shortcuts(candidate_input: DualCoreRoutingInput) -> DualCoreDecision:
             if candidate_input.intent == "chat" and route_decision.execution_mode == "direct":
@@ -1029,6 +1114,23 @@ class RoutingEngineMixin:
                 stage35_metacognition_shadow_delta = metacog_delta
             elif metacog_mode == "live" and cutover_state.mode != "active":
                 decision = metacog_candidate_decision
+
+        if cogload_candidate_input is not None and routing_input.cognitive_load is not None:
+            cogload_baseline_input = replace(effective_routing_input, cognitive_load=None)
+            if legacy_decision is not None and cogload_baseline_input == effective_routing_input:
+                cogload_baseline_decision = legacy_decision
+            else:
+                cogload_baseline_decision = _route_with_shortcuts(cogload_baseline_input)
+            cogload_candidate_decision = _route_with_shortcuts(cogload_candidate_input)
+            cogload_delta = self._build_stage39_cognitive_load_delta(
+                baseline_decision=cogload_baseline_decision,
+                candidate_decision=cogload_candidate_decision,
+                cognitive_load=routing_input.cognitive_load,
+            )
+            if cogload_mode == "shadow":
+                stage39_cognitive_load_shadow_delta = cogload_delta
+            elif cogload_mode == "live" and cutover_state.mode != "active":
+                decision = cogload_candidate_decision
 
         if social_candidate_input is not None and routing_input.social_signals is not None:
             social_baseline_input = replace(effective_routing_input, social_signals=None)
@@ -1106,6 +1208,8 @@ class RoutingEngineMixin:
             state.context_data["stage33_shadow_delta"] = stage33_shadow_delta
         if stage35_metacognition_shadow_delta:
             state.context_data["stage35_metacognition_shadow_delta"] = stage35_metacognition_shadow_delta
+        if stage39_cognitive_load_shadow_delta:
+            state.context_data["stage39_cognitive_load_shadow_delta"] = stage39_cognitive_load_shadow_delta
         if stage33_contributions:
             state.context_data["stage33_contributions"] = stage33_contributions
         state.context_data["dual_core_decision"] = decision.to_dict()
@@ -1205,8 +1309,10 @@ class RoutingEngineMixin:
             "plan_health_status": effective_routing_input.plan_health_status,
             "routing_profile": effective_routing_input.routing_profile,
             "current_guidance": effective_routing_input.current_guidance,
+            "cognitive_load": effective_routing_input.cognitive_load,
             "aurora_stage33_modes": stage33_modes,
             "aurora_stage35_modes": stage35_modes,
+            "aurora_stage39_modes": stage39_modes,
             "social_signal_payload": (
                 routing_input.social_signals.to_payload() if routing_input.social_signals is not None else None
             ),
@@ -1223,6 +1329,7 @@ class RoutingEngineMixin:
                 else None
             ),
             "stage35_metacognition_shadow_delta": stage35_metacognition_shadow_delta,
+            "stage39_cognitive_load_shadow_delta": stage39_cognitive_load_shadow_delta,
             "routing_debug": (decision.routing_debug or {}),
         }
         idiographic_associations_injected: list[dict[str, object]] = []
@@ -1283,11 +1390,13 @@ class RoutingEngineMixin:
                         ),
                         "stage33_modes": stage33_modes,
                         "stage35_modes": stage35_modes,
+                        "stage39_modes": stage39_modes,
                         "stage33_shadow_delta": stage33_shadow_delta or None,
                         "stage33_contributions": stage33_contributions or None,
                         "social_shadow_delta": stage33_shadow_delta.get("social"),
                         "srl_shadow_delta": stage33_shadow_delta.get("srl"),
                         "stage35_metacognition_shadow_delta": stage35_metacognition_shadow_delta,
+                        "stage39_cognitive_load_shadow_delta": stage39_cognitive_load_shadow_delta,
                     },
                     skills_injected=selected_skill_ids,
                     source_state_v2=source_state_v2,

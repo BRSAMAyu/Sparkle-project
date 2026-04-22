@@ -20,6 +20,7 @@ from app.core.event_bus import KnowledgeNodeUpdated, event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.galaxy import KnowledgeNode, NodeRelation
 from app.models.galaxy import UserNodeStatus
+from app.models.task import Task, TaskStatus
 from app.schemas.galaxy import (
     GalaxyGraphResponse,
     NodeRelationInfo,
@@ -235,6 +236,121 @@ class GalaxyService:
 
     async def create_edge(self, user_id: UUID, source_id: UUID, target_id: UUID, relation_type: str) -> NodeRelation:
         return await self.structure.create_edge(user_id, source_id, target_id, relation_type)
+
+    async def get_goal_context_nodes(
+        self,
+        *,
+        user_id: UUID,
+        plan_ids: list[UUID],
+        limit: int = 5,
+    ) -> list[dict[str, object]]:
+        if not plan_ids:
+            return []
+
+        task_rows = (
+            await self.db.execute(
+                select(Task.knowledge_node_id, Task.priority, Task.status)
+                .where(Task.user_id == user_id)
+                .where(Task.plan_id.in_(plan_ids))
+                .where(Task.knowledge_node_id.is_not(None))
+                .order_by(Task.priority.desc(), Task.updated_at.desc())
+                .limit(12)
+            )
+        ).all()
+
+        seed_node_ids: list[UUID] = []
+        for node_id, _priority, status in task_rows:
+            if node_id is None:
+                continue
+            if status not in {TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED}:
+                continue
+            if node_id not in seed_node_ids:
+                seed_node_ids.append(node_id)
+            if len(seed_node_ids) >= limit:
+                break
+
+        if not seed_node_ids:
+            status_rows = (
+                await self.db.execute(
+                    select(UserNodeStatus.node_id)
+                    .where(UserNodeStatus.user_id == user_id)
+                    .where(UserNodeStatus.is_unlocked.is_(True))
+                    .order_by(UserNodeStatus.updated_at.desc())
+                    .limit(limit)
+                )
+            ).all()
+            seed_node_ids = [node_id for node_id, in status_rows if node_id is not None]
+
+        if not seed_node_ids:
+            return []
+
+        candidate_scores: dict[UUID, float] = {}
+        candidate_roles: dict[UUID, str] = {}
+        for node_id in seed_node_ids:
+            candidate_scores[node_id] = candidate_scores.get(node_id, 0.0) + 2.0
+            candidate_roles[node_id] = "goal_anchor"
+
+        relation_rows = (
+            await self.db.execute(
+                select(
+                    NodeRelation.source_node_id,
+                    NodeRelation.target_node_id,
+                    NodeRelation.relation_type,
+                )
+                .where(
+                    NodeRelation.source_node_id.in_(seed_node_ids)
+                    | NodeRelation.target_node_id.in_(seed_node_ids)
+                )
+                .limit(32)
+            )
+        ).all()
+        for source_id, target_id, _relation_type in relation_rows:
+            neighbor_id = target_id if source_id in seed_node_ids else source_id
+            if neighbor_id is None:
+                continue
+            candidate_scores[neighbor_id] = candidate_scores.get(neighbor_id, 0.0) + 1.0
+            candidate_roles.setdefault(neighbor_id, "related")
+
+        candidate_ids = list(candidate_scores.keys())
+        rows = (
+            await self.db.execute(
+                select(KnowledgeNode, UserNodeStatus.mastery_score, UserNodeStatus.is_unlocked)
+                .join(
+                    UserNodeStatus,
+                    (UserNodeStatus.node_id == KnowledgeNode.id)
+                    & (UserNodeStatus.user_id == user_id),
+                )
+                .where(KnowledgeNode.id.in_(candidate_ids))
+            )
+        ).all()
+        if not rows:
+            return []
+
+        node_payloads: dict[UUID, dict[str, object]] = {}
+        for node, mastery_score, is_unlocked in rows:
+            if not bool(is_unlocked):
+                continue
+            description = str(node.description or "").strip()
+            if len(description) > 96:
+                description = description[:95].rstrip() + "..."
+            node_payloads[node.id] = {
+                "node_id": str(node.id),
+                "name": str(node.name or "").strip(),
+                "description": description,
+                "mastery_score": round(float(mastery_score or 0.0), 1),
+                "role": candidate_roles.get(node.id, "related"),
+                "relevance_score": round(float(candidate_scores.get(node.id, 0.0)), 2),
+            }
+
+        ordered_ids = sorted(
+            node_payloads.keys(),
+            key=lambda node_id: (
+                candidate_scores.get(node_id, 0.0),
+                float(node_payloads[node_id].get("mastery_score") or 0.0),
+            ),
+            reverse=True,
+        )
+        return [node_payloads[node_id] for node_id in ordered_ids[:limit]]
 
     async def auto_generate_ontology(self, document_text: str, subject: str | None = None) -> OntologyExtractionResult:
         return await self.ontology_generator.generate(document_text=document_text, subject=subject)

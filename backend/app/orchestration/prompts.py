@@ -63,6 +63,8 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "decision_policy_section": (110, 0.08),
     "user_material_grounding_section": (120, 0.08),
     "intervention_language_contract_section": (90, 0.06),
+    "scaffolding_state_section": (90, 0.06),
+    "galaxy_snapshot_section": (120, 0.07),
     "context_briefing_section": (80, 0.05),
     "intent_section": (100, 0.08),
     "session_feedback_section": (60, 0.05),
@@ -1013,6 +1015,8 @@ def build_system_prompt(
     planning_strategy_section = _format_planning_strategy_section(user_context=user_context)
     user_material_grounding_section = _format_user_material_grounding_section(user_context=user_context)
     process_scaffolding_section = _format_process_scaffolding_section(user_context=user_context)
+    scaffolding_state_section = _format_scaffolding_state_section(user_context=user_context)
+    galaxy_snapshot_section = _format_galaxy_snapshot_section(user_context=user_context)
     idiographic_section = _format_idiographic_section(user_context=user_context)
     intervention_language_contract_section = _format_intervention_language_contract_section(
         user_context=user_context,
@@ -1149,6 +1153,8 @@ def build_system_prompt(
         "planning_strategy_section": planning_strategy_section,
         "user_material_grounding_section": user_material_grounding_section,
         "process_scaffolding_section": process_scaffolding_section,
+        "scaffolding_state_section": scaffolding_state_section,
+        "galaxy_snapshot_section": galaxy_snapshot_section,
         "idiographic_section": idiographic_section,
         "intervention_language_contract_section": intervention_language_contract_section,
         "context_briefing_section": context_briefing_section,
@@ -1197,6 +1203,8 @@ def build_system_prompt(
             "planning_strategy_section": 1,
             "user_material_grounding_section": 1,
             "process_scaffolding_section": 1,
+            "scaffolding_state_section": 1,
+            "galaxy_snapshot_section": 2,
             "idiographic_section": 1,
             "intervention_language_contract_section": 1,
             "context_briefing_section": 0,
@@ -1228,6 +1236,8 @@ def build_system_prompt(
     planning_strategy_section = section_map["planning_strategy_section"]
     user_material_grounding_section = section_map["user_material_grounding_section"]
     process_scaffolding_section = section_map["process_scaffolding_section"]
+    scaffolding_state_section = section_map["scaffolding_state_section"]
+    galaxy_snapshot_section = section_map["galaxy_snapshot_section"]
     idiographic_section = section_map["idiographic_section"]
     intervention_language_contract_section = section_map["intervention_language_contract_section"]
     context_briefing_section = section_map["context_briefing_section"]
@@ -1321,6 +1331,8 @@ def build_system_prompt(
                 planning_strategy_section=planning_strategy_section,
                 user_material_grounding_section=user_material_grounding_section,
                 process_scaffolding_section=process_scaffolding_section,
+                scaffolding_state_section=scaffolding_state_section,
+                galaxy_snapshot_section=galaxy_snapshot_section,
                 idiographic_section=idiographic_section,
                 intervention_language_contract_section=intervention_language_contract_section,
                 context_briefing_section=context_briefing_section,
@@ -1342,6 +1354,8 @@ def build_system_prompt(
                 planning_strategy_section,
                 user_material_grounding_section,
                 process_scaffolding_section,
+                scaffolding_state_section,
+                galaxy_snapshot_section,
                 idiographic_section,
                 intervention_language_contract_section,
                 plan_context_section,
@@ -1381,6 +1395,8 @@ def build_system_prompt(
                 planning_strategy_section=planning_strategy_section,
                 user_material_grounding_section=user_material_grounding_section,
                 process_scaffolding_section=process_scaffolding_section,
+                scaffolding_state_section=scaffolding_state_section,
+                galaxy_snapshot_section=galaxy_snapshot_section,
                 idiographic_section=idiographic_section,
                 intervention_language_contract_section=intervention_language_contract_section,
             )
@@ -1398,6 +1414,8 @@ def build_system_prompt(
             planning_strategy_section,
             user_material_grounding_section,
             process_scaffolding_section,
+            scaffolding_state_section,
+            galaxy_snapshot_section,
             idiographic_section,
             intervention_language_contract_section,
             plan_context_section,
@@ -2025,6 +2043,64 @@ def _format_process_scaffolding_section(*, user_context: dict) -> str:
         f"- {body}",
         "- 只帮助用户回看判断过程，不要把这类观察写成人格、身份或诊断结论。",
     ]
+    return "\n" + "\n".join(lines)
+
+
+def _format_scaffolding_state_section(*, user_context: dict) -> str:
+    payload = user_context.get("scaffolding_fsm_snapshot") if isinstance(user_context, dict) else None
+    if not isinstance(payload, dict):
+        return ""
+    if str(payload.get("mode") or "off").strip().lower() != "live":
+        return ""
+
+    current_stage = str(payload.get("current_scaffolding_stage") or "").strip()
+    intervention_intensity = str(payload.get("intervention_intensity") or "").strip()
+    template_support_level = payload.get("template_support_level")
+    if not current_stage or not intervention_intensity:
+        return ""
+
+    lines = [
+        "## 脚手架状态 [L2 引导]",
+        f"- 当前脚手架阶段: {current_stage}",
+        f"- 当前干预强度: {intervention_intensity}",
+    ]
+    if template_support_level is not None:
+        lines.append(f"- 当前模板支架级别: {template_support_level}")
+    reflection_prompt_style = str(payload.get("reflection_prompt_style") or "").strip()
+    if reflection_prompt_style:
+        lines.append(f"- 复盘提示风格: {reflection_prompt_style}")
+    lines.append("- 先按当前支架强度组织回答，不要突然提高要求或切成高压推进。")
+    return "\n" + "\n".join(lines)
+
+
+def _format_galaxy_snapshot_section(*, user_context: dict) -> str:
+    payload = user_context.get("galaxy_snapshot") if isinstance(user_context, dict) else None
+    if not isinstance(payload, dict):
+        return ""
+    if str(payload.get("mode") or "off").strip().lower() != "live":
+        return ""
+    nodes = payload.get("nodes") or []
+    if not isinstance(nodes, list) or not nodes:
+        return ""
+
+    lines = [
+        "## 知识星图节点 [L2 引导]",
+        "- 若回答涉及路径、前置关系或复盘，优先用这些当前目标附近的节点来落地。",
+    ]
+    for item in nodes[:5]:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        role = str(item.get("role") or "related").strip()
+        mastery_score = item.get("mastery_score")
+        description = str(item.get("description") or "").strip()
+        detail_bits = [role]
+        if mastery_score is not None:
+            detail_bits.append(f"mastery {mastery_score}")
+        line = f"- {name} ({', '.join(detail_bits)}): {description}" if description else f"- {name} ({', '.join(detail_bits)})"
+        lines.append(line[:180])
     return "\n" + "\n".join(lines)
 
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -110,6 +110,7 @@ async def get_transaction_summary(
 @router.post("/transfer", response_model=dict[str, Any])
 async def transfer_photons(
     request: PhotonTransferRequest,
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -124,6 +125,8 @@ async def transfer_photons(
             status_code=403,
             detail="Guest users cannot transfer photons. Please register for a full account."
         )
+    if not idempotency_key:
+        raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
 
     photon_service = get_photon_service(db)
 
@@ -163,6 +166,7 @@ async def transfer_photons(
 @router.post("/adjust", response_model=dict[str, Any])
 async def adjust_photons(
     request: PhotonAdjustmentRequest,
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     current_user: User = Depends(get_current_active_superuser),
     db: AsyncSession = Depends(get_db)
 ):
@@ -171,6 +175,9 @@ async def adjust_photons(
 
     Adjusts a user's photon balance. Admin only.
     """
+    if not idempotency_key:
+        raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+
     photon_service = get_photon_service(db)
 
     try:

@@ -78,6 +78,7 @@ def test_adjust_allows_superuser_and_records_transaction():
                     "transaction_type": "admin_adjustment",
                     "extra_data": {"source": "api-test"},
                 },
+                headers={"Idempotency-Key": "test-adjust-1"},
             )
 
     assert response.status_code == 200
@@ -86,3 +87,30 @@ def test_adjust_allows_superuser_and_records_transaction():
     assert body["data"]["balance"] == 60
     mock_service.grant_photons.assert_awaited_once()
     mock_service.record_transaction.assert_awaited_once()
+
+
+def test_adjust_requires_idempotency_key_after_superuser_auth():
+    app = _build_app()
+
+    async def _override_get_db():
+        yield MagicMock(spec=AsyncSession)
+
+    async def _override_superuser():
+        return SimpleNamespace(id=uuid4(), is_superuser=True)
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_active_superuser] = _override_superuser
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/photons/adjust",
+            json={
+                "user_id": str(uuid4()),
+                "amount": 50,
+                "reason": "manual correction",
+                "transaction_type": "admin_adjustment",
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Idempotency-Key header is required"

@@ -38,10 +38,13 @@ from app.services.perceptible_intelligence_service import (
     PerceptibleInsightService,
 )
 from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
+from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
+from app.services.galaxy_service import GalaxyService
 from app.services.memory_service import MemoryService
 from app.services.plan_service import PlanService
 from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.user_service import UserService
+from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
 from app.state_aggregator.service import StateAggregatorService
 
 
@@ -107,6 +110,121 @@ class ContextBuilderMixin:
                     getattr(settings, "AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED", "live") or "live"
                 ),
             }
+
+    async def _stage39_modes_payload(self) -> dict[str, str]:
+        try:
+            return await AuroraStage39KillSwitchService().summary()
+        except Exception as exc:
+            logger.warning(f"Failed to load Stage39 modes, falling back to settings: {exc}")
+            return {
+                "mode": str(getattr(settings, "AURORA_STAGE39_MODE", "live") or "live"),
+                "scaffolding_prompt_mode": str(
+                    getattr(settings, "AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE", "live") or "live"
+                ),
+                "cogload_route_mode": str(
+                    getattr(settings, "AURORA_STAGE39_COGLOAD_ROUTE_MODE", "shadow") or "shadow"
+                ),
+                "galaxy_inject_mode": str(
+                    getattr(settings, "AURORA_STAGE39_GALAXY_INJECT_MODE", "shadow") or "shadow"
+                ),
+            }
+
+    @staticmethod
+    def _stage39_intervention_intensity(template_support_level: int | float | None) -> str:
+        if template_support_level is None:
+            return "medium"
+        level = float(template_support_level)
+        if level >= 3.5:
+            return "high"
+        if level >= 2.5:
+            return "medium"
+        return "low"
+
+    async def _build_stage39_scaffolding_snapshot(
+        self,
+        *,
+        user_id: str,
+        db_session: AsyncSession,
+        mode: str,
+    ) -> dict[str, Any] | None:
+        try:
+            fsm = ScaffoldingFSM(db_session)
+            state = await fsm.get_state(uuid.UUID(user_id))
+            trait_guidance = await fsm.get_trait_scaffolding_preferences(uuid.UUID(user_id))
+            snapshot = fsm.snapshot(
+                state,
+                consume_mode="off",
+                reflection_prompt_style=str(trait_guidance.get("reflection_prompt_style") or "default"),
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to build Stage39 scaffolding snapshot for {user_id}: {exc}")
+            return None
+
+        return {
+            "mode": mode,
+            "current_scaffolding_stage": str(snapshot.get("current_zone") or "flow"),
+            "intervention_intensity": self._stage39_intervention_intensity(
+                snapshot.get("template_support_level")
+            ),
+            "template_support_level": int(snapshot.get("template_support_level") or 0),
+            "support_level": round(float(snapshot.get("support_level") or 0.0), 2),
+            "capability_level": round(float(snapshot.get("capability_level") or 0.0), 2),
+            "reflection_prompt_style": str(snapshot.get("reflection_prompt_style") or "default"),
+            "consecutive_successes": int(snapshot.get("consecutive_successes") or 0),
+            "consecutive_failures": int(snapshot.get("consecutive_failures") or 0),
+            "combine_state": str(snapshot.get("combine_state") or "neutral"),
+            "last_intervention_timestamp": snapshot.get("last_intervention_timestamp"),
+        }
+
+    async def _attach_stage39_context(
+        self,
+        payload: dict[str, Any],
+        *,
+        user_id: str,
+        db_session: AsyncSession,
+    ) -> dict[str, Any]:
+        stage39_modes = await self._stage39_modes_payload()
+        payload["aurora_stage39_modes"] = dict(stage39_modes)
+
+        scaffolding_snapshot = await self._build_stage39_scaffolding_snapshot(
+            user_id=user_id,
+            db_session=db_session,
+            mode=str(stage39_modes.get("scaffolding_prompt_mode") or "live"),
+        )
+        if scaffolding_snapshot is not None:
+            payload["scaffolding_fsm_snapshot"] = scaffolding_snapshot
+
+        galaxy_snapshot = {
+            "mode": str(stage39_modes.get("galaxy_inject_mode") or "shadow"),
+            "goal_ids": [],
+            "nodes": [],
+        }
+        raw_active_goals = payload.get("active_goals") or []
+        active_goal_ids: list[uuid.UUID] = []
+        for item in raw_active_goals:
+            if not isinstance(item, dict):
+                continue
+            try:
+                active_goal_ids.append(uuid.UUID(str(item.get("id"))))
+            except Exception:
+                continue
+        galaxy_snapshot["goal_ids"] = [str(item) for item in active_goal_ids]
+        if active_goal_ids:
+            with contextlib.suppress(Exception):
+                galaxy_snapshot["nodes"] = await GalaxyService(db_session).get_goal_context_nodes(
+                    user_id=uuid.UUID(user_id),
+                    plan_ids=active_goal_ids,
+                    limit=5,
+                )
+        payload["galaxy_snapshot"] = galaxy_snapshot
+
+        cognitive_context = payload.get("cognitive_context")
+        if isinstance(cognitive_context, dict):
+            cognitive_context["aurora_stage39_modes"] = dict(stage39_modes)
+            if scaffolding_snapshot is not None:
+                cognitive_context["scaffolding_fsm_snapshot"] = dict(scaffolding_snapshot)
+            cognitive_context["galaxy_snapshot"] = dict(galaxy_snapshot)
+        return payload
 
     # ------------------------------------------------------------------
     # _build_profile_payload
@@ -658,7 +776,12 @@ class ContextBuilderMixin:
                     "seed_library": seed_library_context,
                     "learning_gaps_summary": learning_gaps_summary,
                 }
-                return await self._attach_stage34_memory_context(
+                payload = await self._attach_stage34_memory_context(
+                    payload,
+                    user_id=user_id,
+                    db_session=db_session,
+                )
+                return await self._attach_stage39_context(
                     payload,
                     user_id=user_id,
                     db_session=db_session,
@@ -754,7 +877,7 @@ class ContextBuilderMixin:
                     experiment_cohort=experiment_cohort,
                 )
 
-                return {
+                return await self._attach_stage39_context({
                     "user_context": user_context_data,
                     "analytics_summary": analytics,
                     "preferences": {
@@ -774,7 +897,7 @@ class ContextBuilderMixin:
                     "active_goals": [],
                     "episodic_memories": [],
                     "aurora_stage34_modes": await self._stage34_modes_payload(),
-                }
+                }, user_id=user_id, db_session=db_session)
             else:
                 # Fallback to basic context
                 logger.warning(f"User {user_id} not found, using fallback context")
@@ -785,7 +908,7 @@ class ContextBuilderMixin:
                     preference_version=preference_version,
                     experiment_cohort=experiment_cohort,
                 )
-                return {
+                return await self._attach_stage39_context({
                     "user_context": None,
                     "analytics_summary": {"is_active": True, "engagement_level": "medium"},
                     "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
@@ -802,12 +925,12 @@ class ContextBuilderMixin:
                     "active_goals": [],
                     "episodic_memories": [],
                     "aurora_stage34_modes": await self._stage34_modes_payload(),
-                }
+                }, user_id=user_id, db_session=db_session)
 
         except Exception as e:
             logger.error(f"Failed to build user context: {e}")
             # Fallback
-            return {
+            return await self._attach_stage39_context({
                 "user_context": None,
                 "analytics_summary": {"is_active": True, "engagement_level": "medium"},
                 "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
@@ -826,7 +949,7 @@ class ContextBuilderMixin:
                 "active_goals": [],
                 "episodic_memories": [],
                 "aurora_stage34_modes": await self._stage34_modes_payload(),
-            }
+            }, user_id=user_id, db_session=db_session)
 
     # ------------------------------------------------------------------
     # _build_returning_context

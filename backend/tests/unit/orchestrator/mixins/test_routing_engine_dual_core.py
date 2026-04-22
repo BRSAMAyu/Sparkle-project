@@ -155,6 +155,30 @@ async def test_build_dual_core_input_includes_cognitive_patterns_and_routing_pro
 
 
 @pytest.mark.asyncio
+async def test_build_dual_core_input_extracts_cognitive_load_from_plan_context(orchestrator):
+    routing_input = await orchestrator._build_dual_core_input(
+        active_db=None,
+        user_id=str(uuid.uuid4()),
+        plan_id=None,
+        user_context_payload=None,
+        plan_context={
+            "user_profile": {
+                "cognitive_state": {
+                    "cognitive_load": 0.67,
+                }
+            }
+        },
+        unified_routing_result=SimpleNamespace(
+            primary_intent=SimpleNamespace(value="plan"),
+            confidence=0.8,
+        ),
+        information_sufficient=True,
+    )
+
+    assert routing_input.cognitive_load == pytest.approx(0.67)
+
+
+@pytest.mark.asyncio
 async def test_build_dual_core_input_extracts_stage33_social_signals_from_cognitive_context(orchestrator):
     routing_input = await orchestrator._build_dual_core_input(
         active_db=None,
@@ -790,6 +814,114 @@ async def test_apply_dual_core_routing_records_stage35_metacognition_shadow_delt
     assert user_context_payload["aurora_stage35_modes"]["metacog_router_mode"] == "shadow"
     assert state.context_data["stage35_metacognition_shadow_delta"]["mode_changed"] is True
     assert state.context_data["stage35_metacognition_shadow_delta"]["hint_payload"]["awareness"] == "moderate"
+
+
+@pytest.mark.asyncio
+async def test_apply_dual_core_routing_records_stage39_cognitive_load_shadow_delta(orchestrator):
+    orchestrator.dual_core_router.route.side_effect = [
+        DualCoreDecision(
+            mode="execution_first",
+            reason="legacy route",
+            cognitive_adjustments=[],
+            execution_constraints=[],
+        ),
+        DualCoreDecision(
+            mode="cognitive_first",
+            reason="high cognitive load route",
+            cognitive_adjustments=["当前认知负荷偏高，先降低方案复杂度，再给更容易启动的下一步。"],
+            execution_constraints=[],
+        ),
+    ]
+    state = SimpleNamespace(context_data={"plan_metadata": {}})
+    user_context_payload = {}
+
+    with (
+        patch(
+            "app.orchestration.routing_engine.AuroraStage33KillSwitchService.summary",
+            AsyncMock(
+                return_value={
+                    "mode": "shadow",
+                    "social": "off",
+                    "srl": "off",
+                    "wm_prompt": "shadow",
+                    "events": "shadow",
+                }
+            ),
+        ),
+        patch(
+            "app.orchestration.routing_engine.AuroraStage35KillSwitchService.summary",
+            AsyncMock(return_value={"mode": "shadow", "metacog_router_mode": "off"}),
+        ),
+        patch(
+            "app.orchestration.routing_engine.AuroraStage39KillSwitchService.summary",
+            AsyncMock(
+                return_value={
+                    "mode": "live",
+                    "scaffolding_prompt_mode": "live",
+                    "cogload_route_mode": "shadow",
+                    "galaxy_inject_mode": "shadow",
+                }
+            ),
+        ),
+        patch(
+            "app.orchestration.routing_engine.resolve_cutover_state",
+            return_value=SimpleNamespace(mode="control", reason="test_control"),
+        ),
+        patch.object(
+            orchestrator,
+            "_build_dual_core_input",
+            AsyncMock(
+                return_value=DualCoreRoutingInput(
+                    intent="plan",
+                    intent_confidence=0.82,
+                    information_sufficient=True,
+                    primary_challenge_area="execution",
+                    recent_sentiment_distribution={"neutral": 2},
+                    has_active_plan=True,
+                    plan_health_status="healthy",
+                    recent_task_feedback_distribution={"just_right": 1},
+                    behavior_pattern_names=[],
+                    behavior_pattern_types={},
+                    behavior_pattern_details=[],
+                    session_length_preference=25,
+                    difficulty_preference=0.5,
+                    emotional_block_detected=False,
+                    procrastination_pattern=False,
+                    cognitive_mode_suggested=False,
+                    suggested_verbosity=None,
+                    current_guidance=None,
+                    routing_profile={},
+                    adaptive_adjustments={},
+                    cognitive_load=0.81,
+                )
+            ),
+        ),
+    ):
+        updated = await orchestrator._apply_dual_core_routing(
+            route_decision=RouteDecision(
+                execution_mode="hybrid",
+                reason="legacy route",
+                risk_level="medium",
+                confidence=0.7,
+            ),
+            state=state,
+            active_db=None,
+            user_id=str(uuid.uuid4()),
+            plan_id=None,
+            user_context_payload=user_context_payload,
+            plan_context=None,
+            unified_routing_result=SimpleNamespace(
+                primary_intent=SimpleNamespace(value="plan"),
+                confidence=0.82,
+            ),
+            information_sufficient=True,
+            stream_callback=AsyncMock(),
+        )
+
+    assert updated.reason.endswith("dual_core:execution_first")
+    assert user_context_payload["aurora_stage39_modes"]["cogload_route_mode"] == "shadow"
+    assert state.context_data["stage39_cognitive_load_shadow_delta"]["mode_changed"] is True
+    assert state.context_data["stage39_cognitive_load_shadow_delta"]["cognitive_load"] == 0.81
 
 
 @pytest.mark.asyncio

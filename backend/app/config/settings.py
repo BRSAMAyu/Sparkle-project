@@ -312,6 +312,12 @@ class Settings(BaseSettings):
     AURORA_STAGE35_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE35_METACOG_ROUTER_MODE: str = "shadow"  # off | shadow | live
 
+    # Aurora Stage 39
+    AURORA_STAGE39_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE39_COGLOAD_ROUTE_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE39_GALAXY_INJECT_MODE: str = "shadow"  # off | shadow | live
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

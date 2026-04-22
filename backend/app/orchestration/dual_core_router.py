@@ -62,6 +62,7 @@ class DualCoreRoutingInput:
     social_signals: SocialSignalsV1 | None = None
     srl_phase_hint: SRLPhaseHint | None = None
     metacognition_hint: MetacognitionHintV1 | None = None
+    cognitive_load: float | None = None
 
 
 @dataclass(frozen=True)
@@ -169,7 +170,9 @@ class DualCoreRouter:
         )
         cognitive_mode_suggested = bool(routing_input.cognitive_mode_suggested)
         pattern_guidance = self._pattern_guidance(routing_input)
-        cognitive_load_present = routing_input.primary_challenge_area in {"cognitive", "execution"}
+        cognitive_load_value = float(routing_input.cognitive_load or 0.0)
+        high_cognitive_load = routing_input.cognitive_load is not None and cognitive_load_value >= 0.55
+        very_high_cognitive_load = routing_input.cognitive_load is not None and cognitive_load_value >= 0.78
 
         cognitive_adjustments: list[str] = []
         execution_constraints: list[str] = []
@@ -232,6 +235,24 @@ class DualCoreRouter:
                 0.25,
                 reason="Supportive delivery should reduce pressure and keep the tone on the user's side.",
             )
+        if high_cognitive_load:
+            cognitive_adjustments.append("当前认知负荷偏高，先降低方案复杂度，再给更容易启动的下一步。")
+            recommend_strategy(
+                "explanation_style",
+                "step_by_step",
+                reason="High cognitive load benefits from simpler, more incremental explanations.",
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="High cognitive load should lower intervention intensity so the turn stays easy to absorb.",
+            )
+            if very_high_cognitive_load:
+                recommend_strategy(
+                    "planning_granularity",
+                    "startup_ready",
+                    reason="Very high cognitive load should compress planning into the smallest viable starting slice.",
+                )
         social_signals = routing_input.social_signals
         metacognition_hint = routing_input.metacognition_hint
         if social_signals is not None:
@@ -358,6 +379,7 @@ class DualCoreRouter:
             "explicit_srl_signal": srl_phase_hint is not None,
             "srl_phase_payload": srl_phase_hint.to_payload() if srl_phase_hint is not None else None,
             "explicit_metacognition_signal": metacognition_hint is not None,
+            "cognitive_load": round(cognitive_load_value, 4) if routing_input.cognitive_load is not None else None,
             "metacognition_hint_payload": (
                 {
                     "accuracy": round(metacognition_hint.accuracy, 4),
@@ -387,6 +409,7 @@ class DualCoreRouter:
             and not cognitive_mode_suggested
             and not reflection_phase_detected
             and not low_metacognition_accuracy
+            and not high_cognitive_load
         ):
             return DualCoreDecision(
                 mode="execution_first",
@@ -407,6 +430,7 @@ class DualCoreRouter:
             or procrastination_pattern
             or reflection_phase_detected
             or low_metacognition_accuracy
+            or very_high_cognitive_load
             or (cognitive_mode_suggested and not goal_clear)
             or (not goal_clear and routing_input.intent_confidence < low_conf_threshold)
         ):
@@ -426,7 +450,7 @@ class DualCoreRouter:
             )
 
         balanced_reason = "当前同时存在推进任务和理解用户状态的需求，先保持双核心并行。"
-        if goal_clear and cognitive_load_present:
+        if goal_clear and high_cognitive_load:
             balanced_reason = "目标已经清楚，但当前还存在认知或执行摩擦，先在推进方案时同时做状态调制。"
         elif not goal_clear:
             balanced_reason = "目标还有部分边界要澄清，但已经可以先给出轻量推进方向。"
