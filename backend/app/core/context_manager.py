@@ -11,11 +11,13 @@ from sqlalchemy import Integer, cast, func, select
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.metrics import CALENDAR_FALLBACK_TOTAL
 from app.models.achievement import Achievement, AchievementRarity, UserAchievement
 from app.models.calendar_event import CalendarEvent
 from app.models.community import Group, GroupMember, GroupTaskClaim
 from app.schemas.error_book import ErrorQueryParams
 from app.schemas.task import TaskListQuery, TaskStatus
+from app.services.aurora_stage40_calendar_kill_switch_service import AuroraStage40CalendarKillSwitchService
 from app.services.error_book_service import ErrorBookService
 from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
@@ -465,6 +467,11 @@ class ContextOrchestrator:
 
     async def _get_calendar_context(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         db = db_session if db_session is not None else self.db
+        mode = await AuroraStage40CalendarKillSwitchService().get_mode()
+        if mode == "off":
+            CALENDAR_FALLBACK_TOTAL.labels(reason="mode_off", mode=mode).inc()
+            return {}
+
         now = _utcnow()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         today_end = today_start + timedelta(days=1)
@@ -517,14 +524,19 @@ class ContextOrchestrator:
         workload_density = self._derive_workload_density(week_events)
 
         if not upcoming_deadlines and not time_blocks_today and not workload_density and not exam_urgency:
+            if mode != "live":
+                return {"_stage40_mode": mode}
             return {}
 
-        return {
+        payload = {
             "upcoming_deadlines": upcoming_deadlines,
             "time_blocks_today": time_blocks_today,
             "workload_density": workload_density,
             "exam_urgency": exam_urgency or {},
         }
+        if mode != "live":
+            payload["_stage40_mode"] = mode
+        return payload
 
     async def _get_preference_version(self, user_id: str) -> int:
         """

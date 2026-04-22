@@ -1,0 +1,133 @@
+{
+  "generated_at": "2026-04-23T01:13:37",
+  "supports_rl_flags": false,
+  "meta_loop_help": "usage: python3.14 -m sgw_v2.meta.meta_loop [-h] --db-path DB_PATH\n                                           --persona-library PERSONA_LIBRARY\n                                           --adversarial-playbook ADVERSARIAL_PLAYBOOK\n                                           [--max-iterations MAX_ITERATIONS]\n                                           [--exploration-every-n EXPLORATION_EVERY_N]\n                                           [--convergence-window CONVERGENCE_WINDOW]\n                                           [--seed SEED]\n\nSGW v2 meta-orchestration loop\n\noptions:\n  -h, --help            show this help message and exit\n  --db-path DB_PATH     Path to sgw_runs.db\n  --persona-library PERSONA_LIBRARY\n  --adversarial-playbook ADVERSARIAL_PLAYBOOK\n  --max-iterations MAX_ITERATIONS\n  --exploration-every-n EXPLORATION_EVERY_N\n  --convergence-window CONVERGENCE_WINDOW\n  --seed SEED",
+  "phases": [
+    {
+      "phase": "Phase A",
+      "command": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "-m",
+        "sgw_v2.meta.meta_loop",
+        "--db-path",
+        "/tmp/stage40_off.db",
+        "--persona-library",
+        "/Users/brsama/code/GitHub/Sparkle-project-stage40/scripts/sgw/persona_library.json",
+        "--adversarial-playbook",
+        "/Users/brsama/code/GitHub/Sparkle-project-stage40/scripts/sgw/adversarial_playbook.json",
+        "--max-iterations",
+        "3"
+      ],
+      "status": "failed_assertion",
+      "return_code": 0,
+      "duration_seconds": 0.22,
+      "notes": [
+        "non_bootstrap_runs=0 < 1",
+        "iterations=0 < 3"
+      ],
+      "db_snapshot": {
+        "exists": true,
+        "tables": [
+          "audits",
+          "experiments",
+          "iterations",
+          "runs",
+          "sessions",
+          "turns",
+          "violations"
+        ],
+        "counts": {
+          "runs": 1,
+          "sessions": 0,
+          "turns": 0,
+          "audits": 0,
+          "violations": 0,
+          "experiments": 0,
+          "iterations": 0
+        },
+        "non_bootstrap_runs": 0,
+        "run_rows": [
+          {
+            "run_id": "f5592a2d-12d7-4c32-b4b9-612876b49eea",
+            "scenario_id": "stage40_bootstrap",
+            "status": "bootstrap"
+          }
+        ]
+      },
+      "stdout_path": "/Users/brsama/code/GitHub/Sparkle-project-stage40/artifacts/stage40/sgw/Phase A.stdout.log",
+      "stderr_path": "/Users/brsama/code/GitHub/Sparkle-project-stage40/artifacts/stage40/sgw/Phase A.stderr.log"
+    },
+    {
+      "phase": "Phase B",
+      "command": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "-m",
+        "sgw_v2.meta.meta_loop",
+        "--db-path",
+        "/tmp/stage40_shadow.db",
+        "--persona-library",
+        "/Users/brsama/code/GitHub/Sparkle-project-stage40/scripts/sgw/persona_library.json",
+        "--adversarial-playbook",
+        "/Users/brsama/code/GitHub/Sparkle-project-stage40/scripts/sgw/adversarial_playbook.json",
+        "--rl-mode",
+        "shadow",
+        "--max-iterations",
+        "10",
+        "--dashboard"
+      ],
+      "status": "blocked",
+      "return_code": null,
+      "duration_seconds": 0.0,
+      "notes": [
+        "current meta_loop CLI does not expose --rl-mode/--dashboard"
+      ],
+      "db_snapshot": {
+        "exists": false
+      },
+      "stdout_path": null,
+      "stderr_path": null
+    },
+    {
+      "phase": "Phase C",
+      "command": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "-m",
+        "sgw_v2.meta.meta_loop",
+        "--db-path",
+        "/tmp/stage40_rl.db",
+        "--persona-library",
+        "/Users/brsama/code/GitHub/Sparkle-project-stage40/scripts/sgw/persona_library.json",
+        "--adversarial-playbook",
+        "/Users/brsama/code/GitHub/Sparkle-project-stage40/scripts/sgw/adversarial_playbook.json",
+        "--rl-mode",
+        "rl",
+        "--rl-recipe",
+        "fast_iteration",
+        "--max-iterations",
+        "5",
+        "--dashboard"
+      ],
+      "status": "blocked",
+      "return_code": null,
+      "duration_seconds": 0.0,
+      "notes": [
+        "current meta_loop CLI does not expose --rl-mode/--rl-recipe/--dashboard"
+      ],
+      "db_snapshot": {
+        "exists": false
+      },
+      "stdout_path": null,
+      "stderr_path": null
+    }
+  ],
+  "rl_scaffolding_probe": {
+    "command": [
+      "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "/Users/brsama/code/GitHub/Sparkle-project-stage40/scripts/sgw_v2/tests/test_rl_scaffolding.py"
+    ],
+    "status": "pass",
+    "return_code": 0,
+    "stdout_path": "/Users/brsama/code/GitHub/Sparkle-project-stage40/artifacts/stage40/sgw/rl_scaffolding.stdout.log",
+    "stderr_path": "/Users/brsama/code/GitHub/Sparkle-project-stage40/artifacts/stage40/sgw/rl_scaffolding.stderr.log"
+  }
+}

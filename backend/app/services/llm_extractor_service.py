@@ -8,6 +8,7 @@ from uuid import UUID
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.llm_service import llm_service
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate
 from app.services.rule_y_adapter import RuleYAdapter
@@ -31,6 +32,7 @@ class LlmExtractorService:
     ) -> None:
         self._llm_json = llm_json
         self._now_fn = now_fn
+        self.kill_switches = AuroraStage19KillSwitchService()
 
     async def dry_run_extract(
         self,
@@ -41,7 +43,8 @@ class LlmExtractorService:
         assistant_message: str,
         evidence_token: str,
     ) -> list[InferredEpisodicCandidate]:
-        if not settings.SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED and not settings.SPARKLE_LLM_EXTRACTOR_ENABLED:
+        extractor_mode = await self.kill_switches.get_feature_mode("llm_extractor_enabled")
+        if not settings.SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED and extractor_mode == "off":
             return []
 
         if not await self._consume_session_budget(session_id=session_id):

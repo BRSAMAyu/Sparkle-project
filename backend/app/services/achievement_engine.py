@@ -1,7 +1,12 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 Achievement Engine Service
 成就引擎核心服务 - 处理成就解锁逻辑、连胜统计、契约管理
 """
+
 from __future__ import annotations
 import asyncio
 import contextlib

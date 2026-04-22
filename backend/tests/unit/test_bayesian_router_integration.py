@@ -55,7 +55,7 @@ async def test_bayesian_router_integration_shadow_reports_divergence() -> None:
 
 
 @pytest.mark.asyncio
-async def test_bayesian_router_integration_live_canary_applies_recommendation(monkeypatch) -> None:
+async def test_bayesian_router_integration_live_mode_applies_recommendation(monkeypatch) -> None:
     redis = FakeRedis()
     learner = PersistentBayesianLearner(redis, user_id="u3")
     for _ in range(5):
@@ -63,7 +63,7 @@ async def test_bayesian_router_integration_live_canary_applies_recommendation(mo
     await learner.drain_pending_saves()
 
     service = BayesianRoutingWireService(redis)
-    service.kill_switch.get_mode = AsyncMock(return_value="live_canary")
+    service.kill_switch.get_mode = AsyncMock(return_value="live")
     monkeypatch.setattr(service, "_in_canary_bucket", lambda _user_id: True)
     original = RouteDecision(execution_mode="direct", reason="fallback", risk_level="medium", confidence=0.7)
 
@@ -74,7 +74,7 @@ async def test_bayesian_router_integration_live_canary_applies_recommendation(mo
 
 
 @pytest.mark.asyncio
-async def test_bayesian_router_integration_live_canary_respects_bucket(monkeypatch) -> None:
+async def test_bayesian_router_integration_live_mode_respects_bucket(monkeypatch) -> None:
     redis = FakeRedis()
     learner = PersistentBayesianLearner(redis, user_id="u4")
     for _ in range(5):
@@ -82,7 +82,7 @@ async def test_bayesian_router_integration_live_canary_respects_bucket(monkeypat
     await learner.drain_pending_saves()
 
     service = BayesianRoutingWireService(redis)
-    service.kill_switch.get_mode = AsyncMock(return_value="live_canary")
+    service.kill_switch.get_mode = AsyncMock(return_value="live")
     monkeypatch.setattr(service, "_in_canary_bucket", lambda _user_id: False)
     original = RouteDecision(execution_mode="direct", reason="fallback", risk_level="medium", confidence=0.7)
 

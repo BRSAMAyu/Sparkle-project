@@ -1,6 +1,11 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 Sparkle Backend - FastAPI Application Entry Point
 """
+
 import asyncio
 import os
 import sys

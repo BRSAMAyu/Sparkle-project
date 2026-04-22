@@ -1,6 +1,11 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 Plans API Endpoints - Full CRUD operations
 """
+
 from __future__ import annotations
 
 from datetime import timezone, date, datetime

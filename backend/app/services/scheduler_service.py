@@ -1,3 +1,9 @@
+"""
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+"""
+
 from datetime import timezone, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler

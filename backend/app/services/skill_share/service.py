@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_SHARE_PIPELINE_LATENCY_SECONDS
 from app.models.aurora_stage21 import SharedSkill, SkillShareModerationQueue, UserSkill
+from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
 
 
 PHONE_PATTERN = re.compile(r"\b(?:\+?\d[\d\- ]{6,}\d)\b")
@@ -38,9 +39,11 @@ class SkillShareService:
     ) -> None:
         self.db = db
         self._llm_json = llm_json
+        self.kill_switches = AuroraStage21KillSwitchService()
 
     async def submit_share_request(self, *, user_id: UUID, skill_id: UUID) -> dict[str, Any]:
-        if not settings.SPARKLE_SKILL_SHARE_ENABLED:
+        share_mode = await self.kill_switches.get_feature_mode("skill_share_enabled")
+        if share_mode == "off":
             raise ValueError("Skill share disabled")
         skill = await self._load_user_skill(user_id=user_id, skill_id=skill_id)
         if skill is None:
@@ -67,7 +70,7 @@ class SkillShareService:
             return {"status": "rejected", "queue_id": str(queue.id), "reasons": [*pii_reasons, *injection_reasons]}
 
         published = None
-        if settings.SPARKLE_SKILL_SHARE_MOCK_REVIEW_ENABLED:
+        if share_mode == "live" and settings.SPARKLE_SKILL_SHARE_MOCK_REVIEW_ENABLED:
             published = await self.review_and_publish(queue_id=queue.id, approved=True, reviewer_label="mock_approver")
         SPARKLE_SKILL_SHARE_PIPELINE_LATENCY_SECONDS.observe(time.perf_counter() - started)
         return {

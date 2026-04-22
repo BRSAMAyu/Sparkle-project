@@ -20,8 +20,8 @@ REQUIRED_TOKENS = (
 def main() -> int:
     existing = [path for path in TARGET_FILES if path.exists()]
     if not existing:
-        print("[Rule AF Pipeline] PASS - skill sharing service not landed yet")
-        return 0
+        print("[Rule AF Pipeline] FAIL - skill sharing service missing")
+        return 1
 
     violations: list[str] = []
     for path in existing:

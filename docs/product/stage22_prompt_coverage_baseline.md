@@ -1,9 +1,9 @@
 # Stage 22 Prompt Coverage Baseline
 
-- audited_at: 1776754507.5246308
-- audited_fields: 11
-- covered_fields: 10
-- coverage_ratio: 0.909
+- audited_at: 1776878440.2860107
+- audited_fields: 13
+- covered_fields: 12
+- coverage_ratio: 0.923
 - baseline_interpretation: PASS
 
 ## Covered
@@ -12,6 +12,8 @@
 - ✅ `recent_errors` — 近期痛点中的错题样本 (rendered)
 - ✅ `recent_mastery_changes` — 近期进展中的掌握度变化 (rendered)
 - ✅ `active_tasks` — 待办任务 / next_actions (rendered)
+- ✅ `active_goals` — 当前目标 (rendered)
+- ✅ `episodic_memories` — 近期相关记忆 (rendered)
 - ✅ `preferences` — 学习偏好 (rendered)
 - ✅ `social_context` — 社交上下文渲染器 (rendered)
 - ✅ `profile_context` — 通过知识/画像快照间接可见 (rendered)

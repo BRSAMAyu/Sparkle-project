@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export SECRET_KEY="${SECRET_KEY:-stage40-drill-secret-0123456789abcd}"
+export JWT_SECRET="${JWT_SECRET:-stage40-drill-jwt-0123456789abcde}"
+cd "$ROOT_DIR/backend"
+export PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}"
+PYTHON_BIN="${PYTHON_BIN:-/opt/homebrew/opt/python@3.11/bin/python3.11}"
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  PYTHON_BIN="${PYTHON_BIN_FALLBACK:-python3}"
+fi
+export PYTHON_BIN
+
+"$PYTHON_BIN" ../scripts/stage40/run_kill_switch_drills.py --only stage40-calendar

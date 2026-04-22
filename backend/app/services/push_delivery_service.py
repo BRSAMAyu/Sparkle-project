@@ -104,7 +104,7 @@ class PushDeliveryService:
         return {str(value) for value in result.scalars().all()}
 
     async def deliver_decision(self, *, user_id: UUID, decision: PushDecision) -> PushDeliveryRecord | None:
-        if not await self.kill_switches.is_enabled("push_delivery_enabled"):
+        if not await self.kill_switches.is_live("push_delivery_enabled"):
             return None
         if not await self._passes_delivery_guards(user_id=user_id, decision=decision):
             return None

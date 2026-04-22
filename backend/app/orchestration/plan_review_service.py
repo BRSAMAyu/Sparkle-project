@@ -1,4 +1,8 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 Plan Review Service - Phase 1: User Confirmation Loop
 
 Implements intelligent plan review with:
@@ -6,6 +10,7 @@ Implements intelligent plan review with:
 - LLM-based deep review for complex plans
 - User confirmation workflow for high-risk plans
 """
+
 
 from __future__ import annotations
 import asyncio

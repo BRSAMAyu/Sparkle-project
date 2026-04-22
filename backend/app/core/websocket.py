@@ -1,4 +1,8 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 WebSocket Connection Manager
 Distributed support via Redis Pub/Sub with optimized fan-out for presence.
 
@@ -8,6 +12,7 @@ Production-grade features:
 - Offline push notification hooks
 - Message deduplication via message IDs
 """
+
 from __future__ import annotations
 import asyncio
 import contextlib

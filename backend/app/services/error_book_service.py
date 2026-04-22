@@ -1,6 +1,11 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 错题档案服务层 - Phase 4 Optimized
 """
+
 from __future__ import annotations
 
 import asyncio

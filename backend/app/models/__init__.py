@@ -1,7 +1,12 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 Models Package
 导出所有数据库模型
 """
+
 from app.models.achievement import (
     Achievement,
     AchievementRarity,

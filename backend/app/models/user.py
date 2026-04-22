@@ -1,7 +1,12 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 用户模型
 User Model - 核心用户信息和个性化偏好
 """
+
 from __future__ import annotations
 import enum
 

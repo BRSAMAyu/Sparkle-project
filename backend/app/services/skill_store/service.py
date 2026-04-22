@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_COUNT_PER_USER
 from app.models.aurora_stage21 import SharedSkill, UserSkill
+from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
 from app.services.skill_schema import (
     conditions_to_json,
     normalize_activation_conditions,
@@ -28,8 +29,11 @@ class SkillStoreService:
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
+        self.kill_switches = AuroraStage21KillSwitchService()
 
     async def list_user_skills(self, *, user_id: UUID, include_inactive: bool = True) -> list[UserSkill]:
+        if not await self.kill_switches.is_enabled("skill_store_enabled"):
+            return []
         stmt = select(UserSkill).where(
             UserSkill.user_id == user_id,
             UserSkill.deleted_at.is_(None),
@@ -41,6 +45,8 @@ class SkillStoreService:
         return list(result.scalars().all())
 
     async def get_user_skill(self, *, user_id: UUID, skill_id: UUID) -> UserSkill | None:
+        if not await self.kill_switches.is_enabled("skill_store_enabled"):
+            return None
         result = await self.db.execute(
             select(UserSkill).where(
                 UserSkill.id == skill_id,
@@ -51,7 +57,7 @@ class SkillStoreService:
         return result.scalar_one_or_none()
 
     async def create_skill(self, *, user_id: UUID, payload: dict[str, Any]) -> UserSkill:
-        self._ensure_store_enabled()
+        await self._ensure_store_enabled()
         await self._ensure_under_limit(user_id)
 
         skill = UserSkill(
@@ -74,6 +80,7 @@ class SkillStoreService:
         return skill
 
     async def update_skill(self, *, user_id: UUID, skill_id: UUID, payload: dict[str, Any]) -> UserSkill:
+        await self._ensure_store_enabled()
         skill = await self.get_user_skill(user_id=user_id, skill_id=skill_id)
         if skill is None:
             raise ValueError("Skill not found")
@@ -108,6 +115,7 @@ class SkillStoreService:
         return skill
 
     async def delete_skill(self, *, user_id: UUID, skill_id: UUID) -> None:
+        await self._ensure_store_enabled()
         skill = await self.get_user_skill(user_id=user_id, skill_id=skill_id)
         if skill is None:
             return
@@ -120,6 +128,7 @@ class SkillStoreService:
         return await self.update_skill(user_id=user_id, skill_id=skill_id, payload={"active": active})
 
     async def fork_shared_skill(self, *, user_id: UUID, shared_skill_id: UUID) -> UserSkill:
+        await self._ensure_store_enabled()
         await self._ensure_under_limit(user_id)
         shared = await self._load_shared_skill(shared_skill_id)
         if shared is None:
@@ -139,6 +148,8 @@ class SkillStoreService:
         )
 
     async def increment_usage(self, *, user_id: UUID, skill_ids: list[UUID], activated_at: datetime | None = None) -> None:
+        if not await self.kill_switches.is_enabled("skill_store_enabled"):
+            return
         if not skill_ids:
             return
         result = await self.db.execute(
@@ -185,7 +196,6 @@ class SkillStoreService:
         )
         SPARKLE_SKILL_COUNT_PER_USER.observe(float(result.scalar() or 0))
 
-    @staticmethod
-    def _ensure_store_enabled() -> None:
-        if not settings.SPARKLE_SKILL_STORE_ENABLED:
+    async def _ensure_store_enabled(self) -> None:
+        if not await self.kill_switches.is_enabled("skill_store_enabled"):
             raise ValueError("Skill store disabled")

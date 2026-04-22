@@ -1,4 +1,11 @@
-"""Task Schemas - Task creation, update, query, etc."""
+"""
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
+Task Schemas - Task creation, update, query, etc.
+"""
+
 
 from __future__ import annotations
 from datetime import date, datetime

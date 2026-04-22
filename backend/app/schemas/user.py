@@ -1,4 +1,11 @@
-"""User Schemas - Registration, login, profile, etc."""
+"""
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
+User Schemas - Registration, login, profile, etc.
+"""
+
 from __future__ import annotations
 import enum
 

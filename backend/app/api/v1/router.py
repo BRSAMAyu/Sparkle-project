@@ -1,7 +1,12 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 API v1 Router
 聚合所有 v1 版本的 API 路由
 """
+
 
 from fastapi import APIRouter
 

@@ -1,7 +1,12 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 社群功能服务层
 Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 """
+
 from __future__ import annotations
 import asyncio
 from datetime import timezone, datetime, timedelta

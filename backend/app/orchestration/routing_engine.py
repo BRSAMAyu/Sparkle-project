@@ -32,6 +32,7 @@ from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRouting
 from app.orchestration.mode_workflow_config import get_mode_strategy
 from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
+from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.aurora_stage35_kill_switch_service import AuroraStage35KillSwitchService
 from app.services.cognitive_service import CognitiveService
@@ -812,7 +813,8 @@ class RoutingEngineMixin:
 
         selected_ids = [uuid.UUID(item.skill_id) for item in matches]
         prompt_context = ""
-        if settings.SPARKLE_SKILL_SELECTION_ENABLED and selected_ids:
+        selection_mode = await AuroraStage21KillSwitchService().get_feature_mode("skill_selection_enabled")
+        if selection_mode == "live" and selected_ids:
             reader = SkillContentReader(active_db)
             rendered_skills: list[dict[str, str]] = []
             for skill_id in selected_ids:

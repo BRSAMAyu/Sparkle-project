@@ -210,9 +210,9 @@ async def test_memory_admin_stage18_kill_switches(db_session, monkeypatch):
             },
         )
         assert put_resp.status_code == 200
-        assert put_resp.json()["flags"]["aggregator_enabled"] is True
-        assert put_resp.json()["flags"]["push_policy_enabled"] is True
-        assert put_resp.json()["flags"]["push_delivery_enabled"] is False
+        assert put_resp.json()["flags"]["aggregator_enabled"] == "live"
+        assert put_resp.json()["flags"]["push_policy_enabled"] == "live"
+        assert put_resp.json()["flags"]["push_delivery_enabled"] == "off"
 
     app.dependency_overrides = {}
 
@@ -257,9 +257,9 @@ async def test_memory_admin_stage19_kill_switches(db_session, monkeypatch):
             },
         )
         assert put_resp.status_code == 200
-        assert put_resp.json()["flags"]["working_memory_enabled"] is True
-        assert put_resp.json()["flags"]["llm_extractor_enabled"] is True
-        assert put_resp.json()["flags"]["consolidation_enabled"] is False
+        assert put_resp.json()["flags"]["working_memory_enabled"] == "live"
+        assert put_resp.json()["flags"]["llm_extractor_enabled"] == "live"
+        assert put_resp.json()["flags"]["consolidation_enabled"] == "off"
 
     app.dependency_overrides = {}
 
@@ -304,8 +304,8 @@ async def test_memory_admin_stage21_kill_switches(db_session, monkeypatch):
             },
         )
         assert put_resp.status_code == 200
-        assert put_resp.json()["flags"]["skill_store_enabled"] is True
-        assert put_resp.json()["flags"]["skill_selection_enabled"] is True
-        assert put_resp.json()["flags"]["skill_share_enabled"] is False
+        assert put_resp.json()["flags"]["skill_store_enabled"] == "live"
+        assert put_resp.json()["flags"]["skill_selection_enabled"] == "live"
+        assert put_resp.json()["flags"]["skill_share_enabled"] == "off"
 
     app.dependency_overrides = {}

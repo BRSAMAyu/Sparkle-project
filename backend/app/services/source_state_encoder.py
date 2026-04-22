@@ -292,6 +292,11 @@ class SourceStateEncoder:
         calendar_context = (user_context_payload or {}).get("calendar_context")
         if not isinstance(calendar_context, dict) or not calendar_context:
             return "none"
+        if not any(
+            key in calendar_context
+            for key in ("workload_density", "upcoming_deadlines", "exam_urgency", "time_blocks_today")
+        ):
+            return "none"
         workload_density = str(calendar_context.get("workload_density") or "").strip().lower()
         deadlines = calendar_context.get("upcoming_deadlines") or []
         exam_urgency = calendar_context.get("exam_urgency") or {}

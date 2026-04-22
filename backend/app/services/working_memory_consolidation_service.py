@@ -68,7 +68,7 @@ class WorkingMemoryConsolidationService:
         session_id: UUID,
         explicit_confirmation: bool = False,
     ) -> list[WorkingMemoryEntry]:
-        if not await self.kill_switches.is_enabled("consolidation_enabled"):
+        if not await self.kill_switches.is_live("consolidation_enabled"):
             return []
         now = self._now_fn()
         entries = await self.working_memory.list_entries(

@@ -1,3 +1,9 @@
+"""
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+"""
+
 import time
 from asyncio import iscoroutinefunction
 from functools import wraps
@@ -617,6 +623,13 @@ ERROR_REPLAN_BRIDGE_ERROR_TOTAL = get_or_create_metric(
     "sparkle_error_replan_bridge_error_total",
     "Stage34 ErrorReplanBridge classified failures by category and mode",
     ["category", "mode"],
+)
+
+CALENDAR_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_calendar_fallback_total",
+    "Stage40 calendar prompt-path fallbacks by reason and mode",
+    ["reason", "mode"],
 )
 
 KILL_SWITCH_MODE = get_or_create_metric(

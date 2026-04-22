@@ -5,6 +5,12 @@ from typing import Any
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.kill_switch import (
+    KillSwitchBinding,
+    read_mode,
+    record_mode_gauge,
+    write_mode,
+)
 
 
 def _utcnow() -> datetime:
@@ -13,43 +19,101 @@ def _utcnow() -> datetime:
 
 class AuroraStage29SRLKillSwitchService:
     PREFIX = "aurora:stage29:srl:"
-    MODE_KEY = "mode"
-    TRACKER_KEY = "tracker_mode"
-    BRIDGE_KEY = "bridge_mode"
-    SCAFFOLDING_KEY = "scaffolding_consume_mode"
     LAG_STREAK_KEY = "lag_high_points"
     MISJUDGMENT_STREAK_KEY = "misjudgment_high_days"
-    DEFAULT_MODES = {"off", "shadow", "live"}
+    MASTER_BINDING = KillSwitchBinding(
+        stage="29",
+        feature="mode",
+        redis_key="mode",
+        settings_attr="AURORA_SRL_MODE",
+    )
+    TRACKER_BINDING = KillSwitchBinding(
+        stage="29",
+        feature="tracker",
+        redis_key="tracker_mode",
+        settings_attr="AURORA_SRL_TRACKER_MODE",
+    )
+    BRIDGE_BINDING = KillSwitchBinding(
+        stage="29",
+        feature="bridge",
+        redis_key="bridge_mode",
+        settings_attr="AURORA_SRL_BRIDGE_MODE",
+    )
+    SCAFFOLDING_BINDING = KillSwitchBinding(
+        stage="29",
+        feature="scaffolding_consume",
+        redis_key="scaffolding_consume_mode",
+        settings_attr="AURORA_SRL_SCAFFOLDING_CONSUME_MODE",
+    )
 
     async def get_mode(self) -> str:
-        return await self._get_flag(self.MODE_KEY, settings.AURORA_SRL_MODE)
+        return await read_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.MASTER_BINDING,
+        )
 
     async def get_tracker_mode(self) -> str:
         if await self.get_mode() == "off":
+            record_mode_gauge("29", "tracker", "off")
             return "off"
-        return await self._get_flag(self.TRACKER_KEY, settings.AURORA_SRL_TRACKER_MODE)
+        return await read_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.TRACKER_BINDING,
+        )
 
     async def get_bridge_mode(self) -> str:
         if await self.get_mode() == "off":
+            record_mode_gauge("29", "bridge", "off")
             return "off"
-        return await self._get_flag(self.BRIDGE_KEY, settings.AURORA_SRL_BRIDGE_MODE)
+        return await read_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.BRIDGE_BINDING,
+        )
 
     async def get_scaffolding_consume_mode(self) -> str:
         if await self.get_mode() == "off":
+            record_mode_gauge("29", "scaffolding_consume", "off")
             return "off"
-        return await self._get_flag(self.SCAFFOLDING_KEY, settings.AURORA_SRL_SCAFFOLDING_CONSUME_MODE)
+        return await read_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.SCAFFOLDING_BINDING,
+        )
 
     async def set_mode(self, mode: str) -> str:
-        return await self._set_flag(self.MODE_KEY, "AURORA_SRL_MODE", mode)
+        return await write_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.MASTER_BINDING,
+            mode=mode,
+        )
 
     async def set_tracker_mode(self, mode: str) -> str:
-        return await self._set_flag(self.TRACKER_KEY, "AURORA_SRL_TRACKER_MODE", mode)
+        return await write_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.TRACKER_BINDING,
+            mode=mode,
+        )
 
     async def set_bridge_mode(self, mode: str) -> str:
-        return await self._set_flag(self.BRIDGE_KEY, "AURORA_SRL_BRIDGE_MODE", mode)
+        return await write_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.BRIDGE_BINDING,
+            mode=mode,
+        )
 
     async def set_scaffolding_consume_mode(self, mode: str) -> str:
-        return await self._set_flag(self.SCAFFOLDING_KEY, "AURORA_SRL_SCAFFOLDING_CONSUME_MODE", mode)
+        return await write_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.SCAFFOLDING_BINDING,
+            mode=mode,
+        )
 
     async def ordered_shutdown(self) -> dict[str, str]:
         await self.set_scaffolding_consume_mode("off")
@@ -108,10 +172,10 @@ class AuroraStage29SRLKillSwitchService:
             item for item in values if datetime.fromisoformat(item) >= cutoff
         ]
         if len(settings._aurora_stage29_lag_points) >= 3:
-            settings.AURORA_SRL_BRIDGE_MODE = "shadow"
-            settings.AURORA_SRL_SCAFFOLDING_CONSUME_MODE = "shadow"
+            await self.set_bridge_mode("shadow")
+            await self.set_scaffolding_consume_mode("shadow")
             return "shadow"
-        return self._normalize_mode(settings.AURORA_SRL_BRIDGE_MODE)
+        return await self.get_bridge_mode()
 
     async def record_misjudgment_rate(self, misjudgment_rate: float, *, day_key: str | None = None) -> str:
         normalized = max(0.0, min(1.0, float(misjudgment_rate)))
@@ -142,10 +206,10 @@ class AuroraStage29SRLKillSwitchService:
             values.append(label)
         settings._aurora_stage29_misjudgment_days = sorted(values)[-3:]
         if len(settings._aurora_stage29_misjudgment_days) >= 3:
-            settings.AURORA_SRL_BRIDGE_MODE = "shadow"
-            settings.AURORA_SRL_SCAFFOLDING_CONSUME_MODE = "shadow"
+            await self.set_bridge_mode("shadow")
+            await self.set_scaffolding_consume_mode("shadow")
             return "shadow"
-        return self._normalize_mode(settings.AURORA_SRL_BRIDGE_MODE)
+        return await self.get_bridge_mode()
 
     async def _reset_lag_points(self) -> None:
         redis_client = cache_service.redis
@@ -160,29 +224,3 @@ class AuroraStage29SRLKillSwitchService:
             await redis_client.delete(f"{self.PREFIX}{self.MISJUDGMENT_STREAK_KEY}")
             return
         settings._aurora_stage29_misjudgment_days = []
-
-    async def _get_flag(self, key: str, fallback: str) -> str:
-        redis_client = cache_service.redis
-        if redis_client is None:
-            return self._normalize_mode(fallback)
-        raw = await redis_client.get(f"{self.PREFIX}{key}")
-        if raw is None:
-            return self._normalize_mode(fallback)
-        return self._normalize_mode(raw)
-
-    async def _set_flag(self, key: str, settings_attr: str, mode: str) -> str:
-        normalized = self._normalize_mode(mode)
-        redis_client = cache_service.redis
-        if redis_client is None:
-            setattr(settings, settings_attr, normalized)
-        else:
-            await redis_client.set(f"{self.PREFIX}{key}", normalized)
-        return normalized
-
-    @classmethod
-    def _normalize_mode(cls, value: str | Any) -> str:
-        normalized = str(value or "off").strip().lower()
-        if normalized not in cls.DEFAULT_MODES:
-            return "off"
-        return normalized
-

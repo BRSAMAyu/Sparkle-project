@@ -4,31 +4,33 @@ from typing import Any
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.kill_switch import KillSwitchBinding, read_mode, write_mode
 
 
 class AuroraStage25ReflectionKillSwitchService:
     PREFIX = "aurora:stage25:killswitch:"
-    MODE_KEY = "reflection_wire_mode"
     RULE_Y_STREAK_KEY = "rule_y_breach_streak"
-    DEFAULT_MODES = {"off", "shadow", "live"}
+    BINDING = KillSwitchBinding(
+        stage="25",
+        feature="reflection_wire",
+        redis_key="reflection_wire_mode",
+        settings_attr="AURORA_REFLECTION_WIRE_MODE",
+    )
 
     async def get_mode(self) -> str:
-        redis_client = cache_service.redis
-        if redis_client is None:
-            return self._normalize_mode(settings.AURORA_REFLECTION_WIRE_MODE)
-        raw = await redis_client.get(f"{self.PREFIX}{self.MODE_KEY}")
-        if raw is None:
-            return self._normalize_mode(settings.AURORA_REFLECTION_WIRE_MODE)
-        return self._normalize_mode(raw)
+        return await read_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.BINDING,
+        )
 
     async def set_mode(self, mode: str) -> str:
-        normalized = self._normalize_mode(mode)
-        redis_client = cache_service.redis
-        if redis_client is not None:
-            await redis_client.set(f"{self.PREFIX}{self.MODE_KEY}", normalized)
-        else:
-            settings.AURORA_REFLECTION_WIRE_MODE = normalized
-        return normalized
+        return await write_mode(
+            redis_client=cache_service.redis,
+            prefix=self.PREFIX,
+            binding=self.BINDING,
+            mode=mode,
+        )
 
     async def is_trigger_enabled(self, category: str) -> bool:
         normalized = str(category or "").strip().lower()
@@ -76,23 +78,15 @@ class AuroraStage25ReflectionKillSwitchService:
             return await self.get_mode()
 
         if redis_client is None:
-            if self._normalize_mode(settings.AURORA_REFLECTION_WIRE_MODE) == "live":
-                settings.AURORA_REFLECTION_WIRE_MODE = "shadow"
-            return self._normalize_mode(settings.AURORA_REFLECTION_WIRE_MODE)
+            if await self.get_mode() == "live":
+                await self.set_mode("shadow")
+            return await self.get_mode()
 
         streak = await redis_client.incr(f"{self.PREFIX}{self.RULE_Y_STREAK_KEY}")
         await redis_client.expire(f"{self.PREFIX}{self.RULE_Y_STREAK_KEY}", 86400)
         if int(streak) >= 3:
-            await redis_client.set(f"{self.PREFIX}{self.MODE_KEY}", "shadow")
-            return "shadow"
+            return await self.set_mode("shadow")
         return await self.get_mode()
-
-    @classmethod
-    def _normalize_mode(cls, value: str | Any) -> str:
-        normalized = str(value or "off").strip().lower()
-        if normalized not in cls.DEFAULT_MODES:
-            return "off"
-        return normalized
 
     @staticmethod
     def _normalize_bool(value: Any) -> bool:

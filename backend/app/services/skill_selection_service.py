@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_SELECTION_ACTIVATION_RATE
 from app.models.aurora_stage21 import UserSkill
+from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
 from app.services.conflict_resolver_service import ConflictResolverService
 from app.services.skill_schema import (
     SkillActivationMatch,
@@ -22,6 +23,7 @@ class SkillSelectionService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.conflict_resolver = ConflictResolverService(db)
+        self.kill_switches = AuroraStage21KillSwitchService()
 
     async def resolve_prompt_payload(
         self,
@@ -29,7 +31,7 @@ class SkillSelectionService:
         user_id: UUID,
         selection_context: SkillSelectionContext,
     ) -> tuple[list[SkillActivationMatch], list[str]]:
-        if not settings.SPARKLE_SKILL_STORE_ENABLED:
+        if not await self.kill_switches.is_enabled("skill_store_enabled"):
             return [], []
 
         result = await self.db.execute(

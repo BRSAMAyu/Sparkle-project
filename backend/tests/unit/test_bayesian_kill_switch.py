@@ -20,7 +20,7 @@ class FakeRedis:
 @pytest.mark.asyncio
 async def test_bayesian_kill_switch_defaults_to_env(monkeypatch) -> None:
     monkeypatch.setattr("app.services.aurora_stage23_kill_switch_service.cache_service.redis", None)
-    monkeypatch.setattr("app.services.aurora_stage23_kill_switch_service.settings.AURORA_BAYESIAN_MODE", "shadow")
+    monkeypatch.setattr("app.core.kill_switch.settings.AURORA_BAYESIAN_MODE", "shadow")
 
     service = AuroraStage23KillSwitchService()
     assert await service.get_mode() == "shadow"
@@ -32,15 +32,15 @@ async def test_bayesian_kill_switch_persists_mode_in_redis(monkeypatch) -> None:
     monkeypatch.setattr("app.services.aurora_stage23_kill_switch_service.cache_service.redis", redis)
 
     service = AuroraStage23KillSwitchService()
-    await service.set_mode("live_canary")
+    await service.set_mode("live")
 
-    assert await service.get_mode() == "live_canary"
+    assert await service.get_mode() == "live"
 
 
 @pytest.mark.asyncio
 async def test_bayesian_kill_switch_clamps_invalid_mode(monkeypatch) -> None:
     monkeypatch.setattr("app.services.aurora_stage23_kill_switch_service.cache_service.redis", None)
-    monkeypatch.setattr("app.services.aurora_stage23_kill_switch_service.settings.AURORA_BAYESIAN_MODE", "not-real")
+    monkeypatch.setattr("app.core.kill_switch.settings.AURORA_BAYESIAN_MODE", "not-real")
 
     service = AuroraStage23KillSwitchService()
     assert await service.get_mode() == "off"

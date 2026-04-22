@@ -1,7 +1,12 @@
 """
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
 社群功能 API 路由
 Community API - 好友、群组、消息、打卡、任务相关接口
 """
+
 from __future__ import annotations
 import asyncio
 import contextlib
