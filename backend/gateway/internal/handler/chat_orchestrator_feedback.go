@@ -39,18 +39,27 @@ type planReviewStatusSender interface {
 }
 
 // saveMessage persists a chat message to the database
-func (h *ChatOrchestrator) saveMessage(userID, sessionID, role, content string) {
+func (h *ChatOrchestrator) saveMessage(
+	userID,
+	sessionID,
+	role,
+	content string,
+	extra map[string]interface{},
+) {
 	tracer := otel.Tracer("chat-orchestrator")
 	ctx, span := tracer.Start(context.Background(), "redis.save_message")
 	defer span.End()
 
-	payload := map[string]string{
+	payload := map[string]interface{}{
 		"id":         uuid.New().String(), // Generate stable UUID for message ID
 		"session_id": sessionID,
 		"user_id":    userID,
 		"role":       role,
 		"content":    content,
 		"timestamp":  fmt.Sprintf("%d", time.Now().Unix()),
+	}
+	for key, value := range extra {
+		payload[key] = value
 	}
 	data, _ := json.Marshal(payload)
 

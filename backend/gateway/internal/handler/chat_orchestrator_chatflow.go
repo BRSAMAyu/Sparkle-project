@@ -22,6 +22,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -222,7 +224,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	if input.SessionID != "" {
 		sessionID := input.SessionID
 		message := input.Message
-		h.saveMessage(userID, sessionID, "user", message)
+		h.saveMessage(userID, sessionID, "user", message, nil)
 	}
 
 	startTime := time.Now()
@@ -421,11 +423,11 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	if input.IsToolResult {
 		req.Input = &agentv1.ChatRequest_ToolResult{
 			ToolResult: &agentv1.ToolResult{
-				ToolCallId:    input.ToolCallID,
-				ToolName:      input.ToolName,
-				ResultJson:    input.ToolResultJSON,
-				IsError:       input.ToolIsError,
-				ErrorMessage:  input.ToolErrorMsg,
+				ToolCallId:   input.ToolCallID,
+				ToolName:     input.ToolName,
+				ResultJson:   input.ToolResultJSON,
+				IsError:      input.ToolIsError,
+				ErrorMessage: input.ToolErrorMsg,
 			},
 		}
 	} else {
@@ -500,15 +502,8 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 		if err != nil {
 			log.Printf("Stream recv error: %v", err)
-			switch r := responder.(type) {
-			case *envelopeResponder:
-				r.SendError("aborted", "Stream interrupted", true)
-			case *protobufResponder:
-				r.SendError("aborted", "Stream interrupted", true)
-			case *wsSafeWriter:
-				_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "Stream interrupted"})
-			}
-			break
+			respondStreamRecvError(responder, err)
+			return false
 		}
 
 		// Accumulate full text for persistence using pooled builder
@@ -697,7 +692,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		queryText := input.Message
 		result := fullText
 
-		h.saveMessage(userID, sessionID, "assistant", result)
+		h.saveMessage(userID, sessionID, "assistant", result, map[string]interface{}{
+			"meta":           meta,
+			"workflow_id":    doneResp.WorkflowId,
+			"prompt_version": doneResp.PromptVersion,
+			"trace_id":       traceID,
+			"response_id":    doneResp.ResponseId,
+		})
 
 		go func() {
 			// Update Semantic Cache
@@ -710,6 +711,67 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	}
 
 	return false
+}
+
+func respondStreamRecvError(responder interface{}, err error) {
+	code, message, retryable := grpcStreamErrorDetails(err)
+	switch r := responder.(type) {
+	case *envelopeResponder:
+		r.SendError(code, message, retryable)
+	case *protobufResponder:
+		r.SendError(code, message, retryable)
+	case *wsSafeWriter:
+		_ = writeLegacyJSON(r, legacyStreamErrorPayload(code, message, retryable))
+	}
+}
+
+func grpcStreamErrorDetails(err error) (string, string, bool) {
+	message := "Stream interrupted"
+	retryable := true
+	if err == nil {
+		return "unknown", message, retryable
+	}
+
+	st, ok := grpcstatus.FromError(err)
+	if !ok {
+		return "unknown", err.Error(), retryable
+	}
+
+	if strings.TrimSpace(st.Message()) != "" {
+		message = st.Message()
+	}
+
+	switch st.Code() {
+	case codes.InvalidArgument:
+		return "invalid_argument", message, false
+	case codes.Unauthenticated:
+		return "unauthorized", message, false
+	case codes.PermissionDenied:
+		return "forbidden", message, false
+	case codes.NotFound:
+		return "not_found", message, false
+	case codes.AlreadyExists, codes.Aborted:
+		return "conflict", message, true
+	case codes.ResourceExhausted:
+		return "resource_exhausted", message, false
+	case codes.DeadlineExceeded:
+		return "timeout", message, true
+	case codes.Unavailable:
+		return "unavailable", message, true
+	case codes.Internal, codes.DataLoss:
+		return "internal", message, true
+	default:
+		return "unknown", message, retryable
+	}
+}
+
+func legacyStreamErrorPayload(code, message string, retryable bool) gin.H {
+	return gin.H{
+		"type":       "error",
+		"message":    message,
+		"error_code": code,
+		"retryable":  retryable,
+	}
 }
 
 func estimateTokensFromRunes(runes int) int64 {

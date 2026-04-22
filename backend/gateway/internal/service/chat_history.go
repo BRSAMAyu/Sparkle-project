@@ -67,12 +67,24 @@ func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl ti
 }
 
 type ChatHistoryMessage struct {
-	ID        string `json:"id"` // Unique message ID (UUID)
-	SessionID string `json:"session_id"`
-	UserID    string `json:"user_id"`
-	Role      string `json:"role"`
-	Content   string `json:"content"`
-	Timestamp string `json:"timestamp"`
+	ID                   string                   `json:"id"` // Unique message ID (UUID)
+	SessionID            string                   `json:"session_id"`
+	UserID               string                   `json:"user_id"`
+	TaskID               string                   `json:"task_id,omitempty"`
+	Role                 string                   `json:"role"`
+	Content              string                   `json:"content"`
+	Timestamp            string                   `json:"timestamp"`
+	Widgets              []map[string]interface{} `json:"widgets,omitempty"`
+	ToolResults          []map[string]interface{} `json:"tool_results,omitempty"`
+	HasErrors            bool                     `json:"has_errors,omitempty"`
+	Errors               []map[string]interface{} `json:"errors,omitempty"`
+	RequiresConfirmation bool                     `json:"requires_confirmation,omitempty"`
+	ConfirmationData     map[string]interface{}   `json:"confirmation_data,omitempty"`
+	ReasoningSteps       []map[string]interface{} `json:"reasoning_steps,omitempty"`
+	ReasoningSummary     string                   `json:"reasoning_summary,omitempty"`
+	IsReasoningComplete  bool                     `json:"is_reasoning_complete,omitempty"`
+	Meta                 map[string]interface{}   `json:"meta,omitempty"`
+	AgentCollaboration   map[string]interface{}   `json:"agentCollaboration,omitempty"`
 }
 
 type ChatSessionSummary struct {

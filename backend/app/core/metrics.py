@@ -640,6 +640,18 @@ ERROR_REPLAN_BRIDGE_BLOCKED_BY_GATE_TOTAL = get_or_create_metric(
     ["gate", "mode"],
 )
 
+FSM_CONTEXT_SIZE_BYTES = get_or_create_metric(
+    Gauge,
+    "sparkle_fsm_context_size_bytes",
+    "Latest FSM context_data payload size in bytes",
+)
+
+FSM_CONTEXT_EVICTION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_fsm_context_eviction_total",
+    "Total FSM context_data evictions triggered by Stage38 guardrails",
+)
+
 KILL_SWITCH_MODE = get_or_create_metric(
     Gauge,
     "sparkle_kill_switch_mode",

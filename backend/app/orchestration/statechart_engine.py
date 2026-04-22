@@ -1,17 +1,21 @@
 from __future__ import annotations
 import asyncio
 import inspect
+import json
 import uuid
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Union
 
+from app.config import settings
+from app.core.metrics import FSM_CONTEXT_EVICTION_TOTAL, FSM_CONTEXT_SIZE_BYTES
 from loguru import logger
 
 # ==========================================
 # 1. Core Data Structures
 # ==========================================
+
 
 @dataclass
 class WorkflowState:
@@ -19,6 +23,7 @@ class WorkflowState:
     Workflow State Blackboard.
     Shared state passed between nodes.
     """
+
     messages: list[dict[str, str]] = field(default_factory=list)
     context_data: dict[str, Any] = field(default_factory=dict)
     next_step: str | None = None
@@ -33,7 +38,7 @@ class WorkflowState:
 
     def update(self, new_data: dict[str, Any]):
         """Update context data."""
-        self.context_data.update(new_data)
+        _merge_context_data(self.context_data, new_data)
 
     def append_message(self, role: str, content: str, name: str | None = None):
         """Append a message to history."""
@@ -42,7 +47,7 @@ class WorkflowState:
             msg["name"] = name
         self.messages.append(msg)
 
-    def clone(self) -> 'WorkflowState':
+    def clone(self) -> "WorkflowState":
         """Create a shallow copy of the state for parallel execution."""
         new_state = WorkflowState(
             messages=list(self.messages),
@@ -50,9 +55,44 @@ class WorkflowState:
             next_step=self.next_step,
             errors=list(self.errors),
             is_finished=self.is_finished,
-            trace_id=self.trace_id
+            trace_id=self.trace_id,
         )
         return new_state
+
+
+def _safe_context_bytes(value: Any) -> int:
+    try:
+        return len(json.dumps(value, ensure_ascii=False, default=str).encode("utf-8"))
+    except Exception:
+        return len(str(value).encode("utf-8"))
+
+
+def _summarize_context_value(value: Any) -> Any:
+    size_bytes = _safe_context_bytes(value)
+    if size_bytes <= settings.MAX_CONTEXT_DATA_VALUE_BYTES:
+        return value
+    summary = str(value)
+    if len(summary) > 512:
+        summary = summary[:512] + "..."
+    return {
+        "summary": summary,
+        "truncated": True,
+        "original_size_bytes": size_bytes,
+    }
+
+
+def _merge_context_data(target: dict[str, Any], new_data: dict[str, Any]) -> None:
+    if not isinstance(new_data, dict):
+        return
+    for key, value in new_data.items():
+        if key in target:
+            del target[key]
+        target[key] = _summarize_context_value(value)
+    while len(target) > settings.MAX_CONTEXT_DATA_KEYS:
+        oldest_key = next(iter(target))
+        del target[oldest_key]
+        FSM_CONTEXT_EVICTION_TOTAL.inc()
+    FSM_CONTEXT_SIZE_BYTES.set(_safe_context_bytes(target))
 
 
 class GraphEventType(Enum):
@@ -62,6 +102,7 @@ class GraphEventType(Enum):
     GRAPH_START = "GRAPH_START"
     GRAPH_END = "GRAPH_END"
     ERROR = "ERROR"
+
 
 @dataclass
 class GraphEvent:
@@ -76,6 +117,7 @@ class GraphEvent:
 # 2. State Engine
 # ==========================================
 
+
 class StateGraph:
     """
     Hierarchical State Graph Engine (Statecharts).
@@ -86,6 +128,7 @@ class StateGraph:
     - Nested States (Sub-graphs)
     - Parallel Execution
     """
+
     def __init__(self, name: str = "RootGraph"):
         self.name = name
         self.nodes: dict[str, Callable | StateGraph | list[Callable]] = {}
@@ -96,9 +139,9 @@ class StateGraph:
 
         # Hooks for monitoring
         self.on_event: Callable[[GraphEvent], Coroutine[Any, Any, None]] | None = None
-        self.checkpointer: Any = None # Optional checkpointer interface
+        self.checkpointer: Any = None  # Optional checkpointer interface
 
-    def add_node(self, name: str, action: Union[Callable, 'StateGraph']):
+    def add_node(self, name: str, action: Union[Callable, "StateGraph"]):
         """
         Register a node.
         'action' can be a function or another StateGraph (Nested State).
@@ -202,7 +245,7 @@ class StateGraph:
                 logger.exception("❌ Error in node '{}' : {}", current_node_name, e)
                 state.errors.append(f"[{self.name}] Node {current_node_name} failed: {str(e)}")
                 await self._emit_event(GraphEventType.ERROR, current_node_name, state, str(e))
-                break # Or handle error transition
+                break  # Or handle error transition
 
             await self._emit_event(GraphEventType.NODE_END, current_node_name, state)
 
@@ -251,13 +294,15 @@ class StateGraph:
             # Context data
             context_data = new_state.get("context_data")
             if isinstance(context_data, dict):
-                current_state.context_data.update(context_data)
+                _merge_context_data(current_state.context_data, context_data)
 
             # Promote any remaining keys into context_data
+            promoted_context: dict[str, Any] = {}
             for key, value in new_state.items():
                 if key in {"messages", "next_step", "errors", "trace_id", "is_finished", "context_data"}:
                     continue
-                current_state.context_data[key] = value
+                promoted_context[key] = value
+            _merge_context_data(current_state.context_data, promoted_context)
             return current_state
         return current_state
 
@@ -284,6 +329,7 @@ class StateGraph:
                 # Wrap synchronous function
                 async def wrapper(f, s):
                     return f(s)
+
                 tasks.append(wrapper(branch, branch_state))
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -296,7 +342,7 @@ class StateGraph:
                 state.errors.append(f"Parallel branch {i} failed: {str(res)}")
             elif isinstance(res, WorkflowState):
                 # Merge Context
-                state.context_data.update(res.context_data)
+                _merge_context_data(state.context_data, res.context_data)
 
                 # Merge messages: each branch started with a clone that had
                 # original_message_count messages. Any messages beyond that
