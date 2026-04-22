@@ -17,7 +17,8 @@ from sqlalchemy import String, and_, cast, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
-from app.core.exceptions import NotFoundError, SparkleException
+from app.core.event_bus import event_bus
+from app.core.exceptions import AuthorizationError, NotFoundError, SparkleException
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import BehaviorPattern
 from app.models.error_book import ErrorRecord
@@ -1099,7 +1100,7 @@ class PredictionTheaterService:
         skip_node_id: str | None = None,
         skip_node_ids: list[str] | None = None,
     ) -> dict[str, Any]:
-        cached = await self._get_prediction_or_raise(prediction_id)
+        cached = await self._get_prediction_for_user_or_raise(prediction_id, user_id=user_id)
         selected_route = self._find_route(cached, route_id)
         skipped_steps = self._find_steps(
             selected_route,
@@ -1181,7 +1182,7 @@ class PredictionTheaterService:
         route_id: str,
         note: str | None = None,
     ) -> dict[str, Any]:
-        cached = await self._get_prediction_or_raise(prediction_id)
+        cached = await self._get_prediction_for_user_or_raise(prediction_id, user_id=user_id)
         selected_route = self._find_route(cached, route_id)
         snapshot_id = str(uuid4())
         snapshot = {
@@ -1212,7 +1213,7 @@ class PredictionTheaterService:
         prediction_id: str,
         theater_node_id: str,
     ) -> dict[str, Any]:
-        cached = await self._get_prediction_or_raise(prediction_id)
+        cached = await self._get_prediction_for_user_or_raise(prediction_id, user_id=user_id)
         graph = dict(cached.get("graph") or {})
         nodes = [
             node
@@ -1267,6 +1268,7 @@ class PredictionTheaterService:
                 invalidate_caches=False,
             )
             await self._record_candidate_bundle_promotion(
+                user_id=user_id,
                 prediction_id=prediction_id,
                 theater_node_id=theater_node_id,
                 galaxy_node=promoted_node,
@@ -1302,7 +1304,7 @@ class PredictionTheaterService:
         route_id: str,
         source_chat_session_id: str | None = None,
     ) -> dict[str, Any]:
-        cached = await self._get_prediction_or_raise(prediction_id)
+        cached = await self._get_prediction_for_user_or_raise(prediction_id, user_id=user_id)
         selected_route = self._find_route(cached, route_id)
         target_name = str(cached.get("target_name") or "学习目标")
         horizon_days = int(cached.get("horizon_days") or 14)
@@ -1374,7 +1376,7 @@ class PredictionTheaterService:
             cached,
             ttl=self.accuracy.TTL_SECONDS,
         )
-        await self._update_prediction_db(prediction_id, {
+        await self._update_prediction_db(user_id=user_id, prediction_id=prediction_id, updates={
             "adopted_plan_id": plan.id,
             "adopted_at": _utcnow(),
             "selected_prediction": selected_route,
@@ -1536,7 +1538,7 @@ class PredictionTheaterService:
             cached,
             ttl=self.accuracy.TTL_SECONDS,
         )
-        await self._update_prediction_db(prediction_id, {
+        await self._update_prediction_db(user_id=user_id, prediction_id=prediction_id, updates={
             "accuracy_status": "recorded",
             "accuracy_summary": summary,
             "accuracy_tracking": cached["accuracy_tracking"],
@@ -2569,6 +2571,7 @@ class PredictionTheaterService:
     async def _record_candidate_bundle_promotion(
         self,
         *,
+        user_id: UUID,
         prediction_id: str,
         theater_node_id: str,
         galaxy_node: KnowledgeNode,
@@ -2577,7 +2580,11 @@ class PredictionTheaterService:
         if self.db is None:
             return
         result = await self.db.execute(
-            select(TheaterCandidateBundle).where(TheaterCandidateBundle.prediction_id == prediction_id)
+            select(TheaterCandidateBundle).where(
+                TheaterCandidateBundle.prediction_id == prediction_id,
+                TheaterCandidateBundle.user_id == user_id,
+                TheaterCandidateBundle.deleted_at.is_(None),
+            )
         )
         bundle = result.scalar_one_or_none()
         if bundle is None:
@@ -3550,14 +3557,54 @@ class PredictionTheaterService:
         return payload
 
     async def _get_prediction_for_user_or_raise(self, prediction_id: str, *, user_id: UUID) -> dict[str, Any]:
-        payload = await self._get_prediction_or_raise(prediction_id)
-        owner_id = str(payload.get("user_id") or "").strip()
-        if owner_id and owner_id != str(user_id):
-            raise NotFoundError(
-                message="没有找到相关预测记录",
-                detail={"error_code": "THEATER_PREDICTION_NOT_FOUND"},
+        cached = await cache_service.get(f"{self.accuracy.PREDICTION_KEY_PREFIX}{prediction_id}")
+        if isinstance(cached, dict):
+            owner_id = str(cached.get("user_id") or "").strip()
+            if owner_id == str(user_id):
+                return cached
+            if owner_id:
+                await self._raise_prediction_access_denied(user_id=user_id, prediction_id=prediction_id)
+
+        if self.db is None:
+            await self._raise_prediction_access_denied(user_id=user_id, prediction_id=prediction_id)
+
+        result = await self.db.execute(
+            select(TheaterPrediction).where(
+                TheaterPrediction.prediction_id == prediction_id,
+                TheaterPrediction.user_id == user_id,
+                TheaterPrediction.deleted_at.is_(None),
             )
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            await self._raise_prediction_access_denied(user_id=user_id, prediction_id=prediction_id)
+
+        payload = self._prediction_row_to_payload(row)
+        await self._hydrate_graph_from_bundle(payload)
+        try:
+            await cache_service.set(
+                f"{self.accuracy.PREDICTION_KEY_PREFIX}{prediction_id}",
+                payload,
+                ttl=self.accuracy.TTL_SECONDS,
+            )
+        except Exception:
+            pass
         return payload
+
+    async def _raise_prediction_access_denied(self, *, user_id: UUID, prediction_id: str) -> None:
+        payload = {
+            "requester_id": str(user_id),
+            "target_resource_id": prediction_id,
+            "timestamp": _utcnow().isoformat(),
+        }
+        try:
+            await event_bus.publish("theater.access_denied", payload)
+        except Exception as exc:
+            logger.warning("Failed to publish theater.access_denied for %s: %s", prediction_id, exc)
+        raise AuthorizationError(
+            message="resource access denied",
+            detail={"error_code": "THEATER_ACCESS_DENIED"},
+        )
 
     def _prediction_row_to_payload(self, row: TheaterPrediction) -> dict[str, Any]:
         """Reconstruct the full payload dict from a DB row.
@@ -3724,6 +3771,8 @@ class PredictionTheaterService:
 
     async def _update_prediction_db(
         self,
+        *,
+        user_id: UUID,
         prediction_id: str,
         updates: dict[str, Any],
     ) -> None:
@@ -3736,6 +3785,7 @@ class PredictionTheaterService:
                 result = await self.db.execute(
                     select(TheaterPrediction).where(
                         TheaterPrediction.prediction_id == prediction_id,
+                        TheaterPrediction.user_id == user_id,
                         TheaterPrediction.deleted_at.is_(None),
                     )
                 )

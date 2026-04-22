@@ -13,7 +13,7 @@ from app.api.deps import get_current_user_id, get_db
 from app.api.v1.simulation import router as simulation_router
 from app.api.v1.theater import router as theater_router
 from app.core.cache import cache_service
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AuthorizationError, NotFoundError
 from app.main import sparkle_exception_handler
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.theater_candidate_bundle import TheaterCandidateBundle
@@ -880,6 +880,7 @@ async def test_promote_theater_node_to_galaxy_updates_bundle_and_cache(db_sessio
 
     cached_prediction = {
         "prediction_id": "prediction-promote-1",
+        "user_id": str(test_user.id),
         "topic": "LLM",
         "target_name": "LLM 学习路径",
         "target_node_id": None,
@@ -993,6 +994,7 @@ async def test_promote_theater_node_rolls_back_when_bundle_update_fails(db_sessi
 
     cached_prediction = {
         "prediction_id": "prediction-promote-rollback",
+        "user_id": str(test_user.id),
         "topic": "LLM",
         "target_name": "LLM 学习路径",
         "target_node_id": None,
@@ -1454,11 +1456,13 @@ async def test_get_accuracy_summary_includes_recent_comparison_pairs(monkeypatch
 @pytest.mark.asyncio
 async def test_simulate_what_if_accepts_multiple_skips(monkeypatch):
     service = PredictionTheaterService(db=AsyncMock())
+    user_id = uuid4()
     monkeypatch.setattr(
         service,
-        "_get_prediction_or_raise",
+        "_get_prediction_for_user_or_raise",
         AsyncMock(
             return_value={
+                "user_id": str(user_id),
                 "target_name": "线性代数",
                 "paths": [
                     {
@@ -1498,7 +1502,7 @@ async def test_simulate_what_if_accepts_multiple_skips(monkeypatch):
     )
 
     result = await service.simulate_what_if(
-        user_id=uuid4(),
+        user_id=user_id,
         prediction_id="prediction-1",
         route_id="route-a",
         skip_node_ids=["node-1", "node-2"],
@@ -1868,7 +1872,7 @@ async def test_get_accuracy_summary_requires_prediction_owner(db_session, test_u
     assert owned_summary["accuracy_score"] == summary["accuracy_score"]
     assert owned_summary["comparison_pairs"] == []
 
-    with pytest.raises(NotFoundError):
+    with pytest.raises(AuthorizationError):
         await service.get_accuracy_summary(
             user_id=uuid4(),
             prediction_id="pred-accuracy-owner-1",
@@ -1949,8 +1953,9 @@ async def test_update_prediction_failure_keeps_outer_transaction_alive(db_sessio
     db_session.add(outer_bundle)
 
     await service._update_prediction_db(
-        "pred-savepoint-update-1",
-        {"topic": None},
+        user_id=test_user.id,
+        prediction_id="pred-savepoint-update-1",
+        updates={"topic": None},
     )
     await db_session.commit()
 
