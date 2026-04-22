@@ -3,15 +3,20 @@ Shop Service - 商城核心业务逻辑
 处理商城物品查询、购买流程、物品发放等
 """
 from __future__ import annotations
-from datetime import timezone, datetime
+import hashlib
+import json
+from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
 from loguru import logger
 from sqlalchemy import and_, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.idempotency_key import IdempotencyKey
 from app.models.shop import ItemRarity, ShopItem, ShopItemType, ShopPurchase, UserConsumable
 from app.services.equipment_service import EquipmentService
 from app.services.photon_service import PhotonService
@@ -19,6 +24,10 @@ from app.services.photon_service import PhotonService
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+class IdempotencyConflictError(ValueError):
+    """Raised when an idempotency key is reused for a different request payload."""
 
 
 class ShopService:
@@ -32,9 +41,131 @@ class ShopService:
     - 查询购买历史
     """
 
+    PURCHASE_ENDPOINT = "/api/v1/shop/purchase"
+    IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.photon_service = PhotonService(db)
+
+    @staticmethod
+    def _normalize_expiry(value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+    @staticmethod
+    def _build_request_fingerprint(item_id: str) -> str:
+        payload = json.dumps({"item_id": item_id}, ensure_ascii=False, sort_keys=True)
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def _build_scoped_idempotency_key(
+        cls,
+        user_id: str,
+        endpoint: str,
+        idempotency_key: str,
+    ) -> str:
+        return f"{user_id}:{endpoint}:{idempotency_key}"
+
+    @staticmethod
+    def _build_response_hash(payload: dict[str, Any]) -> str:
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+    async def _get_idempotency_record(self, scoped_key: str) -> IdempotencyKey | None:
+        record = await self.db.get(IdempotencyKey, scoped_key)
+        if record is None:
+            return None
+
+        expires_at = self._normalize_expiry(record.expires_at)
+        if expires_at is not None and expires_at < _utcnow():
+            await self.db.delete(record)
+            await self.db.flush()
+            return None
+
+        return record
+
+    async def _reserve_idempotency_key(
+        self,
+        *,
+        scoped_key: str,
+        user_id: str,
+        endpoint: str,
+        request_fingerprint: str,
+    ) -> bool:
+        values = {
+            "key": scoped_key,
+            "user_id": user_id,
+            "endpoint": endpoint,
+            "response_hash": "",
+            "response": {
+                "request_fingerprint": request_fingerprint,
+                "result": None,
+            },
+            "expires_at": _utcnow() + timedelta(seconds=self.IDEMPOTENCY_TTL_SECONDS),
+        }
+
+        bind = self.db.sync_session.get_bind()
+        dialect_name = bind.dialect.name if bind is not None else ""
+
+        if dialect_name == "postgresql":
+            stmt = pg_insert(IdempotencyKey).values(**values).on_conflict_do_nothing(
+                index_elements=[IdempotencyKey.key]
+            )
+            result = await self.db.execute(stmt)
+            return bool(result.rowcount)
+
+        if dialect_name == "sqlite":
+            stmt = sqlite_insert(IdempotencyKey).values(**values).on_conflict_do_nothing(
+                index_elements=[IdempotencyKey.key]
+            )
+            result = await self.db.execute(stmt)
+            return bool(result.rowcount)
+
+        self.db.add(IdempotencyKey(**values))
+        await self.db.flush()
+        return True
+
+    async def _persist_idempotency_result(
+        self,
+        *,
+        scoped_key: str,
+        request_fingerprint: str,
+        response_payload: dict[str, Any],
+    ) -> None:
+        record = await self.db.get(IdempotencyKey, scoped_key)
+        if record is None:
+            raise ValueError(f"Idempotency record {scoped_key} not found")
+
+        record.response = {
+            "request_fingerprint": request_fingerprint,
+            "result": response_payload,
+        }
+        record.response_hash = self._build_response_hash(response_payload)
+        record.expires_at = _utcnow() + timedelta(seconds=self.IDEMPOTENCY_TTL_SECONDS)
+        await self.db.flush()
+
+    def _extract_idempotent_response(
+        self,
+        *,
+        record: IdempotencyKey,
+        request_fingerprint: str,
+    ) -> dict[str, Any] | None:
+        response = record.response or {}
+        existing_fingerprint = response.get("request_fingerprint")
+        if existing_fingerprint and existing_fingerprint != request_fingerprint:
+            raise IdempotencyConflictError("Idempotency key conflict for different purchase payload")
+
+        replay_payload = response.get("result")
+        if replay_payload is not None:
+            replay_payload = dict(replay_payload)
+            replay_payload["replayed"] = True
+            return replay_payload
+
+        return None
 
     async def get_available_items(
         self,
@@ -176,7 +307,10 @@ class ShopService:
     async def purchase_item(
         self,
         user_id: str,
-        item_id: str
+        item_id: str,
+        *,
+        idempotency_key: str | None = None,
+        endpoint: str | None = None,
     ) -> dict[str, Any]:
         """
         购买物品（事务性处理）
@@ -201,10 +335,45 @@ class ShopService:
         Raises:
             ValueError: 物品不存在、不可购买、库存不足、余额不足等
         """
+        effective_endpoint = endpoint or self.PURCHASE_ENDPOINT
+        request_fingerprint = self._build_request_fingerprint(item_id)
+        scoped_key = (
+            self._build_scoped_idempotency_key(user_id, effective_endpoint, idempotency_key)
+            if idempotency_key
+            else None
+        )
+
         try:
             owns_transaction = not self.db.in_transaction()
             tx_context = self.db.begin() if owns_transaction else self.db.begin_nested()
             async with tx_context:
+                if scoped_key:
+                    existing = await self._get_idempotency_record(scoped_key)
+                    if existing is not None:
+                        replay_payload = self._extract_idempotent_response(
+                            record=existing,
+                            request_fingerprint=request_fingerprint,
+                        )
+                        if replay_payload is not None:
+                            return replay_payload
+
+                    inserted = await self._reserve_idempotency_key(
+                        scoped_key=scoped_key,
+                        user_id=user_id,
+                        endpoint=effective_endpoint,
+                        request_fingerprint=request_fingerprint,
+                    )
+                    if not inserted:
+                        existing = await self._get_idempotency_record(scoped_key)
+                        if existing is not None:
+                            replay_payload = self._extract_idempotent_response(
+                                record=existing,
+                                request_fingerprint=request_fingerprint,
+                            )
+                            if replay_payload is not None:
+                                return replay_payload
+                        raise ValueError("Idempotent request is still processing")
+
                 # 1. 查询物品（加行锁防止并发超卖）
                 query = select(ShopItem).where(
                     and_(
@@ -277,6 +446,26 @@ class ShopService:
                 elif item.item_type == ShopItemType.TITLE:
                     await EquipmentService(self.db).equip_shop_title(user_id, item.id)
 
+                result_payload = {
+                    "success": True,
+                    "purchase_id": str(purchase.id),
+                    "item_id": item_id,
+                    "item_name": item.name,
+                    "price_paid": actual_price,
+                    "balance_before": old_balance,
+                    "balance_after": new_balance,
+                    "item_type": item.item_type,
+                    "rarity": item.rarity,
+                    "replayed": False,
+                }
+
+                if scoped_key:
+                    await self._persist_idempotency_result(
+                        scoped_key=scoped_key,
+                        request_fingerprint=request_fingerprint,
+                        response_payload=result_payload,
+                    )
+
             # 9. 删除缓存（事务提交后）
             from app.config import settings
             from app.core.cache import cache_service
@@ -303,17 +492,7 @@ class ShopService:
             #     }
             # )
 
-            return {
-                "success": True,
-                "purchase_id": str(purchase.id),
-                "item_id": item_id,
-                "item_name": item.name,
-                "price_paid": actual_price,
-                "balance_before": old_balance,
-                "balance_after": new_balance,
-                "item_type": item.item_type,
-                "rarity": item.rarity
-            }
+            return result_payload
 
         except Exception as e:
             # 仅回滚当前方法创建的顶层事务，避免破坏外层会话中的已成功操作
