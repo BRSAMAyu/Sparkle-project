@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
 from app.core.cache import cache_service
@@ -18,9 +20,11 @@ from app.models.achievement import (
     UserTitle,
     VisualEffectType,
 )
+from app.models.base import Base
 from app.models.plan import Plan, PlanType
 from app.models.shop import PhotonTransactionHistory
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.user import User
 from app.services.achievement_engine import AchievementEngine, AchievementEvent
 
 
@@ -385,29 +389,127 @@ async def test_notify_milestones_sends_websocket_payload(db_session, test_user):
 
 
 @pytest.mark.asyncio
-async def test_grant_rewards_schedules_photon_compensation_after_commit_failure(db_session, test_user):
+async def test_process_event_rolls_back_unlock_when_photon_grant_fails(db_session, test_user):
     achievement = _achievement(
-        "reward_retry",
+        "reward_atomicity",
         reward_config=[{"type": "photon", "quantity": 66}],
     )
-    engine = AchievementEngine(db_session)
-    callbacks = []
-
-    def capture_callback(callback):
-        callbacks.append(callback)
-
-    engine._enqueue_after_commit = capture_callback
-    engine._schedule_photon_reward_retry = AsyncMock()
-
-    with patch("app.services.photon_service.PhotonService.grant_photons", AsyncMock(side_effect=RuntimeError("boom"))):
-        await engine._grant_rewards(str(test_user.id), achievement)
-
-    assert len(callbacks) == 1
-    await callbacks[0]()
-    engine._schedule_photon_reward_retry.assert_awaited_once_with(
-        user_id=str(test_user.id),
-        achievement_id=achievement.id,
-        achievement_name=achievement.name,
-        quantity=66,
-        error_message="boom",
+    task = Task(
+        user_id=test_user.id,
+        title="atomicity-task",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=25,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.COMPLETED,
+        completed_at=datetime(2026, 3, 10, 10, 0, 0),
     )
+    db_session.add_all([achievement, task])
+    await db_session.commit()
+
+    engine = AchievementEngine(db_session)
+    db_session.sync_session.info["external_transaction_managed"] = True
+
+    with patch(
+        "app.services.photon_service.PhotonService.grant_photons",
+        AsyncMock(side_effect=RuntimeError("boom")),
+    ):
+        with pytest.raises(RuntimeError, match="boom"):
+            await engine.process_event(
+                user_id=str(test_user.id),
+                event_type=AchievementEvent.TASK_COMPLETED,
+            )
+
+    await db_session.rollback()
+    await db_session.refresh(test_user)
+    await db_session.refresh(achievement)
+
+    unlocked_result = await db_session.execute(
+        select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == test_user.id,
+                UserAchievement.achievement_id == achievement.id,
+            )
+        )
+    )
+    history_result = await db_session.execute(
+        select(PhotonTransactionHistory).where(
+            PhotonTransactionHistory.user_id == test_user.id,
+            PhotonTransactionHistory.related_item_id == achievement.id,
+        )
+    )
+
+    assert unlocked_result.scalar_one_or_none() is None
+    assert history_result.scalars().all() == []
+    assert test_user.photon_balance == 0
+    assert achievement.total_unlocked == 0
+
+
+@pytest.mark.asyncio
+async def test_concurrent_unlock_only_grants_photons_once(tmp_path):
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'achievement_atomicity.db'}")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with session_factory() as session:
+        user = User(
+            username="achievement_atomicity_user",
+            email="achievement_atomicity@example.com",
+            hashed_password="hashed",
+            photon_balance=0,
+        )
+        session.add(user)
+        await session.flush()
+        achievement = _achievement(
+            "reward_once",
+            reward_config=[{"type": "photon", "quantity": 42}],
+        )
+        task = Task(
+            user_id=user.id,
+            title="reward-once-task",
+            type=TaskType.LEARNING,
+            tags=[],
+            estimated_minutes=25,
+            difficulty=1,
+            energy_cost=1,
+            status=TaskStatus.COMPLETED,
+            completed_at=datetime(2026, 3, 10, 10, 0, 0),
+        )
+        session.add_all([achievement, task])
+        await session.commit()
+        user_id = str(user.id)
+
+    async def worker():
+        async with session_factory() as session:
+            return await AchievementEngine(session).process_event(
+                user_id=user_id,
+                event_type=AchievementEvent.TASK_COMPLETED,
+            )
+
+    results = await asyncio.gather(worker(), worker(), return_exceptions=True)
+    assert not any(isinstance(item, Exception) for item in results)
+
+    async with session_factory() as session:
+        stored_user = await session.execute(select(User).where(User.id == user_id))
+        history = await session.execute(
+            select(PhotonTransactionHistory).where(
+                PhotonTransactionHistory.user_id == user_id,
+                PhotonTransactionHistory.related_item_id == "reward_once",
+            )
+        )
+        unlocked = await session.execute(
+            select(UserAchievement).where(
+                and_(
+                    UserAchievement.user_id == user_id,
+                    UserAchievement.achievement_id == "reward_once",
+                )
+            )
+        )
+
+        assert stored_user.scalar_one().photon_balance == 42
+        assert len(history.scalars().all()) == 1
+        assert unlocked.scalar_one().unlocked_at is not None
+
+    await engine.dispose()
