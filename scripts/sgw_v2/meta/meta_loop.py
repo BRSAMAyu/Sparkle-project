@@ -47,6 +47,33 @@ from sgw_v2.storage.db import RunDB
 from sgw_v2.meta.meta_orchestrator import MetaOrchestrator
 
 
+RL_MODES = ("off", "shadow", "rl")
+RL_RECIPES: dict[str, dict[str, Any]] = {
+    "default": {},
+    "compliance_focus": {
+        "soft_violation_threshold": 0.90,
+        "soft_violation_rate_limit": 0.03,
+        "audit_sample_rate": 0.40,
+    },
+    "authenticity_focus": {
+        "authenticity_sample_rate": 0.40,
+        "audit_sample_rate": 0.30,
+    },
+    "fast_iteration": {
+        "wall_clock_hours": 0.05,
+        "min_sessions": 2,
+        "min_turns": 10,
+        "turn_target": 6,
+        "adversarial_sessions": 1,
+    },
+    "stress_test": {
+        "adversarial_sessions": 12,
+        "soft_violation_threshold": 0.80,
+        "soft_violation_rate_limit": 0.10,
+    },
+}
+
+
 def _load_config(db: RunDB) -> dict[str, Any]:
     """Load the most recent run's config, or return defaults."""
     run_id = db.latest_run_id()
@@ -154,13 +181,36 @@ def run_meta_loop(
     exploration_every_n: int = 5,
     convergence_window: int = 5,
     seed: int = 42,
+    rl_mode: str = "rl",
+    rl_recipe: str = "default",
+    dashboard: bool = False,
 ) -> int:
-    """Run the full meta-orchestration loop."""
+    """Run the full meta-orchestration loop.
+
+    rl_mode:
+        off    - no meta-iteration adaptation; runs SGW subprocess only.
+        shadow - run diagnosis + planning, log decisions, but do not mutate current_config.
+        rl     - full loop (default): diagnose, plan, evaluate, adopt, explore.
+    rl_recipe:
+        Named preset applied on top of the config defaults (see RL_RECIPES).
+    dashboard:
+        When True, print a single-line dashboard summary per iteration (stdout) for easy parsing.
+    """
+    if rl_mode not in RL_MODES:
+        raise ValueError(f"invalid rl_mode {rl_mode!r}; expected one of {RL_MODES}")
+    if rl_recipe not in RL_RECIPES:
+        raise ValueError(f"invalid rl_recipe {rl_recipe!r}; expected one of {tuple(RL_RECIPES)}")
+
     db = RunDB(db_path)
     rng = random.Random(seed)
     output_dir = db_path.parent / "meta_loop_output"
 
     current_config = _load_config(db)
+    recipe_overrides = RL_RECIPES[rl_recipe]
+    if recipe_overrides:
+        current_config = {**current_config, **recipe_overrides}
+        print(f"[meta-loop] Applied rl_recipe={rl_recipe}: {json.dumps(recipe_overrides)}")
+    print(f"[meta-loop] rl_mode={rl_mode} dashboard={dashboard}")
     print(f"[meta-loop] Starting with config: {json.dumps(current_config, indent=2)}")
 
     consecutive_neutral = 0
@@ -190,41 +240,62 @@ def run_meta_loop(
 
         print(f"[meta-loop] Latest run: {latest_run_id[:12]}")
 
+        if rl_mode == "off":
+            consecutive_neutral += 1
+            if dashboard:
+                print(f"[dashboard] iter={iteration} mode=off run={latest_run_id[:12]}")
+            continue
+
         # Step 3: Run meta-iteration (diagnose -> plan)
         meta = MetaOrchestrator(db, current_config)
         result = meta.run_iteration(latest_run_id)
 
         if result is None:
             print("[meta-loop] No iteration produced, continuing")
+            if dashboard:
+                print(f"[dashboard] iter={iteration} mode={rl_mode} outcome=none")
             continue
 
         print(f"[meta-loop] Iteration result: {result.outcome}, hypotheses={result.hypotheses_count}, changes={result.changes_applied}")
 
         # Step 4: Evaluate if we have a previous run to compare against
+        evaluation_outcome = "pending"
         if result.plan_id and result.changes_applied > 0:
             evaluation = meta.evaluate_iteration(result.iteration_id, latest_run_id)
             if evaluation:
+                evaluation_outcome = evaluation.outcome
                 print(f"[meta-loop] Evaluation: {evaluation.outcome}")
-                current_config = meta.current_config
 
-                if evaluation.outcome == "regressed":
-                    consecutive_neutral = 0
-                    print("[meta-loop] Regressed — keeping original config")
-                elif evaluation.outcome == "improved_sig":
-                    consecutive_neutral = 0
-                    print("[meta-loop] Significant improvement — adopted new config")
-                elif evaluation.outcome == "improved_nonsig":
-                    print("[meta-loop] Non-significant improvement — adopting cautiously")
+                if rl_mode == "shadow":
+                    print("[meta-loop] shadow mode: logging decision without adopting")
                     consecutive_neutral += 1
                 else:
-                    consecutive_neutral += 1
+                    current_config = meta.current_config
+                    if evaluation.outcome == "regressed":
+                        consecutive_neutral = 0
+                        print("[meta-loop] Regressed — keeping original config")
+                    elif evaluation.outcome == "improved_sig":
+                        consecutive_neutral = 0
+                        print("[meta-loop] Significant improvement — adopted new config")
+                    elif evaluation.outcome == "improved_nonsig":
+                        print("[meta-loop] Non-significant improvement — adopting cautiously")
+                        consecutive_neutral += 1
+                    else:
+                        consecutive_neutral += 1
             else:
                 consecutive_neutral += 1
         else:
             consecutive_neutral += 1
 
-        # Step 5: Random exploration injection
-        if iteration % exploration_every_n == 0:
+        if dashboard:
+            print(
+                f"[dashboard] iter={iteration} mode={rl_mode} "
+                f"outcome={result.outcome} eval={evaluation_outcome} "
+                f"hypotheses={result.hypotheses_count} changes={result.changes_applied}"
+            )
+
+        # Step 5: Random exploration injection (rl mode only)
+        if rl_mode == "rl" and iteration % exploration_every_n == 0:
             print("[meta-loop] Injecting random exploration...")
             current_config = _inject_random_exploration(current_config, rng)
 
@@ -261,6 +332,23 @@ def main() -> int:
     parser.add_argument("--exploration-every-n", type=int, default=5)
     parser.add_argument("--convergence-window", type=int, default=5)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--rl-mode",
+        choices=list(RL_MODES),
+        default="rl",
+        help="off=no adaptation, shadow=log-only decisions, rl=full adaptive loop (default)",
+    )
+    parser.add_argument(
+        "--rl-recipe",
+        choices=list(RL_RECIPES),
+        default="default",
+        help="Named parameter preset to seed initial config.",
+    )
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Emit one-line iteration dashboard summaries to stdout.",
+    )
     args = parser.parse_args()
 
     return run_meta_loop(
@@ -271,6 +359,9 @@ def main() -> int:
         exploration_every_n=args.exploration_every_n,
         convergence_window=args.convergence_window,
         seed=args.seed,
+        rl_mode=args.rl_mode,
+        rl_recipe=args.rl_recipe,
+        dashboard=args.dashboard,
     )
 
 

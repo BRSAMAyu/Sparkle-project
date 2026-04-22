@@ -45,6 +45,7 @@ mypy>=1.8.0
 locust>=2.18.0
 prometheus-api-client>=0.1.1
 websockets>=12.0
+aiohttp>=3.9.0
 
 # LLM & AI
 openai>=1.10.0
