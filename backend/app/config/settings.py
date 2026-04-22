@@ -301,6 +301,12 @@ class Settings(BaseSettings):
     AURORA_STAGE33_WM_PROMPT_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE33_EVENTS_MODE: str = "shadow"  # off | shadow | live
 
+    # Aurora Stage 34
+    AURORA_STAGE34_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE34_ERROR_BRIDGE_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE34_CAPSULE_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED: str = "live"  # off | shadow | live
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

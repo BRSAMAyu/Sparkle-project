@@ -6,7 +6,8 @@ for the orchestrator.
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -108,3 +109,69 @@ def test_build_profile_payload_with_valid_llm_profile_string(orchestrator):
     )
 
     assert result["llm_profile"] == {}
+
+
+@pytest.mark.asyncio
+async def test_attach_stage34_memory_context_injects_goal_and_episodic_top_level(orchestrator, monkeypatch):
+    plan = SimpleNamespace(
+        id="plan-1",
+        name="热力学冲刺",
+        is_active=True,
+        type=SimpleNamespace(value="growth"),
+        plan_stage=SimpleNamespace(value="daily"),
+        subject="physics",
+        target_date=None,
+        progress=0.4,
+    )
+    memory = SimpleNamespace(
+        id="memory-1",
+        summary="上次复盘时发现自己总把熵增方向和系统边界混在一起。",
+        subject_type="self",
+        source_type="direct_capture",
+        occurred_at=None,
+        importance_score=0.8,
+        confidence=0.7,
+        tags=["thermo"],
+    )
+
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.PlanService.list_active",
+        AsyncMock(return_value=[plan]),
+    )
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.MemoryService.list_recent_episodic",
+        AsyncMock(return_value=[memory]),
+    )
+
+    payload = {"cognitive_context": {}}
+    result = await orchestrator._attach_stage34_memory_context(
+        payload,
+        user_id="00000000-0000-0000-0000-000000000123",
+        db_session=MagicMock(),
+    )
+
+    assert result["active_goals"][0]["title"] == "热力学冲刺"
+    assert result["episodic_memories"][0]["summary"].startswith("上次复盘时发现")
+    assert result["cognitive_context"]["active_goals"][0]["title"] == "热力学冲刺"
+    assert result["cognitive_context"]["episodic_memories"][0]["subject_type"] == "self"
+
+
+@pytest.mark.asyncio
+async def test_attach_stage34_memory_context_returns_empty_lists_when_no_records(orchestrator, monkeypatch):
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.PlanService.list_active",
+        AsyncMock(return_value=[]),
+    )
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.MemoryService.list_recent_episodic",
+        AsyncMock(return_value=[]),
+    )
+
+    result = await orchestrator._attach_stage34_memory_context(
+        {},
+        user_id="00000000-0000-0000-0000-000000000123",
+        db_session=MagicMock(),
+    )
+
+    assert result["active_goals"] == []
+    assert result["episodic_memories"] == []

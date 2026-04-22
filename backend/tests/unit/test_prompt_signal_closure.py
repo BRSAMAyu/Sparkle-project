@@ -288,3 +288,15 @@ def test_build_system_prompt_renders_stage33_working_memory_section_with_budget_
     assert "working_memory_snapshot" in telemetry["prompt_visible_high_value_fields"]
     assert telemetry["high_value_fields"]["working_memory_snapshot"]["rendered"] is True
     assert telemetry["section_sizes"]["working_memory_snapshot"]["approx_tokens"] <= 300
+
+
+def test_normalize_user_context_preserves_top_level_stage34_goal_and_episodic_payloads() -> None:
+    normalized = _normalize_user_context(
+        {
+            "active_goals": [{"title": "14 天内稳住热力学第二章", "status": "active"}],
+            "episodic_memories": [{"summary": "昨晚已经把热机效率错题重新按题型分组。"}],
+        }
+    )
+
+    assert normalized["active_goals"][0]["title"] == "14 天内稳住热力学第二章"
+    assert normalized["episodic_memories"][0]["summary"] == "昨晚已经把热机效率错题重新按题型分组。"

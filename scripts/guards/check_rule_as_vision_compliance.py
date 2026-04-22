@@ -9,9 +9,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PROFILE_CONTEXT_SERVICE = REPO_ROOT / "backend/app/services/profile_context_service.py"
+CONTEXT_BUILDER = REPO_ROOT / "backend/app/orchestration/context_builder.py"
 ROUTING_ENGINE = REPO_ROOT / "backend/app/orchestration/routing_engine.py"
 PROMPTS = REPO_ROOT / "backend/app/orchestration/prompts.py"
 IGNORE_PATTERN = re.compile(r"#\s*rule-as:\s*ignore\s+(?P<reason>.+)")
+SCAN_CONTEXT_BUILDER = True
 EXPECTATIONS: dict[str, dict[Path, tuple[str, ...]]] = {
     "srl_phase": {
         ROUTING_ENGINE: (
@@ -22,6 +24,26 @@ EXPECTATIONS: dict[str, dict[Path, tuple[str, ...]]] = {
         PROMPTS: (
             "学习自调节阶段",
             "AURORA_STAGE33_SRL_MODE",
+        ),
+    },
+    "active_goals": {
+        CONTEXT_BUILDER: (
+            "_attach_stage34_memory_context",
+            'payload["active_goals"]',
+        ),
+        PROMPTS: (
+            "【当前目标】",
+            'normalized.get("active_goals")',
+        ),
+    },
+    "episodic_memories": {
+        CONTEXT_BUILDER: (
+            "_attach_stage34_memory_context",
+            'payload["episodic_memories"]',
+        ),
+        PROMPTS: (
+            "【近期相关记忆】",
+            'normalized.get("episodic_memories")',
         ),
     },
 }
@@ -86,16 +108,62 @@ def collect_profile_context_attachments(
     return attachments
 
 
+def collect_context_builder_attachments(
+    context_builder: Path = CONTEXT_BUILDER,
+) -> list[AttachmentSignal]:
+    if not context_builder.exists():
+        return []
+    text = context_builder.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    tree = ast.parse(text)
+    attachments: list[AttachmentSignal] = []
+    field_pattern = re.compile(r'payload\["([A-Za-z_][A-Za-z0-9_]*)"\]\s*=')
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
+            continue
+        if not node.name.startswith("_attach_") and not re.match(r"_build_.*_section", node.name):
+            continue
+        body = ast.get_source_segment(text, node) or ""
+        ignore_reason = _ignore_reason_for_method(lines, node.lineno - 1)
+        seen_fields: list[str] = []
+        for match in field_pattern.finditer(body):
+            field_name = match.group(1)
+            if field_name in seen_fields:
+                continue
+            seen_fields.append(field_name)
+            attachments.append(
+                AttachmentSignal(
+                    method_name=node.name,
+                    field_name=field_name,
+                    line_no=node.lineno,
+                    ignore_reason=ignore_reason,
+                )
+            )
+    return attachments
+
+
 def scan_rule_as(
     *,
     profile_context_service: Path = PROFILE_CONTEXT_SERVICE,
-    consumer_targets: tuple[Path, ...] = (ROUTING_ENGINE, PROMPTS),
+    context_builder: Path = CONTEXT_BUILDER,
+    consumer_targets: tuple[Path, ...] = (ROUTING_ENGINE, PROMPTS, CONTEXT_BUILDER),
 ) -> list[str]:
-    attachments = collect_profile_context_attachments(profile_context_service)
-    consumer_text = {
-        path: path.read_text(encoding="utf-8")
-        for path in consumer_targets
-    }
+    attachments = [
+        *collect_profile_context_attachments(profile_context_service),
+        *(collect_context_builder_attachments(context_builder) if SCAN_CONTEXT_BUILDER else []),
+    ]
+    consumer_text: dict[Path, str] = {}
+    for path in consumer_targets:
+        consumer_text[path] = path.read_text(encoding="utf-8")
+        if path.name == PROFILE_CONTEXT_SERVICE.name:
+            consumer_text[PROFILE_CONTEXT_SERVICE] = consumer_text[path]
+        if path.name == CONTEXT_BUILDER.name:
+            consumer_text[CONTEXT_BUILDER] = consumer_text[path]
+        if path.name == ROUTING_ENGINE.name:
+            consumer_text[ROUTING_ENGINE] = consumer_text[path]
+        if path.name == PROMPTS.name:
+            consumer_text[PROMPTS] = consumer_text[path]
     violations: list[str] = []
 
     for attachment in attachments:
@@ -128,6 +196,8 @@ def main() -> int:
             print(violation)
         return 1
     attachments = collect_profile_context_attachments()
+    if SCAN_CONTEXT_BUILDER:
+        attachments.extend(collect_context_builder_attachments())
     print(f"[Rule AS] PASS - attachments={len(attachments)} tracked")
     return 0
 

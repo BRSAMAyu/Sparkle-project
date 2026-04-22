@@ -605,6 +605,27 @@ AURORA_STAGE33_FALLBACK_TOTAL = get_or_create_metric(
     ["feature", "reason"],
 )
 
+JOURNEY_EVENT_CONSUMER_ERROR_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_journey_event_consumer_error_total",
+    "Stage34 journey consumer failures by consumer and event",
+    ["consumer", "event"],
+)
+
+ERROR_REPLAN_BRIDGE_ERROR_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_error_replan_bridge_error_total",
+    "Stage34 ErrorReplanBridge classified failures by category and mode",
+    ["category", "mode"],
+)
+
+KILL_SWITCH_MODE = get_or_create_metric(
+    Gauge,
+    "sparkle_kill_switch_mode",
+    "Kill switch mode gauge by stage and feature",
+    ["stage", "feature"],
+)
+
 RESPONSE_FALLBACK_GENERATED_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_response_fallback_generated_total",

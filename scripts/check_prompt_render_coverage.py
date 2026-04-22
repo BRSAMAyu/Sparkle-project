@@ -15,6 +15,8 @@ AUDIT_FIELDS: dict[str, str] = {
     "recent_errors": "近期痛点中的错题样本",
     "recent_mastery_changes": "近期进展中的掌握度变化",
     "active_tasks": "待办任务 / next_actions",
+    "active_goals": "当前目标",
+    "episodic_memories": "近期相关记忆",
     "preferences": "学习偏好",
     "social_context": "社交上下文渲染器",
     "profile_context": "通过知识/画像快照间接可见",
@@ -30,6 +32,10 @@ def _status_for(field: str, prompt_text: str) -> str:
     if mark_pattern.search(prompt_text):
         return "rendered"
     if field == "profile_context" and "【画像快照】" in prompt_text:
+        return "rendered"
+    if field == "active_goals" and "【当前目标】" in prompt_text:
+        return "rendered"
+    if field == "episodic_memories" and "【近期相关记忆】" in prompt_text:
         return "rendered"
     if field == "community_context":
         return "conditional"
@@ -74,6 +80,7 @@ def _build_markdown(results: list[tuple[str, str]]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--min-ratio", type=float, default=0.85)
     args = parser.parse_args()
 
     prompt_text = PROMPTS.read_text(encoding="utf-8")
@@ -87,7 +94,7 @@ def main() -> int:
     if args.write:
         OUTPUT_PATH.write_text(_build_markdown(results), encoding="utf-8")
         print(f"wrote {OUTPUT_PATH.relative_to(REPO_ROOT)}")
-    return 0
+    return 0 if ratio >= args.min_ratio else 1
 
 
 if __name__ == "__main__":

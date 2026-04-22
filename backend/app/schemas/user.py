@@ -275,5 +275,10 @@ class UserContext(BaseModel):
     daily_cap: int = Field(default=5, description="Daily interaction cap")
     persona_type: str = Field(default="coach", description="AI persona type")
     preference_version: int = Field(default=0, description="Preference version for cache validation")
+    active_goals: list[dict[str, Any]] = Field(default_factory=list, description="Top-level active goals for prompt render")
+    episodic_memories: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Top-level episodic memory summaries for prompt render",
+    )
 
     model_config = ConfigDict(from_attributes=True)

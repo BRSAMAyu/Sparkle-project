@@ -37,6 +37,9 @@ from app.services.self_evolution_service import UnderstandingDepthService
 from app.services.perceptible_intelligence_service import (
     PerceptibleInsightService,
 )
+from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
+from app.services.memory_service import MemoryService
+from app.services.plan_service import PlanService
 from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.user_service import UserService
 from app.state_aggregator.service import StateAggregatorService
@@ -56,6 +59,54 @@ def _utcnow() -> datetime:
 
 class ContextBuilderMixin:
     """Mixin providing context building methods for ChatOrchestrator."""
+
+    @staticmethod
+    def _serialize_stage34_active_goal(plan: Plan) -> dict[str, Any]:
+        return {
+            "id": str(plan.id),
+            "title": str(plan.name or "").strip(),
+            "status": "active" if bool(plan.is_active) else "inactive",
+            "type": getattr(plan.type, "value", plan.type),
+            "plan_stage": getattr(plan.plan_stage, "value", plan.plan_stage),
+            "subject": plan.subject,
+            "target_date": plan.target_date.isoformat() if plan.target_date else None,
+            "progress": float(plan.progress or 0.0),
+        }
+
+    @staticmethod
+    def _serialize_stage34_episodic_memory(memory: Any) -> dict[str, Any]:
+        return {
+            "id": str(memory.id),
+            "summary": str(memory.summary or "").strip(),
+            "subject_type": str(memory.subject_type or "").strip(),
+            "source_type": str(memory.source_type or "").strip(),
+            "occurred_at": memory.occurred_at.isoformat() if memory.occurred_at else None,
+            "importance_score": (
+                float(memory.importance_score)
+                if getattr(memory, "importance_score", None) is not None
+                else None
+            ),
+            "confidence": (
+                float(memory.confidence)
+                if getattr(memory, "confidence", None) is not None
+                else None
+            ),
+            "tags": list(memory.tags or []),
+        }
+
+    async def _stage34_modes_payload(self) -> dict[str, str]:
+        try:
+            return await AuroraStage34KillSwitchService().summary()
+        except Exception as exc:
+            logger.warning(f"Failed to load Stage34 modes, falling back to settings: {exc}")
+            return {
+                "mode": str(getattr(settings, "AURORA_STAGE34_MODE", "shadow") or "shadow"),
+                "error_bridge_mode": str(getattr(settings, "AURORA_STAGE34_ERROR_BRIDGE_MODE", "shadow") or "shadow"),
+                "capsule_mode": str(getattr(settings, "AURORA_STAGE34_CAPSULE_MODE", "shadow") or "shadow"),
+                "journey_subscribers_enabled": str(
+                    getattr(settings, "AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED", "live") or "live"
+                ),
+            }
 
     # ------------------------------------------------------------------
     # _build_profile_payload
@@ -352,6 +403,40 @@ class ContextBuilderMixin:
             "freshness_seconds": envelope.freshness_seconds,
         }
 
+    async def _attach_stage34_memory_context(
+        self,
+        payload: dict[str, Any],
+        *,
+        user_id: str,
+        db_session: AsyncSession,
+    ) -> dict[str, Any]:
+        user_uuid = uuid.UUID(user_id)
+        memory_service = MemoryService(db_session)
+
+        active_goal_rows = await PlanService.list_active(db_session, user_uuid, limit=3)
+        active_goals = [
+            self._serialize_stage34_active_goal(plan)
+            for plan in active_goal_rows
+            if str(plan.name or "").strip()
+        ]
+
+        episodic_rows = await memory_service.list_recent_episodic(user_uuid, limit=5)
+        episodic_memories = [
+            self._serialize_stage34_episodic_memory(memory)
+            for memory in episodic_rows
+            if str(getattr(memory, "summary", "") or "").strip()
+        ]
+
+        payload["active_goals"] = active_goals
+        payload["episodic_memories"] = episodic_memories
+        payload.setdefault("aurora_stage34_modes", await self._stage34_modes_payload())
+
+        cognitive_context = payload.get("cognitive_context")
+        if isinstance(cognitive_context, dict):
+            cognitive_context["active_goals"] = active_goals
+            cognitive_context["episodic_memories"] = episodic_memories
+        return payload
+
     # ------------------------------------------------------------------
     # _get_recent_sentiment_distribution
     # ------------------------------------------------------------------
@@ -507,9 +592,9 @@ class ContextBuilderMixin:
                     {
                         "id": str(plan.id),
                         "title": plan.name,
-                        "type": plan.type.value,
+                        "type": getattr(plan.type, "value", plan.type),
                         "target_date": plan.target_date.isoformat() if plan.target_date else None,
-                        "progress": plan.progress or 0
+                        "progress": plan.progress or 0,
                     }
                     for plan in plans
                 ]
@@ -542,7 +627,7 @@ class ContextBuilderMixin:
                 if working_memory_snapshot:
                     cognitive_context_payload["working_memory_snapshot"] = working_memory_snapshot
 
-                return {
+                payload = {
                     "user_context": user_context_data, # Legacy field
                     "analytics_summary": cognitive_context.engagement_metrics or {},
                     "preferences": (
@@ -573,6 +658,11 @@ class ContextBuilderMixin:
                     "seed_library": seed_library_context,
                     "learning_gaps_summary": learning_gaps_summary,
                 }
+                return await self._attach_stage34_memory_context(
+                    payload,
+                    user_id=user_id,
+                    db_session=db_session,
+                )
 
             # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)
             logger.warning(f"ContextOrchestrator returned None for {user_id}, falling back to legacy")
@@ -681,6 +771,9 @@ class ContextBuilderMixin:
                     "returning_context": returning_context,
                     "understanding_depth": understanding_depth,
                     "profile": profile_payload,
+                    "active_goals": [],
+                    "episodic_memories": [],
+                    "aurora_stage34_modes": await self._stage34_modes_payload(),
                 }
             else:
                 # Fallback to basic context
@@ -706,6 +799,9 @@ class ContextBuilderMixin:
                     "returning_context": returning_context,
                     "understanding_depth": understanding_depth,
                     "profile": profile_payload,
+                    "active_goals": [],
+                    "episodic_memories": [],
+                    "aurora_stage34_modes": await self._stage34_modes_payload(),
                 }
 
         except Exception as e:
@@ -727,6 +823,9 @@ class ContextBuilderMixin:
                     experiment_cohort=self._experiment_cohort_for_user(user_id),
                 ),
                 "experiment_cohort": self._experiment_cohort_for_user(user_id),
+                "active_goals": [],
+                "episodic_memories": [],
+                "aurora_stage34_modes": await self._stage34_modes_payload(),
             }
 
     # ------------------------------------------------------------------

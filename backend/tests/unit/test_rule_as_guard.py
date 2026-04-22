@@ -40,6 +40,7 @@ class ProfileContextService:
 
     violations = scan_rule_as(
         profile_context_service=profile_context,
+        context_builder=tmp_path / "context_builder.py",
         consumer_targets=(routing_engine, prompts),
     )
 
@@ -62,8 +63,38 @@ class ProfileContextService:
     routing_engine.write_text("", encoding="utf-8")
     prompts = tmp_path / "prompts.py"
     prompts.write_text("", encoding="utf-8")
+    context_builder = tmp_path / "context_builder.py"
+    context_builder.write_text("", encoding="utf-8")
 
     assert scan_rule_as(
         profile_context_service=profile_context,
+        context_builder=context_builder,
         consumer_targets=(routing_engine, prompts),
     ) == []
+
+
+def test_rule_as_guard_flags_unconsumed_context_builder_attachment(tmp_path) -> None:
+    profile_context = tmp_path / "profile_context_service.py"
+    profile_context.write_text("class ProfileContextService:\n    pass\n", encoding="utf-8")
+    context_builder = tmp_path / "context_builder.py"
+    context_builder.write_text(
+        """
+class ContextBuilderMixin:
+    async def _attach_memory_context(self, payload):
+        payload["active_goals"] = []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    routing_engine = tmp_path / "routing_engine.py"
+    routing_engine.write_text("", encoding="utf-8")
+    prompts = tmp_path / "prompts.py"
+    prompts.write_text("", encoding="utf-8")
+
+    violations = scan_rule_as(
+        profile_context_service=profile_context,
+        context_builder=context_builder,
+        consumer_targets=(routing_engine, prompts, context_builder),
+    )
+
+    assert any("active_goals" in item for item in violations)
