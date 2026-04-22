@@ -18,6 +18,7 @@ from app.schemas.notification import NotificationCreate
 from app.services.insight_copy import present_pattern_solution
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.notification_service import NotificationService
+from app.services.report.report_snapshot_store import ReportSnapshotStore
 from app.services.report.report_logger import ReportLogger
 from app.services.report.report_templates import DEFAULT_REPORT_SECTIONS
 from app.services.report.report_tools import LearningReportTools
@@ -248,23 +249,25 @@ class LearningReportAgent:
         cache_version: str,
     ) -> dict[str, Any] | None:
         cached = await cache_service.get(self._cache_key(user_id))
-        if not isinstance(cached, dict):
+        hydrated = self._hydrate_cached_payload(cached, cache_version=cache_version)
+        if hydrated is not None:
+            return hydrated
+
+        if self.db is None:
             return None
-        if str(cached.get("cache_version") or "").strip() != cache_version:
+        try:
+            payload = await ReportSnapshotStore(self.db).load_cached_payload(
+                user_id=user_id,
+                cache_version=cache_version,
+            )
+        except Exception as exc:
+            logger.warning(f"Report snapshot DB load failed: {exc}")
             return None
-        payload = cached.get("payload")
         if not isinstance(payload, dict):
             return None
-        hydrated = dict(payload)
-        markdown_blob = str(cached.get("markdown_gzip_b64") or "").strip()
-        if markdown_blob:
-            try:
-                hydrated["markdown"] = gzip.decompress(
-                    base64.b64decode(markdown_blob.encode("ascii"))
-                ).decode("utf-8")
-            except Exception:
-                return None
-        return hydrated
+
+        await self._cache_report(user_id=user_id, cache_version=cache_version, payload=payload)
+        return dict(payload)
 
     async def _cache_report(
         self,
@@ -281,14 +284,56 @@ class LearningReportAgent:
                 "cache_version": cache_version,
                 "payload": compact_payload,
                 "markdown_gzip_b64": (
-                    base64.b64encode(gzip.compress(markdown.encode("utf-8"))).decode("ascii")
-                    if markdown
-                    else ""
+                    base64.b64encode(gzip.compress(markdown.encode("utf-8"))).decode("ascii") if markdown else ""
                 ),
                 "cached_at": datetime.now(UTC).isoformat(),
             },
             ttl=self.CACHE_TTL_SECONDS,
         )
+        if self.db is None:
+            return
+        try:
+            from app.core.celery_app import schedule_long_task
+
+            schedule_long_task(
+                "app.core.celery_tasks.persist_report_snapshot",
+                kwargs={"user_id": str(user_id), "cache_version": cache_version, "payload": payload},
+                queue="low_priority",
+            )
+            return
+        except Exception as exc:
+            logger.warning(f"Report snapshot async persist fallback: {exc}")
+
+        try:
+            await ReportSnapshotStore(self.db).persist_snapshot(
+                user_id=user_id,
+                cache_version=cache_version,
+                payload=payload,
+            )
+        except Exception as exc:
+            logger.warning(f"Report snapshot DB persist failed: {exc}")
+
+    @staticmethod
+    def _hydrate_cached_payload(
+        cached: Any,
+        *,
+        cache_version: str,
+    ) -> dict[str, Any] | None:
+        if not isinstance(cached, dict):
+            return None
+        if str(cached.get("cache_version") or "").strip() != cache_version:
+            return None
+        payload = cached.get("payload")
+        if not isinstance(payload, dict):
+            return None
+        hydrated = dict(payload)
+        markdown_blob = str(cached.get("markdown_gzip_b64") or "").strip()
+        if markdown_blob:
+            try:
+                hydrated["markdown"] = gzip.decompress(base64.b64decode(markdown_blob.encode("ascii"))).decode("utf-8")
+            except Exception:
+                return None
+        return hydrated
 
     @staticmethod
     def _cache_key(user_id: UUID) -> str:
@@ -423,10 +468,16 @@ class LearningReportAgent:
         )
         return {
             "needs_revision": bool((data or {}).get("needs_revision")),
-            "missing_sections": [str(item) for item in list((data or {}).get("missing_sections") or []) if str(item).strip()],
+            "missing_sections": [
+                str(item) for item in list((data or {}).get("missing_sections") or []) if str(item).strip()
+            ],
             "focus_areas": [str(item) for item in list((data or {}).get("focus_areas") or []) if str(item).strip()],
             "revision_brief": str((data or {}).get("revision_brief") or fallback["revision_brief"]),
-            "query_expansion": [str(item) for item in list((data or {}).get("query_expansion") or fallback["query_expansion"]) if str(item).strip()],
+            "query_expansion": [
+                str(item)
+                for item in list((data or {}).get("query_expansion") or fallback["query_expansion"])
+                if str(item).strip()
+            ],
         }
 
     async def _expand_context(self, user_id: UUID, reflection: dict[str, Any]) -> dict[str, Any]:
@@ -482,10 +533,7 @@ class LearningReportAgent:
             user_context={},
             profile=profile,
         )
-        return (
-            "保持与你在日常对话中的导师语气一致，但报告仍需结构清晰、证据充分。\n"
-            f"{persona.to_prompt_section()}"
-        )
+        return f"保持与你在日常对话中的导师语气一致，但报告仍需结构清晰、证据充分。\n{persona.to_prompt_section()}"
 
     @staticmethod
     def _normalize_delivery_mode(value: str | None) -> str:
@@ -528,11 +576,7 @@ class LearningReportAgent:
         mastery = list(payload.get("mastery") or [])
         patterns = list(payload.get("patterns") or [])
         sections = [str(item) for item in list(payload.get("sections") or []) if str(item).strip()]
-        action_cards = [
-            dict(item)
-            for item in list(payload.get("action_cards") or [])
-            if isinstance(item, dict)
-        ]
+        action_cards = [dict(item) for item in list(payload.get("action_cards") or []) if isinstance(item, dict)]
         weak_nodes = [
             str(item.get("node_name") or "").strip()
             for item in mastery[:3]
@@ -646,7 +690,9 @@ class LearningReportAgent:
                     "id": "behavior-pattern",
                     "title": "当前学习模式",
                     "headline": str(pattern.get("pattern_name") or "学习节奏待调整").strip(),
-                    "summary": str(pattern.get("description") or "最近的学习推进方式里有一个值得先修正的惯性。").strip(),
+                    "summary": str(
+                        pattern.get("description") or "最近的学习推进方式里有一个值得先修正的惯性。"
+                    ).strip(),
                     "evidence": [
                         f"模式置信度：{round(float(pattern.get('confidence') or 0.0) * 100)}%",
                         str(pattern.get("solution_text") or "[数据不足]").strip(),
@@ -746,9 +792,7 @@ class LearningReportAgent:
                     continue
                 bucket = buckets[bucket_index]
                 future_deltas = sum(
-                    float(buckets[idx]["mastery_delta"])
-                    for idx in range(bucket_index)
-                    if idx in buckets
+                    float(buckets[idx]["mastery_delta"]) for idx in range(bucket_index) if idx in buckets
                 )
                 average_mastery = max(0.0, min(current_average - future_deltas, 100.0))
                 history_points.append(
@@ -785,16 +829,8 @@ class LearningReportAgent:
                     "direction": direction,
                 }
             )
-        headline = (
-            f"最近一轮掌握度约 {round(current_average)}%"
-            if mastery
-            else "正在从基线数据建立第一条趋势曲线"
-        )
-        summary = (
-            comparisons[-1]["summary"]
-            if comparisons
-            else "再积累一到两份报告后，这里会形成更清晰的周趋势对比。"
-        )
+        headline = f"最近一轮掌握度约 {round(current_average)}%" if mastery else "正在从基线数据建立第一条趋势曲线"
+        summary = comparisons[-1]["summary"] if comparisons else "再积累一到两份报告后，这里会形成更清晰的周趋势对比。"
         return {
             "status": "ready",
             "message": "",
@@ -968,11 +1004,7 @@ class LearningReportAgent:
         except (TypeError, ValueError, json.JSONDecodeError):
             return raw.lower()
         if isinstance(parsed, dict):
-            source = (
-                str(parsed.get("source") or "").strip()
-                or str(parsed.get("type") or "").strip()
-                or "api"
-            )
+            source = str(parsed.get("source") or "").strip() or str(parsed.get("type") or "").strip() or "api"
             return source.lower()
         return raw.lower()
 
@@ -991,19 +1023,11 @@ class LearningReportAgent:
     def _simulation_blindspots_from_trigger_source(trigger_source_payload: dict[str, Any]) -> list[str]:
         explicit = trigger_source_payload.get("knowledge_gaps_revealed")
         if isinstance(explicit, list):
-            return [
-                str(item).strip()
-                for item in explicit
-                if str(item).strip()
-            ]
+            return [str(item).strip() for item in explicit if str(item).strip()]
         insight = trigger_source_payload.get("insight_summary")
         if not isinstance(insight, dict):
             return []
-        return [
-            str(item).strip()
-            for item in list(insight.get("knowledge_gaps_revealed") or [])
-            if str(item).strip()
-        ]
+        return [str(item).strip() for item in list(insight.get("knowledge_gaps_revealed") or []) if str(item).strip()]
 
     @staticmethod
     def _merge_simulation_blindspots_into_learner_voice(
@@ -1044,10 +1068,7 @@ class LearningReportAgent:
 
     def _build_update_copy(self, trigger_summary: dict[str, Any]) -> tuple[str, str]:
         title = str(trigger_summary.get("title") or "学习分析报告已就绪").strip() or "学习分析报告已就绪"
-        summary = (
-            str(trigger_summary.get("summary") or "").strip()
-            or "你可以查看最新的知识掌握度分析与行动建议。"
-        )
+        summary = str(trigger_summary.get("summary") or "").strip() or "你可以查看最新的知识掌握度分析与行动建议。"
         return title, summary
 
     @staticmethod
@@ -1122,14 +1143,8 @@ class LearningReportAgent:
                 "说明这轮节奏值得继续放大。"
             )
         if delta_mastery <= -5:
-            return (
-                f"掌握度比上一阶段回落了 {abs(delta_mastery):.1f}，说明最近需要先收口范围，"
-                "避免继续分散投入。"
-            )
-        return (
-            f"掌握度整体较为平稳，投入变化 {delta_minutes:+d} 分钟。"
-            "接下来更适合围绕一个薄弱点做集中突破。"
-        )
+            return f"掌握度比上一阶段回落了 {abs(delta_mastery):.1f}，说明最近需要先收口范围，避免继续分散投入。"
+        return f"掌握度整体较为平稳，投入变化 {delta_minutes:+d} 分钟。接下来更适合围绕一个薄弱点做集中突破。"
 
     def _fallback_reflection(
         self,
@@ -1164,9 +1179,12 @@ class LearningReportAgent:
         expanded_mastery = list(supplemental_context.get("mastery") or [])
         expanded_timeline = list(supplemental_context.get("timeline") or [])
         mastery_text = "、".join(item["node_name"] for item in expanded_mastery[:3]) or "暂无新增薄弱点"
-        progress_text = "；".join(
-            f"{item['node_name']} {float(item['mastery_delta'] or 0.0):+.1f}" for item in expanded_timeline[:3]
-        ) or "暂无新增趋势数据"
+        progress_text = (
+            "；".join(
+                f"{item['node_name']} {float(item['mastery_delta'] or 0.0):+.1f}" for item in expanded_timeline[:3]
+            )
+            or "暂无新增趋势数据"
+        )
         return (
             f"{draft_markdown}\n\n"
             "## 反思修订补充\n"
@@ -1185,9 +1203,10 @@ class LearningReportAgent:
     ) -> str:
         weak_text = "、".join(item["node_name"] for item in mastery[:3]) or "暂无明显薄弱点"
         pattern_text = "、".join(item["pattern_name"] for item in patterns[:3]) or "暂无显著模式"
-        recent_text = "；".join(
-            f"{item['node_name']} +{item['mastery_delta']:.1f}" for item in timeline[:3]
-        ) or "暂无近期学习记录"
+        recent_text = (
+            "；".join(f"{item['node_name']} +{item['mastery_delta']:.1f}" for item in timeline[:3])
+            or "暂无近期学习记录"
+        )
         primary_pattern = patterns[0] if patterns else {}
         primary_pattern_name = str(primary_pattern.get("pattern_name") or "").strip()
         primary_pattern_solution = present_pattern_solution(
@@ -1239,14 +1258,13 @@ class LearningReportAgent:
             return []
         chat_topics = [str(item).strip() for item in list(chat_inference.get("topics") or []) if str(item).strip()]
         if chat_topics:
-            evidence_text = "；".join(
-                str(item).strip()
-                for item in list(chat_inference.get("evidence") or [])[:2]
-                if str(item).strip()
-            ) or str(chat_inference.get("goal_summary") or "最近聊天里反复提到这个方向。").strip()
-            friction = str(
-                (list(chat_inference.get("frictions") or []) or ["先把第一步和关键卡点说清楚"])[0]
-            ).strip()
+            evidence_text = (
+                "；".join(
+                    str(item).strip() for item in list(chat_inference.get("evidence") or [])[:2] if str(item).strip()
+                )
+                or str(chat_inference.get("goal_summary") or "最近聊天里反复提到这个方向。").strip()
+            )
+            friction = str((list(chat_inference.get("frictions") or []) or ["先把第一步和关键卡点说清楚"])[0]).strip()
             return [
                 {
                     "topic": topic,

@@ -27,33 +27,47 @@ class PushService:
         self.db = db
         self.redis = redis
 
-    async def process_all_users(self):
+    async def process_all_users(self, *, delivery_mode: str = "live") -> dict[str, int | str]:
         """
         Main entry point: Process push logic for all eligible users.
         """
-        logger.info("Starting daily push processing...")
+        normalized_mode = str(delivery_mode or "live").strip().lower()
+        logger.info("Starting push policy processing in {} mode...", normalized_mode)
 
         # 1. Get all active users with push preferences
         # Note: In a real large-scale system, we would paginate or use a job queue.
-        query = (
-            select(User)
-            .join(PushPreference, User.id == PushPreference.user_id)
-            .where(User.is_active)
-        )
+        query = select(User).join(PushPreference, User.id == PushPreference.user_id).where(User.is_active)
         result = await self.db.execute(query)
         users = result.scalars().all()
 
+        summary = {
+            "mode": normalized_mode,
+            "evaluated_users": len(users),
+            "triggered": 0,
+            "sent": 0,
+            "shadowed": 0,
+            "errors": 0,
+        }
         for user in users:
             try:
-                await self.process_user_push(user)
+                outcome = await self.process_user_push(user, delivery_mode=normalized_mode)
+                if outcome["triggered"]:
+                    summary["triggered"] += 1
+                if outcome["sent"]:
+                    summary["sent"] += 1
+                if outcome["shadowed"]:
+                    summary["shadowed"] += 1
             except Exception as e:
+                summary["errors"] += 1
                 logger.error(f"Error processing push for user {user.id}: {e}")
+        return summary
 
-    async def process_user_push(self, user: User) -> bool:
+    async def process_user_push(self, user: User, *, delivery_mode: str = "live") -> dict[str, bool | str]:
         """
         Process push logic for a single user.
-        Returns True if a push was sent.
+        Returns trigger outcome metadata.
         """
+        normalized_mode = str(delivery_mode or "live").strip().lower()
         engine = get_personalization_engine(self.db, self.redis)
         policy = await engine.get_push_policy_profile(user.id)
         prefs = await engine.pref_service.get_preferences(user.id)
@@ -61,15 +75,15 @@ class PushService:
 
         if policy.silent_during_focus:
             logger.info(f"User {user.id} is in focus mode, skipping push")
-            return False
+            return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
 
         if not self._is_active_time(policy):
             logger.debug(f"User {user.id} is not in active time slot.")
-            return False
+            return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
 
         if await self._check_frequency_cap(user, policy):
             logger.debug(f"User {user.id} reached frequency cap.")
-            return False
+            return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
 
         strategies = [
             SprintStrategy(self.db),
@@ -86,7 +100,7 @@ class PushService:
                 break
 
         if not trigger_strategy:
-            return False
+            return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
 
         # 4. Generate Content
         # For curiosity, we might generate capsule inside get_context_data or separate
@@ -99,27 +113,26 @@ class PushService:
                 trigger_data = {"capsule_id": str(capsule.id), "title": capsule.title, "preview": capsule.content[:50]}
                 content_dict = {
                     "title": f"✨ 好奇心胶囊: {capsule.title}",
-                    "body": f"发现一个新知识点！{capsule.content[:30]}..."
+                    "body": f"发现一个新知识点！{capsule.content[:30]}...",
                 }
             else:
-                return False
+                return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": trigger_type}
         else:
             trigger_data = await trigger_strategy.get_context_data(user)
-            content_dict = await self._generate_push_content(
-                user,
-                explicit_prefs,
-                trigger_type,
-                trigger_data
-            )
+            content_dict = await self._generate_push_content(user, explicit_prefs, trigger_type, trigger_data)
 
         if not content_dict:
             logger.warning("Failed to generate push content.")
-            return False
+            return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": trigger_type}
+
+        if normalized_mode == "shadow":
+            logger.info("Push policy shadow evaluation for user {} trigger={}", user.id, trigger_type)
+            return {"triggered": True, "sent": False, "shadowed": True, "trigger_type": trigger_type}
 
         # 5. Send & Record
         await self._send_push(user, trigger_type, content_dict, trigger_data, policy)
 
-        return True
+        return {"triggered": True, "sent": True, "shadowed": False, "trigger_type": trigger_type}
 
     async def _check_frequency_cap(self, user: User, policy: PushPolicyProfile) -> bool:
         """
@@ -155,11 +168,10 @@ class PushService:
         local_start_of_day = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
         utc_start_of_day = local_start_of_day.astimezone(timezone.utc)
 
-        query = select(func.count()).select_from(PushHistory).where(
-            and_(
-                PushHistory.user_id == user.id,
-                PushHistory.created_at >= utc_start_of_day
-            )
+        query = (
+            select(func.count())
+            .select_from(PushHistory)
+            .where(and_(PushHistory.user_id == user.id, PushHistory.created_at >= utc_start_of_day))
         )
         result = await self.db.execute(query)
         daily_count = result.scalar() or 0
@@ -186,11 +198,7 @@ class PushService:
         return 480 <= current_minutes <= 1320
 
     async def _generate_push_content(
-        self,
-        user: User,
-        explicit_prefs: dict[str, Any],
-        trigger_type: str,
-        data: dict
+        self, user: User, explicit_prefs: dict[str, Any], trigger_type: str, data: dict
     ) -> dict[str, str]:
         """
         Generate push content using LLM based on persona and trigger data.
@@ -211,12 +219,7 @@ class PushService:
         )
 
     async def _send_push(
-        self,
-        user: User,
-        trigger_type: str,
-        content: dict[str, str],
-        data: dict,
-        policy: PushPolicyProfile
+        self, user: User, trigger_type: str, content: dict[str, str], data: dict, policy: PushPolicyProfile
     ):
         """
         Create Notification and History records.
@@ -225,25 +228,16 @@ class PushService:
         body = content.get("body", "你有一条新消息")
 
         # 1. Create Notification (User visible)
-        notif_create = NotificationCreate(
-            title=title,
-            content=body,
-            type=trigger_type,
-            data=data
-        )
+        notif_create = NotificationCreate(title=title, content=body, type=trigger_type, data=data)
         await NotificationService.create(self.db, user.id, notif_create)
 
         # 2. Create PushHistory (Analytics)
         import hashlib
-        # Hash body content
-        content_hash = hashlib.md5(body.encode('utf-8')).hexdigest()
 
-        history = PushHistory(
-            user_id=user.id,
-            trigger_type=trigger_type,
-            content_hash=content_hash,
-            status="sent"
-        )
+        # Hash body content
+        content_hash = hashlib.md5(body.encode("utf-8")).hexdigest()
+
+        history = PushHistory(user_id=user.id, trigger_type=trigger_type, content_hash=content_hash, status="sent")
         self.db.add(history)
 
         # 3. Update User Preferences (Last push time)

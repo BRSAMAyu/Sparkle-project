@@ -549,6 +549,9 @@ class Settings(BaseSettings):
     ENABLE_CONTEXT_SEMANTIC_GATING: bool = False
     ENABLE_CONTEXT_BRIEFING: bool = True
     ENABLE_CONTEXT_FOCUS_METADATA: bool = False
+    AURORA_STAGE38_ERR_REPLAN_MODE: str = "shadow"
+    AURORA_STAGE38_PUSH_SCHEDULER_MODE: str = "shadow"
+    AURORA_STAGE38_PUSH_SCHEDULER_INTERVAL_MINUTES: int = 5
     CONTEXT_SEMANTIC_GATING_RULES_JSON: str = ""
     CONTEXT_RANKING_SOFT_CAP_EPISODIC: int = 6
     CONTEXT_RANKING_SOFT_CAP_GOALS: int = 5
@@ -692,6 +695,10 @@ class Settings(BaseSettings):
     EVENT_BUS_DLQ_MAXLEN: int = 10000  # Maximum messages in DLQ before trimming
     EVENT_BUS_DLQ_ENABLED: bool = True
     EVENT_BUS_PENDING_RETRY_IDLE_MS: int = 5000
+
+    # FSM context guardrails
+    MAX_CONTEXT_DATA_KEYS: int = 200
+    MAX_CONTEXT_DATA_VALUE_BYTES: int = 10 * 1024
 
     # Translation Service
     TRANSLATION_DAILY_CARD_LIMIT: int = 20  # Max vocabulary cards created per day from translation

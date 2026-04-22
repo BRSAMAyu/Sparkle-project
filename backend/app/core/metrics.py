@@ -619,6 +619,27 @@ ERROR_REPLAN_BRIDGE_ERROR_TOTAL = get_or_create_metric(
     ["category", "mode"],
 )
 
+ERROR_REPLAN_BRIDGE_EVALUATED_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_error_replan_bridge_evaluated_total",
+    "Stage38 ErrorReplanBridge evaluations by mode",
+    ["mode"],
+)
+
+ERROR_REPLAN_BRIDGE_TRIGGERED_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_error_replan_bridge_triggered_total",
+    "Stage38 ErrorReplanBridge triggers by mode",
+    ["mode"],
+)
+
+ERROR_REPLAN_BRIDGE_BLOCKED_BY_GATE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_error_replan_bridge_blocked_by_gate_total",
+    "Stage38 ErrorReplanBridge blocks by gate and mode",
+    ["gate", "mode"],
+)
+
 KILL_SWITCH_MODE = get_or_create_metric(
     Gauge,
     "sparkle_kill_switch_mode",

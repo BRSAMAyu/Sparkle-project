@@ -173,6 +173,7 @@ from app.models.plan import Plan, PlanStage, PlanType
 from app.models.plan_execution_record import PlanExecutionRecord
 from app.models.plan_state import PlanState, PlanStateStatus
 from app.models.response_feedback import ResponseFeedback
+from app.models.report_snapshot import ReportSnapshot
 from app.models.recommendation import (
     ItemSimilarity,
     LeaderboardSnapshot,
@@ -200,6 +201,7 @@ from app.models.seed_content import (
 )
 from app.models.semantic_memory import SemanticLink, StrategyNode
 from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
+from app.models.simulation_run import SimulationRun
 from app.models.subject import Subject
 from app.models.calendar_event import CalendarEvent, EventSource
 from app.models.task import Task, TaskStatus, TaskType

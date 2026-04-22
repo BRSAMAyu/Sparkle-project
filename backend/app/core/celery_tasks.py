@@ -61,7 +61,7 @@ def generate_node_embedding(self, node_id: str, title: str, summary: str, user_i
 
                 for sim in similar:
                     if sim.id != UUID(node_id):
-                        logger.warning(f"⚠️ Potential duplicate found for {node_id}: " f"{sim.id} ({sim.name})")
+                        logger.warning(f"⚠️ Potential duplicate found for {node_id}: {sim.id} ({sim.name})")
                         # 可以在这里触发通知
                         break
 
@@ -448,6 +448,30 @@ def generate_weekly_learning_reports(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=60)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_push_policy_scheduler")
+def run_push_policy_scheduler(self):
+    """Run the Stage38 push scheduler in off/shadow/live mode."""
+    from app.db.session import AsyncSessionLocal
+    from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
+    from app.services.push_service import PushService
+
+    async def _run():
+        mode = await AuroraStage38KillSwitchService().get_feature_mode("push_scheduler")
+        if mode == "off":
+            return {"mode": mode, "evaluated_users": 0, "triggered": 0, "sent": 0, "shadowed": 0, "errors": 0}
+        async with AsyncSessionLocal() as session:
+            service = PushService(session)
+            return await service.process_all_users(delivery_mode=mode)
+
+    try:
+        result = _run_async(_run())
+        logger.info(f"✅ Push policy scheduler finished: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to run push policy scheduler: {exc}")
+        raise self.retry(exc=exc, countdown=60)
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_growth_digests")
 def generate_weekly_growth_digests(self, limit: int = 200, deliver: bool = False):
     """Generate weekly growth digests, optionally delivering them immediately."""
@@ -559,6 +583,50 @@ def cleanup_stale_simulation_sessions(self, max_age_hours: int = 6):
     except Exception as exc:
         logger.error(f"❌ Failed to cleanup stale simulation sessions: {exc}")
         raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.persist_simulation_run")
+def persist_simulation_run(self, user_id: str, payload: dict):
+    """Persist simulation session payload after the hot-path Redis write."""
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.simulation.simulation_run_store import SimulationRunStore
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            await SimulationRunStore(session).persist_payload(user_id=UUID(user_id), payload=payload)
+            return {"status": "ok", "session_id": payload.get("id")}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error(f"❌ Failed to persist simulation run: {exc}")
+        raise self.retry(exc=exc, countdown=30)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.persist_report_snapshot")
+def persist_report_snapshot(self, user_id: str, cache_version: str, payload: dict):
+    """Persist report snapshot after the hot-path Redis write."""
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.report.report_snapshot_store import ReportSnapshotStore
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            await ReportSnapshotStore(session).persist_snapshot(
+                user_id=UUID(user_id),
+                cache_version=cache_version,
+                payload=payload,
+            )
+            return {"status": "ok", "report_id": payload.get("report_id")}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error(f"❌ Failed to persist report snapshot: {exc}")
+        raise self.retry(exc=exc, countdown=30)
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.capture_ai_metric_baseline")
