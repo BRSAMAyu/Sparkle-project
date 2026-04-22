@@ -436,6 +436,40 @@ INITIAL_ACHIEVEMENTS = [
         "sort_order": 104,
         "reward_config": [{"type": "title", "value": "weekend_warrior", "display": "周末战士"}],
     },
+    # ========== 计划成就系列 ==========
+    {
+        "id": "plan_first",
+        "name": "旅程起笔",
+        "description": "创建第一个计划",
+        "icon_url": "/icons/achievements/plan_first.png",
+        "type": "planning",
+        "rarity": "common",
+        "trigger_code": "PLANS_TOTAL",
+        "trigger_config": {"count": 1},
+        "category": "tasks",
+        "sort_order": 45,
+        "reward_config": [
+            {"type": "photon", "quantity": 20},
+            {"type": "title", "value": "plan_first", "display": "旅程起笔"},
+        ],
+    },
+    {
+        "id": "plan_5",
+        "name": "规划成型",
+        "description": "累计创建 5 个计划",
+        "icon_url": "/icons/achievements/plan_5.png",
+        "type": "planning",
+        "rarity": "common",
+        "trigger_code": "PLANS_TOTAL",
+        "trigger_config": {"count": 5},
+        "prerequisites": ["plan_first"],
+        "category": "tasks",
+        "sort_order": 46,
+        "reward_config": [
+            {"type": "photon", "quantity": 60},
+            {"type": "title", "value": "plan_builder", "display": "规划成型"},
+        ],
+    },
     # ========== 冲刺成就系列 ==========
     {
         "id": "sprint_first",

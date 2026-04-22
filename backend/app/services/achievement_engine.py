@@ -89,6 +89,7 @@ class AchievementEvent:
     # Enhancement events
     ACHIEVEMENT_COMBO = "achievement_combo"  # 连续解锁成就
     PROGRESS_MILESTONE = "progress_milestone"  # 进度里程碑
+    PLAN_CREATED = "plan_created"
 
 
 class AchievementEngine:
@@ -101,6 +102,7 @@ class AchievementEngine:
         "NODES_MASTERED",
         "NODES_UNLOCKED",
         "PERFECTIONIST",
+        "PLANS_TOTAL",
         "SECTOR_MASTERY",
         "SPEED_UNLOCK",
         "SPRINTS_STREAK",
@@ -331,6 +333,9 @@ class AchievementEngine:
                 case AchievementEvent.SPRINT_AHEAD:
                     if trigger_code in ["SPRINTS_TOTAL", "SPRINT_AHEAD"]:
                         relevant.append(achievement)
+                case AchievementEvent.PLAN_CREATED:
+                    if trigger_code == "PLANS_TOTAL":
+                        relevant.append(achievement)
         return relevant
 
     async def _get_user_achievement_progress(
@@ -466,6 +471,15 @@ class AchievementEngine:
                 effective_total = solo_completed + (group_completed * self.GROUP_TASK_WEIGHT_FACTOR)
                 progress = min(effective_total / target, 1.0)
                 return (progress, int(round(effective_total)), target)
+
+            case "PLANS_TOTAL":
+                from app.models.plan import Plan
+
+                target = config.get("count", 1)
+                query = select(func.count()).select_from(Plan).where(Plan.user_id == user_id)
+                result = await self.db.execute(query)
+                current = int(result.scalar_one() or 0)
+                return (min(current / target, 1.0), current, target)
 
             # 知识点数量
             case "NODES_UNLOCKED":

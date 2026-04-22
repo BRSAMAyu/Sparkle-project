@@ -46,6 +46,7 @@ class AchievementType(StrEnum):
     STUDY_TIME = "study_time"  # 学习时长
     NODE_EXPLORE = "node_explore"  # 知识点探索
     SPRINT = "sprint"  # 冲刺专属成就
+    PLANNING = "planning"  # 计划创建/规划行为
 
 
 class VisualEffectType(StrEnum):

@@ -23,6 +23,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.middleware import IdempotencyMiddleware, RequestContextMiddleware
 from app.api.v1.health import set_start_time
 from app.api.v1.router import api_router
+from app.consumers.achievement_plan_consumer import AchievementPlanConsumer
+from app.consumers.galaxy_plan_consumer import GalaxyPlanConsumer
+from app.consumers.user_profile_bootstrap_consumer import UserProfileBootstrapConsumer
+from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
 from app.config import settings
 from app.core.cache import cache_service
 from app.core.redis_search_client import redis_search_client
@@ -249,6 +253,25 @@ async def lifespan(app: FastAPI):
         main_chain_artifact_consumer_task = asyncio.create_task(main_chain_consumer.start())
         app.state.main_chain_artifact_consumer_task = main_chain_artifact_consumer_task
 
+    if cache_service.redis and event_bus is not None:
+        welcome_consumer = WelcomeOnboardingConsumer(event_bus=event_bus, redis_client=cache_service.redis)
+        app.state.welcome_onboarding_consumer_task = asyncio.create_task(welcome_consumer.start())
+
+        profile_bootstrap_consumer = UserProfileBootstrapConsumer(
+            event_bus=event_bus,
+            redis_client=cache_service.redis,
+        )
+        app.state.user_profile_bootstrap_consumer_task = asyncio.create_task(profile_bootstrap_consumer.start())
+
+        galaxy_plan_consumer = GalaxyPlanConsumer(event_bus=event_bus, redis_client=cache_service.redis)
+        app.state.galaxy_plan_consumer_task = asyncio.create_task(galaxy_plan_consumer.start())
+
+        achievement_plan_consumer = AchievementPlanConsumer(
+            event_bus=event_bus,
+            redis_client=cache_service.redis,
+        )
+        app.state.achievement_plan_consumer_task = asyncio.create_task(achievement_plan_consumer.start())
+
     intervention_outcome_verifier_task = None
     if event_bus is not None and ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER:
         intervention_outcome_verifier_task = asyncio.create_task(
@@ -457,6 +480,30 @@ async def lifespan(app: FastAPI):
         main_chain_artifact_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await main_chain_artifact_consumer_task
+
+    welcome_onboarding_consumer_task = getattr(app.state, "welcome_onboarding_consumer_task", None)
+    if welcome_onboarding_consumer_task:
+        welcome_onboarding_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await welcome_onboarding_consumer_task
+
+    user_profile_bootstrap_consumer_task = getattr(app.state, "user_profile_bootstrap_consumer_task", None)
+    if user_profile_bootstrap_consumer_task:
+        user_profile_bootstrap_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await user_profile_bootstrap_consumer_task
+
+    galaxy_plan_consumer_task = getattr(app.state, "galaxy_plan_consumer_task", None)
+    if galaxy_plan_consumer_task:
+        galaxy_plan_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await galaxy_plan_consumer_task
+
+    achievement_plan_consumer_task = getattr(app.state, "achievement_plan_consumer_task", None)
+    if achievement_plan_consumer_task:
+        achievement_plan_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await achievement_plan_consumer_task
 
     intervention_outcome_verifier_task = getattr(app.state, "intervention_outcome_verifier_task", None)
     if intervention_outcome_verifier_task:
