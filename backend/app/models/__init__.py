@@ -2,6 +2,7 @@
 Models Package
 导出所有数据库模型
 """
+
 from app.models.achievement import (
     Achievement,
     AchievementRarity,
@@ -109,6 +110,7 @@ from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry
 from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
 from app.models.event import TrackingEvent
+from app.models.event_bus_dlq import EventBusDLQEntry
 from app.models.execution_intent import (
     ExecutionIntent,
     ExecutionIntentStatus,
@@ -320,6 +322,7 @@ __all__ = [
     "IRTItemParameter",
     "UserIRTAbility",
     "TrackingEvent",
+    "EventBusDLQEntry",
     "ExecutionIntent",
     "ExecutionAuditLog",
     "ExecutionSchedule",

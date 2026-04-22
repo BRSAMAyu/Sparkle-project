@@ -712,6 +712,27 @@ EVENT_BUS_CONSUMER_LAG_SECONDS = get_or_create_metric(
     ["stream", "consumer_group"],
 )
 
+EVENT_BUS_PUBLISH_RETRIES_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_event_bus_publish_retries_total",
+    "Event bus publish retry attempts by event type",
+    ["event_type"],
+)
+
+EVENT_BUS_DLQ_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_event_bus_dlq_total",
+    "Total DLQ writes by event type",
+    ["event_type"],
+)
+
+EVENT_BUS_CONSUMER_FAILURE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_event_bus_consumer_failure_total",
+    "Total consumer callback failures by consumer",
+    ["consumer"],
+)
+
 SPARKLE_SKILL_COUNT_PER_USER = get_or_create_metric(
     Histogram,
     "sparkle_skill_count_per_user",
