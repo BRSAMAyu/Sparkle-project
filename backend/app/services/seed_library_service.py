@@ -2,6 +2,7 @@
 Seed Library Service
 种子内容库核心服务 - 管理库、内容项、订阅和查询
 """
+
 from __future__ import annotations
 import uuid
 from datetime import timezone, datetime
@@ -12,6 +13,7 @@ from sqlalchemy import String, and_, asc, cast, desc, func, insert, or_, select,
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer, selectinload
 
+from app.core.event_bus import event_bus_reliable
 from app.models.seed_content import (
     ItemType,
     LibraryCategory,
@@ -120,28 +122,24 @@ class SeedLibraryService:
         subscription_subquery = None
         if user_id:
             visibility_conditions.append(SeedLibrary.owner_id == user_id)
-            subscription_subquery = (
-                select(UserLibrarySubscription.library_id)
-                .where(
-                    and_(
-                        UserLibrarySubscription.user_id == user_id,
-                        UserLibrarySubscription.is_enabled.is_(True),
-                        UserLibrarySubscription.deleted_at.is_(None),
-                    )
+            subscription_subquery = select(UserLibrarySubscription.library_id).where(
+                and_(
+                    UserLibrarySubscription.user_id == user_id,
+                    UserLibrarySubscription.is_enabled.is_(True),
+                    UserLibrarySubscription.deleted_at.is_(None),
                 )
             )
             visibility_conditions.append(SeedLibrary.id.in_(subscription_subquery))
 
-        result = await db.execute(
-            select(SeedLibrary.id).where(and_(*conditions)).where(or_(*visibility_conditions))
-        )
+        result = await db.execute(select(SeedLibrary.id).where(and_(*conditions)).where(or_(*visibility_conditions)))
         return list(dict.fromkeys(row[0] for row in result.all()))
 
     @staticmethod
     def _is_public_library(library: SeedLibrary) -> bool:
         return bool(
             library.is_official
-            or library.visibility in {
+            or library.visibility
+            in {
                 LibraryVisibility.PUBLIC.value,
                 LibraryVisibility.OFFICIAL.value,
             }
@@ -418,6 +416,12 @@ class SeedLibraryService:
 
     # ============ 库管理 ============
 
+    async def _publish_seed_event(self, event_type: str, payload: dict[str, Any]) -> None:
+        try:
+            await event_bus_reliable.publish(event_type, payload)
+        except Exception as exc:
+            logger.warning("Failed to publish {}: {}", event_type, exc)
+
     async def create_library(
         self,
         db: AsyncSession,
@@ -448,6 +452,19 @@ class SeedLibraryService:
         db.add(library)
         await db.flush()
         await db.refresh(library)
+        await self._publish_seed_event(
+            "seed.created",
+            {
+                "event_type": "seed.created",
+                "user_id": str(owner_id),
+                "library_id": str(library.id),
+                "library_name": library.name,
+                "category": library.category,
+                "visibility": library.visibility,
+                "language": library.language,
+                "timestamp": _utcnow().isoformat(),
+            },
+        )
         logger.info(f"Created library: {library.id} by user {owner_id}")
         return library
 
@@ -468,12 +485,7 @@ class SeedLibraryService:
         Returns:
             库对象或 None
         """
-        query = select(SeedLibrary).where(
-            and_(
-                SeedLibrary.id == library_id,
-                SeedLibrary.deleted_at.is_(None)
-            )
-        )
+        query = select(SeedLibrary).where(and_(SeedLibrary.id == library_id, SeedLibrary.deleted_at.is_(None)))
 
         if include_items:
             query = query.options(selectinload(SeedLibrary.items))
@@ -511,10 +523,7 @@ class SeedLibraryService:
                 # 私有库只显示自己的
                 if user_id:
                     conditions.append(
-                        and_(
-                            SeedLibrary.visibility == LibraryVisibility.PRIVATE.value,
-                            SeedLibrary.owner_id == user_id
-                        )
+                        and_(SeedLibrary.visibility == LibraryVisibility.PRIVATE.value, SeedLibrary.owner_id == user_id)
                     )
                 else:
                     # 未登录用户看不到私有库，返回空结果
@@ -530,10 +539,7 @@ class SeedLibraryService:
             # 如果有用户，也显示自己的私有库
             if user_id:
                 public_conditions.append(
-                    and_(
-                        SeedLibrary.visibility == LibraryVisibility.PRIVATE.value,
-                        SeedLibrary.owner_id == user_id
-                    )
+                    and_(SeedLibrary.visibility == LibraryVisibility.PRIVATE.value, SeedLibrary.owner_id == user_id)
                 )
             conditions.append(or_(*public_conditions))
 
@@ -865,12 +871,9 @@ class SeedLibraryService:
     ) -> SeedItem | None:
         """获取单个内容项"""
         result = await db.execute(
-            select(SeedItem).options(defer(SeedItem.embedding)).where(
-                and_(
-                    SeedItem.id == item_id,
-                    SeedItem.deleted_at.is_(None)
-                )
-            )
+            select(SeedItem)
+            .options(defer(SeedItem.embedding))
+            .where(and_(SeedItem.id == item_id, SeedItem.deleted_at.is_(None)))
         )
         return result.scalar_one_or_none()
 
@@ -1026,7 +1029,7 @@ class SeedLibraryService:
                 and_(
                     UserLibrarySubscription.user_id == user_id,
                     UserLibrarySubscription.library_id == library_id,
-                    UserLibrarySubscription.deleted_at.is_(None)
+                    UserLibrarySubscription.deleted_at.is_(None),
                 )
             )
         )
@@ -1040,7 +1043,9 @@ class SeedLibraryService:
             priority=subscription_data.priority,
             notes=subscription_data.notes,
             subscribed_at=_utcnow(),
-            last_used_at=_utcnow() if str(subscription_data.notes or "").strip().lower() in {"applied", "primary"} else None,
+            last_used_at=_utcnow()
+            if str(subscription_data.notes or "").strip().lower() in {"applied", "primary"}
+            else None,
         )
         db.add(subscription)
         await db.flush()
@@ -1048,6 +1053,17 @@ class SeedLibraryService:
 
         # 增加库的使用计数
         library.increment_usage()
+        await self._publish_seed_event(
+            "seed.consumed",
+            {
+                "event_type": "seed.consumed",
+                "user_id": str(user_id),
+                "library_id": str(library_id),
+                "subscription_id": str(subscription.id),
+                "priority": subscription.priority,
+                "timestamp": _utcnow().isoformat(),
+            },
+        )
 
         logger.info(f"User {user_id} subscribed to library {library_id}")
         return subscription
@@ -1074,7 +1090,7 @@ class SeedLibraryService:
                 and_(
                     UserLibrarySubscription.user_id == user_id,
                     UserLibrarySubscription.library_id == library_id,
-                    UserLibrarySubscription.deleted_at.is_(None)
+                    UserLibrarySubscription.deleted_at.is_(None),
                 )
             )
         )
@@ -1103,10 +1119,7 @@ class SeedLibraryService:
         Returns:
             订阅列表
         """
-        conditions = [
-            UserLibrarySubscription.user_id == user_id,
-            UserLibrarySubscription.deleted_at.is_(None)
-        ]
+        conditions = [UserLibrarySubscription.user_id == user_id, UserLibrarySubscription.deleted_at.is_(None)]
 
         if is_enabled is not None:
             conditions.append(UserLibrarySubscription.is_enabled == is_enabled)
@@ -1143,7 +1156,7 @@ class SeedLibraryService:
                 and_(
                     UserLibrarySubscription.user_id == user_id,
                     UserLibrarySubscription.library_id == library_id,
-                    UserLibrarySubscription.deleted_at.is_(None)
+                    UserLibrarySubscription.deleted_at.is_(None),
                 )
             )
         )
@@ -1214,7 +1227,7 @@ class SeedLibraryService:
                     and_(
                         UserLibrarySubscription.user_id == user_id,
                         UserLibrarySubscription.is_enabled,
-                        UserLibrarySubscription.deleted_at.is_(None)
+                        UserLibrarySubscription.deleted_at.is_(None),
                     )
                 )
             )
@@ -1233,10 +1246,7 @@ class SeedLibraryService:
             if query_request.include_official:
                 official_libs = await db.execute(
                     select(SeedLibrary.id).where(
-                        and_(
-                            SeedLibrary.is_official.is_(True),
-                            SeedLibrary.deleted_at.is_(None)
-                        )
+                        and_(SeedLibrary.is_official.is_(True), SeedLibrary.deleted_at.is_(None))
                     )
                 )
                 lib_ids.extend([row[0] for row in official_libs.all()])
@@ -1255,7 +1265,9 @@ class SeedLibraryService:
                 lib_ids=lib_ids,
                 item_types=item_types,
                 subjects=query_request.subjects,
-                difficulty_levels=[d.value for d in query_request.difficulty_levels] if query_request.difficulty_levels else None,
+                difficulty_levels=[d.value for d in query_request.difficulty_levels]
+                if query_request.difficulty_levels
+                else None,
                 tags=query_request.tags,
                 limit=query_request.limit,
             )
@@ -1267,7 +1279,9 @@ class SeedLibraryService:
             lib_ids=lib_ids,
             item_types=item_types,
             subjects=query_request.subjects,
-            difficulty_levels=[d.value for d in query_request.difficulty_levels] if query_request.difficulty_levels else None,
+            difficulty_levels=[d.value for d in query_request.difficulty_levels]
+            if query_request.difficulty_levels
+            else None,
             tags=query_request.tags,
             limit=query_request.limit,
         )
@@ -1674,12 +1688,7 @@ class SeedLibraryService:
         # 批量查询内容项数量
         item_counts_stmt = (
             select(SeedItem.library_id, func.count())
-            .where(
-                and_(
-                    SeedItem.library_id.in_(library_ids),
-                    SeedItem.deleted_at.is_(None)
-                )
-            )
+            .where(and_(SeedItem.library_id.in_(library_ids), SeedItem.deleted_at.is_(None)))
             .group_by(SeedItem.library_id)
         )
         item_counts_result = await db.execute(item_counts_stmt)
@@ -1689,10 +1698,7 @@ class SeedLibraryService:
         subscriber_counts_stmt = (
             select(UserLibrarySubscription.library_id, func.count())
             .where(
-                and_(
-                    UserLibrarySubscription.library_id.in_(library_ids),
-                    UserLibrarySubscription.deleted_at.is_(None)
-                )
+                and_(UserLibrarySubscription.library_id.in_(library_ids), UserLibrarySubscription.deleted_at.is_(None))
             )
             .group_by(UserLibrarySubscription.library_id)
         )
@@ -1736,11 +1742,7 @@ class SeedLibraryService:
             conditions.append(SeedItem.library_id == library_id)
 
         # 查询所有缺少 embedding 的 items
-        result = await db.execute(
-            select(SeedItem)
-            .where(and_(*conditions))
-            .limit(batch_size)
-        )
+        result = await db.execute(select(SeedItem).where(and_(*conditions)).limit(batch_size))
         items = list(result.scalars().all())
 
         processed = 0
@@ -1849,9 +1851,7 @@ class SeedLibraryService:
             raise
 
         # 过滤低于阈值的结果
-        filtered_results = [
-            (item, float(score)) for item, score in rows if score >= threshold
-        ]
+        filtered_results = [(item, float(score)) for item, score in rows if score >= threshold]
 
         return filtered_results[:limit]
 

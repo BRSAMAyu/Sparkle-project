@@ -5,7 +5,7 @@ from typing import Any
 from loguru import logger
 
 from app.config import settings
-from app.core.event_bus import event_bus
+from app.core.event_bus import event_bus_reliable
 from app.core.metrics import AURORA_STAGE33_FALLBACK_TOTAL
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 
@@ -17,9 +17,7 @@ class Stage33JourneyEventService:
         payload: dict[str, Any],
     ) -> str | None:
         try:
-            events_mode = str(
-                (await AuroraStage33KillSwitchService().summary()).get("events") or "off"
-            ).strip().lower()
+            events_mode = str((await AuroraStage33KillSwitchService().summary()).get("events") or "off").strip().lower()
         except Exception as exc:
             logger.warning("Stage33 events kill switch lookup failed: {}", exc)
             AURORA_STAGE33_FALLBACK_TOTAL.labels(feature="events", reason="mode_lookup_failed").inc()
@@ -37,4 +35,4 @@ class Stage33JourneyEventService:
         metadata.setdefault("stage33_mode", events_mode)
         message["metadata"] = metadata
         message["stage33_mode"] = events_mode
-        return await event_bus.publish(event_type, message)
+        return await event_bus_reliable.publish(event_type, message)
