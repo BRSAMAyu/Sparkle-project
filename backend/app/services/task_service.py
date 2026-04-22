@@ -12,7 +12,7 @@ from uuid import UUID
 from google.protobuf import json_format
 from google.api import annotations_pb2  # noqa: F401
 from loguru import logger
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.cache import cache_service
@@ -560,20 +560,65 @@ class TaskService:
         if not tasks:
             return []
 
+        task_ids = [task.id for task in tasks]
         current_time = _utcnow()
-        confirmed_tasks = []
-        for task in tasks:
-            # Use TaskService.start() to ensure proper state synchronization
-            started_task = await TaskService.start(db, task)
-            # Set confirmed_at for tracking purposes
-            started_task.confirmed_at = current_time
-            db.add(started_task)
-            confirmed_tasks.append(started_task)
-
+        await db.execute(
+            update(Task)
+            .where(
+                and_(
+                    Task.id.in_(task_ids),
+                    Task.user_id == user_id,
+                    Task.status == TaskStatus.PENDING,
+                )
+            )
+            .values(
+                status=TaskStatus.IN_PROGRESS,
+                started_at=current_time,
+                confirmed_at=current_time,
+                updated_at=current_time,
+            )
+        )
         await db.commit()
-        # Refresh all tasks to get updated fields
+
+        confirmed_result = await db.execute(
+            select(Task)
+            .where(
+                and_(
+                    Task.id.in_(task_ids),
+                    Task.user_id == user_id,
+                )
+            )
+            .order_by(Task.order_index.asc(), desc(Task.created_at))
+        )
+        confirmed_tasks = confirmed_result.scalars().all()
+
+        sync_service = None
         for task in confirmed_tasks:
-            await db.refresh(task)
+            await _sync_task_card_projection(db, task)
+            if task.plan_id:
+                try:
+                    if sync_service is None:
+                        from app.services.task_state_sync import TaskStateSyncService
+
+                        sync_service = TaskStateSyncService(db)
+                    await sync_service.on_task_updated(task, old_status=TaskStatus.PENDING)
+                except Exception as e:
+                    logger.warning(f"Failed to sync task confirmation with plan state: {e}")
+
+            from app.core.event_bus import TaskStartedEvent
+
+            event = TaskStartedEvent(
+                user_id=str(task.user_id),
+                task_id=str(task.id),
+                plan_id=str(task.plan_id) if task.plan_id else None,
+            )
+            await event_bus.publish("task.started", event.to_dict())
+            await publish_srl_event(
+                user_id=task.user_id,
+                trigger_event_type="task.started",
+                evidence_id=str(task.id),
+                metadata={"plan_id": str(task.plan_id) if task.plan_id else None},
+            )
 
         return confirmed_tasks
 

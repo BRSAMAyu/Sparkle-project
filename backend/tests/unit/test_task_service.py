@@ -2,11 +2,44 @@
 Unit tests for app.services.task_service module.
 Tests task CRUD operations, status changes, and plan integration.
 """
+import sys
+import types
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 from datetime import datetime, timedelta
+
+_gen_pkg = types.ModuleType("app.gen")
+_sparkle_pkg = types.ModuleType("app.gen.sparkle")
+_inference_pkg = types.ModuleType("app.gen.sparkle.inference")
+_inference_v1_pkg = types.ModuleType("app.gen.sparkle.inference.v1")
+_signals_pkg = types.ModuleType("app.gen.sparkle.signals")
+_signals_v1_pkg = types.ModuleType("app.gen.sparkle.signals.v1")
+_gateway_client_pkg = types.ModuleType("app.services.gateway_client")
+_llm_dispatcher_pkg = types.ModuleType("app.services.llm_dispatcher")
+_gen_pkg.__path__ = []
+_sparkle_pkg.__path__ = []
+_inference_pkg.__path__ = []
+_signals_pkg.__path__ = []
+_inference_v1_pkg.inference_pb2 = types.SimpleNamespace(
+    InferenceRequest=object,
+    Budgets=object,
+    Message=object,
+    PREDICT_NEXT_ACTIONS=0,
+    P0=0,
+)
+_signals_v1_pkg.signals_pb2 = types.SimpleNamespace()
+_gateway_client_pkg.GatewayClient = object
+_llm_dispatcher_pkg.LLMDispatcher = object
+sys.modules.setdefault("app.gen", _gen_pkg)
+sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
+sys.modules.setdefault("app.gen.sparkle.inference", _inference_pkg)
+sys.modules.setdefault("app.gen.sparkle.inference.v1", _inference_v1_pkg)
+sys.modules.setdefault("app.gen.sparkle.signals", _signals_pkg)
+sys.modules.setdefault("app.gen.sparkle.signals.v1", _signals_v1_pkg)
+sys.modules.setdefault("app.services.gateway_client", _gateway_client_pkg)
+sys.modules.setdefault("app.services.llm_dispatcher", _llm_dispatcher_pkg)
 
 from app.services.task_service import TaskService
 from app.models.task import Task, TaskStatus, TaskType
@@ -304,6 +337,52 @@ class TestTaskStatusChanges:
                 assert result.status == TaskStatus.COMPLETED
                 mock_db.commit.assert_called()
                 mock_publish.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_confirm_tasks_by_tool_result_batches_status_update(self):
+        """Test bulk confirm avoids per-task refresh churn."""
+        mock_db = _mock_db()
+        user_id = uuid4()
+
+        task_one = Mock(spec=Task)
+        task_one.id = uuid4()
+        task_one.user_id = user_id
+        task_one.plan_id = None
+        task_one.order_index = 1000
+        task_one.created_at = datetime.now()
+
+        task_two = Mock(spec=Task)
+        task_two.id = uuid4()
+        task_two.user_id = user_id
+        task_two.plan_id = None
+        task_two.order_index = 2000
+        task_two.created_at = datetime.now()
+
+        initial_result = Mock()
+        initial_result.scalars.return_value.all.return_value = [task_one, task_two]
+        refreshed_result = Mock()
+        refreshed_result.scalars.return_value.all.return_value = [task_one, task_two]
+
+        mock_db.execute = AsyncMock(side_effect=[initial_result, Mock(), refreshed_result])
+        mock_db.commit.return_value = None
+        mock_db.refresh = AsyncMock()
+
+        with patch("app.services.task_service._sync_task_card_projection", new=AsyncMock()) as mock_projection:
+            with patch("app.services.task_service.event_bus.publish", new_callable=AsyncMock) as mock_publish:
+                with patch("app.services.task_service.publish_srl_event", new_callable=AsyncMock) as mock_srl:
+                    confirmed = await TaskService.confirm_tasks_by_tool_result(
+                        mock_db,
+                        "tool-result-1",
+                        user_id,
+                    )
+
+        assert confirmed == [task_one, task_two]
+        assert mock_db.execute.await_count == 3
+        mock_db.commit.assert_called_once()
+        mock_db.refresh.assert_not_called()
+        assert mock_projection.await_count == 2
+        assert mock_publish.await_count == 2
+        assert mock_srl.await_count == 2
 
 
 class TestTaskListQuery:

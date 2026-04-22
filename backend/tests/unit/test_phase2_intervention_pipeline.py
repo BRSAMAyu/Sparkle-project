@@ -1,12 +1,45 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import sys
+import types
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
 from unittest.mock import AsyncMock
+
+_gen_pkg = types.ModuleType("app.gen")
+_sparkle_pkg = types.ModuleType("app.gen.sparkle")
+_inference_pkg = types.ModuleType("app.gen.sparkle.inference")
+_inference_v1_pkg = types.ModuleType("app.gen.sparkle.inference.v1")
+_signals_pkg = types.ModuleType("app.gen.sparkle.signals")
+_signals_v1_pkg = types.ModuleType("app.gen.sparkle.signals.v1")
+_gateway_client_pkg = types.ModuleType("app.services.gateway_client")
+_llm_dispatcher_pkg = types.ModuleType("app.services.llm_dispatcher")
+_gen_pkg.__path__ = []
+_sparkle_pkg.__path__ = []
+_inference_pkg.__path__ = []
+_signals_pkg.__path__ = []
+_inference_v1_pkg.inference_pb2 = types.SimpleNamespace(
+    InferenceRequest=object,
+    Budgets=object,
+    Message=object,
+    PREDICT_NEXT_ACTIONS=0,
+    P0=0,
+)
+_signals_v1_pkg.signals_pb2 = types.SimpleNamespace()
+_gateway_client_pkg.GatewayClient = object
+_llm_dispatcher_pkg.LLMDispatcher = object
+sys.modules.setdefault("app.gen", _gen_pkg)
+sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
+sys.modules.setdefault("app.gen.sparkle.inference", _inference_pkg)
+sys.modules.setdefault("app.gen.sparkle.inference.v1", _inference_v1_pkg)
+sys.modules.setdefault("app.gen.sparkle.signals", _signals_pkg)
+sys.modules.setdefault("app.gen.sparkle.signals.v1", _signals_v1_pkg)
+sys.modules.setdefault("app.services.gateway_client", _gateway_client_pkg)
+sys.modules.setdefault("app.services.llm_dispatcher", _llm_dispatcher_pkg)
 
 from app.models.card_protocol import (
     CardLifecycleStatus,
@@ -19,6 +52,7 @@ from app.models.card_protocol import (
 )
 from app.models.notification import Notification, PushHistory
 from app.models.notification_interaction import NotificationInteraction
+from app.models.push_delivery_record import PushDeliveryRecord
 from app.models.user import PushPreference
 from app.services.behavior_signal_collector import BehaviorSignalCollector
 from app.services.card_protocol.behavior_intervention_bridge import BehaviorInterventionBridge
@@ -710,6 +744,64 @@ async def test_notification_center_can_transition_intervention_record_directly(
     assert transitioned is True
     assert record.acceptance_status == InterventionAcceptanceStatus.SEEN
     assert notification.is_read is True
+
+
+@pytest.mark.asyncio
+async def test_clear_read_notifications_bulk_loads_linked_push_notifications(
+    db_session,
+    test_user,
+    monkeypatch,
+):
+    linked_notification = Notification(
+        user_id=test_user.id,
+        title="推送提醒",
+        content="今天还差最后一步",
+        type="aurora_push",
+        is_read=True,
+        read_at=datetime.utcnow(),
+    )
+    system_notification = Notification(
+        user_id=test_user.id,
+        title="系统提醒",
+        content="已读消息",
+        type="achievement",
+        is_read=True,
+        read_at=datetime.utcnow(),
+    )
+    db_session.add_all([linked_notification, system_notification])
+    await db_session.flush()
+
+    push_record = PushDeliveryRecord(
+        user_id=test_user.id,
+        notification_id=linked_notification.id,
+        policy_id="policy-1",
+        category="follow_up",
+        message_template_id="template-1",
+        title="推送提醒",
+        body="今天还差最后一步",
+        evidence_token="evt-1",
+        scheduled_send_at=datetime.utcnow(),
+        sent_at=datetime.utcnow(),
+        read_at=datetime.utcnow(),
+        status="sent",
+    )
+    db_session.add(push_record)
+    await db_session.commit()
+
+    monkeypatch.setattr(
+        db_session,
+        "get",
+        AsyncMock(side_effect=AssertionError("clear_read_notifications should not issue per-record db.get calls")),
+    )
+
+    service = NotificationCenterService(db_session)
+    deleted_count = await service.clear_read_notifications(test_user.id)
+    await db_session.refresh(push_record)
+    await db_session.refresh(linked_notification)
+
+    assert deleted_count == 2
+    assert push_record.deleted_at is not None
+    assert linked_notification.deleted_at is not None
 
 
 @pytest.mark.asyncio
