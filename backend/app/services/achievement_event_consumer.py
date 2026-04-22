@@ -92,6 +92,7 @@ class AchievementEventConsumer:
                 user_id=str(user_id),
                 event_type=AchievementEvent.STUDY_MINUTES_ACCUMULATED,
                 actual_minutes=duration_minutes,
+                session_id=str(event.get("session_id") or ""),
             )
 
     async def _handle_group_task_completed(self, event: dict):

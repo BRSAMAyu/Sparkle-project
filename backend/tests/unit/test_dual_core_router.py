@@ -264,3 +264,24 @@ def test_dual_core_router_prefers_execution_first_when_metacognition_awareness_i
     assert decision.mode == "execution_first"
     assert "减少重复确认与打扰" in rendered
     assert decision.routing_debug["metacognition_awareness"] == "strong"
+
+
+def test_dual_core_router_biases_toward_cognitive_support_when_cognitive_load_is_high() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.9,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 2},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+            cognitive_load=0.84,
+        )
+    )
+
+    rendered = "\n".join(decision.cognitive_adjustments + decision.execution_constraints)
+    assert decision.mode == "cognitive_first"
+    assert "认知负荷偏高" in rendered
+    assert decision.routing_debug["cognitive_load"] == 0.84

@@ -4,12 +4,16 @@ Achievement Engine Service
 """
 from __future__ import annotations
 import asyncio
+import contextlib
 from datetime import timezone, date, datetime, timedelta
 from typing import Any, Awaitable, Callable
 
 from loguru import logger
 from sqlalchemy import event
 from sqlalchemy import and_, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -29,6 +33,7 @@ from app.models.achievement import (
 )
 from app.models.community import GroupTaskClaim
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
+from app.models.session_completion import SessionCompletion
 from app.models.subject import Subject
 from app.services.achievement_reward_observability import AchievementRewardObservability
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -156,6 +161,74 @@ class AchievementEngine:
             return value.date()
         return value
 
+    @staticmethod
+    def _build_session_completion_key(
+        user_id: str,
+        event_type: str,
+        **kwargs,
+    ) -> tuple[str, str] | None:
+        session_id = kwargs.get("session_id")
+        if session_id and event_type in {
+            AchievementEvent.STUDY_MINUTES_ACCUMULATED,
+            AchievementEvent.NIGHT_STUDY,
+            AchievementEvent.EARLY_BIRD,
+        }:
+            return (f"{user_id}:{event_type}:focus:{session_id}", "focus_session")
+
+        if event_type == AchievementEvent.TASK_COMPLETED:
+            task_id = kwargs.get("task_id")
+            if task_id:
+                return (f"{user_id}:{event_type}:task:{task_id}", "task_completion")
+
+            group_task_id = kwargs.get("group_task_id")
+            if group_task_id:
+                return (f"{user_id}:{event_type}:group_task:{group_task_id}", "group_task_completion")
+
+        return None
+
+    async def _reserve_session_completion(
+        self,
+        user_id: str,
+        event_type: str,
+        **kwargs,
+    ) -> bool:
+        completion_key = self._build_session_completion_key(user_id, event_type, **kwargs)
+        if completion_key is None:
+            return True
+
+        scoped_session_id, completion_type = completion_key
+        values = {
+            "session_id": scoped_session_id,
+            "user_id": user_id,
+            "completion_type": completion_type,
+            "source_event": event_type,
+        }
+
+        bind = self.db.sync_session.get_bind()
+        dialect_name = bind.dialect.name if bind is not None else ""
+
+        if dialect_name == "postgresql":
+            stmt = pg_insert(SessionCompletion).values(**values).on_conflict_do_nothing(
+                index_elements=[SessionCompletion.session_id]
+            )
+            result = await self.db.execute(stmt)
+            return bool(result.rowcount)
+
+        if dialect_name == "sqlite":
+            stmt = sqlite_insert(SessionCompletion).values(**values).on_conflict_do_nothing(
+                index_elements=[SessionCompletion.session_id]
+            )
+            result = await self.db.execute(stmt)
+            return bool(result.rowcount)
+
+        try:
+            async with self.db.begin_nested():
+                self.db.add(SessionCompletion(**values))
+                await self.db.flush()
+            return True
+        except IntegrityError:
+            return False
+
     async def _refresh_achievement_cache(self):
         """刷新成就定义缓存"""
         now = _utcnow()
@@ -203,77 +276,87 @@ class AchievementEngine:
         Returns:
             新解锁的成就列表，包含连击和里程碑信息
         """
-        # 1. 更新连胜统计
-        await self._update_streak_stats(user_id, event_type, **kwargs)
+        transaction_context = (
+            self.db.begin_nested()
+            if self._is_transaction_managed_externally()
+            else contextlib.nullcontext()
+        )
 
-        # 2. 获取相关成就定义
-        relevant_achievements = await self._get_relevant_achievements(event_type)
+        async with transaction_context:
+            if not await self._reserve_session_completion(user_id, event_type, **kwargs):
+                return []
 
-        # 3. 检查每个成就的条件
-        unlocked = []
-        milestones = []  # 进度里程碑通知
-        for achievement in relevant_achievements:
-            # 检查是否已解锁
-            if await self._is_unlocked(user_id, achievement.id):
-                continue
+            # 1. 更新连胜统计
+            await self._update_streak_stats(user_id, event_type, **kwargs)
 
-            # 检查前置条件
-            if not await self._check_prerequisites(user_id, achievement):
-                continue
+            # 2. 获取相关成就定义
+            relevant_achievements = await self._get_relevant_achievements(event_type)
 
-            # 评估进度
-            progress, current_value, target_value = await self._evaluate_progress(
-                user_id, achievement, **kwargs
-            )
+            # 3. 检查每个成就的条件
+            unlocked = []
+            milestones = []  # 进度里程碑通知
+            for achievement in relevant_achievements:
+                # 检查是否已解锁
+                if await self._is_unlocked(user_id, achievement.id):
+                    continue
 
-            # 记录解锁前的进度，用于里程碑检测
-            old_progress = await self._get_old_progress(user_id, achievement.id)
+                # 检查前置条件
+                if not await self._check_prerequisites(user_id, achievement):
+                    continue
 
-            # 更新或创建进度记录
-            await self._update_progress(
-                user_id, achievement.id, progress, current_value, target_value
-            )
+                # 评估进度
+                progress, current_value, target_value = await self._evaluate_progress(
+                    user_id, achievement, **kwargs
+                )
 
-            # 检查进度里程碑（每25%进度）
-            milestone = await self._check_progress_milestone(
-                user_id, achievement, old_progress, progress
-            )
-            if milestone:
-                milestones.append(milestone)
+                # 记录解锁前的进度，用于里程碑检测
+                old_progress = await self._get_old_progress(user_id, achievement.id)
 
-            # 检查是否解锁
-            if progress >= 1.0:
-                unlock_data = await self._unlock_achievement(user_id, achievement)
-                if unlock_data:
-                    unlocked.append(unlock_data)
+                # 更新或创建进度记录
+                await self._update_progress(
+                    user_id, achievement.id, progress, current_value, target_value
+                )
 
-        # 4. 处理连击检测
-        combo_info = None
-        if unlocked:
-            combo_info = await self._handle_achievement_combo(user_id, len(unlocked))
-            # 将连击信息添加到每个解锁的成就中
-            if combo_info:
-                for unlock_data in unlocked:
-                    unlock_data["combo_info"] = combo_info
+                # 检查进度里程碑（每25%进度）
+                milestone = await self._check_progress_milestone(
+                    user_id, achievement, old_progress, progress
+                )
+                if milestone:
+                    milestones.append(milestone)
 
-        # 5. 发送通知和触发视觉效果
-        if unlocked:
-            self._enqueue_after_commit(
-                lambda: self._notify_unlocks(user_id, unlocked)
-            )
+                # 检查是否解锁
+                if progress >= 1.0:
+                    unlock_data = await self._unlock_achievement(user_id, achievement)
+                    if unlock_data:
+                        unlocked.append(unlock_data)
 
-        # 6. 发送里程碑通知
-        if milestones:
-            self._enqueue_after_commit(
-                lambda: self._notify_milestones(user_id, milestones)
-            )
+            # 4. 处理连击检测
+            combo_info = None
+            if unlocked:
+                combo_info = await self._handle_achievement_combo(user_id, len(unlocked))
+                # 将连击信息添加到每个解锁的成就中
+                if combo_info:
+                    for unlock_data in unlocked:
+                        unlock_data["combo_info"] = combo_info
 
-        if self._is_transaction_managed_externally():
-            await self.db.flush()
-        else:
-            await self.db.commit()
+            # 5. 发送通知和触发视觉效果
+            if unlocked:
+                self._enqueue_after_commit(
+                    lambda: self._notify_unlocks(user_id, unlocked)
+                )
 
-        return unlocked
+            # 6. 发送里程碑通知
+            if milestones:
+                self._enqueue_after_commit(
+                    lambda: self._notify_milestones(user_id, milestones)
+                )
+
+            if self._is_transaction_managed_externally():
+                await self.db.flush()
+            else:
+                await self.db.commit()
+
+            return unlocked
 
     async def _get_relevant_achievements(self, event_type: str) -> list[Achievement]:
         """获取与事件类型相关的成就"""
@@ -1086,37 +1169,25 @@ class AchievementEngine:
                     await self.db.flush()
 
                 case "photon":
-                    # 光子积分 - 实际发放
-                    try:
-                        from app.services.photon_service import PhotonService, PhotonTransactionType
+                    from app.services.photon_service import PhotonService, PhotonTransactionType
 
-                        photon_service = PhotonService(self.db)
-                        quantity = reward.get("quantity", 0)
+                    photon_service = PhotonService(self.db)
+                    quantity = int(reward.get("quantity", 0) or 0)
+                    if quantity <= 0:
+                        continue
 
-                        await photon_service.grant_photons(
-                            user_id=user_id,
-                            amount=quantity,
-                            source=f"achievement:{achievement.id}",
-                            transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
-                            metadata={"achievement_name": achievement.name},
-                            related_item_id=achievement.id,
-                            record_history=True,
-                            manage_transaction=False,
-                        )
+                    await photon_service.grant_photons(
+                        user_id=user_id,
+                        amount=quantity,
+                        source=f"achievement:{achievement.id}",
+                        transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
+                        metadata={"achievement_name": achievement.name},
+                        related_item_id=achievement.id,
+                        record_history=True,
+                        manage_transaction=False,
+                    )
 
-                        logger.info(f"Granted {quantity} photons to user {user_id} for achievement {achievement.id}")
-                    except Exception as e:
-                        logger.error(f"Failed to grant photons for achievement {achievement.id}: {e}")
-                        self._enqueue_after_commit(
-                            lambda user_id=str(user_id), achievement_id=achievement.id, achievement_name=achievement.name, quantity=quantity, error_message=str(e):
-                            self._schedule_photon_reward_retry(
-                                user_id=user_id,
-                                achievement_id=achievement_id,
-                                achievement_name=achievement_name,
-                                quantity=quantity,
-                                error_message=error_message,
-                            )
-                        )
+                    logger.info(f"Granted {quantity} photons to user {user_id} for achievement {achievement.id}")
 
                 case "visual_element":
                     # 解锁视觉元素

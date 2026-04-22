@@ -96,6 +96,74 @@ async def test_insufficient_balance(db_session: AsyncSession, test_user: User):
 
 
 @pytest.mark.asyncio
+async def test_deduct_photons_records_history(db_session: AsyncSession, test_user: User):
+    service = PhotonService(db_session)
+
+    await service.grant_photons(
+        user_id=str(test_user.id),
+        amount=100,
+        source="initial",
+    )
+
+    result = await service.deduct_photons(
+        user_id=str(test_user.id),
+        amount=30,
+        reason="shop:test",
+        record_history=True,
+        related_item_id="shop-item-1",
+    )
+
+    history_result = await db_session.execute(
+        select(PhotonTransactionHistory).where(
+            PhotonTransactionHistory.user_id == test_user.id,
+            PhotonTransactionHistory.related_item_id == "shop-item-1",
+        )
+    )
+    history = history_result.scalar_one()
+
+    assert result["old_balance"] == 100
+    assert result["new_balance"] == 70
+    assert history.amount == -30
+    assert history.balance_before == 100
+    assert history.balance_after == 70
+
+
+@pytest.mark.asyncio
+async def test_deduct_photons_skips_commit_when_transaction_managed_externally(
+    db_session: AsyncSession,
+    test_user: User,
+):
+    service = PhotonService(db_session)
+
+    await service.grant_photons(
+        user_id=str(test_user.id),
+        amount=40,
+        source="initial",
+    )
+    db_session.sync_session.info["external_transaction_managed"] = True
+
+    await service.deduct_photons(
+        user_id=str(test_user.id),
+        amount=15,
+        reason="managed",
+        record_history=True,
+        related_item_id="managed-deduct",
+    )
+
+    await db_session.rollback()
+    await db_session.refresh(test_user)
+    history_result = await db_session.execute(
+        select(PhotonTransactionHistory).where(
+            PhotonTransactionHistory.user_id == test_user.id,
+            PhotonTransactionHistory.related_item_id == "managed-deduct",
+        )
+    )
+
+    assert test_user.photon_balance == 40
+    assert history_result.scalar_one_or_none() is None
+
+
+@pytest.mark.asyncio
 async def test_has_sufficient(db_session: AsyncSession, test_user: User):
     """测试余额检查"""
     service = PhotonService(db_session)

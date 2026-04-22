@@ -17,13 +17,15 @@ class IdempotencyKey(Base):
     """
     __tablename__ = "idempotency_keys"
 
-    key = Column(String(64), primary_key=True)
+    key = Column(String(255), primary_key=True)
     user_id = Column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
+    endpoint = Column(String(128), nullable=False, default="")
+    response_hash = Column(String(64), nullable=False, default="")
 
     response = Column(JSON, nullable=False)
 

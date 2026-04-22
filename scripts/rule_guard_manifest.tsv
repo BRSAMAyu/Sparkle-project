@@ -31,3 +31,5 @@ AP	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ap_idiographic_association.p
 AR	bash "${REPO_ROOT}/scripts/stage32/run_sqam_suite.sh"
 AX	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_ax_route_ownership.py"
 AY	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_ay_llm_safety.py"
+BB	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bb_financial_atomicity.py"
+BC	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bc_idempotency_key.py"

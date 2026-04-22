@@ -315,6 +315,12 @@ class Settings(BaseSettings):
     # Aurora Stage 37
     AURORA_STAGE37_LLM_SAFETY_ENABLED: bool = True
 
+    # Aurora Stage 39
+    AURORA_STAGE39_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE39_COGLOAD_ROUTE_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE39_GALAXY_INJECT_MODE: str = "shadow"  # off | shadow | live
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""

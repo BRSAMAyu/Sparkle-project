@@ -175,3 +175,60 @@ async def test_attach_stage34_memory_context_returns_empty_lists_when_no_records
 
     assert result["active_goals"] == []
     assert result["episodic_memories"] == []
+
+
+@pytest.mark.asyncio
+async def test_attach_stage39_context_injects_scaffolding_and_galaxy_snapshot(orchestrator, monkeypatch):
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.AuroraStage39KillSwitchService.summary",
+        AsyncMock(
+            return_value={
+                "mode": "live",
+                "scaffolding_prompt_mode": "live",
+                "cogload_route_mode": "shadow",
+                "galaxy_inject_mode": "shadow",
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.ContextBuilderMixin._build_stage39_scaffolding_snapshot",
+        AsyncMock(
+            return_value={
+                "mode": "live",
+                "current_scaffolding_stage": "flow",
+                "intervention_intensity": "medium",
+                "template_support_level": 3,
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.GalaxyService.get_goal_context_nodes",
+        AsyncMock(
+            return_value=[
+                {
+                    "node_id": "node-1",
+                    "name": "热力学第一定律",
+                    "description": "当前目标的核心入口节点。",
+                    "mastery_score": 62.0,
+                    "role": "goal_anchor",
+                    "relevance_score": 2.0,
+                }
+            ]
+        ),
+    )
+
+    result = await orchestrator._attach_stage39_context(
+        {
+            "active_goals": [{"id": "00000000-0000-0000-0000-000000000111"}],
+            "cognitive_context": {},
+        },
+        user_id="00000000-0000-0000-0000-000000000123",
+        db_session=MagicMock(),
+    )
+
+    assert result["aurora_stage39_modes"]["scaffolding_prompt_mode"] == "live"
+    assert result["scaffolding_fsm_snapshot"]["current_scaffolding_stage"] == "flow"
+    assert result["galaxy_snapshot"]["nodes"][0]["name"] == "热力学第一定律"
+    assert result["cognitive_context"]["galaxy_snapshot"]["goal_ids"] == [
+        "00000000-0000-0000-0000-000000000111"
+    ]

@@ -200,6 +200,7 @@ from app.models.seed_content import (
     UserLibrarySubscription,
 )
 from app.models.semantic_memory import SemanticLink, StrategyNode
+from app.models.session_completion import SessionCompletion
 from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
 from app.models.simulation_run import SimulationRun
 from app.models.subject import Subject

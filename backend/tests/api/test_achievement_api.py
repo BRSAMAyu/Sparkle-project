@@ -170,7 +170,7 @@ def test_process_achievement_event_accepts_internal_token_and_user_id(achievemen
                 "/achievements/events/process",
                 params={"user_id": str(uuid4()), "event_type": "task_completed"},
                 json={"task_id": "task-1"},
-                headers={"X-Internal-Token": "secret-key"},
+                headers={"X-Internal-Token": "secret-key", "Idempotency-Key": "achv-evt-1"},
             )
 
     assert response.status_code == 200
@@ -179,6 +179,19 @@ def test_process_achievement_event_accepts_internal_token_and_user_id(achievemen
     assert body["unlocked_count"] == 1
     assert body["unlocked"][0]["achievement_id"] == "task_master"
     mocked_process.assert_awaited_once()
+
+
+def test_process_achievement_event_requires_idempotency_key(achievement_client):
+    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "secret-key"):
+        response = achievement_client.post(
+            "/achievements/events/process",
+            params={"user_id": str(uuid4()), "event_type": "task_completed"},
+            json={"task_id": "task-1"},
+            headers={"X-Internal-Token": "secret-key"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Idempotency-Key header is required"
 
 
 def test_share_templates_route_is_not_shadowed_by_dynamic_achievement_route(achievement_client):

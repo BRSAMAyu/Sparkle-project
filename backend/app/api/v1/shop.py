@@ -5,7 +5,7 @@ Shop API Endpoints
 from __future__ import annotations
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +16,7 @@ from app.models.user import User
 from app.schemas.shop import (
     PurchaseRequest,
 )
-from app.services.shop_service import get_shop_service
+from app.services.shop_service import IdempotencyConflictError, get_shop_service
 
 router = APIRouter()
 
@@ -107,6 +107,7 @@ async def get_shop_item_detail(
 @router.post("/purchase", response_model=dict[str, Any])
 async def purchase_item(
     request: PurchaseRequest,
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -115,12 +116,17 @@ async def purchase_item(
 
     Purchases an item from the shop. Deducts photons and adds item to user inventory.
     """
+    if not idempotency_key:
+        raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+
     shop_service = get_shop_service(db)
 
     try:
         result = await shop_service.purchase_item(
             user_id=str(current_user.id),
-            item_id=request.item_id
+            item_id=request.item_id,
+            idempotency_key=idempotency_key,
+            endpoint="/api/v1/shop/purchase",
         )
 
         return {
@@ -133,6 +139,9 @@ async def purchase_item(
             "price_paid": result["price_paid"]
         }
 
+    except IdempotencyConflictError as e:
+        logger.error(f"Purchase idempotency conflict: {e}")
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         logger.error(f"Purchase error: {e}")
         raise HTTPException(status_code=400, detail=str(e))

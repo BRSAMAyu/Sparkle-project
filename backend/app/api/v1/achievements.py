@@ -345,6 +345,7 @@ async def get_contract_status(
 @router.post("/contracts", response_model=dict[str, Any])
 async def create_contract(
     request: ContractCreateRequest,
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -353,6 +354,9 @@ async def create_contract(
 
     Creates a new study contract with photon stake.
     """
+    if not idempotency_key:
+        raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+
     service = ContractService(db)
 
     try:
@@ -375,6 +379,7 @@ async def create_contract(
 
 @router.delete("/contracts", response_model=dict[str, Any])
 async def cancel_contract(
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -383,6 +388,9 @@ async def cancel_contract(
 
     Cancels active contract (forfeits staked photons).
     """
+    if not idempotency_key:
+        raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+
     from sqlalchemy import and_, select
 
     from app.models.achievement import ContractStatus, SparkContract
@@ -556,6 +564,7 @@ async def process_achievement_event(
     user_id: str = Query(..., description="Target user ID"),
     event_type: str = Query(..., description="Event type"),
     event_data: dict[str, Any] | None = None,
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     _: None = Depends(verify_internal_token),
     db: AsyncSession = Depends(get_db)
 ):
@@ -565,6 +574,9 @@ async def process_achievement_event(
     Processes an achievement event and returns unlocked achievements.
     This endpoint is called by other services when user actions occur.
     """
+    if not idempotency_key:
+        raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+
     if event_data is None:
         event_data = {}
 
