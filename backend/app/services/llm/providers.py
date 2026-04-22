@@ -30,10 +30,10 @@ class OpenAICompatibleProvider(LLMProvider):
         if not api_key:
             logger.error(f"LLM Provider Initialization Error: api_key is empty for base_url={base_url}")
             # Do not raise here to allow fallback/demo mode to handle it, but log it clearly
-            self.api_key = "MISSING_KEY"
+            self.has_api_key = False
         else:
-            self.api_key = api_key
-            
+            self.has_api_key = True
+
         self.base_url = base_url
 
         # Set explicit timeout:

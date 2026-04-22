@@ -7,7 +7,7 @@ from uuid import UUID
 from loguru import logger
 
 from app.core.cache import cache_service
-from app.core.event_bus import EventBus
+from app.core.event_bus import EventBus, reliable_consumer
 from app.core.metrics import JOURNEY_EVENT_CONSUMER_ERROR_TOTAL
 from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -54,6 +54,7 @@ class JourneyEventConsumerBase:
                 logger.error("{} subscription failed: {}", self.CONSUMER_LABEL, exc)
                 await asyncio.sleep(1)
 
+    @reliable_consumer()
     async def handle_event(self, event: dict) -> None:
         if str(event.get("event_type") or "").strip() != self.EVENT_TYPE:
             return
@@ -91,9 +92,7 @@ class JourneyEventConsumerBase:
                 update_type="journey_consumer_error",
                 category="system",
                 title="系统正在补齐你的旅程数据",
-                description=(
-                    "有一条初始化/规划事件暂时没有处理成功，系统会保留你的进度并自动重试。"
-                ),
+                description=("有一条初始化/规划事件暂时没有处理成功，系统会保留你的进度并自动重试。"),
                 priority="medium",
                 metadata={
                     "consumer": self.CONSUMER_LABEL,

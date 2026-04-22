@@ -372,10 +372,11 @@ class ErrorBookService:
         if not gateway_url:
             logger.warning("Cannot resolve sparkle-file image without GATEWAY_URL")
             return ""
+        if not settings.INTERNAL_API_KEY:
+            logger.warning("Cannot resolve sparkle-file image without INTERNAL_API_KEY")
+            return ""
 
-        headers: dict[str, str] = {}
-        if settings.INTERNAL_API_KEY:
-            headers["X-Internal-API-Key"] = settings.INTERNAL_API_KEY
+        headers: dict[str, str] = {"X-Internal-API-Key": settings.INTERNAL_API_KEY}
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:

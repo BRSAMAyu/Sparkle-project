@@ -312,6 +312,9 @@ class Settings(BaseSettings):
     AURORA_STAGE35_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE35_METACOG_ROUTER_MODE: str = "shadow"  # off | shadow | live
 
+    # Aurora Stage 37
+    AURORA_STAGE37_LLM_SAFETY_ENABLED: bool = True
+
     # Email (SMTP)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: str = ""
@@ -684,10 +687,14 @@ class Settings(BaseSettings):
 
     # Event Bus reliability
     EVENT_BUS_MAX_RETRIES: int = 3
+    EVENT_BUS_PUBLISH_BASE_DELAY_MS: int = 200
+    EVENT_BUS_PUBLISH_MAX_DELAY_MS: int = 2000
     EVENT_BUS_DLQ_SUFFIX: str = ":dlq"
     EVENT_BUS_STREAM_MAXLEN: int = 50000  # Soft cap for primary/retry Redis streams
     EVENT_BUS_RETRY_STREAM_MAXLEN: int = 50000  # Prevent retry storms from growing streams unbounded
     EVENT_BUS_DLQ_MAXLEN: int = 10000  # Maximum messages in DLQ before trimming
+    EVENT_BUS_DLQ_ENABLED: bool = True
+    EVENT_BUS_PENDING_RETRY_IDLE_MS: int = 5000
 
     # Translation Service
     TRANSLATION_DAILY_CARD_LIMIT: int = 20  # Max vocabulary cards created per day from translation

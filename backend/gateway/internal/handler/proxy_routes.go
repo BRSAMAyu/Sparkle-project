@@ -715,8 +715,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered executions proxy routes")
 
 	// ==================== Admin Executions / OpenClaw Routes ====================
+	// route-tier: internal
 	adminExecutions := api.Group("/admin/executions")
-	adminExecutions.Use(authMiddleware)
+	adminExecutions.Use(authMiddleware, middleware.RequireAdmin)
 	{
 		adminExecutions.Any("", h.proxyWithHeaders)
 		adminExecutions.Any("/*path", h.proxyWithHeaders)

@@ -1,6 +1,7 @@
 """
 Sparkle Backend - FastAPI Application Entry Point
 """
+
 import asyncio
 import os
 import sys
@@ -25,6 +26,8 @@ from app.api.v1.health import set_start_time
 from app.api.v1.router import api_router
 from app.consumers.achievement_plan_consumer import AchievementPlanConsumer
 from app.consumers.galaxy_plan_consumer import GalaxyPlanConsumer
+from app.consumers.plan_task_generation_consumer import PlanTaskGenerationConsumer
+from app.consumers.user_memory_seed_consumer import UserMemorySeedConsumer
 from app.consumers.user_profile_bootstrap_consumer import UserProfileBootstrapConsumer
 from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
 from app.config import settings
@@ -67,12 +70,10 @@ logger.remove()
 logger.add(
     sys.stderr,
     level=settings.LOG_LEVEL,
-    serialize=not settings.DEBUG, # JSON format in production
+    serialize=not settings.DEBUG,  # JSON format in production
 )
 
-INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS = int(
-    os.getenv("INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS", "900")
-)
+INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS = int(os.getenv("INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS", "900"))
 ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER = (
     os.getenv("ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER", "false").lower() == "true"
 )
@@ -105,6 +106,7 @@ async def _run_working_memory_orphan_cleanup() -> None:
         deleted = await service.run_once()
         logger.info("WorkingMemory orphan cleanup completed deleted={}", deleted)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -122,13 +124,16 @@ async def lifespan(app: FastAPI):
     try:
         import bcrypt
         import passlib
+
         logger.info(f"Auth deps: passlib={passlib.__version__}, bcrypt={bcrypt.__version__}")
         # 验证兼容性: passlib 1.7.4 与 bcrypt 5.0+ 不兼容
         if passlib.__version__.startswith("1.7."):
             try:
                 bcrypt_ver = tuple(map(int, bcrypt.__version__.split(".")[:2]))
                 if bcrypt_ver >= (5, 0):
-                    logger.warning(f"⚠️  passlib {passlib.__version__} may be incompatible with bcrypt {bcrypt.__version__}. Consider downgrading to bcrypt<5.0.0")
+                    logger.warning(
+                        f"⚠️  passlib {passlib.__version__} may be incompatible with bcrypt {bcrypt.__version__}. Consider downgrading to bcrypt<5.0.0"
+                    )
             except Exception:
                 pass
     except ImportError:
@@ -165,6 +170,7 @@ async def lifespan(app: FastAPI):
     galaxy_consumer_task = None
     if cache_service.redis:
         from app.core.event_bus import event_bus
+
         galaxy_consumer = GalaxyEventConsumer(event_bus=event_bus)
         galaxy_consumer_task = asyncio.create_task(galaxy_consumer.start())
         app.state.galaxy_consumer_task = galaxy_consumer_task
@@ -189,9 +195,7 @@ async def lifespan(app: FastAPI):
             event_bus=event_bus,
             redis=cache_service.redis,
         )
-        idiographic_association_task = asyncio.create_task(
-            idiographic_association_service.start()
-        )
+        idiographic_association_task = asyncio.create_task(idiographic_association_service.start())
         app.state.idiographic_association_service = idiographic_association_service
         app.state.idiographic_association_task = idiographic_association_task
 
@@ -263,6 +267,12 @@ async def lifespan(app: FastAPI):
         )
         app.state.user_profile_bootstrap_consumer_task = asyncio.create_task(profile_bootstrap_consumer.start())
 
+        user_memory_seed_consumer = UserMemorySeedConsumer(
+            event_bus=event_bus,
+            redis_client=cache_service.redis,
+        )
+        app.state.user_memory_seed_consumer_task = asyncio.create_task(user_memory_seed_consumer.start())
+
         galaxy_plan_consumer = GalaxyPlanConsumer(event_bus=event_bus, redis_client=cache_service.redis)
         app.state.galaxy_plan_consumer_task = asyncio.create_task(galaxy_plan_consumer.start())
 
@@ -272,11 +282,15 @@ async def lifespan(app: FastAPI):
         )
         app.state.achievement_plan_consumer_task = asyncio.create_task(achievement_plan_consumer.start())
 
+        plan_task_generation_consumer = PlanTaskGenerationConsumer(
+            event_bus=event_bus,
+            redis_client=cache_service.redis,
+        )
+        app.state.plan_task_generation_consumer_task = asyncio.create_task(plan_task_generation_consumer.start())
+
     intervention_outcome_verifier_task = None
     if event_bus is not None and ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER:
-        intervention_outcome_verifier_task = asyncio.create_task(
-            _run_intervention_outcome_verifier_loop()
-        )
+        intervention_outcome_verifier_task = asyncio.create_task(_run_intervention_outcome_verifier_loop())
         app.state.intervention_outcome_verifier_task = intervention_outcome_verifier_task
 
     summarization_worker_task = None
@@ -309,6 +323,7 @@ async def lifespan(app: FastAPI):
     # Start Galaxy Services (Phase 4)
     if cache_service.redis and event_bus is not None:
         from app.services.galaxy.streaming_service import init_galaxy_streaming_service
+
         try:
             galaxy_streaming_service = await init_galaxy_streaming_service(manager, event_bus)
             # Store the service in app state for potential access
@@ -341,6 +356,7 @@ async def lifespan(app: FastAPI):
                     ensure_global_galaxy_baseline,
                 )
                 from app.data.seed_content_initial import initialize_seed_libraries
+
                 await _ensure_achievements(db)
                 await _ensure_galaxy_skins(db)
                 await ensure_global_galaxy_baseline(db)
@@ -414,12 +430,8 @@ async def lifespan(app: FastAPI):
         srl_phase_tracker_task.cancel()
         with suppress(asyncio.CancelledError):
             await srl_phase_tracker_task
-    idiographic_association_service = getattr(
-        app.state, "idiographic_association_service", None
-    )
-    idiographic_association_task = getattr(
-        app.state, "idiographic_association_task", None
-    )
+    idiographic_association_service = getattr(app.state, "idiographic_association_service", None)
+    idiographic_association_task = getattr(app.state, "idiographic_association_task", None)
     if idiographic_association_service:
         idiographic_association_service.stop()
     if idiographic_association_task:
@@ -493,6 +505,12 @@ async def lifespan(app: FastAPI):
         with suppress(asyncio.CancelledError):
             await user_profile_bootstrap_consumer_task
 
+    user_memory_seed_consumer_task = getattr(app.state, "user_memory_seed_consumer_task", None)
+    if user_memory_seed_consumer_task:
+        user_memory_seed_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await user_memory_seed_consumer_task
+
     galaxy_plan_consumer_task = getattr(app.state, "galaxy_plan_consumer_task", None)
     if galaxy_plan_consumer_task:
         galaxy_plan_consumer_task.cancel()
@@ -504,6 +522,12 @@ async def lifespan(app: FastAPI):
         achievement_plan_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await achievement_plan_consumer_task
+
+    plan_task_generation_consumer_task = getattr(app.state, "plan_task_generation_consumer_task", None)
+    if plan_task_generation_consumer_task:
+        plan_task_generation_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await plan_task_generation_consumer_task
 
     intervention_outcome_verifier_task = getattr(app.state, "intervention_outcome_verifier_task", None)
     if intervention_outcome_verifier_task:
@@ -542,6 +566,7 @@ async def lifespan(app: FastAPI):
     await manager.close_redis()
 
     logger.info("Sparkle API Server stopped")
+
 
 # Create FastAPI application
 app = FastAPI(
@@ -604,6 +629,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             )
         return response
 
+
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestContextMiddleware)
 
@@ -617,18 +643,16 @@ app.add_middleware(
 )
 
 # 🆕 幂等性中间件
-idempotency_store = get_idempotency_store(settings.IDEMPOTENCY_STORE if hasattr(settings, "IDEMPOTENCY_STORE") else "redis")
+idempotency_store = get_idempotency_store(
+    settings.IDEMPOTENCY_STORE if hasattr(settings, "IDEMPOTENCY_STORE") else "redis"
+)
 app.add_middleware(IdempotencyMiddleware, store=idempotency_store)
 
 
 @app.get("/")
 async def root():
     """Root endpoint - health check"""
-    return {
-        "app": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "status": "running"
-    }
+    return {"app": settings.APP_NAME, "version": settings.APP_VERSION, "status": "running"}
 
 
 @app.get("/health")
@@ -638,10 +662,7 @@ async def health_check():
 
     完整的健康检查请访问 /api/v1/health
     """
-    return {
-        "status": "healthy",
-        "detail": "For detailed health info, use /api/v1/health"
-    }
+    return {"status": "healthy", "detail": "For detailed health info, use /api/v1/health"}
 
 
 @app.get("/live")
@@ -661,6 +682,7 @@ app.include_router(api_router, prefix="/api/v1")
 if settings.ENABLE_AGENT_GRAPH_V2:
     try:
         from importlib import import_module
+
         agent_graph_router = import_module("app.api.v2.agent_graph").router
         app.include_router(agent_graph_router, prefix="/api/v2/agent", tags=["Agent V2"])
     except Exception as exc:
@@ -670,8 +692,7 @@ if settings.ENABLE_AGENT_GRAPH_V2:
         @placeholder_router.get("/status")
         async def agent_graph_v2_unavailable():
             raise HTTPException(
-                status_code=501,
-                detail="Agent Graph V2 dependencies not installed (langgraph/langchain)."
+                status_code=501, detail="Agent Graph V2 dependencies not installed (langgraph/langchain)."
             )
 
         app.include_router(placeholder_router, prefix="/api/v2/agent", tags=["Agent V2"])
@@ -683,6 +704,7 @@ else:
 # Make sure the directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -698,6 +720,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "detail": encoded_errors,
         },
     )
+
 
 @app.exception_handler(SparkleException)
 async def sparkle_exception_handler(request: Request, exc: SparkleException):
@@ -715,6 +738,7 @@ async def sparkle_exception_handler(request: Request, exc: SparkleException):
             "trace_id": trace_id,
         },
     )
+
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):

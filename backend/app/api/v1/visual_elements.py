@@ -3,6 +3,7 @@ Visual Elements API Endpoints
 视觉元素系统 API 端点
 """
 from __future__ import annotations
+import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
@@ -52,7 +53,9 @@ def _resolve_locale(locale: str | None, accept_language: str | None) -> str | No
 
 async def verify_internal_token(x_internal_token: str | None = Header(None)) -> None:
     """保护内部 API 端点"""
-    if settings.INTERNAL_API_KEY and x_internal_token != settings.INTERNAL_API_KEY:
+    if not settings.INTERNAL_API_KEY:
+        raise HTTPException(status_code=503, detail="Internal API key not configured")
+    if not x_internal_token or not secrets.compare_digest(x_internal_token, settings.INTERNAL_API_KEY):
         raise HTTPException(status_code=401, detail="Invalid internal token")
 
 
@@ -190,6 +193,7 @@ async def unequip_element(
     return await service.unequip_element(current_user.id, element_type, resolved_locale)
 
 
+# route-tier: internal
 @router.post("/unlock", response_model=UnlockElementResponse)
 async def unlock_element_internal(
     request: UnlockElementRequest,

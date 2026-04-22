@@ -626,6 +626,13 @@ KILL_SWITCH_MODE = get_or_create_metric(
     ["stage", "feature"],
 )
 
+LLM_SAFETY_BYPASS_TOTAL = get_or_create_metric(
+    Counter,
+    "llm_safety_bypass_total",
+    "Total LLM safety bypass events by surface",
+    ["surface"],
+)
+
 RESPONSE_FALLBACK_GENERATED_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_response_fallback_generated_total",
@@ -710,6 +717,27 @@ EVENT_BUS_CONSUMER_LAG_SECONDS = get_or_create_metric(
     "sparkle_event_bus_consumer_lag_seconds",
     "Time lag in seconds between stream head and consumer group position",
     ["stream", "consumer_group"],
+)
+
+EVENT_BUS_PUBLISH_RETRIES_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_event_bus_publish_retries_total",
+    "Event bus publish retry attempts by event type",
+    ["event_type"],
+)
+
+EVENT_BUS_DLQ_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_event_bus_dlq_total",
+    "Total DLQ writes by event type",
+    ["event_type"],
+)
+
+EVENT_BUS_CONSUMER_FAILURE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_event_bus_consumer_failure_total",
+    "Total consumer callback failures by consumer",
+    ["consumer"],
 )
 
 SPARKLE_SKILL_COUNT_PER_USER = get_or_create_metric(

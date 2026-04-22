@@ -331,3 +331,61 @@ func TestProxyRoutesHandler_ClientTelemetryAuthBoundary(t *testing.T) {
 		t.Fatalf("expected telemetry summary to invoke auth middleware once, got %d calls", authCalls)
 	}
 }
+
+func TestProxyRoutesHandler_AdminExecutionsRequireAdmin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logger := zap.NewNop()
+
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer backend.Close()
+
+	backendURL, err := url.Parse(backend.URL)
+	if err != nil {
+		t.Fatalf("failed to parse backend url: %v", err)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(backendURL)
+
+	abTestConfig := &middleware.ABTestConfig{
+		BackendURL: backend.URL,
+		Timeout:    3 * time.Second,
+		Enabled:    false,
+	}
+	abTestMiddleware := middleware.NewABTestMiddleware(abTestConfig)
+	h := NewProxyRoutesHandler(proxy, abTestMiddleware, logger)
+
+	newRouter := func(isAdmin bool) *gin.Engine {
+		router := gin.New()
+		api := router.Group("/api/v1")
+		mockAuthMiddleware := func(c *gin.Context) {
+			c.Set("user_id", "test-user-123")
+			c.Set("auth_token", "test-token-abc")
+			c.Set("is_admin", isAdmin)
+			c.Next()
+		}
+		h.RegisterProxyRoutes(api, mockAuthMiddleware)
+		return router
+	}
+
+	notAdminResp := httptest.NewRecorder()
+	newRouter(false).ServeHTTP(
+		notAdminResp,
+		httptest.NewRequest(http.MethodGet, "/api/v1/admin/executions", nil),
+	)
+	if notAdminResp.Code != http.StatusForbidden {
+		t.Fatalf("expected non-admin request to be forbidden, got %d", notAdminResp.Code)
+	}
+
+	adminServer := httptest.NewServer(newRouter(true))
+	defer adminServer.Close()
+
+	adminResp, err := http.Get(adminServer.URL + "/api/v1/admin/executions")
+	if err != nil {
+		t.Fatalf("expected admin request to proxy successfully: %v", err)
+	}
+	defer adminResp.Body.Close()
+	if adminResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected admin request to proxy successfully, got %d", adminResp.StatusCode)
+	}
+}

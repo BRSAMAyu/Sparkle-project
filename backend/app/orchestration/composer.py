@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any
 
+from app.core.llm_secure_io import sanitize_tool_payload
 from app.tools.base import ToolResult
 
 
@@ -51,9 +52,9 @@ class ResponseComposer:
         response = {
             "message": llm_text,
             "widgets": widgets,
-            "tool_results": [r.model_dump() for r in tool_results],
+            "tool_results": [sanitize_tool_payload(r.model_dump()) for r in tool_results],
             "has_errors": len(errors) > 0,
-            "errors": errors if errors else None,
+            "errors": sanitize_tool_payload(errors) if errors else None,
         }
 
         # 需要用户确认的操作

@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import suppress
 from datetime import timezone, datetime
+from functools import wraps
 from typing import Any
 
 import redis.asyncio as redis
@@ -13,7 +14,14 @@ from loguru import logger
 from redis.exceptions import ResponseError
 
 from app.config import settings
+from app.core.metrics import (
+    EVENT_BUS_CONSUMER_FAILURE_TOTAL,
+    EVENT_BUS_DLQ_TOTAL,
+    EVENT_BUS_PUBLISH_RETRIES_TOTAL,
+)
 from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
+from app.db.session import AsyncSessionLocal
+from app.models.event_bus_dlq import EventBusDLQEntry
 
 
 class Event(ABC):
@@ -696,8 +704,12 @@ class EventBus:
         self._consumer_tasks: list[asyncio.Task] = []
         self._running = False
         self.max_retries = getattr(settings, "EVENT_BUS_MAX_RETRIES", 3)
+        self.publish_base_delay_ms = getattr(settings, "EVENT_BUS_PUBLISH_BASE_DELAY_MS", 200)
+        self.publish_max_delay_ms = getattr(settings, "EVENT_BUS_PUBLISH_MAX_DELAY_MS", 2000)
         self.dlq_suffix = getattr(settings, "EVENT_BUS_DLQ_SUFFIX", ":dlq")
         self.dlq_maxlen = getattr(settings, "EVENT_BUS_DLQ_MAXLEN", 10000)
+        self.dlq_enabled = bool(getattr(settings, "EVENT_BUS_DLQ_ENABLED", True))
+        self.pending_retry_idle_ms = getattr(settings, "EVENT_BUS_PENDING_RETRY_IDLE_MS", 5000)
         self.retry_stream_maxlen = getattr(
             settings,
             "EVENT_BUS_RETRY_STREAM_MAXLEN",
@@ -726,6 +738,55 @@ class EventBus:
         except (TypeError, ValueError):
             return 0
 
+    @staticmethod
+    def _consumer_label(callback: Callable[..., Any], consumer_name: str) -> str:
+        label = getattr(callback, "__event_bus_consumer_name__", None)
+        if isinstance(label, str) and label.strip():
+            return label.strip()
+        return consumer_name
+
+    async def _persist_dlq_entry(
+        self,
+        *,
+        stream: str,
+        group_name: str,
+        consumer_name: str,
+        message_id: str,
+        parsed_data: dict[str, Any],
+        error: Exception,
+        retry_count: int,
+        failure_stage: str,
+    ) -> None:
+        if not self.dlq_enabled:
+            return
+
+        raw_user_id = parsed_data.get("user_id")
+        user_id = None
+        if raw_user_id:
+            try:
+                from uuid import UUID
+
+                user_id = UUID(str(raw_user_id))
+            except (TypeError, ValueError):
+                user_id = None
+
+        async with AsyncSessionLocal() as db:
+            db.add(
+                EventBusDLQEntry(
+                    stream=stream,
+                    event_type=str(parsed_data.get("event_type") or "unknown"),
+                    user_id=user_id,
+                    group_name=group_name,
+                    consumer_name=consumer_name,
+                    message_id=message_id,
+                    retry_count=retry_count,
+                    failure_stage=failure_stage,
+                    error=str(error),
+                    payload=dict(parsed_data),
+                )
+            )
+            await db.commit()
+
     async def _move_to_dlq(
         self,
         *,
@@ -737,9 +798,6 @@ class EventBus:
         error: Exception,
         retry_count: int,
     ) -> None:
-        if not self.redis:
-            return
-
         payload = {
             "event": parsed_data,
             "error": str(error),
@@ -750,12 +808,23 @@ class EventBus:
             "retry_count": retry_count,
             "failed_at": datetime.now(timezone.utc).isoformat(),
         }
-        await self.redis.xadd(
-            self._dlq_stream(stream),
-            {"data": json.dumps(payload, ensure_ascii=False, default=str)},
-            maxlen=self.dlq_maxlen,  # Prevent unbounded DLQ growth
+        if self.redis:
+            await self.redis.xadd(
+                self._dlq_stream(stream),
+                {"data": json.dumps(payload, ensure_ascii=False, default=str)},
+                maxlen=self.dlq_maxlen,
+            )
+        await self._persist_dlq_entry(
+            stream=stream,
+            group_name=group_name,
+            consumer_name=consumer_name,
+            message_id=message_id,
+            parsed_data=parsed_data,
+            error=error,
+            retry_count=retry_count,
+            failure_stage="consume",
         )
-        await self.redis.xack(stream, group_name, message_id)
+        EVENT_BUS_DLQ_TOTAL.labels(event_type=str(parsed_data.get("event_type") or "unknown")).inc()
         logger.error(
             "Moved event to DLQ: stream={} group={} consumer={} message_id={} retry_count={} error={}",
             stream,
@@ -848,6 +917,18 @@ class EventBus:
                 dlq_error,
             )
 
+    async def _publish_once(self, event_type: str, payload: dict[str, Any], stream: str) -> str:
+        if not self.redis:
+            await self.connect()
+            if not self.redis:
+                raise RuntimeError("redis_not_connected")
+
+        message = payload.copy()
+        if "event_type" not in message:
+            message["event_type"] = event_type
+
+        return await self.redis.xadd(stream, self._serialize_stream_body(message))
+
     async def connect(self):
         """Establish Redis connection"""
         if not self.redis:
@@ -896,35 +977,46 @@ class EventBus:
         Returns:
             Message ID if successful, None otherwise
         """
-        if not self.redis:
-            await self.connect()
-            if not self.redis:
-                logger.error("Cannot publish: Redis not connected")
-                return None
+        last_error: Exception | None = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                msg_id = await self._publish_once(event_type, payload, stream)
+                logger.debug(f"Published event {event_type} to {stream} with ID {msg_id}")
+                return msg_id
+            except Exception as exc:
+                last_error = exc
+                if attempt >= self.max_retries:
+                    break
+                EVENT_BUS_PUBLISH_RETRIES_TOTAL.labels(event_type=event_type).inc()
+                delay_ms = min(self.publish_base_delay_ms * (2**attempt), self.publish_max_delay_ms)
+                logger.warning(
+                    "Retrying event publish: event_type={} stream={} attempt={}/{} delay_ms={} error={}",
+                    event_type,
+                    stream,
+                    attempt + 1,
+                    self.max_retries,
+                    delay_ms,
+                    exc,
+                )
+                await asyncio.sleep(delay_ms / 1000)
 
-        try:
-            # Ensure payload implies event_type if not present, or wrap it
-            message = payload.copy()
-            if "event_type" not in message:
-                message["event_type"] = event_type
-
-            # Serialize complex types if necessary (Redis expects str->str dict for simpler usage)
-            # We use json dumps for the whole payload or individual fields.
-            # Here we dump the whole payload into a 'data' field to avoid field limitation issues,
-            # or we flatten it. For simplicity and flexibility, let's put it in 'data'.
-            # However, standard stream usage often puts fields directly.
-            # Let's stringify values.
-
-            msg_body = self._serialize_stream_body(message)
-
-            # XADD
-            msg_id = await self.redis.xadd(stream, msg_body)
-            logger.debug(f"Published event {event_type} to {stream} with ID {msg_id}")
-            return msg_id
-
-        except Exception as e:
-            logger.error(f"Failed to publish event {event_type}: {e}")
-            return None
+        logger.error(f"Failed to publish event {event_type}: {last_error}")
+        if self.dlq_enabled:
+            try:
+                await self._persist_dlq_entry(
+                    stream=stream,
+                    group_name="publisher",
+                    consumer_name="event_bus.publish",
+                    message_id="publish-failure",
+                    parsed_data=dict(payload or {}, event_type=payload.get("event_type") or event_type),
+                    error=last_error or RuntimeError("unknown_publish_error"),
+                    retry_count=self.max_retries,
+                    failure_stage="publish",
+                )
+                EVENT_BUS_DLQ_TOTAL.labels(event_type=event_type).inc()
+            except Exception as dlq_exc:
+                logger.error("Failed to persist publish failure DLQ entry for {}: {}", event_type, dlq_exc)
+        return None
 
     async def subscribe(self, stream: str, group_name: str, consumer_name: str, callback: Callable[[dict], Any]):
         """
@@ -959,8 +1051,83 @@ class EventBus:
         """Lazy initialization of idempotency store"""
         if self._idempotency is None:
             from app.core.idempotency import get_idempotency_store
+
             self._idempotency = get_idempotency_store("redis")
         return self._idempotency
+
+    async def _claim_stale_messages(
+        self,
+        stream: str,
+        group_name: str,
+        consumer_name: str,
+    ) -> list[tuple[str, dict[str, Any]]]:
+        if not self.redis:
+            return []
+        try:
+            next_id, messages = await self.redis.xautoclaim(
+                stream,
+                group_name,
+                consumer_name,
+                min_idle_time=self.pending_retry_idle_ms,
+                start_id="0-0",
+                count=10,
+            )
+            if next_id:
+                _ = next_id
+            return list(messages or [])
+        except ResponseError:
+            return []
+
+    async def _process_stream_message(
+        self,
+        *,
+        stream: str,
+        group_name: str,
+        consumer_name: str,
+        callback: Callable[[dict], Any],
+        message_id: str,
+        data: dict[str, Any],
+    ) -> None:
+        parsed_data: dict[str, Any] = {}
+        try:
+            for key, value in data.items():
+                try:
+                    parsed_data[key] = json.loads(value)
+                except (json.JSONDecodeError, TypeError):
+                    parsed_data[key] = value
+
+            idempotency_key = f"evt:{stream}:{message_id}"
+            idempotency = await self._get_idempotency_store()
+            existing = await idempotency.get(idempotency_key)
+            if existing:
+                logger.info(f"Skipping duplicate message: {message_id}")
+                await self.redis.xack(stream, group_name, message_id)
+                return
+
+            if not await idempotency.lock(idempotency_key):
+                logger.warning(f"Could not acquire lock for message: {message_id}")
+                return
+
+            try:
+                await callback(parsed_data)
+                await idempotency.set(idempotency_key, {"status": "done"}, ttl=86400)
+                await self.redis.xack(stream, group_name, message_id)
+            except Exception:
+                await idempotency.unlock(idempotency_key)
+                raise
+        except Exception as exc:
+            label = self._consumer_label(callback, consumer_name)
+            EVENT_BUS_CONSUMER_FAILURE_TOTAL.labels(consumer=label).inc()
+            logger.error(f"Error processing message {message_id}: {exc}")
+            await self._move_to_dlq(
+                stream=stream,
+                group_name=group_name,
+                consumer_name=label,
+                message_id=message_id,
+                parsed_data=parsed_data,
+                error=exc,
+                retry_count=self._extract_retry_count(parsed_data),
+            )
 
     async def _consume_loop(self, stream: str, group_name: str, consumer_name: str, callback: Callable):
         logger.info(f"Starting consumer loop: {group_name}:{consumer_name} on {stream}")
@@ -971,68 +1138,32 @@ class EventBus:
                     await asyncio.sleep(1)
                     continue
 
-                # Read from group
-                # count=1 for processing one by one, block=5000ms
-                entries = await self.redis.xreadgroup(
-                    groupname=group_name, consumername=consumer_name, streams={stream: ">"}, count=1, block=2000
-                )
+                entries = []
+                stale_messages = await self._claim_stale_messages(stream, group_name, consumer_name)
+                if stale_messages:
+                    entries = [(stream, stale_messages)]
+                else:
+                    entries = await self.redis.xreadgroup(
+                        groupname=group_name,
+                        consumername=consumer_name,
+                        streams={stream: ">"},
+                        count=1,
+                        block=2000,
+                    )
 
                 if not entries:
                     continue
 
                 for _stream_name, messages in entries:
                     for message_id, data in messages:
-                        parsed_data = {}  # Initialize before try block for error handler
-                        try:
-                            # Parse data (handling json strings if we did that)
-                            for k, v in data.items():
-                                try:
-                                    parsed_data[k] = json.loads(v)
-                                except (json.JSONDecodeError, TypeError):
-                                    parsed_data[k] = v
-
-                            # === IDEMPOTENCY CHECK ===
-                            # Prevent duplicate processing when messages are redelivered after crash
-                            idempotency_key = f"evt:{stream}:{message_id}"
-                            idempotency = await self._get_idempotency_store()
-
-                            # Check if already processed
-                            existing = await idempotency.get(idempotency_key)
-                            if existing:
-                                logger.info(f"Skipping duplicate message: {message_id}")
-                                await self.redis.xack(stream, group_name, message_id)
-                                continue
-
-                            # Acquire processing lock
-                            if not await idempotency.lock(idempotency_key):
-                                logger.warning(f"Could not acquire lock for message: {message_id}")
-                                continue
-
-                            try:
-                                # Invoke callback
-                                await callback(parsed_data)
-
-                                # Mark as processed
-                                await idempotency.set(idempotency_key, {"status": "done"}, ttl=86400)
-
-                                # ACK
-                                await self.redis.xack(stream, group_name, message_id)
-
-                            except Exception as callback_error:
-                                # Release lock on failure so retry can proceed
-                                await idempotency.unlock(idempotency_key)
-                                raise callback_error
-
-                        except Exception as e:
-                            logger.error(f"Error processing message {message_id}: {e}")
-                            await self._handle_failed_message(
-                                stream=stream,
-                                group_name=group_name,
-                                consumer_name=consumer_name,
-                                message_id=message_id,
-                                parsed_data=parsed_data,
-                                error=e,
-                            )
+                        await self._process_stream_message(
+                            stream=stream,
+                            group_name=group_name,
+                            consumer_name=consumer_name,
+                            callback=callback,
+                            message_id=message_id,
+                            data=data,
+                        )
 
             except Exception as e:
                 logger.error(f"Error in consumer loop: {e}")
@@ -1151,3 +1282,33 @@ class EventBus:
 
 # Global instance
 event_bus = EventBus()
+
+
+def reliable_consumer(consumer_name: str | None = None):
+    """Mark a callback as a reliable consumer for Rule AZ enforcement."""
+
+    def decorator(func):
+        label = consumer_name or getattr(func, "__qualname__", getattr(func, "__name__", "consumer"))
+
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+
+        wrapper.__event_bus_reliable_consumer__ = True
+        wrapper.__event_bus_consumer_name__ = label
+        return wrapper
+
+    return decorator
+
+
+class EventBusReliablePublisher:
+    """Thin compatibility layer for governed EventBus publishing."""
+
+    def __init__(self, bus: EventBus):
+        self._bus = bus
+
+    async def publish(self, event_type: str, payload: dict[str, Any], stream: str = "sparkle_events") -> str | None:
+        return await self._bus.publish(event_type, payload, stream=stream)
+
+
+event_bus_reliable = EventBusReliablePublisher(event_bus)
