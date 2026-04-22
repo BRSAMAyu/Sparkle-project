@@ -8,7 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 from loguru import logger
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import lazyload
 
@@ -150,6 +150,47 @@ class PhotonService:
 
         await self.db.flush()  # flush但不commit
         return old_balance, new_balance, user
+
+    async def _deduct_balance_atomically(
+        self,
+        user_id: str,
+        amount: int,
+        *,
+        allow_negative: bool,
+    ) -> tuple[int, int]:
+        update_stmt = (
+            update(User)
+            .where(User.id == user_id)
+            .values(
+                photon_balance=User.photon_balance - amount,
+                updated_at=_utcnow(),
+            )
+        )
+        if not allow_negative:
+            update_stmt = update_stmt.where(User.photon_balance >= amount)
+
+        result = await self.db.execute(
+            update_stmt.returning(User.photon_balance)
+        )
+        new_balance = result.scalar_one_or_none()
+
+        if new_balance is None:
+            existing_balance_result = await self.db.execute(
+                select(User.photon_balance).where(User.id == user_id)
+            )
+            existing_balance = existing_balance_result.scalar_one_or_none()
+            if existing_balance is None:
+                raise ValueError(f"User {user_id} not found")
+            if not allow_negative:
+                raise ValueError(
+                    f"Insufficient photon balance: {existing_balance} < {amount}"
+                )
+            raise ValueError(f"Failed to deduct photons for user {user_id}")
+
+        cache_key = f"{settings.APP_NAME}:photon:balance:{user_id}"
+        await cache_service.delete(cache_key)
+
+        return int(new_balance) + amount, int(new_balance)
 
     async def grant_photons(
         self,
@@ -295,15 +336,11 @@ class PhotonService:
             else manage_transaction
         )
 
-        # 先检查余额
-        old_balance = await self.get_balance(user_id)
-        if not allow_negative and old_balance < amount:
-            raise ValueError(
-                f"Insufficient photon balance: {old_balance} < {amount}"
-            )
-
-        # 使用内部方法更新余额（负数表示扣除，自动删除缓存）
-        old_balance, new_balance, user = await self._update_balance(user_id, -amount)
+        old_balance, new_balance = await self._deduct_balance_atomically(
+            user_id=user_id,
+            amount=amount,
+            allow_negative=allow_negative,
+        )
 
         if record_history:
             await self.record_transaction(
@@ -317,10 +354,10 @@ class PhotonService:
                 extra_data=transaction_metadata,
             )
 
-        await self._finalize_balance_mutation(
-            user,
-            manage_transaction=should_manage_transaction,
-        )
+        if should_manage_transaction:
+            await self.db.commit()
+        else:
+            await self.db.flush()
 
         logger.info(
             f"Deducted {amount} photons from user {user_id}, "
