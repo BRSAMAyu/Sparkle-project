@@ -111,7 +111,10 @@ celery_app.conf.update(
         "generate_daily_capsules_for_all": {"queue": "default"},
         "app.core.celery_tasks.check_prediction_accuracy": {"queue": "low_priority"},
         "app.core.celery_tasks.cleanup_stale_simulation_sessions": {"queue": "low_priority"},
+        "app.core.celery_tasks.persist_simulation_run": {"queue": "low_priority"},
+        "app.core.celery_tasks.persist_report_snapshot": {"queue": "low_priority"},
         "app.core.celery_tasks.recompute_idiographic_associations": {"queue": "low_priority"},
+        "app.core.celery_tasks.run_push_policy_scheduler": {"queue": "default"},
         # P1: Knowledge Galaxy auto-update tasks
         "update_knowledge_galaxy": {"queue": "default"},
         "sync_plan_progress_to_galaxy": {"queue": "low_priority"},
@@ -981,6 +984,11 @@ celery_app.conf.beat_schedule = {
     "weekly-learning-report": {
         "task": "app.core.celery_tasks.generate_weekly_learning_reports",
         "schedule": crontab(day_of_week="mon", hour=9, minute=0),
+        "options": {"queue": "default"},
+    },
+    "push-policy-scheduler": {
+        "task": "app.core.celery_tasks.run_push_policy_scheduler",
+        "schedule": float(max(settings.AURORA_STAGE38_PUSH_SCHEDULER_INTERVAL_MINUTES, 1) * 60),
         "options": {"queue": "default"},
     },
     "weekly-growth-digest-generation": {

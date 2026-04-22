@@ -9,13 +9,15 @@ from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
-from app.core.event_bus import event_bus
+from app.core.event_bus import event_bus_reliable
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.services.simulation.simulation_run_store import SimulationRunStore
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.predictive_service import PredictiveService
 from app.services.simulation.participant_generator import generate_participants
@@ -98,7 +100,9 @@ class UserInteractionPoint:
             id=str(payload.get("id") or uuid4()),
             interaction_type=str(payload.get("interaction_type") or "choice"),
             prompt=str(payload.get("prompt") or ""),
-            suggested_replies=[str(item).strip() for item in list(payload.get("suggested_replies") or []) if str(item).strip()],
+            suggested_replies=[
+                str(item).strip() for item in list(payload.get("suggested_replies") or []) if str(item).strip()
+            ],
             options=[str(item).strip() for item in list(payload.get("options") or []) if str(item).strip()],
             target_round=int(payload.get("target_round") or 0),
             status=str(payload.get("status") or "pending"),
@@ -173,7 +177,7 @@ class SimulationEngine:
 
     def __init__(self, db: AsyncSession | None = None):
         self.db = db
-        self.event_bus = event_bus
+        self.event_bus_reliable = event_bus_reliable
 
     async def get_session(
         self,
@@ -285,7 +289,9 @@ class SimulationEngine:
             speaker_name = str(fallback.get("speaker") or "").strip()
             speaker = next(
                 (participant for participant in participants if participant.name == speaker_name),
-                participants[0] if participants else AgentParticipant(
+                participants[0]
+                if participants
+                else AgentParticipant(
                     name="学习伙伴",
                     role_hint="学习伙伴",
                     persona={},
@@ -444,7 +450,9 @@ class SimulationEngine:
                     str(question_text or ""),
                     str(user_answer or ""),
                     str(correct_answer or ""),
-                    json.dumps(latest_analysis, ensure_ascii=False) if isinstance(latest_analysis, dict) else str(latest_analysis or ""),
+                    json.dumps(latest_analysis, ensure_ascii=False)
+                    if isinstance(latest_analysis, dict)
+                    else str(latest_analysis or ""),
                 ]
             ).lower()
             if topic_lower not in haystack:
@@ -500,7 +508,7 @@ class SimulationEngine:
                 f"掌握度={('[数据不足]' if mastery_score is None else f'{round(float(mastery_score or 0.0))}%')}"
             )
             for node_id, name, description, mastery_score in rows
-            if str(name or '').strip()
+            if str(name or "").strip()
         ]
 
     async def stream(
@@ -535,16 +543,19 @@ class SimulationEngine:
             template=template,
         )
 
-        yield "status", {
-            "session_id": session_id,
-            "state": LearningSimulationState.PREPARING.value,
-            "progress": 0.08,
-            "topic": topic,
-            "scenario_key": normalized_scenario_key,
-            "planned_round_count": planned_round_count,
-            "facilitation_style": normalized_facilitation_style,
-            "anchor_status": anchor_context["anchor_status"],
-        }
+        yield (
+            "status",
+            {
+                "session_id": session_id,
+                "state": LearningSimulationState.PREPARING.value,
+                "progress": 0.08,
+                "topic": topic,
+                "scenario_key": normalized_scenario_key,
+                "planned_round_count": planned_round_count,
+                "facilitation_style": normalized_facilitation_style,
+                "anchor_status": anchor_context["anchor_status"],
+            },
+        )
 
         raw_participants = await generate_participants(
             scenario_key=normalized_scenario_key,
@@ -558,12 +569,15 @@ class SimulationEngine:
             participants_from=str(template.get("participants_from") or "") or None,
         )
         participants = self._build_agent_participants(raw_participants, scenario_key=normalized_scenario_key)
-        yield "participants", {
-            "session_id": session_id,
-            "state": LearningSimulationState.RUNNING.value,
-            "progress": 0.18,
-            "participants": [participant.to_public_dict() for participant in participants],
-        }
+        yield (
+            "participants",
+            {
+                "session_id": session_id,
+                "state": LearningSimulationState.RUNNING.value,
+                "progress": 0.18,
+                "participants": [participant.to_public_dict() for participant in participants],
+            },
+        )
 
         async for item in self._stream_from_checkpoint(
             session_id=session_id,
@@ -639,13 +653,16 @@ class SimulationEngine:
                 round_item=user_round,
                 moderator_insight="用户明确给出了自己的判断，这能帮助下一轮讨论更贴近真实学习决策。",
             )
-            yield "round", {
-                "session_id": session_id,
-                "state": LearningSimulationState.RUNNING.value,
-                "progress": min(0.55, 0.22 + len(rounds) * 0.08),
-                "round": user_round,
-                "rounds": rounds,
-            }
+            yield (
+                "round",
+                {
+                    "session_id": session_id,
+                    "state": LearningSimulationState.RUNNING.value,
+                    "progress": min(0.55, 0.22 + len(rounds) * 0.08),
+                    "round": user_round,
+                    "rounds": rounds,
+                },
+            )
 
         async for item in self._stream_from_checkpoint(
             session_id=session_id,
@@ -734,19 +751,25 @@ class SimulationEngine:
                 moderator_insight=moderator_decision.real_time_insight,
             )
             progress = min(0.92, 0.18 + (0.62 * (len(rounds) / max(planned_round_count, 1))))
-            yield "round", {
-                "session_id": session_id,
-                "state": LearningSimulationState.RUNNING.value,
-                "progress": progress,
-                "round": round_item,
-                "rounds": rounds,
-            }
-            yield "insight", {
-                "session_id": session_id,
-                "state": LearningSimulationState.RUNNING.value,
-                "progress": progress,
-                "message": moderator_decision.real_time_insight,
-            }
+            yield (
+                "round",
+                {
+                    "session_id": session_id,
+                    "state": LearningSimulationState.RUNNING.value,
+                    "progress": progress,
+                    "round": round_item,
+                    "rounds": rounds,
+                },
+            )
+            yield (
+                "insight",
+                {
+                    "session_id": session_id,
+                    "state": LearningSimulationState.RUNNING.value,
+                    "progress": progress,
+                    "message": moderator_decision.real_time_insight,
+                },
+            )
 
             interaction = await self._build_user_interaction_point(
                 topic=topic,
@@ -782,20 +805,26 @@ class SimulationEngine:
                     session=session,
                     participants=participants,
                 )
-                yield "interaction", {
-                    "session_id": session_id,
-                    "state": LearningSimulationState.WAITING_FOR_USER.value,
-                    "progress": progress,
-                    "interaction": interaction.to_dict(),
-                    "participants": [participant.to_public_dict() for participant in participants],
-                    "rounds": rounds,
-                }
-                yield "complete", {
-                    "session_id": session_id,
-                    "state": LearningSimulationState.WAITING_FOR_USER.value,
-                    "progress": progress,
-                    "session": session.to_dict(),
-                }
+                yield (
+                    "interaction",
+                    {
+                        "session_id": session_id,
+                        "state": LearningSimulationState.WAITING_FOR_USER.value,
+                        "progress": progress,
+                        "interaction": interaction.to_dict(),
+                        "participants": [participant.to_public_dict() for participant in participants],
+                        "rounds": rounds,
+                    },
+                )
+                yield (
+                    "complete",
+                    {
+                        "session_id": session_id,
+                        "state": LearningSimulationState.WAITING_FOR_USER.value,
+                        "progress": progress,
+                        "session": session.to_dict(),
+                    },
+                )
                 return
 
             if moderator_decision.should_end and len(rounds) >= 2:
@@ -822,12 +851,15 @@ class SimulationEngine:
         if user_id is not None:
             await self._persist_simulation_insights(session=session, user_id=str(user_id))
             await self._persist_session_update(user_id=user_id, session=session)
-        yield "complete", {
-            "session_id": session_id,
-            "state": LearningSimulationState.COMPLETED.value,
-            "progress": 1.0,
-            "session": session.to_dict(),
-        }
+        yield (
+            "complete",
+            {
+                "session_id": session_id,
+                "state": LearningSimulationState.COMPLETED.value,
+                "progress": 1.0,
+                "session": session.to_dict(),
+            },
+        )
 
     def _build_agent_participants(
         self,
@@ -919,14 +951,17 @@ class SimulationEngine:
             planned_round_count=planned_round_count,
             facilitation_style=facilitation_style,
         )
-        participant_prompt = "\n".join(
-            (
-                f"- {participant.name}: role={participant.role_hint}; stance={participant.stance}; "
-                f"strategy={participant.strategy}; response_policy={participant.response_policy}; "
-                f"memory={participant.memory[-5:]}"
+        participant_prompt = (
+            "\n".join(
+                (
+                    f"- {participant.name}: role={participant.role_hint}; stance={participant.stance}; "
+                    f"strategy={participant.strategy}; response_policy={participant.response_policy}; "
+                    f"memory={participant.memory[-5:]}"
+                )
+                for participant in participants
             )
-            for participant in participants
-        ) or "- 学习伙伴"
+            or "- 学习伙伴"
+        )
         transcript = self._latest_exchange(rounds, limit=4)
         behavioral_context_block = self._format_behavioral_context(
             behavioral_context,
@@ -1057,7 +1092,11 @@ class SimulationEngine:
         )
         chosen = ordered[0]
         reply_target = next(
-            (str(item.get("speaker") or "").strip() for item in reversed(rounds) if str(item.get("speaker") or "").strip() != chosen.name),
+            (
+                str(item.get("speaker") or "").strip()
+                for item in reversed(rounds)
+                if str(item.get("speaker") or "").strip() != chosen.name
+            ),
             "",
         )
         should_pause = len(rounds) >= 1 and all(str(item.get("speaker") or "") != "你" for item in rounds[-2:])
@@ -1066,9 +1105,7 @@ class SimulationEngine:
             if should_pause
             else ""
         )
-        real_time_insight = (
-            f"{chosen.name} 更适合在这一轮接棒，因为当前讨论还缺少“{chosen.strategy}”视角。"
-        )
+        real_time_insight = f"{chosen.name} 更适合在这一轮接棒，因为当前讨论还缺少“{chosen.strategy}”视角。"
         if facilitation_style == "debate":
             real_time_insight = f"{chosen.name} 这一轮会把争议点挑明，逼近“{topic}”里最站不住脚的前提。"
         elif facilitation_style == "guided":
@@ -1078,7 +1115,9 @@ class SimulationEngine:
         return {
             "speaker": chosen.name,
             "reply_target": reply_target,
-            "turn_goal": "synthesize" if len(rounds) + 1 >= planned_round_count else ("probe" if scenario_key == "socratic_dialogue" else "extend"),
+            "turn_goal": "synthesize"
+            if len(rounds) + 1 >= planned_round_count
+            else ("probe" if scenario_key == "socratic_dialogue" else "extend"),
             "real_time_insight": real_time_insight,
             "round_target": max(planned_round_count, 3 + int(len(rounds) >= 2)),
             "should_pause_for_user": should_pause,
@@ -1105,7 +1144,9 @@ class SimulationEngine:
         anchor_material: str = "",
         learning_objective: str | None = None,
     ) -> dict[str, Any]:
-        speaker = next((participant for participant in participants if participant.name == moderator_decision.speaker), None)
+        speaker = next(
+            (participant for participant in participants if participant.name == moderator_decision.speaker), None
+        )
         if speaker is None:
             speaker = participants[0]
         fallback_message = self._fallback_round_message(
@@ -1117,10 +1158,10 @@ class SimulationEngine:
             rounds=rounds,
             anchor_material=anchor_material,
         )
-        room_state = "\n".join(
-            f"- {participant.name}: memory={participant.memory[-5:]}"
-            for participant in participants
-        ) or "No room state yet."
+        room_state = (
+            "\n".join(f"- {participant.name}: memory={participant.memory[-5:]}" for participant in participants)
+            or "No room state yet."
+        )
         cross_agent_summary = self._cross_agent_summary(
             participants=participants,
             speaker_name=speaker.name,
@@ -1175,7 +1216,8 @@ class SimulationEngine:
             "speaker": speaker.name,
             "message": str(payload.get("message") or fallback_message).strip() or fallback_message,
             "reply_to_speaker": str(payload.get("reply_to_speaker") or moderator_decision.reply_target).strip(),
-            "turn_goal": str(payload.get("turn_goal") or moderator_decision.turn_goal).strip() or moderator_decision.turn_goal,
+            "turn_goal": str(payload.get("turn_goal") or moderator_decision.turn_goal).strip()
+            or moderator_decision.turn_goal,
             "speaker_type": "agent",
         }
 
@@ -1198,7 +1240,9 @@ class SimulationEngine:
                     f" 如果只停在那个结论上，还没有解释清楚它为什么成立，或者何时会失效。"
                 )
             if speaker.strategy == "probe":
-                return f"{anchor_hint}顺着 {reply_target} 的说法，我会继续追问：在“{topic}”里最不能默认成立的前提是什么？"
+                return (
+                    f"{anchor_hint}顺着 {reply_target} 的说法，我会继续追问：在“{topic}”里最不能默认成立的前提是什么？"
+                )
         if turn_goal == "synthesize":
             return f"{anchor_hint}如果先把围绕“{topic}”已经形成的共识收束一下，下一步最值得验证的就是哪条解释真正能落到题目里。"
         if scenario_key == "what_if_path":
@@ -1256,10 +1300,14 @@ class SimulationEngine:
         payload = data if isinstance(data, dict) else {}
         prompt = str(payload.get("prompt") or fallback_prompt).strip() or fallback_prompt
         options = moderator_decision.interaction_options or [participant.name for participant in participants[:3]]
-        suggested = self._string_list(payload.get("suggested_replies")) or moderator_decision.suggested_replies or [
-            f"我会先说明这个结论在什么条件下成立。",
-            f"我会用一个新例子测试这条解释能不能迁移。",
-        ]
+        suggested = (
+            self._string_list(payload.get("suggested_replies"))
+            or moderator_decision.suggested_replies
+            or [
+                f"我会先说明这个结论在什么条件下成立。",
+                f"我会用一个新例子测试这条解释能不能迁移。",
+            ]
+        )
         return UserInteractionPoint(
             id=str(uuid4()),
             interaction_type=moderator_decision.interaction_type or "choice",
@@ -1281,10 +1329,7 @@ class SimulationEngine:
                 continue
             latest = participant.memory[-1]
             latest_message = str(
-                latest.get("message")
-                or latest.get("insight")
-                or latest.get("turn_goal")
-                or ""
+                latest.get("message") or latest.get("insight") or latest.get("turn_goal") or ""
             ).strip()
             if latest_message:
                 lines.append(f"- {participant.name} 最近观点: {latest_message}")
@@ -1354,15 +1399,13 @@ class SimulationEngine:
         participant_names: list[str] | None,
         template: dict[str, Any],
     ) -> list[str]:
-        cleaned = [
-            str(item).strip()
-            for item in list(participant_names or [])
-            if str(item).strip()
-        ]
+        cleaned = [str(item).strip() for item in list(participant_names or []) if str(item).strip()]
         deduped = list(dict.fromkeys(cleaned))
         if deduped:
             return deduped[:6]
-        return [str(item).strip() for item in list(template.get("participants") or ["学习伙伴"]) if str(item).strip()] or ["学习伙伴"]
+        return [
+            str(item).strip() for item in list(template.get("participants") or ["学习伙伴"]) if str(item).strip()
+        ] or ["学习伙伴"]
 
     def _normalize_round_target(
         self,
@@ -1460,19 +1503,15 @@ class SimulationEngine:
                 last_messages[speaker] = message
         if not last_messages:
             return "本次模拟暂未形成可复用的总结。"
-        return "；".join(
-            f"{speaker}最后强调：{message}"
-            for speaker, message in last_messages.items()
-        )
+        return "；".join(f"{speaker}最后强调：{message}" for speaker, message in last_messages.items())
 
     @staticmethod
     def _latest_exchange(rounds: list[dict[str, Any]], limit: int = 3) -> str:
         if not rounds:
             return "讨论还没有开始。"
-        recent = rounds[-max(limit, 1):]
+        recent = rounds[-max(limit, 1) :]
         return "\n".join(
-            f"第 {item.get('round')} 轮：{item.get('speaker')} -> {item.get('message')}"
-            for item in recent
+            f"第 {item.get('round')} 轮：{item.get('speaker')} -> {item.get('message')}" for item in recent
         )
 
     async def _get_user_mastery_gaps(self, user_id: UUID) -> list[str]:
@@ -1486,11 +1525,7 @@ class SimulationEngine:
             .order_by(UserNodeStatus.mastery_score.asc())
             .limit(5)
         )
-        return [
-            str(name).strip()
-            for name in result.scalars().all()
-            if str(name).strip()
-        ]
+        return [str(name).strip() for name in result.scalars().all() if str(name).strip()]
 
     def _format_behavioral_context(
         self,
@@ -1499,9 +1534,7 @@ class SimulationEngine:
         if not behavioral_context:
             return ""
         mastery_gaps = [
-            str(item).strip()
-            for item in list(behavioral_context.get("mastery_gaps") or [])
-            if str(item).strip()
+            str(item).strip() for item in list(behavioral_context.get("mastery_gaps") or []) if str(item).strip()
         ]
         intent_forecast = dict(
             behavioral_context.get("next_intent_forecast") or {},
@@ -1573,7 +1606,8 @@ class SimulationEngine:
                 ttl=self.SESSION_TTL_SECONDS,
             )
         except Exception:
-            return
+            logger.warning("Simulation checkpoint cache write failed for session {}", session.id)
+        await self._persist_checkpoint_to_db(user_id=user_id, payload=payload)
 
     async def _load_checkpoint(
         self,
@@ -1588,6 +1622,18 @@ class SimulationEngine:
             payload = None
         if not isinstance(payload, dict):
             payload = self._local_checkpoints.get(session_id)
+        if not isinstance(payload, dict):
+            payload = await self._load_checkpoint_from_db(session_id=session_id, user_id=user_id)
+            if isinstance(payload, dict):
+                self._local_checkpoints[session_id] = payload
+                try:
+                    await cache_service.set(
+                        f"{self.SESSION_KEY_PREFIX}{session_id}",
+                        payload,
+                        ttl=self.SESSION_TTL_SECONDS,
+                    )
+                except Exception:
+                    logger.warning("Simulation checkpoint cache backfill failed for session {}", session_id)
         if not isinstance(payload, dict):
             raise ValueError("Simulation session not found or expired")
         owner_id = str(payload.get("user_id") or "").strip()
@@ -1607,6 +1653,40 @@ class SimulationEngine:
                 participant["strategy"] = runtime.get("strategy")
                 participant["response_policy"] = runtime.get("response_policy")
         return payload
+
+    async def _persist_checkpoint_to_db(self, *, user_id: UUID | None, payload: dict[str, Any]) -> None:
+        if user_id is None or self.db is None:
+            return
+        try:
+            from app.core.celery_app import schedule_long_task
+
+            schedule_long_task(
+                "app.core.celery_tasks.persist_simulation_run",
+                kwargs={"user_id": str(user_id), "payload": payload},
+                queue="low_priority",
+            )
+            return
+        except Exception as exc:
+            logger.warning("Simulation checkpoint async persist fallback for user {}: {}", user_id, exc)
+
+        try:
+            await SimulationRunStore(self.db).persist_payload(user_id=user_id, payload=payload)
+        except Exception as exc:
+            logger.warning("Simulation checkpoint DB persist failed for user {}: {}", user_id, exc)
+
+    async def _load_checkpoint_from_db(
+        self,
+        *,
+        session_id: str,
+        user_id: UUID | None,
+    ) -> dict[str, Any] | None:
+        if user_id is None or self.db is None:
+            return None
+        try:
+            return await SimulationRunStore(self.db).load_payload(session_id=session_id, user_id=user_id)
+        except Exception as exc:
+            logger.warning("Simulation checkpoint DB load failed for user {}: {}", user_id, exc)
+            return None
 
     @staticmethod
     def _insight_summary_payload(insight_summary: Any) -> dict[str, Any] | None:
@@ -1631,7 +1711,7 @@ class SimulationEngine:
 
         for gap in knowledge_gaps:
             try:
-                await self.event_bus.publish(
+                await self.event_bus_reliable.publish(
                     "SimulationGapRevealed",
                     {
                         "event_type": "SimulationGapRevealed",
@@ -1691,6 +1771,8 @@ class SimulationEngine:
             interaction_type=str(payload.get("interaction_type") or "choice"),
             interaction_options=list(payload.get("interaction_options") or []),
             planned_round_count=int(payload.get("planned_round_count") or 0),
-            pending_interaction=payload.get("pending_interaction") if isinstance(payload.get("pending_interaction"), dict) else None,
+            pending_interaction=payload.get("pending_interaction")
+            if isinstance(payload.get("pending_interaction"), dict)
+            else None,
             facilitation_style=str(payload.get("facilitation_style") or "balanced"),
         )

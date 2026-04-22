@@ -20,6 +20,8 @@ from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.recommendation import UserItemInteraction, UserLearningProfile, UserSimilarity
 from app.models.user import User
 
+SIMILARITY_BATCH_FLUSH_SIZE = 100
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -208,9 +210,8 @@ async def _update_all_similarities(db: AsyncSession) -> int:
 
             similarity_count += 1
 
-        # 每100个用户提交一次
-        if (i + 1) % 100 == 0:
-            await db.commit()
+        if (i + 1) % SIMILARITY_BATCH_FLUSH_SIZE == 0:
+            await db.flush()
             logger.info(f"Processed {i + 1}/{len(active_user_ids)} users")
 
     await db.commit()
@@ -270,9 +271,8 @@ async def _update_learning_profiles(db: AsyncSession) -> int:
 
         updated_count += 1
 
-        # 每100个用户提交一次
-        if updated_count % 100 == 0:
-            await db.commit()
+        if updated_count % SIMILARITY_BATCH_FLUSH_SIZE == 0:
+            await db.flush()
 
     await db.commit()
     logger.info(f"Updated {updated_count} user learning profiles")

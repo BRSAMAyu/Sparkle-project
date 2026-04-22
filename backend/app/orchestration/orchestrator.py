@@ -672,7 +672,7 @@ class ChatOrchestrator(
             for keyword in keywords:
                 start = message.find(keyword)
                 while start != -1:
-                    prefix = message[max(0, start - 8):start]
+                    prefix = message[max(0, start - 8) : start]
                     if not any(marker in prefix for marker in negation_markers):
                         return True
                     start = message.find(keyword, start + len(keyword))
@@ -986,7 +986,9 @@ class ChatOrchestrator(
                         saw_openclaw_short_circuit = True
                         yield openclaw_response
                     if saw_openclaw_short_circuit:
-                        await self._update_state(session_id, STATE_DONE, "OpenClaw chat control short-circuit completed")
+                        await self._update_state(
+                            session_id, STATE_DONE, "OpenClaw chat control short-circuit completed"
+                        )
                         REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
                         COLLABORATION_SUCCESS.labels(
                             workflow_type="standard_chat", agents_used="openclaw", outcome="success"
@@ -994,16 +996,21 @@ class ChatOrchestrator(
                         return
 
                 # Step 4: Build full context
-                grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context = (
-                    await self._build_full_context(
-                        request=request,
-                        active_db=active_db,
-                        user_id=user_id,
-                        session_id=session_id,
-                        user_message=user_message,
-                        request_id=request_id,
-                        tracer=tracer,
-                    )
+                (
+                    grpc_context,
+                    plan_id,
+                    plan_switched,
+                    user_context_payload,
+                    conversation_context,
+                    plan_context,
+                ) = await self._build_full_context(
+                    request=request,
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_message=user_message,
+                    request_id=request_id,
+                    tracer=tracer,
                 )
                 conversation_context = self._merge_request_history_into_conversation_context(
                     conversation_context,
@@ -1014,12 +1021,14 @@ class ChatOrchestrator(
                 session_adaptation_context = None
                 conversation_rhythm = None
                 if not request.HasField("tool_result"):
-                    session_feedback_signal, session_adaptation_context, conversation_rhythm = (
-                        await self._detect_session_feedback(
-                            session_id=session_id,
-                            user_message=user_message,
-                            conversation_context=conversation_context,
-                        )
+                    (
+                        session_feedback_signal,
+                        session_adaptation_context,
+                        conversation_rhythm,
+                    ) = await self._detect_session_feedback(
+                        session_id=session_id,
+                        user_message=user_message,
+                        conversation_context=conversation_context,
                     )
                 session_feedback_signal = self._apply_cohort_to_session_feedback_signal(
                     session_feedback_signal,
@@ -1111,6 +1120,7 @@ class ChatOrchestrator(
                     state.context_data["session_adaptation"] = session_adaptation_context.to_dict()
                 if conversation_rhythm is not None:
                     state.context_data["conversation_rhythm"] = conversation_rhythm
+
                 # Bound stream buffering while preserving critical terminal/content events.
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
                     resp.response_id = response_id
@@ -1245,7 +1255,9 @@ class ChatOrchestrator(
                 except Exception as exc:
                     logger.warning(f"Shadow soul runtime attach failed (non-fatal): {exc}")
                 if isinstance(user_context_payload, dict):
-                    self._copy_companion_runtime_keys(source_context=state.context_data, target_context=user_context_payload)
+                    self._copy_companion_runtime_keys(
+                        source_context=state.context_data, target_context=user_context_payload
+                    )
                 if soul_runtime_payload is not None:
                     await run_ledger.record_event(
                         event_type="soul_runtime_shadow_compiled",
@@ -1426,7 +1438,7 @@ class ChatOrchestrator(
                     run_ledger=run_ledger,
                 )
                 if context_data:
-                    state.context_data.update(context_data)
+                    state.update(context_data)
                 state.context_data["chat_mode"] = chat_mode
                 orchestration_trace = OrchestrationTrace(trace_id=trace_id or request_id or str(uuid.uuid4()))
                 self._sync_orchestration_trace(
@@ -1494,24 +1506,14 @@ class ChatOrchestrator(
                         stream_callback,
                         selected_experts=selected_for_preview,
                         complexity_score=(
-                            expert_routing_decision.complexity_score
-                            if expert_routing_decision
-                            else 0.45
+                            expert_routing_decision.complexity_score if expert_routing_decision else 0.45
                         ),
                         complexity_tier=(
-                            expert_routing_decision.complexity_tier
-                            if expert_routing_decision
-                            else "medium"
+                            expert_routing_decision.complexity_tier if expert_routing_decision else "medium"
                         ),
-                        route_confidence=(
-                            expert_routing_decision.route_confidence
-                            if expert_routing_decision
-                            else 0.7
-                        ),
+                        route_confidence=(expert_routing_decision.route_confidence if expert_routing_decision else 0.7),
                         routing_strategy=(
-                            expert_routing_decision.routing_strategy
-                            if expert_routing_decision
-                            else "explicit_team"
+                            expert_routing_decision.routing_strategy if expert_routing_decision else "explicit_team"
                         ),
                     )
                     state.context_data["routing_preview"] = routing_preview
@@ -1523,10 +1525,7 @@ class ChatOrchestrator(
                             metadata={
                                 "phase": "roundtable",
                                 "queue_index": index,
-                                "collaboration_mode": (
-                                    state.context_data.get("collaboration_mode")
-                                    or "expert"
-                                ),
+                                "collaboration_mode": (state.context_data.get("collaboration_mode") or "expert"),
                             },
                         )
 
@@ -1746,7 +1745,9 @@ class ChatOrchestrator(
                 except Exception as exc:
                     logger.warning(f"Shadow soul runtime refresh failed (non-fatal): {exc}")
                 if isinstance(user_context_payload, dict):
-                    self._copy_companion_runtime_keys(source_context=state.context_data, target_context=user_context_payload)
+                    self._copy_companion_runtime_keys(
+                        source_context=state.context_data, target_context=user_context_payload
+                    )
                 user_context_payload = await self._attach_user_strategy_state(
                     active_db=active_db,
                     user_id=user_id,

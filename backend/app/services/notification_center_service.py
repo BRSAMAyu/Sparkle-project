@@ -612,11 +612,23 @@ class NotificationCenterService:
             )
             push_result = await self.db.execute(push_stmt)
             push_records = push_result.scalars().all()
+            notification_ids = [record.notification_id for record in push_records if record.notification_id]
+            notifications_by_id: dict[UUID, Notification] = {}
+            if notification_ids:
+                linked_result = await self.db.execute(
+                    select(Notification).where(
+                        Notification.user_id == user_id,
+                        Notification.id.in_(notification_ids),
+                    )
+                )
+                notifications_by_id = {
+                    notification.id: notification for notification in linked_result.scalars().all()
+                }
 
             for record in push_records:
                 record.deleted_at = _utcnow()
                 if record.notification_id:
-                    notification = await self.db.get(Notification, record.notification_id)
+                    notification = notifications_by_id.get(record.notification_id)
                     if notification is not None:
                         notification.deleted_at = _utcnow()
                 count += 1

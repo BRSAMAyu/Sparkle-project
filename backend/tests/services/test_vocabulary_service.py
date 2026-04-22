@@ -4,6 +4,7 @@ Vocabulary Service Unit Tests
 """
 import pytest
 from datetime import timezone, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.vocabulary_service import VocabularyService
@@ -219,29 +220,36 @@ class TestGetStatistics:
     async def test_get_statistics_returns_summary(self):
         """返回统计摘要"""
         db = AsyncMock()
-        db.dialect = MagicMock()
-
-        # Mock count queries - scalar() is a method that returns a value
-        async def mock_execute(stmt):
-            result = AsyncMock()
-            if 'total' in str(stmt).lower():
-                result.scalar = MagicMock(return_value=100)
-            elif 'due' in str(stmt).lower():
-                result.scalar = MagicMock(return_value=15)
-            else:
-                result.scalar = MagicMock(return_value=5)
-            return result
-
-        db.execute = mock_execute
+        db.execute = AsyncMock(
+            side_effect=[
+                MagicMock(
+                    one=MagicMock(
+                        return_value=SimpleNamespace(
+                            total_words=100,
+                            due_for_review=15,
+                            accuracy_rate=0.75,
+                        )
+                    )
+                ),
+                MagicMock(all=MagicMock(return_value=[(1, 8), (3, 12), (5, 20)])),
+            ]
+        )
 
         stats = await VocabularyService.get_statistics(
             db, MagicMock(id=123)
         )
 
-        assert 'total_words' in stats
-        assert 'due_for_review' in stats
-        assert 'accuracy_rate' in stats
-        assert 'by_importance' in stats
+        assert stats["total_words"] == 100
+        assert stats["due_for_review"] == 15
+        assert stats["accuracy_rate"] == 0.75
+        assert stats["by_importance"] == {
+            "1": 8,
+            "2": 0,
+            "3": 12,
+            "4": 0,
+            "5": 20,
+        }
+        assert db.execute.await_count == 2
 
 
 @pytest.mark.asyncio

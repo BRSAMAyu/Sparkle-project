@@ -19,7 +19,7 @@ from datetime import timezone, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Float, and_, func, select
+from sqlalchemy import Float, and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vocabulary import DictionaryEntry, WordBook
@@ -485,50 +485,45 @@ class VocabularyService:
             - accuracy_rate: Overall accuracy rate (correct / total reviews)
             - by_importance: Breakdown by importance level
         """
-        # Total words
-        total_stmt = select(func.count()).select_from(WordBook).where(
-            WordBook.user_id == user_id
-        )
-        total_result = await db.execute(total_stmt)
-        total_words = total_result.scalar() or 0
-
-        # Due for review
-        due_stmt = select(func.count()).select_from(WordBook).where(
-            and_(
-                WordBook.user_id == user_id,
-                WordBook.next_review_at <= _utcnow()
-            )
-        )
-        due_result = await db.execute(due_stmt)
-        due_for_review = due_result.scalar() or 0
-
-        # Overall accuracy
-        accuracy_stmt = select(
+        summary_stmt = select(
+            func.count().label("total_words"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (WordBook.next_review_at <= _utcnow(), 1),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("due_for_review"),
             func.coalesce(
                 func.sum(WordBook.correct_review_count).cast(Float) /
                 func.nullif(func.sum(WordBook.review_count), 0),
                 0.0
             )
+            .label("accuracy_rate"),
         ).where(WordBook.user_id == user_id)
-        accuracy_result = await db.execute(accuracy_stmt)
-        accuracy_rate = accuracy_result.scalar() or 0.0
+        summary_result = await db.execute(summary_stmt)
+        summary = summary_result.one()
 
-        # Breakdown by importance
-        by_importance = {}
-        for i in range(VocabularyService.MIN_IMPORTANCE, VocabularyService.MAX_IMPORTANCE + 1):
-            imp_stmt = select(func.count()).select_from(WordBook).where(
-                and_(
-                    WordBook.user_id == user_id,
-                    WordBook.importance == i
-                )
-            )
-            imp_result = await db.execute(imp_stmt)
-            by_importance[str(i)] = imp_result.scalar() or 0
+        by_importance = {
+            str(i): 0 for i in range(VocabularyService.MIN_IMPORTANCE, VocabularyService.MAX_IMPORTANCE + 1)
+        }
+        importance_stmt = (
+            select(WordBook.importance, func.count())
+            .where(WordBook.user_id == user_id)
+            .group_by(WordBook.importance)
+        )
+        importance_result = await db.execute(importance_stmt)
+        for importance, count in importance_result.all():
+            if importance is None:
+                continue
+            by_importance[str(int(importance))] = int(count or 0)
 
         return {
-            "total_words": total_words,
-            "due_for_review": due_for_review,
-            "accuracy_rate": round(accuracy_rate, 4),
+            "total_words": int(summary.total_words or 0),
+            "due_for_review": int(summary.due_for_review or 0),
+            "accuracy_rate": round(float(summary.accuracy_rate or 0.0), 4),
             "by_importance": by_importance,
         }
 

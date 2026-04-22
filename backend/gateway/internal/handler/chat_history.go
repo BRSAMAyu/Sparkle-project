@@ -10,6 +10,28 @@ import (
 	"github.com/sparkle/gateway/internal/service"
 )
 
+type ChatHistoryMessageDTO struct {
+	ID                   string                   `json:"id"`
+	UserID               string                   `json:"user_id"`
+	ConversationID       string                   `json:"conversation_id"`
+	SessionID            string                   `json:"session_id"`
+	TaskID               string                   `json:"task_id"`
+	Role                 string                   `json:"role"`
+	Content              string                   `json:"content"`
+	CreatedAt            string                   `json:"created_at"`
+	Widgets              []map[string]interface{} `json:"widgets"`
+	ToolResults          []map[string]interface{} `json:"tool_results"`
+	HasErrors            bool                     `json:"has_errors"`
+	Errors               []map[string]interface{} `json:"errors"`
+	RequiresConfirmation bool                     `json:"requires_confirmation"`
+	ConfirmationData     map[string]interface{}   `json:"confirmation_data"`
+	ReasoningSteps       []map[string]interface{} `json:"reasoning_steps"`
+	ReasoningSummary     string                   `json:"reasoning_summary"`
+	IsReasoningComplete  bool                     `json:"is_reasoning_complete"`
+	Meta                 map[string]interface{}   `json:"meta"`
+	AgentCollaboration   map[string]interface{}   `json:"agentCollaboration"`
+}
+
 type ChatHistoryHandler struct {
 	chatHistory *service.ChatHistoryService
 }
@@ -56,7 +78,7 @@ func (h *ChatHistoryHandler) GetConversationHistory(c *gin.Context) {
 		return
 	}
 
-	result := make([]gin.H, 0, len(messages))
+	result := make([]ChatHistoryMessageDTO, 0, len(messages))
 	for _, msg := range messages {
 		createdAt := time.Now().UTC().Format(time.RFC3339)
 		if ts, err := strconv.ParseInt(msg.Timestamp, 10, 64); err == nil {
@@ -67,13 +89,26 @@ func (h *ChatHistoryHandler) GetConversationHistory(c *gin.Context) {
 		if msgID == "" {
 			msgID = msg.Timestamp + ":" + msg.Role
 		}
-		result = append(result, gin.H{
-			"id":              msgID,
-			"conversation_id": msg.SessionID,
-			"role":            msg.Role,
-			"content":         msg.Content,
-			"created_at":      createdAt,
-			"user_id":         msg.UserID,
+		result = append(result, ChatHistoryMessageDTO{
+			ID:                   msgID,
+			UserID:               msg.UserID,
+			ConversationID:       msg.SessionID,
+			SessionID:            msg.SessionID,
+			TaskID:               msg.TaskID,
+			Role:                 msg.Role,
+			Content:              msg.Content,
+			CreatedAt:            createdAt,
+			Widgets:              msg.Widgets,
+			ToolResults:          msg.ToolResults,
+			HasErrors:            msg.HasErrors,
+			Errors:               msg.Errors,
+			RequiresConfirmation: msg.RequiresConfirmation,
+			ConfirmationData:     msg.ConfirmationData,
+			ReasoningSteps:       msg.ReasoningSteps,
+			ReasoningSummary:     msg.ReasoningSummary,
+			IsReasoningComplete:  msg.IsReasoningComplete,
+			Meta:                 msg.Meta,
+			AgentCollaboration:   msg.AgentCollaboration,
 		})
 	}
 	c.JSON(http.StatusOK, result)

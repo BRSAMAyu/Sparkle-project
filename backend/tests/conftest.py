@@ -13,6 +13,7 @@ from app.models.plan import Plan  # noqa: F401
 from app.models.task import Task  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.response_feedback import ResponseFeedback  # noqa: F401
+from app.models.report_snapshot import ReportSnapshot  # noqa: F401
 from app.models.intervention import InterventionRequest  # noqa: F401
 from app.models.nightly_review import NightlyReview  # noqa: F401
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference, Scene  # noqa: F401
@@ -55,16 +56,28 @@ from app.models.aurora_stage31 import (  # noqa: F401
 from app.models.user_push_opt_in import UserPushOptIn  # noqa: F401
 from app.models.galaxy import KnowledgeNode, UserNodeStatus, StudyRecord  # noqa: F401
 from app.models.community import (  # noqa: F401
-    Group, GroupMember, GroupMessage, PrivateMessage,
-    Friendship, GroupType, GroupRole, UserBlock
+    Group,
+    GroupMember,
+    GroupMessage,
+    PrivateMessage,
+    Friendship,
+    GroupType,
+    GroupRole,
+    UserBlock,
 )
 from app.models.accountability import AccountabilityPartnership, AccountabilityCheckin  # noqa: F401
 from app.models.achievement import Achievement, UserAchievement  # noqa: F401
 from app.models.cognitive import BehaviorPattern, CognitiveFragment  # noqa: F401
 from app.models.shop import (  # noqa: F401
-    ShopItem, ShopPurchase, UserConsumable,
-    PhotonTransactionType, ShopItemType, ItemRarity, ConsumableEffectType
+    ShopItem,
+    ShopPurchase,
+    UserConsumable,
+    PhotonTransactionType,
+    ShopItemType,
+    ItemRarity,
+    ConsumableEffectType,
 )
+from app.models.simulation_run import SimulationRun  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -105,9 +118,7 @@ async def db_session_fixture():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    async_session = async_sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as session:
         yield session
 
@@ -124,12 +135,7 @@ async def db_fixture(db_session: AsyncSession) -> AsyncSession:
 @pytest_asyncio.fixture(name="test_user")
 async def test_user_fixture(db_session: AsyncSession) -> User:
     """Create a test user"""
-    user = User(
-        username="testuser",
-        email="test@example.com",
-        hashed_password="hashed",
-        photon_balance=0
-    )
+    user = User(username="testuser", email="test@example.com", hashed_password="hashed", photon_balance=0)
     db_session.add(user)
     await db_session.commit()
     await db_session.refresh(user)

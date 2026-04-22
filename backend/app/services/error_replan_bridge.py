@@ -7,7 +7,12 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import desc, select
 
-from app.core.metrics import ERROR_REPLAN_BRIDGE_ERROR_TOTAL
+from app.core.metrics import (
+    ERROR_REPLAN_BRIDGE_BLOCKED_BY_GATE_TOTAL,
+    ERROR_REPLAN_BRIDGE_ERROR_TOTAL,
+    ERROR_REPLAN_BRIDGE_EVALUATED_TOTAL,
+    ERROR_REPLAN_BRIDGE_TRIGGERED_TOTAL,
+)
 from app.models.card_protocol import InterventionRecord
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import UserNodeStatus
@@ -17,9 +22,13 @@ from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
 from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionTriggerType
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
-from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
+from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.route_history_service import RouteHistoryService
+
+
+# Preserve the Stage 34 patch target while Stage 38 owns the live kill-switch path.
+AuroraStage34KillSwitchService = AuroraStage38KillSwitchService
 
 
 def _utcnow() -> datetime:
@@ -68,27 +77,29 @@ class ErrorReplanBridge:
         error_id: UUID,
         linked_node_ids: list[UUID],
     ) -> dict[str, object]:
-        mode = "off"
+        mode = "shadow"
         try:
+            mode = await AuroraStage38KillSwitchService().get_feature_mode("err_replan")
+            ERROR_REPLAN_BRIDGE_EVALUATED_TOTAL.labels(mode=mode).inc()
             normalized_node_ids = [node_id for node_id in linked_node_ids if node_id]
             if not normalized_node_ids:
-                return {"triggered": False, "reason": "no_linked_nodes", "plan_ids": []}
+                return self._blocked(mode=mode, gate="no_linked_nodes")
 
             error = await self.db.get(ErrorRecord, error_id)
             if error is None or error.user_id != user_id:
-                return {"triggered": False, "reason": "error_not_found", "plan_ids": []}
+                return self._blocked(mode=mode, gate="error_not_found")
 
             error_type = self._classify_trigger_type(error)
             if error_type is None:
-                return {
-                    "triggered": False,
-                    "reason": f"unsupported_error_type:{self._extract_error_type(error)}",
-                    "plan_ids": [],
-                }
+                return self._blocked(
+                    mode=mode,
+                    gate="unsupported_error_type",
+                    reason=f"unsupported_error_type:{self._extract_error_type(error)}",
+                )
 
             plan_ids = await self._find_relevant_active_plan_ids(user_id=user_id, node_ids=normalized_node_ids)
             if not plan_ids:
-                return {"triggered": False, "reason": "no_relevant_active_plan", "plan_ids": []}
+                return self._blocked(mode=mode, gate="no_relevant_active_plan")
 
             eligible_plan_ids = await self._filter_plan_ids_by_cooldown(
                 user_id=user_id,
@@ -96,14 +107,13 @@ class ErrorReplanBridge:
                 error_type=error_type,
             )
             if not eligible_plan_ids:
-                return {"triggered": False, "reason": "trigger_cooldown_active", "plan_ids": []}
+                return self._blocked(mode=mode, gate="trigger_cooldown_active")
 
             low_mastery_nodes = await self._find_low_mastery_nodes(user_id=user_id, node_ids=normalized_node_ids)
             if not low_mastery_nodes:
-                return {"triggered": False, "reason": "mastery_not_low", "plan_ids": []}
+                return self._blocked(mode=mode, gate="mastery_not_low")
 
             try:
-                mode = await AuroraStage34KillSwitchService().get_feature_mode("error_bridge")
                 is_new_user = await self._is_new_user(user_id)
                 recent_error_count = await self._count_recent_triggering_errors(
                     user_id=user_id,
@@ -142,15 +152,14 @@ class ErrorReplanBridge:
                 effective_decision = legacy_decision
 
             if not effective_decision.triggered:
-                return {
-                    "triggered": False,
-                    "reason": "insufficient_error_pressure",
-                    "plan_ids": [],
-                    "recent_error_count": recent_error_count,
-                    "threshold_applied": effective_decision.threshold,
-                    "is_new_user": is_new_user,
-                    "mode": mode,
-                }
+                return self._blocked(
+                    mode=mode,
+                    gate="insufficient_error_pressure",
+                    plan_ids=[],
+                    recent_error_count=recent_error_count,
+                    threshold_applied=effective_decision.threshold,
+                    is_new_user=is_new_user,
+                )
 
             replanner = AdaptiveReplanner(self.db, self.redis)
             triggered_plan_ids: list[str] = []
@@ -190,6 +199,7 @@ class ErrorReplanBridge:
                 mode,
                 effective_decision.threshold,
             )
+            ERROR_REPLAN_BRIDGE_TRIGGERED_TOTAL.labels(mode=mode).inc()
             return {
                 "triggered": True,
                 "reason": "error_pressure_bridge",
@@ -267,8 +277,8 @@ class ErrorReplanBridge:
             description = (
                 f"我注意到你在「{node_name}」上遇到了{recent_error_count}次相似的问题，"
                 "已经调整了本周计划，把相关任务移到了更早的时间段。"
-                if node_name else
-                f"你最近在同一知识点上遇到了{recent_error_count}次问题，我已经微调了本周计划。"
+                if node_name
+                else f"你最近在同一知识点上遇到了{recent_error_count}次问题，我已经微调了本周计划。"
             )
 
             await SystemUpdateService(self.redis).enqueue(
@@ -332,8 +342,8 @@ class ErrorReplanBridge:
     ) -> None:
         await RouteHistoryService(self.db).record_decision(
             user_id=user_id,
-            input_aggregator_snapshot_id="stage34:error_replan_bridge",
-            decision_type="stage34_error_replan_bridge_shadow",
+            input_aggregator_snapshot_id="stage38:error_replan_bridge",
+            decision_type="stage38_error_replan_bridge_shadow",
             decision_payload={
                 "trigger": "error_created_bridge",
                 "error_id": str(error_id),
@@ -347,11 +357,30 @@ class ErrorReplanBridge:
                 "plan_ids": [str(plan_id) for plan_id in sorted(plan_ids, key=str)],
             },
             source_state_v2={
-                "stage": "34",
+                "stage": "38",
                 "feature": "error_bridge_shadow",
                 "mode": "shadow",
             },
         )
+
+    @staticmethod
+    def _blocked(
+        *,
+        mode: str,
+        gate: str,
+        reason: str | None = None,
+        plan_ids: list[str] | None = None,
+        **extra: object,
+    ) -> dict[str, object]:
+        ERROR_REPLAN_BRIDGE_BLOCKED_BY_GATE_TOTAL.labels(gate=gate, mode=mode).inc()
+        payload: dict[str, object] = {
+            "triggered": False,
+            "reason": reason or gate,
+            "plan_ids": list(plan_ids or []),
+            "mode": mode,
+        }
+        payload.update(extra)
+        return payload
 
     async def _is_new_user(self, user_id: UUID) -> bool:
         user = await self.db.get(User, user_id)
@@ -368,9 +397,7 @@ class ErrorReplanBridge:
 
         from app.models.galaxy import KnowledgeNode
 
-        node_result = await self.db.execute(
-            select(KnowledgeNode).where(KnowledgeNode.id == node_ids[0])
-        )
+        node_result = await self.db.execute(select(KnowledgeNode).where(KnowledgeNode.id == node_ids[0]))
         node = node_result.scalar_one_or_none()
         if node is None:
             return ""
@@ -485,14 +512,15 @@ class ErrorReplanBridge:
         records = list(
             (
                 await self.db.execute(
-                    select(InterventionRecord)
-                    .where(
+                    select(InterventionRecord).where(
                         InterventionRecord.user_id == user_id,
                         InterventionRecord.trigger_source_ref == "error_replan_bridge",
                         InterventionRecord.created_at >= cutoff,
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         cooled_plan_ids = set(plan_ids)
         for record in records:
@@ -500,9 +528,7 @@ class ErrorReplanBridge:
             if str(diagnosis.get("error_type") or "").strip().lower() != error_type:
                 continue
             recent_plan_ids = {
-                UUID(plan_id)
-                for plan_id in (diagnosis.get("plan_ids") or [])
-                if isinstance(plan_id, str)
+                UUID(plan_id) for plan_id in (diagnosis.get("plan_ids") or []) if isinstance(plan_id, str)
             }
             cooled_plan_ids -= recent_plan_ids
         return cooled_plan_ids
@@ -520,7 +546,9 @@ class ErrorReplanBridge:
             explicit = dict(getattr(prefs, "explicit", None) or getattr(prefs, "explicit_preferences", None) or {})
             goal_mem = dict(prefs.goal_memory or {}) if hasattr(prefs, "goal_memory") else {}
             return {
-                "goal_type": str(goal_mem.get("learning_goal_type") or explicit.get("learning_goal_type") or "").strip(),
+                "goal_type": str(
+                    goal_mem.get("learning_goal_type") or explicit.get("learning_goal_type") or ""
+                ).strip(),
                 "knowledge_level": str(explicit.get("knowledge_level") or "").strip(),
                 "learning_style": str(explicit.get("learning_style") or "").strip(),
             }
