@@ -240,20 +240,35 @@ class Stage35MetacognitionProfile {
 class UserStateV1Model {
   UserStateV1Model({
     this.schemaVersion,
+    this.commitmentSummary,
+    this.recentPersonMentions,
+    this.learningState,
     this.workingMemorySnapshot,
+    this.taskSufficiencySummary,
+    this.contextSufficiencySummary,
     this.achievementSummary,
     this.activeSkillsSummary,
     this.engagementState,
     this.foresightHint,
+    this.calendarContext,
     this.metacognitionProfile,
   });
 
   factory UserStateV1Model.fromJson(Map<String, dynamic> json) =>
       UserStateV1Model(
         schemaVersion: json['schema_version'] as String?,
+        commitmentSummary: _parseRawEnvelope(json['commitment_summary']),
+        recentPersonMentions: _parseRawEnvelope(json['recent_person_mentions']),
+        learningState: _parseRawEnvelope(json['learning_state']),
         workingMemorySnapshot: _parseEnvelope(
           json['working_memory_snapshot'],
           Stage35WorkingMemorySnapshot.fromJson,
+        ),
+        taskSufficiencySummary: _parseRawEnvelope(
+          json['task_sufficiency_summary'],
+        ),
+        contextSufficiencySummary: _parseRawEnvelope(
+          json['context_sufficiency_summary'],
         ),
         achievementSummary: _parseEnvelope(
           json['achievement_summary'],
@@ -271,6 +286,7 @@ class UserStateV1Model {
           json['foresight_hint'],
           ForesightHintSummaryItem.fromJson,
         ),
+        calendarContext: _parseRawEnvelope(json['calendar_context']),
         metacognitionProfile: _parseEnvelope(
           json['metacognition_profile'],
           Stage35MetacognitionProfile.fromJson,
@@ -281,21 +297,36 @@ class UserStateV1Model {
     Map<String, dynamic> profileContext,
   ) {
     final payload = _asMap(profileContext['user_state_v1']);
+    final fallbackMetacognition =
+        _asMap(profileContext['metacognition_profile']);
     final mergedPayload = <String, dynamic>{
       ...payload,
-      if (!payload.containsKey('metacognition_profile'))
-        'metacognition_profile': profileContext['metacognition_profile'],
+      if (!payload.containsKey('metacognition_profile') &&
+          fallbackMetacognition.isNotEmpty)
+        'metacognition_profile': {'value': fallbackMetacognition},
     };
     return UserStateV1Model.fromJson(mergedPayload);
   }
 
   final String? schemaVersion;
+  // @BackendOnly: Commitment follow-up stays in accountability surfaces, not profile cards.
+  final UserStateFieldEnvelope<Map<String, dynamic>>? commitmentSummary;
+  // @BackendOnly: Person mention details stay in social/accountability views to avoid noisy profile chrome.
+  final UserStateFieldEnvelope<Map<String, dynamic>>? recentPersonMentions;
+  // @BackendOnly: Learning-state JSON remains backend guidance input until a dedicated mobile surface exists.
+  final UserStateFieldEnvelope<Map<String, dynamic>>? learningState;
   final UserStateFieldEnvelope<Stage35WorkingMemorySnapshot>?
       workingMemorySnapshot;
+  // @BackendOnly: Task sufficiency only feeds backend clarification routing, not user-facing profile UI.
+  final UserStateFieldEnvelope<Map<String, dynamic>>? taskSufficiencySummary;
+  // @BackendOnly: Context sufficiency is a backend prompt/routing aid and should not surface raw to users.
+  final UserStateFieldEnvelope<Map<String, dynamic>>? contextSufficiencySummary;
   final UserStateFieldEnvelope<Stage35AchievementSummary>? achievementSummary;
   final UserStateFieldEnvelope<Stage35ActiveSkillsSummary>? activeSkillsSummary;
   final UserStateFieldEnvelope<Stage35EngagementState>? engagementState;
   final UserStateFieldEnvelope<ForesightHintSummaryItem>? foresightHint;
+  // @BackendOnly: Calendar context remains a scheduling backend contract until Stage 36 calendar surfacing.
+  final UserStateFieldEnvelope<Map<String, dynamic>>? calendarContext;
   final UserStateFieldEnvelope<Stage35MetacognitionProfile>?
       metacognitionProfile;
 
@@ -319,6 +350,9 @@ UserStateFieldEnvelope<T>? _parseEnvelope<T>(
   }
   return UserStateFieldEnvelope<T>.fromJson(json, parser);
 }
+
+UserStateFieldEnvelope<Map<String, dynamic>>? _parseRawEnvelope(dynamic raw) =>
+    _parseEnvelope(raw, _asMap);
 
 Map<String, dynamic> _asMap(dynamic value) {
   if (value is Map<String, dynamic>) {
