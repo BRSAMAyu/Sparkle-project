@@ -197,6 +197,68 @@ class CapsuleFavoriteService:
         )
         return result.scalar_one_or_none() is not None
 
+    async def get_preferences(
+        self,
+        user_id: UUID,
+        db: AsyncSession,
+        *,
+        limit: int = 50,
+    ) -> dict[str, object]:
+        result = await db.execute(
+            select(CapsuleFavorite, CuriosityCapsule)
+            .join(CuriosityCapsule, CuriosityCapsule.id == CapsuleFavorite.capsule_id)
+            .where(
+                CapsuleFavorite.user_id == user_id,
+                CuriosityCapsule.deleted_at.is_(None),
+                CuriosityCapsule.user_id == user_id,
+            )
+            .order_by(desc(CapsuleFavorite.created_at))
+            .limit(limit)
+        )
+        rows = list(result.all())
+        if not rows:
+            return {
+                "favorite_count": 0,
+                "content_depth_preference": None,
+                "subject_affinity": [],
+                "recent_notes": [],
+            }
+
+        depth_counts: dict[str, int] = {}
+        subject_counts: dict[str, int] = {}
+        recent_notes: list[str] = []
+        for favorite, capsule in rows:
+            depth = str(getattr(capsule.depth_level, "value", capsule.depth_level) or "").strip()
+            if depth:
+                depth_counts[depth] = depth_counts.get(depth, 0) + 1
+            subject = str(capsule.related_subject or "").strip()
+            if subject:
+                subject_counts[subject] = subject_counts.get(subject, 0) + 1
+            note = str(favorite.note or "").strip()
+            if note and note not in recent_notes:
+                recent_notes.append(note)
+
+        content_depth_preference = None
+        if depth_counts:
+            content_depth_preference = sorted(
+                depth_counts.items(),
+                key=lambda item: (-item[1], item[0]),
+            )[0][0]
+
+        subject_affinity = [
+            subject
+            for subject, _count in sorted(
+                subject_counts.items(),
+                key=lambda item: (-item[1], item[0]),
+            )[:3]
+        ]
+        return {
+            "favorite_count": len(rows),
+            "content_depth_preference": content_depth_preference,
+            "subject_affinity": subject_affinity,
+            "recent_notes": recent_notes[:3],
+        }
+
     async def toggle_favorite(
         self,
         user_id: UUID,

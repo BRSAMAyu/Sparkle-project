@@ -12,10 +12,10 @@ from app.core.profile_context import ProfileContext
 from app.core.user_insight_state import UserInsightState
 from app.models.accountability import AccountabilityCheckin, AccountabilityPartnership, AccountabilityStatus
 from app.models.calendar_event import CalendarEvent
-from app.models.capsule_favorite import CapsuleFavorite
-from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.tool_history import UserToolHistory
 from app.profile.projection_contract import UserProjectionContract
+from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
+from app.services.capsule_favorite_service import CapsuleFavoriteService
 from app.services.insight_prediction_service import InsightPredictionService
 from app.services.insight_signal_registry import build_signal_evidence
 from app.services.user_insight_analysis_service import UserInsightAnalysisService
@@ -747,34 +747,17 @@ class UserInsightCompiler:
         )
 
     async def _apply_content_signals(self, user_id: UUID, state: UserInsightState) -> None:
-        since = _utcnow() - timedelta(days=self.CAPSULE_WINDOW_DAYS)
-        result = await self.db.execute(
-            select(CapsuleFavorite, CuriosityCapsule)
-            .join(CuriosityCapsule, CuriosityCapsule.id == CapsuleFavorite.capsule_id)
-            .where(
-                CapsuleFavorite.user_id == user_id,
-                CapsuleFavorite.created_at >= since,
-                CuriosityCapsule.deleted_at.is_(None),
-            )
-        )
-        rows = list(result.all())
-        if not rows:
+        capsule_preferences = await CapsuleFavoriteService().get_preferences(user_id, self.db)
+        sample_size = int(capsule_preferences.get("favorite_count") or 0)
+        if sample_size <= 0:
             return
 
-        depth_counts: Counter[str] = Counter()
-        subject_counts: Counter[str] = Counter()
-        shared_count = 0
-        for _favorite, capsule in rows:
-            depth = getattr(capsule.depth_level, "value", capsule.depth_level) or "unknown"
-            depth_counts[str(depth)] += 1
-            subject = str(capsule.related_subject or "").strip()
-            if subject:
-                subject_counts[subject] += 1
-            shared_count += int(capsule.share_count or 0)
-
-        top_depth = depth_counts.most_common(1)[0][0] if depth_counts else ""
-        top_subjects = [subject for subject, _count in subject_counts.most_common(3)]
-        sample_size = len(rows)
+        top_depth = str(capsule_preferences.get("content_depth_preference") or "").strip()
+        top_subjects = [
+            str(subject).strip()
+            for subject in list(capsule_preferences.get("subject_affinity") or [])
+            if str(subject).strip()
+        ]
 
         if top_depth and top_depth != "unknown":
             state.stable_preferences["content_depth_preference"] = top_depth
@@ -796,10 +779,24 @@ class UserInsightCompiler:
                 freshness="medium",
             )
 
+        capsule_mode = await AuroraStage34KillSwitchService().get_feature_mode("capsule")
+        if capsule_mode in {"shadow", "live"}:
+            state.stable_preferences["capsule"] = {
+                "favorite_count": sample_size,
+                "content_depth_preference": top_depth or None,
+                "subject_affinity": top_subjects,
+                "recent_notes": [
+                    str(note).strip()
+                    for note in list(capsule_preferences.get("recent_notes") or [])[:3]
+                    if str(note).strip()
+                ],
+                "mode": capsule_mode,
+            }
+
         state.temporal_patterns["content"] = {
             "favorite_capsule_count": sample_size,
             "top_subjects": top_subjects,
-            "shared_capsule_count": shared_count,
+            "shared_capsule_count": 0,
         }
         state.evidence_backed_hypotheses.append(
             {

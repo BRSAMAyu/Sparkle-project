@@ -1,3 +1,4 @@
+# AI-OPAQUE: notification interaction rows drive delivery/product analytics and are not stable prompt-safe semantics.
 """
 Notification Interaction and Preference Models
 """

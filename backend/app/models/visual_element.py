@@ -1,3 +1,4 @@
+# AI-OPAQUE: visual unlock/inventory records are product-surface state, not safe semantic evidence for LLM reasoning.
 """
 Visual Element System Models
 视觉元素系统数据模型 - 包含视觉元素定义、用户解锁记录、用户视觉配置

@@ -1,3 +1,4 @@
+# AI-OPAQUE: photon transaction history is economy/audit data and should not be treated as direct learner semantics.
 """
 Shop System Models
 商城系统数据模型 - 包含商城物品、购买记录、光子交易历史、用户消耗品

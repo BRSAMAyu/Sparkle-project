@@ -2454,6 +2454,17 @@ def _extract_working_memory_payload(context: dict[str, Any] | None) -> dict[str,
     return {}
 
 
+def _resolve_stage34_capsule_mode(context: dict[str, Any] | None) -> str:
+    payload = context if isinstance(context, dict) else {}
+    modes = payload.get("aurora_stage34_modes")
+    if isinstance(modes, dict):
+        value = str(modes.get("capsule_mode") or "").strip().lower()
+        if value in {"off", "shadow", "live"}:
+            return value
+    fallback = str(getattr(settings, "AURORA_STAGE34_CAPSULE_MODE", "shadow") or "shadow").strip().lower()
+    return fallback if fallback in {"off", "shadow", "live"} else "shadow"
+
+
 def _format_working_memory_section(payload: dict[str, Any] | None) -> str:
     if not isinstance(payload, dict) or not payload:
         return ""
@@ -3261,7 +3272,9 @@ def _normalize_user_context(context: dict) -> dict:
     # --- Canonical insight state enrichment ---
     if canonical_insight is not None:
         # Inline snapshot for prompt injection
-        normalized["_inline_snapshot"] = canonical_insight.to_inline_snapshot()
+        normalized["_inline_snapshot"] = canonical_insight.to_inline_snapshot(
+            capsule_mode=_resolve_stage34_capsule_mode(context)
+        )
         # Goals from compiled state, only if not already provided
         if not normalized.get("active_goals") and canonical_insight.goals:
             normalized["active_goals"] = [

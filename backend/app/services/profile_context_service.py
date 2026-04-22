@@ -25,6 +25,7 @@ from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.subject import Subject
 from app.schemas.error_book import ErrorQueryParams
 from app.services.error_book_service import ErrorBookService
+from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
 from app.services.idiographic_association_service import IdiographicAssociationService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_name
 from app.services.metacognition_service import MetacognitionService
@@ -189,8 +190,12 @@ class ProfileContextService:
 
         # Write inline snapshot cache as a side-effect of compilation
         if context.user_insight_state is not None:
+            stage34_modes = await AuroraStage34KillSwitchService().summary()
             await self._write_inline_snapshot_cache(
-                user_id, context.user_insight_state.to_inline_snapshot()
+                user_id,
+                context.user_insight_state.to_inline_snapshot(
+                    capsule_mode=stage34_modes.get("capsule_mode", "shadow")
+                ),
             )
 
         await self._attach_live_extensions(

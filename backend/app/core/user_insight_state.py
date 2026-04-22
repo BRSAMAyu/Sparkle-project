@@ -173,7 +173,7 @@ class UserInsightState(BaseModel):
 
     INLINE_SNAPSHOT_BUDGET_CHARS: ClassVar[int] = 1200  # ~200 CJK tokens at ~6 chars/token
 
-    def to_inline_snapshot(self) -> dict[str, Any]:
+    def to_inline_snapshot(self, *, capsule_mode: str = "shadow") -> dict[str, Any]:
         """Produce a compact, budget-bounded snapshot for inline prompt injection.
 
         Returns a dict (not a raw string) so the caller can selectively render
@@ -239,6 +239,19 @@ class UserInsightState(BaseModel):
         if ws.get("accountability_support"):
             items.append(f"- 伙伴支持: {ws['accountability_support']}")
 
+        capsule_preferences = (self.stable_preferences or {}).get("capsule")
+        if str(capsule_mode or "off").strip().lower() == "live" and isinstance(capsule_preferences, dict):
+            depth = str(capsule_preferences.get("content_depth_preference") or "").strip()
+            if depth:
+                items.append(f"- 胶囊偏好: 偏向 {depth} 内容")
+            subjects = [
+                str(item).strip()
+                for item in list(capsule_preferences.get("subject_affinity") or [])[:2]
+                if str(item).strip()
+            ]
+            if subjects:
+                items.append(f"- 胶囊主题: {', '.join(subjects)}")
+
         body = "\n".join(items)
         body = self._truncate_to_budget(body)
 
@@ -248,6 +261,7 @@ class UserInsightState(BaseModel):
             "item_count": len(items),
             "budget_chars": self.INLINE_SNAPSHOT_BUDGET_CHARS,
             "truncated": len("\n".join(items)) > self.INLINE_SNAPSHOT_BUDGET_CHARS,
+            "capsule_mode": str(capsule_mode or "off").strip().lower(),
         }
 
     @classmethod
