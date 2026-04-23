@@ -154,6 +154,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         处理流式聊天请求
         实现打字机效果的 AI 响应
         """
+        trace_id = request.request_id or str(uuid.uuid4())
+        workflow_id = "standard_chat"
+        prompt_version = "v1"
         try:
             # 从 metadata 获取追踪信息
             raw_metadata = context.invocation_metadata()
@@ -168,7 +171,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             elif metadata.get("authorization"):
                 logger.debug(f"Auth metadata found for user_id={user_id}")
 
-            trace_id = metadata.get("x-trace-id", request.request_id) or str(uuid.uuid4())
+            trace_id = metadata.get("x-trace-id", request.request_id) or trace_id
 
             # 🔧 根据请求的 chat_mode 选择 workflow
             chat_mode = normalize_chat_mode(getattr(request, "chat_mode", None) or CHAT_MODE_STANDARD)
@@ -185,7 +188,6 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             workflow_id = self._resolve_workflow_id(chat_mode)
 
             prompt_versions = ["v1", "v2"]
-            prompt_version = "v1"
             try:
                 bandit = PromptBandit(redis_client=self.orchestrator.redis)
                 prompt_version = await bandit.select(workflow_id, prompt_versions)

@@ -63,6 +63,11 @@ class _FakeContext:
         self.details = details
 
 
+class _BrokenMetadataContext(_FakeContext):
+    def invocation_metadata(self):
+        raise RuntimeError("metadata unavailable")
+
+
 class _RaisingOrchestrator:
     def __init__(self, exc: Exception) -> None:
         self.exc = exc
@@ -122,3 +127,28 @@ async def test_stream_chat_timeout_sets_deadline_exceeded():
     assert responses[0].error.error_code == agent_service_pb2.ERROR_CODE_TIMEOUT
     assert context.code == grpc.StatusCode.DEADLINE_EXCEEDED
     assert context.details == "系统处理超时，请稍后重试。"
+
+
+@pytest.mark.asyncio
+async def test_stream_chat_error_path_uses_safe_defaults_before_metadata_load():
+    session_factory = _DummySessionFactory()
+    service = AgentServiceImpl(
+        orchestrator=_RaisingOrchestrator(RuntimeError("should not be reached")),
+        db_session_factory=session_factory,
+    )
+    context = _BrokenMetadataContext()
+    request = agent_service_pb2.ChatRequest(
+        user_id=str(uuid.uuid4()),
+        session_id="session-3",
+        request_id="req-3",
+        message="hello",
+    )
+
+    responses = [response async for response in service.StreamChat(request, context)]
+
+    assert len(responses) == 1
+    assert responses[0].trace_id == "req-3"
+    assert responses[0].workflow_id == "standard_chat"
+    assert responses[0].prompt_version == "v1"
+    assert responses[0].finish_reason == agent_service_pb2.ERROR
+    assert context.code == grpc.StatusCode.INTERNAL

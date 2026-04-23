@@ -594,3 +594,25 @@
 验证：
 
 - `go test ./internal/handler` -> PASS
+
+## 27. Cycle 22 - StreamChat 错误路径默认值防炸 D1
+
+状态：`FIXED`
+
+目标：
+
+- 复核 `StreamChat` 的 `trace_id/workflow_id/prompt_version` 是否仍只在 try 内赋值，导致早期异常再被 `UnboundLocalError` 覆盖。
+
+源码复核结论：
+
+- `CONFIRMED`：`trace_id/workflow_id/prompt_version` 仍在 metadata/chat_mode/bandit 之后才赋值，但异常响应构造无条件引用这几个变量。
+
+修复：
+
+- 在 `StreamChat` 入口先初始化安全默认值：`trace_id=request.request_id or uuid4`、`workflow_id=standard_chat`、`prompt_version=v1`。
+- metadata 成功时再覆盖默认值，避免错误路径二次崩溃。
+- 新增单测模拟 `invocation_metadata()` 本身抛错，验证服务仍返回一条带默认 trace/workflow/prompt 的 `ERROR` 响应。
+
+验证：
+
+- `pytest backend/tests/unit/services/test_agent_grpc_service.py` -> PASS
