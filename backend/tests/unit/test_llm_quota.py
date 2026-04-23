@@ -57,6 +57,8 @@ class TestLLMCostGuard:
         redis.get = AsyncMock(return_value=None)
         redis.incrby = AsyncMock(return_value=None)
         redis.incr = AsyncMock(return_value=None)
+        redis.script_load = AsyncMock(return_value="quota-sha")
+        redis.evalsha = AsyncMock(return_value=[1, 1000])
         redis.setex = AsyncMock(return_value=None)
         redis.delete = AsyncMock(return_value=None)
         redis.pipeline = Mock()
@@ -173,12 +175,25 @@ class TestLLMCostGuard:
     async def test_check_quota_with_actual_record(self, cost_guard, mock_redis):
         """测试实际记录配额使用"""
         mock_redis.get = AsyncMock(return_value=b"0")
+        mock_redis.evalsha = AsyncMock(return_value=[1, 1000])
 
         # 检查并记录
         result = await cost_guard.check_quota("user_123", 1000, check_only=False)
 
-        # 验证 incrby 被调用
-        mock_redis.incrby.assert_called_once()
+        assert result.allowed is True
+        mock_redis.evalsha.assert_awaited_once()
+        mock_redis.incrby.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_check_quota_atomic_path_rejects_when_limit_exceeded(self, cost_guard, mock_redis):
+        mock_redis.get = AsyncMock(return_value=b"99000")
+        mock_redis.evalsha = AsyncMock(return_value=[0, 99000])
+
+        result = await cost_guard.check_quota("user_123", 2000, check_only=False)
+
+        assert result.allowed is False
+        assert result.current_usage == 99000
+        assert result.remaining == 1000
 
     # =============================================================================
     # 使用记录测试

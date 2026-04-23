@@ -480,3 +480,26 @@
 验证：
 
 - `go test ./internal/handler ./internal/service ./internal/db` -> PASS
+
+## 22. Cycle 17 - LLMCostGuard 原子扣减 D1
+
+状态：`FIXED`
+
+目标：
+
+- 复核 `LLMCostGuard.check_quota(check_only=False)` 是否仍是 `GET` 再 `INCRBY` 的非原子检查/扣减路径。
+
+源码复核结论：
+
+- `CONFIRMED`：`check_quota()` 在 `check_only=False` 时先读取 `daily_key` 当前值，再调用 `_increment_usage()`；并发下仍可能出现 oversubscribe。
+
+修复：
+
+- `LLMCostGuard` 增加 Lua script 加载与 `_reserve_usage_atomic()`，`check_only=False` 改为使用原子脚本执行“检查并扣减”。
+- 保留脚本加载失败时的兼容回退，但优先走 Lua 原子路径。
+- 新增单测覆盖 atomic allow / atomic reject。
+
+验证：
+
+- `python3 -m compileall backend/app/core/llm_quota.py backend/tests/unit/test_llm_quota.py` -> PASS
+- `pytest backend/tests/unit/test_llm_quota.py backend/tests/unit/test_llm_security_wrapper.py` -> `36 passed`

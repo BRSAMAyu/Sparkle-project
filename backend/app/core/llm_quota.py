@@ -31,6 +31,8 @@ from app.core.redis_utils import resolve_redis_password
 
 logger = logging.getLogger(__name__)
 
+RATE_LIMIT_LUA_PATH = "backend/app/services/lua/rate_limit.lua"
+
 
 @dataclass
 class QuotaConfig:
@@ -104,6 +106,7 @@ class LLMCostGuard:
         """
         self.redis = redis_client
         self.config = config or QuotaConfig()
+        self._quota_script_sha: str | None = None
 
         logger.info(
             f"LLMCostGuard initialized - "
@@ -176,8 +179,26 @@ class LLMCostGuard:
             logger.warning(f"用户 {user_id} 配额警告: {result.message}")
 
         if not check_only and allowed:
-            # 扣减配额 (实际使用时更新)
-            await self._increment_usage(daily_key, estimated_tokens)
+            reserved = await self._reserve_usage_atomic(
+                daily_key=daily_key,
+                estimated_tokens=estimated_tokens,
+                limit=limit,
+            )
+            if not reserved.allowed:
+                result.allowed = False
+                result.current_usage = reserved.current_usage
+                result.remaining = max(0, limit - reserved.current_usage)
+                result.percentage = reserved.current_usage / limit if limit > 0 else 1.0
+                result.message = (
+                    f"配额不足: 已使用 {reserved.current_usage:,}/{limit:,} tokens "
+                    f"({result.percentage*100:.1f}%), 需要 {estimated_tokens:,}, "
+                    f"剩余 {result.remaining:,}"
+                )
+                await self._trigger_quota_alert(user_id, reserved.current_usage, limit)
+            else:
+                result.current_usage = reserved.current_usage
+                result.remaining = max(0, limit - reserved.current_usage)
+                result.percentage = reserved.current_usage / limit if limit > 0 else 1.0
 
         return result
 
@@ -326,6 +347,85 @@ class LLMCostGuard:
     async def _increment_usage(self, key: str, amount: int) -> None:
         """原子性增加使用量"""
         await self.redis.incrby(key, amount)
+
+    async def _load_quota_script(self) -> str | None:
+        if self._quota_script_sha:
+            return self._quota_script_sha
+        try:
+            with open(RATE_LIMIT_LUA_PATH, encoding="utf-8") as handle:
+                script = handle.read()
+            self._quota_script_sha = await self.redis.script_load(script)
+        except Exception as exc:
+            logger.warning(f"Quota script load failed: {exc}")
+            self._quota_script_sha = None
+        return self._quota_script_sha
+
+    async def _reserve_usage_atomic(
+        self,
+        *,
+        daily_key: str,
+        estimated_tokens: int,
+        limit: int,
+    ) -> QuotaCheckResult:
+        script_sha = await self._load_quota_script()
+        if not script_sha:
+            current_usage = int(await self.redis.get(daily_key) or 0)
+            if current_usage + estimated_tokens > limit:
+                return QuotaCheckResult(
+                    allowed=False,
+                    current_usage=current_usage,
+                    limit=limit,
+                    remaining=max(0, limit - current_usage),
+                    percentage=current_usage / limit if limit > 0 else 1.0,
+                )
+            await self._increment_usage(daily_key, estimated_tokens)
+            new_usage = current_usage + estimated_tokens
+            return QuotaCheckResult(
+                allowed=True,
+                current_usage=new_usage,
+                limit=limit,
+                remaining=max(0, limit - new_usage),
+                percentage=new_usage / limit if limit > 0 else 1.0,
+            )
+
+        try:
+            allowed, current_after = await self.redis.evalsha(
+                script_sha,
+                1,
+                daily_key,
+                limit,
+                estimated_tokens,
+                86400,
+            )
+        except Exception as exc:
+            logger.warning(f"Quota evalsha failed: {exc}")
+            current_usage = int(await self.redis.get(daily_key) or 0)
+            if current_usage + estimated_tokens > limit:
+                return QuotaCheckResult(
+                    allowed=False,
+                    current_usage=current_usage,
+                    limit=limit,
+                    remaining=max(0, limit - current_usage),
+                    percentage=current_usage / limit if limit > 0 else 1.0,
+                )
+            await self._increment_usage(daily_key, estimated_tokens)
+            new_usage = current_usage + estimated_tokens
+            return QuotaCheckResult(
+                allowed=True,
+                current_usage=new_usage,
+                limit=limit,
+                remaining=max(0, limit - new_usage),
+                percentage=new_usage / limit if limit > 0 else 1.0,
+            )
+
+        current_after = int(current_after)
+        return QuotaCheckResult(
+            allowed=bool(allowed),
+            current_usage=current_after,
+            limit=limit,
+            remaining=max(0, limit - current_after),
+            percentage=current_after / limit if limit > 0 else 1.0,
+        )
 
     async def _is_emergency_mode(self) -> bool:
         """检查是否处于紧急模式"""
