@@ -384,6 +384,16 @@ func startCQRSWorkers(cqrs *cqrsBundle, log *zap.Logger) {
 
 func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, handlers *handlerBundle, cqrs *cqrsBundle, proxy *proxyBundle, agentClient *agent.Client, logger *zap.Logger) *gin.Engine {
 	r := gin.Default()
+
+	// Configure trusted proxies for accurate ClientIP() behind load balancers
+	if len(cfg.TrustedProxies) > 0 {
+		if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+			logger.Warn("Failed to set trusted proxies, using defaults", zap.Error(err))
+		}
+	} else if cfg.IsProduction() {
+		logger.Warn("TRUSTED_PROXIES not set in production — X-Forwarded-For spoofing possible. " +
+			"Set TRUSTED_PROXIES to your load balancer IP(s).")
+	}
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.Use(otelgin.Middleware("sparkle-gateway"))
 	r.Use(middleware.RequestContextMiddleware())

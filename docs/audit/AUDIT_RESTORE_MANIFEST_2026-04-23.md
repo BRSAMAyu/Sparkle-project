@@ -55,6 +55,7 @@
 - `deep_audit_2026-04-25_0700_stt_service.md`
 - `deep_audit_2026-04-25_0730_profile_event_consumer.md`
 - `STRICT_REVALIDATED_GLOBAL_REPAIR_PLAN_2026-04-24_rounds_1_107.md`
+- `STRICT_REVALIDATED_GLOBAL_REPAIR_PLAN_RECONSTRUCTED_FROM_CONTEXT_2026-04-24_rounds_1_107.md`
 
 ## 仍未找回的内容
 
@@ -65,3 +66,5 @@
 ## 说明
 
 `DEEP_AUDIT_SUMMARY.md` 当前恢复版本汇总到 `Round 64`。我重新写入的严格复核总方案保留了此前源码复核形成的 9 个工作流，并明确标注了当前恢复归档和缺失归档之间的差异。
+
+补充恢复：`STRICT_REVALIDATED_GLOBAL_REPAIR_PLAN_RECONSTRUCTED_FROM_CONTEXT_2026-04-24_rounds_1_107.md` 是根据当前对话上下文中仍保留的源码复核结论重建的增强版。它不等同于原始 107 轮报告全集，但最大化保留了此前对 `65-107` 的有效审查成果。

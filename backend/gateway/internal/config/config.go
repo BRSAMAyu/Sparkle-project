@@ -88,6 +88,7 @@ type Config struct {
 	Environment    string   `mapstructure:"ENVIRONMENT"`     // dev, staging, production
 	AllowedOrigins []string `mapstructure:"ALLOWED_ORIGINS"` // Comma-separated list of allowed origins
 	CORSEnabled    bool     `mapstructure:"CORS_ENABLED"`    // Enable CORS for WebSocket
+	TrustedProxies []string `mapstructure:"TRUSTED_PROXIES"` // Trusted reverse proxy IPs/CIDRs (production: set to LB IP)
 
 	// Cache Strategy Configuration
 	CacheStrategy CacheStrategy `mapstructure:"CACHE_STRATEGY"`
