@@ -7,26 +7,26 @@
 
 | # | 日期 | 模块 | 报告 | P0 | P1 | P2 | 状态 |
 |---|------|------|------|----|----|----|------|
-| 1 | 2026-04-21 23:15 | JWT 认证完整链路 | [deep_audit_2026-04-21_2315_jwt_auth.md](deep_audit_2026-04-21_2315_jwt_auth.md) | 2 | 6 | 5 | ✅ 完成 |
-| 2 | 2026-04-21 23:30 | WebSocket 消息流完整链路 | [deep_audit_2026-04-21_2330_ws_message_flow.md](deep_audit_2026-04-21_2330_ws_message_flow.md) | 2 | 7 | 4 | ✅ 完成 |
-| 3 | 2026-04-21 23:45 | Redis Event Bus 完整链路 | [deep_audit_2026-04-21_2345_event_bus.md](deep_audit_2026-04-21_2345_event_bus.md) | 6 | 5 | 3 | ✅ 完成 |
-| 4 | 2026-04-22 00:00 | Context Pack 上下文组装与注入 | [deep_audit_2026-04-22_0000_context_pack.md](deep_audit_2026-04-22_0000_context_pack.md) | 3 | 6 | 4 | ✅ 完成 |
-| 5 | 2026-04-22 00:15 | gRPC StreamChat 调用链 | [deep_audit_2026-04-22_0015_grpc_streamchat.md](deep_audit_2026-04-22_0015_grpc_streamchat.md) | 3 | 5 | 4 | ✅ 完成 |
-| 6 | 2026-04-22 00:30 | Rate Limiting 完整链路 | [deep_audit_2026-04-22_0030_rate_limiting.md](deep_audit_2026-04-22_0030_rate_limiting.md) | 3 | 4 | 3 | ✅ 完成 |
-| 7 | 2026-04-22 00:45 | Achievement Engine 事件处理与奖励 | [deep_audit_2026-04-22_0045_achievement_engine.md](deep_audit_2026-04-22_0045_achievement_engine.md) | 3 | 5 | 4 | ✅ 完成 |
-| 8 | 2026-04-22 01:00 | Chat History 持久化与检索 | [deep_audit_2026-04-22_0100_chat_history.md](deep_audit_2026-04-22_0100_chat_history.md) | 2 | 5 | 3 | ✅ 完成 |
-| 9 | 2026-04-22 01:15 | Dual-Core Router 决策链路 | [deep_audit_2026-04-22_0115_dual_core_router.md](deep_audit_2026-04-22_0115_dual_core_router.md) | 2 | 5 | 3 | ✅ 完成 |
-| 10 | 2026-04-22 01:30 | Memory Service 写入路径 | [deep_audit_2026-04-22_0130_memory_service.md](deep_audit_2026-04-22_0130_memory_service.md) | 2 | 4 | 3 | ✅ 完成 |
-| 11 | 2026-04-22 01:45 | Galaxy Knowledge Graph 完整链路 | [deep_audit_2026-04-22_0145_galaxy_knowledge_graph.md](deep_audit_2026-04-22_0145_galaxy_knowledge_graph.md) | 2 | 5 | 3 | ✅ 完成 |
-| 12 | 2026-04-22 02:00 | Community Signal Bridge 社群信号桥接 | [deep_audit_2026-04-22_0200_community_signal_bridge.md](deep_audit_2026-04-22_0200_community_signal_bridge.md) | 2 | 5 | 3 | ✅ 完成 |
-| 13 | 2026-04-22 02:15 | ScaffoldingFSM 学习脚手架状态机 | [deep_audit_2026-04-22_0215_scaffolding_fsm.md](deep_audit_2026-04-22_0215_scaffolding_fsm.md) | 2 | 4 | 3 | ✅ 完成 |
-| 14 | 2026-04-22 02:30 | 输入校验/XSS/注入防御全链路 | [deep_audit_2026-04-22_0230_input_validation_security.md](deep_audit_2026-04-22_0230_input_validation_security.md) | 2 | 5 | 3 | ✅ 完成 |
-| 15 | 2026-04-22 02:45 | 通知/推送系统完整链路 | [deep_audit_2026-04-22_0245_notification_push.md](deep_audit_2026-04-22_0245_notification_push.md) | 2 | 5 | 3 | ✅ 完成 |
-| 16 | 2026-04-22 03:00 | Focus Mode 专注模式完整闭环 | [deep_audit_2026-04-22_0300_focus_mode.md](deep_audit_2026-04-22_0300_focus_mode.md) | 2 | 5 | 3 | ✅ 完成 |
-| 17 | 2026-04-22 03:15 | Task Service 生命周期链路 | [deep_audit_2026-04-22_0315_task_service.md](deep_audit_2026-04-22_0315_task_service.md) | 2 | 5 | 3 | ✅ 完成 |
-| 18 | 2026-04-22 03:30 | Error Book 错题本完整链路 | [deep_audit_2026-04-22_0330_error_book.md](deep_audit_2026-04-22_0330_error_book.md) | 2 | 5 | 3 | ✅ 完成 |
-| 19 | 2026-04-22 03:45 | Calendar Event 日历事件完整链路 | [deep_audit_2026-04-22_0345_calendar.md](deep_audit_2026-04-22_0345_calendar.md) | 2 | 5 | 3 | ✅ 完成 |
-| 20 | 2026-04-22 04:00 | Cognitive Prism 认知棱镜完整链路 | [deep_audit_2026-04-22_0400_cognitive_prism.md](deep_audit_2026-04-22_0400_cognitive_prism.md) | 2 | 5 | 3 | ✅ 完成 |
+| 1 | 2026-04-21 23:15 | JWT 认证完整链路 | [deep_audit_2026-04-21_2315_jwt_auth.md](deep_audit_2026-04-21_2315_jwt_auth.md) | 2 | 6 | 5 | ⚠️ 已复核-有更新 0/13已修, P1-1/P1-5部分缓解(生产Fail-Closed守卫+本地缓存TTL), P0-1刷新无轮换+P0-2 WS Token泄露未修 |
+| 2 | 2026-04-21 23:30 | WebSocket 消息流完整链路 | [deep_audit_2026-04-21_2330_ws_message_flow.md](deep_audit_2026-04-21_2330_ws_message_flow.md) | 2 | 7 | 4 | ⚠️ 已复核-有更新 0/13已修, P1-6部分修复(break路径发送DoneEvent但return false路径仍缺失), 行号偏移已标注 |
+| 3 | 2026-04-21 23:45 | Redis Event Bus 完整链路 | [deep_audit_2026-04-21_2345_event_bus.md](deep_audit_2026-04-21_2345_event_bus.md) | 6 | 5 | 3 | ⚠️ 已复核-有更新 1/14已修(P0-6 SET NX原子锁), P0-1主Stream仍无maxlen, P0-3仍无XAUTOCLAIM, lock fail-open仍存在 |
+| 4 | 2026-04-22 00:00 | Context Pack 上下文组装与注入 | [deep_audit_2026-04-22_0000_context_pack.md](deep_audit_2026-04-22_0000_context_pack.md) | 3 | 6 | 4 | ⚠️ 已复核-无变化 0/13已修, 代码完全未动, P0-3额外发现session不一致bug(:354 self.db vs db) |
+| 5 | 2026-04-22 00:15 | gRPC StreamChat 调用链 | [deep_audit_2026-04-22_0015_grpc_streamchat.md](deep_audit_2026-04-22_0015_grpc_streamchat.md) | 3 | 5 | 4 | ⚠️ 已复核-有更新 1/12已修(P2-2 UUID校验), 3个P0全部未修, 行号基本准确 |
+| 6 | 2026-04-22 00:30 | Rate Limiting 完整链路 | [deep_audit_2026-04-22_0030_rate_limiting.md](deep_audit_2026-04-22_0030_rate_limiting.md) | 3 | 4 | 3 | ⚠️ 已复核-无变化 0/10已修, P0-1 Token Bucket 1000x补充仍存在, 代码完全未动 |
+| 7 | 2026-04-22 00:45 | Achievement Engine 事件处理与奖励 | [deep_audit_2026-04-22_0045_achievement_engine.md](deep_audit_2026-04-22_0045_achievement_engine.md) | 3 | 5 | 4 | ⚠️ 已复核-无变化 0/10已修, 代码完全未动, P0-1非原子奖励+P0-3非原子计数器仍存在 |
+| 8 | 2026-04-22 01:00 | Chat History 持久化与检索 | [deep_audit_2026-04-22_0100_chat_history.md](deep_audit_2026-04-22_0100_chat_history.md) | 2 | 5 | 3 | ⚠️ 已复核-有更新 0/10已修, P0-2部分改善(增加丢弃日志但无指标), P0-1仍仅6字段/缺富内容 |
+| 9 | 2026-04-22 01:15 | Dual-Core Router 决策链路 | [deep_audit_2026-04-22_0115_dual_core_router.md](deep_audit_2026-04-22_0115_dual_core_router.md) | 2 | 5 | 3 | ⚠️ 已复核-有更新 1/10已修(P1-5), 路由器已重构22→10字段, P0-1 cognitive_load仍缺失, 建议重新审计 |
+| 10 | 2026-04-22 01:30 | Memory Service 写入路径 | [deep_audit_2026-04-22_0130_memory_service.md](deep_audit_2026-04-22_0130_memory_service.md) | 2 | 4 | 3 | ⚠️ 已复核-无变化 0/9已修, 代码完全未动, P0-1 Aurora Stage16可能仅实现未上线 |
+| 11 | 2026-04-22 01:45 | Galaxy Knowledge Graph 完整链路 | [deep_audit_2026-04-22_0145_galaxy_knowledge_graph.md](deep_audit_2026-04-22_0145_galaxy_knowledge_graph.md) | 2 | 5 | 3 | ⚠️ 已复核-无变化 0/10已修, 代码完全未动, P0-2 build_evidence_pack在知识搜索有调用但聊天流未调用 |
+| 12 | 2026-04-22 02:00 | Community Signal Bridge 社群信号桥接 | [deep_audit_2026-04-22_0200_community_signal_bridge.md](deep_audit_2026-04-22_0200_community_signal_bridge.md) | 2 | 5 | 3 | ⚠️ 已复核-有更新 1/10已修(P1-5唯一约束), P0-1加重(social_context_renderer源文件已删除→倒退), P0-2部分修(API层修但flame端点仍泄露), P1-1零事件发布仍存在 |
+| 13 | 2026-04-22 02:15 | ScaffoldingFSM 学习脚手架状态机 | [deep_audit_2026-04-22_0215_scaffolding_fsm.md](deep_audit_2026-04-22_0215_scaffolding_fsm.md) | 2 | 4 | 3 | ✅ 已复核-无变化(Chris S3) P0-1/P0-2/P1-1/P1-2全部确认未修,属架构级改进 |
+| 14 | 2026-04-22 02:30 | 输入校验/XSS/注入防御全链路 | [deep_audit_2026-04-22_0230_input_validation_security.md](deep_audit_2026-04-22_0230_input_validation_security.md) | 2 | 5 | 3 | ⚠️ 已复核-有更新 0/10主体已修, P0-2部分改善(部分_soften_section但核心f-string/format仍存在), 其余9项未修 |
+| 15 | 2026-04-22 02:45 | 通知/推送系统完整链路 | [deep_audit_2026-04-22_0245_notification_push.md](deep_audit_2026-04-22_0245_notification_push.md) | 2 | 5 | 3 | ⚠️ 已复核-无变化 0/10已修, P1-4部分缓解(有消费链但无用户可见通知), P2-3加重(日历上下文路径已消失) |
+| 16 | 2026-04-22 03:00 | Focus Mode 专注模式完整闭环 | [deep_audit_2026-04-22_0300_focus_mode.md](deep_audit_2026-04-22_0300_focus_mode.md) | 2 | 5 | 3 | ⚠️ 已复核-有更新 0/10已修(P1-4/P2-2部分缓解), P0-1成就双重处理仍在, P0-2无幂等保护未修, AF-3 Flutter侧无幂等键, AF-4 Go侧允许客户端覆盖focus_type |
+| 17 | 2026-04-22 03:15 | Task Service 生命周期链路 | [deep_audit_2026-04-22_0315_task_service.md](deep_audit_2026-04-22_0315_task_service.md) | 2 | 5 | 3 | ⚠️ 已复核-有更新 0/10已修, 行号偏移(726→634), P1-4修正(GalaxyEventConsumer调用GraphEvolutionService非spark_node→架构违规非双重spark), P0-1双重成就仍存在 |
+| 18 | 2026-04-22 03:30 | Error Book 错题本完整链路 | [deep_audit_2026-04-22_0330_error_book.md](deep_audit_2026-04-22_0330_error_book.md) | 2 | 5 | 3 | ⚠️ 已复核-有更新 0/8已修(2项N/A ErrorReplanBridge不存在于主项目), AF-1 ErrorReplanBridge整体缺失(非dormant而是absent), AF-2 error_summary/recent_errors在prompt层完全不可见(关联#54 P1-1), P0-2错题纠正零成就反馈 |
+| 19 | 2026-04-22 03:45 | Calendar Event 日历事件完整链路 | [deep_audit_2026-04-22_0345_calendar.md](deep_audit_2026-04-22_0345_calendar.md) | 2 | 5 | 3 | ⚠️ 已复核-有更新 2/10已修(P2-2 duration_minutes+P1-4 Create端校验), P0-2加重(ProfileEventConsumer移除calendar订阅+InsightSignalRegistry不存在+审计合规项3/5声称有误), AD-1 ContextManager注入消失+AD-3 Gateway缺restore路由 |
+| 20 | 2026-04-22 04:00 | Cognitive Prism 认知棱镜完整链路 | [deep_audit_2026-04-22_0400_cognitive_prism.md](deep_audit_2026-04-22_0400_cognitive_prism.md) | 2 | 5 | 3 | ⚠️ 已复核-二次确认无变化(Chris S3) P0-1双路径/P0-2类型不匹配/P1-1 is_archived均确认未修 |
 | 21 | 2026-04-22 04:15 | Plan Service 生命周期链路 | [deep_audit_2026-04-22_0415_plan_service.md](deep_audit_2026-04-22_0415_plan_service.md) | 2 | 5 | 3 | ✅ 完成 |
 | 22 | 2026-04-22 04:30 | Photon/Flame 奖励经济系统 | [deep_audit_2026-04-22_0430_photon_flame_economy.md](deep_audit_2026-04-22_0430_photon_flame_economy.md) | 2 | 5 | 3 | ✅ 完成 |
 | 23 | 2026-04-22 04:45 | Seed Library 种子库完整链路 | [deep_audit_2026-04-22_0445_seed_library.md](deep_audit_2026-04-22_0445_seed_library.md) | 2 | 5 | 3 | ✅ 完成 |
@@ -39,7 +39,7 @@
 | 30 | 2026-04-22 06:30 | Report 学习报告生成完整链路 | [deep_audit_2026-04-22_0630_learning_report.md](deep_audit_2026-04-22_0630_learning_report.md) | 2 | 5 | 3 | ✅ 完成 |
 | 31 | 2026-04-22 06:45 | OpenClaw 数字任务执行完整链路 | [deep_audit_2026-04-22_0645_openclaw_execution.md](deep_audit_2026-04-22_0645_openclaw_execution.md) | 2 | 5 | 3 | ✅ 完成 |
 | 32 | 2026-04-22 07:00 | Dynamic Tool Registry + AI Tools 系统 | [deep_audit_2026-04-22_0700_tool_registry.md](deep_audit_2026-04-22_0700_tool_registry.md) | 2 | 5 | 3 | ✅ 完成 |
-| 33 | 2026-04-22 07:15 | Celery Task Queue 分布式任务队列 | [deep_audit_2026-04-22_0715_celery_task_queue.md](deep_audit_2026-04-22_0715_celery_task_queue.md) | 2 | 5 | 3 | ✅ 完成 |
+| 33 | 2026-04-22 07:15 | Celery Task Queue 分布式任务队列 | [deep_audit_2026-04-22_0715_celery_task_queue.md](deep_audit_2026-04-22_0715_celery_task_queue.md) | 2 | 5 | 3 | ⚠️ 已复核-报告文件缺失 原始报告文件不在worktree中(已从SUMMARY推断P0×2+P1×5+P2×3=10项), 新鲜审计发现4×P0(Beat缺失+日期比较bug+嵌套asyncio.run+event loop竞态)+6×P1+4×P2, 严重程度高于原始报告 |
 | 34 | 2026-04-22 07:30 | LLM Service 多提供者抽象与安全层 | [deep_audit_2026-04-22_0730_llm_service.md](deep_audit_2026-04-22_0730_llm_service.md) | 2 | 5 | 3 | ✅ 完成 |
 | 35 | 2026-04-22 07:45 | 文件处理流水线（上传→分块→嵌入→存储） | [deep_audit_2026-04-22_0745_file_processing_pipeline.md](deep_audit_2026-04-22_0745_file_processing_pipeline.md) | 2 | 5 | 3 | ✅ 完成 |
 | 36 | 2026-04-22 08:00 | 好奇心胶囊生成系统完整链路 | [deep_audit_2026-04-22_0800_capsule_generation.md](deep_audit_2026-04-22_0800_capsule_generation.md) | 2 | 5 | 3 | ✅ 完成 |
@@ -53,3 +53,14 @@
 | 44 | 2026-04-22 10:00 | State Aggregator Service 用户状态聚合服务完整链路 | [deep_audit_2026-04-22_1000_state_aggregator.md](deep_audit_2026-04-22_1000_state_aggregator.md) | 2 | 5 | 3 | ✅ 完成 |
 | 45 | 2026-04-22 10:15 | Context Builder 上下文组装与注入完整链路 | [deep_audit_2026-04-22_1015_context_builder.md](deep_audit_2026-04-22_1015_context_builder.md) | 2 | 5 | 3 | ✅ 完成 |
 | 46 | 2026-04-22 10:30 | Context Pruner 对话历史裁剪与摘要完整链路 | [deep_audit_2026-04-22_1030_context_pruner.md](deep_audit_2026-04-22_1030_context_pruner.md) | 2 | 5 | 3 | ✅ 完成 |
+| 47 | 2026-04-24 11:00 | ChatOrchestrator Chatflow 核心聊天请求处理（配额预留不退还 + token 估算偏估 + 缓存 scope 含 volatile 字段 + FileIds 未消毒 + i18n 盲区十连） | [deep_audit_2026-04-24_1100_chat_orchestrator_chatflow.md](deep_audit_2026-04-24_1100_chat_orchestrator_chatflow.md) | 2 | 5 | 3 | ✅ 完成 |
+| 48 | 2026-04-24 11:15 | File Handler 文件上传/下载/删除完整链路（SVG stored XSS + Bucket泄露 + 幽灵文件 + fire-and-forget处理 + 非原子删除） | [deep_audit_2026-04-24_1115_file_handler_upload.md](deep_audit_2026-04-24_1115_file_handler_upload.md) | 1 | 5 | 3 | ⚠️ 已复核-无变化 0/9已修, P1-2/P1-5部分缓解(FileGCService最终一致性清理), AF-2 thumbnail_service仅处理PDF→非PDF thumbnail永远404 |
+| 49 | 2026-04-25 01:00 | gRPC Client + Circuit Breaker + Health Check 完整链路（健康检查触发完整FSM + RESOURCE_EXHAUSTED重试 + WithBlock启动阻塞 + 断路器不可观测） | [deep_audit_2026-04-25_0100_grpc_client_circuit_breaker.md](deep_audit_2026-04-25_0100_grpc_client_circuit_breaker.md) | 1 | 4 | 3 | ⚠️ 已复核-无变化 0/8已修, P0-1 health check仍用StreamChat无短路+无CloseSend, P1-3流中途失败对断路器不可见, AF-4 GRPCHealthClient重复WithBlock反模式 |
+| 50 | 2026-04-25 02:00 | WebSocket Proxy 社群连接代理完整链路 | [deep_audit_2026-04-25_0200_websocket_proxy_community.md](deep_audit_2026-04-25_0200_websocket_proxy_community.md) | 1 | 5 | 3 | ✅ 完成 |
+| 51 | 2026-04-25 03:00 | Go Gateway 中间件安全链（CORS/SecurityHeaders/Timeout/InternalAPI/IPWhitelist/RequestContext） | [deep_audit_2026-04-25_0300_go_middleware_security_chain.md](deep_audit_2026-04-25_0300_go_middleware_security_chain.md) | 0 | 5 | 3 | ✅ 完成 |
+| 52 | 2026-04-25 04:00 | UX Envelope 展示适配层完整链路（内存泄漏 + 50+硬编码中文 + 无schema契约 + metadata膨胀 + 无类型安全） | [deep_audit_2026-04-25_0400_ux_envelope.md](deep_audit_2026-04-25_0400_ux_envelope.md) | 1 | 5 | 3 | ✅ 完成 |
+| 53 | 2026-04-25 05:00 | Go Chat Orchestrator WebSocket→gRPC 完整链路（Legacy反馈并发写竞态 + Health probe流泄漏 + 速率限制默认值过激 + CJK配额估算偏低 + SHA-1哈希碰撞 + 异步goroutine脱离context） | [deep_audit_2026-04-25_0500_go_chat_orchestrator.md](deep_audit_2026-04-25_0500_go_chat_orchestrator.md) | 3 | 7 | 7 | ✅ 完成 |
+| 54 | 2026-04-25 05:15 | Prompt Assembly 系统提示词组装完整链路（format_map值未消毒+Graph节点零上下文+Error data死代码+Token预算len/4+模板200行×4重复+i18n零支持+双重token预算冲突） | [deep_audit_2026-04-25_0515_prompt_assembly.md](deep_audit_2026-04-25_0515_prompt_assembly.md) | 2 | 5 | 7 | ✅ 完成 |
+| 55 | 2026-04-25 05:30 | Agent gRPC Service Go↔Python桥接层（UnboundLocalError崩溃+finish_reason STOP非ERROR+SubmitPlanReview 3×DB session+context取消不检查+17处str(e)泄露+limit无上限） | [deep_audit_2026-04-25_0530_agent_grpc_service.md](deep_audit_2026-04-25_0530_agent_grpc_service.md) | 3 | 6 | 6 | ✅ 完成 |
+| 56 | 2026-04-25 05:45 | Flutter WebSocket Client 完整链路（Legacy连接标记过早+Community WS 100ms竞态+Community token URL明文暴露+ChatRepository每次build新建WS实例+401检测过宽+心跳失败广播+枚举重复+dispose顺序错） | [deep_audit_2026-04-25_0545_flutter_ws_client.md](deep_audit_2026-04-25_0545_flutter_ws_client.md) | 4 | 7 | 8 | ✅ 完成 |
+| 57 | 2026-04-23 16:00 | Notification Center Service 通知中心完整链路 | [deep_audit_2026-04-23_1600_notification_center.md](deep_audit_2026-04-23_1600_notification_center.md) | 1 | 5 | 3 | ✅ 完成(Chris S3新审) |

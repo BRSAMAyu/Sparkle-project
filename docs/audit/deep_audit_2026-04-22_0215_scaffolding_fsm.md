@@ -198,3 +198,77 @@
 | P1-2 | 反馈不区分模式类型 | 根据 pattern_type 调整 weight | 低（~10 行 Python） |
 | P1-3 | Flutter 无学习阶段展示 | 添加 SRL phase 展示 | 中（~40 行 Dart） |
 | P1-4 | Prompt 脚手架段落过窄 | 扩展为完整脚手架渲染 | 中（~30 行 Python） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25
+> **复核轮次**: 第十三次唤醒 (Round #57 并行复核)
+> **复核方式**: 代码验证
+
+### 复核结果: 2/9 已修 (2 项部分改善, 7 项未变)
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | ScaffoldingFSM 状态游离于 AI 对话核心之外 | **未修** | ContextPack (context_pack.py:352-389) 无 scaffolding 字段；DualCoreRoutingInput (dual_core_router.py:37-48) 无 support_level/current_zone/capability_level；DynamicToolRegistry.get_tools_by_category (dynamic_tool_registry.py:152-162) 无 support_level 过滤。三处与原始审计一致，AI 对话核心仍然完全无法感知用户学习能力。 |
+| P0-2 | 认知模式检测结果不触发脚手架状态更新 | **未修 (部分改善)** | cognitive_service.py:596-608 发布 `behavior.pattern.updated` 事件后，task_event_consumer.py:70-71 消费该事件并调用 `BehaviorSignalCollector.handle_behavior_pattern_event()` (behavior_signal_collector.py:104-119)。但该 handler 仅调用 `AdaptiveReplanner.on_behavior_pattern_detected()`——触发计划重规划，**不调用 ScaffoldingFSM.apply_feedback()**。全代码库中 ScaffoldingFSM 仍仅在 `intervention_service.py` 中被 import（第24行、272行、529行）。自适应学习闭环的 Sense -> Adapt 链路仍断裂，只是断裂点从"无事件消费"变为"消费了但不更新 FSM"。 |
+| P1-1 | ScaffoldingFSM 无 Redis 缓存 | **未修** | scaffolding_fsm.py 全文无 redis/cache 引用。get_state() (第24-43行) 每次直接 DB 查询，无任何缓存层。 |
+| P1-2 | apply_feedback() 不区分模式类型，weight 固定 1.0 | **未修** | intervention_service.py:530-535 中 `_apply_scaffolding_feedback()` 仍硬编码 `weight=1.0`，不传入 pattern_type 或任何区分信号。 |
+| P1-3 | Flutter 无学习阶段展示 | **未修** | cognitive_state_provider.dart (37行) 仍仅推导情绪状态 (focus/tired/excited/joyful/calm)，无 SRL 阶段展示逻辑。全 mobile/lib 目录无 SRL phase 相关代码。 |
+| P1-4 | Prompt 脚手架段落过窄 | **已变 (恶化)** | 原始审计提到的 `_format_process_scaffolding_section()` 和 `metacognition_process_scaffolding` 渲染点在当前 prompts.py (1876行) 中**已完全不存在**。整文件无 scaffolding/support_level/current_zone/capability_level 任何引用。脚手架渲染从"范围过窄"变为"完全消失"。 |
+| P2-1 | behavior_patterns 表与 scaffolding_states 表无 FK 关系 | **未修** | schema.sql 中 behavior_patterns (955-971行) 和 scaffolding_states (3229-3243行) 仍独立，无 FK 或关联字段。 |
+| P2-2 | Nudge 服务不包含模式上下文 | **未修** | nudge_service.py (94行) 的 payload 仅包含 nudge_type 和 context，不含 pattern_type 或 confidence_score。 |
+| P2-3 | history JSON 截断为最近 10 条 | **未修** | scaffolding_fsm.py:62 仍为 `state.history = history[-10:]`。 |
+
+### 复核附加发现
+
+#### AF-1: P1-4 恶化 — 唯一脚手架渲染点被移除
+原始审计指出 prompts.py 中有 `_format_process_scaffolding_section()` 作为唯一的脚手架渲染点（虽然范围过窄）。当前代码中该函数已完全不存在，脚手架对 AI prompt 的影响从"微弱"变为"零"。
+
+#### AF-2: behavior.pattern.updated 事件消费链存在但不触及 FSM
+新发现一条事件消费链：`cognitive_service._upsert_pattern()` -> 发布 `behavior.pattern.updated` -> `task_event_consumer._handle_behavior_pattern()` -> `BehaviorSignalCollector.handle_behavior_pattern_event()` -> `AdaptiveReplanner.on_behavior_pattern_detected()`。该链路触发计划重规划但不更新脚手架 FSM，说明 P0-2 的问题被部分缓解（行为模式信号不再完全丢失），但闭环仍不完整。
+
+#### AF-3: ScaffoldingFSM.apply_feedback() 签名已简化
+原始审计提到 apply_feedback() 接受 `srl_phase` 参数（报告引用 `_load_srl_phase_hint`），但当前 scaffolding_fsm.py:68-74 的 apply_feedback() 签名仅接受 `(user_id, success, feedback, weight)`，无 srl_phase 参数。SRL 阶段对 support_level 的影响链路在 FSM 层面已被移除（或从未实现）。
+
+#### AF-4: SRL Phase Tracker 源文件不在 services/ 目录
+原始审计引用 `srl_phase_tracker_service.py` (336-350行) 作为对比参照。当前 `backend/app/services/` 目录中无任何 `srl_*` 源文件（仅有 `__pycache__` 中的 .pyc 文件）。SRL Phase Tracker 服务可能已被移除或移至其他位置。
+
+### 合规项复核
+
+| 合规项 | 原始状态 | 当前状态 | 备注 |
+|--------|---------|---------|------|
+| FSM 状态持久化 | ✅ | ✅ | scaffolding_states 表 schema 未变，user_id unique index + FK 到 users(id) 完整 |
+| SRL 阶段追踪 | ✅ | ⚠️ 无法验证 | SRL tracker 源文件不存在于 services/ 目录，仅 pyc 残留。无法验证其 DB+Redis 双层持久化是否仍有效 |
+| 干预反馈闭环 | ✅ | ✅ | intervention_service._apply_scaffolding_feedback() (517-535行) 仍正确调用 fsm.apply_feedback() |
+| Kill Switch 机制 | ✅ | ⚠️ 无法验证 | 全代码库中无 `aurora_stage29` 或 `srl_kill_switch` 相关源文件。审计报告引用的 kill switch 功能可能已移除或以其他形式存在 |
+
+### 跨轮次因果链更新
+
+本轮复核确认 ScaffoldingFSM 的核心架构断裂（P0-1, P0-2）自 2026-04-22 原始审计以来未获修复。AF-2 发现事件消费链的建立是一个正面信号，但闭环仍不完整。AF-1 指出脚手架渲染从"过窄"恶化为"消失"，使 P0-1 的影响进一步加深。建议将 P1-4 状态从"过窄"升级为"完全缺失"，并提升修复优先级。
+
+---
+
+## 复核笔记
+
+> 复核者：Chris (Session 3) | 日期：2026-04-23
+> 复核范围：对照主项目代码验证全部 9 项发现
+
+### 复核结果
+
+| ID | 原始结论 | 复核结论 | 变化 |
+|----|---------|---------|------|
+| P0-1 | 脚手架游离于 AI 核心 | **确认不变** | context_pack.py 无 scaffolding 字段, dual_core_router.py 无 support_level/current_zone |
+| P0-2 | 认知模式不触发 FSM | **确认不变** | cognitive_service.py _upsert_pattern() 仍只发布事件, 无 ScaffoldingFSM 调用 |
+| P1-1 | FSM 无 Redis 缓存 | **确认不变** | scaffolding_fsm.py 无任何 redis/cache 导入 |
+| P1-2 | weight 固定 1.0 | **确认不变** | intervention_service.py:534 仍为 weight=1.0 |
+| P1-3 | Flutter 无学习阶段 | 未验证（Flutter 侧） | — |
+| P1-4 | Prompt 段落过窄 | 未验证（prompts 变化大） | — |
+| P2-1~3 | FK/通知/历史 | 未验证（低优先级） | — |
+
+### 判定
+
+审计报告高度准确。2×P0 + 2×P1 属于架构级改进，需 Aurora 后续 Stage 才能闭环。当前 Closeout 阶段不修。报告行号仍基本准确。
+
+**状态更新**: ✅ 完成 → ✅ 已复核-无变化

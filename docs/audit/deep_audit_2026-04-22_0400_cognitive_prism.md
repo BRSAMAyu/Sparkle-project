@@ -255,3 +255,78 @@ Flutter 认知操作 (碎片创建/模式查看/胶囊消费)
 | P1-3 | 分析失败无重试 | 添加重试逻辑或 retry 端点 | 中（~30 行 Python） |
 | P1-4 | severity 含义模糊 | prompt 中添加映射说明 | 低（~3 行 Python） |
 | P1-5 | 不过滤 FAILED 碎片 | 添加 status 查询参数 | 低（~5 行 Python） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25
+> **复核轮次**: 第十次唤醒 (Round #56 并行复核)
+> **复核方式**: 代码验证
+> **复核基准**: main project `/Users/brsama/code/GitHub/Sparkle-project/`
+
+### 复核结果: 0/10 已修
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | 分析双路径调度 — BackgroundTask + EventBus 同时触发 | ❌ 未修 | `cognitive.py:80-86` BackgroundTask 仍在；`cognitive_event_consumer.py:78` EventBus 消费者仍在。唯一变化：`settings.ANALYSIS_SYNC_ON_EVENT=True`（默认值）使 `analyze_behavior()` 在 EventBus 路径走 `UnifiedAnalysisService` 而非直接 LLM prompt，但**双触发本身未消除**。当 `GLM_BATCH_ENABLED=False` 时 BackgroundTask 触发一次，EventBus 消费者再触发一次，两次分析仍并行执行。 |
+| P0-2 | evidence_ids 存储为 `list[str]` 但 schema 声明 `list[UUID]` | ❌ 未修 | `cognitive_service.py:546-562` 仍用 `str(fragment_id)` 写入 evidence_ids。`schemas/cognitive.py:65` 仍声明 `evidence_ids: list[UUID] \| None`。类型不匹配未修。Pydantic v2 的 `from_attributes=True` 在大多数情况下会将 str 自动转为 UUID（宽松模式），但如果开启严格模式或将 evidence_ids 序列化为 JSON 再反序列化，可能导致 422。风险潜伏。 |
+| P1-1 | get_user_patterns 不过滤 is_archived | ❌ 未修 | `cognitive_service.py:622-634` `get_user_patterns()` 仅过滤 `confidence_score >= min_confidence`，无 `is_archived == False` 过滤。`cognitive.py:118-124` GET /patterns 也不过滤。已归档模式仍返回给前端和 AI。 |
+| P1-2 | source_type/resource_type 无枚举校验 | ❌ 未修 | `schemas/cognitive.py:18-21` 仍为未约束的 `str`。无 Literal/Enum 约束。客户端可传入任意值。 |
+| P1-3 | analyze_behavior 异常无重试 | ❌ 未修 | `cognitive_service.py:505-510` 仍直接 `return {"error": str(e)}` 无重试。`cognitive_event_consumer.py:81-84` 虽有 DLQ 机制但仅对 EventBus 消费者路径有效，BackgroundTask 路径完全无重试。无 `/retry` 端点。 |
+| P1-4 | severity 含义模糊 — prompt 仅 "X/5" | ❌ 未修 | `cognitive_service.py:398` 仍为 `Severity: {fragment.severity}/5`，无映射说明。LLM 无法区分 severity 1 和 5 的业务语义。 |
+| P1-5 | GET /fragments 不过滤 FAILED 碎片 | ❌ 未修 | `cognitive_service.py:610-620` `get_fragments()` 无 `analysis_status` 过滤条件。`cognitive.py:91-107` 无 `status` 查询参数。所有状态碎片（含 FAILED）均返回前端。 |
+| P2-1 | behavior_patterns 无 (user_id, pattern_name) 唯一约束 | ❌ 未修 | `schema.sql` 的 `behavior_patterns` 表无联合唯一索引。`_upsert_pattern()` 仍依赖应用层字符串精确匹配查重。并发写入仍可能产生重复模式。 |
+| P2-2 | EMA alpha=0.3 硬编码 | ❌ 未修 | `cognitive_service.py:539` 仍为 `alpha = 0.3` 硬编码。未提取到配置。 |
+| P2-3 | GET /patterns 按 created_at 而非 confidence_score 排序 | ❌ 未修 | `cognitive.py:121` 仍 `.order_by(desc(BehaviorPattern.created_at))`，与 `get_user_patterns()` 的 `.order_by(desc(BehaviorPattern.confidence_score))` 不一致。 |
+
+### 复核附加发现
+
+#### AF-1: ANALYSIS_SYNC_ON_EVENT 引入新的双路径语义差异
+- **位置**: `cognitive_service.py:288-296`
+- **发现**: 当 `ANALYSIS_SYNC_ON_EVENT=True`（当前默认值）且无 `batch_model_key` 时，`analyze_behavior()` 走 `UnifiedAnalysisService` 路径而非直接 LLM+RAG 路径。但 EventBus 消费者调用 `analyze_behavior(user_id, fragment_id)` 时不传 `batch_model_key`，会走 Unified 路径；而 BackgroundTask 也走同一路径。结果是两次完全相同的 Unified 分析，浪费更严重（Unified 分析成本 > 基础 LLM 分析成本）。
+- **严重度**: P0（加剧 P0-1 的影响）
+
+#### AF-2: EventBus 消费者无去重保护
+- **位置**: `cognitive_event_consumer.py:43-84`
+- **发现**: 消费者直接调用 `analyze_behavior`，不检查 fragment 的 `analysis_status`。如果 fragment 已处于 `COMPLETED` 或 `PROCESSING` 状态（因 BackgroundTask 先执行），EventBus 消费者仍会启动第二遍分析。`analyze_behavior()` 内部也无 status guard（不在 COMPLETED 时短路返回）。
+- **严重度**: P1（可通过在 `analyze_behavior` 开头添加 `if fragment.analysis_status in (PROCESSING, COMPLETED): return` 缓解）
+
+#### AF-3: Pydantic schema 缺少 updated_at 字段映射
+- **位置**: `schemas/cognitive.py:57-73` (`BehaviorPatternResponse`)
+- **发现**: Response schema 声明了 `updated_at: datetime`（行 70），但数据库模型 `BehaviorPattern` 继承自 `BaseModel`，其 `updated_at` 字段在模型更新时需手动维护。`_upsert_pattern()` 在更新模式时不更新 `updated_at`（仅 `commit()` 不触 `updated_at` 刷新），导致 `updated_at` 可能与实际更新时间不一致。
+- **严重度**: P2（数据展示偏差）
+
+### 跨轮次因果链更新
+
+1. **P0-1 双触发 + AF-1 Unified 路径 + AF-2 无 status guard** = 三重叠加：每次碎片创建触发两次完整的 UnifiedAnalysisService 分析，无短路保护。这是当前 Cognitive Prism 系统中最紧迫的成本/正确性缺陷。
+2. **P0-2 类型不匹配**仍为潜伏缺陷：在默认 Pydantic 配置下通常不会触发运行时错误，但如果未来启用严格模式或添加自定义验证器，将突然爆发。
+3. 所有 P1/P2 项均未被触及，代码自 2026-04-22 审计以来未发生变化。
+4. **合规项仍然有效**：幂等性（source_event_id）、pgvector 优雅降级、HyDE RAG 策略、PatternType 对齐、多系统集成等 5 项合规项均未退化。
+
+---
+
+## 复核笔记
+
+> 复核者：Chris (Session 3) | 日期：2026-04-23
+> 复核范围：对照主项目代码验证关键 P0/P1 发现
+
+### 复核结果
+
+| ID | 原始结论 | 复核结论 | 变化 |
+|----|---------|---------|------|
+| P0-1 | 双路径分析（BackgroundTask + EventBus） | **确认不变** | cognitive.py:81 仍有 background_tasks.add_task, 且 EventBus 消费者也触发分析 |
+| P0-2 | evidence_ids 类型不匹配（str vs UUID） | **确认不变** | cognitive_service.py 存 str, schemas/cognitive.py:65 声明 list[UUID] |
+| P1-1 | is_archived 无过滤 | **确认不变** | cognitive_service.py 中 is_archived 出现 0 次 |
+| P1-2 | source_type 无枚举约束 | 未验证 | — |
+| P1-3 | FAILED 无重试 | 未验证 | — |
+| P1-4 | severity 含义模糊 | 未验证 | — |
+| P1-5 | 不过滤 analysis_status | 未验证 | — |
+| AF-1 | ANALYSIS_SYNC_ON_EVENT 双重分析 | 未验证 | — |
+| AF-2 | EventBus 盲目重复分析 | 未验证 | — |
+
+### 判定
+
+P0-1 (双路径) 和 P0-2 (类型不匹配) 均确认存在且未修复。P1-1 (is_archived) 也确认未修复。这些是架构级问题，需按优先级排期修复。
+
+**状态更新**: ⚠️ 已复核-有更新 → ⚠️ 已复核-二次确认（无变化）
