@@ -74,7 +74,7 @@ async def log_focus_session(
             "unlocked_achievements": result.get("unlocked_achievements", []),
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid focus session parameters") from e
 
 @router.get("/stats", response_model=FocusStats, summary="获取今日专注统计")
 async def get_focus_stats(

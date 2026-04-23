@@ -92,7 +92,7 @@ async def equip_item(
 
     except ValueError as e:
         logger.error(f"Equip error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid request") from e
     except Exception as e:
         logger.error(f"Unexpected equip error: {e}")
         raise HTTPException(status_code=500, detail="Failed to equip item")
@@ -154,7 +154,7 @@ async def use_consumable(
 
     except ValueError as e:
         logger.error(f"Use consumable error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid request") from e
     except Exception as e:
         logger.error(f"Unexpected use consumable error: {e}")
         raise HTTPException(status_code=500, detail="Failed to use consumable")

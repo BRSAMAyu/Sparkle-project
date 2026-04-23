@@ -215,7 +215,7 @@ async def unlock_element_internal(
     try:
         return await service.unlock_element(current_user.id, request, resolved_locale)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail="Element not found or cannot be unlocked") from e
 
 
 @router.post("/unlock-by-achievement", response_model=list[UnlockElementResponse])
