@@ -6,6 +6,7 @@ Provides unified access to system notifications and intervention requests.
 
 from __future__ import annotations
 from datetime import timezone, datetime
+import re
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -25,6 +26,11 @@ from app.schemas.unified_notification import (
     NotificationPreferencesUpdate,
     UnifiedNotificationResponse,
 )
+
+
+def _escape_like(value: str) -> str:
+    """Escape LIKE wildcard characters % and _ for safe use in ilike patterns."""
+    return re.sub(r"([%_])", r"\\\1", value)
 
 
 def _utcnow() -> datetime:
@@ -676,8 +682,8 @@ class NotificationCenterService:
             if filters.search:
                 system_stmt = system_stmt.where(
                     or_(
-                        Notification.title.ilike(f"%{filters.search}%"),
-                        Notification.content.ilike(f"%{filters.search}%"),
+                        Notification.title.ilike(f"%{_escape_like(filters.search)}%"),
+                        Notification.content.ilike(f"%{_escape_like(filters.search)}%"),
                     )
                 )
 
@@ -713,8 +719,8 @@ class NotificationCenterService:
             if filters.search:
                 intervention_notification_stmt = intervention_notification_stmt.where(
                     or_(
-                        Notification.title.ilike(f"%{filters.search}%"),
-                        Notification.content.ilike(f"%{filters.search}%"),
+                        Notification.title.ilike(f"%{_escape_like(filters.search)}%"),
+                        Notification.content.ilike(f"%{_escape_like(filters.search)}%"),
                     )
                 )
 
@@ -747,7 +753,7 @@ class NotificationCenterService:
             if filters.end_date:
                 intervention_stmt = intervention_stmt.where(InterventionRequest.created_at <= filters.end_date)
             if filters.search:
-                intervention_stmt = intervention_stmt.where(InterventionRequest.topic.ilike(f"%{filters.search}%"))
+                intervention_stmt = intervention_stmt.where(InterventionRequest.topic.ilike(f"%{_escape_like(filters.search)}%"))
 
             # Count total
             count_stmt = select(func.count()).select_from(intervention_stmt.subquery())
