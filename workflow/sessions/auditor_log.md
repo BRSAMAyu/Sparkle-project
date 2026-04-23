@@ -91,3 +91,32 @@
 - next_cursor: 4 (slice 04-dual_core_router)
 - commit: pending
 
+## 2026-04-24T20:35+08:00 round=0 slice=04-dual_core_router
+- directives_read: example advisory only (no active override/elevated directives)
+- produced: 6 issues (P0=0 P1=1 P2=5 P3=0)
+  - 021 P1: routing_engine chat+direct shortcut 绕过全部双核信号处理
+  - 022 P2: intent_confidence=0.0 被 Python truthiness 静默覆盖为 0.7
+  - 023 P2: cognitive_adjustments/execution_constraints 硬编码截断，不同模式比例不一致
+  - 024 P2: BlockedPresentationHistoryStore 本地 fallback 无限增长无淘汰
+  - 025 P2: _contains_any 子串匹配导致模式检测误报风险
+  - 026 P2: gentle blocked_temperature 缺少 4 种 failure_kind 温和消息变体
+- deferred: 0
+- anchors_personally_read:
+  - dual_core_router.py:1-647 (全文件)
+  - ux_envelope.py:1-1827 (全文件)
+  - prompts.py:793-1093 (build_system_prompt + dual_core_section 注入)
+  - routing_engine.py:1020-1100, 1210-1300 (dual_core 调用点 + prompt_instruction 组装)
+  - aurora_stage20.py:85-125 (RoutingDecisionLog model)
+  - route_history_service.py:150-200 (record_decision)
+- grep_queries:
+  - dual_core|routing_decision|cognitive_adjustments in prompts.py → 25+ locations
+  - routing_decision_log in backend/app → aurora_stage20.py, srl_phase_tracker_service.py, route_history_service.py
+  - RoutingDecisionLog( in backend/app → 3 files (model, srl_phase_tracker, route_history_service)
+  - dual_core_router.route( in backend/app → routing_engine.py:1058, migration.py:379
+  - build_system_prompt( in orchestrator.py → 0 matches (called via routing_engine/orchestrator_production)
+  - prompt_instruction|dual_core_instruction in orchestration/ → 20+ locations
+  - dual_core_router|DualCoreRoutingInput in orchestrator.py → :89, 1703-1712
+- deviations: none
+- next_cursor: 5 (slice 05-execution_openclaw)
+- commit: pending
+

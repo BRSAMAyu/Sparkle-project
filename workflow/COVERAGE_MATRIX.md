@@ -53,7 +53,7 @@
 | 01 | auth_session | 2026-04-24T19:10+08:00 | 0 | 6 | Go不查session_revoked; AppleLogin静默丢错误; guest限流100/15min |
 | 02 | chat_websocket | 2026-04-24T19:40+08:00 | 0 | 8 | Protobuf绕过长度限制; GetWriter非确定性; saveMessage丢错误; goroutine无超时 |
 | 03 | plan_review | 2026-04-24T20:15+08:00 | 0 | 6 | asyncio.create_task无错误处理; get-delete竞态; plan_id来源不一致; redis=null降级; feasibility硬编码; get_stored_plan stub |
-| 04 | dual_core_router | null | 0 | - | - |
+| 04 | dual_core_router | 2026-04-24T20:35+08:00 | 0 | 6 | chat+direct shortcut绕过信号处理; intent_confidence=0静默覆盖为0.7; 截断不一致; local fallback无淘汰; 子串匹配误报; gentle消息缺4种变体 |
 | 05 | execution_openclaw | null | 0 | - | - |
 | 06 | galaxy | null | 0 | - | - |
 | 07 | community_accountability | null | 0 | - | - |

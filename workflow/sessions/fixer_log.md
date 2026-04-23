@@ -52,3 +52,21 @@
 - ui_hand_verified: na
 - commits: []
 - follow_ups: []
+
+## 2026-04-24T20:35:00+08:00 claim=ISSUE-20260424-001
+
+- directives_read: [ARCHITECT_DIRECTIVES.md (no active override)]
+- verdict: confirmed
+
+### 独立复核证据
+
+1. Go `createAccessToken` (handler/auth.go:186): JWT 确实包含 `"sid": sessionID`
+2. Go `validateJWT` (middleware/auth.go:234-396): 提取 sub/jti/iat/exp/nbf/iss/aud/is_admin，**未提取 sid**，**未检查 `session_revoked:{sid}`**
+3. Python `revoke_session` (auth_session_service.py:136): 写入 `session_revoked:{session_id}` 到 Redis
+4. Python `SESSION_REVOKED_PREFIX` = `"session_revoked:"` (auth_session_service.py:17)
+5. Go `validateJWT` 已有两次 Redis 检查（JTI blacklist + user_revoked_before），修复为第三次检查，模式一致
+
+### 三问回答
+- **预期是否成立**：是。用户下线设备后该设备 token 应立即失效是基本安全预期，CLAUDE.md §Security Architecture 支持。
+- **配置/flag 覆盖**：无。这是代码路径缺失，不受 feature flag 影响。
+- **修复回归风险**：低。添加一次 Redis GET，复用现有 fail-closed/fail-open 策略。不影响当前正常工作的 token 验证链路。
