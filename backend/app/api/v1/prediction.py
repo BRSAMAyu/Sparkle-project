@@ -109,6 +109,7 @@ async def list_intent_types():
     }
 
 
+# route-tier: authed
 @router.get("/shadow/stats", response_model=dict[str, Any])
 async def get_shadow_prediction_stats(
     hours: int = 24,

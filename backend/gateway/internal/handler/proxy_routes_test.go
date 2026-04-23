@@ -357,6 +357,7 @@ func TestProxyRoutesHandler_AdminExecutionsRequireAdmin(t *testing.T) {
 
 	newRouter := func(isAdmin bool) *gin.Engine {
 		router := gin.New()
+		// route-tier: authed
 		api := router.Group("/api/v1")
 		mockAuthMiddleware := func(c *gin.Context) {
 			c.Set("user_id", "test-user-123")

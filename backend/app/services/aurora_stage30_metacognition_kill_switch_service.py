@@ -78,7 +78,7 @@ class AuroraStage30MetacognitionKillSwitchService:
     async def disable_all(self) -> dict[str, str]:
         await self.set_mode("off")
         states = {"mode": "off"}
-        for feature in self.FEATURE_KEYS:
+        for feature in self.FEATURE_BINDINGS:
             states[feature] = await self.set_feature_mode(feature, "off")
         return states
 

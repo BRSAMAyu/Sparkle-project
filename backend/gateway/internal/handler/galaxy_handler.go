@@ -67,7 +67,9 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		galaxy.POST("/nodes/:id/spark", h.SparkNode)
 		galaxy.POST("/node/:id/mastery", h.UpdateMastery)
 		galaxy.POST("/nodes/:id/mastery", h.UpdateMastery)
+		// route-tier: authed
 		galaxy.POST("/node/:id/update-mastery", h.UpdateMastery)
+		// route-tier: authed
 		galaxy.POST("/nodes/:id/update-mastery", h.UpdateMastery)
 
 		// Read-heavy graph endpoints are used by page rendering and AI context hydration.

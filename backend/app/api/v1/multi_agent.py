@@ -255,6 +255,7 @@ async def get_multi_agent_catalog(
     }
 
 
+# route-tier: authed
 @router.get("/body-map")
 async def get_multi_agent_body_map(
     current_user: User = Depends(get_current_user),

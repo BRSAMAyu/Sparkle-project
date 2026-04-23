@@ -209,6 +209,7 @@ async def continue_learning_simulation(
     return session.to_dict()
 
 
+# route-tier: authed
 @router.get("/sessions/{session_id}")
 async def get_learning_simulation_session(
     session_id: str,

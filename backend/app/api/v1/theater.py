@@ -132,6 +132,7 @@ async def adopt_theater_prediction(
     )
 
 
+# route-tier: authed
 @router.get("/predictions/{prediction_id}")
 async def get_theater_prediction(
     prediction_id: str,
@@ -171,6 +172,7 @@ async def get_theater_prediction_accuracy(
     return await service.get_accuracy_summary(user_id=UUID(user_id), prediction_id=prediction_id)
 
 
+# route-tier: authed
 @router.get("/accuracy/overview")
 async def get_theater_accuracy_overview(
     user_id: str = Depends(get_current_user_id),
@@ -180,6 +182,7 @@ async def get_theater_accuracy_overview(
     return await service.get_accuracy_overview(user_id=UUID(user_id))
 
 
+# route-tier: authed
 @router.post("/predictions/{prediction_id}/promote-node")
 async def promote_theater_node(
     prediction_id: str,

@@ -528,6 +528,7 @@ async def execution_connection_status(
     )
 
 
+# route-tier: authed
 @router.get("/connection/diagnose", response_model=ExecutionConnectionDiagnosticResponse)
 async def execution_connection_diagnose(
     current_user: User = Depends(get_current_user),
@@ -552,6 +553,7 @@ async def execution_connection_diagnose(
     )
 
 
+# route-tier: authed
 @router.get("/connection/profile", response_model=ExecutionConnectionProfileResponse)
 async def get_execution_connection_profile(
     current_user: User = Depends(get_current_user),
@@ -562,6 +564,7 @@ async def get_execution_connection_profile(
     return ExecutionConnectionProfileResponse(**payload)
 
 
+# route-tier: authed
 @router.put("/connection/profile", response_model=ExecutionConnectionProfileResponse)
 async def update_execution_connection_profile(
     request: ExecutionConnectionProfileRequest,
@@ -575,6 +578,7 @@ async def update_execution_connection_profile(
     return ExecutionConnectionProfileResponse(**profile.to_payload())
 
 
+# route-tier: authed
 @router.get("/nodes", response_model=list[ExecutionNodeResponse])
 async def list_execution_nodes(
     connected_only: bool = False,
@@ -591,6 +595,7 @@ async def list_execution_nodes(
     return [ExecutionNodeResponse(**node) for node in nodes]
 
 
+# route-tier: authed
 @router.delete("/connection/profile", response_model=ExecutionConnectionProfileResponse)
 async def delete_execution_connection_profile(
     current_user: User = Depends(get_current_user),
@@ -600,6 +605,7 @@ async def delete_execution_connection_profile(
     return ExecutionConnectionProfileResponse(configured=False)
 
 
+# route-tier: authed
 @router.get("/preferences", response_model=ExecutionPreferencesResponse)
 async def get_execution_preferences(
     current_user: User = Depends(get_current_user),
@@ -609,6 +615,7 @@ async def get_execution_preferences(
     return ExecutionPreferencesResponse(**payload)
 
 
+# route-tier: authed
 @router.put("/preferences", response_model=ExecutionPreferencesResponse)
 async def update_execution_preferences(
     request: ExecutionPreferencesRequest,
@@ -635,6 +642,7 @@ async def execution_profile_summary(
     return ExecutionProfileSummaryResponse(**payload)
 
 
+# route-tier: authed
 @router.get("/schedules", response_model=list[ExecutionScheduleResponse])
 async def list_execution_schedules(
     current_user: User = Depends(get_current_user),
@@ -644,6 +652,7 @@ async def list_execution_schedules(
     return [ExecutionScheduleResponse(**schedule.to_dict()) for schedule in schedules]
 
 
+# route-tier: authed
 @router.post("/schedules", response_model=ExecutionScheduleResponse)
 async def create_execution_schedule(
     request: ExecutionScheduleRequest,
@@ -673,6 +682,7 @@ async def create_execution_schedule(
     return ExecutionScheduleResponse(**schedule.to_dict())
 
 
+# route-tier: authed
 @router.post("/schedules/tick", response_model=ExecutionScheduleTickResponse)
 async def tick_execution_schedules(
     current_user: User = Depends(get_current_user),
@@ -683,6 +693,7 @@ async def tick_execution_schedules(
     return ExecutionScheduleTickResponse(**payload)
 
 
+# route-tier: authed
 @router.post("/schedules/{schedule_id}/pause", response_model=ExecutionScheduleResponse)
 async def pause_execution_schedule(
     schedule_id: UUID,
@@ -699,6 +710,7 @@ async def pause_execution_schedule(
     return ExecutionScheduleResponse(**schedule.to_dict())
 
 
+# route-tier: authed
 @router.post("/schedules/{schedule_id}/resume", response_model=ExecutionScheduleResponse)
 async def resume_execution_schedule(
     schedule_id: UUID,
@@ -715,6 +727,7 @@ async def resume_execution_schedule(
     return ExecutionScheduleResponse(**schedule.to_dict())
 
 
+# route-tier: authed
 @router.delete("/schedules/{schedule_id}")
 async def delete_execution_schedule(
     schedule_id: UUID,
@@ -731,6 +744,7 @@ async def delete_execution_schedule(
     return {"success": True}
 
 
+# route-tier: authed
 @router.post("/schedules/events/trigger", response_model=ExecutionScheduleTickResponse)
 async def trigger_execution_schedule_event(
     request: ExecutionScheduleEventTriggerRequest,
@@ -804,6 +818,7 @@ async def handoff_task(
     return _intent_to_response(intent)
 
 
+# route-tier: authed
 @router.post("/tasks/handoff/batch", response_model=ExecutionBatchResponse)
 async def handoff_task_batch(
     request: ExecutionTaskBatchRequest,
@@ -855,6 +870,7 @@ async def get_execution(
     return _intent_to_response(intent)
 
 
+# route-tier: authed
 @router.get("/{intent_id}/record", response_model=ExecutionRecordResponse | None)
 async def get_execution_record(
     intent_id: UUID,
@@ -869,6 +885,7 @@ async def get_execution_record(
     return await _record_to_response(record, db=db) if record else None
 
 
+# route-tier: authed
 @router.post("/{intent_id}/retry", response_model=ExecutionIntentResponse)
 async def retry_execution(
     intent_id: UUID,
@@ -883,6 +900,7 @@ async def retry_execution(
     return _intent_to_response(intent)
 
 
+# route-tier: authed
 @router.post("/batch/handoff", response_model=ExecutionBatchResponse)
 async def handoff_batch(
     request: ExecutionBatchRequest,

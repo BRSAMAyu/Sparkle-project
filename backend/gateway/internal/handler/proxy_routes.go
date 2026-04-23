@@ -69,26 +69,39 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	{
 		tasks.GET("", h.proxyWithHeaders)
 		tasks.POST("", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.POST("/reorder", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.POST("/suggestions", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.GET("/recommendations/micro", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.GET("/today", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.GET("/recommended", h.proxyWithHeaders)
 		tasks.GET("/suggestions", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.GET("/feedback/stats", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.POST("/feedback/:feedback_id/reflection", h.proxyWithHeaders)
 		tasks.GET("/:id", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.GET("/:id/resources", h.proxyWithHeaders)
 		tasks.PUT("/:id", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.DELETE("/:id", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.POST("/:id/resources", h.proxyWithHeaders)
 		tasks.DELETE("/:id/resources/:resourceId", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.POST("/:id/generate-guide", h.proxyWithHeaders)
 		tasks.POST("/:id/start", h.proxyWithHeaders)
 		tasks.POST("/:id/complete", h.proxyWithHeaders)
 		tasks.POST("/:id/abandon", h.proxyWithHeaders)
 		tasks.POST("/:id/feedback", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.GET("/:id/feedback", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.POST("/:id/next-action-selection", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered tasks proxy routes")
@@ -104,31 +117,47 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		plans.GET("/primary", h.proxyWithHeaders)
 		plans.POST("/primary", h.proxyWithHeaders)
 		plans.GET("/archived", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.GET("/:id", h.proxyWithHeaders)
 		plans.PUT("/:id", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.PATCH("/:id", h.proxyWithHeaders) // Python uses PATCH (not PUT)
+		// route-tier: authed
 		plans.DELETE("/:id", h.proxyWithHeaders)
 		plans.POST("/:id/archive", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/:id/restore", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/:id/generate-tasks", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.GET("/:id/progress", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.PATCH("/:id/priority", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.GET("/:id/learning-path-progress", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered plans proxy routes")
 
 	// ==================== Cards Routes ====================
+	// route-tier: authed
 	cards := api.Group("/cards")
 	cards.Use(authMiddleware)
 	{
 		// Explicit methods rather than Any() to respect HTTP semantics and
 		// prevent unintended method exposure (HEAD/CONNECT/TRACE).
+		// route-tier: authed
 		cards.GET("", h.proxyWithHeaders)
+		// route-tier: authed
 		cards.POST("", h.proxyWithHeaders)
+		// route-tier: authed
 		cards.GET("/*path", h.proxyWithHeaders)
+		// route-tier: authed
 		cards.POST("/*path", h.proxyWithHeaders)
+		// route-tier: authed
 		cards.PUT("/*path", h.proxyWithHeaders)
+		// route-tier: authed
 		cards.PATCH("/*path", h.proxyWithHeaders)
+		// route-tier: authed
 		cards.DELETE("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered cards proxy routes")
@@ -404,22 +433,30 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// Favorites
 		community.POST("/favorites", h.proxyWithHeaders)
 		community.GET("/favorites", h.proxyWithHeaders)
+		// route-tier: authed
 		community.DELETE("/favorites/:favorite_id", h.proxyWithHeaders)
 		// Forward
+		// route-tier: authed
 		community.POST("/forward", h.proxyWithHeaders)
 		// Broadcast
+		// route-tier: authed
 		community.POST("/broadcast", h.proxyWithHeaders)
 		// Offline Messages
+		// route-tier: authed
 		community.GET("/offline/pending", h.proxyWithHeaders)
+		// route-tier: authed
 		community.GET("/offline/failed", h.proxyWithHeaders)
+		// route-tier: authed
 		community.POST("/offline/retry", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered community proxy routes")
 
 	// ==================== Interventions Routes ====================
+	// route-tier: authed
 	interventions := api.Group("/interventions")
 	interventions.Use(authMiddleware)
 	{
+		// route-tier: authed
 		interventions.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered interventions proxy routes")
@@ -433,9 +470,11 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered dashboard proxy routes")
 
 	// ==================== Growth Routes ====================
+	// route-tier: authed
 	growth := api.Group("/growth")
 	growth.Use(authMiddleware)
 	{
+		// route-tier: authed
 		growth.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered growth proxy routes")
@@ -672,50 +711,66 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered visual-elements proxy routes")
 
 	// ==================== Profile Transparency Routes ====================
+	// route-tier: authed
 	profileTransparency := api.Group("/profile")
 	profileTransparency.Use(authMiddleware)
 	{
+		// route-tier: authed
 		profileTransparency.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered profile-transparency proxy routes")
 
 	// ==================== Observability Routes ====================
+	// route-tier: authed
 	observability := api.Group("/observability")
 	observability.Use(authMiddleware)
 	{
+		// route-tier: authed
 		observability.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered observability proxy routes")
 
 	// ==================== Knowledge Theater Routes ====================
+	// route-tier: authed
 	theater := api.Group("/theater")
 	theater.Use(authMiddleware)
 	{
+		// route-tier: authed
 		theater.POST("/predictions/generate", h.proxyWithHeaders)
 		theater.POST("/predictions/what-if", h.proxyWithHeaders)
+		// route-tier: authed
 		theater.GET("/predictions/:id", h.proxyWithHeaders)
+		// route-tier: authed
 		theater.POST("/predictions/:id/adopt", h.proxyWithHeaders)
 		theater.POST("/predictions/:id/actuals", h.proxyWithHeaders)
+		// route-tier: authed
 		theater.POST("/predictions/:id/promote-node", h.proxyWithHeaders)
 		theater.GET("/predictions/:id/accuracy", h.proxyWithHeaders)
+		// route-tier: authed
 		theater.GET("/accuracy/overview", h.proxyWithHeaders)
+		// route-tier: authed
 		theater.POST("/snapshots", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered theater proxy routes")
 
 	// ==================== Simulation Routes ====================
+	// route-tier: authed
 	simulation := api.Group("/simulation")
 	simulation.Use(authMiddleware)
 	{
+		// route-tier: authed
 		simulation.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered simulation proxy routes")
 
 	// ==================== Executions / OpenClaw Routes ====================
+	// route-tier: authed
 	executions := api.Group("/executions")
 	executions.Use(authMiddleware)
 	{
+		// route-tier: authed
 		executions.Any("", h.proxyWithHeaders)
+		// route-tier: authed
 		executions.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered executions proxy routes")
@@ -725,7 +780,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	adminExecutions := api.Group("/admin/executions")
 	adminExecutions.Use(authMiddleware, middleware.RequireAdmin)
 	{
+		// route-tier: authed
 		adminExecutions.Any("", h.proxyWithHeaders)
+		// route-tier: authed
 		adminExecutions.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered admin executions proxy routes")

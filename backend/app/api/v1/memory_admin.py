@@ -256,6 +256,7 @@ async def run_memory_job(
     raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="unsupported job")
 
 
+# route-tier: internal
 @router.post("/inferred/revoke")
 async def revoke_inferred_memory_lane(
     payload: dict = Body(default={}),
@@ -273,12 +274,14 @@ async def revoke_inferred_memory_lane(
     return {"status": "ok", "revoked": revoked}
 
 
+# route-tier: internal
 @router.get("/stage18/killswitch")
 async def get_stage18_kill_switches():
     service = AuroraStage18KillSwitchService()
     return {"flags": await service.get_all()}
 
 
+# route-tier: internal
 @router.put("/stage18/killswitch")
 async def update_stage18_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage18KillSwitchService()
@@ -292,12 +295,14 @@ async def update_stage18_kill_switches(payload: dict = Body(default={})):
     return {"status": "ok", "flags": flags}
 
 
+# route-tier: internal
 @router.get("/stage19/killswitch")
 async def get_stage19_kill_switches():
     service = AuroraStage19KillSwitchService()
     return {"flags": await service.get_all()}
 
 
+# route-tier: internal
 @router.put("/stage19/killswitch")
 async def update_stage19_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage19KillSwitchService()
@@ -311,12 +316,14 @@ async def update_stage19_kill_switches(payload: dict = Body(default={})):
     return {"status": "ok", "flags": flags}
 
 
+# route-tier: internal
 @router.get("/stage21/killswitch")
 async def get_stage21_kill_switches():
     service = AuroraStage21KillSwitchService()
     return {"flags": await service.get_all()}
 
 
+# route-tier: internal
 @router.put("/stage21/killswitch")
 async def update_stage21_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage21KillSwitchService()

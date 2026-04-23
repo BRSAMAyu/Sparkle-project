@@ -246,6 +246,7 @@ async def list_plans(
     }
 
 
+# route-tier: authed
 @router.post("/discovery/start", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
 async def start_plan_discovery(
     request: DiscoveryStartRequest,
@@ -259,6 +260,7 @@ async def start_plan_discovery(
     return {"success": True, "data": payload}
 
 
+# route-tier: authed
 @router.post("/discovery/{session_id}/turn", response_model=dict[str, Any])
 async def continue_plan_discovery(
     request: DiscoveryTurnRequest,
@@ -277,6 +279,7 @@ async def continue_plan_discovery(
     return {"success": True, "data": payload}
 
 
+# route-tier: authed
 @router.post("/discovery/{session_id}/finalize", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
 async def finalize_plan_discovery(
     request: DiscoveryFinalizeRequest,
@@ -330,6 +333,7 @@ async def create_plan(
     )
 
 
+# route-tier: authed
 @router.get("/{plan_id:uuid}/compass/review", response_model=dict[str, Any])
 async def get_compass_review(
     plan_id: UUID = Path(..., description="Plan ID"),
@@ -350,6 +354,7 @@ async def get_compass_review(
     return {"success": True, "data": payload}
 
 
+# route-tier: authed
 @router.post("/compass/{artifact_id}/approve", response_model=dict[str, Any])
 async def approve_compass(
     request: CompassApproveRequest,
@@ -376,6 +381,7 @@ async def approve_compass(
     }
 
 
+# route-tier: authed
 @router.post("/{plan_id:uuid}/phase-sketch/generate", response_model=dict[str, Any])
 async def generate_phase_sketch(
     request: PhaseSketchGenerateRequest,
@@ -435,6 +441,7 @@ async def generate_phase_sketch(
     }
 
 
+# route-tier: authed
 @router.post("/{plan_id:uuid}/phase-sketch/{artifact_id}/materialize", response_model=dict[str, Any])
 async def materialize_phase_sketch(
     plan_id: UUID = Path(..., description="Plan ID"),
@@ -468,6 +475,7 @@ async def materialize_phase_sketch(
     }
 
 
+# route-tier: authed
 @router.get("/{plan_id:uuid}/planning-context", response_model=dict[str, Any])
 async def get_planning_context(
     plan_id: UUID = Path(..., description="Plan ID"),
@@ -485,6 +493,7 @@ async def get_planning_context(
     return {"success": True, "data": context.__dict__}
 
 
+# route-tier: authed
 @router.post("/phases/{phase_card_id}/design-tasks", response_model=dict[str, Any])
 async def design_phase_tasks(
     phase_card_id: UUID,
@@ -503,6 +512,7 @@ async def design_phase_tasks(
     return {"success": True, "data": {"phase_card_id": str(phase.id), "tasks": created}}
 
 
+# route-tier: authed
 @router.post("/phases/{phase_card_id}/feedback-gate/start", response_model=dict[str, Any])
 async def start_phase_feedback_gate(
     phase_card_id: UUID,
@@ -519,6 +529,7 @@ async def start_phase_feedback_gate(
     return {"success": True, "data": payload}
 
 
+# route-tier: authed
 @router.post("/phases/feedback-gate/{session_id}/respond", response_model=dict[str, Any])
 async def respond_phase_feedback_gate(
     request: FeedbackGateAnswerRequest,
@@ -536,6 +547,7 @@ async def respond_phase_feedback_gate(
     return {"success": True, "data": payload}
 
 
+# route-tier: authed
 @router.post("/{plan_id:uuid}/advance-phase", response_model=dict[str, Any])
 async def advance_plan_phase(
     plan_id: UUID = Path(..., description="Plan ID"),
@@ -589,6 +601,7 @@ async def get_plan(
     )
 
 
+# route-tier: authed
 @router.get("/{plan_id:uuid}/phases", response_model=dict[str, Any])
 async def get_plan_phases(
     plan_id: UUID = Path(..., description="Plan ID"),
@@ -607,6 +620,7 @@ async def get_plan_phases(
     return {"success": True, "data": payload}
 
 
+# route-tier: authed
 @router.post("/{plan_id:uuid}/phases", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
 async def create_plan_phase(
     request: PhaseCreateRequest,
@@ -646,6 +660,7 @@ async def create_plan_phase(
     return {"success": True, "data": summary}
 
 
+# route-tier: authed
 @router.post("/{plan_id:uuid}/phases/reorder", response_model=dict[str, Any])
 async def reorder_plan_phases(
     request: PhaseReorderRequest,
@@ -678,6 +693,7 @@ async def reorder_plan_phases(
     return {"success": True, "data": payload}
 
 
+# route-tier: authed
 @router.post("/phases/{phase_card_id}/activate", response_model=dict[str, Any])
 async def activate_phase(
     phase_card_id: UUID,
@@ -698,6 +714,7 @@ async def activate_phase(
     }
 
 
+# route-tier: authed
 @router.post("/phases/{phase_card_id}/complete", response_model=dict[str, Any])
 async def complete_phase(
     phase_card_id: UUID,
@@ -712,6 +729,7 @@ async def complete_phase(
     return {"success": True, "data": result.__dict__}
 
 
+# route-tier: authed
 @router.post("/phases/{phase_card_id}/feedback", response_model=dict[str, Any])
 async def submit_phase_feedback(
     request: PhaseFeedbackRequest,
@@ -729,6 +747,7 @@ async def submit_phase_feedback(
     return {"success": True, "data": result.__dict__}
 
 
+# route-tier: authed
 @router.post("/phases/{phase_card_id}/schedule/regenerate", response_model=dict[str, Any])
 async def regenerate_phase_schedule(
     request: PhaseRegenerateScheduleRequest,

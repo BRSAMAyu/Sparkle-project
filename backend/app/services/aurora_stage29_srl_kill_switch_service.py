@@ -7,6 +7,7 @@ from app.config import settings
 from app.core.cache import cache_service
 from app.core.kill_switch import (
     KillSwitchBinding,
+    normalize_mode,
     read_mode,
     record_mode_gauge,
     write_mode,
@@ -122,7 +123,7 @@ class AuroraStage29SRLKillSwitchService:
         return await self.summary()
 
     async def ordered_startup(self, mode: str = "live") -> dict[str, str]:
-        normalized = self._normalize_mode(mode)
+        normalized = normalize_mode(mode, fallback="live")
         await self.set_mode(normalized)
         await self.set_tracker_mode(normalized)
         await self.set_bridge_mode(normalized)

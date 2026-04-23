@@ -1048,6 +1048,7 @@ class MetacognitionPanelPreferencePayload(BaseModel):
     hidden: bool = False
 
 
+# route-tier: authed
 @router.post("/metacognition/panel")
 async def update_metacognition_panel_preference(
     payload: MetacognitionPanelPreferencePayload,
@@ -1062,6 +1063,7 @@ async def update_metacognition_panel_preference(
     return {"hidden": bool(payload.hidden)}
 
 
+# route-tier: authed
 @router.get("/insights")
 async def get_profile_insights(
     db: AsyncSession = Depends(get_db),
@@ -1139,6 +1141,7 @@ async def list_system_updates(
     return {"items": items}
 
 
+# route-tier: authed
 @router.post("/chat-opening", response_model=ChatOpeningResponse)
 async def create_chat_opening(
     payload: ChatOpeningRequest,
@@ -1352,6 +1355,7 @@ async def preview_onboarding(
     )
 
 
+# route-tier: authed
 @router.get("/traits/coldstart/questions")
 async def get_traits_coldstart_questions(
     current_user: User = Depends(get_current_user),
@@ -1364,6 +1368,7 @@ async def get_traits_coldstart_questions(
     }
 
 
+# route-tier: authed
 @router.post("/traits/coldstart")
 async def submit_traits_coldstart(
     payload: TraitsColdstartRequest,
@@ -1477,6 +1482,7 @@ async def reset_override_preference(
     }
 
 
+# route-tier: authed
 @router.post("/insights/control")
 async def control_profile_insight(
     payload: InsightControlRequest,

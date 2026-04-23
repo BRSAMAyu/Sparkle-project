@@ -171,6 +171,7 @@ async def get_galaxy_graph(
     )
 
 
+# route-tier: authed
 @router.post("/nodes", response_model=NodeBase)
 async def create_galaxy_node(
     request: CreateGalaxyNodeRequest,

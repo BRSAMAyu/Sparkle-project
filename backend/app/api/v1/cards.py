@@ -85,6 +85,7 @@ class AdoptShareRequest(BaseModel):
     modifications: dict | None = None
 
 
+# route-tier: authed
 @router.post("/{card_id}/move", response_model=dict)
 async def move_card(
     card_id: UUID,
@@ -107,6 +108,7 @@ async def move_card(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# route-tier: authed
 @router.post("/bulk-move", response_model=dict)
 async def bulk_move_cards(
     request: BulkMoveCardsRequest,
@@ -127,6 +129,7 @@ async def bulk_move_cards(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# route-tier: authed
 @router.post("/{card_id}/link", response_model=dict)
 async def link_card(
     card_id: UUID,
@@ -160,6 +163,7 @@ async def link_card(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# route-tier: authed
 @router.delete("/{card_id}/link/{target_id}/{edge_type}", response_model=dict)
 async def unlink_card(
     card_id: UUID,
@@ -183,6 +187,7 @@ async def unlink_card(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# route-tier: authed
 @router.get("/{card_id}/tree", response_model=dict)
 async def get_card_tree(
     card_id: UUID,
@@ -198,6 +203,7 @@ async def get_card_tree(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+# route-tier: authed
 @router.get("/search", response_model=dict)
 async def search_cards(
     card_type: CardType | None = Query(default=None),
@@ -240,6 +246,7 @@ async def search_cards(
     }
 
 
+# route-tier: authed
 @router.post("/{card_id}/recurrence", response_model=dict)
 async def set_task_recurrence(
     card_id: UUID,
@@ -275,6 +282,7 @@ async def set_task_recurrence(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# route-tier: authed
 @router.post("/occurrences/{occurrence_id}/defer", response_model=dict)
 async def defer_occurrence(
     occurrence_id: UUID,
@@ -309,6 +317,7 @@ async def defer_occurrence(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# route-tier: authed
 @router.post("/{card_id}/snapshot", response_model=dict)
 async def create_card_snapshot(
     card_id: UUID,
@@ -342,6 +351,7 @@ async def create_card_snapshot(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# route-tier: authed
 @router.post("/{card_id}/share", response_model=dict)
 async def share_card(
     card_id: UUID,
@@ -379,6 +389,7 @@ async def share_card(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+# route-tier: authed
 @router.get("/shares/{share_record_id}", response_model=dict)
 async def get_card_share(
     share_record_id: UUID,
@@ -410,6 +421,7 @@ async def get_card_share(
     }
 
 
+# route-tier: authed
 @router.post("/shares/{share_record_id}/adopt", response_model=dict)
 async def adopt_card_share(
     share_record_id: UUID,

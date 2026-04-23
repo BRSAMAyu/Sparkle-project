@@ -8,6 +8,7 @@ from app.services.growth_dashboard_service import GrowthDashboardService
 router = APIRouter()
 
 
+# route-tier: authed
 @router.get("/dashboard")
 async def get_growth_dashboard(
     current_user: User = Depends(get_current_user),

@@ -65,6 +65,7 @@ func TestAdminRateLimitMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(AdminRateLimitMiddleware(nil))
+	// route-tier: authed
 	router.GET("/admin/probe", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	})

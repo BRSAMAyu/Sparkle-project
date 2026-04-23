@@ -49,6 +49,7 @@ async def get_run_ledger_by_response(response_id: str, _: User = Depends(get_cur
     }
 
 
+# route-tier: internal
 @router.get("/achievement-photon-compensations")
 async def get_achievement_photon_compensations(
     limit: int = Query(default=20, ge=1, le=100),

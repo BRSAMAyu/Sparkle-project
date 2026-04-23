@@ -491,6 +491,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 
 	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg), middleware.InternalIPWhitelistMiddleware(cfg))
 	{
+		// route-tier: internal
 		internal.GET("/files/:file_id/download", handlers.fileHandler.GetInternalDownloadURL)
 		internal.POST("/interventions/push", handlers.interventionPushHandler.HandlePush)
 		internal.POST("/signals/push", handlers.signalPushHandler.HandlePush)

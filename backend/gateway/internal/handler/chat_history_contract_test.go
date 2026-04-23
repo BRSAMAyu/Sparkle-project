@@ -47,6 +47,7 @@ func TestGetConversationHistoryIncludesMobileContractFields(t *testing.T) {
 		c.Set("user_id", "user-1")
 		c.Next()
 	})
+	// route-tier: authed
 	router.GET("/history/:conversation_id", handler.GetConversationHistory)
 
 	req := httptest.NewRequest(http.MethodGet, "/history/session-1", nil)
@@ -90,6 +91,7 @@ func TestGetConversationHistoryKeepsNullShapeForOptionalFields(t *testing.T) {
 		c.Set("user_id", "user-2")
 		c.Next()
 	})
+	// route-tier: authed
 	router.GET("/history/:conversation_id", handler.GetConversationHistory)
 
 	req := httptest.NewRequest(http.MethodGet, "/history/session-2", nil)

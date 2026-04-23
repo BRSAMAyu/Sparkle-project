@@ -274,6 +274,7 @@ async def list_episodic(
     return {"items": items}
 
 
+# route-tier: authed
 @router.get("/working-memory/session")
 async def get_working_memory_session(
     session_id: str | None = Query(default=None),
@@ -317,6 +318,7 @@ async def get_working_memory_session(
     }
 
 
+# route-tier: authed
 @router.post("/working-memory/{entry_id}/forget")
 async def forget_working_memory_entry(
     entry_id: str,
@@ -343,6 +345,7 @@ async def forget_working_memory_entry(
     return {"status": "ok"}
 
 
+# route-tier: authed
 @router.post("/working-memory/{entry_id}/mark-correct")
 async def mark_working_memory_entry_correct(
     entry_id: str,
@@ -383,6 +386,7 @@ async def mark_working_memory_entry_correct(
     }
 
 
+# route-tier: authed
 @router.get("/accountability/pending", response_model=PendingCommitmentListOut)
 async def list_pending_commitments(
     db: AsyncSession = Depends(get_db),
@@ -406,6 +410,7 @@ async def list_pending_commitments(
     )
 
 
+# route-tier: authed
 @router.get("/accountability/recent-scenes")
 async def list_recent_scenes(
     db: AsyncSession = Depends(get_db),
@@ -435,6 +440,7 @@ async def list_recent_scenes(
     }
 
 
+# route-tier: authed
 @router.get("/accountability/foresight-hint")
 async def get_foresight_hint(
     db: AsyncSession = Depends(get_db),
@@ -469,6 +475,7 @@ async def get_foresight_hint(
     }
 
 
+# route-tier: authed
 @router.post("/accountability/pending/{memory_id}/resolve", response_model=PendingCommitmentOut)
 async def resolve_pending_commitment(
     memory_id: UUID,
@@ -490,6 +497,7 @@ async def resolve_pending_commitment(
     )
 
 
+# route-tier: authed
 @router.get("/unresolved-conflicts")
 async def list_unresolved_conflicts(
     db: AsyncSession = Depends(get_db),
@@ -501,6 +509,7 @@ async def list_unresolved_conflicts(
     return {"items": [_serialize_unresolved_conflict(item) for item in items]}
 
 
+# route-tier: authed
 @router.post("/unresolved-conflicts/{conflict_id}/arbitrate")
 async def arbitrate_unresolved_conflict(
     conflict_id: UUID,

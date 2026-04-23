@@ -475,6 +475,7 @@ async def generate_task_guide(
     return {"data": TaskDetail.model_validate(task)}
 
 
+# route-tier: authed
 @router.get("/{task_id}/guidance", response_model=dict[str, Any])
 async def get_task_guidance(
     task_id: UUID = Path(..., description="Task ID"),
@@ -502,6 +503,7 @@ async def get_task_guidance(
     return {"data": _serialize_task_guidance(guidance)}
 
 
+# route-tier: authed
 @router.post("/{task_id}/guidance", response_model=dict[str, Any])
 async def create_or_refresh_task_guidance(
     task_id: UUID = Path(..., description="Task ID"),

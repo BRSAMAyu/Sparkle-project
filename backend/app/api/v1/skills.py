@@ -50,6 +50,7 @@ def _serialize_shared_skill(skill: SharedSkill) -> dict[str, object]:
     }
 
 
+# route-tier: authed
 @router.get("")
 async def list_skills(
     db: AsyncSession = Depends(get_db),
@@ -59,6 +60,7 @@ async def list_skills(
     return {"items": [_serialize_skill(item) for item in items]}
 
 
+# route-tier: authed
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_skill(
     payload: dict,
@@ -72,6 +74,7 @@ async def create_skill(
     return _serialize_skill(skill)
 
 
+# route-tier: authed
 @router.put("/{skill_id}")
 async def update_skill(
     skill_id: UUID,
@@ -86,6 +89,7 @@ async def update_skill(
     return _serialize_skill(skill)
 
 
+# route-tier: authed
 @router.delete("/{skill_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_skill(
     skill_id: UUID,
@@ -95,6 +99,7 @@ async def delete_skill(
     await SkillStoreService(db).delete_skill(user_id=current_user.id, skill_id=skill_id)
 
 
+# route-tier: authed
 @router.post("/{skill_id}/toggle")
 async def toggle_skill(
     skill_id: UUID,
@@ -113,6 +118,7 @@ async def toggle_skill(
     return _serialize_skill(skill)
 
 
+# route-tier: authed
 @router.post("/drafts/extract")
 async def extract_skill_draft(
     payload: dict,
@@ -136,12 +142,14 @@ async def extract_skill_draft(
     return {"draft": draft_to_payload(draft)}
 
 
+# route-tier: authed
 @router.post("/drafts/outcome")
 async def record_skill_draft_outcome(payload: dict):
     SkillExtractService().record_draft_outcome(accepted=bool(payload.get("accepted", False)))
     return {"status": "ok"}
 
 
+# route-tier: authed
 @router.get("/shared")
 async def list_shared_skills(
     page: int = Query(default=1, ge=1),
@@ -154,6 +162,7 @@ async def list_shared_skills(
     return {"items": [_serialize_shared_skill(item) for item in items]}
 
 
+# route-tier: authed
 @router.post("/{skill_id}/share")
 async def share_skill(
     skill_id: UUID,
@@ -167,6 +176,7 @@ async def share_skill(
     return result
 
 
+# route-tier: authed
 @router.post("/{skill_id}/unshare")
 async def unshare_skill(
     skill_id: UUID,
@@ -180,6 +190,7 @@ async def unshare_skill(
     return _serialize_skill(skill)
 
 
+# route-tier: authed
 @router.post("/shared/{shared_skill_id}/fork", status_code=status.HTTP_201_CREATED)
 async def fork_shared_skill(
     shared_skill_id: UUID,

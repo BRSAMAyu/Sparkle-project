@@ -66,6 +66,7 @@ def _serialize_settings(record: object) -> MemorySettingsResponse:
     )
 
 
+# route-tier: authed
 @router.get("/push-settings", response_model=PushOptInResponse)
 async def get_push_settings(
     db: AsyncSession = Depends(get_db),
@@ -76,6 +77,7 @@ async def get_push_settings(
     return _serialize_push_settings(record)
 
 
+# route-tier: authed
 @router.put("/push-settings", response_model=PushOptInResponse)
 async def update_push_settings(
     payload: PushOptInUpdate,

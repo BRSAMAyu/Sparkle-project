@@ -156,6 +156,7 @@ async def delete_notification(
     return {"message": "Notification deleted"}
 
 
+# route-tier: internal
 @router.post("/notifications/{notification_id}/intervention-action")
 async def transition_intervention_notification(
     notification_id: UUID,
@@ -190,6 +191,7 @@ async def transition_intervention_notification(
     return {"message": f"Intervention action applied: {request.action}"}
 
 
+# route-tier: internal
 @router.post("/notifications/{notification_id}/push-action")
 async def transition_push_notification(
     notification_id: UUID,
@@ -212,6 +214,7 @@ async def transition_push_notification(
     return {"message": f"Push action applied: {request.action}"}
 
 
+# route-tier: internal
 @router.post("/interventions/{record_id}/action")
 async def transition_intervention_record(
     record_id: UUID,

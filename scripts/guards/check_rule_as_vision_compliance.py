@@ -54,6 +54,32 @@ EXPECTATIONS: dict[str, dict[Path, tuple[str, ...]]] = {
             'normalized.get("episodic_memories")',
         ),
     },
+    "aurora_stage39_modes": {
+        CONTEXT_BUILDER: (
+            'payload["aurora_stage39_modes"]',
+        ),
+        ROUTING_ENGINE: (
+            'user_context_payload["aurora_stage39_modes"]',
+            '"aurora_stage39_modes": stage39_modes',
+        ),
+    },
+    "scaffolding_fsm_snapshot": {
+        CONTEXT_BUILDER: (
+            'payload["scaffolding_fsm_snapshot"]',
+        ),
+        PROMPTS: (
+            'user_context.get("scaffolding_fsm_snapshot")',
+        ),
+    },
+    "galaxy_snapshot": {
+        CONTEXT_BUILDER: (
+            'payload["galaxy_snapshot"]',
+        ),
+        PROMPTS: (
+            '_format_galaxy_snapshot_section',
+            'user_context.get("galaxy_snapshot")',
+        ),
+    },
 }
 
 
