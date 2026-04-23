@@ -530,3 +530,27 @@ compact = compact[:80] + ("..." if len(compact) > 80 else "")
 | **总计** | **9** | **9** | **全部 STILL OPEN** |
 
 **所有 9 项审计发现均未修复。代码自审计以来无变更。行号完全无偏移。**
+
+---
+
+## Chris (Session 5) 复核 — 2026-04-23
+
+> 仅验证 P0-1 (内存泄漏), 因其是最高优先级可修复项。
+
+### P0-1: `_local_state` 无界增长 — **FALSE (已修复)**
+
+原报告称 `_local_state` 无大小限制、无 TTL、无清理机制。**当前代码已有完整修复：**
+
+| 防护机制 | 代码位置 | 描述 |
+|----------|---------|------|
+| `LOCAL_MAX_ENTRIES = 10000` | :113 | 最大条目数限制 |
+| `LOCAL_TTL_SECONDS = 3600` | :112 | 1小时本地 TTL |
+| `OrderedDict` 替代 `dict` | :118 | 支持 LRU 顺序 |
+| `_prune_local_state()` | :124-138 | 过期清理 + 超限驱逐 |
+| `record()` 调用 `_prune_local_state(now_dt)` | :162 | 每次写入前清理 |
+| Redis 成功 → `self._local_state.clear()` | :157 | 恢复连接后清除本地缓存 |
+| 双重保险 `while len > max: popitem` | :167-168 | 写入后再次检查上限 |
+
+**复核结论**: P0-1 **已修复**, 从审计时的无保护 `dict` 升级为带 TTL + maxsize + 过期清理 + Redis 恢复清除的 `OrderedDict`。
+
+**其他 8 项 (P1-1 至 P2-3)**: 未验证, 状态维持不变。

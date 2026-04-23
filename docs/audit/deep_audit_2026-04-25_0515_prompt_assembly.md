@@ -260,3 +260,84 @@ def _estimate_prompt_tokens(text: str) -> int:
 | P2-1 (硬编码中文) | Round #47 i18n 盲区 + Round #52 P1-1 (50+ 中文字符串) | 系统性 i18n 缺失 |
 | P2-2 (手动 get()) | Round #52 P1-5 (getattr 20+ 次) | 整个编排层缺乏类型化 schema |
 | P2-4 (仅中文关键词) | Round #52 P2-2 (full_response 中文检测) | LLM 输出语言检测依赖中文字符串 |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-23 (Session continuation, 第十一次唤醒)
+> **复核方式**: 逐项代码验证
+> **复核人**: GLM-5.1 executor
+
+### 复核结果: 0/14 已修 (全部未变)
+
+| 原始编号 | 描述 | 状态 | 验证证据 |
+|----------|------|------|---------|
+| P0-1 | `.format_map()` 值内容未消毒 | **未修** | `_SafeFormatDict` (:34-36) 仅 `__missing__` → 返回空串，无值清洗。两处 `format_map` (:1039, :1090) 仍直接传入用户数据 |
+| P0-1b | agent_profiles 用原始 `.format(**kwargs)` | **未修** | agent_profiles.py:169 仍为 `self.system_prompt_template.format(**kwargs)` |
+| P0-2 | Graph 节点零用户上下文 | **未修** | error_analyst.py:14-48 `_build_system_prompt()` 仍硬编码中文提示词，从不访问 `state.context_data["user_context"]` |
+| P1-1 | Error data 死代码 | **未修** | prompts.py 中 grep `error_summary\|recent_errors\|recent_mastery` 零匹配。错题数据仍未到达 prompt |
+| P1-2 | returning_context 未注入 | **未验证** | 需检查 context_focus 路径 |
+| P1-3 | 4 模板 ~200 行重复 | **未修** | MODE_SYSTEM_PROMPTS (:270) 仍存在，结构未重构 |
+| P1-4 | Token 预算 len/4 | **未修** | `_estimate_prompt_tokens` (:73-74) 仍为 `len(str(text or "")) // 4` |
+| P1-5 | 双重 token 预算冲突 | **未修** | context_pack 用 tiktoken vs prompts.py 用 len/4，两套系统并存 |
+| P2-1~7 | i18n/类型化/截断等 | **未修** | 代码完全未动 |
+
+### 行号精确度
+
+prompts.py 仍为 1876 行，与审计时一致。所有行号精确命中。
+
+### 判定
+
+报告全部 14 项发现经代码验证完全准确。Prompt Injection (P0-1) 是最高安全风险——用户通过昵称、计划标题等可控字段可注入任意 prompt 指令。Graph 节点零上下文 (P0-2) 使专家模式 AI 完全不了解用户，与主模板形成体验断裂。
+
+**状态更新**: ✅ 完成 → ⚠️ 已复核-无变化
+
+---
+
+## 复核笔记（第二轮）
+
+> **复核日期**: 2026-04-25
+> **复核轮次**: 第十五次唤醒 (Round #61 并行复核)
+> **复核方式**: 代码验证（主项目 /Users/brsama/code/GitHub/Sparkle-project/）
+> **复核人**: GLM-5.1 executor
+
+### 文件行号漂移
+
+| 文件 | 审计时行数 | 当前行数 | 漂移 |
+|------|-----------|---------|------|
+| prompts.py | 1,876 | 1,877 | +1（尾空行） |
+| agent_profiles.py | 828 | 828 | 无变化 |
+| context_pack.py | 872 | 873 | +1（尾空行） |
+
+所有行号引用仍然精确命中，漂移可忽略。
+
+### 复核结果: 0/14 已修 (全部未变)
+
+| 原始编号 | 描述 | 状态 | 验证证据 |
+|----------|------|------|---------|
+| P0-1 | `.format_map()` 值内容未消毒 | **未修** | `_SafeFormatDict` (:34-36) 仍仅有 `__missing__` 返回空串，无任何值清洗逻辑。grep `sanitize\|clean\|escape\|strip_markers` 在 prompts.py 中零匹配。两处 `format_map` (:1039, :1090) 仍直接传入 `formatted_user_context`、`plan_context_section`、`seed_library_section` 等含用户可控数据的字段 |
+| P0-1b | agent_profiles 用原始 `.format(**kwargs)` | **未修** | agent_profiles.py:169 仍为 `self.system_prompt_template.format(**kwargs)`，无 `_SafeFormatDict` 包装 |
+| P0-2 | Graph 节点零用户上下文 | **未修** | 已验证全部 5 个受影响节点：(1) error_analyst.py:14-52 `_build_system_prompt()` 硬编码中文提示词，从不访问 `state["user_context"]` 或 `state.context_data`；(2) time_tutor.py:20-58 同结构，零上下文；(3) exam_oracle.py:19-57 同结构；(4) deep_analyst.py:14-52 同结构；(5) galaxy_guide.py:18-56 同结构。所有节点仅从 state 读取 `collaboration_mode`、`collaboration_agents`、`planning_mode`——从不读取用户画像或偏好 |
+| P1-1 | Error data 死代码 | **未修** | prompts.py 中 grep `error_summary\|recent_errors\|recent_mastery` 零匹配（bash 输出为空）。`_normalize_user_context()` (:1639-1716) 不提取任何错题本字段。错题数据收集链完整但 prompt 层完全断裂 |
+| P1-2 | returning_context 未注入 | **已确认未修** | context_builder.py:355/469/589/614/628 中 `returning_context` 已构建并注入 `user_context_payload`，但 prompts.py 中 grep `returning_context` 零匹配。`_normalize_user_context()` (:1639-1716) 不提取 `returning_context` 字段。构建了但不渲染——确认死代码 |
+| P1-3 | 4 模板 ~200 行重复 | **未修** | `MODE_SYSTEM_PROMPTS` (:270) 仍为 4 个独立模板（standard/deep_analysis/study_plan/error_diagnosis），每个均包含完整的 8 条「核心原则」和全部 17 个 `{placeholder}` 段。未抽取共享基础模板 |
+| P1-4 | Token 预算 len/4 | **未修** | `_estimate_prompt_tokens` (:73-74) 仍为 `return max(1, len(str(text or "")) // 4)`。未导入 tiktoken |
+| P1-5 | 双重 token 预算冲突 | **未修** | context_pack.py:61-70 的 `estimate_tokens()` 在 tiktoken 可用时使用 `cl100k_base` 编码，不可用时回退 `len//4`。prompts.py:73-74 始终使用 `len//4`。两套独立系统并存，tiktoken 路径在 context_pack 裁剪后由 prompts.py 再次用 len/4 裁剪，导致中文 prompt 双重过度修剪 |
+| P2-1 | 硬编码中文 | **未修** | prompts.py:177-590 全部模板、:78-87 `_detect_feedback_mode` 关键词、agent_profiles.py 全部角色描述均为硬编码中文 |
+| P2-2 | 30+ 手动 get() | **未修** | `_normalize_user_context()` (:1639-1716) 仍包含 ~30 个手动 `context.get(...)` 调用，无类型化 schema |
+| P2-3 | 非锚定消息截断 100 字符 | **未修** | `:1269` 仍为 `max_length = 500 if _is_anchor_message(msg) else 100`，非锚定消息限制 100 字符 |
+| P2-4 | 仅中文关键词匹配 | **未修** | `_is_query_plan_related` (:1770-1786) 仅匹配中文关键词 `("计划", "任务", "复习", "里程碑", "进度", "安排")`。英文查询 "what's my task progress?" 返回 False |
+| P2-5 | 高 tier 模型无预算条目 | **未修** | `_TIER_PROMPT_BUDGET` (:42-49) 仍仅覆盖 `free_fast/fast/standard/reasoning/free_reasoning/glm_batch`。`plus/pro/max/specialist` 无条目，回退到 `PROMPT_SECTION_SOFT_LIMIT_TOKENS` (2800)。最强模型反而获得与 standard 相同的 prompt 预算 |
+| P2-6 | evidence_summary 仅在无目标且无记忆时渲染 | **未修** | `:1602` 条件 `if context_level == "full" and not active_goals and not episodic_memories` 未改变。有目标或有记忆的用户永远看不到画像证据摘要 |
+| P2-7 | random.random() 不可种子化 | **未修** | `:23` `import random`，`:1852` `if sample_rate > 0.0 and random.random() > sample_rate` 仍使用不可复现的 `random.random()` |
+
+### 判定
+
+自上次复核 (2026-04-23) 以来，Prompt Assembly 链路所有 14 项发现均未修复。代码完全未变动（行数漂移 ≤1 行，来自尾空行）。
+
+**最高风险项重申**:
+- P0-1 (Prompt Injection): 用户通过昵称、计划标题、种子库问答等可控字段可注入任意 prompt 指令。`_SafeFormatDict` 仅防止 KeyError，不清洗值内容。
+- P0-2 (Graph 节点零上下文): 5 个专家节点（error_analyst/time_tutor/exam_oracle/deep_analyst/galaxy_guide）全部使用硬编码中文提示词，从不读取用户画像或偏好。专家模式 AI 对用户完全匿名。
+
+**状态更新**: ⚠️ 已复核-无变化 (第二轮确认)

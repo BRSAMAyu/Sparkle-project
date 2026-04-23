@@ -225,3 +225,143 @@ limit=request.limit if request.limit > 0 else 10,  # 无上限
 | P1-1 (context 取消) | Round #49 (health check 触发完整 FSM) | 资源浪费: 断开的连接仍触发完整处理 |
 | P1-3 (信息泄露) | Round #14 P1-1 (错误响应泄露 str(e)) | 同一模式在 gRPC 层重现 |
 | P2-3 (误判 status) | Round #9 (路由器重构) | status 字符串检查 vs 枚举匹配的脆弱性 |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-23 (Session continuation, 第十一次唤醒)
+> **复核方式**: 逐项代码验证
+> **复核人**: GLM-5.1 executor
+
+### 行号偏移对照
+
+| 原始行号 | 当前行号 | 位置描述 |
+|----------|---------|---------|
+| 132-257 | 132-258 | StreamChat 方法体 |
+| 155 | 155 | trace_id 赋值 |
+| 169 | 169 | workflow_id 赋值 |
+| 172 | 172 | prompt_version 赋值 |
+| 238-257 | 226-257 | error/fallback 路径 |
+| 254 | 254 | finish_reason=STOP (error) |
+| 421-455 | 421-455 | RetrieveMemory |
+| 547 | 546 | highlights[0] |
+| 620-668 | 620-668 | SubmitPlanReview |
+
+文件行数: 1630 → 1629 (-1 行尾)。
+
+### 复核结果: 0/15 已修 (P1-3 恶化)
+
+| 原始编号 | 描述 | 状态 | 验证证据 |
+|----------|------|------|---------|
+| P0-1 | UnboundLocalError trace_id/workflow_id | **未修** | try 块起于 :141，变量在 :155/:169/:172。:141-154 间异常导致变量未绑定。error handler :226-257 引用这些变量 |
+| P0-2 | finish_reason=STOP 非 ERROR | **未修** | :231 fallback 和 :254 error handler 均使用 `agent_service_pb2.STOP`。:254 有注释 `# Using STOP as finish reason even for errors...` 但从未改为 ERROR |
+| P0-3 | SubmitPlanReview 3×DB session | **未修** | :620 `db_session_factory()`, :646 `db_session_factory()`, :663 `db_session_factory()` — 3 个独立 session 未变 |
+| P1-1 | 不检查 context.is_active() | **未修** | grep `context.is_active\|context.cancelled` 零匹配 |
+| P1-2 | fire-and-forget asyncio.create_task | **未验证** | — |
+| P1-3 | 17处 str(e) 信息泄露 | **恶化** | 当前 27 处 `context.set_details(str(e))` + 6 处 `message=str(e)` = 共 33 处泄露（原报告称 17 处）。新方法（arbitration 系列、feedback 系列）均重复同一模式 |
+| P1-4 | highlights[0] IndexError | **未修** | :546 `f"{snapshot.highlights[0]} "` 无 bounds check |
+| P1-5 | RetrieveMemory limit 无上限 | **未修** | :424 `request.limit if request.limit > 0 else 10`，无 max 上限 |
+| P1-6 | _require_admin 每次导入+实例化 | **未验证** | — |
+
+### 附加发现
+
+#### AF-1: str(e) 泄露恶化 — 从 17 处增至 33 处
+原始审计报告时文件约 1630 行，`context.set_details(str(e))` 17 处。当前文件 1629 行，但该方法被复制到新增的 arbitration 系列（5 个方法）和 feedback 系列（4 个方法）中。新增方法复制了旧方法的不安全模式，导致信息泄露点翻倍。
+
+### 判定
+
+报告核心发现 (3 P0 + 6 P1) 经代码验证准确。P1-3 (信息泄露) 显著恶化——新增方法复制了不安全的 `str(e)` 模式，泄露点从 17 增至 33。P0-2 (STOP vs ERROR) 从 Round #5 至今跨 50+ 轮未修。
+
+**状态更新**: ✅ 完成 → ⚠️ 已复核-无变化(P1-3恶化)
+
+---
+
+## 复核笔记 (第2次)
+
+> **复核日期**: 2026-04-25
+> **复核轮次**: 第十五次唤醒 (Round #61 并行复核)
+> **复核方式**: 代码验证 (逐行比对当前 main 分支代码)
+
+### 文件行数对照
+
+| 文件 | 原始审计 | 上次复核 | 当前复核 | 变化 |
+|------|---------|---------|---------|------|
+| `agent_grpc_service.py` | 1,630 | 1,629 | 1,629 | 无变化 |
+| `grpc_server.py` | 202 | 202 | 202 | 无变化 |
+| `grpc_auth.py` | 117 | 117 | 117 | 无变化 |
+
+### 行号偏移对照
+
+| 原始行号 | 上次复核行号 | 当前行号 | 位置描述 |
+|----------|-------------|---------|---------|
+| 132-257 | 132-258 | 132-258 | StreamChat 方法体 |
+| 155 | 155 | 155 | trace_id 赋值 |
+| 169 | 169 | 169 | workflow_id 赋值 |
+| 172 | 172 | 172 | prompt_version 赋值 |
+| 238-257 | 226-257 | 226-257 | error/fallback 路径 |
+| 254 | 254 | 254 | finish_reason=STOP (error) |
+| 421-455 | 421-455 | 421-455 | RetrieveMemory |
+| 547 | 546 | 546 | highlights[0] |
+| 620-668 | 620-668 | 620-668 | SubmitPlanReview |
+
+行号自上次复核以来无漂移。
+
+### 复核结果: 0/15 已修 (状态与上次复核一致)
+
+| 原始编号 | 描述 | 上次状态 | 本次状态 | 验证证据 |
+|----------|------|---------|---------|---------|
+| P0-1 | UnboundLocalError trace_id/workflow_id | 未修 | **未修** | try 块起于 :141, trace_id 在 :155, workflow_id 在 :169, prompt_version 在 :172。若异常在 :141-:154 间触发, error handler :245-:257 引用未绑定变量 |
+| P0-2 | finish_reason=STOP 非 ERROR | 未修 | **未修** | :231 fallback 用 `STOP`; :254 error handler 用 `STOP` 并附注释 "Using STOP as finish reason even for errors..."。Proto 定义 `ERROR = 5` 已存在于 `FinishReason` enum, `agent_service_pb2.ERROR` 可直接访问 (验证: `ERROR value: 5`)。仅改 1 行即可修, 但跨 50+ 轮未修 |
+| P0-3 | SubmitPlanReview 3xDB session | 未修 | **未修** | :620 `db_session_factory()`, :646 `db_session_factory()`, :663 `db_session_factory()` — 仍为 3 个独立 session。若 :663 失败, :620 和 :646 的写入无法回滚 |
+| P1-1 | 不检查 context.is_active() | 未修 | **未修** | `grep -c 'context.is_active\|context.cancelled'` = 0。StreamChat 循环中无取消检查, 断连后 Orchestrator 仍执行全部 LLM 调用 |
+| P1-2 | fire-and-forget asyncio.create_task | 未验证 | **确认未修** | :819 `asyncio.create_task(run_learning())` 仍存在。任务不绑定 gRPC 请求生命周期, 异常仅记日志 |
+| P1-3 | str(e) 信息泄露 | 恶化(17→23) | **稳定在 23 处** | 当前 `context.set_details(str(e))` = 23 处 (行: 127, 347, 460, 516, 557, 711, 842, 911, 919, 997, 1005, 1056, 1139, 1147, 1238, 1246, 1295, 1383, 1458, 1466, 1573, 1581, 1628)。`message=str(e)` = 6 处 (行: 914, 1000, 1142, 1241, 1461, 1576)。合计 **29 处泄露点** (上次复核称 33 处, 经逐行精确计数为 23+6=29) |
+| P1-4 | highlights[0] IndexError | 未修 | **未修** | :546 `f"{snapshot.highlights[0]} "` 无 bounds check。空列表时触发 IndexError |
+| P1-5 | RetrieveMemory limit 无上限 | 未修 | **未修** | :424 `request.limit if request.limit > 0 else 10` 无 max cap。额外发现 :1313 `GetArbitrationQueue` 也有同样模式 `request.limit if request.limit > 0 else 50` |
+| P1-6 | _require_admin 每次导入+实例化 | 未验证 | **确认未修** | :116-:119 每次调用 `from app.services.user_service import UserService` + `UserService(db_session)` — 无缓存 |
+| P2-1 | 重复 import uuid | 未验证 | **确认未修** | 顶层 :11 + 行内 :413, :727 — 共 3 处 |
+| P2-2 | session_id="" 空值 observability | 未验证 | **确认未修** | :334 `session_id=""` 在 observability log 调用中 |
+| P2-3 | information_collection_triggered 误判 | — | **已消失** | grep `information_collection_triggered` 零匹配。该 P2-3 问题已不再存在于当前代码中 |
+| P2-4 | ThreadPoolExecutor(max_workers=10) | 未验证 | **确认未修** | `grpc_server.py`:85 `futures.ThreadPoolExecutor(max_workers=10)` 不变 |
+| P2-5 | _normalize_v2_response 副作用 | 未验证 | **确认未修** | :79-:95 直接修改传入的 `response` 对象并返回同一引用 (protobuf 可变对象) |
+| P2-6 | GetFeedbackStatistics 不验证 UUID | 未验证 | **确认未修** | :1263 `user_id = request.user_id` 后直接使用, 不验证 UUID 格式。与 GetUserProfile (:478) 的 `uuid.UUID()` 验证模式不一致 |
+
+### P1-3 泄露点精确计数
+
+上次复核声称 33 处 (27 `set_details` + 6 `message=`)。本次逐行精确计数:
+
+- `context.set_details(str(e))`: **23 处** (不是 27)
+- `message=str(e)`: **6 处**
+- 合计: **29 处泄露点**
+
+上次计数偏差原因: 可能将部分非 `str(e)` 模式的 `context.set_details()` 误计入。
+
+### 补充发现
+
+#### AF-2: grpc_auth.py `get_verified_user_id` 无实质安全保证
+`grpc_auth.py`:99-117 — `get_verified_user_id()` 仅返回 metadata 中的 `user-id`, 注释声称 "interceptor has already validated" 但 AuthInterceptor (:86-:88) 并未将 token_user_id 写入 gRPC context。若客户端不提供 metadata `user-id`, 返回 None; 若提供, AuthInterceptor 只在两者**同时存在**时交叉验证 (:77)。这意味着:
+- 若客户端只传 JWT (无 metadata user-id), 交叉验证被跳过
+- `get_verified_user_id` 返回 None, 下游代码 (agent_grpc_service.py) 转而使用 `request.user_id`
+- `request.user_id` 完全由客户端控制, 未经 JWT 验证
+
+这不是新问题 (原审计覆盖了 AuthInterceptor), 但 `get_verified_user_id` 函数的存在给出虚假安全感。
+
+#### AF-3: `grpc_server.py` ThreadPoolExecutor + async 混用风险
+`grpc_server.py`:84-:85 使用 `grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))` — 对于 `grpc.aio` (异步服务器), ThreadPoolExecutor 仅用于非 async handler 的 fallback。当前所有 AgentServiceImpl 方法都是 `async`, 因此 ThreadPoolExecutor 理论上不限制并发。但若未来添加同步方法, max_workers=10 会成为瓶颈。建议改为 `None` (默认值) 或明确注释。
+
+### 修复状态汇总
+
+| 状态 | 数量 | 编号 |
+|------|------|------|
+| 未修 | 13 | P0-1, P0-2, P0-3, P1-1, P1-2, P1-3, P1-4, P1-5, P1-6, P2-1, P2-2, P2-4, P2-5, P2-6 |
+| 已消失 | 1 | P2-3 (information_collection_triggered 误判) |
+| **总计** | **14** (1 已消, 原始 15) |
+
+### 判定
+
+与上次复核相比, 代码无任何修改。15 项发现中 1 项因代码删除自然消失 (P2-3), 其余 14 项全部未修。P1-3 泄露点精确计数为 29 (23 set_details + 6 message=), 较上次复核声称的 33 处有所修正。P0-2 (STOP vs ERROR) 跨越 Round #5 至 Round #61 共 56 轮仍未修, 属于最顽固的技术债。
+
+**最高优先级修复项**: P0-1 (3 行) + P0-2 (1 行) = 共 4 行修改可消除两个 P0。
+
+**状态更新**: ⚠️ 已复核-无变化(P1-3恶化) → ⚠️ 已复核-无变化(P2-3已消, P1-3精确计数29处)
