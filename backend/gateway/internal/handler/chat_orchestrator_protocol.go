@@ -541,7 +541,12 @@ func (h *ChatOrchestrator) handleProtobufMessage(writer *wsSafeWriter, msg []byt
 
 		input.Message = chatMsg.Message
 		input.SessionID = chatMsg.SessionId
-		// Map other fields if ChatMessage has them (e.g. UserProfile)
+
+		if len(input.Message) > maxMessageLength {
+			responder.SendError("invalid_argument",
+				fmt.Sprintf("消息长度超过 %d 字符限制", maxMessageLength), false)
+			return
+		}
 
 		h.handleChatMessage(ctx, responder, userID, input, wsMsg.RequestId)
 

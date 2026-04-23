@@ -6,3 +6,4 @@
 
 - ISSUE-20260424-001 | 1-Auth: Go AppleLogin 不写 auth_sessions，session 不可管理 (P1) — 2026-04-24T13:39
 - ISSUE-20260424-007 | 2-Chat-WebSocket: /ws/chat 缺少 per-user 连接数限制 (P1) — 2026-04-24T19:30
+- ISSUE-20260424-008 | 2-Chat-WebSocket: Protobuf 路径绕过 maxMessageLength 限制 (P1) — 2026-04-24T19:50
