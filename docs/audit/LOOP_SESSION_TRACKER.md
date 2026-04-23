@@ -163,3 +163,33 @@
 - 修复 #61 ProfileContextService P0-2 (伪造掌握度→返回空列表 ~5行)
 - 继续✅报告复核 (#59 Go Proxy Routes, #60 FastAPI Route Handlers)
 
+### Session 7 — 2026-04-23 (Seventh Run — Chris S5)
+
+**Focus**: 实现 S6 审计复核发现的具体修复
+
+**Fixes Committed**:
+1. `stt_service.py` (#63 P0-2 + P0-1 + str(e)泄露):
+   - 移除 `finally: provider.close()` — 单例 Provider 不应在每个 WS 请求结束时关闭
+   - 添加 `_PROVIDER_ERROR_MARKERS` 检测，防止 Provider 错误文本作为转录结果返回
+   - WS 错误响应改为通用消息 "STT stream error"
+2. `behavior_signal_collector.py` (#58 P0-2):
+   - `_signal_on_cooldown`: Redis get() 添加 try/except，失败时 fallback 到本地 _local_cooldowns
+   - `_mark_signal_emitted`: Redis setex() 添加 try/except，失败时仅记录 warning
+3. `profile_context.py` + `profile_context_service.py` (#61 P0-2):
+   - `MasteryChange.old_mastery` 和 `new_mastery` 改为 `float | None`
+   - Fallback 路径（query_study_timeline）不再伪造 42.0 基线，改为 `None`
+   - 跳过 delta < 0.01 的无意义条目
+
+**P0-3 Correction**: S6 复核时确认 P0-3 (pattern_adjustment 无冷却) 的描述不准确 — 代码已有 `_signal_on_cooldown` 检查 (:344)。实际问题是 `_signal_on_cooldown` 在 Redis 不可用时可能 fallback 到空本地缓存，已在 P0-2 修复中一并解决。
+
+**Test Results**: 18/18 passed (behavior_signal + prompt_leakage), Go build clean
+
+**Commits**:
+- `9cf94b68`: fix: 4 focused P0/P1 repairs from audit #58, #61, #63
+
+**Next Session Should**:
+- 复核 #59 Go Proxy Routes + #60 FastAPI Route Handlers
+- 检查是否有其他低风险可修复项（如 XunFeiProvider.transcribe_file 返回错误字符串 → 抛异常）
+- 验证累积修复的稳定性（运行更广测试套件）
+
+
