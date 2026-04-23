@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.models.error_record import ErrorRecord
+from app.models.error_book import ErrorRecord
 from app.models.subject import Subject
 from app.models.user import User
 from app.schemas.error import ErrorRecordCreate, ErrorRecordResponse

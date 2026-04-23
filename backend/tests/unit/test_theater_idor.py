@@ -101,7 +101,7 @@ async def test_theater_idor_read_denies_cross_user_access(theater_idor_client, t
     async def _fake_publish(event_type: str, payload: dict[str, str]) -> None:
         published.append((event_type, payload))
 
-    monkeypatch.setattr("app.services.theater.prediction_theater_service.event_bus.publish", _fake_publish)
+    monkeypatch.setattr("app.services.theater.prediction_theater_service.event_bus_reliable.publish", _fake_publish)
 
     response = await client.get(f"/api/v1/theater/predictions/{theater_idor_seed['prediction'].prediction_id}")
 
@@ -122,7 +122,7 @@ async def test_theater_idor_write_denies_cross_user_mutation(theater_idor_client
     async def _fake_publish(event_type: str, payload: dict[str, str]) -> None:
         published.append((event_type, payload))
 
-    monkeypatch.setattr("app.services.theater.prediction_theater_service.event_bus.publish", _fake_publish)
+    monkeypatch.setattr("app.services.theater.prediction_theater_service.event_bus_reliable.publish", _fake_publish)
 
     response = await client.post(
         f"/api/v1/theater/predictions/{theater_idor_seed['prediction'].prediction_id}/actuals",

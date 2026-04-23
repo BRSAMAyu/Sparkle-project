@@ -7,7 +7,7 @@ from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent_profiles import AgentRole
-from app.core.config import settings
+from app.config import settings
 from app.models.galaxy import UserNodeStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import User

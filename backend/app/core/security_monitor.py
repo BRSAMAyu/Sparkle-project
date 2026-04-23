@@ -22,7 +22,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.redis import redis_client
+from app.core.cache import cache_service
 from app.models.audit_log import SecurityAuditLog
 from app.models.user import LoginAttempt
 
@@ -84,7 +84,7 @@ class SecurityMonitor:
     """安全监控服务"""
 
     def __init__(self):
-        self.redis = redis_client
+        self.redis = cache_service.redis
         self._alerts_enabled = True
         self._monitoring_enabled = True
 

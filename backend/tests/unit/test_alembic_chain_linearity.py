@@ -76,8 +76,12 @@ def test_alembic_stage29_5_merge_is_the_single_head() -> None:
     metadata = _read_revision_metadata()
     children = _children_map(metadata)
     heads = sorted(revision for revision, dependents in children.items() if not dependents)
-    # drift-fix: Stage 31 is now the canonical single head after later migrations landed.
-    assert heads == ["s31a1b2c3d4"]
+    assert len(heads) == 1
+    head = heads[0]
+    ancestors = _ancestor_closure(metadata, head)
+    assert "s295a1b2c3d4" in ancestors or head == "s295a1b2c3d4"
+    assert "stage38_06_add_vector_hnsw_indexes" in ancestors or head == "stage38_06_add_vector_hnsw_indexes"
+    assert "s39b1c2d3e4" in ancestors or head == "s39b1c2d3e4"
 
 
 def test_alembic_stage29_5_head_includes_stage19_and_stage22_backfills() -> None:

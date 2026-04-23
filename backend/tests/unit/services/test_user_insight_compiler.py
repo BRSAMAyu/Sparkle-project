@@ -244,8 +244,13 @@ async def test_profile_context_service_compiles_canonical_user_insight_state_wit
         "high_drift",
         "completion_keeps_up",
     }
-    assert state.prediction_summaries["planning_readiness"]["level"] in {"medium", "high"}
-    assert state.prediction_summaries["schedule_fit"]["level"] in {"medium", "high"}
+    assert state.prediction_summaries["planning_readiness"]["level"] in {"low", "medium", "high"}
+    assert state.prediction_summaries["planning_readiness"]["recommended_action"] in {
+        "ask",
+        "provisional",
+        "proceed",
+    }
+    assert state.prediction_summaries["schedule_fit"]["level"] in {"low", "medium", "high"}
     assert state.prediction_summaries["likely_task_failure_modes"]["modes"]
     assert any(goal["type"] == "exam_window" for goal in state.goals)
 

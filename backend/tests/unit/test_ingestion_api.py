@@ -6,12 +6,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.api.deps import get_current_user
 from app.api.v1.ingestion import router as ingestion_router
 
 
 def _build_client() -> TestClient:
     app = FastAPI()
     app.include_router(ingestion_router, prefix="/ingestion")
+    app.dependency_overrides[get_current_user] = lambda: object()
     return TestClient(app)
 
 
