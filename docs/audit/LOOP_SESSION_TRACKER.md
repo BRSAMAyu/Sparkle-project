@@ -71,3 +71,42 @@
 - Consider fixing str(e) in community.py (43 instances) and predictive_analytics.py (8 instances)
 - Run guard scripts (check_rule_ax_route_ownership.py, check_sgw_readiness.py)
 - Consider whether all real fixable issues have been addressed
+
+### Session 3 — 2026-04-23 (Third Run)
+
+**Focus**: New audit (Notification Center) + predictive_analytics str(e) fixes
+
+**Fixes Committed**:
+1. `predictive_analytics.py`: 8× str(e) sanitized (all generic Exception at 500 status)
+2. Notification Center deep audit (#57): 1×P0 + 5×P1 + 3×P2 identified
+3. ScaffoldingFSM (#13): Revalidated, confirmed "no change" status
+4. Cognitive Prism (#20): Revalidated twice, confirmed all findings still real
+
+**Audit Review**: #13 ScaffoldingFSM (⚠️→confirmed), #20 Cognitive Prism (⚠️→confirmed)
+
+**Test Results**: 2109 passed, 18 failed (all pre-existing, none in modified files)
+
+### Session 4 — 2026-04-23 (Fourth Run)
+
+**Focus**: Audit reviews #50 + #51 + LIKE wildcard fix + time_to_action fix
+
+**Fixes Committed**:
+1. `notification_center_service.py`: `time_to_action = max(0, int(...))` (P2-1)
+2. `notification_center_service.py`: `_escape_like()` helper + 5× ilike pattern escape (P1-3)
+3. Audit review #50 WS Proxy: P0-1→P1 downgrade, 4/9 findings FALSE (code significantly improved)
+4. Audit review #51 Go Middleware: P1-3 Max-Age + P1-4 Request-ID already fixed (FALSE)
+
+**Key Findings from Reviews**:
+- #50 WS Proxy code was substantially rewritten since audit — now has idle timeout (5min), ping/pong, read deadlines, message size limits, query token rejection
+- #51 CORS Max-Age was already present, Request-ID validation already had UUID v4 + hex sanitization
+- Both audits were based on older code versions
+
+**Commits**:
+- `f9d253e1`: fix(notification): clamp time_to_action to non-negative (P2-1)
+- `89850053`: fix(notification): escape LIKE wildcards in search filter (P1-3) + audit reviews
+
+**Next Session Should**:
+- Review more ✅ audit reports (#52 UX Envelope, #53 Go Chat Orchestrator)
+- Check remaining str(e) files (community.py 43× ValueError→intentional, skip; experiments.py 5×)
+- Investigate P0-1 in notification center (mark_all N+1 batch update)
+- Check TrustedProxies setup (#51 P1-1) and CSP connect-src (#51 P1-2)
