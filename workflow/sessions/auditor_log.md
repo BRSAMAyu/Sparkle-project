@@ -63,3 +63,31 @@
 - next_cursor: 3 (slice 03-plan_review)
 - commit: pending
 
+## 2026-04-24T20:15+08:00 round=0 slice=03-plan_review
+- directives_read: none active
+- produced: 6 issues (P0=0 P1=2 P2=4 P3=0)
+  - 015 P1: asyncio.create_task fire-and-forget，计划批准后任务生成静默失败
+  - 016 P1: pending_actions_store get-delete 非原子，并发 SubmitPlanReview 可重复审批
+  - 017 P2: gRPC handler plan_id 来源不一致
+  - 018 P2: track_rejection_count 在 redis=None 时静默降级
+  - 019 P2: _validate_feasibility 硬编码 liberal_arts 背景检查
+  - 020 P2: get_stored_plan 永远返回 None (stub)
+- deferred: 0
+- anchors_personally_read:
+  - plan_review_service.py:1-2241 (全文件)
+  - plan_review_card.dart:1-1376 (全文件)
+  - agent_service.proto:25-68, 285-316 (SubmitPlanReview RPC + PlanReviewRequest/Response)
+  - agent_grpc_service.py:580-737 (SubmitPlanReview handler)
+  - pending_actions.py:1-271 (全文件)
+- grep_queries:
+  - SubmitPlanReview|PlanReview in agent_service.proto → :30-31, 290-315
+  - plan_review|SubmitPlanReview in agent_grpc_service.py → :45, 580-731
+  - get_stored_plan|get_review|review_id in plan_review_service.py → 30 locations
+  - asyncio.create_task in plan_review_service.py → :1634, 1642, 1917
+  - self.redis in plan_review_service.py → 15 locations
+  - pending_actions_store in orchestration/ → 10+ files
+  - _validate_feasibility|liberal_arts in plan_review_service.py → :624, 646, 673, 700
+- deviations: none
+- next_cursor: 4 (slice 04-dual_core_router)
+- commit: pending
+
