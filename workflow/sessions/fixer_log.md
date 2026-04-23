@@ -70,3 +70,12 @@
 - **预期是否成立**：是。用户下线设备后该设备 token 应立即失效是基本安全预期，CLAUDE.md §Security Architecture 支持。
 - **配置/flag 覆盖**：无。这是代码路径缺失，不受 feature flag 影响。
 - **修复回归风险**：低。添加一次 Redis GET，复用现有 fail-closed/fail-open 策略。不影响当前正常工作的 token 验证链路。
+
+### 收尾
+
+- files_touched: 1
+- lines_delta: +21/-0
+- tests_run: [go test ./internal/middleware/... -> PASS (0.016s), go test ./... -> PASS (14.1s)]
+- ui_hand_verified: na (pure Go backend)
+- commits: [a3c61232 fix(auth), f27ca5ba triage verifying]
+- follow_ups: []
