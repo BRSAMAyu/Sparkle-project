@@ -318,6 +318,31 @@
 验证：
 
 - `cd backend && pytest -q tests/services/test_translation_service.py -q` -> `20 passed`
+
+## 16. Cycle 12 - LLM Quota Lua Script Path Hardening
+
+状态：`FIXED`
+
+目标：
+
+- 修复 `LLMCostGuard` 依赖当前工作目录才能加载 Lua 脚本的问题，恢复真实的原子 quota reserve 路径。
+
+源码复核结论：
+
+- `CONFIRMED`：全量 `pytest -x` 新的首个失败点是 `tests/unit/test_llm_quota.py::TestLLMCostGuard::test_check_quota_with_actual_record`。
+- 根因不是 Redis mock 本身，而是 [llm_quota.py](/Users/brsama/code/GitHub/Sparkle-project/backend/app/core/llm_quota.py:28) 把脚本路径写成了相对 cwd 的字符串 `backend/app/services/lua/rate_limit.lua`。
+- 在 repo 根目录运行时这条路径可用，但在 `cd backend && pytest` 下会解析成不存在的 `backend/backend/...`，导致脚本加载失败，逻辑回退到非 Lua 分支，`evalsha` 永远不会被调用。
+
+修复：
+
+- 将 `RATE_LIMIT_LUA_PATH` 改为基于 `__file__` 解析的绝对源码路径。
+- `_load_quota_script()` 改为使用 `Path.open()` 读取脚本，彻底去除 cwd 依赖。
+
+验证：
+
+- `python3 -m py_compile backend/app/core/llm_quota.py` -> PASS
+- `cd backend && pytest -q tests/unit/test_llm_quota.py::TestLLMCostGuard::test_check_quota_with_actual_record tests/unit/test_llm_quota.py::TestLLMCostGuard::test_check_quota_atomic_path_rejects_when_limit_exceeded -q` -> `2 passed`
+- 全量推进位置更新：在修复前已到 `2058 passed, 179 skipped`
 - 复核 community WS proxy 是否仍有 token URL 暴露、idle/ping-pong/per-user limit 缺口。
 - 复核 STT WebSocket origin 是否已使用统一 allowlist。
 
