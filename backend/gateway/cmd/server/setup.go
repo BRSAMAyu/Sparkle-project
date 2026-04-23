@@ -422,6 +422,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	authRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 5.0, 15)
 	apiRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 30, 60)
 	adminRateLimit := middleware.AdminRateLimitMiddleware(rdb)
+	internalRateLimit := middleware.InternalRateLimitMiddleware(rdb)
 
 	requestTimeout := 30
 	if cfg.RequestTimeoutSeconds > 0 {
@@ -499,7 +500,12 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		proxyRoutesHandler.RegisterProxyRoutes(api, authMiddleware)
 	}
 
-	internal := r.Group("/internal", middleware.InternalAPIKeyMiddleware(cfg), middleware.InternalIPWhitelistMiddleware(cfg))
+	internal := r.Group(
+		"/internal",
+		middleware.InternalAPIKeyMiddleware(cfg),
+		middleware.InternalIPWhitelistMiddleware(cfg),
+		internalRateLimit,
+	)
 	{
 		// route-tier: internal
 		internal.GET("/files/:file_id/download", handlers.fileHandler.GetInternalDownloadURL)

@@ -63,6 +63,35 @@ func TestAdminRateLimitMiddleware(t *testing.T) {
 	}
 }
 
+func TestInternalRateLimitMiddleware(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(InternalRateLimitMiddleware(nil))
+	router.GET("/internal/probe", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	blocked := false
+	for i := 0; i < 121; i++ {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/internal/probe", nil)
+		req.RemoteAddr = "127.0.0.1:34567"
+		router.ServeHTTP(recorder, req)
+		if i < 120 && recorder.Code != http.StatusOK {
+			t.Fatalf("request %d should pass, got %d", i+1, recorder.Code)
+		}
+		if i == 120 {
+			blocked = recorder.Code == http.StatusTooManyRequests
+		}
+	}
+
+	if !blocked {
+		t.Fatalf("expected internal rate limiter to reject burst above 120 requests")
+	}
+}
+
 func TestNormalizeRateLimitRoutePath(t *testing.T) {
 	t.Parallel()
 

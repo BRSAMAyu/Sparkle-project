@@ -548,3 +548,25 @@
 验证：
 
 - `pytest backend/tests/unit/services/test_agent_grpc_service.py` -> PASS
+
+## 25. Cycle 20 - Internal 控制面限流 D1
+
+状态：`FIXED`
+
+目标：
+
+- 复核 Gateway `/internal/*` 路由在已有 API key + IP 白名单之外，是否仍完全没有请求节流。
+
+源码复核结论：
+
+- `CONFIRMED`：`/admin` 已挂 `AdminRateLimitMiddleware()`，但 `/internal` 路由组仍只有 `InternalAPIKeyMiddleware` 与 `InternalIPWhitelistMiddleware`，没有任何 rate limit。
+
+修复：
+
+- 新增 `InternalRateLimitMiddleware()`，对内部控制面应用独立 Hybrid rate limiter。
+- `setup.go` 将 `/internal` 路由组接入该中间件，保持 key/IP 白名单不变，只补请求节流层。
+- 新增单测覆盖 internal burst 超过阈值后返回 429。
+
+验证：
+
+- `go test ./cmd/server ./internal/middleware` -> PASS

@@ -361,6 +361,12 @@ func AdminRateLimitMiddleware(rdb *redis.Client) gin.HandlerFunc {
 	return HybridRateLimitMiddlewareSimple(rdb, 10.0/60.0, 10)
 }
 
+// InternalRateLimitMiddleware protects authenticated internal service routes
+// from burst amplification while allowing normal intra-service traffic.
+func InternalRateLimitMiddleware(rdb *redis.Client) gin.HandlerFunc {
+	return HybridRateLimitMiddlewareSimple(rdb, 60.0, 120)
+}
+
 // WebSocketRateLimitMiddleware WebSocket连接速率限制
 func WebSocketRateLimitMiddleware() gin.HandlerFunc {
 	// WebSocket连接限制按分钟计算
