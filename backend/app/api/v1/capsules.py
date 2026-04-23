@@ -177,7 +177,9 @@ async def mark_capsule_read(
     """
     标记胶囊为已读
     """
-    await curiosity_capsule_service.mark_as_read(id, db)
+    marked = await curiosity_capsule_service.mark_as_read(current_user.id, id, db)
+    if not marked:
+        raise HTTPException(status_code=404, detail="Capsule not found")
     return {"success": True}
 
 

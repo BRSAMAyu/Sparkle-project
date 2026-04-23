@@ -2,12 +2,14 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
+from app.api.deps import get_current_user
 from app.agents.graph.workflow import sparkle_graph
+from app.models.user import User
 
 router = APIRouter()
 
@@ -52,13 +54,13 @@ async def generate_graph_events(inputs: dict, config: dict) -> AsyncGenerator[st
 @router.post("/chat")
 async def chat_with_agent(
     request: ChatRequest,
-    # current_user = Depends(get_current_user) # 暂时注释，方便测试
+    current_user: User = Depends(get_current_user),
 ):
     """
     与 Next-Gen Agent 对话
     """
     session_id = request.session_id or str(uuid.uuid4())
-    user_id = "test_user" # current_user.id
+    user_id = str(current_user.id)
 
     # 构造初始状态
     inputs = {

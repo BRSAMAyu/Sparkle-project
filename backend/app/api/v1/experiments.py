@@ -18,6 +18,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
@@ -47,6 +48,29 @@ def _is_uuid_like(value: str) -> bool:
         return True
     except (TypeError, ValueError):
         return False
+
+
+async def _get_owned_experiment(
+    db: AsyncSession,
+    experiment_id: str,
+    current_user: User,
+    *,
+    load_variants: bool = False,
+) -> ABExperiment:
+    query = select(ABExperiment).where(
+        ABExperiment.id == experiment_id,
+        ABExperiment.not_deleted_filter(),
+    )
+    if not current_user.is_superuser:
+        query = query.where(ABExperiment.created_by == current_user.id)
+    if load_variants:
+        query = query.options(selectinload(ABExperiment.variants))
+
+    result = await db.execute(query)
+    experiment = result.scalar_one_or_none()
+    if not experiment:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    return experiment
 
 
 # Request/Response Models
@@ -106,7 +130,7 @@ class RecordMetricRequest(BaseModel):
 
 class VariantResponse(BaseModel):
     """Variant response"""
-    id: str
+    id: UUID
     variant_name: str
     description: str | None
     is_control: bool
@@ -120,12 +144,12 @@ class VariantResponse(BaseModel):
 
 class ExperimentResponse(BaseModel):
     """Experiment response"""
-    id: str
+    id: UUID
     name: str
     description: str | None
     hypothesis: str
     status: str
-    created_by: str | None
+    created_by: UUID | None
     sample_size_target: int | None
     significance_level: float
     power: float
@@ -133,7 +157,7 @@ class ExperimentResponse(BaseModel):
     start_date: datetime | None
     end_date: datetime | None
     conclusion: str | None
-    winning_variant_id: str | None
+    winning_variant_id: UUID | None
     created_at: datetime
     updated_at: datetime
     variants: list[VariantResponse] = []
@@ -261,16 +285,7 @@ async def get_experiment(
     current_user: User = Depends(get_current_user),
 ):
     """Get experiment details"""
-    query = select(ABExperiment).where(ABExperiment.id == experiment_id)
-    result = await db.execute(query)
-    experiment = result.scalar_one_or_none()
-
-    if not experiment:
-        raise HTTPException(status_code=404, detail="Experiment not found")
-
-    await db.refresh(experiment, ["variants"])
-
-    return experiment
+    return await _get_owned_experiment(db, experiment_id, current_user, load_variants=True)
 
 
 @router.post("/{experiment_id}/start", response_model=ExperimentResponse)
@@ -280,6 +295,7 @@ async def start_experiment(
     current_user: User = Depends(get_current_user),
 ):
     """Start an experiment"""
+    await _get_owned_experiment(db, experiment_id, current_user)
     redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
@@ -299,6 +315,7 @@ async def pause_experiment(
     current_user: User = Depends(get_current_user),
 ):
     """Pause a running experiment"""
+    await _get_owned_experiment(db, experiment_id, current_user)
     redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
@@ -318,6 +335,7 @@ async def resume_experiment(
     current_user: User = Depends(get_current_user),
 ):
     """Resume a paused experiment"""
+    await _get_owned_experiment(db, experiment_id, current_user)
     redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
@@ -338,6 +356,7 @@ async def complete_experiment(
     current_user: User = Depends(get_current_user),
 ):
     """Complete an experiment with conclusions"""
+    await _get_owned_experiment(db, experiment_id, current_user)
     redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
@@ -361,6 +380,7 @@ async def get_experiment_stats(
     current_user: User = Depends(get_current_user),
 ):
     """Get experiment statistics"""
+    await _get_owned_experiment(db, experiment_id, current_user)
     redis_client = _get_redis_client_or_503()
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
@@ -468,13 +488,7 @@ async def analyze_experiment(
     Performs statistical analysis on the collected metrics,
     including hypothesis tests and effect size estimation.
     """
-    # Get experiment
-    query = select(ABExperiment).where(ABExperiment.id == experiment_id)
-    result = await db.execute(query)
-    experiment = result.scalar_one_or_none()
-
-    if not experiment:
-        raise HTTPException(status_code=404, detail="Experiment not found")
+    experiment = await _get_owned_experiment(db, experiment_id, current_user)
 
     # Get metrics grouped by variant
     metrics_query = select(ABExperimentMetric).where(

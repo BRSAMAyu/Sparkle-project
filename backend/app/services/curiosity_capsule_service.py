@@ -175,11 +175,20 @@ class CuriosityCapsuleService:
         )
         return result.scalars().all()
 
-    async def mark_as_read(self, capsule_id: UUID, db: AsyncSession):
-        capsule = await db.get(CuriosityCapsule, capsule_id)
-        if capsule:
-            capsule.is_read = True
-            await db.commit()
+    async def mark_as_read(self, user_id: UUID, capsule_id: UUID, db: AsyncSession) -> bool:
+        result = await db.execute(
+            select(CuriosityCapsule).where(
+                CuriosityCapsule.id == capsule_id,
+                CuriosityCapsule.user_id == user_id,
+            )
+        )
+        capsule = result.scalar_one_or_none()
+        if not capsule:
+            return False
+
+        capsule.is_read = True
+        await db.commit()
+        return True
 
     # ========== 新增方法（委托给专用服务）==========
 

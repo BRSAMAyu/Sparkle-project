@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_optional_current_user
+from app.api.deps import get_current_active_superuser, get_current_user, get_optional_current_user
 from app.db.session import get_db
 from app.models.execution_intent import ExecutionIntent, ExecutionIntentStatus
 from app.models.execution_record import ExecutionRecord
@@ -682,10 +682,10 @@ async def create_execution_schedule(
     return ExecutionScheduleResponse(**schedule.to_dict())
 
 
-# route-tier: authed
+# route-tier: admin
 @router.post("/schedules/tick", response_model=ExecutionScheduleTickResponse)
 async def tick_execution_schedules(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_superuser),
     db: AsyncSession = Depends(get_db),
 ):
     del current_user
@@ -744,11 +744,11 @@ async def delete_execution_schedule(
     return {"success": True}
 
 
-# route-tier: authed
+# route-tier: admin
 @router.post("/schedules/events/trigger", response_model=ExecutionScheduleTickResponse)
 async def trigger_execution_schedule_event(
     request: ExecutionScheduleEventTriggerRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_superuser),
     db: AsyncSession = Depends(get_db),
 ):
     del current_user

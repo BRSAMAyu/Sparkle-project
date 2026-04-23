@@ -81,6 +81,64 @@ def _favorite_load_options():
     )
 
 
+async def _get_accessible_group_message(
+    db: AsyncSession,
+    user_id: UUID,
+    message_id: UUID,
+) -> GroupMessage | None:
+    result = await db.execute(
+        select(GroupMessage)
+        .join(GroupMember, GroupMember.group_id == GroupMessage.group_id)
+        .where(
+            GroupMessage.id == message_id,
+            GroupMessage.not_deleted_filter(),
+            GroupMessage.is_revoked.is_(False),
+            GroupMember.user_id == user_id,
+            GroupMember.not_deleted_filter(),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def _get_accessible_private_message(
+    db: AsyncSession,
+    user_id: UUID,
+    message_id: UUID,
+) -> PrivateMessage | None:
+    result = await db.execute(
+        select(PrivateMessage).where(
+            PrivateMessage.id == message_id,
+            PrivateMessage.not_deleted_filter(),
+            PrivateMessage.is_revoked.is_(False),
+            or_(
+                PrivateMessage.sender_id == user_id,
+                PrivateMessage.receiver_id == user_id,
+            ),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def _get_accessible_message(
+    db: AsyncSession,
+    user_id: UUID,
+    *,
+    group_message_id: UUID | None = None,
+    private_message_id: UUID | None = None,
+) -> GroupMessage | PrivateMessage:
+    if bool(group_message_id) == bool(private_message_id):
+        raise ValueError("必须指定且只能指定一条消息")
+
+    if group_message_id:
+        message = await _get_accessible_group_message(db, user_id, group_message_id)
+    else:
+        message = await _get_accessible_private_message(db, user_id, private_message_id)  # type: ignore[arg-type]
+
+    if not message:
+        raise ValueError("消息不存在或无权访问")
+    return message
+
+
 class EncryptionService:
     """端到端加密密钥管理服务"""
 
@@ -370,8 +428,12 @@ class ReportService:
         data: MessageReportCreate
     ) -> MessageReport:
         """创建举报"""
-        if not data.group_message_id and not data.private_message_id:
-            raise ValueError("必须指定举报的消息")
+        await _get_accessible_message(
+            db,
+            reporter_id,
+            group_message_id=data.group_message_id,
+            private_message_id=data.private_message_id,
+        )
 
         report = MessageReport(
             reporter_id=reporter_id,
@@ -394,9 +456,28 @@ class ReportService:
         data: MessageReportReview
     ) -> MessageReport:
         """审核举报"""
-        report = await MessageReport.get_by_id(db, report_id)
+        result = await db.execute(
+            select(MessageReport)
+            .where(MessageReport.id == report_id, MessageReport.not_deleted_filter())
+            .options(
+                selectinload(MessageReport.group_message),
+                selectinload(MessageReport.private_message),
+            )
+        )
+        report = result.scalar_one_or_none()
         if not report:
             raise ValueError("举报不存在")
+
+        if report.group_message:
+            reviewer = await ModerationService._get_admin_member(
+                db,
+                report.group_message.group_id,
+                reviewer_id,
+            )
+            if not reviewer:
+                raise ValueError("无权操作")
+        else:
+            raise ValueError("无权操作")
 
         report.status = data.status
         report.action_taken = data.action_taken
@@ -437,8 +518,12 @@ class FavoriteService:
         data: MessageFavoriteCreate
     ) -> MessageFavorite:
         """添加收藏"""
-        if not data.group_message_id and not data.private_message_id:
-            raise ValueError("必须指定收藏的消息")
+        await _get_accessible_message(
+            db,
+            user_id,
+            group_message_id=data.group_message_id,
+            private_message_id=data.private_message_id,
+        )
 
         # 检查是否已收藏
         query = select(MessageFavorite).where(
@@ -539,13 +624,13 @@ class ForwardService:
 
         # 获取源消息
         if data.source_type == "group":
-            source = await db.get(GroupMessage, data.source_message_id)
-            if not source or source.is_deleted or source.is_revoked:
-                raise ValueError("源消息不存在")
+            source = await _get_accessible_group_message(db, user_id, data.source_message_id)
+            if not source:
+                raise ValueError("源消息不存在或无权访问")
         else:
-            source = await db.get(PrivateMessage, data.source_message_id)
-            if not source or source.is_deleted or source.is_revoked:
-                raise ValueError("源消息不存在")
+            source = await _get_accessible_private_message(db, user_id, data.source_message_id)
+            if not source:
+                raise ValueError("源消息不存在或无权访问")
 
         # 更新源消息转发计数
         source.forward_count += 1
@@ -599,31 +684,33 @@ class BroadcastService:
     ) -> BroadcastMessage:
         """创建跨群广播"""
         # 验证用户是否是所有目标群组的管理员
-        for group_id in data.target_group_ids:
-            member_result = await db.execute(
-                select(GroupMember).where(
-                    GroupMember.group_id == group_id,
-                    GroupMember.user_id == user_id,
-                    GroupMember.role.in_([GroupRole.OWNER, GroupRole.ADMIN]),
-                    GroupMember.not_deleted_filter()
-                )
+        target_group_ids = list(dict.fromkeys(data.target_group_ids))
+        member_result = await db.execute(
+            select(GroupMember.group_id).where(
+                GroupMember.group_id.in_(target_group_ids),
+                GroupMember.user_id == user_id,
+                GroupMember.role.in_([GroupRole.OWNER, GroupRole.ADMIN]),
+                GroupMember.not_deleted_filter()
             )
-            if not member_result.scalar_one_or_none():
-                raise ValueError(f"无权在群组 {group_id} 中发送广播")
+        )
+        allowed_group_ids = set(member_result.scalars().all())
+        missing_group_ids = [group_id for group_id in target_group_ids if group_id not in allowed_group_ids]
+        if missing_group_ids:
+            raise ValueError(f"无权在群组 {missing_group_ids[0]} 中发送广播")
 
         # 创建广播记录
         broadcast = BroadcastMessage(
             sender_id=user_id,
             content=data.content,
             content_data=data.content_data,
-            target_group_ids=[str(gid) for gid in data.target_group_ids],
+            target_group_ids=[str(gid) for gid in target_group_ids],
             delivered_count=0
         )
         db.add(broadcast)
         await db.flush()
 
         # 在每个群组中创建消息
-        for group_id in data.target_group_ids:
+        for group_id in target_group_ids:
             message = GroupMessage(
                 group_id=group_id,
                 sender_id=user_id,

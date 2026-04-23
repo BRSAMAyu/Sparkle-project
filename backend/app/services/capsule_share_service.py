@@ -52,8 +52,15 @@ class CapsuleShareService:
         Raises:
             ValueError: 如果胶囊不存在或用户不在群组中
         """
-        # 验证胶囊
-        capsule = await db.get(CuriosityCapsule, capsule_id)
+        # Only the capsule owner can share it. Keep lookup scoped to the actor so
+        # non-owned capsule IDs are indistinguishable from missing records here.
+        result = await db.execute(
+            select(CuriosityCapsule).where(
+                CuriosityCapsule.id == capsule_id,
+                CuriosityCapsule.user_id == user_id,
+            )
+        )
+        capsule = result.scalar_one_or_none()
         if not capsule:
             raise ValueError(f"Capsule {capsule_id} not found")
 
@@ -131,8 +138,15 @@ class CapsuleShareService:
         Raises:
             ValueError: 如果胶囊不存在或不是好友关系
         """
-        # 验证胶囊
-        capsule = await db.get(CuriosityCapsule, capsule_id)
+        # Only the capsule owner can share it. Keep lookup scoped to the actor so
+        # non-owned capsule IDs are indistinguishable from missing records here.
+        result = await db.execute(
+            select(CuriosityCapsule).where(
+                CuriosityCapsule.id == capsule_id,
+                CuriosityCapsule.user_id == user_id,
+            )
+        )
+        capsule = result.scalar_one_or_none()
         if not capsule:
             raise ValueError(f"Capsule {capsule_id} not found")
 

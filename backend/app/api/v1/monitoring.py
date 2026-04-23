@@ -6,13 +6,17 @@ Also includes device token management for push notifications.
 from __future__ import annotations
 from datetime import timezone
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_active_superuser, get_current_user
 from app.core.websocket import manager
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, get_db
+from app.models.community import Friendship, FriendshipStatus, GroupMember
 from app.models.user import User, UserDevice
 
 router = APIRouter()
@@ -50,8 +54,53 @@ class DeviceListResponse(BaseModel):
     total: int
 
 
+async def _can_view_presence(db: AsyncSession, viewer: User, target_user_id: str) -> bool:
+    if str(viewer.id) == str(target_user_id):
+        return True
+    if viewer.is_superuser:
+        return True
+
+    try:
+        target_uuid = UUID(str(target_user_id))
+    except (TypeError, ValueError):
+        return False
+
+    friendship_result = await db.execute(
+        select(Friendship.id)
+        .where(
+            Friendship.status == FriendshipStatus.ACCEPTED,
+            Friendship.not_deleted_filter(),
+            or_(
+                (Friendship.user_id == viewer.id) & (Friendship.friend_id == target_uuid),
+                (Friendship.user_id == target_uuid) & (Friendship.friend_id == viewer.id),
+            ),
+        )
+        .limit(1)
+    )
+    if friendship_result.scalar_one_or_none() is not None:
+        return True
+
+    viewer_groups = (
+        select(GroupMember.group_id)
+        .where(
+            GroupMember.user_id == viewer.id,
+            GroupMember.not_deleted_filter(),
+        )
+    )
+    shared_group_result = await db.execute(
+        select(GroupMember.id)
+        .where(
+            GroupMember.user_id == target_uuid,
+            GroupMember.group_id.in_(viewer_groups),
+            GroupMember.not_deleted_filter(),
+        )
+        .limit(1)
+    )
+    return shared_group_result.scalar_one_or_none() is not None
+
+
 @router.get("/stats")
-async def websocket_stats(current_user: User = Depends(get_current_user)):
+async def websocket_stats(current_user: User = Depends(get_current_active_superuser)):
     """
     Get WebSocket statistics.
 
@@ -108,7 +157,8 @@ async def websocket_health():
 @router.get("/online/{user_id}")
 async def check_user_online(
     user_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Check if a specific user is online.
@@ -116,11 +166,15 @@ async def check_user_online(
     Can be used to implement presence indicators in the UI.
     """
     try:
+        if not await _can_view_presence(db, current_user, user_id):
+            raise HTTPException(status_code=403, detail="Not allowed to view this user's presence")
         is_online = await manager.is_user_online(user_id)
         return {
             "user_id": user_id,
             "online": is_online,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to check online status: {str(e)}")
 
@@ -143,7 +197,7 @@ async def record_message_ack(
 
 
 @router.get("/metrics")
-async def websocket_metrics(current_user: User = Depends(get_current_user)):
+async def websocket_metrics(current_user: User = Depends(get_current_active_superuser)):
     """
     Get detailed WebSocket metrics.
 

@@ -127,3 +127,38 @@ async def test_submit_feedback_persists_inferred_preferences(
     inferred = prefs.inferred or {}
     assert inferred.get("depth_preference") == pytest.approx(0.51, rel=1e-3)
     assert inferred.get("curiosity_preference") == pytest.approx(0.505, rel=1e-3)
+
+
+@pytest.mark.asyncio
+async def test_mark_capsule_read_rejects_non_owner(
+    db_session,
+    capsules_client,
+):
+    client, state = capsules_client
+    requester = User(
+        username="capsule_read_requester",
+        email="capsule_read_requester@example.com",
+        hashed_password="hashed",
+    )
+    owner = User(
+        username="capsule_read_owner",
+        email="capsule_read_owner@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add_all([requester, owner])
+    await db_session.flush()
+    capsule = CuriosityCapsule(
+        user_id=owner.id,
+        title="Owner-only capsule",
+        content="private capsule",
+    )
+    db_session.add(capsule)
+    await db_session.commit()
+    await db_session.refresh(capsule)
+    state["current_user"] = requester
+
+    response = client.post(f"/capsules/{capsule.id}/read")
+
+    assert response.status_code == 404
+    await db_session.refresh(capsule)
+    assert capsule.is_read is False

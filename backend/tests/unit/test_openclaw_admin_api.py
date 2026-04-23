@@ -625,6 +625,32 @@ async def test_execution_admin_routes_require_superuser(db_session):
 
 
 @pytest.mark.asyncio
+async def test_execution_schedule_global_triggers_require_superuser(db_session):
+    async def override_get_db():
+        yield db_session
+
+    def override_superuser_forbidden():
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_active_superuser] = override_superuser_forbidden
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as ac:
+        tick_resp = await ac.post("/api/v1/executions/schedules/tick")
+        event_resp = await ac.post(
+            "/api/v1/executions/schedules/events/trigger",
+            json={"event_type": "task.completed", "payload": {}},
+        )
+
+    assert tick_resp.status_code == 403
+    assert event_resp.status_code == 403
+    app.dependency_overrides = {}
+
+
+@pytest.mark.asyncio
 async def test_execution_admin_quality_summary_available_for_superuser(db_session, monkeypatch):
     admin_user = User(
         id=uuid4(),
