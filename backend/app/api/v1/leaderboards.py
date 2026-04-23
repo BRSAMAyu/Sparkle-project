@@ -87,7 +87,7 @@ async def get_leaderboard(
         logger.error(f"Leaderboard error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get leaderboard: {str(e)}"
+            detail="Failed to get leaderboard"
         )
 
 
@@ -121,7 +121,7 @@ async def get_leaderboard_summary(
         logger.error(f"Leaderboard summary error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get summary: {str(e)}"
+            detail="Failed to get summary"
         )
 
 
@@ -163,7 +163,7 @@ async def get_my_rank(
         logger.error(f"My rank error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get my rank: {str(e)}"
+            detail="Failed to get my rank"
         )
 
 

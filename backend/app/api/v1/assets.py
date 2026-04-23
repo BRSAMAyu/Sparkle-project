@@ -146,7 +146,7 @@ async def create_asset(
         raise
     except Exception as e:
         logger.error(f"Failed to create asset: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to create asset: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create asset")
 
 
 @router.post("/{asset_id}/activate", response_model=AssetResponse, summary="激活资产")
@@ -350,7 +350,7 @@ async def record_suggestion_feedback(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to record feedback: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to record feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to record feedback")
 
 
 # ============ Helpers ============

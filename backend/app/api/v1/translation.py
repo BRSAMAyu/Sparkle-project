@@ -182,7 +182,7 @@ async def translate_text(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"翻译服务错误: {str(e)}",
+            detail="Translation service unavailable",
         )
 
 

@@ -144,7 +144,7 @@ async def multi_agent_chat(
         logger.error(f"Multi-agent error: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Multi-agent processing failed: {str(e)}"
+            detail="Multi-agent processing failed"
         )
 
 
@@ -217,7 +217,7 @@ async def preview_routing(
 
     except Exception as e:
         logger.error(f"Routing preview error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Routing preview failed")
 
 
 @router.get("/catalog")

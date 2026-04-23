@@ -693,7 +693,7 @@ async def confirm_action(
     except Exception as e:
         # 删除失败的待确认操作
         await pending_actions_store.delete(action_id, str(current_user.id))
-        raise HTTPException(status_code=500, detail=f"执行操作时出错: {str(e)}")
+        raise HTTPException(status_code=500, detail="Action execution failed")
 
 # ============辅助函数 ============
 
