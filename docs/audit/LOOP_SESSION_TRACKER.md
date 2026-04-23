@@ -235,4 +235,35 @@
 - 验证累积修复的稳定性 (运行更广测试套件)
 - 检查 XunFeiProvider.transcribe_file 返回错误字符串问题
 
+### Session 9 — 2026-04-23 (Chris S9 — Main Branch Direct)
 
+**Focus**: 审计文档恢复 + 直接在 main 分支修复已确认的真实问题
+
+**审计文档恢复**:
+- 从 integration/phase-i-exit 分支恢复 46 个审计文件到 docs/audit/
+- DEEP_AUDIT_SUMMARY.md 索引完整 (Round #1-#64)
+- 注意: Round #65-#107 原始报告未在本地 Git 找到
+
+**代码修复 (6 项)**:
+
+| # | 文件 | 问题 | 修复 |
+|---|------|------|------|
+| 1 | context_manager.py:354,375 | `self.db` 绕过并行 session 隔离 | → `db` (正确参数) |
+| 2 | context_manager.py:353-373 | N+1 sprint claim 查询 (per-group in loop) | → 批量 GROUP BY |
+| 3 | auth.py:654,726,900 | 3× `asyncio.create_task(email)` 即发即弃 | → Celery `.delay()` |
+| 4 | celery_tasks.py | 缺少 `send_password_reset_email_task` | → 新增 (rate_limit=10/m) |
+| 5 | plans.py:125,706 | 2× N+1 per-plan COUNT (list_plans + list_archived) | → GROUP BY 批量 |
+| 6 | notification_center_service.py | `time_to_action` 可能为负 | → `max(0, int(...))` |
+
+**测试结果**: 1349 passed, 44 failed (all pre-existing), context_manager/plan/behavior_signal_collector tests all pass
+
+**Commits**:
+- `b44431d1`: fix(security+perf): context_manager session fix, auth Celery migration, plans N+1 batch
+- `b31f036d`: docs: restore audit reports and session tracker from integration branch
+
+**Next Session Should**:
+- 复核 ⚠️ 报告 #4 (Context Pack — self.db 已修, 确认其他项)
+- 复核 ⚠️ 报告 #47 ChatOrchestrator, #53 Go Chat Orchestrator
+- 检查剩余 asyncio.create_task (assets.py 5×, community.py 1×)
+- 检查 Go Gateway 安全链 (audit #51 P1-1 TrustedProxies, P1-2 CSP)
+- 考虑修复 chat.py 死代码 N+1 (test_behavior_signal_collector mock 已修但 chat.py 未动)
