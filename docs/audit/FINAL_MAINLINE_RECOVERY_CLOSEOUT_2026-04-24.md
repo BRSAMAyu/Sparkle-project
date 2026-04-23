@@ -35,6 +35,7 @@
 - 修复集成基线遗留的 Go gateway build error：`NewSTTHandler` 调用签名不匹配。
 - 修复 Rule AX 对 data consistency routes 的 route-tier 注释要求。
 - 恢复并纳入此前散落在旧 `main` 工作区的项目状态复盘与集成决策文档。
+- 切换到本地 `main` 后复跑 Go handler 测试，修正 WebSocket wildcard origin 测试预期：生产环境继续拒绝 `AllowedOrigins=["*"]`，仅开发环境允许 wildcard。
 
 ## 4. 验证状态
 
@@ -48,7 +49,15 @@
 - Stage40 kill switch drill 通过。
 - 关键 Python pytest 样本 12/12 通过。
 
-本收尾提交只新增审计/决策文档，不改变运行时代码；因此代码验证结论继承上述报告。
+候选线初始收尾提交只新增审计/决策文档，不改变运行时代码；代码验证结论继承上述报告。
+
+切换到本地 `main` 后追加复核：
+
+- `make proto-gen` 成功，docker toolchain 不可用时已 fallback 到 host toolchain。
+- `go build ./...` 通过。
+- `go vet ./...` 通过。
+- `go test ./internal/handler/... ./internal/config/...` 通过。
+- 关键 Python pytest 样本 12/12 通过。
 
 ## 5. 剩余治理原则
 

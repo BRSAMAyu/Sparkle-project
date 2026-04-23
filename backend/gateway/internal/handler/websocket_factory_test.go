@@ -176,7 +176,7 @@ func TestCheckOrigin_PortMattering(t *testing.T) {
 		allowed bool
 	}{
 		{"https://example.com:8080", true},
-		{"https://example.com", false}, // Different port (missing explicit port)
+		{"https://example.com", false},      // Different port (missing explicit port)
 		{"https://example.com:9090", false}, // Different port number
 	}
 
@@ -285,12 +285,12 @@ func TestCheckOrigin_WildcardDomain(t *testing.T) {
 		origin  string
 		allowed bool
 	}{
-		{"https://app.example.com", true},   // Matches *.example.com wildcard
-		{"https://mobile.example.com", true}, // Matches *.example.com wildcard
-		{"https://example.com", true},        // Direct match
-		{"https://evil-example.com", false},  // Not a subdomain
+		{"https://app.example.com", true},       // Matches *.example.com wildcard
+		{"https://mobile.example.com", true},    // Matches *.example.com wildcard
+		{"https://example.com", true},           // Direct match
+		{"https://evil-example.com", false},     // Not a subdomain
 		{"https://example.com.evil.com", false}, // Suffix injection attempt
-		{"https://example.org", false},       // Different domain
+		{"https://example.org", false},          // Different domain
 	}
 
 	for _, tt := range tests {
@@ -305,8 +305,9 @@ func TestCheckOrigin_WildcardDomain(t *testing.T) {
 	}
 }
 
-// TestCheckOrigin_WildcardOrigin tests allow-all wildcard
-func TestCheckOrigin_WildcardOrigin(t *testing.T) {
+// TestCheckOrigin_WildcardOriginInProduction tests that allow-all wildcard is
+// ignored in production. Production deployments must use explicit origins.
+func TestCheckOrigin_WildcardOriginInProduction(t *testing.T) {
 	cfg := &config.Config{
 		Environment:    "production",
 		AllowedOrigins: []string{"*"},
@@ -328,7 +329,36 @@ func TestCheckOrigin_WildcardOrigin(t *testing.T) {
 
 			result := factory.checkOrigin(req)
 
-			assert.True(t, result, "should allow any origin when wildcard is set")
+			assert.False(t, result, "production should reject wildcard origins")
+		})
+	}
+}
+
+// TestCheckOrigin_WildcardOriginInDevelopment tests allow-all wildcard support
+// for local development only.
+func TestCheckOrigin_WildcardOriginInDevelopment(t *testing.T) {
+	cfg := &config.Config{
+		Environment:    "development",
+		AllowedOrigins: []string{"*"},
+	}
+
+	factory := NewWebSocketFactory(cfg)
+
+	tests := []string{
+		"https://example.com",
+		"https://any-domain.com",
+		"http://localhost:3000",
+		"https://malicious.com",
+	}
+
+	for _, origin := range tests {
+		t.Run(origin, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "http://localhost:8080/ws", nil)
+			req.Header.Set("Origin", origin)
+
+			result := factory.checkOrigin(req)
+
+			assert.True(t, result, "development wildcard should allow any origin")
 		})
 	}
 }
