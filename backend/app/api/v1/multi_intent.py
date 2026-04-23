@@ -58,7 +58,7 @@ async def parse_intents(
         logger.error(f"Intent parsing error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Intent parsing failed: {str(e)}"
+            detail="Intent parsing failed"
         )
 
 
@@ -96,7 +96,7 @@ async def create_intent_preview(
         logger.error(f"Intent preview error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Intent preview failed: {str(e)}"
+            detail="Intent preview failed"
         )
 
 
@@ -144,7 +144,7 @@ async def execute_intents(
         logger.error(f"Intent execution error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Intent execution failed: {str(e)}"
+            detail="Intent execution failed"
         )
 
 
@@ -214,7 +214,7 @@ async def analyze_and_execute(
         logger.error(f"Analyze and execute error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Operation failed: {str(e)}"
+            detail="Operation failed"
         )
 
 

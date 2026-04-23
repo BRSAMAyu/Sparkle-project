@@ -933,7 +933,17 @@ class EventBus:
         if "event_type" not in message:
             message["event_type"] = event_type
 
-        return await self.redis.xadd(stream, self._serialize_stream_body(message))
+        maxlen = getattr(
+            settings,
+            "EVENT_BUS_STREAM_MAXLEN",
+            50000,
+        )
+        return await self.redis.xadd(
+            stream,
+            self._serialize_stream_body(message),
+            maxlen=maxlen,
+            approximate=True,
+        )
 
     async def connect(self):
         """Establish Redis connection"""

@@ -73,7 +73,7 @@ async def get_collaborative_recommendations(
         logger.error(f"Collaborative filtering error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Recommendation failed: {str(e)}"
+            detail="Recommendation failed"
         )
 
 
@@ -117,7 +117,7 @@ async def get_similar_users(
         logger.error(f"Similar users error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get similar users: {str(e)}"
+            detail="Failed to get similar users"
         )
 
 
@@ -163,7 +163,7 @@ async def get_similar_items(
         logger.error(f"Similar items error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get similar items: {str(e)}"
+            detail="Failed to get similar items"
         )
 
 
@@ -197,7 +197,7 @@ async def get_my_interaction_summary(
         logger.error(f"Interaction summary error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get interaction summary: {str(e)}"
+            detail="Failed to get interaction summary"
         )
 
 
@@ -254,7 +254,7 @@ async def record_interaction(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to record interaction: {str(e)}"
+            detail="Failed to record interaction"
         )
 
 
@@ -324,5 +324,5 @@ async def get_recommendation_stats(
         logger.error(f"Recommendation stats error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get stats: {str(e)}"
+            detail="Failed to get recommendation stats"
         )

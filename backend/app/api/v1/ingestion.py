@@ -4,11 +4,13 @@ import os
 import tempfile
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from loguru import logger
 
+from app.api.deps import get_current_user
 from app.config import settings
 from app.core.cache import cache_service
+from app.models.user import User
 from app.services.document_service import document_service
 
 router = APIRouter()
@@ -56,8 +58,8 @@ async def _process_document_task(task_id: str, file_path: str, options: dict):
             await cache_service.set(f"task:{task_id}", {
                 "status": "failed",
                 "percent": 100,
-                "message": f"Processing failed: {str(e)}",
-                "error": str(e)
+                "message": "Processing failed",
+                "error": "internal_error"
             }, ttl=3600)
         except Exception as cache_err:
             logger.error(f"Failed to update task status: {cache_err}")
@@ -74,12 +76,14 @@ async def _process_document_task(task_id: str, file_path: str, options: dict):
 async def clean_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    options: str = Form("{}", description="JSON options (e.g. {'enable_ocr': true, 'ocr_engine': 'zhipu' | 'local'})")
+    options: str = Form("{}", description="JSON options (e.g. {'enable_ocr': true, 'ocr_engine': 'zhipu' | 'local'})"),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Starts an asynchronous document cleaning task.
     Returns a `task_id` immediately. Use `GET /clean/{task_id}` to check progress.
     """
+    del current_user
     try:
         # Parse options
         try:
@@ -131,13 +135,14 @@ async def clean_document(
         raise
     except Exception as e:
         logger.error(f"Failed to initiate document cleaning: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to process upload: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to process upload")
 
 @router.get("/clean/{task_id}", summary="Check Cleaning Task Status")
-async def check_task_status(task_id: str):
+async def check_task_status(task_id: str, current_user: User = Depends(get_current_user)):
     """
     Poll this endpoint to get progress (percent, message) and final result.
     """
+    del current_user
     data = await cache_service.get(f"task:{task_id}")
     if not data:
         raise HTTPException(status_code=404, detail="Task not found or expired")

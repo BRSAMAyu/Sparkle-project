@@ -51,7 +51,7 @@ async def generate_weekly_report(
             background_tasks=background_tasks,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Report generation failed") from e
 
 
 @router.get("/report", response_model=dict[str, Any])
@@ -68,7 +68,7 @@ async def get_weekly_report_alias(
             background_tasks=background_tasks,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Report generation failed") from e
 
 @router.get("/reports/download/{filename}")
 async def download_report(

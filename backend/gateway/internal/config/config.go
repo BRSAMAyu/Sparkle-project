@@ -20,6 +20,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	DefaultWSMessageRateRPS   = 10.0
+	DefaultWSMessageRateBurst = 20
+)
+
 type Config struct {
 	Port                        string   `mapstructure:"PORT"`
 	DatabaseURL                 string   `mapstructure:"DATABASE_URL"`
@@ -142,6 +147,10 @@ func (c *Config) IsOriginAllowed(origin string) bool {
 			continue
 		}
 		if allowed == "*" {
+			if c.IsProduction() {
+				// Wildcard origin is never allowed in production
+				continue
+			}
 			return true
 		}
 
@@ -455,8 +464,8 @@ func Load() *Config {
 	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
 	viper.SetDefault("WS_TICKET_RATE_BURST", 5)
 	viper.SetDefault("WS_MAX_MESSAGE_BYTES", int64(262144))
-	viper.SetDefault("WS_MESSAGE_RATE_RPS", 10.0)
-	viper.SetDefault("WS_MESSAGE_RATE_BURST", 20)
+	viper.SetDefault("WS_MESSAGE_RATE_RPS", DefaultWSMessageRateRPS)
+	viper.SetDefault("WS_MESSAGE_RATE_BURST", DefaultWSMessageRateBurst)
 	viper.SetDefault("WS_MAX_CONNECTIONS_PER_USER", 2)
 	viper.SetDefault("WS_GLOBAL_MAX_CONNECTIONS", 2000)
 	viper.SetDefault("REDIS_URL", "")
@@ -565,10 +574,14 @@ func Load() *Config {
 	if !cfg.IsDevelopment() && cfg.AgentTLSInsecure {
 		log.Fatal("AGENT_TLS_INSECURE must be false in non-development environments.")
 	}
-	if !cfg.IsDevelopment() && !viper.IsSet("REDIS_FAIL_CLOSED") {
-		cfg.RedisFailClosed = true
-	}
 	if !cfg.IsDevelopment() {
+		cfg.RedisFailClosed = true
+		if cfg.AllowWsQueryToken {
+			log.Fatal("ALLOW_WS_QUERY_TOKEN must be false in non-development environments.")
+		}
+		if strings.TrimSpace(cfg.InternalAPIKey) == "" {
+			log.Fatal("INTERNAL_API_KEY must be set in non-development environments.")
+		}
 		if strings.TrimSpace(cfg.MinioAccessKey) == "" || strings.TrimSpace(cfg.MinioSecretKey) == "" {
 			log.Fatal("MINIO_ACCESS_KEY and MINIO_SECRET_KEY must be non-empty in non-development environments.")
 		}
