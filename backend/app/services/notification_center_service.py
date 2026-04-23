@@ -11,7 +11,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from loguru import logger
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import and_, desc, func, or_, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.card_protocol import InterventionAcceptanceStatus, InterventionRecord
@@ -260,6 +260,9 @@ class NotificationCenterService:
         """
         Mark all notifications as read for a user.
 
+        Uses bulk UPDATE + batch INSERT for interactions instead of
+        per-row ORM updates to avoid N+1 query pattern.
+
         Args:
             user_id: User UUID
 
@@ -267,34 +270,44 @@ class NotificationCenterService:
             Number of notifications marked as read
         """
         count = 0
+        now = _utcnow()
 
         try:
-            # Mark all system notifications as read
-            system_stmt = select(Notification).where(
+            # --- Bulk UPDATE: system (non-intervention) notifications ---
+            system_ids_stmt = select(Notification.id, Notification.created_at).where(
                 and_(
                     Notification.user_id == user_id,
                     Notification.is_read.is_(False),
                     ~self._is_intervention_notification(),
                 )
             )
-            result = await self.db.execute(system_stmt)
-            unread_system = result.scalars().all()
+            result = await self.db.execute(system_ids_stmt)
+            system_rows = result.all()
 
-            for notif in unread_system:
-                notif.is_read = True
-                notif.read_at = _utcnow()
-                count += 1
-
-                # Record interaction
-                await self._record_interaction(
-                    user_id=user_id,
-                    notification_type="system",
-                    notification_id=notif.id,
-                    action_type="viewed",
-                    created_at=notif.created_at,
+            if system_rows:
+                system_ids = [row.id for row in system_rows]
+                await self.db.execute(
+                    sa_update(Notification)
+                    .where(Notification.id.in_(system_ids))
+                    .values(is_read=True, read_at=now)
                 )
+                count += len(system_ids)
 
-            # Mark new intervention notifications as read
+                # Batch INSERT interactions
+                self.db.add_all([
+                    NotificationInteraction(
+                        id=uuid4(),
+                        user_id=user_id,
+                        notification_type="system",
+                        notification_id=row.id,
+                        action_type="viewed",
+                        action_time=now,
+                        time_to_action=max(0, int((now - row.created_at).total_seconds())),
+                    )
+                    for row in system_rows
+                ])
+
+            # --- Intervention notifications: must loop for side effects ---
             intervention_notification_stmt = select(Notification).where(
                 and_(
                     Notification.user_id == user_id,
@@ -307,7 +320,7 @@ class NotificationCenterService:
 
             for notif in unread_intervention_notifications:
                 notif.is_read = True
-                notif.read_at = _utcnow()
+                notif.read_at = now
                 count += 1
 
                 record_id = self._extract_notification_record_id(notif)
@@ -327,25 +340,35 @@ class NotificationCenterService:
                     created_at=notif.created_at,
                 )
 
-            # Mark all pending interventions as acknowledged
-            intervention_stmt = select(InterventionRequest).where(
+            # --- Bulk UPDATE: pending intervention requests ---
+            intervention_ids_stmt = select(InterventionRequest.id, InterventionRequest.created_at).where(
                 and_(InterventionRequest.user_id == user_id, InterventionRequest.status == "pending")
             )
-            result = await self.db.execute(intervention_stmt)
-            pending_interventions = result.scalars().all()
+            result = await self.db.execute(intervention_ids_stmt)
+            intervention_rows = result.all()
 
-            for intervention in pending_interventions:
-                intervention.status = "acknowledged"
-                count += 1
-
-                # Record interaction
-                await self._record_interaction(
-                    user_id=user_id,
-                    notification_type="intervention",
-                    notification_id=intervention.id,
-                    action_type="viewed",
-                    created_at=intervention.created_at,
+            if intervention_rows:
+                intervention_ids = [row.id for row in intervention_rows]
+                await self.db.execute(
+                    sa_update(InterventionRequest)
+                    .where(InterventionRequest.id.in_(intervention_ids))
+                    .values(status="acknowledged")
                 )
+                count += len(intervention_ids)
+
+                # Batch INSERT interactions
+                self.db.add_all([
+                    NotificationInteraction(
+                        id=uuid4(),
+                        user_id=user_id,
+                        notification_type="intervention",
+                        notification_id=row.id,
+                        action_type="viewed",
+                        action_time=now,
+                        time_to_action=max(0, int((now - row.created_at).total_seconds())),
+                    )
+                    for row in intervention_rows
+                ])
 
             await self.db.commit()
             return count
