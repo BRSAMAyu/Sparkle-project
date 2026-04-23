@@ -158,7 +158,7 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
-		wsRegistry: NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections),
+		wsRegistry: NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections, cfg.WSMaxConnections),
 	}
 }
 
@@ -276,7 +276,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	}
 	metrics.WSConnectionSuccess.WithLabelValues("/ws/chat", authMethod).Inc()
 	if !h.registerConnection(userID, conn, writer) {
-		metrics.WSConnectionError.WithLabelValues("/ws/chat", authMethod, "global_connection_limit").Inc()
+		metrics.WSConnectionError.WithLabelValues("/ws/chat", authMethod, "connection_limit").Inc()
 		writeConnectionLimitClose(writer, conn)
 		return
 	}

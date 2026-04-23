@@ -16,6 +16,7 @@ type ConnectionRegistry struct {
 	signalHub   *service.SignalHub
 	chatHistory *service.ChatHistoryService
 	maxActive   int
+	maxPerUser  int
 }
 
 type connectionEntry struct {
@@ -23,12 +24,13 @@ type connectionEntry struct {
 	writer service.JSONWriteCloser
 }
 
-func NewConnectionRegistry(signalHub *service.SignalHub, chatHistory *service.ChatHistoryService, maxActive int) *ConnectionRegistry {
+func NewConnectionRegistry(signalHub *service.SignalHub, chatHistory *service.ChatHistoryService, maxActive, maxPerUser int) *ConnectionRegistry {
 	return &ConnectionRegistry{
 		connections: make(map[string]map[*websocket.Conn]*connectionEntry),
 		signalHub:   signalHub,
 		chatHistory: chatHistory,
 		maxActive:   maxActive,
+		maxPerUser:  maxPerUser,
 	}
 }
 
@@ -40,6 +42,12 @@ func (r *ConnectionRegistry) Register(userID string, conn *websocket.Conn, write
 			totalActive += len(entries)
 		}
 		if totalActive >= r.maxActive {
+			r.mu.Unlock()
+			return false
+		}
+	}
+	if r.maxPerUser > 0 {
+		if len(r.connections[userID]) >= r.maxPerUser {
 			r.mu.Unlock()
 			return false
 		}
