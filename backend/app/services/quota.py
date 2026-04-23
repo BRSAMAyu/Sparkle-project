@@ -7,6 +7,7 @@ from loguru import logger
 from app.core.cache import cache_service
 
 RATE_LIMIT_LUA_PATH = "backend/app/services/lua/rate_limit.lua"
+RATE_LIMIT_REFUND_LUA_PATH = "backend/app/services/lua/rate_limit_refund.lua"
 
 
 @dataclass
@@ -21,20 +22,29 @@ class RedisRateLimiter:
         self.daily_limit = daily_limit
         self.ttl_seconds = ttl_seconds
         self._script_sha: str | None = None
+        self._refund_script_sha: str | None = None
 
-    async def _load_script(self) -> str | None:
+    async def _load_script(self, path: str = RATE_LIMIT_LUA_PATH, *, refund: bool = False) -> str | None:
         if not self.redis:
             return None
-        if self._script_sha:
-            return self._script_sha
+        current_sha = self._refund_script_sha if refund else self._script_sha
+        if current_sha:
+            return current_sha
         try:
-            with open(RATE_LIMIT_LUA_PATH, encoding="utf-8") as handle:
+            with open(path, encoding="utf-8") as handle:
                 script = handle.read()
-            self._script_sha = await self.redis.script_load(script)
+            loaded_sha = await self.redis.script_load(script)
+            if refund:
+                self._refund_script_sha = loaded_sha
+            else:
+                self._script_sha = loaded_sha
         except Exception as exc:
             logger.warning(f"Rate limiter script load failed: {exc}")
-            self._script_sha = None
-        return self._script_sha
+            if refund:
+                self._refund_script_sha = None
+            else:
+                self._script_sha = None
+        return self._refund_script_sha if refund else self._script_sha
 
     @staticmethod
     def _quota_key(user_id: str) -> str:
@@ -63,6 +73,26 @@ class RedisRateLimiter:
         except Exception as exc:
             logger.warning(f"Rate limiter eval failed: {exc}")
             return QuotaResult(allowed=True, current=0)
+
+    async def refund(self, user_id: str, amount: int) -> int:
+        if not self.redis or not user_id or amount <= 0:
+            return 0
+        sha = await self._load_script(RATE_LIMIT_REFUND_LUA_PATH, refund=True)
+        if not sha:
+            return 0
+        key = self._quota_key(user_id)
+        try:
+            current = await self.redis.evalsha(
+                sha,
+                1,
+                key,
+                amount,
+                self.ttl_seconds,
+            )
+            return int(current)
+        except Exception as exc:
+            logger.warning(f"Rate limiter refund failed: {exc}")
+            return 0
 
 
 async def get_rate_limiter() -> RedisRateLimiter:

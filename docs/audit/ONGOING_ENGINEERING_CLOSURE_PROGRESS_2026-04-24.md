@@ -323,3 +323,30 @@
 - `pytest backend/tests/unit/test_openclaw_phase2.py::test_create_intent_blocks_second_active_execution` -> `1 passed`
 - `pytest backend/tests/unit/test_openclaw_admin_api.py::test_execution_admin_routes_require_superuser backend/tests/unit/test_openclaw_admin_api.py::test_execution_admin_dashboard_available_for_superuser` -> `2 passed`
 - `pytest backend/tests/unit/test_openclaw_admin_api.py::test_user_execution_connection_status_is_available` -> `1 passed`
+
+## 16. Cycle 11 - Python LLM 配额预留 D3
+
+状态：`FIXED`
+
+目标：
+
+- 复核 Python `LLMDispatcher` 是否仍存在配额预留后 provider/circuit/grpc 异常不退还。
+- 复核 token 估算是否仍对中文/CJK 输入按 `len // 4` 折扣，导致配额低估。
+
+源码复核结论：
+
+- `CONFIRMED`：`LLMDispatcher.run()` 调用 `limiter.check_and_decr()` 后，`CircuitBreakerOpenException`、`grpc.RpcError`、普通 provider exception 都直接返回错误响应，没有退还已扣估算 token。
+- `CONFIRMED`：`_estimate_tokens()` 只按 `prompt_chars // 4 + max_output_tokens` 估算，中文文本与英文同折扣，仍会显著偏低。
+
+修复：
+
+- 为 `RedisRateLimiter` 增加 `refund()`，通过 `rate_limit_refund.lua` 原子扣回 usage counter，避免退还后变成负数。
+- `LLMDispatcher.run()` 在异常路径退还完整预留；成功路径按实际输入/输出估算退还未使用部分。
+- `_estimate_tokens()` 改为语言感知估算：CJK 字符按 1 token 计，非 CJK 字符按约 4 字符/token 计，再叠加 `max_output_tokens`。
+- 新增回归测试覆盖 provider 失败完整 refund、成功响应退还 unused reservation、CJK 不再享受四字符折扣。
+
+验证：
+
+- `python3 -m compileall backend/app/services/llm_dispatcher.py backend/app/services/quota.py backend/tests/unit/test_llm_dispatcher_quota.py` -> PASS
+- `pytest backend/tests/unit/test_llm_dispatcher_quota.py` -> `3 passed`
+- `pytest backend/tests/unit/test_llm_prediction_routing.py backend/tests/unit/test_llm_quota.py` -> `35 passed`

@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import math
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -80,6 +81,7 @@ class LLMDispatcher:
                 "Quota exceeded",
             )
 
+        quota_reserved = quota.allowed and bool(request.user_id) and estimated_tokens > 0
         provider_name = settings_provider_name()
         try:
             # 1. Check Circuit Breaker
@@ -93,6 +95,12 @@ class LLMDispatcher:
 
             # 2. Call LLM
             content = await llm_service.chat(messages, model=model_id)
+            actual_tokens = self._estimate_text_tokens(
+                "".join(msg["content"] for msg in messages)
+            ) + self._estimate_text_tokens(content)
+            if quota_reserved and actual_tokens < estimated_tokens:
+                await limiter.refund(request.user_id, estimated_tokens - actual_tokens)
+                quota_reserved = False
 
             # 3. Record Success
             await circuit_breaker_service.record_success(provider_name)
@@ -109,11 +117,17 @@ class LLMDispatcher:
             return response
 
         except CircuitBreakerOpenException:
+            if quota_reserved:
+                await limiter.refund(request.user_id, estimated_tokens)
             logger.warning(f"Circuit open for {provider_name}")
             return self._error_response(request, inference_pb2.PROVIDER_UNAVAILABLE, "Service temporarily unavailable (Circuit Open)")
         except InferenceException as exc:
+            if quota_reserved:
+                await limiter.refund(request.user_id, estimated_tokens)
             return self._error_response(request, exc.reason, exc.message)
         except grpc.RpcError as exc:
+            if quota_reserved:
+                await limiter.refund(request.user_id, estimated_tokens)
             # Record failure for network/availability issues
             await circuit_breaker_service.record_failure(provider_name)
 
@@ -122,6 +136,8 @@ class LLMDispatcher:
                 reason = inference_pb2.TIMEOUT
             return self._error_response(request, reason, exc.details() or "gRPC error")
         except Exception as exc:
+            if quota_reserved:
+                await limiter.refund(request.user_id, estimated_tokens)
             # Record failure for unknown exceptions (likely provider issues)
             await circuit_breaker_service.record_failure(provider_name)
 
@@ -480,9 +496,22 @@ class LLMDispatcher:
             raise InferenceException(inference_pb2.SCHEMA_VIOLATION, "schema_version or output_schema required")
 
     def _estimate_tokens(self, request: inference_pb2.InferenceRequest) -> int:
-        prompt_chars = sum(len(msg.content) for msg in request.messages)
-        estimated_in = max(1, prompt_chars // 4)
+        estimated_in = self._estimate_text_tokens("".join(msg.content for msg in request.messages))
         return estimated_in + int(request.budgets.max_output_tokens)
+
+    @staticmethod
+    def _estimate_text_tokens(text: str) -> int:
+        if not text:
+            return 0
+        cjk_chars = sum(
+            1
+            for char in text
+            if "\u3400" <= char <= "\u4dbf"
+            or "\u4e00" <= char <= "\u9fff"
+            or "\uf900" <= char <= "\ufaff"
+        )
+        non_cjk_chars = max(0, len(text) - cjk_chars)
+        return max(1, math.ceil(cjk_chars + non_cjk_chars / 4))
 
     def _select_model(self, request: inference_pb2.InferenceRequest) -> str:
         if request.task_type in (inference_pb2.HEAVY_JOB, inference_pb2.VERIFY_PLAN):
