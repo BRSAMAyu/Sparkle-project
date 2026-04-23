@@ -1,0 +1,11 @@
+{
+  "cursor": 0,
+  "round": 0,
+  "halt": false,
+  "last_auditor_end": null,
+  "last_fixer_end": null,
+  "last_verifier_end": null,
+  "verifier_rotation": 0,
+  "empty_streak": 0,
+  "notes": "cursor ∈ [0, 20] 映射到 COVERAGE_MATRIX 的 21 切片；cursor 归零时 round += 1；empty_streak 记录 Verifier 连续空队列 loop 数，用于停机判定。"
+}
