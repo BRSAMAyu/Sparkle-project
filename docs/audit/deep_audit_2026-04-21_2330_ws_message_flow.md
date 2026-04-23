@@ -195,3 +195,43 @@ Flutter (websocket_chat_service_v2.dart)
 | P1-4 | 消息长度不一致 | Flutter 前端校验 ≤4000 | 低（~5 行 Dart） |
 | P1-5 | 异常信息丢失 | 扩展 safe error 映射 + correlation_id | 中（~60 行 Python） |
 | P1-6 | 错误后无 DoneEvent | Error 后强制发送 DoneEvent | 低（~5 行 Go） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25
+> **复核员**: Claude Deep Auditor
+
+### 复核方法
+
+逐项验证原审计（Round #2）发现是否与当前代码一致。重点验证 P0 级发现的行号准确性和修复进展。
+
+### 逐项复核结果
+
+| 编号 | 原发现 | 状态 | 备注 |
+|------|--------|------|------|
+| P0-1 | Flutter 消息队列无持久化 | ✅ 已验证 | 仍为 50 条上限 (`_pendingMessageLimit = 50`, :1089)，溢出 `removeAt(0)` (:1538)，多处 `.clear()` (:1571, 1676, 1742, 1847, 2020, 2187)。无 SQLite/Hive 持久化 |
+| P0-2 | FSM context_data 无限增长 | ✅ 已验证 | `context_data[` 赋值超过 20 处 (:936-1189)，包含 `session_feedback_signal`, `adaptation_records`, `preference_learnings`, `evolution_highlights`, `progress_snapshot` 等。无大小限制或入口裁剪 |
+| P1-7→原P0-3 | 并发请求路由竞态 | ✅ 已验证 | 无变化，自审降级合理 |
+| P1-1 | Python metadata 布尔值类型不稳定 | ✅ 已验证 | `orchestrator.py:426` 仍为 `"early_ack": "true"` (字符串)，`:417` `json.dumps({...})` 二次编码 ux_progress |
+| P1-2 | gRPC 超时无 Flutter 感知 | ✅ 已验证 | 无变化 |
+| P1-3 | WebSocket 写入无背压控制 | ✅ 已验证 | 无变化，主流式循环 SendChatResponse 无背压检查 |
+| P1-4 | 消息长度限制前后端不一致 | ✅ 已验证 | Go 侧 `maxMessageLength = 4000` (chat_orchestrator.go:102)，Flutter 端仍无前端校验 |
+| P1-5 | Python 异常信息丢失 | ✅ 已验证 | 无变化 |
+| P1-6 | Go 侧流错误后未发送 DoneEvent | ⚠️ 部分修复 | `break` 路径（stream interrupted, :436）现在到达 :595-614 发送 DoneEvent (FinishReason_STOP)。但 `return false` 路径（daily quota exceeded, :477）仍然**直接返回不发送 DoneEvent**，Flutter 端可能卡在"加载中" |
+| P2-1 | finish_reason 对错误用 STOP | ✅ 已验证 | 无变化 |
+| P2-2 | droppable 消息无指标 | ✅ 已验证 | 无变化 |
+| P2-3 | Flutter Delta 无去重 | ✅ 已验证 | 无变化 |
+| P2-4 | DoneEvent 清理顺序 | ✅ 已验证 | 无变化 |
+
+### 新发现
+
+- **P1-6 残留路径**: 配额超限 (`return false` at :477) 跳过了 :530-614 的 RecordUsage + SendMeta + SendChatResponse(DoneEvent)。这意味着：配额超限时 Flutter 端收不到 DoneEvent，StreamController 不关闭，UI 卡死。与 Round #47 P0-1 (配额不退还) 是同一代码路径的不同症状。
+
+### 总结
+
+- **0/13 已完全修复**
+- **1/13 部分修复** (P1-6: break 路径现在发送 DoneEvent，但 return false 路径仍不发送)
+- **12/13 未变化**
+- 行号偏移：主要引用的文件行号基本匹配，`_pendingMessageLimit` 从报告中的 :1555 移至 :1089（Flutter 文件重构），`context_data` 赋值从 :1094 移至 :936（orchestrator 重构）

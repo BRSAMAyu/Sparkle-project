@@ -197,3 +197,32 @@ AchievementEngine.process_event()
 | P1-3 | Streak 更新无锁 | SQL 原子递增或行锁 | 低（~10 行 Python） |
 | P1-4 | N+1 查询 | 批量 IN 查询 + 预热缓存 | 中（~40 行 Python） |
 | P1-5 | 缺失 FK 约束 | 迁移脚本添加 FK | 低（迁移文件） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 02:30
+> **复核轮次**: 第三次唤醒 (Round #50 并行复核)
+> **复核方式**: Explore agent 代码验证
+
+### 复核结果: 0/10 已修, 代码完全未动
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | 解锁+奖励非原子 | ❌ 未修 | achievement_engine.py:773 `await self.db.commit()` 先提交解锁, :783 `await self._grant_rewards()` 后发奖励 — 仍为两步非原子操作 |
+| P0-2 | _update_progress 无行锁 | ❌ 未修 | :704-709 仍为简单 `SELECT` 无 `FOR UPDATE`, 并发更新仍有丢失更新风险 |
+| P0-3 | 缓存计数器 GET→SET 非 INCR | ❌ 未修 | :498 `count = max(await cache_service.get(cache_key) or 0, current) + 1` 后 `cache_service.set()` — 仍为竞态条件模式 |
+| P1-1 | ErrorCreated 不触发成就 | ❌ 未修 | achievement_event_consumer.py:42-52 仍仅处理 5 种事件类型, 无 `error_created` |
+| P1-2 | Contract 事件不发布 | ❌ 未修 | 无 Contract 完成事件发布到 Event Bus |
+| P1-3 | Streak 更新无锁 | ❌ 未修 | 无 SQL 原子递增或行锁 |
+| P1-4 | N+1 查询 | ❌ 未修 | 未观察到批量查询优化 |
+| P1-5 | 缺失 FK 约束 | ❌ 未修 | 无新增迁移文件 |
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-1 (非原子奖励) | Round #22 Photon/Flame Economy | Photon 丢失直接影响经济系统一致性 |
+| P0-3 (非原子计数器) | Round #6 P0-1 (Token Bucket) | 两处均存在 Redis 竞态条件 — 非原子操作系统性问题 |
+| P1-1 (ErrorCreated 不触发) | Round #14 输入校验审计 | 错题事件无法驱动成就 — 用户激励回路断裂 |

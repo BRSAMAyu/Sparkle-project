@@ -284,3 +284,172 @@ Context Pruner 对话历史裁剪与摘要完整链路
 | P1-3 | 硬编码中文 LLM 提示 | 根据用户语言动态选择提示语言 | 中（~20 行 Python） |
 | P1-4 | 配置已定义但未接入 | Orchestrator 读取 settings.* 替代硬编码 | 低（~6 行 Python） |
 | P1-5 | 关键词匹配仅中文 | 添加英文关键词映射 | 低（~5 行 Python） |
+
+---
+
+## 复核笔记
+
+> 复核日期: 2026-04-25
+> 复核轮次: 第十三次唤醒 (Round #57 并行复核)
+> 复核方式: 代码验证
+> 复核人: Claude Opus 4.5 (GLM-5.1 executor)
+
+### 文件版本快照
+
+| 文件 | 审计时行数 | 当前行数 | 偏移 |
+|------|-----------|---------|------|
+| `context_pruner.py` | 333 | 332 | -1（末尾空行差异，无实质变化） |
+| `summarization_worker.py` | 401 | 355 | -46（重构：删除了 `__main__` 入口和冗余代码） |
+| `chat_history.go` | 508 | 692 | +184（新增断路器重试机制、DB fallback、session 元数据管理） |
+
+---
+
+### P0-1: Tier 3（LLM 摘要）永不可达 — **未修复，确认仍然存在**
+
+**验证结果**:
+
+- `chat_history.go:199`: `pipe.LTrim(ctx, cacheKey, -20, -1)` — 仍然限制 20 条
+- `context_pruner.py:43`: `self.importance_threshold = max(summary_threshold, 30)` — 仍然是 30
+- `context_pruner.py:81`: `if not force_summary and original_count <= self.importance_threshold:` — 逻辑不变
+
+**行号漂移**: 原报告引用 `chat_history.go:206-208`，现在位于 `199`（因文件头部新增常量定义和 retryEntry 结构体导致偏移）。原报告引用 `context_pruner.py:43,81`，行号未变。
+
+**结论**: Go LTrim 20 条 vs Python importance_threshold 30 的矛盾完全未修复。Tier 3 仍然不可达。`_summarize_sync`（L147-173）和 `_get_summarized_history`（L109-145）中的 LLM 调用路径仍然是死代码。
+
+---
+
+### P0-2: SummarizationWorker 完全孤立 — **未修复，确认仍然存在**
+
+**验证结果**:
+
+- `summarization_worker.py:92`: `queue_key = "queue:summarization"` — 仍然消费此队列
+- 全项目 grep `rpush.*summarization\|lpush.*summarization`（排除测试和 `__pycache__`）: **零结果** — 无任何生产者入队
+- `docker-compose.yml`: grep "summarization" **零匹配** — Worker 未集成到 Docker Compose
+- 两个 Orchestrator 均不 import 或引用 `SummarizationWorker`
+
+**变化**: Worker 文件从 401 行减少到 355 行（删除了 `__main__` 块中的 `asyncio.run(run_worker())` 入口和一些冗余），但核心问题不变。
+
+**结论**: Worker 仍然是完全孤立的僵尸代码。`health_production.py` 中甚至有 `queue:summarization` 的监控代码（L150, L239, L304, L362），但这些代码监控的是一个永远不会增长的队列。
+
+---
+
+### P1-1: Python `_load_chat_history` 不按 `user_id` 过滤 — **未修复，确认仍然存在**
+
+**验证结果**:
+
+- `context_pruner.py:274-289`: `_load_chat_history(self, session_id: str)` — 签名不变，仍不接收 `user_id`
+- `context_pruner.py:282`: 只检查 `"role" in parsed and "content" in parsed` — 不检查 `user_id`
+- `context_pruner.py:115`: `_get_summarized_history` 仍然 `del user_id` — 删除了传入的 user_id
+
+**对比 Go**: `chat_history.go:333-334` (`getMessagesFromRedis`): `if msg.UserID != "" && msg.UserID != userID { continue }` — Go 正确过滤
+
+**结论**: 安全风险虽低（session UUID 隔离），但 Python 侧确实不验证消息归属，与 Go 行为不一致。
+
+---
+
+### P1-2: SHA1 缓存键每次消息变化 — **未修复，确认仍然存在**
+
+**验证结果**:
+
+- `context_pruner.py:243-247`: `_summary_cache_key` 仍然基于完整消息列表的 SHA1
+- 逻辑不变：每新增一条消息，整个消息列表的 SHA1 变化，缓存永远 miss
+
+**结论**: 缓存设计缺陷仍然存在。但由于 Tier 3 本身不可达（P0-1），此缓存逻辑从不执行，影响为零。
+
+---
+
+### P1-3: 硬编码中文 LLM 提示 — **未修复，确认仍然存在**
+
+**验证结果**:
+
+- `context_pruner.py:161-168`: 提示仍然是 `"用中文简洁总结以下对话的关键信息（100字以内）"` + `"你是对话总结助手。只输出总结，不加前缀。"`
+- `summarization_worker.py:211,253-258`: `"你是一个专业的对话总结助手。请用简洁的语言总结对话核心内容。"` + `"总结（用中文，不超过200字）"` — 同样全中文
+
+**结论**: 由于 Tier 3 不可达，`context_pruner.py` 中的中文提示从不执行。但 `summarization_worker.py` 的中文提示作为独立模块的代码债务仍然存在。
+
+---
+
+### P1-4: 生产配置 `CONTEXT_PRUNER_*` 未接入 — **未修复，确认仍然存在**
+
+**验证结果**:
+
+- `config_production.py:94-96`: 三个配置字段仍然定义但未被使用
+- `orchestrator.py:306-310`: 仍然硬编码 `max_history_messages=10, summary_threshold=20, summary_cache_ttl=3600`
+- `orchestrator_production.py:265-270`: 同样硬编码相同值
+
+**行号漂移**: 原报告引用 `orchestrator.py:314-319`，现在位于 `306-310`（前面代码删减导致偏移）。原报告引用 `orchestrator_production.py:281-283`，现在位于 `265-270`。
+
+**结论**: 环境变量配置路径仍然断开，修改配置仍需改代码。
+
+---
+
+### P1-5: 关键词匹配仅中文 — **未修复，确认仍然存在**
+
+**验证结果**:
+
+- `context_pruner.py:223`: `high_priority_keywords = ["计划", "任务", "阶段", "里程碑", "目标", "记住", "注意", "修改", "变更"]` — 9 个中文关键词
+- `context_pruner.py:230`: `anchor_keywords = ["计划已创建", "任务完成", "阶段", "里程碑", "目标确认", "关键决策", "修改计划"]` — 7 个中文关键词
+- `context_pruner.py:214`: `_is_low_signal_message` 的 `low_signal_values` 已包含 `"ok"`, `"okay"` — **部分英文覆盖**
+
+**结论**: 高重要性和锚点关键词仍然是纯中文。低信号检测已包含少量英文词（ok/okay），但核心的关键词匹配对英文对话完全无效。由于 Tier 2（11-20 条消息）是实际执行的路径，此问题对英文用户有实际影响。
+
+---
+
+### P2-1: 去重键不含消息 ID — **未修复，确认仍然存在**
+
+**验证结果**:
+
+- `context_pruner.py:249-266`: `_dedupe_messages` 仍然使用 `(role, content, timestamp)` 三元组
+- `chat_history.go:62`: `ChatHistoryMessage` 仍然包含 `ID string` 字段
+- Python 解析后 `parsed` 中应有 `id` 字段但未被使用
+
+**结论**: 去重逻辑不变。实际影响低（timestamp 相同的重复消息罕见）。
+
+---
+
+### P2-2: `clear_summary` 使用 `scan_iter` — **未修复，风险可接受**
+
+**验证结果**:
+
+- `context_pruner.py:312`: `async for key in self.redis.scan_iter(match=f"summary:{session_id}:*")` — 逻辑不变
+
+**结论**: 原报告已标注"可接受"。每个 session 的 summary key 通常 0-2 个，无性能问题。
+
+---
+
+### P2-3: 消息截断阈值 150 字符 — **未修复，确认仍然存在**
+
+**验证结果**:
+
+- `context_pruner.py:195-196`: `if len(content) > 150: compressed["content"] = content[:150].rstrip() + "..."` — 阈值不变
+- 无 user/assistant 区分逻辑
+
+**结论**: AI 回复仍会被截断到 ~150 字符。由于 Tier 2 是实际执行路径（11-20 条消息），此问题有实际影响。
+
+---
+
+### 合规项复核
+
+| # | 合规项 | 审计结论 | 复核结论 |
+|---|--------|---------|---------|
+| 1 | Go-Redis-Python 数据流 | ✅ | ✅ 仍然正确。Go 写 JSON 到 `chat:history:{sid}`，Python 读同一 key，格式兼容 |
+| 2 | Tier 1/2 策略有效 | ✅ | ✅ 仍然正确。Tier 1 (<=10) 全保留，Tier 2 (11-20) 重要性压缩 |
+| 3 | Redis 管道原子性 | ✅ | ✅ 仍然正确。`pipe.RPush + pipe.LTrim + pipe.Expire` 不变 |
+| 4 | Prompt 渲染 | ✅ | ✅ 仍然正确。`prompts.py:1241+` 正确渲染 summary_used/summary/messages |
+| 5 | 降级容错 | ✅ | ✅ 仍然正确。LLM 失败回退到 `_compress_with_importance`（L141），Redis 异常返回空列表（L288） |
+
+---
+
+### 总结
+
+**10 项发现中 0 项已修复，全部确认仍然存在。**
+
+| 优先级 | 总数 | 已修复 | 仍然存在 | 备注 |
+|--------|------|--------|---------|------|
+| P0 | 2 | 0 | 2 | Tier 3 不可达 + Worker 孤立 |
+| P1 | 5 | 0 | 5 | user_id 过滤、缓存键、中文提示、配置未接入、中文关键词 |
+| P2 | 3 | 0 | 3 | 去重键、scan_iter、截断阈值 |
+
+**核心问题未变**: Go LTrim 限制 20 条 → Python importance_threshold 30 → Tier 3 永不可达 → 依赖于 Tier 3 的 SummarizationWorker、SHA1 缓存、LLM 中文摘要提示全部成为死代码。实际运行路径仅为 Tier 1 (<=10) 和 Tier 2 (11-20)。
+
+**新增观察**: `chat_history.go` 新增了断路器重试机制（retryWorker + retryBuf）和 DB fallback（getMessagesFromDB），但这些改进不涉及 Python 侧的裁剪逻辑，因此不影响本审计的任何发现。

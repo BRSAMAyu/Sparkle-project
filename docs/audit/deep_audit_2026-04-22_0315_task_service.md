@@ -251,3 +251,41 @@ Flutter 任务操作 (创建/执行/完成/放弃)
 | P1-3 | 标签 JSONB 无 GIN 索引 | 添加 GIN 索引 | 低（1 条 DDL） |
 | P1-4 | Galaxy spark 可能双重 | 移除服务层直接 spark，统一走事件 | 低（删除 ~10 行 Python） |
 | P1-5 | 幂等键未实际使用 | Redis SETNX 去重 | 中（~20 行 Python） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25
+> **复核轮次**: 第十二次唤醒 (Round #58 并行复核)
+> **复核方式**: 代码验证
+
+### 复核结果: 0/10 已修
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | 成就 TASK_COMPLETED 双重处理 | ❌ 未修 | `tasks.py:634-657` 仍直接调用 `AchievementEngine.process_event(TASK_COMPLETED)`；`achievement_event_consumer.py:57-69` 仍消费 `task.completed` 事件并调用同一方法。双重处理完整保留。行号从原始 726-733 变为 634-657（代码重构导致偏移），逻辑未变 |
+| P0-2 | 服务层无状态守卫 | ❌ 未修 | `task_service.py:268` 仍直接 `db_obj.status = TaskStatus.COMPLETED`，无前置状态检查。API 层 `tasks.py:565-567` 的 COMPLETED 短路守卫仍在，但服务层自身不防护 |
+| P1-1 | 硬编码 mock 火焰/统计 | ❌ 未修 | `tasks.py:678-686` 仍返回固定值 `level_before: 3, level_after: 3, today_completed: 5, streak_days: 7`，代码注释 `# Mock update data for MVP` 保留 |
+| P1-2 | 批量确认 N+1 查询 | ❌ 未修 | `task_service.py:511-522` 仍循环调用 `TaskService.start()` + `db.refresh()`，结构未变 |
+| P1-3 | 标签 JSONB 无 GIN 索引 | ❌ 未修 | `task.py:138-143` 索引定义仍为 user_id/plan_id/status/created_at/due_date/order_index，无 GIN 索引。`tasks.py:137` 仍使用 `@>` 操作符无 GIN 支持 |
+| P1-4 | Galaxy spark 可能双重 | ⚠️ 需修正描述 | `task_service.py:305-319` 仍直接调用 `galaxy_service.spark_node()`。但 `GalaxyEventConsumer._handle_task_completed` (line 212-222) 实际调用的是 `GraphEvolutionService.handle_task_completed()`，后者执行 `record_engagement` + `adjust_neighbor_relation_strengths` + `tag_node_signal`，**不调用 spark_node**。原始审计"双重 spark"描述不准确——实际问题是架构违规：spark 仍在服务层同步调用而非事件驱动路径，但 GalaxyEventConsumer 不会重复 spark。修正为"架构违反：spark 同步调用未走事件路径" |
+| P1-5 | 幂等键未实际使用 | ❌ 未修 | `tasks.py:541` 仍接受 `X-Idempotency-Key` header；`tasks.py:572` 仍仅用作 `retry_token` 返回值。未做 Redis SETNX 去重 |
+| P2-1 | Flutter 标签硬编码中文 | ❌ 未修 | `execution_intent_model.dart:200-240` statusLabel/trustLabel 仍全硬编码中文（"待准备"/"原始结果"/等）。`next_action.dart:120-148` displayName/description 仍全硬编码中文（"快速回顾"/"拓展学习"/等） |
+| P2-2 | 无依赖/DAG 支持 | ❌ 未修 | `task.py` 仍仅有 `order_index` 字段，无 `depends_on`/`blocked_by` |
+| P2-3 | TaskRepository 错误消息硬编码中文 | ❌ 未修 | `task_repository.dart:25-52` `_handleDioError` 仍全硬编码中文（"网络超时"/"网络连接失败"/"服务器返回错误"/等） |
+
+### 复核附加发现
+
+| 编号 | 描述 | 状态 | 备注 |
+|------|------|------|------|
+| AF-1 | P1-4 描述需修正 | ⚠️ | 原始审计称 GalaxyEventConsumer 会"双重 spark"。经代码验证，GalaxyEventConsumer 调用的是 `GraphEvolutionService.handle_task_completed()`（图结构强化），非 `spark_node()`。实际问题是 spark 仍在服务层同步调用（架构违反事件驱动原则），但不会双重 spark。建议将 P1-4 从"双重 spark"修正为"spark 架构违反：同步调用未走事件路径" |
+| AF-2 | `_handle_task_completed` 签名偏移 | ℹ️ | `achievement_event_consumer.py:57` 方法签名与原始审计一致，但无实质变化。行号偏移 <5 行 |
+| AF-3 | `complete()` 中 galaxy spark 仍在服务层 | ⚠️ | `task_service.py:305-319` 的 `spark_node` 调用位置未变。与事件驱动架构原则矛盾——理想方案应将 spark 移到事件消费者中，但当前双路径不会导致功能 bug |
+
+### 跨轮次因果链更新
+
+- **Round #17 → Round #58**: 本轮 Task Service 生命周期链路 10 项发现中，**0 项已修**，全部保留至后续轮次。
+- **P1-4 修正**: 原始审计称 GalaxyEventConsumer 会导致双重 spark，经代码验证不成立。GalaxyEventConsumer 调用 `GraphEvolutionService.handle_task_completed()`（图结构强化），与 `spark_node()` 是不同操作。但仍存在架构问题：spark 同步调用未走事件路径。
+- **无新增 P0**: 本阶段未发现新的阻断性问题。
+- **未修复项保持原优先级**: P0-1（双重成就）和 P0-2（无状态守卫）仍为最高优先级修复项。

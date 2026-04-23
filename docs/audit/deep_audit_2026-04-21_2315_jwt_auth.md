@@ -155,3 +155,43 @@ Flutter → ws_ticket API (POST /api/v1/ws/ticket) → 获取一次性 ticket
 | P0-3 | Email 明文存储 | pgcrypto 加密 + 迁移脚本 | 中（迁移 + 读写改造） |
 | P1-1 | Fail-Open 默认 | 配置默认值改 true | 低（1 行） |
 | P1-2 | 无全局撤销端点 | 新增 /auth/revoke-all + 密码修改触发 | 中（~80 行） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-24
+> **复核员**: Claude Deep Auditor
+
+### 复核方法
+
+逐项验证原审计（最早一轮）发现是否与当前代码一致。代码可能已通过后续迭代改变。
+
+### 逐项复核结果
+
+| 编号 | 原发现 | 状态 | 备注 |
+|------|--------|------|------|
+| P0-1 | Refresh Token 无轮换机制 | ✅ 已验证 | `auth.go` 中无 `/auth/refresh` 端点。`createRefreshToken` 仅在登录时调用（:122）。无旧 JTI 作废逻辑 |
+| P0-2 | WebSocket Token 通过 URL Query 传输 | ✅ 已验证 | `ws_auth.go:61-63` 仍存在 `AllowWsQueryToken` + `c.Query("token")` 路径 |
+| P0-3→P1-6 | Email 明文存储 | ✅ 已验证 | 审计时已自审降级为 P1 |
+| P1-1 | Token 黑名单 Fail-Open 默认 | ⚠️ 部分缓解 | `config.go:462` 仍默认 false，但 :562-563 新增生产守卫：`if !cfg.IsDevelopment() && !viper.IsSet("REDIS_FAIL_CLOSED") { cfg.RedisFailClosed = true }`。开发环境仍 Fail-Open，生产环境默认 Fail-Closed |
+| P1-2 | user_revoked_before 无设置端点 | ✅ 已验证 | `auth.go:328` 读取逻辑存在，但全局搜索未发现写入端点 |
+| P1-3 | WebSocket Ticket 无频次限制 | ✅ 已验证 | 无变化 |
+| P1-4 | Flutter Logout 状态清理不彻底 | ✅ 已验证 | 无变化 |
+| P1-5 | 本地黑名单缓存集群不同步 | ⚠️ 部分改善 | 本地缓存已从简单 map 升级为带 TTL + 批量清理的 `globalLocalBlacklist`（:36-132）。新增 cleanup goroutine 防止内存泄漏。但仍是进程内缓存，多实例不一致问题未修 |
+| P2-1 | STT Origin 检查缺失 | ✅ 已验证 | 无变化 |
+| P2-2 | JWT 密钥最小长度未验证 | ✅ 已验证 | 无变化 |
+| P2-3 | Token 过期无预刷新 | ✅ 已验证 | 无变化 |
+| P2-4 | auth_audit_log 无清理 | ✅ 已验证 | 无变化 |
+| P2-5 | 配置示例含弱密钥 | ✅ 已验证 | 无变化 |
+
+### 新发现
+
+- 本地黑名单缓存 cleanup 使用 batch + sleep 模式（:103-131），在高并发下 `c.mu.Lock()` 仍会阻塞新请求 10ms×3 轮。但 batch 限制 50 条/轮 + 3 轮上限，实际阻塞时间可控。
+
+### 总结
+
+- **0/13 已完全修复**
+- **2/13 部分缓解** (P1-1 生产 Fail-Closed 守卫, P1-5 本地缓存 TTL)
+- 核心安全问题（P0-1 刷新无轮换、P0-2 WS Token 泄露）均未修
+- 行号偏移：auth.go 从原报告行号增长到 423 行（新增 localBlacklistCache + Fail-Closed 逻辑），但核心 validateJWT 逻辑位置大致匹配

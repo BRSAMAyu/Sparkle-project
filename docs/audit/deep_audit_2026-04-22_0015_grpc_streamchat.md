@@ -214,3 +214,41 @@ WebSocket → Flutter
 | P1-3 | session_id 不一致填充 | 强制覆写而非条件检查 | 低（1 行 Python） |
 | P1-4 | history/config 死字段 | 移除或实现 | 低（proto 改动） |
 | P1-5 | chat_mode 魔术字符串 | 改为 proto enum | 中（proto + 多文件改动） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 03:00
+> **复核轮次**: 第四次唤醒 (Round #51 并行复核)
+> **复核方式**: Explore agent 代码验证
+
+### 复核结果: 1/12 已修 (P2-2 UUID 校验), 其余 11 项代码完全未动
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | active_tools Go 从未填充, Python 读空列表 | ❌ 未修 | chat_orchestrator_chatflow.go:343-365 仍未设置 ActiveTools; orchestrator.py:646 仍 `list(request.active_tools)` → 永远 [] |
+| P0-2 | 错误路径 finish_reason=STOP 非 ERROR | ❌ 未修 | agent_grpc_service.py:254 仍 `agent_service_pb2.STOP`, 注释已标注但未修 |
+| P0-3 | StreamChat 不设 gRPC status code | ❌ 未修 | StreamChat 错误路径仍无 `context.set_code()`, 其他 RPC 方法正常调用 |
+| P1-1 | 流中断无恢复机制 | ❌ 未修 | 仍直接 break, 无 resume token |
+| P1-2 | 流接收无背压控制 | ❌ 未修 | Recv() 循环仍直接转发 WebSocket |
+| P1-3 | session_id 条件填充 | ❌ 未修 | agent_grpc_service.py:209-211 仍 `if not response.session_id:` |
+| P1-4 | history/config Proto 死字段 | ❌ 未修 | proto 定义仍存在, 两端仍不使用 |
+| P1-5 | chat_mode 魔术字符串 | ❌ 未修 | proto 仍 `string chat_mode = 13` |
+| P2-1 | 单 gRPC 连接无连接池 | ❌ 未修 | 仍单连接 |
+| P2-2 | Python 无 user_id 格式校验 | ✅ 已修 | agent_grpc_service.py:102-113 现在使用 `uuid.UUID(user_id)` 校验 + INVALID_ARGUMENT 返回 |
+| P2-3 | event_time 依赖 fallback | ❌ 未修 | 仍依赖 normalize 补时间戳 |
+| P2-4 | gRPC 超时最小 300s | ❌ 未修 | chat_orchestrator_chatflow.go:151-157 仍强制 `if timeoutSeconds < 300` |
+
+### 复核附加发现
+
+- **P2-2 修复验证**: 新增的 UUID 校验在 metadata 提取后立即执行, 空 user_id 返回 UNAUTHENTICATED, 非法格式返回 INVALID_ARGUMENT — 实现质量好
+- **3 个 P0 全部未修**: 这些是低成本修复 (P0-2 仅 1 行, P0-3 仅 5 行), 但影响 Go/Flutter 无法区分正常完成和错误终止
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-2 (finish_reason STOP) | Round #2 P1-6 (无 DoneEvent) | 两个问题叠加: Go 端收不到 gRPC 错误码 + Flutter 端收不到 DoneEvent → 错误对用户完全不可见 |
+| P0-3 (无 status code) | Round #49 P1-3 (RecordRequestResult 仅检查初始 err) | 断路器仅看 stream 建立错误, 加上 StreamChat 不设 status code → Python 崩溃时断路器完全盲区 |
+| P0-1 (active_tools 空) | Round #32 (Dynamic Tool Registry) | 工具注册表维护了工具列表但从不传递给 orchestrator → 工具决策缺少客户端侧输入 |

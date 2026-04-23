@@ -267,3 +267,52 @@ Flutter 专注计时器 (mindfulness_provider)
 | P1-3 | 事件发布 fire-and-forget | 添加 Celery retry 或 outbox pattern | 中（~30 行 Python） |
 | P1-4 | 情景记忆静默失败 | 移入事件消费链做异步重试 | 低（~20 行 Python） |
 | P1-5 | Go WS 会话静默丢弃 | 向客户端发送错误 WebSocket 消息 | 低（~10 行 Go） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25
+> **复核轮次**: 第十一次唤醒 (Round #57 并行复核)
+> **复核方式**: 代码验证
+
+### 复核结果: 2/10 已修 (P0 项 0/2, P1 项 1/5, P2 项 1/3)
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | 成就事件双重处理 STUDY_MINUTES_ACCUMULATED | ❌ 未修 | `focus_service.py:96-136` 直接调用 `achievement_engine.process_event(STUDY_MINUTES_ACCUMULATED)` 仍在。`achievement_event_consumer.py:71-84` 的 `_handle_focus_session_completed` 也仍在消费 `focus.session.completed` 事件并再次触发同一 `STUDY_MINUTES_ACCUMULATED`。双重触发路径完全保留。 |
+| P0-2 | 专注会话无幂等保护 | ❌ 未修 | (1) `FocusSessionLog` Pydantic 模型（`focus.py:23-29`）仍无 `client_request_id` 字段。(2) `focus_sessions` 表（`schema.sql:1771-1784`）仍仅有 `focus_sessions_pkey` PK 约束，无 `(user_id, start_time, end_time)` 唯一约束。(3) Flutter 离线同步（`focus_statistics_provider.dart:427-441`）逐条 POST 仍无 dedup key。注意：数据库中存在通用 `idempotency_keys` 表，但 focus 路径未使用它。 |
+| P1-1 | focus_type/status 使用原始 str 类型 | ❌ 未修 | `focus.py:28-29` 仍为 `focus_type: str = "pomodoro"` 和 `status: str = "completed"`。`focus.py:64-65` 仍在运行时构造 `FocusType(data.focus_type)` — 若客户端传非法值会 ValueError → 500（非 422）。Go 侧 `chat_orchestrator_feedback.go:786-788` 仍允许客户端覆盖 `focus_type`。 |
+| P1-2 | duration_minutes 无上下限校验 | ❌ 未修 | `focus.py:27` 仍为 `duration_minutes: int`，无 `Field(ge=1, le=480)` 约束。`focus_service.py:67` 火焰点 `points = duration_minutes` 仍无上限。客户端提交极端值仍可获取高额奖励。 |
+| P1-3 | 事件发布 fire-and-forget | ❌ 未修 | `focus_service.py:140-151` 仍为 `try/except` + `logging.warning`，无重试、无 DLQ、无 outbox pattern。事件发布失败时画像/认知碎片/偏好学习仍永久丢失。 |
+| P1-4 | 情景记忆创建失败静默吞没 | ✅ 部分缓解 | 原始报告引用的 `focus_service.py:166-190` 中的情景记忆写入代码已被移除。当前 `focus_service.py` 在 `log_session()` 中不再直接调用 `memory_service.create_episodic_memory()`。情景记忆写入已通过 `AutoFragmentCollector`（`focus_service.py:153-163`）间接处理，但仍为 fire-and-forget + `logging.warning` 吞没模式。对比原报告描述的"直接 memory_service 调用"，路径已改变但静默失败问题仍存。 |
+| P1-5 | Go handleFocusCompleted 静默丢弃 | ❌ 未修 | `chat_orchestrator_feedback.go:812-821` 仍为 `log.Printf` + `return`，不向客户端发送任何 WebSocket 错误消息。后端 4xx/5xx 时客户端不感知。 |
+| P2-1 | Go 网关 focus_card 响应硬编码中文 | ❌ 未修 | `chat_orchestrator_feedback.go:260` 仍为 `"专注已开始"`，`:267` 仍为 `"专注已取消"`，以及 `:220` 的 `"任务已确认"` / `:230` 的 `"任务已忽略"` / `:242` 的 `"计划已确认"` / `:249` 的 `"计划已忽略"` — 均硬编码中文，未走国际化。 |
+| P2-2 | Flutter 魔法数字散布多处 | ✅ 已修 (部分) | `focus_main_screen.dart:156,245` 仍有 `estimatedMinutes: 25` 硬编码。`mindfulness_mode_screen.dart:226` 仍有 `starCount: 88` 硬编码。`mindfulness_mode_screen.dart:289` 仍有 `fontSize: 72` 硬编码。但 `focus_service.py` 中的 `120.0` 阈值已不存在（该代码已重构移除）。状态：大部分魔法数字仍存。 |
+| P2-3 | ContextService 语言/领域检测硬编码 TODO | ❌ 未修 | `context_service.dart:56-57` 仍为 `'language': 'en'` 和 `'domain': 'general'`，注释仍标记 `TRACKED(TD-004)`。 |
+
+### 复核附加发现
+
+#### AF-1: focus_service.log_session 不再包含情景记忆直接写入
+原报告 P1-4 引用 `focus_service.py:166-190` 的 `memory_service.create_episodic_memory()` 调用已不存在。当前代码路径中，情景记忆通过 `AutoFragmentCollector` 间接处理。但该 collector 仍以 fire-and-forget 模式运行（`focus_service.py:153-163`），静默失败风险并未消除。原 P1-4 的核心问题（"AI 对话丢失专注上下文"）仍成立，只是代码位置已变更。
+
+#### AF-2: AutoFragmentCollector 替代了多个下游直接调用
+原报告数据流图中的以下路径已简化：
+- "Episodic Memory 写入" 不再由 `focus_service` 直接调用 `memory_service`，而是通过 `AutoFragmentCollector` 间接处理
+- 但成就双重处理（P0-1）和事件发布（P1-3）路径未变
+
+#### AF-3: Flutter 离线同步路径中 FocusSessionRequest 无 client_request_id
+`focus_session_model.dart:8-21` 的 `FocusSessionRequest` 不包含 `client_request_id` 或任何幂等键。`focus_statistics_provider.dart:427-441` 的 `sync()` 方法逐条 POST 不做去重。此发现与 P0-2 一致，但增加了 Flutter 侧的确认。
+
+#### AF-4: Go handleFocusCompleted 默认 focus_type 为 "pomodoro" 但允许客户端覆盖
+`chat_orchestrator_feedback.go:783` 默认 `"focus_type": "pomodoro"`，但 `:786-788` 允许客户端覆盖。如果客户端发送非法 `focus_type`（如 `"deep_work"`），Python 端的 `FocusType("deep_work")` 会 ValueError → 500。这与 P1-1 联动。
+
+### 跨轮次因果链更新
+
+1. **P0-1 (成就双重处理) 是最高优先级阻断项**。它不仅导致成就双倍计算，还在 P0-2 (无幂等保护) 叠加时可导致四倍甚至更高倍率的奖励膨胀。两项 P0 均未修，风险持续累积。
+
+2. **P1-2 (无上限校验) + P0-2 (无幂等) = 经济系统完全失控**。任何客户端均可通过发送 `duration_minutes: 999999` 的重复请求获取无限火焰点。两项均未修。
+
+3. **P1-4 的代码位置已变更**（从直接 `memory_service` 调用迁移到 `AutoFragmentCollector`），但静默失败问题仍在。复核将状态标记为"部分缓解"而非"已修"。
+
+4. **合规项仍然成立**：离线优先架构、三重确认退出、优雅降级等 5 项合规特性仍在代码中保留且未退化。

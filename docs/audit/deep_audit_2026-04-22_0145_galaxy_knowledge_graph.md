@@ -197,3 +197,39 @@ Plan 里程碑完成 / Task 完成 / 错题创建
 | P1-3 | 边创建无节点存在性校验 | 添加 existence check | 低（~10 行 Python） |
 | P1-4 | knowledge_nodes.name 无索引 | 添加 trigram 或 btree 索引 | 低（1 条 DDL） |
 | P1-5 | Celery fire-and-forget | 添加状态追踪 + 失败告警 | 中（~40 行 Python） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 04:00
+> **复核轮次**: 第五次唤醒 (Round #52 并行复核)
+> **复核方式**: Explore agent 代码验证
+
+### 复核结果: 0/10 已修, 代码完全未动
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | galaxy_event_consumer handler 吞没异常 | ❌ 未修 | 4 个 handler (:91-92, :209-210, :221-222, :233-234) 仍 `except Exception as e: logger.error(...)` 无 re-raise, EventBus XACK 后消息永久丢失 |
+| P0-2 | 知识图谱未注入 AI 上下文 | ❌ 未修 | context_pack.py build() 仍无 galaxy 段; orchestrator.py:66 仍 `# noqa: F401` 未使用; build_evidence_pack() 仅在 knowledge_search 被调用, 非聊天流 |
+| P1-1 | knowledge_nodes embedding 无 HNSW 索引 | ❌ 未修 | schema.sql 仅 cognitive_fragments 有 HNSW, knowledge_nodes 仍仅 btree 索引 |
+| P1-2 | Go Gateway mastery 无范围校验 | ❌ 未修 | galaxy_handler.go:190 `Mastery int` 无 [0,100] 校验, 直接 int32 转发 |
+| P1-3 | 边创建无节点存在性校验 | ❌ 未修 | 依赖 FK 报错返回 500 而非 400 |
+| P1-4 | knowledge_nodes.name 无索引 | ❌ 未修 | 无 trigram 或 btree 索引 |
+| P1-5 | Celery fire-and-forget | ❌ 未修 | update_knowledge_galaxy 任务结果无人检查 |
+| P2-1 | AGE 图数据库未使用 | ❌ 未修 | 扩展已安装但无 Cypher 查询 |
+| P2-2 | Galaxy 路由重复注册 | ❌ 未修 | 单数+复数形式仍并存 |
+| P2-3 | user_node_status.node_id 缺 FK | ❌ 未修 | 无 REFERENCES 约束 |
+
+### 复核附加发现
+
+- **P0-2 build_evidence_pack() 定位更新**: 原报告称 "从未在聊天流中被调用", 验证发现该函数在 `knowledge_service.py:142` 被调用（知识搜索场景）, 但确实不在聊天流 (orchestrator/context_pack) 中. 从"完全未调用"修正为"知识搜索有调用但聊天流未调用"
+- **P0-1 与 Round #3 Event Bus 关联**: Round #3 P0-1 (主 Stream 无 maxlen) + 本轮 P0-1 (handler 吞没异常) = 双重数据丢失: 消息可能因 maxlen 被裁剪, 即使送达也可能被 handler 静默丢弃
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-2 (Galaxy 不在 AI 上下文) | Round #4 P0-2 (community_context 死数据) | 同一反模式: 数据在子系统内完整采集但从不传递到 AI 对话上下文 |
+| P0-2 (Galaxy 不在 AI 上下文) | Round #10 P0-2 (记忆元数据丢弃) | AI 对用户的三维认知(知识图谱/记忆/社群)全部断裂或降级 |
+| P1-1 (无 HNSW) | Round #10 P1-1 (episodic 无 HNSW) | 两处 embedding 列均缺少 HNSW 索引 — 系统性遗漏 |

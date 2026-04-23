@@ -251,3 +251,54 @@ Flutter 日历操作 (创建/编辑/删除/查看)
 | P1-3 | N+1 查询 | 提取辅助方法 + 批量查询 | 低（~30 行 Python） |
 | P1-4 | 无时间合法性校验 | Pydantic model_validator | 低（~10 行 Python） |
 | P1-5 | restore 无事件 | 添加 event_bus.publish | 低（~5 行 Python） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 05:15
+> **复核轮次**: 第八次唤醒 (Round #54 并行复核)
+> **复核方式**: 代码验证
+
+### 复核结果: 2/10 已修 (P1-4 部分修)
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | 服务端日历提醒完全未实现 | ❌ 未修 | `celery_schedule.py` 仍仅 2 个 periodic task。`calendar.py:146` 仍为 `# TRACKED(TD-006)`。Flutter 客户端本地通知 `_scheduleReminders()` 仍是唯一提醒路径 |
+| P0-2 | 日历事件无下游联动 | ❌ 未修 | `ProfileEventConsumer` 已完全移除 `calendar.event.*` 订阅。不存在 `CalendarEventConsumer`。AchievementEngine、MemoryService、CognitiveService 均无 calendar 引用。**审计声称的 InsightSignalRegistry 4 个信号在当前代码中不存在** |
+| P1-1 | 批量操作不发布 EventBus 事件 | ❌ 未修 | `calendar.py:311-381` batch_operations 仍循环中无 event_bus.publish |
+| P1-2 | recurrence_rule 无解析/展开 | ❌ 未修 | `calendar_event.py:55` 仍为 String(512) 直接存储，Flutter 仍做简化字符串匹配 |
+| P1-3 | 批量操作 N+1 查询 | ❌ 未修 | `calendar.py:334,354` 仍循环调用 db.get，未用 IN 子句 |
+| P1-4 | 无 start_time < end_time 校验 | ✅ 部分修 | `CalendarEventCreate` 新增 `@field_validator("end_time")` 检查。但 **`CalendarEventUpdate` 仍无交叉字段校验**，更新操作可设置 end_time 早于 start_time |
+| P1-5 | restore 不发布 EventBus 事件 | ❌ 未修 | `calendar.py:406-412` 仍无 event_bus.publish。额外发现:**Go Gateway `proxy_routes.go` 缺少 POST /:id/restore 路由**，该端点对 Gateway 不可达 |
+| P2-1 | Flutter 日历提醒硬编码中文 | ❌ 未修 | `calendar_repository.dart:387-388` 仍为硬编码中文 |
+| P2-2 | CalendarEventDetail 缺 duration_minutes | ✅ 已修 | `calendar_event.py:110` schema 已包含 `duration_minutes: int` 和 `is_recurring: bool` |
+| P2-3 | 统计摘要未缓存 | ❌ 未修 | `calendar.py:151-206` summary 仍 4 条独立 COUNT 查询，无 Redis 缓存 |
+
+### 复核附加发现
+
+**AD-1 (P0 级): ContextManager 日历注入已完全消失 — 加剧**
+审计合规项 3 声称 `context_manager.py:466-527` 查询 today+7d 事件并注入 prompt。当前验证:
+- `context_manager.py` (411 行): **零** calendar 引用
+- `prompts.py` (1876 行): **零** calendar 引用
+- `context_pack.py` (33K): **零** calendar 引用
+日历数据对 AI **完全不可见**。Round #15 P2-3 中已标记的恶化持续。
+
+**AD-2 (P0 级): ProfileEventConsumer 已移除 calendar.event.* 订阅**
+当前 `profile_event_consumer.py` 仅处理 6 种事件类型，无日历事件。日历事件现在零消费者，连缓存失效都无。
+
+**AD-3 (P1 级): Go Gateway 缺 restore 代理路由**
+`proxy_routes.go:160-171` 注册了 9 条 calendar 路由但缺少 `POST /:id/restore`。Python 端点存在但不可达。
+
+**AD-4: 审计合规项 3/5 声称有误**
+- 合规项 3（ContextManager 日历注入）: 当前不存在
+- 合规项 5（InsightSignalRegistry 4 个信号）: 当前不存在
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-1 (日历提醒未实现) | Round #15 P0-2 (TD-006) | 同源问题，至今未修 |
+| AD-1 (注入消失) | Round #15 P2-3 | 恶化持续: 日历从"CRUD-only"退化为"CRUD-only 且 AI 不可见" |
+| AD-2 (订阅移除) | 本轮新发现 | 日历事件现在零消费者 |
+| P0-2 (无下游联动) | Data Utilization Analysis | 日历仍是集成度最低的模块 |

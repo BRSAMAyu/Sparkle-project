@@ -190,3 +190,41 @@
 | P1-3 | Flutter 无本地缓存 | Hive 缓存最近 100 条 | 中（~60 行 Dart） |
 | P1-4 | 专注完成无通知 | 添加 FocusEventConsumer | 低（~20 行 Python） |
 | P1-5 | SystemUpdate 仅 Redis | 添加 DB 持久化备份 | 低（~20 行 Python） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 05:00
+> **复核轮次**: 第七次唤醒 (Round #53 并行复核)
+> **复核方式**: 代码验证
+
+### 复核结果: 0/10 已修
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | 主动推送策略从未被调度执行 | ❌ 未修 | `celery_schedule.py` 仍仅注册 2 个清理任务（outbox + galaxy），无推送调度。`PushService.process_all_users()` 完整存在于 `push_service.py:30` 但无任何 Celery beat 或 worker 调用入口。5 个策略仍为死代码。`backend/app/workers/` 下无 push worker |
+| P0-2 | 日历提醒调度完全未实现 | ❌ 未修 | `calendar.py:146` 仍为 `# TRACKED(TD-006): 调度提醒通知` 注释。`reminder_minutes` jsonb 字段在 schema.sql 中存在但从未被消费。CalendarEventCreated 事件仅触发 EventBus 发布，唯一消费者做缓存失效，不发送通知 |
+| P1-1 | 推送发送失败无重试机制 | ❌ 未修 | `nudge_service.py:89-90` 仍为 bare `except Exception as e: logger.error(...)`，无 retry/DLQ/exponential backoff。`push_sender_service.py` 的 `_send_fcm_multicast` 和 `_send_fcm_single` 均无重试逻辑 |
+| P1-2 | 通知表无清理任务 | ❌ 未修 | `cleanup_worker.py` 仅含 3 个任务：`cleanup_outbox_events`、`cleanup_galaxy_outbox`、`process_inbox_decay`。`notifications`、`push_histories`、`notification_interactions` 表无任何清理或归档逻辑 |
+| P1-3 | Flutter 通知无本地持久化 | ❌ 未修 | `notification_center_provider.dart` 全量内存 Riverpod state，无 Hive/Isar/sqflite 缓存。`notification_center_repository.dart` 仅 API 调用 + demo mode fallback，无本地持久层 |
+| P1-4 | 专注模式完成不触发通知 | ⚠️ 部分缓解 | 现有两条事件消费链：(1) `ProfileEventConsumer._handle_focus_session_completed` → `FocusSignalProcessor.process_focus_event` → 更新推断偏好；(2) `AchievementEventConsumer._handle_focus_session_completed` → AchievementEngine 检查。但**两条路径均不创建用户可见通知**。原始发现核心"完成通知"仍未修 |
+| P1-5 | SystemUpdateService 仅 Redis 存储 | ❌ 未修 | `system_update_service.py` 仍为纯 Redis lpush/ltrim/expire（200 条上限，7 天 TTL），无 DB 写入 |
+| P2-1 | 通知操作按钮硬编码中文 | ❌ 未修 | `notification_service.dart:338-352` 仍为硬编码 `'⚡ 开始'`、`'💤 稍后'`、`'🔕 勿扰'`，未使用 `context.l10n` |
+| P2-2 | Device ID hashCode 碰撞风险 | ❌ 未修 | `push_token_manager.dart:54` 仍为 `deviceId = 'sparkle_${identifier.hashCode.toRadixString(16)}'`，32-bit hashCode |
+| P2-3 | 日历数据未进入 ContextPack | ❌ 未修（加重） | 原报告称 `context_manager.py:285-290` 有 `_get_calendar_context`，但当前代码中 `context_manager.py` 和 `context_pack.py` **均无任何 calendar 引用**。日历上下文注入路径不仅未迁移，连旧路径也已消失。日历数据目前完全不进入 AI prompt |
+
+### 复核附加发现
+
+1. **P1-4 消费链重复处理风险**: `focus_service.py:107-129` 在 `log_session` 中已直接调用 `AchievementEngine.process_event`，而 `AchievementEventConsumer._handle_focus_session_completed:79` 再次处理同一事件。`focus.session.completed` EventBus 事件触发二次成就检查，可能导致重复计数或重复解锁。
+
+2. **P2-3 加重说明**: Data Utilization Analysis (2026-04-06) 记录的"Calendar (CRUD-only)"定性在当前代码中进一步加重——日历不仅 CRUD-only，连 context_manager 中的旧注入路径也被移除，日历数据对 AI 系统完全不可见。
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-2 (日历提醒死代码) | ↔ Round #14 P1-4 (push_token 明文) | 同属 notification/push 子系统基础设施缺失 |
+| P2-3 (日历上下文消失) | → Data Utilization Analysis (2026-04-06) | 日历从"CRUD-only"恶化为"完全不可见"，AI prompt 零日历上下文 |
+| P1-1 (无重试) | ↔ Round #51 P1-2 (CSP connect-src 宽松) | 推送失败不可恢复 + 潜在数据外泄通道的组合风险 |
+| P1-4 (专注完成无通知) | ↔ Stage 22 Baseline Repair | growth loop 中 "Reinforce" 阶段断裂，应在 Stage 22+ 优先修复 |

@@ -202,3 +202,43 @@ UX Envelope (ux_envelope.py)
 | P1-3 | 衍生信号硬性覆盖评分 | 改为分数加成或提高阈值 | 低（~15 行 Python） |
 | P1-4 | 窗口固定 8 条 | 动态窗口或时间窗口 | 低（~10 行 Python） |
 | P1-5 | routing_profile 仅 3 参数 | 扩展到 6-8 个可配置参数 | 中（~40 行 Python） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-24
+> **复核员**: Claude Deep Auditor
+
+### 复核方法
+
+逐项验证原审计发现是否与当前代码一致。注意此为早期审计（#9），代码可能已通过 Aurora Stages 重构。
+
+### 重大变化：路由器已重构
+
+`DualCoreRoutingInput` 从 22 字段大幅简化为 10 字段（intent, intent_confidence, information_sufficient, primary_challenge_area, recent_sentiment_distribution, has_active_plan, plan_health_status, recent_task_feedback_distribution, session_length_preference, difficulty_preference）。
+
+`emotional_block` 和 `procrastination` 检测从外部 `BehaviorPattern` 信号改为内部计算（基于 sentiment distribution 和 task feedback distribution），不再依赖 `CognitiveService` 的 `behavior_pattern` 字段。
+
+### 逐项复核结果
+
+| 编号 | 原发现 | 状态 | 备注 |
+|------|--------|------|------|
+| P0-1 | cognitive_load 已测量但未传入路由 | ⚠️ 部分变化 | `cognitive_load` 仍未作为独立字段传入。但路由器新增 `cognitive_load_present = primary_challenge_area in {"cognitive", "execution"}`（:113），用 `primary_challenge_area` 粗略替代。state_estimator 仍计算精确的 `cognitive_load`（:108）但值未使用 |
+| P0-2 | 无结果反馈闭环 | ✅ 已验证 | 仍无 outcome tracking 机制。`routing_decision_log` 存在但无回填 |
+| P1-1 | 新用户路由退化为 balanced | ✅ 已验证 | 简化后输入更少（10 字段），新用户空值字段仍有 4+ 个 |
+| P1-2 | 阈值硬编码 | ⚠️ 部分变化 | `DEFAULT_ROUTING_PROFILE` 已移除。但 `_has_emotional_block` 中 `negative >= 2`、`ratio >= 0.5` 和 `_has_procrastination_pattern` 中 `friction_signals >= 3` 仍硬编码 |
+| P1-3 | 衍生信号硬性覆盖 | ⚠️ 部分变化 | `emotional_block` 不再来自外部 `BehaviorPattern`，改为内部计算。但仍以 bool 形式硬性覆盖（:118-122），非分数加成 |
+| P1-4 | 窗口固定 8 条 | ⚠️ 需验证 | 输入简化后，sentiment/feedback 由外部 routing_engine 构造，需检查其窗口设置 |
+| P1-5 | routing_profile 仅 3 参数 | ✅ 已修 | `DEFAULT_ROUTING_PROFILE` 已移除，改为内部阈值 |
+| P2-1 | cognitive_adjustments 固定截断 | ⚠️ 需验证 | 简化后 adjustments 生成逻辑可能已变 |
+| P2-2 | routing_debug 无分析工具 | ✅ 已验证 | 仍无消费方 |
+| P2-3 | 硬编码列表 | ✅ 已验证 | `CLEAR_INTENTS` 和 `NEGATIVE_SENTIMENTS` 仍硬编码 |
+
+### 总结
+
+- **1/10 完全修复** (P1-5 DEFAULT_ROUTING_PROFILE 移除)
+- **5/10 部分变化** — 路由器架构已重构（22→10 字段），核心问题方向正确但细节已过时
+- **P0-1 仍有效** — state_estimator 的精确 cognitive_load 仍未被路由使用
+- **行号引用已失效** — 文件已大规模重构，原行号不再准确
+- **建议**: 下次全面重新审计此模块，因为架构变化使原报告失去参考价值

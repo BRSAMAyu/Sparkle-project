@@ -196,3 +196,41 @@
 | P1-3 | 资源分享仅处理 knowledge_node | 扩展 bridge 处理逻辑 | 低（~20 行 Python） |
 | P1-4 | Accountability 缺 Proto 定义 | 添加 RPC 到 community_service.proto | 中（~40 行 proto） |
 | P1-5 | Partnership 缺唯一约束 | 添加 UniqueConstraint | 低（1 行 Python） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 05:15
+> **复核轮次**: 第八次唤醒 (Round #54 并行复核)
+> **复核方式**: 代码验证
+
+### 复核结果: 1/10 已修
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | 社群信号桥接输出完全未到达 AI 上下文 | ❌ 未修 | `context_pack.py` 873 行 build() 无 community/social 段。`dual_core_router.py` 的 `DualCoreRoutingInput` 仍为原始 8 字段，无社群信号。**加重**: `social_context_renderer.py` 和 `social_context_provider.py` 源文件已删除(仅剩 .pyc 缓存)，旧有微弱连接彻底消失——这是倒退而非"从未实现" |
+| P0-2 | 群组访问控制绕过 | ❌ 部分修 | API 层 `get_group()` 端点正确传递 user_id。但 `get_group_flame_status()` 调用 `GroupService.get_group()` 不传 user_id，非成员可查看私密群组+成员火苗数据。Go Gateway 使用 proxyWithHeaders 无额外鉴权 |
+| P1-1 | community_service.py 零事件发布 | ❌ 未修 | `community_service.py` 中 `event_bus` 出现次数 = 0，无导入。所有写操作仅调用 `_record_community_signal()` 写 Redis，无 Event Bus 发布 |
+| P1-2 | group_task_claims.personal_task_id 缺失索引 | ❌ 未修 | schema.sql 无 personal_task_id 索引，Alembic 也无相关迁移 |
+| P1-3 | 资源分享仅处理 knowledge_node | ❌ 未修 | `community_signal_bridge.py:99` 仍为 `if resource_type != "knowledge_node": return` |
+| P1-4 | Accountability 缺 Proto 定义 | ❌ 未修 | `community_service.proto` 323 行无 accountability RPC。Go Gateway accountability 路由全部通过 REST proxy 绕过 gRPC 合约 |
+| P1-5 | AccountabilityPartnership 缺唯一约束 | ✅ 已修 | `accountability.py:91-96` 已添加 `UniqueConstraint("initiator_id", "partner_id")` |
+| P2-1 | Message reactions Proto 与后端不一致 | ❌ 未修 | Proto `map<string, string> reactions` vs 后端 `dict[str, list[UUID]]`，无转换层 |
+| P2-2 | WS9 Feature Flag 静默禁用无日志 | ⚠️ 无法验证 | 相关代码路径可能已被重构移除，原始描述的功能无法在当前代码中定位 |
+| P2-3 | 社群端点无 Gateway 级速率限制 | ❌ 未修 | `proxy_routes.go` community 路由仅 authMiddleware，无 RateLimit |
+
+### 复核附加发现
+
+1. **P0-1 加重 — social_context_renderer 源文件已删除**: 原审计描述的"唯一社群→AI注入点"已不复存在。这不是"从未实现"而是**倒退**:旧代码被删除但无替代。
+2. **P0-2 加重 — 火堆端点泄露成员数据**: `/groups/{group_id}/flame` 不仅泄露群组元数据，还返回全部成员的 user_id、flame_level、flame_contribution。
+3. **P1-1 与 P0-1 级联**: community_service 零事件发布意味着 bridge 唯一触发路径是 TaskEventConsumer。群组创建、消息发送、成员加入等核心社群活动永远不经过 bridge。
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-1 (未修+加重) | Round #11 Galaxy KG 未注入 AI 上下文 | 同一模式: 数据收集完整但 context_pack/router 无对应注入段 |
+| P0-1 (源文件删除) | Round #4 Context Pack community_context dead data | 确认死亡: social_context_renderer 源文件已删除，Round #4 担忧已变为事实 |
+| P0-2 (部分修) | Round #50 WS proxy 零验证 | WS 验证比 REST 更严格，不对称 |
+| P1-1 (零事件) | Aurora Stage 17 "Social → Router" | Stage 17 前提条件未满足: community_service 需先发布事件 |

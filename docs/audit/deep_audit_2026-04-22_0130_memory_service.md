@@ -166,3 +166,38 @@ LLM 收到: 仅 {key:value} 偏好 + 0 条情景记忆
 | P1-2 | 偏好写入窗口 20 轮过大 | 降低到 5 轮或增量更新 | 低（1 行配置） |
 | P1-3 | ContextPackBuilder 无缓存 | 60s Redis 缓存 + 写入时失效 | 中（~40 行 Python） |
 | P1-4 | memory_evolutions 无限增长 | 月分区 + 90 天归档 | 中（迁移 + 清理任务） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 03:00
+> **复核轮次**: 第四次唤醒 (Round #51 并行复核)
+> **复核方式**: Explore agent 代码验证
+
+### 复核结果: 0/9 已修, 代码完全未动
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | AI 推断记忆写入默认禁用 | ❌ 未修 | settings.py 仍无 `SPARKLE_MEMORY_INFERRED_WRITE_ENABLED` 定义（默认 False）; memory_inferred_write_lane.py 守卫仍直接 return |
+| P0-2 | ContextPackBuilder 丢弃 56-75% 元数据 | ❌ 未修 | context_pack.py:561-583 仍仅保留 {key,value}/{id,title,status,target_date}/{id,summary,occurred_at,importance,tags}, 缺 confidence/source_type |
+| P1-1 | episodic_memories embedding 无 HNSW 索引 | ❌ 未修 | schema.sql 仅 cognitive_fragments 有 HNSW 索引; episodic_memories 仍全表扫描 |
+| P1-2 | ChatSignalCollector 每 20 轮才写入 | ❌ 未修 | chat_signal_collector.py:26 仍 `WINDOW_SIZE = 20` |
+| P1-3 | ContextPackBuilder 无缓存 | ❌ 未修 | build() 仍直接查 DB, 无 Redis 缓存层 |
+| P1-4 | memory_evolutions 无分区/清理 | ❌ 未修 | 无 PARTITION BY, 无 TTL, 无清理任务 |
+| P2-1 | episodic_memories 无分区 | ❌ 未修 | 同上 |
+| P2-2 | 记忆生命周期需检查 4 个时间戳 | ❌ 未修 | 仍需 WHERE archived_at IS NULL AND retracted_at IS NULL AND deleted_at IS NULL |
+| P2-3 | scenes 表仅 Python 模型 | ❌ 未修 | schema.sql 中未找到 scenes 表定义 |
+
+### 复核附加发现
+
+- **P0-1 Aurora Stage 16 关联**: 记忆中记录 Stage 16 "Memory Write Lane ✅ DONE", 但核心开关 `SPARKLE_MEMORY_INFERRED_WRITE_ENABLED` 仍为 False. Stage 16 的"完成"可能仅指代码实现和 Rule Y 治理规则, 而非功能上线
+- **P0-2 数据丢失链路**: context_pack.py 丢弃 confidence → prompts.py 渲染无来源可信度 → LLM 无法区分用户明确说的 vs AI 推断的 → 产生"幻觉权威"（把推断当事实使用）
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-1 (写入禁用) | Round #4 P0-2 (community_context 死数据) | 同一模式: 代码存在但功能未启用, 形成数据空洞 |
+| P0-2 (元数据丢弃) | Round #4 P0-1 (context_manager 重复查询) | context_pack 在读写两端都存在数据质量问题 |
+| P1-2 (20 轮窗口) | Round #7 P1-1 (ErrorCreated 不触发成就) | 两处都是"信号收集频率过低" — 用户行为信号大量丢失 |

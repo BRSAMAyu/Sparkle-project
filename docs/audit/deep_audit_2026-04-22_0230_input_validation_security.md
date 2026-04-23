@@ -208,3 +208,39 @@ Flutter 用户输入
 | P1-3 | 原始 JSON 无校验 | 添加 Pydantic schema | 中（~80 行 Python） |
 | P1-4 | OAuth/push 明文 | pgcrypto 加密存储 | 中（迁移 + 加密） |
 | P1-5 | Go CORS 通配符 | 添加生产守卫 | 低（~5 行 Go） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 04:00
+> **复核轮次**: 第五次唤醒 (Round #52 并行复核)
+> **复核方式**: Explore agent 代码验证
+
+### 复核结果: 0/10 主体未修, 1/10 部分改善 (P0-2)
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | WebSocket 代理零校验转发 | ❌ 未修 | websocket_proxy.go:188-232 仍字节级透传, 无大小限制/内容清洗/速率限制 |
+| P0-2 | Prompt 注入 — 用户输入未转义 | ⚠️ 部分改善 | prompts.py 部分区域使用 `_soften_section()` 包装, 但核心 f-string 插值 (:1370-1380) 和 agent_profiles.py:175 的 `format(**kwargs)` 仍存在 |
+| P1-1 | 错误响应泄露 str(e) | ❌ 未修 | signals.py:140, monitoring.py:81 仍 `f"...{str(e)}"` |
+| P1-2 | 无 RLS 策略 | ❌ 未修 | schema.sql 零 `ROW LEVEL SECURITY` / `CREATE POLICY` |
+| P1-3 | 原始 JSON 无 Pydantic 校验 | ❌ 未修 | error_book.go:88 仍 `map[string]interface{}`; community.py:239 仍 `request.json()` |
+| P1-4 | OAuth/push token 明文存储 | ❌ 未修 | google_id/apple_id/push_token 仍明文 |
+| P1-5 | Go CORS 通配符无生产守卫 | ❌ 未修 | config.go:138-139 仍 `if allowed == "*" { return true }` 无 IsProduction() 检查 |
+| P2-1 | CSP style-src unsafe-inline | ❌ 未修 | security.go:18 仍 `'unsafe-inline'` |
+| P2-2 | Flutter 聊天无 maxLength | ❌ 未修 | TextField 无长度约束 |
+| P2-3 | Bluemonday UGCPolicy 过宽松 | ❌ 未修 | chat_orchestrator.go:99 仍 `bluemonday.UGCPolicy()` |
+
+### 复核附加发现
+
+- **P0-2 部分改善细节**: `_soften_section()` 在某些位置添加了包装文本, 但未解决根本问题 — 用户控制的数据仍通过 f-string/format() 直接插入系统提示词. 改善方向正确但不充分
+- **P0-1 与 Round #50 P0-1 关联**: Round #50 确认社群 WS 无连接数限制, 本轮确认社群 WS 也无消息内容校验 — 双重缺失构成完整攻击面
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-1 (WS 零校验) + Round #50 P0-1 (WS 无连接限制) | Round #51 P1-5 (WS 路由绕过 API 组) | 根因: 社群 WS 注册在根路由, 绕过所有保护中间件 |
+| P1-5 (CORS 通配符) | Round #51 P1-2 (CSP connect-src 过宽) | 两处过度宽松的网络策略 — CORS 接受任何源, CSP 允许连接任何端点 |
+| P0-2 (Prompt 注入) | Round #5 P0-2 (finish_reason STOP 非 ERROR) | LLM 执行恶意指令后错误被掩盖为正常完成 |

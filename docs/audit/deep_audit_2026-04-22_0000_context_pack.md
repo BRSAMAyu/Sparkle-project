@@ -205,3 +205,36 @@ LLM 接收最终 prompt (受 token budget 裁剪)
 | P1-4 | 缓存 TTL 5min 过长 | 关键事件触发缓存失效 | 中（~60 行） |
 | P1-5 | 缓存失败无指标 | 添加 Prometheus counter | 低（~10 行） |
 | P1-6 | SafeFormatDict 静默吞没 | 添加 counter + CI 测试 | 低（~15 行） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 02:30
+> **复核轮次**: 第三次唤醒 (Round #50 并行复核)
+> **复核方式**: Explore agent 代码验证
+
+### 复核结果: 0/13 已修, 代码完全未动
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | context_manager 与 orchestrator 重复查询 | ❌ 未修 | 两个文件仍在独立获取用户画像/记忆数据 |
+| P0-2 | community_context 获取但从未渲染到 prompts | ❌ 未修 | context_manager.py:163 仍 fetch community_data, prompts.py 仍无 community_context 引用 |
+| P0-3 | 社群 sprint 分组 N+1 查询 | ❌ 未修 | context_manager.py:347-373 循环内仍逐组执行 claim_counts 查询; 额外发现 :354 使用 `self.db` 而非传入的 `db` 参数（session 不一致 bug） |
+| P1-1 | social_context 永远为空 | ❌ 未修 | 搜索 backend 全目录, `social_context` 0 结果 — 字段根本不存在于 CognitiveContext 类中 |
+| P1-2 | 无输出大小限制 | ❌ 未修 | 未观察到 8KB 预算或裁剪逻辑 |
+| P1-3 | 硬编码限制值 | ❌ 未修 | 限制值仍在代码中硬编码 |
+| P1-4 | 缓存 TTL 5min (300s) | ❌ 未修 | context_manager.py:70 仍 `CACHE_TTL_SECONDS = 300` |
+| P1-5 | 缓存失败无指标 | ❌ 未修 | 无 Prometheus counter |
+| P1-6 | SafeFormatDict 静默吞没 | ❌ 未修 | 无 counter 或 CI 测试 |
+
+### 复核附加发现
+
+- **P0-3 session bug**: `_get_community_profile()` :328 行建立了 `db = db_session if db_session is not None else self.db` 模式, 但 :354 行的 `claim_counts` 查询直接使用 `self.db.execute()` 而非 `db.execute()`, 绕过了 session 参数化
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-2 (community_context 死数据) | Round #12 Community Signal Bridge | Signal Bridge 产生信号但 Context Pack 不消费 — 信号断路 |
+| P0-3 (N+1 + session bug) | Round #9 Dual-Core Router | context 组装延迟直接影响路由决策质量 |

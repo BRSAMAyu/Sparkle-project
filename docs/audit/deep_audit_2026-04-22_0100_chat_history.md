@@ -191,3 +191,40 @@ ChatHistoryPersister (后台 goroutine)
 | P1-3 | 无数据清理机制 | Celery 定时任务 + 软删除清理 | 中（~60 行 Python） |
 | P1-4 | Flutter 无本地缓存 | Hive 缓存最近 100 条 | 中（~80 行 Dart） |
 | P1-5 | 无分页元数据 | 响应添加 has_more/total | 低（~10 行 Go） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25
+> **复核员**: Claude Deep Auditor
+
+### 复核方法
+
+逐项验证原审计（Round #8）发现是否与当前代码一致。独立验证 agent 同步完成交叉确认。
+
+### 逐项复核结果
+
+| 编号 | 原发现 | 状态 | 备注 |
+|------|--------|------|------|
+| P0-1 | Go API 仅返回 6 个字段 | ✅ 已验证 | `chat_history.go:69-76` 仍为 6 字段：id, conversation_id, role, content, created_at, user_id。actions/task_id/model_name/tokens_used 仍未返回。ChatHistoryMessage struct (:61-68) 未变 |
+| P0-2 | 重试缓冲溢出静默丢弃 | ⚠️ 部分改善 | 不再完全静默：`:223-227` 现在 log "dropping message" + 队列深度。但：(1) 无 Prometheus 指标 (2) 缓冲满时仍丢弃消息 (breakerRetryBufMax=500) (3) 无客户端通知 |
+| P1-1 | 无 thundering herd 保护 | ✅ 已验证 | 无 singleflight。`:296` `go s.backfillRedisMessages(sessionID, messages)` 仍为无锁无去重的异步 backfill |
+| P1-2 | N+1 Redis session 元数据 | ✅ 已验证 | `:537-543` 仍在循环中逐个调用 `s.rdb.HGetAll(ctx, metaKey)`。Pipeline 仅用于写操作 (:194)，读操作无批量化 |
+| P1-3 | 无数据清理机制 | ✅ 已验证 | 无变化 |
+| P1-4 | Flutter 无持久化缓存 | ✅ 已验证 | 无变化 |
+| P1-5 | API 响应无分页元数据 | ✅ 已验证 | `:58-78` 仍为 `c.JSON(200, result)`，无 has_more/total_count |
+| P2-1 | 重复索引 | ✅ 已验证 | 无变化 |
+| P2-2 | 缺失复合索引 | ✅ 已验证 | 无变化 |
+| P2-3 | 无外键约束 | ✅ 已验证 | 无变化 |
+
+### 新发现
+
+- 无新发现。代码变化极小，仅 P0-2 增加了日志记录。
+
+### 总结
+
+- **0/10 已完全修复**
+- **1/10 部分改善** (P0-2: 增加丢弃日志，但无指标/通知)
+- **9/10 未变化**
+- P0-1（历史消息丢失富内容）是用户体验最严重的未修项——用户回看对话只能看到纯文本

@@ -189,3 +189,45 @@ DLQ Stream
 | P1-3 | DLQ 无告警 | Prometheus alert rule | 低（~10 行 YAML） |
 | P1-4 | Consumer 数=1 | 动态 consumer + 独立 group | 中（~50 行） |
 | P1-5 | 资源分享缺幂等 | 添加 idempotency key | 低（~10 行） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-24
+> **复核员**: Claude Deep Auditor
+
+### 复核方法
+
+逐项验证原审计（Round #3）发现是否与当前代码一致。聚焦关键 P0 项。
+
+### 逐项复核结果
+
+| 编号 | 原发现 | 状态 | 备注 |
+|------|--------|------|------|
+| P0-1 | 主 Stream XADD 无 maxlen | ✅ 已验证 | `event_bus.py:530` 仍为 `await self.redis.xadd(stream, msg_body)` 无 maxlen 参数。DLQ (:366-369) 和 retry (:405) 均已设置 maxlen，唯独主 stream 遗漏 |
+| P0-2 | 发布失败静默丢弃 | ✅ 已验证 | 无 outbox 表、无补偿重发机制 |
+| P0-3 | 无 XAUTOCLAIM | ✅ 已验证 | 全文搜索 `XAUTOCLAIM` 无结果。Pending entries 无自动回收 |
+| P0-4 | Bridge 多写无事务 | ✅ 已验证 | 无变化 |
+| P0-5 | Galaxy 多表写异常 | ✅ 已验证 | 无变化 |
+| P0-6 | 幂等 get→lock 竞态 | ⚠️ 已修复(原子锁) + 残留问题 | **修复**: `idempotency.py:124-132` 使用 `SET NX EX` 原子操作替代了 GET→SET 两步。lock token + Lua unlock 保证正确释放。**残留**: (1) `event_bus.py:609-616` 仍先 GET 再 lock，但 GET 只是快速路径优化，实际防护由 SET NX lock 保证；(2) `idempotency.py:134-135` lock 失败时 `return True` — **fail-open**：Redis 不可用时幂等保护失效，两消费者可同时处理同一事件 |
+| P1-1 | 无 payload 大小限制 | ✅ 已验证 | 无变化 |
+| P1-2 | 无事件类型注册表 | ✅ 已验证 | 无变化 |
+| P1-3 | DLQ 无告警 | ✅ 已验证 | 无变化 |
+| P1-4 | Consumer 数=1 | ✅ 已验证 | 无变化 |
+| P1-5 | 资源分享缺幂等 | ✅ 已验证 | 无变化 |
+| P2-1 | error_id 去重缺失 | ✅ 已验证 | 无变化 |
+| P2-2 | 成就/奖励非原子 | ✅ 已验证 | 无变化 |
+| P2-3 | TTL 24h 可能不足 | ✅ 已验证 | 无变化 |
+
+### 新发现
+
+- **P0-6 残留 fail-open**: `RedisIdempotencyStore.lock()` 在 Redis 异常时返回 `True`（:134-135），绕过幂等保护。结合 P0-1（主 Stream 无 maxlen）和 P0-3（无 XAUTOCLAIM），在 Redis 抖动场景下：pending entries 堆积 → Redis 重启 → lock fail-open → 重复消费 → 重复积分/成就发放。
+- 行号偏移：event_bus.py 行号与原报告略有变化（主 XADD 从 :896 移至 :530），属重构导致，核心逻辑未变。
+
+### 总结
+
+- **1/14 已修复** (P0-6 核心竞态：SET NX 原子锁)
+- **1/14 残留问题** (P0-6 lock fail-open on Redis error)
+- **12/14 未变化**
+- 最危险的未修项：P0-1（主 Stream 无 maxlen → OOM 风险）、P0-3（无 XAUTOCLAIM → 消息堆积）

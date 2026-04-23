@@ -170,3 +170,36 @@
 | P1-2 | Sliding Window 未启用 | 修复 token bucket 后评估切换 | 低（1 行配置） |
 | P1-3 | Reset header 不准确 | 计算实际回补时间 | 低（~10 行 Go） |
 | P1-4 | 限流在认证之前 | 调整中间件顺序或分层限流 | 中（~50 行 Go） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-24
+> **复核员**: Claude Deep Auditor
+
+### 复核方法
+
+逐项验证原审计发现是否与当前代码一致。
+
+### 逐项复核结果
+
+| 编号 | 原发现 | 状态 | 备注 |
+|------|--------|------|------|
+| P0-1 | Token Bucket Lua 脚本 1000x 补充速率 | ✅ 已验证 | `distributed_rate_limiter.go:89` 仍为 `elapsed * rate`，无 `÷1000` 转换 |
+| P0-2 | Telemetry 端点绕过限流无认证 | ✅ 已验证 | `rate_limit.go:407-410` `shouldBypassGlobalRateLimit` 仍存在，:465-472 仍仅检查路径后缀 |
+| P0-3 | Admin/Internal 端点无限流 | ✅ 已验证 | 代码结构未变，admin/internal 路由组仍无限流中间件 |
+| P1-1 | Redis 降级单实例本地限流 | ✅ 已验证 | `rate_limit.go:436-443` fallback 逻辑未变 |
+| P1-2 | Sliding Window 未启用 | ✅ 已验证 | `UseSlidingWindow: false` 仍硬编码 |
+| P1-3 | X-RateLimit-Reset 不准确 | ✅ 已验证 | 仍为 `now+1s` |
+| P1-4 | 限流在认证之前 | ✅ 已验证 | `setup.go` 中 `apiRateLimit` 仍在 auth middleware 之前 |
+| P2-1 | 本地限流器 cleanup 持锁遍历 | ✅ 已验证 | 未变 |
+| P2-2 | 限流配置硬编码 | ✅ 已验证 | 未变 |
+| P2-3 | 开发模式禁用白名单 | ✅ 已验证 | 未变 |
+
+### 总结
+
+- **0/10 已修复**
+- 所有行号引用仍然准确
+- P0-1 (1000x token 补充) 仍然是最严重的问题 — 所有分布式限流实质失效
+- 代码自审计以来完全未动

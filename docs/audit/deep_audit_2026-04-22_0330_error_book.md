@@ -193,3 +193,42 @@ Flutter 错题操作 (创建/编辑/复习/删除)
 | P1-3 | Flutter 硬编码中文 | 迁移到 l10n | 中（~80 行 Dart） |
 | P1-4 | gRPC vs proxy 架构不一致 | 统一为 proxy 模式 | 高（~400 行 Go 重写） |
 | P1-5 | is_deleted vs deleted_at 不一致 | 迁移到 deleted_at | 中（迁移 + 查询更新） |
+
+---
+
+## 复核笔记
+
+> **复核日期**: 2026-04-25 05:30
+> **复核轮次**: 第九次唤醒 (Round #55 并行复核)
+> **复核方式**: 代码验证
+
+### 复核结果: 0/8 已修 (2 项 N/A — ErrorReplanBridge 不存在于主项目)
+
+| 原始编号 | 描述 | 状态 | 备注 |
+|----------|------|------|------|
+| P0-1 | 分析管道 BackgroundTask 无重试无通知 | ❌ 未修 | `error_book.py:54` 仍使用 `BackgroundTasks.add_task()`，无 Celery 迁移。有 `POST /{id}/analyze` 手动重触发端点但前端无失败提示 |
+| P0-2 | 错题纠正无成就反馈 (Reinforce 失效) | ❌ 未修 | `AchievementEvent` 枚举无 `ERROR_FIX`/`ERROR_REVIEW` 事件。`submit_review()` 仅调 `ErrorBookSignalProcessor`，不调用 `AchievementEngine.process_event()` |
+| P1-1 | linked_knowledge_node_ids 无 FK 约束 | ❌ 未修 | `error_book.py:57` 仍为 `ArrayUUIDCompat`，schema.sql 仍为 `uuid[]` 无 FK |
+| P1-2 | ErrorReplanBridge time_management 误触发 | N/A | `error_replan_bridge.py` 不存在于主项目，仅存于 worktree |
+| P1-3 | Flutter 硬编码中文 (7 科目 + 20+ 屏幕) | ❌ 未修 | `subject_chips.dart` 7 科目仍硬编码，`review_screen.dart` 20+ 处硬编码中文，零 l10n 引用 |
+| P1-4 | 独立 Go gRPC handler vs proxy 模式 | ❌ 未修 | `error_book.go` (330 行) 仍为独立 gRPC handler，vs 项目 257 个 proxy 路由 |
+| P1-5 | is_deleted vs deleted_at 不一致 | ❌ 未修 | `error_book.py:63` 仍为 `is_deleted Boolean`，`BaseModel` 用 `deleted_at DateTime` |
+| P2-1 | memory_lapse 不被 ErrorReplanBridge 覆盖 | N/A | ErrorReplanBridge 不存在于主项目 |
+| P2-2 | ReviewScheduler random.uniform 无种子 | ❌ 未修 | `error_book_service.py:99` 仍为 `random.uniform(0.9, 1.1)` |
+| P2-3 | ErrorRecord 继承 Base 非 BaseModel | ❌ 未修 | `error_book.py:17` 仍为 `class ErrorRecord(Base)` |
+
+### 复核附加发现
+
+**AF-1: ErrorReplanBridge 整体缺失 (P0 级)**
+审计报告 analyze_and_link() Step 9 描述"发布 error_created → ErrorReplanBridge → 重规划"。但 ErrorReplanBridge 整个文件不存在于主项目。error_created 事件消费者仅 GalaxyEventConsumer/AutoFragmentCollector/ProfileEventConsumer。**错题信号无法触发自适应重规划**。
+
+**AF-2: error_summary/recent_errors 在 prompt 层完全不可见 (关联 Round #54 P1-1)**
+context_manager.py 收集 error_summary/recent_errors 到 CognitiveContext，但 orchestrator_production.py 的 _build_user_context() 不调用 ContextOrchestrator，直接用 UserService.get_context()。prompts.py 的 _normalize_user_context() 也不提取这些字段。**错题数据在 AI prompt 中完全不可见**。
+
+### 跨轮次因果链更新
+
+| 本轮复核 | 关联 | 说明 |
+|----------|------|------|
+| P0-2 + AF-2 | Round #54 P1-1 (error data 死代码) | 错题数据双重断裂: 既不在 AI prompt 也不在成就引擎 |
+| AF-1 | Memory "ErrorReplanBridge dormant" | 情况更严重: 不是 dormant 而是 absent |
+| P1-3 | Round #47 i18n 盲区 + Round #52 P1-1 | 系统性 i18n 缺失 |

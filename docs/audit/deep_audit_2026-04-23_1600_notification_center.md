@@ -128,3 +128,15 @@ Flutter NotificationCenterScreen
 | P1-3 | LIKE 通配符注入 | 转义 % 和 _ | 低（~5 行） |
 | P1-4 | 硬删除 | 改为软删除 | 低（~10 行） |
 | P1-5 | quiet_hours 未检查 | 推送前检查偏好 | 低（~15 行） |
+
+---
+
+## Chris (Session 3+4) 修复记录
+
+| 原始发现 | 修复提交 | 状态 |
+|----------|---------|------|
+| P0-1 mark_all N+1 | `41a5f609` (S4) | **FIXED** — bulk UPDATE + batch INSERT, O(3N)→O(6) |
+| P1-3 LIKE 通配符注入 | `89850053` (S4) | **FIXED** — _escape_like() helper, 5× ilike escaped |
+| P2-1 time_to_action 负数 | `f9d253e1` (S4) | **FIXED** — max(0, int(...)) |
+
+**备注**: P1-1 notification_type 无枚举 → 部分误报，API层已有 `if notification_type not in ['system', 'intervention']` 校验。P1-2 分页不精确、P1-4 硬删除、P1-5 quiet_hours 仍为架构级改进项。
