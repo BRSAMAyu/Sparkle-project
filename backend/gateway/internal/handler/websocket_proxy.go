@@ -19,6 +19,8 @@ type WebSocketProxy struct {
 	upgrader         *websocket.Upgrader
 	logger           *zap.Logger
 	config           *config.Config
+	mu               sync.Mutex
+	activeByUser     map[string]int
 }
 
 // NewWebSocketProxy 创建新的 WebSocket 代理
@@ -44,8 +46,9 @@ func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config
 				return allowed
 			},
 		},
-		logger: logger,
-		config: cfg,
+		logger:       logger,
+		config:       cfg,
+		activeByUser: make(map[string]int),
 	}
 }
 
@@ -66,28 +69,13 @@ func (p *WebSocketProxy) HandleCommunityWS(c *gin.Context) {
 		zap.String("group_id", groupID))
 
 	// 构造后端 WebSocket URL
-	backendURL := p.pythonBackendURL + "/api/v1/community/groups/" + groupID + "/ws"
+	backendURL := p.communityBackendURL(groupID)
 
-	// Get token - prefer Authorization header over query parameter for security
-	token := c.GetHeader("Authorization")
-	if token != "" && len(token) > 7 && token[:7] == "Bearer " {
-		token = token[7:]
-	} else {
-		// Fallback to query token (less secure, logged as warning)
-		token = c.Query("token")
-		if token != "" {
-			p.logger.Warn("Group WS using query token (deprecated, use Authorization header)",
-				zap.String("user_id", userID),
-				zap.String("group_id", groupID))
-		}
-	}
-
+	token := c.GetString("auth_token")
 	if token == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
 		return
 	}
-
-	backendURL += "?token=" + token
 
 	// 双向代理 WebSocket 连接
 	p.proxyWebSocket(c.Writer, c.Request, backendURL, token, userID, "group", groupID)
@@ -107,31 +95,25 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 	p.logger.Info("Personal WS connection request",
 		zap.String("user_id", userID))
 
-	// Get token - prefer Authorization header over query parameter for security
-	token := c.GetHeader("Authorization")
-	if token != "" && len(token) > 7 && token[:7] == "Bearer " {
-		token = token[7:]
-	} else {
-		// Fallback to query token (less secure, logged as warning)
-		token = c.Query("token")
-		if token != "" {
-			p.logger.Warn("Personal WS using query token (deprecated, use Authorization header)",
-				zap.String("user_id", userID))
-		}
-	}
-
+	token := c.GetString("auth_token")
 	if token == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
 		return
 	}
 
-	backendURL := p.pythonBackendURL + "/api/v1/community/ws/connect?token=" + token
+	backendURL := p.personalBackendURL()
 
 	p.proxyWebSocket(c.Writer, c.Request, backendURL, token, userID, "personal", "")
 }
 
 // proxyWebSocket 实现双向 WebSocket 代理
 func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, backendURL, authToken, userID, connType, resourceID string) {
+	if !p.registerConnection(userID) {
+		http.Error(w, "Too many websocket connections", http.StatusTooManyRequests)
+		return
+	}
+	defer p.unregisterConnection(userID)
+
 	backendWSURL, err := p.toWebSocketURL(backendURL)
 	if err != nil {
 		p.logger.Error("Failed to normalize backend websocket URL",
@@ -169,6 +151,33 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 	}
 	defer clientConn.Close()
 
+	readLimit := p.config.WSMaxMessageBytes
+	if readLimit <= 0 {
+		readLimit = 1 << 20
+	}
+	pongWait := time.Duration(p.config.WSPongWaitSeconds) * time.Second
+	if pongWait <= 0 {
+		pongWait = 90 * time.Second
+	}
+	pingInterval := time.Duration(p.config.WSPingIntervalSeconds) * time.Second
+	if pingInterval <= 0 || pingInterval >= pongWait {
+		pingInterval = pongWait / 2
+	}
+	writeWait := time.Duration(p.config.WSWriteWaitSeconds) * time.Second
+	if writeWait <= 0 {
+		writeWait = 10 * time.Second
+	}
+	clientConn.SetReadLimit(readLimit)
+	backendConn.SetReadLimit(readLimit)
+	_ = clientConn.SetReadDeadline(time.Now().Add(pongWait))
+	_ = backendConn.SetReadDeadline(time.Now().Add(pongWait))
+	clientConn.SetPongHandler(func(string) error {
+		return clientConn.SetReadDeadline(time.Now().Add(pongWait))
+	})
+	backendConn.SetPongHandler(func(string) error {
+		return backendConn.SetReadDeadline(time.Now().Add(pongWait))
+	})
+
 	p.logger.Info("WebSocket proxy connection established",
 		zap.String("user_id", userID),
 		zap.String("conn_type", connType),
@@ -177,11 +186,19 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 	// 双向转发
 	done := make(chan struct{})
 	var doneOnce sync.Once
-	errChan := make(chan error, 2)
+	errChan := make(chan error, 3)
 	signalDone := func() {
 		doneOnce.Do(func() {
 			close(done)
 		})
+	}
+	var clientWriteMu sync.Mutex
+	var backendWriteMu sync.Mutex
+	writeMessage := func(mu *sync.Mutex, conn *websocket.Conn, messageType int, data []byte) error {
+		mu.Lock()
+		defer mu.Unlock()
+		_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
+		return conn.WriteMessage(messageType, data)
 	}
 
 	// 客户端 -> 后端
@@ -198,7 +215,7 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				errChan <- err
 				return
 			}
-			if err := backendConn.WriteMessage(messageType, data); err != nil {
+			if err := writeMessage(&backendWriteMu, backendConn, messageType, data); err != nil {
 				p.logger.Warn("Backend write error",
 					zap.String("user_id", userID),
 					zap.Error(err))
@@ -222,12 +239,34 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				errChan <- err
 				return
 			}
-			if err := clientConn.WriteMessage(messageType, data); err != nil {
+			if err := writeMessage(&clientWriteMu, clientConn, messageType, data); err != nil {
 				p.logger.Warn("Client write error",
 					zap.String("user_id", userID),
 					zap.Error(err))
 				errChan <- err
 				return
+			}
+		}
+	}()
+
+	go func() {
+		ticker := time.NewTicker(pingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if err := writeMessage(&clientWriteMu, clientConn, websocket.PingMessage, nil); err != nil {
+					errChan <- err
+					signalDone()
+					return
+				}
+				if err := writeMessage(&backendWriteMu, backendConn, websocket.PingMessage, nil); err != nil {
+					errChan <- err
+					signalDone()
+					return
+				}
 			}
 		}
 	}()
@@ -247,6 +286,44 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 	p.logger.Info("WebSocket proxy connection closed",
 		zap.String("user_id", userID),
 		zap.String("conn_type", connType))
+}
+
+func (p *WebSocketProxy) registerConnection(userID string) bool {
+	maxConns := p.config.WSMaxConnections
+	if maxConns <= 0 {
+		return true
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.activeByUser[userID] >= maxConns {
+		return false
+	}
+	p.activeByUser[userID]++
+	return true
+}
+
+func (p *WebSocketProxy) unregisterConnection(userID string) {
+	maxConns := p.config.WSMaxConnections
+	if maxConns <= 0 {
+		return
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.activeByUser[userID] <= 1 {
+		delete(p.activeByUser, userID)
+		return
+	}
+	p.activeByUser[userID]--
+}
+
+func (p *WebSocketProxy) communityBackendURL(groupID string) string {
+	return p.pythonBackendURL + "/api/v1/community/groups/" + groupID + "/ws"
+}
+
+func (p *WebSocketProxy) personalBackendURL() string {
+	return p.pythonBackendURL + "/api/v1/community/ws/connect"
 }
 
 func (p *WebSocketProxy) toWebSocketURL(rawURL string) (string, error) {

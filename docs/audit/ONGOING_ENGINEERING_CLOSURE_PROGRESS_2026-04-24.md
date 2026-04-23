@@ -233,10 +233,38 @@
 
 ## 12. Cycle 8 - WebSocket 边界 B3/B4/B5
 
-状态：`PENDING`
+状态：`FIXED`
 
 目标：
 
 - 复核 root WS routes 是否统一经过 origin、连接数、read limit、idle timeout、ping/pong、metrics 链。
 - 复核 community WS proxy 是否仍有 token URL 暴露、idle/ping-pong/per-user limit 缺口。
 - 复核 STT WebSocket origin 是否已使用统一 allowlist。
+
+源码复核结论：
+
+- `FIXED/PREVIOUSLY`：`/ws/chat`、`/ws/files`、`/ws/stt`、community WS proxy 路由均先经过 `WsAuthMiddleware`；chat/files handler 已有 origin upgrader、read limit、连接限制和 metrics。
+- `CONFIRMED`：community WS proxy 仍将 token 拼进后端 URL，例如 `/api/v1/community/ws/connect?token=...`，且 group WS 也会追加 query token。
+- `CONFIRMED`：community WS proxy 缺少 per-user proxy 连接限制、read limit、pong deadline、ping ticker。
+- `CONFIRMED`：STT upgrader 仍 `CheckOrigin: return true`。
+
+修复：
+
+- community WS proxy 改为只通过 `Authorization: Bearer ...` 向 Python 后端透传 token，后端 URL 不再携带 token。
+- community WS proxy 增加 per-user 连接计数，复用 `WS_MAX_CONNECTIONS_PER_USER`。
+- community WS proxy 增加 read limit、pong deadline、ping ticker、write deadline，并用写锁避免 ping 与转发并发写同一连接。
+- STT handler 构造函数接收 `config.Config`，origin 校验改用 `IsOriginAllowed()`；无 Origin 的同源/非浏览器连接仍允许。
+
+验证：
+
+- `go test ./internal/handler ./internal/middleware ./internal/config ./cmd/server` -> PASS
+
+## 13. Next Queue
+
+状态：`PENDING`
+
+下一批建议进入账本/幂等与并发：
+
+- C1 SignalHub map 并发竞态。
+- C4 Execution Service 幂等键随机化与类级故障状态。
+- D1/D3 Quota/LLM 预留与失败退款。

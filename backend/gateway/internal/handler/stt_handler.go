@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/sparkle/gateway/internal/config"
 	"go.uber.org/zap"
 )
 
@@ -17,21 +18,32 @@ type STTHandler struct {
 	pythonSTTUrl string
 	upgrader     websocket.Upgrader
 	logger       *zap.Logger
+	config       *config.Config
 }
 
 // NewSTTHandler creates a new STT handler
-func NewSTTHandler(pythonSTTUrl string, logger *zap.Logger) *STTHandler {
+func NewSTTHandler(pythonSTTUrl string, logger *zap.Logger, cfg *config.Config) *STTHandler {
 	return &STTHandler{
 		pythonSTTUrl: pythonSTTUrl,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
-				return true // Allow all origins for WebSocket
+				origin := r.Header.Get("Origin")
+				if origin == "" {
+					return true
+				}
+				allowed := cfg.IsOriginAllowed(origin)
+				if !allowed {
+					logger.Warn("STT WebSocket rejected connection from unauthorized origin",
+						zap.String("origin", origin))
+				}
+				return allowed
 			},
 			HandshakeTimeout: 10 * time.Second,
 			ReadBufferSize:   4096,
 			WriteBufferSize:  4096,
 		},
 		logger: logger,
+		config: cfg,
 	}
 }
 
@@ -55,6 +67,11 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 		return
 	}
 	defer clientConn.Close()
+	readLimit := h.config.WSMaxMessageBytes
+	if readLimit <= 0 {
+		readLimit = 1 << 20
+	}
+	clientConn.SetReadLimit(readLimit)
 
 	// Extract user_id from context (set by auth middleware)
 	userID := c.GetString("user_id")
