@@ -40,10 +40,7 @@ func TestQuotaService_ReserveRequest(t *testing.T) {
 		exists := s.Exists(fmt.Sprintf("quota:request:%s:%s", uid, reqID))
 		assert.True(t, exists)
 
-		// Verify sync queue
-		l, err := s.List("queue:sync:quota")
-		assert.NoError(t, err)
-		assert.Len(t, l, 1)
+		assert.False(t, s.Exists("queue:sync:quota"))
 	})
 
 	t.Run("Reserve with insufficient quota", func(t *testing.T) {

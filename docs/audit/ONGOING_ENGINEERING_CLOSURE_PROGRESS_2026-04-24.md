@@ -408,3 +408,27 @@
 
 - `python3 -m compileall backend/app/services/photon_service.py backend/app/api/v1/photons.py backend/tests/unit/test_photon_service.py backend/tests/api/test_photons_api.py` -> PASS
 - `pytest backend/tests/unit/test_photon_service.py backend/tests/api/test_photons_api.py` -> `16 passed`
+
+## 19. Cycle 14 - Quota 死队列清理 D1
+
+状态：`FIXED`
+
+目标：
+
+- 复核 `queue:sync:quota` 是否仍只有 producer、没有任何 consumer/reconciliation worker。
+- 若确认是死队列，清理 quota 脚本与服务层中的无效 enqueue，避免持续积累无消费状态。
+
+源码复核结论：
+
+- `CONFIRMED`：`DecrQuota()`、`ReserveRequest()`、`RefundReservation()` 都仍向 `queue:sync:quota` 推送事件。
+- `CONFIRMED`：当前仓库内未发现对应 consumer、worker 或 reconciliation 入口；`queue:sync:quota` 是死队列。
+
+修复：
+
+- `decr_quota.lua` / `reserve_quota.lua` / `refund_quota.lua` 移除 `RPUSH queue:sync:quota`。
+- `QuotaService` 移除仅为 queue payload 存在的 JSON 构造与多余 queue key 传参。
+- 单测改为显式断言不会再创建 `queue:sync:quota`。
+
+验证：
+
+- `go test ./internal/service ./internal/db ./internal/handler` -> PASS
