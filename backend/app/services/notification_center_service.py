@@ -957,7 +957,6 @@ class NotificationCenterService:
                 {
                     "category": push_record.category,
                     "policy_id": push_record.policy_id,
-                    "evidence_token": push_record.evidence_token,
                     "message_template_id": push_record.message_template_id,
                     "delivery_record_id": str(push_record.id),
                     "delivery_channel": push_record.delivery_channel,
