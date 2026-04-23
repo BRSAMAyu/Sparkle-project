@@ -59,6 +59,8 @@ class AuroraStage26SceneKillSwitchService:
         return await self.get_mode()
 
     async def reset_quality_streak(self) -> None:
+        from app.config import settings
+
         redis_client = cache_service.redis
         if redis_client is not None:
             await redis_client.delete(f"{self.PREFIX}{self.QUALITY_STREAK_KEY}")

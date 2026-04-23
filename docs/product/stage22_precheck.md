@@ -12,13 +12,13 @@
 ## Stage 27
 
 - verdict: Foresight remains a new capability, not an extension
-- evidence: `backend/app/services/theater/prediction_theater_service.py` exists with 3749 lines, but current prediction theater is scoped to learning-result prediction rather than time-window / attractor / deviation foresight.
+- evidence: `backend/app/services/theater/prediction_theater_service.py` exists with 3796 lines, but current prediction theater is scoped to learning-result prediction rather than time-window / attractor / deviation foresight.
 - dispatch implication: keep Rule AJ and kill-switch split.
 
 ## Stage 29
 
 - verdict: SRL remains refactor + new service
-- evidence: `backend/app/scaffolding/scaffolding_fsm.py` exists with 195 lines and only tracks scaffolding zones, not explicit Forethought / Performance / Reflection phases.
+- evidence: `backend/app/scaffolding/scaffolding_fsm.py` exists with 288 lines and only tracks scaffolding zones, not explicit Forethought / Performance / Reflection phases.
 - dispatch implication: keep `SRLPhaseTracker` beside `ScaffoldingFSM`, not inside orchestrator transitions.
 
 ## Baseline Registration
