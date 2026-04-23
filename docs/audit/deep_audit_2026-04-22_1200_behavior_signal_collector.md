@@ -344,3 +344,27 @@ if ratios:
 | P1-3 (硬编码中文) | Rounds #48→#128 (i18n 九连) | 系统性硬编码中文反模式 |
 | P0-1 (零校验) | Round #47 P1-2 (FileIds 未验证) | 事件输入零校验 — 防御纵深缺失 |
 | P0-3 (无冷却重规划) | Round #20 P0-2 (认知模式不触发 FSM 更新) | 自适应闭环的触发/抑制机制不完整 |
+
+---
+
+## Chris (Session 5) 复核 — 2026-04-23
+
+> 逐项验证 P0 发现对主项目当前代码 (`/Users/brsama/code/GitHub/Sparkle-project/`)。
+
+### P0 验证
+
+| 原始发现 | 文件 | 行号 | 当前状态 | 结论 |
+|----------|------|------|---------|------|
+| P0-1 event dict 零校验 | `behavior_signal_collector.py` | :50-52, :62-63 `UUID(str(event["user_id"]))` | 代码未变, 无 try/except 包裹 | **CONFIRMED** |
+| P0-2 Redis 冷却 fail-open | `behavior_signal_collector.py` | :274-278 `_signal_on_cooldown` | `except Exception: return False` 仍存在 | **CONFIRMED** |
+| P0-3 pattern_adjustment 无冷却 | `behavior_signal_collector.py` | :264-272 `_maybe_emit_pattern_adjustment` | 无冷却检查, `pattern_name=None` 仍存在 | **CONFIRMED** |
+
+### P1 抽样验证
+
+| 发现 | 结论 |
+|------|------|
+| P1-4 pattern_name=None | **CONFIRMED** — `:271` 仍然传入 `pattern_name=None` |
+
+### 总结
+
+报告质量高，行号精确，3个P0全部确认仍存在。代码自审计以来无变化。`behavior_signal_collector.py` 属于可修复范围——P0-3(添加冷却)、P0-2(fail-closed)、P0-1(入口校验) 均为 ~5-10 行低风险修复。

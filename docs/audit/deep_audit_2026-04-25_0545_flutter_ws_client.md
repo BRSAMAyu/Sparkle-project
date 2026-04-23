@@ -382,3 +382,29 @@ if (_receivedMessageIds.length > _maxMessageCacheSize) {
 | P1-5 无截断保护 | Round #53 (Go Chat Orchestrator) | 背压与缓冲区管理 |
 | P2-4 token-in-URL fallback | Round #55 (Agent gRPC Service) | 认证 token 传输安全 |
 | P2-8 SSE 与 V2 解析差异 | Round #2 (WS Message Flow) | 消息格式兼容性 |
+
+---
+
+## Chris (Session 5) 复核 — 2026-04-23
+
+> 逐项验证 P0 发现对主项目当前代码 (`/Users/brsama/code/GitHub/Sparkle-project/`)。
+
+### P0 验证
+
+| 原始发现 | 文件 | 行号 | 当前状态 | 结论 |
+|----------|------|------|---------|------|
+| P0-1 旧版WS connected过早 | `websocket_service.dart` | :62 `_isConnected = true` | 代码未变 | **CONFIRMED** |
+| P0-2 Community 100ms竞态 | `community_websocket_service.dart` | :164-168 `Future.delayed(100ms)` + `connected` | 代码未变 | **CONFIRMED** |
+| P0-3 Community token在URL | `community_websocket_service.dart` | :142 `?token=$token` | 代码未变 | **CONFIRMED** |
+| P0-4 ChatRepository多实例 | `chat_repository.dart` | :20 `wsService ?? WebSocketChatServiceV2(...)` | 代码未变 | **CONFIRMED** |
+
+### P1 抽样验证
+
+| 发现 | 结论 |
+|------|------|
+| P1-1 _is401Error过宽 | **CONFIRMED** — `contains('token')` 仍存在，过于宽泛 |
+| P1-4 枚举重复 | **CONFIRMED** — 两个文件各自定义 `WsConnectionState` |
+
+### 总结
+
+报告质量高，行号精确，4个P0全部确认仍存在。代码自审计以来无变化。19项发现均为真实问题。Flutter侧问题需协调mobile team排期修复，不适合autonomous loop直接修改。

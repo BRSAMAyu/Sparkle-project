@@ -284,3 +284,36 @@ UUID 格式由类型系统保证，但如果 user_id 对应的用户不存在，
 | P1-1 (串行查询) | Round #44 (State Aggregator) | 聚合服务的并行化改进机会 |
 | P1-4 (无 token 预算) | Round #54 P1-4 (Token 预算 len/4) | Token 预算在多个层级不一致 |
 | P1-5 (字段名误导) | Round #52 P1-5 (无类型化 schema) | 命名语义不一致导致下游误用 |
+
+---
+
+## Chris (Session 5) 复核 — 2026-04-23
+
+> 逐项验证 P0 发现对主项目当前代码 (`/Users/brsama/code/GitHub/Sparkle-project/`)。
+
+### P0 验证
+
+| 原始发现 | 文件 | 行号 | 当前状态 | 结论 |
+|----------|------|------|---------|------|
+| P0-1 缓存不清除 | `profile_context_service.py` | 全文 | **FALSE** — `profile_event_consumer.py:74,107,117,126` 在 4 种事件类型下调用 `_invalidate_profile_context_cache()` 清除 `user:profile_context:{user_id}` | **FALSE** |
+| P0-2 伪造掌握度数据 | `profile_context_service.py` | :280-288 `old_mastery=max(0.0, 42.0 - delta)` | 代码未变 | **CONFIRMED** |
+
+### P0-1 FALSE 详解
+
+审计报告声称 "grep delete/clear/invalidat 零匹配"。实际上 `profile_event_consumer.py` 在以下事件中清除缓存:
+- `profile.preference.updated` (:74)
+- `profile.preference.deleted` (:107)
+- `knowledge.updated` (:117)
+- `behavior.pattern.updated` (:126)
+
+这些事件通过 EventBus 消费链路正确触发，覆盖了偏好/知识/认知三大域的变更。报告遗漏了 `profile_event_consumer.py` 这个关键文件。
+
+### P1 抽样验证
+
+| 发现 | 结论 |
+|------|------|
+| P1-1 串行 DB 查询 | **CONFIRMED** — :159-230 四个查询仍为串行 |
+
+### 总结
+
+P0-1 为 FALSE（缓存清除存在于 `profile_event_consumer.py`，审计遗漏了消费方）。P0-2 (伪造掌握度) CONFIRMED。报告整体质量中等——数据流图准确但遗漏了关键的缓存清除路径。

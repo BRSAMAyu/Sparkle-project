@@ -136,3 +136,30 @@
 - Check if Event Bus main stream MAXLEN fix from S1 is still in place
 - Consider whether we've reached diminishing returns on str(e) fixes
 - Run broader test suite to confirm stability
+
+### Session 6 — 2026-04-23 (Sixth Run — Chris S5)
+
+**Focus**: 复核+新审混合模式 — 2个✅报告复核 + 1个新模块审计
+
+**复核结果**:
+
+| ID | Module | Original P0 | Verdict | Key Finding |
+|----|--------|------------|---------|-------------|
+| #56 | Flutter WS Client | 4×P0 | ALL CONFIRMED | 代码完全未变, 4×P0全部真实, 需mobile team排期 |
+| #58 | BehaviorSignalCollector | 3×P0 | ALL CONFIRMED | UUID零校验+Redis fail-open+无冷却重规划 |
+| #61 | ProfileContextService | 2×P0 | **P0-1 FALSE** | `profile_event_consumer.py` 已有4种事件缓存清除, 审计遗漏了消费方文件 |
+
+**新审结果**:
+
+| ID | Module | P0 | P1 | P2 | Key Findings |
+|----|--------|----|----|----|----|
+| #63 | STT Service | 2 | 5 | 3 | P0-1: XunFei错误作为转录文本yield; P0-2: 并发WS关闭共享Provider单例 |
+
+**Commits**: 本次为纯审计复核+新审, 无代码修改, 无commit
+
+**Next Session Should**:
+- 修复 #58 BehaviorSignalCollector P0-2 (Redis fail-closed ~5行) + P0-3 (添加冷却 ~10行)
+- 修复 #63 STT Service P0-1 (错误文本区分 ~15行) + P0-2 (移除 finally close ~2行)
+- 修复 #61 ProfileContextService P0-2 (伪造掌握度→返回空列表 ~5行)
+- 继续✅报告复核 (#59 Go Proxy Routes, #60 FastAPI Route Handlers)
+
