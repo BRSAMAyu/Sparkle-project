@@ -6,7 +6,7 @@
 
 | ID | Slice | P | Status | Title | Claimed | Updated |
 |----|-------|---|--------|-------|---------|---------|
-| ISSUE-20260424-001 | 01 | P1 | open | Go validateJWT 不检查 session_revoked:{sid}，设备下线不立即生效 | - | 19:05 |
+| ISSUE-20260424-001 | 01 | P1 | open | Go validateJWT 不检查 session_revoked:{sid}，设备下线不立即生效 | fixer@2026-04-24T20:35 | 20:35 |
 | ISSUE-20260424-002 | 01 | P1 | open | AppleLogin UpdateUserLastLogin 和 UpsertUserSession 错误静默丢弃 | - | 19:05 |
 | ISSUE-20260424-003 | 01 | P1 | open | Guest login 限流 100/15min 过于宽松，可被滥用刷号 | - | 19:05 |
 | ISSUE-20260424-004 | 01 | P2 | open | Guest login SELECT-INSERT 竞态条件，并发同 guest_id 返回 500 | - | 19:05 |
