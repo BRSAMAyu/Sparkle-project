@@ -8,7 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 from loguru import logger
-from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy import and_, case, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import lazyload
 
@@ -452,31 +452,30 @@ class PhotonService:
 
             # 在单一事务中执行转账
             async with tx_context:
-                # 先检查转出用户余额
-                from_balance = await self.get_balance(from_user_id)
-                if from_balance < amount:
+                locked_users: dict[str, User] = {}
+                for lock_user_id in sorted({from_user_id, to_user_id}):
+                    locked_users[lock_user_id] = await self._lock_user_balance_row(lock_user_id)
+
+                from_user = locked_users[from_user_id]
+                to_user = locked_users[to_user_id]
+                old_from = from_user.photon_balance or 0
+                old_to = to_user.photon_balance or 0
+
+                if old_from < amount:
                     raise ValueError(
-                        f"Insufficient photon balance: {from_balance} < {amount}"
+                        f"Insufficient photon balance: {old_from} < {amount}"
                     )
 
-                # 扣除转出用户（使用内部方法，不提交）
-                old_from, new_from, _ = await self._update_balance(
-                    from_user_id, -amount, delete_cache=False
-                )
-
-                # 发放给转入用户（使用内部方法，不提交）
-                old_to, new_to, _ = await self._update_balance(
-                    to_user_id, amount, delete_cache=False
-                )
-
-                # 删除两个用户的缓存
-                cache_key_from = f"{settings.APP_NAME}:photon:balance:{from_user_id}"
-                cache_key_to = f"{settings.APP_NAME}:photon:balance:{to_user_id}"
-                await cache_service.delete(cache_key_from)
-                await cache_service.delete(cache_key_to)
+                new_from = old_from - amount
+                new_to = old_to + amount
+                from_user.photon_balance = new_from
+                from_user.updated_at = _utcnow()
+                to_user.photon_balance = new_to
+                to_user.updated_at = _utcnow()
+                await self.db.flush()
 
                 # 记录转出用户交易历史（修复bug：转账未记录交易）
-                await self.record_transaction(
+                transfer_out_transaction = await self.record_transaction(
                     user_id=from_user_id,
                     transaction_type="transfer_out",
                     amount=-amount,
@@ -497,7 +496,11 @@ class PhotonService:
                     extra_data={"sender_id": from_user_id, "reason": reason}
                 )
 
-            # 事务已自动提交
+            cache_key_from = f"{settings.APP_NAME}:photon:balance:{from_user_id}"
+            cache_key_to = f"{settings.APP_NAME}:photon:balance:{to_user_id}"
+            await cache_service.delete(cache_key_from)
+            await cache_service.delete(cache_key_to)
+
             logger.info(
                 f"Transferred {amount} photons from {from_user_id} to {to_user_id}, "
                 f"reason={reason}, from_balance={new_from}, to_balance={new_to}"
@@ -509,7 +512,8 @@ class PhotonService:
                 "amount": amount,
                 "from_balance": new_from,
                 "to_balance": new_to,
-                "reason": reason
+                "reason": reason,
+                "transfer_id": str(transfer_out_transaction.id),
             }
         except Exception as e:
             logger.error(f"Transfer failed: {e}")
@@ -663,36 +667,46 @@ class PhotonService:
 
         since_date = _utcnow() - timedelta(days=days)
 
-        # 查询交易历史
-        query = select(PhotonTransactionHistory).where(
-            and_(
-                PhotonTransactionHistory.user_id == user_id,
-                PhotonTransactionHistory.created_at >= since_date
-            )
+        base_filter = and_(
+            PhotonTransactionHistory.user_id == user_id,
+            PhotonTransactionHistory.created_at >= since_date
         )
+        summary_query = select(
+            func.coalesce(
+                func.sum(case((PhotonTransactionHistory.amount > 0, PhotonTransactionHistory.amount), else_=0)),
+                0,
+            ),
+            func.coalesce(
+                func.sum(case((PhotonTransactionHistory.amount < 0, -PhotonTransactionHistory.amount), else_=0)),
+                0,
+            ),
+            func.count(PhotonTransactionHistory.id),
+        ).where(base_filter)
+        summary_result = await self.db.execute(summary_query)
+        total_income, total_expense, transaction_count = summary_result.one()
 
-        result = await self.db.execute(query)
-        transactions = result.scalars().all()
+        by_type_query = (
+            select(
+                PhotonTransactionHistory.transaction_type,
+                func.coalesce(func.sum(PhotonTransactionHistory.amount), 0),
+            )
+            .where(base_filter)
+            .group_by(PhotonTransactionHistory.transaction_type)
+        )
+        by_type_result = await self.db.execute(by_type_query)
 
-        # 统计
-        total_income = sum(t.amount for t in transactions if t.amount > 0)
-        total_expense = sum(abs(t.amount) for t in transactions if t.amount < 0)
-        net_change = total_income - total_expense
-
-        # 按类型分组
         by_type = {}
-        for t in transactions:
-            # Handle both enum and string types
-            type_key = t.transaction_type.value if hasattr(t.transaction_type, 'value') else str(t.transaction_type)
-            if type_key not in by_type:
-                by_type[type_key] = 0
-            by_type[type_key] += t.amount
+        for transaction_type, amount in by_type_result.all():
+            type_key = transaction_type.value if hasattr(transaction_type, "value") else str(transaction_type)
+            by_type[type_key] = int(amount or 0)
+
+        net_change = int(total_income or 0) - int(total_expense or 0)
 
         return {
-            "total_income": total_income,
-            "total_expense": total_expense,
+            "total_income": int(total_income or 0),
+            "total_expense": int(total_expense or 0),
             "net_change": net_change,
-            "transaction_count": len(transactions),
+            "transaction_count": int(transaction_count or 0),
             "by_type": by_type,
             "period_days": days
         }

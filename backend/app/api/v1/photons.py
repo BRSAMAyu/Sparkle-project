@@ -4,8 +4,6 @@ Photon API Endpoints
 """
 from __future__ import annotations
 from typing import Any
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -148,7 +146,7 @@ async def transfer_photons(
             "success": True,
             "message": f"Successfully transferred {request.amount} photons",
             "data": result,
-            "transfer_id": str(UUID("00000000-0000-0000-0000-000000000000")),  # Placeholder
+            "transfer_id": result["transfer_id"],
             "sender_balance_before": result["from_balance"] + request.amount,
             "sender_balance_after": result["from_balance"],
             "recipient_username": recipient_username,

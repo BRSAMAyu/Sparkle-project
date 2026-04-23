@@ -114,3 +114,52 @@ def test_adjust_requires_idempotency_key_after_superuser_auth():
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Idempotency-Key header is required"
+
+
+def test_transfer_returns_real_transfer_id():
+    app = _build_app()
+    transfer_id = str(uuid4())
+    mock_service = SimpleNamespace(
+        transfer_photons=AsyncMock(
+            return_value={
+                "from_user_id": str(uuid4()),
+                "to_user_id": str(uuid4()),
+                "amount": 25,
+                "from_balance": 75,
+                "to_balance": 25,
+                "reason": "gift",
+                "transfer_id": transfer_id,
+            }
+        ),
+    )
+
+    async def _override_get_db():
+        db = MagicMock(spec=AsyncSession)
+        execute_result = MagicMock()
+        execute_result.scalar_one_or_none.return_value = "receiver"
+        db.execute = AsyncMock(return_value=execute_result)
+        yield db
+
+    async def _override_user():
+        return SimpleNamespace(id=uuid4(), username="sender")
+
+    from app.api.deps import get_current_user
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_user
+
+    with patch("app.api.v1.photons.get_photon_service", return_value=mock_service):
+        with TestClient(app) as client:
+            response = client.post(
+                "/photons/transfer",
+                json={
+                    "recipient_id": str(uuid4()),
+                    "amount": 25,
+                    "message": "gift",
+                },
+                headers={"Idempotency-Key": "transfer-1"},
+            )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["transfer_id"] == transfer_id

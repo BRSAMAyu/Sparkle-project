@@ -378,3 +378,33 @@
 验证：
 
 - `go test ./internal/service ./internal/handler ./internal/db` -> PASS
+
+## 18. Cycle 13 - Photon 转账与汇总 D2
+
+状态：`FIXED`
+
+目标：
+
+- 复核 Photon 转账是否仍先读缓存余额、再做数据库更新，导致前置判断与真实行锁状态分裂。
+- 复核转账是否仍按调用顺序锁定双方余额，存在反向转账死锁风险。
+- 复核 `/photons/transfer` 是否仍返回 placeholder transfer UUID。
+- 复核 transaction summary 是否仍把整段历史拉回 Python 聚合。
+
+源码复核结论：
+
+- `CONFIRMED`：`transfer_photons()` 先 `get_balance()` 读缓存余额，再通过 `_update_balance()` 逐个更新，前置校验与真实事务锁定路径不一致。
+- `CONFIRMED`：`transfer_photons()` 对 `from_user_id`、`to_user_id` 的行锁顺序依赖调用顺序，反向并发转账存在死锁窗口。
+- `CONFIRMED`：`/photons/transfer` 仍返回固定 `00000000-0000-0000-0000-000000000000` placeholder。
+- `CONFIRMED`：`get_transaction_summary()` 仍把近 N 天交易全量加载到 Python 后再 `sum()` / 分组。
+
+修复：
+
+- `transfer_photons()` 改为在单事务中按 `sorted(user_id)` 固定顺序 `SELECT ... FOR UPDATE` 锁定双方用户行。
+- 转账前余额判断改为使用已锁定发送方行的真实余额，不再依赖缓存值。
+- 转账返回 payload 带真实 `transfer_id`，API 层直接透传，不再造 placeholder UUID。
+- `get_transaction_summary()` 改为 SQL 聚合：`SUM/COUNT/GROUP BY` 在数据库侧完成。
+
+验证：
+
+- `python3 -m compileall backend/app/services/photon_service.py backend/app/api/v1/photons.py backend/tests/unit/test_photon_service.py backend/tests/api/test_photons_api.py` -> PASS
+- `pytest backend/tests/unit/test_photon_service.py backend/tests/api/test_photons_api.py` -> `16 passed`

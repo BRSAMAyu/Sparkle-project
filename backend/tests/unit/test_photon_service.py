@@ -290,3 +290,72 @@ async def test_grant_photons_skips_commit_when_transaction_managed_externally(
     await db_session.rollback()
     await db_session.refresh(test_user)
     assert test_user.photon_balance == 0
+
+
+@pytest.mark.asyncio
+async def test_transfer_photons_returns_real_transaction_id_and_updates_balances(
+    db_session: AsyncSession,
+    test_user: User,
+):
+    service = PhotonService(db_session)
+    other_user = User(
+        username="transfer_target",
+        email="transfer_target@example.com",
+        hashed_password="hashed",
+        photon_balance=10,
+    )
+    db_session.add(other_user)
+    await db_session.commit()
+    await db_session.refresh(other_user)
+
+    await service.grant_photons(
+        user_id=str(test_user.id),
+        amount=100,
+        source="initial",
+    )
+
+    result = await service.transfer_photons(
+        from_user_id=str(test_user.id),
+        to_user_id=str(other_user.id),
+        amount=30,
+        reason="gift",
+    )
+
+    out_txn = await db_session.get(PhotonTransactionHistory, result["transfer_id"])
+    assert out_txn is not None
+    assert result["from_balance"] == 70
+    assert result["to_balance"] == 40
+    assert out_txn.user_id == test_user.id
+    assert out_txn.amount == -30
+
+
+@pytest.mark.asyncio
+async def test_get_transaction_summary_aggregates_in_sql(
+    db_session: AsyncSession,
+    test_user: User,
+):
+    service = PhotonService(db_session)
+
+    await service.grant_photons(
+        user_id=str(test_user.id),
+        amount=120,
+        source="achievement:a1",
+        transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
+        record_history=True,
+        related_item_id="achievement-a1",
+    )
+    await service.deduct_photons(
+        user_id=str(test_user.id),
+        amount=50,
+        reason="shop:test",
+        record_history=True,
+        related_item_id="shop-item-1",
+    )
+
+    summary = await service.get_transaction_summary(str(test_user.id), days=30)
+
+    assert summary["total_income"] == 120
+    assert summary["total_expense"] == 50
+    assert summary["net_change"] == 70
+    assert summary["transaction_count"] == 2
+    assert summary["by_type"][PhotonTransactionType.GRANT_ACHIEVEMENT] == 120
