@@ -410,11 +410,6 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
 	}
 
 	return func(c *gin.Context) {
-		if shouldBypassGlobalRateLimit(c) {
-			c.Next()
-			return
-		}
-
 		clientID := c.GetString("user_id")
 		if clientID == "" {
 			clientID = "ip:" + c.ClientIP()
@@ -466,15 +461,6 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
 		c.Header("X-RateLimit-Remaining", strconv.FormatInt(remaining, 10))
 		c.Next()
 	}
-}
-
-func shouldBypassGlobalRateLimit(c *gin.Context) bool {
-	if c.Request.Method != http.MethodPost {
-		return false
-	}
-	path := c.Request.URL.Path
-	return strings.HasSuffix(path, "/api/v1/client-telemetry/events") ||
-		strings.HasSuffix(path, "/api/v1/client-telemetry/events/batch")
 }
 
 func normalizeRateLimitRoutePath(c *gin.Context) string {

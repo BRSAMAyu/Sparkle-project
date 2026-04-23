@@ -503,3 +503,25 @@
 
 - `python3 -m compileall backend/app/core/llm_quota.py backend/tests/unit/test_llm_quota.py` -> PASS
 - `pytest backend/tests/unit/test_llm_quota.py backend/tests/unit/test_llm_security_wrapper.py` -> `36 passed`
+
+## 23. Cycle 18 - Telemetry 全局限流豁免移除 D1
+
+状态：`FIXED`
+
+目标：
+
+- 复核匿名 `client-telemetry` ingest 是否仍绕过 Gateway 全局限流。
+
+源码复核结论：
+
+- `CONFIRMED`：`HybridRateLimitMiddleware()` 仍在 `POST /api/v1/client-telemetry/events` 与 `/events/batch` 上直接 `c.Next()`，匿名 telemetry ingest 不经过任何全局限流。
+- `CONFIRMED`：当前限流 key 已经按 `user/IP + method + normalized route` 隔离，保留该豁免已无必要，只会留下匿名高频写入口。
+
+修复：
+
+- 移除 telemetry ingest 的全局限流 bypass，匿名 telemetry 继续保持“免认证可写”，但不再“免限流可刷”。
+- 用中间件级回归测试覆盖 telemetry POST 第二次请求会命中 429，确保后续不会再悄悄放开。
+
+验证：
+
+- `go test ./internal/middleware ./internal/handler` -> PASS
