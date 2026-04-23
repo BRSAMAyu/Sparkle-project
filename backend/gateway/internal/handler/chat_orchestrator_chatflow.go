@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -36,7 +36,7 @@ const (
 )
 
 func shortHash(parts ...string) string {
-	h := sha1.New()
+	h := sha256.New()
 	for _, part := range parts {
 		if _, err := h.Write([]byte(part)); err != nil {
 			return "hash_error"
@@ -383,6 +383,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 
+	quotaReserved := false
 	if h.quota != nil && !skipQuota {
 		quotaCtx, quotaSpan := tracer.Start(ctx, "quota.reserve")
 		remaining, err := h.quota.ReserveRequest(quotaCtx, userID, reqID, 24*time.Hour)
@@ -405,6 +406,20 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		} else {
 			span := trace.SpanFromContext(ctx)
 			span.SetAttributes(attribute.Int64("quota_remaining", remaining))
+			quotaReserved = true
+		}
+	}
+	refundQuotaReservation := func(reason string) {
+		if !quotaReserved {
+			return
+		}
+		quotaReserved = false
+		refundCtx, cancelRefund := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancelRefund()
+		if remaining, err := h.quota.RefundReservation(refundCtx, userID, reqID, 24*time.Hour); err != nil {
+			log.Printf("Failed to refund quota reservation user=%s request=%s reason=%s err=%v", userID, reqID, reason, err)
+		} else {
+			log.Printf("Refunded quota reservation user=%s request=%s reason=%s remaining=%d", userID, reqID, reason, remaining)
 		}
 	}
 
@@ -443,6 +458,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	if h.agentClient == nil {
 		log.Printf("Agent client not initialized")
+		refundQuotaReservation("agent_client_unavailable")
 		switch r := responder.(type) {
 		case *envelopeResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
@@ -461,6 +477,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	if err != nil {
 		log.Printf("Failed to call StreamChat: %v", err)
+		refundQuotaReservation("stream_chat_call_failed")
 		switch r := responder.(type) {
 		case *envelopeResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
@@ -502,6 +519,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 		if err != nil {
 			log.Printf("Stream recv error: %v", err)
+			refundQuotaReservation("stream_recv_failed")
 			respondStreamRecvError(responder, err)
 			return false
 		}
@@ -700,10 +718,12 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			"response_id":    doneResp.ResponseId,
 		})
 
+		cacheCtx, cancelCache := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		go func() {
+			defer cancelCache()
 			// Update Semantic Cache
 			if h.semantic != nil {
-				if err := h.semantic.SetExact(context.Background(), cacheScope, queryText, result); err != nil {
+				if err := h.semantic.SetExact(cacheCtx, cacheScope, queryText, result); err != nil {
 					log.Printf("Failed to update cache: %v", err)
 				}
 			}

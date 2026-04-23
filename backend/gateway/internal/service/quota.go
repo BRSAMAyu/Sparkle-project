@@ -112,6 +112,46 @@ func (s *QuotaService) ReserveRequest(ctx context.Context, uid, requestID string
 	return remaining, nil
 }
 
+func (s *QuotaService) RefundReservation(ctx context.Context, uid, requestID string, ttl time.Duration) (int64, error) {
+	if requestID == "" {
+		return 0, fmt.Errorf("request_id is required for refund")
+	}
+
+	script := redis.NewScript(db.RefundQuotaScript)
+	payload, err := json.Marshal(reservePayload{
+		UID:       uid,
+		Delta:     1,
+		TS:        time.Now().Unix(),
+		RequestID: requestID,
+		Type:      "refund",
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal refund payload: %w", err)
+	}
+
+	result, err := script.Run(ctx, s.rdb,
+		[]string{
+			fmt.Sprintf("user:quota:%s", uid),
+			fmt.Sprintf("quota:request:%s:%s", uid, requestID),
+			"queue:sync:quota",
+		},
+		payload,
+		int64(ttl.Seconds()),
+	).Slice()
+	if err != nil {
+		return 0, err
+	}
+	if len(result) < 2 {
+		return 0, fmt.Errorf("unexpected refund result")
+	}
+
+	remaining, ok := result[1].(int64)
+	if !ok {
+		return 0, fmt.Errorf("unexpected refund remaining type")
+	}
+	return remaining, nil
+}
+
 func (s *QuotaService) RecordUsage(ctx context.Context, uid, requestID string, totalTokens int64, ttl time.Duration) (bool, error) {
 	if requestID == "" {
 		return false, nil
@@ -128,7 +168,7 @@ func (s *QuotaService) RecordUsage(ctx context.Context, uid, requestID string, t
 		},
 		fmt.Sprintf("%d", totalTokens),
 		fmt.Sprintf("%d", int64(ttl.Seconds())),
-		fmt.Sprintf("%d", int64((24 * time.Hour).Seconds())),
+		fmt.Sprintf("%d", int64((24*time.Hour).Seconds())),
 	).Int64()
 	if err != nil {
 		return false, err

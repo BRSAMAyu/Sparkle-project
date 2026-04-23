@@ -10,6 +10,9 @@ var DecrQuotaScript string
 //go:embed scripts/reserve_quota.lua
 var ReserveQuotaScript string
 
+//go:embed scripts/refund_quota.lua
+var RefundQuotaScript string
+
 //go:embed scripts/record_usage.lua
 var RecordUsageScript string
 

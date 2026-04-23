@@ -121,8 +121,8 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 		assert.Equal(t, "error", resp["type"])
 		assert.Equal(t, "AI Service Unavailable", resp["message"])
 
-		// Verify quota WAS decremented
+		// Verify quota was refunded because the request failed before reaching the agent stream.
 		val, _ := s.Get("user:quota:user_quota_test")
-		assert.Equal(t, "9", val)
+		assert.Equal(t, "10", val)
 	})
 }

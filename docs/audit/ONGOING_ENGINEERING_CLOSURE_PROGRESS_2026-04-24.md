@@ -350,3 +350,31 @@
 - `python3 -m compileall backend/app/services/llm_dispatcher.py backend/app/services/quota.py backend/tests/unit/test_llm_dispatcher_quota.py` -> PASS
 - `pytest backend/tests/unit/test_llm_dispatcher_quota.py` -> `3 passed`
 - `pytest backend/tests/unit/test_llm_prediction_routing.py backend/tests/unit/test_llm_quota.py` -> `35 passed`
+
+## 17. Cycle 12 - Go Chat Orchestrator 配额与缓存边界 D3
+
+状态：`FIXED`
+
+目标：
+
+- 复核 Go Chat Orchestrator 是否仍使用 SHA-1 短 hash 生成 semantic cache scope。
+- 复核 semantic cache 异步写入是否仍使用 `context.Background()` 脱离请求链。
+- 复核 request quota 预留后，在 agent client 不可用、StreamChat 建连失败、stream recv 失败时是否会漏退还。
+
+源码复核结论：
+
+- `CONFIRMED`：`shortHash()` 仍使用 SHA-1，并截断到 12 字符用于 cache scope。
+- `CONFIRMED`：semantic cache 写入 goroutine 使用 `context.Background()`，与请求 trace/value/cancellation 语义完全脱离。
+- `CONFIRMED`：`ReserveRequest()` 成功后，如果 `agentClient == nil` 或 `StreamChatWithFallback()`/`Recv()` 失败，handler 直接返回错误，没有恢复 `user:quota:{uid}` request quota。
+
+修复：
+
+- `shortHash()` 改用 SHA-256，保持短 scope 输出形态但移除 SHA-1 碰撞弱点。
+- semantic cache 异步写入改用 `context.WithoutCancel(ctx)` 派生的 5 秒 timeout context，保留请求 value/trace 语义，同时避免响应完成后立即取消后台缓存写。
+- 新增 `refund_quota.lua` 与 `QuotaService.RefundReservation()`：只有 reservation request key 存在时才 `INCR` quota 并推送 sync queue，重复 refund 不会重复加回。
+- Chat Orchestrator 在 agent client 不可用、StreamChat 建连失败、stream recv 失败三类“未完成请求”路径调用 reservation refund。
+- 更新 quota integration 测试：服务不可用前置失败时，quota 应退回而不是永久扣减。
+
+验证：
+
+- `go test ./internal/service ./internal/handler ./internal/db` -> PASS

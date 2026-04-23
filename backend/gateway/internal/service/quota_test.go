@@ -68,6 +68,23 @@ func TestQuotaService_ReserveRequest(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int64(9), remaining) // Should still be 9, not 8
 	})
+
+	t.Run("Refund reservation is idempotent", func(t *testing.T) {
+		s.Set(fmt.Sprintf("user:quota:%s", uid), "10")
+		reqID := "req_refund"
+
+		remaining, err := svc.ReserveRequest(ctx, uid, reqID, time.Minute)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(9), remaining)
+
+		remaining, err = svc.RefundReservation(ctx, uid, reqID, time.Minute)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(10), remaining)
+
+		remaining, err = svc.RefundReservation(ctx, uid, reqID, time.Minute)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(10), remaining)
+	})
 }
 
 func TestQuotaService_RecordUsage(t *testing.T) {
