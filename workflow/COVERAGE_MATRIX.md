@@ -50,7 +50,7 @@
 
 | # | slice | last_audited | round | last_issues_count | notes |
 |---|-------|--------------|-------|-------------------|-------|
-| 01 | auth_session | null | 0 | - | - |
+| 01 | auth_session | 2026-04-24T19:10+08:00 | 0 | 6 | Go不查session_revoked; AppleLogin静默丢错误; guest限流100/15min |
 | 02 | chat_websocket | null | 0 | - | - |
 | 03 | plan_review | null | 0 | - | - |
 | 04 | dual_core_router | null | 0 | - | - |
