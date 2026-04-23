@@ -25,7 +25,14 @@
 - next_cursor: 1 (slice 02-chat_websocket)
 - commit: pending
 
-## 2026-04-24T19:30:00+08:00 round=0 slice=02-chat_websocket
+## 2026-04-24T20:10:00+08:00 round=0 slice=skipped
+- directives_read: none active
+- produced: 0
+- deferred: 0
+- anchors_personally_read: none
+- deviations: SKIP — auditor.lock exists (started_at=20:00, claim=slice-03), another Auditor instance active on cursor=2 target slice. Respect lock.
+- next_cursor: unchanged (2)
+- commit: none
 - directives_read: none active (example advisory only)
 - produced: 6 issues (P0=0 P1=2 P2=4 P3=0)
   - 007 P1: saveMessage Redis 失败静默丢弃
