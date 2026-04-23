@@ -161,6 +161,67 @@ async def test_create_intent_applies_template_strategy_and_node_policy(
 
 
 @pytest.mark.asyncio
+async def test_execution_intent_idempotency_key_is_stable_per_task_attempt(
+    db_session,
+    openclaw_settings,
+    mute_execution_side_effects,
+) -> None:
+    user = User(
+        username="phase4stablekey",
+        email="phase4stablekey@example.com",
+        hashed_password="hashed",
+        photon_balance=0,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(
+        user_id=user.id,
+        title="整理网页资料",
+        type=TaskType.OCR,
+        tags=["research"],
+        estimated_minutes=20,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    service = ExecutionService(db=db_session)
+
+    first = await service._build_idempotency_key(task)
+    second = await service._build_idempotency_key(task)
+    assert first == second
+    assert first == f"execution-intent:noplan:{task.id}:attempt:1"
+
+    db_session.add(
+        ExecutionIntent(
+            task_id=task.id,
+            user_id=user.id,
+            plan_id=task.plan_id,
+            execution_mode=ExecutionMode.AGENT,
+            executor=ExecutorType.OPENCLAW,
+            goal="整理网页资料",
+            instructions=["输出摘要"],
+            target_env=ExecutionTargetEnv.BROWSER,
+            policy={},
+            success_criteria={"type": "non_empty"},
+            result_contract={},
+            timeout_seconds=60,
+            status=ExecutionIntentStatus.FAILED,
+            trust_level=TrustLevel.RAW,
+            idempotency_key=first,
+        )
+    )
+    await db_session.commit()
+
+    assert await service._build_idempotency_key(task) == f"execution-intent:noplan:{task.id}:attempt:2"
+
+
+@pytest.mark.asyncio
 async def test_create_intent_applies_default_shell_workdir(
     db_session,
     openclaw_settings,
@@ -1660,8 +1721,6 @@ async def test_consecutive_failures_trigger_degraded_manual_mode(
     await db_session.refresh(user)
 
     service = ExecutionService(db=db_session)
-    ExecutionService._failure_counts.clear()
-    ExecutionService._degraded_users.clear()
 
     for index in range(3):
         task = Task(
@@ -1685,7 +1744,8 @@ async def test_consecutive_failures_trigger_degraded_manual_mode(
         )
         assert intent.status == ExecutionIntentStatus.FAILED
 
-    snapshot = service.get_degradation_snapshot()
+    second_service = ExecutionService(db=db_session)
+    snapshot = await second_service.get_degradation_snapshot()
     assert snapshot["degraded_user_count"] == 1
     assert snapshot["failure_counts"][str(user.id)] >= 3
 
@@ -1703,7 +1763,7 @@ async def test_consecutive_failures_trigger_degraded_manual_mode(
     await db_session.commit()
     await db_session.refresh(blocked_task)
 
-    decision = await service.classify_task(task_id=blocked_task.id, user_id=user.id)
+    decision = await second_service.classify_task(task_id=blocked_task.id, user_id=user.id)
     assert decision.execution_mode == ExecutionMode.HUMAN
     with pytest.raises(ValueError, match="temporarily degraded"):
-        await service.create_intent(task_id=blocked_task.id, user_id=user.id)
+        await second_service.create_intent(task_id=blocked_task.id, user_id=user.id)

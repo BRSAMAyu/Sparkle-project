@@ -291,3 +291,35 @@
 
 - `go test ./internal/service` -> PASS
 - `go test -race ./internal/service -run TestSignalHub` -> PASS
+
+## 15. Cycle 10 - 执行幂等与降级状态 C4
+
+状态：`FIXED`
+
+目标：
+
+- 复核 `ExecutionService` 是否仍生成随机 idempotency key，导致同一执行尝试无法稳定去重。
+- 复核连续失败降级是否仍依赖类级全局 dict，导致进程内共享状态污染、跨实例语义不清。
+
+源码复核结论：
+
+- `CONFIRMED`：`_build_idempotency_key()` 使用 `uuid.uuid4().hex[:8]` 拼接 key，同一 task/plan 下重复构造会生成不同 key。
+- `CONFIRMED`：`_failure_counts` 与 `_degraded_users` 是 `ExecutionService` 类级 dict。由于 API 每次请求都会创建新 service，类级状态被用来维持跨实例降级，但它不是受控持久状态，也会把运行期降级语义绑死在单进程内存。
+
+修复：
+
+- `_build_idempotency_key()` 改为基于 `plan_id + task_id + 已有 execution_intents 数量` 生成稳定 attempt key，例如 `execution-intent:noplan:<task_id>:attempt:1`。
+- 同一 task 在未写入新 intent 前重复构造 key 保持一致；已有历史 intent 后进入下一 attempt，避免终态重试撞唯一约束。
+- 并发重复创建若撞到 idempotency unique constraint，会回滚后查询已存在 intent，并返回明确的 active execution 错误，避免数据库异常冒成 500。
+- 移除类级 failure/degraded dict 的运行依赖，降级状态改为从数据库中近期 terminal intents 的连续失败序列推导。
+- `FAILED` / `TIMED_OUT` 计入连续失败；任一非失败终态会自然打断连续失败链，保留“成功/取消/交回后不继续降级”的产品语义。
+- `get_health()` / admin dashboard 的 degraded snapshot 改为 async DB-derived snapshot。
+
+验证：
+
+- `python3 -m compileall backend/app/services/execution_service.py backend/tests/unit/test_openclaw_phase4.py` -> PASS
+- `pytest backend/tests/unit/test_openclaw_phase4.py::test_execution_intent_idempotency_key_is_stable_per_task_attempt backend/tests/unit/test_openclaw_phase4.py::test_consecutive_failures_trigger_degraded_manual_mode` -> `2 passed`
+- `pytest backend/tests/unit/test_openclaw_phase4.py` -> `26 passed`
+- `pytest backend/tests/unit/test_openclaw_phase2.py::test_create_intent_blocks_second_active_execution` -> `1 passed`
+- `pytest backend/tests/unit/test_openclaw_admin_api.py::test_execution_admin_routes_require_superuser backend/tests/unit/test_openclaw_admin_api.py::test_execution_admin_dashboard_available_for_superuser` -> `2 passed`
+- `pytest backend/tests/unit/test_openclaw_admin_api.py::test_user_execution_connection_status_is_available` -> `1 passed`

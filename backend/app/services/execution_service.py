@@ -9,7 +9,7 @@ import socket
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
@@ -17,6 +17,7 @@ from uuid import UUID
 import httpx
 from loguru import logger
 from sqlalchemy import String, cast, desc, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.openclaw import OpenClawClient, OpenClawConfig, IntentTranslator, ResultParser
@@ -75,8 +76,6 @@ class ExecutionService:
 
     _shared_classify_cache: dict[str, tuple[RoutingDecision, float]] = {}
     _classify_cache_ttl_seconds = 300.0
-    _failure_counts: dict[str, int] = {}
-    _degraded_users: dict[str, float] = {}
     _degradation_threshold = 3
     _degradation_window_seconds = 1800.0
 
@@ -134,7 +133,7 @@ class ExecutionService:
                 health_snapshot["reachable"] = False
                 health_snapshot["message"] = str(exc)
                 logger.exception("Unexpected OpenClaw node listing failure during health check")
-        degradation = self.get_degradation_snapshot()
+        degradation = await self.get_degradation_snapshot()
         return {
             "openclaw_enabled": self._config.enabled,
             "gateway_url": self._config.gateway_url if self._config.enabled else None,
@@ -336,7 +335,7 @@ class ExecutionService:
     async def classify_task(self, *, task_id: UUID, user_id: UUID) -> RoutingDecision:
         await self._ensure_runtime(user_id=user_id)
         task = await self._get_user_task(task_id=task_id, user_id=user_id)
-        if self._is_user_degraded(user_id):
+        if await self._is_user_degraded(user_id):
             return RoutingDecision(
                 execution_mode=ExecutionMode.HUMAN,
                 target_env=ExecutionTargetEnv.HUMAN,
@@ -781,7 +780,7 @@ class ExecutionService:
     ) -> ExecutionIntent:
         await self._ensure_runtime(user_id=user_id)
         task = await self._get_user_task(task_id=task_id, user_id=user_id)
-        if self._is_user_degraded(user_id):
+        if await self._is_user_degraded(user_id):
             task.execution_mode = ExecutionMode.HUMAN.value
             self._db.add(task)
             await self._db.commit()
@@ -914,7 +913,7 @@ class ExecutionService:
             )
         if node_selection:
             intent_policy["node_selection"] = node_selection
-        idempotency_key = self._build_idempotency_key(task)
+        idempotency_key = await self._build_idempotency_key(task)
 
         intent = ExecutionIntent(
             plan_id=task.plan_id,
@@ -936,7 +935,14 @@ class ExecutionService:
         self._db.add(intent)
         task.execution_mode = decision.execution_mode.value
         self._db.add(task)
-        await self._db.commit()
+        try:
+            await self._db.commit()
+        except IntegrityError as exc:
+            await self._db.rollback()
+            existing = await self._get_intent_by_idempotency_key(idempotency_key)
+            if existing is not None:
+                raise ValueError(f"Active execution already exists for task: {existing.id}") from exc
+            raise
         await self._db.refresh(intent)
         await self._db.refresh(task)
 
@@ -1188,7 +1194,7 @@ class ExecutionService:
             raise ValueError("Chat control message cannot be empty")
         if not normalized_session_id:
             raise ValueError("Chat control session_id is required")
-        if self._is_user_degraded(user_id):
+        if await self._is_user_degraded(user_id):
             raise ValueError("AI execution is temporarily degraded after consecutive failures")
 
         hidden_task = await self._create_hidden_chat_control_task(
@@ -2002,9 +2008,26 @@ class ExecutionService:
         if active_intent is not None:
             raise ValueError(f"Active execution already exists for task: {active_intent.id}")
 
-    def _build_idempotency_key(self, task: Task) -> str:
+    async def _get_intent_by_idempotency_key(self, idempotency_key: str) -> ExecutionIntent | None:
+        result = await self._db.execute(
+            select(ExecutionIntent).where(
+                ExecutionIntent.idempotency_key == idempotency_key,
+                ExecutionIntent.deleted_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def _build_idempotency_key(self, task: Task) -> str:
         plan_id = str(task.plan_id) if task.plan_id else "noplan"
-        return f"{plan_id}:{task.id}:{uuid.uuid4().hex[:8]}"
+        result = await self._db.execute(
+            select(func.count(ExecutionIntent.id)).where(
+                ExecutionIntent.task_id == task.id,
+                ExecutionIntent.user_id == task.user_id,
+                ExecutionIntent.deleted_at.is_(None),
+            )
+        )
+        attempt = int(result.scalar_one() or 0) + 1
+        return f"execution-intent:{plan_id}:{task.id}:attempt:{attempt}"
 
     async def _create_hidden_chat_control_task(
         self,
@@ -3131,7 +3154,7 @@ class ExecutionService:
                 "error_recovery": recovery,
             },
         )
-        degraded = self._record_failure(intent.user_id)
+        degraded = await self._record_failure(intent.user_id)
         if degraded or bool((recovery or {}).get("manual_only")):
             if not self._should_skip_task_sync(intent):
                 task = await self._get_user_task(task_id=intent.task_id, user_id=intent.user_id)
@@ -3198,42 +3221,75 @@ class ExecutionService:
             ExecutionIntentStatus.HANDED_BACK,
         }
 
-    def get_degradation_snapshot(self) -> dict[str, Any]:
-        self._cleanup_degradation_state()
+    async def get_degradation_snapshot(self) -> dict[str, Any]:
+        degraded_users = await self._get_degraded_user_failure_counts()
         return {
-            "degraded_user_count": len(self.__class__._degraded_users),
-            "failure_counts": dict(self.__class__._failure_counts),
-            "degraded_users": dict(self.__class__._degraded_users),
+            "degraded_user_count": len(degraded_users),
+            "failure_counts": degraded_users,
+            "degraded_users": {
+                user_id: time.time() + self.__class__._degradation_window_seconds
+                for user_id in degraded_users
+            },
             "degradation_threshold": self.__class__._degradation_threshold,
             "degradation_window_seconds": self.__class__._degradation_window_seconds,
         }
 
-    def _is_user_degraded(self, user_id: UUID) -> bool:
-        self._cleanup_degradation_state()
-        return str(user_id) in self.__class__._degraded_users
+    async def _is_user_degraded(self, user_id: UUID) -> bool:
+        return await self._recent_consecutive_failure_count(user_id) >= self.__class__._degradation_threshold
 
-    def _record_failure(self, user_id: UUID) -> bool:
-        self._cleanup_degradation_state()
-        key = str(user_id)
-        next_count = self.__class__._failure_counts.get(key, 0) + 1
-        self.__class__._failure_counts[key] = next_count
-        if next_count >= self.__class__._degradation_threshold:
-            self.__class__._degraded_users[key] = time.time() + self.__class__._degradation_window_seconds
-            return True
-        return False
+    async def _record_failure(self, user_id: UUID) -> bool:
+        return await self._is_user_degraded(user_id)
 
     def _clear_failure_state(self, user_id: UUID) -> None:
-        key = str(user_id)
-        self.__class__._failure_counts.pop(key, None)
-        self.__class__._degraded_users.pop(key, None)
+        del user_id
+        return None
 
-    def _cleanup_degradation_state(self) -> None:
-        now = time.time()
-        expired = [
-            key
-            for key, expires_at in self.__class__._degraded_users.items()
-            if expires_at <= now
-        ]
-        for key in expired:
-            self.__class__._degraded_users.pop(key, None)
-            self.__class__._failure_counts.pop(key, None)
+    async def _recent_consecutive_failure_count(self, user_id: UUID) -> int:
+        cutoff = _utcnow() - timedelta(seconds=self.__class__._degradation_window_seconds)
+        result = await self._db.execute(
+            select(ExecutionIntent.status)
+            .where(
+                ExecutionIntent.user_id == user_id,
+                ExecutionIntent.deleted_at.is_(None),
+                ExecutionIntent.completed_at.is_not(None),
+                ExecutionIntent.completed_at >= cutoff,
+            )
+            .order_by(desc(ExecutionIntent.completed_at), desc(ExecutionIntent.created_at))
+        )
+        count = 0
+        failure_statuses = {ExecutionIntentStatus.FAILED, ExecutionIntentStatus.TIMED_OUT}
+        for raw_status in result.scalars().all():
+            status = raw_status if isinstance(raw_status, ExecutionIntentStatus) else ExecutionIntentStatus(raw_status)
+            if status not in failure_statuses:
+                break
+            count += 1
+        return count
+
+    async def _get_degraded_user_failure_counts(self) -> dict[str, int]:
+        cutoff = _utcnow() - timedelta(seconds=self.__class__._degradation_window_seconds)
+        result = await self._db.execute(
+            select(ExecutionIntent.user_id, ExecutionIntent.status)
+            .where(
+                ExecutionIntent.deleted_at.is_(None),
+                ExecutionIntent.completed_at.is_not(None),
+                ExecutionIntent.completed_at >= cutoff,
+            )
+            .order_by(ExecutionIntent.user_id, desc(ExecutionIntent.completed_at), desc(ExecutionIntent.created_at))
+        )
+        counts: dict[str, int] = {}
+        sealed_users: set[str] = set()
+        failure_statuses = {ExecutionIntentStatus.FAILED, ExecutionIntentStatus.TIMED_OUT}
+        for user_id, raw_status in result.all():
+            user_key = str(user_id)
+            if user_key in sealed_users:
+                continue
+            status = raw_status if isinstance(raw_status, ExecutionIntentStatus) else ExecutionIntentStatus(raw_status)
+            if status in failure_statuses:
+                counts[user_key] = counts.get(user_key, 0) + 1
+                continue
+            sealed_users.add(user_key)
+        return {
+            user_id: count
+            for user_id, count in counts.items()
+            if count >= self.__class__._degradation_threshold
+        }
