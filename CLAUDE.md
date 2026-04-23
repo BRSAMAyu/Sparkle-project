@@ -1,8 +1,12 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # CLAUDE.md — Sparkle (星火) AI Growth Companion
 
 > **Project**: Sparkle (星火) — Dual-Core Growth OS for University Students
 > **Architecture**: Go Gateway + Python Engine + Flutter Mobile | **Scale**: Large Monorepo (1,200+ source files)
-> **Version**: 1.0.0+1 | **Last Updated**: 2026-03-31
+> **Version**: 1.0.0+1 | **Last Updated**: 2026-04-24
 
 ---
 
@@ -55,10 +59,60 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
 │  24 .go files (production) | 16 middleware | Gin + WebSocket   │
 ├─────────────────────────────────────────────────────────────────┤
 │  PYTHON ENGINE (Intelligence) →  AI logic, RAG, tools, LLM     │
-│  319 .py files | LangGraph FSM | FastAPI + gRPC | 26 services  │
+│  319+ .py files | LangGraph FSM | FastAPI + gRPC | 30+ services │
 └─────────────────────────────────────────────────────────────────┘
          ↕ PostgreSQL 16 + pgvector + AGE    ↕ Redis Stack    ↕ gRPC/WebSocket
 ```
+
+---
+
+## Aurora Adaptive Kernel
+
+Sparkle includes an Aurora adaptive cognitive kernel (Stages 4-40) that governs how user behavioral signals flow into AI reasoning, routing, and prompt assembly. Aurora enforces safety through **53 governance rules** enforced by CI guard scripts.
+
+### Core Data Flow
+
+```
+User Behavior → State Aggregator (UserStateV1) → Dual-Core Router + Prompt Assembly
+                    ↑                                    ↓
+         PersDyn / SRL / Social /              Router Decision Log
+         Working Memory / Metacognition /            ↓
+         Idiographic / Foresight              Bayesian Learner
+```
+
+### Key Aurora Services
+
+| Service | File | Purpose |
+|---------|------|---------|
+| State Aggregator | `backend/app/state_aggregator/service.py` | Unified user state v1.12 from 15+ subsystems |
+| Metacognition | `backend/app/services/metacognition_service.py` | Bias unification, confidence proxies, process scaffolding |
+| Idiographic Association | `backend/app/services/idiographic_association_service.py` | Within-person correlation (association-only, no causal claims) |
+| SRL Phase Tracker | `backend/app/services/srl_phase_tracker_service.py` | Self-regulated learning phase transitions |
+| Social Signal Bridge | `backend/app/services/social_signal_bridge.py` | Social context → Router (read-only) |
+| PII Privacy | `backend/app/aurora/privacy.py` | Redacts phone/email/CN ID/bank card before LLM export |
+| Kill Switch | `backend/app/core/kill_switch.py` | Unified tri-state (off/shadow/live) with Prometheus gauge |
+
+### Kill Switch Protocol
+
+Every Aurora feature ships behind a **tri-state kill switch**: `off` (disabled) → `shadow` (compute but don't affect live) → `live` (active). All switches expose `sparkle_kill_switch_mode{stage,feature}` to Prometheus. Drill scripts in `scripts/stage{N}/drill_transitions.sh` exercise off→shadow→live→shadow→off transitions.
+
+### Governance Rules & Guard System
+
+53 rules are registered in `scripts/rule_guard_manifest.tsv` and enforced by CI via `scripts/run_all_rule_guards.sh`. Key rule families:
+
+| Family | Rules | Domain |
+|--------|-------|--------|
+| Write boundary | K, Y, Z, AB, AF | Aggregator write isolation, inferred extraction, social boundary |
+| Eval / Safety | AM, AN, AO, AP, AQ | Confidence cap, user isolation, diagnostic label ban, association discipline, proto parity |
+| Vision compliance | AS, AT, AU, AV | Signal must have consumer, no orphans, mobile parity (0% black hole rate), kill switch enum |
+| Financial | BB, BC | Atomic photon grants, idempotency keys |
+| Security | AW, AX, AY, AZ | Rate limiter sanity, route ownership, LLM safety layer, EventBus reliability |
+
+Run guards: `bash scripts/run_all_rule_guards.sh` or per-rule: `bash scripts/run_all_rule_guards.sh --rule AO`
+
+### Aurora Branches
+
+Aurora work lives on feature branches: `claude/stage{N}-impl`, `codex/stage{N}-*`. The `integration/phase-i-exit` branch consolidates Stage 33-40. Handoff documents for each stage are in `docs/product/SPARKLE_AURORA_STAGE{N}_HANDOFF_*.md`.
 
 ---
 
@@ -310,7 +364,13 @@ When exploring unfamiliar territory, prioritize these files:
 | Achievement Event Consumer | `achievement_event_consumer.py` | Unlock→Notification |
 | Progress Narrative | `progress_narrative_service.py` | Growth storytelling |
 | Behavior Signal Collector | `behavior_signal_collector.py` | Behavioral pattern detection |
+| Metacognition Service | `metacognition_service.py` | Bias unification, confidence proxies |
+| Idiographic Association | `idiographic_association_service.py` | Within-person correlation analysis |
+| SRL Phase Tracker | `srl_phase_tracker_service.py` | Self-regulated learning phases |
+| Social Signal Bridge | `social_signal_bridge.py` | Social → Router signal bridge |
+| Journey Event Service | `stage33_journey_event_service.py` | user.registered / plan.created events |
 | OpenClaw Client | `adapters/openclaw/client.py` | Digital task execution |
+| OpenClaw URL Guard | `services/openclaw/url_guard.py` | SSRF protection (private IP blocklist) |
 | Theater Service | `services/theater/` | Path prediction + what-if analysis |
 | Simulation Engine | `services/simulation/` | Scenario simulation |
 | Learning Report | `services/report/` | Mastery report generation |
@@ -409,6 +469,13 @@ cd backend && python scripts/seed_demo_user_enhanced.py  # Seed demo data for te
 # === QUALITY ===
 make quality-baseline                   # Run full quality baseline checks
 python scripts/check_tech_debt_budget.py  # Check tech debt against budget
+
+# === AURORA GOVERNANCE ===
+bash scripts/run_all_rule_guards.sh          # Run all 53 rule guards
+bash scripts/run_all_rule_guards.sh --rule AO  # Run single rule guard
+bash scripts/journey_smoke.sh all            # 7-hop main + 3-hop error journey smoke
+python scripts/add_core_phase_headers.py     # Add Core/Phase declaration headers
+python scripts/check_core_phase_header.py    # Verify header coverage
 ```
 
 ### Command Decision Tree
@@ -573,10 +640,9 @@ Formatting: trailing whitespace, end-of-file, YAML/JSON, merge conflicts, privat
 
 | Layer | Test Files | Key Acceptance Scripts |
 |-------|-----------|----------------------|
-| Python | 311 | 21 acceptance scripts covering all major chains |
+| Python | 3214+ passed (incl. 53 rule guards) | 21 acceptance scripts covering all major chains |
 | Go | 34 (incl. 20 handler tests) | Contract tests, benchmark tests |
-| Flutter | 131 | Smoke tests, golden tests, widget tests, integration tests |
-| **Total** | **476** | |
+| Flutter | 131+ | Smoke tests, golden tests, widget tests, integration tests |
 
 ### Acceptance Test Coverage (21 scripts in `backend/scripts/`)
 
@@ -717,7 +783,48 @@ ai_expert_acceptance.py               # AI专家模式验收
    - Backend processes and updates plan accordingly
 ```
 
-### Pattern 6: OpenClaw Integration
+### Pattern 7: Adding an Aurora Kill Switch
+
+```
+1. Define kill switch binding in the service:
+   from app.core.kill_switch import KillSwitchBinding, read_mode
+
+   binding = KillSwitchBinding(
+       stage="stageN", feature="my_feature",
+       redis_key="aurora:stageN:my_feature",
+       settings_attr="AURORA_STAGE_N_MY_FEATURE_MODE",
+       fallback_mode="shadow",
+   )
+
+2. Add setting in backend/app/config/settings.py:
+   AURORA_STAGE_N_MY_FEATURE_MODE: str = "shadow"
+
+3. Check mode in service code:
+   mode = await read_mode(redis_client=redis, prefix="sparkle:", binding=binding)
+   if mode == "off": return
+
+4. Register in scripts/rule_guard_manifest.tsv if applicable
+
+5. Create drill script: scripts/stageN/drill_transitions.sh
+   Tests off→shadow→live→shadow→off transitions
+```
+
+### Pattern 8: Adding a Governance Rule Guard
+
+```
+1. Create guard script: scripts/guards/check_rule_XX_description.py
+   - Must exit 0 on pass, non-zero on fail
+   - Print findings to stdout
+
+2. Register in scripts/rule_guard_manifest.tsv:
+   XX	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_XX_description.py"
+
+3. Document rule: docs/aurora/rule_xx_description.md
+
+4. CI will auto-discover via run_all_rule_guards.sh
+```
+
+### Pattern 9: OpenClaw Integration
 
 ```
 1. Backend adapter: backend/app/adapters/openclaw/
@@ -878,7 +985,7 @@ Budget enforced by `scripts/check_tech_debt_budget.py` using `quality/tech_debt_
 
 ---
 
-**Document Version**: 3.0.0
-**Last Updated**: 2026-03-31
+**Document Version**: 3.1.0
+**Last Updated**: 2026-04-24
 **Project Version**: Sparkle v1.0.0+1
-**Current Branch**: 复赛前修复打磨
+**Aurora Status**: Phase I Exit Gate (Stage 4-40 complete)

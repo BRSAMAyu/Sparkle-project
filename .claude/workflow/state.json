@@ -1,0 +1,15 @@
+{
+  "cursor": 2,
+  "round": 0,
+  "halt": false,
+  "last_updated": "2026-04-24T17:43:00+08:00",
+  "stats": {
+    "total_issues": 12,
+    "p0_count": 0,
+    "p1_count": 7,
+    "p2_count": 5,
+    "p3_count": 0,
+    "closed_count": 0,
+    "failed_verify_count": 0
+  }
+}
