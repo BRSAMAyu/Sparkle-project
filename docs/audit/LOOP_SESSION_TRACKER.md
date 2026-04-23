@@ -110,3 +110,29 @@
 - Check remaining str(e) files (community.py 43× ValueError→intentional, skip; experiments.py 5×)
 - Investigate P0-1 in notification center (mark_all N+1 batch update)
 - Check TrustedProxies setup (#51 P1-1) and CSP connect-src (#51 P1-2)
+
+### Session 5 — 2026-04-23 (Fifth Run)
+
+**Focus**: str(e) batch sanitization + #52 UX Envelope P0-1 verification
+
+**Fixes Committed**:
+1. `multi_agent.py` (2×), `assets.py` (2×), `chat.py` (1×), `translation.py` (1×), `leaderboards.py` (3×): 9× str(e) sanitized at 500 status
+2. **All 500-level str(e) leaks now FIXED** — only 400-level ValueError/intentional messages remain
+3. #52 UX Envelope P0-1 verified **FALSE** — `_local_state` already has OrderedDict + TTL + maxsize + prune + Redis clear
+
+**Commits**:
+- `a66362fa`: fix(security): sanitize str(e) in 500-level HTTPExceptions (8 files)
+- `5c055e73`: docs: #52 UX Envelope P0-1 verified FALSE (already fixed)
+
+**Key Findings**:
+- **All dangerous str(e) eliminated**: Only `graphrag_trace.py:149` remains (commented out). All active 500-status `str(e)` leaks are sanitized.
+- **400-level str(e) are INTENTIONAL**: experiments.py (5×), tasks.py (5×), shop.py (2×), capsules.py (2×) all catch ValueError with user-facing messages at 400 status — these are correct behavior.
+- #52 UX Envelope: Prior re-review (Round 60) claimed "all 9 STILL OPEN, code unchanged" but missed that P0-1 was already fixed. The code now uses `OrderedDict` with `LOCAL_MAX_ENTRIES=10000`, `LOCAL_TTL_SECONDS=3600`, `_prune_local_state()`, and Redis clear-on-success.
+
+**Test Results**: 66 passed (targeted), Go build clean
+
+**Next Session Should**:
+- Verify remaining ⚠️ reports against code (#1 JWT, #3 EventBus, #5 gRPC StreamChat)
+- Check if Event Bus main stream MAXLEN fix from S1 is still in place
+- Consider whether we've reached diminishing returns on str(e) fixes
+- Run broader test suite to confirm stability
