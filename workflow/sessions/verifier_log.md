@@ -44,4 +44,52 @@
 - Fixer 未做业务代码改动，仅工作流文档
 
 - summary_updated: yes（首次初始化统计快照）
+- commit: e0cbd1e1
+
+## 2026-04-24T20:00:00+08:00 target=patrol-mode-1
+
+- directives_read: [ARCHITECT_DIRECTIVES.md (example advisory only, no active override)]
+- mode: patrol (verifying/ empty → proactive evidence spot-check)
+- independent_evidence:
+  - chatflow.go:460-480, 500-529 (segmentSize guard verification)
+  - chatflow.go:218-228 (handleChatMessage length check gap)
+  - chat_orchestrator_feedback.go:42-70 (saveMessage error handling)
+  - ws_registry.go:37-59, 102-128 (connection management)
+  - websocket_chat_service_v2.dart:1388-1402 (query token fallback)
+  - chat_orchestrator_protocol.go:535-560 (protobuf chat no length check)
+
+### env-check 结果
+- postgres=ok, redis=ok
+
+### 独立抽检 open/ ISSUE（预防性证据审查）
+
+**ISSUE-009 (P1) — STREAM_TOKEN_SEGMENT=0 无限循环: 判定 MISREPORTED**
+- Auditor 声称 line 508 `for estimatedTokens-segmentRecorded >= segmentSize` 无限循环
+- **实际**: line 506 `if h.quota != nil && segmentSize > 0` 是外层 guard
+- 当 segmentSize ≤ 0 时，整个 quota block 被跳过，内层 for 根本不执行
+- **不会无限循环**。实际影响是 quota segment recording 被静默禁用
+- 建议 Fixer 处理时重新评估为 P2（配置行为不明确）或 P3（建议加校验）
+
+**ISSUE-007 (P1→P2) — saveMessage 静默丢弃: CONFIRMED 但应降级**
+- 证据准确，line 67-69 只 log.Printf
+- 但实际影响有限：Redis 正常时不会触发；消息已转发给 Python 处理
+- 建议降为 P2
+
+**ISSUE-008 (P2) — 双连接注册系统: CONFIRMED**
+- 两套系统互不感知，证据准确
+
+**ISSUE-012 (P2) — Flutter JWT 在 URL: CONFIRMED**
+- line 1395 query token fallback 确实存在
+
+**ISSUE-013 (P1) — Protobuf 绕过长度限制: CONFIRMED**
+- protobuf 路径在 protocol.go:542 直接赋值，不经过 maxMessageLength 检查
+- handleChatMessage 内部（chatflow.go:221）只做 XSS 过滤，无长度检查
+- 证据链完整，P1 定级合理
+
+**ISSUE-014 (P1→P2) — GetWriter 非确定性: CONFIRMED 但应降级**
+- Go map 遍历非确定性确认为真
+- 但多设备同时在线是边缘场景，PushIntervention 是否有活跃调用者待确认
+- 建议降为 P2
+
+- summary_updated: yes（统计快照已更新）
 - commit: pending

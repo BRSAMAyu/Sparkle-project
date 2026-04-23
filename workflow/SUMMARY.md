@@ -34,6 +34,7 @@
 - verifying: 0
 - closed (7d): 0
 - escalated: 0
-- last_update: 2026-04-24T19:40:00+08:00
+- last_update: 2026-04-24T20:00:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
+- verifier_patrol_2: env-check pass; ISSUE-009 misreported (segmentSize guard exists); ISSUE-007/014 suggest P2 downgrade
