@@ -15,7 +15,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from loguru import logger
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -218,22 +218,33 @@ async def list_plans(
     result = await db.execute(query)
     plans = result.scalars().all()
 
+    # Batch task counts (replaces N+1 with single GROUP BY query)
+    plan_ids = [plan.id for plan in plans]
+    task_counts: dict = {}
+    completed_counts: dict = {}
+    if plan_ids:
+        task_stats_query = (
+            select(
+                Task.plan_id,
+                func.count(Task.id).label("total"),
+                func.count(case((Task.status == TaskStatus.COMPLETED, Task.id))).label("completed"),
+            )
+            .where(Task.plan_id.in_(plan_ids))
+            .group_by(Task.plan_id)
+        )
+        task_stats_result = await db.execute(task_stats_query)
+        for row in task_stats_result.all():
+            task_counts[row.plan_id] = row.total
+            completed_counts[row.plan_id] = row.completed
+
     # Enrich with task counts
     plans_data = []
     for plan in plans:
-        task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
-        task_count = (await db.execute(task_query)).scalar() or 0
-
-        completed_query = select(func.count(Task.id)).where(
-            and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
-        )
-        completed_count = (await db.execute(completed_query)).scalar() or 0
-
         plans_data.append(
             _serialize_plan(
                 plan,
-                task_count=task_count,
-                completed_task_count=completed_count,
+                task_count=task_counts.get(plan.id, 0),
+                completed_task_count=completed_counts.get(plan.id, 0),
             )
         )
 
@@ -1241,21 +1252,32 @@ async def list_archived_plans(
     """
     plans = await PlanService.list_archived(db=db, user_id=current_user.id, limit=page_size)
 
+    # Batch task counts (replaces N+1 with single GROUP BY query)
+    plan_ids = [plan.id for plan in plans]
+    task_counts: dict = {}
+    completed_counts: dict = {}
+    if plan_ids:
+        task_stats_query = (
+            select(
+                Task.plan_id,
+                func.count(Task.id).label("total"),
+                func.count(case((Task.status == TaskStatus.COMPLETED, Task.id))).label("completed"),
+            )
+            .where(Task.plan_id.in_(plan_ids))
+            .group_by(Task.plan_id)
+        )
+        task_stats_result = await db.execute(task_stats_query)
+        for row in task_stats_result.all():
+            task_counts[row.plan_id] = row.total
+            completed_counts[row.plan_id] = row.completed
+
     plans_data = []
     for plan in plans:
-        task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
-        task_count = (await db.execute(task_query)).scalar() or 0
-
-        completed_query = select(func.count(Task.id)).where(
-            and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
-        )
-        completed_count = (await db.execute(completed_query)).scalar() or 0
-
         plans_data.append(
             _serialize_plan(
                 plan,
-                task_count=task_count,
-                completed_task_count=completed_count,
+                task_count=task_counts.get(plan.id, 0),
+                completed_task_count=completed_counts.get(plan.id, 0),
             )
         )
 
