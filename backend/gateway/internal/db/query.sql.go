@@ -621,13 +621,9 @@ func (q *Queries) GetGroupMessages(ctx context.Context, arg GetGroupMessagesPara
 }
 
 const getKnowledgeNodeByID = `-- name: GetKnowledgeNodeByID :one
-
 SELECT subject_id, parent_id, name, name_en, description, keywords, importance_level, is_seed, source_type, source_task_id, source_file_id, chunk_refs, status, embedding, position_x, position_y, global_spark_count, id, created_at, updated_at, deleted_at FROM knowledge_nodes WHERE id = $1 AND deleted_at IS NULL
 `
 
-// =====================
-// Knowledge Galaxy Queries
-// =====================
 func (q *Queries) GetKnowledgeNodeByID(ctx context.Context, id pgtype.UUID) (KnowledgeNode, error) {
 	row := q.db.QueryRow(ctx, getKnowledgeNodeByID, id)
 	var i KnowledgeNode
@@ -1550,4 +1546,75 @@ ON CONFLICT (projection_name) DO UPDATE SET updated_at = NOW()
 func (q *Queries) UpsertProjectionMetadata(ctx context.Context, projectionName string) error {
 	_, err := q.db.Exec(ctx, upsertProjectionMetadata, projectionName)
 	return err
+}
+
+const upsertUserSession = `-- name: UpsertUserSession :one
+
+INSERT INTO user_sessions (
+    id, user_id, session_id, device_id, device_name, device_type,
+    ip_address, user_agent, refresh_token_jti, is_active,
+    last_active_at, created_at, updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW(), NOW(), NOW())
+ON CONFLICT (session_id) DO UPDATE SET
+    user_id = EXCLUDED.user_id,
+    device_id = EXCLUDED.device_id,
+    device_name = EXCLUDED.device_name,
+    device_type = EXCLUDED.device_type,
+    ip_address = EXCLUDED.ip_address,
+    user_agent = EXCLUDED.user_agent,
+    refresh_token_jti = EXCLUDED.refresh_token_jti,
+    is_active = true,
+    revoked_at = NULL,
+    last_active_at = NOW(),
+    updated_at = NOW()
+RETURNING user_id, session_id, device_id, device_name, device_type, ip_address, user_agent, refresh_token_jti, is_active, revoked_at, last_active_at, id, created_at, updated_at, deleted_at
+`
+
+type UpsertUserSessionParams struct {
+	ID              pgtype.UUID `json:"id"`
+	UserID          pgtype.UUID `json:"user_id"`
+	SessionID       string      `json:"session_id"`
+	DeviceID        pgtype.Text `json:"device_id"`
+	DeviceName      pgtype.Text `json:"device_name"`
+	DeviceType      pgtype.Text `json:"device_type"`
+	IpAddress       pgtype.Text `json:"ip_address"`
+	UserAgent       pgtype.Text `json:"user_agent"`
+	RefreshTokenJti pgtype.Text `json:"refresh_token_jti"`
+}
+
+// =====================
+// Knowledge Galaxy Queries
+// =====================
+func (q *Queries) UpsertUserSession(ctx context.Context, arg UpsertUserSessionParams) (UserSession, error) {
+	row := q.db.QueryRow(ctx, upsertUserSession,
+		arg.ID,
+		arg.UserID,
+		arg.SessionID,
+		arg.DeviceID,
+		arg.DeviceName,
+		arg.DeviceType,
+		arg.IpAddress,
+		arg.UserAgent,
+		arg.RefreshTokenJti,
+	)
+	var i UserSession
+	err := row.Scan(
+		&i.UserID,
+		&i.SessionID,
+		&i.DeviceID,
+		&i.DeviceName,
+		&i.DeviceType,
+		&i.IpAddress,
+		&i.UserAgent,
+		&i.RefreshTokenJti,
+		&i.IsActive,
+		&i.RevokedAt,
+		&i.LastActiveAt,
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }

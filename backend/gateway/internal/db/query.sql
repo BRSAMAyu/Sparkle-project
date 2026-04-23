@@ -285,6 +285,27 @@ SELECT * FROM tasks WHERE id = $1 AND deleted_at IS NULL;
 -- Knowledge Galaxy Queries
 -- =====================
 
+-- name: UpsertUserSession :one
+INSERT INTO user_sessions (
+    id, user_id, session_id, device_id, device_name, device_type,
+    ip_address, user_agent, refresh_token_jti, is_active,
+    last_active_at, created_at, updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW(), NOW(), NOW())
+ON CONFLICT (session_id) DO UPDATE SET
+    user_id = EXCLUDED.user_id,
+    device_id = EXCLUDED.device_id,
+    device_name = EXCLUDED.device_name,
+    device_type = EXCLUDED.device_type,
+    ip_address = EXCLUDED.ip_address,
+    user_agent = EXCLUDED.user_agent,
+    refresh_token_jti = EXCLUDED.refresh_token_jti,
+    is_active = true,
+    revoked_at = NULL,
+    last_active_at = NOW(),
+    updated_at = NOW()
+RETURNING *;
+
 -- name: GetKnowledgeNodeByID :one
 SELECT * FROM knowledge_nodes WHERE id = $1 AND deleted_at IS NULL;
 

@@ -119,10 +119,33 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发令牌失败"})
 		return
 	}
-	refreshToken, err := h.createRefreshToken(user.ID, sessionID)
+	refreshToken, refreshJTI, err := h.createRefreshToken(user.ID, sessionID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发刷新令牌失败"})
 		return
+	}
+
+	// 4. Persist session to user_sessions table
+	sessionUUID := uuid.New()
+	var pgSessionID pgtype.UUID
+	copy(pgSessionID.Bytes[:], sessionUUID[:])
+	pgSessionID.Valid = true
+
+	_, err = h.queries.UpsertUserSession(ctx, db.UpsertUserSessionParams{
+		ID:              pgSessionID,
+		UserID:          user.ID,
+		SessionID:       sessionID,
+		DeviceID:        pgtype.Text{String: c.GetHeader("X-Device-ID"), Valid: c.GetHeader("X-Device-ID") != ""},
+		DeviceName:      pgtype.Text{String: c.GetHeader("X-Device-Name"), Valid: c.GetHeader("X-Device-Name") != ""},
+		DeviceType:      pgtype.Text{String: c.GetHeader("X-Device-Platform"), Valid: c.GetHeader("X-Device-Platform") != ""},
+		IpAddress:       pgtype.Text{String: c.ClientIP(), Valid: true},
+		UserAgent:       pgtype.Text{String: c.GetHeader("User-Agent"), Valid: c.GetHeader("User-Agent") != ""},
+		RefreshTokenJti: pgtype.Text{String: refreshJTI, Valid: true},
+	})
+	if err != nil {
+		// Session persistence failure should not block login
+		// but log the error for investigation
+		_ = err
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -177,7 +200,7 @@ func (h *AuthHandler) createAccessToken(userID pgtype.UUID, sessionID string) (s
 	return token.SignedString([]byte(h.cfg.JWTSecret))
 }
 
-func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (string, error) {
+func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (string, string, error) {
 	now := time.Now()
 
 	// Get expiration time from config, default to 7 days
@@ -186,12 +209,13 @@ func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (
 		expireDays = 7
 	}
 
+	jti := uuid.New().String()
 	claims := jwt.MapClaims{
 		"sub":  h.uuidToString(userID),
 		"sid":  sessionID,
 		"exp":  now.Add(time.Duration(expireDays) * 24 * time.Hour).Unix(),
 		"iat":  now.Unix(),
-		"jti":  uuid.New().String(),
+		"jti":  jti,
 		"type": "refresh",
 	}
 	if h.cfg.JWTIssuer != "" {
@@ -202,7 +226,11 @@ func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(h.cfg.JWTSecret))
+	signed, err := token.SignedString([]byte(h.cfg.JWTSecret))
+	if err != nil {
+		return "", "", err
+	}
+	return signed, jti, nil
 }
 
 func (h *AuthHandler) uuidToString(id pgtype.UUID) string {
