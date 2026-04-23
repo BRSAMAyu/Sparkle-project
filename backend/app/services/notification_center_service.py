@@ -861,7 +861,7 @@ class NotificationCenterService:
         """Record a notification interaction"""
         try:
             # Calculate time to action in seconds
-            time_to_action = int((_utcnow() - created_at).total_seconds())
+            time_to_action = max(0, int((_utcnow() - created_at).total_seconds()))
 
             interaction = NotificationInteraction(
                 id=uuid4(),

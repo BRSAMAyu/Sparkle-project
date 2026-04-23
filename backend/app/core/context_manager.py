@@ -567,6 +567,7 @@ class ContextOrchestrator:
             return {}
 
         active_groups = []
+        sprint_groups: list[Group] = []
         sprint_summaries: list[str] = []
         type_counts = {"sprint": 0, "squad": 0, "official": 0}
         latest_active_at: datetime | None = None
@@ -578,28 +579,37 @@ class ContextOrchestrator:
             if member.last_active_at and (latest_active_at is None or member.last_active_at > latest_active_at):
                 latest_active_at = member.last_active_at
             if group_type == "sprint":
-                claim_counts = await self.db.execute(
-                    select(
-                        func.count(GroupTaskClaim.id),
-                        func.sum(cast(GroupTaskClaim.is_completed, Integer)),
-                    )
-                    .join(GroupMember, GroupMember.user_id == GroupTaskClaim.user_id)
-                    .join(Group, Group.id == GroupMember.group_id)
-                    .where(
-                        GroupMember.user_id == user_id,
-                        Group.id == group.id,
-                        GroupTaskClaim.deleted_at.is_(None),
-                    )
+                sprint_groups.append(group)
+
+        # Batch query: claim counts per sprint group (replaces N+1 loop queries)
+        if sprint_groups:
+            sprint_group_ids = [g.id for g in sprint_groups]
+            claim_rows = await db.execute(
+                select(
+                    Group.id.label("group_id"),
+                    func.count(GroupTaskClaim.id).label("total"),
+                    func.sum(cast(GroupTaskClaim.is_completed, Integer)).label("completed"),
                 )
-                total_claims, completed_claims = claim_counts.one()
-                total_claims = int(total_claims or 0)
-                completed_claims = int(completed_claims or 0)
+                .join(GroupMember, GroupMember.group_id == Group.id)
+                .join(GroupTaskClaim, GroupTaskClaim.user_id == GroupMember.user_id)
+                .where(
+                    GroupMember.user_id == user_id,
+                    Group.id.in_(sprint_group_ids),
+                    GroupTaskClaim.deleted_at.is_(None),
+                )
+                .group_by(Group.id)
+            )
+            claim_map: dict[UUID, tuple[int, int]] = {}
+            for row in claim_rows.all():
+                claim_map[row.group_id] = (int(row.total or 0), int(row.completed or 0))
+            for group in sprint_groups:
+                total_claims, completed_claims = claim_map.get(group.id, (0, 0))
                 progress = round((completed_claims / total_claims) * 100) if total_claims else 0
                 sprint_summaries.append(
                     f"\"{group.name}\" 群组进度 {progress}%，你的贡献 {completed_claims}/{max(total_claims, 1)} 任务"
                 )
 
-        unfinished_claims = await self.db.execute(
+        unfinished_claims = await db.execute(
             select(func.count(GroupTaskClaim.id))
             .join(GroupMember, GroupMember.user_id == GroupTaskClaim.user_id)
             .join(Group, Group.id == GroupMember.group_id)
