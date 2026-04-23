@@ -89,17 +89,12 @@ async def test_translate_cache_miss(mock_cache_service, mock_llm_service):
 
     segments = [TranslationSegment(id="s0", text="database")]
 
-    # Mock AsyncOpenAI
-    mock_response = MagicMock()
-    mock_response.choices = [MagicMock()]
-    mock_response.choices[0].message.content = "数据库"
-    
     mock_client = MagicMock()
-    mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+    mock_client.chat = AsyncMock(return_value="数据库")
 
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
-         patch("app.services.translation_service.AsyncOpenAI", return_value=mock_client), \
+         patch("app.services.translation_service.SecureLLMClient.get", return_value=mock_client), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "test-key"):
         result = await service.translate(
             segments=segments,
@@ -114,7 +109,7 @@ async def test_translate_cache_miss(mock_cache_service, mock_llm_service):
     assert result.segments[0].translation == "数据库"
 
     # Hunyuan client should be called
-    mock_client.chat.completions.create.assert_called_once()
+    mock_client.chat.assert_awaited_once()
 
     # Result should be cached
     mock_cache_service.set.assert_called_once()
@@ -132,17 +127,12 @@ async def test_translate_with_siliconflow_provider_label(mock_cache_service, moc
 
     segments = [TranslationSegment(id="s0", text="database")]
 
-    # Mock AsyncOpenAI response
-    mock_response = MagicMock()
-    mock_response.choices = [MagicMock()]
-    mock_response.choices[0].message.content = "数据库"
-
     mock_client = MagicMock()
-    mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+    mock_client.chat = AsyncMock(return_value="数据库")
 
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
-         patch("app.services.translation_service.AsyncOpenAI", return_value=mock_client), \
+         patch("app.services.translation_service.SecureLLMClient.get", return_value=mock_client), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", ""), \
          patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "sf-key"):
         result = await service.translate(
@@ -154,7 +144,7 @@ async def test_translate_with_siliconflow_provider_label(mock_cache_service, moc
     assert result.cache_hit is False
     assert result.provider == "siliconflow"
     assert result.segments[0].translation == "数据库"
-    mock_client.chat.completions.create.assert_called_once()
+    mock_client.chat.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -163,17 +153,13 @@ async def test_translate_falls_back_to_backup_provider_when_hunyuan_fails(mock_c
     mock_cache_service.get.return_value = None
 
     failing_client = MagicMock()
-    failing_client.chat.completions.create = AsyncMock(side_effect=RuntimeError("429"))
-
-    success_response = MagicMock()
-    success_response.choices = [MagicMock()]
-    success_response.choices[0].message.content = "备用翻译"
+    failing_client.chat = AsyncMock(side_effect=RuntimeError("429"))
     success_client = MagicMock()
-    success_client.chat.completions.create = AsyncMock(return_value=success_response)
+    success_client.chat = AsyncMock(return_value="备用翻译")
 
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
-         patch("app.services.translation_service.AsyncOpenAI", side_effect=[failing_client, success_client]), \
+         patch("app.services.translation_service.SecureLLMClient.get", side_effect=[failing_client, success_client]), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "hy-key"), \
          patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "sf-key"):
         result = await service.translate(
@@ -184,8 +170,8 @@ async def test_translate_falls_back_to_backup_provider_when_hunyuan_fails(mock_c
 
     assert result.provider == "siliconflow"
     assert result.segments[0].translation == "备用翻译"
-    failing_client.chat.completions.create.assert_called_once()
-    success_client.chat.completions.create.assert_called_once()
+    failing_client.chat.assert_awaited_once()
+    success_client.chat.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -199,17 +185,12 @@ async def test_translate_with_glossary(mock_cache_service, mock_llm_service):
 
     segments = [TranslationSegment(id="s0", text="The API endpoint")]
 
-    # Mock AsyncOpenAI
-    mock_response = MagicMock()
-    mock_response.choices = [MagicMock()]
-    mock_response.choices[0].message.content = "应用程序接口"
-    
     mock_client = MagicMock()
-    mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+    mock_client.chat = AsyncMock(return_value="应用程序接口")
 
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
-         patch("app.services.translation_service.AsyncOpenAI", return_value=mock_client), \
+         patch("app.services.translation_service.SecureLLMClient.get", return_value=mock_client), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "test-key"):
         result = await service.translate(
             segments=segments,
@@ -222,7 +203,7 @@ async def test_translate_with_glossary(mock_cache_service, mock_llm_service):
     assert len(result.segments) == 1
 
     # Check that Hunyuan client was called with glossary in prompt
-    call_args = mock_client.chat.completions.create.call_args
+    call_args = mock_client.chat.await_args
     messages = call_args.kwargs['messages']
     prompt = messages[1]['content']
 
@@ -245,13 +226,13 @@ async def test_translate_timeout_handling(mock_cache_service, mock_llm_service):
         return "translation"
 
     mock_client = MagicMock()
-    mock_client.chat.completions.create.side_effect = slow_translation
+    mock_client.chat = AsyncMock(side_effect=slow_translation)
 
     segments = [TranslationSegment(id="s0", text="some text")]
 
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
-         patch("app.services.translation_service.AsyncOpenAI", return_value=mock_client), \
+         patch("app.services.translation_service.SecureLLMClient.get", return_value=mock_client), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "test-key"):
         result = await service.translate(
             segments=segments,
@@ -273,11 +254,11 @@ async def test_translate_falls_back_to_generic_llm_after_all_specialists_fail(mo
     mock_llm_service.chat.return_value = "通用翻译"
 
     failing_client = MagicMock()
-    failing_client.chat.completions.create = AsyncMock(side_effect=RuntimeError("provider down"))
+    failing_client.chat = AsyncMock(side_effect=RuntimeError("provider down"))
 
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
-         patch("app.services.translation_service.AsyncOpenAI", side_effect=[failing_client, failing_client]), \
+         patch("app.services.translation_service.SecureLLMClient.get", side_effect=[failing_client, failing_client]), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "hy-key"), \
          patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "sf-key"):
         result = await service.translate(
@@ -301,17 +282,12 @@ async def test_translate_multiple_segments(mock_cache_service, mock_llm_service)
 
     # Return different translations for each segment
     translations = ["句子一", "句子二", "句子三"]
-    
-    # Mock AsyncOpenAI
-    async def create_mock_response(*args, **kwargs):
-        content = translations.pop(0) if translations else "default"
-        resp = MagicMock()
-        resp.choices = [MagicMock()]
-        resp.choices[0].message.content = content
-        return resp
+
+    async def create_translation(*args, **kwargs):
+        return translations.pop(0) if translations else "default"
 
     mock_client = MagicMock()
-    mock_client.chat.completions.create.side_effect = create_mock_response
+    mock_client.chat = AsyncMock(side_effect=create_translation)
 
     segments = [
         TranslationSegment(id="s0", text="Sentence one"),
@@ -321,7 +297,7 @@ async def test_translate_multiple_segments(mock_cache_service, mock_llm_service)
 
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
-         patch("app.services.translation_service.AsyncOpenAI", return_value=mock_client), \
+         patch("app.services.translation_service.SecureLLMClient.get", return_value=mock_client), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "test-key"):
         result = await service.translate(
             segments=segments,
@@ -336,7 +312,7 @@ async def test_translate_multiple_segments(mock_cache_service, mock_llm_service)
     assert result.segments[2].translation == "句子三"
 
     # Hunyuan client should be called 3 times
-    assert mock_client.chat.completions.create.call_count == 3
+    assert mock_client.chat.await_count == 3
 
 
 @pytest.mark.asyncio
@@ -518,14 +494,14 @@ async def test_translate_error_handling(mock_cache_service, mock_llm_service):
 
     # Simulate Hunyuan error and LLM fallback error
     mock_client = MagicMock()
-    mock_client.chat.completions.create.side_effect = Exception("Hunyuan API error")
+    mock_client.chat = AsyncMock(side_effect=Exception("Hunyuan API error"))
     mock_llm_service.chat.side_effect = Exception("LLM API error")
 
     segments = [TranslationSegment(id="s0", text="test")]
 
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
-         patch("app.services.translation_service.AsyncOpenAI", return_value=mock_client), \
+         patch("app.services.translation_service.SecureLLMClient.get", return_value=mock_client), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "test-key"):
         result = await service.translate(
             segments=segments,
