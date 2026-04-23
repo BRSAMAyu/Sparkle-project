@@ -123,7 +123,7 @@ class LLMSecurityWrapper:
             total_text = " ".join([msg.get("content", "") for msg in safe_messages])
             estimated_tokens = self.cost_guard.estimate_tokens(total_text)
 
-            quota_result = await self.cost_guard.check_quota(user_id, estimated_tokens)
+            quota_result = await self.cost_guard.check_quota(user_id, estimated_tokens, check_only=True)
             if not quota_result.allowed:
                 if self.monitor:
                     self.monitor.record_quota_exceeded(user_id, quota_result.current_usage, quota_result.limit)
@@ -246,7 +246,7 @@ class LLMSecurityWrapper:
                 total_text += " ".join([msg.get("content", "") for msg in safe_history])
 
             estimated_tokens = self.cost_guard.estimate_tokens(total_text)
-            quota_result = await self.cost_guard.check_quota(user_id, estimated_tokens)
+            quota_result = await self.cost_guard.check_quota(user_id, estimated_tokens, check_only=True)
 
             if not quota_result.allowed:
                 if self.monitor:
@@ -336,7 +336,7 @@ class LLMSecurityWrapper:
             total_text = " ".join([msg.get("content", "") for msg in safe_messages])
             estimated_tokens = self.cost_guard.estimate_tokens(total_text)
 
-            quota_result = await self.cost_guard.check_quota(user_id, estimated_tokens)
+            quota_result = await self.cost_guard.check_quota(user_id, estimated_tokens, check_only=True)
             if not quota_result.allowed:
                 if self.monitor:
                     self.monitor.record_quota_exceeded(user_id, quota_result.current_usage, quota_result.limit)
@@ -414,7 +414,7 @@ class LLMSecurityWrapper:
             total_text = " ".join(safe_texts)
             estimated_tokens = self.cost_guard.estimate_tokens(total_text) // 2  # Embedding 通常便宜一半
 
-            quota_result = await self.cost_guard.check_quota(user_id, estimated_tokens)
+            quota_result = await self.cost_guard.check_quota(user_id, estimated_tokens, check_only=True)
             if not quota_result.allowed:
                 raise QuotaExceededError(quota_result.message)
 

@@ -432,3 +432,27 @@
 验证：
 
 - `go test ./internal/service ./internal/db ./internal/handler` -> PASS
+
+## 20. Cycle 15 - LLM Security Wrapper 双记账 D1
+
+状态：`FIXED`
+
+目标：
+
+- 复核 `LLMSecurityWrapper` 是否仍把同一次 LLM 请求同时记入“预检查估算”和“实际使用”，导致日配额双重累计。
+
+源码复核结论：
+
+- `CONFIRMED`：`chat()`、`chat_with_tools()`、`stream_chat()`、`generate_embeddings()` 都先调用 `cost_guard.check_quota(user_id, estimated_tokens)`，随后又调用 `record_usage(user_id, actual_tokens, ...)`。
+- `CONFIRMED`：`LLMCostGuard.check_quota()` 在 `check_only=False` 时会直接 `incrby(daily_key, estimated_tokens)`，所以包装层当前会把同一次请求的日配额至少累计两次。
+
+修复：
+
+- 四个包装入口统一改为 `check_quota(..., check_only=True)`，仅做配额准入判断。
+- 保留 `record_usage(actual_tokens)` 作为唯一的真实记账入口。
+- 新增包装层回归测试，断言 quota 检查是 `check_only=True`，并且实际只记录一次 usage。
+
+验证：
+
+- `python3 -m compileall backend/app/core/llm_security_wrapper.py backend/tests/unit/test_llm_security_wrapper.py` -> PASS
+- `pytest backend/tests/unit/test_llm_security_wrapper.py backend/tests/unit/test_llm_quota.py` -> `35 passed`
