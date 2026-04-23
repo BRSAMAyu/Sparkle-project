@@ -51,7 +51,7 @@
 | # | slice | last_audited | round | last_issues_count | notes |
 |---|-------|--------------|-------|-------------------|-------|
 | 01 | auth_session | 2026-04-24T19:10+08:00 | 0 | 6 | Go不查session_revoked; AppleLogin静默丢错误; guest限流100/15min |
-| 02 | chat_websocket | null | 0 | - | - |
+| 02 | chat_websocket | 2026-04-24T19:40+08:00 | 0 | 8 | Protobuf绕过长度限制; GetWriter非确定性; saveMessage丢错误; goroutine无超时 |
 | 03 | plan_review | null | 0 | - | - |
 | 04 | dual_core_router | null | 0 | - | - |
 | 05 | execution_openclaw | null | 0 | - | - |

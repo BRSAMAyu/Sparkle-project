@@ -12,6 +12,14 @@
 | ISSUE-20260424-004 | 01 | P2 | open | Guest login SELECT-INSERT 竞态条件，并发同 guest_id 返回 500 | - | 19:05 |
 | ISSUE-20260424-005 | 01 | P2 | open | AppleLogin 用户创建/链接竞态，无 IntegrityError 处理 | - | 19:05 |
 | ISSUE-20260424-006 | 01 | P2 | open | Go/Python JWT issuer/audience claims 处理需验证一致性 | - | 19:05 |
+| ISSUE-20260424-007 | 02 | P1 | open | saveMessage Redis 写入失败静默丢弃，用户消息不可恢复丢失 | - | 19:30 |
+| ISSUE-20260424-008 | 02 | P2 | open | 两套独立 WS 连接注册系统互不感知，用户可绕过全局限制 | - | 19:30 |
+| ISSUE-20260424-009 | 02 | P1 | open | STREAM_TOKEN_SEGMENT=0 导致 quota 记录无限循环 | - | 19:30 |
+| ISSUE-20260424-010 | 02 | P2 | open | 客户端 active_tools 未做白名单校验可注入任意工具名 | - | 19:30 |
+| ISSUE-20260424-011 | 02 | P2 | open | WS auth 检查在 Upgrade 之后，防御层位置不当 | - | 19:30 |
+| ISSUE-20260424-012 | 02 | P2 | open | Flutter WS fallback 将 JWT 暴露在 URL query parameter 中 | - | 19:30 |
+| ISSUE-20260424-013 | 02 | P1 | open | Protobuf 路径绕过 maxMessageLength 4000 字符应用层限制 | - | 19:35 |
+| ISSUE-20260424-014 | 02 | P1 | open | GetWriter/Get 非确定性返回，PushIntervention 可能发到错误设备 | - | 19:35 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -22,9 +30,10 @@
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 6
+- open: 14
 - verifying: 0
 - closed (7d): 0
 - escalated: 0
-- last_update: 2026-04-24T19:10:00+08:00
+- last_update: 2026-04-24T19:40:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
+- slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
