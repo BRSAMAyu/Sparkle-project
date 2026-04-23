@@ -48,15 +48,16 @@ type chatInput struct {
 	Nickname          string                 `json:"nickname,omitempty"`
 	FileIds           []string               `json:"file_ids,omitempty"`
 	IncludeReferences bool                   `json:"include_references,omitempty"`
+	ActiveTools       []string               `json:"active_tools,omitempty"`
 	ExtraContext      map[string]interface{} `json:"extra_context,omitempty"`
 	ChatMode          string                 `json:"chat_mode,omitempty"`
 	// Tool result fields — populated when the client sends back a tool execution result.
-	ToolCallID    string `json:"tool_call_id,omitempty"`
-	ToolName      string `json:"tool_name,omitempty"`
+	ToolCallID     string `json:"tool_call_id,omitempty"`
+	ToolName       string `json:"tool_name,omitempty"`
 	ToolResultJSON string `json:"tool_result_json,omitempty"`
-	ToolIsError   bool   `json:"tool_is_error,omitempty"`
-	ToolErrorMsg  string `json:"tool_error_message,omitempty"`
-	IsToolResult  bool   `json:"-"` // internal flag
+	ToolIsError    bool   `json:"tool_is_error,omitempty"`
+	ToolErrorMsg   string `json:"tool_error_message,omitempty"`
+	IsToolResult   bool   `json:"-"` // internal flag
 }
 
 type wsMode int
@@ -97,6 +98,7 @@ func (c *chatInput) Reset() {
 	c.Nickname = ""
 	c.FileIds = nil
 	c.IncludeReferences = false
+	c.ActiveTools = nil
 	c.ExtraContext = nil
 	c.ChatMode = ""
 	c.ToolCallID = ""

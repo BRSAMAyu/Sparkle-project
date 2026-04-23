@@ -74,6 +74,7 @@ func TestDecodeChatRequestEnvelopeProtoJSON(t *testing.T) {
 		"chatMode":"default",
 		"includeReferences":true,
 		"fileIds":["f1","f2"],
+		"activeTools":["search","plan"],
 		"userProfile":{"nickname":"tester"},
 		"message":"hello world",
 		"extraContext":{"plan_id":"p1"}
@@ -95,6 +96,9 @@ func TestDecodeChatRequestEnvelopeProtoJSON(t *testing.T) {
 	}
 	if !input.IncludeReferences {
 		t.Fatal("expected include references to be true")
+	}
+	if len(input.ActiveTools) != 2 {
+		t.Fatalf("unexpected active tools: %#v", input.ActiveTools)
 	}
 	if got := input.ExtraContext["plan_id"]; got != "p1" {
 		t.Fatalf("unexpected extra context plan_id: %#v", got)

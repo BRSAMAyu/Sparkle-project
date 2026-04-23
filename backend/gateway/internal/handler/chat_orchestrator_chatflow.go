@@ -387,6 +387,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		SessionId:         input.SessionID,
 		FileIds:           input.FileIds,
 		IncludeReferences: input.IncludeReferences,
+		ActiveTools:       input.ActiveTools,
 		ChatMode:          normalizedChatMode,
 		UserProfile:       buildAgentUserProfile(input.Nickname, userContextJSON, profileSnapshot, resolvedUser),
 	}

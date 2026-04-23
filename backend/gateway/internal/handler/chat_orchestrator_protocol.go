@@ -464,6 +464,7 @@ func decodeChatRequestEnvelope(raw json.RawMessage, input *chatInput) error {
 	input.Nickname = req.GetUserProfile().GetNickname()
 	input.FileIds = req.GetFileIds()
 	input.IncludeReferences = req.GetIncludeReferences()
+	input.ActiveTools = req.GetActiveTools()
 	if extra := req.GetExtraContext(); extra != nil {
 		input.ExtraContext = extra.AsMap()
 	}

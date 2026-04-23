@@ -16,7 +16,8 @@ func TestChatInputUnmarshalWithFiles(t *testing.T) {
 		"message": "hi",
 		"session_id": "s1",
 		"file_ids": ["f1", "f2"],
-		"include_references": true
+		"include_references": true,
+		"active_tools": ["search", "plan"]
 	}`)
 
 	var input chatInput
@@ -26,6 +27,7 @@ func TestChatInputUnmarshalWithFiles(t *testing.T) {
 	assert.Equal(t, "s1", input.SessionID)
 	assert.Equal(t, []string{"f1", "f2"}, input.FileIds)
 	assert.True(t, input.IncludeReferences)
+	assert.Equal(t, []string{"search", "plan"}, input.ActiveTools)
 }
 
 func TestNormalizeChatMode(t *testing.T) {

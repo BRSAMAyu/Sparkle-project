@@ -570,3 +570,27 @@
 验证：
 
 - `go test ./cmd/server ./internal/middleware` -> PASS
+
+## 26. Cycle 21 - Active Tools 跨桥接透传 D1
+
+状态：`FIXED`
+
+目标：
+
+- 复核 proto `ChatRequest.active_tools` 是否在 Gateway WebSocket/Envelope 解码后仍会在 Go→Python 桥接中丢失。
+
+源码复核结论：
+
+- `CONFIRMED`：`chatInput` 结构缺少 `ActiveTools` 字段，`decodeChatRequestEnvelope()` 也未读取 `req.GetActiveTools()`。
+- `CONFIRMED`：`chat_orchestrator_chatflow.go` 构造下游 gRPC `ChatRequest` 时因此永远传空列表，Python 侧显式工具范围只能依赖推断而非客户端透传。
+
+修复：
+
+- `chatInput` 增加 `ActiveTools`，同时支持 legacy JSON 的 `active_tools` 与 proto envelope 的 `activeTools`。
+- `decodeChatRequestEnvelope()` 透传 `req.GetActiveTools()`。
+- Go→Python 构造下游 `ChatRequest` 时补上 `ActiveTools: input.ActiveTools`。
+- 新增回归测试覆盖 legacy JSON 与 proto envelope 两种入口的 active tools 解析。
+
+验证：
+
+- `go test ./internal/handler` -> PASS
