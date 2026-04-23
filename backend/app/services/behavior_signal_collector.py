@@ -43,11 +43,14 @@ class BehaviorSignalCollector:
     OVERRUN_STREAK = 3
     INFERRED_WINDOW_DAYS = 14
     INFERRED_AGGREGATION_STEP = 5
+    INFERRED_TASK_LIMIT = 200
+    INFERRED_FEEDBACK_LIMIT = 200
 
     def __init__(self, db: AsyncSession, redis=None, event_bus: EventBus | None = None):
         self.db = db
         self.redis = redis
         self.event_bus = event_bus
+        self._local_cooldowns: dict[str, datetime] = {}
         self.cognitive_service = CognitiveService(db)
         self.plan_state_service = PlanStateService(db, redis)
         self.profile_write_service = ProfileWriteService(db, redis)
@@ -114,11 +117,13 @@ class BehaviorSignalCollector:
             return
 
         intervention_created = False
+        processed_active_state = False
         pending_push_deliveries: list[tuple[str, dict]] = []
         states = await self.plan_state_service.get_active_plan_states(user_id, limit=3)
         for state in states:
             if state.status != PlanStateStatus.ACTIVE.value:
                 continue
+            processed_active_state = True
             replanner = AdaptiveReplanner(self.db, self.redis)
             await replanner.on_behavior_pattern_detected(
                 user_id=user_id,
@@ -130,17 +135,32 @@ class BehaviorSignalCollector:
             try:
                 from app.services.card_protocol.behavior_intervention_bridge import BehaviorInterventionBridge
                 bridge = BehaviorInterventionBridge(self.db, self.event_bus)
-                record = await bridge.on_behavior_pattern(
-                    user_id=user_id,
-                    pattern_name=str(event.get("pattern_name") or ""),
-                    pattern_type=str(event.get("pattern_type") or "execution"),
-                    confidence=confidence,
-                    plan_id=state.plan_id,
-                    description=event.get("description"),
-                    solution_text=event.get("solution_text"),
-                    frequency=int(event.get("frequency") or 1),
-                    evidence_ids=event.get("evidence_ids"),
-                )
+                record = None
+                if hasattr(self.db, "begin_nested"):
+                    async with self.db.begin_nested():
+                        record = await bridge.on_behavior_pattern(
+                            user_id=user_id,
+                            pattern_name=str(event.get("pattern_name") or ""),
+                            pattern_type=str(event.get("pattern_type") or "execution"),
+                            confidence=confidence,
+                            plan_id=state.plan_id,
+                            description=event.get("description"),
+                            solution_text=event.get("solution_text"),
+                            frequency=int(event.get("frequency") or 1),
+                            evidence_ids=event.get("evidence_ids"),
+                        )
+                else:
+                    record = await bridge.on_behavior_pattern(
+                        user_id=user_id,
+                        pattern_name=str(event.get("pattern_name") or ""),
+                        pattern_type=str(event.get("pattern_type") or "execution"),
+                        confidence=confidence,
+                        plan_id=state.plan_id,
+                        description=event.get("description"),
+                        solution_text=event.get("solution_text"),
+                        frequency=int(event.get("frequency") or 1),
+                        evidence_ids=event.get("evidence_ids"),
+                    )
                 if record:
                     intervention_created = True
                     try:
@@ -155,11 +175,11 @@ class BehaviorSignalCollector:
                     except Exception:
                         pass
             except Exception as bridge_exc:
-                await self.db.rollback()
                 logger.warning("Behavior→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)
 
-        if intervention_created:
+        if processed_active_state:
             await self.db.commit()
+        if intervention_created:
             for intervention_id, payload in pending_push_deliveries:
                 try:
                     from app.core.celery_tasks import schedule_push_notification
@@ -320,6 +340,9 @@ class BehaviorSignalCollector:
         await self._mark_signal_emitted(user_id, signal_key)
 
     async def _maybe_emit_pattern_adjustment(self, user_id: UUID) -> None:
+        signal_key = "pattern_adjustment"
+        if await self._signal_on_cooldown(user_id, signal_key):
+            return
         states = await self.plan_state_service.get_active_plan_states(user_id, limit=3)
         for state in states:
             replanner = AdaptiveReplanner(self.db, self.redis)
@@ -328,21 +351,38 @@ class BehaviorSignalCollector:
                 plan_id=state.plan_id,
                 pattern_name=None,
             )
+        if states:
+            await self._mark_signal_emitted(user_id, signal_key)
 
     async def _signal_on_cooldown(self, user_id: UUID, signal_key: str) -> bool:
-        if not self.redis:
+        key = self._cooldown_key(user_id, signal_key)
+        if self.redis:
+            try:
+                raw = await self.redis.get(key)
+                if raw:
+                    return True
+            except Exception:
+                logger.warning(f"Redis cooldown check failed for {key}, falling back to local")
+        expires_at = self._local_cooldowns.get(key)
+        if not expires_at:
             return False
-        raw = await self.redis.get(self._cooldown_key(user_id, signal_key))
-        return bool(raw)
+        if expires_at <= _utcnow():
+            self._local_cooldowns.pop(key, None)
+            return False
+        return True
 
     async def _mark_signal_emitted(self, user_id: UUID, signal_key: str) -> None:
-        if not self.redis:
-            return
-        await self.redis.setex(
-            self._cooldown_key(user_id, signal_key),
-            int(self.SIGNAL_COOLDOWN.total_seconds()),
-            json.dumps({"emitted_at": _utcnow().isoformat()}),
-        )
+        key = self._cooldown_key(user_id, signal_key)
+        self._local_cooldowns[key] = _utcnow() + self.SIGNAL_COOLDOWN
+        if self.redis:
+            try:
+                await self.redis.setex(
+                    key,
+                    int(self.SIGNAL_COOLDOWN.total_seconds()),
+                    json.dumps({"emitted_at": _utcnow().isoformat()}),
+                )
+            except Exception:
+                logger.warning(f"Redis cooldown mark failed for {key}")
 
     @staticmethod
     def _cooldown_key(user_id: UUID, signal_key: str) -> str:
@@ -358,6 +398,7 @@ class BehaviorSignalCollector:
                     return
             except Exception as exc:
                 logger.warning("Task inferred counter failed for %s: %s", user_id, exc)
+                return
 
         updates = await self._build_task_inferred_updates(user_id)
         if not updates:
@@ -382,6 +423,7 @@ class BehaviorSignalCollector:
                 Task.completed_at >= cutoff,
             )
             .order_by(desc(Task.completed_at))
+            .limit(self.INFERRED_TASK_LIMIT)
         )
         tasks = list(task_result.scalars().all())
         if not tasks:
@@ -407,6 +449,7 @@ class BehaviorSignalCollector:
                 TaskFeedback.created_at >= cutoff,
             )
             .order_by(desc(TaskFeedback.created_at))
+            .limit(self.INFERRED_FEEDBACK_LIMIT)
         )
         feedbacks = list(feedback_result.scalars().all())
         difficulty_feedback_ratio = self._difficulty_feedback_ratio(feedbacks)

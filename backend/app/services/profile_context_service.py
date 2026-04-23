@@ -622,6 +622,9 @@ class ProfileContextService:
                 if not node_name:
                     continue
                 delta = float(item.get("mastery_delta") or 0.0)
+                # Only include changes with meaningful delta; no synthetic baseline
+                if abs(delta) < 0.01:
+                    continue
                 created_at_raw = item.get("created_at")
                 changed_at = _utcnow()
                 if isinstance(created_at_raw, str) and created_at_raw.strip():
@@ -635,8 +638,8 @@ class ProfileContextService:
                     MasteryChange(
                         node_id=f"derived:{index}",
                         node_name=node_name,
-                        old_mastery=max(0.0, 42.0 - delta),
-                        new_mastery=max(0.0, 42.0),
+                        old_mastery=None,
+                        new_mastery=None,
                         changed_at=changed_at,
                     )
                 )

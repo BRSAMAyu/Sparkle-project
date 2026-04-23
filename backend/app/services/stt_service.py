@@ -178,6 +178,14 @@ class STTService:
         enhanced_text = await stt_llm.call(messages, fallback=text, temperature=0.3)
         return enhanced_text.strip() if enhanced_text else text
 
+    _PROVIDER_ERROR_MARKERS = (
+        "未配置",
+        "识别失败",
+        "语音识别失败",
+        "API密钥",
+        "请求失败",
+    )
+
     async def handle_websocket_stream(self, websocket: WebSocket):
         """
         Handle WebSocket audio stream using configured STT Provider.
@@ -204,6 +212,11 @@ class STTService:
 
             # Transcribe using the provider
             async for text in active_provider.transcribe_stream(audio_stream):
+                # Detect error text leaked from providers as transcription
+                if any(marker in text for marker in self._PROVIDER_ERROR_MARKERS):
+                    logger.warning(f"Provider returned error as text: {text[:80]}")
+                    await websocket.send_json({"type": "error", "content": "STT provider error"})
+                    break
                 await websocket.send_json({"type": "transcription", "text": text, "is_final": False})
 
             # Send completion signal
@@ -213,11 +226,10 @@ class STTService:
             logger.info(f"WebSocket disconnected: {session_id}")
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
-            await websocket.send_json({"type": "error", "content": str(e)})
-        finally:
-            # Cleanup
-            for provider in self._ordered_providers():
-                await provider.close()
+            try:
+                await websocket.send_json({"type": "error", "content": "STT stream error"})
+            except Exception:
+                pass
 
     async def _create_audio_stream_generator(self, websocket: WebSocket) -> AsyncGenerator[bytes, None]:
         """

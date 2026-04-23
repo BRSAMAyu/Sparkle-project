@@ -36,8 +36,8 @@ class WeakSpot(BaseModel):
 class MasteryChange(BaseModel):
     node_id: str
     node_name: str
-    old_mastery: float
-    new_mastery: float
+    old_mastery: float | None = None
+    new_mastery: float | None = None
     changed_at: datetime
 
 
