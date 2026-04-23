@@ -206,3 +206,37 @@
 - B1 Signal Push internal auth fail-closed。
 - B2 Gateway config dangerous defaults。
 - B3/B4/B5 WebSocket origin/token/连接治理。
+
+## 11. Cycle 7 - 跨服务边界 B1/B2
+
+状态：`FIXED`
+
+目标：
+
+- 复核 Gateway Signal Push internal auth 是否仍存在 handler 级 fail-open。
+- 复核 Gateway config 是否仍在非开发环境允许危险默认。
+
+源码复核结论：
+
+- `CONFIRMED`：`SignalPushHandler.isAuthorized()` 在 `InternalAPIKey == ""` 时返回 `true`，且使用普通字符串比较。虽然 `/internal` 路由组已有 `InternalAPIKeyMiddleware` 保护，但 handler 自身仍是可复发的 fail-open 防线缺口。
+- `FIXED/PREVIOUSLY`：`backend/gateway/internal/config/config.go` 已在非开发环境强制 `INTERNAL_API_KEY` 非空、强制 `RedisFailClosed = true`，并拒绝 `ALLOW_WS_QUERY_TOKEN`、默认 MinIO 密钥等危险配置。本轮不重复修改。
+
+修复：
+
+- `SignalPushHandler.isAuthorized()` 改为 key 未配置时 fail-closed。
+- header 与配置 key 均 trim 后用 `subtle.ConstantTimeCompare()` 比较。
+- 新增 Go 单测覆盖空配置、缺失 header、错误 header、正确 header。
+
+验证：
+
+- `go test ./internal/handler ./internal/middleware ./internal/config` -> PASS
+
+## 12. Cycle 8 - WebSocket 边界 B3/B4/B5
+
+状态：`PENDING`
+
+目标：
+
+- 复核 root WS routes 是否统一经过 origin、连接数、read limit、idle timeout、ping/pong、metrics 链。
+- 复核 community WS proxy 是否仍有 token URL 暴露、idle/ping-pong/per-user limit 缺口。
+- 复核 STT WebSocket origin 是否已使用统一 allowlist。

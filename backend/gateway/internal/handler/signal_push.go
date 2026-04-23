@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"crypto/subtle"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -129,11 +131,12 @@ func (h *SignalPushHandler) HandlePush(c *gin.Context) {
 }
 
 func (h *SignalPushHandler) isAuthorized(c *gin.Context) bool {
-	if h.cfg.InternalAPIKey == "" {
-		return true
+	expected := strings.TrimSpace(h.cfg.InternalAPIKey)
+	if expected == "" {
+		return false
 	}
-	key := c.GetHeader("X-Internal-API-Key")
-	return key != "" && key == h.cfg.InternalAPIKey
+	key := strings.TrimSpace(c.GetHeader("X-Internal-API-Key"))
+	return key != "" && subtle.ConstantTimeCompare([]byte(key), []byte(expected)) == 1
 }
 
 func mapStringString(input map[string]any) map[string]string {
