@@ -51,6 +51,14 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _grpc_status_for_chat_error(error_code: int) -> grpc.StatusCode:
+    if error_code == agent_service_pb2.ERROR_CODE_TIMEOUT:
+        return grpc.StatusCode.DEADLINE_EXCEEDED
+    if error_code == agent_service_pb2.ERROR_CODE_UNAVAILABLE:
+        return grpc.StatusCode.UNAVAILABLE
+    return grpc.StatusCode.INTERNAL
+
+
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
     """
     AgentService 的 gRPC 实现
@@ -246,6 +254,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"StreamChat error: {e}", exc_info=True)
             safe_message, error_code, retryable = build_safe_chat_error(e)
+            context.set_code(_grpc_status_for_chat_error(error_code))
+            context.set_details(safe_message)
             response = agent_service_pb2.ChatResponse(
                 response_id=str(uuid.uuid4()),
                 created_at=int(datetime.now().timestamp()),
@@ -259,7 +269,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     retryable=retryable,
                     error_code=error_code,
                 ),
-                finish_reason=agent_service_pb2.STOP,  # Using STOP as finish reason even for errors in gRPC mapping if needed, or define ERROR
+                finish_reason=agent_service_pb2.ERROR,
             )
             response.event_time.FromDatetime(datetime.now(timezone.utc))
             yield response

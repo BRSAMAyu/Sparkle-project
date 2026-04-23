@@ -525,3 +525,26 @@
 验证：
 
 - `go test ./internal/middleware ./internal/handler` -> PASS
+
+## 24. Cycle 19 - gRPC StreamChat 错误终止语义 D1
+
+状态：`FIXED`
+
+目标：
+
+- 复核 `AgentServiceImpl.StreamChat()` 在异常路径上是否仍把错误结束伪装成正常 `STOP`，并缺少 gRPC status code。
+
+源码复核结论：
+
+- `CONFIRMED`：`StreamChat` 异常分支仍返回 `finish_reason=STOP`。
+- `CONFIRMED`：同一异常分支没有 `context.set_code()` / `set_details()`，导致 Go 侧和断路器只能看到“流正常结束但带 error payload”。
+
+修复：
+
+- 增加 `_grpc_status_for_chat_error()`，将 timeout / unavailable / internal 安全错误映射到明确的 gRPC status code。
+- `StreamChat` 异常响应改为 `finish_reason=ERROR`，同时写入 `context.set_code()` 与 `context.set_details()`。
+- 新增单测覆盖 internal error 与 timeout 两条路径，确保 finish reason 与 gRPC status 同步。
+
+验证：
+
+- `pytest backend/tests/unit/services/test_agent_grpc_service.py` -> PASS
