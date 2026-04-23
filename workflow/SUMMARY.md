@@ -21,4 +21,5 @@
 - verifying: 0
 - closed (7d): 0
 - escalated: 0
-- last_update: null
+- last_update: 2026-04-24T17:00:00+08:00
+- baseline_audit: 工程收尾 vs main 3 commits verified clean, env-check pass
