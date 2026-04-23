@@ -251,5 +251,27 @@ login_debug_res.json
 login_new_res.json
 register_res.json
 
+# ========================================
+# Local Runtime State (never commit)
+# ========================================
+.sgw_state/
+.local_runtime/
+.codex-backups/
+
+# ========================================
+# Claude Code local state (never commit)
+# Keep plan docs under .claude/plans/ but not runtime state
+# ========================================
+.claude/worktrees/
+.claude/scheduled_tasks.json
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+.claude/ide/
+
+# ========================================
+# Session continuation artifacts (Claude Code)
+# ========================================
+2026-*-this-session-is-being-continued-from-a-previous-*.txt
+
 # Keep dictionaries directory (MDX files for vocabulary lookup)
 # data/dictionaries/
