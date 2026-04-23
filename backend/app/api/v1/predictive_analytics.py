@@ -63,8 +63,8 @@ async def get_engagement_forecast(
         }
 
     except Exception as e:
-        logger.error(f"Engagement prediction failed for user {current_user.id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
 
 
 @router.get("/difficulty/{topic_id}")
@@ -107,8 +107,8 @@ async def get_difficulty_prediction(
         }
 
     except Exception as e:
-        logger.error(f"Difficulty prediction failed for topic {topic_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
 
 
 @router.get("/optimal-time")
@@ -144,8 +144,8 @@ async def get_optimal_time_recommendation(
         }
 
     except Exception as e:
-        logger.error(f"Optimal time recommendation failed for user {current_user.id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
 
 
 @router.get("/dropout-risk")
@@ -191,8 +191,8 @@ async def get_dropout_risk_assessment(
         }
 
     except Exception as e:
-        logger.error(f"Dropout risk assessment failed for user {current_user.id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
 
 
 @router.get("/dashboard")
@@ -245,8 +245,8 @@ async def get_predictive_dashboard(
         }
 
     except Exception as e:
-        logger.error(f"Predictive dashboard generation failed for user {current_user.id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
 
 
 @router.get("/next-intent")
@@ -262,8 +262,8 @@ async def get_next_intent_forecast(
             "data": forecast,
         }
     except Exception as e:
-        logger.error(f"Next intent prediction failed for user {current_user.id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
 
 
 @router.post("/realtime-next-step")
@@ -285,8 +285,8 @@ async def get_realtime_next_step_prediction(
             "data": forecast,
         }
     except Exception as e:
-        logger.error(f"Realtime next-step prediction failed for user {current_user.id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
 
 
 @router.get("/analytics")
@@ -306,5 +306,5 @@ async def get_prediction_analytics(
             "data": analytics,
         }
     except Exception as e:
-        logger.error(f"Predictive analytics failed for user {current_user.id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
