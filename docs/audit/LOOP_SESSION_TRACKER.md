@@ -267,3 +267,33 @@
 - 检查剩余 asyncio.create_task (assets.py 5×, community.py 1×)
 - 检查 Go Gateway 安全链 (audit #51 P1-1 TrustedProxies, P1-2 CSP)
 - 考虑修复 chat.py 死代码 N+1 (test_behavior_signal_collector mock 已修但 chat.py 未动)
+
+### Session 10 — 2026-04-23 (Chris S10 — Main Branch)
+
+**Focus**: 继续在 main 分支修复已确认的真实问题
+
+**代码修复 (4 项)**:
+
+| # | 文件 | 问题 | 修复 |
+|---|------|------|------|
+| 1 | chat.py:956-959 | 死 N+1: session_meta 查了但从未使用 | 移除整个查询块 |
+| 2 | profile_event_consumer.py:44 | consumer_name 用 timestamp→重启丢消息 | → 固定 "profile-consumer-1" |
+| 3 | profile_event_consumer.py:130 | focus_session 不清 ProfileContext 缓存 | → 添加 _invalidate_profile_context_cache |
+| 4 | profile_event_consumer.py:141 | error_created 不清 ProfileContext 缓存 | → 添加 _invalidate_profile_context_cache |
+
+**调查结论**: assets.py (5×) 和 community.py (1×) 的 asyncio.create_task 是内部信号刷新
+（自带 AsyncSessionLocal + try/except），非安全风险，无需改 Celery。
+
+**测试结果**: 4 passed (targeted), 无回归
+
+**Commits**:
+- `ffbbceb3`: fix(perf+cache): chat.py dead N+1, profile_event_consumer cache fix
+
+**审计更新**: SUMMARY #4 (P0-3已修), #64 (P0-1+P0-2已修)
+
+**Next Session Should**:
+- 复核 ⚠️ 报告 #47 ChatOrchestrator (配额预留不退还 + token偏估)
+- 复核 ⚠️ 报告 #53 Go Chat Orchestrator (3×P0全部确认)
+- 检查 Go Gateway #51 P1-1 TrustedProxies, P1-2 CSP, P1-5 WS路由绕过
+- 验证 security.py blacklist_token logger import (audit #62 P0-1)
+- 评估 #62 P0-2 get_db_context asyncio.run 崩溃风险
