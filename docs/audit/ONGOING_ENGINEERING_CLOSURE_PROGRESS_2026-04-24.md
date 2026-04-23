@@ -456,3 +456,27 @@
 
 - `python3 -m compileall backend/app/core/llm_security_wrapper.py backend/tests/unit/test_llm_security_wrapper.py` -> PASS
 - `pytest backend/tests/unit/test_llm_security_wrapper.py backend/tests/unit/test_llm_quota.py` -> `35 passed`
+
+## 21. Cycle 16 - Gateway Chat 单账本切换 D1
+
+状态：`FIXED`
+
+目标：
+
+- 复核 Gateway chat runtime 是否仍同时依赖 `user:quota:{uid}` 请求计数账本和 `llm_tokens:{uid}:{date}` token usage 账本。
+- 若成立，切到单一 token usage 账本，避免未初始化 `user:quota` 把新用户当 0 直接阻断。
+
+源码复核结论：
+
+- `CONFIRMED`：`handleChatMessage()` 仍先调用 `ReserveRequest()` 操作 `user:quota:{uid}`，同时后面又按流式输出写 `llm_tokens:{uid}:{date}`。
+- `CONFIRMED`：仓库内没有 `user:quota:{uid}` 的统一初始化路径；在启用该路径时，未初始化用户会被视为 0 配额。
+
+修复：
+
+- Chat Orchestrator 运行时移除 `ReserveRequest()` / request quota refund 路径，统一依赖已有的 token usage 限额与 `DAILY_QUOTA`。
+- quota integration 测试改为验证“不需要预置 request quota 计数，也不会写入 `user:quota:{uid}`”。
+- 这样 Gateway chat runtime 与 Python `LLMDispatcher` 一样，收敛到 usage-based quota，而不是 request-count + token-count 双轨。
+
+验证：
+
+- `go test ./internal/handler ./internal/service ./internal/db` -> PASS

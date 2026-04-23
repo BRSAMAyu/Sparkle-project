@@ -16,7 +16,7 @@ import (
 )
 
 // TestChatOrchestrator_QuotaIntegration verifies that the WebSocket handler
-// correctly interacts with the QuotaService (ReserveRequest).
+// relies on token-usage quota only and does not require a preinitialized request quota counter.
 func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 	// Force production environment to enable quota checks
 	os.Setenv("ENVIRONMENT", "prod")
@@ -70,36 +70,7 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 	defer ts.Close()
 	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws/chat"
 
-	t.Run("Quota Exhausted -> Immediate Error", func(t *testing.T) {
-		// Ensure user has 0 quota
-		s.Set("user:quota:user_quota_test", "0")
-
-		// Connect
-		conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-		assert.NoError(t, err)
-		defer conn.Close()
-
-		// Send Message
-		err = conn.WriteJSON(map[string]interface{}{
-			"message":    "Hello",
-			"session_id": "sess_1",
-		})
-		assert.NoError(t, err)
-
-		// Expect Error Message
-		var resp map[string]interface{}
-		err = conn.ReadJSON(&resp)
-		assert.NoError(t, err)
-
-		// Verify it's a quota error
-		assert.Equal(t, "error", resp["type"])
-		assert.Equal(t, "Quota exhausted", resp["message"])
-	})
-
-	t.Run("Quota Sufficient -> Proceeds (and fails at next step)", func(t *testing.T) {
-		// Ensure user has quota
-		s.Set("user:quota:user_quota_test", "10")
-
+	t.Run("Request quota counter is not required for first request", func(t *testing.T) {
 		// Connect
 		conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 		assert.NoError(t, err)
@@ -121,8 +92,6 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 		assert.Equal(t, "error", resp["type"])
 		assert.Equal(t, "AI Service Unavailable", resp["message"])
 
-		// Verify quota was refunded because the request failed before reaching the agent stream.
-		val, _ := s.Get("user:quota:user_quota_test")
-		assert.Equal(t, "10", val)
+		assert.False(t, s.Exists("user:quota:user_quota_test"))
 	})
 }

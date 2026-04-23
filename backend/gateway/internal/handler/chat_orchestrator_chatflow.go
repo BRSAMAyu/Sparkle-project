@@ -369,57 +369,14 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	var dailyLimit int64
 	var dailyUsageStart int64
-	skipQuota := false
 	if h.quota != nil {
 		dailyLimit = getEnvInt64("DAILY_QUOTA", 100000)
-		if dailyLimit <= 0 || isDevelopmentEnv() {
-			skipQuota = true
-		} else {
+		if dailyLimit > 0 && !isDevelopmentEnv() {
 			if usage, err := h.quota.GetDailyUsage(ctx, userID); err == nil {
 				dailyUsageStart = usage
 			} else {
 				log.Printf("Failed to load daily usage: %v", err)
 			}
-		}
-	}
-
-	quotaReserved := false
-	if h.quota != nil && !skipQuota {
-		quotaCtx, quotaSpan := tracer.Start(ctx, "quota.reserve")
-		remaining, err := h.quota.ReserveRequest(quotaCtx, userID, reqID, 24*time.Hour)
-		quotaSpan.End()
-
-		if err != nil {
-			if err == service.ErrQuotaInsufficient {
-				log.Printf("Quota exhausted for user=%s request=%s", userID, reqID)
-				switch r := responder.(type) {
-				case *envelopeResponder:
-					r.SendError("resource_exhausted", "Quota exhausted", false)
-				case *protobufResponder:
-					r.SendError("resource_exhausted", "Quota exhausted", false)
-				case *wsSafeWriter:
-					_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "Quota exhausted"})
-				}
-				return false
-			}
-			log.Printf("Failed to reserve quota: %v", err)
-		} else {
-			span := trace.SpanFromContext(ctx)
-			span.SetAttributes(attribute.Int64("quota_remaining", remaining))
-			quotaReserved = true
-		}
-	}
-	refundQuotaReservation := func(reason string) {
-		if !quotaReserved {
-			return
-		}
-		quotaReserved = false
-		refundCtx, cancelRefund := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancelRefund()
-		if remaining, err := h.quota.RefundReservation(refundCtx, userID, reqID, 24*time.Hour); err != nil {
-			log.Printf("Failed to refund quota reservation user=%s request=%s reason=%s err=%v", userID, reqID, reason, err)
-		} else {
-			log.Printf("Refunded quota reservation user=%s request=%s reason=%s remaining=%d", userID, reqID, reason, remaining)
 		}
 	}
 
@@ -458,7 +415,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	if h.agentClient == nil {
 		log.Printf("Agent client not initialized")
-		refundQuotaReservation("agent_client_unavailable")
 		switch r := responder.(type) {
 		case *envelopeResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
@@ -477,7 +433,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	if err != nil {
 		log.Printf("Failed to call StreamChat: %v", err)
-		refundQuotaReservation("stream_chat_call_failed")
 		switch r := responder.(type) {
 		case *envelopeResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
@@ -519,7 +474,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 		if err != nil {
 			log.Printf("Stream recv error: %v", err)
-			refundQuotaReservation("stream_recv_failed")
 			respondStreamRecvError(responder, err)
 			return false
 		}
