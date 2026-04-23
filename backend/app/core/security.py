@@ -8,6 +8,7 @@ from datetime import timezone, datetime, timedelta
 from uuid import uuid4
 
 from jose import JWTError, jwt
+from loguru import logger
 from passlib.context import CryptContext
 from sqlalchemy import select
 

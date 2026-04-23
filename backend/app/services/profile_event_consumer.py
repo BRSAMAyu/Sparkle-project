@@ -63,7 +63,7 @@ class ProfileEventConsumer:
                 await self.event_bus.subscribe(
                     stream=self.STREAM_NAME,
                     group_name=self.GROUP_NAME,
-                    consumer_name=f"profile-{_utcnow().timestamp()}",
+                    consumer_name="profile-consumer-1",
                     callback=self.handle_event,
                 )
                 break
@@ -156,6 +156,7 @@ class ProfileEventConsumer:
             user_id = self._normalize_user_id(event.get("user_id"))
             if not user_id:
                 return
+            await self._invalidate_profile_context_cache(user_id)
             async with AsyncSessionLocal() as db:
                 processor = FocusSignalProcessor(db, self.redis)
                 await processor.process_focus_event(UUID(user_id))
@@ -167,6 +168,7 @@ class ProfileEventConsumer:
             user_id = self._normalize_user_id(event.get("user_id"))
             if not user_id:
                 return
+            await self._invalidate_profile_context_cache(user_id)
             async with AsyncSessionLocal() as db:
                 processor = ErrorBookSignalProcessor(db, self.redis)
                 await processor.process_error_created(UUID(user_id))
