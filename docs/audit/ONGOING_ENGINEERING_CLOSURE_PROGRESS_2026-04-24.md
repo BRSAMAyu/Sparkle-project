@@ -268,3 +268,26 @@
 - C1 SignalHub map 并发竞态。
 - C4 Execution Service 幂等键随机化与类级故障状态。
 - D1/D3 Quota/LLM 预留与失败退款。
+
+## 14. Cycle 9 - 并发边界 C1
+
+状态：`FIXED`
+
+目标：
+
+- 复核 `backend/gateway/internal/service/signal_hub.go` 是否仍存在 Send 遍历 map 与 Unregister 修改 map 的并发竞态。
+
+源码复核结论：
+
+- `CONFIRMED`：`Send()` 在释放 `RLock` 后遍历 `userConns` 原 map；同时 `Unregister()` 可持写锁删除同一 map 项。锁保护了 map 获取动作，但没有保护后续遍历。
+
+修复：
+
+- `Send()` 在读锁内复制连接快照到 slice，释放锁后执行 `WriteJSON()`。
+- 写失败仍调用 `Unregister()` 和 `Close()`，避免坏连接泄漏。
+- 新增失败连接清理测试和 concurrent unregister/send 测试。
+
+验证：
+
+- `go test ./internal/service` -> PASS
+- `go test -race ./internal/service -run TestSignalHub` -> PASS

@@ -47,9 +47,13 @@ func (h *SignalHub) Unregister(userID string, conn JSONWriteCloser) {
 func (h *SignalHub) Send(userID string, payload interface{}) {
 	h.mu.RLock()
 	userConns := h.connections[userID]
+	conns := make([]JSONWriteCloser, 0, len(userConns))
+	for conn := range userConns {
+		conns = append(conns, conn)
+	}
 	h.mu.RUnlock()
 
-	for conn := range userConns {
+	for _, conn := range conns {
 		if err := conn.WriteJSON(payload); err != nil {
 			h.Unregister(userID, conn)
 			_ = conn.Close()
