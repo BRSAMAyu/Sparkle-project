@@ -880,7 +880,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
 
     except Exception as e:
         # 如果获取上下文失败，返回默认值，不影响聊天功能
-        print(f"获取用户上下文时出错: {e}")
+        logger.warning(f"Failed to fetch user context: {e}")
 
     return context
 
@@ -1018,12 +1018,6 @@ async def get_chat_sessions(
 
     sessions = []
     for row in rows:
-        # Try to get title from ChatSessionModel
-        session_meta = await db.execute(
-            select(ChatSessionModel).where(ChatSessionModel.id == row.session_id)
-        )
-        session_meta = session_meta.scalar_one_or_none()
-
         sessions.append(ChatSession(
             session_id=row.session_id,
             user_id=row.user_id,

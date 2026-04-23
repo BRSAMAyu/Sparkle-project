@@ -770,6 +770,35 @@ def send_verification_email_task(self, to_email: str, verify_token: str, usernam
         raise self.retry(exc=exc)
 
 
+@celery_app.task(
+    bind=True,
+    max_retries=3,
+    default_retry_delay=60,
+    rate_limit="10/m",
+    name="send_password_reset_email_task",
+)
+def send_password_reset_email_task(self, to_email: str, reset_token: str, username: str):
+    """Send password reset email via Celery (replaces fire-and-forget asyncio.create_task)."""
+    import asyncio
+
+    from app.core.email_service import email_service
+
+    async def _send():
+        try:
+            await email_service.send_password_reset_email(to_email=to_email, reset_token=reset_token, username=username)
+            logger.info(f"Password reset email sent to {to_email}")
+            return {"status": "success", "to_email": to_email}
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {to_email}: {e}")
+            raise
+
+    try:
+        return asyncio.run(_send())
+    except Exception as exc:
+        logger.error(f"Password reset email failed to {to_email}, retrying: {exc}")
+        raise self.retry(exc=exc)
+
+
 @celery_app.task(bind=True, max_retries=2, name="send_task_reminders")
 def send_task_reminders(self):
     """

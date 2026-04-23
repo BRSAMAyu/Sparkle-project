@@ -239,7 +239,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 
 	sttURL := strings.Replace(cfg.BackendURL, "http://", "ws://", 1)
 	sttURL = strings.Replace(sttURL, "https://", "wss://", 1)
-	sttHandler := handler.NewSTTHandler(sttURL+"/api/v1/stt/stream", logger)
+	sttHandler := handler.NewSTTHandler(sttURL+"/api/v1/stt/stream", logger, cfg)
 
 	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger, cfg)
 
@@ -479,7 +479,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		handlers.errorBookHandler.RegisterRoutes(api, authMiddleware)
 
 		handlers.fileHandler.RegisterRoutes(api, authMiddleware)
-		handlers.dataConsistencyHandler.RegisterRoutes(api)
+		handlers.dataConsistencyHandler.RegisterRoutes(api, authMiddleware)
 
 		// Galaxy routes - authentication passthrough with rate limiting
 		galaxyRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 10, 20)
@@ -756,7 +756,27 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 }
 
 func shouldProxyNoRoutePath(path string) bool {
-	return strings.HasPrefix(path, "/api/v1/auth")
+	// Only proxy specific public auth paths — do NOT open-proxy /api/v1/auth/*
+	// Apple login is handled by Go handler directly, so excluded here.
+	publicAuthPrefixes := []string{
+		"/api/v1/auth/register",
+		"/api/v1/auth/login",
+		"/api/v1/auth/social-login",
+		"/api/v1/auth/refresh",
+		"/api/v1/auth/forgot-password",
+		"/api/v1/auth/reset-password",
+		"/api/v1/auth/send-verification",
+		"/api/v1/auth/verify-email",
+		"/api/v1/auth/guest",
+		"/api/v1/auth/logout",
+		"/api/v1/auth/upgrade-guest",
+	}
+	for _, prefix := range publicAuthPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func setupProxy(cfg *config.Config, logger *zap.Logger) (*proxyBundle, error) {
@@ -786,6 +806,23 @@ func setupProxy(cfg *config.Config, logger *zap.Logger) (*proxyBundle, error) {
 		req.URL.Scheme = targetURL.Scheme
 		req.URL.Host = targetURL.Host
 		req.Host = targetURL.Host
+
+		// Forward standard proxy headers so Python backend sees real client info
+		if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+			prior := req.Header.Get("X-Forwarded-For")
+			if prior != "" {
+				req.Header.Set("X-Forwarded-For", prior+", "+clientIP)
+			} else {
+				req.Header.Set("X-Forwarded-For", clientIP)
+			}
+		}
+		if req.Header.Get("X-Forwarded-Proto") == "" {
+			req.Header.Set("X-Forwarded-Proto", "http")
+		}
+		if req.Header.Get("X-Forwarded-Host") == "" {
+			req.Header.Set("X-Forwarded-Host", req.Host)
+		}
+
 		otel.GetTextMapPropagator().Inject(req.Context(), propagation.HeaderCarrier(req.Header))
 	}
 

@@ -35,11 +35,11 @@ func NewDataConsistencyHandler(
 }
 
 // RegisterRoutes registers data consistency check routes
-func (h *DataConsistencyHandler) RegisterRoutes(api *gin.RouterGroup) {
+func (h *DataConsistencyHandler) RegisterRoutes(api *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	// Check message in Redis cache
-	api.GET("/chat/cache/check", h.checkCache)
+	api.GET("/chat/cache/check", authMiddleware, h.checkCache)
 	// Check message in database
-	api.GET("/chat/db/check", h.checkDatabase)
+	api.GET("/chat/db/check", authMiddleware, h.checkDatabase)
 }
 
 // checkCache checks if a message exists in Redis cache

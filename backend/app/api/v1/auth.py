@@ -682,12 +682,11 @@ async def forgot_password(
             str(user.id),
             ttl=PASSWORD_RESET_TTL_SECONDS,
         )
-        asyncio.create_task(
-            email_service.send_password_reset_email(
-                to_email=user.email,
-                reset_token=reset_token,
-                username=user.nickname or user.username,
-            )
+        from app.core.celery_tasks import send_password_reset_email_task
+        send_password_reset_email_task.delay(
+            to_email=user.email,
+            reset_token=reset_token,
+            username=user.nickname or user.username,
         )
     except Exception as e:
         logger.warning(f"Failed to handle forgot-password: {e}")
@@ -754,12 +753,11 @@ async def send_verification_email(
         str(current_user.id),
         ttl=EMAIL_VERIFY_TTL_SECONDS,
     )
-    asyncio.create_task(
-        email_service.send_verification_email(
-            to_email=current_user.email,
-            verify_token=verify_token,
-            username=current_user.nickname or current_user.username,
-        )
+    from app.core.celery_tasks import send_verification_email_task
+    send_verification_email_task.delay(
+        to_email=current_user.email,
+        verify_token=verify_token,
+        username=current_user.nickname or current_user.username,
     )
     return {"detail": "验证邮件已发送"}
 
@@ -928,12 +926,11 @@ async def upgrade_guest(
     try:
         verify_token = uuid.uuid4().hex
         await cache_service.set(f"email_verify:{verify_token}", str(current_user.id), ttl=EMAIL_VERIFY_TTL_SECONDS)
-        asyncio.create_task(
-            email_service.send_verification_email(
-                to_email=current_user.email,
-                verify_token=verify_token,
-                username=current_user.nickname or current_user.username,
-            ),
+        from app.core.celery_tasks import send_verification_email_task
+        send_verification_email_task.delay(
+            to_email=current_user.email,
+            verify_token=verify_token,
+            username=current_user.nickname or current_user.username,
         )
     except Exception as e:
         logger.warning(f"Failed to schedule verification email after guest upgrade: {e}")

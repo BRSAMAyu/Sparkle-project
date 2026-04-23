@@ -194,4 +194,45 @@
 - 检查 profile_event_consumer P0-1 (consumer_name) 是否需要 EventBus 层面 XAUTOCLAIM 支持
 - 验证累积修复的稳定性
 
+### Session 8 — 2026-04-25 (Chris S8)
+
+**Focus**: 验证矩阵 + 审计 #59 (Go Proxy Routes 3×P0 修复) + 审计 #60 (FastAPI Route Handlers 6×P0 验证+修复)
+
+**验证矩阵**:
+- behavior_signal_collector: 1 failed→fixed (mock缺少scalars, 添加_maybe_update_task_inferred_preferences mock)
+- Go build: CLEAN
+- Go tests: ALL PASS (handler + middleware + server)
+- Python tests: 8/8 passed
+
+**审计 #59 复核+修复 (Go Proxy Routes)**:
+
+| P0 | 发现 | 状态 | 修复 |
+|----|------|------|------|
+| P0-1 | DataConsistencyHandler 无认证 | FIXED | RegisterRoutes 添加 authMiddleware 参数 |
+| P0-2 | NoRoute auth 通配代理 | FIXED | shouldProxyNoRoutePath 改为具体路径白名单 |
+| P0-3 | 缺少 X-Forwarded 头 | FIXED | proxy Director 添加 X-Forwarded-For/Proto/Host |
+
+**审计 #60 复核+修复 (FastAPI Route Handlers)**:
+
+| P0 | 发现 | 状态 | 备注 |
+|----|------|------|------|
+| P0-01 | 时序不安全密钥比较 | FALSE | 已使用 secrets.compare_digest |
+| P0-02 | WS stats 泄露用户ID | FALSE | 现在只返回计数 |
+| P0-03 | asyncio.create_task 邮件 | FIXED | 3处改用 Celery (.delay) |
+| P0-04 | chat sessions N+1 死代码 | FIXED | 移除未使用的 session_meta 查询 |
+| P0-05 | plans N+1 | CONFIRMED | 需批量查询重构(后续) |
+| P0-06 | archived plans N+1 | CONFIRMED | 同P0-05(后续) |
+| P1-02 | print() in chat.py | FALSE | 已移除 |
+
+**其他修复**:
+- test_behavior_signal_collector: 添加 _maybe_update_task_inferred_preferences mock (pre-existing test fix)
+
+**Commits**: 待统一提交
+
+**Next Session Should**:
+- 修复 P0-05/P0-06 (plans N+1 批量查询) — 需要仔细验证 ChatSession 构造逻辑
+- 继续复核 ⚠️ 报告 (#47 ChatOrchestrator, #53 Go Chat Orchestrator)
+- 验证累积修复的稳定性 (运行更广测试套件)
+- 检查 XunFeiProvider.transcribe_file 返回错误字符串问题
+
 
