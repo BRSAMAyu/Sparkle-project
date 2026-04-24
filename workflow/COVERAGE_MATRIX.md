@@ -57,8 +57,8 @@
 | 05 | execution_openclaw | 2026-04-24T21:20+08:00 | 0 | 6 | /health泄露基础设施; Exception泄露内部错误; 无连接池; _clear_failure_state空操作; 条件解析朴素; promote竞态 |
 | 06 | galaxy | 2026-04-24T21:40+08:00 | 0 | 6 | spark_node缺audit/outbox; mastery legacy竞态; LIKE通配符; SSE空流; 零UUID; consumer重命名 |
 | 07 | community_accountability | 2026-04-24T22:20 | 6 | P1×2 P2×4 | ISSUE-039..044 |
-| 08 | error_book | null | 0 | - | - |
-| 09 | focus_breathing | null | 0 | - | - |
+| 08 | error_book | 2026-04-24T22:30+08:00 | 0 | 6 | P1×1 P2×5: AnalyzeError fire-and-forget; unbounded query; LIKE wildcards; delete missing filter; submit_review race; bare except |
+| 09 | focus_breathing | 2026-04-24T23:00+08:00 | 0 | 6 | P1×1 P2×5: commit-before-event; N+1 streak; duration未校验; heatmap无上限; import logging; AchievementEngine共享session |
 | 10 | achievement_photon_visual | null | 0 | - | - |
 | 11 | calendar_notification | null | 0 | - | - |
 | 12 | memory_write_lane | null | 0 | - | - |

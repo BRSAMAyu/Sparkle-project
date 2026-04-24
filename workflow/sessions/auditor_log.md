@@ -239,3 +239,47 @@
 - commit: none
 
 [2026-04-24T22:25] start slice=08-error_book round=0
+
+[2026-04-24T22:35] end slice=08-error_book produced=6 deferred=0
+  - P1: AnalyzeError gRPC fire-and-forget (ISSUE-046)
+  - P2: unbounded query (047), LIKE wildcards (048), delete missing filter (049), submit_review race (050), bare except (051)
+  - anchors read: proto/error_book.proto (214L), error_book_grpc_service.py (332L), error_book_service.py (861L), error_replan_bridge.py (557L), error_book/client.go (110L), error_book.go (330L), error_book_repository.dart (80L), error_record.dart (60L)
+  - 7-dimension summary:
+    ① entry: Flutter→Go REST→gRPC→Python chain verified, REST path also registered but unused in prod
+    ② errors: AnalyzeError gRPC swallows task failures; delete_error returns wrong status for deleted records
+    ③ logging: _get_cohort_profile bare except without log; AnalyzeError task failures silent
+    ④ auth: all Go endpoints behind authMiddleware; user_id from JWT context
+    ⑤ concurrency: submit_review read-modify-write race; _count_recent_triggering_errors unbounded load
+    ⑥ contracts: Flutter subject_code mapping handled by Go gateway; proto fields consistent
+    ⑦ product: ErrorReplanBridge TRIGGERING_ERROR_TYPES covers 6 types, _classify_trigger_type aligns
+
+[2026-04-24T23:10] start slice=10-achievement_photon_visual round=0
+
+## 2026-04-24T23:00+08:00 round=0 slice=09-focus_breathing
+- directives_read: none active (advisory example only)
+- produced: 6 issues (P0=0 P1=1 P2=5 P3=0)
+  - 052 P1: log_session 先 commit 后发 event/write memory，失败不可恢复
+  - 053 P2: _calculate_current_streak N+1 查询最多 365 次 DB 查询
+  - 054 P2: log_session 不验证 duration_minutes 与 start/end_time 一致性
+  - 055 P2: heatmap days 参数无上限，可请求全量历史
+  - 056 P2: focus_service.py 4处 import logging 绕过 loguru 管道
+  - 057 P2: log_session AchievementEngine 共享 session 事务边界不清
+- deferred: 0
+- anchors_personally_read:
+  - focus_service.py:1-587 (全文件)
+  - focus.py API:1-169 (全文件)
+  - focus.py model:1-54 (全文件)
+  - mindfulness_provider.dart:1-569 (全文件)
+  - focus_signal_processor.py:1-162 (全文件)
+  - focus_repository.dart:1-348 (全文件)
+- grep_queries:
+  - focus_session|FocusSession in backend/*.py → 49 files
+  - focus|breathing|mindful in backend/app/api → focus.py + 11 files
+  - focus|breathing|mindful in gateway/internal/*.go → 9 files (proxy_routes only)
+  - db.commit|db.flush in focus_service.py → line 62 flush, line 146 commit
+  - import logging in focus_service.py → lines 142, 158, 170, 196
+  - duration_minutes in focus_service.py → 20+ locations
+  - limit|offset|days in focus.py API → heatmap days=90 no upper bound
+- deviations: none
+- next_cursor: 10 (slice 10-achievement_photon_visual)
+- commit: pending

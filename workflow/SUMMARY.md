@@ -8,7 +8,7 @@
 |----|-------|---|--------|-------|---------|---------|
 | ISSUE-20260424-001 | 01 | P1 | closed | Go validateJWT 不检查 session_revoked:{sid}，设备下线不立即生效 | fixer@2026-04-24T20:45 | 21:00 PASS |
 | ISSUE-20260424-002 | 01 | P1 | closed | AppleLogin UpdateUserLastLogin 和 UpsertUserSession 错误静默丢弃 | fixer@2026-04-24T21:45 | 22:15 PASS |
-| ISSUE-20260424-003 | 01 | P1 | verifying | Guest login 限流 100/15min 过于宽松，可被滥用刷号 | fixer@2026-04-24T22:48 | 22:48 |
+| ISSUE-20260424-003 | 01 | P1 | closed | Guest login 限流 100/15min 过于宽松，可被滥用刷号 | fixer@2026-04-24T22:48 | 22:45 PASS |
 | ISSUE-20260424-004 | 01 | P2 | open | Guest login SELECT-INSERT 竞态条件，并发同 guest_id 返回 500 | - | 19:05 |
 | ISSUE-20260424-005 | 01 | P2 | open | AppleLogin 用户创建/链接竞态，无 IntegrityError 处理 | - | 19:05 |
 | ISSUE-20260424-006 | 01 | P2 | open | Go/Python JWT issuer/audience claims 处理需验证一致性 | - | 19:05 |
@@ -50,7 +50,19 @@
 | ISSUE-20260424-042 | 07 | P2 | open | _record_community_signal asyncio.create_task fire-and-forget | - | 22:20 |
 | ISSUE-20260424-043 | 07 | P2 | open | like_checkin/encourage_checkin 直接 db.commit() 绕过 session 管理约定 | - | 22:20 |
 | ISSUE-20260424-044 | 07 | P2 | open | broadcast_achievement_unlock 使用 __import__("json") 代替正常 import | - | 22:20 |
-| ISSUE-20260424-045 | 02 | P2 | verifying | Flutter WS 重连耗尽静默清空 pending messages，不通知用户 | fixer@6db0c87f | 22:20 影子系统映射 |
+| ISSUE-20260424-045 | 02 | P2 | closed | Flutter WS 重连耗尽静默清空 pending messages，不通知用户 | fixer@6db0c87f | 22:50 PASS |
+| ISSUE-20260424-046 | 08 | P1 | open | AnalyzeError gRPC asyncio.create_task fire-and-forget，分析失败无感知 | - | 22:30 |
+| ISSUE-20260424-047 | 08 | P2 | open | ErrorReplanBridge _count_recent_triggering_errors 无 SQL 日期过滤，全量加载 | - | 22:30 |
+| ISSUE-20260424-048 | 08 | P2 | open | list_errors chapter/keyword LIKE 通配符未转义 | - | 22:30 |
+| ISSUE-20260424-049 | 08 | P2 | open | delete_error 缺 is_deleted 过滤，已删错题重复删除返回 204 | - | 22:30 |
+| ISSUE-20260424-050 | 08 | P2 | open | submit_review read-modify-write 竞态，并发复习丢失进度 | - | 22:30 |
+| ISSUE-20260424-051 | 08 | P2 | open | _get_cohort_profile bare except 静默返回 None，cohort 数据永远空 | - | 22:30 |
+| ISSUE-20260424-052 | 09 | P1 | open | log_session 先 commit 后发 event/write memory，失败不可恢复 | - | 23:00 |
+| ISSUE-20260424-053 | 09 | P2 | open | _calculate_current_streak N+1 查询最多 365 次 DB 查询 | - | 23:00 |
+| ISSUE-20260424-054 | 09 | P2 | open | log_session 不验证 duration_minutes 与 start/end_time 一致性 | - | 23:00 |
+| ISSUE-20260424-055 | 09 | P2 | open | heatmap days 参数无上限，可请求全量历史 | - | 23:00 |
+| ISSUE-20260424-056 | 09 | P2 | open | focus_service.py 4处 import logging 绕过 loguru 管道 | - | 23:00 |
+| ISSUE-20260424-057 | 09 | P2 | open | log_session AchievementEngine 共享 session 事务边界不清 | - | 23:00 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -59,15 +71,17 @@
 <!-- Verifier 判 PASS 后追加 -->
 | ISSUE-20260424-001 | 01 | P1 | PASS | 2026-04-24T21:00 |
 | ISSUE-20260424-002 | 01 | P1 | PASS | 2026-04-24T22:15 |
+| ISSUE-20260424-003 | 01 | P1 | PASS | 2026-04-24T22:45 |
+| ISSUE-20260424-045 | 02 | P2 | PASS | 2026-04-24T22:50 |
 
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 41
-- verifying: 3
-- closed (7d): 2
+- open: 52
+- verifying: 0
+- closed (7d): 4
 - escalated: 0
-- last_update: 2026-04-24T22:15:00+08:00
+- last_update: 2026-04-24T23:00:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
@@ -77,3 +91,4 @@
 - slice_07_audit: 2 P1 + 4 P2, anchors personally read (community_service.py 2482L, community_advanced_service.py 975L, community_signal_bridge.py 231L, community_signal_collector.py 172L, accountability.py API 1528L, accountability.py model 156L, community.py API 200L, proto/community_service.proto 324L, group_chat.go 116L)
 - verifier_patrol_2: env-check pass; ISSUE-009 misreported (segmentSize guard exists); ISSUE-007/014 suggest P2 downgrade
 - cross_ref_2026-04-24: .claude/workflow 影子系统与规范系统 ID 冲突已对齐：shadow-007→ISSUE-008(部分), shadow-008→ISSUE-013, shadow-011→ISSUE-045(新建)
+- slice_09_audit: 1 P1 + 5 P2, anchors personally read (focus_service.py 587L, focus.py API 169L, focus.py model 54L, mindfulness_provider.dart 569L, focus_signal_processor.py 162L, focus_repository.dart 348L)
