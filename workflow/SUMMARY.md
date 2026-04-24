@@ -75,6 +75,14 @@
 | ISSUE-20260424-067 | 11 | P2 | open | _get_hourly_distribution 无时间过滤加载用户全量交互记录 | - | 09:04 |
 | ISSUE-20260424-068 | 11 | P2 | open | _find_notification_for_record 全量加载用户干预通知 Python 侧遍历 | - | 09:04 |
 | ISSUE-20260424-069 | 11 | P2 | open | batch_operations 不发布 EventBus 事件，静默绕过事件管道 | - | 09:04 |
+| ISSUE-20260424-070 | 11 | P2 | open | calendar.py get_event_summary 用 __import__("datetime") 代替正常 import | - | 23:25 |
+| ISSUE-20260424-071 | 11 | P2 | open | Flutter _cancelReminders 硬编码最多 5 个提醒，超出部分永不取消 | - | 23:25 |
+| ISSUE-20260424-072 | 12 | P1 | open | enqueue_from_chat_turn fire-and-forget，推断记忆写入失败静默丢弃 | - | 09:09 |
+| ISSUE-20260424-073 | 12 | P1 | open | _rate_limit_state 进程级 dict，多 worker 限流失效 | - | 09:09 |
+| ISSUE-20260424-074 | 12 | P2 | open | _resolve_occurred_at UTC 时间戳设 locale 小时，"今晚"偏移+8h | - | 09:09 |
+| ISSUE-20260424-075 | 12 | P2 | open | _degraded_queue 无界内存列表永不消费，死代码 | - | 09:09 |
+| ISSUE-20260424-076 | 12 | P2 | open | MemoryPolicyEvaluator 每次写入查 DB 无缓存 | - | 09:09 |
+| ISSUE-20260424-077 | 12 | P2 | open | TD-008 per-session 记忆限流未实现，单次对话可无限写入 | - | 09:09 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -90,11 +98,11 @@
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 63
+- open: 71
 - verifying: 0
 - closed (7d): 5
 - escalated: 0
-- last_update: 2026-04-24T09:20:00+08:00
+- last_update: 2026-04-24T09:30:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
@@ -106,3 +114,4 @@
 - cross_ref_2026-04-24: .claude/workflow 影子系统与规范系统 ID 冲突已对齐：shadow-007→ISSUE-008(部分), shadow-008→ISSUE-013, shadow-011→ISSUE-045(新建)
 - slice_09_audit: 1 P1 + 5 P2, anchors personally read (focus_service.py 587L, focus.py API 169L, focus.py model 54L, mindfulness_provider.dart 569L, focus_signal_processor.py 162L, focus_repository.dart 348L)
 - slice_10_audit: 3 P1 + 3 P2, anchors personally read (achievement_engine.py 2292L, achievement_event_consumer.py 318L, achievement_repository.dart 920L, achievement_provider.dart 724L, photon_provider.dart 172L, photon_repository.dart 139L, visual_element_repository.dart 553L, close_to_unlock_provider.dart 125L)
+- slice_11_audit: 2 P1 + 6 P2 (6 by concurrent session validated + 2 new), anchors personally read (calendar.py 413L, notification_push_service.py 323L, notification_center_service.py 1160L, notification_analytics_service.py 500L, calendar_repository.dart 454L)

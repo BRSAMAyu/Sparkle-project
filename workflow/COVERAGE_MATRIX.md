@@ -60,8 +60,8 @@
 | 08 | error_book | 2026-04-24T22:30+08:00 | 0 | 6 | P1×1 P2×5: AnalyzeError fire-and-forget; unbounded query; LIKE wildcards; delete missing filter; submit_review race; bare except |
 | 09 | focus_breathing | 2026-04-24T23:00+08:00 | 0 | 6 | P1×1 P2×5: commit-before-event; N+1 streak; duration未校验; heatmap无上限; import logging; AchievementEngine共享session |
 | 10 | achievement_photon_visual | 2026-04-24T23:10+08:00 | 0 | 6 | P1×3 P2×3: after_commit fire-and-forget; WEEKEND_WARRIOR无界查询; get_close_to_unlock N+1; consumer_name时间戳; contract无日期守卫; check_daily_first竞态 |
-| 11 | calendar_notification | 2026-04-24T09:04+08:00 | 0 | 6 | P1×2 P2×4: NotificationPushService绕过偏好; reminder未实现; trends N+1; hourly无过滤; find_record全表扫; batch无事件 |
-| 12 | memory_write_lane | null | 0 | - | - |
+| 11 | calendar_notification | 2026-04-24T23:25+08:00 | 0 | 8 | P1×2 P2×6: push绕过偏好; reminder未实现; trends N+1; hourly无过滤; find_record全表扫; batch无事件; __import__; _cancelReminders硬编码5 |
+| 12 | memory_write_lane | 2026-04-24T09:09+08:00 | 0 | 6 | P1×2 P2×4: enqueue fire-and-forget; rate_limit per-process; occurred_at UTC偏移; degraded_queue死代码; PolicyEvaluator无缓存; TD-008 per-session未实现 |
 | 13 | cognitive_capsule | null | 0 | - | - |
 | 14 | seed_tools_translation | null | 0 | - | - |
 | 15 | insights_report_theater_simulation | null | 0 | - | - |

@@ -318,3 +318,38 @@
     ⑥ contracts: batch_operations doesn't publish EventBus while individual ops do
     ⑦ product: calendar CRUD-only confirmed; no AI feedback loop; reminder scheduling unimplemented
   - next_cursor: 12 (slice 12-memory_write_lane)
+
+[2026-04-24T09:09+08:00] start slice=12-memory_write_lane round=0
+
+[2026-04-24T09:30+08:00] end slice=12-memory_write_lane produced=6 deferred=0
+  - P1: enqueue_from_chat_turn fire-and-forget (ISSUE-072)
+  - P1: _rate_limit_state per-process ineffective (ISSUE-073)
+  - P2: _resolve_occurred_at UTC vs locale +8h shift (074), _degraded_queue dead code (075), MemoryPolicyEvaluator no caching (076), TD-008 per-session limit stub (077)
+  - anchors read: memory_service.py (1067L), memory_inferred_write_lane.py (782L), memory_policy_evaluator.py (91L), memory_constants.py (58L), orchestrator.py:1690-1810
+  - 7-dimension summary:
+    ① entry: chat→enqueue→background→extract→write chain verified; fire-and-forget on critical path
+    ② errors: episodic write has vector fallback; _run_background catches all as warning; no retry/DLQ
+    ③ logging: all loguru; comprehensive Prometheus metrics (5 counters); SystemUpdateService for user visibility
+    ④ auth: MemoryPolicyEvaluator per-write check; rate_limit in-memory per-process (fails in multi-worker)
+    ⑤ concurrency: upsert_preference SELECT FOR UPDATE correct; _is_duplicate checks evidence_token+semantic_key; occurred_at UTC bug
+    ⑥ contracts: 58 PREFERENCE_KEYS validated; ALLOWED_EVIDENCE_TYPES enforced; Rule Y adapter validates candidates
+    ⑦ product: inferred extraction conservative (banned terms, confidence threshold); fire-and-forget unreliability undermines learning
+  - next_cursor: 13 (slice 13-cognitive_capsule)
+
+[2026-04-24T23:25+08:00] start slice=11-calendar_notification round=0 (supplementary)
+
+[2026-04-24T23:30+08:00] end slice=11-calendar_notification produced=2 new deferred=0
+  - P2: __import__("datetime") anti-pattern at calendar.py:182 (ISSUE-070)
+  - P2: Flutter _cancelReminders hardcoded max 5 at calendar_repository.dart:399 (ISSUE-071)
+  - Validated concurrent session's 6 issues (064-069): all evidence confirmed by independent reading
+  - Combined slice total: 8 issues (2 P1 + 6 P2)
+  - anchors personally read: calendar.py (413L), notification_push_service.py (323L), notification_center_service.py (1160L), notification_analytics_service.py (500L), calendar_repository.dart (454L)
+  - 7-dimension summary (combined):
+    ① entry: Flutter→Go REST→Python→DB chain verified; reminder_minutes TD-006 stub
+    ② errors: PushService swallows WS errors; batch partial success correct; _cancelReminders leaks ghost reminders
+    ③ logging: all services use loguru; __import__("datetime") at calendar.py:182
+    ④ auth: calendar behind authMiddleware; PushService bypasses user preference check
+    ⑤ concurrency: _get_trends N+1; hourly_distribution unfiltered; find_record full scan
+    ⑥ contracts: batch_operations skips EventBus; individual ops publish correctly
+    ⑦ product: calendar CRUD-only; no AI feedback; server-side reminder scheduling unimplemented
+  - next_cursor: 12 (slice 12-memory_write_lane)

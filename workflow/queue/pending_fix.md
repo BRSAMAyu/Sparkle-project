@@ -2,6 +2,8 @@
 
 - ISSUE-20260424-064 P1 NotificationPushService bypasses user preferences (notification_push_service.py:33-75)
 - ISSUE-20260424-065 P1 calendar reminder_minutes stored but never consumed (calendar.py:146)
+- ISSUE-20260424-072 P1 enqueue_from_chat_turn fire-and-forget (memory_inferred_write_lane.py:99)
+- ISSUE-20260424-073 P1 _rate_limit_state per-process (memory_inferred_write_lane.py:77)
 - ISSUE-20260424-058 P1 after_commit fire-and-forget (achievement_engine.py:68)
 - ISSUE-20260424-059 P1 WEEKEND_WARRIOR unbounded queries (achievement_engine.py:699-733)
 - ISSUE-20260424-060 P1 get_close_to_unlock N+1 evaluation (achievement_engine.py:2047-2131)
@@ -13,6 +15,12 @@
 - ISSUE-20260424-067 P2 _get_hourly_distribution no time filter (notification_analytics_service.py:486-489)
 - ISSUE-20260424-068 P2 _find_notification_for_record full table scan (notification_center_service.py:1115-1132)
 - ISSUE-20260424-069 P2 batch_operations no EventBus events (calendar.py:298-387)
+- ISSUE-20260424-070 P2 calendar.py __import__("datetime") anti-pattern (line 182)
+- ISSUE-20260424-071 P2 Flutter _cancelReminders hardcoded max 5 (calendar_repository.dart:399)
+- ISSUE-20260424-074 P2 _resolve_occurred_at UTC vs locale mismatch (memory_inferred_write_lane.py:732)
+- ISSUE-20260424-075 P2 _degraded_queue never consumed unbounded (memory_inferred_write_lane.py:78)
+- ISSUE-20260424-076 P2 MemoryPolicyEvaluator no caching per-write query (memory_policy_evaluator.py:63)
+- ISSUE-20260424-077 P2 TD-008 per-session rate limit not implemented (memory_inferred_write_lane.py:599)
 - ISSUE-20260424-047 P2 ErrorReplanBridge unbounded query
 - ISSUE-20260424-048 P2 list_errors LIKE wildcards not escaped
 - ISSUE-20260424-049 P2 delete_error missing is_deleted filter
