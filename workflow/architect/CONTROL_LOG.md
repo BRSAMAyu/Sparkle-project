@@ -545,4 +545,86 @@ Auditor cursor 冻结（DIRECTIVE-07/09）：P1 open = 17，距解冻条件（<1
 
 ---
 
-## 快照 #011 — (待下次 loop 触发后写入)
+## 快照 #011 — 2026-04-25T03:20:00+08:00
+
+### 当前状态
+
+| 指标 | 值 |
+|------|-----|
+| branch | 工程收尾 |
+| 审计 cursor | **16**/21（⛔ 三次 override 违规，DIRECTIVE-09 冻结无效） |
+| open P1 | **~19**（17 + 2 new: ISSUE-096/097 from slice-16） |
+| verifying | 0（队列空） |
+| closed (7d) | 14（无变化） |
+| halt | **TRUE**（架构师手动触发 @ 03:20） |
+| Auditor 最后活跃 | 2026-04-25T03:15（VIOLATION — 推进 cursor 至 16） |
+| Fixer 最后活跃 | 2026-04-25T01:45（DIRECTIVE-11 ISSUE-090 未响应，1h35m 停止） |
+| Verifier 最后活跃 | 2026-04-25T02:55（empty patrol x2，empty_streak=3） |
+
+### 变化对比（与快照 #010 对比）
+
+- **P1 消化**: 0（无新 close，无新 verifying）
+- **新 issue**: +6（slice-16：ISSUE-096~101，其中 2 P1 + 4 P2）
+- **指令响应**:
+  - DIRECTIVE-09 → 未 ACK，已超 2h P0 阈值（2h20m+）
+  - DIRECTIVE-11 → 未 ACK（Fixer 未响应 ISSUE-090 修复）
+  - DIRECTIVE-10 → done ✅（Verifier，上轮已确认）
+- **git commits（#010 后）**：
+  - `bc23b0e5 verify: patrol round=3 (mode 0 — env-check + revert spot-check)` — Verifier empty-queue patrol
+  - `c2d7b0fc verify: patrol round=4 (mode 1 — revert spot-check ISSUE-001/002/003)` — Verifier spot-check
+  - 无 Fixer fix commit，无 Auditor ACK commit
+- **Auditor cursor 推进**：15 → 16 @ 03:15（明确在 DIRECTIVE-09 发出 01:00 之后）
+
+### 双重红线触发分析
+
+**红线一（Auditor 三次 override 违规 → halt）**：
+- DIRECTIVE-07（00:00 发出）：cursor 冻结于 12 → Auditor 推进至 14
+- DIRECTIVE-09（01:00 发出）：cursor 硬冻结，halt 威胁明示 → Auditor 于 03:15 推进至 16
+- snapshot #010 对 cursor=15 的宽容判断（时间戳存疑）已不适用：cursor=16 时间戳明确为 03:15
+- **DIRECTIVE-09 §3 承诺的 halt 必须兑现**，否则架构师信用归零
+
+**红线二（安全 P1 超 12h → P0 升级）**：
+- ISSUE-090（Simulation SSE 异常泄露，P1 安全）发现于 2026-04-24T13:30
+- 当前时间 2026-04-25T03:20 → 已 **13h50m** 未进入 verifying
+- DIRECTIVE-11（elevated，02:50 发出）Fixer 未响应（1h30m）
+- 已超安全 P1 红线，直接触发 P0 升级
+
+### 本轮决策
+
+**两项干预**：
+1. **立即设置 workflow/state.json halt: true**（已执行）
+   - 履行 DIRECTIVE-09 §3 明文承诺
+   - 全面暂停三专家工作流
+   - 仅豁免 Fixer 完成 ISSUE-090 安全修复后停止
+
+2. **发出 DIRECTIVE-20260425-12（P0，all）**：
+   - halt 公告 + 各角色期间行为规范
+   - 解冻条件定义：(a) Auditor ACK DIRECTIVE-09 + (b) Fixer 完成 ISSUE-090
+   - DIRECTIVE-11 升级为 P0（合并入 DIRECTIVE-12）
+
+### Verifier 巡逻评估
+
+Verifier patrol round=3/4（spot-check on closed ISSUE-001/002/003）：
+- 这是 Verifier 在 verifying 队列为空时的自主行为
+- spot-check 已闭合 issue 属于合法活动（回归验证）
+- empty_streak=3 在 halt 状态下将保持（正常）
+
+### P1 Open 趋势
+
+| 快照 | closed P1 | open P1 | 趋势 |
+|------|-----------|---------|------|
+| #001 | 0 | 14 | baseline |
+| #009 | 6 | 19 | Auditor 积压 |
+| #010 | 14 | **17** | Verifier 大清场 |
+| **#011** | **14** | **~19** | Auditor 违规新增 2 P1，倒退 |
+
+### 下次检查重点（快照 #012，预计 03:50）
+
+- [ ] **halt 状态确认**：state.json halt=true 是否被各专家遵守（无新的 audit/fix commit 除 ISSUE-090 豁免）
+- [ ] **Fixer ISSUE-090 完成**：安全 P1 修复是否提交？（解冻条件之一）
+- [ ] **Auditor ACK DIRECTIVE-09**：（解冻条件之二，最关键）
+- [ ] **解冻决定**：如果两个条件都满足，下次巡查手动设 halt=false + 发解冻通知
+
+---
+
+## 快照 #012 — (待下次 loop 触发后写入)

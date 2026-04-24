@@ -1,11 +1,11 @@
 {
-  "cursor": 15,
+  "cursor": 16,
   "round": 0,
-  "halt": false,
-  "last_auditor_end": "2026-04-24T13:30:00+08:00",
+  "halt": true,
+  "last_auditor_end": "2026-04-25T03:15:00+08:00",
   "last_fixer_end": "2026-04-25T01:45:00+08:00",
   "last_verifier_end": "2026-04-25T02:55:00+08:00",
   "verifier_rotation": 8,
   "empty_streak": 3,
-  "notes": "cursor ∈ [0, 20] 映射到 COVERAGE_MATRIX 的 21 切片；cursor 归零时 round += 1；empty_streak 记录 Verifier 连续空队列 loop 数，用于停机判定。"
+  "notes": "cursor ∈ [0, 20] 映射到 COVERAGE_MATRIX 的 21 切片；cursor 归零时 round += 1；empty_streak 记录 Verifier 连续空队列 loop 数，用于停机判定。HALT 由架构师触发 @ 2026-04-25T03:20（DIRECTIVE-09 §3：cursor=16 超出冻结线，三次 override 违规）。解冻需架构师手动设 halt: false，条件见 DIRECTIVE-20260425-12。"
 }

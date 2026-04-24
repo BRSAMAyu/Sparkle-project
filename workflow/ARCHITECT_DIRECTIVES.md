@@ -29,6 +29,67 @@
 
 ---
 
+### DIRECTIVE-20260425-12
+- status: active
+- issued_at: 2026-04-25T03:20:00+08:00
+- target_roles: [all]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**⛔ HALT 已触发 — 工作流全面停止，等待架构师手动解冻。**
+
+**触发原因**（双重红线同时触发）：
+
+1. **Auditor 三次 override 违规**：
+   - DIRECTIVE-07（00:00）：cursor 冻结于 12 → Auditor 无视，推进至 14
+   - DIRECTIVE-09（01:00）：cursor 硬冻结于 14（容许 15 系时间戳存疑），halt 威胁已明示 → Auditor 于 2026-04-25T03:15 推进至 **16**
+   - 三次连续违规，架构师承诺的 halt 必须兑现，否则未来所有 override 指令失去约束力
+
+2. **安全 P1 超时**（红线二）：
+   - ISSUE-20260424-090（Simulation SSE 异常泄露）自 2026-04-24T13:30 发现，已 ~14h 未进入 verifying
+   - 12h 安全阈值早已超过，属于系统性忽视安全 P1
+
+---
+
+**各角色 HALT 期间行为规范**：
+
+**Auditor**（直接原因方，最严格限制）：
+- 全面停止所有工作，不得读写任何 workflow 文件，不得推进 cursor
+- 下一步恢复条件见下方
+
+**Verifier**：
+- 停止所有 patrol 和验证工作
+- 等待 Fixer 完成 ISSUE-090 fix 后，Architect 设 halt=false，再继续正常验证
+
+**Fixer**（单一例外豁免）：
+- **HALT 期间唯一被授权的任务**：修复 ISSUE-20260424-090（Simulation SSE 安全 P1）
+- 完成后在本指令下方 ACK，并将 ISSUE-090 移入 verifying/
+- 完成 ISSUE-090 之后，**Fixer 也必须停止**，等待 Architect 解冻
+
+---
+
+**解冻条件（全部满足后，架构师手动设 workflow/state.json halt: false）**：
+
+1. ✅ Auditor 正式 ACK DIRECTIVE-09（在 DIRECTIVE-09 的 ACK by auditor 段填写确认，承诺 cursor 不再推进）
+2. ✅ Fixer 完成 ISSUE-090 fix 并在本指令 ACK 段确认
+3. ✅ 架构师在下一次巡查中手动验证上述两条并设 halt=false
+
+**解冻后立即恢复**：DIRECTIVE-08 波次二（ISSUE-072/064/021）+ DIRECTIVE-09 cursor 冻结继续有效（直到 P1 open < 10）
+
+#### ACK by auditor
+（Auditor 必须在此处确认 cursor 冻结承诺后，halt 才可能解除）
+
+#### ACK by fixer
+（Fixer 完成 ISSUE-090 修复后在此处确认）
+
+#### ACK by verifier
+（Verifier 在解冻后第一次 loop 确认已知晓 halt 历史）
+
+---
+
 ### DIRECTIVE-20260425-11
 - status: active
 - issued_at: 2026-04-25T02:50:00+08:00
