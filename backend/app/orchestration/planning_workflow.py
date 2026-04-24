@@ -1292,6 +1292,9 @@ class PlanningWorkflowManager:
             "time_constraint_days": _safe_int(cold_start.get("time_constraint_days")),
             "avg_mastery_score": galaxy_avg,
             "weak_nodes": galaxy_baseline.get("weak_nodes") if galaxy_baseline else None,
+            "motivation": _strip(
+                cold_start.get("motivation") or cold_start.get("goal_motivation")
+            ),
         }
         return {key: value for key, value in merged.items() if value not in (None, "", [], {})}
 

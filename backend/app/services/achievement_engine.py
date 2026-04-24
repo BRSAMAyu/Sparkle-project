@@ -332,6 +332,15 @@ class AchievementEngine:
                     user_id, achievement.id, progress, current_value, target_value
                 )
 
+                progress_delta = progress - (old_progress or 0.0)
+                if progress_delta > 0 and progress < 1.0:
+                    await self._publish_achievement_progress(
+                        user_id=user_id,
+                        achievement_id=achievement.id,
+                        achievement_name=achievement.name,
+                        progress_percent=round(progress * 100),
+                    )
+
                 # 检查进度里程碑（每25%进度）
                 milestone = await self._check_progress_milestone(
                     user_id, achievement, old_progress, progress
@@ -970,6 +979,33 @@ class AchievementEngine:
             f"{settings.APP_NAME}:achievement:{user_id}:*"
         )
         await self._broadcast_unlock_signals(user_id, unlock_payload)
+
+    async def _publish_achievement_progress(
+        self,
+        *,
+        user_id: str,
+        achievement_id: str,
+        achievement_name: str,
+        progress_percent: int,
+    ) -> None:
+        throttle_key = f"{settings.APP_NAME}:achievement:{user_id}:{achievement_id}:progress_event"
+        try:
+            if await cache_service.get(throttle_key):
+                return
+            await cache_service.set(throttle_key, "1", ex=3600)
+            await event_bus.publish(
+                "achievement.progress",
+                {
+                    "event_type": "achievement.progress",
+                    "user_id": str(user_id),
+                    "achievement_id": achievement_id,
+                    "achievement_name": achievement_name,
+                    "progress_percent": progress_percent,
+                    "timestamp": _utcnow().isoformat(),
+                },
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to publish achievement progress event: {exc}")
 
     async def _broadcast_unlock_signals(self, user_id: str, unlock_payload: dict[str, Any]) -> None:
         try:

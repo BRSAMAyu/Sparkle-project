@@ -7,8 +7,8 @@ from typing import Any
 import pytest
 
 from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
-from app.aurora.runtime_v1.control_surface import AuroraHardBounds, DndWindow
-from app.aurora.runtime_v1.dashboard import DashboardReadout
+from app.aurora.runtime_v1.control_surface import AuroraHardBounds, ControlSurfaceReading, ActivityProfile, DndWindow
+from app.aurora.runtime_v1.dashboard import DashboardReadout, DashboardReadoutBuilder
 from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
@@ -402,3 +402,33 @@ async def test_service_keeps_wait_turn_silent_without_extra_fallback() -> None:
     )
 
     assert plan.messages == []
+
+
+def test_extract_achievement_signals_falls_back_to_cognitive_context() -> None:
+    builder = DashboardReadoutBuilder()
+    user_context_payload = {
+        "cognitive_context": {
+            "achievement_summary": {
+                "recent_unlocks": [{"name": "初学者", "rarity": "common"}],
+                "in_progress_achievements": [{"name": "连续打卡7天", "progress": 0.6}],
+                "total_achievement_score": 25.0,
+            }
+        }
+    }
+    signals = builder._extract_achievement_signals({}, user_context_payload)
+    assert signals["in_progress_count"] == 1
+    assert len(signals["recent_unlocks"]) == 1
+    assert signals["momentum"] == pytest.approx(0.5)
+
+
+def test_extract_achievement_signals_prefers_explicit_over_cognitive() -> None:
+    builder = DashboardReadoutBuilder()
+    explicit = {"active_streaks": ["daily_study"], "in_progress_count": 5, "recent_unlocks": [], "momentum": 0.9}
+    user_context_payload = {
+        "cognitive_context": {
+            "achievement_summary": {"recent_unlocks": [], "in_progress_achievements": [], "total_achievement_score": 0}
+        }
+    }
+    signals = builder._extract_achievement_signals({"achievement_signals": explicit}, user_context_payload)
+    assert signals["in_progress_count"] == 5
+    assert signals["momentum"] == pytest.approx(0.9)

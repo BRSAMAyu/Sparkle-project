@@ -268,9 +268,7 @@ class DashboardReadoutBuilder:
             recently_asked_domains=recently_asked_domains,
         )
 
-        achievement_signals = self._as_dict(
-            request_extra_context.get("achievement_signals") or user_context_payload.get("achievement_signals")
-        )
+        achievement_signals = self._extract_achievement_signals(request_extra_context, user_context_payload)
 
         return DashboardReadout(
             surface=surface,
@@ -324,6 +322,30 @@ class DashboardReadoutBuilder:
             if isinstance(candidate, dict):
                 return dict(candidate)
         return {}
+
+    def _extract_achievement_signals(
+        self,
+        request_extra_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        direct = self._as_dict(
+            request_extra_context.get("achievement_signals") or user_context_payload.get("achievement_signals")
+        )
+        if direct:
+            return direct
+        cognitive = self._as_dict(
+            (user_context_payload.get("cognitive_context") or {}).get("achievement_summary")
+        )
+        if not cognitive:
+            return {}
+        in_progress = list(cognitive.get("in_progress_achievements") or [])
+        total_score = float(cognitive.get("total_achievement_score") or 0.0)
+        return {
+            "active_streaks": [],
+            "recent_unlocks": list(cognitive.get("recent_unlocks") or []),
+            "in_progress_count": len(in_progress),
+            "momentum": min(1.0, round(total_score / 50.0, 3)),
+        }
 
     def _as_dict(self, value: Any) -> dict[str, Any]:
         return dict(value) if isinstance(value, dict) else {}
