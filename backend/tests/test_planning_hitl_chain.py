@@ -408,7 +408,7 @@ class TestHITLPriority:
                 },
             }
 
-        with patch.object(pending_actions_store, "get", side_effect=mock_get_action):
+        with patch.object(pending_actions_store, "claim", side_effect=mock_get_action):
             # Simulate user approval (override)
             db_session_mock = AsyncMock()
             result = await plan_review_service.handle_review_feedback(
@@ -451,7 +451,7 @@ class TestHITLPriority:
                 }
             return None
 
-        with patch.object(pending_actions_store, "get", side_effect=mock_get_action):
+        with patch.object(pending_actions_store, "claim", side_effect=mock_get_action):
             # Mock rejection count to return 2 on second call
             mock_redis.incr = AsyncMock(return_value=2)
 
@@ -492,7 +492,7 @@ class TestHITLPriority:
                 "preview_data": {"plan_id": plan_id, "decision": "approved"},
             }
 
-        with patch.object(pending_actions_store, "get", side_effect=mock_get_action):
+        with patch.object(pending_actions_store, "claim", side_effect=mock_get_action):
             # Simulate approval (should reset)
             mock_redis.delete = AsyncMock()
             result = await plan_review_service.handle_review_feedback(
