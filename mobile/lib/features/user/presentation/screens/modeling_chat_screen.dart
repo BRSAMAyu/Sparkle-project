@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
@@ -22,187 +25,552 @@ class ModelingChatScreen extends ConsumerStatefulWidget {
 
 class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
   final TextEditingController _inputController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final List<_ModelingMessage> _messages = <_ModelingMessage>[];
+  final Map<String, StreamSubscription<ChatStreamEvent>> _runSubscriptions =
+      <String, StreamSubscription<ChatStreamEvent>>{};
+  final Map<String, String> _draftMessageIdsByRequest = <String, String>{};
+
   String? _conversationId;
-  bool _loading = false;
   bool _completed = false;
-  int _assistantTurns = 0;
+  bool _skipInFlight = false;
+  int _requestSequence = 0;
+  int _messageSequence = 0;
+
+  bool get _hasActiveAuroraRun => _runSubscriptions.isNotEmpty;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_sendModelingTurn('_onboarding_start_'));
+      unawaited(
+        _startModelingStream(
+          '_onboarding_start_',
+          addUserMessage: false,
+        ),
+      );
     });
   }
 
   @override
   void dispose() {
+    for (final subscription in _runSubscriptions.values) {
+      unawaited(subscription.cancel());
+    }
+    _runSubscriptions.clear();
+    _draftMessageIdsByRequest.clear();
     _inputController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SparklePageScaffold(
-      role: SparklePageRole.content,
-      appBar: AppBar(
-        title: const Text('让我更了解你（约2分钟）'),
-        actions: [
-          TextButton(
-            onPressed: _loading ? null : () => unawaited(_skip()),
-            child: const Text('跳过'),
-          ),
-        ],
-      ),
-      child: ContentConstraint(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(DS.spacing16),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  final isUser = message.isUser;
-                  return Align(
-                    alignment:
-                        isUser ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: DS.spacing12),
-                      padding: const EdgeInsets.all(DS.spacing12),
-                      constraints: const BoxConstraints(maxWidth: 520),
-                      decoration: BoxDecoration(
-                        color: isUser ? DS.primaryBase : DS.surfaceSecondary,
-                        borderRadius: DS.borderRadius16,
-                      ),
-                      child: Text(
-                        message.text,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: isUser
-                                  ? DS.brandPrimaryConst
-                                  : DS.textPrimary,
-                              height: 1.45,
-                            ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+  Widget build(BuildContext context) => SparklePageScaffold(
+        role: SparklePageRole.content,
+        appBar: AppBar(
+          title: const Text('让我更了解你（约2分钟）'),
+          actions: [
+            TextButton(
+              onPressed: _skipInFlight ? null : () => unawaited(_skip()),
+              child: const Text('跳过'),
             ),
-            if (_completed)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  DS.spacing16,
-                  0,
-                  DS.spacing16,
-                  DS.spacing16,
-                ),
-                child: SparkleButton(
-                  label: '进入主界面',
-                  onPressed: _finish,
-                ),
-              )
-            else
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(DS.spacing16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _inputController,
-                          enabled: !_loading,
-                          onSubmitted: (_) => _handleSubmit(),
-                          decoration: const InputDecoration(
-                            hintText: '输入你的回答…',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: DS.spacing8),
-                      SparkleIconButton(
-                        variant: ButtonVariant.primary,
-                        icon: _loading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.send_rounded),
-                        onPressed: _loading ? null : _handleSubmit,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
           ],
         ),
-      ),
-    );
-  }
+        child: ContentConstraint(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(DS.spacing16),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final message = _messages[index];
+                    final isUser = message.isUser;
+                    final label = isUser ? '你' : 'Aurora';
+                    return Align(
+                      alignment:
+                          isUser ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Column(
+                        crossAxisAlignment: isUser
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: DS.spacing4,
+                              right: DS.spacing4,
+                              bottom: DS.spacing4,
+                            ),
+                            child: Text(
+                              label,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: DS.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(bottom: DS.spacing12),
+                            padding: const EdgeInsets.all(DS.spacing12),
+                            constraints: const BoxConstraints(maxWidth: 520),
+                            decoration: BoxDecoration(
+                              color:
+                                  isUser ? DS.primaryBase : DS.surfaceSecondary,
+                              borderRadius: DS.borderRadius16,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  message.text,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: isUser
+                                            ? DS.brandPrimaryConst
+                                            : DS.textPrimary,
+                                        height: 1.45,
+                                      ),
+                                ),
+                                if (!isUser && message.isStreaming)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: DS.spacing8,
+                                    ),
+                                    child: Text(
+                                      '输入中…',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(color: DS.textSecondary),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (_completed)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DS.spacing16,
+                    0,
+                    DS.spacing16,
+                    DS.spacing16,
+                  ),
+                  child: SparkleButton(
+                    label: '进入主界面',
+                    onPressed: _finish,
+                  ),
+                )
+              else
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.all(DS.spacing16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_hasActiveAuroraRun)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: DS.spacing8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: DS.spacing12,
+                              vertical: DS.spacing10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: DS.surfaceSecondary,
+                              borderRadius: DS.borderRadius12,
+                            ),
+                            child: Text(
+                              'Aurora 可能会连续发几条，你也可以直接插话。',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: DS.textSecondary),
+                            ),
+                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _inputController,
+                                enabled: !_skipInFlight,
+                                onSubmitted: (_) => _handleSubmit(),
+                                decoration: const InputDecoration(
+                                  hintText: '输入你的回答…',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: DS.spacing8),
+                            SparkleIconButton(
+                              icon: _skipInFlight
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.send_rounded),
+                              onPressed: _skipInFlight ? null : _handleSubmit,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
 
   Future<void> _handleSubmit() async {
     final text = _inputController.text.trim();
-    if (text.isEmpty || _loading) {
+    if (text.isEmpty || _skipInFlight) {
       return;
     }
     _inputController.clear();
-    setState(() {
-      _messages.add(_ModelingMessage(text: text, isUser: true));
-    });
-    await _sendModelingTurn(text);
+    await _startModelingStream(text);
   }
 
-  Future<void> _sendModelingTurn(String message) async {
-    setState(() => _loading = true);
-    try {
-      final response = await ref.read(chatRepositoryProvider).sendMessage(
-        message,
-        conversationId: _conversationId,
-        extraContext: const {'mode': 'onboarding_modeling'},
-      );
-      if (!mounted) return;
+  Future<void> _startModelingStream(
+    String message, {
+    bool addUserMessage = true,
+    Map<String, dynamic>? extraContext,
+  }) async {
+    final trimmed = message.trim();
+    if (trimmed.isEmpty || _skipInFlight || _completed) {
+      return;
+    }
+
+    if (addUserMessage) {
       setState(() {
-        _conversationId = response.conversationId;
-        _messages.add(_ModelingMessage(text: response.message, isUser: false));
-        _assistantTurns += 1;
-        _completed =
-            _assistantTurns >= 4 || response.message.contains('等你开始规划的时候');
+        _messages.add(
+          _ModelingMessage(
+            id: _nextMessageId('user'),
+            text: trimmed,
+            isUser: true,
+          ),
+        );
       });
-      if (_completed) {
-        ref.invalidate(profileContextProvider);
+      _scheduleScrollToBottom();
+    }
+
+    final requestId = _nextRequestId();
+    try {
+      final authState = ref.read(authProvider);
+      final userId = authState.user?.id ??
+          await ref.read(guestServiceProvider).getGuestId();
+      final token = await ref.read(authRepositoryProvider).getAccessToken();
+
+      if (!mounted) {
+        return;
       }
+
+      final stream = ref.read(chatRepositoryProvider).chatStream(
+        trimmed,
+        _conversationId,
+        userId: userId,
+        requestId: requestId,
+        token: token,
+        extraContext: {
+          'mode': 'onboarding_modeling',
+          'aurora_surface': 'modeling',
+          'aurora_runtime_enabled': true,
+          ...?extraContext,
+        },
+      );
+
+      final subscription = stream.listen(
+        (event) => _handleStreamEvent(requestId, event),
+        onError: (Object error, StackTrace stackTrace) {
+          _handleStreamError(requestId, error);
+        },
+        onDone: () {
+          _handleStreamClosed(requestId);
+        },
+        cancelOnError: false,
+      );
+
+      if (!mounted) {
+        unawaited(subscription.cancel());
+        return;
+      }
+
+      setState(() {
+        _runSubscriptions[requestId] = subscription;
+      });
     } catch (error) {
-      if (!mounted) return;
-      AppFeedback.error(context, '建模对话暂时失败：$error');
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
+      if (!mounted) {
+        return;
       }
+      AppFeedback.error(context, '建模对话暂时失败：$error');
     }
   }
 
+  void _handleStreamEvent(String requestId, ChatStreamEvent event) {
+    if (!mounted) {
+      return;
+    }
+
+    final sessionId = event.sessionId?.trim();
+    if (sessionId != null && sessionId.isNotEmpty) {
+      _conversationId = sessionId;
+    }
+
+    if (event is TextEvent) {
+      _applyMetadata(event.metadata);
+      _appendAssistantChunk(requestId, event.content);
+      return;
+    }
+
+    if (event is FullTextEvent) {
+      _applyMetadata(event.metadata);
+      _replaceAssistantChunk(requestId, event.content);
+      return;
+    }
+
+    if (event is MetaEvent) {
+      _applyMetadata(event.meta);
+      return;
+    }
+
+    if (event is ContinueEvent) {
+      _applyMetadata(event.metadata);
+      _finalizeAssistantDraft(requestId);
+      return;
+    }
+
+    if (event is DoneEvent) {
+      _applyMetadata(event.metadata);
+      _finalizeAssistantDraft(requestId);
+      _cleanupRun(requestId);
+      return;
+    }
+
+    if (event is ErrorEvent) {
+      _handleStreamError(requestId, event.message);
+    }
+  }
+
+  void _handleStreamClosed(String requestId) {
+    if (!mounted) {
+      return;
+    }
+    _finalizeAssistantDraft(requestId);
+    _cleanupRun(requestId);
+  }
+
+  void _handleStreamError(String requestId, Object error) {
+    if (!mounted) {
+      return;
+    }
+    _finalizeAssistantDraft(requestId);
+    _cleanupRun(requestId, cancelSubscription: true);
+    AppFeedback.error(context, '建模对话暂时失败：$error');
+  }
+
+  void _appendAssistantChunk(String requestId, String chunk) {
+    if (chunk.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      final messageId = _draftMessageIdsByRequest[requestId];
+      if (messageId == null) {
+        final newMessageId = _nextMessageId('assistant');
+        _draftMessageIdsByRequest[requestId] = newMessageId;
+        _messages.add(
+          _ModelingMessage(
+            id: newMessageId,
+            text: chunk,
+            isUser: false,
+            isStreaming: true,
+          ),
+        );
+        return;
+      }
+
+      final index = _messages.indexWhere((message) => message.id == messageId);
+      if (index < 0) {
+        final newMessageId = _nextMessageId('assistant');
+        _draftMessageIdsByRequest[requestId] = newMessageId;
+        _messages.add(
+          _ModelingMessage(
+            id: newMessageId,
+            text: chunk,
+            isUser: false,
+            isStreaming: true,
+          ),
+        );
+        return;
+      }
+
+      final message = _messages[index];
+      _messages[index] = message.copyWith(
+        text: '${message.text}$chunk',
+        isStreaming: true,
+      );
+    });
+    _scheduleScrollToBottom();
+  }
+
+  void _replaceAssistantChunk(String requestId, String content) {
+    if (content.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      final messageId = _draftMessageIdsByRequest[requestId];
+      if (messageId == null) {
+        final newMessageId = _nextMessageId('assistant');
+        _draftMessageIdsByRequest[requestId] = newMessageId;
+        _messages.add(
+          _ModelingMessage(
+            id: newMessageId,
+            text: content,
+            isUser: false,
+            isStreaming: true,
+          ),
+        );
+        return;
+      }
+
+      final index = _messages.indexWhere((message) => message.id == messageId);
+      if (index < 0) {
+        final newMessageId = _nextMessageId('assistant');
+        _draftMessageIdsByRequest[requestId] = newMessageId;
+        _messages.add(
+          _ModelingMessage(
+            id: newMessageId,
+            text: content,
+            isUser: false,
+            isStreaming: true,
+          ),
+        );
+        return;
+      }
+
+      _messages[index] = _messages[index].copyWith(
+        text: content,
+        isStreaming: true,
+      );
+    });
+    _scheduleScrollToBottom();
+  }
+
+  void _finalizeAssistantDraft(String requestId) {
+    final messageId = _draftMessageIdsByRequest.remove(requestId);
+    if (messageId == null || !mounted) {
+      return;
+    }
+
+    final index = _messages.indexWhere((message) => message.id == messageId);
+    if (index < 0 || !_messages[index].isStreaming) {
+      return;
+    }
+
+    setState(() {
+      _messages[index] = _messages[index].copyWith(isStreaming: false);
+    });
+    _scheduleScrollToBottom();
+  }
+
+  void _cleanupRun(
+    String requestId, {
+    bool cancelSubscription = false,
+  }) {
+    final subscription = _runSubscriptions.remove(requestId);
+    _draftMessageIdsByRequest.remove(requestId);
+    if (cancelSubscription && subscription != null) {
+      unawaited(subscription.cancel());
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _applyMetadata(Map<String, dynamic>? metadata) {
+    if (metadata == null || metadata.isEmpty || !mounted) {
+      return;
+    }
+
+    final modelingComplete = _isTruthy(metadata['modeling_complete']);
+    if (!modelingComplete || _completed) {
+      return;
+    }
+
+    setState(() {
+      _completed = true;
+    });
+    ref.invalidate(profileContextProvider);
+  }
+
   Future<void> _skip() async {
-    setState(() => _loading = true);
+    if (_skipInFlight) {
+      return;
+    }
+
+    setState(() => _skipInFlight = true);
+
+    final activeSubscriptions = List<StreamSubscription<ChatStreamEvent>>.from(
+      _runSubscriptions.values,
+    );
+    _runSubscriptions.clear();
+    _draftMessageIdsByRequest.clear();
+    for (final subscription in activeSubscriptions) {
+      await subscription.cancel();
+    }
+
     try {
-      await ref.read(chatRepositoryProvider).sendMessage(
+      final authState = ref.read(authProvider);
+      final userId = authState.user?.id ??
+          await ref.read(guestServiceProvider).getGuestId();
+      final token = await ref.read(authRepositoryProvider).getAccessToken();
+
+      final stream = ref.read(chatRepositoryProvider).chatStream(
         '_onboarding_skip_',
-        conversationId: _conversationId,
+        _conversationId,
+        userId: userId,
+        requestId: _nextRequestId(),
+        token: token,
         extraContext: const {
           'mode': 'onboarding_modeling',
+          'aurora_surface': 'modeling',
+          'aurora_runtime_enabled': true,
           'skip': true,
         },
       );
-      if (!mounted) return;
+
+      await stream
+          .firstWhere(
+            (event) => event is DoneEvent || event is ErrorEvent,
+          )
+          .timeout(const Duration(seconds: 3), onTimeout: DoneEvent.new);
+
+      if (!mounted) {
+        return;
+      }
       await _finish();
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       AppFeedback.error(context, '暂时无法跳过：$error');
-      setState(() => _loading = false);
+      setState(() => _skipInFlight = false);
     }
   }
 
@@ -217,14 +585,66 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       context.go('/home');
     }
   }
+
+  String _nextRequestId() =>
+      'aurora_modeling_${DateTime.now().microsecondsSinceEpoch}_${_requestSequence++}';
+
+  String _nextMessageId(String prefix) =>
+      '${prefix}_${DateTime.now().microsecondsSinceEpoch}_${_messageSequence++}';
+
+  void _scheduleScrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+      final position = _scrollController.position.maxScrollExtent;
+      unawaited(
+        _scrollController.animateTo(
+          position,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        ),
+      );
+    });
+  }
+
+  bool _isTruthy(dynamic value) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is String) {
+      return value.toLowerCase() == 'true';
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    return false;
+  }
 }
 
 class _ModelingMessage {
   const _ModelingMessage({
+    required this.id,
     required this.text,
     required this.isUser,
+    this.isStreaming = false,
   });
 
+  final String id;
   final String text;
   final bool isUser;
+  final bool isStreaming;
+
+  _ModelingMessage copyWith({
+    String? id,
+    String? text,
+    bool? isUser,
+    bool? isStreaming,
+  }) =>
+      _ModelingMessage(
+        id: id ?? this.id,
+        text: text ?? this.text,
+        isUser: isUser ?? this.isUser,
+        isStreaming: isStreaming ?? this.isStreaming,
+      );
 }

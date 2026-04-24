@@ -37,6 +37,7 @@ from sqlalchemy import and_, asc, desc, func, select  # noqa: F401
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.standard_workflow import create_standard_chat_graph
+from app.aurora.runtime_v1 import AURORA_RUNTIME_MODE_SURFACES, AuroraRuntimeV1Service
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.config import settings
 from app.core.business_metrics import (  # noqa: F401
@@ -402,6 +403,110 @@ class ChatOrchestrator(
         # Ensure tools are registered
         self._ensure_tools_registered()
         self.multi_agent_adapter = MultiAgentWorkflowAdapter(self)
+        self.aurora_runtime_v1 = AuroraRuntimeV1Service(redis_client)
+
+    @staticmethod
+    def _resolve_aurora_runtime_surface(request_extra_context: dict[str, Any]) -> str | None:
+        if not getattr(settings, "ENABLE_AURORA_RUNTIME_V1", False):
+            return None
+        explicit_surface = str(request_extra_context.get("aurora_surface") or "").strip()
+        if explicit_surface:
+            return explicit_surface
+        mode = str(request_extra_context.get("mode") or "").strip()
+        return AURORA_RUNTIME_MODE_SURFACES.get(mode)
+
+    @staticmethod
+    def _build_aurora_runtime_metadata(
+        *,
+        surface: str,
+        surface_complete: bool,
+        modeling_complete: bool,
+    ) -> dict[str, str]:
+        return {
+            "aurora_surface": surface,
+            "aurora_runtime_enabled": "true",
+            "surface_complete": str(surface_complete).lower(),
+            "modeling_complete": str(modeling_complete).lower(),
+        }
+
+    async def _stream_aurora_runtime_v1(
+        self,
+        *,
+        request: agent_service_pb2.ChatRequest,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        response_id: str,
+        request_id: str,
+        trace_id: str,
+        workflow_id: str,
+        prompt_version: str,
+        request_extra_context: dict[str, Any],
+        conversation_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+    ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
+        surface = self._resolve_aurora_runtime_surface(request_extra_context)
+        if surface is None:
+            return
+
+        plan = await self.aurora_runtime_v1.plan_turn(
+            active_db=active_db,
+            user_id=user_id,
+            surface=surface,
+            conversation_id=session_id,
+            request_id=request_id,
+            user_message=request.message or "",
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            user_context_payload=user_context_payload,
+        )
+
+        combined_messages: list[str] = []
+        total_messages = len(plan.messages)
+        for index, message in enumerate(plan.messages):
+            combined_messages.append(message)
+            finish_reason = (
+                agent_service_pb2.CONTINUE if index < total_messages - 1 else agent_service_pb2.STOP
+            )
+            metadata = self._build_aurora_runtime_metadata(
+                surface=plan.surface,
+                surface_complete=plan.surface_complete if index == total_messages - 1 else False,
+                modeling_complete=plan.modeling_complete if index == total_messages - 1 else False,
+            )
+            yield agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                session_id=session_id,
+                full_text=message,
+                finish_reason=finish_reason,
+                metadata=metadata,
+            )
+
+        combined_text = "\n\n".join(item for item in combined_messages if str(item).strip())
+        if combined_text:
+            await self._persist_assistant_message(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                full_response=combined_text,
+            )
+            await self._cache_response(
+                session_id,
+                request_id,
+                {
+                    "message": combined_text,
+                    "tool_results": [],
+                    "metadata": self._build_aurora_runtime_metadata(
+                        surface=plan.surface,
+                        surface_complete=plan.surface_complete,
+                        modeling_complete=plan.modeling_complete,
+                    ),
+                },
+            )
 
     async def _emit_early_ack_progress(
         self,
@@ -1438,6 +1543,33 @@ class ChatOrchestrator(
                     REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
                     COLLABORATION_SUCCESS.labels(
                         workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
+                    ).inc()
+                    return
+
+                aurora_surface = self._resolve_aurora_runtime_surface(request_extra_context)
+                if aurora_surface is not None:
+                    await self._update_state(session_id, STATE_GENERATING, f"Aurora runtime v1 ({aurora_surface})")
+                    async for queued in self._drain_queue(queue):
+                        yield queued
+                    async for aurora_response in self._stream_aurora_runtime_v1(
+                        request=request,
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        response_id=response_id,
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        request_extra_context=request_extra_context,
+                        conversation_context=conversation_context,
+                        user_context_payload=user_context_payload,
+                    ):
+                        yield aurora_response
+                    await self._update_state(session_id, STATE_DONE, f"Aurora runtime v1 completed ({aurora_surface})")
+                    REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+                    COLLABORATION_SUCCESS.labels(
+                        workflow_type=workflow_id, agents_used="aurora_runtime_v1", outcome="success"
                     ).inc()
                     return
 

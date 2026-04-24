@@ -49,6 +49,24 @@ var jsonMetadataKeys = map[string]bool{
 	"collaboration_summary":  true,
 }
 
+func isTerminalFinishReason(reason agentv1.FinishReason) bool {
+	return reason != agentv1.FinishReason_NULL && reason != agentv1.FinishReason_CONTINUE
+}
+
+func isAuroraRuntimeResponse(resp *agentv1.ChatResponse) bool {
+	if resp == nil {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(resp.Metadata["aurora_runtime_enabled"]), "true")
+}
+
+func shouldEmitSyntheticDone(sawAuroraRuntime bool, sawUpstreamFinishReason bool) bool {
+	if !sawAuroraRuntime {
+		return true
+	}
+	return !sawUpstreamFinishReason
+}
+
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
 func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	metadata := map[string]interface{}{}
@@ -251,7 +269,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		result["intervention"] = intervention
 	default:
 		// Finish-only responses are terminal stream markers for WebSocket clients.
-		if resp.FinishReason != agentv1.FinishReason_NULL {
+		if isTerminalFinishReason(resp.FinishReason) {
 			result["type"] = "done"
 		} else if _, hasType := result["type"]; !hasType {
 			// If no content field is set, add type "metadata" for responses with only metadata
@@ -261,7 +279,9 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 
 	if resp.FinishReason != agentv1.FinishReason_NULL {
 		result["finish_reason"] = resp.FinishReason.String()
-		metadata["done"] = true
+		if isTerminalFinishReason(resp.FinishReason) {
+			metadata["done"] = true
+		}
 	}
 
 	return result

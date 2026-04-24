@@ -9,9 +9,9 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.aurora.runtime_v1 import AuroraRuntimePlanningAdapter, AuroraRuntimePlanningState
 from app.core.cache import cache_service
 from app.models.plan import PlanPriority, PlanStage, PlanType
 from app.models.task import Task
@@ -20,7 +20,6 @@ from app.schemas.task import TaskCreate, coerce_task_type
 from app.services.plan_service import PlanService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.task_service import TaskService
-
 
 PLANNING_SESSION_TTL = 2 * 60 * 60
 PLANNING_SESSION_PREFIX = "planning:session:"
@@ -152,7 +151,7 @@ class PlanningSession:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "PlanningSession":
+    def from_dict(cls, payload: dict[str, Any]) -> PlanningSession:
         return cls(
             planning_session_id=_strip(payload.get("planning_session_id")),
             chat_session_id=_strip(payload.get("chat_session_id")),
@@ -172,8 +171,9 @@ class PlanningSession:
 class PlanningWorkflowManager:
     REQUIRED_FIELDS = ("exam_scope", "knowledge_baseline", "time_available")
 
-    def __init__(self, redis_client=None) -> None:
+    def __init__(self, redis_client=None, runtime_adapter: AuroraRuntimePlanningAdapter | None = None) -> None:
         self.redis = redis_client or cache_service.redis
+        self.runtime_adapter = runtime_adapter or AuroraRuntimePlanningAdapter(redis_client=self.redis)
 
     def detect_planning_intent(self, message: str, context: dict[str, Any] | None = None) -> bool:
         text = _strip(message).lower()
@@ -252,6 +252,7 @@ class PlanningWorkflowManager:
         message: str,
         context: dict[str, Any],
     ) -> dict[str, Any] | None:
+        profile_context = _as_dict(context.get("profile_context"))
         session = await self.get_active_session(chat_session_id)
         if session is None:
             if not self.detect_planning_intent(message, context):
@@ -262,7 +263,16 @@ class PlanningWorkflowManager:
                 goal_raw=message,
             )
             session.collected.update(await self._prefill_from_profile_context(context))
-            return await self._handle_clarifying(db=db, user_id=user_id, session=session, user_message=message)
+
+        runtime_state = await self.runtime_adapter.get_or_create_state(
+            user_id=str(user_id),
+            conversation_id=chat_session_id,
+            db=db,
+            planning_session_id=session.planning_session_id,
+            goal_raw=session.goal_raw or message,
+            profile_context=profile_context,
+            collected=session.collected,
+        )
 
         context_session_id = _strip(context.get("planning_session_id"))
         if context_session_id and context_session_id != session.planning_session_id:
@@ -274,19 +284,60 @@ class PlanningWorkflowManager:
             return {
                 "message": "好的，先退出这轮规划。我会保留已经了解的信息，之后你想继续时我们可以直接接上。",
                 "widgets": [],
+                "metadata": self.runtime_adapter.build_response_metadata(runtime_state, surface_complete=False),
             }
 
-        if not self.is_message_relevant_to_planning(session, message):
+        extracted_fields = self._extract_clarifying_fields(message)
+        if not self.is_message_relevant_to_planning(session, message, extracted_fields=extracted_fields):
+            await self.runtime_adapter.absorb_user_turn(
+                state=runtime_state,
+                db=db,
+                message=message,
+                extracted_fields=extracted_fields,
+                is_detour=True,
+            )
             return {"bypass_planning": True}
 
+        runtime_state = await self.runtime_adapter.absorb_user_turn(
+            state=runtime_state,
+            db=db,
+            message=message,
+            extracted_fields=extracted_fields,
+            is_detour=False,
+        )
+
         if session.state == "CLARIFYING":
-            return await self._handle_clarifying(db=db, user_id=user_id, session=session, user_message=message)
+            return await self._handle_clarifying(
+                db=db,
+                user_id=user_id,
+                session=session,
+                user_message=message,
+                runtime_state=runtime_state,
+                extracted_fields=extracted_fields,
+                profile_context=profile_context,
+            )
         if session.state == "AWAITING_CONFIRM":
             if any(token in lowered for token in PLANNING_CONFIRM_PATTERNS):
-                return await self._handle_generating(db=db, user_id=user_id, session=session)
-            return await self._handle_strategy_revision(session=session, user_message=message)
+                return await self._handle_generating(
+                    db=db,
+                    user_id=user_id,
+                    session=session,
+                    runtime_state=runtime_state,
+                    profile_context=profile_context,
+                )
+            return await self._handle_strategy_revision(
+                db=db,
+                session=session,
+                user_message=message,
+                runtime_state=runtime_state,
+            )
         if session.state == "STRATEGY_REVISION":
-            return await self._handle_strategy_revision(session=session, user_message=message)
+            return await self._handle_strategy_revision(
+                db=db,
+                session=session,
+                user_message=message,
+                runtime_state=runtime_state,
+            )
         return None
 
     async def process_onboarding_turn(
@@ -371,14 +422,25 @@ class PlanningWorkflowManager:
         user_id: UUID,
         session: PlanningSession,
         user_message: str,
+        runtime_state: AuroraRuntimePlanningState,
+        extracted_fields: dict[str, Any],
+        profile_context: dict[str, Any],
     ) -> dict[str, Any]:
-        self._merge_clarifying_fields(session.collected, user_message)
+        session.collected.update(extracted_fields)
         session.collected.setdefault("goal_raw", session.goal_raw)
         session.turns_in_state += 1
+        runtime_state = await self.runtime_adapter.sync_session(
+            state=runtime_state,
+            db=db,
+            planning_session_id=session.planning_session_id,
+            goal_raw=session.goal_raw,
+            collected=session.collected,
+            profile_context=profile_context,
+        )
         if self._is_ready_for_bottlenecks(session, user_message):
             session.state = "BOTTLENECK"
-            session.bottlenecks = self._build_bottlenecks(session)
-            strategy = self._build_strategy(session)
+            session.bottlenecks = self._build_bottlenecks(session, aurora_state=runtime_state)
+            strategy = self._build_strategy(session, aurora_state=runtime_state)
             session.confirmed_strategy = strategy
             session.state = "AWAITING_CONFIRM"
             await self._persist_profile_payload(
@@ -389,7 +451,7 @@ class PlanningWorkflowManager:
             )
             await self.save_session(session)
             return {
-                "message": "我先把这次 7 天备考里最影响结果的瓶颈和推进策略整理出来，你看看是否符合你的实际情况。",
+                "message": self._build_strategy_intro(session, runtime_state),
                 "widgets": [
                     {"type": "planning_progress_strip", "data": self._progress_data("AWAITING_CONFIRM")},
                     {
@@ -406,26 +468,60 @@ class PlanningWorkflowManager:
                         },
                     },
                 ],
+                "metadata": self.runtime_adapter.build_response_metadata(runtime_state, surface_complete=False),
             }
 
-        prompt = self._next_clarifying_prompt(session)
+        prompt = self._next_clarifying_prompt(session, aurora_state=runtime_state)
+        _, prompt_domain = self.runtime_adapter.build_next_prompt(runtime_state)
+        await self.runtime_adapter.note_question_asked(state=runtime_state, db=db, domain=prompt_domain)
         await self.save_session(session)
         return {
             "message": prompt,
             "widgets": [{"type": "planning_progress_strip", "data": self._progress_data("CLARIFYING")}],
+            "metadata": self.runtime_adapter.build_response_metadata(runtime_state, surface_complete=False),
         }
 
-    async def _handle_strategy_revision(self, *, session: PlanningSession, user_message: str) -> dict[str, Any]:
+    async def _handle_strategy_revision(
+        self,
+        *,
+        db: AsyncSession,
+        session: PlanningSession,
+        user_message: str,
+        runtime_state: AuroraRuntimePlanningState,
+    ) -> dict[str, Any]:
         strategy = _as_dict(session.confirmed_strategy)
         if strategy:
             first_phase = strategy.get("phases", [{}])[0]
             if "真题" in user_message:
                 first_phase["method"] = f"{_strip(first_phase.get('method'))} 优先把真题和课件一起使用。".strip()
+                materials = list(session.collected.get("available_materials") or [])
+                if "真题" not in materials:
+                    materials.append("真题")
+                session.collected["available_materials"] = materials
             if "轻一点" in user_message or "时间少" in user_message:
                 strategy["daily_commitment_range"] = "1–3小时"
+                await self.runtime_adapter.update_activity_profile(
+                    state=runtime_state,
+                    db=db,
+                    updates={"task_density_hint": 0.35, "conversation_style": "structured"},
+                )
             if "重一点" in user_message or "更猛" in user_message:
                 strategy["daily_commitment_range"] = "3–5小时"
+                await self.runtime_adapter.update_activity_profile(
+                    state=runtime_state,
+                    db=db,
+                    updates={"task_density_hint": 0.9, "conversation_style": "structured"},
+                )
             strategy["adjustment_note"] = user_message.strip()
+            strategy["aurora_brief"] = self.runtime_adapter.build_strategy_brief(runtime_state)
+        runtime_state = await self.runtime_adapter.sync_session(
+            state=runtime_state,
+            db=db,
+            planning_session_id=session.planning_session_id,
+            goal_raw=session.goal_raw,
+            collected=session.collected,
+            profile_context=None,
+        )
         session.confirmed_strategy = strategy
         session.state = "AWAITING_CONFIRM"
         await self.save_session(session)
@@ -447,6 +543,7 @@ class PlanningWorkflowManager:
                     },
                 },
             ],
+            "metadata": self.runtime_adapter.build_response_metadata(runtime_state, surface_complete=False),
         }
 
     async def _handle_generating(
@@ -455,10 +552,20 @@ class PlanningWorkflowManager:
         db: AsyncSession,
         user_id: UUID,
         session: PlanningSession,
+        runtime_state: AuroraRuntimePlanningState,
+        profile_context: dict[str, Any],
     ) -> dict[str, Any]:
+        runtime_state = await self.runtime_adapter.sync_session(
+            state=runtime_state,
+            db=db,
+            planning_session_id=session.planning_session_id,
+            goal_raw=session.goal_raw,
+            collected=session.collected,
+            profile_context=profile_context,
+        )
         strategy = _as_dict(session.confirmed_strategy)
         if not strategy:
-            strategy = self._build_strategy(session)
+            strategy = self._build_strategy(session, aurora_state=runtime_state)
             session.confirmed_strategy = strategy
 
         days = _safe_int(strategy.get("total_days")) or _safe_int(session.collected.get("time_constraint_days")) or 7
@@ -492,6 +599,7 @@ class PlanningWorkflowManager:
                     default_daily_hours=daily_hours,
                     day_number=day_spec["day"],
                     day_focus=day_spec["focus"],
+                    aurora_state=runtime_state,
                 )
                 task = await TaskService.create(
                     db=db,
@@ -508,6 +616,7 @@ class PlanningWorkflowManager:
                             session=session,
                             phase={**phase, "focus": day_spec["focus"]},
                             guide_json=guide_json,
+                            aurora_state=runtime_state,
                         ),
                         source_planning_session_id=session.planning_session_id,
                         phase_index=index,
@@ -520,6 +629,8 @@ class PlanningWorkflowManager:
 
         session.state = "DONE"
         await self.save_session(session)
+        runtime_state.current_intent = {"intent_type": "wait", "target_tension_id": None, "payload": {}}
+        await self.runtime_adapter.save_state(runtime_state, db=db)
         return {
             "message": "方案已经确认，我把第一阶段任务卡生成好了。你现在可以直接进入第一个任务开始执行。",
             "widgets": [
@@ -554,6 +665,7 @@ class PlanningWorkflowManager:
                     },
                 },
             ],
+            "metadata": self.runtime_adapter.build_response_metadata(runtime_state, surface_complete=True),
         }
 
     def _is_ready_for_bottlenecks(self, session: PlanningSession, user_message: str) -> bool:
@@ -564,7 +676,13 @@ class PlanningWorkflowManager:
             return True
         return session.turns_in_state >= 4
 
-    def is_message_relevant_to_planning(self, session: PlanningSession, message: str) -> bool:
+    def is_message_relevant_to_planning(
+        self,
+        session: PlanningSession,
+        message: str,
+        *,
+        extracted_fields: dict[str, Any] | None = None,
+    ) -> bool:
         text = _strip(message).lower()
         if not text:
             return False
@@ -573,14 +691,21 @@ class PlanningWorkflowManager:
         if session.state == "CLARIFYING":
             if any(token in text for token in PLANNING_TASK_BYPASS_PATTERNS):
                 return False
-            collected = {}
-            self._merge_clarifying_fields(collected, message)
+            collected = dict(extracted_fields or self._extract_clarifying_fields(message))
             return any(_strip(collected.get(field)) for field in self.REQUIRED_FIELDS)
         if session.state in {"AWAITING_CONFIRM", "STRATEGY_REVISION"}:
             return any(token in text for token in PLANNING_ADJUST_PATTERNS)
         return True
 
-    def _next_clarifying_prompt(self, session: PlanningSession) -> str:
+    def _next_clarifying_prompt(
+        self,
+        session: PlanningSession,
+        aurora_state: AuroraRuntimePlanningState | None = None,
+    ) -> str:
+        if aurora_state is not None:
+            prompt, _ = self.runtime_adapter.build_next_prompt(aurora_state)
+            if prompt:
+                return prompt
         missing = [field for field in self.REQUIRED_FIELDS if not _strip(session.collected.get(field))]
         if "exam_scope" in missing and "knowledge_baseline" in missing:
             return "先帮我补两块最关键的信息：这次考试具体考哪些范围？你现在对这门课大概是完全没学过、上过课但没复习，还是已经学过一部分？"
@@ -590,12 +715,15 @@ class PlanningWorkflowManager:
             return "你现在对这门课的基础大概在哪个位置？比如完全没学过、上过课但没复习，或者已经学过一半。"
         return "你接下来这几天每天大概能拿出多少时间？有没有哪几天会特别忙或者完全学不了？"
 
-    def _merge_clarifying_fields(self, collected: dict[str, Any], user_message: str) -> None:
+    def _extract_clarifying_fields(self, user_message: str) -> dict[str, Any]:
+        collected: dict[str, Any] = {}
         text = _strip(user_message)
         if not text:
-            return
+            return collected
         lowered = text.lower()
-        if not collected.get("exam_scope") and any(token in lowered for token in ("章", "教材", "课件", "考纲", "网络", "计网", "tcp", "udp", "传输层", "网络层")):
+        if not collected.get("exam_scope") and any(
+            token in lowered for token in ("章", "教材", "课件", "考纲", "网络", "计网", "tcp", "udp", "传输层", "网络层")
+        ):
             collected["exam_scope"] = text
         if not collected.get("knowledge_baseline"):
             if any(token in lowered for token in ("没学过", "零基础", "完全不会")):
@@ -617,6 +745,12 @@ class PlanningWorkflowManager:
                 collected["daily_available_hours"] = max(1, round(minutes / 60))
         if "没空" in lowered or "有课" in lowered:
             collected["blocked_days"] = text
+        materials = list(collected.get("available_materials") or [])
+        for token in ("真题", "课件", "教材", "笔记", "题库", "往年题"):
+            if token in text and token not in materials:
+                materials.append(token)
+        if materials:
+            collected["available_materials"] = materials
 
         day_match = re.search(r"(?P<days>\d+)\s*(天|day|days)", lowered)
         if day_match and not collected.get("time_constraint_days"):
@@ -625,6 +759,10 @@ class PlanningWorkflowManager:
             subject_match = re.search(r"(计算机网络|计网|高数|线代|概率论|操作系统|数据库|英语)", text)
             if subject_match:
                 collected["subject"] = subject_match.group(1)
+        return collected
+
+    def _merge_clarifying_fields(self, collected: dict[str, Any], user_message: str) -> None:
+        collected.update(self._extract_clarifying_fields(user_message))
 
     def _strategy_actions(
         self,
@@ -652,6 +790,19 @@ class PlanningWorkflowManager:
             },
         ]
 
+    def _build_strategy_intro(
+        self,
+        session: PlanningSession,
+        aurora_state: AuroraRuntimePlanningState | None = None,
+    ) -> str:
+        days = _safe_int(session.collected.get("time_constraint_days")) or 7
+        subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "这次备考")
+        brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
+        recent_detours = [item for item in list(brief.get("recent_detours") or []) if _strip(item)]
+        if recent_detours:
+            return f"我先把这次 {days} 天 {subject} 里最影响结果的瓶颈和推进策略整理出来，也把你刚才补充过的碎信息一起吃进去，你看看是否贴合你的实际情况。"
+        return f"我先把这次 {days} 天 {subject} 里最影响结果的瓶颈和推进策略整理出来，你看看是否符合你的实际情况。"
+
     def _build_task_guide_json(
         self,
         *,
@@ -661,22 +812,32 @@ class PlanningWorkflowManager:
         default_daily_hours: int,
         day_number: int | None = None,
         day_focus: str | None = None,
+        aurora_state: AuroraRuntimePlanningState | None = None,
     ) -> dict[str, Any]:
         phase_hours = _safe_int(phase.get("daily_hours")) or default_daily_hours or 2
         method = _strip(phase.get("method"))
         focus = _strip(day_focus or phase.get("focus"))
         output = _strip(phase.get("output"))
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
+        brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
+        materials = [item for item in list(brief.get("available_materials") or session.collected.get("available_materials") or []) if _strip(item)]
+        blocked_days = [item for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or []) if _strip(item)]
         day_label = f"Day {day_number} " if day_number else ""
         guide_steps = [
             f"先用 15 分钟扫一遍和「{_strip(phase.get('label'))}」相关的课件/教材目录，只标记最容易失分的部分。",
             f"围绕这个阶段的重点执行：{method or focus}",
             f"最后留 15 分钟做一次自测或复述，确认你是否已经达到「{output or focus}」。",
         ]
+        if materials:
+            guide_steps.insert(1, f"优先使用你手头已有的资料：{'、'.join(materials[:3])}。")
+        if blocked_days:
+            guide_steps.append(f"如果碰到这些忙碌时段，就把任务压缩成保底版：{'；'.join(blocked_days[:2])}。")
         key_points = [
             focus or f"{subject} 的阶段重点",
             output or "把知识点转成能说清、能做题的状态",
         ]
+        if materials:
+            key_points.append(f"优先吃透手头资料里的高频材料：{'、'.join(materials[:2])}")
         if session.bottlenecks:
             key_points.extend(
                 _strip(item.get("description")) for item in session.bottlenecks[:1] if _strip(item.get("description"))
@@ -703,14 +864,23 @@ class PlanningWorkflowManager:
         session: PlanningSession,
         phase: dict[str, Any],
         guide_json: dict[str, Any],
+        aurora_state: AuroraRuntimePlanningState | None = None,
     ) -> str:
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
         baseline = _strip(session.collected.get("knowledge_baseline") or "基础不稳")
         daily_hours = _safe_int(session.collected.get("daily_available_hours")) or 2
         phase_label = _strip(phase.get("label") or "当前阶段")
+        brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
+        materials = [item for item in list(brief.get("available_materials") or session.collected.get("available_materials") or []) if _strip(item)]
+        blocked_days = [item for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or []) if _strip(item)]
+        latent_threads = [item for item in list(brief.get("latent_threads") or []) if _strip(item.get("context_snapshot"))]
+        materials_line = f"手头资料包括：{'、'.join(materials[:3])}。\n" if materials else ""
+        blocked_days_line = f"已知忙碌时段：{'；'.join(blocked_days[:2])}。\n" if blocked_days else ""
+        latent_line = f"还需要顺手照顾的潜在线索：{latent_threads[0]['context_snapshot']}。\n" if latent_threads else ""
         return (
             f"【背景】我是学生，目标是 {session.goal_raw or f'在限定时间内完成 {subject} 备考'}。\n\n"
-            f"【我的情况】科目是 {subject}，当前基础是 {baseline}，每天大概能投入 {daily_hours} 小时。\n\n"
+            f"【我的情况】科目是 {subject}，当前基础是 {baseline}，每天大概能投入 {daily_hours} 小时。\n"
+            f"{materials_line}{blocked_days_line}{latent_line}\n"
             f"【当前阶段】{phase_label}\n"
             f"重点：{_strip(phase.get('focus'))}\n"
             f"目标：{_strip(guide_json.get('objective'))}\n"
@@ -733,23 +903,36 @@ class PlanningWorkflowManager:
             "time_available": self._format_time_available(cold_start),
             "daily_available_hours": _safe_int(cold_start.get("daily_available_hours")),
             "blocked_days": cold_start.get("blocked_days") or [],
+            "available_materials": cold_start.get("available_materials") or [],
             "subject": _strip(cold_start.get("subject")),
             "time_constraint_days": _safe_int(cold_start.get("time_constraint_days")),
         }
         return {key: value for key, value in merged.items() if value not in (None, "", [], {})}
 
-    def _build_bottlenecks(self, session: PlanningSession) -> list[dict[str, Any]]:
+    def _build_bottlenecks(
+        self,
+        session: PlanningSession,
+        aurora_state: AuroraRuntimePlanningState | None = None,
+    ) -> list[dict[str, Any]]:
         # Phase II: replace this V1 rule template with LLM-backed analysis once richer study signals are available.
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "这门课")
         baseline = _strip(session.collected.get("knowledge_baseline") or "基础不稳")
         days = _safe_int(session.collected.get("time_constraint_days")) or 7
         hours = _safe_int(session.collected.get("daily_available_hours")) or 2
+        brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
+        blocked_days = [item for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or []) if _strip(item)]
+        materials = [item for item in list(brief.get("available_materials") or session.collected.get("available_materials") or []) if _strip(item)]
+        open_tensions = list(brief.get("open_tensions") or [])
         return [
             {
                 "id": "b1",
-                "description": f"知识覆盖率不足：{subject} 需要在 {days} 天内完成压缩复习，但你当前只有每天约 {hours} 小时的有效时间。",
+                "description": (
+                    f"知识覆盖率不足：{subject} 需要在 {days} 天内完成压缩复习，但你当前只有每天约 {hours} 小时的有效时间。"
+                    if not blocked_days
+                    else f"知识覆盖率不足：{subject} 需要在 {days} 天内完成压缩复习，而你这几天还夹着忙碌时段（{'；'.join(blocked_days[:2])}）。"
+                ),
                 "severity": "high",
-                "specific_risk": f"如果前两天没有快速建立章节框架，后半程很容易只顾着赶进度，留不出完整模拟的时间。",
+                "specific_risk": "如果前两天没有快速建立章节框架，后半程很容易只顾着赶进度，留不出完整模拟的时间。",
             },
             {
                 "id": "b2",
@@ -759,17 +942,37 @@ class PlanningWorkflowManager:
             },
             {
                 "id": "b3",
-                "description": f"题感不足：当前信息里还没有看到你做过稳定的真题或自测，这意味着知识点可能学过却不会落到题型上。",
+                "description": (
+                    "题感不足：当前信息里还没有看到你做过稳定的真题或自测，这意味着知识点可能学过却不会落到题型上。"
+                    if not materials
+                    else f"题感转化压力：你手头已经有 {'、'.join(materials[:2])}，但如果这些材料没被尽快转成自测回路，后面还是会只顾输入不顾检验。"
+                ),
                 "severity": "medium",
-                "specific_risk": "后两天如果才第一次接触题目，会来不及暴露高频错误类型，冲刺效率会明显下降。",
+                "specific_risk": (
+                    "后两天如果才第一次接触题目，会来不及暴露高频错误类型，冲刺效率会明显下降。"
+                    if not open_tensions
+                    else f"目前还有 {len(open_tensions)} 块信息缺口没完全闭合，如果不尽早用题目和资料一起校准，计划会越来越像按假设推进。"
+                ),
             },
         ]
 
-    def _build_strategy(self, session: PlanningSession) -> dict[str, Any]:
+    def _build_strategy(
+        self,
+        session: PlanningSession,
+        aurora_state: AuroraRuntimePlanningState | None = None,
+    ) -> dict[str, Any]:
         # Phase II: replace this V1 rule template with LLM-backed strategy generation for non-demo domains.
         days = _safe_int(session.collected.get("time_constraint_days")) or 7
         hours = _safe_int(session.collected.get("daily_available_hours")) or 2
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
+        brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
+        activity_profile = _as_dict(brief.get("activity_profile"))
+        density_hint = float(activity_profile.get("task_density_hint") or 0.7)
+        density_delta = -1 if density_hint <= 0.4 else 1 if density_hint >= 0.85 else 0
+        materials = [item for item in list(brief.get("available_materials") or session.collected.get("available_materials") or []) if _strip(item)]
+        blocked_days = [item for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or []) if _strip(item)]
+        open_tensions = list(brief.get("open_tensions") or [])
+        latent_threads = list(brief.get("latent_threads") or [])
         ranges = self._phase_day_ranges(days)
         templates = [
             {
@@ -797,6 +1000,11 @@ class PlanningWorkflowManager:
         phases = []
         for index, day_range in enumerate(ranges, start=1):
             template = templates[index - 1]
+            method = template["method"]
+            if materials and index == 1:
+                method = f"{method} 优先用你手头的 {'、'.join(materials[:2])} 来确认范围，而不是重新找资料。"
+            if materials and index == len(ranges):
+                method = f"{method} 把 {'、'.join(materials[:2])} 里的高频题先过一轮。"
             phases.append(
                 {
                     "phase": index,
@@ -804,22 +1012,23 @@ class PlanningWorkflowManager:
                     "end_day": day_range["end"],
                     "days": self._format_day_range(day_range["start"], day_range["end"]),
                     "label": template["label"],
-                    "daily_hours": max(1, hours + int(template["hour_delta"])),
+                    "daily_hours": max(1, hours + int(template["hour_delta"]) + density_delta),
                     "focus": template["focus"],
-                    "method": template["method"],
+                    "method": method,
                     "output": template["output"],
                 }
             )
         first_checkpoint = min(days, ranges[0]["end"])
         final_checkpoint = min(days, ranges[-1]["start"])
+        checkpoint_tail = f" 同时避开这些忙碌时段：{'；'.join(blocked_days[:2])}。" if blocked_days else ""
         return {
             "total_days": days,
-            "daily_commitment_range": f"{max(1, hours - 1)}–{hours + 1}小时",
+            "daily_commitment_range": f"{max(1, hours - 1 + density_delta)}–{max(1, hours + 1 + density_delta)}小时",
             "phases": phases,
             "checkpoints": [
                 {
                     "day": first_checkpoint,
-                    "description": f"Day {first_checkpoint} 晚：做一轮 15–20 题的小自测，确认框架阶段是否真的建立起来。",
+                    "description": f"Day {first_checkpoint} 晚：做一轮 15–20 题的小自测，确认框架阶段是否真的建立起来。{checkpoint_tail}".strip(),
                 },
                 {
                     "day": final_checkpoint,
@@ -830,6 +1039,14 @@ class PlanningWorkflowManager:
                 f"如果 Day {first_checkpoint} 自测低于 30%，说明基础理解成本比预期更高，后续每天只攻 1 个核心点。",
                 "如果冲刺前半套题已经超过 60%，最后阶段优先做题感和高频陷阱纠偏。",
             ],
+            "user_context_digest": {
+                "goal_raw": _strip(session.goal_raw),
+                "blocked_days": blocked_days,
+                "available_materials": materials,
+                "open_tensions": open_tensions,
+                "latent_threads": latent_threads,
+            },
+            "aurora_brief": brief,
         }
 
     def _phase_day_ranges(self, total_days: int) -> list[dict[str, int]]:

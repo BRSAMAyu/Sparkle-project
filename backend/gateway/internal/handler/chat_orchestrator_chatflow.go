@@ -460,6 +460,8 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var segmentIndex int
 	var outputRuneCount int
 	var responseEventCount int64
+	var sawAuroraRuntime bool
+	var sawUpstreamFinishReason bool
 	var firstEventAt time.Time
 	var firstTokenAt time.Time
 	segmentSize := getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
@@ -501,6 +503,12 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 		if usage := resp.GetUsage(); usage != nil {
 			usageTotalTokens = int64(usage.TotalTokens)
+		}
+		if isAuroraRuntimeResponse(resp) {
+			sawAuroraRuntime = true
+		}
+		if resp.GetFinishReason() != agentv1.FinishReason_NULL {
+			sawUpstreamFinishReason = true
 		}
 
 		if h.quota != nil && segmentSize > 0 {
@@ -647,13 +655,15 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		EventTime:     timestamppb.New(time.Now()),
 	}
 
-	switch r := responder.(type) {
-	case *envelopeResponder:
-		_ = r.SendChatResponse(doneResp)
-	case *protobufResponder:
-		_ = r.SendChatResponse(doneResp)
-	case *wsSafeWriter:
-		_ = writeLegacyJSON(r, convertResponseToJSON(doneResp))
+	if shouldEmitSyntheticDone(sawAuroraRuntime, sawUpstreamFinishReason) {
+		switch r := responder.(type) {
+		case *envelopeResponder:
+			_ = r.SendChatResponse(doneResp)
+		case *protobufResponder:
+			_ = r.SendChatResponse(doneResp)
+		case *wsSafeWriter:
+			_ = writeLegacyJSON(r, convertResponseToJSON(doneResp))
+		}
 	}
 
 	// Persist completed message to database and cache (async)

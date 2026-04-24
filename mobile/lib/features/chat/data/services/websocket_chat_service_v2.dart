@@ -80,6 +80,19 @@ bool _isTrue(dynamic value) {
   return false;
 }
 
+String? _normalizeFinishReason(dynamic raw) {
+  final finishReason = raw?.toString().trim();
+  if (finishReason == null ||
+      finishReason.isEmpty ||
+      finishReason.toUpperCase() == 'NULL') {
+    return null;
+  }
+  return finishReason;
+}
+
+bool _isContinueFinishReason(String? finishReason) =>
+    finishReason?.toUpperCase() == 'CONTINUE';
+
 Map<String, dynamic>? _extractDagExecutionMetadata(
   Map<String, dynamic>? metadata,
 ) {
@@ -121,6 +134,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     final workflowId = data['workflow_id'] as String?;
     final promptVersion = data['prompt_version'] as String?;
     final sessionId = data['session_id'] as String?;
+    final finishReason = _normalizeFinishReason(data['finish_reason']);
 
     switch (type) {
       case 'delta':
@@ -538,7 +552,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         );
 
       case 'full_text':
-        final metadata = data['metadata'] as Map<String, dynamic>?;
+        final metadata = _normalizeMetadata(data['metadata']);
         return FullTextEvent(
           content: data['full_text'] as String? ?? '',
           responseId: responseId,
@@ -546,6 +560,29 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           workflowId: workflowId,
           promptVersion: promptVersion,
           metadata: metadata,
+        );
+
+      case 'done':
+        final metadata = _normalizeMetadata(data['metadata']);
+        if (_isContinueFinishReason(finishReason)) {
+          return ContinueEvent(
+            finishReason: finishReason,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+            metadata: metadata,
+            sessionId: sessionId,
+          );
+        }
+        return DoneEvent(
+          finishReason: finishReason,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          metadata: metadata,
+          sessionId: sessionId,
         );
 
       case 'error':
@@ -950,14 +987,26 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         return NotificationEvent.fromJson(data);
 
       default:
-        final finishReason = data['finish_reason'] as String?;
-        if (finishReason != null && finishReason != 'NULL') {
+        if (finishReason != null) {
+          final metadata = _normalizeMetadata(data['metadata']);
+          if (_isContinueFinishReason(finishReason)) {
+            return ContinueEvent(
+              finishReason: finishReason,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+              metadata: metadata,
+              sessionId: sessionId,
+            );
+          }
           return DoneEvent(
             finishReason: finishReason,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
             promptVersion: promptVersion,
+            metadata: metadata,
             sessionId: sessionId,
           );
         }

@@ -241,6 +241,59 @@ func TestConvertResponseToJSONMarksDoneOnFinishOnlyResponse(t *testing.T) {
 	assert.Equal(t, true, meta["done"])
 }
 
+func TestConvertResponseToJSONKeepsContinuePayloadOpen(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId:   "resp-continue",
+		RequestId:    "req-continue",
+		FinishReason: agentv1.FinishReason_CONTINUE,
+		Metadata: map[string]string{
+			"aurora_runtime_enabled": "true",
+			"aurora_surface":         "aurora_modeling",
+			"surface_complete":       "false",
+			"modeling_complete":      "false",
+		},
+		Content: &agentv1.ChatResponse_FullText{
+			FullText: "我先接住这部分，我们继续往下走。",
+		},
+	}
+
+	result := convertResponseToJSON(resp)
+	assert.Equal(t, "full_text", result["type"])
+	assert.Equal(t, "CONTINUE", result["finish_reason"])
+	meta, ok := result["metadata"].(map[string]interface{})
+	assert.True(t, ok)
+	_, hasDone := meta["done"]
+	assert.False(t, hasDone)
+	assert.Equal(t, "true", meta["aurora_runtime_enabled"])
+}
+
+func TestConvertResponseToJSONDoesNotTreatContinueOnlyMarkerAsDone(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId:   "resp-continue-meta",
+		RequestId:    "req-continue-meta",
+		FinishReason: agentv1.FinishReason_CONTINUE,
+		Metadata: map[string]string{
+			"aurora_runtime_enabled": "true",
+			"aurora_surface":         "aurora_modeling",
+		},
+	}
+
+	result := convertResponseToJSON(resp)
+	assert.Equal(t, "metadata", result["type"])
+	assert.Equal(t, "CONTINUE", result["finish_reason"])
+	meta, ok := result["metadata"].(map[string]interface{})
+	assert.True(t, ok)
+	_, hasDone := meta["done"]
+	assert.False(t, hasDone)
+}
+
+func TestShouldEmitSyntheticDoneForAuroraRuntimeOnlyWhenUpstreamNeverFinished(t *testing.T) {
+	assert.True(t, shouldEmitSyntheticDone(false, true))
+	assert.True(t, shouldEmitSyntheticDone(false, false))
+	assert.False(t, shouldEmitSyntheticDone(true, true))
+	assert.True(t, shouldEmitSyntheticDone(true, false))
+}
+
 func TestConvertResponseToJSONBuildsExecutionSummaryWidget(t *testing.T) {
 	payload, err := structpb.NewStruct(map[string]interface{}{
 		"plan_id": "plan-1",

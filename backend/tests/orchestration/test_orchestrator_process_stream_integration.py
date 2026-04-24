@@ -8,6 +8,7 @@ from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from google.protobuf.struct_pb2 import Struct
 
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.schemas import ExecutablePlan, RouteDecision, ToolCallSpec
@@ -114,6 +115,12 @@ async def _passthrough_route(route_decision: RouteDecision, **kwargs) -> RouteDe
 
 async def _emit_noop(*args, **kwargs) -> None:
     return None
+
+
+def _make_struct(data: dict[str, object]) -> Struct:
+    message = Struct()
+    message.update(data)
+    return message
 
 
 def _make_request(*, message: str = "帮我整理今天的学习重点") -> agent_service_pb2.ChatRequest:
@@ -522,6 +529,92 @@ async def test_process_stream_direct_flow_reaches_done(orchestrator_factory):
     assert responses[-1].full_text == "先帮你梳理重点。"
     assert final_state is not None
     assert final_state.state == STATE_DONE
+
+
+@pytest.mark.asyncio
+async def test_process_stream_onboarding_modeling_enters_aurora_runtime_path(orchestrator_factory, monkeypatch):
+    orchestrator, redis_client, state_updates = orchestrator_factory()
+    request = _make_request(message="我最近特别想把学习和作息一起稳下来。")
+    request.extra_context.CopyFrom(_make_struct({"mode": "onboarding_modeling"}))
+
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    monkeypatch.setattr(orchestrator_module.settings, "ENABLE_AURORA_RUNTIME_V1", True, raising=False)
+
+    orchestrator.aurora_runtime_v1._build_message_plan = MagicMock(
+        return_value=[
+            "谢谢你先把这部分告诉我。",
+            "我会先围着你的节奏和目标把线索补齐。",
+            "如果只先补一个关键空缺，你现在最想先稳住的是作息还是学习推进？",
+        ]
+    )
+    orchestrator._route_and_classify = AsyncMock(side_effect=AssertionError("aurora path should bypass router"))
+    orchestrator._plan_and_validate = AsyncMock(side_effect=AssertionError("aurora path should bypass planner"))
+
+    responses = await _collect(orchestrator, request)
+    final_state = await orchestrator.state_manager.load_state(request.session_id)
+
+    finish_reasons = [response.finish_reason for response in responses if response.finish_reason]
+
+    assert orchestrator.aurora_runtime_v1._build_message_plan.call_count == 1
+    assert finish_reasons == [
+        agent_service_pb2.CONTINUE,
+        agent_service_pb2.CONTINUE,
+        agent_service_pb2.STOP,
+    ]
+    assert responses[-1].metadata["aurora_surface"] == "aurora_modeling"
+    assert responses[-1].metadata["aurora_runtime_enabled"] == "true"
+    assert responses[-1].metadata["surface_complete"] == "false"
+    assert responses[-1].metadata["modeling_complete"] == "false"
+    assert any(key.startswith("aurora:runtime:") for key in redis_client.values)
+    assert [state for state, _ in state_updates] == [STATE_INIT, STATE_GENERATING, STATE_DONE]
+    assert final_state is not None
+    assert final_state.state == STATE_DONE
+
+
+@pytest.mark.asyncio
+async def test_process_stream_feature_flag_off_keeps_legacy_behavior(orchestrator_factory, monkeypatch):
+    orchestrator, _, state_updates = orchestrator_factory()
+    request = _make_request(message="我最近在摸索自己的节奏。")
+    request.extra_context.CopyFrom(_make_struct({"mode": "onboarding_modeling"}))
+
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    monkeypatch.setattr(orchestrator_module.settings, "ENABLE_AURORA_RUNTIME_V1", False, raising=False)
+    orchestrator.aurora_runtime_v1.plan_turn = AsyncMock(side_effect=AssertionError("feature flag off"))
+    orchestrator._route_and_classify = AsyncMock(
+        return_value=(RouteDecision(execution_mode="direct", reason="simple_chat", risk_level="low"), None)
+    )
+    orchestrator._plan_and_validate = AsyncMock(side_effect=lambda **kwargs: (
+        kwargs["route_decision"],
+        None,
+        None,
+        False,
+    ))
+
+    async def execute_graph(*, queue, result_holder, **kwargs):
+        async for item in _drain_queue(queue):
+            yield item
+        await orchestrator._update_state(request.session_id, STATE_GENERATING, "Legacy direct response")
+        yield agent_service_pb2.ChatResponse(delta="这是旧链路返回。")
+        result_holder["final_state"] = WorkflowState()
+
+    async def build_final_response(*, session_id, **kwargs):
+        return (
+            agent_service_pb2.ChatResponse(
+                session_id=session_id,
+                full_text="这是旧链路返回。",
+                finish_reason=agent_service_pb2.STOP,
+            ),
+            {"message": "这是旧链路返回。"},
+        )
+
+    orchestrator._execute_graph = execute_graph
+    orchestrator._build_final_response = AsyncMock(side_effect=build_final_response)
+
+    responses = await _collect(orchestrator, request)
+
+    assert responses[-1].finish_reason == agent_service_pb2.STOP
+    assert responses[-1].full_text == "这是旧链路返回。"
+    assert [state for state, _ in state_updates] == [STATE_INIT, STATE_GENERATING, STATE_DONE]
 
 
 @pytest.mark.asyncio

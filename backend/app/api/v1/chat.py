@@ -5,8 +5,9 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import json
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -47,7 +48,7 @@ TASK_CHAT_ALLOWED_TOOLS = [
 ]
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_conversation_id(conversation_id: str | None) -> tuple[UUID, str]:
@@ -390,8 +391,19 @@ async def chat(
         )
         return ChatResponse(**response_data, conversation_id=session_id_str)
 
+    planning_detour_prompt = ""
+    if planning_response and planning_response.get("bypass_planning"):
+        planning_runtime_state = await planning_workflow_manager.runtime_adapter.load_state(
+            user_id=str(current_user.id),
+            conversation_id=session_id_str,
+        )
+        if planning_runtime_state is not None:
+            planning_detour_prompt = planning_workflow_manager.runtime_adapter.build_detour_prompt(planning_runtime_state)
+
     # 2. 构建 System Prompt
     system_prompt = build_system_prompt(user_context, "暂无对话历史") # History passed directly to LLM
+    if planning_detour_prompt:
+        system_prompt += f"\n\nAURORA PLANNING SIDECAR:\n{planning_detour_prompt}"
 
     # 3. 调用 LLM（带工具定义）
     llm_response: LLMResponse = await llm_service.chat_with_tools(
@@ -764,7 +776,7 @@ async def confirm_action(
 
         return {"status": "executed", "result": result.model_dump()}
 
-    except Exception as e:
+    except Exception:
         # 删除失败的待确认操作
         await pending_actions_store.delete(action_id, str(current_user.id))
         raise HTTPException(status_code=500, detail="Action execution failed")
@@ -776,7 +788,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
     获取用户上下文信息
     为 LLM 提供用户的学习状态，帮助其做出更个性化的决策
     """
-    from datetime import timezone, datetime, timedelta
+    from datetime import timedelta
 
     from app.models.galaxy import UserNodeStatus
     from app.models.plan import Plan

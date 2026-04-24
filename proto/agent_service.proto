@@ -600,6 +600,7 @@ enum FinishReason {
     TOOL_CALLS = 3; // Paused to wait for tool execution
     CONTENT_FILTER = 4; // Blocked by safety filter
     ERROR = 5;
+    CONTINUE = 6; // Aurora runtime will continue emitting more messages in the same stream
 }
 
 message ToolCall {
