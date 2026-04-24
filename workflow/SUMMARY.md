@@ -51,7 +51,7 @@
 | ISSUE-20260424-043 | 07 | P2 | open | like_checkin/encourage_checkin 直接 db.commit() 绕过 session 管理约定 | - | 22:20 |
 | ISSUE-20260424-044 | 07 | P2 | open | broadcast_achievement_unlock 使用 __import__("json") 代替正常 import | - | 22:20 |
 | ISSUE-20260424-045 | 02 | P2 | closed | Flutter WS 重连耗尽静默清空 pending messages，不通知用户 | fixer@6db0c87f | 22:50 PASS |
-| ISSUE-20260424-046 | 08 | P1 | open | AnalyzeError gRPC asyncio.create_task fire-and-forget，分析失败无感知 | - | 22:30 |
+| ISSUE-20260424-046 | 08 | P1 | claimed | AnalyzeError gRPC asyncio.create_task fire-and-forget，分析失败无感知 | fixer@2026-04-25 | reviewing |
 | ISSUE-20260424-047 | 08 | P2 | open | ErrorReplanBridge _count_recent_triggering_errors 无 SQL 日期过滤，全量加载 | - | 22:30 |
 | ISSUE-20260424-048 | 08 | P2 | open | list_errors chapter/keyword LIKE 通配符未转义 | - | 22:30 |
 | ISSUE-20260424-049 | 08 | P2 | open | delete_error 缺 is_deleted 过滤，已删错题重复删除返回 204 | - | 22:30 |
@@ -77,7 +77,7 @@
 | ISSUE-20260424-069 | 11 | P2 | open | batch_operations 不发布 EventBus 事件，静默绕过事件管道 | - | 09:04 |
 | ISSUE-20260424-070 | 11 | P2 | open | calendar.py get_event_summary 用 __import__("datetime") 代替正常 import | - | 23:25 |
 | ISSUE-20260424-071 | 11 | P2 | open | Flutter _cancelReminders 硬编码最多 5 个提醒，超出部分永不取消 | - | 23:25 |
-| ISSUE-20260424-072 | 12 | P1 | open | enqueue_from_chat_turn fire-and-forget，推断记忆写入失败静默丢弃 | - | 09:09 |
+| ISSUE-20260424-072 | 12 | P1 | claimed | enqueue_from_chat_turn fire-and-forget，推断记忆写入失败静默丢弃 | fixer@2026-04-25 | disputed: _run_background has try/except + logger.warning, not silent; P2 not P1 |
 | ISSUE-20260424-073 | 12 | P1 | open | _rate_limit_state 进程级 dict，多 worker 限流失效 | - | 09:09 |
 | ISSUE-20260424-074 | 12 | P2 | open | _resolve_occurred_at UTC 时间戳设 locale 小时，"今晚"偏移+8h | - | 09:09 |
 | ISSUE-20260424-075 | 12 | P2 | open | _degraded_queue 无界内存列表永不消费，死代码 | - | 09:09 |
