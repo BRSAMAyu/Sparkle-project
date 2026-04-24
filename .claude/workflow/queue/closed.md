@@ -7,3 +7,5 @@
 - ISSUE-20260424-007 | 2-Chat-WebSocket: /ws/chat 缺少 per-user 连接数限制 (P1) — PASS 2026-04-24T20:00
 - ISSUE-20260424-008 | 2-Chat-WebSocket: Protobuf 路径绕过 maxMessageLength 限制 (P1) — PASS 2026-04-24T20:00
 - ISSUE-20260424-011 | 2-Chat-WebSocket: Flutter 重连耗尽 pendingMessages 静默丢弃 (P1) — PASS 2026-04-24T20:30
+- ISSUE-20260424-001 | 1-Auth: Go AppleLogin 不写 auth_sessions (P1) — PASS 2026-04-24T21:00
+- ISSUE-20260424-002 | 1-Auth: guest_login IntegrityError 竞态 (P1) — PASS 2026-04-24T21:00
