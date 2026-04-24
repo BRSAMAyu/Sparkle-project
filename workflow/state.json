@@ -7,5 +7,5 @@
   "last_verifier_end": "2026-04-25T03:15:00+08:00",
   "verifier_rotation": 9,
   "empty_streak": 4,
-  "notes": "cursor ∈ [0, 20] 映射到 COVERAGE_MATRIX 的 21 切片；cursor 归零时 round += 1；empty_streak 记录 Verifier 连续空队列 loop 数，用于停机判定。HALT 由架构师触发 @ 2026-04-25T03:20（DIRECTIVE-09 §3：cursor=16 超出冻结线，三次 override 违规）。解冻需架构师手动设 halt: false，条件见 DIRECTIVE-20260425-12。"
+  "notes": "HALT 状态，由架构师触发 @ 2026-04-25T03:20（DIRECTIVE-09 §3：Auditor 三次违规，cursor=16）。Auditor/Verifier 必须停止。Fixer 被 DIRECTIVE-20260425-13 授权处理全部 P1 队列（见 ARCHITECT_DIRECTIVES.md）。解冻条件：Auditor 正式 ACK DIRECTIVE-09 cursor 冻结承诺，由架构师手动设 halt: false。cursor ∈ [0, 20] 映射到 COVERAGE_MATRIX 的 21 切片；cursor 归零时 round += 1；empty_streak 记录 Verifier 连续空队列 loop 数。"
 }

@@ -87,12 +87,12 @@ Phase II 的独特责任：**RL 迭代暴露的每一个系统行为缺陷都必
 回流契约：
 
 1. **诊断 Agent 产出**：`scripts/sgw_v2/meta/diagnostic_agent.py::diagnose()` 每轮产出 `active_hypotheses` 列表，存 `experiments` 表。
-2. **自动 issue 化**：凡命中以下条件之一，由 `ops/alerting.py` 自动在 `.claude/workflow/issues/` 生成 ISSUE 草案：
+2. **自动 issue 化**：凡命中以下条件之一，由 `ops/alerting.py` 自动在 `workflow/issues/open/` 生成 ISSUE 草案（ID 格式 `ISSUE-YYYYMMDD-NNN`，并追加到 `workflow/SUMMARY.md`）：
    - `critical_alerts > 0`
    - 同一 hypothesis 连续 3 iter 未消除
    - `authenticity z-test` 显著回退（veto 触发）
    - Shadow/Canary 任一门 FAIL
-3. **切片归属**：issue front matter 必须填 `slice` 字段（引用 `.claude/workflow/coverage_matrix.md` 19 条切片之一）。RL 参数调整本身不是 issue；issue 指向的是被 RL 暴露的业务/工程缺陷。
+3. **切片归属**：issue front matter 必须填 `slice` 字段（引用 `workflow/COVERAGE_MATRIX.md` 中的切片编号）。RL 参数调整本身不是 issue；issue 指向的是被 RL 暴露的业务/工程缺陷。
 4. **优先级映射**：hard violation → **P0**；authenticity 显著回退 → **P1**；soft violation 累积偏差 → **P2**；diversity 坍缩 → **P3**。
 5. **Fixer 处理完毕后**：issue closed 时必须反向 ping `meta_orchestrator.py::_revert_config` 解除相关 arm 的 β penalty，让策略重新评估该区域。
 

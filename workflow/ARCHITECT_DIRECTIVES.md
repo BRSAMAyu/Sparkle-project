@@ -29,6 +29,109 @@
 
 ---
 
+### DIRECTIVE-20260425-13
+- status: active
+- issued_at: 2026-04-25T03:45:00+08:00
+- target_roles: [fixer]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**HALT 豁免授权扩展：Fixer 获得全部 19 条 P1 的处理授权（Auditor/Verifier 仍 halt）。**
+
+当前 HALT 期间 **仅 Fixer 工作**，Auditor/Verifier 不得运行。
+
+---
+
+**完整 P1 队列（19 条，按优先级分 6 批）**
+
+每次最多同时认领 **2 条**（防文件冲突）。每条 fix 完成后立即更新 SUMMARY.md + 移入 `workflow/issues/verifying/`，不需等 Verifier 处理。
+
+---
+
+**批次 A — 安全 P1（最高优先，已超 12h 红线）**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-090 | `backend/app/api/v1/simulation.py`（SSE 流路由） | `async for` 外套 `try/except Exception as e: logger.exception(...); yield 'data: {"error":"Internal error"}\n\n'; return`，不暴露 `str(e)` 或 traceback |
+| ISSUE-20260424-096 | `backend/app/api/v1/users.py` `link_social` / `unlink_social` | 在 `db.add(social_link)` / `db.delete(social_link)` 后加 `await db.commit()`；若用 session context manager 则确保 commit 在事务边界内 |
+
+fix commit 格式：`fix(simulation): ...  \n\nissue: ISSUE-20260424-090`
+
+---
+
+**批次 B — Fire-and-forget P1（同模式，三条连做）**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-072 | `backend/app/services/memory_service.py` `enqueue_from_chat_turn` | `asyncio.create_task(...)` 改为 `await` + `try/except Exception as e: logger.error(...)` |
+| ISSUE-20260424-046 | `backend/app/services/error_book_service.py` `AnalyzeError` gRPC handler | 同上，fire-and-forget 改 await；若必须异步后台，改用 `asyncio.shield()` + 显式错误回调 |
+| ISSUE-20260424-058 | `backend/app/services/achievement_engine.py` `after_commit` | fire-and-forget 副作用（通知/缓存/事件广播）改为在事务后 `await`，或用 transactional outbox 保证至少一次 |
+
+---
+
+**批次 C — 数据持久化 P1**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-052 | `backend/app/services/focus_service.py` `log_session` | 先发 EventBus event / write memory（可 fire-and-forget 带重试），再 `commit`；或将事件发布放入同一事务的 outbox 表，commit 后再 dispatch |
+| ISSUE-20260424-039 | `backend/app/services/community_service.py` `send_message` | 在 DB insert 前调用 `await self.check_keyword_filter(content, group_id)` + `await self._check_slow_mode(user_id, group_id)`；两者返回拒绝时 raise HTTPException(400) |
+
+---
+
+**批次 D — OOM/无界查询 P1**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-059 | `backend/app/services/achievement_engine.py` WEEKEND_WARRIOR check | 全量加载改为 `SELECT COUNT(*) WHERE date >= (now()-7d)` 或带 `LIMIT 500` 的分页查询；不需要全量历史 |
+| ISSUE-20260424-060 | `backend/app/services/achievement_engine.py` `get_close_to_unlock` | 在循环前加 `LIMIT 10`（只取最近 10 个未解锁成就做进度估算），其余跳过 |
+| ISSUE-20260424-097 | `backend/app/services/leaderboard_service.py` | 全量 Python sort 改为 SQL `ORDER BY photon_balance DESC LIMIT 100`；Python 侧只处理已排好序的前 N 条 |
+
+---
+
+**批次 E — 核心逻辑缺口 P1**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-021 | `backend/app/orchestration/routing_engine.py` chat+direct 快捷路径 | 删除 / 条件保护这两条快捷路径，强制所有 intent 流过 `DualCoreRouter` 信号处理 |
+| ISSUE-20260424-064 | `backend/app/services/notification_push_service.py` | 推送前查 `user_settings.notifications_enabled` + 当前时间是否在 `do_not_disturb` 窗口内；两者任一阻止则跳过，不抛异常 |
+| ISSUE-20260424-065 | calendar 提醒调度 | 在 `create_event` / `update_event` 时，若 `reminder_minutes > 0`，向 `scheduled_notifications` 表写一条 `trigger_at = event_start - reminder_minutes min`；通知 worker 消费此表 |
+| ISSUE-20260424-091 | `backend/app/services/simulation_engine.py` `_local_checkpoints` | 将类级 `dict` 改为 `LRUCache(maxsize=200)` 或定期 GC（每 N 次调用扫描删除超过 1h 的条目） |
+
+---
+
+**批次 F — 并发 / 竞态 P1**
+
+| ISSUE | 文件 | 修复方向 |
+|-------|------|---------|
+| ISSUE-20260424-033 | `backend/app/services/galaxy_service.py` `spark_node` | 改为调用 `update_node_mastery()`，而非直接写 `node.mastery_level`，确保 audit/outbox/cache 一致 |
+| ISSUE-20260424-034 | `backend/app/services/galaxy_service.py` `update_node_mastery` legacy path | 加 `SELECT ... FOR UPDATE` 行级锁（或乐观锁：读 revision → 更新时校验 revision 未变） |
+| ISSUE-20260424-078 | behavior patterns 表迁移 | 新增 Alembic migration：`ALTER TABLE behavior_patterns ADD CONSTRAINT uq_user_pattern UNIQUE (user_id, pattern_type)`；若存在重复行先 dedup |
+| ISSUE-20260424-073 | `backend/app/services/memory_service.py` `_rate_limit_state` | 改用 Redis `INCR` + `EXPIRE`（`rate_limit:{user_id}:memory_write`），替换进程级 dict；Redis 不可用时降级为 no-limit（记 warning 日志） |
+| ISSUE-20260424-079 | `backend/app/services/behavior_signal_collector.py` `_local_cooldowns` | 同 ISSUE-073，冷却窗口改用 Redis Key + TTL；实例级 dict 只作为本地 short-circuit 加速，Redis 为权威 |
+
+---
+
+**fix commit 格式**（全部遵守）：
+
+```
+fix(<scope>): <动词+描述>
+
+issue: ISSUE-20260424-NNN
+```
+
+**每批完成后**：
+1. 更新 `workflow/SUMMARY.md` 对应行 status → `verifying`，Claimed/Updated 字段填写
+2. 将 `workflow/issues/open/ISSUE-NNN.md` 的 `## [Fix]` 段填完，移入 `workflow/issues/verifying/`
+3. 批次内所有 ISSUE 全部入 verifying 后，在本指令 ACK 段注明批次编号
+
+#### ACK by fixer
+（按批次 A→B→C→D→E→F 顺序 ACK，每完成一批追加一行）
+
+---
+
 ### DIRECTIVE-20260425-12
 - status: active
 - issued_at: 2026-04-25T03:20:00+08:00
