@@ -7,7 +7,7 @@
 | ID | Slice | P | Status | Title | Claimed | Updated |
 |----|-------|---|--------|-------|---------|---------|
 | ISSUE-20260424-001 | 01 | P1 | closed | Go validateJWT 不检查 session_revoked:{sid}，设备下线不立即生效 | fixer@2026-04-24T20:45 | 21:00 PASS |
-| ISSUE-20260424-002 | 01 | P1 | open | AppleLogin UpdateUserLastLogin 和 UpsertUserSession 错误静默丢弃 | - | 19:05 |
+| ISSUE-20260424-002 | 01 | P1 | verifying | AppleLogin UpdateUserLastLogin 和 UpsertUserSession 错误静默丢弃 | fixer@2026-04-24T21:45 | 21:45 |
 | ISSUE-20260424-003 | 01 | P1 | open | Guest login 限流 100/15min 过于宽松，可被滥用刷号 | - | 19:05 |
 | ISSUE-20260424-004 | 01 | P2 | open | Guest login SELECT-INSERT 竞态条件，并发同 guest_id 返回 500 | - | 19:05 |
 | ISSUE-20260424-005 | 01 | P2 | open | AppleLogin 用户创建/链接竞态，无 IntegrityError 处理 | - | 19:05 |
@@ -38,6 +38,12 @@
 | ISSUE-20260424-030 | 05 | P2 | open | _clear_failure_state 为空操作 stub，成功后不清除降级状态 | - | 21:20 |
 | ISSUE-20260424-031 | 05 | P2 | open | _condition_matches 朴素字符串切片解析条件表达式，不支持转义 | - | 21:20 |
 | ISSUE-20260424-032 | 05 | P2 | open | _promote_next_queued_intent TOCTOU 竞态可超出并发限制 | - | 21:20 |
+| ISSUE-20260424-033 | 06 | P1 | open | spark_node 绕过 update_node_mastery pipeline，缺 audit/outbox/cache | - | 21:40 |
+| ISSUE-20260424-034 | 06 | P1 | open | update_node_mastery legacy path 无 revision 时 read-modify-write 竞态 | - | 21:40 |
+| ISSUE-20260424-035 | 06 | P2 | open | _find_nodes_by_keywords LIKE 通配符未转义，可匹配不相关节点 | - | 21:40 |
+| ISSUE-20260424-036 | 06 | P2 | open | GalaxyRepository.getGalaxyEventsStream() 永久空流，SSE 端点未实现 | - | 21:40 |
+| ISSUE-20260424-037 | 06 | P2 | open | auto_classify_task 用零 UUID 作 user_id 占位符，语义不正确 | - | 21:40 |
+| ISSUE-20260424-038 | 06 | P2 | open | TaskEventListener consumer_name 含时间戳，重启后 pending 消息成孤儿 | - | 21:40 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -49,14 +55,15 @@
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 31
+- open: 37
 - verifying: 0
 - closed (7d): 1
 - escalated: 0
-- last_update: 2026-04-24T21:20:00+08:00
+- last_update: 2026-04-24T21:40:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
 - slice_04_audit: 1 P1 + 5 P2, anchors personally read (dual_core_router.py 647L, ux_envelope.py 1827L, prompts.py key sections + routing_engine.py integration)
 - slice_05_audit: 2 P1 + 4 P2, anchors personally read (client.py 315L, executions.py 1000L, config.py 48L, intent_translator.py 220L, result_parser.py 122L, url_guard.py 118L, execution_service.py 3296L, execution_schedule_service.py 385L)
+- slice_06_audit: 2 P1 + 4 P2, anchors personally read (galaxy_service.py 1000L, galaxy_service.proto 57L, galaxy_provider.dart 150L, galaxy_repository.dart 150L, event_listener.py 375L, stats_service.py 100L, structure_service.py 100L, collaborative_service.py 67L, crdt_persistence.py 119L, galaxy_grpc_service.py 170L, galaxy.py 300L)
 - verifier_patrol_2: env-check pass; ISSUE-009 misreported (segmentSize guard exists); ISSUE-007/014 suggest P2 downgrade
