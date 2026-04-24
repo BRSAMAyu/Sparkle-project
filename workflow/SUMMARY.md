@@ -101,6 +101,12 @@
 | ISSUE-20260424-093 | 15 | P2 | open | adopt_prediction bare except:pass 静默吞掉认知碎片创建错误 | - | 13:30 |
 | ISSUE-20260424-094 | 15 | P2 | open | _find_related_concept_anchors ilike 通配符未转义 | - | 13:30 |
 | ISSUE-20260424-095 | 15 | P2 | open | PredictionAccuracyTracker 用户索引 SET 积累过期 prediction ID 无清理 | - | 13:30 |
+| ISSUE-20260424-096 | 16 | P1 | open | link_social / unlink_social db.add 无 db.commit 社交绑定不持久化 | - | 03:15 |
+| ISSUE-20260424-097 | 16 | P1 | open | Leaderboard 全量加载用户到 Python 排序，OOM 风险 | - | 03:15 |
+| ISSUE-20260424-098 | 16 | P2 | open | Leaderboard refresh-cache 端点无管理员校验且为空操作 stub | - | 03:15 |
+| ISSUE-20260424-099 | 16 | P2 | open | Leaderboard get_top_three 泄露 str(e) 内部异常详情 | - | 03:15 |
+| ISSUE-20260424-100 | 16 | P2 | open | Shop get_available_items N+1 ownership check 逐项查 DB | - | 03:15 |
+| ISSUE-20260424-101 | 16 | P2 | open | update_schedule_preferences 无类型校验接受任意 dict[str, Any] | - | 03:15 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -125,11 +131,11 @@
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 74
+- open: 81
 - verifying: 0
 - closed (7d): 14
 - escalated: 0
-- last_update: 2026-04-25T02:15:00+08:00
+- last_update: 2026-04-25T03:15:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
@@ -145,3 +151,4 @@
 - slice_13_audit: 2 P1 + 4 P2, anchors personally read (cognitive_service.py 681L, behavior_signal_collector.py 535L, cognitive.py API 126L, capsules.py 553L, cognitive models 106L, capsule_repository.dart 240L, cognitive_repository.dart 103L, capsule_provider.dart 188L, cognitive_provider.dart 95L, behavior_pattern_model.dart 72L, capsule_archive_provider.dart 106L)
 - slice_14_audit: 0 P1 + 6 P2, anchors personally read (seed_libraries.py 789L, seed_library_service.py 700+L, seed_content.py 363L, seed_bridge.py 180L, translation.py 231L, translation_service.dart 157L, seed_library_repository.dart 598L, tool_registry.dart 380L, proxy_routes.go seed+translation routes)
 - slice_15_audit: 2 P1 + 4 P2, anchors personally read (prediction_theater_service.py 3797L, simulation_engine.py 1779L, theater.py API 202L, simulation.py API 263L, learning_reports.py API 33L, learning_report_agent.py 1315L, session_cleanup.py 47L, simulation_state.py 13L, simulation_run_store.py 70L, proxy_routes.go theater/simulation/report routes)
+- slice_16_audit: 2 P1 + 4 P2, anchors personally read (users.py API 697L, shop.py API 182L, leaderboards.py API 311L, user_settings.py API 146L, shop_service.py 450L, leaderboard_service.py 350L, proxy_routes.go user/shop/leaderboard/settings/profile routes)

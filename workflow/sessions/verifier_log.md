@@ -304,4 +304,33 @@ All 3 fixes confirmed in place, no reverts.
 - If Fixer/Auditor remain idle and round reaches 2, halt will trigger
 
 - summary_updated: no (stats unchanged: open=74, verifying=0, closed(7d)=14)
+- commit: c2d7b0fc
+
+## 2026-04-25T03:15:00+08:00 target=patrol-mode-2 — **HALT DETECTED**
+
+- directives_read: [ARCHITECT_DIRECTIVES.md — DIRECTIVE-11 targets fixer only]
+- mode: patrol (verifying queue empty, rotation=8→mode 2)
+
+### Escalated directory scan
+- `workflow/issues/escalated/` is empty — no escalated issues to review
+
+### ISSUE-013 file location fix
+- ISSUE-013 (protobuf maxMessageLength) was verified PASS in patrol-mode-4 but file remained in open/
+- Moved from open/ to closed/ where it belongs
+
+### Stats correction
+- SUMMARY stats were stale (showed open=74). Auditor added slice-16 (ISSUE-096 to 101, 2 P1 + 4 P2)
+- Updated: open=81, verifying=0, closed(7d)=14
+
+### ⚠️ HALT TRIGGERED — DIRECTIVE-09 §3
+
+Architect set `halt: true` in state.json. Cause:
+- DIRECTIVE-09 (override) froze cursor at 14 with warning: "再推一步将触发 halt"
+- Auditor violated for the **third time**: cursor 14→15→16 (added ISSUE-096~101)
+- P1 open count: **19** (red line was 20, now 1 away from breach)
+- Architect note: "解冻需架构师手动设 halt: false，条件见 DIRECTIVE-20260425-12"
+
+**Three-expert workflow is now HALTED.** All loops must stop until architect manually sets `halt: false`.
+
+- summary_updated: yes
 - commit: pending
