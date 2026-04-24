@@ -63,6 +63,12 @@
 | ISSUE-20260424-055 | 09 | P2 | open | heatmap days 参数无上限，可请求全量历史 | - | 23:00 |
 | ISSUE-20260424-056 | 09 | P2 | open | focus_service.py 4处 import logging 绕过 loguru 管道 | - | 23:00 |
 | ISSUE-20260424-057 | 09 | P2 | open | log_session AchievementEngine 共享 session 事务边界不清 | - | 23:00 |
+| ISSUE-20260424-058 | 10 | P1 | open | after_commit fire-and-forget，解锁后关键副作用（通知/缓存/事件广播）静默丢失 | - | 23:10 |
+| ISSUE-20260424-059 | 10 | P1 | open | WEEKEND_WARRIOR 三条无界查询加载全量用户历史，OOM 风险 | - | 23:10 |
+| ISSUE-20260424-060 | 10 | P1 | open | get_close_to_unlock 对每个未解锁成就执行 _evaluate_progress，60-120 查询/调用 | - | 23:10 |
+| ISSUE-20260424-061 | 10 | P2 | open | AchievementEventConsumer consumer_name 含时间戳，重启后 pending 消息成孤儿 | - | 23:10 |
+| ISSUE-20260424-062 | 10 | P2 | open | ContractService.update_daily_progress 无日期守卫，单日可获多天契约积分 | - | 23:10 |
+| ISSUE-20260424-063 | 10 | P2 | open | check_daily_first get-then-set TOCTOU 竞态，可获双倍首胜奖励 | - | 23:10 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -77,11 +83,11 @@
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 52
+- open: 58
 - verifying: 0
 - closed (7d): 4
 - escalated: 0
-- last_update: 2026-04-24T23:00:00+08:00
+- last_update: 2026-04-24T23:10:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
@@ -92,3 +98,4 @@
 - verifier_patrol_2: env-check pass; ISSUE-009 misreported (segmentSize guard exists); ISSUE-007/014 suggest P2 downgrade
 - cross_ref_2026-04-24: .claude/workflow 影子系统与规范系统 ID 冲突已对齐：shadow-007→ISSUE-008(部分), shadow-008→ISSUE-013, shadow-011→ISSUE-045(新建)
 - slice_09_audit: 1 P1 + 5 P2, anchors personally read (focus_service.py 587L, focus.py API 169L, focus.py model 54L, mindfulness_provider.dart 569L, focus_signal_processor.py 162L, focus_repository.dart 348L)
+- slice_10_audit: 3 P1 + 3 P2, anchors personally read (achievement_engine.py 2292L, achievement_event_consumer.py 318L, achievement_repository.dart 920L, achievement_provider.dart 724L, photon_provider.dart 172L, photon_repository.dart 139L, visual_element_repository.dart 553L, close_to_unlock_provider.dart 125L)

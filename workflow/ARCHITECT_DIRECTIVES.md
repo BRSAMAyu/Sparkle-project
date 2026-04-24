@@ -27,7 +27,132 @@
 
 <!-- 架构师在下方追加新指令。三专家按顺序处理 active 指令，done 与 expired 会被定期归档到 architect/decisions/ARCHIVE_<yyyymm>.md -->
 
-### DIRECTIVE-EXAMPLE-00 (样例，架构师启动前删除或保留作格式参考)
+---
+
+### DIRECTIVE-20260424-01
+- status: active
+- issued_at: 2026-04-24T23:30:00+08:00
+- target_roles: [fixer]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**Fixer 队列重置：立即放弃 `.claude/workflow/queue/pending_fix.md`，改用规范队列。**
+
+经架构师独立审查，`.claude/workflow/` 是一个影子追踪系统，其 ISSUE ID 与规范系统 `workflow/SUMMARY.md` 存在严重冲突（同一 ID 指向不同问题）。继续在影子系统工作会导致修复错误问题、fix commit 引用错误 ID，污染 git 历史。
+
+**立即执行（本 loop 内）**：
+
+1. 丢弃 `.claude/workflow/queue/pending_fix.md` 中的所有条目（不要 fix 这些）
+2. 改从 `workflow/SUMMARY.md` 中按以下优先级认领：
+   ```
+   P1 安全优先（立即修）：
+     ISSUE-20260424-027  /health 泄露 OpenClaw 基础设施
+     ISSUE-20260424-028  handoff_task Exception 泄露内部错误
+   P1 数据完整性（其次）：
+     ISSUE-20260424-007  saveMessage Redis 写入失败静默丢弃
+     ISSUE-20260424-016  pending_actions_store get-delete 非原子，重复审批
+     ISSUE-20260424-015  asyncio.create_task fire-and-forget，计划生成静默失败
+   P1 核心逻辑（继续）：
+     ISSUE-20260424-009  STREAM_TOKEN_SEGMENT=0 quota 无限循环（先验证是否误报）
+     ISSUE-20260424-014  GetWriter/Get 非确定性，PushIntervention 发错设备
+     ISSUE-20260424-021  routing_engine chat+direct 绕过双核信号处理
+   ```
+3. 每个 fix commit 必须引用规范 ISSUE ID（`workflow/SUMMARY.md` 里的），格式：`fix(scope): <描述>\n\nissue: ISSUE-20260424-NNN`
+4. Fix 完成后在 `workflow/issues/open/ISSUE-NNN.md` 填写 `## [Fix]` 段，并将文件移入 `workflow/issues/verifying/`，同时更新 `workflow/SUMMARY.md` 中对应行 status → verifying
+
+#### ACK by fixer
+（待 Fixer 执行后填写）
+
+---
+
+### DIRECTIVE-20260424-02
+- status: active
+- issued_at: 2026-04-24T23:30:00+08:00
+- target_roles: [all]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**影子系统停用通知：`.claude/workflow/` 从本指令生效起完全停用。**
+
+背景：两套系统并行导致了以下已确认的事故：
+- Fixer Loop 3 声称修复 `.claude` ISSUE-002（Python TOCTOU），实际提交的 `c0d4ab3c` 修复的是 Go 错误日志（规范 ISSUE-002）
+- Verifier 对 `.claude` 007/008/011 判 PASS，但规范 ISSUE-007/014/045 的描述完全不同
+- git log 中 `fix(auth)` commit 引用了错误的 issue 编号
+
+**所有角色立即执行**：
+
+1. **Auditor**：不再向 `.claude/workflow/issues/` 写新 issue。所有新发现 → `workflow/issues/open/` + 追加 `workflow/SUMMARY.md`
+2. **Fixer**：不再读 `.claude/workflow/queue/pending_fix.md`。认领 issue 时在 `workflow/SUMMARY.md` 更新 Claimed 字段，并在 `workflow/issues/open/ISSUE-NNN.md` 填写 `## [Fix] 复核结论`
+3. **Verifier**：不再读 `.claude/workflow/queue/pending_verify.md`。从 `workflow/issues/verifying/` 取 issue，判定后移入 `workflow/issues/closed/`，更新 `workflow/SUMMARY.md`
+4. `.claude/workflow/` 目录下的文件保持原样不删除（考古用），但任何人不得再往里写新内容
+
+#### ACK by all
+（待三专家在各自 loop 确认后填写）
+
+---
+
+### DIRECTIVE-20260424-03
+- status: active
+- issued_at: 2026-04-24T23:30:00+08:00
+- target_roles: [auditor]
+- priority: elevated
+- scope: slice:10-achievement_photon_visual
+- expires_at: 2026-04-25T06:00:00+08:00
+
+#### 内容
+
+**Auditor 节奏调整：暂缓推进新切片，先做一次补充审查。**
+
+当前状态：9 个切片已审，52 个 issue open（14 个 P1），Fixer 队列未对齐。在 Fixer 开始消化 P1 之前，额外的 audit 只会加剧积压。
+
+**本 loop 的任务**（优先级高于常规 cursor 推进）：
+
+1. 对 **slice-02（chat_websocket）** 做一次针对性补充核查：
+   - 规范 ISSUE-009（`STREAM_TOKEN_SEGMENT=0` quota 循环）：`verifier_patrol_2` 备注说"ISSUE-009 misreported (segmentSize guard exists)"。请独立验证：打开 `backend/gateway/internal/service/quota.go` 和 `backend/gateway/internal/handler/chat_orchestrator_chatflow.go`，确认 segmentSize guard 是否真的防住了除零。如果 guard 有效，在 `workflow/SUMMARY.md` 为 ISSUE-009 追加注释 `[re-audit: misreported]` 并降为 P2；如果 guard 无效，维持 P1。
+
+2. 然后正常推进 cursor → slice-10（achievement_photon_visual）
+
+**注意**：如果 cursor 推进耗时会超过本 loop，仅做 ISSUE-009 补充核查即可，cursor 推进留下一个 loop。
+
+#### ACK by auditor
+（待 Auditor 执行后填写）
+
+---
+
+### DIRECTIVE-20260424-04
+- status: active
+- issued_at: 2026-04-24T23:30:00+08:00
+- target_roles: [verifier]
+- priority: elevated
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**Verifier 验收规则强化：新增两条硬规则。**
+
+架构师观察到以下风险：
+1. Verifier 之前对影子系统 issue 判 PASS，实际上验证的问题和规范系统描述不同
+2. Fix commit 可能修复了问题但 git 引用的 ISSUE ID 错误
+
+**从本指令生效后，Verifier 每次判定必须额外完成**：
+
+**硬规则 A（ID 一致性）**：确认 fix commit message 中的 ISSUE ID 与 `workflow/SUMMARY.md` 中的 issue 描述一致。若 commit 引用的是影子系统 ID（`.claude/workflow/issues/` 里的描述），而不是规范 ID，判定为 FAIL，备注 "commit references wrong issue ID"。
+
+**硬规则 B（问题消除确认）**：Verifier 必须独立 Read 被修改的源文件（不得仅看 fixer 的描述），确认 audit 证据中的具体代码行已被修改，且修改方向正确。不允许仅凭 "go build PASS" 和 "tests PASS" 判定 PASS。
+
+#### ACK by verifier
+（待 Verifier 执行后填写）
+
+---
+
+### DIRECTIVE-EXAMPLE-00 (样例，保留作格式参考)
 - status: advisory
 - issued_at: 2026-04-24T15:00:00+08:00
 - target_roles: [all]
