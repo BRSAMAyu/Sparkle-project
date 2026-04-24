@@ -127,6 +127,41 @@ func (r *ConnectionRegistry) GetWriter(userID string) (service.JSONWriteCloser, 
 	return nil, false
 }
 
+// BroadcastToUser sends a JSON message to all active connections for a user.
+// Returns the number of connections that received the message and a list of
+// connections that failed (so callers can unregister them).
+func (r *ConnectionRegistry) BroadcastToUser(userID string, v interface{}) (int, []*websocket.Conn) {
+	r.mu.RLock()
+	entries, ok := r.connections[userID]
+	if !ok || len(entries) == 0 {
+		r.mu.RUnlock()
+		return 0, nil
+	}
+	// Snapshot writers under read lock
+	type writerEntry struct {
+		writer service.JSONWriteCloser
+		conn   *websocket.Conn
+	}
+	var writers []writerEntry
+	for conn, entry := range entries {
+		if entry != nil && entry.writer != nil {
+			writers = append(writers, writerEntry{writer: entry.writer, conn: conn})
+		}
+	}
+	r.mu.RUnlock()
+
+	sent := 0
+	var failed []*websocket.Conn
+	for _, w := range writers {
+		if err := w.writer.WriteJSON(v); err != nil {
+			failed = append(failed, w.conn)
+		} else {
+			sent++
+		}
+	}
+	return sent, failed
+}
+
 // Count returns the number of active connections.
 func (r *ConnectionRegistry) Count() int {
 	r.mu.RLock()

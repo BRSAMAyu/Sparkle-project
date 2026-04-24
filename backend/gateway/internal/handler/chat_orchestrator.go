@@ -599,10 +599,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	log.Printf("WebSocket disconnected for user: %s", userID)
 }
 
-// PushIntervention sends an intervention push message to a connected WebSocket client.
+// PushIntervention sends an intervention push message to all active WebSocket connections for a user.
 func (h *ChatOrchestrator) PushIntervention(userID string, intervention *pbws.InterventionPushMessage) error {
-	writer, exists := h.getConnectionWriter(userID)
-	if !exists {
+	if h.wsRegistry == nil {
 		return fmt.Errorf("no active WebSocket connection for user %s", userID)
 	}
 
@@ -621,11 +620,12 @@ func (h *ChatOrchestrator) PushIntervention(userID string, intervention *pbws.In
 		"expires_at": intervention.ExpiresAt,
 	}
 
-	if err := writer.WriteJSON(message); err != nil {
-		if conn, ok := h.getConnection(userID); ok {
-			h.unregisterConnection(userID, conn)
-		}
-		return fmt.Errorf("failed to send intervention: %w", err)
+	sent, failed := h.wsRegistry.BroadcastToUser(userID, message)
+	for _, conn := range failed {
+		h.unregisterConnection(userID, conn)
+	}
+	if sent == 0 {
+		return fmt.Errorf("no active WebSocket connection for user %s", userID)
 	}
 	return nil
 }
