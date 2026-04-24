@@ -100,3 +100,24 @@
 - ui_hand_verified: na (pure Go backend)
 - commits: [c0d4ab3c fix(auth), b0b9cf8c triage verifying]
 - follow_ups: []
+
+## 2026-04-24T22:40:00+08:00 claim=ISSUE-20260424-003
+
+- directives_read: [ARCHITECT_DIRECTIVES.md (no active override)]
+- verdict: confirmed (实际严重性接近 P2，属于加固而非链路断裂)
+
+### 独立复核证据
+
+1. auth.py:800 原始 `@limiter.limit("100/15minutes")` — 独立 Read 确认
+2. AUTH_RATE_LIMIT=5/15min (prod), GUEST=100/15min — 独立 Grep 确认所有 `@limiter.limit`
+3. Go Gateway rate_limit.go:271 只对 login/register 严格限流 — 独立 Read 确认
+4. seed_guest_user_data 为重操作 — 独立 Read 确认
+
+### 收尾
+
+- files_touched: 1
+- lines_delta: +2/-1
+- tests_run: [pytest tests/ -k "auth or guest" -> 45 passed, 1 skipped (17.0s)]
+- ui_hand_verified: na (backend rate limit config)
+- commits: [d2849524 fix(auth), 81d65988 triage verifying]
+- follow_ups: [guest_id 服务端生成 / IP 总数限制可作为 follow-up ISSUE]

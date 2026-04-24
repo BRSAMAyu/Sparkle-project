@@ -3,9 +3,9 @@
   "round": 0,
   "halt": false,
   "last_auditor_end": "2026-04-24T22:20:00+08:00",
-  "last_fixer_end": "2026-04-24T21:50:00+08:00",
+  "last_fixer_end": "2026-04-24T22:50:00+08:00",
   "last_verifier_end": "2026-04-24T22:15:00+08:00",
   "verifier_rotation": 3,
   "empty_streak": 0,
-  "notes": "cursor ∈ [0, 20] 映射到 COVERAGE_MATRIX 的 21 切片；cursor 归零时 round += 1；empty_streak 记录 Verifier 连续空队列 loop 数，用于停机判定。"
+  "notes": "cursor \u2208 [0, 20] \u6620\u5c04\u5230 COVERAGE_MATRIX \u7684 21 \u5207\u7247\uff1bcursor \u5f52\u96f6\u65f6 round += 1\uff1bempty_streak \u8bb0\u5f55 Verifier \u8fde\u7eed\u7a7a\u961f\u5217 loop \u6570\uff0c\u7528\u4e8e\u505c\u673a\u5224\u5b9a\u3002"
 }
