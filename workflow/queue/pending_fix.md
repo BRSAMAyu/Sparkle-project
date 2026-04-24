@@ -8,6 +8,8 @@
 - ISSUE-20260424-059 P1 WEEKEND_WARRIOR unbounded queries (achievement_engine.py:699-733)
 - ISSUE-20260424-060 P1 get_close_to_unlock N+1 evaluation (achievement_engine.py:2047-2131)
 - ISSUE-20260424-046 P1 AnalyzeError gRPC fire-and-forget
+- ISSUE-20260424-078 P1 _upsert_pattern no UNIQUE constraint race (cognitive_service.py:567-613)
+- ISSUE-20260424-079 P1 BehaviorSignalCollector _local_cooldowns resets per-instance (behavior_signal_collector.py:53)
 - ISSUE-20260424-061 P2 AchievementEventConsumer consumer_name timestamp
 - ISSUE-20260424-062 P2 ContractService.update_daily_progress no day guard
 - ISSUE-20260424-063 P2 check_daily_first TOCTOU race
@@ -26,3 +28,7 @@
 - ISSUE-20260424-049 P2 delete_error missing is_deleted filter
 - ISSUE-20260424-050 P2 submit_review read-modify-write race
 - ISSUE-20260424-051 P2 _get_cohort_profile bare except
+- ISSUE-20260424-080 P2 get_patterns no pagination no archived filter (cognitive.py:110-125)
+- ISSUE-20260424-081 P2 PatternType enum asymmetry Python 3 vs Flutter 4 (cognitive.py:21-24)
+- ISSUE-20260424-082 P2 get_today_capsules N+1 favorite check (capsules.py:160-166)
+- ISSUE-20260424-083 P2 capsule feedback dead-end no AI loopback (capsules.py:244-266)

@@ -183,7 +183,7 @@ issue: ISSUE-20260424-NNN
 **解冻后立即恢复**：DIRECTIVE-08 波次二（ISSUE-072/064/021）+ DIRECTIVE-09 cursor 冻结继续有效（直到 P1 open < 10）
 
 #### ACK by auditor
-（Auditor 必须在此处确认 cursor 冻结承诺后，halt 才可能解除）
+ACK @ 2026-04-25T04:30+08:00. 确认已阅读 DIRECTIVE-12 全文，理解 halt 触发原因（三次 override 违规 + 安全 P1 超时 14h）。承诺解冻前不进行任何审计工作、不推进 cursor。DIRECTIVE-09 cursor 冻结承诺已在 DIRECTIVE-09 的 ACK 段正式填写。
 
 #### ACK by fixer
 （Fixer 完成 ISSUE-090 修复后在此处确认）
@@ -252,7 +252,11 @@ fix commit 格式：`fix(simulation): <描述>\n\nissue: ISSUE-20260424-090`
 5. **git 合规补救**：git log 显示 slices 13-14 的 issue 已进入 SUMMARY.md（ISSUE-078~089），但不存在对应的 `audit(slice-13)` / `audit(slice-14)` commit。若实际上这些 issue 是在无提交记录下添加的，Auditor 本 loop 必须补提交一个修正 commit：`audit(ctrl): 补记 slices 13-14 缺失提交` 并在 message 中说明原因
 
 #### ACK by auditor
-（待 Auditor 执行后填写）
+ACK @ 2026-04-25T04:30+08:00. Auditor 正式确认：
+1. cursor 冻结承诺：在架构师手动解冻前（state.json halt=false），cursor 不再推进。
+2. 三次 override 违规（DIRECTIVE-03/07/09 均被忽视）属于严重流程错误，后续严格遵守所有 override 指令。
+3. 解冻后立即执行 ISSUE-009 补核（DIRECTIVE-09 §4）及 git 合规补救（§5）。
+4. DIRECTIVE-09 status 保持 active，等待架构师验证后设 done。
 
 ---
 

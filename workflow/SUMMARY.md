@@ -26,7 +26,7 @@
 | ISSUE-20260424-018 | 03 | P2 | open | track_rejection_count 在 redis=None 时静默降级，连续拒绝信息收集永不触发 | - | 20:15 |
 | ISSUE-20260424-019 | 03 | P2 | open | _validate_feasibility 硬编码 liberal_arts 背景检查，不适用于多元用户画像 | - | 20:15 |
 | ISSUE-20260424-020 | 03 | P2 | open | get_stored_plan 永远返回 None (stub)，计划恢复前无法验证计划存在 | - | 20:15 |
-| ISSUE-20260424-021 | 04 | P1 | open | routing_engine chat+direct 快捷路径绕过全部双核信号处理 | - | 20:35 |
+| ISSUE-20260424-021 | 04 | P1 | verifying | routing_engine chat+direct 快捷路径绕过全部双核信号处理 | fixer@2026-04-25 | 04:35 fix@6f43c40a |
 | ISSUE-20260424-022 | 04 | P2 | open | intent_confidence=0.0 被 Python truthiness 静默覆盖为 0.7 | - | 20:35 |
 | ISSUE-20260424-023 | 04 | P2 | open | cognitive_adjustments/execution_constraints 硬编码截断，不同模式比例不一致 | - | 20:35 |
 | ISSUE-20260424-024 | 04 | P2 | open | BlockedPresentationHistoryStore 本地 fallback 无限增长无淘汰 | - | 20:35 |
@@ -38,13 +38,13 @@
 | ISSUE-20260424-030 | 05 | P2 | open | _clear_failure_state 为空操作 stub，成功后不清除降级状态 | - | 21:20 |
 | ISSUE-20260424-031 | 05 | P2 | open | _condition_matches 朴素字符串切片解析条件表达式，不支持转义 | - | 21:20 |
 | ISSUE-20260424-032 | 05 | P2 | open | _promote_next_queued_intent TOCTOU 竞态可超出并发限制 | - | 21:20 |
-| ISSUE-20260424-033 | 06 | P1 | open | spark_node 绕过 update_node_mastery pipeline，缺 audit/outbox/cache | - | 21:40 |
-| ISSUE-20260424-034 | 06 | P1 | open | update_node_mastery legacy path 无 revision 时 read-modify-write 竞态 | - | 21:40 |
+| ISSUE-20260424-033 | 06 | P1 | verifying | spark_node 绕过 update_node_mastery pipeline，缺 audit/outbox/cache | fixer@2026-04-25 | 04:35 fix@b1c54cab |
+| ISSUE-20260424-034 | 06 | P1 | verifying | update_node_mastery legacy path 无 revision 时 read-modify-write 竞态 | fixer@2026-04-25 | 04:35 fix@b1c54cab |
 | ISSUE-20260424-035 | 06 | P2 | open | _find_nodes_by_keywords LIKE 通配符未转义，可匹配不相关节点 | - | 21:40 |
 | ISSUE-20260424-036 | 06 | P2 | open | GalaxyRepository.getGalaxyEventsStream() 永久空流，SSE 端点未实现 | - | 21:40 |
 | ISSUE-20260424-037 | 06 | P2 | open | auto_classify_task 用零 UUID 作 user_id 占位符，语义不正确 | - | 21:40 |
 | ISSUE-20260424-038 | 06 | P2 | open | TaskEventListener consumer_name 含时间戳，重启后 pending 消息成孤儿 | - | 21:40 |
-| ISSUE-20260424-039 | 07 | P1 | open | send_message 未调用 check_keyword_filter 和 slow_mode_seconds 检查 | - | 22:20 |
+| ISSUE-20260424-039 | 07 | P1 | verifying | send_message 未调用 check_keyword_filter 和 slow_mode_seconds 检查 | fixer@2026-04-25 | 04:35 fix@eb739fcf |
 | ISSUE-20260424-040 | 07 | P1 | closed | community_signal_bridge handle_resource_shared 双重 commit | fixer@2026-04-25T01:20 | 02:00 PASS |
 | ISSUE-20260424-041 | 07 | P2 | open | search_messages/group/user LIKE 通配符未转义 | - | 22:20 |
 | ISSUE-20260424-042 | 07 | P2 | open | _record_community_signal asyncio.create_task fire-and-forget | - | 22:20 |
@@ -95,14 +95,14 @@
 | ISSUE-20260424-087 | 14 | P2 | open | rate_library 并发提交 IntegrityError 未处理返回误导性400 | - | 00:35 |
 | ISSUE-20260424-088 | 14 | P2 | open | _blend_quality_score 每次 GET 重新计算无缓存 | - | 00:35 |
 | ISSUE-20260424-089 | 14 | P2 | open | _SEED_VECTOR_RUNTIME_ENABLED 进程级全局开关，一用户失败禁用全进程 | - | 00:35 |
-| ISSUE-20260424-090 | 15 | P1 | open | Simulation SSE streaming 泄露内部异常详情到客户端 | - | 13:30 |
-| ISSUE-20260424-091 | 15 | P1 | open | SimulationEngine._local_checkpoints 类级 dict 无限增长，OOM 风险 | - | 13:30 |
+| ISSUE-20260424-090 | 15 | P1 | verifying | Simulation SSE streaming 泄露内部异常详情到客户端 | fixer@2026-04-25 | 04:35 fix@2496216f |
+| ISSUE-20260424-091 | 15 | P1 | verifying | SimulationEngine._local_checkpoints 类级 dict 无限增长，OOM 风险 | fixer@2026-04-25 | 04:35 fix@cca4dcd7 |
 | ISSUE-20260424-092 | 15 | P2 | open | prediction_theater_service.py 使用 import logging 绕过 loguru 管道 | - | 13:30 |
 | ISSUE-20260424-093 | 15 | P2 | open | adopt_prediction bare except:pass 静默吞掉认知碎片创建错误 | - | 13:30 |
 | ISSUE-20260424-094 | 15 | P2 | open | _find_related_concept_anchors ilike 通配符未转义 | - | 13:30 |
 | ISSUE-20260424-095 | 15 | P2 | open | PredictionAccuracyTracker 用户索引 SET 积累过期 prediction ID 无清理 | - | 13:30 |
-| ISSUE-20260424-096 | 16 | P1 | open | link_social / unlink_social db.add 无 db.commit 社交绑定不持久化 | - | 03:15 |
-| ISSUE-20260424-097 | 16 | P1 | open | Leaderboard 全量加载用户到 Python 排序，OOM 风险 | - | 03:15 |
+| ISSUE-20260424-096 | 16 | P1 | verifying | link_social / unlink_social db.add 无 db.commit 社交绑定不持久化 | fixer@2026-04-25 | 04:35 fix@a0d6face |
+| ISSUE-20260424-097 | 16 | P1 | verifying | Leaderboard 全量加载用户到 Python 排序，OOM 风险 | fixer@2026-04-25 | 04:35 fix@8e683799 |
 | ISSUE-20260424-098 | 16 | P2 | open | Leaderboard refresh-cache 端点无管理员校验且为空操作 stub | - | 03:15 |
 | ISSUE-20260424-099 | 16 | P2 | open | Leaderboard get_top_three 泄露 str(e) 内部异常详情 | - | 03:15 |
 | ISSUE-20260424-100 | 16 | P2 | open | Shop get_available_items N+1 ownership check 逐项查 DB | - | 03:15 |

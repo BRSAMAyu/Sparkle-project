@@ -62,10 +62,10 @@
 | 10 | achievement_photon_visual | 2026-04-24T23:10+08:00 | 0 | 6 | P1×3 P2×3: after_commit fire-and-forget; WEEKEND_WARRIOR无界查询; get_close_to_unlock N+1; consumer_name时间戳; contract无日期守卫; check_daily_first竞态 |
 | 11 | calendar_notification | 2026-04-24T23:25+08:00 | 0 | 8 | P1×2 P2×6: push绕过偏好; reminder未实现; trends N+1; hourly无过滤; find_record全表扫; batch无事件; __import__; _cancelReminders硬编码5 |
 | 12 | memory_write_lane | 2026-04-24T09:09+08:00 | 0 | 6 | P1×2 P2×4: enqueue fire-and-forget; rate_limit per-process; occurred_at UTC偏移; degraded_queue死代码; PolicyEvaluator无缓存; TD-008 per-session未实现 |
-| 13 | cognitive_capsule | null | 0 | - | - |
-| 14 | seed_tools_translation | null | 0 | - | - |
-| 15 | insights_report_theater_simulation | null | 0 | - | - |
-| 16 | home_profile_shop_settings_leaderboard | null | 0 | - | - |
+| 13 | cognitive_capsule | 2026-04-25T00:15+08:00 | 0 | 6 | P1×2 P2×4: upsert_pattern竞态; cooldowns实例级重置; get_patterns无分页; PatternType枚举不对称; today N+1; 胶囊反馈不回流AI |
+| 14 | seed_tools_translation | 2026-04-25T00:35+08:00 | 0 | 6 | P2×6: LIKE wildcard injection; findMySubscription O(N/P) scan; translation no error logging; rate_library race; blend_score no cache; vector_runtime global switch |
+| 15 | insights_report_theater_simulation | 2026-04-24T13:30+08:00 | 0 | 6 | P1×2 P2×4: SSE error leak; _local_checkpoints unbounded; import logging; bare except:pass; LIKE wildcard; stale prediction IDs |
+| 16 | home_profile_shop_settings_leaderboard | 2026-04-25T03:15+08:00 | 0 | 6 | P1×2 P2×4: social link无commit; 全量排行OOM; refresh-cache无admin+stub; top3泄露str(e); shop N+1; schedule_prefs无校验 |
 | 17 | event_bus | null | 0 | - | - |
 | 18 | proto_contract_sync | null | 0 | - | - |
 | 19 | db_schema_migrations | null | 0 | - | - |

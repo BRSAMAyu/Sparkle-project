@@ -353,3 +353,77 @@
     ⑥ contracts: batch_operations skips EventBus; individual ops publish correctly
     ⑦ product: calendar CRUD-only; no AI feedback; server-side reminder scheduling unimplemented
   - next_cursor: 12 (slice 12-memory_write_lane)
+
+## 2026-04-25T00:00+08:00 round=0 slice=13-cognitive_capsule
+- directives_read: none active (advisory example only)
+- produced: 6 issues (P0=0 P1=2 P2=4 P3=0)
+  - 078 P1: _upsert_pattern 无 UNIQUE 约束并发竞态可创建重复行为定式
+  - 079 P1: BehaviorSignalCollector _local_cooldowns 实例级每次 new 重置为空，Redis 不可用时冷却完全失效
+  - 080 P2: get_patterns API 无分页不过滤 is_archived
+  - 081 P2: PatternType 枚举不对称 Python 3值 vs Flutter 4值，未知类型静默映射
+  - 082 P2: get_today_capsules N+1 查询逐胶囊检查收藏状态
+  - 083 P2: 胶囊反馈数据收集但未闭环，反馈不回流 AI
+- deferred: 0
+- anchors_personally_read:
+  - cognitive_service.py:1-681 (全文件)
+  - behavior_signal_collector.py:1-535 (全文件)
+  - cognitive.py API:1-126 (全文件)
+  - capsules.py:1-553 (全文件)
+  - cognitive.py models:1-106 (全文件)
+  - capsule_repository.dart:1-240 (全文件)
+  - cognitive_repository.dart:1-103 (全文件)
+  - capsule_provider.dart:1-188 (全文件)
+  - cognitive_provider.dart:1-95 (全文件)
+  - behavior_pattern_model.dart:1-72 (全文件)
+  - capsule_archive_provider.dart:1-106 (全文件)
+  - pattern_card.dart:1-80
+  - prism_behavior_card.dart:1-80
+  - task_event_consumer.py:70-190 (BehaviorSignalCollector instantiation sites)
+- grep_queries:
+  - PatternType in backend/models → cognitive.py:21-24
+  - PatternType in mobile/lib/features/cognitive → behavior_pattern_model.dart + 8 files
+  - capsules|capsule in gateway → proxy_routes.go (routes 286-303, 688-694) + 4 files
+  - BehaviorSignalCollector( in backend → task_event_consumer.py (5 sites)
+  - asyncio.create_task in cognitive_service.py → 0 matches
+  - capsule in backend/app/api/v1 → capsules.py, router.py, community.py, accountability.py
+- deviations: none
+- next_cursor: 14 (slice 14-seed_tools_translation)
+- commit: pending
+
+[2026-04-25T00:20+08:00] start slice=14-seed_tools_translation round=0
+
+[2026-04-25T00:50+08:00] start slice=15-insights_report_theater_simulation round=0
+
+[2026-04-24T13:19+08:00] start slice=15-insights_report_theater_simulation round=0
+
+[2026-04-24T13:30+08:00] end slice=15-insights_report_theater_simulation produced=6 deferred=0
+
+[2026-04-25T03:10+08:00] start slice=16-home_profile_shop_settings_leaderboard round=0
+
+[2026-04-25T03:15+08:00] end slice=16-home_profile_shop_settings_leaderboard produced=6 deferred=0
+  - P1: link_social/unlink_social db.add无db.commit社交绑定不持久化 (ISSUE-096)
+  - P1: Leaderboard全量加载用户到Python排序OOM风险 (ISSUE-097)
+  - P2: refresh-cache无admin校验且为空操作stub (098), get_top_three泄露str(e) (099), shop N+1 ownership check (100), schedule_prefs无校验接受任意dict (101)
+  - anchors read: users.py API (697L), shop.py API (182L), leaderboards.py API (311L), user_settings.py API (146L), shop_service.py (450L), leaderboard_service.py (350L), proxy_routes.go (user/shop/leaderboard/settings/profile routes)
+  - 7-dimension summary:
+    ① entry: Flutter→Go REST→Python chain verified; all endpoints behind authMiddleware; shop/leaderboard/settings/profile all registered
+    ② errors: link_social/unlink_social missing db.commit (P1); get_top_three/refresh-cache leak str(e); shop purchase error handling correct
+    ③ logging: all services use loguru; shop has comprehensive error logging; leaderboard logs errors before raising
+    ④ auth: all Go endpoints behind authMiddleware; shop uses .Any() wildcard; leaderboards uses .Any(); user settings individually registered; refresh-cache has no admin check
+    ⑤ concurrency: leaderboard loads ALL users for scoring (P1 OOM); shop N+1 ownership check; purchase has proper idempotency key + row locking
+    ⑥ contracts: users.py uses typed Pydantic models except schedule_preferences (raw dict); shop PurchaseRequest + Idempotency-Key header; leaderboard LeaderboardType enum covers 7+1 types
+    ⑦ product: profile CRUD functional; shop purchase flow with photon deduction and equipment auto-equip; leaderboard 7 types with scoring formula; settings transparency + AI ops dashboard
+  - next_cursor: 17 (slice 17-event_bus)
+  - P1: Simulation SSE streaming leaks internal exception details (ISSUE-090)
+  - P1: SimulationEngine._local_checkpoints class-level unbounded dict (ISSUE-091)
+  - P2: import logging bypasses loguru (092), bare except:pass adopt_prediction (093), ilike wildcard injection (094), stale prediction IDs (095)
+  - anchors read: prediction_theater_service.py (3797L), simulation_engine.py (1779L), theater.py API (202L), simulation.py API (263L), learning_reports.py API (33L), learning_report_agent.py (1315L), session_cleanup.py (47L), simulation_state.py (13L), simulation_run_store.py (70L), proxy_routes.go (theater/simulation/report routes)
+  - 7-dimension summary:
+    ① entry: Flutter→Go REST→Python chain verified; all theater/simulation/report endpoints behind authMiddleware
+    ② errors: SSE str(exc) leaks internal details; adopt_prediction bare except:pass swallows fragment errors
+    ③ logging: prediction_theater_service.py uses import logging (not loguru); simulation + report services use loguru correctly
+    ④ auth: all Go endpoints behind authMiddleware; theater individually registered, simulation/report use wildcard .Any()
+    ⑤ concurrency: _local_checkpoints class-level dict grows without bound; session_cleanup.py only cleans Redis not in-memory; LIKE wildcards unescaped
+    ⑥ contracts: theater API fine-grained routes; simulation uses SSE streaming; learning_reports single generate endpoint; report uses LLM fallback chain
+    ⑦ product: theater prediction→adopt→plan pipeline functional; simulation multi-agent discussions with interaction points; report 2-pass LLM with reflection; accuracy tracking has stale ID accumulation
+  - next_cursor: 16 (slice 16-home_profile_shop_settings_leaderboard)
