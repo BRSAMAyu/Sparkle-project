@@ -183,3 +183,35 @@
 
 - ui_hand_verified: na (backend security fixes)
 - follow_ups: []
+
+## 2026-04-25T00:10:00+08:00 claim=ISSUE-20260424-016
+
+- directives_read: [DIRECTIVE-01/02/05/06 all ACK'd in prior loop, no new active override]
+- verdict: confirmed
+
+### 独立复核证据
+
+1. `pending_actions.py:93-128`: get() reads Redis/dict without removing → race window open
+2. `pending_actions.py:130-164`: delete() does separate GET+DEL → 2 round-trips, non-atomic
+3. `plan_review_service.py:1485`: get() at entry, delete() at lines 1515/1561 → 76+ lines of async gap with await yields
+4. `agent_grpc_service.py:641`: gRPC handler calls handle_review_feedback → reachable path
+5. Third call site (line ~2074) is delete-only cleanup in auto-execute path → no race → left unchanged
+
+### 三问
+- 预期成立: concurrent plan review submissions should be idempotent — yes, duplicate approval is a real bug
+- 配置覆盖: no feature flag or runtime branch mitigates this
+- 修复回归: claim() replaces get()+delete() sequence; existing callers of get/delete still work; only handle_review_feedback changed to use claim()
+
+### Fix
+- Added `claim()` method to PendingActionsStore: Redis Lua script (atomic GET+DEL) or dict.pop() (memory)
+- Replaced get()+delete() in handle_review_feedback with single claim() call
+- Updated 3 test mocks from `get` to `claim`
+
+### 收尾
+
+- files_touched: 3 (pending_actions.py, plan_review_service.py, test_planning_hitl_chain.py)
+- lines_delta: +58/-11
+- tests_run: [pytest tests/ -k "plan" -> 307 passed, 0 failed]
+- ui_hand_verified: na (backend concurrency fix)
+- commits: [d62a40fe]
+- follow_ups: []

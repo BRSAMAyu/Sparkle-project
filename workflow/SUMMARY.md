@@ -21,7 +21,7 @@
 | ISSUE-20260424-013 | 02 | P1 | closed | Protobuf 路径绕过 maxMessageLength 4000 字符应用层限制 | fixer@8fd4b32d | 23:15 PASS |
 | ISSUE-20260424-014 | 02 | P1 | open | GetWriter/Get 非确定性返回，PushIntervention 可能发到错误设备 | - | 19:35 |
 | ISSUE-20260424-015 | 03 | P1 | open | asyncio.create_task fire-and-forget，计划批准后任务生成静默失败 | - | 20:15 |
-| ISSUE-20260424-016 | 03 | P1 | open | pending_actions_store get-delete 非原子，并发 SubmitPlanReview 可重复审批 | - | 20:15 |
+| ISSUE-20260424-016 | 03 | P1 | verifying | pending_actions_store get-delete 非原子，并发 SubmitPlanReview 可重复审批 | fixer@2026-04-25T00:10 | 00:15 |
 | ISSUE-20260424-017 | 03 | P2 | open | gRPC handler plan_id 来源不一致，使用 request.plan_id 而非已验证存储值 | - | 20:15 |
 | ISSUE-20260424-018 | 03 | P2 | open | track_rejection_count 在 redis=None 时静默降级，连续拒绝信息收集永不触发 | - | 20:15 |
 | ISSUE-20260424-019 | 03 | P2 | open | _validate_feasibility 硬编码 liberal_arts 背景检查，不适用于多元用户画像 | - | 20:15 |
@@ -83,6 +83,12 @@
 | ISSUE-20260424-075 | 12 | P2 | open | _degraded_queue 无界内存列表永不消费，死代码 | - | 09:09 |
 | ISSUE-20260424-076 | 12 | P2 | open | MemoryPolicyEvaluator 每次写入查 DB 无缓存 | - | 09:09 |
 | ISSUE-20260424-077 | 12 | P2 | open | TD-008 per-session 记忆限流未实现，单次对话可无限写入 | - | 09:09 |
+| ISSUE-20260424-078 | 13 | P1 | open | _upsert_pattern 无 UNIQUE 约束，并发分析可创建重复行为定式 | - | 00:15 |
+| ISSUE-20260424-079 | 13 | P1 | open | BehaviorSignalCollector 实例级 _local_cooldowns 每次 new 重置，Redis 不可用时冷却失效 | - | 00:15 |
+| ISSUE-20260424-080 | 13 | P2 | open | get_patterns API 无分页不过滤 is_archived，返回全量含已归档 | - | 00:15 |
+| ISSUE-20260424-081 | 13 | P2 | open | PatternType 枚举不对称 Python 3值 vs Flutter 4值，未知类型静默映射 | - | 00:15 |
+| ISSUE-20260424-082 | 13 | P2 | open | get_today_capsules N+1 查询，逐胶囊检查收藏状态 | - | 00:15 |
+| ISSUE-20260424-083 | 13 | P2 | open | 胶囊反馈数据收集但未闭环，反馈不回流AI无法个性化 | - | 00:15 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -99,11 +105,11 @@
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 69
+- open: 75
 - verifying: 2
 - closed (7d): 6
 - escalated: 0
-- last_update: 2026-04-24T23:55:00+08:00
+- last_update: 2026-04-25T00:15:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
@@ -116,3 +122,4 @@
 - slice_09_audit: 1 P1 + 5 P2, anchors personally read (focus_service.py 587L, focus.py API 169L, focus.py model 54L, mindfulness_provider.dart 569L, focus_signal_processor.py 162L, focus_repository.dart 348L)
 - slice_10_audit: 3 P1 + 3 P2, anchors personally read (achievement_engine.py 2292L, achievement_event_consumer.py 318L, achievement_repository.dart 920L, achievement_provider.dart 724L, photon_provider.dart 172L, photon_repository.dart 139L, visual_element_repository.dart 553L, close_to_unlock_provider.dart 125L)
 - slice_11_audit: 2 P1 + 6 P2 (6 by concurrent session validated + 2 new), anchors personally read (calendar.py 413L, notification_push_service.py 323L, notification_center_service.py 1160L, notification_analytics_service.py 500L, calendar_repository.dart 454L)
+- slice_13_audit: 2 P1 + 4 P2, anchors personally read (cognitive_service.py 681L, behavior_signal_collector.py 535L, cognitive.py API 126L, capsules.py 553L, cognitive models 106L, capsule_repository.dart 240L, cognitive_repository.dart 103L, capsule_provider.dart 188L, cognitive_provider.dart 95L, behavior_pattern_model.dart 72L, capsule_archive_provider.dart 106L)
