@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import traceback
 import json
 import os
 import random
@@ -23,9 +24,12 @@ from sqlalchemy import select
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
+SCRIPTS_ROOT = SCRIPT_DIR.parent
 BACKEND_ROOT = REPO_ROOT / "backend"
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+if str(SCRIPTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_ROOT))
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
@@ -39,8 +43,6 @@ from app.models.user import User
 
 # SGW v2 storage layer
 SGW_V2_DIR = SCRIPT_DIR.parent / "sgw_v2"
-if str(SGW_V2_DIR) not in sys.path:
-    sys.path.insert(0, str(SGW_V2_DIR))
 from sgw_v2.storage.db import RunDB, compute_config_hash, compute_prompt_hashes, compute_file_hash
 
 
@@ -788,6 +790,7 @@ class SGWOrchestrator:
     async def _bootstrap_tasks(self) -> None:
         persona_batches: list[list[SessionTask]] = []
         max_sessions_per_persona = 0
+        target_persona_sessions = max(0, int(self.config.min_sessions))
         for persona in self.personas:
             sessions = int(persona.get("session_multiplier", 1))
             max_sessions_per_persona = max(max_sessions_per_persona, sessions)
@@ -812,14 +815,18 @@ class SGWOrchestrator:
                 )
             persona_batches.append(batch)
 
+        planned_persona_sessions = 0
         for index in range(max_sessions_per_persona):
             for batch in persona_batches:
+                if planned_persona_sessions >= target_persona_sessions:
+                    break
                 if index >= len(batch):
                     continue
                 task = batch[index]
                 self.session_tasks[task.task_id] = task
                 await self.persona_queue.put(task.task_id)
                 self.metrics.record_session_planned()
+                planned_persona_sessions += 1
                 # SGW v2: Write session to SQLite
                 if self.run_id:
                     self.run_db.upsert_session(
@@ -830,6 +837,8 @@ class SGWOrchestrator:
                         seed_persona_id=task.persona_id,
                         target_turns=task.target_turns,
                     )
+            if planned_persona_sessions >= target_persona_sessions:
+                break
 
         for index in range(self.config.adversarial_sessions):
             playbook_item = self.playbook[index % len(self.playbook)]
@@ -950,6 +959,8 @@ class SGWOrchestrator:
                     target_queue.put_nowait(task.task_id)
             except Exception as exc:  # noqa: BLE001
                 self.metrics.record_worker_restart()
+                print(f"[sgw] {worker_name} crashed: {exc!r}")
+                traceback.print_exc()
                 await asyncio.sleep(3)
                 if isinstance(exc, ClaudeCallError):
                     continue
@@ -972,6 +983,8 @@ class SGWOrchestrator:
                     self.audit_queue.put_nowait(task.case_id)
             except Exception:  # noqa: BLE001
                 self.metrics.record_worker_restart()
+                print(f"[sgw] {worker_name} crashed during audit")
+                traceback.print_exc()
                 await asyncio.sleep(3)
 
     async def _run_session(self, task: SessionTask, *, worker_name: str) -> None:
@@ -1245,6 +1258,8 @@ class SGWOrchestrator:
                     self.authenticity_queue.put_nowait(auth_task.case_id)
             except Exception:  # noqa: BLE001
                 self.metrics.record_worker_restart()
+                print(f"[sgw] {worker_name} crashed during authenticity audit")
+                traceback.print_exc()
                 await asyncio.sleep(3)
 
     async def _next_authenticity_case(self) -> str | None:

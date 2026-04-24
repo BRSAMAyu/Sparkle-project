@@ -21,6 +21,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -520,6 +521,267 @@ def test_cli_rollback_subcommand_registered():
     assert "--iteration-id" in result.stdout, (
         "rollback subcommand is missing --iteration-id argument"
     )
+
+
+def test_meta_loop_evaluates_previous_iteration_with_next_run():
+    """run_meta_loop must compare a pending iteration against the *next* run.
+
+    Regression guard for the sequencing bug where meta_loop used to call
+    evaluate_iteration(result.iteration_id, latest_run_id) immediately after
+    creating the iteration, which compared a run against itself and made every
+    evaluation effectively neutral.
+    """
+    import importlib
+
+    meta_loop = importlib.import_module("sgw_v2.meta.meta_loop")
+    original_runner = meta_loop._run_sgw_subprocess
+    original_meta = meta_loop.MetaOrchestrator
+
+    class FakeMetaOrchestrator:
+        pending: dict | None = None
+        run_calls: list[str] = []
+        eval_calls: list[tuple[str, str]] = []
+
+        def __init__(self, db, current_config):
+            self.db = db
+            self.current_config = dict(current_config)
+
+        def get_latest_pending_iteration(self):
+            pending = type(self).pending
+            return dict(pending) if pending else None
+
+        def evaluate_iteration(self, iteration_id, new_run_id):
+            type(self).eval_calls.append((iteration_id, new_run_id))
+            assert type(self).pending is not None
+            assert type(self).pending["iteration_id"] == iteration_id
+            type(self).pending = None
+            return SimpleNamespace(outcome="neutral")
+
+        def run_iteration(self, run_id):
+            idx = len(type(self).run_calls) + 1
+            type(self).run_calls.append(run_id)
+            iteration_id = f"iter-{idx}"
+            type(self).pending = {"iteration_id": iteration_id, "run_id": run_id}
+            self.current_config = {**self.current_config, "turn_target": self.current_config.get("turn_target", 12) + 1}
+            return SimpleNamespace(
+                iteration_id=iteration_id,
+                outcome="pending",
+                hypotheses_count=1,
+                changes_applied=1,
+                plan_id=f"plan-{idx}",
+                summary_before={},
+            )
+
+        def get_iteration_history(self):
+            return []
+
+    created_runs: list[str] = []
+
+    def fake_run_sgw_subprocess(*, shared_db_path, config, **_kwargs):
+        db = RunDB(shared_db_path)
+        run_id = db.create_run(
+            scenario_id="sgw_rl_smoke",
+            config_hash=f"cfg-{len(FakeMetaOrchestrator.run_calls)}",
+            git_sha="deadbeef",
+            scenario_config=config,
+            prompt_hashes={},
+            model_versions={},
+        )
+        created_runs.append(run_id)
+        db.conn.execute(
+            "UPDATE runs SET started_at = ? WHERE run_id = ?",
+            (f"2026-04-24T00:00:{len(created_runs):02d}", run_id),
+        )
+        db.conn.commit()
+        db.finish_run(run_id, status="completed", summary={})
+        db.close()
+        return 0
+
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        db_path = td_path / "sgw_runs.db"
+        persona = td_path / "persona.json"
+        playbook = td_path / "playbook.json"
+        persona.write_text("{}", encoding="utf-8")
+        playbook.write_text("{}", encoding="utf-8")
+
+        meta_loop._run_sgw_subprocess = fake_run_sgw_subprocess
+        meta_loop.MetaOrchestrator = FakeMetaOrchestrator
+        try:
+            rc = meta_loop.run_meta_loop(
+                db_path=db_path,
+                persona_library=persona,
+                adversarial_playbook=playbook,
+                max_iterations=2,
+                rl_mode="rl",
+                exploration_every_n=99,
+                convergence_window=99,
+            )
+        finally:
+            meta_loop._run_sgw_subprocess = original_runner
+            meta_loop.MetaOrchestrator = original_meta
+
+    assert rc == 0
+    assert len(FakeMetaOrchestrator.run_calls) == 2
+    assert FakeMetaOrchestrator.eval_calls == [
+        ("iter-1", created_runs[1]),
+    ]
+    assert FakeMetaOrchestrator.eval_calls[0][1] != created_runs[0]
+
+
+def test_meta_loop_shadow_mode_finalizes_iterations_without_pending():
+    """shadow mode should log the plan and avoid leaving pending iterations behind."""
+    import importlib
+
+    meta_loop = importlib.import_module("sgw_v2.meta.meta_loop")
+    original_runner = meta_loop._run_sgw_subprocess
+    original_meta = meta_loop.MetaOrchestrator
+
+    class FakeMetaOrchestrator:
+        shadow_updates: list[tuple[str, str]] = []
+
+        def __init__(self, _db, current_config):
+            self.current_config = dict(current_config)
+
+        def run_iteration(self, _run_id):
+            self.current_config = {**self.current_config, "turn_target": 16}
+            return SimpleNamespace(
+                iteration_id="iter-shadow-1",
+                outcome="pending",
+                hypotheses_count=2,
+                changes_applied=1,
+                plan_id="plan-shadow-1",
+                summary_before={"soft_violation_rate": 0.12},
+            )
+
+        def set_iteration_outcome(self, iteration_id, *, outcome, summary_after=None):
+            type(self).shadow_updates.append((iteration_id, outcome))
+            assert summary_after == {"soft_violation_rate": 0.12}
+
+        def get_iteration_history(self):
+            return []
+
+    def fake_run_sgw_subprocess(*, shared_db_path, config, **_kwargs):
+        db = RunDB(shared_db_path)
+        run_id = db.create_run(
+            scenario_id="sgw_rl_smoke",
+            config_hash="cfg-shadow",
+            git_sha="deadbeef",
+            scenario_config=config,
+            prompt_hashes={},
+            model_versions={},
+        )
+        db.finish_run(run_id, status="completed", summary={})
+        db.close()
+        return 0
+
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        db_path = td_path / "sgw_runs.db"
+        persona = td_path / "persona.json"
+        playbook = td_path / "playbook.json"
+        persona.write_text("{}", encoding="utf-8")
+        playbook.write_text("{}", encoding="utf-8")
+
+        meta_loop._run_sgw_subprocess = fake_run_sgw_subprocess
+        meta_loop.MetaOrchestrator = FakeMetaOrchestrator
+        try:
+            rc = meta_loop.run_meta_loop(
+                db_path=db_path,
+                persona_library=persona,
+                adversarial_playbook=playbook,
+                max_iterations=1,
+                rl_mode="shadow",
+                exploration_every_n=99,
+                convergence_window=99,
+            )
+        finally:
+            meta_loop._run_sgw_subprocess = original_runner
+            meta_loop.MetaOrchestrator = original_meta
+
+    assert rc == 0
+    assert FakeMetaOrchestrator.shadow_updates == [("iter-shadow-1", "shadow")]
+
+
+def test_meta_loop_continues_after_completed_run_with_nonzero_exit():
+    """A completed SGW run should still be diagnosed even if SGW exits non-zero.
+
+    Fast shadow / RL iterations intentionally miss the production acceptance
+    gate, so orchestrator may return 1 despite persisting a completed run.
+    meta_loop must treat that as a usable result, not a subprocess failure.
+    """
+    import importlib
+
+    meta_loop = importlib.import_module("sgw_v2.meta.meta_loop")
+    original_runner = meta_loop._run_sgw_subprocess
+    original_meta = meta_loop.MetaOrchestrator
+
+    class FakeMetaOrchestrator:
+        run_calls: list[str] = []
+        shadow_updates: list[tuple[str, str]] = []
+
+        def __init__(self, _db, current_config):
+            self.current_config = dict(current_config)
+
+        def run_iteration(self, run_id):
+            type(self).run_calls.append(run_id)
+            return SimpleNamespace(
+                iteration_id="iter-nonzero-1",
+                outcome="pending",
+                hypotheses_count=1,
+                changes_applied=1,
+                plan_id="plan-nonzero-1",
+                summary_before={"soft_violation_rate": 0.09},
+            )
+
+        def set_iteration_outcome(self, iteration_id, *, outcome, summary_after=None):
+            type(self).shadow_updates.append((iteration_id, outcome))
+            assert summary_after == {"soft_violation_rate": 0.09}
+
+        def get_iteration_history(self):
+            return []
+
+    def fake_run_sgw_subprocess(*, shared_db_path, config, **_kwargs):
+        db = RunDB(shared_db_path)
+        run_id = db.create_run(
+            scenario_id="sgw_rl_smoke",
+            config_hash="cfg-nonzero",
+            git_sha="deadbeef",
+            scenario_config=config,
+            prompt_hashes={},
+            model_versions={},
+        )
+        db.finish_run(run_id, status="completed", summary={})
+        db.close()
+        return 1
+
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        db_path = td_path / "sgw_runs.db"
+        persona = td_path / "persona.json"
+        playbook = td_path / "playbook.json"
+        persona.write_text("{}", encoding="utf-8")
+        playbook.write_text("{}", encoding="utf-8")
+
+        meta_loop._run_sgw_subprocess = fake_run_sgw_subprocess
+        meta_loop.MetaOrchestrator = FakeMetaOrchestrator
+        try:
+            rc = meta_loop.run_meta_loop(
+                db_path=db_path,
+                persona_library=persona,
+                adversarial_playbook=playbook,
+                max_iterations=1,
+                rl_mode="shadow",
+                exploration_every_n=99,
+                convergence_window=99,
+            )
+        finally:
+            meta_loop._run_sgw_subprocess = original_runner
+            meta_loop.MetaOrchestrator = original_meta
+
+    assert rc == 0
+    assert len(FakeMetaOrchestrator.run_calls) == 1
+    assert FakeMetaOrchestrator.shadow_updates == [("iter-nonzero-1", "shadow")]
 
 
 # ── Entry point ────────────────────────────────────────────────

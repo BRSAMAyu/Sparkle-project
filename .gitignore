@@ -274,5 +274,10 @@ register_res.json
 # ========================================
 2026-*-this-session-is-being-continued-from-a-previous-*.txt
 
+# ========================================
+# SGW runtime artifacts (databases, checkpoints, debug output)
+# ========================================
+artifacts/sgw*/
+
 # Keep dictionaries directory (MDX files for vocabulary lookup)
 # data/dictionaries/

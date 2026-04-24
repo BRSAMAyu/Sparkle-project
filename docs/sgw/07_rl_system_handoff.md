@@ -1,6 +1,6 @@
 # SGW v2 RL System Handoff — Phase II 入场凭证
 
-> Version: 1.1 | Date: 2026-04-24 | Status: FROZEN (三个核心缺陷已修复并测试验证)
+> Version: 1.2 | Date: 2026-04-24 | Status: FROZEN（四个核心缺陷已修复并测试验证）
 > 承接：`docs/sgw/HANDOVER.md` §3 阶段 0–8、`docs/sgw/04_mdp_formalization.md`、`docs/sgw/05_rollout_gates.md`、`docs/product/SPARKLE_AURORA_PHASE_I_EXIT_GATE_2026-04-22.md`、`docs/product/SPARKLE_AURORA_PHASE_II_RL_OPTIMIZATION_KICKOFF_2026-04-22.md`
 > 目的：作为 Phase II 真跑的唯一入场凭证，锁定 CLI 契约、门槛指标、回滚红线、失败模式回流口径。Phase II 实际执行前必须把本文件收到 `FROZEN`。
 
@@ -176,8 +176,9 @@ policy snapshot 与 arm stats 的结构化导出是 Phase II Backlog 第 3 项�
 |---|---|---|
 | 1.0 DRAFT | 2026-04-24 | 架构师初稿，基于实证落盘 |
 | 1.1 FROZEN | 2026-04-24 | 三个核心缺陷修复 + 测试验证后升至 FROZEN |
+| 1.2 FROZEN | 2026-04-24 | 补修 meta_loop 迭代评估时序缺陷，避免 run 与自身比较 |
 
-### v1.1 修复内容（已验证，29/29 tests pass）
+### v1.2 修复内容（已验证，31/31 tests pass）
 
 | 缺陷 | 根因 | 修复位置 |
 |---|---|---|
@@ -186,6 +187,7 @@ policy snapshot 与 arm stats 的结构化导出是 Phase II Backlog 第 3 项�
 | `cli rollback` 子命令缺失 | cli.py 只有 diagnose/plan/iterate/history | `cli.py`: 加 `rollback --iteration-id` 子命令 |
 | policy snapshot 未落盘 | Phase II Backlog #3 | `environment.py`: 加 `PolicyZoo.save_config_snapshot()`；`meta_loop.py`: significant improvement 时自动保存 |
 | subprocess timeout 硬编码 1h | full run 8–18h 会被提前 kill | `meta_loop.py`: `timeout = wall_clock_hours * 3600 + 600` |
+| iteration 自比较（RL adopt/rollback 永远失真） | `meta_loop` 在创建 iteration 后立刻用同一个 `latest_run_id` 调 `evaluate_iteration()`，结果变成“run 对自己” | `meta_loop.py`: 先评估上一轮 `pending iteration`，再为下一轮创建新计划；`meta_orchestrator.py`: 加 `get_latest_pending_iteration()` / `set_iteration_outcome()`；`test_rl_scaffolding.py`: 加两条回归测试 |
 
 **对齐锚点**：`SGW_V2_RL_PHASE_II_HANDOFF`
 **下一步**：§9 checklist → 首轮 `--rl-mode off` 基线复跑
