@@ -12,7 +12,7 @@
 | ISSUE-20260424-004 | 01 | P2 | open | Guest login SELECT-INSERT 竞态条件，并发同 guest_id 返回 500 | - | 19:05 |
 | ISSUE-20260424-005 | 01 | P2 | open | AppleLogin 用户创建/链接竞态，无 IntegrityError 处理 | - | 19:05 |
 | ISSUE-20260424-006 | 01 | P2 | open | Go/Python JWT issuer/audience claims 处理需验证一致性 | - | 19:05 |
-| ISSUE-20260424-007 | 02 | P1 | open | saveMessage Redis 写入失败静默丢弃，用户消息不可恢复丢失 | - | 19:30 |
+| ISSUE-20260424-007 | 02 | P1 | disputed | saveMessage Redis 写入失败静默丢弃，用户消息不可恢复丢失 | fixer@2026-04-24T23:15 | 23:15 disputed (existing retry buffer mitigates) |
 | ISSUE-20260424-008 | 02 | P2 | verifying | 两套独立 WS 连接注册系统互不感知，用户可绕过全局限制 | fixer@89c88217 | 22:20 部分修复 |
 | ISSUE-20260424-009 | 02 | P1 | open | STREAM_TOKEN_SEGMENT=0 导致 quota 记录无限循环 | - | 19:30 |
 | ISSUE-20260424-010 | 02 | P2 | open | 客户端 active_tools 未做白名单校验可注入任意工具名 | - | 19:30 |

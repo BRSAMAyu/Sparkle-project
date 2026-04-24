@@ -123,3 +123,11 @@
 - regression_scan: n/a (first closed issue)
 - summary_updated: yes
 - commit: pending
+
+[2026-04-24T22:40] start ISSUE-20260424-003
+
+[2026-04-24T22:47] start ISSUE-20260424-045
+
+[2026-04-24T22:45] closed ISSUE-20260424-003 — PASS (guest rate limit 100→10/15min prod, 100→50/15min dev)
+[2026-04-24T22:50] closed ISSUE-20260424-045 — PASS (Flutter _failPendingMessages consistent across 3 paths)
+[2026-04-24T22:50] verifying queue empty, entering patrol mode next loop
