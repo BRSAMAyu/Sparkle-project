@@ -15,6 +15,7 @@ from app.aurora.runtime_v1 import AuroraRuntimePlanningAdapter, AuroraRuntimePla
 from app.core.cache import cache_service
 from app.models.plan import PlanPriority, PlanStage, PlanType
 from app.models.task import Task
+from app.orchestration.exam_sprint_policy import ExamSprintPolicyEngine, ExamSprintPolicyInput
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate, coerce_task_type
 from app.services.plan_service import PlanService
@@ -143,9 +144,7 @@ class PlanningSession:
     bottlenecks: list[dict[str, Any]] | None = None
     confirmed_strategy: dict[str, Any] | None = None
     created_at: str = field(default_factory=lambda: _utcnow().isoformat())
-    expires_at: str = field(
-        default_factory=lambda: (_utcnow() + timedelta(seconds=PLANNING_SESSION_TTL)).isoformat()
-    )
+    expires_at: str = field(default_factory=lambda: (_utcnow() + timedelta(seconds=PLANNING_SESSION_TTL)).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -182,6 +181,8 @@ class PlanningWorkflowManager:
         ctx = _as_dict(context)
         if ctx.get("plan_id"):
             return False
+        if ctx.get("from_modeling_complete"):
+            return True
         route_intent = _strip(ctx.get("route_intent") or ctx.get("intent")).lower()
         if route_intent in {"create_task", "update_task", "get_task_detail", "plan_update"}:
             return False
@@ -194,12 +195,16 @@ class PlanningWorkflowManager:
         has_subject = any(token in text for token in PLANNING_SUBJECT_PATTERNS)
         has_goal_commitment = any(token in text for token in ("想在", "希望在", "准备", "冲到", "冲刺"))
         asks_for_help = "帮我" in text or "给我" in text
-        mentions_existing_plan = any(token in text for token in ("更新这个计划", "调整这个计划", "已有计划", "这个计划"))
+        mentions_existing_plan = any(
+            token in text for token in ("更新这个计划", "调整这个计划", "已有计划", "这个计划")
+        )
 
         if mentions_existing_plan:
             return False
 
-        return has_timebox and (has_planning_verb or has_goal_commitment or (asks_for_help and (has_goal or has_subject)))
+        return has_timebox and (
+            has_planning_verb or has_goal_commitment or (asks_for_help and (has_goal or has_subject))
+        )
 
     async def get_active_session(self, chat_session_id: str) -> PlanningSession | None:
         if not self.redis or not chat_session_id:
@@ -243,6 +248,57 @@ class PlanningWorkflowManager:
         session.state = "ABANDONED"
         await self.save_session(session)
 
+    @staticmethod
+    def build_plan_from_modeling_output(modeling_output: dict[str, Any]) -> dict[str, Any]:
+        """Convert Aurora modeling activity_profile / cold_start_context into planning input.
+
+        Allows the orchestrator to auto-bridge from modeling_complete=True to the
+        planning workflow without requiring the user to re-state their goal.
+        """
+        profile = _as_dict(modeling_output.get("activity_profile"))
+        cold_start = _as_dict(modeling_output.get("cold_start_context") or modeling_output.get("cold_start"))
+        user_model = _as_dict(modeling_output.get("user_model_snapshot"))
+
+        goal_raw = (
+            _strip(cold_start.get("goal_raw") or cold_start.get("goal_summary") or cold_start.get("goal"))
+            or _strip(user_model.get("goal_raw") or user_model.get("goal_summary"))
+            or "完成学习目标"
+        )
+        return {
+            "from_modeling_complete": True,
+            "goal_raw": goal_raw,
+            "collected": {
+                "exam_scope": _strip(
+                    cold_start.get("exam_scope")
+                    or cold_start.get("scope")
+                    or user_model.get("exam_scope")
+                    or user_model.get("subject")
+                ),
+                "knowledge_baseline": _strip(
+                    cold_start.get("knowledge_baseline")
+                    or cold_start.get("baseline")
+                    or user_model.get("knowledge_baseline")
+                ),
+                "time_available": _strip(
+                    cold_start.get("time_available")
+                    or cold_start.get("time")
+                    or user_model.get("time_available")
+                ),
+                "daily_available_hours": cold_start.get("daily_available_hours")
+                or user_model.get("daily_available_hours"),
+                "time_constraint_days": cold_start.get("time_constraint_days")
+                or user_model.get("time_constraint_days")
+                or user_model.get("days_remaining"),
+                "subject": _strip(
+                    cold_start.get("subject") or user_model.get("subject") or cold_start.get("exam_scope")
+                ),
+                "motivation": _strip(
+                    cold_start.get("motivation") or user_model.get("motivation") or user_model.get("goal_motivation")
+                ),
+            },
+            "activity_profile": profile,
+        }
+
     async def process_planning_turn(
         self,
         *,
@@ -257,12 +313,23 @@ class PlanningWorkflowManager:
         if session is None:
             if not self.detect_planning_intent(message, context):
                 return None
+            modeling_output = _as_dict(context.get("modeling_output"))
+            if context.get("from_modeling_complete") and modeling_output:
+                bridge = self.build_plan_from_modeling_output(modeling_output)
+                goal_raw = _strip(bridge.get("goal_raw")) or message
+            else:
+                bridge = {}
+                goal_raw = message
             session = await self.create_session(
                 chat_session_id=chat_session_id,
                 user_id=str(user_id),
-                goal_raw=message,
+                goal_raw=goal_raw,
             )
             session.collected.update(await self._prefill_from_profile_context(context))
+            if bridge.get("collected"):
+                for key, value in _as_dict(bridge["collected"]).items():
+                    if value and not session.collected.get(key):
+                        session.collected[key] = value
 
         runtime_state = await self.runtime_adapter.get_or_create_state(
             user_id=str(user_id),
@@ -576,7 +643,9 @@ class PlanningWorkflowManager:
             obj_in=PlanCreate(
                 name=f"{days}天{subject}冲刺",
                 type=PlanType.SPRINT,
-                description=json.dumps({"strategy": strategy, "bottlenecks": session.bottlenecks or []}, ensure_ascii=False),
+                description=json.dumps(
+                    {"strategy": strategy, "bottlenecks": session.bottlenecks or []}, ensure_ascii=False
+                ),
                 subject=subject[:100],
                 target_date=(_utcnow() + timedelta(days=days)).date(),
                 daily_available_minutes=max(daily_hours * 60, 30),
@@ -599,15 +668,23 @@ class PlanningWorkflowManager:
                     default_daily_hours=daily_hours,
                     day_number=day_spec["day"],
                     day_focus=day_spec["focus"],
+                    day_spec=day_spec,
                     aurora_state=runtime_state,
                 )
                 task = await TaskService.create(
                     db=db,
                     obj_in=TaskCreate(
-                        title=f"Day {day_spec['day']} · {_strip(phase.get('label'))}",
+                        title=(
+                            f"Day {day_spec['day']} · {_strip(phase.get('label'))}"
+                            f" - {_strip(day_spec.get('title_focus') or day_spec.get('task_kind') or '检索推进')}"
+                        ),
                         type=coerce_task_type("learning"),
                         plan_id=plan.id,
-                        estimated_minutes=max((_safe_int(phase.get("daily_hours")) or daily_hours) * 60, 30),
+                        estimated_minutes=max(
+                            _safe_int(day_spec.get("estimated_minutes"))
+                            or (_safe_int(phase.get("daily_hours")) or daily_hours) * 60,
+                            30,
+                        ),
                         difficulty=min(5, 2 + index),
                         energy_cost=min(5, 2 + index),
                         guide_content=_strip(guide_json.get("objective") or day_spec["focus"]),
@@ -621,7 +698,14 @@ class PlanningWorkflowManager:
                         source_planning_session_id=session.planning_session_id,
                         phase_index=index,
                         success_criteria=_strip(guide_json.get("success_criteria") or phase.get("output")),
-                        tags=["规划生成", subject, f"phase:{index}", f"day:{day_spec['day']}"],
+                        tags=[
+                            "规划生成",
+                            subject,
+                            f"phase:{index}",
+                            f"day:{day_spec['day']}",
+                            _strip(strategy.get("sprint_policy", {}).get("sprint_mode") or "exam_sprint"),
+                            _strip(day_spec.get("task_kind") or "retrieval"),
+                        ],
                     ),
                     user_id=user_id,
                 )
@@ -686,7 +770,9 @@ class PlanningWorkflowManager:
         text = _strip(message).lower()
         if not text:
             return False
-        if any(token in text for token in PLANNING_CANCEL_PATTERNS + PLANNING_ENOUGH_PATTERNS + PLANNING_CONFIRM_PATTERNS):
+        if any(
+            token in text for token in PLANNING_CANCEL_PATTERNS + PLANNING_ENOUGH_PATTERNS + PLANNING_CONFIRM_PATTERNS
+        ):
             return True
         if session.state == "CLARIFYING":
             if any(token in text for token in PLANNING_TASK_BYPASS_PATTERNS):
@@ -722,7 +808,8 @@ class PlanningWorkflowManager:
             return collected
         lowered = text.lower()
         if not collected.get("exam_scope") and any(
-            token in lowered for token in ("章", "教材", "课件", "考纲", "网络", "计网", "tcp", "udp", "传输层", "网络层")
+            token in lowered
+            for token in ("章", "教材", "课件", "考纲", "网络", "计网", "tcp", "udp", "传输层", "网络层")
         ):
             collected["exam_scope"] = text
         if not collected.get("knowledge_baseline"):
@@ -803,6 +890,204 @@ class PlanningWorkflowManager:
             return f"我先把这次 {days} 天 {subject} 里最影响结果的瓶颈和推进策略整理出来，也把你刚才补充过的碎信息一起吃进去，你看看是否贴合你的实际情况。"
         return f"我先把这次 {days} 天 {subject} 里最影响结果的瓶颈和推进策略整理出来，你看看是否符合你的实际情况。"
 
+    def _build_daily_task_contract(
+        self,
+        *,
+        task_kind: str,
+        sprint_mode: str,
+        phase_label: str,
+        focus: str,
+        output: str,
+        minimum_output: str,
+        day_number: int | None,
+    ) -> dict[str, Any]:
+        day_prefix = f"Day {day_number}" if day_number else "今天"
+        objective = f"{day_prefix}：{output or focus or phase_label}".strip()
+        fallback = {
+            "objective": objective,
+            "output_action": f"完成一次明确输出：{minimum_output}",
+            "success_criteria": f"完成 {minimum_output}，并能据此判断今天有没有推进。",
+            "micro_contract": "如果开始这个任务，就先做闭卷提取，再决定要不要翻资料。",
+            "fail_safe_rule": "如果状态差，就只保留一个最小输出动作，不继续加新内容。",
+            "success_checklist": ["有一个明确输出", "能判断今天哪里会、哪里不会"],
+            "method_steps": [
+                "先闭卷提取，不要从阅读开始。",
+                "只围绕今天的一个产出动作推进。",
+                "最后用最小检查确认不是只是看懂了。",
+            ],
+        }
+
+        if task_kind == "diagnostic_triage":
+            return {
+                "objective": f"{day_prefix}：产出一张保底 / 补强 / defer_or_skip 三栏清单。",
+                "output_action": "先做 5 题探针或 8 分钟闭卷回忆，再整理一张「保底 / 补强 / defer_or_skip」三栏清单。",
+                "success_criteria": "三栏清单里至少有 3 个保底项、2 个补强项、1 个 defer_or_skip 项，并明确今天只攻 1 个保底主线。",
+                "micro_contract": "如果开始，就先做 5 题探针或 8 分钟闭卷回忆；没做完这一步，不允许直接翻资料。",
+                "fail_safe_rule": "如果只剩 20 分钟，就保留探针结果和三栏清单，不再扩新内容。",
+                "success_checklist": ["有三栏清单", "明确 1 个今天必保主线", "至少做过一次探针检查"],
+                "method_steps": [
+                    "先闭卷写出你认为最可能考的 5 个关键词，或者做 5 题探针，不查资料。",
+                    "再只翻范围材料，把内容分到「保底 / 补强 / defer_or_skip」三栏。",
+                    "从「保底」里挑今天必须拿下的 1 个模块，作为接下来 24 小时主线。",
+                    f"最后用 {minimum_output} 再验一次，确认这个主线真的能提取。",
+                ],
+            }
+
+        if task_kind == "retrieval_triage":
+            return {
+                "objective": f"{day_prefix}：闭卷写一页高频概念卡，并标出 2 个最危险漏洞。",
+                "output_action": "闭卷写 1 页高频概念卡，再把 2 个不会的点转成补强条目。",
+                "success_criteria": "至少闭卷写出 4 个高频概念的关键词或判断点，并形成 2 个具体补强条目。",
+                "micro_contract": "如果开始，就先闭卷 6 分钟写概念卡；只补 2 个最危险漏洞，不切去新章节。",
+                "fail_safe_rule": "如果卡住，不追全章覆盖，只补当前最危险的 1 个漏洞。",
+                "success_checklist": ["有 1 页概念卡", "标出 2 个漏洞", "今天没有切到新章节"],
+                "method_steps": [
+                    "先闭卷写出高频概念、判断条件和容易混淆的点。",
+                    "翻资料只补你刚才写不出的部分，不顺手扩展到新章节。",
+                    "把最危险的 2 个漏洞改写成明天可继续追的补强条目。",
+                    f"最后用 {minimum_output} 检查概念卡是不是能转成可提取内容。",
+                ],
+            }
+
+        if task_kind == "retrieval_drill":
+            return {
+                "objective": f"{day_prefix}：独立完成 3 道代表题，并写出每道题的判断依据或错因。",
+                "output_action": "不看答案先做 3 道代表题，并写下每道题的判断依据或错因。",
+                "success_criteria": "至少完成 3 道代表题，其中至少 2 道能独立判断；错题需写出错因并重做 1 道同型题。",
+                "micro_contract": "如果开始，就先不看答案做前 2 题；卡住超过 3 分钟才允许翻资料。",
+                "fail_safe_rule": "如果状态差，就只保留 2 道代表题 + 1 条错因，不额外加新难题。",
+                "success_checklist": ["完成至少 3 道代表题", "错题有错因", "至少重做 1 道同型题"],
+                "method_steps": [
+                    "先独立做题，不要先读解析。",
+                    "每做完一题就写一句判断依据或为什么会错。",
+                    "只追最影响分数的错误类型，直到同型题能做对。",
+                    f"最后用 {minimum_output} 回看你是不是已经能独立提取关键判断点。",
+                ],
+            }
+
+        if task_kind == "retrieval_repair":
+            return {
+                "objective": f"{day_prefix}：只补 1 类高频错误，并用 1 道同型题回测。",
+                "output_action": "挑 1 类最高收益错误，补完后立刻用 1 道同型题回测。",
+                "success_criteria": "能说出这类错误的触发点，并在 1 道同型题上完成纠正。",
+                "micro_contract": "如果开始，就只选 1 类错误，不同时补多个洞。",
+                "fail_safe_rule": "今天不追所有错题，只修最影响分数的 1 类。",
+                "success_checklist": ["只处理 1 类错误", "有 1 道同型回测", "能说出触发点"],
+                "method_steps": [
+                    "先看最近一轮错题，选最影响得分的 1 类错误。",
+                    "把这类错误改写成一句提醒语和一个判断步骤。",
+                    "立刻做 1 道同型题回测，不让补强停留在看懂。",
+                ],
+            }
+
+        if task_kind == "mock_review":
+            return {
+                "objective": f"{day_prefix}：完成一次限时自测，并写出最后 24 小时清单。",
+                "output_action": "限时完成 15–20 题或半套题，并整理「最后 24 小时保留 / 补强 / 放弃」清单。",
+                "success_criteria": "拿到一次限时结果，归纳 Top 3 失分类型，并形成最后 24 小时清单。",
+                "micro_contract": "如果开始，就先开表计时并一次做完；做完前不来回翻资料。",
+                "fail_safe_rule": "如果时间不够，就做 15 分钟压缩版自测，但也必须留下 Top 3 错误类型。",
+                "success_checklist": ["有一次限时结果", "有 Top 3 失分类型", "有最后 24 小时清单"],
+                "method_steps": [
+                    "先按考试节奏限时完成一轮，不中途查答案。",
+                    "做完后把错误分成概念混淆、题型不会、记忆断点三类。",
+                    "只把最后时间留给最高收益的错误类型，明确哪些内容先放弃。",
+                ],
+            }
+
+        if task_kind == "diagnostic_map":
+            return {
+                "objective": f"{day_prefix}：画一张知识地图，并用 5 题探针校准掌握度。",
+                "output_action": "画一张知识地图，再完成 5 题探针题记录结果。",
+                "success_criteria": "知识地图至少包含 3 条主线、2 个薄弱点，并留下 5 题探针结果。",
+                "micro_contract": "如果开始，就先画主线再补细节；探针题只用来校准，不追难题。",
+                "fail_safe_rule": "如果时间不够，至少保留知识地图主线和 3 题探针结果。",
+                "success_checklist": ["有知识地图", "有 5 题或至少 3 题探针结果", "标出 2 个薄弱点"],
+                "method_steps": [
+                    "先不看细节，闭卷画出这门课的 3 条主线。",
+                    "翻资料只修正主线和关键连接点，不展开到所有细枝末节。",
+                    "做 5 题探针题，校准自评和真实掌握度的差距。",
+                    "把暴露出来的薄弱点标成后续可 deep learn 或保底处理对象。",
+                ],
+            }
+
+        if task_kind == "closed_book_map":
+            return {
+                "objective": f"{day_prefix}：闭卷重画框架，并补 2 个缺口。",
+                "output_action": "闭卷重画一版框架图，再补 2 个关键缺口。",
+                "success_criteria": "能不看资料写出核心链路，并标出 2 个下一轮必须复测的缺口。",
+                "micro_contract": "如果开始，就先闭卷 10 分钟重画，再打开资料只补 2 处空白。",
+                "fail_safe_rule": "如果卡住，不追求完整重建，只保住主链和最影响理解的 2 个缺口。",
+                "success_checklist": ["有闭卷框架图", "补了 2 个缺口", "留下下轮复测点"],
+                "method_steps": [
+                    "先闭卷重画框架图，不查资料。",
+                    "对照资料只补最关键的 2 个缺口，不把任务变成重新抄一遍。",
+                    f"最后用 {minimum_output} 检查框架是不是已经能被提取出来。",
+                ],
+            }
+
+        if task_kind == "deep_learn_retrieval":
+            return {
+                "objective": f"{day_prefix}：先复测旧点，再深学 1 个高权重难点。",
+                "output_action": "先复测 6 个旧点，再对 1 个高权重难点做 limited deep learn，并完成 1 个例题或反例。",
+                "success_criteria": "旧点至少 4/6 可提取；新难点能解释适用条件，并完成 1 个例题或反例。",
+                "micro_contract": "如果开始，就先复测旧点；旧点没过，不追加第二个新难点。",
+                "fail_safe_rule": "如果复测掉太多点，今天取消 deep learn，改成只修旧点和最小检查。",
+                "success_checklist": ["复测了 6 个旧点", "只深学 1 个难点", "有 1 个例题或反例"],
+                "method_steps": [
+                    "先复测上一轮旧点，确认不是看过就算会。",
+                    "只挑 1 个高权重、串联性强的难点做深学，不并行开第二个。",
+                    "立刻用 1 个例题或反例检验 deep learn 是否转成可用理解。",
+                ],
+            }
+
+        if task_kind == "spaced_retrieval":
+            return {
+                "objective": f"{day_prefix}：复测旧点，再把今天的新内容接到检索回路里。",
+                "output_action": "复测前一天或上一轮的 6 个点，再记录今天新增的 2 个复测点。",
+                "success_criteria": "旧点至少 4/6 可提取，并为今天的新内容留下 2 个下一轮复测点。",
+                "micro_contract": "如果开始，就先复测旧点；没复测完，不进入新的阅读输入。",
+                "fail_safe_rule": "如果没时间，至少保留旧点复测和 2 个下一轮复测点。",
+                "success_checklist": ["复测了旧点", "记录 2 个下一轮复测点", "今天不是只阅读"],
+                "method_steps": [
+                    "先复测前一天或上一轮错点，不看资料作答。",
+                    "只把今天的新内容学到能接入下一轮复测，不追求一次性完全吃透。",
+                    f"最后用 {minimum_output} 把今天的新旧内容都收进检索闭环。",
+                ],
+            }
+
+        if task_kind == "integration_retrieval":
+            return {
+                "objective": f"{day_prefix}：完成跨章节整合题，并更新下一轮复测名单。",
+                "output_action": "完成 4 道跨章节整合题，并记录预测分与实际表现差距。",
+                "success_criteria": "完成 4 道整合题，归纳至少 2 个跨章节混淆点，并更新下一轮复测名单。",
+                "micro_contract": "如果开始，就先做整合题再回看资料，不要反过来。",
+                "fail_safe_rule": "如果状态差，就保留 2 道整合题和 2 个混淆点，不再追加新难题。",
+                "success_checklist": ["完成整合题", "有预测分与实际差距", "有下一轮复测名单"],
+                "method_steps": [
+                    "先做跨章节整合题，用题目暴露连接点是否真的建立起来。",
+                    "记录你的预测表现和实际表现差距，识别高估区域。",
+                    "把暴露出的混淆点写成下一轮 spaced retrieval 的复测名单。",
+                ],
+            }
+
+        if task_kind == "stage_mock":
+            return {
+                "objective": f"{day_prefix}：完成一次阶段模拟，并生成下一轮优先级清单。",
+                "output_action": "完成一次阶段模拟，并整理 Top 3 失分来源和下一轮 5 个复测点。",
+                "success_criteria": "拿到阶段分数或正确率，写出 Top 3 失分来源，并明确下一轮 5 个复测点。",
+                "micro_contract": "如果开始，就按正式节奏先做完整轮次；做完后再分析，不边做边补。",
+                "fail_safe_rule": "如果时间不足，就做压缩版阶段模拟，但必须留下失分归因和下一轮复测点。",
+                "success_checklist": ["有阶段结果", "有 Top 3 失分来源", "有下一轮 5 个复测点"],
+                "method_steps": [
+                    "先完成一轮阶段模拟，尽量贴近真实考试节奏。",
+                    "把失分归因为知识漏洞、提取失败、审题判断问题三类。",
+                    "根据失分归因生成下一轮优先级清单，不把最后几天继续堆成阅读任务。",
+                ],
+            }
+
+        return fallback
+
     def _build_task_guide_json(
         self,
         *,
@@ -812,6 +1097,7 @@ class PlanningWorkflowManager:
         default_daily_hours: int,
         day_number: int | None = None,
         day_focus: str | None = None,
+        day_spec: dict[str, Any] | None = None,
         aurora_state: AuroraRuntimePlanningState | None = None,
     ) -> dict[str, Any]:
         phase_hours = _safe_int(phase.get("daily_hours")) or default_daily_hours or 2
@@ -819,22 +1105,51 @@ class PlanningWorkflowManager:
         focus = _strip(day_focus or phase.get("focus"))
         output = _strip(phase.get("output"))
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
+        sprint_policy = _as_dict(phase.get("sprint_policy"))
+        retrieval_policy = _as_dict(phase.get("retrieval_policy") or sprint_policy.get("retrieval_policy"))
+        sprint_mode = _strip(sprint_policy.get("sprint_mode") or phase.get("sprint_mode") or "exam_sprint")
+        minimum_output = _strip(retrieval_policy.get("minimum_output") or "闭卷复述或小测")
+        task_kind = _strip((day_spec or {}).get("task_kind") or "retrieval_drill")
+        contract = self._build_daily_task_contract(
+            task_kind=task_kind,
+            sprint_mode=sprint_mode,
+            phase_label=_strip(phase.get("label") or "当前阶段"),
+            focus=focus,
+            output=output,
+            minimum_output=minimum_output,
+            day_number=day_number,
+        )
         brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
-        materials = [item for item in list(brief.get("available_materials") or session.collected.get("available_materials") or []) if _strip(item)]
-        blocked_days = [item for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or []) if _strip(item)]
-        day_label = f"Day {day_number} " if day_number else ""
-        guide_steps = [
-            f"先用 15 分钟扫一遍和「{_strip(phase.get('label'))}」相关的课件/教材目录，只标记最容易失分的部分。",
-            f"围绕这个阶段的重点执行：{method or focus}",
-            f"最后留 15 分钟做一次自测或复述，确认你是否已经达到「{output or focus}」。",
+        materials = [
+            item
+            for item in list(brief.get("available_materials") or session.collected.get("available_materials") or [])
+            if _strip(item)
         ]
+        blocked_days = [
+            item
+            for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or [])
+            if _strip(item)
+        ]
+        guide_steps = list(contract["method_steps"])
         if materials:
             guide_steps.insert(1, f"优先使用你手头已有的资料：{'、'.join(materials[:3])}。")
+        guide_steps.insert(
+            min(2, len(guide_steps)),
+            f"执行时只围绕今天这一个明确产出动作推进：{contract['output_action']}",
+        )
+        if method:
+            guide_steps.append(f"阶段方法提醒：{method}")
+        if sprint_mode == "seven_day_survival":
+            guide_steps.append("如果遇到低频且耗时的细节，先记录到 defer_or_skip，不在今天死磕。")
+        elif sprint_mode == "fourteen_day_build_and_retrieve":
+            guide_steps.append("把今天错过或卡住的点标成下一轮间隔复测对象，不靠一次阅读判断掌握。")
         if blocked_days:
             guide_steps.append(f"如果碰到这些忙碌时段，就把任务压缩成保底版：{'；'.join(blocked_days[:2])}。")
         key_points = [
             focus or f"{subject} 的阶段重点",
-            output or "把知识点转成能说清、能做题的状态",
+            contract["output_action"],
+            contract["success_criteria"],
+            f"检索优先：{minimum_output}",
         ]
         if materials:
             key_points.append(f"优先吃透手头资料里的高频材料：{'、'.join(materials[:2])}")
@@ -850,12 +1165,20 @@ class PlanningWorkflowManager:
         if not common_mistakes:
             common_mistakes = ["只看内容不做自测，最后很难知道自己到底会不会。"]
         return {
-            "objective": f"{day_label}{output or focus or f'完成 {subject} 的第 {phase_index} 阶段推进'}".strip(),
+            "objective": contract["objective"],
             "method_steps": guide_steps,
-            "time_estimate_minutes": max(phase_hours * 60, 30),
-            "success_criteria": output or f"完成 {phase_index} 阶段并能复述核心内容。",
+            "time_estimate_minutes": _safe_int((day_spec or {}).get("estimated_minutes")) or max(phase_hours * 60, 30),
+            "output_action": contract["output_action"],
+            "success_criteria": contract["success_criteria"],
             "key_points": key_points,
             "common_mistakes": common_mistakes,
+            "retrieval_first": True,
+            "sprint_mode": sprint_mode,
+            "task_kind": task_kind,
+            "minimum_output": minimum_output,
+            "micro_contract": contract["micro_contract"],
+            "success_checklist": contract["success_checklist"],
+            "fail_safe_rule": contract["fail_safe_rule"],
         }
 
     def _build_task_ai_prompt(
@@ -870,25 +1193,51 @@ class PlanningWorkflowManager:
         baseline = _strip(session.collected.get("knowledge_baseline") or "基础不稳")
         daily_hours = _safe_int(session.collected.get("daily_available_hours")) or 2
         phase_label = _strip(phase.get("label") or "当前阶段")
+        sprint_policy = _as_dict(phase.get("sprint_policy"))
+        sprint_mode = _strip(sprint_policy.get("sprint_mode") or phase.get("sprint_mode") or "exam_sprint")
+        retrieval_policy = _as_dict(phase.get("retrieval_policy") or sprint_policy.get("retrieval_policy"))
+        minimum_output = _strip(
+            retrieval_policy.get("minimum_output") or guide_json.get("minimum_output") or "闭卷复述或小测"
+        )
         brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
-        materials = [item for item in list(brief.get("available_materials") or session.collected.get("available_materials") or []) if _strip(item)]
-        blocked_days = [item for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or []) if _strip(item)]
-        latent_threads = [item for item in list(brief.get("latent_threads") or []) if _strip(item.get("context_snapshot"))]
+        materials = [
+            item
+            for item in list(brief.get("available_materials") or session.collected.get("available_materials") or [])
+            if _strip(item)
+        ]
+        blocked_days = [
+            item
+            for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or [])
+            if _strip(item)
+        ]
+        latent_threads = [
+            item for item in list(brief.get("latent_threads") or []) if _strip(item.get("context_snapshot"))
+        ]
         materials_line = f"手头资料包括：{'、'.join(materials[:3])}。\n" if materials else ""
         blocked_days_line = f"已知忙碌时段：{'；'.join(blocked_days[:2])}。\n" if blocked_days else ""
         latent_line = f"还需要顺手照顾的潜在线索：{latent_threads[0]['context_snapshot']}。\n" if latent_threads else ""
+        output_action = _strip(guide_json.get("output_action"))
+        micro_contract = _strip(guide_json.get("micro_contract"))
+        fail_safe_rule = _strip(guide_json.get("fail_safe_rule"))
         return (
             f"【背景】我是学生，目标是 {session.goal_raw or f'在限定时间内完成 {subject} 备考'}。\n\n"
             f"【我的情况】科目是 {subject}，当前基础是 {baseline}，每天大概能投入 {daily_hours} 小时。\n"
             f"{materials_line}{blocked_days_line}{latent_line}\n"
+            f"【冲刺策略】{sprint_mode}；本任务必须有输出动作：{minimum_output}。\n"
             f"【当前阶段】{phase_label}\n"
             f"重点：{_strip(phase.get('focus'))}\n"
             f"目标：{_strip(guide_json.get('objective'))}\n"
-            f"完成标准：{_strip(guide_json.get('success_criteria'))}\n\n"
+            f"今天的输出动作：{output_action}\n"
+            f"完成标准：{_strip(guide_json.get('success_criteria'))}\n"
+            f"启动约定：{micro_contract}\n"
+            f"失手时降压规则：{fail_safe_rule}\n\n"
             "【请帮我】\n"
-            "1. 用最精炼的方式讲清当前阶段最关键的知识点\n"
-            "2. 给我 3 个由浅到深的检查题，不要先给答案\n"
-            "3. 告诉我这个阶段最容易踩的坑\n\n"
+            "1. 先用一个闭卷问题检查我现在到底会不会，不要直接灌内容\n"
+            "2. 再用最精炼的方式讲清当前阶段最关键的知识点\n"
+            "3. 给我 3 个由浅到深的检查题，不要先给答案\n"
+            "4. 优先围绕今天的输出动作设计推进路径，不要把任务变回泛泛地读章节\n"
+            "5. 如果我说没搞懂、落后或没时间，先收窄成一个更轻、更具体的补强动作，不继续加难\n"
+            "6. 告诉我这个阶段最容易踩的坑，以及哪些低 ROI 内容可以先放一放\n\n"
             "【风格要求】直接、结论先行、不说空话，我的时间很紧。"
         )
 
@@ -920,8 +1269,16 @@ class PlanningWorkflowManager:
         days = _safe_int(session.collected.get("time_constraint_days")) or 7
         hours = _safe_int(session.collected.get("daily_available_hours")) or 2
         brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
-        blocked_days = [item for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or []) if _strip(item)]
-        materials = [item for item in list(brief.get("available_materials") or session.collected.get("available_materials") or []) if _strip(item)]
+        blocked_days = [
+            item
+            for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or [])
+            if _strip(item)
+        ]
+        materials = [
+            item
+            for item in list(brief.get("available_materials") or session.collected.get("available_materials") or [])
+            if _strip(item)
+        ]
         open_tensions = list(brief.get("open_tensions") or [])
         return [
             {
@@ -956,6 +1313,39 @@ class PlanningWorkflowManager:
             },
         ]
 
+    def _build_exam_sprint_policy(
+        self,
+        session: PlanningSession,
+        aurora_state: AuroraRuntimePlanningState | None = None,
+    ) -> dict[str, Any]:
+        days = _safe_int(session.collected.get("time_constraint_days")) or 7
+        hours = _safe_int(session.collected.get("daily_available_hours")) or 2
+        subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
+        brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
+        materials = [
+            _strip(item)
+            for item in list(brief.get("available_materials") or session.collected.get("available_materials") or [])
+            if _strip(item)
+        ]
+        cold_start = _as_dict(session.collected.get("cold_start_context"))
+        policy = ExamSprintPolicyEngine.build(
+            ExamSprintPolicyInput(
+                total_days=days,
+                subject=subject,
+                exam_scope=_strip(session.collected.get("exam_scope")),
+                knowledge_baseline=_strip(session.collected.get("knowledge_baseline")),
+                time_available=_strip(session.collected.get("time_available")),
+                daily_available_hours=hours,
+                materials=tuple(materials),
+                cold_start_context=cold_start,
+                existing_signals={
+                    "bottlenecks": session.bottlenecks or [],
+                    "aurora_activity_profile": _as_dict(brief.get("activity_profile")),
+                },
+            )
+        )
+        return policy.to_dict()
+
     def _build_strategy(
         self,
         session: PlanningSession,
@@ -967,36 +1357,95 @@ class PlanningWorkflowManager:
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
         brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
         activity_profile = _as_dict(brief.get("activity_profile"))
-        density_hint = float(activity_profile.get("task_density_hint") or 0.7)
+        sprint_policy = self._build_exam_sprint_policy(session, aurora_state=aurora_state)
+        policy_density = float(sprint_policy.get("task_density_hint") or 0.7)
+        density_hint = min(policy_density, float(activity_profile.get("task_density_hint") or policy_density))
         density_delta = -1 if density_hint <= 0.4 else 1 if density_hint >= 0.85 else 0
-        materials = [item for item in list(brief.get("available_materials") or session.collected.get("available_materials") or []) if _strip(item)]
-        blocked_days = [item for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or []) if _strip(item)]
+        materials = [
+            item
+            for item in list(brief.get("available_materials") or session.collected.get("available_materials") or [])
+            if _strip(item)
+        ]
+        blocked_days = [
+            item
+            for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or [])
+            if _strip(item)
+        ]
         open_tensions = list(brief.get("open_tensions") or [])
         latent_threads = list(brief.get("latent_threads") or [])
         ranges = self._phase_day_ranges(days)
-        templates = [
-            {
-                "label": "建立框架",
-                "hour_delta": 0,
-                "focus": f"先把 {subject} 的考查范围、章节框架和高频概念拉出来，不追求一开始就吃透全部细节。",
-                "method": "优先看老师课件/教材目录/考纲，把每章只记核心概念、关键词和常见问法；看完一章就用自己的话复述。",
-                "output": "能说清每章在考什么，知道最值得优先啃的 20% 内容。",
-            },
-            {
-                "label": "核心攻克",
-                "hour_delta": 1,
-                "focus": "围绕最容易丢分的核心知识点做理解 + 小量题目验证，尽快建立能解释、能判断的能力。",
-                "method": "每天只攻 1–2 个核心点：先学概念，再马上做对应选择题/典型题，最后复盘‘我为什么错’。",
-                "output": "对重点协议/概念能独立解释，常见题型不再完全靠猜。",
-            },
-            {
-                "label": "模拟冲刺",
-                "hour_delta": 1,
-                "focus": "通过自测或真题暴露薄弱点，再把最后时间砸到最值分的漏洞上。",
-                "method": "至少做 1 轮限时自测；把错误按‘概念混淆 / 不会判断 / 记忆断点’归类，最后只补最高频错误。",
-                "output": "能完成至少 1 轮接近考试的自测，知道最后 24 小时该补哪里。",
-            },
-        ]
+        if sprint_policy.get("sprint_mode") == "seven_day_survival":
+            templates = [
+                {
+                    "label": "诊断分诊",
+                    "hour_delta": 0,
+                    "focus": f"先把 {subject} 的考试范围切成高频保底、需要补强、可以暂缓三类。",
+                    "method": "用考纲/课件/真题快速定位高频内容；每看完一块就闭卷写 3 个关键词，低 ROI 内容记入 defer_or_skip。",
+                    "output": "知道哪些内容先保底，哪些内容暂缓，不再线性从第一页复习。",
+                },
+                {
+                    "label": "检索攻克",
+                    "hour_delta": 0,
+                    "focus": "每天围绕高频基础分做闭卷输出 + 典型题验证，优先修补最影响及格线的漏洞。",
+                    "method": "先闭卷复述，再做 3–5 道代表题；错题只追到能做对同型题，不扩展到低频细节。",
+                    "output": "核心概念能说清，典型题能独立判断，薄弱点被转成补强任务。",
+                },
+                {
+                    "label": "保底模拟",
+                    "hour_delta": 1,
+                    "focus": "用限时自测确认保底线，把最后时间集中在最可能提分的错误类型上。",
+                    "method": "做一轮小模拟或半套真题；按概念混淆、题型不会、记忆断点归类，只补最高收益漏洞。",
+                    "output": "完成接近考试的检索测试，明确最后 24 小时保留、补强和暂缓的内容。",
+                },
+            ]
+        elif sprint_policy.get("sprint_mode") == "fourteen_day_build_and_retrieve":
+            templates = [
+                {
+                    "label": "结构诊断",
+                    "hour_delta": 0,
+                    "focus": f"建立 {subject} 的知识框架，同时用探针题校准真实掌握度。",
+                    "method": "先看范围和资料，再做少量诊断题；把高权重、串联性强的内容标为可深学对象。",
+                    "output": "形成第一版知识地图，知道哪些点需要 deep learn，哪些只做识别保底。",
+                },
+                {
+                    "label": "间隔再学",
+                    "hour_delta": 1,
+                    "focus": "用两轮复习把核心内容从看懂推进到能提取，穿插间隔检索防止假性掌握。",
+                    "method": "今天学过的点隔天复测；错题以 successive relearning 方式做到再次独立答对。",
+                    "output": "核心内容至少经历一次间隔复测，错题不只停留在看懂答案。",
+                },
+                {
+                    "label": "模拟整合",
+                    "hour_delta": 1,
+                    "focus": "用阶段模拟整合题感，再把低信心节点回填到最后一轮复习。",
+                    "method": "做阶段模拟或半套真题；根据预测分与实际分差距校准下一轮复习权重。",
+                    "output": "完成阶段性模拟，能解释主要失分来源并形成最后冲刺清单。",
+                },
+            ]
+        else:
+            templates = [
+                {
+                    "label": "建立框架",
+                    "hour_delta": 0,
+                    "focus": f"先把 {subject} 的考查范围、章节框架和高频概念拉出来，不追求一开始就吃透全部细节。",
+                    "method": "优先看老师课件/教材目录/考纲，把每章只记核心概念、关键词和常见问法；看完一章就用自己的话复述。",
+                    "output": "能说清每章在考什么，知道最值得优先啃的 20% 内容。",
+                },
+                {
+                    "label": "核心攻克",
+                    "hour_delta": 1,
+                    "focus": "围绕最容易丢分的核心知识点做理解 + 小量题目验证，尽快建立能解释、能判断的能力。",
+                    "method": "每天只攻 1–2 个核心点：先学概念，再马上做对应选择题/典型题，最后复盘‘我为什么错’。",
+                    "output": "对重点协议/概念能独立解释，常见题型不再完全靠猜。",
+                },
+                {
+                    "label": "模拟冲刺",
+                    "hour_delta": 1,
+                    "focus": "通过自测或真题暴露薄弱点，再把最后时间砸到最值分的漏洞上。",
+                    "method": "至少做 1 轮限时自测；把错误按‘概念混淆 / 不会判断 / 记忆断点’归类，最后只补最高频错误。",
+                    "output": "能完成至少 1 轮接近考试的自测，知道最后 24 小时该补哪里。",
+                },
+            ]
         phases = []
         for index, day_range in enumerate(ranges, start=1):
             template = templates[index - 1]
@@ -1016,6 +1465,9 @@ class PlanningWorkflowManager:
                     "focus": template["focus"],
                     "method": method,
                     "output": template["output"],
+                    "sprint_mode": sprint_policy.get("sprint_mode"),
+                    "sprint_policy": sprint_policy,
+                    "retrieval_policy": sprint_policy.get("retrieval_policy") or {},
                 }
             )
         first_checkpoint = min(days, ranges[0]["end"])
@@ -1023,6 +1475,7 @@ class PlanningWorkflowManager:
         checkpoint_tail = f" 同时避开这些忙碌时段：{'；'.join(blocked_days[:2])}。" if blocked_days else ""
         return {
             "total_days": days,
+            "sprint_policy": sprint_policy,
             "daily_commitment_range": f"{max(1, hours - 1 + density_delta)}–{max(1, hours + 1 + density_delta)}小时",
             "phases": phases,
             "checkpoints": [
@@ -1039,6 +1492,7 @@ class PlanningWorkflowManager:
                 f"如果 Day {first_checkpoint} 自测低于 30%，说明基础理解成本比预期更高，后续每天只攻 1 个核心点。",
                 "如果冲刺前半套题已经超过 60%，最后阶段优先做题感和高频陷阱纠偏。",
             ],
+            "strategy_notes": sprint_policy.get("strategy_notes") or [],
             "user_context_digest": {
                 "goal_raw": _strip(session.goal_raw),
                 "blocked_days": blocked_days,
@@ -1078,13 +1532,95 @@ class PlanningWorkflowManager:
             end_day = int(day_match.group("end") or start_day) if day_match else start_day
         focus = _strip(phase.get("focus"))
         label = _strip(phase.get("label") or "阶段推进")
-        return [
-            {
-                "day": day,
-                "focus": f"{label}第 {day - start_day + 1} 天：{focus}",
-            }
-            for day in range(start_day, end_day + 1)
-        ]
+        sprint_mode = _strip(phase.get("sprint_mode") or _as_dict(phase.get("sprint_policy")).get("sprint_mode"))
+        retrieval_policy = _as_dict(
+            phase.get("retrieval_policy") or _as_dict(phase.get("sprint_policy")).get("retrieval_policy")
+        )
+        minimum_output = _strip(retrieval_policy.get("minimum_output") or "闭卷复述或小测")
+        phase_days = max(1, end_day - start_day + 1)
+        specs: list[dict[str, Any]] = []
+        for day in range(start_day, end_day + 1):
+            offset = day - start_day
+            task_kind = "retrieval_drill"
+            title_focus = "闭卷检索"
+            day_focus = f"{label}第 {offset + 1} 天：{focus}"
+            if sprint_mode == "seven_day_survival":
+                if phase_index == 1 and offset == 0:
+                    task_kind = "diagnostic_triage"
+                    title_focus = "诊断分诊"
+                    day_focus = f"{label}第 {offset + 1} 天：用小测和资料确认高频保底范围，并标记 defer_or_skip 内容。"
+                elif phase_index == 1:
+                    task_kind = "retrieval_triage"
+                    title_focus = "高频保底"
+                    day_focus = f"{label}第 {offset + 1} 天：闭卷复述高频概念，再把不会的点转成补强清单。"
+                elif phase_index == 2:
+                    task_kind = "retrieval_drill"
+                    title_focus = "典型题检索"
+                    day_focus = f"{label}第 {offset + 1} 天：先闭卷输出，再做代表题验证，错题只追到同型题能做对。"
+                else:
+                    task_kind = "mock_review" if offset >= phase_days - 1 else "retrieval_repair"
+                    title_focus = "限时自测" if task_kind == "mock_review" else "漏洞补强"
+                    day_focus = f"{label}第 {offset + 1} 天：用限时自测暴露漏洞，只补最高收益错误类型。"
+            elif sprint_mode == "fourteen_day_build_and_retrieve":
+                if phase_index == 1:
+                    task_kind = "diagnostic_map" if offset == 0 else "closed_book_map"
+                    title_focus = "结构诊断" if offset == 0 else "闭卷复述"
+                    day_focus = f"{label}第 {offset + 1} 天：建立知识框架后做探针题，校准自评和真实掌握度。"
+                elif phase_index == 2:
+                    task_kind = "deep_learn_retrieval" if offset == 0 else "spaced_retrieval"
+                    title_focus = "深学+复测" if task_kind == "deep_learn_retrieval" else "间隔再学"
+                    day_focus = (
+                        f"{label}第 {offset + 1} 天：先复测上一轮旧点，再对 1 个高权重难点做 limited deep learn。"
+                        if task_kind == "deep_learn_retrieval"
+                        else f"{label}第 {offset + 1} 天：复测前一天或上一轮错点，再学习今天的高权重内容。"
+                    )
+                else:
+                    task_kind = "stage_mock" if offset >= phase_days - 1 else "integration_retrieval"
+                    title_focus = "阶段模拟" if task_kind == "stage_mock" else "整合检索"
+                    day_focus = f"{label}第 {offset + 1} 天：用阶段题整合多个知识点，并记录预测分与实际分差距。"
+            specs.append(
+                {
+                    "day": day,
+                    "focus": day_focus,
+                    "task_kind": task_kind,
+                    "title_focus": title_focus,
+                    "minimum_output": minimum_output,
+                    "estimated_minutes": self._estimated_minutes_for_task(
+                        task_kind=task_kind,
+                        sprint_mode=sprint_mode,
+                        base_minutes=max((_safe_int(phase.get("daily_hours")) or 1) * 60, 30),
+                    ),
+                }
+            )
+        return specs
+
+    def _estimated_minutes_for_task(
+        self,
+        *,
+        task_kind: str,
+        sprint_mode: str,
+        base_minutes: int,
+    ) -> int:
+        caps = {
+            "diagnostic_triage": 55,
+            "retrieval_triage": 55,
+            "retrieval_drill": 75,
+            "retrieval_repair": 50,
+            "mock_review": 85,
+            "diagnostic_map": 70,
+            "closed_book_map": 65,
+            "deep_learn_retrieval": 85,
+            "spaced_retrieval": 75,
+            "integration_retrieval": 85,
+            "stage_mock": 110,
+        }
+        floors = {
+            "seven_day_survival": 35,
+            "fourteen_day_build_and_retrieve": 45,
+        }
+        floor = floors.get(sprint_mode, 30)
+        cap = caps.get(task_kind, base_minutes)
+        return max(floor, min(base_minutes, cap))
 
     def _progress_data(self, state: str) -> dict[str, Any]:
         current = {

@@ -24,6 +24,8 @@ class ModelingChatScreen extends ConsumerStatefulWidget {
 }
 
 class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+  static const String _auroraModelingSurface = 'aurora_modeling';
+
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<_ModelingMessage> _messages = <_ModelingMessage>[];
@@ -167,9 +169,24 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                     DS.spacing16,
                     DS.spacing16,
                   ),
-                  child: SparkleButton(
-                    label: '进入主界面',
-                    onPressed: _finish,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SparkleButton(
+                        label: '开始规划',
+                        onPressed: _finishWithPlanning,
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      TextButton(
+                        onPressed: _finish,
+                        child: Text(
+                          '还想聊聊',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: DS.textSecondary,
+                              ),
+                        ),
+                      ),
+                    ],
                   ),
                 )
               else
@@ -287,10 +304,10 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
         requestId: requestId,
         token: token,
         extraContext: {
-          'mode': 'onboarding_modeling',
-          'aurora_surface': 'modeling',
-          'aurora_runtime_enabled': true,
           ...?extraContext,
+          'mode': 'onboarding_modeling',
+          'aurora_surface': _auroraModelingSurface,
+          'aurora_runtime_enabled': true,
         },
       );
 
@@ -509,7 +526,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     }
 
     final modelingComplete = _isTruthy(metadata['modeling_complete']);
-    if (!modelingComplete || _completed) {
+    if (!modelingComplete || !_isModelingSurface(metadata) || _completed) {
       return;
     }
 
@@ -549,7 +566,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
         token: token,
         extraContext: const {
           'mode': 'onboarding_modeling',
-          'aurora_surface': 'modeling',
+          'aurora_surface': _auroraModelingSurface,
           'aurora_runtime_enabled': true,
           'skip': true,
         },
@@ -572,6 +589,16 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       AppFeedback.error(context, '暂时无法跳过：$error');
       setState(() => _skipInFlight = false);
     }
+  }
+
+  Future<void> _finishWithPlanning() async {
+    await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
+    ref.invalidate(profileContextProvider);
+    if (!mounted) return;
+    context.go('/chat', extra: {
+      'initial_user_message': '开始规划',
+      'from_modeling_complete': true,
+    });
   }
 
   Future<void> _finish() async {
@@ -619,6 +646,14 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       return value != 0;
     }
     return false;
+  }
+
+  bool _isModelingSurface(Map<String, dynamic> metadata) {
+    final surface = metadata['aurora_surface']?.toString().trim();
+    if (surface == null || surface.isEmpty) {
+      return true;
+    }
+    return surface == _auroraModelingSurface || surface == 'modeling';
   }
 }
 

@@ -10,24 +10,51 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
+from app.aurora.runtime_v1.control_surface import (
+    ActivityProfile,
+    AuroraHardBounds,
+    ControlSurfaceReading,
+    ControlSurfaceService,
+)
+from app.aurora.runtime_v1.dashboard import DashboardReadoutBuilder, canonicalize_runtime_domain
+from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
+from app.aurora.runtime_v1.skills import AuroraSkillRegistry
 from app.models.user_preferences import UserPreferencesCenter
 
 AURORA_SURFACE_MODELING = "aurora_modeling"
 AURORA_RUNTIME_MODE_SURFACES = {
     "onboarding_modeling": AURORA_SURFACE_MODELING,
     "aurora_modeling": AURORA_SURFACE_MODELING,
+    "modeling": AURORA_SURFACE_MODELING,
     "aurora_planning": "aurora_planning",
     "aurora_checkpoint": "aurora_checkpoint",
 }
 AURORA_RUNTIME_STATE_KEY_TEMPLATE = "aurora:runtime:{user_id}:{surface}:{conversation_id}"
 AURORA_RUNTIME_STATE_TTL_SECONDS = 24 * 60 * 60
 
-_DEFAULT_ACTIVITY_PROFILE = {
-    "proactive_intensity": 0.6,
-    "next_wake_at": None,
-    "conversation_style": "exploratory",
-    "agenda_priority": None,
-    "task_density_hint": 0.35,
+_SURFACE_ACTIVITY_DEFAULTS = {
+    AURORA_SURFACE_MODELING: {
+        "proactive_intensity": 0.6,
+        "next_wake_at": None,
+        "conversation_style": "warm",
+        "agenda_priority": None,
+        "task_density_hint": 0.35,
+    },
+    "aurora_planning": {
+        "proactive_intensity": 0.45,
+        "next_wake_at": None,
+        "conversation_style": "structured",
+        "agenda_priority": None,
+        "task_density_hint": 0.65,
+    },
+    "aurora_checkpoint": {
+        "proactive_intensity": 0.5,
+        "next_wake_at": None,
+        "conversation_style": "warm",
+        "agenda_priority": None,
+        "task_density_hint": 0.45,
+    },
 }
 
 
@@ -47,8 +74,20 @@ class AuroraRuntimeTurnPlan:
 
 
 class AuroraRuntimeV1Service:
-    def __init__(self, redis_client=None):
+    def __init__(
+        self,
+        redis_client=None,
+        *,
+        decision_loop: AuroraDecisionLoop | None = None,
+        chat_adapter: ChatLayerAdapter | None = None,
+        dashboard_builder: DashboardReadoutBuilder | None = None,
+        skill_registry: AuroraSkillRegistry | None = None,
+    ):
         self.redis = redis_client
+        self.decision_loop = decision_loop or AuroraDecisionLoop()
+        self.chat_adapter = chat_adapter or ChatLayerAdapter()
+        self.dashboard_builder = dashboard_builder or DashboardReadoutBuilder()
+        self.skill_registry = skill_registry or AuroraSkillRegistry()
 
     async def plan_turn(
         self,
@@ -66,49 +105,40 @@ class AuroraRuntimeV1Service:
         request_extra_context = dict(request_extra_context or {})
         conversation_context = dict(conversation_context or {})
         user_context_payload = dict(user_context_payload or {})
+        surface = AURORA_RUNTIME_MODE_SURFACES.get(surface, surface)
 
-        hard_boundaries = await self._read_hard_boundaries(active_db=active_db, user_id=user_id)
-        activity_profile = self._build_activity_profile(
+        control_surface_reading = await self._read_control_surface(active_db=active_db, user_id=user_id)
+        activity_profile = self._build_activity_profile(surface=surface, request_extra_context=request_extra_context)
+        activity_profile.update(self._activity_payload(control_surface_reading.adjustable))
+
+        candidate_affordances = self.skill_registry.load_candidate_affordances(surface)
+        readout = self.dashboard_builder.build(
             surface=surface,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            request_id=request_id,
             user_message=user_message,
             request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            user_context_payload=user_context_payload,
+            control_surface_reading=control_surface_reading,
+            activity_profile=activity_profile,
+            candidate_affordances=candidate_affordances,
         )
-        agenda_priority = str(activity_profile.get("agenda_priority") or "").strip() or None
-        privacy_boundaries = {
-            str(item).strip().lower()
-            for item in (hard_boundaries.get("privacy_boundaries") or [])
-            if str(item).strip()
-        }
-        if agenda_priority and agenda_priority.lower() in privacy_boundaries:
-            activity_profile["agenda_priority"] = None
-            agenda_priority = None
 
-        surface_complete = bool(request_extra_context.get("surface_complete"))
-        modeling_complete = bool(request_extra_context.get("modeling_complete"))
-        if surface == AURORA_SURFACE_MODELING and not modeling_complete:
-            modeling_complete = self._looks_like_modeling_complete(user_message)
-        if surface == AURORA_SURFACE_MODELING and not surface_complete:
-            surface_complete = modeling_complete
+        decision = await self.decision_loop.decide(readout)
+        activity_profile = self._merge_harness_updates(activity_profile, decision)
+        messages = await self.chat_adapter.render(decision, readout)
+        if not messages and decision.action not in {"wait", "drop_thread"}:
+            logger.warning("Aurora runtime v1 produced no chat output for non-wait action {}", decision.action)
 
-        messages = self._build_message_plan(
-            surface=surface,
-            user_message=user_message,
-            agenda_priority=agenda_priority,
-            modeling_complete=modeling_complete,
-        )
-        if not messages:
-            messages = ["我先接住你刚刚说的这部分。你不用一次讲得很完整，我们可以一点点把它捋清。"]
+        surface_complete = bool(decision.surface_complete)
+        modeling_complete = bool(decision.modeling_complete)
+        if surface == AURORA_SURFACE_MODELING and modeling_complete:
+            surface_complete = True
+            activity_profile["planning_ready"] = True
 
-        informational_tensions = []
-        if agenda_priority:
-            informational_tensions.append(
-                {
-                    "domain": agenda_priority,
-                    "status": "open",
-                    "description": f"需要继续补齐 {agenda_priority} 相关线索",
-                    "priority": 0.7,
-                }
-            )
+        informational_tensions = self._extract_informational_tensions(decision)
 
         plan = AuroraRuntimeTurnPlan(
             surface=surface,
@@ -116,7 +146,7 @@ class AuroraRuntimeV1Service:
             surface_complete=surface_complete,
             modeling_complete=modeling_complete,
             activity_profile=activity_profile,
-            hard_boundaries=hard_boundaries,
+            hard_boundaries=control_surface_reading.hard_bounds.model_dump(mode="json"),
             informational_tensions=informational_tensions,
         )
         await self._persist_runtime_state(
@@ -128,8 +158,32 @@ class AuroraRuntimeV1Service:
             conversation_context=conversation_context,
             user_context_payload=user_context_payload,
             plan=plan,
+            decision=decision,
         )
         return plan
+
+    async def _read_control_surface(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+    ) -> ControlSurfaceReading:
+        if active_db is None:
+            return ControlSurfaceReading(
+                adjustable=ActivityProfile(),
+                hard_bounds=AuroraHardBounds(),
+                runtime_enabled=True,
+            )
+        try:
+            return await ControlSurfaceService(active_db, self.redis, enabled=True).read_control_surface(user_id)
+        except Exception as exc:
+            logger.warning("Aurora runtime v1 failed to read control surface: {}", exc)
+            hard_boundaries = await self._read_hard_boundaries(active_db=active_db, user_id=user_id)
+            return ControlSurfaceReading(
+                adjustable=ActivityProfile(),
+                hard_bounds=AuroraHardBounds.model_validate(hard_boundaries or {}),
+                runtime_enabled=True,
+            )
 
     async def _read_hard_boundaries(
         self,
@@ -163,85 +217,68 @@ class AuroraRuntimeV1Service:
         self,
         *,
         surface: str,
-        user_message: str,
         request_extra_context: dict[str, Any],
     ) -> dict[str, Any]:
-        agenda_priority = self._infer_agenda_priority(user_message)
-        profile = dict(_DEFAULT_ACTIVITY_PROFILE)
-        profile["agenda_priority"] = agenda_priority
-        if surface == AURORA_SURFACE_MODELING:
-            profile["conversation_style"] = "exploratory"
-            profile["task_density_hint"] = 0.25
-        if any(token in str(user_message or "") for token in ("赶", "来不及", "很多事", "好忙")):
-            profile["task_density_hint"] = 0.15
+        profile = dict(_SURFACE_ACTIVITY_DEFAULTS.get(surface, _SURFACE_ACTIVITY_DEFAULTS[AURORA_SURFACE_MODELING]))
         if request_extra_context.get("conversation_style") in {"warm", "structured", "exploratory"}:
             profile["conversation_style"] = request_extra_context["conversation_style"]
         return profile
 
-    def _infer_agenda_priority(self, user_message: str) -> str | None:
-        message = str(user_message or "").strip().lower()
-        if not message:
-            return None
-        if any(token in message for token in ("时间", "作息", "节奏", "schedule", "busy", "忙")):
-            return "schedule"
-        if any(token in message for token in ("考试", "目标", "想要", "plan", "goal", "方向")):
-            return "goal"
-        if any(token in message for token in ("情绪", "焦虑", "motivation", "状态", "没动力", "怕")):
-            return "motivation"
-        if any(token in message for token in ("任务", "todo", "安排", "清单", "执行")):
-            return "task_density"
-        return "baseline"
-
-    def _looks_like_modeling_complete(self, user_message: str) -> bool:
-        message = str(user_message or "").strip().lower()
-        if not message:
-            return False
-        completion_markers = ("就这些", "差不多了", "说完了", "没别的了", "that's all", "done")
-        return any(marker in message for marker in completion_markers)
-
-    def _build_message_plan(
-        self,
-        *,
-        surface: str,
-        user_message: str,
-        agenda_priority: str | None,
-        modeling_complete: bool,
-    ) -> list[str]:
-        if surface != AURORA_SURFACE_MODELING:
-            return [
-                "我先接住你刚刚补进来的信息。",
-                "这轮我会按这个方向继续往下走；如果你想改重点，也可以直接打断我。",
-            ]
-
-        if modeling_complete:
-            return [
-                "我大概已经抓到你的轮廓了，先把目前这些线索收住。",
-                "接下来我会带着这些理解继续陪你往下走；如果你想补充，随时都可以接着说。",
-            ]
-
-        follow_up_by_agenda = {
-            "schedule": "如果只先补一个关键空缺，你一天里最容易卡住的是哪个时段？",
-            "goal": "如果先只抓一件你最想改变的事，那件事会是什么？",
-            "motivation": "最近最容易把你往下拉的念头或情绪，通常会在什么情境里冒出来？",
-            "task_density": "你更舒服的推进方式，是轻一点但持续，还是短时间更密一点？",
-            "baseline": "如果让我先理解一个最关键的面向，你更想让我先弄清你的目标、卡点，还是日常节奏？",
-        }
-        focus_by_agenda = {
-            "schedule": "我先把“日常节奏怎么影响你”记成当前最重要的线索。",
-            "goal": "我先把“你真正想往哪走”记成当前最重要的线索。",
-            "motivation": "我先把“什么在拉扯你的状态”记成当前最重要的线索。",
-            "task_density": "我先把“你适合什么推进密度”记成当前最重要的线索。",
-            "baseline": "我会先用比较轻的方式把你的整体轮廓慢慢补齐。",
+    def _activity_payload(self, profile: ActivityProfile) -> dict[str, Any]:
+        default_payload = ActivityProfile().model_dump(mode="python")
+        payload = profile.model_dump(mode="python")
+        return {
+            key: value
+            for key, value in payload.items()
+            if value not in (None, "") and value != default_payload.get(key)
         }
 
-        messages = [
-            "谢谢你先把这部分告诉我。你不用一次讲得很完整，我会边听边帮你把线索捋清。",
-            focus_by_agenda.get(agenda_priority or "baseline", focus_by_agenda["baseline"]),
-            follow_up_by_agenda.get(agenda_priority or "baseline", follow_up_by_agenda["baseline"]),
+    def _merge_harness_updates(self, activity_profile: dict[str, Any], decision: AuroraDecision) -> dict[str, Any]:
+        merged = dict(activity_profile)
+        for key, value in (decision.harness_updates or {}).items():
+            if value not in (None, ""):
+                merged[key] = value
+        return merged
+
+    def _extract_informational_tensions(self, decision: AuroraDecision) -> list[dict[str, Any]]:
+        if decision.modeling_complete:
+            return []
+        updates = decision.state_updates or {}
+        tensions = updates.get("informational_tensions")
+        if isinstance(tensions, list):
+            normalized: list[dict[str, Any]] = []
+            seen: set[str] = set()
+            for item in tensions:
+                if not isinstance(item, dict):
+                    continue
+                domain = canonicalize_runtime_domain(item.get("domain"))
+                status = str(item.get("status") or "open")
+                if not domain or status in {"resolved", "dropped"} or domain in seen:
+                    continue
+                seen.add(domain)
+                normalized.append(
+                    {
+                        **dict(item),
+                        "domain": domain,
+                        "status": status,
+                    }
+                )
+            return normalized
+
+        if decision.action in {"wait", "drop_thread"}:
+            return []
+
+        domain = canonicalize_runtime_domain(updates.get("agenda_priority") or decision.harness_updates.get("agenda_priority"))
+        if not domain:
+            return []
+        return [
+            {
+                "domain": domain,
+                "status": "open",
+                "description": f"需要继续补齐 {domain} 相关线索",
+                "priority": 0.7,
+            }
         ]
-        if str(user_message or "").strip():
-            messages[0] = "谢谢你把这部分先交给我。你不用现在就组织得很完整，我会边听边帮你理出重点。"
-        return messages
 
     async def _persist_runtime_state(
         self,
@@ -254,6 +291,7 @@ class AuroraRuntimeV1Service:
         conversation_context: dict[str, Any],
         user_context_payload: dict[str, Any],
         plan: AuroraRuntimeTurnPlan,
+        decision: AuroraDecision,
     ) -> None:
         if self.redis is None:
             return
@@ -274,18 +312,20 @@ class AuroraRuntimeV1Service:
             "user_model_snapshot": profile_context,
             "informational_tensions": plan.informational_tensions,
             "current_intent": {
-                "intent_type": "confirm_understanding" if plan.surface_complete else "pursue_tension",
+                "intent_type": self._intent_type_from_decision(decision, plan),
                 "target_tension_id": plan.activity_profile.get("agenda_priority"),
+                "payload": decision.chat_directive,
             },
-            "latent_threads": [],
+            "latent_threads": decision.state_updates.get("latent_threads", []),
             "activity_profile": plan.activity_profile,
-            "self_scheduled_wakes": [],
+            "self_scheduled_wakes": [decision.wake_schedule] if decision.wake_schedule else [],
             "streaming_status": "waiting_user",
             "ingress_events": [{"type": "user_message", "content": str(user_message or "")}],
             "last_decision_at": _utcnow().isoformat(),
             "updated_at": _utcnow().isoformat(),
             "messages": plan.messages,
             "hard_boundaries": plan.hard_boundaries,
+            "decision": decision.to_payload(),
             "history_size": len(conversation_context.get("messages") or []),
         }
         try:
@@ -296,3 +336,16 @@ class AuroraRuntimeV1Service:
             )
         except Exception as exc:
             logger.warning("Aurora runtime v1 failed to persist Redis runtime state: {}", exc)
+
+    def _intent_type_from_decision(self, decision: AuroraDecision, plan: AuroraRuntimeTurnPlan) -> str:
+        if decision.action == "drop_thread":
+            return "drop_thread"
+        if decision.action == "soft_return_topic":
+            return "soft_return"
+        if decision.action == "schedule_wake":
+            return "schedule_follow_up"
+        if decision.action == "wait":
+            return "wait"
+        if plan.surface_complete:
+            return "confirm_understanding"
+        return "pursue_tension"

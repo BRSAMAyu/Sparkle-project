@@ -215,13 +215,21 @@ void main() {
       await _pumpModelingScreen(tester, repository: repository);
 
       expect(repository.sentRequests.single.message, '_onboarding_start_');
+      expect(
+        repository.sentRequests.single.extraContext?['aurora_surface'],
+        'aurora_modeling',
+      );
+      expect(
+        repository.sentRequests.single.extraContext?['mode'],
+        'onboarding_modeling',
+      );
 
       onboardingController
         ..add(
           TextEvent(
             content: '我们先定个调。',
             metadata: const {
-              'aurora_surface': 'modeling',
+              'aurora_surface': 'aurora_modeling',
               'aurora_runtime_enabled': true,
               'modeling_complete': true,
             },
@@ -232,8 +240,37 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text('进入主界面'), findsOneWidget);
+      expect(find.text('开始规划'), findsOneWidget);
       expect(find.text('我们先定个调。'), findsOneWidget);
+    });
+
+    testWidgets('ignores modeling_complete metadata from non-modeling surfaces',
+        (tester) async {
+      final onboardingController = StreamController<ChatStreamEvent>();
+      controllers.add(onboardingController);
+      repository.enqueueController(onboardingController);
+
+      await _pumpModelingScreen(tester, repository: repository);
+
+      onboardingController
+        ..add(
+          TextEvent(
+            content: '这条不该触发完成。',
+            metadata: const {
+              'aurora_surface': 'aurora_checkpoint',
+              'aurora_runtime_enabled': true,
+              'modeling_complete': true,
+            },
+          ),
+        )
+        ..add(DoneEvent(finishReason: 'STOP'));
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('这条不该触发完成。'), findsOneWidget);
+      expect(find.text('进入主界面'), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
     });
 
     testWidgets('allows sending another message during CONTINUE',
