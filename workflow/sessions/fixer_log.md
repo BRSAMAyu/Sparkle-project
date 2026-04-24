@@ -121,3 +121,25 @@
 - ui_hand_verified: na (backend rate limit config)
 - commits: [d2849524 fix(auth), 81d65988 triage verifying]
 - follow_ups: [guest_id 服务端生成 / IP 总数限制可作为 follow-up ISSUE]
+
+## 2026-04-24T23:15:00+08:00 claim=ISSUE-20260424-007
+
+- directives_read: [ARCHITECT_DIRECTIVES.md (no active override)]
+- verdict: disputed (P1 → P2 severity downgrade recommended)
+
+### 独立反证证据
+
+1. `chat_history.go:237-250`: Circuit breaker + retry buffer 已存在，队列过载时消息不丢弃
+2. `chat_history.go:123`: retryWorker 独立 goroutine 定期刷新 retry buffer
+3. `chat_history.go:308-309`: GetMessages 有 DB fallback
+4. 消息交付不受影响——仅 Redis 历史可能缺失
+5. Auditor 未发现代码中已有的"P1修复"注释（line 241）
+
+### 收尾
+
+- files_touched: 0 (disputed, no code change)
+- lines_delta: +0/-0
+- tests_run: []
+- ui_hand_verified: na
+- commits: [b9d2d792 triage dispute]
+- follow_ups: []
