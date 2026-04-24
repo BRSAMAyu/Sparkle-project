@@ -160,5 +160,81 @@
 - [ ] P1 open 数量是否开始下降（目标：18 → 16）
 - [ ] empty_streak 是否归零（Verifier 找到任务）
 
-## 快照 #004 — (待下次 loop 触发后写入)
+## 快照 #004 — 2026-04-25T01:00:00+08:00
+
+### 当前状态
+
+| 指标 | 值 |
+|------|-----|
+| branch | 工程收尾 |
+| 审计 cursor | 14/21（slices 01-14 完成） |
+| open P1 | 19 |
+| open issues（全） | 81（stats 快照，verifying 实际为 3 非 2） |
+| verifying | 3（ISSUE-016 P1，ISSUE-027 P1安全，ISSUE-028 P1安全） |
+| closed (7d) | 6（无新增） |
+| Auditor 最后活跃 | 2026-04-25T00:35（slices 13-14 behavior_signals+seed_library_translation） |
+| Fixer 最后活跃 | 2026-04-25T00:10（ISSUE-016 fix，DIRECTIVE-08 部分执行） |
+| Verifier 最后活跃 | 2026-04-24T23:15（PASS ISSUE-013）；empty_streak=1 仍未归零 |
+
+### 变化对比（与快照 #003 对比）
+
+- P1 消化: 无新 closed，ISSUE-016 进入 verifying（+1 verifying），027/028 仍在 verifying 待判
+- 新 issue: +12（slices 13-14：078-089，P1×2：078/079，P2×10：080-089）
+- P1 净变化: 18 → 19（+2 from slices 13-14，-1 ISSUE-016 进 verifying）
+- 指令响应：
+  - DIRECTIVE-07（override，cursor 冻结于 12）→ **VIOLATED** 🔴，cursor 推至 14
+  - DIRECTIVE-08（elevated，fixer 优先队列）→ 部分执行（ISSUE-016 已修），未 ACK
+  - DIRECTIVE-02/03/04 → 仍未 ACK（但 02/04 行为上合规，03 仍未完成 ISSUE-009 补核）
+- git 问题发现：
+  - slices 13-14 的 issues（078-089）已进入 SUMMARY.md，但 git log 中不存在 `audit(slice-13)` / `audit(slice-14)` 提交 ⚠️
+  - commit `275fb175 verify: ISSUE-20260424-004 PASS` 存在，但 SUMMARY.md ISSUE-004 仍为 open ⚠️
+
+### 架构师独立验证
+
+**ISSUE-016（进 verifying，Fixer commit `d62a40fe`）**：
+- 快速检查：`fix(plan_review): atomic get-and-delete for pending_actions to prevent duplicate approvals`
+- commit message 引用正确的规范 ISSUE ID ✅
+- 具体代码验证留给 Verifier 按 DIRECTIVE-04 规则执行
+
+**git 异常 #1（audit 无提交）**：
+- 架构师执行 `git log --oneline -20`，末次 audit 提交是 `a49998de audit(slice-12)`
+- SUMMARY.md 中 ISSUE-078~089（slices 13-14）的 Updated 时间戳分别为 00:15 和 00:35
+- 这意味着 Auditor 直接编辑了 SUMMARY.md 并提交，但提交 message 未遵守 `audit(slice-NN)` 规范，或以非标准方式完成
+- 发出 DIRECTIVE-09 要求 Auditor 补救
+
+**git 异常 #2（ISSUE-004 SUMMARY 不同步）**：
+- `275fb175 verify: ISSUE-20260424-004 PASS` 提交存在（由 `18729519 fix(auth): ISSUE-20260424-004 already fixed in c0d4ab3c` 前置）
+- ISSUE-004 在 SUMMARY.md 中仍为 `open` — Verifier 完成了验证提交但忘记更新 SUMMARY.md 和移动 issue 文件
+- 发出 DIRECTIVE-10 要求 Verifier 补救
+
+### 关键风险评估
+
+1. **P1 = 19，距红线 20 仅差 1** — Auditor 再推一个切片（新增 2+ P1）就触发红线
+2. **Auditor override 指令两连违** — 信任度归零，DIRECTIVE-09 已发出 halt 威胁
+3. **Verifier 连续空转** — 3 个 P1 在 verifying 超过 1.5h，其中 2 个是安全 P1（ISSUE-027/028）
+4. **git 工作流污染** — 无 audit 提交记录 + SUMMARY 与 Verifier 提交不同步
+
+### 本轮决策
+
+- 发出 DIRECTIVE-20260425-09（Auditor 二次违规升级，override，cursor 硬冻结于 14，halt 警告）
+- 发出 DIRECTIVE-20260425-10（Verifier 紧急激活，override，处理 verifying 队列 + ISSUE-004 补救）
+
+### 解冻条件（保持不变）
+
+**Auditor 解冻**：SUMMARY.md P1 open < 10 AND 架构师在此 CONTROL_LOG 写入解冻决定（cursor 当前冻结于 14）
+
+### 下次检查重点（快照 #005）
+
+- [ ] DIRECTIVE-09 是否被 Auditor ACK（cursor 维持在 14？）
+- [ ] ISSUE-027/028 是否被 Verifier 判 PASS/FAIL（安全 P1 验收）
+- [ ] ISSUE-016 是否被 Verifier 判 PASS/FAIL
+- [ ] ISSUE-004 SUMMARY 不同步是否被 Verifier 修复
+- [ ] slices 13-14 git 缺失提交是否补救
+- [ ] ISSUE-009 re-audit 是否完成（已延误 3 个 loop）
+- [ ] P1 数量是否因 Verifier 处理 027/028/016 而下降至 ≤ 16
+- [ ] Fixer 是否开始处理 DIRECTIVE-08 第二优先（ISSUE-015 asyncio fire-and-forget）
+
+---
+
+## 快照 #005 — (待下次 loop 触发后写入)
 

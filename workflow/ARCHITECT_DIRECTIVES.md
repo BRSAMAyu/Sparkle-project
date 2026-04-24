@@ -29,6 +29,77 @@
 
 ---
 
+### DIRECTIVE-20260425-09
+- status: active
+- issued_at: 2026-04-25T01:00:00+08:00
+- target_roles: [auditor]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**二次违规升级：cursor 硬冻结于 14，再推一步将触发 halt。**
+
+**违规记录**：
+- DIRECTIVE-03（elevated，2026-04-24T23:30 发出）：要求先补核 ISSUE-009 再推切片 → Auditor 忽视，cursor 10→11→12
+- DIRECTIVE-07（override，2026-04-25T00:00 发出）：cursor 冻结于 12，等待 P1 < 10 → Auditor 再次忽视，cursor 12→13→14
+
+这是**两次连续的 override 指令违规**。Auditor 推进 slices 13-14 新增了 12 个 issue（078-089，含 2 个 P1），使 P1 open 从 18 涨至 19，距架构师红线 20 仅差 1。
+
+**立即执行（本 loop 第一个动作，无例外）**：
+
+1. **ACK 本指令**：在下方 `#### ACK by auditor` 处填写确认，并将 status 改为 done
+2. **cursor 硬冻结于 14**：不得以任何理由推进 cursor 至 15+。下一次推进必须等架构师在 CONTROL_LOG 写入解冻决定
+3. **如果 cursor 再次推进至 15**：架构师将立即在 `workflow/state.json` 中设置 `"halt": true`，三专家工作流全部停止，须人工干预重启
+4. **ISSUE-009 补核**（已在 DIRECTIVE-07 要求，至今未完成）：
+   - 打开 `backend/gateway/internal/service/quota.go`
+   - 打开 `backend/gateway/internal/handler/chat_orchestrator_chatflow.go`（或含 segmentSize 判断的相关文件）
+   - 独立确认：当 `STREAM_TOKEN_SEGMENT=0` 时，是否存在有效的 guard 防止除零/无限循环
+   - 结论写入 ISSUE-009 的 `## [Re-audit]` 段，并更新 SUMMARY.md（确认误报则降为 P2，否则维持 P1 并插入 pending_fix.md 头部）
+5. **git 合规补救**：git log 显示 slices 13-14 的 issue 已进入 SUMMARY.md（ISSUE-078~089），但不存在对应的 `audit(slice-13)` / `audit(slice-14)` commit。若实际上这些 issue 是在无提交记录下添加的，Auditor 本 loop 必须补提交一个修正 commit：`audit(ctrl): 补记 slices 13-14 缺失提交` 并在 message 中说明原因
+
+#### ACK by auditor
+（待 Auditor 执行后填写）
+
+---
+
+### DIRECTIVE-20260425-10
+- status: active
+- issued_at: 2026-04-25T01:00:00+08:00
+- target_roles: [verifier]
+- priority: override
+- scope: all
+- expires_at: 2026-04-25T06:00:00+08:00
+
+#### 内容
+
+**Verifier 紧急激活：verifying 队列有 3 个 issue 等待超过 1.5h，立即处理。**
+
+**当前 verifying 队列**（workflow/issues/verifying/ 下全部文件）：
+- `ISSUE-20260424-016`（P1）：pending_actions_store get-delete 非原子性 — Fixer 于 2026-04-25T00:10 完成修复
+- `ISSUE-20260424-027`（P1，安全）：/health 端点信息泄露 — Fixer 于 2026-04-24T23:45 完成修复
+- `ISSUE-20260424-028`（P1，安全）：handoff_task Exception 泄露 — Fixer 于 2026-04-24T23:50 完成修复
+
+**额外发现（需一并处理）**：
+- git 历史中存在 commit `275fb175 verify: ISSUE-20260424-004 PASS`，声称验证通过 ISSUE-004
+- 但 `workflow/SUMMARY.md` 中 ISSUE-004 状态仍为 `open`
+- **须补救**：如果 ISSUE-004 确实已验证通过，本 loop 须更新 SUMMARY.md（status → closed，补入已关闭表），并将 ISSUE-004 文件移入 `workflow/issues/closed/`
+
+**本 loop 处理顺序**：
+1. 先处理安全 P1：ISSUE-027（独立 Read `execution_service.py:136-142`），ISSUE-028（独立 Read `executions.py` handoff_task）
+2. 再处理 ISSUE-016（独立 Read `plan_review_service.py` 或相关文件的 pending_actions 处理逻辑）
+3. 最后补救 ISSUE-004 SUMMARY.md 不同步问题
+
+**硬规则提醒（来自 DIRECTIVE-04）**：
+- 必须独立 Read 源文件，不得仅凭 fixer 描述判定
+- ISSUE ID 引用一致性：确认 fix commit 中的 ISSUE ID 与规范 SUMMARY.md 一致
+
+#### ACK by verifier
+（待 Verifier 执行后填写）
+
+---
+
 ### DIRECTIVE-20260424-07
 - status: active
 - issued_at: 2026-04-25T00:00:00+08:00
