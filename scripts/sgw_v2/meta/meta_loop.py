@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import random
 import subprocess
 import sys
@@ -45,6 +46,7 @@ for p in [str(SCRIPTS_DIR), str(SGW_V2_DIR), str(SGW_DIR)]:
 
 from sgw_v2.storage.db import RunDB
 from sgw_v2.meta.meta_orchestrator import MetaOrchestrator
+from sgw_v2.rl.environment import PolicyZoo
 
 
 RL_MODES = ("off", "shadow", "rl")
@@ -99,9 +101,23 @@ def _run_sgw_subprocess(
     persona_library: Path,
     adversarial_playbook: Path,
     output_dir: Path,
+    shared_db_path: Path,
     config: dict[str, Any],
 ) -> int:
-    """Run the SGW orchestrator as a subprocess. Returns exit code."""
+    """Run the SGW orchestrator as a subprocess. Returns exit code.
+
+    Critical design notes
+    ---------------------
+    * ``--db-path`` is passed explicitly so the orchestrator writes its run
+      records into the *same* SQLite file that meta_loop reads.  Without this,
+      ``db.latest_run_id()`` always returns None and the RL loop never adapts.
+    * Dynamic RL parameters (soft_violation_threshold, audit_sample_rate, etc.)
+      are injected as environment variables because the orchestrator reads them
+      from the environment, not from CLI flags.  Passing them here ensures that
+      every policy-adjusted parameter actually takes effect in the next run.
+    * The subprocess timeout is derived from wall_clock_hours so long runs are
+      not killed prematurely (adds a 10-minute safety buffer).
+    """
     report_path = output_dir / "report.md"
     checkpoint_path = output_dir / "checkpoint.json"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -113,6 +129,7 @@ def _run_sgw_subprocess(
         "--adversarial-playbook", str(adversarial_playbook),
         "--report-path", str(report_path),
         "--checkpoint-path", str(checkpoint_path),
+        "--db-path", str(shared_db_path),         # FIX: share a single DB
         "--wall-clock-hours", str(config.get("wall_clock_hours", 0.5)),
         "--min-sessions", str(config.get("min_sessions", 20)),
         "--min-turns", str(config.get("min_turns", 200)),
@@ -120,10 +137,40 @@ def _run_sgw_subprocess(
         "--adversarial-sessions", str(config.get("adversarial_sessions", 4)),
     ]
 
-    print(f"[meta-loop] Launching SGW subprocess...")
-    print(f"[meta-loop]   cmd: {' '.join(cmd[:6])}...")
+    # FIX: inject RL-adjustable parameters as env vars so they actually reach
+    # the orchestrator's OrchestratorConfig (which reads from os.getenv).
+    env_overrides: dict[str, str] = {}
+    _ENV_MAP = {
+        "soft_violation_threshold": "SGW_SOFT_VIOLATION_THRESHOLD",
+        "audit_sample_rate":        "SGW_AUDIT_SAMPLE_RATE",
+        "authenticity_sample_rate": "SGW_AUTHENTICITY_SAMPLE_RATE",
+        "expression_validation_retries": "SGW_EXPRESSION_VALIDATION_RETRIES",
+        "max_history_pairs":        "SGW_MAX_HISTORY_PAIRS",
+        "session_turn_slice":       "SGW_SESSION_TURN_SLICE",
+        "claude_timeout_seconds":   "SGW_CLAUDE_TIMEOUT_SECONDS",
+        "claude_failure_backoff_seconds": "SGW_CLAUDE_FAILURE_BACKOFF_SECONDS",
+    }
+    for config_key, env_key in _ENV_MAP.items():
+        if config_key in config:
+            env_overrides[env_key] = str(config[config_key])
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+    subprocess_env = {**os.environ, **env_overrides}
+
+    wall_hours = config.get("wall_clock_hours", 0.5)
+    timeout_seconds = int(wall_hours * 3600) + 600  # +10 min safety buffer
+
+    print(f"[meta-loop] Launching SGW subprocess (timeout={timeout_seconds}s)...")
+    print(f"[meta-loop]   cmd: {' '.join(cmd[:6])}...")
+    if env_overrides:
+        print(f"[meta-loop]   env overrides: {json.dumps(env_overrides)}")
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=timeout_seconds,
+        env=subprocess_env,
+    )
 
     if result.returncode != 0:
         print(f"[meta-loop] SGW exited with code {result.returncode}")
@@ -204,6 +251,9 @@ def run_meta_loop(
     db = RunDB(db_path)
     rng = random.Random(seed)
     output_dir = db_path.parent / "meta_loop_output"
+    policy_dir = db_path.parent / "policy"
+    policy_dir.mkdir(parents=True, exist_ok=True)
+    policy_zoo = PolicyZoo(policy_dir)
 
     current_config = _load_config(db)
     recipe_overrides = RL_RECIPES[rl_recipe]
@@ -220,11 +270,14 @@ def run_meta_loop(
         print(f"[meta-loop] Iteration {iteration}/{max_iterations}")
         print(f"{'='*60}")
 
-        # Step 1: Run SGW with current config
+        # Step 1: Run SGW with current config.
+        # db_path is passed explicitly so the orchestrator writes into the same
+        # SQLite file that this loop reads — without it latest_run_id() is always None.
         exit_code = _run_sgw_subprocess(
             persona_library=persona_library,
             adversarial_playbook=adversarial_playbook,
             output_dir=output_dir / f"iter_{iteration}",
+            shared_db_path=db_path,
             config=current_config,
         )
 
@@ -260,6 +313,7 @@ def run_meta_loop(
 
         # Step 4: Evaluate if we have a previous run to compare against
         evaluation_outcome = "pending"
+        snapshot_id: str | None = None
         if result.plan_id and result.changes_applied > 0:
             evaluation = meta.evaluate_iteration(result.iteration_id, latest_run_id)
             if evaluation:
@@ -277,6 +331,22 @@ def run_meta_loop(
                     elif evaluation.outcome == "improved_sig":
                         consecutive_neutral = 0
                         print("[meta-loop] Significant improvement — adopted new config")
+                        # Save a config snapshot on every significant improvement
+                        # so the state can be restored via 'cli rollback' if needed.
+                        try:
+                            snapshot_id = policy_zoo.save_config_snapshot(
+                                current_config=current_config,
+                                metadata={
+                                    "iteration": iteration,
+                                    "run_id": latest_run_id,
+                                    "outcome": evaluation.outcome,
+                                    "rl_mode": rl_mode,
+                                    "rl_recipe": rl_recipe,
+                                },
+                            )
+                            print(f"[meta-loop] Config snapshot saved: {snapshot_id}")
+                        except Exception as exc:
+                            print(f"[meta-loop] Warning: config snapshot failed: {exc}")
                     elif evaluation.outcome == "improved_nonsig":
                         print("[meta-loop] Non-significant improvement — adopting cautiously")
                         consecutive_neutral += 1
@@ -292,6 +362,7 @@ def run_meta_loop(
                 f"[dashboard] iter={iteration} mode={rl_mode} "
                 f"outcome={result.outcome} eval={evaluation_outcome} "
                 f"hypotheses={result.hypotheses_count} changes={result.changes_applied}"
+                + (f" snapshot={snapshot_id}" if snapshot_id else "")
             )
 
         # Step 5: Random exploration injection (rl mode only)

@@ -448,6 +448,80 @@ def test_policy_zoo_snapshot_roundtrip():
         assert cfg2["turn_target"] == 12
 
 
+# ── Phase 9: RL integration wiring ──────────────────────────────
+#
+# Tests that verify the three critical fixes:
+# 1. save_config_snapshot stores config + metadata and is retrievable.
+# 2. meta_loop._run_sgw_subprocess env-override mapping is complete for
+#    every RL-adjustable parameter.
+# 3. cli.py rollback subcommand is registered and callable.
+
+
+def test_policy_zoo_config_snapshot_roundtrip():
+    """PolicyZoo.save_config_snapshot persists config and returns a readable ID."""
+    with tempfile.TemporaryDirectory() as td:
+        zoo = PolicyZoo(Path(td))
+        cfg = {"soft_violation_threshold": 0.87, "turn_target": 10}
+        sid = zoo.save_config_snapshot(
+            current_config=cfg,
+            metadata={"iteration": 3, "rl_mode": "rl"},
+        )
+        assert isinstance(sid, str) and sid.startswith("cfg_")
+        saved = json.loads((Path(td) / f"{sid}.config.json").read_text())
+        assert saved["config"]["soft_violation_threshold"] == 0.87
+        assert saved["metadata"]["iteration"] == 3
+
+
+def test_subprocess_env_map_covers_all_adjustable_params():
+    """Every RL-adjustable parameter in ACTION_SPECS must map to an SGW env var.
+
+    The _ENV_MAP in meta_loop._run_sgw_subprocess must contain an entry for
+    each parameter that the policy can adjust so RL changes are not silently
+    dropped.
+    """
+    import importlib
+    import inspect
+    import re
+
+    meta_loop_src = (REPO_ROOT / "scripts" / "sgw_v2" / "meta" / "meta_loop.py").read_text()
+    # Extract _ENV_MAP from source via simple regex (avoids importing side-effects)
+    block = re.search(r"_ENV_MAP\s*=\s*\{(.+?)\}", meta_loop_src, re.DOTALL)
+    assert block, "_ENV_MAP not found in meta_loop.py"
+    mapped_keys: set[str] = set(re.findall(r'"([a-z_]+)":\s*"SGW_', block.group(1)))
+
+    # These are the params the policy can adjust (from MDP spec §1.2)
+    expected_adjustable = {
+        "soft_violation_threshold",
+        "audit_sample_rate",
+        "authenticity_sample_rate",
+        "expression_validation_retries",
+        "max_history_pairs",
+        "session_turn_slice",
+        "claude_timeout_seconds",
+        "claude_failure_backoff_seconds",
+    }
+    missing = expected_adjustable - mapped_keys
+    assert not missing, (
+        f"_ENV_MAP is missing entries for adjustable params: {sorted(missing)}.  "
+        "RL changes to these params will have no effect on the next SGW run."
+    )
+
+
+def test_cli_rollback_subcommand_registered():
+    """cli.py rollback subcommand exists and produces help text."""
+    import subprocess
+    result = subprocess.run(
+        [sys.executable, "-m", "sgw_v2.meta.cli", "--db-path", "/tmp/nonexistent.db",
+         "rollback", "--help"],
+        capture_output=True, text=True,
+        cwd=str(REPO_ROOT / "scripts"),
+    )
+    assert result.returncode == 0, f"rollback --help failed: {result.stderr}"
+    assert "--iteration-id" in result.stdout, (
+        "rollback subcommand is missing --iteration-id argument"
+    )
+
+
 # ── Entry point ────────────────────────────────────────────────
 
 

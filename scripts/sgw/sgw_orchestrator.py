@@ -124,6 +124,9 @@ class OrchestratorConfig:
     adversarial_playbook: Path
     report_path: Path
     checkpoint_path: Path
+    # When set by meta_loop, all iterations share one DB file so the loop
+    # can read back results.  Falls back to the legacy per-checkpoint location.
+    db_path: Path | None = None
     wall_clock_hours: float = float(os.getenv("SGW_WALL_CLOCK_HOURS", "18"))
     min_sessions: int = 360
     min_turns: int = 4000
@@ -694,7 +697,9 @@ class SGWOrchestrator:
         self._db_sessions_in_use = 0
 
         # SGW v2: RunDB (SQLite storage)
-        db_path = config.checkpoint_path.parent / "sgw_runs.db"
+        # Prefer the explicit db_path (set by meta_loop for shared access),
+        # fall back to the legacy per-checkpoint-dir location.
+        db_path = config.db_path or (config.checkpoint_path.parent / "sgw_runs.db")
         self.run_db = RunDB(db_path)
         self.run_id: str | None = None  # Set during run()
 
@@ -1951,6 +1956,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--turn-target", type=int, default=12)
     parser.add_argument("--adversarial-sessions", type=int, default=24)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--db-path",
+        type=Path,
+        default=None,
+        help=(
+            "Explicit path for the shared RunDB SQLite file.  "
+            "When set (e.g. by meta_loop), all SGW iterations write to one file "
+            "so the meta-loop can read back results.  "
+            "Defaults to <checkpoint-dir>/sgw_runs.db."
+        ),
+    )
     return parser
 
 
@@ -1967,6 +1983,7 @@ def parse_args(argv: list[str] | None = None) -> OrchestratorConfig:
         turn_target=args.turn_target,
         adversarial_sessions=args.adversarial_sessions,
         resume=args.resume,
+        db_path=args.db_path,
     )
 
 

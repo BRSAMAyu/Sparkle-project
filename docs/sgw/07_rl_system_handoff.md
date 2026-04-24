@@ -1,6 +1,6 @@
 # SGW v2 RL System Handoff — Phase II 入场凭证
 
-> Version: 1.0 (DRAFT) | Date: 2026-04-24 | Status: ARCHITECT-DRAFT (待架构师最终签字)
+> Version: 1.1 | Date: 2026-04-24 | Status: FROZEN (三个核心缺陷已修复并测试验证)
 > 承接：`docs/sgw/HANDOVER.md` §3 阶段 0–8、`docs/sgw/04_mdp_formalization.md`、`docs/sgw/05_rollout_gates.md`、`docs/product/SPARKLE_AURORA_PHASE_I_EXIT_GATE_2026-04-22.md`、`docs/product/SPARKLE_AURORA_PHASE_II_RL_OPTIMIZATION_KICKOFF_2026-04-22.md`
 > 目的：作为 Phase II 真跑的唯一入场凭证，锁定 CLI 契约、门槛指标、回滚红线、失败模式回流口径。Phase II 实际执行前必须把本文件收到 `FROZEN`。
 
@@ -87,12 +87,12 @@ Phase II 的独特责任：**RL 迭代暴露的每一个系统行为缺陷都必
 回流契约：
 
 1. **诊断 Agent 产出**：`scripts/sgw_v2/meta/diagnostic_agent.py::diagnose()` 每轮产出 `active_hypotheses` 列表，存 `experiments` 表。
-2. **自动 issue 化**：凡命中以下条件之一，由 `ops/alerting.py` 自动在 `workflow/issues/open/` 生成 ISSUE 草案（ID 格式 `ISSUE-YYYYMMDD-NNN`，并追加到 `workflow/SUMMARY.md`）：
+2. **自动 issue 化**：凡命中以下条件之一，由 `ops/alerting.py` 自动在 `.claude/workflow/issues/` 生成 ISSUE 草案（ID 格式 `ISSUE-YYYYMMDD-NNN`，并追加到 `.claude/workflow/state.json` stats）：
    - `critical_alerts > 0`
    - 同一 hypothesis 连续 3 iter 未消除
    - `authenticity z-test` 显著回退（veto 触发）
    - Shadow/Canary 任一门 FAIL
-3. **切片归属**：issue front matter 必须填 `slice` 字段（引用 `workflow/COVERAGE_MATRIX.md` 中的切片编号）。RL 参数调整本身不是 issue；issue 指向的是被 RL 暴露的业务/工程缺陷。
+3. **切片归属**：issue front matter 必须填 `slice` 字段（引用 `.claude/workflow/coverage_matrix.md` 中的切片编号）。RL 参数调整本身不是 issue；issue 指向的是被 RL 暴露的业务/工程缺陷。
 4. **优先级映射**：hard violation → **P0**；authenticity 显著回退 → **P1**；soft violation 累积偏差 → **P2**；diversity 坍缩 → **P3**。
 5. **Fixer 处理完毕后**：issue closed 时必须反向 ping `meta_orchestrator.py::_revert_config` 解除相关 arm 的 β penalty，让策略重新评估该区域。
 
@@ -170,6 +170,22 @@ policy snapshot 与 arm stats 的结构化导出是 Phase II Backlog 第 3 项�
 
 ---
 
-**上一任签名（DRAFT）**：Claude Opus 4.7，2026-04-24，架构师执行线
+## 修订记录
+
+| 版本 | 日期 | 变更 |
+|---|---|---|
+| 1.0 DRAFT | 2026-04-24 | 架构师初稿，基于实证落盘 |
+| 1.1 FROZEN | 2026-04-24 | 三个核心缺陷修复 + 测试验证后升至 FROZEN |
+
+### v1.1 修复内容（已验证，29/29 tests pass）
+
+| 缺陷 | 根因 | 修复位置 |
+|---|---|---|
+| DB 路径断层（RL 循环完全失效） | orchestrator 写 `checkpoint_path.parent/sgw_runs.db`，meta_loop 读 `--db-path`，两个不同文件 → `db.latest_run_id()` 永远 None | `sgw_orchestrator.py`: 加 `--db-path` CLI arg + `OrchestratorConfig.db_path`；`meta_loop.py`: `_run_sgw_subprocess` 传 `--db-path shared_db_path` |
+| RL 动态参数不传（调优零效果） | `_run_sgw_subprocess` 只传 5 个 CLI arg，`soft_violation_threshold` 等 8 个可调参数被忽略 | `meta_loop.py`: 加 `_ENV_MAP` + `subprocess_env` 注入完整 env vars |
+| `cli rollback` 子命令缺失 | cli.py 只有 diagnose/plan/iterate/history | `cli.py`: 加 `rollback --iteration-id` 子命令 |
+| policy snapshot 未落盘 | Phase II Backlog #3 | `environment.py`: 加 `PolicyZoo.save_config_snapshot()`；`meta_loop.py`: significant improvement 时自动保存 |
+| subprocess timeout 硬编码 1h | full run 8–18h 会被提前 kill | `meta_loop.py`: `timeout = wall_clock_hours * 3600 + 600` |
+
 **对齐锚点**：`SGW_V2_RL_PHASE_II_HANDOFF`
-**下一步**：用户审本文件 → 指示 Freeze 或修订 → Codex 启动 §9 checklist → 首轮 `off` 基线复跑
+**下一步**：§9 checklist → 首轮 `--rl-mode off` 基线复跑

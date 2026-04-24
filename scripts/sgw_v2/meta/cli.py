@@ -5,6 +5,7 @@ Usage:
     python -m sgw_v2.meta.cli --db-path <path> plan [--run-id <id>]
     python -m sgw_v2.meta.cli --db-path <path> iterate [--run-id <id>]
     python -m sgw_v2.meta.cli --db-path <path> history
+    python -m sgw_v2.meta.cli --db-path <path> rollback --iteration-id <id>
 """
 from __future__ import annotations
 
@@ -131,6 +132,40 @@ def cmd_history(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_rollback(args: argparse.Namespace) -> int:
+    """Revert the config used in a specific iteration back to its pre-change state.
+
+    This is the emergency rollback path referenced in Stage 2–4 rollout gates.
+    It calls MetaOrchestrator._revert_config which reads the ``pre_change_config``
+    stored in the ``iterations`` table (written by F-2 fix) and prints the
+    reverted config so the operator can verify and re-apply manually.
+    """
+    db = RunDB(Path(args.db_path))
+
+    # Load any config to satisfy MetaOrchestrator constructor (won't be used for revert)
+    run_data = db.get_run(db.latest_run_id() or "")
+    config = json.loads(run_data.get("scenario_config", "{}")) if run_data else {}
+
+    meta = MetaOrchestrator(db, config)
+    config_before = dict(meta.current_config)
+
+    meta._revert_config(args.iteration_id)
+
+    if meta.current_config == config_before:
+        # _revert_config prints a WARNING when no pre_change_config is found
+        print(f"ERROR: iteration {args.iteration_id!r} not found or has no pre-change config.")
+        print("Hint: only iterations that applied parameter changes have a pre_change_config.")
+        return 1
+
+    print(f"Rolled back iteration {args.iteration_id}")
+    print(f"Reverted config:\n{json.dumps(meta.current_config, indent=2)}")
+    print()
+    print("NOTE: this command prints the reverted config; it does NOT automatically")
+    print("restart the next SGW run.  Pass this config to meta_loop or update the")
+    print("environment variables manually before the next run.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="SGW v2 meta-orchestrator")
     parser.add_argument("--db-path", required=True, help="Path to sgw_runs.db")
@@ -149,6 +184,16 @@ def main() -> int:
 
     subparsers.add_parser("history")
 
+    rollback_parser = subparsers.add_parser(
+        "rollback",
+        help="Revert the config of a specific iteration to its pre-change state (emergency rollback).",
+    )
+    rollback_parser.add_argument(
+        "--iteration-id",
+        required=True,
+        help="UUID of the iteration record to roll back (from 'history' output).",
+    )
+
     args = parser.parse_args()
 
     commands = {
@@ -156,6 +201,7 @@ def main() -> int:
         "plan": cmd_plan,
         "iterate": cmd_iterate,
         "history": cmd_history,
+        "rollback": cmd_rollback,
     }
     return commands[args.command](args)
 
