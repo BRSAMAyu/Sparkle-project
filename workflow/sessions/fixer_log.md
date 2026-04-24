@@ -215,3 +215,33 @@
 - ui_hand_verified: na (backend concurrency fix)
 - commits: [d62a40fe]
 - follow_ups: []
+
+## 2026-04-25T00:40:00+08:00 claim=ISSUE-20260424-015
+
+- directives_read: [no new active override for fixer]
+- verdict: disputed (P1 → P2 recommended, Auditor's core claim inaccurate)
+
+### 独立反证证据
+
+1. `_generate_tasks_after_approval` (lines 1741-1801): already wrapped in `try/except Exception as e` with `logger.error(f"Error in _generate_tasks_after_approval: {e}", exc_info=True)` — Auditor said "无 try/except 包裹"
+2. `_capture_plan_goal_memory` (lines 1670-1709): two layers of try/except — `ValueError` on UUID parse, `Exception` on outer with `logger.warning(...)` — Auditor said "异常被 asyncio 静默吞噬"
+3. `_execute_replan_action` (lines 1974-2090): try/except with `logger.error(..., exc_info=True)` AND `sse_manager.send_to_user(user_id, "plan_replan_failed", ...)` for user notification — Auditor said "无任何日志或通知"
+
+### 三问
+- 预期成立: partially — user-side notification gap exists for task generation, but errors ARE logged server-side
+- 配置覆盖: N/A
+- 修复回归: N/A (disputed, no code change)
+
+### 真实差距（P2）
+1. `_generate_tasks_after_approval` lacks SSE user notification on failure (server logs exist)
+2. `_capture_plan_goal_memory` uses warning instead of error level
+3. Early "success" return is acceptable async pattern — task is initiated, not completed
+
+### 收尾
+
+- files_touched: 0 (disputed, no code change)
+- lines_delta: +0/-0
+- tests_run: []
+- ui_hand_verified: na
+- commits: []
+- follow_ups: []

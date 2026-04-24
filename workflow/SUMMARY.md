@@ -20,7 +20,7 @@
 | ISSUE-20260424-012 | 02 | P2 | open | Flutter WS fallback 将 JWT 暴露在 URL query parameter 中 | - | 19:30 |
 | ISSUE-20260424-013 | 02 | P1 | closed | Protobuf 路径绕过 maxMessageLength 4000 字符应用层限制 | fixer@8fd4b32d | 23:15 PASS |
 | ISSUE-20260424-014 | 02 | P1 | open | GetWriter/Get 非确定性返回，PushIntervention 可能发到错误设备 | - | 19:35 |
-| ISSUE-20260424-015 | 03 | P1 | open | asyncio.create_task fire-and-forget，计划批准后任务生成静默失败 | - | 20:15 |
+| ISSUE-20260424-015 | 03 | P1 | disputed | asyncio.create_task fire-and-forget，计划批准后任务生成静默失败 | fixer@2026-04-25T00:40 | 00:45 disputed (try/except exists) |
 | ISSUE-20260424-016 | 03 | P1 | verifying | pending_actions_store get-delete 非原子，并发 SubmitPlanReview 可重复审批 | fixer@2026-04-25T00:10 | 00:15 |
 | ISSUE-20260424-017 | 03 | P2 | open | gRPC handler plan_id 来源不一致，使用 request.plan_id 而非已验证存储值 | - | 20:15 |
 | ISSUE-20260424-018 | 03 | P2 | open | track_rejection_count 在 redis=None 时静默降级，连续拒绝信息收集永不触发 | - | 20:15 |
@@ -89,6 +89,12 @@
 | ISSUE-20260424-081 | 13 | P2 | open | PatternType 枚举不对称 Python 3值 vs Flutter 4值，未知类型静默映射 | - | 00:15 |
 | ISSUE-20260424-082 | 13 | P2 | open | get_today_capsules N+1 查询，逐胶囊检查收藏状态 | - | 00:15 |
 | ISSUE-20260424-083 | 13 | P2 | open | 胶囊反馈数据收集但未闭环，反馈不回流AI无法个性化 | - | 00:15 |
+| ISSUE-20260424-084 | 14 | P2 | open | list_libraries search LIKE 通配符未转义 | - | 00:35 |
+| ISSUE-20260424-085 | 14 | P2 | open | findMySubscriptionForLibrary 客户端分页扫描 O(N/P) API调用 | - | 00:35 |
+| ISSUE-20260424-086 | 14 | P2 | open | Translation API 捕获异常不记录日志，失败无法排查 | - | 00:35 |
+| ISSUE-20260424-087 | 14 | P2 | open | rate_library 并发提交 IntegrityError 未处理返回误导性400 | - | 00:35 |
+| ISSUE-20260424-088 | 14 | P2 | open | _blend_quality_score 每次 GET 重新计算无缓存 | - | 00:35 |
+| ISSUE-20260424-089 | 14 | P2 | open | _SEED_VECTOR_RUNTIME_ENABLED 进程级全局开关，一用户失败禁用全进程 | - | 00:35 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -105,11 +111,11 @@
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 75
+- open: 81
 - verifying: 2
 - closed (7d): 6
 - escalated: 0
-- last_update: 2026-04-25T00:15:00+08:00
+- last_update: 2026-04-25T00:35:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
@@ -123,3 +129,4 @@
 - slice_10_audit: 3 P1 + 3 P2, anchors personally read (achievement_engine.py 2292L, achievement_event_consumer.py 318L, achievement_repository.dart 920L, achievement_provider.dart 724L, photon_provider.dart 172L, photon_repository.dart 139L, visual_element_repository.dart 553L, close_to_unlock_provider.dart 125L)
 - slice_11_audit: 2 P1 + 6 P2 (6 by concurrent session validated + 2 new), anchors personally read (calendar.py 413L, notification_push_service.py 323L, notification_center_service.py 1160L, notification_analytics_service.py 500L, calendar_repository.dart 454L)
 - slice_13_audit: 2 P1 + 4 P2, anchors personally read (cognitive_service.py 681L, behavior_signal_collector.py 535L, cognitive.py API 126L, capsules.py 553L, cognitive models 106L, capsule_repository.dart 240L, cognitive_repository.dart 103L, capsule_provider.dart 188L, cognitive_provider.dart 95L, behavior_pattern_model.dart 72L, capsule_archive_provider.dart 106L)
+- slice_14_audit: 0 P1 + 6 P2, anchors personally read (seed_libraries.py 789L, seed_library_service.py 700+L, seed_content.py 363L, seed_bridge.py 180L, translation.py 231L, translation_service.dart 157L, seed_library_repository.dart 598L, tool_registry.dart 380L, proxy_routes.go seed+translation routes)
