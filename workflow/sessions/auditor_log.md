@@ -188,3 +188,37 @@
 - deviations: none
 - next_cursor: 7 (slice 07-community_accountability)
 - commit: pending
+
+## 2026-04-24T22:20+08:00 round=0 slice=07-community_accountability
+- directives_read: none active
+- produced: 6 issues (P0=0 P1=2 P2=4 P3=0)
+  - 039 P1: send_message 未调用 check_keyword_filter 和 slow_mode_seconds 检查
+  - 040 P1: community_signal_bridge handle_resource_shared 双重 commit
+  - 041 P2: search_messages/group/user LIKE 通配符未转义
+  - 042 P2: _record_community_signal asyncio.create_task fire-and-forget
+  - 043 P2: like_checkin/encourage_checkin 直接 db.commit() 绕过 session 管理约定
+  - 044 P2: broadcast_achievement_unlock 使用 __import__("json") 代替正常 import
+- deferred: 0
+- anchors_personally_read:
+  - community_service.py:1-2482 (全文件)
+  - community_advanced_service.py:1-975 (全文件)
+  - community_signal_bridge.py:1-231 (全文件)
+  - community_signal_collector.py:1-172 (全文件)
+  - accountability.py API:1-1528 (全文件)
+  - accountability.py model:1-156 (全文件)
+  - community.py API:1-200 + 1767-1810 (router + send_message handler)
+  - proto/community_service.proto:1-324 (全文件)
+  - group_chat.go:1-116 (全文件)
+- grep_queries:
+  - community|accountability in api/v1 → community.py, accountability.py, signals.py, +15 files
+  - accountability in backend/*.py → 62 files (full list captured)
+  - accountability in mobile/*.dart → 29 files (full list captured)
+  - community|group|friend in gateway/internal/*.go → 30 files (Go side)
+  - __import__ in backend/app/services → community_signal_bridge.py:225
+  - search_messages|ilike in community_service.py → 1384, 2138 + 466-470, 2422-2424
+  - check_keyword_filter|slow_mode in backend → community_advanced_service.py only, never called from send_message
+  - asyncio.create_task in community_service.py → line 57
+  - db.commit in accountability.py → lines 1386, 1428 (like/encourage)
+- deviations: none
+- next_cursor: 8 (slice 08-error_book)
+- commit: pending

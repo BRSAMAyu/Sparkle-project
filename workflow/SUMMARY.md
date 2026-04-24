@@ -7,18 +7,18 @@
 | ID | Slice | P | Status | Title | Claimed | Updated |
 |----|-------|---|--------|-------|---------|---------|
 | ISSUE-20260424-001 | 01 | P1 | closed | Go validateJWT 不检查 session_revoked:{sid}，设备下线不立即生效 | fixer@2026-04-24T20:45 | 21:00 PASS |
-| ISSUE-20260424-002 | 01 | P1 | verifying | AppleLogin UpdateUserLastLogin 和 UpsertUserSession 错误静默丢弃 | fixer@2026-04-24T21:45 | 21:45 |
+| ISSUE-20260424-002 | 01 | P1 | closed | AppleLogin UpdateUserLastLogin 和 UpsertUserSession 错误静默丢弃 | fixer@2026-04-24T21:45 | 22:15 PASS |
 | ISSUE-20260424-003 | 01 | P1 | open | Guest login 限流 100/15min 过于宽松，可被滥用刷号 | - | 19:05 |
 | ISSUE-20260424-004 | 01 | P2 | open | Guest login SELECT-INSERT 竞态条件，并发同 guest_id 返回 500 | - | 19:05 |
 | ISSUE-20260424-005 | 01 | P2 | open | AppleLogin 用户创建/链接竞态，无 IntegrityError 处理 | - | 19:05 |
 | ISSUE-20260424-006 | 01 | P2 | open | Go/Python JWT issuer/audience claims 处理需验证一致性 | - | 19:05 |
 | ISSUE-20260424-007 | 02 | P1 | open | saveMessage Redis 写入失败静默丢弃，用户消息不可恢复丢失 | - | 19:30 |
-| ISSUE-20260424-008 | 02 | P2 | open | 两套独立 WS 连接注册系统互不感知，用户可绕过全局限制 | - | 19:30 |
+| ISSUE-20260424-008 | 02 | P2 | verifying | 两套独立 WS 连接注册系统互不感知，用户可绕过全局限制 | fixer@89c88217 | 22:20 部分修复 |
 | ISSUE-20260424-009 | 02 | P1 | open | STREAM_TOKEN_SEGMENT=0 导致 quota 记录无限循环 | - | 19:30 |
 | ISSUE-20260424-010 | 02 | P2 | open | 客户端 active_tools 未做白名单校验可注入任意工具名 | - | 19:30 |
 | ISSUE-20260424-011 | 02 | P2 | open | WS auth 检查在 Upgrade 之后，防御层位置不当 | - | 19:30 |
 | ISSUE-20260424-012 | 02 | P2 | open | Flutter WS fallback 将 JWT 暴露在 URL query parameter 中 | - | 19:30 |
-| ISSUE-20260424-013 | 02 | P1 | open | Protobuf 路径绕过 maxMessageLength 4000 字符应用层限制 | - | 19:35 |
+| ISSUE-20260424-013 | 02 | P1 | verifying | Protobuf 路径绕过 maxMessageLength 4000 字符应用层限制 | fixer@8fd4b32d | 22:20 已修复待验收 |
 | ISSUE-20260424-014 | 02 | P1 | open | GetWriter/Get 非确定性返回，PushIntervention 可能发到错误设备 | - | 19:35 |
 | ISSUE-20260424-015 | 03 | P1 | open | asyncio.create_task fire-and-forget，计划批准后任务生成静默失败 | - | 20:15 |
 | ISSUE-20260424-016 | 03 | P1 | open | pending_actions_store get-delete 非原子，并发 SubmitPlanReview 可重复审批 | - | 20:15 |
@@ -44,6 +44,12 @@
 | ISSUE-20260424-036 | 06 | P2 | open | GalaxyRepository.getGalaxyEventsStream() 永久空流，SSE 端点未实现 | - | 21:40 |
 | ISSUE-20260424-037 | 06 | P2 | open | auto_classify_task 用零 UUID 作 user_id 占位符，语义不正确 | - | 21:40 |
 | ISSUE-20260424-038 | 06 | P2 | open | TaskEventListener consumer_name 含时间戳，重启后 pending 消息成孤儿 | - | 21:40 |
+| ISSUE-20260424-039 | 07 | P1 | open | send_message 未调用 check_keyword_filter 和 slow_mode_seconds 检查 | - | 22:20 |
+| ISSUE-20260424-040 | 07 | P1 | open | community_signal_bridge handle_resource_shared 双重 commit | - | 22:20 |
+| ISSUE-20260424-041 | 07 | P2 | open | search_messages/group/user LIKE 通配符未转义 | - | 22:20 |
+| ISSUE-20260424-042 | 07 | P2 | open | _record_community_signal asyncio.create_task fire-and-forget | - | 22:20 |
+| ISSUE-20260424-043 | 07 | P2 | open | like_checkin/encourage_checkin 直接 db.commit() 绕过 session 管理约定 | - | 22:20 |
+| ISSUE-20260424-044 | 07 | P2 | open | broadcast_achievement_unlock 使用 __import__("json") 代替正常 import | - | 22:20 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -51,19 +57,21 @@
 |----|-------|---|---------|--------|
 <!-- Verifier 判 PASS 后追加 -->
 | ISSUE-20260424-001 | 01 | P1 | PASS | 2026-04-24T21:00 |
+| ISSUE-20260424-002 | 01 | P1 | PASS | 2026-04-24T22:15 |
 
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 37
+- open: 43
 - verifying: 0
-- closed (7d): 1
+- closed (7d): 2
 - escalated: 0
-- last_update: 2026-04-24T21:40:00+08:00
+- last_update: 2026-04-24T22:15:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
 - slice_04_audit: 1 P1 + 5 P2, anchors personally read (dual_core_router.py 647L, ux_envelope.py 1827L, prompts.py key sections + routing_engine.py integration)
 - slice_05_audit: 2 P1 + 4 P2, anchors personally read (client.py 315L, executions.py 1000L, config.py 48L, intent_translator.py 220L, result_parser.py 122L, url_guard.py 118L, execution_service.py 3296L, execution_schedule_service.py 385L)
 - slice_06_audit: 2 P1 + 4 P2, anchors personally read (galaxy_service.py 1000L, galaxy_service.proto 57L, galaxy_provider.dart 150L, galaxy_repository.dart 150L, event_listener.py 375L, stats_service.py 100L, structure_service.py 100L, collaborative_service.py 67L, crdt_persistence.py 119L, galaxy_grpc_service.py 170L, galaxy.py 300L)
+- slice_07_audit: 2 P1 + 4 P2, anchors personally read (community_service.py 2482L, community_advanced_service.py 975L, community_signal_bridge.py 231L, community_signal_collector.py 172L, accountability.py API 1528L, accountability.py model 156L, community.py API 200L, proto/community_service.proto 324L, group_chat.go 116L)
 - verifier_patrol_2: env-check pass; ISSUE-009 misreported (segmentSize guard exists); ISSUE-007/014 suggest P2 downgrade

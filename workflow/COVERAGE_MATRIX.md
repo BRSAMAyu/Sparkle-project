@@ -56,7 +56,7 @@
 | 04 | dual_core_router | 2026-04-24T20:35+08:00 | 0 | 6 | chat+direct shortcut绕过信号处理; intent_confidence=0静默覆盖为0.7; 截断不一致; local fallback无淘汰; 子串匹配误报; gentle消息缺4种变体 |
 | 05 | execution_openclaw | 2026-04-24T21:20+08:00 | 0 | 6 | /health泄露基础设施; Exception泄露内部错误; 无连接池; _clear_failure_state空操作; 条件解析朴素; promote竞态 |
 | 06 | galaxy | 2026-04-24T21:40+08:00 | 0 | 6 | spark_node缺audit/outbox; mastery legacy竞态; LIKE通配符; SSE空流; 零UUID; consumer重命名 |
-| 07 | community_accountability | null | 0 | - | - |
+| 07 | community_accountability | 2026-04-24T22:20 | 6 | P1×2 P2×4 | ISSUE-039..044 |
 | 08 | error_book | null | 0 | - | - |
 | 09 | focus_breathing | null | 0 | - | - |
 | 10 | achievement_photon_visual | null | 0 | - | - |
