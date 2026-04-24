@@ -165,6 +165,7 @@ from app.services.self_evolution_service import UnderstandingDepthService  # noq
 from app.services.shadow_prediction_service import shadow_prediction_service
 from app.services.system_update_service import SystemUpdateService, build_system_update  # noqa: F401
 from app.services.user_service import UserService  # noqa: F401
+from app.services.checkpoint_nudge_service import CheckpointDebriefService
 
 # ---------------------------------------------------------------------------
 # Mixin imports
@@ -951,6 +952,35 @@ class ChatOrchestrator(
                     except Exception as exc:
                         logger.warning(f"Failed to parse request extra_context in process_stream: {exc}")
                 resolved_active_tools = self._resolve_active_tools(request, user_message)
+
+                debrief_response = await CheckpointDebriefService(active_db, self.redis).process_turn(
+                    user_id=uuid.UUID(str(user_id)),
+                    chat_session_id=session_id,
+                    user_message=user_message,
+                    context=request_extra_context,
+                )
+                if debrief_response:
+                    text = str(debrief_response.get("message") or "")
+                    await self._persist_assistant_message(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        full_response=text,
+                    )
+                    yield agent_service_pb2.ChatResponse(
+                        response_id=response_id,
+                        created_at=int(datetime.now().timestamp()),
+                        request_id=request_id,
+                        trace_id=trace_id,
+                        workflow_id=workflow_id,
+                        prompt_version=prompt_version,
+                        full_text=text,
+                        finish_reason=agent_service_pb2.STOP,
+                        session_id=session_id,
+                        metadata={"debrief_mode": "checkpoint"},
+                    )
+                    await self._update_state(session_id, STATE_DONE, "Checkpoint debrief completed")
+                    return
 
                 if chat_mode == CHAT_MODE_STANDARD and not request.HasField("tool_result"):
                     bridge_responses = await self._maybe_short_circuit_bridge_tool(

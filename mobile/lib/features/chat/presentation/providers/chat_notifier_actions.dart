@@ -62,8 +62,36 @@ extension ChatNotifierActions on ChatNotifier {
             ? _actionString(payload, 'prompt')
             : payload['label']?.toString() ?? '';
         if (prompt.isNotEmpty) {
-          await sendMessage(prompt);
+          final actionPayload = _actionPayload(payload);
+          final extraContext = <String, dynamic>{
+            if (_actionString(payload, 'planning_session_id').isNotEmpty)
+              'planning_session_id':
+                  _actionString(payload, 'planning_session_id'),
+            if (actionPayload['extra_context'] is Map<String, dynamic>)
+              ...Map<String, dynamic>.from(
+                actionPayload['extra_context'] as Map<String, dynamic>,
+              ),
+          };
+          await sendMessage(
+            prompt,
+            extraContextOverrides: extraContext.isEmpty ? null : extraContext,
+          );
         }
+        return;
+      case 'checkpoint_debrief_start':
+        final prompt = payload['prompt']?.toString() ?? '我来复盘一下';
+        final rawContext = payload['debrief_context'];
+        final debriefContext = rawContext is Map<String, dynamic>
+            ? rawContext
+            : rawContext is Map
+                ? Map<String, dynamic>.from(rawContext)
+                : const <String, dynamic>{};
+        await sendMessage(
+          prompt,
+          extraContextOverrides: {
+            if (debriefContext.isNotEmpty) 'debrief_context': debriefContext,
+          },
+        );
         return;
       case 'route':
         final route = _actionString(payload, 'route');

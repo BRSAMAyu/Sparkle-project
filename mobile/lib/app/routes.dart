@@ -80,6 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnAuth = publicAuthPaths.contains(state.uri.path);
       final isOnPersonaOnboarding =
           state.uri.path == UserRoutes.personaOnboarding;
+      final isOnModelingChat = state.uri.path == UserRoutes.modelingChat;
       final onboardingCompleted = ref.read(onboardingCompletedProvider);
       final isGuestUser = authState.user?.registrationSource == 'guest';
 
@@ -104,7 +105,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isAuthenticated &&
           !isGuestUser &&
           !onboardingCompleted &&
-          !isOnPersonaOnboarding) {
+          !isOnPersonaOnboarding &&
+          !isOnModelingChat) {
         return UserRoutes.personaOnboarding;
       }
 
@@ -173,8 +175,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                       policy: ExperienceProfiles.assistantFlow.audioPolicy(),
                       child: ChatScreen(
                         initialPrompt: state.uri.queryParameters['prompt'],
-                        initialChatMode:
-                            state.uri.queryParameters['chat_mode'],
+                        initialChatMode: state.uri.queryParameters['chat_mode'],
                         initialConversationId:
                             state.uri.queryParameters['session_id'],
                         initialAiMessage: initialAiMessage,

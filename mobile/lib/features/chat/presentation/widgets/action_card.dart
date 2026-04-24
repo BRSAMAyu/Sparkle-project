@@ -10,8 +10,12 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/widgets/aurora_nudge_entry.dart';
+import 'package:sparkle/features/chat/presentation/widgets/bottleneck_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/graph_diagnostic_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_progress_strip.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_strategy_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/profile_front_door_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
@@ -565,14 +569,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return LinearGradient(
           colors: [
             DS.info.withValues(alpha: 0.95),
-            DS.success.withValues(alpha: 0.9)
+            DS.success.withValues(alpha: 0.9),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case 'profile_front_door':
-        return LinearGradient(
-          colors: [const Color(0xFF0EA5A4), const Color(0xFF4F46E5)],
+        return const LinearGradient(
+          colors: [Color(0xFF0EA5A4), Color(0xFF4F46E5)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
@@ -581,6 +585,29 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.cardGradientNeutral;
       case 'blocked_input_request':
         return DS.warningGradient;
+      case 'planning_bottleneck_card':
+        return LinearGradient(
+          colors: [
+            DS.warning.withValues(alpha: 0.95),
+            DS.error.withValues(alpha: 0.9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'planning_strategy_card':
+        return LinearGradient(
+          colors: [DS.primaryBase, DS.secondaryBase],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'planning_progress_strip':
+        return DS.infoGradient;
+      case 'aurora_nudge_entry':
+        return const LinearGradient(
+          colors: [Color(0xFF0EA5A4), Color(0xFF4F46E5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       default:
         return DS.primaryGradient;
     }
@@ -634,6 +661,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.neutral700;
       case 'blocked_input_request':
         return DS.warning;
+      case 'planning_bottleneck_card':
+        return DS.warning;
+      case 'planning_strategy_card':
+        return DS.primaryBase;
+      case 'planning_progress_strip':
+        return DS.info;
+      case 'aurora_nudge_entry':
+        return const Color(0xFF0EA5A4);
       default:
         return DS.primaryBase;
     }
@@ -693,6 +728,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.tips_and_updates_rounded;
       case 'blocked_input_request':
         return Icons.help_outline_rounded;
+      case 'planning_bottleneck_card':
+        return Icons.warning_amber_rounded;
+      case 'planning_strategy_card':
+        return Icons.map_rounded;
+      case 'planning_progress_strip':
+        return Icons.linear_scale_rounded;
+      case 'aurora_nudge_entry':
+        return Icons.psychology_rounded;
       default:
         return Icons.touch_app_rounded;
     }
@@ -741,6 +784,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return l10n.chatActionTitleModeExplanation;
       case 'blocked_input_request':
         return l10n.chatActionTitleBlockedInput;
+      case 'planning_bottleneck_card':
+        return '瓶颈分析';
+      case 'planning_strategy_card':
+        return '策略方案';
+      case 'planning_progress_strip':
+        return '规划流程';
+      case 'aurora_nudge_entry':
+        return 'Aurora 提醒';
       default:
         return l10n.chatActionTitleDefault;
     }
@@ -812,8 +863,26 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     if (action.type == 'reflection_card') {
       return _buildReflectionCard(context, action);
     }
+    if (action.type == 'planning_bottleneck_card') {
+      return BottleneckCard(data: action.data);
+    }
+    if (action.type == 'planning_strategy_card') {
+      return PlanStrategyCard(
+        data: action.data,
+        onWidgetAction: widget.onWidgetAction,
+      );
+    }
+    if (action.type == 'planning_progress_strip') {
+      return PlanProgressStrip(data: action.data);
+    }
     if (action.type == 'plan_card') {
       return _buildPlanCardContent(context, action);
+    }
+    if (action.type == 'aurora_nudge_entry') {
+      return AuroraNudgeEntry(
+        data: action.data,
+        onWidgetAction: widget.onWidgetAction,
+      );
     }
     if (action.type == 'system_update') {
       final description = action.data['description']?.toString() ?? '';

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -80,6 +81,9 @@ class _TaskDetailView extends ConsumerWidget {
                         gap: DS.spacing24,
                         children: [
                           _buildInfoSection(context, ref),
+                          if (task.guideJson != null ||
+                              (task.aiPrompt ?? '').trim().isNotEmpty)
+                            _StructuredGuideSection(task: task),
                           if ((task.userNote ?? '').trim().isNotEmpty)
                             _buildNoteSection(context),
                           _buildSubtaskSection(context, ref),
@@ -904,6 +908,204 @@ class _BottomActionBar extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _StructuredGuideSection extends StatelessWidget {
+  const _StructuredGuideSection({required this.task});
+
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final guide = task.guideJson ?? const <String, dynamic>{};
+    final methodSteps = (guide['method_steps'] as List<dynamic>? ?? const [])
+        .map((item) => item.toString())
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+    final keyPoints = (guide['key_points'] as List<dynamic>? ?? const [])
+        .map((item) => item.toString())
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+
+    return GraphiteCardSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '任务指南',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+              ),
+              if ((task.aiPrompt ?? '').trim().isNotEmpty)
+                SparkleButton(
+                  label: '复制AI提示词',
+                  size: ButtonSize.small,
+                  variant: ButtonVariant.secondary,
+                  icon: const Icon(Icons.content_copy_rounded, size: 14),
+                  onPressed: () => _copyAiPrompt(context),
+                ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing12),
+          if ((guide['objective']?.toString() ?? '').trim().isNotEmpty)
+            _GuideInfoRow(
+              icon: Icons.track_changes_rounded,
+              label: '目标',
+              value: guide['objective'].toString(),
+            ),
+          if ((guide['time_estimate_minutes']?.toString() ?? '')
+              .trim()
+              .isNotEmpty)
+            _GuideInfoRow(
+              icon: Icons.timer_outlined,
+              label: '预计时间',
+              value: '${guide['time_estimate_minutes']} 分钟',
+            ),
+          if ((task.successCriteria ??
+                  guide['success_criteria']?.toString() ??
+                  '')
+              .trim()
+              .isNotEmpty)
+            _GuideInfoRow(
+              icon: Icons.verified_outlined,
+              label: '完成标准',
+              value: (task.successCriteria ??
+                      guide['success_criteria']?.toString() ??
+                      '')
+                  .trim(),
+            ),
+          if (methodSteps.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            Text(
+              '步骤',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            ...List.generate(
+              methodSteps.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing6),
+                child: Text(
+                  '${index + 1}. ${methodSteps[index]}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                ),
+              ),
+            ),
+          ],
+          if (keyPoints.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            Text(
+              '关键点',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: keyPoints
+                  .map(
+                    (point) => Chip(
+                      label: Text(point),
+                      backgroundColor: DS.surfaceSecondary,
+                      labelStyle: TextStyle(color: DS.textPrimary),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if ((task.aiPrompt ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: DS.spacing16),
+            Row(
+              children: [
+                Expanded(
+                  child: SparkleButton(
+                    label: '开始专注',
+                    variant: ButtonVariant.primary,
+                    icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                    onPressed: () => unawaited(
+                      context.push('/tasks/${task.id}/execute'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: SparkleButton(
+                    label: '打开AI助手',
+                    variant: ButtonVariant.secondary,
+                    icon: const Icon(Icons.smart_toy_outlined, size: 16),
+                    onPressed: () => unawaited(
+                      context.push('/tasks/${task.id}/execute?panel=assistant'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyAiPrompt(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: task.aiPrompt ?? ''));
+    if (!context.mounted) return;
+    AppFeedback.success(context, 'AI 提示词已复制');
+  }
+}
+
+class _GuideInfoRow extends StatelessWidget {
+  const _GuideInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DS.spacing8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: DS.primaryBase),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.textPrimary,
+                      height: 1.45,
+                    ),
+                children: [
+                  TextSpan(
+                    text: '$label：',
+                    style: const TextStyle(fontWeight: DS.fontWeightBold),
+                  ),
+                  TextSpan(text: value),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

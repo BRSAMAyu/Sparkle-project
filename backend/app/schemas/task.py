@@ -76,6 +76,11 @@ class TaskCreate(BaseModel):
     due_date: date | None = Field(default=None, description="Due date")
     knowledge_node_id: UUID | None = Field(default=None, description="Knowledge node ID")
     tool_result_id: str | None = Field(default=None, description="Tool result ID from AI generator")
+    guide_json: dict | None = Field(default=None, description="Structured user-facing task guide")
+    ai_prompt: str | None = Field(default=None, description="Copyable AI prompt scaffold")
+    source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
+    phase_index: int | None = Field(default=None, ge=1, description="Phase index inside the planning strategy")
+    success_criteria: str | None = Field(default=None, description="Task success criteria")
 
     @field_validator("type", mode="before")
     @classmethod
@@ -121,6 +126,11 @@ class TaskUpdate(BaseModel):
     order_index: int | None = Field(default=None, description="Display order")
     due_date: date | None = Field(default=None, description="Due date")
     user_note: str | None = Field(default=None, description="User note")
+    guide_json: dict | None = Field(default=None, description="Structured user-facing task guide")
+    ai_prompt: str | None = Field(default=None, description="Copyable AI prompt scaffold")
+    source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
+    phase_index: int | None = Field(default=None, ge=1, description="Phase index inside the planning strategy")
+    success_criteria: str | None = Field(default=None, description="Task success criteria")
 
 
 class TaskStart(BaseModel):
@@ -186,6 +196,11 @@ class TaskDetail(TaskBase):
     order_index: int = Field(default=0, description="Display order")
     subtasks_total: int = Field(default=0, description="Total subtasks")
     subtasks_completed: int = Field(default=0, description="Completed subtasks")
+    guide_json: dict | None = Field(default=None, description="Structured user-facing task guide")
+    ai_prompt: str | None = Field(default=None, description="Copyable AI prompt scaffold")
+    source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
+    phase_index: int | None = Field(default=None, description="Phase index inside the planning strategy")
+    success_criteria: str | None = Field(default=None, description="Task success criteria")
 
 
 class TaskReorderRequest(BaseModel):

@@ -53,6 +53,11 @@ class TaskModel {
     required this.updatedAt,
     this.planId,
     this.guideContent,
+    this.guideJson,
+    this.aiPrompt,
+    this.sourcePlanningSessionId,
+    this.phaseIndex,
+    this.successCriteria,
     this.startedAt,
     this.completedAt,
     this.actualMinutes,
@@ -84,6 +89,16 @@ class TaskModel {
   final int energyCost;
   @JsonKey(name: 'guide_content')
   final String? guideContent;
+  @JsonKey(name: 'guide_json')
+  final Map<String, dynamic>? guideJson;
+  @JsonKey(name: 'ai_prompt')
+  final String? aiPrompt;
+  @JsonKey(name: 'source_planning_session_id')
+  final String? sourcePlanningSessionId;
+  @JsonKey(name: 'phase_index')
+  final int? phaseIndex;
+  @JsonKey(name: 'success_criteria')
+  final String? successCriteria;
   final TaskStatus status;
   @JsonKey(name: 'started_at')
   final DateTime? startedAt;
@@ -129,6 +144,11 @@ class TaskModel {
     int? difficulty,
     int? energyCost,
     String? guideContent,
+    Map<String, dynamic>? guideJson,
+    String? aiPrompt,
+    String? sourcePlanningSessionId,
+    int? phaseIndex,
+    String? successCriteria,
     TaskStatus? status,
     DateTime? startedAt,
     DateTime? completedAt,
@@ -157,6 +177,12 @@ class TaskModel {
         difficulty: difficulty ?? this.difficulty,
         energyCost: energyCost ?? this.energyCost,
         guideContent: guideContent ?? this.guideContent,
+        guideJson: guideJson ?? this.guideJson,
+        aiPrompt: aiPrompt ?? this.aiPrompt,
+        sourcePlanningSessionId:
+            sourcePlanningSessionId ?? this.sourcePlanningSessionId,
+        phaseIndex: phaseIndex ?? this.phaseIndex,
+        successCriteria: successCriteria ?? this.successCriteria,
         status: status ?? this.status,
         startedAt: startedAt ?? this.startedAt,
         completedAt: completedAt ?? this.completedAt,
@@ -189,6 +215,11 @@ class TaskCreate {
     this.dueDate,
     this.knowledgeNodeId,
     this.guideContent,
+    this.guideJson,
+    this.aiPrompt,
+    this.sourcePlanningSessionId,
+    this.phaseIndex,
+    this.successCriteria,
   });
 
   factory TaskCreate.fromJson(Map<String, dynamic> json) =>
@@ -208,6 +239,16 @@ class TaskCreate {
   final String? knowledgeNodeId;
   @JsonKey(name: 'guide_content')
   final String? guideContent;
+  @JsonKey(name: 'guide_json')
+  final Map<String, dynamic>? guideJson;
+  @JsonKey(name: 'ai_prompt')
+  final String? aiPrompt;
+  @JsonKey(name: 'source_planning_session_id')
+  final String? sourcePlanningSessionId;
+  @JsonKey(name: 'phase_index')
+  final int? phaseIndex;
+  @JsonKey(name: 'success_criteria')
+  final String? successCriteria;
   Map<String, dynamic> toJson() => _$TaskCreateToJson(this);
 }
 

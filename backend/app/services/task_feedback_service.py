@@ -11,16 +11,17 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
 from app.core.event_bus import event_bus
 from app.event_publishers.srl_events import publish_srl_event
-from app.models.task import Task, TaskStatus
+from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.personalization.preference_service import PreferenceService
+from app.services.profile_write_service import ProfileWriteService
 from app.services.routing_profile_service import RoutingProfileService
 from app.services.task_reflection_service import TaskReflectionService
 
@@ -38,6 +39,21 @@ class TaskFeedbackService:
     - 验证任务状态（必须是COMPLETED）
     - 更新用户推断偏好
     """
+
+    REMEDIAL_TRIGGER_CATEGORIES = {"unclear", "too_difficult"}
+    REMEDIAL_TEXT_MARKERS = (
+        "不懂",
+        "不理解",
+        "搞不懂",
+        "看不懂",
+        "不会",
+        "没思路",
+        "太难",
+        "confus",
+        "don't understand",
+        "do not understand",
+    )
+    MAX_CONSECUTIVE_REMEDIAL_TASKS = 2
 
     def __init__(self, db: AsyncSession, redis=None):
         self.db = db
@@ -67,6 +83,13 @@ class TaskFeedbackService:
         """
         # 验证任务并获取任务状态快照
         task = await self._get_and_validate_task(task_id, user_id)
+        task_snapshot = {
+            "id": task.id,
+            "user_id": task.user_id,
+            "plan_id": task.plan_id,
+            "title": task.title,
+            "actual_minutes": task.actual_minutes,
+        }
 
         # 检查是否已有反馈
         existing_feedback = await self._get_existing_feedback(user_id, task_id)
@@ -93,6 +116,11 @@ class TaskFeedbackService:
             logger.info(f"[TaskFeedback] Created new feedback for task {task_id}")
 
         await self.db.flush()
+        feedback_snapshot = {
+            "id": feedback.id,
+            "category": feedback.category,
+            "feedback_text": feedback.feedback_text,
+        }
 
         # 计算偏好变化
         depth_delta, difficulty_delta = feedback.calculate_preference_deltas()
@@ -103,16 +131,16 @@ class TaskFeedbackService:
         await self._update_inferred_preferences(user_id, depth_delta, difficulty_delta)
 
         # Adaptive replanning based on feedback signals
-        if task.plan_id:
+        if task_snapshot["plan_id"]:
             try:
                 adaptive_replanner = AdaptiveReplanner(self.db, self.redis)
                 await adaptive_replanner.on_task_feedback(
                     user_id=user_id,
-                    plan_id=task.plan_id,
+                    plan_id=task_snapshot["plan_id"],
                     task_id=task_id,
-                    category=feedback.category,
+                    category=feedback_snapshot["category"],
                     difficulty_delta=difficulty_delta,
-                    feedback_text=feedback.feedback_text,
+                    feedback_text=feedback_snapshot["feedback_text"],
                 )
             except Exception as e:
                 logger.warning(f"[TaskFeedback] Adaptive replanning failed: {e}")
@@ -120,7 +148,8 @@ class TaskFeedbackService:
         try:
             await self._maybe_update_routing_profile_after_feedback(
                 user_id=user_id,
-                feedback=feedback,
+                category=feedback_snapshot["category"],
+                feedback_text=feedback_snapshot["feedback_text"],
             )
         except Exception as e:
             logger.warning(f"[TaskFeedback] Routing profile update skipped: {e}")
@@ -132,11 +161,30 @@ class TaskFeedbackService:
                 user_id=user_id,
                 task=task,
                 feedback=feedback,
-                category=feedback.category,
-                time_spent_minutes=task.actual_minutes,
+                category=feedback_snapshot["category"],
+                time_spent_minutes=task_snapshot["actual_minutes"],
             )
         except Exception as e:
             logger.warning(f"[TaskFeedback] Reflection prompt generation failed: {e}")
+
+        if task_snapshot["plan_id"] and self._is_knowledge_gap_signal(
+            feedback_snapshot["category"],
+            feedback_snapshot["feedback_text"],
+        ):
+            try:
+                knowledge_gap = await self._record_knowledge_gap(
+                    user_id=user_id,
+                    task_snapshot=task_snapshot,
+                    feedback_snapshot=feedback_snapshot,
+                )
+                await self._insert_remedial_task(
+                    user_id=user_id,
+                    plan_id=task_snapshot["plan_id"],
+                    task_id=task_snapshot["id"],
+                    knowledge_gap=knowledge_gap,
+                )
+            except Exception as e:
+                logger.warning(f"[TaskFeedback] Remedial task insertion skipped: {e}")
 
         await self.db.commit()
         await self.db.refresh(
@@ -165,7 +213,7 @@ class TaskFeedbackService:
                 "user_id": str(user_id),
                 "feedback_id": str(feedback.id),
                 "task_id": str(task_id),
-                "plan_id": str(task.plan_id) if task.plan_id else "",
+                "plan_id": str(task_snapshot["plan_id"]) if task_snapshot["plan_id"] else "",
                 "category": feedback.category or "",
                 "feedback_text": feedback.feedback_text or "",
             },
@@ -174,10 +222,166 @@ class TaskFeedbackService:
             user_id=user_id,
             trigger_event_type="task.feedback_submitted",
             evidence_id=str(feedback.id),
-            metadata={"plan_id": str(task.plan_id) if task.plan_id else None},
+            metadata={"plan_id": str(task_snapshot["plan_id"]) if task_snapshot["plan_id"] else None},
         )
 
         return feedback, reflection_prompt
+
+    def _is_knowledge_gap_signal(self, category: str | None, feedback_text: str | None) -> bool:
+        normalized_category = str(category or "").strip().lower()
+        if normalized_category in self.REMEDIAL_TRIGGER_CATEGORIES:
+            return True
+        haystack = str(feedback_text or "").strip().lower()
+        return bool(haystack) and any(marker in haystack for marker in self.REMEDIAL_TEXT_MARKERS)
+
+    async def _record_knowledge_gap(
+        self,
+        *,
+        user_id: UUID,
+        task_snapshot: dict[str, Any],
+        feedback_snapshot: dict[str, Any],
+    ) -> dict[str, Any]:
+        prefs = await self.preference_service.get_preferences(user_id)
+        explicit = dict(getattr(prefs, "explicit", {}) or {})
+        existing = explicit.get("knowledge_gaps")
+        gaps = list(existing) if isinstance(existing, list) else []
+        feedback_text = str(feedback_snapshot.get("feedback_text") or "").strip()
+        description = self._build_knowledge_gap_description(
+            str(task_snapshot.get("title") or "当前任务"),
+            feedback_text,
+        )
+        gap = {
+            "id": f"kgap:{task_snapshot['id']}:{feedback_snapshot['id']}",
+            "task_id": str(task_snapshot["id"]),
+            "plan_id": str(task_snapshot["plan_id"]) if task_snapshot.get("plan_id") else None,
+            "task_title": task_snapshot.get("title"),
+            "description": description,
+            "feedback_text": feedback_text,
+            "category": feedback_snapshot.get("category"),
+            "source": "task_feedback",
+            "created_at": _utcnow().isoformat(),
+        }
+        deduped = [
+            item
+            for item in gaps
+            if not (isinstance(item, dict) and item.get("task_id") == str(task_snapshot["id"]))
+        ]
+        deduped.append(gap)
+        await ProfileWriteService(self.db, self.redis).set_explicit_preference(
+            user_id=user_id,
+            pref_key="knowledge_gaps",
+            pref_value=deduped[-20:],
+            evidence_refs=[{"type": "task_feedback", "id": str(feedback_snapshot["id"])}],
+            confidence=0.8,
+            source_type="task_feedback",
+            source="task_feedback_service",
+        )
+        return gap
+
+    def _build_knowledge_gap_description(self, task_title: str, feedback_text: str) -> str:
+        if feedback_text:
+            trimmed = feedback_text[:80]
+            return f"{task_title}: {trimmed}"
+        return f"{task_title}: 用户反馈该任务过难或不清楚"
+
+    async def _insert_remedial_task(
+        self,
+        *,
+        user_id: UUID,
+        plan_id: UUID,
+        task_id: UUID,
+        knowledge_gap: dict[str, Any],
+    ) -> Task | None:
+        task = await self._get_and_validate_task(task_id, user_id)
+        result = await self.db.execute(
+            select(Task)
+            .where(Task.user_id == user_id, Task.plan_id == plan_id)
+            .order_by(Task.order_index.asc(), Task.created_at.asc())
+        )
+        plan_tasks = list(result.scalars().all())
+        current_index = next((index for index, item in enumerate(plan_tasks) if item.id == task.id), -1)
+        if current_index < 0:
+            return None
+        consecutive = 0
+        for item in plan_tasks[current_index + 1 :]:
+            if self._is_remedial_task(item):
+                consecutive += 1
+                continue
+            break
+        if consecutive >= self.MAX_CONSECUTIVE_REMEDIAL_TASKS:
+            return None
+
+        insert_order = int(task.order_index or 0) + 1
+        await self.db.execute(
+            update(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.plan_id == plan_id,
+                Task.order_index >= insert_order,
+            )
+            .values(order_index=Task.order_index + 1)
+        )
+        guide_json = self._build_remedial_guide_json(task, knowledge_gap)
+        remedial_task = Task(
+            user_id=task.user_id,
+            plan_id=task.plan_id,
+            title=f"[补强] {knowledge_gap['description'][:80]}",
+            type=TaskType.LEARNING,
+            tags=["remedial", "knowledge_gap", f"source_task:{task.id}"],
+            estimated_minutes=min(30, max(15, int((task.estimated_minutes or 30) * 0.5))),
+            difficulty=max(1, int(task.difficulty or 2) - 1),
+            energy_cost=1,
+            guide_content=guide_json["objective"],
+            guide_json=guide_json,
+            ai_prompt=self._build_remedial_ai_prompt(task, knowledge_gap, guide_json),
+            source_planning_session_id=task.source_planning_session_id,
+            phase_index=task.phase_index,
+            success_criteria=guide_json["success_criteria"],
+            status=TaskStatus.PENDING,
+            priority=max(int(task.priority or 0), 0) + 1,
+            order_index=insert_order,
+            due_date=task.due_date,
+        )
+        self.db.add(remedial_task)
+        await self.db.flush()
+        return remedial_task
+
+    def _is_remedial_task(self, task: Task) -> bool:
+        tags = [str(tag) for tag in (task.tags or [])]
+        return task.title.startswith("[补强]") or "remedial" in tags
+
+    def _build_remedial_guide_json(self, task: Task, knowledge_gap: dict[str, Any]) -> dict[str, Any]:
+        description = str(knowledge_gap.get("description") or task.title)
+        return {
+            "objective": f"把刚才卡住的点补到能说清：{description}",
+            "method_steps": [
+                "用 5 分钟回看原任务里最卡的句子或题目，圈出一个具体问题。",
+                "用自己的话写出这个知识点的定义、适用条件和一个反例。",
+                "做 1 道最小练习题或口头复述一次，确认不是只看懂答案。",
+            ],
+            "time_estimate_minutes": 30,
+            "success_criteria": "能不用资料解释这个卡点，并完成 1 个最小检查题。",
+            "key_points": [description, "先补前置理解，再回到原任务"],
+            "common_mistakes": ["直接重做原任务，但没有先定位到底是哪一个概念卡住。"],
+        }
+
+    def _build_remedial_ai_prompt(
+        self,
+        task: Task,
+        knowledge_gap: dict[str, Any],
+        guide_json: dict[str, Any],
+    ) -> str:
+        return (
+            f"【背景】我刚做任务「{task.title}」时卡住了。\n\n"
+            f"【具体卡点】{knowledge_gap.get('description')}\n\n"
+            f"【补强目标】{guide_json['objective']}\n"
+            f"【完成标准】{guide_json['success_criteria']}\n\n"
+            "【请帮我】\n"
+            "1. 先判断我可能缺的是概念、题感还是前置知识\n"
+            "2. 用最短路径讲清这个卡点\n"
+            "3. 给我 1 道最小检查题，不要先给答案\n\n"
+            "【风格要求】直接、具体、不要泛泛鼓励。"
+        )
 
     async def _get_and_validate_task(self, task_id: UUID, user_id: UUID) -> Task:
         """
@@ -297,11 +501,12 @@ class TaskFeedbackService:
         self,
         *,
         user_id: UUID,
-        feedback: TaskFeedback,
+        category: str | None,
+        feedback_text: str | None,
     ) -> None:
         if not AdaptiveReplanner.is_strong_cognitive_struggle_feedback(
-            category=feedback.category,
-            feedback_text=feedback.feedback_text,
+            category=category,
+            feedback_text=feedback_text,
         ):
             return
 

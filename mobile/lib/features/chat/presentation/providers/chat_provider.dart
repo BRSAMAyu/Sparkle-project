@@ -724,7 +724,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
-  Future<void> sendMessage(String content, {String? taskId}) async {
+  Future<void> sendMessage(
+    String content, {
+    String? taskId,
+    Map<String, dynamic>? extraContextOverrides,
+  }) async {
     // P0修复: 计划切换期间禁止发送，防止消息关联到错误的计划上下文
     if (isSwitchingPlan) {
       debugPrint('[Chat] sendMessage blocked: plan switch in progress');
@@ -984,6 +988,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
               )
               .toList(),
         },
+        ...?extraContextOverrides,
       };
 
       // Get selected chat mode

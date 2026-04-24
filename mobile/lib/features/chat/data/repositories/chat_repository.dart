@@ -118,6 +118,33 @@ class ChatRepository {
     );
   }
 
+  Future<ChatResponseModel> sendMessage(
+    String message, {
+    String? conversationId,
+    Map<String, dynamic>? extraContext,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return ChatResponseModel(
+        message: 'Demo response: $message',
+        conversationId: conversationId ?? 'demo_id',
+      );
+    }
+
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/chat',
+      data: {
+        'message': message,
+        'conversation_id': conversationId,
+        if (extraContext != null) 'context': extraContext,
+      },
+    );
+    final payload = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'sendMessage',
+    );
+    return ChatResponseModel.fromJson(payload);
+  }
+
   /// 获取对话历史
   Future<List<ChatMessageModel>> getConversationHistory(
     String conversationId, {

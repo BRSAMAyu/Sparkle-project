@@ -16,13 +16,13 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import desc, select
+from sqlalchemy import desc, select, update
 
 from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIVE_ROLLBACK_TOTAL
 from app.core.event_bus import event_bus
 from app.models.card_protocol import Card, CardType
 from app.models.cognitive import BehaviorPattern
-from app.models.task import Task
+from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_revision_summary import PlanRevisionSummary
@@ -34,6 +34,7 @@ from app.services.plan_progress_service import PlanHealthReport, PlanProgressSer
 from app.services.plan_state_service import PlanStateService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.card_protocol.replanner_bridge import ReplannerCardBridge
+from app.services.task_service import _sync_task_card_projection
 
 if TYPE_CHECKING:
     from app.orchestration.step_feedback_collector import PlanExecutionFeedback
@@ -348,6 +349,80 @@ class AdaptiveReplanner:
             feedback_category=category,
             difficulty_delta=difficulty_delta,
         )
+
+    async def adjust_for_checkpoint(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+        debrief_result: dict[str, Any],
+    ) -> Task | None:
+        """Insert one focused remedial task when checkpoint debrief shows the phase slipped."""
+        if bool(debrief_result.get("goal_met", True)):
+            return None
+
+        result = await self.db.execute(
+            select(Task)
+            .where(Task.user_id == user_id, Task.plan_id == plan_id)
+            .where(Task.status != TaskStatus.COMPLETED)
+            .where(Task.title.not_like("[复盘补强]%"))
+            .order_by(Task.order_index.asc(), Task.created_at.asc())
+            .limit(1)
+        )
+        next_task = result.scalar_one_or_none()
+        insert_order = int(next_task.order_index or 0) if next_task else 0
+        if insert_order <= 0:
+            insert_order = 1000
+
+        await self.db.execute(
+            update(Task)
+            .where(Task.user_id == user_id, Task.plan_id == plan_id, Task.order_index >= insert_order)
+            .values(order_index=Task.order_index + 1)
+        )
+
+        checkpoint_day = int(debrief_result.get("checkpoint_day") or 0)
+        checkpoint_description = str(debrief_result.get("checkpoint_description") or "检查点内容").strip()
+        title = f"[复盘补强] Day {checkpoint_day} 检查点回顾" if checkpoint_day else "[复盘补强] 检查点回顾"
+        guide_json = {
+            "objective": f"回顾 Day {checkpoint_day} 检查点内容，把还没搞定的知识点逐一过一遍",
+            "method_steps": [
+                "用 10 分钟列出这个检查点里没有完成或不踏实的知识点。",
+                "按最影响后续任务的顺序，逐个用自己的话解释一遍。",
+                "做 1 个最小自测，确认补强后能继续进入下一阶段。",
+            ],
+            "time_estimate_minutes": 45,
+            "success_criteria": "能说清检查点中的薄弱项，并完成 1 个最小自测。",
+            "key_points": [checkpoint_description, "优先补影响下一阶段的漏洞"],
+            "common_mistakes": ["只承认落后，但没有定位到具体知识点或时间问题。"],
+        }
+        task = Task(
+            user_id=user_id,
+            plan_id=plan_id,
+            title=title,
+            type=TaskType.REFLECTION,
+            tags=["checkpoint_remedial", "review", f"checkpoint_day:{checkpoint_day}"],
+            estimated_minutes=45,
+            difficulty=2,
+            energy_cost=2,
+            guide_content=guide_json["objective"],
+            guide_json=guide_json,
+            ai_prompt=(
+                f"【背景】我正在做第 {checkpoint_day} 天检查点复盘。\n"
+                f"【检查点】{checkpoint_description}\n"
+                "【我的状态】阶段目标没有完全达成，需要快速补强。\n"
+                "【请帮我】定位最影响后续计划的薄弱点，给我一个 45 分钟内能完成的补强路径。"
+            ),
+            success_criteria=guide_json["success_criteria"],
+            status=TaskStatus.PENDING,
+            priority=1,
+            order_index=insert_order,
+            phase_index=getattr(next_task, "phase_index", None) if next_task else None,
+            source_planning_session_id=getattr(next_task, "source_planning_session_id", None) if next_task else None,
+            due_date=getattr(next_task, "due_date", None) if next_task else None,
+        )
+        self.db.add(task)
+        await self.db.flush()
+        await _sync_task_card_projection(self.db, task)
+        return task
 
     async def evaluate_plan_health_now(
         self,

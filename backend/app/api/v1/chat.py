@@ -28,6 +28,7 @@ from app.models.user import User
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.error_handler import AgentErrorHandler
 from app.orchestration.executor import ToolExecutor
+from app.orchestration.planning_workflow import PlanningWorkflowManager
 from app.orchestration.prompts import build_system_prompt
 from app.services.analytics_service import AnalyticsService
 from app.services.llm_service import LLMResponse, llm_service
@@ -35,6 +36,7 @@ from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneServi
 from app.tools.registry import tool_registry
 
 router = APIRouter()
+planning_workflow_manager = PlanningWorkflowManager()
 
 TASK_CHAT_ALLOWED_TOOLS = [
     "breakdown_task",
@@ -126,6 +128,10 @@ async def chat_with_task_context(
         "type": task.type,
         "status": task.status,
         "guide_content": task.guide_content,
+        "guide_json": task.guide_json,
+        "ai_prompt": task.ai_prompt,
+        "phase_index": task.phase_index,
+        "success_criteria": task.success_criteria,
         "estimated_minutes": task.estimated_minutes,
         "current_focus": "The user is currently working on this task."
     }
@@ -296,6 +302,10 @@ async def chat(
     tool_executor = ToolExecutor()
     response_composer = ResponseComposer()
     error_handler = AgentErrorHandler()
+    request_context = dict(request.context or {})
+    session_id_uuid, session_id_str = _normalize_conversation_id(
+        request.conversation_id,
+    )
 
     # 1. 构建上下文和对话历史
     user_context = await get_user_context(
@@ -311,6 +321,74 @@ async def chat(
     llm_conversation_history = [
         {"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw
     ]
+
+    planning_context = dict(request_context)
+    planning_context["profile_context"] = user_context.get("profile_context", {})
+
+    if request_context.get("mode") == "onboarding_modeling":
+        if bool(request_context.get("skip")):
+            await planning_workflow_manager.skip_onboarding(
+                db=db,
+                user_id=current_user.id,
+                conversation_id=session_id_str,
+            )
+            response_data = {
+                "message": "先跳过这一步也没关系。我会先带你进入主界面，之后需要时再补齐这些信息。",
+                "widgets": [],
+                "tool_results": [],
+                "has_errors": False,
+                "errors": None,
+            }
+        else:
+            onboarding_data = await planning_workflow_manager.process_onboarding_turn(
+                db=db,
+                user_id=current_user.id,
+                conversation_id=session_id_str,
+                message=request.message,
+                context=planning_context,
+            )
+            response_data = {
+                "message": onboarding_data["message"],
+                "widgets": onboarding_data.get("widgets", []),
+                "tool_results": [],
+                "has_errors": False,
+                "errors": None,
+            }
+
+        await save_chat_message(
+            db=db,
+            user_id=current_user.id,
+            session_id=session_id_uuid,
+            user_message=request.message,
+            assistant_message=response_data["message"],
+            tool_results=[],
+        )
+        return ChatResponse(**response_data, conversation_id=session_id_str)
+
+    planning_response = await planning_workflow_manager.process_planning_turn(
+        db=db,
+        user_id=current_user.id,
+        chat_session_id=session_id_str,
+        message=request.message,
+        context=planning_context,
+    )
+    if planning_response and not planning_response.get("bypass_planning"):
+        response_data = {
+            "message": planning_response["message"],
+            "widgets": planning_response.get("widgets", []),
+            "tool_results": [],
+            "has_errors": False,
+            "errors": None,
+        }
+        await save_chat_message(
+            db=db,
+            user_id=current_user.id,
+            session_id=session_id_uuid,
+            user_message=request.message,
+            assistant_message=response_data["message"],
+            tool_results=[],
+        )
+        return ChatResponse(**response_data, conversation_id=session_id_str)
 
     # 2. 构建 System Prompt
     system_prompt = build_system_prompt(user_context, "暂无对话历史") # History passed directly to LLM
@@ -403,10 +481,6 @@ async def chat(
         llm_text = llm_response.content
 
     # 6. 组装响应
-    session_id_uuid, session_id_str = _normalize_conversation_id(
-        request.conversation_id,
-    )
-
     response_data = response_composer.compose_response(
         llm_text=llm_text,
         tool_results=tool_results,

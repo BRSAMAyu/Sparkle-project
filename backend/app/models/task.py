@@ -75,6 +75,11 @@ class Task(BaseModel):
 
     # AI生成内容
     guide_content = Column(Text, nullable=True)
+    guide_json = Column(JSONBCompat, nullable=True)
+    ai_prompt = Column(Text, nullable=True)
+    source_planning_session_id = Column(String(64), nullable=True, index=True)
+    phase_index = Column(Integer, nullable=True)
+    success_criteria = Column(Text, nullable=True)
 
     # 状态信息
     status = Column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False, index=True)

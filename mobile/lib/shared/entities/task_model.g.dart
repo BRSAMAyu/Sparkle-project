@@ -21,6 +21,13 @@ TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => TaskModel(
       updatedAt: DateTime.parse(json['updated_at'] as String),
       planId: json['plan_id'] as String?,
       guideContent: json['guide_content'] as String?,
+      guideJson: json['guide_json'] == null
+          ? null
+          : Map<String, dynamic>.from(json['guide_json'] as Map),
+      aiPrompt: json['ai_prompt'] as String?,
+      sourcePlanningSessionId: json['source_planning_session_id'] as String?,
+      phaseIndex: (json['phase_index'] as num?)?.toInt(),
+      successCriteria: json['success_criteria'] as String?,
       startedAt: json['started_at'] == null
           ? null
           : DateTime.parse(json['started_at'] as String),
@@ -49,6 +56,11 @@ Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
       'difficulty': instance.difficulty,
       'energy_cost': instance.energyCost,
       'guide_content': instance.guideContent,
+      'guide_json': instance.guideJson,
+      'ai_prompt': instance.aiPrompt,
+      'source_planning_session_id': instance.sourcePlanningSessionId,
+      'phase_index': instance.phaseIndex,
+      'success_criteria': instance.successCriteria,
       'status': _$TaskStatusEnumMap[instance.status]!,
       'started_at': instance.startedAt?.toIso8601String(),
       'completed_at': instance.completedAt?.toIso8601String(),
@@ -94,6 +106,13 @@ TaskCreate _$TaskCreateFromJson(Map<String, dynamic> json) => TaskCreate(
           : DateTime.parse(json['due_date'] as String),
       knowledgeNodeId: json['knowledge_node_id'] as String?,
       guideContent: json['guide_content'] as String?,
+      guideJson: json['guide_json'] == null
+          ? null
+          : Map<String, dynamic>.from(json['guide_json'] as Map),
+      aiPrompt: json['ai_prompt'] as String?,
+      sourcePlanningSessionId: json['source_planning_session_id'] as String?,
+      phaseIndex: (json['phase_index'] as num?)?.toInt(),
+      successCriteria: json['success_criteria'] as String?,
     );
 
 Map<String, dynamic> _$TaskCreateToJson(TaskCreate instance) =>
@@ -108,6 +127,11 @@ Map<String, dynamic> _$TaskCreateToJson(TaskCreate instance) =>
       'due_date': instance.dueDate?.toIso8601String(),
       'knowledge_node_id': instance.knowledgeNodeId,
       'guide_content': instance.guideContent,
+      'guide_json': instance.guideJson,
+      'ai_prompt': instance.aiPrompt,
+      'source_planning_session_id': instance.sourcePlanningSessionId,
+      'phase_index': instance.phaseIndex,
+      'success_criteria': instance.successCriteria,
     };
 
 TaskUpdate _$TaskUpdateFromJson(Map<String, dynamic> json) => TaskUpdate(
