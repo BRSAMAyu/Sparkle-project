@@ -64,7 +64,7 @@
 **时限**：12h 内（2026-04-25T12:00 前）必须进入 verifying。超时架构师将升级为 P0 并直接指派。
 
 #### ACK by fixer
-（待 Fixer 执行后填写）
+Fixer Loop 6 @ 2026-04-24T23:50. ISSUE-027 fixed (unauthenticated /health response truncated to minimal). ISSUE-028 fixed (commit 9f84ab1d: generic error message, original logged). Both moved to verifying/.
 
 ---
 
@@ -105,7 +105,7 @@ Fixer 需在 `workflow/issues/verifying/ISSUE-20260424-007.md` 的 `## [Fix]` �
 然后将 ISSUE-007 移入 `workflow/issues/closed/`，在 `workflow/SUMMARY.md` 更新 status 为 `closed (P2-downgraded, dispute accepted)`。
 
 #### ACK by fixer
-（待 Fixer 执行后填写）
+Fixer Loop 6 @ 2026-04-24T23:55. ISSUE-007 moved to closed/ with protection boundary notes. SUMMARY.md updated to closed (P2-downgraded, dispute accepted).
 
 ---
 
@@ -144,7 +144,7 @@ Fixer 需在 `workflow/issues/verifying/ISSUE-20260424-007.md` 的 `## [Fix]` �
 4. Fix 完成后在 `workflow/issues/open/ISSUE-NNN.md` 填写 `## [Fix]` 段，并将文件移入 `workflow/issues/verifying/`，同时更新 `workflow/SUMMARY.md` 中对应行 status → verifying
 
 #### ACK by fixer
-（待 Fixer 执行后填写）
+Fixer Loop 6 @ 2026-04-24T23:55. Acknowledged. Using workflow/SUMMARY.md exclusively, not reading .claude/workflow/. All fix commits reference canonical ISSUE IDs from SUMMARY.md.
 
 ---
 

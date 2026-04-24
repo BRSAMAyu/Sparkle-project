@@ -12,7 +12,7 @@
 | ISSUE-20260424-004 | 01 | P2 | open | Guest login SELECT-INSERT 竞态条件，并发同 guest_id 返回 500 | - | 19:05 |
 | ISSUE-20260424-005 | 01 | P2 | open | AppleLogin 用户创建/链接竞态，无 IntegrityError 处理 | - | 19:05 |
 | ISSUE-20260424-006 | 01 | P2 | open | Go/Python JWT issuer/audience claims 处理需验证一致性 | - | 19:05 |
-| ISSUE-20260424-007 | 02 | P1 | disputed | saveMessage Redis 写入失败静默丢弃，用户消息不可恢复丢失 | fixer@2026-04-24T23:15 | 23:15 disputed (existing retry buffer mitigates) |
+| ISSUE-20260424-007 | 02 | P1 | closed | saveMessage Redis 写入失败静默丢弃，用户消息不可恢复丢失 | fixer@2026-04-24T23:15 | 23:55 closed (P2-downgraded, dispute accepted) |
 | ISSUE-20260424-008 | 02 | P2 | open | 两套独立 WS 连接注册系统互不感知，用户可绕过全局限制 | fixer@89c88217 | 23:15 per-user limit已加，双系统问题仍open |
 | ISSUE-20260424-009 | 02 | P1 | open | STREAM_TOKEN_SEGMENT=0 导致 quota 记录无限循环 | - | 19:30 |
 | ISSUE-20260424-010 | 02 | P2 | open | 客户端 active_tools 未做白名单校验可注入任意工具名 | - | 19:30 |
@@ -32,8 +32,8 @@
 | ISSUE-20260424-024 | 04 | P2 | open | BlockedPresentationHistoryStore 本地 fallback 无限增长无淘汰 | - | 20:35 |
 | ISSUE-20260424-025 | 04 | P2 | open | _contains_any 子串匹配导致模式检测误报风险 | - | 20:35 |
 | ISSUE-20260424-026 | 04 | P2 | open | gentle blocked_temperature 缺少 4 种 failure_kind 温和消息变体 | - | 20:35 |
-| ISSUE-20260424-027 | 05 | P1 | open | /health 端点未认证可访问，泄露 OpenClaw 基础设施详情 | - | 21:20 |
-| ISSUE-20260424-028 | 05 | P1 | open | handoff_task 通用 Exception 捕获泄露内部错误消息 | - | 21:20 |
+| ISSUE-20260424-027 | 05 | P1 | verifying | /health 端点未认证可访问，泄露 OpenClaw 基础设施详情 | fixer@2026-04-24T23:45 | 23:50 |
+| ISSUE-20260424-028 | 05 | P1 | verifying | handoff_task 通用 Exception 捕获泄露内部错误消息 | fixer@2026-04-24T23:50 | 23:50 |
 | ISSUE-20260424-029 | 05 | P2 | open | OpenClawClient 每次 execute 新建 httpx.AsyncClient 无连接池 | - | 21:20 |
 | ISSUE-20260424-030 | 05 | P2 | open | _clear_failure_state 为空操作 stub，成功后不清除降级状态 | - | 21:20 |
 | ISSUE-20260424-031 | 05 | P2 | open | _condition_matches 朴素字符串切片解析条件表达式，不支持转义 | - | 21:20 |
@@ -94,15 +94,16 @@
 | ISSUE-20260424-003 | 01 | P1 | PASS | 2026-04-24T22:45 |
 | ISSUE-20260424-045 | 02 | P2 | PASS | 2026-04-24T22:50 |
 | ISSUE-20260424-013 | 02 | P1 | PASS | 2026-04-24T23:15 |
+| ISSUE-20260424-007 | 02 | P1 | DISPUTED→P2 | 2026-04-24T23:55 |
 
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 71
-- verifying: 0
-- closed (7d): 5
+- open: 69
+- verifying: 2
+- closed (7d): 6
 - escalated: 0
-- last_update: 2026-04-24T09:30:00+08:00
+- last_update: 2026-04-24T23:55:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)

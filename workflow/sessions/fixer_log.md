@@ -143,3 +143,43 @@
 - ui_hand_verified: na
 - commits: [b9d2d792 triage dispute]
 - follow_ups: []
+
+## 2026-04-24T23:55:00+08:00 claim=patrol (directive processing)
+
+- directives_read: [DIRECTIVE-05 (override: ISSUE-027/028 security P1), DIRECTIVE-06 (elevated: ISSUE-007 closure)]
+
+### DIRECTIVE-05 执行：ISSUE-027 + ISSUE-028
+
+**ISSUE-027** (/health 泄露基础设施):
+- verdict: confirmed
+- independent_evidence: executions.py:498 uses get_optional_current_user; execution_service.py:137 returns full health details regardless of auth
+- fix: execution_service.py get_health() early return for user_id=None → minimal {openclaw_enabled, reachable}
+- files_touched: 2 (execution_service.py, test_execution_service_health.py)
+- tests_run: [pytest tests/unit/test_execution_service_health.py -> passed (170 execution/openclaw tests pass)]
+- commits: [ISSUE-027 fix in execution_service.py]
+
+**ISSUE-028** (handoff_task Exception 泄露内部错误):
+- verdict: confirmed
+- independent_evidence: executions.py:810-811 `str(exc)` in HTTPException detail
+- fix: replaced `str(exc)` with generic "Internal execution error", added logger.exception for server-side logging
+- files_touched: 1 (executions.py)
+- tests_run: [existing tests pass]
+- commits: [9f84ab1d]
+
+### DIRECTIVE-06 执行：ISSUE-007 闭包
+
+- verdict: already disputed in prior loop, executed architect closure instruction
+- action: added protection boundary notes to ISSUE-007, moved to closed/
+- files_touched: 0 (workflow doc only)
+- commits: []
+
+### ACK 状态
+- DIRECTIVE-01: ACK'd (using workflow/SUMMARY.md exclusively)
+- DIRECTIVE-02: ACK'd (shadow system deprecated)
+- DIRECTIVE-05: ACK'd (ISSUE-027/028 fixed, in verifying)
+- DIRECTIVE-06: ACK'd (ISSUE-007 closed with boundary notes)
+
+### 收尾
+
+- ui_hand_verified: na (backend security fixes)
+- follow_ups: []
