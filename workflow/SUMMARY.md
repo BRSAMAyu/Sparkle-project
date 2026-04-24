@@ -14,7 +14,7 @@
 | ISSUE-20260424-006 | 01 | P2 | open | Go/Python JWT issuer/audience claims 处理需验证一致性 | - | 19:05 |
 | ISSUE-20260424-007 | 02 | P1 | closed | saveMessage Redis 写入失败静默丢弃，用户消息不可恢复丢失 | fixer@2026-04-24T23:15 | 23:55 closed (P2-downgraded, dispute accepted) |
 | ISSUE-20260424-008 | 02 | P2 | open | 两套独立 WS 连接注册系统互不感知，用户可绕过全局限制 | fixer@89c88217 | 23:15 per-user limit已加，双系统问题仍open |
-| ISSUE-20260424-009 | 02 | P1 | open | STREAM_TOKEN_SEGMENT=0 导致 quota 记录无限循环 | - | 19:30 |
+| ISSUE-20260424-009 | 02 | P1 | disputed | STREAM_TOKEN_SEGMENT=0 导致 quota 记录无限循环 | fixer@2026-04-25T01:00 | 01:05 disputed (segmentSize>0 guard exists at line 506) |
 | ISSUE-20260424-010 | 02 | P2 | open | 客户端 active_tools 未做白名单校验可注入任意工具名 | - | 19:30 |
 | ISSUE-20260424-011 | 02 | P2 | open | WS auth 检查在 Upgrade 之后，防御层位置不当 | - | 19:30 |
 | ISSUE-20260424-012 | 02 | P2 | open | Flutter WS fallback 将 JWT 暴露在 URL query parameter 中 | - | 19:30 |

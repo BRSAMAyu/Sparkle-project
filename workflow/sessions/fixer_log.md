@@ -245,3 +245,25 @@
 - ui_hand_verified: na
 - commits: []
 - follow_ups: []
+
+## 2026-04-25T01:00:00+08:00 claim=ISSUE-20260424-009
+
+- directives_read: [no new active override for fixer]
+- verdict: disputed (misreported — infinite loop cannot occur)
+
+### 独立反证证据
+
+1. `chat_orchestrator_chatflow.go:506`: `if h.quota != nil && segmentSize > 0 {` — guard exists OUTSIDE the for loop
+2. When STREAM_TOKEN_SEGMENT=0, segmentSize=0, guard evaluates to false, entire quota block skipped
+3. The for loop at line 508 is INSIDE the guarded block — it never executes when segmentSize<=0
+4. Auditor only looked at line 465 (assignment) and line 508 (loop condition), missed line 506 guard
+5. verifier_patrol_2 already noted "ISSUE-009 misreported (segmentSize guard exists)" — confirmed independently
+
+### 收尾
+
+- files_touched: 0 (disputed, no code change)
+- lines_delta: +0/-0
+- tests_run: []
+- ui_hand_verified: na
+- commits: []
+- follow_ups: []
