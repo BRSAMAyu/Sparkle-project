@@ -29,8 +29,82 @@
 
 ---
 
-### DIRECTIVE-20260424-05
+### DIRECTIVE-20260424-07
 - status: active
+- issued_at: 2026-04-25T00:00:00+08:00
+- target_roles: [auditor]
+- priority: override
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**Auditor cursor 冻结：立即停止推进新切片，等待 P1 open < 10。**
+
+原因：
+1. P1 积压已达 18 个（红线是 20），fix 速率约 1-2/loop，audit 速率约 6/loop，积压比 1:3 无法收敛
+2. DIRECTIVE-03（elevated，要求先补核 ISSUE-009 再推切片）被直接忽视 — cursor 推了 10→11→12 两步，ISSUE-009 未核查
+
+**立即执行（本 loop 内，在所有其他任务之前）**：
+
+1. **cursor 冻结**：不得再调用 `cursor += 1` 推进新切片，直到 `workflow/SUMMARY.md` 中 P1 open 数量降至 **< 10**
+2. **ISSUE-009 补核**（DIRECTIVE-03 遗留任务）：
+   - 打开 `backend/gateway/internal/service/quota.go` 和 `backend/gateway/internal/handler/chat_orchestrator_chatflow.go`
+   - 独立确认 `segmentSize guard` 是否真的防住了 `STREAM_TOKEN_SEGMENT=0` 除零
+   - 若 guard 有效 → 在 `workflow/SUMMARY.md` 为 ISSUE-009 标注 `[re-audit: guard confirmed, downgrade P1→P2]` 并降级
+   - 若 guard 无效 → 维持 P1，将 ISSUE-009 插入 `workflow/queue/pending_fix.md` 头部
+3. **冻结期间可做的工作**（不得推新切片，但以下工作合法）：
+   - Re-audit 已有切片（round 0 的第二遍）
+   - 协助 Verifier：帮助验证在 verifying 队列中的 fix（但不替代 Verifier 的最终判定）
+   - 对现有 open 问题提供辅助分析（如 Fixer 需要背景信息时）
+4. 解冻条件：`workflow/SUMMARY.md` 统计快照显示 `open P1 < 10` 时，由架构师在 CONTROL_LOG 写入解冻决定后生效（不得自行解冻）
+
+#### ACK by auditor
+（待 Auditor 执行后填写）
+
+---
+
+### DIRECTIVE-20260424-08
+- status: active
+- issued_at: 2026-04-25T00:00:00+08:00
+- target_roles: [fixer]
+- priority: elevated
+- scope: all
+- expires_at: never
+
+#### 内容
+
+**Fixer 下阶段优先队列（ISSUE-027/028 进入 verifying 后）**
+
+安全 P1 修复完成后，下阶段按以下顺序认领：
+
+```
+第一波（数据完整性 P1）：
+  ISSUE-20260424-016  pending_actions_store get-delete 非原子，SubmitPlanReview 可重复审批
+                      → 加 Redis SET NX 或 DB 行级锁
+  ISSUE-20260424-015  asyncio.create_task fire-and-forget，计划批准后任务生成静默失败
+                      → 改为 await 或显式 try/except + 日志
+  ISSUE-20260424-040  community_signal_bridge handle_resource_shared 双重 commit
+                      → 删除重复 await db.commit()
+
+第二波（核心逻辑 P1）：
+  ISSUE-20260424-072  enqueue_from_chat_turn fire-and-forget，推断记忆写入失败静默丢弃
+  ISSUE-20260424-064  NotificationPushService 绕过用户通知偏好
+  ISSUE-20260424-021  routing_engine chat+direct 快捷路径绕过双核信号处理
+```
+
+**原则**：
+- 每个 fix commit 引用规范 ISSUE ID
+- Fix 完成后立即更新 `workflow/issues/open/ISSUE-NNN.md` 的 `## [Fix]` 段，移入 verifying/，更新 SUMMARY.md
+- 不要超前认领超过 2 个 issue（避免并发冲突）
+
+#### ACK by fixer
+（待 Fixer 执行后填写）
+
+---
+
+### DIRECTIVE-20260424-05
+- status: done
 - issued_at: 2026-04-24T23:35:00+08:00
 - target_roles: [fixer]
 - priority: override
@@ -69,7 +143,7 @@ Fixer Loop 6 @ 2026-04-24T23:50. ISSUE-027 fixed (unauthenticated /health respon
 ---
 
 ### DIRECTIVE-20260424-06
-- status: active
+- status: done
 - issued_at: 2026-04-24T23:35:00+08:00
 - target_roles: [fixer]
 - priority: elevated
@@ -110,7 +184,7 @@ Fixer Loop 6 @ 2026-04-24T23:55. ISSUE-007 moved to closed/ with protection boun
 ---
 
 ### DIRECTIVE-20260424-01
-- status: active
+- status: done
 - issued_at: 2026-04-24T23:30:00+08:00
 - target_roles: [fixer]
 - priority: override

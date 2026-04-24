@@ -100,5 +100,65 @@
 - [ ] Auditor 是否对 ISSUE-009 做了补核（DIRECTIVE-03 要求）
 - [ ] 是否有 Verifier 验证 ISSUE-013（protobuf fix）
 
-## 快照 #003 — (待下次 loop 触发后写入)
+## 快照 #003 — 2026-04-25T00:00:00+08:00
+
+### 当前状态
+
+| 指标 | 值 |
+|------|-----|
+| branch | 工程收尾 |
+| 审计 cursor | 12/21（slices 01-12 完成） |
+| open P1 | 18 |
+| open issues（全） | 69 |
+| verifying | 2（ISSUE-027/028 安全修复，待 Verifier） |
+| closed (7d) | 6（+ISSUE-004 re-closed，+ISSUE-007 P2-downgraded） |
+| Auditor 最后活跃 | 2026-04-24T09:30（slice-12 memory_write_lane） |
+| Fixer 最后活跃 | 2026-04-24T23:55（Loop 6 ACK 指令） |
+| Verifier 最后活跃 | 2026-04-24T23:15（PASS ISSUE-004）；empty_streak=1 |
+
+### 变化对比（与快照 #002 对比）
+
+- P1 消化: ISSUE-027/028 进入 verifying ✅；ISSUE-007 P2降级关单 ✅；ISSUE-004 re-closed ✅
+- 新 issue: +11（slices 11-12：064-077，其中 P1×4）
+- P1 净变化: 16 → 18（+4 新 slice-11/12 P1，-2 进 verifying 027/028，但 open 计数不含 verifying）
+- 指令响应:
+  - DIRECTIVE-01 → ACK ✅（Fixer Loop 6）
+  - DIRECTIVE-05 → ACK ✅（执行，标为 done）
+  - DIRECTIVE-06 → ACK ✅（执行，标为 done）
+  - DIRECTIVE-02 → Auditor/Verifier 未 ACK ⚠️（但行为已合规）
+  - DIRECTIVE-03 → Auditor 违规：跳过 ISSUE-009 补核直接推 slices 11/12 🔴
+  - DIRECTIVE-04 → Verifier 未 ACK（但待核实是否合规）
+- git commits: 本轮 fix commits 均引用规范 ID ✅（9f84ab1d, 18729519, a49998de 等）
+
+### 独立验证结果
+
+- **ISSUE-027 fix ✅**: `execution_service.py:137-142` 未认证时仅返回 `{openclaw_enabled, reachable}`，正确
+- **ISSUE-028 fix ✅**: `executions.py` handoff_task 现在返回 `"Internal execution error"`，原始异常通过 `logger.exception` 记录，正确
+
+### 关键风险
+
+1. **P1 积压趋势不收敛** — fix 速率 ~2/loop，audit 速率 ~6/loop，积压比 1:3。若不冻结，30min 后 P1 可能超 20 触发红线。已发 DIRECTIVE-07（Auditor 冻结）。
+2. **DIRECTIVE-03 被绕过** — Auditor 忽视 elevated 指令，直接推进切片。证明 elevated 优先级对 Auditor 无约束力。已升级为 override（DIRECTIVE-07）。
+3. **Verifier empty_streak=1** — Verifier 跑了一轮没找到任务（ISSUE-027/028 可能 Verifier 先于 Fixer 修完跑的）。下次应自动找到 verifying 队列的 2 个 issue。
+
+### 本轮决策
+
+- DIRECTIVE-01/05/06 标为 done（Fixer 已 ACK 执行完）
+- 发出 DIRECTIVE-07：Auditor cursor 冻结至 P1 < 10（override，永不过期）
+- 发出 DIRECTIVE-08：Fixer 下阶段优先队列（elevated）
+
+### 解冻条件（记录在此供下次 loop 判断）
+
+**Auditor 解冻**：SUMMARY.md P1 open < 10 AND 架构师在此 CONTROL_LOG 写入解冻决定
+
+### 下次检查重点（快照 #004）
+
+- [ ] DIRECTIVE-07 是否被 Auditor ACK（冻结执行？）
+- [ ] DIRECTIVE-03 遗留的 ISSUE-009 补核是否完成
+- [ ] Verifier 是否对 ISSUE-027/028 给出 PASS/FAIL 判定
+- [ ] Fixer 是否开始处理 ISSUE-016（plan review race condition）
+- [ ] P1 open 数量是否开始下降（目标：18 → 16）
+- [ ] empty_streak 是否归零（Verifier 找到任务）
+
+## 快照 #004 — (待下次 loop 触发后写入)
 
