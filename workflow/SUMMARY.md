@@ -45,7 +45,7 @@
 | ISSUE-20260424-037 | 06 | P2 | open | auto_classify_task 用零 UUID 作 user_id 占位符，语义不正确 | - | 21:40 |
 | ISSUE-20260424-038 | 06 | P2 | open | TaskEventListener consumer_name 含时间戳，重启后 pending 消息成孤儿 | - | 21:40 |
 | ISSUE-20260424-039 | 07 | P1 | open | send_message 未调用 check_keyword_filter 和 slow_mode_seconds 检查 | - | 22:20 |
-| ISSUE-20260424-040 | 07 | P1 | open | community_signal_bridge handle_resource_shared 双重 commit | - | 22:20 |
+| ISSUE-20260424-040 | 07 | P1 | verifying | community_signal_bridge handle_resource_shared 双重 commit | fixer@2026-04-25T01:20 | 01:25 |
 | ISSUE-20260424-041 | 07 | P2 | open | search_messages/group/user LIKE 通配符未转义 | - | 22:20 |
 | ISSUE-20260424-042 | 07 | P2 | open | _record_community_signal asyncio.create_task fire-and-forget | - | 22:20 |
 | ISSUE-20260424-043 | 07 | P2 | open | like_checkin/encourage_checkin 直接 db.commit() 绕过 session 管理约定 | - | 22:20 |

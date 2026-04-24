@@ -267,3 +267,28 @@
 - ui_hand_verified: na
 - commits: []
 - follow_ups: []
+
+## 2026-04-25T01:20:00+08:00 claim=ISSUE-20260424-040
+
+- directives_read: [no new active override for fixer]
+- verdict: confirmed
+
+### 独立复核证据
+
+1. `community_signal_bridge.py:116`: `GalaxyService(self.db)` — shares same session
+2. `galaxy_service.py:996-998`: `await self.db.flush()` then `await self.db.commit()` — internal commit exists
+3. `community_signal_bridge.py:123`: `await self.db.commit()` — redundant, no pending changes after internal commit
+4. Same session object → outer commit is a no-op that violates transaction ownership
+
+### Fix
+- Removed redundant `await self.db.commit()` at community_signal_bridge.py:123
+- Minimal: 1 line removed (-1)
+
+### 收尾
+
+- files_touched: 1 (community_signal_bridge.py)
+- lines_delta: +0/-1
+- tests_run: [pytest tests/ -k "galaxy or community" -> 101 passed]
+- ui_hand_verified: na (backend transaction fix)
+- commits: [40e74efd]
+- follow_ups: []
