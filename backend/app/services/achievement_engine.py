@@ -52,6 +52,15 @@ _EXTERNAL_TRANSACTION_MANAGED_KEY = "external_transaction_managed"
 _AFTER_COMMIT_TASKS_KEY = "achievement_after_commit_tasks"
 
 
+def _make_after_commit_error_handler():
+    """Create a done-callback that logs unhandled exceptions from after-commit tasks."""
+    def _handler(task: asyncio.Task) -> None:
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc:
+            logger.error("Achievement after-commit task failed: {}", exc)
+    return _handler
 @event.listens_for(AsyncSession.sync_session_class, "after_commit")
 def _run_achievement_after_commit_tasks(session) -> None:
     callbacks: list[Callable[[], Awaitable[None]]] = session.info.pop(_AFTER_COMMIT_TASKS_KEY, [])
@@ -65,7 +74,8 @@ def _run_achievement_after_commit_tasks(session) -> None:
         return
 
     for callback in callbacks:
-        loop.create_task(callback())
+        task = loop.create_task(callback())
+        task.add_done_callback(_make_after_commit_error_handler())
 
 
 @event.listens_for(AsyncSession.sync_session_class, "after_rollback")
