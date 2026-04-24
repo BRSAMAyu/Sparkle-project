@@ -283,4 +283,25 @@ All 3 fixes confirmed in place, no reverts detected.
 - Next loop: if empty_streak reaches 3 AND round ≥ 2 → halt=true
 
 - summary_updated: no (stats unchanged: open=74, verifying=0, closed(7d)=14)
+- commit: bc23b0e5
+
+## 2026-04-25T02:55:00+08:00 target=patrol-mode-1
+
+- directives_read: [ARCHITECT_DIRECTIVES.md — DIRECTIVE-11 targets fixer only, no verifier action]
+- mode: patrol (verifying queue empty, rotation=7→mode 1)
+
+### Revert spot-check (3 closed issues from earliest verified)
+
+**ISSUE-001** (session_revoked): auth.go:352-369 sid extraction + Redis EXISTS check intact ✅
+**ISSUE-002** (AppleLogin errors): auth.go:114-116 UpdateUserLastLogin logged (not `_ = err`); auth.go:148-152 UpsertUserSession logged ✅
+**ISSUE-003** (guest rate limit): auth.py:70 GUEST_RATE_LIMIT = "5/15minutes" prod / "50/15minutes" debug; line 801 @limiter.limit(GUEST_RATE_LIMIT) ✅
+
+All 3 fixes confirmed in place, no reverts.
+
+### empty_streak
+- empty_streak: 2 → 3 (third consecutive empty-queue loop)
+- round=0 (not ≥ 2), so halt is NOT triggered
+- If Fixer/Auditor remain idle and round reaches 2, halt will trigger
+
+- summary_updated: no (stats unchanged: open=74, verifying=0, closed(7d)=14)
 - commit: pending
