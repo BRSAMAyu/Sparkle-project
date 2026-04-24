@@ -880,6 +880,7 @@ class GalaxyService:
 
                 new_revision = current_revision + 1
                 # UPSERT pattern for non-revision cases
+                # Use atomic revision increment to prevent TOCTOU race
                 upsert_query = text("""
                     INSERT INTO user_node_status (
                         user_id,
@@ -924,7 +925,7 @@ class GalaxyService:
                         updated_at = EXCLUDED.updated_at,
                         last_study_at = EXCLUDED.updated_at,
                         is_unlocked = true,
-                        revision = EXCLUDED.revision
+                        revision = user_node_status.revision + 1
                 """)
 
                 await self.db.execute(
@@ -938,6 +939,14 @@ class GalaxyService:
                         "revision": new_revision,
                     },
                 )
+                # Re-read the actual revision after atomic increment
+                rev_result = await self.db.execute(
+                    text("SELECT revision FROM user_node_status WHERE user_id = :user_id AND node_id = :node_id"),
+                    {"user_id": user_id, "node_id": node_id},
+                )
+                rev_row = rev_result.fetchone()
+                if rev_row:
+                    new_revision = rev_row[0]
 
             # === COMMON: Update Global Stats, Audit Log, Outbox ===
             # A. Update Global Stats (Collaborative Sparking)
