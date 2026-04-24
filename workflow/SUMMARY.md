@@ -6,7 +6,7 @@
 
 | ID | Slice | P | Status | Title | Claimed | Updated |
 |----|-------|---|--------|-------|---------|---------|
-| ISSUE-20260424-001 | 01 | P1 | verifying | Go validateJWT 不检查 session_revoked:{sid}，设备下线不立即生效 | fixer@2026-04-24T20:45 | 20:45 |
+| ISSUE-20260424-001 | 01 | P1 | closed | Go validateJWT 不检查 session_revoked:{sid}，设备下线不立即生效 | fixer@2026-04-24T20:45 | 21:00 PASS |
 | ISSUE-20260424-002 | 01 | P1 | open | AppleLogin UpdateUserLastLogin 和 UpsertUserSession 错误静默丢弃 | - | 19:05 |
 | ISSUE-20260424-003 | 01 | P1 | open | Guest login 限流 100/15min 过于宽松，可被滥用刷号 | - | 19:05 |
 | ISSUE-20260424-004 | 01 | P2 | open | Guest login SELECT-INSERT 竞态条件，并发同 guest_id 返回 500 | - | 19:05 |
@@ -38,15 +38,16 @@
 | ID | Slice | P | Verdict | Closed |
 |----|-------|---|---------|--------|
 <!-- Verifier 判 PASS 后追加 -->
+| ISSUE-20260424-001 | 01 | P1 | PASS | 2026-04-24T21:00 |
 
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 26
+- open: 25
 - verifying: 0
-- closed (7d): 0
+- closed (7d): 1
 - escalated: 0
-- last_update: 2026-04-24T20:35:00+08:00
+- last_update: 2026-04-24T21:00:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)

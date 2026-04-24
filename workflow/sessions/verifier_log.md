@@ -93,3 +93,33 @@
 
 - summary_updated: yes（统计快照已更新）
 - commit: pending
+
+## 2026-04-24T21:00:00+08:00 target=ISSUE-20260424-001
+
+- directives_read: [none active]
+- mode: verify
+- independent_evidence:
+  - auth.go:345-370 (Read confirmed session_revoked check exists)
+  - auth_session_service.py:17 (SESSION_REVOKED_PREFIX = "session_revoked:")
+  - auth_session_service.py:136 (revoke_session writes session_revoked:{sid})
+  - commit a3c61232 diff: +21 lines in auth.go only
+
+### Blind verification (Audit evidence first, Fix description last)
+1. Audit claimed Go validateJWT never checks session_revoked:{sid} → Now line 353-354 extracts sid and checks
+2. Audit claimed Python writes session_revoked:{session_id} on device logout → Confirmed auth_session_service.py:136
+3. Go prefix "session_revoked:" matches Python SESSION_REVOKED_PREFIX "session_revoked:"
+
+### Six-dimension checks
+- checks: {A: ok, B: ok, C: ok, D: ok, E: ok, F: partial}
+- A (evidence eliminated): PASS — sid extraction + Redis EXISTS added
+- B (no regression): PASS — go test ./internal/middleware/... PASS (0.017s)
+- C (no red line): PASS — single file +21 lines, no .env/secrets/gen files
+- D (contract): PASS — prefix matches Python, no proto changes
+- E (architecture): PASS — auth middleware doing auth, no business logic added
+- F (tests): PARTIAL — existing tests PASS but no new test for session_revocation logic
+  - Note: missing test is evidence gap, not regression. Suggest follow-up P2 ISSUE.
+
+- verdict: PASS (with note: missing unit test for new session_revocation path)
+- regression_scan: n/a (first closed issue)
+- summary_updated: yes
+- commit: pending
