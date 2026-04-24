@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -110,7 +111,9 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	}
 
 	// Update last login
-	_ = h.queries.UpdateUserLastLogin(ctx, user.ID)
+	if err := h.queries.UpdateUserLastLogin(ctx, user.ID); err != nil {
+		log.Printf("[WARN] UpdateUserLastLogin failed for user %s: %v", h.uuidToString(user.ID), err)
+	}
 
 	// 3. Issue System Token
 	sessionID := uuid.New().String()
@@ -145,7 +148,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	if err != nil {
 		// Session persistence failure should not block login
 		// but log the error for investigation
-		_ = err
+		log.Printf("[WARN] UpsertUserSession failed for user %s: %v", h.uuidToString(user.ID), err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
