@@ -627,4 +627,70 @@ Verifier patrol round=3/4（spot-check on closed ISSUE-001/002/003）：
 
 ---
 
-## 快照 #012 — (待下次 loop 触发后写入)
+## 快照 #012 — 2026-04-25T04:15:00+08:00
+
+### 当前状态
+
+| 指标 | 值 |
+|------|-----|
+| branch | 工程收尾 |
+| 审计 cursor | 16/21（halt 有效，Auditor 无新活动） |
+| open P1 | ~19（无新增；ISSUE-096 in-progress） |
+| verifying | 0 |
+| closed (7d) | 14（无变化） |
+| halt | TRUE（继续） |
+| Fixer 最后活跃 | ISSUE-096 claimed（state.json 未更新，说明 fix 尚未完成） |
+| Auditor 最后活跃 | 2026-04-25T03:15（halt 后无新活动 ✅） |
+| Verifier 最后活跃 | 2026-04-25T03:15（patrol round=5，HALT ACK ✅） |
+
+### 变化对比（与快照 #011 对比）
+
+- **P1 消化**: 0 closed/verifying（ISSUE-096 in-progress，尚未入 verifying）
+- **新 issue**: 0（Auditor 停止，cursor=16 不变）
+- **指令响应**:
+  - DIRECTIVE-12（halt 公告）→ Verifier ACK ✅（patrol round=5）；Auditor 未 ACK；Fixer 开工中
+  - DIRECTIVE-13（全 P1 队列）→ Fixer 开始批次 A（ISSUE-096 claimed）✅
+  - DIRECTIVE-09 → Auditor **仍未 ACK**（解冻关键条件）
+- **git commits（#011 后）**：
+  - `351850c8 verify: patrol round=5 — HALT ACKNOWLEDGED` — Verifier 合规 ✅
+  - 无 Auditor commit，无新 Fixer fix commit（096 mid-fix）
+
+### 顺序偏差评估
+
+Fixer 批次 A 先认领 ISSUE-096（`db.commit` 补丁，10-line fix）而非 ISSUE-090（SSE 安全 P1）。
+- **不构成违规**：两者同属批次 A，DIRECTIVE-13 未强制线性顺序
+- **次优**：ISSUE-090 超 12h 安全红线，应优先
+- **预期**：ISSUE-096 完成后 Fixer 立即认领 ISSUE-090，本次不额外干预
+
+### Halt 遵守情况
+
+| 角色 | 状态 |
+|------|------|
+| Auditor | ✅ halt 后无新 cursor 推进 |
+| Verifier | ✅ patrol round=5 明确 ACK halt |
+| Fixer | ✅ 按 DIRECTIVE-13 豁免授权工作 |
+
+### 本轮决策
+
+**无新指令**。工作流进入正轨：
+- Fixer 活跃，按 DIRECTIVE-13 批次推进
+- halt 被三角色遵守（Auditor 无 ACK 但行为合规）
+- 仅剩解冻条件：Auditor 正式 ACK DIRECTIVE-09
+
+### 解冻进度追踪
+
+| 条件 | 状态 |
+|------|------|
+| ✅ Fixer 完成 ISSUE-090（安全 P1） | 未完成（096 in-progress，090 待认领） |
+| ✅ Auditor ACK DIRECTIVE-09 | **未完成** — 关键阻断 |
+
+### 下次检查重点（快照 #013，预计 04:45）
+
+- [ ] ISSUE-096 是否进入 verifying？ISSUE-090 是否被认领？
+- [ ] Fixer 批次 A 两条是否全部完成？
+- [ ] Auditor 是否 ACK DIRECTIVE-09（解冻必要条件）
+- [ ] verifying 队列是否开始积累（需判断是否要局部解冻 Verifier）
+
+---
+
+## 快照 #013 — (待下次 loop 触发后写入)
