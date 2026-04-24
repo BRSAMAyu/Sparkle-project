@@ -4,6 +4,7 @@ gRPC Implementation for Error Book Service
 from uuid import UUID
 
 import grpc
+from loguru import logger
 
 from app.core.task_manager import task_manager
 from app.gen.proto.error_book import error_book_pb2, error_book_pb2_grpc
@@ -31,8 +32,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             try:
                 await service.analyze_and_link(error_id, user_id)
             except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(f"Background analysis failed for error {error_id}: {e}")
+                logger.error("Background analysis failed for error {}: {}", error_id, e)
 
     async def CreateError(self, request, context):
         async with self.db_session_factory() as db:
@@ -164,8 +164,11 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 context.set_code(grpc.StatusCode.NOT_FOUND)
                 return error_book_pb2.AnalyzeErrorResponse()
 
-            import asyncio
-            asyncio.create_task(self._run_analysis_task(UUID(request.error_id), UUID(request.user_id)))
+            await task_manager.spawn(
+                self._run_analysis_task(UUID(request.error_id), UUID(request.user_id)),
+                task_name="error_analysis",
+                user_id=request.user_id,
+            )
 
             return error_book_pb2.AnalyzeErrorResponse(message="Analysis task submitted")
 
