@@ -205,7 +205,14 @@ class LeaderboardService:
         """全局综合排行榜"""
         # 计算综合分数
         # 全局排行 = 知识点数×1.0 + 打卡天数×0.5 + 成就数×2.0 + 最长连胜×1.5
-        # UserNodeStatus uses composite primary key (user_id, node_id), so count by user_id
+        # Use SQL ORDER BY + LIMIT to avoid loading all users into Python memory
+        score_expr = (
+            func.count(UserNodeStatus.user_id) * self.WEIGHT_KNOWLEDGE_NODES
+            + func.coalesce(UserStreakStats.total_checkin_days, 0) * self.WEIGHT_STUDY_DAYS
+            + func.count(UserAchievement.id) * self.WEIGHT_ACHIEVEMENTS
+            + func.coalesce(UserStreakStats.longest_streak, 0) * self.WEIGHT_STREAK
+        ).label("composite_score")
+
         query = select(
             User.id,
             User.username,
@@ -213,7 +220,8 @@ class LeaderboardService:
             func.count(UserNodeStatus.user_id).label('node_count'),
             func.count(UserAchievement.id).label('achievement_count'),
             func.coalesce(UserStreakStats.longest_streak, 0).label('streak'),
-            func.coalesce(UserStreakStats.total_checkin_days, 0).label('study_days')
+            func.coalesce(UserStreakStats.total_checkin_days, 0).label('study_days'),
+            score_expr,
         ).outerjoin(
             UserNodeStatus, and_(
                 UserNodeStatus.user_id == User.id,
@@ -226,42 +234,62 @@ class LeaderboardService:
         ).where(
             User.is_active,
             User.not_deleted_filter()
-        ).group_by(User.id, UserStreakStats.longest_streak, UserStreakStats.total_checkin_days)
+        ).group_by(User.id, UserStreakStats.longest_streak, UserStreakStats.total_checkin_days
+        ).order_by(score_expr.desc()
+        ).limit(request.limit)
 
         result = await self.db.execute(query)
         rows = result.all()
 
-        # 计算分数并排序
-        scored_users = []
-        for row in rows:
-            score = (
-                row.node_count * self.WEIGHT_KNOWLEDGE_NODES +
-                row.study_days * self.WEIGHT_STUDY_DAYS +
-                row.achievement_count * self.WEIGHT_ACHIEVEMENTS +
-                row.streak * self.WEIGHT_STREAK
-            )
-            scored_users.append((row, score))
+        # Also fetch current user's score if not in top results
+        user_score = None
+        user_row_data = None
+        for i, row in enumerate(rows):
+            if row.id == current_user_id:
+                user_score = row.composite_score
+                user_row_data = row
+                break
 
-        scored_users.sort(key=lambda x: x[1], reverse=True)
+        if user_score is None:
+            user_score_q = select(
+                score_expr,
+            ).outerjoin(
+                UserNodeStatus, and_(
+                    UserNodeStatus.user_id == User.id,
+                    UserNodeStatus.mastery_score >= 50
+                )
+            ).outerjoin(
+                UserAchievement, UserAchievement.user_id == User.id
+            ).outerjoin(
+                UserStreakStats, UserStreakStats.user_id == User.id
+            ).where(
+                User.id == current_user_id,
+                User.is_active,
+            ).group_by(User.id, UserStreakStats.longest_streak, UserStreakStats.total_checkin_days)
+            us_result = await self.db.execute(user_score_q)
+            us_row = us_result.first()
+            if us_row:
+                user_score = us_row[0]
 
-        # 构建排行榜条目
+        # Build leaderboard entries
         entries = []
-        for rank, (user_row, score) in enumerate(scored_users[:request.limit], 1):
-            is_me = user_row.id == current_user_id
+        for rank, row in enumerate(rows, 1):
+            score = row.composite_score
+            is_me = row.id == current_user_id
 
             entry = LeaderboardEntry(
                 rank=rank,
-                user_id=user_row.id,
-                username=user_row.username,
-                avatar_url=user_row.avatar_url,
+                user_id=row.id,
+                username=row.username,
+                avatar_url=row.avatar_url,
                 score=score,
                 score_label=f"{int(score)}分",
                 is_me=is_me,
                 stats={
-                    "knowledge_nodes": user_row.node_count,
-                    "achievements": user_row.achievement_count,
-                    "streak": user_row.streak,
-                    "study_days": user_row.study_days
+                    "knowledge_nodes": row.node_count,
+                    "achievements": row.achievement_count,
+                    "streak": row.streak,
+                    "study_days": row.study_days
                 },
                 badge=self._get_badge_for_rank(rank)
             )
@@ -269,13 +297,10 @@ class LeaderboardService:
 
         # 获取我的排名
         my_rank = next(
-            (i + 1 for i, (user_row, _) in enumerate(scored_users) if user_row.id == current_user_id),
+            (i + 1 for i, row in enumerate(rows) if row.id == current_user_id),
             None
         )
-        my_score = next(
-            (score for user_row, score in scored_users if user_row.id == current_user_id),
-            None
-        )
+        my_score = user_score
 
         return LeaderboardResponse(
             type=LeaderboardType.GLOBAL,
@@ -284,7 +309,7 @@ class LeaderboardService:
             my_rank=my_rank,
             my_score=my_score,
             last_updated=_utcnow(),
-            total_participants=len(scored_users),
+            total_participants=-1,  # Exact count not available without full scan
             period=request.period
         )
 
