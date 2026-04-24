@@ -67,6 +67,7 @@ LOGOUT_RATE_LIMIT = "500/15minutes" if settings.DEBUG else "30/15minutes"
 FORGOT_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "3/15minutes"
 VERIFY_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "5/15minutes"
 RESET_RATE_LIMIT = "30/15minutes" if settings.DEBUG else "5/15minutes"
+GUEST_RATE_LIMIT = "50/15minutes" if settings.DEBUG else "10/15minutes"
 
 PASSWORD_RESET_TTL_SECONDS = 15 * 60
 EMAIL_VERIFY_TTL_SECONDS = 24 * 60 * 60
@@ -797,7 +798,7 @@ async def verify_email(
 
 
 @router.post("/guest", response_model=Any)
-@limiter.limit("100/15minutes")
+@limiter.limit(GUEST_RATE_LIMIT)
 async def guest_login(
     request: Request,
     guest_id: str = None,
