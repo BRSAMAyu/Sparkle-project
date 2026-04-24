@@ -685,8 +685,12 @@ class PlanningWorkflowManager:
                             or (_safe_int(phase.get("daily_hours")) or daily_hours) * 60,
                             30,
                         ),
-                        difficulty=min(5, 2 + index),
-                        energy_cost=min(5, 2 + index),
+                        difficulty=self._mastery_to_difficulty(
+                            session.collected.get("avg_mastery_score"), index
+                        ),
+                        energy_cost=self._mastery_to_difficulty(
+                            session.collected.get("avg_mastery_score"), index
+                        ),
                         guide_content=_strip(guide_json.get("objective") or day_spec["focus"]),
                         guide_json=guide_json,
                         ai_prompt=self._build_task_ai_prompt(
@@ -751,6 +755,34 @@ class PlanningWorkflowManager:
             ],
             "metadata": self.runtime_adapter.build_response_metadata(runtime_state, surface_complete=True),
         }
+
+    @staticmethod
+    def _mastery_to_difficulty(mastery_score: float | None, phase_index: int) -> int:
+        """Map per-node mastery (0-100) to task difficulty (1-5).
+
+        Falls back to the old phase-based formula when mastery is unavailable.
+        """
+        if mastery_score is None:
+            return min(5, 2 + phase_index)
+        if mastery_score < 20:
+            return 5
+        if mastery_score < 40:
+            return 4
+        if mastery_score < 60:
+            return 3
+        if mastery_score < 80:
+            return 2
+        return 1
+
+    @staticmethod
+    def _classify_baseline_from_galaxy(avg_mastery: float | None) -> str:
+        if avg_mastery is None:
+            return ""
+        if avg_mastery < 20:
+            return "完全没学过"
+        if avg_mastery < 50:
+            return "上过课但没复习"
+        return "已经学过一部分"
 
     def _is_ready_for_bottlenecks(self, session: PlanningSession, user_message: str) -> bool:
         if all(_strip(session.collected.get(field)) for field in self.REQUIRED_FIELDS):
@@ -1245,16 +1277,21 @@ class PlanningWorkflowManager:
         profile_context = _as_dict(context.get("profile_context"))
         prefs = _as_dict(profile_context.get("preferences"))
         cold_start = _as_dict(prefs.get(PLANNING_PROFILE_KEYS["cold_start_context"]))
+        galaxy_baseline = _as_dict(context.get("galaxy_baseline") or context.get("request_extra_context", {}).get("galaxy_baseline"))
+        galaxy_avg = galaxy_baseline.get("avg_mastery") if galaxy_baseline else None
+        galaxy_derived_baseline = self._classify_baseline_from_galaxy(galaxy_avg) if galaxy_avg is not None else None
         merged = {
             "goal_raw": _strip(cold_start.get("primary_goal_description")),
             "exam_scope": _strip(cold_start.get("exam_scope") or cold_start.get("subject")),
-            "knowledge_baseline": _strip(cold_start.get("knowledge_baseline")),
+            "knowledge_baseline": _strip(cold_start.get("knowledge_baseline")) or galaxy_derived_baseline,
             "time_available": self._format_time_available(cold_start),
             "daily_available_hours": _safe_int(cold_start.get("daily_available_hours")),
             "blocked_days": cold_start.get("blocked_days") or [],
             "available_materials": cold_start.get("available_materials") or [],
             "subject": _strip(cold_start.get("subject")),
             "time_constraint_days": _safe_int(cold_start.get("time_constraint_days")),
+            "avg_mastery_score": galaxy_avg,
+            "weak_nodes": galaxy_baseline.get("weak_nodes") if galaxy_baseline else None,
         }
         return {key: value for key, value in merged.items() if value not in (None, "", [], {})}
 

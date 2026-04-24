@@ -22,6 +22,8 @@ from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLo
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
 from app.models.user_preferences import UserPreferencesCenter
 
+GALAXY_BASELINE_TTL_SECONDS = 300  # 5-min stale-acceptable cache
+
 AURORA_SURFACE_MODELING = "aurora_modeling"
 AURORA_RUNTIME_MODE_SURFACES = {
     "onboarding_modeling": AURORA_SURFACE_MODELING,
@@ -106,6 +108,11 @@ class AuroraRuntimeV1Service:
         conversation_context = dict(conversation_context or {})
         user_context_payload = dict(user_context_payload or {})
         surface = AURORA_RUNTIME_MODE_SURFACES.get(surface, surface)
+
+        if not request_extra_context.get("galaxy_baseline") and active_db is not None:
+            galaxy_baseline = await self._fetch_galaxy_baseline(active_db=active_db, user_id=user_id)
+            if galaxy_baseline:
+                request_extra_context = {**request_extra_context, "galaxy_baseline": galaxy_baseline}
 
         control_surface_reading = await self._read_control_surface(active_db=active_db, user_id=user_id)
         activity_profile = self._build_activity_profile(surface=surface, request_extra_context=request_extra_context)
@@ -336,6 +343,42 @@ class AuroraRuntimeV1Service:
             )
         except Exception as exc:
             logger.warning("Aurora runtime v1 failed to persist Redis runtime state: {}", exc)
+
+    async def _fetch_galaxy_baseline(
+        self,
+        *,
+        active_db: AsyncSession,
+        user_id: str,
+    ) -> dict | None:
+        try:
+            from sqlalchemy import func, select
+            from app.models.galaxy import KnowledgeNode, UserNodeStatus
+
+            user_uuid = UUID(str(user_id))
+            result = await active_db.execute(
+                select(KnowledgeNode.name, UserNodeStatus.mastery_score)
+                .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
+                .where(UserNodeStatus.user_id == user_uuid)
+                .where(UserNodeStatus.mastery_score > 0)
+                .order_by(UserNodeStatus.mastery_score.asc())
+                .limit(40)
+            )
+            rows = result.fetchall()
+            if not rows:
+                return None
+            scores = [float(row.mastery_score) for row in rows]
+            avg_mastery = sum(scores) / len(scores)
+            weak_nodes = [row.name for row in rows if float(row.mastery_score) < 30]
+            strong_nodes = [row.name for row in rows if float(row.mastery_score) >= 60]
+            return {
+                "avg_mastery": round(avg_mastery, 1),
+                "weak_nodes": weak_nodes[:10],
+                "strong_nodes": strong_nodes[:10],
+                "total_nodes_tracked": len(rows),
+            }
+        except Exception as exc:
+            logger.warning("Aurora runtime v1 failed to fetch Galaxy baseline: {}", exc)
+            return None
 
     def _intent_type_from_decision(self, decision: AuroraDecision, plan: AuroraRuntimeTurnPlan) -> str:
         if decision.action == "drop_thread":
