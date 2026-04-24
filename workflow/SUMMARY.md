@@ -57,13 +57,13 @@
 | ISSUE-20260424-049 | 08 | P2 | open | delete_error 缺 is_deleted 过滤，已删错题重复删除返回 204 | - | 22:30 |
 | ISSUE-20260424-050 | 08 | P2 | open | submit_review read-modify-write 竞态，并发复习丢失进度 | - | 22:30 |
 | ISSUE-20260424-051 | 08 | P2 | open | _get_cohort_profile bare except 静默返回 None，cohort 数据永远空 | - | 22:30 |
-| ISSUE-20260424-052 | 09 | P1 | open | log_session 先 commit 后发 event/write memory，失败不可恢复 | - | 23:00 |
+| ISSUE-20260424-052 | 09 | P1 | claimed | log_session 先 commit 后发 event/write memory，失败不可恢复 | fixer@2026-04-25 | disputed: commit-first is intentional (prevents phantom events); event/memory failures are logged; P2 not P1 |
 | ISSUE-20260424-053 | 09 | P2 | open | _calculate_current_streak N+1 查询最多 365 次 DB 查询 | - | 23:00 |
 | ISSUE-20260424-054 | 09 | P2 | open | log_session 不验证 duration_minutes 与 start/end_time 一致性 | - | 23:00 |
 | ISSUE-20260424-055 | 09 | P2 | open | heatmap days 参数无上限，可请求全量历史 | - | 23:00 |
 | ISSUE-20260424-056 | 09 | P2 | open | focus_service.py 4处 import logging 绕过 loguru 管道 | - | 23:00 |
 | ISSUE-20260424-057 | 09 | P2 | open | log_session AchievementEngine 共享 session 事务边界不清 | - | 23:00 |
-| ISSUE-20260424-058 | 10 | P1 | open | after_commit fire-and-forget，解锁后关键副作用（通知/缓存/事件广播）静默丢失 | - | 23:10 |
+| ISSUE-20260424-058 | 10 | P1 | claimed | after_commit fire-and-forget，解锁后关键副作用（通知/缓存/事件广播）静默丢失 | fixer@2026-04-25 | fixing: added done-callback error handler to create_task |
 | ISSUE-20260424-059 | 10 | P1 | open | WEEKEND_WARRIOR 三条无界查询加载全量用户历史，OOM 风险 | - | 23:10 |
 | ISSUE-20260424-060 | 10 | P1 | open | get_close_to_unlock 对每个未解锁成就执行 _evaluate_progress，60-120 查询/调用 | - | 23:10 |
 | ISSUE-20260424-061 | 10 | P2 | open | AchievementEventConsumer consumer_name 含时间戳，重启后 pending 消息成孤儿 | - | 23:10 |
@@ -77,7 +77,7 @@
 | ISSUE-20260424-069 | 11 | P2 | open | batch_operations 不发布 EventBus 事件，静默绕过事件管道 | - | 09:04 |
 | ISSUE-20260424-070 | 11 | P2 | open | calendar.py get_event_summary 用 __import__("datetime") 代替正常 import | - | 23:25 |
 | ISSUE-20260424-071 | 11 | P2 | open | Flutter _cancelReminders 硬编码最多 5 个提醒，超出部分永不取消 | - | 23:25 |
-| ISSUE-20260424-072 | 12 | P1 | claimed | enqueue_from_chat_turn fire-and-forget，推断记忆写入失败静默丢弃 | fixer@2026-04-25 | disputed: _run_background has try/except + logger.warning, not silent; P2 not P1 |
+| ISSUE-20260424-072 | 12 | P2 | closed | enqueue_from_chat_turn fire-and-forget，推断记忆写入失败静默丢弃 | fixer@2026-04-25 | DISPUTED_UPHELD: logger.warning exists + Memory Write non-live; P2 downgraded @ architect review 2026-04-25T04:45 |
 | ISSUE-20260424-073 | 12 | P1 | open | _rate_limit_state 进程级 dict，多 worker 限流失效 | - | 09:09 |
 | ISSUE-20260424-074 | 12 | P2 | open | _resolve_occurred_at UTC 时间戳设 locale 小时，"今晚"偏移+8h | - | 09:09 |
 | ISSUE-20260424-075 | 12 | P2 | open | _degraded_queue 无界内存列表永不消费，死代码 | - | 09:09 |

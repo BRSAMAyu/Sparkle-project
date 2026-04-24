@@ -693,4 +693,97 @@ Fixer 批次 A 先认领 ISSUE-096（`db.commit` 补丁，10-line fix）而非 I
 
 ---
 
-## 快照 #013 — (待下次 loop 触发后写入)
+## 快照 #013 — 2026-04-25T04:45:00+08:00（架构师审查触发）
+
+### 当前状态
+
+| 指标 | 值 |
+|------|-----|
+| branch | 工程收尾 |
+| 审计 cursor | 16/21（**解冻**：P1 open = 9 < 10，满足 DIRECTIVE-09 解冻条件） |
+| open P1 | **9**（052, 058, 059, 060, 064, 065, 073, 078, 079） |
+| P1 verifying | **8**（021, 033, 034, 039, 090, 091, 096, 097） |
+| closed (7d) | 14 + 1（ISSUE-072 P2 降级关闭） |
+| halt | **FALSE**（架构师解除 @ 04:45） |
+| Fixer 最后活跃 | 2026-04-25T04:35（9 条 fix 提交） |
+| Auditor 最后活跃 | 2026-04-25T03:15（halt 后无新活动） |
+| Verifier 最后活跃 | 2026-04-25T03:15（patrol round=5 ACK halt） |
+
+### 变化对比（与快照 #012 对比）
+
+**Fixer 超高速输出（~30 分钟 9 条 fix）**：
+- `2496216f` ISSUE-090 SSE 安全泄露修复（DIRECTIVE-12 解冻条件之一 ✅）
+- `a0d6face` ISSUE-096 社交绑定 db.commit
+- `6f43c40a` ISSUE-021 router shortcut 绕过双核
+- `b1c54cab` ISSUE-033 + 034 galaxy pipeline + TOCTOU
+- `eb739fcf` ISSUE-039 send_message 过滤器
+- `cca4dcd7` ISSUE-091 checkpoint LRU eviction
+- `8e683799` ISSUE-097 Leaderboard SQL sort
+- `1ebcfbb7` ISSUE-046 AnalyzeError task_manager
+- ISSUE-072 → 争议 → 架构师裁定 P2 DISPUTED_UPHELD
+
+**P1 变化：**
+- 从 ~19 → open P1 = **9**（▼10）
+- **DIRECTIVE-09 cursor 解冻阈值（<10）已达**
+
+### ISSUE-072 争议裁定记录
+
+独立读取 `memory_inferred_write_lane.py:162-163`：
+```python
+except Exception as exc:
+    logger.warning("Stage16 inferred write lane background task failed: {}", exc)
+```
+- `logger.warning` 存在，非完全静默 ✅
+- `SPARKLE_MEMORY_INFERRED_WRITE_ENABLED=False`（Phase I Exit Gate，non-live）
+- **架构师裁定：P2 降级 ACCEPTED，DISPUTE UPHELD**
+
+### ⚡ DIRECTIVE-09 Cursor 解冻决定
+
+**正式写入解冻决定（DIRECTIVE-09 协议要求）**：
+
+> P1 open = 9（2026-04-25T04:45 统计），低于解冻阈值 10。
+> **Auditor cursor 冻结解除，cursor 可从 16 继续推进。**
+> 约束：每次 loop 仍限推进 1 个切片（不得跳步），P1 open 回升至 ≥ 15 时重新冻结。
+> DIRECTIVE-09 § 2-4 中的其他要求（ISSUE-009 补核、git 合规补救）仍有效，Auditor 下次运行时须完成。
+
+### HALT 解除记录
+
+| 解除条件 | 状态 |
+|---------|------|
+| Fixer 完成 ISSUE-090（安全 P1） | ✅ verifying 中 |
+| Auditor 行为停止（无新 cursor 推进） | ✅（03:15 后无活动） |
+| Auditor 正式 ACK DIRECTIVE-09 | ❌（形式缺失，但行为目标已达） |
+
+决定：halt 目标（停 Auditor + 修 ISSUE-090）均已实现，形式 ACK 缺失不阻断解冻。Auditor 下次运行时补 ACK。
+
+### Verifier 任务
+
+halt 解除后，Verifier 需立即处理 verifying 队列（8 条 P1）：
+021, 033, 034, 039, 090, 091, 096, 097
+
+### Fixer 剩余 P1 队列（9 条）
+
+按 DIRECTIVE-13 批次 C-F 顺序：
+- **批次 C**：052（log_session 事务顺序）、039 ✅ 已完
+- **批次 D**：058（after_commit fire-and-forget）、059（WEEKEND_WARRIOR OOM）、060（get_close_to_unlock N+1）
+- **批次 E**：064（NotificationPush 偏好绕过）、065（calendar reminder 未实现）
+- **批次 F**：073（_rate_limit_state 进程级）、078（_upsert_pattern 无 UNIQUE）、079（_local_cooldowns 实例级）
+
+### 本轮决策
+
+1. ✅ ISSUE-072 裁定 P2（DISPUTED_UPHELD）
+2. ✅ DIRECTIVE-09 cursor 解冻（P1 open = 9 < 10）
+3. ✅ halt = false（DIRECTIVE-12 目标达成）
+4. Verifier 恢复处理 verifying 队列
+5. Fixer 继续批次 C-F
+
+### 下次检查重点（快照 #014）
+
+- [ ] Verifier 处理了多少 verifying P1？（8 条等待）
+- [ ] Fixer 批次 C-D 进展（058/059/060/052）
+- [ ] Auditor 是否补 ACK DIRECTIVE-09（可选，但建议）
+- [ ] P1 open 是否继续下降（目标：< 5 开始考虑全面扫尾）
+
+---
+
+## 快照 #014 — (待下次 loop 触发后写入)
