@@ -1049,12 +1049,10 @@ class RoutingEngineMixin:
 
         def _route_with_shortcuts(candidate_input: DualCoreRoutingInput) -> DualCoreDecision:
             if candidate_input.intent == "chat" and route_decision.execution_mode == "direct":
-                return DualCoreDecision(
-                    mode="execution_first",
-                    reason="通用知识问答优先直接回答，避免把认知调制或任务背景混入基础解释。",
-                    cognitive_adjustments=[],
-                    execution_constraints=[],
-                )
+                routed = self.dual_core_router.route(candidate_input)
+                routed.mode = "execution_first"
+                routed.reason = "通用知识问答优先直接回答，避免把认知调制或任务背景混入基础解释。"
+                return routed
             return self.dual_core_router.route(candidate_input)
 
         legacy_decision: DualCoreDecision | None = None
