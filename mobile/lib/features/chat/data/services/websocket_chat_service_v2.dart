@@ -1889,8 +1889,20 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('❌ Max reconnect attempts reached');
       _updateConnectionState(WsConnectionState.failed);
 
-      // TRACKED(TD-001): Clear pending
-      _pendingMessages.clear();
+      // Notify user about dropped pending messages (consistent with 401/token-refresh paths)
+      if (_pendingMessages.isNotEmpty) {
+        final droppedCount = _pendingMessages.length;
+        final l10n = I18nService.instance.l10n;
+        _log(
+          '⚠️ Discarding $droppedCount pending messages: max reconnect attempts reached',
+        );
+        _failPendingMessages(
+          code: 'MESSAGES_LOST',
+          message: l10n.chatPendingMessagesFailed(
+            '有 $droppedCount 条未发送消息因网络连接失败被丢弃 / $droppedCount pending messages were dropped because connection failed after $_maxReconnectAttempts attempts.',
+          ),
+        );
+      }
 
       _broadcastErrorToActiveRequests(
         ErrorEvent(

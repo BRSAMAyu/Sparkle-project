@@ -32,6 +32,12 @@
 | ISSUE-20260424-024 | 04 | P2 | open | BlockedPresentationHistoryStore 本地 fallback 无限增长无淘汰 | - | 20:35 |
 | ISSUE-20260424-025 | 04 | P2 | open | _contains_any 子串匹配导致模式检测误报风险 | - | 20:35 |
 | ISSUE-20260424-026 | 04 | P2 | open | gentle blocked_temperature 缺少 4 种 failure_kind 温和消息变体 | - | 20:35 |
+| ISSUE-20260424-027 | 05 | P1 | open | /health 端点未认证可访问，泄露 OpenClaw 基础设施详情 | - | 21:20 |
+| ISSUE-20260424-028 | 05 | P1 | open | handoff_task 通用 Exception 捕获泄露内部错误消息 | - | 21:20 |
+| ISSUE-20260424-029 | 05 | P2 | open | OpenClawClient 每次 execute 新建 httpx.AsyncClient 无连接池 | - | 21:20 |
+| ISSUE-20260424-030 | 05 | P2 | open | _clear_failure_state 为空操作 stub，成功后不清除降级状态 | - | 21:20 |
+| ISSUE-20260424-031 | 05 | P2 | open | _condition_matches 朴素字符串切片解析条件表达式，不支持转义 | - | 21:20 |
+| ISSUE-20260424-032 | 05 | P2 | open | _promote_next_queued_intent TOCTOU 竞态可超出并发限制 | - | 21:20 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -43,13 +49,14 @@
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 25
+- open: 31
 - verifying: 0
 - closed (7d): 1
 - escalated: 0
-- last_update: 2026-04-24T21:00:00+08:00
+- last_update: 2026-04-24T21:20:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
 - slice_04_audit: 1 P1 + 5 P2, anchors personally read (dual_core_router.py 647L, ux_envelope.py 1827L, prompts.py key sections + routing_engine.py integration)
+- slice_05_audit: 2 P1 + 4 P2, anchors personally read (client.py 315L, executions.py 1000L, config.py 48L, intent_translator.py 220L, result_parser.py 122L, url_guard.py 118L, execution_service.py 3296L, execution_schedule_service.py 385L)
 - verifier_patrol_2: env-check pass; ISSUE-009 misreported (segmentSize guard exists); ISSUE-007/014 suggest P2 downgrade

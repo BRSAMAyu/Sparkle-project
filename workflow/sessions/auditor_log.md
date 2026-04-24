@@ -128,3 +128,31 @@
 - deviations: SKIP — auditor.lock exists (started_at=21:00, claim=slice-05), another Auditor instance active on cursor=4. Respect lock.
 - next_cursor: unchanged (4)
 - commit: none
+
+## 2026-04-24T21:20:00+08:00 round=0 slice=05-execution_openclaw
+- directives_read: none active
+- produced: 6 issues (P0=0 P1=2 P2=4 P3=0)
+  - 027 P1: /health 端点未认证泄露基础设施详情
+  - 028 P1: handoff_task 通用 Exception 泄露内部错误
+  - 029 P2: OpenClawClient 每次 execute 新建连接无池化
+  - 030 P2: _clear_failure_state 空操作 stub
+  - 031 P2: _condition_matches 朴素条件解析
+  - 032 P2: _promote_next_queued_intent TOCTOU 竞态
+- deferred: 0
+- anchors_personally_read:
+  - client.py:1-315 (全文件)
+  - executions.py:1-1000 (全文件)
+  - config.py:1-48 (全文件)
+  - intent_translator.py:1-220 (全文件)
+  - result_parser.py:1-122 (全文件)
+  - url_guard.py:1-118 (全文件)
+  - execution_service.py:1-3296 (全文件)
+  - execution_schedule_service.py:1-385 (全文件)
+- grep_queries:
+  - url_guard|SSRF in backend → url_guard.py, execution_schedule_service.py, file_processing_orchestrator.py
+  - execution_service|ExecutionService in backend/app/services → execution_service.py, execution_schedule_service.py
+  - openclaw|execution in backend/gateway/internal → 14 files
+  - OPENCLAW in backend/app/config → settings.py:205-222
+- deviations: none
+- next_cursor: 6 (slice 06-galaxy)
+- commit: pending
