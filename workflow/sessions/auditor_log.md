@@ -222,3 +222,20 @@
 - deviations: none
 - next_cursor: 8 (slice 08-error_book)
 - commit: pending
+
+## 2026-04-24T22:40+08:00 round=0 slice=skipped
+- directives_read: none active (advisory example only)
+- produced: 0
+- deferred: 0
+- anchors_personally_read: none
+- deviations: SKIP — foreign uncommitted changes detected in worktree:
+  - .claude/workflow/locks/fixer.lock (deleted, Fixer cleanup)
+  - workflow/SUMMARY.md (modified by Verifier: ISSUE-002 closed, ISSUE-045 added, stats updated)
+  - workflow/issues/verifying/ISSUE-20260424-002.md (deleted → moved to closed by Verifier)
+  - workflow/issues/closed/ISSUE-20260424-002.md (new, Verifier PASS)
+  - workflow/issues/verifying/ISSUE-20260424-045.md (new, Fixer fix)
+  These are Verifier/Fixer residuals not yet committed. Per protocol §2 step 4, exit loop and wait for those roles to commit.
+- next_cursor: unchanged (7)
+- commit: none
+
+[2026-04-24T22:25] start slice=08-error_book round=0

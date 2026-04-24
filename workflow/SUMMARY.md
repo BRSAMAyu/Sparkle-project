@@ -8,7 +8,7 @@
 |----|-------|---|--------|-------|---------|---------|
 | ISSUE-20260424-001 | 01 | P1 | closed | Go validateJWT 不检查 session_revoked:{sid}，设备下线不立即生效 | fixer@2026-04-24T20:45 | 21:00 PASS |
 | ISSUE-20260424-002 | 01 | P1 | closed | AppleLogin UpdateUserLastLogin 和 UpsertUserSession 错误静默丢弃 | fixer@2026-04-24T21:45 | 22:15 PASS |
-| ISSUE-20260424-003 | 01 | P1 | open | Guest login 限流 100/15min 过于宽松，可被滥用刷号 | - | 19:05 |
+| ISSUE-20260424-003 | 01 | P1 | verifying | Guest login 限流 100/15min 过于宽松，可被滥用刷号 | fixer@2026-04-24T22:48 | 22:48 |
 | ISSUE-20260424-004 | 01 | P2 | open | Guest login SELECT-INSERT 竞态条件，并发同 guest_id 返回 500 | - | 19:05 |
 | ISSUE-20260424-005 | 01 | P2 | open | AppleLogin 用户创建/链接竞态，无 IntegrityError 处理 | - | 19:05 |
 | ISSUE-20260424-006 | 01 | P2 | open | Go/Python JWT issuer/audience claims 处理需验证一致性 | - | 19:05 |
@@ -50,6 +50,7 @@
 | ISSUE-20260424-042 | 07 | P2 | open | _record_community_signal asyncio.create_task fire-and-forget | - | 22:20 |
 | ISSUE-20260424-043 | 07 | P2 | open | like_checkin/encourage_checkin 直接 db.commit() 绕过 session 管理约定 | - | 22:20 |
 | ISSUE-20260424-044 | 07 | P2 | open | broadcast_achievement_unlock 使用 __import__("json") 代替正常 import | - | 22:20 |
+| ISSUE-20260424-045 | 02 | P2 | verifying | Flutter WS 重连耗尽静默清空 pending messages，不通知用户 | fixer@6db0c87f | 22:20 影子系统映射 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -62,8 +63,8 @@
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 43
-- verifying: 0
+- open: 41
+- verifying: 3
 - closed (7d): 2
 - escalated: 0
 - last_update: 2026-04-24T22:15:00+08:00
@@ -75,3 +76,4 @@
 - slice_06_audit: 2 P1 + 4 P2, anchors personally read (galaxy_service.py 1000L, galaxy_service.proto 57L, galaxy_provider.dart 150L, galaxy_repository.dart 150L, event_listener.py 375L, stats_service.py 100L, structure_service.py 100L, collaborative_service.py 67L, crdt_persistence.py 119L, galaxy_grpc_service.py 170L, galaxy.py 300L)
 - slice_07_audit: 2 P1 + 4 P2, anchors personally read (community_service.py 2482L, community_advanced_service.py 975L, community_signal_bridge.py 231L, community_signal_collector.py 172L, accountability.py API 1528L, accountability.py model 156L, community.py API 200L, proto/community_service.proto 324L, group_chat.go 116L)
 - verifier_patrol_2: env-check pass; ISSUE-009 misreported (segmentSize guard exists); ISSUE-007/014 suggest P2 downgrade
+- cross_ref_2026-04-24: .claude/workflow 影子系统与规范系统 ID 冲突已对齐：shadow-007→ISSUE-008(部分), shadow-008→ISSUE-013, shadow-011→ISSUE-045(新建)
