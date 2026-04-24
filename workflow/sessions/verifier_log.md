@@ -230,4 +230,33 @@ pending_verify.md 不存在，但 SUMMARY.md 有 2 个 verifying 状态的 ISSUE
 - open: 75, verifying: 0, closed(7d): 13
 
 - summary_updated: yes
+- commit: abe5bcfd
+
+## 2026-04-25T02:15:00+08:00 target=patrol-mode-5
+
+- directives_read: [ARCHITECT_DIRECTIVES.md — ACK'd DIRECTIVE-10, DIRECTIVE-04]
+- mode: patrol (verifying queue empty → DIRECTIVE-10 remediation + patrol mode 5)
+
+### DIRECTIVE-10 remediation: ISSUE-004 SUMMARY sync
+
+- git show `275fb175` verified: shadow-system commit claimed "ISSUE-004 PASS" but only updated `.claude/workflow/` (never synced to canonical)
+- Root cause: commit `b40e2e37` (fix) referenced ISSUE-002 (shadow ID) but actually fixed canonical ISSUE-004 (guest login TOCTOU)
+- Independent verification of auth.py:841-848: IntegrityError catch + rollback + re-SELECT confirmed
+- Six-dimension: {A: ok, B: ok, C: ok, D: na, E: ok, F: ok} — 3 guest tests pass
+- ISSUE-004 moved from open/ to closed/, SUMMARY updated
+
+### Patrol mode 5: Archive check
+
+No directives qualify for archiving:
+- None expired (DIRECTIVE-03 expires 2026-04-25T06:00, not yet)
+- None done > 48h (earliest done: DIRECTIVE-01 at 2026-04-24T23:30, only ~3h ago)
+
+### DIRECTIVE ACKs
+- DIRECTIVE-10: ACK'd (done) — all 3 verifying issues handled in Loop 1, ISSUE-004 sync fixed
+- DIRECTIVE-04: ACK'd — hard rules A (ID consistency) and B (source file verification) applied in all verifications
+
+### Stats
+- open: 74, verifying: 0, closed(7d): 14
+
+- summary_updated: yes
 - commit: pending

@@ -65,7 +65,7 @@
 ---
 
 ### DIRECTIVE-20260425-10
-- status: active
+- status: done
 - issued_at: 2026-04-25T01:00:00+08:00
 - target_roles: [verifier]
 - priority: override
@@ -96,11 +96,7 @@
 - ISSUE ID 引用一致性：确认 fix commit 中的 ISSUE ID 与规范 SUMMARY.md 一致
 
 #### ACK by verifier
-（待 Verifier 执行后填写）
-
----
-
-### DIRECTIVE-20260424-07
+Verifier Loop 2 @ 2026-04-25T02:15. All 3 issues (016/027/028) already verified in Loop 1 batch (commit abe5bcfd). ISSUE-004 SUMMARY sync remedied: canonical ISSUE-004 (guest login TOCTOU) fixed in b40e2e37 but shadow verification never synced. Now independently verified: IntegrityError catch at auth.py:841-848, 3 guest tests pass. Moved to closed/.
 - status: active
 - issued_at: 2026-04-25T00:00:00+08:00
 - target_roles: [auditor]
@@ -373,7 +369,7 @@ Fixer Loop 6 @ 2026-04-24T23:55. Acknowledged. Using workflow/SUMMARY.md exclusi
 **硬规则 B（问题消除确认）**：Verifier 必须独立 Read 被修改的源文件（不得仅看 fixer 的描述），确认 audit 证据中的具体代码行已被修改，且修改方向正确。不允许仅凭 "go build PASS" 和 "tests PASS" 判定 PASS。
 
 #### ACK by verifier
-（待 Verifier 执行后填写）
+Verifier Loop 2 @ 2026-04-25T02:15. Both hard rules applied in Loop 1 and Loop 2: (A) ISSUE-004 fix commit b40e2e37 referenced shadow ID ISSUE-002 — noted, but fix is correct for canonical ISSUE-004; (B) all verifications independently Read source files before checking Fix descriptions. Confirmed applied.
 
 ---
 
