@@ -100,6 +100,13 @@ def _serialize_payload(payload: dict[str, Any]) -> str:
     return json.dumps(payload, ensure_ascii=False)
 
 
+_TENSION_IMPORTANCE: dict[str, str] = {
+    "exam_scope": "决定任务分解粒度——不知道考什么就无法生成有效计划",
+    "knowledge_baseline": "决定起点和难度梯度——高估或低估都会造成计划不可执行",
+    "time_available": "决定密度和取舍策略——时间约束直接决定 seven_day_survival 模式是否激活",
+}
+
+
 @dataclass
 class AuroraTension:
     tension_id: str
@@ -108,6 +115,7 @@ class AuroraTension:
     priority: float
     status: str = "open"
     evidence: list[str] = field(default_factory=list)
+    importance_reasoning: str | None = None
     created_at: str = field(default_factory=lambda: _utcnow().isoformat())
     last_attempted_at: str | None = None
 
@@ -123,6 +131,7 @@ class AuroraTension:
             priority=float(payload.get("priority") or 0.0),
             status=_strip(payload.get("status")) or "open",
             evidence=[_strip(item) for item in list(payload.get("evidence") or []) if _strip(item)],
+            importance_reasoning=_strip(payload.get("importance_reasoning")) or None,
             created_at=_strip(payload.get("created_at")) or _utcnow().isoformat(),
             last_attempted_at=_coerce_iso(payload.get("last_attempted_at")),
         )
@@ -404,14 +413,50 @@ class AuroraRuntimePlanningAdapter:
         db: AsyncSession | None = None,
         domain: str | None,
     ) -> None:
-        if not domain:
+        if not self._mark_tension_attempted(state, domain):
             return
+        state.last_decision_at = _utcnow().isoformat()
+        await self.save_state(state, db=db)
+
+    async def apply_detour_decision(
+        self,
+        *,
+        state: AuroraRuntimePlanningState,
+        action: str,
+        chat_directive: dict[str, Any] | None = None,
+        harness_updates: dict[str, Any] | None = None,
+        db: AsyncSession | None = None,
+    ) -> AuroraRuntimePlanningState:
+        directive = _as_dict(chat_directive)
+        normalized_action = _strip(action) or "wait"
+        target_tension = self._resolve_target_tension(state, directive)
         now = _utcnow().isoformat()
-        for tension in state.informational_tensions:
-            if tension.domain == domain and tension.status in {"open", "partially_resolved"}:
-                tension.last_attempted_at = now
+
+        self._apply_activity_updates(state.activity_profile, _as_dict(harness_updates))
+
+        if normalized_action == "soft_return_topic":
+            self._mark_tension_attempted(state, target_tension.domain if target_tension else directive.get("target_domain"))
+            state.current_intent = {
+                "intent_type": "soft_return",
+                "target_tension_id": target_tension.tension_id if target_tension else None,
+                "payload": directive,
+            }
+        elif normalized_action == "drop_thread":
+            self._drop_latent_threads(state, target_tension_id=target_tension.tension_id if target_tension else None)
+            state.current_intent = {
+                "intent_type": "drop_thread",
+                "target_tension_id": target_tension.tension_id if target_tension else None,
+                "payload": directive,
+            }
+        else:
+            state.current_intent = {
+                "intent_type": "wait",
+                "target_tension_id": target_tension.tension_id if target_tension else None,
+                "payload": directive,
+            }
         state.last_decision_at = now
         await self.save_state(state, db=db)
+        return state
 
     async def update_activity_profile(
         self,
@@ -455,32 +500,99 @@ class AuroraRuntimePlanningAdapter:
         return prompt, tension.domain
 
     def build_detour_prompt(self, state: AuroraRuntimePlanningState) -> str:
-        top_thread = self._top_active_thread(state)
-        top_tension = self.select_next_tension(state)
-        if top_tension is None:
-            return ""
-
-        hard_bounds = _as_dict(state.user_model_snapshot.get("aurora_hard_bounds"))
+        scaffold = self.build_detour_scaffold(state)
+        hard_bounds = _as_dict(scaffold.get("hard_bounds"))
         disabled_actions = {item.strip() for item in _as_list(hard_bounds.get("disabled_actions")) if _strip(item)}
         if "proactive_follow_up" in disabled_actions:
             return ""
 
-        resolved_facts = self._resolved_fact_lines(state)
+        top_tension = _as_dict(scaffold.get("top_tension"))
+        if not top_tension:
+            return ""
+
         lines = [
-            "Aurora planning sidecar is active for this conversation.",
-            "Handle the user's immediate request first.",
-            "If it feels natural, you may end with one short bridge back to the planning clarification.",
-            "Do not use a rigid callback phrase and do not repeat information that is already resolved.",
+            "Aurora planning scaffold is active for this conversation.",
+            "Treat this as state context, not final user wording.",
             f"Planning surface: {state.surface}",
-            f"Current goal: {_strip(state.user_model_snapshot.get('goal_raw')) or '帮助用户完成当前规划'}",
-            f"Most salient unresolved tension: {top_tension.domain} - {top_tension.description}",
+            f"Current goal: {_strip(scaffold.get('goal_raw')) or '帮助用户完成当前规划'}",
+            f"Most salient unresolved tension: {_strip(top_tension.get('domain'))} - {_strip(top_tension.get('description'))}",
         ]
-        if top_thread is not None and _strip(top_thread.context_snapshot):
-            lines.append(f"Latent thread to keep warm: {top_thread.context_snapshot}")
+        top_thread = _as_dict(scaffold.get("top_latent_thread"))
+        if _strip(top_thread.get("context_snapshot")):
+            lines.append(f"Latent thread to keep warm: {_strip(top_thread.get('context_snapshot'))}")
+        resolved_facts = [_strip(item) for item in list(scaffold.get("resolved_facts") or []) if _strip(item)]
         if resolved_facts:
             lines.append("Resolved planning facts:")
             lines.extend(f"- {item}" for item in resolved_facts)
         return "\n".join(lines)
+
+    def build_detour_scaffold(self, state: AuroraRuntimePlanningState) -> dict[str, Any]:
+        top_thread = self._top_active_thread(state)
+        top_tension = self.select_next_tension(state)
+        open_tensions = [
+            {
+                "tension_id": item.tension_id,
+                "domain": item.domain,
+                "description": item.description,
+                "priority": round(item.priority, 3),
+                "status": item.status,
+                "last_attempted_at": item.last_attempted_at,
+            }
+            for item in state.informational_tensions
+            if item.status in {"open", "partially_resolved"}
+        ]
+        latent_threads = [
+            {
+                "thread_id": item.thread_id,
+                "source_intent": dict(item.source_intent or {}),
+                "tension_links": list(item.tension_links),
+                "salience": round(item.salience, 3),
+                "context_snapshot": item.context_snapshot,
+                "status": item.status,
+            }
+            for item in state.latent_threads
+            if item.status == "active"
+        ]
+        return {
+            "surface": state.surface,
+            "planning_session_id": state.planning_session_id,
+            "goal_raw": _strip(state.user_model_snapshot.get("goal_raw")) or "帮助用户完成当前规划",
+            "activity_profile": state.activity_profile.to_dict(),
+            "current_intent": dict(state.current_intent or {}),
+            "resolved_facts": self._resolved_fact_lines(state),
+            "recent_detours": [
+                _strip(item.get("message"))
+                for item in list(state.ingress_events)[-4:]
+                if item.get("is_detour") and _strip(item.get("message"))
+            ],
+            "open_tensions": open_tensions,
+            "top_tension": (
+                {
+                    "tension_id": top_tension.tension_id,
+                    "domain": top_tension.domain,
+                    "description": top_tension.description,
+                    "priority": round(top_tension.priority, 3),
+                    "status": top_tension.status,
+                    "last_attempted_at": top_tension.last_attempted_at,
+                }
+                if top_tension is not None
+                else None
+            ),
+            "latent_threads": latent_threads,
+            "top_latent_thread": (
+                {
+                    "thread_id": top_thread.thread_id,
+                    "source_intent": dict(top_thread.source_intent or {}),
+                    "tension_links": list(top_thread.tension_links),
+                    "salience": round(top_thread.salience, 3),
+                    "context_snapshot": top_thread.context_snapshot,
+                    "status": top_thread.status,
+                }
+                if top_thread is not None
+                else None
+            ),
+            "hard_bounds": _as_dict(state.user_model_snapshot.get("aurora_hard_bounds")),
+        }
 
     def build_strategy_brief(self, state: AuroraRuntimePlanningState) -> dict[str, Any]:
         open_tensions = [
@@ -595,6 +707,7 @@ class AuroraRuntimePlanningAdapter:
                     priority=0.0,
                 )
             current.description = self._describe_tension(domain, snapshot)
+            current.importance_reasoning = _TENSION_IMPORTANCE.get(domain)
             current.priority = self._priority_for_domain(domain, snapshot, state)
             if domain in privacy_boundaries:
                 current.status = "dropped"
@@ -678,6 +791,57 @@ class AuroraRuntimePlanningAdapter:
         for thread in state.latent_threads:
             if resolved_tension_ids.intersection(thread.tension_links):
                 thread.status = "resolved"
+
+    @staticmethod
+    def _apply_activity_updates(profile: AuroraActivityProfile, updates: dict[str, Any]) -> None:
+        if "proactive_intensity" in updates:
+            profile.proactive_intensity = max(0.0, min(1.0, _safe_float(updates.get("proactive_intensity"), profile.proactive_intensity)))
+        if "next_wake_at" in updates:
+            profile.next_wake_at = _coerce_iso(updates.get("next_wake_at"))
+        if _strip(updates.get("conversation_style")):
+            profile.conversation_style = _strip(updates.get("conversation_style"))
+        if "agenda_priority" in updates:
+            profile.agenda_priority = _strip(updates.get("agenda_priority")) or None
+        if "task_density_hint" in updates:
+            profile.task_density_hint = max(0.0, min(1.0, _safe_float(updates.get("task_density_hint"), profile.task_density_hint)))
+
+    def _mark_tension_attempted(self, state: AuroraRuntimePlanningState, domain: str | None) -> bool:
+        normalized_domain = _strip(domain)
+        if not normalized_domain:
+            return False
+        now = _utcnow().isoformat()
+        updated = False
+        for tension in state.informational_tensions:
+            if tension.domain == normalized_domain and tension.status in {"open", "partially_resolved"}:
+                tension.last_attempted_at = now
+                updated = True
+        return updated
+
+    def _resolve_target_tension(
+        self,
+        state: AuroraRuntimePlanningState,
+        directive: dict[str, Any],
+    ) -> AuroraTension | None:
+        target_tension_id = _strip(directive.get("target_tension_id"))
+        if target_tension_id:
+            for tension in state.informational_tensions:
+                if tension.tension_id == target_tension_id:
+                    return tension
+
+        target_domain = _strip(directive.get("target_domain"))
+        if target_domain:
+            for tension in state.informational_tensions:
+                if tension.domain == target_domain and tension.status in {"open", "partially_resolved"}:
+                    return tension
+        return self._top_open_tension(state)
+
+    def _drop_latent_threads(self, state: AuroraRuntimePlanningState, *, target_tension_id: str | None) -> None:
+        for thread in state.latent_threads:
+            if thread.status != "active":
+                continue
+            if target_tension_id and target_tension_id not in thread.tension_links:
+                continue
+            thread.status = "dropped"
 
     def _top_open_tension(self, state: AuroraRuntimePlanningState) -> AuroraTension | None:
         return self.select_next_tension(state)

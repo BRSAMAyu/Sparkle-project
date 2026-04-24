@@ -51,6 +51,7 @@ class InformationalTension(AuroraSchemaBase):
     priority: float
     status: TensionStatus = "open"
     evidence: list[str] = Field(default_factory=list)
+    importance_reasoning: str | None = None
     created_at: datetime = Field(default_factory=_utcnow)
     last_attempted_at: datetime | None = None
 
