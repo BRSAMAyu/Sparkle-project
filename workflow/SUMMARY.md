@@ -13,12 +13,12 @@
 | ISSUE-20260424-005 | 01 | P2 | open | AppleLogin 用户创建/链接竞态，无 IntegrityError 处理 | - | 19:05 |
 | ISSUE-20260424-006 | 01 | P2 | open | Go/Python JWT issuer/audience claims 处理需验证一致性 | - | 19:05 |
 | ISSUE-20260424-007 | 02 | P1 | disputed | saveMessage Redis 写入失败静默丢弃，用户消息不可恢复丢失 | fixer@2026-04-24T23:15 | 23:15 disputed (existing retry buffer mitigates) |
-| ISSUE-20260424-008 | 02 | P2 | verifying | 两套独立 WS 连接注册系统互不感知，用户可绕过全局限制 | fixer@89c88217 | 22:20 部分修复 |
+| ISSUE-20260424-008 | 02 | P2 | open | 两套独立 WS 连接注册系统互不感知，用户可绕过全局限制 | fixer@89c88217 | 23:15 per-user limit已加，双系统问题仍open |
 | ISSUE-20260424-009 | 02 | P1 | open | STREAM_TOKEN_SEGMENT=0 导致 quota 记录无限循环 | - | 19:30 |
 | ISSUE-20260424-010 | 02 | P2 | open | 客户端 active_tools 未做白名单校验可注入任意工具名 | - | 19:30 |
 | ISSUE-20260424-011 | 02 | P2 | open | WS auth 检查在 Upgrade 之后，防御层位置不当 | - | 19:30 |
 | ISSUE-20260424-012 | 02 | P2 | open | Flutter WS fallback 将 JWT 暴露在 URL query parameter 中 | - | 19:30 |
-| ISSUE-20260424-013 | 02 | P1 | verifying | Protobuf 路径绕过 maxMessageLength 4000 字符应用层限制 | fixer@8fd4b32d | 22:20 已修复待验收 |
+| ISSUE-20260424-013 | 02 | P1 | closed | Protobuf 路径绕过 maxMessageLength 4000 字符应用层限制 | fixer@8fd4b32d | 23:15 PASS |
 | ISSUE-20260424-014 | 02 | P1 | open | GetWriter/Get 非确定性返回，PushIntervention 可能发到错误设备 | - | 19:35 |
 | ISSUE-20260424-015 | 03 | P1 | open | asyncio.create_task fire-and-forget，计划批准后任务生成静默失败 | - | 20:15 |
 | ISSUE-20260424-016 | 03 | P1 | open | pending_actions_store get-delete 非原子，并发 SubmitPlanReview 可重复审批 | - | 20:15 |
@@ -69,6 +69,12 @@
 | ISSUE-20260424-061 | 10 | P2 | open | AchievementEventConsumer consumer_name 含时间戳，重启后 pending 消息成孤儿 | - | 23:10 |
 | ISSUE-20260424-062 | 10 | P2 | open | ContractService.update_daily_progress 无日期守卫，单日可获多天契约积分 | - | 23:10 |
 | ISSUE-20260424-063 | 10 | P2 | open | check_daily_first get-then-set TOCTOU 竞态，可获双倍首胜奖励 | - | 23:10 |
+| ISSUE-20260424-064 | 11 | P1 | open | NotificationPushService 绕过用户通知偏好（免打扰时段、系统通知开关） | - | 09:04 |
+| ISSUE-20260424-065 | 11 | P1 | open | calendar reminder_minutes 存储但从未消费，提醒功能完全未实现 | - | 09:04 |
+| ISSUE-20260424-066 | 11 | P2 | open | _get_trends 逐日 N+1 查询，period='all' 可触发数千次 DB 查询 | - | 09:04 |
+| ISSUE-20260424-067 | 11 | P2 | open | _get_hourly_distribution 无时间过滤加载用户全量交互记录 | - | 09:04 |
+| ISSUE-20260424-068 | 11 | P2 | open | _find_notification_for_record 全量加载用户干预通知 Python 侧遍历 | - | 09:04 |
+| ISSUE-20260424-069 | 11 | P2 | open | batch_operations 不发布 EventBus 事件，静默绕过事件管道 | - | 09:04 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -79,15 +85,16 @@
 | ISSUE-20260424-002 | 01 | P1 | PASS | 2026-04-24T22:15 |
 | ISSUE-20260424-003 | 01 | P1 | PASS | 2026-04-24T22:45 |
 | ISSUE-20260424-045 | 02 | P2 | PASS | 2026-04-24T22:50 |
+| ISSUE-20260424-013 | 02 | P1 | PASS | 2026-04-24T23:15 |
 
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 58
+- open: 63
 - verifying: 0
-- closed (7d): 4
+- closed (7d): 5
 - escalated: 0
-- last_update: 2026-04-24T23:10:00+08:00
+- last_update: 2026-04-24T09:20:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)

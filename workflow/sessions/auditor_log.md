@@ -301,3 +301,20 @@
   Per protocol §2 step 4, exit loop and wait for other roles to commit.
 - next_cursor: unchanged (9)
 - commit: none
+
+[2026-04-24T09:04+08:00] start slice=11-calendar_notification round=0
+
+[2026-04-24T09:20+08:00] end slice=11-calendar_notification produced=6 deferred=0
+  - P1: NotificationPushService bypasses user preferences (ISSUE-064)
+  - P1: calendar reminder_minutes stored but never consumed (ISSUE-065)
+  - P2: _get_trends N+1 daily queries (066), _get_hourly_distribution no time filter (067), _find_notification_for_record full table scan (068), batch_operations no EventBus events (069)
+  - anchors read: calendar.py (413L), notification_service.py (244L), notification_push_service.py (323L), notification_center_service.py (1157L), notification_analytics_service.py (695L), notification_center.py API (399L), calendar_provider.dart (403L), notification_center_provider.dart (457L), calendar_event.py model (94L), proxy_routes.go (219-231)
+  - 7-dimension summary:
+    ① entry: Flutter→REST→DB chain verified; reminder_minutes dead feature (TD-006 stub)
+    ② errors: batch partial success correct; PushService swallows WS errors silently
+    ③ logging: all services use loguru; __import__("datetime") code smell at calendar.py:182
+    ④ auth: calendar behind authMiddleware; PushService bypasses preference check
+    ⑤ concurrency: _get_trends N+1 (up to 14K queries), hourly_distribution unfiltered, find_record full scan
+    ⑥ contracts: batch_operations doesn't publish EventBus while individual ops do
+    ⑦ product: calendar CRUD-only confirmed; no AI feedback loop; reminder scheduling unimplemented
+  - next_cursor: 12 (slice 12-memory_write_lane)
