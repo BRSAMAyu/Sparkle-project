@@ -5,4 +5,3 @@
 <!-- Fixer appends here. Verifier picks from top. -->
 
 - ISSUE-20260424-001 | 1-Auth: Go AppleLogin 不写 auth_sessions，session 不可管理 (P1) — 2026-04-24T13:39
-- ISSUE-20260424-011 | 2-Chat-WebSocket: Flutter 重连耗尽 pendingMessages 静默丢弃 (P1) — 2026-04-24T20:15

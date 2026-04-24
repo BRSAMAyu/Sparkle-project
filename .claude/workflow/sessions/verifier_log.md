@@ -25,3 +25,19 @@ checks:
 regression_scan: go test ./internal/handler/ -count=1 PASS (14.091s)
 summary_updated: pending_verify queue updated
 commit: 8fd4b32d (007 already committed), 8fd4b32d (008 committed)
+
+## Loop 2 — 2026-04-24 20:30 → target=ISSUE-20260424-011
+
+mode: verify
+checks:
+  ISSUE-011 (Flutter pending messages silently dropped):
+    A: _pendingMessages.clear() replaced with _failPendingMessages (line 1893-1904)
+    B: flutter analyze No issues found, 97/97 chat tests PASS
+    C: only .dart + workflow tracking files
+    D: no proto/schema changes
+    E: Flutter layer handles own pending queue notification (correct)
+    F: flutter analyze + chat test suite re-verified PASS
+    verdict: PASS
+regression_scan: flutter test test/features/chat/ 97/97 PASS
+summary_updated: closed.md updated, pending_verify updated
+commit: 6db0c87f
