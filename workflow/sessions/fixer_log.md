@@ -292,3 +292,35 @@
 - ui_hand_verified: na (backend transaction fix)
 - commits: [40e74efd]
 - follow_ups: []
+
+## 2026-04-25T01:40:00+08:00 claim=ISSUE-20260424-014
+
+- directives_read: [no new active override for fixer]
+- verdict: confirmed
+
+### 独立复核证据
+
+1. `ws_registry.go:109-111`: `Get` iterates Go map with `for conn := range entries` → non-deterministic
+2. `ws_registry.go:122-126`: `GetWriter` iterates Go map → same non-determinism
+3. `config.go:54`: `WSMaxConnections` defaults to 0 → `maxPerUser` check skipped at line 49 → unlimited connections allowed
+4. `chat_orchestrator.go:604`: PushIntervention uses single GetWriter → sends to random device
+5. Go map iteration order is explicitly undefined by spec
+
+### 三问
+- 预期成立: yes — push notifications should reach all user devices or at least the most active one
+- 配置覆盖: default config allows multiple connections, no feature flag
+- 修复回归: low — PushIntervention now broadcasts; consumer (Flutter) already deduplicates by intervention_id
+
+### Fix
+- Added `BroadcastToUser` to ConnectionRegistry: snapshots writers under RLock, writes to all, returns failed connections
+- Modified `PushIntervention` to broadcast instead of single-writer pick
+- Failed connections auto-unregistered
+
+### 收尾
+
+- files_touched: 2 (ws_registry.go, chat_orchestrator.go)
+- lines_delta: +43/-8
+- tests_run: [go test ./internal/handler/... -> PASS]
+- ui_hand_verified: na (Go WebSocket broadcast)
+- commits: [986305fc]
+- follow_ups: []

@@ -19,7 +19,7 @@
 | ISSUE-20260424-011 | 02 | P2 | open | WS auth 检查在 Upgrade 之后，防御层位置不当 | - | 19:30 |
 | ISSUE-20260424-012 | 02 | P2 | open | Flutter WS fallback 将 JWT 暴露在 URL query parameter 中 | - | 19:30 |
 | ISSUE-20260424-013 | 02 | P1 | closed | Protobuf 路径绕过 maxMessageLength 4000 字符应用层限制 | fixer@8fd4b32d | 23:15 PASS |
-| ISSUE-20260424-014 | 02 | P1 | open | GetWriter/Get 非确定性返回，PushIntervention 可能发到错误设备 | - | 19:35 |
+| ISSUE-20260424-014 | 02 | P1 | verifying | GetWriter/Get 非确定性返回，PushIntervention 可能发到错误设备 | fixer@2026-04-25T01:40 | 01:45 |
 | ISSUE-20260424-015 | 03 | P1 | disputed | asyncio.create_task fire-and-forget，计划批准后任务生成静默失败 | fixer@2026-04-25T00:40 | 00:45 disputed (try/except exists) |
 | ISSUE-20260424-016 | 03 | P1 | verifying | pending_actions_store get-delete 非原子，并发 SubmitPlanReview 可重复审批 | fixer@2026-04-25T00:10 | 00:15 |
 | ISSUE-20260424-017 | 03 | P2 | open | gRPC handler plan_id 来源不一致，使用 request.plan_id 而非已验证存储值 | - | 20:15 |
