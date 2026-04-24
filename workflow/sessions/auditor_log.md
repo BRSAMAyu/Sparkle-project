@@ -156,3 +156,35 @@
 - deviations: none
 - next_cursor: 6 (slice 06-galaxy)
 - commit: pending
+
+## 2026-04-24T21:40:00+08:00 round=0 slice=06-galaxy
+- directives_read: example advisory only (no active override/elevated directives)
+- produced: 6 issues (P0=0 P1=2 P2=4 P3=0)
+  - 033 P1: spark_node 绕过 update_node_mastery pipeline，缺 audit/outbox/cache
+  - 034 P1: update_node_mastery legacy path 无 revision 时 read-modify-write 竞态
+  - 035 P2: _find_nodes_by_keywords LIKE 通配符未转义
+  - 036 P2: GalaxyRepository.getGalaxyEventsStream() 永久空流
+  - 037 P2: auto_classify_task 零 UUID 占位
+  - 038 P2: TaskEventListener consumer_name 含时间戳重启成孤儿
+- deferred: 0
+- anchors_personally_read:
+  - galaxy_service.proto:1-57 (全文件)
+  - galaxy_service.py:1-999 (全文件)
+  - stats_service.py:1-100
+  - structure_service.py:1-100
+  - event_listener.py:1-375 (全文件)
+  - collaborative_service.py:1-67 (全文件)
+  - crdt_persistence.py:1-119 (全文件)
+  - galaxy_grpc_service.py:1-170 (全文件)
+  - galaxy.py:1-300
+  - galaxy_provider.dart:1-150
+  - galaxy_repository.dart:1-150 (全文件)
+- grep_queries:
+  - galaxy_service|GalaxyService in api → galaxy.py (30+ endpoints), tasks.py
+  - CollaborativeGalaxyService in backend → galaxy_grpc_service.py (5 refs)
+  - knowledge_prerequisite_baseline → 0 matches (not found)
+  - outbox|audit in stats_service → cache_service import only, no audit/outbox writes
+  - mastery_audit_log|outbox|cache in galaxy_service → lines 65, 955, 984, 999
+- deviations: none
+- next_cursor: 7 (slice 07-community_accountability)
+- commit: pending
