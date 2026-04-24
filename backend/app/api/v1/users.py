@@ -354,6 +354,7 @@ async def link_social(
         current_user.avatar_url = user_info["picture"]
 
     db.add(current_user)
+    await db.commit()
     auth_audit_service.schedule_log(
         AuthAuditAction.SOCIAL_LINK,
         user_id=str(current_user.id),
@@ -388,6 +389,7 @@ async def unlink_social(
         raise HTTPException(status_code=400, detail="暂不支持这种登录方式")
 
     db.add(current_user)
+    await db.commit()
     auth_audit_service.schedule_log(
         AuthAuditAction.SOCIAL_UNLINK,
         user_id=str(current_user.id),
