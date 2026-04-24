@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, OrderedDict
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -173,7 +173,8 @@ class SimulationSession:
 class SimulationEngine:
     SESSION_KEY_PREFIX = "simulation:session:"
     SESSION_TTL_SECONDS = 60 * 60 * 6
-    _local_checkpoints: dict[str, dict[str, Any]] = {}
+    MAX_LOCAL_CHECKPOINTS = 128
+    _local_checkpoints: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
     def __init__(self, db: AsyncSession | None = None):
         self.db = db
@@ -1599,6 +1600,9 @@ class SimulationEngine:
             for participant in participants
         ]
         self._local_checkpoints[session.id] = payload
+        self._local_checkpoints.move_to_end(session.id)
+        while len(self._local_checkpoints) > self.MAX_LOCAL_CHECKPOINTS:
+            self._local_checkpoints.popitem(last=False)
         try:
             await cache_service.set(
                 f"{self.SESSION_KEY_PREFIX}{session.id}",
@@ -1626,6 +1630,9 @@ class SimulationEngine:
             payload = await self._load_checkpoint_from_db(session_id=session_id, user_id=user_id)
             if isinstance(payload, dict):
                 self._local_checkpoints[session_id] = payload
+                self._local_checkpoints.move_to_end(session_id)
+                while len(self._local_checkpoints) > self.MAX_LOCAL_CHECKPOINTS:
+                    self._local_checkpoints.popitem(last=False)
                 try:
                     await cache_service.set(
                         f"{self.SESSION_KEY_PREFIX}{session_id}",
