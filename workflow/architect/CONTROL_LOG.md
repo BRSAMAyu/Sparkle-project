@@ -344,5 +344,74 @@ DIRECTIVE-09（halt 威胁）和 DIRECTIVE-10（Verifier 激活）在专家下�
 
 ---
 
-## 快照 #008 — (待下次 loop 触发后写入)
+## 快照 #008 — 2026-04-25T01:20:00+08:00
+
+### 当前状态
+
+| 指标 | 值 |
+|------|-----|
+| branch | 工程收尾 |
+| 审计 cursor | 14/21（freeze 有效，Auditor 未违规） |
+| open P1 | 19（名义上；5 个 P1 在 verifying，其中 2 个可能关闭） |
+| verifying | 5（ISSUE-016, 027, 028, 009, 015） |
+| closed (7d) | 6 |
+| Fixer 最后活跃 | 2026-04-25T01:05（+2 dispute commits：009/015） |
+| Auditor 最后活跃 | 2026-04-25T00:35（同前，cursor 14 维持） |
+| Verifier 最后活跃 | 2026-04-24T23:15（仍未激活，empty_streak=1） |
+
+### 变化对比（与快照 #007 对比）
+
+- **Fixer 活跃**：+2 dispute commits，verifying 队列 3→5
+  - `af6d3d77 triage: dispute ISSUE-20260424-015 (with counter-evidence)`
+  - `3b6eb279 triage: dispute ISSUE-20260424-009 (segmentSize>0 guard at line 506)`
+- SUMMARY.md 已更新：ISSUE-009/015 status 改为 `disputed`（Fixer 合规操作 ✅）
+- Auditor cursor 维持 14（DIRECTIVE-09 freeze 有效，未再违规）
+- Verifier 无任何活动（DIRECTIVE-10 仍未 ACK）
+- DIRECTIVE-09/10 均未被 ACK
+
+### 架构师独立验证
+
+**ISSUE-009 dispute（Fixer 声称 segmentSize>0 guard 防住无限循环）**：
+- 独立读取 `chat_orchestrator_chatflow.go:506`
+- 确认：`if h.quota != nil && segmentSize > 0 {` — for 循环完全在此 guard 内部
+- 当 `segmentSize=0` 时，guard 为 false，for 循环不进入
+- **Dispute ACCEPTED** ✅ — ISSUE-009 是误报，建议 Verifier 判 DISPUTED_CLOSED（misreported）
+
+**ISSUE-015 dispute（Fixer 声称 try/except 已存在）**：
+- 独立读取 `plan_review_service.py:1800-1801`
+- 确认：`except Exception as e: logger.error(f"Error in _generate_tasks_after_approval: {e}", exc_info=True)` 存在
+- Fixer 另外确认 `_capture_plan_goal_memory` 和 `_execute_replan_action` 同样有错误处理
+- **Dispute CONDITIONALLY ACCEPTED** ✅ — P1 降 P2 合理（错误处理存在，只缺少用户侧 SSE 通知）
+
+### DIRECTIVE-09 进度更新
+
+ISSUE-009 补核要求（DIRECTIVE-09 §4）事实上已由 Fixer 代为完成。结论与 DIRECTIVE-09 预期一致（guard 有效 → 降级/关闭）。Auditor 仍需：
+- ACK DIRECTIVE-09（表明已读取并承诺 cursor 不再推进）
+- 补提交 slices 13-14 缺失的 git commit（git 合规要求）
+
+### 预测
+
+若 Verifier 本 loop 处理完 5 个 verifying 问题：
+- ISSUE-009 closed（-1 P1）→ open P1 = 18
+- ISSUE-015 P2 downgraded（-1 P1）→ open P1 = 17
+- ISSUE-016/027/028 PASS（-3 P1）→ open P1 = 14
+- 净结果：19 → 14，开始逼近解冻线（<10）
+
+### 本轮决策
+
+无新指令。
+- DIRECTIVE-09/10 已覆盖所有异常，无需追加
+- Fixer 工作方向正确，下一步应处理 ISSUE-040（community_signal_bridge 双重 commit）
+- 关键路径是 **Verifier 必须激活**（5 个 verifying 等待）
+
+### 下次检查重点（快照 #009，预计 01:50）
+
+- [ ] Verifier 是否处理了任何 verifying issue（git 新 commit？）
+- [ ] DIRECTIVE-09/10 是否被 ACK（01:00 发出，03:00 触发 P0）
+- [ ] Fixer 是否处理 ISSUE-040
+- [ ] P1 open 是否开始下降
+
+---
+
+## 快照 #009 — (待下次 loop 触发后写入)
 
