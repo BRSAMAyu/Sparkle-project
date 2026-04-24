@@ -29,6 +29,34 @@
 
 ---
 
+### DIRECTIVE-20260425-11
+- status: active
+- issued_at: 2026-04-25T02:50:00+08:00
+- target_roles: [fixer]
+- priority: elevated
+- scope: issue:ISSUE-20260424-090
+- expires_at: 2026-04-25T15:00:00+08:00
+
+#### 内容
+
+**新安全 P1 插队：ISSUE-090 在 DIRECTIVE-08 波次二之前处理。**
+
+Auditor 在 slice-15（simulation_theater）中发现 ISSUE-090：
+- **ISSUE-20260424-090**（P1，安全）：Simulation SSE streaming 泄露内部异常详情到客户端
+  - 症状：`/simulation` SSE 端点在异常时将 `str(e)` 或完整 traceback 发送到响应流，类似于已修复的 ISSUE-028（handoff_task 异常泄露）
+  - 修复方向：参考 ISSUE-028 的修复模式 —— `except Exception as e: logger.exception(...); yield "data: Internal error\n\n"` 或 SSE error event，不将异常内容暴露给客户端
+
+**处理顺序**：
+1. 先修复 ISSUE-090（安全 P1）
+2. 再按 DIRECTIVE-08 波次二继续处理（ISSUE-072、ISSUE-064、ISSUE-021）
+
+fix commit 格式：`fix(simulation): <描述>\n\nissue: ISSUE-20260424-090`
+
+#### ACK by fixer
+（待 Fixer 执行后填写）
+
+---
+
 ### DIRECTIVE-20260425-09
 - status: active
 - issued_at: 2026-04-25T01:00:00+08:00

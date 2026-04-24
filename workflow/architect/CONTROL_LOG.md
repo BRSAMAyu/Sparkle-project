@@ -465,4 +465,84 @@ ISSUE-009 补核要求（DIRECTIVE-09 §4）事实上已由 Fixer 代为完成�
 
 ---
 
-## 快照 #010 — (待下次 loop 触发后写入)
+## 快照 #010 — 2026-04-25T02:50:00+08:00
+
+### 当前状态
+
+| 指标 | 值 |
+|------|-----|
+| branch | 工程收尾 |
+| 审计 cursor | **15**/21（⚠️ 违规：DIRECTIVE-09 冻结于 14；时间戳存疑） |
+| open P1 | **17**（19 - 7 closed + 2 new slice-15 P1s = 17，大幅下降） |
+| verifying | 0（Verifier 清空了整个队列） |
+| closed (7d) | **14**（+8 本波次：009/014/015/016/027/028/040/004） |
+| Fixer 最后活跃 | 2026-04-25T01:45（ISSUE-014 fix，DIRECTIVE-08 wave-1 + extra 完成） |
+| Auditor 最后活跃 | 2026-04-24T13:30（slice-15，⚠️ 时间戳异常 — 早于 DIRECTIVE-07/09） |
+| Verifier 最后活跃 | 2026-04-25T02:35（empty_streak=2，队列已清空） |
+
+### 变化对比（与快照 #009 对比）
+
+**Verifier 爆发（本轮最大亮点）**：
+- `abe5bcfd verify(batch): 7 P1 issues — 5 PASS, 2 DISPUTED_UPHELD`
+  - PASS：016, 027, 028, 040, 014
+  - DISPUTED_UPHELD（closed）：009, 015
+- `3011d823 verify: ISSUE-20260424-004 PASS + ACK DIRECTIVE-10/04`
+  - DIRECTIVE-10 标记为 **done** ✅
+  - DIRECTIVE-04 ACK ✅
+  - ISSUE-004 SUMMARY 不同步已修复 ✅
+- verifying 队列清空（empty_streak 1→2）
+
+**Fixer**：
+- `986305fc fix(ws): broadcast PushIntervention to all user connections` — ISSUE-014 fix，超出 DIRECTIVE-08 预期（wave-2 提前完成一项）
+- DIRECTIVE-08 wave-1 完成，wave-2 实质已开始
+
+**Auditor cursor=15 问题**：
+- state.json `last_auditor_end: "2026-04-24T13:30:00+08:00"` — **早于 DIRECTIVE-07（00:00）和 DIRECTIVE-09（01:00）**
+- slice-15 issues（ISSUE-090~095）的 Updated 时间戳也是 "13:30"，与状态一致
+- **架构师判断**：slice-15 可能是在 DIRECTIVE-09 发出前已审计完毕的历史工作（April 24 afternoon），不属于"在冻结令后推进"的新违规
+- **因此不触发 halt**，但 DIRECTIVE-09 ACK 要求仍然有效
+- **新增 P1s（090/091）已存在于 SUMMARY，无法取消** — 按正常优先级处理
+
+**DIRECTIVE 状态**：
+- DIRECTIVE-07：active（Auditor 未 ACK，原 cursor-freeze 指令，被 DIRECTIVE-09 升级覆盖）
+- DIRECTIVE-09：active，**未 ACK**（发出时长 ~1h50m，距 2h P0 阈值剩余 ~10min）
+- DIRECTIVE-10：**done ✅**（Verifier ACK）
+- DIRECTIVE-04：**done ✅**（Verifier ACK）
+- DIRECTIVE-08：active，执行中（Fixer 合规操作）
+- DIRECTIVE-11：active，刚发出（ISSUE-090 安全 P1）
+
+### 新 P1 快速评估（slice-15）
+
+- **ISSUE-090（P1，安全）**：Simulation SSE 异常详情泄露 — 类 ISSUE-028，需优先修复 → DIRECTIVE-11 发出
+- **ISSUE-091（P1）**：SimulationEngine 类级 dict OOM 风险 — DIRECTIVE-08 波次二后处理
+
+### 本轮决策
+
+- 发出 DIRECTIVE-20260425-11（Fixer, elevated）：ISSUE-090 安全 P1 在 wave-2 之前优先处理
+- 不触发 halt（cursor=15 时间戳显示审计在冻结令前已完成）
+
+### P1 关闭进度一览
+
+| 时期 | 已关闭 P1 | open P1 趋势 |
+|------|-----------|-------------|
+| 初始（snapshot #001） | 0 | 14 |
+| 快照 #003 | 5 | 18 |
+| 快照 #004 | 6 | 19 |
+| 快照 #009 | 6 | 19（verifying 中有 6-7 个） |
+| **快照 #010** | **14** | **17** |
+
+### 解冻条件状态
+
+Auditor cursor 冻结（DIRECTIVE-07/09）：P1 open = 17，距解冻条件（<10）还差 7 个。冻结继续。
+
+### 下次检查重点（快照 #011，预计 03:20）
+
+- [ ] **DIRECTIVE-09 P0 升级**：若仍未 ACK（发出 2h+ → 必须发 P0）
+- [ ] Fixer 是否开始处理 ISSUE-090（安全 P1，DIRECTIVE-11）
+- [ ] Fixer 是否继续 DIRECTIVE-08 wave-2（ISSUE-072/064/021）
+- [ ] Auditor DIRECTIVE-09 ACK（cursor=15 的正式解释）
+- [ ] P1 open 是否继续下降（目标：17→14）
+
+---
+
+## 快照 #011 — (待下次 loop 触发后写入)
