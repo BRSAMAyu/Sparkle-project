@@ -1099,6 +1099,20 @@ class GroupMessageService:
             # await manager.kick_user_from_group(str(group_id), str(sender_id), "Muted")
             raise ValueError("您已被禁言")
 
+        # Slow mode enforcement
+        group = await db.get(Group, group_id)
+        if group and group.slow_mode_seconds and group.slow_mode_seconds > 0:
+            if member.last_active_at:
+                elapsed = (datetime.now(timezone.utc).replace(tzinfo=None) - member.last_active_at).total_seconds()
+                if elapsed < group.slow_mode_seconds:
+                    raise ValueError(f"慢速模式：请等待 {int(group.slow_mode_seconds - elapsed)} 秒后再发送")
+
+        # Keyword filter enforcement
+        from app.services.community_advanced_service import CommunityAdvancedService
+        keyword_ok, matched = await CommunityAdvancedService.check_keyword_filter(db, group_id, data.content)
+        if not keyword_ok:
+            raise ValueError(f"消息包含不允许的关键词：{', '.join(matched)}")
+
         if data.reply_to_id:
             reply_msg = await db.get(GroupMessage, data.reply_to_id)
             if not reply_msg or reply_msg.group_id != group_id or reply_msg.is_deleted:
