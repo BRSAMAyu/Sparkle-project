@@ -79,3 +79,24 @@
 - ui_hand_verified: na (pure Go backend)
 - commits: [a3c61232 fix(auth), f27ca5ba triage verifying]
 - follow_ups: []
+
+## 2026-04-24T21:40:00+08:00 claim=ISSUE-20260424-002
+
+- directives_read: [ARCHITECT_DIRECTIVES.md (no active override)]
+- verdict: confirmed
+
+### 独立复核证据
+
+1. auth.go:113 原始 `_ = h.queries.UpdateUserLastLogin(ctx, user.ID)` — 独立 Read 确认
+2. auth.go:148-151 原始 `_ = err` — 独立 Read 确认
+3. auth.go 不 import `log` — 独立 Grep 确认
+4. chat_orchestrator.go 使用 `log.Printf` — 确认修复风格一致
+
+### 收尾
+
+- files_touched: 1
+- lines_delta: +5/-2
+- tests_run: [go test ./... -> PASS (14.1s)]
+- ui_hand_verified: na (pure Go backend)
+- commits: [c0d4ab3c fix(auth), b0b9cf8c triage verifying]
+- follow_ups: []
