@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -834,7 +835,16 @@ async def guest_login(
             is_active=True,
         )
         db.add(user)
-        await db.flush()  # 获取 user.id 但不 commit，保持事务
+        try:
+            await db.flush()  # 获取 user.id 但不 commit，保持事务
+        except IntegrityError:
+            # Concurrent INSERT with same guest_id — user already exists
+            await db.rollback()
+            result = await db.execute(select(User).where(User.username == guest_id))
+            user = result.scalars().first()
+            if not user:
+                raise HTTPException(status_code=500, detail="访客账号创建失败，请稍后重试")
+            is_new_guest = False
 
         # 为新游客播种演示数据，确保完整体验
         # 整个 user 创建 + seed 在同一个事务中，失败全部回滚
