@@ -10,3 +10,4 @@
 - ISSUE-20260424-001 | 1-Auth: Go AppleLogin 不写 auth_sessions (P1) — PASS 2026-04-24T21:00
 - ISSUE-20260424-002 | 1-Auth: guest_login IntegrityError 竞态 (P1) — PASS 2026-04-24T21:00
 - ISSUE-20260424-003 | 1-Auth: guest_login 限流 production 偏高 (P1) — PASS 2026-04-24T21:30
+- ISSUE-20260424-004 | 1-Auth: Go AppleLogin UpdateUserLastLogin 静默丢弃错误 (P1) — PASS 2026-04-24T22:00 (pre-fixed c0d4ab3c)
