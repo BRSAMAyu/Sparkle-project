@@ -262,6 +262,7 @@ class AdaptiveReplanner:
 
     AUTO_ADJUSTMENT_COOLDOWN = timedelta(hours=2)
     AUTO_REPLAN_COOLDOWN = timedelta(hours=12)
+    STRUGGLE_COOLDOWN_BYPASS_THRESHOLD = 2
     SNAPSHOT_HISTORY_LIMIT = 3
     NEGATIVE_FEEDBACK_CATEGORIES = {"too_difficult", "too_long", "unclear", "irrelevant"}
     STRONG_COGNITIVE_STRUGGLE_MARKERS = (
@@ -275,6 +276,9 @@ class AdaptiveReplanner:
         "don't understand",
         "do not understand",
     )
+    TIME_PRESSURE_MARKERS = ("没时间", "来不及", "时间不够", "太赶", "排不开", "没空")
+    BEHIND_MARKERS = ("落后", "没完成", "没做完", "没跟上", "跑偏", "没搞定")
+    REPEATED_FAILURE_MARKERS = ("连续", "又没", "还是没", "再次", "一直")
 
     def __init__(
         self,
@@ -381,35 +385,53 @@ class AdaptiveReplanner:
 
         checkpoint_day = int(debrief_result.get("checkpoint_day") or 0)
         checkpoint_description = str(debrief_result.get("checkpoint_description") or "检查点内容").strip()
+        recovery = self._checkpoint_recovery_contract(
+            checkpoint_day=checkpoint_day,
+            checkpoint_description=checkpoint_description,
+            first_answer=str(debrief_result.get("first_answer") or ""),
+            second_answer=str(debrief_result.get("second_answer") or ""),
+        )
         title = f"[复盘补强] Day {checkpoint_day} 检查点回顾" if checkpoint_day else "[复盘补强] 检查点回顾"
         guide_json = {
-            "objective": f"回顾 Day {checkpoint_day} 检查点内容，把还没搞定的知识点逐一过一遍",
-            "method_steps": [
-                "用 10 分钟列出这个检查点里没有完成或不踏实的知识点。",
-                "按最影响后续任务的顺序，逐个用自己的话解释一遍。",
-                "做 1 个最小自测，确认补强后能继续进入下一阶段。",
-            ],
-            "time_estimate_minutes": 45,
-            "success_criteria": "能说清检查点中的薄弱项，并完成 1 个最小自测。",
+            "objective": recovery["objective"],
+            "method_steps": recovery["method_steps"],
+            "time_estimate_minutes": recovery["time_estimate_minutes"],
+            "output_action": recovery["output_action"],
+            "success_criteria": recovery["success_criteria"],
             "key_points": [checkpoint_description, "优先补影响下一阶段的漏洞"],
             "common_mistakes": ["只承认落后，但没有定位到具体知识点或时间问题。"],
+            "sprint_fail_safe": True,
+            "density_adjustment": recovery["density_adjustment"],
+            "scaffolding_mode": recovery["scaffolding_mode"],
+            "micro_contract": recovery["micro_contract"],
+            "fail_safe_rule": recovery["fail_safe_rule"],
         }
         task = Task(
             user_id=user_id,
             plan_id=plan_id,
             title=title,
             type=TaskType.REFLECTION,
-            tags=["checkpoint_remedial", "review", f"checkpoint_day:{checkpoint_day}"],
-            estimated_minutes=45,
-            difficulty=2,
-            energy_cost=2,
+            tags=[
+                "checkpoint_remedial",
+                "review",
+                "scaffolded",
+                "reduced_density",
+                "sprint_fail_safe",
+                *list(recovery["tags"]),
+                f"checkpoint_day:{checkpoint_day}",
+            ],
+            estimated_minutes=recovery["time_estimate_minutes"],
+            difficulty=recovery["difficulty"],
+            energy_cost=recovery["energy_cost"],
             guide_content=guide_json["objective"],
             guide_json=guide_json,
             ai_prompt=(
                 f"【背景】我正在做第 {checkpoint_day} 天检查点复盘。\n"
                 f"【检查点】{checkpoint_description}\n"
-                "【我的状态】阶段目标没有完全达成，需要快速补强。\n"
-                "【请帮我】定位最影响后续计划的薄弱点，给我一个 45 分钟内能完成的补强路径。"
+                f"【我的状态】{recovery['state_summary']}\n"
+                f"【输出动作】{recovery['output_action']}\n"
+                f"【完成标准】{recovery['success_criteria']}\n"
+                f"【请帮我】定位最影响后续计划的薄弱点，给我一个 {recovery['time_estimate_minutes']} 分钟内能完成的补强路径。"
             ),
             success_criteria=guide_json["success_criteria"],
             status=TaskStatus.PENDING,
@@ -423,6 +445,85 @@ class AdaptiveReplanner:
         await self.db.flush()
         await _sync_task_card_projection(self.db, task)
         return task
+
+    @classmethod
+    def _checkpoint_recovery_contract(
+        cls,
+        *,
+        checkpoint_day: int,
+        checkpoint_description: str,
+        first_answer: str,
+        second_answer: str,
+    ) -> dict[str, Any]:
+        combined = " ".join([checkpoint_description, first_answer, second_answer]).strip().lower()
+        time_pressure = any(marker in combined for marker in cls.TIME_PRESSURE_MARKERS)
+        repeated_failure = any(marker in combined for marker in cls.REPEATED_FAILURE_MARKERS)
+        understanding_issue = any(marker in combined for marker in cls.STRONG_COGNITIVE_STRUGGLE_MARKERS)
+        behind = any(marker in combined for marker in cls.BEHIND_MARKERS)
+
+        if time_pressure:
+            return {
+                "objective": f"把 Day {checkpoint_day} 的落后内容压缩成一个 25 分钟保底回收动作。",
+                "method_steps": [
+                    "先写下最影响下一阶段的 1 个模块，不列长清单。",
+                    "只保留这个模块的 3 个保底点或 1 道代表题，不追完整章。",
+                    "最后写一句明天从哪里继续，避免下次重新启动成本。",
+                ],
+                "output_action": "留下 1 个可检查的保底产出，例如 3 个保底点、1 道代表题或 1 张错因卡。",
+                "success_criteria": "有 1 个可检查的保底产出，并明确下次从哪里继续。",
+                "time_estimate_minutes": 25,
+                "difficulty": 1,
+                "energy_cost": 1,
+                "density_adjustment": "minimum_viable",
+                "scaffolding_mode": "checkpoint_time_boxed_recovery",
+                "micro_contract": "如果开始，就先锁定 1 个模块和 1 个保底输出，不再扩到第二个模块。",
+                "fail_safe_rule": "今天只回收下一阶段最需要的最小产出，不继续加难。",
+                "tags": ["time_boxed", "compressed_recovery"],
+                "state_summary": "这次主要是时间不够，优先做最小保底回收，不继续堆任务。",
+            }
+
+        if understanding_issue:
+            return {
+                "objective": f"只补 Day {checkpoint_day} 检查点里最卡的 1 个概念，并做 1 个最小检查。",
+                "method_steps": [
+                    "先写出到底哪一句、哪一题或哪一个判断点没懂，只选 1 个卡点。",
+                    "用自己的话重讲这个点，并补 1 个适用条件或反例。",
+                    "立刻做 1 个最小检查题，确认不是只看懂答案。",
+                ],
+                "output_action": "补清 1 个最卡概念，并完成 1 个最小检查题。",
+                "success_criteria": "能不用资料讲清 1 个最卡点，并完成 1 个最小检查题。",
+                "time_estimate_minutes": 35,
+                "difficulty": 1,
+                "energy_cost": 1,
+                "density_adjustment": "reduced",
+                "scaffolding_mode": "checkpoint_single_gap_repair",
+                "micro_contract": "如果开始，就只处理 1 个卡点；没讲清前，不切到第二个漏洞。",
+                "fail_safe_rule": "今天不追整章补完，只修最影响后续的一处理解断点。",
+                "tags": ["single_gap_focus"],
+                "state_summary": "这次主要是没搞懂，先补清一个关键卡点，不继续堆更难任务。",
+            }
+
+        density_adjustment = "minimum_viable" if repeated_failure else "reduced"
+        estimated_minutes = 20 if repeated_failure else 30
+        return {
+            "objective": f"回收 Day {checkpoint_day} 检查点的落后部分，并重新锁定下一阶段只保 1 个主线。",
+            "method_steps": [
+                "列出当前落后里最影响下一阶段的 2 项，不再继续展开。",
+                "只选 1 项做最小补回动作，另一项放进稍后回收清单。",
+                "用 1 次口头复述或小测确认主线已经重新接上。",
+            ],
+            "output_action": "完成 1 个最小补回动作，并写下下一阶段只保的 1 个主线。",
+            "success_criteria": "明确 1 个下一阶段主线，完成 1 个最小补回动作，并留下 1 个稍后回收项。",
+            "time_estimate_minutes": estimated_minutes,
+            "difficulty": 1,
+            "energy_cost": 1,
+            "density_adjustment": density_adjustment,
+            "scaffolding_mode": "checkpoint_backlog_triage",
+            "micro_contract": "如果开始，就只补 1 个主线缺口；剩下的内容统一放到稍后回收。",
+            "fail_safe_rule": "先把下一阶段能继续的主线接上，不为了补完而继续加码。",
+            "tags": ["backlog_triage", "streak_fail_safe"] if repeated_failure or behind else ["backlog_triage"],
+            "state_summary": "这次主要是进度落后，先降密度、接回主线，不继续并行补多个漏洞。",
+        }
 
     async def evaluate_plan_health_now(
         self,
@@ -727,7 +828,12 @@ class AdaptiveReplanner:
         action_records: list[AdaptationRecord] = []
 
         if report.recommended_action == "replan":
-            if self._recently_triggered(state.facts, "last_replan_at", self.AUTO_REPLAN_COOLDOWN):
+            within_cooldown = self._recently_triggered(state.facts, "last_replan_at", self.AUTO_REPLAN_COOLDOWN)
+            bypass_cooldown = False
+            if within_cooldown and trigger == "task_feedback_struggle":
+                new_streak = await self._increment_struggle_streak(report.user_id, report.plan_id, state)
+                bypass_cooldown = new_streak >= self.STRUGGLE_COOLDOWN_BYPASS_THRESHOLD
+            if within_cooldown and not bypass_cooldown:
                 action_taken = "replan_cooldown_active"
             else:
                 action_records = await self._trigger_full_replan(
@@ -1080,6 +1186,9 @@ class AdaptiveReplanner:
 
         time_multiplier = adaptive.get("time_multiplier", 1.0)
         difficulty_shift = adaptive.get("difficulty_shift", 0.0)
+        feedback_stats = dict((report.metrics or {}).get("feedback_stats") or {})
+        too_difficult = int(feedback_stats.get("too_difficult", 0) or 0)
+        too_long = int(feedback_stats.get("too_long", 0) or 0)
 
         if "time_overrun" in report.reasons:
             time_multiplier = min(2.0, round(time_multiplier + 0.15, 2))
@@ -1097,6 +1206,17 @@ class AdaptiveReplanner:
             adaptive["time_multiplier"] = time_multiplier
         if difficulty_shift != adaptive.get("difficulty_shift", 0.0):
             adaptive["difficulty_shift"] = difficulty_shift
+
+        if any(reason in {"progress_lag", "time_overrun"} for reason in report.reasons) or too_long >= 2:
+            adaptive["max_concurrent_tasks"] = 1
+            adaptive["task_density_mode"] = "reduced"
+            adaptive["scaffolding_mode"] = "time_boxed_or_single_step"
+
+        if "difficulty_too_hard" in report.reasons or too_difficult >= 2:
+            adaptive["max_concurrent_tasks"] = 1
+            adaptive["task_density_mode"] = "reduced"
+            adaptive["scaffolding_mode"] = "single_gap_repair"
+            adaptive["allow_new_hard_topics"] = False
 
         if adaptive:
             adjustments["adaptive_adjustments"] = adaptive
@@ -1184,6 +1304,26 @@ class AdaptiveReplanner:
         )
         return applied_records
 
+    async def _increment_struggle_streak(
+        self,
+        user_id: "UUID",
+        plan_id: "UUID",
+        state: Any,
+    ) -> int:
+        adaptive_meta = dict(((state.facts or {}).get("adaptive_meta")) or {})
+        streak = int(adaptive_meta.get("struggle_streak_since_last_replan") or 0) + 1
+        adaptive_meta["struggle_streak_since_last_replan"] = streak
+        try:
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan_id,
+                patch={"facts": {"adaptive_meta": adaptive_meta}},
+                bump_version=False,
+            )
+        except Exception as exc:
+            logger.warning("Failed to persist struggle streak: {}", exc)
+        return streak
+
     def _recently_triggered(
         self,
         facts: dict[str, Any],
@@ -1241,6 +1381,10 @@ class AdaptiveReplanner:
             change_parts.append(f"把任务难度偏移调整为 {adaptive['difficulty_shift']}")
         if "time_multiplier" in adaptive:
             change_parts.append(f"把任务时长预算系数调整为 {adaptive['time_multiplier']}")
+        if adaptive.get("max_concurrent_tasks") == 1:
+            change_parts.append("把同时推进的核心任务收紧到 1 个")
+        if adaptive.get("scaffolding_mode"):
+            change_parts.append(f"补上 {adaptive['scaffolding_mode']} 型脚手架")
         what_changed = "；".join(change_parts) or "调整了当前计划的执行参数"
 
         metrics = report.metrics or {}
@@ -1257,10 +1401,14 @@ class AdaptiveReplanner:
         expected_parts: list[str] = []
         if "time_multiplier" in adaptive:
             expected_parts.append("给每步任务更多缓冲时间")
+        if adaptive.get("max_concurrent_tasks") == 1:
+            expected_parts.append("降低任务密度")
         if "difficulty_shift" in adaptive and adaptive["difficulty_shift"] < 0:
             expected_parts.append("降低任务启动门槛")
         elif "difficulty_shift" in adaptive and adaptive["difficulty_shift"] > 0:
             expected_parts.append("适度提高挑战强度")
+        if adaptive.get("scaffolding_mode"):
+            expected_parts.append("先给更具体的补强脚手架")
         expected_effect = "，".join(expected_parts) if expected_parts else "让后续任务更贴近你当前的执行状态。"
 
         if "difficulty_too_hard" in report.reasons or too_difficult >= 2:
