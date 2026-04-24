@@ -259,4 +259,28 @@ No directives qualify for archiving:
 - open: 74, verifying: 0, closed(7d): 14
 
 - summary_updated: yes
+- commit: 3011d823
+
+## 2026-04-25T02:35:00+08:00 target=patrol-mode-0
+
+- directives_read: [ARCHITECT_DIRECTIVES.md — no new verifier-targeted directives]
+- mode: patrol (verifying queue empty, rotation=6→mode 0)
+
+### env-check results
+- postgres=ok, redis=ok
+- Config valid, no anomalies
+
+### Revert spot-check (3 recent closed issues)
+
+**ISSUE-004** (guest login TOCTOU): auth.py:839-848 IntegrityError catch block intact ✅
+**ISSUE-040** (double commit): community_signal_bridge.py:117-122 no commit after update_node_mastery ✅
+**ISSUE-014** (broadcast): ws_registry.go:133-163 BroadcastToUser exists; chat_orchestrator.go:623 uses it ✅
+
+All 3 fixes confirmed in place, no reverts detected.
+
+### empty_streak
+- empty_streak: 1 → 2 (second consecutive empty-queue loop)
+- Next loop: if empty_streak reaches 3 AND round ≥ 2 → halt=true
+
+- summary_updated: no (stats unchanged: open=74, verifying=0, closed(7d)=14)
 - commit: pending
