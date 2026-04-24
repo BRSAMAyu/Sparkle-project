@@ -120,3 +120,11 @@
 - next_cursor: 5 (slice 05-execution_openclaw)
 - commit: pending
 
+
+## 2026-04-24T21:15:00+08:00 round=0 slice=skipped
+- directives_read: none active
+- produced: 0
+- deferred: 0
+- deviations: SKIP — auditor.lock exists (started_at=21:00, claim=slice-05), another Auditor instance active on cursor=4. Respect lock.
+- next_cursor: unchanged (4)
+- commit: none
