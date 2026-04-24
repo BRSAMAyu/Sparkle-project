@@ -53,5 +53,52 @@
 
 ---
 
-## 快照 #002 — (待 loop 触发后写入)
+## 快照 #002 — 2026-04-24T23:35:00+08:00
+
+### 当前状态
+
+| 指标 | 值 |
+|------|-----|
+| branch | 工程收尾 |
+| 审计 cursor | 10/21（slices 01-10 完成） |
+| open issues | 58（P1: 16, P2: 42） |
+| verifying | 2（ISSUE-007 P1→disputed, ISSUE-013 protobuf fix） |
+| closed | 5（+ISSUE-003 guest rate limit PASS） |
+| Auditor 最后活跃 | 2026-04-24T23:10+08:00（slice-10 achievement） |
+| Fixer 最后活跃 | 2026-04-24T23:20+08:00（Loop 5 ISSUE-007 dispute） |
+| Verifier 最后活跃 | 2026-04-24T22:50+08:00 |
+
+### 变化对比（与快照 #001 对比）
+
+- P1 消化: ISSUE-003 关闭（+1 closed），ISSUE-007 P2 降级（净减少 1 P1）
+- 新 issue: +6（slice-09 focus_breathing: ISSUE-052~057），+6（slice-10 achievement: ISSUE-058~063）
+- P1 净变化: 14 → 16（+3 from achievement P1s: 058/059/060，-1 ISSUE-007 降级）
+- 指令响应: DIRECTIVE-01/02/03/04 → 全部未 ACK（预期：agents 在指令发出前已完成上一个 loop）
+- git commits: 本轮3个 fix commit 均引用规范 ISSUE ID ✅
+
+### 关键发现
+
+1. **ISSUE-007 dispute 技术上成立** - 独立验证 circuit breaker + retryBuf + DB fallback 均存在。降级 P2 合理，但须记录 retryBuf overflow 边界（500条上限）。已发出 DIRECTIVE-06 处置。
+
+2. **安全 P1 队列缺位** - ISSUE-027（/health 信息泄露）、ISSUE-028（Exception 内容泄露）均未进入 pending_fix.md。Fixer 因 recency bias 优先处理新发现的 achievement 问题。已发出 DIRECTIVE-05 紧急插队，时限 12h。
+
+3. **P1 积压持续增长** - 16 个 P1 仍 open，Fixer 每 loop 只消化 1 个，Auditor 每 loop 新增 6 个。当前 ratio = 1:6，严重不平衡。下次快照需关注此趋势。
+
+4. **Fixer 队列已切换到规范 ID** - pending_fix.md 中的条目均使用规范 ISSUE ID，DIRECTIVE-01 效果已局部显现（即使 agents 未正式 ACK）。
+
+### 本轮决策
+
+- 发出 DIRECTIVE-20260424-05（安全 P1 插队，override）
+- 发出 DIRECTIVE-20260424-06（ISSUE-007 降级关单，elevated）
+
+### 下次检查重点（快照 #003 时验证）
+
+- [ ] DIRECTIVE-01/02/04 是否被 ACK（预计下轮 agents 已读取）
+- [ ] ISSUE-027/028 是否进入 verifying（安全 P1 12h 时限）
+- [ ] ISSUE-007 是否被正式 closed（dispute 接受后关单）
+- [ ] P1 open 数量是否开始下降（需 closed > audited P1 per loop）
+- [ ] Auditor 是否对 ISSUE-009 做了补核（DIRECTIVE-03 要求）
+- [ ] 是否有 Verifier 验证 ISSUE-013（protobuf fix）
+
+## 快照 #003 — (待下次 loop 触发后写入)
 

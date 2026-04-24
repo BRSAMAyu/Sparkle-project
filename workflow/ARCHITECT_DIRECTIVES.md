@@ -29,6 +29,86 @@
 
 ---
 
+### DIRECTIVE-20260424-05
+- status: active
+- issued_at: 2026-04-24T23:35:00+08:00
+- target_roles: [fixer]
+- priority: override
+- scope: issue:ISSUE-20260424-027,ISSUE-20260424-028
+- expires_at: 2026-04-25T12:00:00+08:00
+
+#### 内容
+
+**安全 P1 紧急插队：ISSUE-027 和 ISSUE-028 必须在所有其他 issue 之前修复。**
+
+架构师检测到 `workflow/queue/pending_fix.md` 当前队列头部是 achievement/error_book 相关问题（ISSUE-058/059/060/046），而安全类 P1 未入队。这违反了安全优先原则。
+
+**立即执行**：
+
+1. 将 `workflow/queue/pending_fix.md` 中的当前条目保持不变，但在顶部**插入**以下两条（优先处理）：
+   ```
+   - ISSUE-20260424-027 P1 [SECURITY] /health 端点未认证可访问，泄露 OpenClaw 基础设施详情
+   - ISSUE-20260424-028 P1 [SECURITY] handoff_task Exception 捕获泄露内部错误消息
+   ```
+
+2. ISSUE-027 修复方向：
+   - 在 `/health` 路由加认证 middleware（与 `/api/v1/executions` 路由一致），或者
+   - 将 `/health` 端点的响应内容截断为只返回 `{"status": "ok"}`，不含 OpenClaw URL、config 等基础设施信息
+
+3. ISSUE-028 修复方向：
+   - 将 `except Exception as e: raise HTTPException(status_code=500, detail=str(e))` 改为 `raise HTTPException(status_code=500, detail="Internal execution error")`
+   - 确保内部错误只进入日志，不通过 HTTP 响应泄露
+
+4. Fix commit 格式：`fix(openclaw): <描述>\n\nissue: ISSUE-20260424-027` 和 `fix(openclaw): <描述>\n\nissue: ISSUE-20260424-028`
+
+**时限**：12h 内（2026-04-25T12:00 前）必须进入 verifying。超时架构师将升级为 P0 并直接指派。
+
+#### ACK by fixer
+（待 Fixer 执行后填写）
+
+---
+
+### DIRECTIVE-20260424-06
+- status: active
+- issued_at: 2026-04-24T23:35:00+08:00
+- target_roles: [fixer]
+- priority: elevated
+- scope: issue:ISSUE-20260424-007
+- expires_at: never
+
+#### 内容
+
+**ISSUE-007 降级决定：P1 → P2，不强制修复，但需记录保护边界。**
+
+架构师独立验证了 Fixer 的 dispute 证据：
+- `chat_history.go:237-250` circuit breaker + retryBuf（最大 500 条）确实存在
+- `retryWorker` 定期重试入队确实存在
+- `GetMessages` DB fallback 确实存在
+
+Dispute 核心观察**成立**：不是"立即不可恢复丢失"，有多层保护。P2 降级合理。
+
+**但须记录以下已知剩余风险**（写入 ISSUE-007 的 `## [Fix]` 段）：
+- retryBuf 上限 500 条，在持续 Redis 不可用时 old messages 会被 LRU 淘汰（line 178）
+- 这是可接受的工程折中，但运维必须知道此边界
+
+Fixer 需在 `workflow/issues/verifying/ISSUE-20260424-007.md` 的 `## [Fix]` 段补充：
+```
+## [Fix] 变更摘要
+无代码修改。保护机制已存在。
+
+## [Fix] 自检
+已验证: circuit breaker retryBuf(max=500), retryWorker, GetMessages DB fallback
+已知边界: retryBuf overflow 在持续 Redis 故障 >500 消息时 oldest 被丢弃（可接受折中）
+建议: 运维 alert on retryBuf > 400 条（Prometheus gauge 建议后续添加）
+```
+
+然后将 ISSUE-007 移入 `workflow/issues/closed/`，在 `workflow/SUMMARY.md` 更新 status 为 `closed (P2-downgraded, dispute accepted)`。
+
+#### ACK by fixer
+（待 Fixer 执行后填写）
+
+---
+
 ### DIRECTIVE-20260424-01
 - status: active
 - issued_at: 2026-04-24T23:30:00+08:00
