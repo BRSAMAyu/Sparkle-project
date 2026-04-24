@@ -131,3 +131,103 @@
 [2026-04-24T22:45] closed ISSUE-20260424-003 — PASS (guest rate limit 100→10/15min prod, 100→50/15min dev)
 [2026-04-24T22:50] closed ISSUE-20260424-045 — PASS (Flutter _failPendingMessages consistent across 3 paths)
 [2026-04-24T22:50] verifying queue empty, entering patrol mode next loop
+
+[2026-04-24T23:15] closed ISSUE-20260424-013 — PASS (protobuf maxMessageLength check added at chat_orchestrator_protocol.go:545-549, same 4000 limit across all 3 paths)
+
+## 2026-04-24T23:15:00+08:00 target=patrol-mode-4
+
+- directives_read: [none active]
+- mode: patrol (verifying queue empty, pending_verify.md missing)
+
+### Tech Debt Budget Check
+- `scripts/check_tech_debt_budget.py` — PASS
+- backend_datetime_utcnow: 163 / 467 budget (delta -304) ✅
+- backend_pydantic_class_config: 0 / 61 budget (delta -61) ✅
+- backend_pydantic_json_encoders: 0 / 1 budget (delta -1) ✅
+- backend_pydantic_min_items: 1 / 1 budget (delta 0) ✅
+
+### SLO Alert Drift Analysis
+- CLAUDE.md claims 11 SLO alert rules
+- sparkle_slo_alerts.yml: 5 rules (GatewayDown, BackendDown, High5xxRate, P95LatencyHigh, EventStreamLagHigh, ContextPackOverBudgetSpike → actually 6)
+- sparkle_production_baseline_alerts.yml: 6 rules (AIFirstTokenLatency, AITotalDuration, PredictionRulesFallback, OutboxBacklog, BackendMemory, GatewayGoroutines)
+- celery_alerts.yml: 17 rules
+- sqam_alerts.yml: 6 rules
+- **Total: 35 alert rules across 4 files, well above claimed 11** — CLAUDE.md undercounts
+
+### Systemic Pattern Scan: Fire-and-forget
+
+- `asyncio.create_task` in `backend/app/`: **65 occurrences across 30 files**
+- `loop.create_task` in `backend/app/`: **5 occurrences across 4 files**
+  - achievement_engine.py, memory_inferred_write_lane.py, tool_history_service.py, galaxy/event_listener.py
+- `task_manager.spawn` in `backend/app/`: **5 occurrences across 5 files**
+- **Fire-and-forget ratio: 70 sites vs 5 correct sites (93% non-compliant)**
+- Cross-referenced with audit: ISSUE-015, ISSUE-042, ISSUE-046, ISSUE-058 all flag this pattern
+- **Recommendation**: Add `asyncio.create_task` count to `tech_debt_budget.json` with max=65
+
+### Orphaned Verifying Issues Found
+
+pending_verify.md 不存在，但 SUMMARY.md 有 2 个 verifying 状态的 ISSUE：
+- ISSUE-008 (commit 89c88217): per-user WS connection limit
+- ISSUE-013 (commit 8fd4b32d): protobuf maxMessageLength check
+
+**独立验证 ISSUE-013 (protobuf maxMessageLength)**:
+- A (evidence eliminated): ✅ chat_orchestrator_protocol.go:545-549 添加 `len(input.Message) > maxMessageLength` 检查
+- B (no regression): ✅ +6/-1 lines, 不影响其他路径
+- C (no red lines): ✅ 无 .env/secrets/gen files
+- D (contract): ✅ 无 proto 改动
+- E (architecture): ✅ Gateway 执行安全限制，正确层位
+- F (tests): Fixer self-test PASS; worktree 无 gen files 无法本地跑 Go test，代码变更简单可读验证
+- **Verdict: PASS**
+
+**验证 ISSUE-008 (per-user WS limit)**:
+- Fix 添加了 per-user 限制 (ws_registry.go:49-53, maxPerUser 字段)
+- 但原始 ISSUE 描述 "两套独立 WS 连接注册系统互不感知" 未完全解决
+- SUMMARY 已标注 "22:20 部分修复"
+- **Verdict: PARTIAL — per-user limit 已实现，双系统问题仍 open**
+
+### Stats Correction
+- SUMMARY "verifying: 0" 应为 "verifying: 2"（已更新）
+- ISSUE-013 移至 closed
+- ISSUE-008 改为 open (per-user limit done, dual-system still open)
+
+- summary_updated: yes
+- commit: pending
+
+## 2026-04-25T02:00:00+08:00 target=batch-verify-P1-7issues
+
+- directives_read: [ARCHITECT_DIRECTIVES.md]
+- mode: verify (7 P1 issues batch-verified in parallel)
+- independent_evidence: (see individual ISSUE closed sections for per-issue evidence)
+
+### Batch verification summary
+
+7 issues pulled from verifying/ queue, all verified in a single batch using parallel agents:
+
+| ID | Slice | Verdict | Key Evidence |
+|----|-------|---------|-------------|
+| ISSUE-027 | 05 | PASS | /health truncated to status+timestamp, no infra details |
+| ISSUE-028 | 05 | PASS | Generic error message in handoff_task exception handler |
+| ISSUE-016 | 03 | PASS | Atomic claim() with Redis Lua + dict.pop(); tests updated |
+| ISSUE-040 | 07 | PASS | Redundant commit removed; galaxy_service.py:998 internal commit confirmed |
+| ISSUE-014 | 02 | PASS | BroadcastToUser added; PushIntervention uses broadcast; failed conns unregistered |
+| ISSUE-009 | 02 | DISPUTED_UPHELD | segmentSize > 0 guard at chatflow.go:506 prevents loop; misreported |
+| ISSUE-015 | 03 | DISPUTED_UPHELD | All 3 tasks have try/except+logging; "no error handling" claim false |
+
+### Six-dimension spot-check (ISSUE-016 deepest)
+- checks: {A: ok, B: ok, C: ok, D: ok, E: ok, F: ok}
+  - A: Redis Lua atomicity verified, dict.pop() fallback verified
+  - B: test_planning_hitl_chain.py mocks updated from get→claim
+  - C: No .env/secrets/generated files
+  - D: No proto changes
+  - E: pending_actions.py is the correct layer for atomic claim
+  - F: pytest tests pass
+
+### Dispute analysis
+- ISSUE-009: Auditor missed `if h.quota != nil && segmentSize > 0` guard at line 506. When segmentSize=0, entire quota block skipped. Infinite loop impossible.
+- ISSUE-015: Auditor claimed "no try/except" and "no logging" — both false. All 3 tasks have comprehensive error handling with logging. _execute_replan_action even has SSE user notification.
+
+### Stats after batch
+- open: 75, verifying: 0, closed(7d): 13
+
+- summary_updated: yes
+- commit: pending

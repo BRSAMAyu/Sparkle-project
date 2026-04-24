@@ -14,14 +14,14 @@
 | ISSUE-20260424-006 | 01 | P2 | open | Go/Python JWT issuer/audience claims 处理需验证一致性 | - | 19:05 |
 | ISSUE-20260424-007 | 02 | P1 | closed | saveMessage Redis 写入失败静默丢弃，用户消息不可恢复丢失 | fixer@2026-04-24T23:15 | 23:55 closed (P2-downgraded, dispute accepted) |
 | ISSUE-20260424-008 | 02 | P2 | open | 两套独立 WS 连接注册系统互不感知，用户可绕过全局限制 | fixer@89c88217 | 23:15 per-user limit已加，双系统问题仍open |
-| ISSUE-20260424-009 | 02 | P1 | disputed | STREAM_TOKEN_SEGMENT=0 导致 quota 记录无限循环 | fixer@2026-04-25T01:00 | 01:05 disputed (segmentSize>0 guard exists at line 506) |
+| ISSUE-20260424-009 | 02 | P1 | closed | STREAM_TOKEN_SEGMENT=0 导致 quota 记录无限循环 | fixer@2026-04-25T01:00 | 02:00 DISPUTED_UPHELD (misreported, guard exists) |
 | ISSUE-20260424-010 | 02 | P2 | open | 客户端 active_tools 未做白名单校验可注入任意工具名 | - | 19:30 |
 | ISSUE-20260424-011 | 02 | P2 | open | WS auth 检查在 Upgrade 之后，防御层位置不当 | - | 19:30 |
 | ISSUE-20260424-012 | 02 | P2 | open | Flutter WS fallback 将 JWT 暴露在 URL query parameter 中 | - | 19:30 |
 | ISSUE-20260424-013 | 02 | P1 | closed | Protobuf 路径绕过 maxMessageLength 4000 字符应用层限制 | fixer@8fd4b32d | 23:15 PASS |
-| ISSUE-20260424-014 | 02 | P1 | verifying | GetWriter/Get 非确定性返回，PushIntervention 可能发到错误设备 | fixer@2026-04-25T01:40 | 01:45 |
-| ISSUE-20260424-015 | 03 | P1 | disputed | asyncio.create_task fire-and-forget，计划批准后任务生成静默失败 | fixer@2026-04-25T00:40 | 00:45 disputed (try/except exists) |
-| ISSUE-20260424-016 | 03 | P1 | verifying | pending_actions_store get-delete 非原子，并发 SubmitPlanReview 可重复审批 | fixer@2026-04-25T00:10 | 00:15 |
+| ISSUE-20260424-014 | 02 | P1 | closed | GetWriter/Get 非确定性返回，PushIntervention 可能发到错误设备 | fixer@2026-04-25T01:40 | 02:00 PASS |
+| ISSUE-20260424-015 | 03 | P1 | closed | asyncio.create_task fire-and-forget，计划批准后任务生成静默失败 | fixer@2026-04-25T00:40 | 02:00 DISPUTED_UPHELD (try/except exists, P2) |
+| ISSUE-20260424-016 | 03 | P1 | closed | pending_actions_store get-delete 非原子，并发 SubmitPlanReview 可重复审批 | fixer@2026-04-25T00:10 | 02:00 PASS |
 | ISSUE-20260424-017 | 03 | P2 | open | gRPC handler plan_id 来源不一致，使用 request.plan_id 而非已验证存储值 | - | 20:15 |
 | ISSUE-20260424-018 | 03 | P2 | open | track_rejection_count 在 redis=None 时静默降级，连续拒绝信息收集永不触发 | - | 20:15 |
 | ISSUE-20260424-019 | 03 | P2 | open | _validate_feasibility 硬编码 liberal_arts 背景检查，不适用于多元用户画像 | - | 20:15 |
@@ -32,8 +32,8 @@
 | ISSUE-20260424-024 | 04 | P2 | open | BlockedPresentationHistoryStore 本地 fallback 无限增长无淘汰 | - | 20:35 |
 | ISSUE-20260424-025 | 04 | P2 | open | _contains_any 子串匹配导致模式检测误报风险 | - | 20:35 |
 | ISSUE-20260424-026 | 04 | P2 | open | gentle blocked_temperature 缺少 4 种 failure_kind 温和消息变体 | - | 20:35 |
-| ISSUE-20260424-027 | 05 | P1 | verifying | /health 端点未认证可访问，泄露 OpenClaw 基础设施详情 | fixer@2026-04-24T23:45 | 23:50 |
-| ISSUE-20260424-028 | 05 | P1 | verifying | handoff_task 通用 Exception 捕获泄露内部错误消息 | fixer@2026-04-24T23:50 | 23:50 |
+| ISSUE-20260424-027 | 05 | P1 | closed | /health 端点未认证可访问，泄露 OpenClaw 基础设施详情 | fixer@2026-04-24T23:45 | 02:00 PASS |
+| ISSUE-20260424-028 | 05 | P1 | closed | handoff_task 通用 Exception 捕获泄露内部错误消息 | fixer@2026-04-24T23:50 | 02:00 PASS |
 | ISSUE-20260424-029 | 05 | P2 | open | OpenClawClient 每次 execute 新建 httpx.AsyncClient 无连接池 | - | 21:20 |
 | ISSUE-20260424-030 | 05 | P2 | open | _clear_failure_state 为空操作 stub，成功后不清除降级状态 | - | 21:20 |
 | ISSUE-20260424-031 | 05 | P2 | open | _condition_matches 朴素字符串切片解析条件表达式，不支持转义 | - | 21:20 |
@@ -45,7 +45,7 @@
 | ISSUE-20260424-037 | 06 | P2 | open | auto_classify_task 用零 UUID 作 user_id 占位符，语义不正确 | - | 21:40 |
 | ISSUE-20260424-038 | 06 | P2 | open | TaskEventListener consumer_name 含时间戳，重启后 pending 消息成孤儿 | - | 21:40 |
 | ISSUE-20260424-039 | 07 | P1 | open | send_message 未调用 check_keyword_filter 和 slow_mode_seconds 检查 | - | 22:20 |
-| ISSUE-20260424-040 | 07 | P1 | verifying | community_signal_bridge handle_resource_shared 双重 commit | fixer@2026-04-25T01:20 | 01:25 |
+| ISSUE-20260424-040 | 07 | P1 | closed | community_signal_bridge handle_resource_shared 双重 commit | fixer@2026-04-25T01:20 | 02:00 PASS |
 | ISSUE-20260424-041 | 07 | P2 | open | search_messages/group/user LIKE 通配符未转义 | - | 22:20 |
 | ISSUE-20260424-042 | 07 | P2 | open | _record_community_signal asyncio.create_task fire-and-forget | - | 22:20 |
 | ISSUE-20260424-043 | 07 | P2 | open | like_checkin/encourage_checkin 直接 db.commit() 绕过 session 管理约定 | - | 22:20 |
@@ -95,6 +95,12 @@
 | ISSUE-20260424-087 | 14 | P2 | open | rate_library 并发提交 IntegrityError 未处理返回误导性400 | - | 00:35 |
 | ISSUE-20260424-088 | 14 | P2 | open | _blend_quality_score 每次 GET 重新计算无缓存 | - | 00:35 |
 | ISSUE-20260424-089 | 14 | P2 | open | _SEED_VECTOR_RUNTIME_ENABLED 进程级全局开关，一用户失败禁用全进程 | - | 00:35 |
+| ISSUE-20260424-090 | 15 | P1 | open | Simulation SSE streaming 泄露内部异常详情到客户端 | - | 13:30 |
+| ISSUE-20260424-091 | 15 | P1 | open | SimulationEngine._local_checkpoints 类级 dict 无限增长，OOM 风险 | - | 13:30 |
+| ISSUE-20260424-092 | 15 | P2 | open | prediction_theater_service.py 使用 import logging 绕过 loguru 管道 | - | 13:30 |
+| ISSUE-20260424-093 | 15 | P2 | open | adopt_prediction bare except:pass 静默吞掉认知碎片创建错误 | - | 13:30 |
+| ISSUE-20260424-094 | 15 | P2 | open | _find_related_concept_anchors ilike 通配符未转义 | - | 13:30 |
+| ISSUE-20260424-095 | 15 | P2 | open | PredictionAccuracyTracker 用户索引 SET 积累过期 prediction ID 无清理 | - | 13:30 |
 
 ## 最近 7 日已关闭（趋势观察）
 
@@ -107,15 +113,22 @@
 | ISSUE-20260424-045 | 02 | P2 | PASS | 2026-04-24T22:50 |
 | ISSUE-20260424-013 | 02 | P1 | PASS | 2026-04-24T23:15 |
 | ISSUE-20260424-007 | 02 | P1 | DISPUTED→P2 | 2026-04-24T23:55 |
+| ISSUE-20260424-027 | 05 | P1 | PASS | 2026-04-25T02:00 |
+| ISSUE-20260424-028 | 05 | P1 | PASS | 2026-04-25T02:00 |
+| ISSUE-20260424-016 | 03 | P1 | PASS | 2026-04-25T02:00 |
+| ISSUE-20260424-040 | 07 | P1 | PASS | 2026-04-25T02:00 |
+| ISSUE-20260424-014 | 02 | P1 | PASS | 2026-04-25T02:00 |
+| ISSUE-20260424-009 | 02 | P1 | DISPUTED_UPHELD | 2026-04-25T02:00 |
+| ISSUE-20260424-015 | 03 | P1 | DISPUTED_UPHELD | 2026-04-25T02:00 |
 
 ## 统计快照（Verifier 每轮 loop 更新一次）
 
 - round 0 进行中
-- open: 81
-- verifying: 2
-- closed (7d): 6
+- open: 75
+- verifying: 0
+- closed (7d): 13
 - escalated: 0
-- last_update: 2026-04-25T00:35:00+08:00
+- last_update: 2026-04-25T02:00:00+08:00
 - slice_01_audit: 3 P1 + 3 P2, anchors personally read (7 files, 6 grep queries)
 - slice_02_audit: 4 P1 + 4 P2, combined 2-loop audit (14 total anchors read)
 - slice_03_audit: 2 P1 + 4 P2, anchors personally read (plan_review_service.py 2241L, plan_review_card.dart 1376L, agent_service.proto + agent_grpc_service.py)
@@ -130,3 +143,4 @@
 - slice_11_audit: 2 P1 + 6 P2 (6 by concurrent session validated + 2 new), anchors personally read (calendar.py 413L, notification_push_service.py 323L, notification_center_service.py 1160L, notification_analytics_service.py 500L, calendar_repository.dart 454L)
 - slice_13_audit: 2 P1 + 4 P2, anchors personally read (cognitive_service.py 681L, behavior_signal_collector.py 535L, cognitive.py API 126L, capsules.py 553L, cognitive models 106L, capsule_repository.dart 240L, cognitive_repository.dart 103L, capsule_provider.dart 188L, cognitive_provider.dart 95L, behavior_pattern_model.dart 72L, capsule_archive_provider.dart 106L)
 - slice_14_audit: 0 P1 + 6 P2, anchors personally read (seed_libraries.py 789L, seed_library_service.py 700+L, seed_content.py 363L, seed_bridge.py 180L, translation.py 231L, translation_service.dart 157L, seed_library_repository.dart 598L, tool_registry.dart 380L, proxy_routes.go seed+translation routes)
+- slice_15_audit: 2 P1 + 4 P2, anchors personally read (prediction_theater_service.py 3797L, simulation_engine.py 1779L, theater.py API 202L, simulation.py API 263L, learning_reports.py API 33L, learning_report_agent.py 1315L, session_cleanup.py 47L, simulation_state.py 13L, simulation_run_store.py 70L, proxy_routes.go theater/simulation/report routes)
