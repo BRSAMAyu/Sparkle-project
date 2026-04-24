@@ -413,5 +413,56 @@ ISSUE-009 补核要求（DIRECTIVE-09 §4）事实上已由 Fixer 代为完成�
 
 ---
 
-## 快照 #009 — (待下次 loop 触发后写入)
+## 快照 #009 — 2026-04-25T01:30:00+08:00
 
+### 当前状态
+
+| 指标 | 值 |
+|------|-----|
+| branch | 工程收尾 |
+| 审计 cursor | 14/21（freeze 有效，Auditor 无活动） |
+| open P1 | 19（名义；6 个 P1 在 verifying） |
+| verifying | **6**（009, 015, 016, 027, 028, 040） |
+| closed (7d) | 6（无变化） |
+| Fixer 最后活跃 | 2026-04-25T01:25（ISSUE-040 fix，DIRECTIVE-08 wave-1 完成） |
+| Auditor 最后活跃 | 2026-04-25T00:35（仍无活动，cursor 14 合规） |
+| Verifier 最后活跃 | 2026-04-24T23:15（仍未激活，empty_streak=1） |
+
+### 变化对比（与快照 #008 对比）
+
+- Fixer +1 fix commit：`40e74efd fix(community): remove redundant db.commit() after update_node_mastery in handle_resource_shared`
+- ISSUE-040 进入 verifying（verifying 队列 5→6）
+- Fixer DIRECTIVE-08 波次一完成：ISSUE-016 ✅、ISSUE-015（dispute）✅、ISSUE-040 ✅
+- DIRECTIVE-09/10 仍无 ACK（发出时长 ~30min，距 2h 阈值剩余 ~1h30m）
+- Verifier 无活动（6 个 P1 等待，其中安全 P1 ISSUE-027/028 等待 ~1.75h）
+
+### 架构师独立验证
+
+**ISSUE-040 fix（`remove redundant db.commit()`）**：
+- 独立 Read `ISSUE-20260424-040.md` fix 段
+- Fixer 确认 `galaxy_service.py:998` 有内部 commit，bridge.py:116 共享同一 session
+- 移除外层 `await self.db.commit()` 技术上正确 ✅
+- 101 galaxy/community 测试通过
+- **架构师评估：fix VALID**，Verifier 可直接判 PASS
+
+### 预测更新（如 Verifier 本 loop 处理 6 个 verifying 问题）
+
+- ISSUE-009 closed（-1 P1）
+- ISSUE-015 P2 downgraded（-1 P1）
+- ISSUE-016/027/028/040 PASS（-4 P1）
+- **净结果：open P1 19 → 13**，超过解冻线的一半
+
+### 本轮决策
+
+无新指令。DIRECTIVE-10 已覆盖 Verifier 激活需求。Fixer 按 DIRECTIVE-08 良好执行。
+
+### 下次检查重点（快照 #010，预计 02:00）
+
+- [ ] Verifier 是否终于激活？（安全 P1 027/028 等待时间快到 2h）
+- [ ] DIRECTIVE-09/10 是否 ACK？（2h 阈值 = 03:00，距今 ~1.5h）
+- [ ] Fixer 是否进入 DIRECTIVE-08 波次二（ISSUE-072 enqueue_from_chat_turn fire-and-forget）
+- [ ] open P1 是否开始下降
+
+---
+
+## 快照 #010 — (待下次 loop 触发后写入)
