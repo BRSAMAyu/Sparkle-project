@@ -1,0 +1,2411 @@
+{
+  "id": "mathematics@v1",
+  "name": "高等数学与线性代数冲刺包",
+  "version": "v1.0",
+  "description": "面向理工科本科期末考试的数学冲刺知识包，覆盖高等数学的极限、连续、导数、积分、多元函数、二重积分与级数，以及线性代数的行列式、矩阵、线性方程组、特征值特征向量、二次型与正定矩阵。",
+  "subject": "高等数学与线性代数",
+  "aliases": [
+    "高数",
+    "高等数学",
+    "线代",
+    "线性代数",
+    "数学",
+    "math"
+  ],
+  "author": "sparkle-core",
+  "created_at": "2026-04-25T00:00:00",
+  "changelog": [
+    "Initial release: 57 knowledge nodes, 20 question archetypes, 55 mistake types, 7d/14d strategy presets."
+  ],
+  "knowledge_nodes": [
+    {
+      "node_id": "math.limit_definition",
+      "label": "极限定义与邻域语言",
+      "layer": "calculus_limit",
+      "prerequisites": [],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.65,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.limit_direct_substitution_condition"
+      ],
+      "recommended_action": "用 3 个典型例子复述数列极限、函数极限和左右极限的定义差异"
+    },
+    {
+      "node_id": "math.limit_laws",
+      "label": "极限四则运算与直接代入",
+      "layer": "calculus_limit",
+      "prerequisites": [
+        "math.limit_definition"
+      ],
+      "exam_weight": 0.85,
+      "frequency": 0.9,
+      "trainability": 0.9,
+      "time_cost": 18,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.limit_direct_substitution_condition"
+      ],
+      "recommended_action": "先判断可代入条件，再用四则运算处理 5 道基础极限题"
+    },
+    {
+      "node_id": "math.equivalent_infinitesimal",
+      "label": "等价无穷小替换",
+      "layer": "calculus_limit",
+      "prerequisites": [
+        "math.limit_laws"
+      ],
+      "exam_weight": 0.95,
+      "frequency": 0.95,
+      "trainability": 0.9,
+      "time_cost": 22,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.equivalent_infinitesimal_condition"
+      ],
+      "recommended_action": "闭卷默写常见等价无穷小，并标注只能在乘除因子中安全替换"
+    },
+    {
+      "node_id": "math.lhopital_rule",
+      "label": "L'Hôpital 法则",
+      "layer": "calculus_limit",
+      "prerequisites": [
+        "math.derivative_rules",
+        "math.limit_laws"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.9,
+      "trainability": 0.85,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.lhopital_condition_ignored",
+        "mistake.infinity_minus_infinity_untransformed"
+      ],
+      "recommended_action": "每题先写出 0/0 或 ∞/∞ 判定，再决定是否使用 L'Hôpital"
+    },
+    {
+      "node_id": "math.sequence_limits",
+      "label": "数列极限与夹逼/单调有界",
+      "layer": "calculus_limit",
+      "prerequisites": [
+        "math.limit_definition"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.45,
+      "trainability": 0.6,
+      "time_cost": 30,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.sequence_limit_rule_misuse"
+      ],
+      "recommended_action": "区分夹逼、单调有界、递推数列三类题的第一步判断"
+    },
+    {
+      "node_id": "math.one_sided_limits",
+      "label": "左右极限与间断点判断",
+      "layer": "calculus_limit",
+      "prerequisites": [
+        "math.limit_laws"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.7,
+      "trainability": 0.85,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.one_sided_limit_ignored"
+      ],
+      "recommended_action": "对分段函数逐点写出左极限、右极限和函数值"
+    },
+    {
+      "node_id": "math.continuity_discontinuity",
+      "label": "连续性与间断点分类",
+      "layer": "calculus_limit",
+      "prerequisites": [
+        "math.one_sided_limits"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.85,
+      "time_cost": 22,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.continuity_piecewise_boundary"
+      ],
+      "recommended_action": "用一张表判断可去、跳跃、无穷和振荡间断点"
+    },
+    {
+      "node_id": "math.asymptote_continuity_apps",
+      "label": "渐近线与连续性应用",
+      "layer": "calculus_limit",
+      "prerequisites": [
+        "math.limit_laws",
+        "math.continuity_discontinuity"
+      ],
+      "exam_weight": 0.45,
+      "frequency": 0.4,
+      "trainability": 0.7,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.infinity_minus_infinity_untransformed"
+      ],
+      "recommended_action": "按垂直、水平、斜渐近线三类各做 1 题"
+    },
+    {
+      "node_id": "math.derivative_definition",
+      "label": "导数定义",
+      "layer": "calculus_derivative",
+      "prerequisites": [
+        "math.limit_laws"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.8,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.derivative_definition_delta_error"
+      ],
+      "recommended_action": "用定义求一次导数，明确增量、差商和极限三步"
+    },
+    {
+      "node_id": "math.derivative_rules",
+      "label": "导数公式与四则运算",
+      "layer": "calculus_derivative",
+      "prerequisites": [
+        "math.derivative_definition"
+      ],
+      "exam_weight": 0.95,
+      "frequency": 0.95,
+      "trainability": 0.95,
+      "time_cost": 22,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.derivative_rule_sign_error"
+      ],
+      "recommended_action": "闭卷默写基本初等函数导数表，并做 10 道快速求导题"
+    },
+    {
+      "node_id": "math.chain_rule",
+      "label": "复合函数链式法则",
+      "layer": "calculus_derivative",
+      "prerequisites": [
+        "math.derivative_rules"
+      ],
+      "exam_weight": 0.95,
+      "frequency": 0.9,
+      "trainability": 0.9,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.chain_rule_missing_inner_derivative"
+      ],
+      "recommended_action": "给每个复合层编号，从外到内写出导数乘积"
+    },
+    {
+      "node_id": "math.implicit_parametric_derivative",
+      "label": "隐函数与参数方程求导",
+      "layer": "calculus_derivative",
+      "prerequisites": [
+        "math.chain_rule"
+      ],
+      "exam_weight": 0.7,
+      "frequency": 0.65,
+      "trainability": 0.75,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.implicit_derivative_treat_y_constant",
+        "mistake.parametric_derivative_order_error"
+      ],
+      "recommended_action": "做隐函数和参数方程各 2 题，步骤中显式写 dy/dx 或 dy/dt 除以 dx/dt"
+    },
+    {
+      "node_id": "math.differential_approximation",
+      "label": "微分与近似计算",
+      "layer": "calculus_derivative",
+      "prerequisites": [
+        "math.derivative_rules"
+      ],
+      "exam_weight": 0.6,
+      "frequency": 0.55,
+      "trainability": 0.8,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.differential_linear_part_missing"
+      ],
+      "recommended_action": "用 dy = f'(x)dx 处理 3 道近似计算题"
+    },
+    {
+      "node_id": "math.tangent_normal",
+      "label": "切线与法线方程",
+      "layer": "calculus_derivative",
+      "prerequisites": [
+        "math.derivative_rules"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.9,
+      "time_cost": 18,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.tangent_normal_slope_inverse_error"
+      ],
+      "recommended_action": "先求切点斜率，再写点斜式，法线斜率取负倒数"
+    },
+    {
+      "node_id": "math.monotonicity_extrema",
+      "label": "单调性与极值",
+      "layer": "calculus_derivative_application",
+      "prerequisites": [
+        "math.derivative_rules"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.8,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.extrema_endpoint_missing"
+      ],
+      "recommended_action": "列一阶导数符号表，端点和不可导点一起检查"
+    },
+    {
+      "node_id": "math.concavity_inflection",
+      "label": "凹凸性与拐点",
+      "layer": "calculus_derivative_application",
+      "prerequisites": [
+        "math.derivative_rules"
+      ],
+      "exam_weight": 0.6,
+      "frequency": 0.55,
+      "trainability": 0.75,
+      "time_cost": 28,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.concavity_second_derivative_sign"
+      ],
+      "recommended_action": "用二阶导数符号表判断凹凸区间和拐点"
+    },
+    {
+      "node_id": "math.mean_value_theorem",
+      "label": "微分中值定理",
+      "layer": "calculus_derivative_application",
+      "prerequisites": [
+        "math.continuity_discontinuity",
+        "math.derivative_rules"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.45,
+      "trainability": 0.5,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.mean_value_theorem_conditions_missing"
+      ],
+      "recommended_action": "先背 Rolle、Lagrange、Cauchy 条件，再看证明题模板"
+    },
+    {
+      "node_id": "math.indefinite_integral_basic",
+      "label": "不定积分基本公式",
+      "layer": "calculus_integral",
+      "prerequisites": [
+        "math.derivative_rules"
+      ],
+      "exam_weight": 0.95,
+      "frequency": 0.95,
+      "trainability": 0.95,
+      "time_cost": 30,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.basic_integral_formula_misremembered"
+      ],
+      "recommended_action": "闭卷默写不定积分公式表，特别标注 +C"
+    },
+    {
+      "node_id": "math.substitution_integral",
+      "label": "换元积分法",
+      "layer": "calculus_integral",
+      "prerequisites": [
+        "math.indefinite_integral_basic",
+        "math.chain_rule"
+      ],
+      "exam_weight": 0.95,
+      "frequency": 0.9,
+      "trainability": 0.85,
+      "time_cost": 40,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.substitution_integral_symbol_missing",
+        "mistake.substitution_bound_not_changed"
+      ],
+      "recommended_action": "每道换元题都写出 u=... 与 du=...，定积分同步改上下限"
+    },
+    {
+      "node_id": "math.integration_by_parts",
+      "label": "分部积分法",
+      "layer": "calculus_integral",
+      "prerequisites": [
+        "math.indefinite_integral_basic"
+      ],
+      "exam_weight": 0.85,
+      "frequency": 0.8,
+      "trainability": 0.75,
+      "time_cost": 40,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.integration_by_parts_u_dv_choice"
+      ],
+      "recommended_action": "按反三角、对数、幂、三角、指数的优先级选择 u"
+    },
+    {
+      "node_id": "math.rational_trig_integral",
+      "label": "有理函数与三角积分技巧",
+      "layer": "calculus_integral",
+      "prerequisites": [
+        "math.indefinite_integral_basic"
+      ],
+      "exam_weight": 0.45,
+      "frequency": 0.4,
+      "trainability": 0.55,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.rational_integral_partial_fraction_error"
+      ],
+      "recommended_action": "只掌握常见部分分式和三角恒等变换模板，不在考前深挖冷门技巧"
+    },
+    {
+      "node_id": "math.definite_integral_properties",
+      "label": "定积分性质与对称性",
+      "layer": "calculus_integral",
+      "prerequisites": [
+        "math.indefinite_integral_basic"
+      ],
+      "exam_weight": 0.85,
+      "frequency": 0.85,
+      "trainability": 0.9,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.definite_integral_symmetry_wrong"
+      ],
+      "recommended_action": "练习奇偶性、区间可加性和积分中值性质的快速判断"
+    },
+    {
+      "node_id": "math.newton_leibniz",
+      "label": "牛顿-莱布尼茨公式",
+      "layer": "calculus_integral",
+      "prerequisites": [
+        "math.definite_integral_properties",
+        "math.indefinite_integral_basic"
+      ],
+      "exam_weight": 0.95,
+      "frequency": 0.9,
+      "trainability": 0.9,
+      "time_cost": 30,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.newton_leibniz_constant_error"
+      ],
+      "recommended_action": "先找原函数 F(x)，再严格写 F(b)-F(a)"
+    },
+    {
+      "node_id": "math.definite_integral_substitution_parts",
+      "label": "定积分换元与分部积分",
+      "layer": "calculus_integral",
+      "prerequisites": [
+        "math.substitution_integral",
+        "math.integration_by_parts",
+        "math.newton_leibniz"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.75,
+      "time_cost": 45,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.substitution_bound_not_changed",
+        "mistake.integration_by_parts_u_dv_choice"
+      ],
+      "recommended_action": "做 3 道定积分技巧题，重点检查上下限和符号"
+    },
+    {
+      "node_id": "math.improper_integral",
+      "label": "广义积分收敛性",
+      "layer": "calculus_integral",
+      "prerequisites": [
+        "math.definite_integral_properties"
+      ],
+      "exam_weight": 0.45,
+      "frequency": 0.4,
+      "trainability": 0.5,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.improper_integral_convergence_ignored"
+      ],
+      "recommended_action": "只抓无穷区间和瑕积分的判别入口，避免临考扩展难题"
+    },
+    {
+      "node_id": "math.area_volume_applications",
+      "label": "积分应用：面积与体积",
+      "layer": "calculus_integral_application",
+      "prerequisites": [
+        "math.newton_leibniz"
+      ],
+      "exam_weight": 0.6,
+      "frequency": 0.55,
+      "trainability": 0.7,
+      "time_cost": 40,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.area_volume_interval_error"
+      ],
+      "recommended_action": "先画图确定上下函数和积分区间，再套面积或旋转体体积公式"
+    },
+    {
+      "node_id": "math.partial_derivatives",
+      "label": "多元函数偏导数",
+      "layer": "calculus_multivariable",
+      "prerequisites": [
+        "math.derivative_rules"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.7,
+      "trainability": 0.85,
+      "time_cost": 30,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.partial_derivative_variable_confusion"
+      ],
+      "recommended_action": "求偏导时先圈出谁是变量，其他量一律当常数"
+    },
+    {
+      "node_id": "math.total_differential",
+      "label": "全微分",
+      "layer": "calculus_multivariable",
+      "prerequisites": [
+        "math.partial_derivatives"
+      ],
+      "exam_weight": 0.6,
+      "frequency": 0.55,
+      "trainability": 0.75,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.total_differential_missing_terms"
+      ],
+      "recommended_action": "写出 dz = f_x dx + f_y dy，检查每个自变量项是否齐全"
+    },
+    {
+      "node_id": "math.multivariable_chain_rule",
+      "label": "多元复合函数求导",
+      "layer": "calculus_multivariable",
+      "prerequisites": [
+        "math.partial_derivatives",
+        "math.chain_rule"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.65,
+      "time_cost": 40,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.multivariable_chain_rule_path_missing"
+      ],
+      "recommended_action": "画变量依赖树，沿每条路径相乘再相加"
+    },
+    {
+      "node_id": "math.multivariable_extrema",
+      "label": "多元函数极值与条件极值",
+      "layer": "calculus_multivariable",
+      "prerequisites": [
+        "math.partial_derivatives"
+      ],
+      "exam_weight": 0.6,
+      "frequency": 0.55,
+      "trainability": 0.55,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.multivariable_extrema_hessian_error"
+      ],
+      "recommended_action": "按驻点、一阶条件、二阶判别或拉格朗日乘数法分流"
+    },
+    {
+      "node_id": "math.double_integral_rectangular",
+      "label": "二重积分：直角坐标",
+      "layer": "calculus_double_integral",
+      "prerequisites": [
+        "math.definite_integral_properties"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.7,
+      "trainability": 0.7,
+      "time_cost": 45,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.double_integral_region_draw_error",
+        "mistake.double_integral_order_change_limits"
+      ],
+      "recommended_action": "先画积分区域，再决定先 x 后 y 或先 y 后 x"
+    },
+    {
+      "node_id": "math.double_integral_polar",
+      "label": "二重积分：极坐标",
+      "layer": "calculus_double_integral",
+      "prerequisites": [
+        "math.double_integral_rectangular"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.5,
+      "trainability": 0.6,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.polar_jacobian_missing_r"
+      ],
+      "recommended_action": "遇圆域优先想极坐标，积分元必须写成 r dr dθ"
+    },
+    {
+      "node_id": "math.series_basic_convergence",
+      "label": "级数收敛基本概念",
+      "layer": "calculus_series",
+      "prerequisites": [
+        "math.sequence_limits"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.5,
+      "trainability": 0.65,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.series_necessary_condition_overused"
+      ],
+      "recommended_action": "先判断通项是否趋零，再选择正项、交错或幂级数工具"
+    },
+    {
+      "node_id": "math.positive_series_tests",
+      "label": "正项级数判别法",
+      "layer": "calculus_series",
+      "prerequisites": [
+        "math.series_basic_convergence"
+      ],
+      "exam_weight": 0.6,
+      "frequency": 0.55,
+      "trainability": 0.55,
+      "time_cost": 40,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.positive_series_test_misuse"
+      ],
+      "recommended_action": "对比比较、比值、根值和 p 级数的适用信号"
+    },
+    {
+      "node_id": "math.alternating_series",
+      "label": "交错级数与误差估计",
+      "layer": "calculus_series",
+      "prerequisites": [
+        "math.series_basic_convergence"
+      ],
+      "exam_weight": 0.45,
+      "frequency": 0.4,
+      "trainability": 0.55,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.alternating_series_remainder_missing"
+      ],
+      "recommended_action": "检查单调趋零条件，再写 Leibniz 判别和余项估计"
+    },
+    {
+      "node_id": "math.power_series",
+      "label": "幂级数收敛半径与收敛域",
+      "layer": "calculus_series",
+      "prerequisites": [
+        "math.positive_series_tests"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.5,
+      "trainability": 0.55,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.power_series_radius_endpoint_missing"
+      ],
+      "recommended_action": "先求半径，再逐个检验端点，不把开区间直接当收敛域"
+    },
+    {
+      "node_id": "math.taylor_series",
+      "label": "泰勒公式与常用展开",
+      "layer": "calculus_series",
+      "prerequisites": [
+        "math.derivative_rules",
+        "math.power_series"
+      ],
+      "exam_weight": 0.4,
+      "frequency": 0.35,
+      "trainability": 0.5,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.taylor_expansion_center_error"
+      ],
+      "recommended_action": "只背 sin、cos、e^x、ln(1+x)、1/(1-x) 的常见展开"
+    },
+    {
+      "node_id": "math.determinant_definition",
+      "label": "行列式定义与几何意义",
+      "layer": "linear_algebra_determinant",
+      "prerequisites": [],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.65,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.determinant_expansion_sign_error"
+      ],
+      "recommended_action": "理解二阶、三阶行列式公式和行列式非零的含义"
+    },
+    {
+      "node_id": "math.determinant_properties",
+      "label": "行列式性质",
+      "layer": "linear_algebra_determinant",
+      "prerequisites": [
+        "math.determinant_definition"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.9,
+      "trainability": 0.85,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.determinant_row_operation_factor_error",
+        "mistake.determinant_triangular_product_after_swap"
+      ],
+      "recommended_action": "把换行变号、倍乘提因子、倍加不变三条性质写成检查清单"
+    },
+    {
+      "node_id": "math.determinant_expansion",
+      "label": "行列式按行列展开与计算",
+      "layer": "linear_algebra_determinant",
+      "prerequisites": [
+        "math.determinant_properties"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.85,
+      "trainability": 0.8,
+      "time_cost": 40,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.determinant_expansion_sign_error"
+      ],
+      "recommended_action": "按代数余子式符号棋盘展开，优先选择零最多的一行或一列"
+    },
+    {
+      "node_id": "math.matrix_operations",
+      "label": "矩阵运算",
+      "layer": "linear_algebra_matrix",
+      "prerequisites": [],
+      "exam_weight": 0.85,
+      "frequency": 0.85,
+      "trainability": 0.9,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.matrix_multiplication_order_error"
+      ],
+      "recommended_action": "练习矩阵加法、乘法、转置和幂运算，特别检查乘法次序"
+    },
+    {
+      "node_id": "math.inverse_matrix",
+      "label": "逆矩阵与伴随矩阵",
+      "layer": "linear_algebra_matrix",
+      "prerequisites": [
+        "math.matrix_operations",
+        "math.determinant_properties"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.7,
+      "trainability": 0.75,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.inverse_matrix_condition_ignored"
+      ],
+      "recommended_action": "先判断 det(A) 是否非零，再选择伴随矩阵或初等变换求逆"
+    },
+    {
+      "node_id": "math.elementary_transformations",
+      "label": "矩阵初等变换",
+      "layer": "linear_algebra_matrix",
+      "prerequisites": [
+        "math.matrix_operations"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.9,
+      "trainability": 0.85,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.elementary_transform_operation_record_error"
+      ],
+      "recommended_action": "每一步初等行变换都写在箭头上，避免漏乘或换行符号错误"
+    },
+    {
+      "node_id": "math.matrix_rank",
+      "label": "矩阵秩",
+      "layer": "linear_algebra_matrix",
+      "prerequisites": [
+        "math.elementary_transformations"
+      ],
+      "exam_weight": 0.85,
+      "frequency": 0.8,
+      "trainability": 0.8,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.rank_pivot_count_error"
+      ],
+      "recommended_action": "化为阶梯形后数非零行，并与主元列对应起来"
+    },
+    {
+      "node_id": "math.linear_system_gaussian",
+      "label": "线性方程组：高斯消元",
+      "layer": "linear_algebra_systems",
+      "prerequisites": [
+        "math.elementary_transformations",
+        "math.matrix_rank"
+      ],
+      "exam_weight": 0.95,
+      "frequency": 0.9,
+      "trainability": 0.8,
+      "time_cost": 45,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.gaussian_elimination_free_variable_missing"
+      ],
+      "recommended_action": "增广矩阵化阶梯形，标出主元变量和自由变量"
+    },
+    {
+      "node_id": "math.cramers_rule",
+      "label": "线性方程组：克拉默法则",
+      "layer": "linear_algebra_systems",
+      "prerequisites": [
+        "math.determinant_properties"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.7,
+      "trainability": 0.8,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.cramers_rule_zero_determinant_ignored"
+      ],
+      "recommended_action": "先写适用条件 det(A) != 0，再计算各列替换行列式"
+    },
+    {
+      "node_id": "math.homogeneous_system_solution_space",
+      "label": "齐次线性方程组基础解系",
+      "layer": "linear_algebra_systems",
+      "prerequisites": [
+        "math.linear_system_gaussian",
+        "math.vector_space_linear_dependence"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.7,
+      "trainability": 0.7,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.homogeneous_solution_dimension_error"
+      ],
+      "recommended_action": "用 n-r 先判断基础解系个数，再按自由变量构造向量"
+    },
+    {
+      "node_id": "math.nonhomogeneous_general_solution",
+      "label": "非齐次线性方程组通解与特解",
+      "layer": "linear_algebra_systems",
+      "prerequisites": [
+        "math.linear_system_gaussian",
+        "math.homogeneous_system_solution_space"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.65,
+      "time_cost": 50,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.nonhomogeneous_general_solution_missing_particular"
+      ],
+      "recommended_action": "通解写成一个特解加齐次通解，不能只写自由变量表达式"
+    },
+    {
+      "node_id": "math.vector_space_linear_dependence",
+      "label": "向量组线性相关与线性无关",
+      "layer": "linear_algebra_vectors",
+      "prerequisites": [
+        "math.matrix_rank"
+      ],
+      "exam_weight": 0.7,
+      "frequency": 0.65,
+      "trainability": 0.65,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.linear_dependence_definition_confused"
+      ],
+      "recommended_action": "把线性相关问题转化为 Ax=0 是否有非零解"
+    },
+    {
+      "node_id": "math.basis_dimension_rank",
+      "label": "极大无关组、秩与维数",
+      "layer": "linear_algebra_vectors",
+      "prerequisites": [
+        "math.vector_space_linear_dependence",
+        "math.matrix_rank"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.6,
+      "time_cost": 40,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.rank_pivot_count_error"
+      ],
+      "recommended_action": "用主元列找极大无关组，维数等于秩"
+    },
+    {
+      "node_id": "math.eigenvalues_eigenvectors",
+      "label": "特征值与特征向量",
+      "layer": "linear_algebra_eigen",
+      "prerequisites": [
+        "math.determinant_properties",
+        "math.linear_system_gaussian"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.85,
+      "trainability": 0.7,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.eigenvalue_characteristic_polynomial_sign",
+        "mistake.eigenvector_solve_system_error",
+        "mistake.eigenvalue_substitution_verification_missing"
+      ],
+      "recommended_action": "按 det(λI-A)=0 求特征值，再代回 (λI-A)x=0 求特征向量"
+    },
+    {
+      "node_id": "math.diagonalization",
+      "label": "矩阵对角化",
+      "layer": "linear_algebra_eigen",
+      "prerequisites": [
+        "math.eigenvalues_eigenvectors"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.6,
+      "time_cost": 50,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.diagonalization_condition_ignored"
+      ],
+      "recommended_action": "检查是否有 n 个线性无关特征向量，再组成 P 和 D"
+    },
+    {
+      "node_id": "math.symmetric_matrix_orthogonal_diagonalization",
+      "label": "实对称矩阵正交对角化",
+      "layer": "linear_algebra_eigen",
+      "prerequisites": [
+        "math.diagonalization"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.5,
+      "trainability": 0.5,
+      "time_cost": 50,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.diagonalization_condition_ignored"
+      ],
+      "recommended_action": "实对称矩阵先找正交特征向量，再单位化构造正交矩阵"
+    },
+    {
+      "node_id": "math.matrix_similarity",
+      "label": "相似矩阵与相似不变量",
+      "layer": "linear_algebra_eigen",
+      "prerequisites": [
+        "math.eigenvalues_eigenvectors"
+      ],
+      "exam_weight": 0.5,
+      "frequency": 0.45,
+      "trainability": 0.55,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.eigenvalue_characteristic_polynomial_sign"
+      ],
+      "recommended_action": "记住相似矩阵有相同特征多项式、特征值、迹和行列式"
+    },
+    {
+      "node_id": "math.quadratic_form",
+      "label": "二次型与标准形",
+      "layer": "linear_algebra_quadratic",
+      "prerequisites": [
+        "math.symmetric_matrix_orthogonal_diagonalization",
+        "math.elementary_transformations"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.55,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.positive_definite_principal_minors_error"
+      ],
+      "recommended_action": "把二次型写成 x^T A x，再用配方法或正交变换化标准形"
+    },
+    {
+      "node_id": "math.positive_definite_matrix",
+      "label": "正定矩阵判别",
+      "layer": "linear_algebra_quadratic",
+      "prerequisites": [
+        "math.quadratic_form",
+        "math.determinant_properties",
+        "math.eigenvalues_eigenvectors"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.6,
+      "time_cost": 40,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.positive_definite_principal_minors_error"
+      ],
+      "recommended_action": "按顺序检查顺序主子式，或用特征值全正判别"
+    },
+    {
+      "node_id": "math.linear_transformation_matrix",
+      "label": "线性变换与矩阵表示",
+      "layer": "linear_algebra_vectors",
+      "prerequisites": [
+        "math.matrix_operations",
+        "math.basis_dimension_rank"
+      ],
+      "exam_weight": 0.35,
+      "frequency": 0.3,
+      "trainability": 0.45,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.matrix_multiplication_order_error"
+      ],
+      "recommended_action": "作为低频拓展，仅掌握基变换和矩阵表示的基本例题"
+    }
+  ],
+  "question_archetypes": [
+    {
+      "archetype_id": "limit_equivalent_infinitesimal",
+      "label": "极限计算（等价无穷小）",
+      "knowledge_nodes": [
+        "math.limit_laws",
+        "math.equivalent_infinitesimal"
+      ],
+      "difficulty": 2,
+      "frequency": 0.95,
+      "common_mistakes": [
+        "mistake.equivalent_infinitesimal_condition"
+      ],
+      "worked_example_strategy": "先判断趋近点和无穷小阶，再只在乘除因子中替换常见等价式"
+    },
+    {
+      "archetype_id": "limit_lhopital_transform",
+      "label": "极限计算（洛必达）",
+      "knowledge_nodes": [
+        "math.lhopital_rule",
+        "math.derivative_rules"
+      ],
+      "difficulty": 2,
+      "frequency": 0.9,
+      "common_mistakes": [
+        "mistake.lhopital_condition_ignored",
+        "mistake.infinity_minus_infinity_untransformed"
+      ],
+      "worked_example_strategy": "先写 0/0 或 ∞/∞ 判定，非标准型先变形再求导"
+    },
+    {
+      "archetype_id": "continuity_piecewise_parameter",
+      "label": "分段函数连续性与参数题",
+      "knowledge_nodes": [
+        "math.one_sided_limits",
+        "math.continuity_discontinuity"
+      ],
+      "difficulty": 2,
+      "frequency": 0.75,
+      "common_mistakes": [
+        "mistake.continuity_piecewise_boundary"
+      ],
+      "worked_example_strategy": "在分界点分别计算左极限、右极限、函数值，列方程求参数"
+    },
+    {
+      "archetype_id": "derivative_chain_rule_computation",
+      "label": "复合函数求导与链式法则",
+      "knowledge_nodes": [
+        "math.derivative_rules",
+        "math.chain_rule"
+      ],
+      "difficulty": 2,
+      "frequency": 0.9,
+      "common_mistakes": [
+        "mistake.chain_rule_missing_inner_derivative"
+      ],
+      "worked_example_strategy": "给复合层编号，按外层导数乘内层导数逐层展开"
+    },
+    {
+      "archetype_id": "implicit_parametric_derivative",
+      "label": "隐函数/参数方程求导",
+      "knowledge_nodes": [
+        "math.implicit_parametric_derivative"
+      ],
+      "difficulty": 3,
+      "frequency": 0.65,
+      "common_mistakes": [
+        "mistake.implicit_derivative_treat_y_constant",
+        "mistake.parametric_derivative_order_error"
+      ],
+      "worked_example_strategy": "隐函数对 x 两边求导；参数方程先求 dy/dt 与 dx/dt，再相除"
+    },
+    {
+      "archetype_id": "monotonicity_extrema_graph",
+      "label": "单调性/极值/曲线形态分析",
+      "knowledge_nodes": [
+        "math.monotonicity_extrema",
+        "math.concavity_inflection",
+        "math.tangent_normal"
+      ],
+      "difficulty": 3,
+      "frequency": 0.8,
+      "common_mistakes": [
+        "mistake.extrema_endpoint_missing",
+        "mistake.concavity_second_derivative_sign"
+      ],
+      "worked_example_strategy": "列一阶、二阶导数符号表，按区间输出单调、极值、凹凸和拐点"
+    },
+    {
+      "archetype_id": "mean_value_theorem_proof",
+      "label": "中值定理证明题",
+      "knowledge_nodes": [
+        "math.mean_value_theorem"
+      ],
+      "difficulty": 4,
+      "frequency": 0.45,
+      "common_mistakes": [
+        "mistake.mean_value_theorem_conditions_missing"
+      ],
+      "worked_example_strategy": "先补辅助函数，再检查连续、可导和端点条件是否满足"
+    },
+    {
+      "archetype_id": "indefinite_integral_methods",
+      "label": "不定积分技巧题",
+      "knowledge_nodes": [
+        "math.indefinite_integral_basic",
+        "math.substitution_integral",
+        "math.integration_by_parts",
+        "math.rational_trig_integral"
+      ],
+      "difficulty": 3,
+      "frequency": 0.85,
+      "common_mistakes": [
+        "mistake.basic_integral_formula_misremembered",
+        "mistake.substitution_integral_symbol_missing",
+        "mistake.integration_by_parts_u_dv_choice"
+      ],
+      "worked_example_strategy": "先识别公式、换元、分部或部分分式，再完整写出中间变量和 +C"
+    },
+    {
+      "archetype_id": "definite_integral_techniques",
+      "label": "定积分技巧",
+      "knowledge_nodes": [
+        "math.definite_integral_properties",
+        "math.newton_leibniz",
+        "math.definite_integral_substitution_parts"
+      ],
+      "difficulty": 3,
+      "frequency": 0.85,
+      "common_mistakes": [
+        "mistake.definite_integral_symmetry_wrong",
+        "mistake.substitution_bound_not_changed",
+        "mistake.newton_leibniz_constant_error"
+      ],
+      "worked_example_strategy": "利用对称性和 Newton-Leibniz 先降复杂度，换元时同步改上下限"
+    },
+    {
+      "archetype_id": "newton_leibniz_application",
+      "label": "变上限积分与牛顿-莱布尼茨",
+      "knowledge_nodes": [
+        "math.newton_leibniz",
+        "math.chain_rule"
+      ],
+      "difficulty": 3,
+      "frequency": 0.7,
+      "common_mistakes": [
+        "mistake.newton_leibniz_constant_error",
+        "mistake.chain_rule_missing_inner_derivative"
+      ],
+      "worked_example_strategy": "把变上限积分看作复合函数，先求外层再乘上限导数"
+    },
+    {
+      "archetype_id": "multivariable_partial_derivative",
+      "label": "多元函数偏导与全微分",
+      "knowledge_nodes": [
+        "math.partial_derivatives",
+        "math.total_differential",
+        "math.multivariable_chain_rule"
+      ],
+      "difficulty": 3,
+      "frequency": 0.65,
+      "common_mistakes": [
+        "mistake.partial_derivative_variable_confusion",
+        "mistake.total_differential_missing_terms",
+        "mistake.multivariable_chain_rule_path_missing"
+      ],
+      "worked_example_strategy": "先确认变量依赖关系，偏导时固定其他变量，全微分时补齐每一项"
+    },
+    {
+      "archetype_id": "double_integral_region_order",
+      "label": "二重积分区域与换序",
+      "knowledge_nodes": [
+        "math.double_integral_rectangular",
+        "math.double_integral_polar"
+      ],
+      "difficulty": 4,
+      "frequency": 0.65,
+      "common_mistakes": [
+        "mistake.double_integral_region_draw_error",
+        "mistake.double_integral_order_change_limits",
+        "mistake.polar_jacobian_missing_r"
+      ],
+      "worked_example_strategy": "先画区域边界，再按竖切/横切或极坐标重写上下限"
+    },
+    {
+      "archetype_id": "series_convergence_tests",
+      "label": "级数收敛判别",
+      "knowledge_nodes": [
+        "math.series_basic_convergence",
+        "math.positive_series_tests",
+        "math.alternating_series",
+        "math.power_series"
+      ],
+      "difficulty": 4,
+      "frequency": 0.55,
+      "common_mistakes": [
+        "mistake.series_necessary_condition_overused",
+        "mistake.positive_series_test_misuse",
+        "mistake.power_series_radius_endpoint_missing"
+      ],
+      "worked_example_strategy": "先按通项、正项、交错、幂级数分类，再选对应判别法"
+    },
+    {
+      "archetype_id": "determinant_calculation",
+      "label": "行列式性质与展开计算",
+      "knowledge_nodes": [
+        "math.determinant_definition",
+        "math.determinant_properties",
+        "math.determinant_expansion"
+      ],
+      "difficulty": 3,
+      "frequency": 0.9,
+      "common_mistakes": [
+        "mistake.determinant_row_operation_factor_error",
+        "mistake.determinant_expansion_sign_error"
+      ],
+      "worked_example_strategy": "先用行列变换造零，再按零最多的行列展开，符号按 (-1)^(i+j) 检查"
+    },
+    {
+      "archetype_id": "matrix_elementary_transform_rank",
+      "label": "矩阵初等变换与秩",
+      "knowledge_nodes": [
+        "math.matrix_operations",
+        "math.elementary_transformations",
+        "math.matrix_rank",
+        "math.inverse_matrix"
+      ],
+      "difficulty": 3,
+      "frequency": 0.85,
+      "common_mistakes": [
+        "mistake.matrix_multiplication_order_error",
+        "mistake.elementary_transform_operation_record_error",
+        "mistake.rank_pivot_count_error"
+      ],
+      "worked_example_strategy": "化阶梯形时记录每一步，最终用非零行、主元列判断秩或求逆"
+    },
+    {
+      "archetype_id": "linear_system_general_particular_solution",
+      "label": "求通解/特解",
+      "knowledge_nodes": [
+        "math.linear_system_gaussian",
+        "math.homogeneous_system_solution_space",
+        "math.nonhomogeneous_general_solution"
+      ],
+      "difficulty": 4,
+      "frequency": 0.8,
+      "common_mistakes": [
+        "mistake.gaussian_elimination_free_variable_missing",
+        "mistake.nonhomogeneous_general_solution_missing_particular"
+      ],
+      "worked_example_strategy": "先高斯消元求特解，再叠加对应齐次方程的基础解系"
+    },
+    {
+      "archetype_id": "cramers_rule_parameter_system",
+      "label": "克拉默法则与含参数方程组",
+      "knowledge_nodes": [
+        "math.cramers_rule",
+        "math.determinant_properties",
+        "math.linear_system_gaussian"
+      ],
+      "difficulty": 3,
+      "frequency": 0.65,
+      "common_mistakes": [
+        "mistake.cramers_rule_zero_determinant_ignored"
+      ],
+      "worked_example_strategy": "先讨论 det(A) 是否为零，再分唯一解、无解、无穷多解"
+    },
+    {
+      "archetype_id": "eigenvalue_eigenvector_calculation",
+      "label": "特征值特征向量计算",
+      "knowledge_nodes": [
+        "math.eigenvalues_eigenvectors"
+      ],
+      "difficulty": 4,
+      "frequency": 0.85,
+      "common_mistakes": [
+        "mistake.eigenvalue_characteristic_polynomial_sign",
+        "mistake.eigenvector_solve_system_error",
+        "mistake.eigenvalue_substitution_verification_missing"
+      ],
+      "worked_example_strategy": "求特征多项式后逐个代回验证，特征向量必须解齐次方程组"
+    },
+    {
+      "archetype_id": "matrix_diagonalization",
+      "label": "矩阵对角化",
+      "knowledge_nodes": [
+        "math.eigenvalues_eigenvectors",
+        "math.diagonalization",
+        "math.symmetric_matrix_orthogonal_diagonalization"
+      ],
+      "difficulty": 4,
+      "frequency": 0.75,
+      "common_mistakes": [
+        "mistake.diagonalization_condition_ignored",
+        "mistake.eigenvector_solve_system_error"
+      ],
+      "worked_example_strategy": "先判断是否有足够线性无关特征向量，再按列组成 P，使 P^-1AP=D"
+    },
+    {
+      "archetype_id": "quadratic_form_positive_definite",
+      "label": "二次型与正定矩阵",
+      "knowledge_nodes": [
+        "math.quadratic_form",
+        "math.positive_definite_matrix",
+        "math.matrix_similarity"
+      ],
+      "difficulty": 4,
+      "frequency": 0.6,
+      "common_mistakes": [
+        "mistake.positive_definite_principal_minors_error"
+      ],
+      "worked_example_strategy": "写出对称矩阵，化标准形或检查顺序主子式/特征值是否全正"
+    }
+  ],
+  "mistake_types": [
+    {
+      "mistake_id": "mistake.limit_direct_substitution_condition",
+      "label": "未判断极限运算和直接代入条件",
+      "related_nodes": [
+        "math.limit_definition",
+        "math.limit_laws"
+      ],
+      "repair_strategy": "每题第一行写趋近点、函数是否有定义、是否出现 0/0 或 ∞/∞，再决定计算工具"
+    },
+    {
+      "mistake_id": "mistake.equivalent_infinitesimal_condition",
+      "label": "等价无穷小替换条件误用",
+      "related_nodes": [
+        "math.equivalent_infinitesimal"
+      ],
+      "repair_strategy": "只在乘除结构中替换等价无穷小，遇加减先合并、提因子或通分"
+    },
+    {
+      "mistake_id": "mistake.lhopital_condition_ignored",
+      "label": "忽略 L'Hôpital 前提（必须为 0/0 或 ∞/∞）",
+      "related_nodes": [
+        "math.lhopital_rule"
+      ],
+      "repair_strategy": "使用 L'Hôpital 前必须写出原式型别；非 0/0 或 ∞/∞ 先变形成标准型"
+    },
+    {
+      "mistake_id": "mistake.infinity_minus_infinity_untransformed",
+      "label": "∞-∞ 型未先通分或有理化",
+      "related_nodes": [
+        "math.lhopital_rule",
+        "math.asymptote_continuity_apps"
+      ],
+      "repair_strategy": "把 ∞-∞ 转为商式、乘积或有理化形式后再考虑等价无穷小或 L'Hôpital"
+    },
+    {
+      "mistake_id": "mistake.one_sided_limit_ignored",
+      "label": "左右极限漏算",
+      "related_nodes": [
+        "math.one_sided_limits",
+        "math.continuity_discontinuity"
+      ],
+      "repair_strategy": "分段函数和绝对值函数在分界点必须分别写左极限、右极限、函数值"
+    },
+    {
+      "mistake_id": "mistake.continuity_piecewise_boundary",
+      "label": "分段函数端点连续条件漏写",
+      "related_nodes": [
+        "math.continuity_discontinuity"
+      ],
+      "repair_strategy": "把连续条件写成左极限=右极限=函数值，再代参数求解"
+    },
+    {
+      "mistake_id": "mistake.sequence_limit_rule_misuse",
+      "label": "数列极限判别法套错",
+      "related_nodes": [
+        "math.sequence_limits"
+      ],
+      "repair_strategy": "递推数列先猜极限并验证单调有界；夹逼题先构造上下界"
+    },
+    {
+      "mistake_id": "mistake.derivative_definition_delta_error",
+      "label": "导数定义中增量或差商写错",
+      "related_nodes": [
+        "math.derivative_definition"
+      ],
+      "repair_strategy": "固定模板 f'(x0)=lim(h→0)[f(x0+h)-f(x0)]/h，先套模板再化简"
+    },
+    {
+      "mistake_id": "mistake.derivative_rule_sign_error",
+      "label": "基本求导公式符号错误",
+      "related_nodes": [
+        "math.derivative_rules"
+      ],
+      "repair_strategy": "重点重背三角、反三角、对数、指数导数表，错题按公式来源归类"
+    },
+    {
+      "mistake_id": "mistake.chain_rule_missing_inner_derivative",
+      "label": "链式法则漏乘内层导数",
+      "related_nodes": [
+        "math.chain_rule",
+        "math.newton_leibniz"
+      ],
+      "repair_strategy": "给每层函数画括号，求导后逐层打勾，确保每个内层导数都出现"
+    },
+    {
+      "mistake_id": "mistake.implicit_derivative_treat_y_constant",
+      "label": "隐函数求导把 y 当常数",
+      "related_nodes": [
+        "math.implicit_parametric_derivative"
+      ],
+      "repair_strategy": "对含 y 项求导时统一补 dy/dx，例如 d(y^2)/dx=2y dy/dx"
+    },
+    {
+      "mistake_id": "mistake.parametric_derivative_order_error",
+      "label": "参数方程求导分子分母颠倒",
+      "related_nodes": [
+        "math.implicit_parametric_derivative"
+      ],
+      "repair_strategy": "固定写 dy/dx=(dy/dt)/(dx/dt)，二阶导继续对 x 求导而不是直接对 t 求导"
+    },
+    {
+      "mistake_id": "mistake.differential_linear_part_missing",
+      "label": "微分近似漏掉线性主部",
+      "related_nodes": [
+        "math.differential_approximation"
+      ],
+      "repair_strategy": "近似计算先写 Δy≈dy=f'(x0)Δx，再代数值"
+    },
+    {
+      "mistake_id": "mistake.tangent_normal_slope_inverse_error",
+      "label": "切线和法线斜率关系写反",
+      "related_nodes": [
+        "math.tangent_normal"
+      ],
+      "repair_strategy": "切线斜率为 f'(x0)，法线斜率为 -1/f'(x0)，斜率为 0 或不存在时单独讨论"
+    },
+    {
+      "mistake_id": "mistake.extrema_endpoint_missing",
+      "label": "最值题漏检查端点或不可导点",
+      "related_nodes": [
+        "math.monotonicity_extrema"
+      ],
+      "repair_strategy": "闭区间最值必须检查端点、驻点和不可导点，列成候选值表"
+    },
+    {
+      "mistake_id": "mistake.concavity_second_derivative_sign",
+      "label": "二阶导符号与凹凸性对应错误",
+      "related_nodes": [
+        "math.concavity_inflection"
+      ],
+      "repair_strategy": "二阶导大于 0 对应凹向上，小于 0 对应凹向下，拐点要看符号是否改变"
+    },
+    {
+      "mistake_id": "mistake.mean_value_theorem_conditions_missing",
+      "label": "中值定理使用前未验证条件",
+      "related_nodes": [
+        "math.mean_value_theorem"
+      ],
+      "repair_strategy": "使用 Rolle/Lagrange/Cauchy 前逐条写连续、可导、端点条件"
+    },
+    {
+      "mistake_id": "mistake.basic_integral_formula_misremembered",
+      "label": "基本积分公式记错或漏写 +C",
+      "related_nodes": [
+        "math.indefinite_integral_basic"
+      ],
+      "repair_strategy": "每天闭卷默写公式表 3 分钟，不定积分答案末尾强制检查 +C"
+    },
+    {
+      "mistake_id": "mistake.substitution_integral_symbol_missing",
+      "label": "换元积分符号漏写（du/dx 或 dx 未同步替换）",
+      "related_nodes": [
+        "math.substitution_integral",
+        "math.definite_integral_substitution_parts"
+      ],
+      "repair_strategy": "换元题必须成对写 u=... 与 du=...dx，替换后原变量符号不得残留"
+    },
+    {
+      "mistake_id": "mistake.substitution_bound_not_changed",
+      "label": "定积分换元后上下限未同步改变",
+      "related_nodes": [
+        "math.substitution_integral",
+        "math.definite_integral_substitution_parts"
+      ],
+      "repair_strategy": "定积分换元二选一：改上下限后直接算，或算完换回原变量再代原上下限"
+    },
+    {
+      "mistake_id": "mistake.integration_by_parts_u_dv_choice",
+      "label": "分部积分 u 与 dv 选择不当",
+      "related_nodes": [
+        "math.integration_by_parts",
+        "math.definite_integral_substitution_parts"
+      ],
+      "repair_strategy": "按反三角、对数、幂、三角、指数优先级选 u，再检查 v 是否容易积分"
+    },
+    {
+      "mistake_id": "mistake.rational_integral_partial_fraction_error",
+      "label": "有理函数部分分式分解错误",
+      "related_nodes": [
+        "math.rational_trig_integral"
+      ],
+      "repair_strategy": "先因式分解分母，再按一次因子和二次不可约因子写完整待定形式"
+    },
+    {
+      "mistake_id": "mistake.definite_integral_symmetry_wrong",
+      "label": "定积分奇偶对称性判断错误",
+      "related_nodes": [
+        "math.definite_integral_properties"
+      ],
+      "repair_strategy": "区间必须关于 0 对称才可用奇偶性，先判断 f(-x) 与 f(x) 的关系"
+    },
+    {
+      "mistake_id": "mistake.newton_leibniz_constant_error",
+      "label": "牛顿-莱布尼茨代入上下限或常数项错误",
+      "related_nodes": [
+        "math.newton_leibniz"
+      ],
+      "repair_strategy": "写 F(b)-F(a) 后再代数值；定积分原函数常数会抵消，不要把 +C 带入"
+    },
+    {
+      "mistake_id": "mistake.improper_integral_convergence_ignored",
+      "label": "广义积分只算值不判断收敛",
+      "related_nodes": [
+        "math.improper_integral"
+      ],
+      "repair_strategy": "先把无穷端点或瑕点写成极限形式，极限存在才给积分值"
+    },
+    {
+      "mistake_id": "mistake.area_volume_interval_error",
+      "label": "面积/体积应用积分区间取错",
+      "related_nodes": [
+        "math.area_volume_applications"
+      ],
+      "repair_strategy": "先画交点和区域，面积用上函数减下函数，体积先确认旋转轴"
+    },
+    {
+      "mistake_id": "mistake.partial_derivative_variable_confusion",
+      "label": "偏导时变量和常量混淆",
+      "related_nodes": [
+        "math.partial_derivatives"
+      ],
+      "repair_strategy": "求 f_x 时把 y 圈成常量，求 f_y 时把 x 圈成常量，再执行一元求导"
+    },
+    {
+      "mistake_id": "mistake.total_differential_missing_terms",
+      "label": "全微分漏项",
+      "related_nodes": [
+        "math.total_differential"
+      ],
+      "repair_strategy": "每个自变量都对应一项偏导乘微分，按变量列表逐个勾选"
+    },
+    {
+      "mistake_id": "mistake.multivariable_chain_rule_path_missing",
+      "label": "多元链式法则漏掉依赖路径",
+      "related_nodes": [
+        "math.multivariable_chain_rule"
+      ],
+      "repair_strategy": "画依赖树，从目标变量到自变量的每条路径都相乘，最后求和"
+    },
+    {
+      "mistake_id": "mistake.multivariable_extrema_hessian_error",
+      "label": "多元极值二阶判别式用错",
+      "related_nodes": [
+        "math.multivariable_extrema"
+      ],
+      "repair_strategy": "二元极值先算 A=fxx、B=fxy、C=fyy 和 D=AC-B^2，再判断 D 与 A"
+    },
+    {
+      "mistake_id": "mistake.double_integral_region_draw_error",
+      "label": "二重积分区域画错",
+      "related_nodes": [
+        "math.double_integral_rectangular"
+      ],
+      "repair_strategy": "把每条边界曲线单独画出并标交点，再决定积分顺序"
+    },
+    {
+      "mistake_id": "mistake.double_integral_order_change_limits",
+      "label": "二重积分换序上下限写错",
+      "related_nodes": [
+        "math.double_integral_rectangular"
+      ],
+      "repair_strategy": "换序前先重画区域，横切和竖切各写一次变量范围"
+    },
+    {
+      "mistake_id": "mistake.polar_jacobian_missing_r",
+      "label": "极坐标二重积分漏乘 Jacobian r",
+      "related_nodes": [
+        "math.double_integral_polar"
+      ],
+      "repair_strategy": "极坐标积分元固定写 r dr dθ，写完后专门检查是否漏了 r"
+    },
+    {
+      "mistake_id": "mistake.series_necessary_condition_overused",
+      "label": "把通项趋零误当作级数收敛充分条件",
+      "related_nodes": [
+        "math.series_basic_convergence"
+      ],
+      "repair_strategy": "通项不趋零可判发散；通项趋零只能继续选择其他判别法"
+    },
+    {
+      "mistake_id": "mistake.positive_series_test_misuse",
+      "label": "正项级数判别法适用条件混淆",
+      "related_nodes": [
+        "math.positive_series_tests"
+      ],
+      "repair_strategy": "先确认正项，再按阶乘/指数优先比值，n 次方优先根值，近似 p 级数优先比较"
+    },
+    {
+      "mistake_id": "mistake.alternating_series_remainder_missing",
+      "label": "交错级数漏检单调趋零或余项估计",
+      "related_nodes": [
+        "math.alternating_series"
+      ],
+      "repair_strategy": "Leibniz 判别必须写单调递减且趋零，近似误差不超过下一项绝对值"
+    },
+    {
+      "mistake_id": "mistake.power_series_radius_endpoint_missing",
+      "label": "幂级数收敛域漏检端点",
+      "related_nodes": [
+        "math.power_series"
+      ],
+      "repair_strategy": "求出 |x-a|<R 后，把两个端点分别代回原级数判别"
+    },
+    {
+      "mistake_id": "mistake.taylor_expansion_center_error",
+      "label": "泰勒展开中心或阶数写错",
+      "related_nodes": [
+        "math.taylor_series"
+      ],
+      "repair_strategy": "先确认围绕 0 还是 x0 展开，写到题目所需阶数即可"
+    },
+    {
+      "mistake_id": "mistake.determinant_row_operation_factor_error",
+      "label": "行列式初等变换倍数因子处理错误",
+      "related_nodes": [
+        "math.determinant_properties"
+      ],
+      "repair_strategy": "区分换行变号、某行乘 k 行列式乘 k、倍加不变，计算旁边记录系数变化"
+    },
+    {
+      "mistake_id": "mistake.determinant_expansion_sign_error",
+      "label": "行列式展开符号错误",
+      "related_nodes": [
+        "math.determinant_definition",
+        "math.determinant_expansion"
+      ],
+      "repair_strategy": "展开前写出 + - + / - + - 符号棋盘，代数余子式符号按 (-1)^(i+j) 检查"
+    },
+    {
+      "mistake_id": "mistake.determinant_triangular_product_after_swap",
+      "label": "化三角行列式后忘记换行变号",
+      "related_nodes": [
+        "math.determinant_properties",
+        "math.determinant_expansion"
+      ],
+      "repair_strategy": "行交换次数单独计数，最终三角主对角线乘积前乘 (-1)^交换次数"
+    },
+    {
+      "mistake_id": "mistake.matrix_multiplication_order_error",
+      "label": "矩阵乘法顺序或维度错误",
+      "related_nodes": [
+        "math.matrix_operations",
+        "math.linear_transformation_matrix"
+      ],
+      "repair_strategy": "先写维度 m×n 与 n×p 是否匹配，矩阵乘法一般不可交换"
+    },
+    {
+      "mistake_id": "mistake.inverse_matrix_condition_ignored",
+      "label": "未判断矩阵是否可逆",
+      "related_nodes": [
+        "math.inverse_matrix"
+      ],
+      "repair_strategy": "求逆前先检查 det(A) != 0 或 rank(A)=n，不满足则不可逆"
+    },
+    {
+      "mistake_id": "mistake.elementary_transform_operation_record_error",
+      "label": "矩阵初等变换步骤记录错误",
+      "related_nodes": [
+        "math.elementary_transformations"
+      ],
+      "repair_strategy": "每次只做一个初等行变换，箭头上写清 R_i 操作，避免心算跨步"
+    },
+    {
+      "mistake_id": "mistake.rank_pivot_count_error",
+      "label": "矩阵秩和主元个数数错",
+      "related_nodes": [
+        "math.matrix_rank",
+        "math.basis_dimension_rank"
+      ],
+      "repair_strategy": "化到阶梯形后只数非零行，主元列用于找极大无关组"
+    },
+    {
+      "mistake_id": "mistake.gaussian_elimination_free_variable_missing",
+      "label": "高斯消元漏设自由变量",
+      "related_nodes": [
+        "math.linear_system_gaussian"
+      ],
+      "repair_strategy": "比较未知数个数 n 与秩 r，自由变量个数为 n-r，并逐一设参数"
+    },
+    {
+      "mistake_id": "mistake.cramers_rule_zero_determinant_ignored",
+      "label": "克拉默法则忽略 det(A) 非零条件",
+      "related_nodes": [
+        "math.cramers_rule"
+      ],
+      "repair_strategy": "只有系数矩阵行列式非零才能用克拉默法则；为零时改用秩讨论"
+    },
+    {
+      "mistake_id": "mistake.homogeneous_solution_dimension_error",
+      "label": "齐次方程基础解系维数判断错误",
+      "related_nodes": [
+        "math.homogeneous_system_solution_space"
+      ],
+      "repair_strategy": "基础解系向量个数等于 n-r(A)，解向量之间必须线性无关"
+    },
+    {
+      "mistake_id": "mistake.nonhomogeneous_general_solution_missing_particular",
+      "label": "非齐次通解漏写特解",
+      "related_nodes": [
+        "math.nonhomogeneous_general_solution"
+      ],
+      "repair_strategy": "非齐次通解固定写 x = x_p + x_h，其中 x_p 是任一特解，x_h 是齐次通解"
+    },
+    {
+      "mistake_id": "mistake.linear_dependence_definition_confused",
+      "label": "线性相关/无关定义混淆",
+      "related_nodes": [
+        "math.vector_space_linear_dependence"
+      ],
+      "repair_strategy": "转化为 k1a1+...+knan=0，只有零解为无关，有非零解为相关"
+    },
+    {
+      "mistake_id": "mistake.eigenvalue_characteristic_polynomial_sign",
+      "label": "特征多项式符号或 λI-A/A-λI 混用",
+      "related_nodes": [
+        "math.eigenvalues_eigenvectors",
+        "math.matrix_similarity"
+      ],
+      "repair_strategy": "全题统一使用 det(λI-A)=0 或 det(A-λI)=0，不在中途切换符号约定"
+    },
+    {
+      "mistake_id": "mistake.eigenvector_solve_system_error",
+      "label": "特征向量求解时方程组解错",
+      "related_nodes": [
+        "math.eigenvalues_eigenvectors",
+        "math.diagonalization"
+      ],
+      "repair_strategy": "每个特征值单独代入 (λI-A)x=0，化阶梯形后写出非零解空间"
+    },
+    {
+      "mistake_id": "mistake.eigenvalue_substitution_verification_missing",
+      "label": "特征值代入验证漏步骤",
+      "related_nodes": [
+        "math.eigenvalues_eigenvectors"
+      ],
+      "repair_strategy": "求出候选特征值后至少代回特征多项式或 (A-λI) 检查一次，避免代数根写错"
+    },
+    {
+      "mistake_id": "mistake.diagonalization_condition_ignored",
+      "label": "矩阵对角化条件漏判",
+      "related_nodes": [
+        "math.diagonalization",
+        "math.symmetric_matrix_orthogonal_diagonalization"
+      ],
+      "repair_strategy": "先判断是否有 n 个线性无关特征向量；重根要检查对应特征子空间维数"
+    },
+    {
+      "mistake_id": "mistake.positive_definite_principal_minors_error",
+      "label": "二次型/正定矩阵顺序主子式判别错误",
+      "related_nodes": [
+        "math.quadratic_form",
+        "math.positive_definite_matrix"
+      ],
+      "repair_strategy": "正定判别按顺序主子式 Δ1, Δ2, ..., Δn 全为正，或等价检查特征值全正"
+    }
+  ],
+  "paths": {
+    "minimum_pass": {
+      "label": "保过路线（60分底线）",
+      "description": "只保留高数极限、导数、积分基础，以及线代行列式、矩阵基础和线性方程组的高频得分点。",
+      "ordered_nodes": [
+        "math.limit_laws",
+        "math.equivalent_infinitesimal",
+        "math.lhopital_rule",
+        "math.one_sided_limits",
+        "math.continuity_discontinuity",
+        "math.derivative_definition",
+        "math.derivative_rules",
+        "math.chain_rule",
+        "math.differential_approximation",
+        "math.tangent_normal",
+        "math.monotonicity_extrema",
+        "math.indefinite_integral_basic",
+        "math.substitution_integral",
+        "math.integration_by_parts",
+        "math.definite_integral_properties",
+        "math.newton_leibniz",
+        "math.definite_integral_substitution_parts",
+        "math.determinant_definition",
+        "math.determinant_properties",
+        "math.determinant_expansion",
+        "math.matrix_operations",
+        "math.inverse_matrix",
+        "math.elementary_transformations",
+        "math.matrix_rank",
+        "math.linear_system_gaussian",
+        "math.cramers_rule"
+      ],
+      "drop_candidates": [
+        "math.mean_value_theorem",
+        "math.improper_integral",
+        "math.series_basic_convergence",
+        "math.positive_series_tests",
+        "math.power_series",
+        "math.taylor_series",
+        "math.symmetric_matrix_orthogonal_diagonalization",
+        "math.linear_transformation_matrix"
+      ]
+    },
+    "score_max": {
+      "label": "高分路线（含多元、级数、特征值）",
+      "description": "在保过路线基础上补齐多元函数、二重积分、级数、特征值特征向量、矩阵对角化、二次型和正定矩阵。",
+      "ordered_nodes": [
+        "math.limit_definition",
+        "math.limit_laws",
+        "math.equivalent_infinitesimal",
+        "math.lhopital_rule",
+        "math.sequence_limits",
+        "math.one_sided_limits",
+        "math.continuity_discontinuity",
+        "math.asymptote_continuity_apps",
+        "math.derivative_definition",
+        "math.derivative_rules",
+        "math.chain_rule",
+        "math.implicit_parametric_derivative",
+        "math.differential_approximation",
+        "math.tangent_normal",
+        "math.monotonicity_extrema",
+        "math.concavity_inflection",
+        "math.mean_value_theorem",
+        "math.indefinite_integral_basic",
+        "math.substitution_integral",
+        "math.integration_by_parts",
+        "math.rational_trig_integral",
+        "math.definite_integral_properties",
+        "math.newton_leibniz",
+        "math.definite_integral_substitution_parts",
+        "math.improper_integral",
+        "math.area_volume_applications",
+        "math.partial_derivatives",
+        "math.total_differential",
+        "math.multivariable_chain_rule",
+        "math.multivariable_extrema",
+        "math.double_integral_rectangular",
+        "math.double_integral_polar",
+        "math.series_basic_convergence",
+        "math.positive_series_tests",
+        "math.alternating_series",
+        "math.power_series",
+        "math.taylor_series",
+        "math.determinant_definition",
+        "math.determinant_properties",
+        "math.determinant_expansion",
+        "math.matrix_operations",
+        "math.inverse_matrix",
+        "math.elementary_transformations",
+        "math.matrix_rank",
+        "math.linear_system_gaussian",
+        "math.cramers_rule",
+        "math.homogeneous_system_solution_space",
+        "math.nonhomogeneous_general_solution",
+        "math.vector_space_linear_dependence",
+        "math.basis_dimension_rank",
+        "math.eigenvalues_eigenvectors",
+        "math.diagonalization",
+        "math.symmetric_matrix_orthogonal_diagonalization",
+        "math.matrix_similarity",
+        "math.quadratic_form",
+        "math.positive_definite_matrix",
+        "math.linear_transformation_matrix"
+      ]
+    }
+  },
+  "strategy_presets": {
+    "7d": {
+      "label": "7天数学冲刺策略",
+      "description": "高压保过模式：公式、典型题、错因修复三件事轮转，优先守住计算题基本盘。",
+      "daily_ratio": {
+        "formula_recall": 0.25,
+        "worked_examples": 0.25,
+        "targeted_drill": 0.35,
+        "error_review": 0.15
+      },
+      "daily_targets": {
+        "max_new_nodes": 4,
+        "calculation_drill_count": 8,
+        "minimum_output": "每天至少完成 8 道计算题或 1 张公式闭卷默写卡"
+      },
+      "phase_plan": [
+        {
+          "phase": 1,
+          "days": "1-2",
+          "focus": "极限 + 导数基础",
+          "nodes": [
+            "math.equivalent_infinitesimal",
+            "math.lhopital_rule",
+            "math.derivative_rules",
+            "math.chain_rule",
+            "math.monotonicity_extrema"
+          ],
+          "output": "完成极限 8 题、求导 10 题、单调极值 2 题"
+        },
+        {
+          "phase": 2,
+          "days": "3-4",
+          "focus": "积分基础与定积分技巧",
+          "nodes": [
+            "math.indefinite_integral_basic",
+            "math.substitution_integral",
+            "math.integration_by_parts",
+            "math.definite_integral_properties",
+            "math.newton_leibniz"
+          ],
+          "output": "默写积分公式表，并完成 10 道不定/定积分混合题"
+        },
+        {
+          "phase": 3,
+          "days": "5-6",
+          "focus": "行列式 + 矩阵 + 方程组",
+          "nodes": [
+            "math.determinant_properties",
+            "math.determinant_expansion",
+            "math.matrix_operations",
+            "math.elementary_transformations",
+            "math.linear_system_gaussian",
+            "math.cramers_rule"
+          ],
+          "output": "完成行列式 5 题、矩阵初等变换 4 题、线性方程组 3 题"
+        },
+        {
+          "phase": 4,
+          "days": "7",
+          "focus": "短模拟 + 高频错因修复",
+          "nodes": [],
+          "output": "做 45 分钟短模拟，只修复高频错因，不再展开新章节"
+        }
+      ]
+    },
+    "14d": {
+      "label": "14天数学冲刺策略",
+      "description": "两轮复习模式：第一轮覆盖核心计算，第二轮补多元、级数、特征值和综合题。",
+      "daily_ratio": {
+        "formula_recall": 0.2,
+        "new_learning": 0.25,
+        "targeted_drill": 0.35,
+        "mixed_review": 0.2
+      },
+      "daily_targets": {
+        "max_new_nodes": 5,
+        "calculation_drill_count": 10,
+        "minimum_output": "每天完成 10 道计算题或 1 套小题组订正"
+      },
+      "phase_plan": [
+        {
+          "phase": 1,
+          "days": "1-3",
+          "focus": "极限、连续、导数",
+          "nodes": [
+            "math.limit_laws",
+            "math.equivalent_infinitesimal",
+            "math.lhopital_rule",
+            "math.continuity_discontinuity",
+            "math.derivative_rules",
+            "math.chain_rule",
+            "math.monotonicity_extrema"
+          ],
+          "output": "完成极限与导数混合题 20 道"
+        },
+        {
+          "phase": 2,
+          "days": "4-6",
+          "focus": "积分与积分应用",
+          "nodes": [
+            "math.indefinite_integral_basic",
+            "math.substitution_integral",
+            "math.integration_by_parts",
+            "math.definite_integral_properties",
+            "math.newton_leibniz",
+            "math.area_volume_applications"
+          ],
+          "output": "完成不定积分、定积分和面积体积题 20 道"
+        },
+        {
+          "phase": 3,
+          "days": "7-8",
+          "focus": "多元函数与二重积分",
+          "nodes": [
+            "math.partial_derivatives",
+            "math.total_differential",
+            "math.multivariable_chain_rule",
+            "math.double_integral_rectangular",
+            "math.double_integral_polar"
+          ],
+          "output": "画区域并完成二重积分 6 题，偏导/全微分 8 题"
+        },
+        {
+          "phase": 4,
+          "days": "9-10",
+          "focus": "行列式、矩阵、线性方程组",
+          "nodes": [
+            "math.determinant_properties",
+            "math.determinant_expansion",
+            "math.matrix_operations",
+            "math.elementary_transformations",
+            "math.matrix_rank",
+            "math.linear_system_gaussian",
+            "math.nonhomogeneous_general_solution"
+          ],
+          "output": "完成线代基础计算题 18 道"
+        },
+        {
+          "phase": 5,
+          "days": "11-12",
+          "focus": "级数 + 特征值 + 对角化",
+          "nodes": [
+            "math.series_basic_convergence",
+            "math.positive_series_tests",
+            "math.power_series",
+            "math.eigenvalues_eigenvectors",
+            "math.diagonalization",
+            "math.positive_definite_matrix"
+          ],
+          "output": "完成级数判别 8 题、特征值和对角化 8 题"
+        },
+        {
+          "phase": 6,
+          "days": "13-14",
+          "focus": "综合模拟与错题闭环",
+          "nodes": [],
+          "output": "做一套综合模拟并按错因标签重做同类题"
+        }
+      ]
+    }
+  },
+  "task_card_templates": [
+    {
+      "template_id": "formula_recall_card",
+      "label": "公式闭卷默写卡",
+      "description": "针对积分、导数、行列式、特征值等高频公式做短时闭卷输出",
+      "steps": [
+        "选定一个公式组",
+        "闭卷默写公式和适用条件",
+        "对照笔记圈出遗漏",
+        "立刻用 2 道小题验证"
+      ],
+      "done_criteria": "公式和适用条件都能闭卷写出，并完成对应小题",
+      "duration_minutes": 15
+    },
+    {
+      "template_id": "calculation_drill_card",
+      "label": "计算专项训练卡",
+      "description": "面向积分、行列式、矩阵消元、特征值等计算题进行集中训练",
+      "steps": [
+        "复盘该类题的固定步骤",
+        "独立完成 3-5 道题",
+        "逐行核对符号、上下限、主元和自由变量",
+        "把错因归入 mistake_types"
+      ],
+      "done_criteria": "错题能不看答案完整重做一遍",
+      "duration_minutes": 35
+    },
+    {
+      "template_id": "proof_template_card",
+      "label": "证明模板卡",
+      "description": "用于中值定理、收敛判别、线性无关等证明题模板化练习",
+      "steps": [
+        "写出定理条件",
+        "标出题目已给条件和待补条件",
+        "套用标准证明结构",
+        "最后检查结论是否与题问一致"
+      ],
+      "done_criteria": "证明中条件、构造和结论三段完整",
+      "duration_minutes": 30
+    },
+    {
+      "template_id": "error_repair_card",
+      "label": "错因修复卡",
+      "description": "围绕一个高频错误做最小闭环修复",
+      "steps": [
+        "选择一个 mistake_id",
+        "写出错误触发点",
+        "重做原错题",
+        "再做一道同型新题"
+      ],
+      "done_criteria": "原题和同型题都能独立正确完成",
+      "duration_minutes": 25
+    },
+    {
+      "template_id": "mixed_mock_card",
+      "label": "混合短模拟卡",
+      "description": "用少量高频题覆盖高数和线代核心得分点",
+      "steps": [
+        "限时完成 6-8 道混合题",
+        "标注每题所属知识节点",
+        "统计错因标签",
+        "只修复最高频的 1-2 个错因"
+      ],
+      "done_criteria": "完成订正并能说明下次避免错误的检查动作",
+      "duration_minutes": 45
+    }
+  ],
+  "checkpoint_rules": {
+    "pass_threshold": 60,
+    "high_score_threshold": 85,
+    "mastery_minimum": {
+      "minimum_pass_nodes": 68,
+      "score_max_nodes": 78
+    },
+    "checkpoint_intervals": {
+      "7d": [
+        2,
+        4,
+        7
+      ],
+      "14d": [
+        3,
+        6,
+        10,
+        14
+      ]
+    },
+    "upgrade_criteria": {
+      "minimum_pass_to_score_max": {
+        "condition": "minimum_pass 节点掌握度 >= 75% 且最近一次短模拟 >= 70 分",
+        "action": "加入多元函数、级数、特征值和二次型节点"
+      }
+    },
+    "downgrade_criteria": {
+      "score_max_to_minimum_pass": {
+        "condition": "连续 2 次短模拟基础计算题正确率低于 55%",
+        "action": "回退到 minimum_pass 路线，暂停低频证明和拓展题"
+      }
+    }
+  },
+  "last_24h_strategy": {
+    "label": "考前24小时策略",
+    "description": "最后一天只做高频速览：积分公式背诵、行列式计算技巧、特征值求法速览，以及少量错题复盘。",
+    "focus": [
+      {
+        "node_id": "math.indefinite_integral_basic",
+        "label": "积分公式背诵",
+        "recommended_action": "闭卷默写基本不定积分公式、常见换元形式和分部积分公式"
+      },
+      {
+        "node_id": "math.substitution_integral",
+        "label": "换元积分检查",
+        "recommended_action": "重做 2 道换元题，检查 u、du、dx 和定积分上下限"
+      },
+      {
+        "node_id": "math.newton_leibniz",
+        "label": "牛顿-莱布尼茨",
+        "recommended_action": "快速练 2 道定积分，固定写 F(b)-F(a)"
+      },
+      {
+        "node_id": "math.determinant_properties",
+        "label": "行列式计算技巧",
+        "recommended_action": "复述换行变号、倍乘提因子、倍加不变，并练 2 道化三角题"
+      },
+      {
+        "node_id": "math.determinant_expansion",
+        "label": "行列式展开符号",
+        "recommended_action": "画代数余子式符号棋盘，重做 1 道展开题"
+      },
+      {
+        "node_id": "math.linear_system_gaussian",
+        "label": "高斯消元",
+        "recommended_action": "重做 1 道增广矩阵题，标主元变量和自由变量"
+      },
+      {
+        "node_id": "math.eigenvalues_eigenvectors",
+        "label": "特征值求法速览",
+        "recommended_action": "复述 det(λI-A)=0、代回求特征向量、验证特征值三步"
+      },
+      {
+        "node_id": "math.diagonalization",
+        "label": "矩阵对角化",
+        "recommended_action": "只看条件和标准步骤：n 个线性无关特征向量、构造 P、D"
+      }
+    ],
+    "mock_exam": {
+      "duration_minutes": 45,
+      "question_count": 8,
+      "coverage_labels": [
+        "极限",
+        "导数",
+        "积分",
+        "行列式",
+        "矩阵与方程组",
+        "特征值"
+      ],
+      "instruction": "做 6-8 题短模拟，覆盖极限、求导、积分、行列式、矩阵消元和特征值；做完只订正最高频错因"
+    },
+    "schedule": [
+      {
+        "time_block": "上午",
+        "duration_minutes": 90,
+        "focus": "公式与基础题速览",
+        "activities": [
+          "闭卷默写导数和积分公式",
+          "重做极限与求导基础题",
+          "整理 3 个最容易漏的符号检查点"
+        ]
+      },
+      {
+        "time_block": "下午",
+        "duration_minutes": 90,
+        "focus": "线代计算题保分",
+        "activities": [
+          "复习行列式性质与展开符号",
+          "做高斯消元和矩阵秩小题",
+          "速览特征值求法与对角化条件"
+        ]
+      },
+      {
+        "time_block": "傍晚",
+        "duration_minutes": 45,
+        "focus": "混合短模拟",
+        "activities": [
+          "限时完成 6-8 道混合题",
+          "按错因标签订正",
+          "只补一个最高频漏洞"
+        ]
+      },
+      {
+        "time_block": "晚间",
+        "duration_minutes": 30,
+        "focus": "轻量收尾",
+        "activities": [
+          "看公式清单和错题标签",
+          "准备考试用品",
+          "停止新题轰炸，保证睡眠"
+        ]
+      }
+    ],
+    "forbidden_actions": [
+      "不学习全新的低频章节",
+      "不钻研超过15分钟的难题",
+      "不整晚刷题或熬夜背证明"
+    ]
+  },
+  "aurora_rules": {
+    "medium_aurora": {
+      "label": "中等强度自适应介入",
+      "trigger_conditions": [
+        "连续 2 次计算专项正确率低于 60%",
+        "同一 mistake_id 在 3 道题中重复出现",
+        "用户反馈公式记不住或步骤总断"
+      ],
+      "actions": [
+        "降低题目综合度，拆成公式回忆和单步骤计算",
+        "增加同型短题和错因修复卡",
+        "把任务时长切成 25 分钟以内"
+      ]
+    },
+    "full_aurora": {
+      "label": "全量自适应介入",
+      "trigger_conditions": [
+        "估计分数低于 40%",
+        "minimum_pass 节点掌握度低于 50%",
+        "用户连续 2 天没有完成任何计算输出",
+        "临考 24 小时仍在学习全新高难章节"
+      ],
+      "actions": [
+        "强制回退 minimum_pass 路线",
+        "每天只安排 2-3 个核心计算节点",
+        "停止低频证明和拓展章节",
+        "优先安排公式闭卷默写与同型题重做"
+      ]
+    }
+  },
+  "priority_formula": "priority = exam_weight * frequency * (1 - current_mastery) * trainability * (minimum_pass_required ? 1.2 : 1.0) / (time_cost * difficulty)",
+  "priority_matrix": {
+    "formula": "priority = exam_weight * frequency * gap * trainability / (time_cost * difficulty)",
+    "variables": {
+      "gap": "1.0 - current_mastery (defaults to 1.0 if unknown)",
+      "time_pressure_boost": "1.3 if days_left<=3, 1.1 if days_left<=7, else 1.0",
+      "minimum_pass_boost": "1.2 if minimum_pass_required else 1.0"
+    },
+    "note": "Higher score = higher priority. For mathematics, calculation-heavy nodes intentionally carry higher time_cost, so last-day mode should use focused drills instead of broad expansion."
+  }
+}

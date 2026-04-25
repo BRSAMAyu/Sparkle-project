@@ -6,33 +6,86 @@ import json
 from pathlib import Path
 from typing import Any
 
-from loguru import logger
+try:
+    from loguru import logger
+except ModuleNotFoundError:
+    import logging
+
+    class _FallbackLogger:
+        def __init__(self) -> None:
+            self._logger = logging.getLogger(__name__)
+
+        def debug(self, message: str, *args: Any) -> None:
+            self._logger.debug(message.format(*args))
+
+        def warning(self, message: str, *args: Any) -> None:
+            self._logger.warning(message.format(*args))
+
+    logger = _FallbackLogger()
 
 _PACKS_DIR = Path(__file__).resolve().parent
 
 _SUBJECT_ALIASES: dict[str, str] = {
     "计算机网络": "computer_networks",
     "计网": "computer_networks",
+    "网络": "computer_networks",
     "computer_networks": "computer_networks",
+    "computer network": "computer_networks",
     "computer networks": "computer_networks",
+    "操作系统": "operating_systems",
+    "计算机操作系统": "operating_systems",
+    "操作系统原理": "operating_systems",
+    "operating_systems": "operating_systems",
+    "operating system": "operating_systems",
+    "operating systems": "operating_systems",
+    "os": "operating_systems",
+    "操系": "operating_systems",
+    "高数": "mathematics",
+    "高等数学": "mathematics",
+    "线代": "mathematics",
+    "线性代数": "mathematics",
+    "数学": "mathematics",
+    "math": "mathematics",
+    "mathematics": "mathematics",
+    "数据结构": "data_structures_algorithms",
+    "数据结构与算法": "data_structures_algorithms",
+    "数据结构和算法": "data_structures_algorithms",
+    "数结": "data_structures_algorithms",
+    "ds": "data_structures_algorithms",
+    "算法": "data_structures_algorithms",
+    "算法设计": "data_structures_algorithms",
+    "algo": "data_structures_algorithms",
+    "algorithm": "data_structures_algorithms",
+    "algorithms": "data_structures_algorithms",
+    "data_structures_algorithms": "data_structures_algorithms",
+    "data structures and algorithms": "data_structures_algorithms",
+    "data structures algorithms": "data_structures_algorithms",
+    "data structures": "data_structures_algorithms",
+    "dsa": "data_structures_algorithms",
 }
+
+
+def _alias_match(subject: str | None) -> str | None:
+    if not subject:
+        return None
+    return _SUBJECT_ALIASES.get(subject.strip().lower())
 
 
 def _normalize_subject(subject: str | None) -> str | None:
     if not subject:
         return None
-    return _SUBJECT_ALIASES.get(subject.strip().lower(), subject.strip().lower().replace(" ", "_"))
+    return _alias_match(subject) or subject.strip().lower().replace(" ", "_")
 
 
-def load_pack(subject: str, version: str = "v1") -> dict[str, Any] | None:
-    """Load a Sprint Pack JSON file by subject and version.
+def auto_detect_subject(user_input: str) -> str | None:
+    """Detect the Sprint Pack subject from free-form user input."""
 
-    Returns the parsed JSON dict, or None if no matching pack exists.
-    """
-    normalized = _normalize_subject(subject)
-    if not normalized:
-        return None
+    from app.sprint_packs.sprint_pack_registry import SprintPackRegistry
 
+    return SprintPackRegistry().match_subject(user_input)
+
+
+def _load_pack_file(normalized: str, version: str) -> dict[str, Any] | None:
     filename = f"{normalized}_{version}.json"
     path = _PACKS_DIR / filename
     if not path.exists():
@@ -47,6 +100,40 @@ def load_pack(subject: str, version: str = "v1") -> dict[str, Any] | None:
 
     logger.debug("Loaded Sprint Pack: {} ({} nodes)", filename, len(data.get("knowledge_nodes", [])))
     return data
+
+
+def load_pack(subject: str, version: str = "v1") -> dict[str, Any] | None:
+    """Load a Sprint Pack JSON file by subject and version.
+
+    Returns the parsed JSON dict, or None if no matching pack exists.
+    """
+    subject_text = str(subject or "").strip()
+    if not subject_text:
+        return None
+
+    candidates: list[str] = []
+    alias = _alias_match(subject_text)
+    if alias:
+        candidates.append(alias)
+    else:
+        detected = auto_detect_subject(subject_text)
+        if detected:
+            candidates.append(detected)
+
+    normalized = _normalize_subject(subject_text)
+    if normalized and normalized not in candidates:
+        candidates.append(normalized)
+
+    for candidate in candidates:
+        pack = _load_pack_file(candidate, version)
+        if pack is not None:
+            return pack
+
+    if alias:
+        detected = auto_detect_subject(subject_text)
+        if detected and detected not in candidates:
+            return _load_pack_file(detected, version)
+    return None
 
 
 def query_nodes_by_priority(
