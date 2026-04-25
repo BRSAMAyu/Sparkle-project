@@ -1,12 +1,12 @@
 {
   "workflow_version": "1.0",
   "status": "running",
-  "current_round": 3,
+  "current_round": 4,
   "reviewer_a_next": 6,
-  "reviewer_b_next": 7,
+  "reviewer_b_next": 8,
   "reviewer_a_last_timestamp": "2026-04-25T20:35:00+08:00",
-  "reviewer_b_last_timestamp": "2026-04-25T20:45:00Z",
-  "validator_last_timestamp": "2026-04-25T21:00:00+08:00",
+  "reviewer_b_last_timestamp": "2026-04-25T21:20:00Z",
+  "validator_last_timestamp": "2026-04-25T21:30:00+08:00",
   "steering_notes": "C01/C02 原始发现已被后续轮次覆盖丢失。所有当前 reviewer 文件中的发现（C03/C04/C06）质量很好，请保持。Validator 已因时间戳匹配逻辑跳过两轮，请立即重新运行 validator 处理所有未验证的发现。",
   "architect_override_a": null,
   "architect_override_b": null,
@@ -199,7 +199,7 @@
         "mobile/lib/features/achievement/presentation/screens/milestone_celebration_screen.dart",
         "mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C17": {
       "name": "API失败恢复（加载→错误→重试）",
