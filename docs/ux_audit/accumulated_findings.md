@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 48/50 chains audited (C20, D01 no reviewer files — indirectly covered by C02/E08)
+> **Status**: 50/50 chains audited. All C+D+E chains complete.
 
 ---
 
@@ -843,8 +843,33 @@
 
 ---
 
-### C20: Sprint Pack端到端集成
-**Status**: ⚠️ 无 reviewer 文件。C02 Critical 间接覆盖了 mastery 0-1 刻度 bug。
+### C20: Sprint Pack端到端集成（节点→任务spec→mastery回写） — Validator亲自审查
 
-### D01: 离线/弱网行为
-**Status**: ⚠️ 无 reviewer 文件。E08 审查了 WebSocket 断线重连机制。
+**Critical Issues 🔴**
+- None — C02 报告的 0-1 刻度 bug 已不存在于当前代码
+
+**C02 Critical 修正** ⚠️: `task_service.py:518` 实际为 `new_mastery = min(100.0, current_mastery + 25.0)`（0-100 刻度），非 C02 报告的 `min(1.0, current_mastery + 0.25)`。`galaxy_service.py:1125-1126` `_mastery_score_percent()` 还有 0-1→100 兜底转换。当前 Sprint Pack mastery 回写链路通畅。
+
+**Major Issues 🟡**
+- **Sprint Pack 节点必须匹配 `has_history_hint` 才会触发**: `planning_workflow.py:2472` 要求 cold_start_context 含 `previous_sprint_summary`/`mastery_snapshot` 等 5 个字段之一。首次使用 Sprint Pack 的用户无历史数据，`sprint_pack_id` 虽存在但不触发节点选择。
+- **E09 发现的 DSA 包缺陷影响此链路**: `data_structures_algorithms_v1.json` 缺少 `steps`/`done_criteria`/`duration_minutes` 和 `checkpoint_rules`，影响 DSA 科目的任务质量和检查点触发。
+
+**Working Well ✅**: Sprint Pack 加载→plan session 注入→task spec 含 `sprint_pack_nodes`/`knowledge_node_ids`→完成时 `_update_sprint_pack_mastery_for_completed_task` 每次 +25→`galaxy_service.update_node_mastery` 有 atomic revision check→`_mastery_score_percent` 自动归一化。
+
+---
+
+### D01: 离线/弱网行为 — Validator亲自审查
+
+**Critical Issues 🔴**
+- None — 核心离线场景有基础覆盖
+
+**Major Issues 🟡**
+- **任务完成无自动离线重试**: `task_provider.dart:410-496` completeTask 用乐观更新 + syncStatus 三态（pending/synced/failed），但 API 失败后标记 failed，**无自动重试**。仅用户手动点击 `retryCompleteTask`（line 525）。`SyncEngine` 有网络监听（`onConnectivityChanged`）和 Isar 本地队列，但 task_provider 不使用它。
+- **聊天 pending messages 仅存内存**: `websocket_chat_service_v2.dart:1158` `_pendingMessages` 是 `List<Map>` 内存列表，不持久化到 Isar/SharedPreferences。app 被杀后丢失。重连成功后 `_flushPendingMessages` 发出，但超过 6 次重连失败后消息被丢弃（E08 Minor）。
+
+**Minor Issues 🟢**
+- **Timer widget 后台恢复正确**: `timer_widget.dart:93-111` 使用 wall-clock 时间（`DateTime.now().difference(_runStartedAt)`），后台回来时自动补偿已过时间，不依赖累加。
+- **MindfulnessMode 有 SharedPreferences 会话持久化**: 切后台回来可恢复暂停的会话。
+- **focus_statistics_provider 使用 Isar 本地数据库**: `local_database.dart` + `focus_session_record.dart` 提供离线存储。
+
+**Working Well ✅**: WebSocket 6 级退避重连 + 历史补偿；Timer wall-clock 正确；MindfulnessMode 会话持久化完整；SyncEngine 基础设施存在（Isar + connectivity listener）但未接入任务系统。
