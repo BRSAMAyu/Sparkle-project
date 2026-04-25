@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 18 / 20 chains audited (C04, C20 still need review)
+> **Status**: 23 / 30 chains audited (C04, C20, D01, D05, D07, D09, D10 pending)
 
 ---
 
@@ -352,3 +352,94 @@
 
 ### C20: Sprint Pack端到端集成（节点→任务spec→mastery回写）
 **Status**: ⚠️ 无 reviewer 文件 — 原始发现丢失，无重新审查记录。仍需审查。但 C02 Critical 已间接覆盖 mastery 回写路径（0-1 刻度 bug）。
+
+---
+
+## Round 9 — 2026-04-26 (Phase 2 D-chains)
+*Reviewer A: D03 — 专注模式→任务联动 | Reviewer B: D02 — 错题修复→Galaxy闭环 + D04 — 日历→Aurora感知 + D06 — 长期用户退化 + D08 — 社区→个人AI*
+
+### D02: 错题修复→Galaxy掌握度闭环——修了错题星图真的变亮吗 (Reviewer B)
+
+**Critical Issues 🔴**
+- **`error_book_mastery_sync_service.py:243-246`**: `apply_review_feedback` 直接修改 `UserNodeStatus.mastery_score`（line 246），绕过了 `GalaxyService.update_node_mastery`（后者有 Outbox 写入、审计日志、WebSocket 推送）。Expected: 复习错题后 Galaxy 星图实时更新。Actual: mastery 写入 DB 但不推送 Outbox/WebSocket。用户需重新打开 Galaxy 页面才能看到变化。
+
+**Major Issues 🟡**
+- **`error_book_mastery_sync_service.py:170-172`**: `linked_knowledge_node_ids` 为空时直接返回空列表，mastery 不更新。前端不提示用户关联节点。
+- **`error_book_provider.dart:454-464`**: `submitReview` 成功后 invalidate 了 error/plan/task/weekly providers，但未 invalidate `galaxyProvider` 或递增 `galaxyRefreshTriggerProvider`。
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: REVIEW_PERFORMANCE_IMPACT 映射合理（remembered→+4, fuzzy→+1, forgot→-2）；最多更新 3 个节点防过大变化；DB commit 后发布事件保证一致性；StudyRecord 记录每次变化有审计追踪。
+
+---
+
+### D03: 专注模式→计划/任务联动——专注完成是否更新任务进度 (Reviewer A)
+
+**Critical Issues 🔴**
+- **`focus_service.py:174-186`**: `focus.session.completed` 事件 payload 含 `session_id`、`duration_minutes`、`mastery_updates`，但**不含 `task_id`**。`event_bus.py` 中零 `focus` 相关事件类定义。专注完成是数据孤岛——记录了但不被任何下游系统消费。Expected: 专注完成后任务进度更新。Actual: 只记录 FocusSession 行，任务进度不变。
+- **`plans.py:1391`**: `"total_minutes_spent": 0,  # Would be calculated from focus sessions` 硬编码。注释直接说明集成未实现。计划进度页永远显示 0。
+
+**Major Issues 🟡**
+- **`mindfulness_provider.dart`**: 专注完成后不 invalidate 任何 task provider（grep 确认 0 匹配）。如果后端更新了关联数据，用户需手动离开再返回才能看到变化。
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: 专注会话记录完整（saveSession 正确传递 taskId/taskTitle）；Galaxy mastery 集成有效（task 关联节点时触发 mastery boost）；完成 UI 有 mastery 更新 dialog；离线保存降级有本地标记。
+
+---
+
+### D04: 日历→Aurora感知——AI教练知道用户日程吗 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`adaptive_replanner.py` + `planning_workflow.py`**: 自动化计划生成和自适应压缩完全不引用 calendar context（grep 确认零匹配）。`should_compress` 仅看 `completion_rate < 0.5 && days_left <= 5`，不看当日考试/上课冲突。Expected: 计划考虑用户当日可用时间。Actual: Aurora 在 chat 中能看到【时间约束】并口头建议，但自动生成的计划完全忽略日历。
+
+**Minor Issues 🟢**
+- **`service.py`**: 每日启动个性化消息不参考 calendar context，首屏缺失时间上下文。
+
+**Working Well ✅**: `_get_calendar_context` 实现完整（4 维数据推导 + kill switch + 空数据降级）；`_format_calendar_context_lines` 双路径渲染（完整/仅考试紧迫度）；任务自动同步到日历事件；kill switch 默认 "live"。
+
+---
+
+### D06: 长期用户（30天+）体验——记忆/归档/推送是否退化 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`exam_sprint_review_service.py:61,1043-1044`**: `MAX_ARCHIVE_ENTRIES = 10` 硬截断归档。**[已与 C14 Major #2 交叉确认]**。约 70 天后（10 个冲刺）最早的冲刺数据永久丢失。无导出/分页/警告机制。
+- **`progress_narrative_service.py:916-936`**: `_compose_weekly_narrative_sentences` 使用固定句式模板，不参考之前周叙事内容。第 4 周和第 12 周叙事结构完全一致。无去重逻辑。
+
+**Minor Issues 🟢**
+- **`memory_service.py:610-633`**: `list_recent_episodic` 默认返回最近 10 条，DB 无上限无驱逐。注释 `# TRACKED(TD-008)` 但未实现 rate limits。
+- **`notification_center_service.py:80-85`**: 间隔重复提醒标题固定 "Aurora 复习提醒"，框架句式不变。对 10+ 节点的用户消息结构高度重复。
+
+**Working Well ✅**: 每日冲刺提醒使用动态数据（含完成率、任务名）；重复提醒抑制和节点去重机制；空数据有占位文案；记忆状态过滤正确。
+
+---
+
+### D08: 社区→个人AI体验——伙伴活动影响教练吗 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`settings.py:320` + `prompts.py:3276`**: `AURORA_STAGE33_SOCIAL_MODE` 默认 `"shadow"`。社交信号在 `SocialSignalBridge` 中被正确计算，在 `context_manager` 中被正确收集，但最终因 kill switch 处于 shadow 模式而不进入 prompt。Aurora 完全不知道用户有活跃的学习伙伴。Expected: 伙伴活跃度影响 AI 建议。Actual: 数据计算但不注入。
+- **`dashboard.py`**: Dashboard 零社交信号引用（grep 确认）。即使 kill switch 切到 "live"，dashboard 层面的 AI 个性化也不含社交维度。
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: `build_social_signals_v1` 多维度聚合完善；集成路径通畅（只等 kill switch 切 live）；`_format_stage33_social_signal_section` 含边界感提示符合 Rule Z；accountability_screen 伙伴展示完整。
+
+---
+
+### D01: 离线/弱网行为
+**Status**: ⚠️ 无 reviewer 文件 — audit_state 标记 "done" 但无审查产出。仍需审查。
+
+### C04: 错题录入→修复任务插入→计划页橙色卡可见
+**Status**: ⚠️ 无 reviewer 文件 — 仍需审查。D02 Critical 间接覆盖了错题→mastery 链路。

@@ -1,12 +1,12 @@
 {
   "workflow_version": "1.0",
   "status": "running",
-  "current_round": 8,
-  "reviewer_a_next": 10,
-  "reviewer_b_next": 18,
-  "reviewer_a_last_timestamp": "2026-04-25T23:50:00+08:00",
-  "reviewer_b_last_timestamp": "2026-04-26T01:15:00+08:00",
-  "validator_last_timestamp": "2026-04-26T01:00:00+08:00",
+  "current_round": 9,
+  "reviewer_a_next": 12,
+  "reviewer_b_next": 22,
+  "reviewer_a_last_timestamp": "2026-04-26T01:45:00+08:00",
+  "reviewer_b_last_timestamp": "2026-04-26T01:30:00+08:00",
+  "validator_last_timestamp": "2026-04-26T02:00:00+08:00",
   "steering_notes": "第二轮审查：B 重新审查 7 条丢失发现的链路（C03→C04→C05→C02→C07→C08→C12），按优先级排序。保持 file:line 引用和 expected/actual 格式。",
   "architect_override_a": null,
   "architect_override_b": null,
@@ -255,7 +255,7 @@
         "mobile/lib/features/focus/",
         "backend/gateway/internal/handler/websocket_proxy.go"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "D02": {
       "name": "错题修复→Galaxy掌握度闭环——修了错题星图真的变亮吗",
@@ -278,7 +278,7 @@
         "backend/app/core/event_bus.py",
         "mobile/lib/features/task/presentation/providers/task_provider.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "D04": {
       "name": "日历→Aurora感知——AI教练知道用户日程吗",
@@ -289,7 +289,7 @@
         "backend/app/orchestration/prompts.py",
         "backend/app/aurora/runtime_v1/dashboard.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "D05": {
       "name": "多设备并发——两台设备同时使用数据冲突",
@@ -311,7 +311,7 @@
         "backend/app/services/progress_narrative_service.py",
         "backend/app/services/notification_center_service.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "D07": {
       "name": "设置/隐私控制——用户能控制数据流向吗",
@@ -333,7 +333,7 @@
         "backend/app/aurora/runtime_v1/dashboard.py",
         "mobile/lib/features/community/"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "D09": {
       "name": "Go Gateway 中间件——限流误杀与WebSocket断连恢复",
@@ -355,7 +355,7 @@
         "mobile/lib/features/achievement/presentation/providers/achievement_provider.dart",
         "mobile/lib/features/task/presentation/providers/task_provider.dart"
       ],
-      "status": "pending"
+      "status": "done"
     }
   }
 }
