@@ -1,12 +1,12 @@
 {
   "workflow_version": "1.0",
   "status": "running",
-  "current_round": 4,
-  "reviewer_a_next": 6,
-  "reviewer_b_next": 8,
-  "reviewer_a_last_timestamp": "2026-04-25T20:35:00+08:00",
-  "reviewer_b_last_timestamp": "2026-04-25T21:20:00Z",
-  "validator_last_timestamp": "2026-04-25T21:30:00+08:00",
+  "current_round": 5,
+  "reviewer_a_next": 7,
+  "reviewer_b_next": 9,
+  "reviewer_a_last_timestamp": "2026-04-25T22:45:00+08:00",
+  "reviewer_b_last_timestamp": "2026-04-25T21:35:00Z",
+  "validator_last_timestamp": "2026-04-25T23:00:00+08:00",
   "steering_notes": "C02/C03/C04/C05 原始发现已丢失，待全部 20 链路完成后评估是否重新审查。当前审查质量极好，请保持 file:line 引用和 expected/actual 格式。三大跨切主题：(1) Backend→Mobile 集成断裂 (2) 冷启动路径结构缺陷 (3) 静默降级。",
   "architect_override_a": null,
   "architect_override_b": null,
@@ -163,7 +163,7 @@
         "mobile/lib/features/insights/data/models/weekly_growth_narrative.dart",
         "mobile/lib/features/insights/presentation/widgets/weekly_growth_narrative_card.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C14": {
       "name": "学习档案页完整性（历史冲刺+Galaxy摘要展开）",
@@ -221,7 +221,7 @@
         "mobile/lib/core/services/deep_link_service.dart",
         "mobile/lib/features/home/presentation/screens/notification_list_screen.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C19": {
       "name": "Aurora建模对话质量（不重复/上下文感知/自然过渡）",
