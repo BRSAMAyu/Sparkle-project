@@ -150,6 +150,7 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
     assert result["triggered"] is True
     assert result["reason"] == "error_pressure_bridge"
     assert result["recent_error_count"] == 3
+    assert len(result["repair_task_ids"]) == 1
     mock_eval.assert_awaited_once_with(
         user_id=user.id,
         plan_id=plan.id,
@@ -157,9 +158,7 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
         feedback_category="concept_gap_repeated",
     )
     record = (
-        await db_session.execute(
-            select(InterventionRecord).where(InterventionRecord.user_id == user.id)
-        )
+        await db_session.execute(select(InterventionRecord).where(InterventionRecord.user_id == user.id))
     ).scalar_one()
     assert record.trigger_type == InterventionTriggerType.CONCEPT_GAP
     assert record.diagnosis_payload["node_name"] == node.name
@@ -173,6 +172,17 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
     assert str(node.id) in stored_claims["values"]
     assert stored_claims["claims"][0]["evidence_type"] == "error_replan_signal"
     assert stored_claims["claims"][0]["planning_session_id"] == str(plan.id)
+
+    task_rows = await db_session.execute(
+        select(Task).where(Task.user_id == user.id, Task.plan_id == plan.id).order_by(Task.order_index.asc())
+    )
+    repair_tasks = [
+        task for task in task_rows.scalars().all() if (task.guide_json or {}).get("task_kind") == "targeted_repair"
+    ]
+    assert len(repair_tasks) == 1
+    assert repair_tasks[0].estimated_minutes == 15
+    assert repair_tasks[0].guide_json["daily_spec"]["task_kind"] == "targeted_repair"
+    assert repair_tasks[0].guide_json["output_action"] == "闭卷复述错因 + 1 道同类题独立完成"
 
 
 @pytest.mark.asyncio

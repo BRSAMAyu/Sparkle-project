@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -9,6 +10,7 @@ from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
 from app.aurora.runtime_v1.decision_loop import AuroraDecisionLoop
 from app.aurora.runtime_v1.models import AuroraDecisionTelemetry
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
+from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 
 
 class _FakeJsonLLM:
@@ -18,6 +20,28 @@ class _FakeJsonLLM:
     async def chat_json(self, messages, **kwargs):
         del messages, kwargs
         return self.payload
+
+
+class _FakeRedis:
+    def __init__(self) -> None:
+        self._lists: dict[str, list[str]] = {}
+
+    async def lpush(self, key: str, value: str) -> None:
+        bucket = self._lists.setdefault(key, [])
+        bucket.insert(0, value)
+
+    async def ltrim(self, key: str, start: int, end: int) -> None:
+        bucket = self._lists.setdefault(key, [])
+        self._lists[key] = bucket[start : end + 1]
+
+    async def lrange(self, key: str, start: int, end: int) -> list[str]:
+        bucket = self._lists.get(key, [])
+        if end == -1:
+            return bucket[start:]
+        return bucket[start : end + 1]
+
+    async def expire(self, key: str, seconds: int) -> None:
+        del key, seconds
 
 
 def _strategy(
@@ -113,6 +137,57 @@ async def test_plan_turn_writes_aurora_telemetry_record(db_session, test_user) -
 
 
 @pytest.mark.asyncio
+async def test_detect_stale_strategy_flags_repeated_task_help_on_same_domain() -> None:
+    redis = _FakeRedis()
+    service = AuroraDecisionTelemetryService(None, redis_client=redis)
+    key = service.recent_telemetry_key(user_id="user-stale", conversation_id="conv-stale")
+    for request_id in ("req-1", "req-2", "req-3"):
+        await redis.lpush(
+            key,
+            json.dumps(
+                {
+                    "request_id": request_id,
+                    "response_type": "task_help",
+                    "target_domain": "tcp",
+                    "covered_domains": ["goal"],
+                },
+                ensure_ascii=False,
+            ),
+        )
+
+    signal = await service.detect_stale_strategy(user_id="user-stale", conversation_id="conv-stale")
+
+    assert signal == {
+        "stale": True,
+        "stuck_on": "tcp",
+        "suggestion": "switch_to_concept_first",
+    }
+
+
+@pytest.mark.asyncio
+async def test_detect_stale_strategy_ignores_repetition_when_coverage_grows() -> None:
+    redis = _FakeRedis()
+    service = AuroraDecisionTelemetryService(None, redis_client=redis)
+    key = service.recent_telemetry_key(user_id="user-moving", conversation_id="conv-moving")
+    for covered_domains in (["goal"], ["goal", "scope"], ["goal", "scope", "tcp"]):
+        await redis.lpush(
+            key,
+            json.dumps(
+                {
+                    "response_type": "task_help",
+                    "target_domain": "tcp",
+                    "covered_domains": covered_domains,
+                },
+                ensure_ascii=False,
+            ),
+        )
+
+    signal = await service.detect_stale_strategy(user_id="user-moving", conversation_id="conv-moving")
+
+    assert signal is None
+
+
+@pytest.mark.asyncio
 async def test_next_turn_backfills_previous_aurora_outcome(db_session, test_user) -> None:
     first_service = AuroraRuntimeV1Service(
         decision_loop=AuroraDecisionLoop(
@@ -171,7 +246,9 @@ async def test_next_turn_backfills_previous_aurora_outcome(db_session, test_user
                 .where(AuroraDecisionTelemetry.conversation_id == "conv-telemetry-backfill")
                 .order_by(AuroraDecisionTelemetry.decided_at.asc(), AuroraDecisionTelemetry.created_at.asc())
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
     assert len(rows) == 2

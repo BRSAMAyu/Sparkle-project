@@ -13,6 +13,7 @@ from app.aurora.runtime_v1.dashboard import DashboardReadout, DashboardReadoutBu
 from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
+from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.aurora.runtime_v1.write_pipeline import AURORA_CLAIM_KEY_TEMPLATE
 from app.orchestration.planning_workflow import PlanningSession, PlanningWorkflowManager
 
@@ -36,6 +37,31 @@ class _CapturingDecisionLoop:
         return AuroraDecision(action="wait")
 
 
+class _StaticDecisionLoop:
+    def __init__(self, decision: AuroraDecision) -> None:
+        self.decision = decision
+        self.readouts: list[DashboardReadout] = []
+
+    async def decide(self, readout: DashboardReadout) -> AuroraDecision:
+        self.readouts.append(readout)
+        return self.decision
+
+
+class _StaticChatAdapter:
+    async def render(self, decision: AuroraDecision, readout: DashboardReadout) -> list[str]:
+        del decision, readout
+        return ["收到。"]
+
+
+class _FakeGalaxyService:
+    def __init__(self) -> None:
+        self.mastery_updates: list[dict[str, Any]] = []
+
+    async def update_node_mastery(self, **kwargs) -> dict[str, Any]:
+        self.mastery_updates.append(kwargs)
+        return {"success": True, "new_mastery": kwargs["new_mastery"]}
+
+
 class _StubSelfModelService:
     async def get_readout_summary(self, **kwargs) -> dict[str, Any]:
         return {}
@@ -44,6 +70,7 @@ class _StubSelfModelService:
 class _FakeRedis:
     def __init__(self) -> None:
         self.store: dict[str, str] = {}
+        self.lists: dict[str, list[str]] = {}
 
     async def get(self, key: str) -> str | None:
         return self.store.get(key)
@@ -53,6 +80,23 @@ class _FakeRedis:
 
     async def delete(self, key: str) -> None:
         self.store.pop(key, None)
+
+    async def lpush(self, key: str, value: str) -> None:
+        bucket = self.lists.setdefault(key, [])
+        bucket.insert(0, value)
+
+    async def ltrim(self, key: str, start: int, end: int) -> None:
+        bucket = self.lists.setdefault(key, [])
+        self.lists[key] = bucket[start : end + 1]
+
+    async def lrange(self, key: str, start: int, end: int) -> list[str]:
+        bucket = self.lists.get(key, [])
+        if end == -1:
+            return bucket[start:]
+        return bucket[start : end + 1]
+
+    async def expire(self, key: str, seconds: int) -> None:
+        del key, seconds
 
 
 def _readout(
@@ -73,6 +117,8 @@ def _readout(
     checkpoint_state: dict[str, Any] | None = None,
     achievement_signals: dict[str, Any] | None = None,
     self_model: dict[str, Any] | None = None,
+    conversation_summary: dict[str, Any] | None = None,
+    wake_policy: dict[str, Any] | None = None,
 ) -> DashboardReadout:
     return DashboardReadout(
         surface=surface,
@@ -108,6 +154,8 @@ def _readout(
         request_extra_context=dict(request_extra_context or {}),
         achievement_signals=dict(achievement_signals or {"plan_completion_rate": 0.48}),
         self_model=dict(self_model or {}),
+        conversation_summary=dict(conversation_summary or {}),
+        wake_policy=dict(wake_policy or {}),
     )
 
 
@@ -230,6 +278,31 @@ def test_decision_loop_assigns_task_help_standard_layer_contract_for_active_task
     assert contract["max_response_length"] == "extended"
 
 
+def test_decision_loop_diagnoses_stuck_task_instead_of_continuing_current_task() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(
+        action="emit_message",
+        chat_directive={"intent": "continue_current_task"},
+    )
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            task_state={"stage": "stuck", "stuck_topic": "TCP状态机"},
+        ),
+    )
+
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert validated.chat_directive["intent"] == "diagnose_stuck_point"
+    assert contract["response_type"] == "diagnostic"
+    assert "mistake_diagnosis" in contract["must_include"]
+    assert "one_targeted_fix" in contract["must_include"]
+    assert "full_week_replan" in contract["must_not_include"]
+    assert "three_practice_questions" in contract["must_not_include"]
+    assert "three_practice_questions" not in contract["must_include"]
+
+
 def test_decision_loop_assigns_emotional_support_contract_after_repeated_failures() -> None:
     loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
     decision = AuroraDecision(action="emit_message", chat_directive={"intent": "continue_current_task"})
@@ -336,6 +409,54 @@ def test_decision_loop_acknowledges_recent_unlock_and_allows_streak_reminder() -
     validated = loop.validate_decision(AuroraDecision(action="emit_message"), readout)
     contract = validated.chat_directive["standard_layer_contract"]
     assert "direct_answer_or_acknowledgment" in contract["must_include"]
+
+
+def test_decision_loop_adds_high_streak_challenge_modulation_rule() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(
+        surface="aurora_planning",
+        task_state={"stage": "planning"},
+        achievement_signals={"current_streak_days": 6},
+    )
+
+    messages = loop.build_prompt(readout)
+    prompt_payload = json.loads(messages[1]["content"])
+    prompt_rules = " ".join(prompt_payload["rules"])
+
+    assert "current_streak_days >= 5" in prompt_rules
+    assert "retrieval_practice = true" in prompt_rules
+    assert "direct_answer_or_acknowledgment" in prompt_rules
+    assert prompt_payload["strategy_defaults"]["retrieval_practice"] is True
+
+    validated = loop.validate_decision(AuroraDecision(action="emit_message"), readout)
+    assert validated.harness_updates["strategy"]["retrieval_practice"] is True
+    assert "direct_answer_or_acknowledgment" in validated.chat_directive["standard_layer_contract"]["must_include"]
+
+
+def test_decision_loop_reduces_pressure_after_study_gap() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(
+        surface="aurora_planning",
+        activity_profile={"task_density_hint": 0.6},
+        task_state={"stage": "planning"},
+        achievement_signals={"gap_since_last_study_days": 4},
+    )
+
+    messages = loop.build_prompt(readout)
+    prompt_payload = json.loads(messages[1]["content"])
+    prompt_rules = " ".join(prompt_payload["rules"])
+
+    assert "gap_since_last_study_days >= 3" in prompt_rules
+    assert "减压" in prompt_rules
+    assert "task_density_hint by 0.1" in prompt_rules
+    assert "response_type=emotional_support" in prompt_rules
+    assert "one_concrete_next_step" in prompt_rules
+
+    validated = loop.validate_decision(AuroraDecision(action="emit_message"), readout)
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert validated.harness_updates["task_density_hint"] == pytest.approx(0.5)
+    assert contract["response_type"] == "emotional_support"
+    assert "one_concrete_next_step" in contract["must_include"]
 
 
 @pytest.mark.asyncio
@@ -713,6 +834,79 @@ async def test_chat_adapter_prompt_includes_standard_layer_contract_as_hard_cons
     assert "MUST NOT include" in user_prompt["standard_layer_contract_instruction"]
 
 
+@pytest.mark.asyncio
+async def test_chat_adapter_stuck_prompt_includes_sprint_pack_mistake_candidates() -> None:
+    chat_llm = _FakeJsonLLM({"messages": ["先定位卡点。"]})
+    adapter = ChatLayerAdapter(llm_factory=lambda: chat_llm)
+    decision = AuroraDecision(
+        action="emit_message",
+        chat_directive={"intent": "diagnose_stuck_point"},
+    )
+
+    await adapter.render(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            user_message="我不会做 TCP 状态机这道题。",
+            task_state={"stage": "stuck", "stuck_topic": "TCP状态机"},
+            checkpoint_state={
+                "sprint_pack_id": "computer_networks@v1",
+                "today_nodes": ["cn.tcp_three_way", "cn.tcp_four_way"],
+            },
+        ),
+    )
+
+    user_prompt = json.loads(chat_llm.calls[0][1]["content"])
+    serialized_context = json.dumps(user_prompt["task_help_context"], ensure_ascii=False)
+    assert user_prompt["task_help_context"]["micro_teaching"]["mode"] == "diagnose_then_targeted_fix"
+    assert "candidate_mistake_types" in user_prompt["task_help_context"]
+    assert "tcp_state_diagram" in serialized_context
+
+
+@pytest.mark.asyncio
+async def test_chat_adapter_system_prompt_includes_conversation_memory_when_summary_exists() -> None:
+    chat_llm = _FakeJsonLLM({"messages": ["这和你前面提到的 TCP 状态机可以用同一种画状态图方法。"]})
+    adapter = ChatLayerAdapter(llm_factory=lambda: chat_llm)
+    messages = [
+        {"role": "user", "content": "TCP状态机很难。"},
+        {"role": "assistant", "content": "我们先拆状态和迁移。"},
+        {"role": "user", "content": "目标是能做对连接管理选择题。"},
+        {"role": "assistant", "content": "可以。"},
+        {"role": "user", "content": "OSI 模型闭卷复述已经完成了。"},
+        {"role": "assistant", "content": "收到。"},
+    ]
+
+    await adapter.render(
+        AuroraDecision(action="emit_message", chat_directive={"intent": "teach_by_analogy"}),
+        _readout(
+            user_message="那拥塞控制怎么理解？",
+            conversation_summary={"message_count": len(messages), "recent_messages": messages},
+        ),
+    )
+
+    system_prompt = chat_llm.calls[0][0]["content"]
+    assert "在适当时机自然地引用用户之前提到的具体内容" in system_prompt
+    assert "## 对话记忆片段" in system_prompt
+    assert "- 困难：TCP状态机" in system_prompt
+    assert "- 已完成：OSI模型闭卷复述" in system_prompt
+    assert "TCP状态机很难" not in system_prompt
+
+
+def test_chat_adapter_system_prompt_stays_light_without_conversation_summary() -> None:
+    adapter = ChatLayerAdapter(llm_factory=lambda: _FakeJsonLLM({"messages": ["ok"]}))
+
+    prompt = adapter._build_prompt(AuroraDecision(action="emit_message"), _readout())
+    system_prompt = prompt[0]["content"]
+    empty_history_prompt = adapter._build_prompt(
+        AuroraDecision(action="emit_message"),
+        _readout(conversation_summary={"message_count": 0, "recent_messages": []}),
+    )[0]["content"]
+
+    assert "在适当时机自然地引用用户之前提到的具体内容" not in system_prompt
+    assert "## 对话记忆片段" not in system_prompt
+    assert empty_history_prompt == system_prompt
+
+
 def test_service_surface_defaults_include_distinct_expression_profiles() -> None:
     service = AuroraRuntimeV1Service()
 
@@ -979,7 +1173,14 @@ def test_motivation_answer_marks_dashboard_domain_covered() -> None:
 
 
 @pytest.mark.asyncio
-async def test_motivation_planning_session_asks_after_core_fields() -> None:
+async def test_fast_track_planning_session_skips_motivation_after_core_fields(monkeypatch) -> None:
+    from app.orchestration import bottleneck_analyzer as bottleneck_module
+
+    async def _fail_bottleneck_analysis(**kwargs):
+        raise RuntimeError("force deterministic fallback")
+
+    monkeypatch.setattr(bottleneck_module.bottleneck_analyzer, "analyze", _fail_bottleneck_analysis)
+
     redis = _FakeRedis()
     manager = PlanningWorkflowManager(redis_client=redis)
     user_id = uuid4()
@@ -1002,11 +1203,12 @@ async def test_motivation_planning_session_asks_after_core_fields() -> None:
     )
 
     state = await manager.runtime_adapter.load_state(user_id=str(user_id), conversation_id=conversation_id)
+    persisted = await manager.get_active_session(conversation_id)
     assert reply is not None
-    assert "这次考试对你来说意味着什么" in reply["message"]
+    assert "这次考试对你来说意味着什么" not in reply["message"]
+    assert persisted is not None
+    assert persisted.state == "PLANNING"
     assert state is not None
-    assert state.activity_profile.agenda_priority == "motivation"
-    assert state.missing_domains == ["motivation"]
 
 
 @pytest.mark.asyncio
@@ -1120,6 +1322,23 @@ def test_dashboard_readout_wait_context_mask_is_smaller_than_emit_message() -> N
     assert len(json.dumps(wait_payload, ensure_ascii=False)) < len(json.dumps(emit_payload, ensure_ascii=False))
 
 
+def test_dashboard_readout_context_budget_masks_compact_more_aggressively() -> None:
+    readout = _readout(
+        surface="aurora_planning",
+        wake_policy={"context_budget": "compact"},
+        task_state={"stage": "task_card", "current_error": "tcp-handshake"},
+        conversation_summary={"message_count": 8},
+    )
+
+    compact_payload = readout.to_llm_payload(context_budget="compact")
+    extended_payload = readout.to_llm_payload(context_budget="extended")
+
+    assert set(compact_payload) == {"user_message", "task_state", "wake_policy"}
+    assert len(compact_payload) <= 5
+    assert len(extended_payload) >= 10
+    assert len(compact_payload) < len(extended_payload)
+
+
 def test_dashboard_readout_schedule_wake_context_keeps_activity_and_constraints() -> None:
     payload = _readout().to_llm_payload(action="schedule_wake")
 
@@ -1140,6 +1359,30 @@ def test_dashboard_readout_planning_surface_includes_planning_fields_without_ach
     assert "task_state" in payload
     assert "achievement_signals" not in payload
     assert "cold_start_context" not in payload
+
+
+def test_slim_readout_for_compact_budget_keeps_only_high_signal_fields() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(
+        surface="aurora_planning",
+        wake_policy={"context_budget": "compact"},
+        task_state={"stage": "task_card", "current_error": "tcp-handshake"},
+        request_extra_context={"surface_state": {"in_detour": True}},
+    )
+    readout.informational_tensions = [
+        {"domain": "baseline", "status": "open"},
+        {"domain": "time", "status": "open"},
+        {"domain": "scope", "status": "open"},
+    ]
+
+    payload = loop._slim_readout_for_surface(readout)
+
+    assert set(payload) == {"user_message", "task_state", "informational_tensions", "wake_policy"}
+    assert len(payload["informational_tensions"]) == 2
+    assert "surface_state" not in payload
+    assert "covered_domains" not in payload
+    assert "cold_start_context" not in payload
+    assert "sprint_policy_summary" not in payload
 
 
 def test_soft_return_topic_uses_latent_candidate_after_planning_detour() -> None:
@@ -1235,6 +1478,123 @@ async def test_service_uses_chat_adapter_as_single_fallback_source() -> None:
     assert adapter.fallback_reason == "empty_render"
 
 
+@pytest.mark.asyncio
+async def test_plan_turn_updates_galaxy_mastery_for_correct_answer_node() -> None:
+    galaxy_service = _FakeGalaxyService()
+    service = AuroraRuntimeV1Service(
+        decision_loop=_StaticDecisionLoop(
+            AuroraDecision(
+                action="emit_message",
+                state_updates={"correct_answer_node": "cn.tcp_handshake"},
+                chat_directive={"intent": "completion_check"},
+            )
+        ),
+        chat_adapter=_StaticChatAdapter(),
+        galaxy_service=galaxy_service,
+        self_model_service=_StubSelfModelService(),
+    )
+
+    await service.plan_turn(
+        active_db=None,
+        user_id=str(uuid4()),
+        surface="aurora_modeling",
+        conversation_id="conv-correct-answer",
+        request_id="req-correct-answer",
+        user_message="SYN，SYN+ACK，ACK。",
+        request_extra_context={
+            "cold_start_context": {
+                "goal_type": "exam",
+                "sprint_pack_nodes": ["cn.tcp_handshake"],
+                "galaxy_mastery": {"cn.tcp_handshake": 0.4},
+            }
+        },
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    assert len(galaxy_service.mastery_updates) == 1
+    update = galaxy_service.mastery_updates[0]
+    assert update["node_id"] == "cn.tcp_handshake"
+    assert update["new_mastery"] == pytest.approx(0.55)
+    assert update["reason"] == "aurora_completion_check_correct"
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_dedupes_correct_answer_node_per_turn() -> None:
+    galaxy_service = _FakeGalaxyService()
+    service = AuroraRuntimeV1Service(
+        decision_loop=_StaticDecisionLoop(
+            AuroraDecision(
+                action="emit_message",
+                state_updates={
+                    "correct_answer_node": ["cn.tcp_handshake", "cn.tcp_handshake"],
+                    "correct_answer_nodes": ["cn.tcp_handshake"],
+                },
+                chat_directive={"intent": "completion_check"},
+            )
+        ),
+        chat_adapter=_StaticChatAdapter(),
+        galaxy_service=galaxy_service,
+        self_model_service=_StubSelfModelService(),
+    )
+
+    await service.plan_turn(
+        active_db=None,
+        user_id=str(uuid4()),
+        surface="aurora_modeling",
+        conversation_id="conv-dedupe",
+        request_id="req-dedupe",
+        user_message="三次握手是 SYN、SYN ACK、ACK。",
+        request_extra_context={
+            "cold_start_context": {
+                "goal_type": "exam",
+                "sprint_pack_nodes": ["cn.tcp_handshake"],
+            }
+        },
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    assert len(galaxy_service.mastery_updates) == 1
+    assert galaxy_service.mastery_updates[0]["new_mastery"] == pytest.approx(0.15)
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_skips_correct_answer_node_outside_sprint_pack() -> None:
+    galaxy_service = _FakeGalaxyService()
+    service = AuroraRuntimeV1Service(
+        decision_loop=_StaticDecisionLoop(
+            AuroraDecision(
+                action="emit_message",
+                state_updates={"correct_answer_node": "cn.hallucinated_node"},
+                chat_directive={"intent": "completion_check"},
+            )
+        ),
+        chat_adapter=_StaticChatAdapter(),
+        galaxy_service=galaxy_service,
+        self_model_service=_StubSelfModelService(),
+    )
+
+    await service.plan_turn(
+        active_db=None,
+        user_id=str(uuid4()),
+        surface="aurora_modeling",
+        conversation_id="conv-skip",
+        request_id="req-skip",
+        user_message="我答对了。",
+        request_extra_context={
+            "cold_start_context": {
+                "goal_type": "exam",
+                "sprint_pack_nodes": ["cn.tcp_handshake"],
+            }
+        },
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    assert galaxy_service.mastery_updates == []
+
+
 def test_extract_achievement_signals_falls_back_to_cognitive_context() -> None:
     builder = DashboardReadoutBuilder()
     user_context_payload = {
@@ -1284,6 +1644,26 @@ def test_extract_achievement_signals_derives_streak_and_recent_unlock_flags() ->
 
     assert signals["streak_active"] is True
     assert signals["recently_unlocked"] is True
+
+
+def test_extract_achievement_signals_derives_current_streak_and_gap_from_user_context() -> None:
+    builder = DashboardReadoutBuilder()
+
+    signals = builder._extract_achievement_signals(
+        {},
+        {
+            "achievement": {
+                "streak": {
+                    "current_streak": "6",
+                    "gap_since_last_study_days": "4",
+                }
+            }
+        },
+    )
+
+    assert signals["current_streak_days"] == 6
+    assert signals["gap_since_last_study_days"] == 4
+    assert signals["streak_active"] is True
 
 
 def test_extract_cold_start_context_injects_redis_weak_node_claim() -> None:
@@ -1353,6 +1733,52 @@ async def test_plan_turn_loads_redis_weak_node_claim_into_readout() -> None:
     )
 
     assert decision_loop.readouts[0].cold_start_context["confirmed_weak_nodes"] == [node_id]
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_injects_strategy_recalibration_from_stale_telemetry() -> None:
+    redis = _FakeRedis()
+    decision_loop = _CapturingDecisionLoop()
+    user_id = "runtime-user"
+    conversation_id = "conv-stale-strategy"
+    key = AuroraDecisionTelemetryService.recent_telemetry_key(
+        user_id=user_id,
+        conversation_id=conversation_id,
+    )
+    for request_id in ("req-1", "req-2", "req-3"):
+        await redis.lpush(
+            key,
+            json.dumps(
+                {
+                    "request_id": request_id,
+                    "response_type": "task_help",
+                    "target_domain": "tcp",
+                    "covered_domains": ["goal", "scope"],
+                },
+                ensure_ascii=False,
+            ),
+        )
+    service = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=decision_loop,
+        self_model_service=_StubSelfModelService(),
+    )
+
+    await service.plan_turn(
+        active_db=None,
+        user_id=user_id,
+        surface="aurora_modeling",
+        conversation_id=conversation_id,
+        request_id="req-4",
+        user_message="我还是卡在 TCP。",
+        request_extra_context={},
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    context = decision_loop.readouts[0].request_extra_context
+    assert context["strategy_recalibration_needed"] is True
+    assert context["stuck_domain"] == "tcp"
 
 
 # ---------------------------------------------------------------------------
@@ -1468,6 +1894,41 @@ def test_decision_loop_prompt_includes_sleep_guard_rule_when_active() -> None:
     ]
 
 
+def test_decision_loop_prompt_includes_strategy_recalibration_system_rule() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(request_extra_context={"strategy_recalibration_needed": True, "stuck_domain": "tcp"})
+
+    messages = loop.build_prompt(readout)
+    prompt_payload = json.loads(messages[1]["content"])
+
+    assert "当前策略已失效（连续 3 轮相同策略）" in messages[0]["content"]
+    assert "必须切换到不同的 response_type 和不同的教学策略" in messages[0]["content"]
+    assert any("stuck_domain=tcp" in rule for rule in prompt_payload["rules"])
+
+
+def test_decision_loop_prompt_instructs_correct_answer_node_writeback() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+
+    messages = loop.build_prompt(_readout())
+
+    assert "state_updates.correct_answer_node" in messages[0]["content"]
+    assert "cold_start_context.sprint_pack_nodes" in messages[0]["content"]
+
+
+def test_validate_decision_normalizes_correct_answer_node_mapping() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+
+    decision = loop.validate_decision(
+        AuroraDecision(
+            action="emit_message",
+            state_updates={"correct_answer_node": {"node_id": "cn.tcp_handshake"}},
+        ),
+        _readout(),
+    )
+
+    assert decision.state_updates["correct_answer_node"] == "cn.tcp_handshake"
+
+
 def test_sleep_guard_contract_blocks_full_replan_and_three_question_drill() -> None:
     loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
     decision = AuroraDecision(action="emit_message", chat_directive={"intent": "teach_with_example"})
@@ -1562,18 +2023,16 @@ class TestSprintPackAutoInjection:
         """When goal_type=exam and subject=计算机网络, sprint_pack_minimum_output is injected."""
         readout = _build_readout_via_builder(subject="计算机网络")
         csc = readout.cold_start_context
-        assert "sprint_pack_minimum_output" in csc, (
-            f"sprint_pack_minimum_output missing from cold_start_context, got keys: {sorted(csc.keys())}"
-        )
+        assert (
+            "sprint_pack_minimum_output" in csc
+        ), f"sprint_pack_minimum_output missing from cold_start_context, got keys: {sorted(csc.keys())}"
         assert "闭卷输出" in csc["sprint_pack_minimum_output"]
 
     def test_pack_found_injects_aurora_hint(self) -> None:
         """sprint_pack_aurora_hint is injected from aurora_rules.medium_aurora."""
         readout = _build_readout_via_builder(subject="计算机网络")
         csc = readout.cold_start_context
-        assert "sprint_pack_aurora_hint" in csc, (
-            f"sprint_pack_aurora_hint missing, got keys: {sorted(csc.keys())}"
-        )
+        assert "sprint_pack_aurora_hint" in csc, f"sprint_pack_aurora_hint missing, got keys: {sorted(csc.keys())}"
         assert "触发条件" in csc["sprint_pack_aurora_hint"]
         assert "介入动作" in csc["sprint_pack_aurora_hint"]
 

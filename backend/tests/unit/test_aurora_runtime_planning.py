@@ -6,6 +6,10 @@ from uuid import uuid4
 import pytest
 
 from app.aurora.runtime_v1 import AuroraRuntimePlanningAdapter
+from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
+from app.aurora.runtime_v1.control_surface import ActivityProfile, AuroraHardBounds, ControlSurfaceReading
+from app.aurora.runtime_v1.dashboard import DashboardReadoutBuilder
+from app.aurora.runtime_v1.decision_loop import AuroraDecision
 from app.orchestration.planning_workflow import PlanningSession, PlanningWorkflowManager
 
 
@@ -21,6 +25,33 @@ class FakeRedis:
 
     async def delete(self, key: str) -> None:
         self.store.pop(key, None)
+
+
+@pytest.mark.asyncio
+async def test_sprint_pack_first_question_skips_scope_and_asks_baseline() -> None:
+    redis = FakeRedis()
+    adapter = AuroraRuntimePlanningAdapter(redis_client=redis)
+
+    state = await adapter.get_or_create_state(
+        user_id="user-fast-track-first-question",
+        conversation_id="aurora-planning-pack-first-question",
+        planning_session_id="planning-pack-first-question",
+        goal_raw="7天后考计算机网络",
+        profile_context={},
+        collected={
+            "subject": "计算机网络",
+            "sprint_pack_id": "computer_networks@v1",
+            "sprint_pack_subject": "计算机网络",
+            "fast_track_exam_sprint": True,
+        },
+    )
+
+    prompt, domain = adapter.build_next_prompt(state)
+
+    assert domain == "knowledge_baseline"
+    assert "计算机网络" in prompt
+    assert "Sprint Pack" in prompt
+    assert "水平" in prompt
 
 
 @pytest.mark.asyncio
@@ -158,6 +189,78 @@ async def test_user_supplied_info_resolves_tension_without_reasking_same_domain(
     time_tension = next(item for item in state.informational_tensions if item.domain == "time_available")
     assert baseline_tension.status == "resolved"
     assert time_tension.status == "open"
+
+
+def test_dashboard_covers_goal_scope_and_baseline_from_natural_two_turn_modeling() -> None:
+    builder = DashboardReadoutBuilder()
+    reading = ControlSurfaceReading(
+        adjustable=ActivityProfile(),
+        hard_bounds=AuroraHardBounds(),
+        runtime_enabled=True,
+    )
+
+    readout = builder.build(
+        surface="aurora_modeling",
+        user_id="u1",
+        conversation_id="c1",
+        request_id="r1",
+        user_message="我完全没学过，想考传输层和网络层",
+        request_extra_context={
+            "informational_tensions": [
+                {"domain": "scope", "status": "open"},
+                {"domain": "baseline", "status": "open"},
+                {"domain": "time", "status": "open"},
+            ]
+        },
+        conversation_context={"messages": [{"role": "user", "content": "7天后考计算机网络，帮我规划一下"}]},
+        user_context_payload={},
+        control_surface_reading=reading,
+        activity_profile={},
+        candidate_affordances=[],
+    )
+
+    assert {"goal", "scope", "baseline"}.issubset(set(readout.covered_domains))
+    assert "time" in readout.missing_domains
+
+
+@pytest.mark.asyncio
+async def test_chat_fallback_uses_natural_transition_after_zero_baseline_and_scope() -> None:
+    builder = DashboardReadoutBuilder()
+    reading = ControlSurfaceReading(
+        adjustable=ActivityProfile(),
+        hard_bounds=AuroraHardBounds(),
+        runtime_enabled=True,
+    )
+    readout = builder.build(
+        surface="aurora_modeling",
+        user_id="u1",
+        conversation_id="c1",
+        request_id="r1",
+        user_message="我完全没学过，想考传输层和网络层",
+        request_extra_context={
+            "informational_tensions": [
+                {"domain": "scope", "status": "open"},
+                {"domain": "baseline", "status": "open"},
+                {"domain": "time", "status": "open"},
+            ]
+        },
+        conversation_context={"messages": [{"role": "user", "content": "7天后考计算机网络，帮我规划一下"}]},
+        user_context_payload={},
+        control_surface_reading=reading,
+        activity_profile={},
+        candidate_affordances=[],
+    )
+    decision = AuroraDecision(
+        action="emit_message",
+        chat_directive={"intent": "ask_baseline", "target_domain": "baseline"},
+    )
+
+    messages = await ChatLayerAdapter()._fallback_messages(decision, readout)
+
+    assert messages
+    assert "好，零基础的话，咱们" in messages[0]
+    assert "请告诉我你的基础" not in messages[0]
+    assert "每天大概能拿出多少时间" in messages[0]
 
 
 @pytest.mark.asyncio

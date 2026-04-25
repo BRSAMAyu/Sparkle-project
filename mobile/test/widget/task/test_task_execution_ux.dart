@@ -229,6 +229,34 @@ void main() {
     expect(find.text('Level 2 · 再给关键步骤'), findsOneWidget);
   });
 
+  testWidgets('StuckHelpSheet renders two-step micro teaching help',
+      (tester) async {
+    final task = _task(
+      guideJson: const <String, dynamic>{
+        'stuck_help': {
+          'diagnosis_question': '你卡在哪里？是不知道哪些状态之间有连线，还是搞不清楚触发条件？',
+          'diagnosis_options': ['状态之间的连线', '触发条件'],
+          'targeted_fix': '先只看一条边：状态 A 遇到某个报文或超时，才会进入状态 B。',
+          'check_question': '小题：LISTEN 收到 SYN 后，下一个状态是什么？',
+        },
+      },
+    );
+
+    await tester.pumpWidget(
+      _materialHost(StuckHelpSheet(task: task)),
+    );
+
+    expect(find.text('Aurora 两步帮扶'), findsOneWidget);
+    expect(find.byKey(const Key('stuck-help-diagnosis-step')), findsOneWidget);
+    expect(find.byKey(const Key('stuck-help-fix-step')), findsOneWidget);
+    expect(find.text('第 1 步 · 诊断问题'), findsOneWidget);
+    expect(find.text('第 2 步 · 精准修复'), findsOneWidget);
+    expect(find.text('你卡在哪里？是不知道哪些状态之间有连线，还是搞不清楚触发条件？'), findsOneWidget);
+    expect(find.text('先只看一条边：状态 A 遇到某个报文或超时，才会进入状态 B。'), findsOneWidget);
+    expect(find.text('小题：LISTEN 收到 SYN 后，下一个状态是什么？'), findsOneWidget);
+    expect(find.text('具体该怎么做'), findsNothing);
+  });
+
   testWidgets('stuck FAB opens help sheet from task execution screen',
       (tester) async {
     final task = _task();

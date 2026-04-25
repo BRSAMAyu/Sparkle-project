@@ -310,3 +310,111 @@ async def test_sprint_summary_endpoint_returns_payload(exam_sprint_client, db_se
     assert response.status_code == 200
     assert response.json() == response_payload
     mock_summary.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_sprint_completion_endpoint_returns_completion_summary(exam_sprint_client, db_session):
+    client, state = exam_sprint_client
+    user = User(
+        username="exam_sprint_completion_user",
+        email="exam_sprint_completion_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = user
+
+    plan_id = str(uuid4())
+    response_payload = {
+        "completed": True,
+        "summary": {
+            "mastered_nodes_count": 32,
+            "repaired_errors_count": 8,
+            "completed_tasks_count": 14,
+            "strongest_area": "TCP/IP 协议栈",
+            "growth_area": "子网划分",
+        },
+    }
+
+    with patch(
+        "app.api.v1.exam_sprint.ExamSprintReviewService.check_sprint_completion",
+        new=AsyncMock(return_value=response_payload),
+    ) as mock_completion:
+        response = client.get(f"/exam-sprint/completion?plan_id={plan_id}")
+
+    assert response.status_code == 200
+    assert response.json() == response_payload
+    mock_completion.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_learning_portfolio_endpoint_supports_current_user_query_param(exam_sprint_client, db_session):
+    client, state = exam_sprint_client
+    user = User(
+        username="exam_sprint_portfolio_user",
+        email="exam_sprint_portfolio_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = user
+
+    response_payload = {
+        "entries": [
+            {
+                "plan_id": str(uuid4()),
+                "plan_name": "7天计网冲刺",
+                "subject": "计算机网络",
+                "sprint_mode": "seven_day_survival",
+                "status": "completed",
+                "mastered_nodes_count": 32,
+                "started_at": "2026-04-04T09:00:00",
+                "completed_at": "2026-04-10T20:00:00",
+                "target_date": "2026-04-10",
+                "progress": 1.0,
+                "strongest_area": "TCP 拥塞控制",
+                "growth_area": "子网划分",
+                "self_rating": 8,
+                "result_rating": 4,
+                "result_description": "估计 82 分",
+                "headline": "7 天内补齐了高频保底点。",
+                "current_score": 82.0,
+                "weakest_points": ["子网划分"],
+                "proud_nodes": ["TCP 拥塞控制"],
+            }
+        ],
+        "total_mastered_nodes": 32,
+        "active_count": 0,
+        "completed_count": 1,
+        "planned_count": 0,
+    }
+
+    with patch(
+        "app.api.v1.exam_sprint.ExamSprintReviewService.get_portfolio",
+        new=AsyncMock(return_value=response_payload),
+    ) as mock_portfolio:
+        response = client.get(f"/exam-sprint/portfolio?user_id={user.id}")
+
+    assert response.status_code == 200
+    assert response.json() == response_payload
+    mock_portfolio.assert_awaited_once()
+    _, kwargs = mock_portfolio.await_args
+    assert kwargs["user_id"] == user.id
+
+
+@pytest.mark.asyncio
+async def test_learning_portfolio_endpoint_rejects_other_user_query_param(exam_sprint_client, db_session):
+    client, state = exam_sprint_client
+    user = User(
+        username="exam_sprint_portfolio_forbidden_user",
+        email="exam_sprint_portfolio_forbidden_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = user
+
+    response = client.get(f"/exam-sprint/portfolio?user_id={uuid4()}")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "无权查看其他用户的学习档案"

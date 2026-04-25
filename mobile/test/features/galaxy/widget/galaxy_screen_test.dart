@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 
 void main() {
@@ -158,6 +159,79 @@ void main() {
 
       container.dispose();
     });
+
+    testWidgets('mastery colors differ for sprint progress nodes', (
+      tester,
+    ) async {
+      final lowMasteryNode = GalaxyNodeModel.fromJson({
+        'id': 'low',
+        'name': 'Low mastery',
+        'importance': 3,
+        'sector_code': 'TECH',
+        'is_unlocked': true,
+        'mastery_score': 0.1,
+      });
+      final highMasteryNode = GalaxyNodeModel.fromJson({
+        'id': 'high',
+        'name': 'High mastery',
+        'importance': 3,
+        'sector_code': 'TECH',
+        'is_unlocked': true,
+        'mastery_score': 0.6,
+      });
+      final lowColor = galaxyMasteryNodeColor(
+        masteryScore: lowMasteryNode.masteryScore,
+        isDarkMode: true,
+      );
+      final highColor = galaxyMasteryNodeColor(
+        masteryScore: highMasteryNode.masteryScore,
+        isDarkMode: true,
+      );
+
+      expect(lowMasteryNode.masteryScore, equals(10));
+      expect(highMasteryNode.masteryScore, equals(60));
+      expect(highColor, isNot(lowColor));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MasteryColorProbe(
+                    key: const ValueKey('low-mastery-node-color'),
+                    color: lowColor,
+                  ),
+                  _MasteryColorProbe(
+                    key: const ValueKey('high-mastery-node-color'),
+                    color: highColor,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final lowBox = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byKey(const ValueKey('low-mastery-node-color')),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      final highBox = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byKey(const ValueKey('high-mastery-node-color')),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      final lowDecoration = lowBox.decoration as BoxDecoration;
+      final highDecoration = highBox.decoration as BoxDecoration;
+
+      expect(lowDecoration.color, isNot(highDecoration.color));
+    });
   });
 
   group('GalaxyState Tests', () {
@@ -231,6 +305,18 @@ void main() {
 }
 
 // Test widgets
+class _MasteryColorProbe extends StatelessWidget {
+  const _MasteryColorProbe({super.key, required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        child: const SizedBox.square(dimension: 24),
+      );
+}
+
 class _TestGalaxyLoadingWidget extends ConsumerWidget {
   const _TestGalaxyLoadingWidget();
 

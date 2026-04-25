@@ -132,6 +132,36 @@ def test_build_system_prompt_defaults_to_five_episodic_memories() -> None:
     assert "memory-5" not in prompt
 
 
+def test_build_system_prompt_unchanged_when_past_session_memory_empty() -> None:
+    base_prompt = build_system_prompt(
+        user_context={"preferences": {"depth_preference": 0.5}},
+        conversation_history={"messages": []},
+    )
+    empty_memory_prompt = build_system_prompt(
+        user_context={"preferences": {"depth_preference": 0.5}, "past_session_memory": []},
+        conversation_history={"messages": []},
+    )
+
+    assert empty_memory_prompt == base_prompt
+    assert "你之前了解的关于用户的信息" not in empty_memory_prompt
+
+
+def test_build_system_prompt_prefixes_past_session_memory() -> None:
+    prompt = build_system_prompt(
+        user_context={
+            "preferences": {"depth_preference": 0.5},
+            "past_session_memory": [
+                {"summary": "上次你备考计算机网络，传输层学得不错但子网划分比较薄弱。"},
+                {"summary": "最近更适合用短冲刺和错题复盘推进。"},
+            ],
+        },
+        conversation_history={"messages": []},
+    )
+
+    assert prompt.startswith("你之前了解的关于用户的信息：\n- 上次你备考计算机网络")
+    assert "子网划分比较薄弱" in prompt
+
+
 def test_build_system_prompt_includes_understanding_depth_hint() -> None:
     prompt = build_system_prompt(
         user_context={

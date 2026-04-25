@@ -544,6 +544,33 @@ async def test_process_stream_direct_flow_reaches_done(orchestrator_factory):
 
 
 @pytest.mark.asyncio
+async def test_process_stream_fast_tracks_exam_sprint_before_sufficiency(orchestrator_factory, monkeypatch):
+    from app.orchestration import bottleneck_analyzer as bottleneck_module
+
+    monkeypatch.setattr(
+        bottleneck_module.bottleneck_analyzer,
+        "analyze",
+        AsyncMock(side_effect=RuntimeError("force deterministic fallback")),
+    )
+
+    orchestrator, _, state_updates = orchestrator_factory()
+    request = _make_request(message="7天后考计算机网络，没学过，每天2小时")
+
+    responses = await _collect(orchestrator, request)
+    persisted = await orchestrator.planning_workflow_manager.get_active_session(request.session_id)
+
+    assert orchestrator._check_sufficiency.await_count == 0
+    assert persisted is not None
+    assert persisted.state == "PLANNING"
+    assert persisted.collected["exam_scope"].startswith("计算机网络")
+    assert persisted.collected["knowledge_baseline"] == "完全没学过"
+    assert persisted.collected["time_available"] == "每天约 2 小时"
+    assert responses[-1].metadata["planning_fast_track"] == "exam_sprint"
+    assert responses[-1].finish_reason == agent_service_pb2.STOP
+    assert state_updates[-1][0] == STATE_DONE
+
+
+@pytest.mark.asyncio
 async def test_process_stream_planning_bypass_injects_aurora_sidecar_prompt(orchestrator_factory):
     orchestrator, _, _state_updates = orchestrator_factory()
     user_id = str(uuid.uuid4())
@@ -710,12 +737,18 @@ async def test_process_stream_planning_sidecar_does_not_reask_resolved_informati
     [
         (
             "wait",
-            {"intent": "handle_current_need_only", "brief": "Stay on the current task and do not recover planning yet."},
+            {
+                "intent": "handle_current_need_only",
+                "brief": "Stay on the current task and do not recover planning yet.",
+            },
             "本轮先处理当前需求，不要主动把话题拉回规划；只在用户自己回到规划时继续。",
         ),
         (
             "drop_thread",
-            {"intent": "drop_stale_followup", "brief": "Do not bring the earlier planning clarification back in this reply."},
+            {
+                "intent": "drop_stale_followup",
+                "brief": "Do not bring the earlier planning clarification back in this reply.",
+            },
             "把先前那条规划追问放下，本轮不要带回，也不要补问刚才那块信息。",
         ),
     ],
@@ -952,6 +985,51 @@ async def test_process_stream_explicit_aurora_modeling_surface_uses_modeling_con
         "接下来我会带着这些理解继续陪你往下走；如果你想补充，随时都可以接着说。",
     ]
     assert [state for state, _ in state_updates] == [STATE_INIT, STATE_GENERATING, STATE_DONE]
+
+
+@pytest.mark.asyncio
+async def test_turn_end_memory_write_persists_aurora_modeling_summary(db_session):
+    _install_import_stubs()
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    from app.models.user import User
+    from app.services.memory_service import MemoryService
+
+    user_id = uuid.uuid4()
+    db_session.add(
+        User(
+            id=user_id,
+            username=f"user_{user_id.hex[:8]}",
+            email=f"{user_id.hex[:8]}@example.com",
+            hashed_password="test",
+        )
+    )
+    await db_session.commit()
+
+    orchestrator = orchestrator_module.ChatOrchestrator.__new__(orchestrator_module.ChatOrchestrator)
+    await orchestrator._write_turn_end_episodic_memory(
+        active_db=db_session,
+        user_id=str(user_id),
+        session_id=f"session-{uuid.uuid4()}",
+        request_id=f"req-{uuid.uuid4()}",
+        user_message="我想做计算机网络冲刺。",
+        assistant_message="我已经抓到你的基础和范围。",
+        event_kind="aurora_modeling_complete",
+        request_extra_context={
+            "subject": "计算机网络",
+            "exam_scope": "传输层、网络层和子网划分",
+            "knowledge_baseline": "传输层学得不错",
+            "time_available": "接下来三周每天 1 小时",
+            "galaxy_baseline": {"weak_nodes": ["子网划分"], "strong_nodes": ["传输层"]},
+        },
+        user_context_payload={},
+    )
+
+    recent = await MemoryService(db_session).get_recent_episodic(user_id, limit=1)
+
+    assert len(recent) == 1
+    assert "subject=计算机网络" in recent[0].summary
+    assert "baseline=传输层学得不错" in recent[0].summary
+    assert "子网划分" in recent[0].summary
 
 
 @pytest.mark.asyncio

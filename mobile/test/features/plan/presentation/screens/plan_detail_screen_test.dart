@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/graphite_surfaces.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
@@ -40,6 +41,28 @@ void main() {
 
       expect(find.text('⚠️ 常见误区'), findsNothing);
       expect(_commonMistakeCards(), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('PlanDetailScreen targeted repair tasks', () {
+    testWidgets('renders targeted repair task with orange card treatment',
+        (tester) async {
+      final plan = _planWithTargetedRepairTask();
+
+      await _pumpPlanDetail(tester, plan);
+
+      final normalCard = tester.widget<GraphiteCardSurface>(
+        find.byKey(const ValueKey('plan-task-card-task-normal')),
+      );
+      final repairCard = tester.widget<GraphiteCardSurface>(
+        find.byKey(const ValueKey('plan-task-card-task-repair')),
+      );
+
+      expect(normalCard.backgroundColor, isNull);
+      expect(repairCard.backgroundColor, DS.warning.withValues(alpha: 0.08));
+      expect(find.text('⚠️'), findsOneWidget);
+      expect(find.text('错题补强'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -127,6 +150,75 @@ PlanModel _planWithMistakes(List<dynamic> commonMistakesToWatch) {
       day: 1,
       recommendation: '今天优先拿下 TCP 确认号。',
       tasks: [task],
+    ),
+  );
+}
+
+PlanModel _planWithTargetedRepairTask() {
+  final now = DateTime.utc(2026, 4, 25);
+  final normalTask = TaskModel(
+    id: 'task-normal',
+    userId: 'user-1',
+    planId: 'plan-1',
+    title: '拿下 TCP 确认号',
+    type: TaskType.learning,
+    tags: const ['day:1'],
+    estimatedMinutes: 30,
+    difficulty: 2,
+    energyCost: 1,
+    guideJson: const {
+      'why_now': '现在先处理它，是为了把今天的学习推进变成一个看得见的输出。',
+      'task_kind': 'retrieval_drill',
+    },
+    status: TaskStatus.pending,
+    priority: 1,
+    orderIndex: 1000,
+    createdAt: now,
+    updatedAt: now,
+  );
+  final repairTask = TaskModel(
+    id: 'task-repair',
+    userId: 'user-1',
+    planId: 'plan-1',
+    title: '修复昨日错题：TCP 滑动窗口机制',
+    type: TaskType.errorFix,
+    tags: const ['day:1', 'targeted_repair'],
+    estimatedMinutes: 15,
+    difficulty: 2,
+    energyCost: 1,
+    guideJson: const {
+      'why_now': '昨天暴露的漏洞现在最适合短补强。',
+      'task_kind': 'targeted_repair',
+      'daily_spec': {
+        'task_kind': 'targeted_repair',
+        'estimated_minutes': 15,
+      },
+    },
+    status: TaskStatus.pending,
+    priority: 100,
+    orderIndex: 1001,
+    createdAt: now,
+    updatedAt: now,
+  );
+
+  return PlanModel(
+    id: 'plan-1',
+    userId: 'user-1',
+    name: '计算机网络冲刺',
+    type: PlanType.sprint,
+    dailyAvailableMinutes: 45,
+    masteryLevel: 0.4,
+    progress: 0.2,
+    isActive: true,
+    createdAt: now,
+    updatedAt: now,
+    description: '今天先稳住高频节点。',
+    subject: '计算机网络',
+    tasks: [normalTask, repairTask],
+    dayHighlights: PlanDayHighlights(
+      day: 1,
+      recommendation: '今天优先修复昨天暴露的错因。',
+      tasks: [normalTask, repairTask],
     ),
   );
 }

@@ -174,6 +174,45 @@ async def test_streak_days_progress_uses_streak_stats(db_session, test_user):
 
 
 @pytest.mark.asyncio
+async def test_daily_study_unlocks_30_day_learner_on_registration_day_30(db_session, test_user):
+    achievement = _achievement(
+        "30_day_learner",
+        trigger_code="REGISTRATION_STUDY_MILESTONE",
+        trigger_config={"registration_days": 30, "study_days": 20},
+    )
+    test_user.created_at = datetime.utcnow() - timedelta(days=29, hours=1)
+    stats = UserStreakStats(
+        user_id=test_user.id,
+        current_streak=6,
+        max_streak=8,
+        total_checkin_days=22,
+        last_activity_date=datetime.utcnow() - timedelta(days=1),
+    )
+    db_session.add_all([achievement, stats])
+    await db_session.commit()
+
+    engine = AchievementEngine(db_session)
+
+    unlocked = await engine.process_event(
+        user_id=str(test_user.id),
+        event_type=AchievementEvent.DAILY_STUDY,
+    )
+
+    assert [entry["achievement_id"] for entry in unlocked] == ["30_day_learner"]
+    result = await db_session.execute(
+        select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == test_user.id,
+                UserAchievement.achievement_id == "30_day_learner",
+            )
+        )
+    )
+    stored = result.scalar_one()
+    assert stored.unlocked_at is not None
+    assert stored.progress == 1.0
+
+
+@pytest.mark.asyncio
 async def test_sprint_progress_variants(db_session, test_user):
     now = datetime(2026, 3, 10, 9, 0, 0)
     plan1 = Plan(

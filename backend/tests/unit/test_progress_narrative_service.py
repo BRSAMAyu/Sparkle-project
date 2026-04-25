@@ -157,8 +157,10 @@ async def test_weekly_growth_narrative_uses_tasks_errors_reflections_and_mastery
         chapter="热力学",
         question_text="内能变化题",
         latest_analysis={"root_cause": "概念混淆"},
-        mastery_level=0.2,
+        mastery_level=0.85,
         created_at=now - timedelta(days=1),
+        last_reviewed_at=now - timedelta(days=1),
+        review_count=2,
         is_deleted=False,
     )
     feedback = TaskFeedback(
@@ -180,16 +182,27 @@ async def test_weekly_growth_narrative_uses_tasks_errors_reflections_and_mastery
     await db_session.commit()
 
     service = ProgressNarrativeService(db_session, redis=None)
-    narrative = await service.build_weekly_narrative(str(user_id), generated_at=now)
+    narrative = await service.get_weekly_narrative(
+        str(user_id),
+        now - timedelta(days=now.weekday()),
+        now - timedelta(days=now.weekday()) + timedelta(days=7),
+        force=True,
+        now=now,
+    )
 
     assert narrative.is_placeholder is False
     assert narrative.data_points["tasks_completed"] == 1
     assert narrative.data_points["error_records"] == 1
+    assert narrative.data_points["errors_fixed"] == 1
     assert narrative.data_points["reflection_records"] == 1
     assert narrative.data_points["mastery_delta"] == 18.5
+    assert narrative.highlights
+    assert narrative.biggest_improvement is not None
+    assert narrative.biggest_improvement["node_name"] == "热力学第一定律"
+    assert narrative.next_week_suggestion
     assert "热力学" in narrative.body
-    assert "概念混淆" in narrative.body
-    assert "费曼法" in narrative.body
+    assert narrative.data_points["error_causes"] == ["概念混淆"]
+    assert "掌握度从 40% 提升到了 58%" in narrative.body
 
 
 @pytest.mark.asyncio
@@ -211,10 +224,49 @@ async def test_weekly_growth_narrative_returns_first_week_placeholder(db_session
 
     assert narrative.is_placeholder is True
     assert "这是你的第一周，先开始吧" in narrative.body
+    assert narrative.highlights == ["开始留下第一条成长线索。"]
     assert narrative.source_counts == {
         "task_completions": 0,
         "error_records": 0,
+        "error_review_records": 0,
         "reflection_records": 0,
         "mastery_changes": 0,
         "achievement_unlocks": 0,
+        "study_days": 0,
     }
+
+
+@pytest.mark.asyncio
+async def test_weekly_growth_narrative_returns_gentle_pause_when_no_study_days(db_session):
+    user_id = uuid4()
+    now = _utcnow()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    task = Task(
+        id=uuid4(),
+        user_id=user_id,
+        title="整理下周学习清单",
+        type=TaskType.PLANNING,
+        status=TaskStatus.COMPLETED,
+        estimated_minutes=15,
+        actual_minutes=15,
+        difficulty=1,
+        energy_cost=1,
+        tags=["网络层"],
+        completed_at=now - timedelta(days=1),
+        created_at=now - timedelta(days=1),
+    )
+    db_session.add_all([user, task])
+    await db_session.commit()
+
+    service = ProgressNarrativeService(db_session, redis=None)
+    narrative = await service.build_weekly_narrative(user_id, generated_at=now)
+
+    assert narrative.is_placeholder is True
+    assert narrative.data_points["study_days"] == 0
+    assert narrative.highlights == ["本周暂停学习，下周继续。"]
+    assert "本周暂停学习，下周继续" in narrative.body

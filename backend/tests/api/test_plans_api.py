@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, timedelta
 
 import pytest
 from fastapi import FastAPI
@@ -156,3 +156,68 @@ async def test_plan_list_and_detail_include_mobile_required_fields(db_session, p
     assert detail["tasks"] is not None
     assert len(detail["tasks"]) == 1
     assert detail["tasks"][0]["plan_id"] == str(plan.id)
+
+
+@pytest.mark.asyncio
+async def test_plan_today_exposes_compressed_recovery_task(db_session, plans_client):
+    client, state = plans_client
+    user = User(
+        username="plan_today_compressed_user",
+        email="plan_today_compressed_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    plan = Plan(
+        user_id=user.id,
+        name="7天计网冲刺",
+        type=PlanType.SPRINT,
+        description='{"strategy": {"total_days": 7}}',
+        plan_stage=PlanStage.SPRINT,
+        target_date=date.today() + timedelta(days=3),
+        daily_available_minutes=120,
+        total_estimated_hours=14,
+        subject="计算机网络",
+        mastery_level=0.3,
+        progress=0.3,
+        is_active=True,
+        priority=PlanPriority.HIGH,
+    )
+    db_session.add(plan)
+    await db_session.flush()
+
+    reason = "前一天完成率只有 30%，低于 50%，而距离考试只剩 5 天；所以 Day 5 自动压缩为保底版。"
+    db_session.add(
+        Task(
+            user_id=user.id,
+            plan_id=plan.id,
+            title="Day 5 · 压缩保底 - TCP 拥塞控制",
+            type=TaskType.LEARNING,
+            tags=["day:5", "compressed_recovery"],
+            estimated_minutes=35,
+            difficulty=1,
+            energy_cost=1,
+            status=TaskStatus.PENDING,
+            priority=2,
+            order_index=5000,
+            guide_json={
+                "compressed": True,
+                "compression_reason": reason,
+                "task_kind": "compressed_recovery",
+                "daily_spec": {"day": 5, "compressed": True},
+            },
+        )
+    )
+    await db_session.commit()
+    state["current_user"] = user
+
+    response = client.get(f"/plans/{plan.id}/today")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["day"] == 5
+    assert payload["compressed"] is True
+    assert payload["compression_reason"] == reason
+    assert payload["tasks"][0]["compressed"] is True
+    assert payload["tasks"][0]["compression_reason"] == reason

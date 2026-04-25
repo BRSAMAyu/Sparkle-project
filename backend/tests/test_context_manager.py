@@ -1,4 +1,5 @@
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -28,13 +29,23 @@ async def test_context_orchestrator_aggregation(db_session):
 
     with pytest.MonkeyPatch.context() as m:
         m.setattr(orchestrator, "_get_profile_context", AsyncMock(return_value=profile_context))
-        m.setattr(orchestrator, "_get_error_profile", AsyncMock(return_value={"summary": {"total_errors": 5}, "recent": []}))
+        m.setattr(
+            orchestrator, "_get_error_profile", AsyncMock(return_value={"summary": {"total_errors": 5}, "recent": []})
+        )
         m.setattr(
             orchestrator,
             "_get_task_profile",
             AsyncMock(
                 return_value={
-                    "tasks": [{"id": str(uuid.uuid4()), "title": "Test Task", "priority": 1, "due_date": None, "type": "study"}],
+                    "tasks": [
+                        {
+                            "id": str(uuid.uuid4()),
+                            "title": "Test Task",
+                            "priority": 1,
+                            "due_date": None,
+                            "type": "study",
+                        }
+                    ],
                     "focus": {"focus_minutes": 120},
                 }
             ),
@@ -52,7 +63,9 @@ async def test_context_orchestrator_aggregation(db_session):
             AsyncMock(
                 return_value={
                     "recent_unlocks": [{"achievement_id": "streak_7", "name": "七日连胜"}],
-                    "in_progress_achievements": [{"achievement_id": "study_100hours", "name": "百小时学习", "progress": 0.62}],
+                    "in_progress_achievements": [
+                        {"achievement_id": "study_100hours", "name": "百小时学习", "progress": 0.62}
+                    ],
                     "total_achievement_score": 3.6,
                 }
             ),
@@ -67,6 +80,21 @@ async def test_context_orchestrator_aggregation(db_session):
                     "workload_density": "medium",
                     "exam_urgency": {"days_left": 12, "urgent": True},
                 }
+            ),
+        )
+        m.setattr(
+            "app.core.context_manager.MemoryService.get_recent_episodic",
+            AsyncMock(
+                return_value=[
+                    SimpleNamespace(
+                        id=uuid.uuid4(),
+                        summary="上次你备考计算机网络，传输层不错但子网划分薄弱。",
+                        subject_type="learning_profile",
+                        source_type="chat_turn",
+                        occurred_at=None,
+                        tags=["aurora"],
+                    )
+                ]
             ),
         )
 
@@ -88,6 +116,7 @@ async def test_context_orchestrator_aggregation(db_session):
     assert context.social_context_v1["mention_count"] == 1
     assert context.achievement_summary["recent_unlocks"][0]["name"] == "七日连胜"
     assert context.calendar_context["workload_density"] == "medium"
+    assert context.past_session_memory[0]["summary"].startswith("上次你备考计算机网络")
     assert redis_client.setex.called
 
 
@@ -152,6 +181,7 @@ async def test_context_orchestrator_uses_isolated_sessions_for_service_backed_he
         m.setattr(orchestrator, "_get_social_context_v1", AsyncMock(return_value={}))
         m.setattr(orchestrator, "_get_achievement_context", AsyncMock(return_value={}))
         m.setattr(orchestrator, "_get_calendar_context", AsyncMock(return_value={}))
+        m.setattr(orchestrator, "_get_past_session_memory", AsyncMock(return_value=[]))
 
         await orchestrator.get_user_context(str(uuid.uuid4()))
 

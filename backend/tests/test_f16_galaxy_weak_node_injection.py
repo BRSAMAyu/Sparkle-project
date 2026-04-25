@@ -75,6 +75,23 @@ class TestDashboardExtractGalaxyWeakNodes:
         )
         assert "galaxy_weak_nodes" not in ctx
 
+    def test_extracts_previous_sprint_summary(self, builder):
+        ctx = builder._extract_cold_start_context(
+            profile_context={"cold_start_context": {"subject": "计算机网络"}},
+            user_context_payload={
+                "previous_sprint_summary": {
+                    "strongest_nodes": ["cn.osi_model", "cn.tcp_handshake"],
+                    "persistent_weak_nodes": ["cn.subnetting"],
+                    "mastery_snapshot": {"cn.osi_model": 0.85},
+                },
+            },
+        )
+
+        assert ctx["strongest_nodes"] == ["cn.osi_model", "cn.tcp_handshake"]
+        assert ctx["persistent_weak_nodes"] == ["cn.subnetting"]
+        assert ctx["mastery_snapshot"] == {"cn.osi_model": 0.85}
+        assert ctx["previous_sprint_summary"]["strongest_nodes"] == ["cn.osi_model", "cn.tcp_handshake"]
+
 
 # ---------------------------------------------------------------------------
 # 2. planning_workflow._daily_task_specs — galaxy_weak 标注
