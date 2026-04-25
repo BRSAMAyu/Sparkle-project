@@ -7,10 +7,10 @@
   "reviewer_a_last_timestamp": "2026-04-25T20:35:00+08:00",
   "reviewer_b_last_timestamp": "2026-04-25T21:20:00Z",
   "validator_last_timestamp": "2026-04-25T21:30:00+08:00",
-  "steering_notes": "C01/C02 原始发现已被后续轮次覆盖丢失。所有当前 reviewer 文件中的发现（C03/C04/C06）质量很好，请保持。Validator 已因时间戳匹配逻辑跳过两轮，请立即重新运行 validator 处理所有未验证的发现。",
+  "steering_notes": "C02/C03/C04/C05 原始发现已丢失，待全部 20 链路完成后评估是否重新审查。当前审查质量极好，请保持 file:line 引用和 expected/actual 格式。三大跨切主题：(1) Backend→Mobile 集成断裂 (2) 冷启动路径结构缺陷 (3) 静默降级。",
   "architect_override_a": null,
   "architect_override_b": null,
-  "architect_last_check": "2026-04-25T19:00:00+08:00",
+  "architect_last_check": "2026-04-25T21:30:00+08:00",
   "reviewer_a_queue": ["C01","C03","C05","C07","C09","C11","C13","C15","C17","C19"],
   "reviewer_b_queue": ["C02","C04","C06","C08","C10","C12","C14","C16","C18","C20"],
   "chains": {

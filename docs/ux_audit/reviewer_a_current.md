@@ -1,89 +1,91 @@
-# Reviewer A — C03: 任务卡点(stuck)→卡点帮助面板→Aurora诊断内容
-Timestamp: 2026-04-25T18:28:00+08:00
-Chain Index: 1
+# Reviewer A — C11: 间隔重复提醒链路（Celery→推送→复习chat）
+Timestamp: 2026-04-25T20:35:00+08:00
+Chain Index: 5
 
 ## Chain Flow Summary
 
-User is on the task execution screen. A FAB labeled "卡住了?" appears in the bottom-left. Tapping it opens `StuckHelpSheet` as a bottom sheet, which reads diagnostic content from the task's pre-generated `guideJson` metadata (micro_teaching / fallback_if_stuck / if_stuck). The sheet also offers "和Sparkle聊聊这个问题" which navigates to chat with a structured stuck prompt. There is no "stuck" task status — the interaction is purely UI-side with no backend state change.
+Celery Beat fires `scan_spaced_repetition_reminders` daily at 9:30 AM (Asia/Shanghai). The scan dispatches per-user tasks that evaluate each Galaxy node: nodes with mastery 30%-80% that are at exactly 1, 3, 7, 14, or 30 days since last study get a push notification. The notification carries a deep link `/chat?review_node={id}&node_label={name}&prompt=带我复习...`. On tap, `push_navigation_service` extracts the deep link, routes through `DeepLinkService` to `/chat`, and the chat screen passes `review_node` context to Aurora via `extra_context`. Aurora generates a specialized review prompt for that node.
 
 ## Critical Issues 🔴
 
-**1. `backend/app/models/task.py:47-51` + `mobile/lib/features/task/presentation/screens/task_execution_screen.dart:452-466`: No stuck status — stuck state never reaches the backend**
-
-TaskStatus enum has only `PENDING`, `IN_PROGRESS`, `COMPLETED`, `ABANDONED`. There is no `STUCK` status. No API endpoint exists to mark a task as stuck. The mobile code opens the help sheet as a purely local UI action — no API call, no status update, no event.
-
-This means:
-- The backend never learns the user was stuck
-- `decision_loop.py:641` `_is_stuck_task_scene()` checks `task_state.stage == "stuck"` — but nothing ever sets this
-- No stuck events flow to EventBus, achievement engine, or analytics
-- Aurora's strategy recalibration (`service.py:602` `_with_strategy_recalibration_context`) relies on stale signals that never get produced from mobile stuck interactions
-- The 53 governance rules and telemetry can't track stuck→unstuck transitions
-
-Expected: Tapping "卡住了?" should set task status to STUCK (or equivalent), notify the backend, and trigger Aurora diagnostic. Actual: Purely local UI with no backend communication.
-
-**2. `stuck_help_sheet.dart:27-31` + `task_card_generator.py:256-283`: Sheet content is static task metadata, NOT Aurora real-time diagnostic**
-
-The chain description says "内容来自Aurora真实诊断而非静态文案". But `StuckHelpSheet` reads from `task.guideJson` — content generated at plan creation time by `task_card_generator.py`. This is static metadata baked into the task card, not a real-time Aurora diagnostic based on the user's current state.
-
-The only Aurora interaction is the "和Sparkle聊聊这个问题" button, which navigates to chat with a pre-built prompt. This IS an Aurora conversation, but it's manual — the user must type and wait for a response, not see pre-computed diagnostic content.
-
-Expected: Sheet shows Aurora's contextual diagnosis based on current user state. Actual: Sheet shows pre-generated generic help content from task creation time.
+None found.
 
 ## Major Issues 🟡
 
-**3. `task_execution_screen.dart:477`: `_openStuckChat` uses `context.go()` — navigation dead-end**
+**1. `celery_tasks.py:1141-1150`: Exact-day interval matching — missed scan days lose review opportunities permanently**
 
-When user clicks "和Sparkle聊聊这个问题", `_openStuckChat` calls `context.go(route)` which replaces the entire navigation stack. The task execution screen is destroyed, and the running timer is lost. The user can't get back to their task from the chat screen. The back button from chat goes to `/home`, not back to the task.
+The `_spaced_repetition_due_interval_days` function checks if `elapsed_days in (1, 3, 7, 14, 30)`. If the Celery scan is skipped on day 7 (server downtime, queue backlog, crash), on day 8 the elapsed_days is 8 which doesn't match any interval. The day-7 review is permanently missed — the next chance is day 14. This doubles the review gap for that node.
 
-Expected: Chat opens as overlay or push navigation, preserving the task execution context. Actual: Task execution screen is destroyed.
+There's no grace window (e.g., "trigger if within ±1 day of interval"). For a system designed around spaced repetition learning science, missing intervals directly impacts retention.
 
-**4. `task_execution_screen.dart:480-493`: `_sendAuroraTrigger` doesn't pass stuck context to Aurora**
+Expected: Trigger if `elapsed_days >= interval and elapsed_days < interval + grace_window`. Actual: Only triggers on exact match.
 
-The `_sendAuroraTrigger` method sends a message via `taskChatProvider(task.id).notifier.sendMessage(message)` but doesn't include `task_state.stage="stuck"` or any stuck-specific context. Without this, Aurora's decision loop won't activate stuck-specific diagnostic mode (`_is_stuck_task_scene` returns False). The response will be generic, not the micro-teaching diagnostic described in `decision_loop.py:727-740`.
+**2. `celery_tasks.py:1105-1107`: Fixed intervals regardless of mastery level**
 
-Expected: Aurora receives stuck context and activates micro-teaching diagnostic mode. Actual: Aurora receives a plain text message without stuck indicators.
+Intervals are `(1, 3, 7, 14, 30)` for all nodes regardless of mastery. A node at 31% mastery (barely learned) gets the same schedule as one at 79% (well-learned). Standard spaced repetition algorithms (SM-2, Anki) increase intervals for well-known material and decrease for poorly-known material. The current system treats all mid-mastery nodes identically.
+
+Expected: Nodes at lower mastery (30-50%) should have shorter intervals; nodes at higher mastery (65-80%) should have longer intervals. Actual: All nodes get the same fixed schedule.
 
 ## Minor Issues 🟢
 
-None found beyond the above.
+**3. `celery_tasks.py:1251-1283`: 500-user scan limit per day**
+
+The scan limits to 500 users per invocation. If there are more active users, some won't get processed that day. They'll be picked up the next day, but this creates inconsistent UX where some users always get reminders and others don't.
+
+**4. `celery_tasks.py:1194-1197`: Nodes below 30% mastery are excluded from review**
+
+Nodes with mastery < 30% are skipped entirely. These are the weakest nodes that arguably need the most review. The rationale seems to be that very weak nodes should be re-learned rather than reviewed, but the threshold may be too aggressive.
 
 ## Working Well ✅
 
-**StuckHelpSheet widget is well-designed** (`stuck_help_sheet.dart`):
-- Progressive content fallback: `micro_teaching` → `fallback_if_stuck` → `if_stuck` → `genericSuggestions` (line 27-32)
-- Reads from 5+ field name variants for resilience (line 395-399, 402-416)
-- Two-step micro-teaching card with diagnosis question + targeted fix (line 205-229)
-- DraggableScrollableSheet with proper min/max sizing (line 35-37)
-- "好了，继续" dismiss button (line 113-123)
+**Celery scheduling and scan logic** (`celery_tasks.py`):
+- Daily scan at 9:30 AM Asia/Shanghai — reasonable morning timing
+- Per-user task dispatch prevents timeout on large user bases
+- Cooldown enforcement (24h) via `notification_center_service.py:72-77` prevents notification spam
+- Filters out `decay_paused` nodes (line 1190-1192)
 
-**Stuck chat prompt is well-structured** (`task_execution_screen.dart:505-528`):
-- Includes task title, estimated time, focus cue, steps, success criteria, and fallback suggestions
-- Ends with clear instruction: "请先问我一个最关键的澄清问题，然后把下一步缩小到5分钟内能开始"
+**Notification payload** (`notification_center_service.py:79-128`):
+- Includes `node_id`, `node_name`, `mastery`, `interval_days` in payload
+- Deep link constructed with `review_node` + `node_label` + pre-built `prompt` (line 79-94)
+- `primary_action` with `action_type: "galaxy_node_review"` and full payload
+- `push_via_websocket=True` ensures immediate delivery
 
-**FAB design is appropriate** (`task_execution_screen.dart:575-614`):
-- Positioned in bottom-left, not blocking the timer
-- "卡住了?" label is clear and inviting
-- Tooltip and icon provide context
+**Push notification routing** (`push_navigation_service.dart`):
+- `handleOpenedPayload` extracts `deep_link` from notification data (line 80-89)
+- Routes through `DeepLinkService.handleExternalDeepLink` preserving full query string
+- Falls back to `destination_route` if `deep_link` is empty
 
-**Backend stuck diagnostic infrastructure exists** (`decision_loop.py`):
-- `STUCK_TASK_STAGE_TOKENS` detection (line 126)
-- `standard_layer_contract` for diagnostic responses (line 727-740)
-- Micro-teaching mode activation (line 1255-1260)
-- Rule injection for stuck tasks (line 984-992)
-- Chat adapter fallback messages (chat_adapter.py line 632-635)
-- Task card generator creates structured stuck_help content (task_card_generator.py line 563-617)
+**Route parameter extraction** (`routes.dart:191-197`):
+- `/chat` route correctly extracts `review_node` and `node_label` from query parameters
+- Builds `initialExtraContext` map that preserves all review context
+- Passes to `ChatScreen` as `initialExtraContext` parameter
+
+**Chat context delivery** (`chat_screen.dart:506-531`):
+- `_queueInitialPromptDispatch` sends the pre-built review prompt with `extraContextOverrides`
+- `chat_provider.dart:799-840` passes `extraContextOverrides` through WebSocket as `extra_context`
+- WebSocket payload preserves `review_node` and `node_label` in the `extra_context` field
+
+**Aurora runtime processing** (`service.py:765-794`):
+- `_review_focus_from_context` extracts `review_node` and `node_label` from `request_extra_context`
+- `_build_review_node_first_turn_message` generates specialized review prompt with node-specific language
+- Falls back to `_humanize_review_node_id` if `node_label` is missing (line 775)
+
+**Test coverage**:
+- Backend unit test `test_spaced_repetition_reminder.py:72-77` validates notification payload contains `review_node` and `node_label`
+- Mobile integration test `h5_cross_system_chains_test.dart:86-91` validates routing from notification to chat with correct context
 
 ## Files Examined
 
-1. `mobile/lib/features/task/presentation/widgets/stuck_help_sheet.dart` (full, 479 lines)
-2. `mobile/lib/features/task/presentation/providers/task_provider.dart` (full, 1276 lines)
-3. `mobile/lib/features/task/presentation/screens/task_execution_screen.dart` (lines 440-614)
-4. `backend/app/aurora/runtime_v1/decision_loop.py` (stuck detection, diagnostic contracts, rule injection)
-5. `backend/app/aurora/runtime_v1/service.py` (strategy recalibration context)
-6. `backend/app/aurora/runtime_v1/chat_adapter.py` (micro-teaching context, fallback messages)
-7. `backend/app/orchestration/task_card_generator.py` (stuck_help field generation)
-8. `backend/app/models/task.py` (TaskStatus enum — no STUCK status)
-9. `backend/app/services/task_service.py` (no stuck-related transitions)
-10. `backend/app/api/v1/tasks.py` (no stuck endpoint)
+1. `backend/app/core/celery_tasks.py` (lines 1105-1283, scan + per-user task + interval calculation)
+2. `backend/app/core/celery_app.py` (line 1033-1038, beat schedule)
+3. `backend/app/services/notification_center_service.py` (lines 45-155, notification creation + cooldown)
+4. `backend/app/services/galaxy/review_urgency_service.py` (separate UI scoring, not used by reminders)
+5. `backend/tests/unit/test_spaced_repetition_reminder.py` (payload validation)
+6. `mobile/lib/core/services/push_navigation_service.dart` (notification tap → deep link extraction)
+7. `mobile/lib/core/services/deep_link_service.dart` (deep link routing)
+8. `mobile/lib/app/routes.dart` (query parameter extraction for /chat)
+9. `mobile/lib/features/chat/presentation/screens/chat_screen.dart` (context delivery)
+10. `mobile/lib/features/chat/presentation/providers/chat_provider.dart` (extra context passthrough)
+11. `mobile/test/widget/h5_cross_system_chains_test.dart` (integration test validation)
 
-## Confidence: High — The stuck feature has substantial backend diagnostic infrastructure but zero mobile-to-backend integration. The mobile side is purely local UI with static content. The chain description's claim of "Aurora真实诊断" is not met.
+## Confidence: High — The end-to-end flow from Celery scan to Aurora review prompt is well-wired and tested. Issues are limited to interval algorithm quality, not broken links.
