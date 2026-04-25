@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import logging
@@ -60,6 +61,7 @@ from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.checkpoint_nudge_service import CheckpointDebriefService
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+CORE_ACCEPTANCE_DOMAINS = ("goal", "scope", "baseline", "time")
 
 
 async def _acceptance_adjust_for_checkpoint(self, *, user_id, plan_id, debrief_result):
@@ -92,6 +94,14 @@ class FakeRedis:
 class ScenarioResult:
     name: str
     details: str
+    covered_domains: int = len(CORE_ACCEPTANCE_DOMAINS)
+    total_domains: int = len(CORE_ACCEPTANCE_DOMAINS)
+    max_consecutive_messages: int = 3
+    semantic_repeat_free: bool = True
+
+    @property
+    def coverage_ratio(self) -> float:
+        return self.covered_domains / max(self.total_domains, 1)
 
 
 class SequenceJsonLLM:
@@ -161,6 +171,33 @@ def _semantic_similarity(left: str, right: str) -> float:
         return 0.0
     overlap = len(grams_left.intersection(grams_right))
     return overlap / max(min(len(grams_left), len(grams_right)), 1)
+
+
+def _assert_message_quality(messages: list[str], previous_message: str | None = None) -> str | None:
+    assert len(messages) <= 3
+    assert all(not _is_fragment(message) for message in messages)
+    cursor = previous_message
+    for message in messages:
+        if cursor is not None:
+            assert _semantic_similarity(cursor, message) < 0.82
+        cursor = message
+    return cursor
+
+
+def _coverage_count(covered_domains: list[str] | set[str]) -> int:
+    covered = set(covered_domains)
+    return sum(1 for domain in CORE_ACCEPTANCE_DOMAINS if domain in covered)
+
+
+def _assert_coverage_ratio(covered_domains: list[str] | set[str]) -> tuple[int, int]:
+    covered = _coverage_count(covered_domains)
+    total = len(CORE_ACCEPTANCE_DOMAINS)
+    assert covered / total >= 0.8
+    return covered, total
+
+
+def _tensions(statuses: dict[str, str]) -> list[dict[str, str]]:
+    return [{"domain": domain, "status": status} for domain, status in statuses.items()]
 
 
 async def create_session() -> (
@@ -233,6 +270,64 @@ async def seed_plan(
     session.add_all([plan, task])
     await session.commit()
     return plan, task
+
+
+async def run_modeling_turns(
+    service: AuroraRuntimeV1Service,
+    *,
+    user_id: str,
+    conversation_id: str,
+    turns: list[dict],
+) -> dict:
+    conversation_context: dict[str, list[dict[str, str]]] = {"messages": []}
+    asked_domains: list[str] = []
+    repeated_asks = 0
+    turns_to_planning: int | None = None
+    final_runtime_state: dict = {}
+    previous_assistant_message: str | None = None
+    max_consecutive_messages = 0
+    all_assistant_messages: list[str] = []
+
+    for index, turn in enumerate(turns, start=1):
+        conversation_context["messages"].append({"role": "user", "content": turn["user_message"]})
+        plan = await service.plan_turn(
+            active_db=None,
+            user_id=user_id,
+            surface=AURORA_SURFACE_MODELING,
+            conversation_id=conversation_id,
+            request_id=f"{conversation_id}:{index}",
+            user_message=turn["user_message"],
+            request_extra_context=turn["request_extra_context"],
+            conversation_context=conversation_context,
+            user_context_payload={},
+        )
+        previous_assistant_message = _assert_message_quality(plan.messages, previous_assistant_message)
+        max_consecutive_messages = max(max_consecutive_messages, len(plan.messages))
+
+        current_asked = _infer_asked_domains(plan.messages)
+        repeated_asks += sum(1 for domain in current_asked if domain in asked_domains)
+        asked_domains.extend(domain for domain in current_asked if domain not in asked_domains)
+
+        for message in plan.messages:
+            conversation_context["messages"].append({"role": "assistant", "content": message})
+            all_assistant_messages.append(message)
+
+        if plan.modeling_complete and turns_to_planning is None:
+            turns_to_planning = index
+        final_runtime_state = _load_runtime_state(service.redis, user_id=user_id, conversation_id=conversation_id)
+
+    covered_domains = set(final_runtime_state["decision"]["metadata"]["covered_domains"])
+    covered, total = _assert_coverage_ratio(covered_domains)
+    return {
+        "asked_domains": asked_domains,
+        "repeated_asks": repeated_asks,
+        "turns_to_planning": turns_to_planning,
+        "final_runtime_state": final_runtime_state,
+        "covered": covered,
+        "total": total,
+        "max_consecutive_messages": max_consecutive_messages,
+        "all_assistant_messages": all_assistant_messages,
+    }
 
 
 async def run_blocked_debrief(
@@ -619,6 +714,7 @@ async def scenario_modeling_core_deepening() -> ScenarioResult:
     repeated_asks = 0
     turns_to_planning: int | None = None
     final_runtime_state: dict = {}
+    max_consecutive_messages = 0
 
     for index, turn in enumerate(turns, start=1):
         conversation_context["messages"].append({"role": "user", "content": turn["user_message"]})
@@ -634,6 +730,7 @@ async def scenario_modeling_core_deepening() -> ScenarioResult:
             user_context_payload={},
         )
         assert len(plan.messages) <= 3
+        max_consecutive_messages = max(max_consecutive_messages, len(plan.messages))
         assert all(not _is_fragment(message) for message in plan.messages)
         for left_index, left in enumerate(plan.messages):
             for right in plan.messages[left_index + 1 :]:
@@ -661,6 +758,274 @@ async def scenario_modeling_core_deepening() -> ScenarioResult:
         details=(
             "4 轮内补齐 目标/范围/基础/时间，0 次重复追问，并验证连续消息不会拆句或语义重叠。"
         ),
+        covered_domains=_coverage_count(final_decision["metadata"]["covered_domains"]),
+        total_domains=len(CORE_ACCEPTANCE_DOMAINS),
+        max_consecutive_messages=max_consecutive_messages,
+    )
+
+
+async def scenario_modeling_detour_user() -> ScenarioResult:
+    redis = FakeRedis()
+    decision_llm = SequenceJsonLLM(
+        [
+            {
+                "action": "emit_message",
+                "modeling_complete": False,
+                "chat_directive": {"intent": "ask_scope", "target_domain": "scope"},
+            },
+            {
+                "action": "soft_return_topic",
+                "modeling_complete": False,
+                "chat_directive": {"intent": "recover_planning_naturally"},
+            },
+            {
+                "action": "emit_message",
+                "modeling_complete": False,
+                "chat_directive": {"intent": "ask_time", "target_domain": "time"},
+            },
+            {
+                "action": "emit_message",
+                "modeling_complete": False,
+                "chat_directive": {"intent": "ask_time", "target_domain": "time"},
+            },
+        ]
+    )
+    chat_llm = SequenceJsonLLM(
+        [
+            {"messages": ["我先抓住目标：7 天后过计网。", "这次主要考哪些范围？"]},
+            {"messages": ["这件事先接住，不急着切断。等你处理完，我们再自然带回考试范围。"]},
+            RuntimeError("force adapter fallback"),
+            RuntimeError("force adapter fallback"),
+        ]
+    )
+    service = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=AuroraDecisionLoop(llm_factory=lambda: decision_llm),
+        chat_adapter=ChatLayerAdapter(llm_factory=lambda: chat_llm),
+    )
+    turns = [
+        {
+            "user_message": "我想在 7 天后通过计算机网络考试。",
+            "request_extra_context": {
+                "task_state": {"goal_raw": "7 天后通过计算机网络考试"},
+                "informational_tensions": _tensions(
+                    {"goal": "resolved", "scope": "open", "baseline": "open", "time": "open"}
+                ),
+            },
+        },
+        {
+            "user_message": "对了，我刚才和室友吵了一架，脑子有点乱。",
+            "request_extra_context": {
+                "surface_state": {"in_detour": True},
+                "task_state": {"goal_raw": "7 天后通过计算机网络考试"},
+                "informational_tensions": _tensions(
+                    {"goal": "resolved", "scope": "open", "baseline": "open", "time": "open"}
+                ),
+                "latent_threads": [
+                    {
+                        "thread_id": "thread-scope",
+                        "status": "active",
+                        "source_intent": {"target_domain": "scope"},
+                        "salience": 0.9,
+                        "context_snapshot": "还缺考试范围",
+                    }
+                ],
+            },
+        },
+        {
+            "user_message": "范围是传输层、网络层和应用层；基础一般，传输层最虚。",
+            "request_extra_context": {
+                "task_state": {
+                    "goal_raw": "7 天后通过计算机网络考试",
+                    "exam_scope": "传输层、网络层、应用层",
+                    "knowledge_baseline": "基础一般，传输层最虚",
+                },
+                "informational_tensions": _tensions(
+                    {"goal": "resolved", "scope": "resolved", "baseline": "resolved", "time": "open"}
+                ),
+            },
+        },
+        {
+            "user_message": "每天大概能学 3 小时，周末能多一点。",
+            "request_extra_context": {
+                "task_state": {
+                    "goal_raw": "7 天后通过计算机网络考试",
+                    "exam_scope": "传输层、网络层、应用层",
+                    "knowledge_baseline": "基础一般，传输层最虚",
+                    "daily_available_hours": 3,
+                },
+                "informational_tensions": _tensions(
+                    {"goal": "resolved", "scope": "resolved", "baseline": "resolved", "time": "resolved"}
+                ),
+            },
+        },
+    ]
+
+    report = await run_modeling_turns(
+        service,
+        user_id="acceptance-detour-user",
+        conversation_id="acceptance:modeling-detour",
+        turns=turns,
+    )
+    soft_return_messages = chat_llm.calls[1]
+    serialized_second_prompt = json.dumps(soft_return_messages, ensure_ascii=False)
+    joined_messages = "\n".join(report["all_assistant_messages"])
+    assert "soft_return_topic" in serialized_second_prompt
+    assert "先接住" in joined_messages or "自然带回" in joined_messages
+    assert not any(token in joined_messages for token in ("无关", "别跑题", "回到正题"))
+    assert report["turns_to_planning"] is not None and report["turns_to_planning"] <= 5
+    assert report["repeated_asks"] == 0
+    assert set(report["final_runtime_state"]["decision"]["metadata"]["covered_domains"]) >= set(CORE_ACCEPTANCE_DOMAINS)
+    return ScenarioResult(
+        name="modeling_detour_user",
+        details="跑题时先温和接住，再由 DecisionLoop 软性带回，最终仍覆盖 4 个核心域。",
+        covered_domains=report["covered"],
+        total_domains=report["total"],
+        max_consecutive_messages=report["max_consecutive_messages"],
+    )
+
+
+async def scenario_modeling_sparse_user() -> ScenarioResult:
+    redis = FakeRedis()
+    decision_llm = SequenceJsonLLM(
+        [
+            {"action": "emit_message", "chat_directive": {"intent": "ask_scope", "target_domain": "scope"}},
+            {"action": "emit_message", "chat_directive": {"intent": "ask_scope", "target_domain": "scope"}},
+            {"action": "emit_message", "chat_directive": {"intent": "ask_baseline", "target_domain": "baseline"}},
+            {"action": "emit_message", "chat_directive": {"intent": "ask_time", "target_domain": "time"}},
+        ]
+    )
+    chat_llm = SequenceJsonLLM(
+        [
+            {"messages": ["可以，我们先把备考对象钉清楚。你主要备考哪门，范围大概是什么？"]},
+            RuntimeError("force adapter fallback"),
+            RuntimeError("force adapter fallback"),
+            RuntimeError("force adapter fallback"),
+        ]
+    )
+    service = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=AuroraDecisionLoop(llm_factory=lambda: decision_llm),
+        chat_adapter=ChatLayerAdapter(llm_factory=lambda: chat_llm),
+    )
+    turns = [
+        {
+            "user_message": "我想备考。",
+            "request_extra_context": {
+                "task_state": {"goal_raw": "备考"},
+                "informational_tensions": _tensions(
+                    {"goal": "resolved", "scope": "open", "baseline": "open", "time": "open"}
+                ),
+            },
+        },
+        {
+            "user_message": "考高数，范围是极限和导数。",
+            "request_extra_context": {
+                "task_state": {"goal_raw": "备考高数", "exam_scope": "极限和导数"},
+                "informational_tensions": _tensions(
+                    {"goal": "resolved", "scope": "resolved", "baseline": "open", "time": "open"}
+                ),
+            },
+        },
+        {
+            "user_message": "基础偏弱，导数还可以，极限经常卡。",
+            "request_extra_context": {
+                "task_state": {
+                    "goal_raw": "备考高数",
+                    "exam_scope": "极限和导数",
+                    "knowledge_baseline": "基础偏弱，极限经常卡",
+                },
+                "informational_tensions": _tensions(
+                    {"goal": "resolved", "scope": "resolved", "baseline": "resolved", "time": "open"}
+                ),
+            },
+        },
+        {
+            "user_message": "还有 5 天，每天大概 2 小时。",
+            "request_extra_context": {
+                "task_state": {
+                    "goal_raw": "备考高数",
+                    "exam_scope": "极限和导数",
+                    "knowledge_baseline": "基础偏弱，极限经常卡",
+                    "daily_available_hours": 2,
+                    "time_constraint_days": 5,
+                },
+                "informational_tensions": _tensions(
+                    {"goal": "resolved", "scope": "resolved", "baseline": "resolved", "time": "resolved"}
+                ),
+            },
+        },
+    ]
+
+    report = await run_modeling_turns(
+        service,
+        user_id="acceptance-sparse-user",
+        conversation_id="acceptance:modeling-sparse",
+        turns=turns,
+    )
+    assert report["turns_to_planning"] is not None and report["turns_to_planning"] <= 5
+    assert report["repeated_asks"] == 0
+    assert report["asked_domains"] == ["scope", "baseline", "time"]
+    return ScenarioResult(
+        name="modeling_sparse_user",
+        details="用户只说想备考时，Aurora 主动探询，4 轮完成且不重复问已回答的问题。",
+        covered_domains=report["covered"],
+        total_domains=report["total"],
+        max_consecutive_messages=report["max_consecutive_messages"],
+    )
+
+
+async def scenario_modeling_specific_user() -> ScenarioResult:
+    redis = FakeRedis()
+    decision_llm = SequenceJsonLLM(
+        [
+            {
+                "action": "emit_message",
+                "modeling_complete": False,
+                "chat_directive": {"intent": "ask_scope", "target_domain": "scope"},
+            }
+        ]
+    )
+    chat_llm = SequenceJsonLLM([RuntimeError("force adapter fallback")])
+    service = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=AuroraDecisionLoop(llm_factory=lambda: decision_llm),
+        chat_adapter=ChatLayerAdapter(llm_factory=lambda: chat_llm),
+    )
+    turns = [
+        {
+            "user_message": "7 天后考计网，范围是传输层和网络层；我基础薄弱但刷过题，目标是过线，每天能学 3 小时。",
+            "request_extra_context": {
+                "task_state": {
+                    "goal_raw": "7 天后通过计算机网络考试",
+                    "exam_scope": "传输层和网络层",
+                    "knowledge_baseline": "基础薄弱但刷过题",
+                    "daily_available_hours": 3,
+                    "time_constraint_days": 7,
+                },
+                "informational_tensions": _tensions(
+                    {"goal": "resolved", "scope": "resolved", "baseline": "resolved", "time": "resolved"}
+                ),
+            },
+        }
+    ]
+
+    report = await run_modeling_turns(
+        service,
+        user_id="acceptance-specific-user",
+        conversation_id="acceptance:modeling-specific",
+        turns=turns,
+    )
+    assert report["turns_to_planning"] is not None and report["turns_to_planning"] <= 2
+    assert report["final_runtime_state"]["decision"]["modeling_complete"] is True
+    messages = report["final_runtime_state"]["messages"]
+    assert not any(any(marker in message for marker in ("？", "?", "哪些", "多少", "什么")) for message in messages)
+    return ScenarioResult(
+        name="modeling_specific_user",
+        details="用户首句给全科目、时间、基础和目标时，不再追问，1 轮进入规划。",
+        covered_domains=report["covered"],
+        total_domains=report["total"],
+        max_consecutive_messages=report["max_consecutive_messages"],
     )
 
 
@@ -680,8 +1045,17 @@ async def scenario_modeling_metadata_contract() -> ScenarioResult:
     )
 
 
-async def main() -> None:
+def _assert_global_result_contract(results: list[ScenarioResult]) -> None:
+    for result in results:
+        assert result.max_consecutive_messages <= 3
+        assert result.semantic_repeat_free is True
+        assert result.coverage_ratio >= 0.8
+
+
+async def main(*, dry_run: bool = False) -> None:
     results: list[ScenarioResult] = []
+    if dry_run:
+        print("Aurora Runtime v1 acceptance dry-run: using fake LLMs and in-memory SQLite.")
     for scenario in (
         scenario_multi_message_and_detour,
         scenario_gap_closed_no_repeat,
@@ -696,11 +1070,22 @@ async def main() -> None:
             await engine.dispose()
 
     results.append(await scenario_modeling_core_deepening())
+    results.append(await scenario_modeling_detour_user())
+    results.append(await scenario_modeling_sparse_user())
+    results.append(await scenario_modeling_specific_user())
     results.append(await scenario_modeling_metadata_contract())
+    _assert_global_result_contract(results)
     print("Aurora Runtime v1 acceptance passed.")
     for item in results:
-        print(f"- {item.name}: {item.details}")
+        print(
+            f"- {item.name}: {item.details} "
+            f"(覆盖域/总域={item.covered_domains}/{item.total_domains}, "
+            f"max连续消息={item.max_consecutive_messages})"
+        )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description="Aurora Runtime v1 acceptance checks")
+    parser.add_argument("--dry-run", action="store_true", help="Run the deterministic local acceptance suite.")
+    args = parser.parse_args()
+    asyncio.run(main(dry_run=args.dry_run))

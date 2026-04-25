@@ -65,6 +65,8 @@ message ErrorRecord {
   google.protobuf.Timestamp updated_at = 16;
   repeated string cognitive_tags = 17;
   string ai_analysis_summary = 18;
+  optional string affected_node_id = 19;
+  optional double mastery_delta = 20;
 }
 
 message ErrorAnalysisResult {

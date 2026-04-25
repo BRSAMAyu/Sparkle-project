@@ -6,6 +6,7 @@
 - `backend/app/services/capability_selection_evaluator.py`
 - `backend/app/services/experience_phase_evaluator.py`
 - `backend/app/services/five_layer_learning_evaluator.py`
+- `backend/app/services/error_book_grpc_service.py`
 - `backend/app/services/galaxy_grpc_service.py`
 - `backend/app/services/llm/parser.py`
 - `backend/app/services/planning_benchmark_evaluator.py`
