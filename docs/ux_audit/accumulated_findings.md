@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 12 / 20 chains audited
+> **Status**: 13 / 20 chains audited
 
 ---
 
@@ -154,6 +154,7 @@
 - **`modeling_chat_screen.dart` 导航问题**: C01 Major #3（成功路径 root navigator 断裂）+ C16 Critical（返回键 fallback 路由错误）共同指向同一文件的导航缺陷。两轮独立确认。
 - **周报通知到达后 UI 不展开**: C13 Major #1（insights 页不识别 `initialPanel=weeklyNarrative`）+ C18 表格第 5 行（路由存在且导航正确）共同验证——导航成功但目标页未响应参数。
 - **Celery 500 用户扫描上限**: C11 Minor #3（间隔重复）+ C13 Minor #3（周报）独立发现同一模式。
+- **`chat_screen.dart:424` daily startup 静默降级**: C09 Major #1（首次发现）+ C17 Major #1（独立确认）。两轮交叉验证。
 
 ---
 
@@ -230,3 +231,19 @@
 - None
 
 **Working Well ✅**: StuckHelpSheet widget 设计精良（渐进式内容回退 micro_teaching → fallback_if_stuck → if_stuck → genericSuggestions，读取 5+ 字段名变体增强韧性）；双步 micro-teaching 卡片（诊断问题 + 针对修复）；Stuck chat prompt 结构良好（含任务标题、预估时间、聚焦提示、步骤、成功标准）；FAB 位置恰当不遮挡计时器；后端卡点诊断基础设施完整（STUCK_TASK_STAGE_TOKENS 检测、standard_layer_contract、micro-teaching 模式激活、规则注入）。
+
+---
+
+### C17: API失败恢复（加载→错误→重试） (Reviewer A — from reviewer_a_C17.md)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`chat_screen.dart:424-426`**: `_hydrateDailyStartupIfNeeded()` 在 `getDailyStartup()` 失败时 `catch (_) { return false; }` 静默吞掉。上游 `examSprintDashboardProvider.future` 超时也在 line 372 静默返回 false。后端不可用时用户看到空白而非错误提示。**[已与 C09 Major #1 交叉确认 — 两轮独立验证]**
+- **`galaxy_screen.dart:2710`**: `contributionStats.when(...)` 的 error 回调返回 `const SizedBox.shrink()`。贡献统计 API 失败时 banner 完全消失，无错误提示无重试入口。与 Galaxy 主加载错误处理（GalaxyErrorSnackBar + 重试）形成对比。
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: 计划详情页三态完整（data/loading/error 含重试按钮），错误消息可识别 404/超时/网络错误；Galaxy 主加载区分首次/后台刷新错误，SSE 断线 5 秒自动重连；Chat WebSocket 断线自动重连。
