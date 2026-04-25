@@ -30,7 +30,7 @@ class UnresolvedConflictsSection extends StatelessWidget {
         const Text(
           '待你确认',
           style:
-              TextStyle(fontSize: DS.fontSizeLg, fontWeight: FontWeight.w700),
+              TextStyle(fontSize: DS.fontSizeLg, fontWeight: DS.fontWeightBold),
         ),
         const SizedBox(height: DS.sm),
         ...items.map(
@@ -105,7 +105,7 @@ class _ConflictCandidateCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(title, style: const TextStyle(fontWeight: DS.fontWeightBold)),
             const SizedBox(height: DS.xs),
             Text(candidate.summary),
             const SizedBox(height: DS.xs),

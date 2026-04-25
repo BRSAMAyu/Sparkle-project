@@ -49,7 +49,7 @@ class IntentAnalysisButton extends ConsumerWidget {
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
               ),
             ],
@@ -153,7 +153,7 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
               style: TextStyle(
                 color: Theme.of(context).primaryColor,
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
             ),
           ],

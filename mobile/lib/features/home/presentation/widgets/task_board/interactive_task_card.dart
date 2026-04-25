@@ -60,7 +60,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                         Text(
                           task.title,
                           style: context.sparkleTypography.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w500,
+                            fontWeight: DS.fontWeightMedium,
                             color: DS.textPrimary,
                           ),
                           maxLines: isExpanded ? null : 1,
@@ -267,7 +267,7 @@ class InteractiveTaskCard extends ConsumerWidget {
         label,
         style: TextStyle(
           fontSize: 10,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
           color: color,
         ),
       ),
@@ -291,7 +291,7 @@ class InteractiveTaskCard extends ConsumerWidget {
         label,
         style: TextStyle(
           fontSize: 10,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
           color: color,
         ),
       ),
@@ -340,7 +340,7 @@ class InteractiveTaskCard extends ConsumerWidget {
               label,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
                 color: color,
               ),
             ),
@@ -443,7 +443,7 @@ class _ActionButton extends StatelessWidget {
                 label,
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: color,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
               ),
             ],

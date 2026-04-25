@@ -282,7 +282,7 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
                                                     .titleMedium
                                                     ?.copyWith(
                                                       fontWeight:
-                                                          FontWeight.w700,
+                                                          DS.fontWeightBold,
                                                     ),
                                               ),
                                               _SecurityStatePill(
@@ -417,7 +417,7 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -456,7 +456,7 @@ class _SecurityStatePill extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: color,
-                fontWeight: FontWeight.w700,
+                fontWeight: DS.fontWeightBold,
               ),
         ),
       );

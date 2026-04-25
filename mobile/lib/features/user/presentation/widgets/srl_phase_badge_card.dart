@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 class SrlPhaseBadgeCard extends StatelessWidget {
   const SrlPhaseBadgeCard({
@@ -85,7 +86,7 @@ class SrlPhaseBadgeCard extends StatelessWidget {
                 _label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: color,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ),

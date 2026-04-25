@@ -87,7 +87,7 @@ class GalaxySearchPanel extends StatelessWidget {
                           style: TextStyle(
                             color: foreground,
                             fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                       ),
@@ -106,7 +106,7 @@ class GalaxySearchPanel extends StatelessWidget {
                     style: TextStyle(
                       color: foreground,
                       fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: DS.fontWeightMedium,
                     ),
                     decoration: InputDecoration(
                       hintText: l10n.galaxySearchHint,
@@ -149,7 +149,7 @@ class GalaxySearchPanel extends StatelessWidget {
                                   style: TextStyle(
                                     color: secondary,
                                     fontSize: 13,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: DS.fontWeightMedium,
                                   ),
                                 ),
                               )
@@ -209,7 +209,7 @@ class GalaxySearchPanel extends StatelessWidget {
                                                 style: TextStyle(
                                                   color: foreground,
                                                   fontSize: 14,
-                                                  fontWeight: FontWeight.w700,
+                                                  fontWeight: DS.fontWeightBold,
                                                 ),
                                               ),
                                               Text(
@@ -275,7 +275,7 @@ class _SearchHint extends StatelessWidget {
             style: TextStyle(
               color: secondary,
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
         ],

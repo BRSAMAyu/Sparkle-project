@@ -122,7 +122,7 @@ class RecommendationFeedbackPromptCard extends StatelessWidget {
                         prompt.title,
                         style: context.typo.titleLarge.copyWith(
                           color: DS.textPrimary,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -238,7 +238,7 @@ class RecommendationFeedbackInsightCard extends StatelessWidget {
                         ? '你的伙伴匹配偏好'
                         : '你的社群推荐偏好',
                     style: context.typo.titleLarge.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
@@ -606,7 +606,7 @@ class _TargetSnapshot extends StatelessWidget {
                 Text(
                   title,
                   style: context.typo.titleLarge.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -652,7 +652,7 @@ class _ScoreRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: context.typo.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+            style: context.typo.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -694,7 +694,7 @@ class _ChipSelector extends StatelessWidget {
       children: [
         Text(
           title,
-          style: context.typo.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+          style: context.typo.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
         ),
         const SizedBox(height: 8),
         Wrap(

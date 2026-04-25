@@ -548,7 +548,7 @@ class _TodayFocusPlan extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: DS.textPrimary,
                         height: 1.45,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
               ),
@@ -761,7 +761,7 @@ class _CompactPlanTaskTile extends StatelessWidget {
                   child: Text(
                     task.title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                           height: 1.35,
                         ),
                   ),
@@ -855,7 +855,7 @@ class _TaskMetaPill extends StatelessWidget {
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: resolvedColor,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
         ],
@@ -1053,7 +1053,7 @@ class _PlanMetaChip extends StatelessWidget {
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -1087,7 +1087,7 @@ class _PlanRichSection extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                         ),
                   ),
                 ],

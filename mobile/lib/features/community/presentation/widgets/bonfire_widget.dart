@@ -202,7 +202,7 @@ class _BonfireWidgetState extends State<BonfireWidget>
                           style: TextStyle(
                             color: baseColor,
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: DS.fontWeightSemibold,
                           ),
                         ),
                       ],

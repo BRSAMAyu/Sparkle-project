@@ -596,8 +596,8 @@ class NotificationCenterRepository {
       final statusCode = e.response?.statusCode;
       final responseData = e.response?.data;
       final message = responseData is Map<String, dynamic>
-          ? responseData['message'] ?? 'Unknown error'
-          : 'Unknown error';
+          ? responseData['message'] ?? '未知错误'
+          : '未知错误';
 
       switch (statusCode) {
         case 400:

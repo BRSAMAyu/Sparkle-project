@@ -291,7 +291,7 @@ class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
           _result!.translation,
           style: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
             height: 1.4,
           ),
         ),

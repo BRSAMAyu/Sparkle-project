@@ -201,7 +201,7 @@ class FocusMainScreen extends ConsumerWidget {
               task.title,
               style: TextStyle(
                 color: DS.textPrimary,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
             subtitle: Text(

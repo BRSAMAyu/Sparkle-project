@@ -720,7 +720,7 @@ class _SeedLibraryDetailScreenState
             Text(
               '$label ${value.toStringAsFixed(1)}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
             ),
           ],

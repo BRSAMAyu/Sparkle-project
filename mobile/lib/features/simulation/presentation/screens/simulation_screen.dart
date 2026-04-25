@@ -529,7 +529,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 Text(
                   routeTitle.isNotEmpty ? '正在验证路径「$routeTitle」' : '正在验证一条推演路径',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: 6),
@@ -1976,7 +1976,7 @@ class _InlineErrorBanner extends StatelessWidget {
               message,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.error,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                     height: 1.4,
                   ),
             ),
@@ -2123,7 +2123,7 @@ class _SimulationInteractionCard extends StatelessWidget {
                         option,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                               color: accent,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                       ),
                     ),
@@ -2657,7 +2657,7 @@ class _StatusBadge extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
             ),
           ],
@@ -3279,7 +3279,7 @@ class _AnimatedParticipantChipState extends State<_AnimatedParticipantChip> {
                     style: TextStyle(
                       fontSize: 11,
                       color: widget.accent,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
@@ -3288,7 +3288,7 @@ class _AnimatedParticipantChipState extends State<_AnimatedParticipantChip> {
                   widget.participant.name,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         fontWeight:
-                            widget.isActive ? FontWeight.w800 : FontWeight.w600,
+                            widget.isActive ? FontWeight.w800 : DS.fontWeightSemibold,
                       ),
                 ),
                 if (widget.isActive) ...[
@@ -3347,7 +3347,7 @@ class _SimulationMiniParticipantPill extends StatelessWidget {
             participant.name,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: accent,
-                  fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                  fontWeight: isActive ? FontWeight.w800 : DS.fontWeightSemibold,
                 ),
           ),
         ],

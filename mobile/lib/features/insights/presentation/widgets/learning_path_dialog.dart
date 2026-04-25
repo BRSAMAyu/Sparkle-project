@@ -118,7 +118,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                           '主干路径',
                           style:
                               Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: DS.fontWeightBold,
                                   ),
                         ),
                         const SizedBox(height: DS.md),
@@ -152,7 +152,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                 Text(
                   '生成方式',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: DS.xs),
@@ -232,7 +232,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
             Text(
               '推荐拓展节点',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.xs),
@@ -752,7 +752,7 @@ class _LearningPathNodeSummary extends StatelessWidget {
                     Text(
                       '关联任务',
                       style: DS.labelLarge.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                     const SizedBox(height: DS.xs),

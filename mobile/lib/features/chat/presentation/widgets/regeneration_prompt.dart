@@ -255,7 +255,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                     Text(
                       _getStatusTitle(),
                       style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                     ),
                     if (widget.status != RegenerationStatus.idle)
@@ -372,7 +372,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
             Text(
               context.l10n.regenImprovementsTitle,
               style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
             const SizedBox(height: 4),
@@ -421,7 +421,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
                     ),
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: DS.success,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ],
@@ -492,7 +492,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
             Text(
               context.l10n.regenSelectType,
               style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
             const SizedBox(height: 8),
@@ -525,7 +525,7 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
             Text(
               context.l10n.regenHintsOptional,
               style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
             const SizedBox(height: 8),

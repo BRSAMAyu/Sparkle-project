@@ -44,7 +44,7 @@ class AnalysisCard extends StatelessWidget {
                 Text(
                   'AI 分析',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
                 const Spacer(),
@@ -124,7 +124,7 @@ class AnalysisCard extends StatelessWidget {
                   Text(
                     '关联知识点',
                     style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ],
@@ -178,7 +178,7 @@ class AnalysisCard extends StatelessWidget {
             Text(
               title,
               style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
                 color: iconColor,
               ),
             ),
@@ -225,7 +225,7 @@ class AnalysisCard extends StatelessWidget {
             Text(
               title,
               style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
                 color: iconColor,
               ),
             ),
@@ -306,7 +306,7 @@ class _ErrorTypeChip extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: DS.fontWeightSemibold,
         ),
       ),
     );
@@ -366,7 +366,7 @@ class AnalysisLoadingPlaceholder extends StatelessWidget {
                 Text(
                   'AI 正在分析中...',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
               ],

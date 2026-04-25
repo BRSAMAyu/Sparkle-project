@@ -212,7 +212,7 @@ class SeedLibraryCard extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
           ),
           const SizedBox(width: 2),

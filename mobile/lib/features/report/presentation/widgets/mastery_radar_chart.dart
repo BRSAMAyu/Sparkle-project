@@ -54,7 +54,7 @@ class MasteryRadarChart extends StatelessWidget {
         children: [
           const Text(
             '知识掌握度雷达图',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: TextStyle(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -160,7 +160,7 @@ class MasteryRadarChart extends StatelessWidget {
                     child: Text(
                       '${chartLabels[index]} ${(normalizedValues[index] * 100).round()}%',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: selected ? FontWeight.w700 : null,
+                            fontWeight: selected ? DS.fontWeightBold : null,
                           ),
                     ),
                   ),

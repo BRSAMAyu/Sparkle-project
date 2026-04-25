@@ -104,7 +104,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
           Text(
             context.l10n.sprintProgressTitle,
             style: context.sparkleTypography.labelLarge.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing16),
@@ -194,7 +194,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
             Text(
               context.l10n.sprintTaskSummaryTitle,
               style: context.sparkleTypography.labelLarge.copyWith(
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
             const SizedBox(height: DS.spacing12),
@@ -240,7 +240,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
             Text(
               context.l10n.sprintInfoTitle,
               style: context.sparkleTypography.labelLarge.copyWith(
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
             const SizedBox(height: DS.spacing12),
@@ -285,7 +285,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
             value,
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: color ?? DS.textPrimary,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
         ],

@@ -204,7 +204,7 @@ class _QuickReplyChip extends StatelessWidget {
                 reply.label,
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: color,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
               ),
             ],
@@ -311,7 +311,7 @@ class _QuickReplyCard extends StatelessWidget {
                 reply.label,
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: color,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,

@@ -88,7 +88,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             Text(
               '管理员窗口',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -137,7 +137,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           Text(
             '容量与健康',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -199,7 +199,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           Text(
             '服务级 drill-down',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -254,7 +254,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           Text(
             '当前告警',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -280,7 +280,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                     Text(
                       '${alert['name'] ?? 'Unknown Alert'} · ${alert['severity'] ?? 'warning'}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const SizedBox(height: 6),
@@ -320,7 +320,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           Text(
             '客户端观测',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -343,7 +343,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             Text(
               '7/14/30 天趋势',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -356,7 +356,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             Text(
               '事件类型 drill-down',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -380,7 +380,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             Text(
               '最近事件',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -408,7 +408,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -550,7 +550,7 @@ class _ServiceDetailTile extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: 6),
@@ -601,7 +601,7 @@ class _MetricChip extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],

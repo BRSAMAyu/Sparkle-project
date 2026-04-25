@@ -196,7 +196,7 @@ class TranslationDrawer extends ConsumerWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
             ),
           ),
           subtitle: Column(
@@ -292,7 +292,7 @@ class TranslationDrawer extends ConsumerWidget {
                 context.l10n.translationOriginal,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                   color: DS.neutral500,
                 ),
               ),
@@ -306,7 +306,7 @@ class TranslationDrawer extends ConsumerWidget {
                 context.l10n.translationTranslated,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                   color: DS.neutral500,
                 ),
               ),

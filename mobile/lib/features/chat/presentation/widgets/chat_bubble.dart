@@ -2807,7 +2807,7 @@ class _InsightLinkCard extends StatelessWidget {
                     child: Text(
                       title,
                       style: const TextStyle(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                         fontSize: 13,
                       ),
                     ),
@@ -2831,7 +2831,7 @@ class _InsightLinkCard extends StatelessWidget {
                     style: TextStyle(
                       color: DS.info,
                       fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
@@ -2852,7 +2852,7 @@ class _InsightLinkCard extends StatelessWidget {
                     style: TextStyle(
                       color: DS.brandPrimary,
                       fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
@@ -3114,7 +3114,7 @@ class _CollaborationSignatureCard extends StatelessWidget {
                 _formatCollaborationModeLabel(collaborationMode),
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                   color: theme.colorScheme.primary,
                 ),
               ),

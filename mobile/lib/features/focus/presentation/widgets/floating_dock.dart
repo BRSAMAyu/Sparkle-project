@@ -215,7 +215,7 @@ class _FocusFloatingDockState extends State<FocusFloatingDock>
                     : context.l10n.focusDockToolbox,
                 style: TextStyle(
                   color: DS.brandPrimaryConst,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
               ),
             ],

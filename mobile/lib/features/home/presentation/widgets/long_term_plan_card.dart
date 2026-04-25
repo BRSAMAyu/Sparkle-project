@@ -54,7 +54,7 @@ class LongTermPlanCard extends ConsumerWidget {
                 '长期计划',
                 style: TextStyle(
                   fontSize: dense ? 10 : (compact ? 11 : 12),
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                   color: DS.textSecondary,
                 ),
               ),
@@ -105,7 +105,7 @@ class LongTermPlanCard extends ConsumerWidget {
             growth.name,
             style: TextStyle(
               fontSize: dense ? 10 : (compact ? 11 : 12),
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
               color: DS.textPrimary,
             ),
             maxLines: dense ? 2 : 1,

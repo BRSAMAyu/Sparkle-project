@@ -113,7 +113,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                                   .labelSmall
                                   ?.copyWith(
                                     color: DS.textSecondary,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: DS.fontWeightSemibold,
                                   ),
                             ),
                           ),

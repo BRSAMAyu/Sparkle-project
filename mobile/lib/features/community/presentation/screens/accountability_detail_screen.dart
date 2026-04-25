@@ -402,7 +402,7 @@ class _DashboardView extends StatelessWidget {
                                         Text(
                                           share['title']?.toString() ?? '已分享内容',
                                           style: DS.bodyMedium.copyWith(
-                                            fontWeight: FontWeight.w600,
+                                            fontWeight: DS.fontWeightSemibold,
                                           ),
                                         ),
                                         if ((share['comment'] ?? '')
@@ -675,7 +675,7 @@ class _HeroAction extends StatelessWidget {
               Text(
                 label,
                 style: DS.labelSmall.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                   color: onTap == null ? DS.textTertiary : null,
                 ),
               ),
@@ -928,7 +928,7 @@ class _PendingPoliciesCard extends StatelessWidget {
           Text(
             count <= 0 ? '0 条' : '$count 条',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.spacing4),
@@ -978,7 +978,7 @@ class _RecentReflectionsCard extends StatelessWidget {
           Text(
             count <= 0 ? '0 条' : '$count 条',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           if ((lastCategory ?? '').isNotEmpty) ...[

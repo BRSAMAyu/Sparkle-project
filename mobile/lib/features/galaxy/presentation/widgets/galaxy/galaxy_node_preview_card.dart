@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
@@ -100,7 +101,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                             style: TextStyle(
                               color: isDarkMode ? Colors.white : Colors.black87,
                               fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -114,7 +115,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                             style: TextStyle(
                               color: secondaryColor,
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: DS.fontWeightSemibold,
                             ),
                           ),
                         ],
@@ -137,7 +138,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                             style: TextStyle(
                               color: isDarkMode ? Colors.white : Colors.black87,
                               fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                         ),
@@ -153,7 +154,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                   style: TextStyle(
                     color: sectorColor,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 if (!node.isUnlocked) ...[
@@ -306,7 +307,7 @@ class _CardActionButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
             ),
@@ -367,7 +368,7 @@ class _ReviewUrgencyCallout extends StatelessWidget {
                   style: TextStyle(
                     color: sectorColor,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const Spacer(),
@@ -376,7 +377,7 @@ class _ReviewUrgencyCallout extends StatelessWidget {
                   style: TextStyle(
                     color: secondaryColor,
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ],
@@ -388,7 +389,7 @@ class _ReviewUrgencyCallout extends StatelessWidget {
                 color: isDarkMode ? Colors.white : Colors.black87,
                 fontSize: 12,
                 height: 1.4,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
             const SizedBox(height: 6),

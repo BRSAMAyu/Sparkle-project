@@ -59,7 +59,7 @@ class GalaxyErrorDialog extends StatelessWidget {
                 style: TextStyle(
                   color: DS.textPrimary,
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ),
@@ -290,7 +290,7 @@ class OfflineIndicator extends StatelessWidget {
             style: TextStyle(
               color: DS.neutral0,
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
             ),
           ),
           if (onRetry != null) ...[
@@ -365,7 +365,7 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
                 style: TextStyle(
                   color: DS.textPrimary,
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
               const SizedBox(height: 8),

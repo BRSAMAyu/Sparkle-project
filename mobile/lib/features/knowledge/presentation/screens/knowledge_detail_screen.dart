@@ -173,7 +173,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             style: TextStyle(
                               color: DS.textPrimary,
                               fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                         ),
@@ -183,7 +183,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                           detail.node.name,
                           style: DS.headingLarge.copyWith(
                             color: DS.textPrimary,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                         if (detail.node.nameEn != null) ...[
@@ -372,7 +372,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         Text(
                           '已生成任务',
                           style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                         const SizedBox(height: DS.xs),
@@ -628,7 +628,7 @@ class _MasteryCard extends StatelessWidget {
                       stats.masteryLabel,
                       style: DS.labelLarge.copyWith(
                         color: _getMasteryColor(),
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ),
@@ -651,7 +651,7 @@ class _MasteryCard extends StatelessWidget {
                 '${stats.masteryScore.toStringAsFixed(0)}%',
                 style: DS.titleLarge.copyWith(
                   color: _getMasteryColor(),
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.lg),
@@ -746,7 +746,7 @@ class _StatItem extends StatelessWidget {
             value,
             style: DS.bodyLarge.copyWith(
               color: DS.textPrimary,
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           Text(
@@ -1082,7 +1082,7 @@ class _CandidateMetaChip extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: DS.brandPrimary,
-                fontWeight: FontWeight.w700,
+                fontWeight: DS.fontWeightBold,
               ),
         ),
       );

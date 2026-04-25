@@ -107,7 +107,7 @@ class _InAppHintBanner extends ConsumerWidget {
             Expanded(
               child: Text(
                 hint.message,
-                style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+                style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
               ),
             ),
             const SizedBox(width: 8),
@@ -377,7 +377,7 @@ class _PendingInviteBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 '$count 条责任伙伴/好友请求待处理',
-                style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
               ),
             ),
             SparkleButton.ghost(
@@ -459,7 +459,7 @@ class _FriendCard extends StatelessWidget {
                           friend.displayName,
                           overflow: TextOverflow.ellipsis,
                           style: DS.bodyLarge.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                       ),
@@ -654,7 +654,7 @@ class _Pill extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: DS.labelSmall.copyWith(
             color: color,
-            fontWeight: FontWeight.w700,
+            fontWeight: DS.fontWeightBold,
           ),
         ),
       );

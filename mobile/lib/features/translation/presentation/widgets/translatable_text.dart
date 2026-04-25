@@ -240,7 +240,7 @@ class TranslationDemoScreen extends StatelessWidget {
                 'Long-press any text below to translate:',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                   color: DS.neutral500,
                 ),
               ),

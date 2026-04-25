@@ -361,7 +361,7 @@ class _PersonaOnboardingScreenState
                 Text(
                   'AI 已开始理解你的目标',
                   style: textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const SizedBox(height: DS.spacing4),

@@ -252,7 +252,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                             style: TextStyle(
                               color: DS.brandPrimary,
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: DS.fontWeightSemibold,
                             ),
                           )
                         : friendship.accountability?.isPending == true

@@ -43,7 +43,7 @@ class CompactTaskCard extends ConsumerWidget {
                       Text(
                         task.title,
                         style: context.sparkleTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w500,
+                          fontWeight: DS.fontWeightMedium,
                           color: DS.textPrimary,
                         ),
                         maxLines: 1,
@@ -116,7 +116,7 @@ class CompactTaskCard extends ConsumerWidget {
         label,
         style: TextStyle(
           fontSize: 10,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
           color: color,
         ),
       ),

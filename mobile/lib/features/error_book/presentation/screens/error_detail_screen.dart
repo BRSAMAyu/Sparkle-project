@@ -269,7 +269,7 @@ class ErrorDetailScreen extends ConsumerWidget {
             ),
             style: theme.textTheme.labelMedium?.copyWith(
               color: color,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
         ],
@@ -378,7 +378,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     return Text(
       title,
       style: theme.textTheme.bodyMedium?.copyWith(
-        fontWeight: FontWeight.w600,
+        fontWeight: DS.fontWeightSemibold,
         color: theme.colorScheme.onSurface,
       ),
     );
@@ -396,7 +396,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         Text(
           '$label：',
           style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
             color: theme.colorScheme.onSurface,
           ),
         ),
@@ -469,7 +469,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Text(
             context.l10n.errorBookQuestionContent,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -512,7 +512,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Text(
             context.l10n.errorBookAnswerComparison,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing16),
@@ -573,7 +573,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: color,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ],
@@ -607,7 +607,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                 Text(
                   context.l10n.errorBookAiAnalysis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                 ),
                 const Spacer(),
@@ -645,7 +645,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               Text(
                 context.l10n.errorBookKnowledgeLinks,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ],
@@ -683,7 +683,7 @@ class ErrorDetailScreen extends ConsumerWidget {
           Text(
             context.l10n.errorBookReviewStats,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing16),
@@ -827,7 +827,7 @@ class ErrorDetailScreen extends ConsumerWidget {
         Text(
           value,
           style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
           ),
         ),
       ],
@@ -860,7 +860,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 16),
               textStyle: const TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
           ),
@@ -882,7 +882,7 @@ class ErrorDetailScreen extends ConsumerWidget {
               context.l10n.errorBookLoadFailed,
               style: const TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
             ),
             const SizedBox(height: DS.spacing8),

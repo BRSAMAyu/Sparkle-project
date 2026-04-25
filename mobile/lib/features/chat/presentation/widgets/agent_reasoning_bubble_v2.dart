@@ -225,7 +225,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   Text(
                     _getStatusText(activeStep, isCompleted),
                     style: context.sparkleTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                       color: _getStatusColor(activeStep, isCompleted, context),
                     ),
                   ),
@@ -337,7 +337,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   context.l10n.chatReasoningProcess,
                   style: context.sparkleTypography.labelLarge.copyWith(
                     color: DS.brandPrimary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
                 const Spacer(),
@@ -394,7 +394,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     Text(
                       step.description,
                       style: context.sparkleTypography.labelSmall.copyWith(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: DS.fontWeightMedium,
                         color: DS.textPrimary,
                       ),
                     ),
@@ -460,7 +460,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: DS.brandPrimary,
-                                            fontWeight: FontWeight.w500,
+                                            fontWeight: DS.fontWeightMedium,
                                           ),
                                         ),
                                       ],
@@ -740,7 +740,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   labelStyle: TextStyle(
                     color: accent,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
@@ -899,7 +899,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                                 context,
                                 contribution.agentType,
                               ),
-                              fontWeight: FontWeight.w500,
+                              fontWeight: DS.fontWeightMedium,
                             ),
                           ),
                         ),

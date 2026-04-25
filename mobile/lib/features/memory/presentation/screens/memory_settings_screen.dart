@@ -214,7 +214,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             '记忆控制',
             style: DS.titleLarge.copyWith(
               color: DS.textPrimary,
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           iconTheme: IconThemeData(color: DS.textPrimary),
@@ -326,7 +326,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                       '社交语义子开关',
                       style: DS.titleMedium.copyWith(
                         color: DS.textPrimary,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                     const SizedBox(height: DS.sm),
@@ -632,7 +632,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: color,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -648,7 +648,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: DS.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             if (subtitle != null) ...[
@@ -691,7 +691,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                     title,
                     style: DS.bodyLarge.copyWith(
                       color: enabled ? DS.textPrimary : DS.textDisabled,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                   const SizedBox(height: DS.spacing4),
@@ -729,7 +729,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
             title,
             style: DS.bodyMedium.copyWith(
               color: enabled ? DS.textPrimary : DS.textDisabled,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -820,7 +820,7 @@ class _MemoryChoiceChip extends StatelessWidget {
         ),
         labelStyle: DS.bodySmall.copyWith(
           color: selected ? DS.primaryBase : DS.textSecondary,
-          fontWeight: FontWeight.w600,
+          fontWeight: DS.fontWeightSemibold,
         ),
       );
 }
@@ -855,7 +855,7 @@ class _MemoryFilterChip extends StatelessWidget {
           color: enabled
               ? (selected ? DS.primaryBase : DS.textSecondary)
               : DS.textDisabled,
-          fontWeight: FontWeight.w600,
+          fontWeight: DS.fontWeightSemibold,
         ),
         checkmarkColor: DS.primaryBase,
       );

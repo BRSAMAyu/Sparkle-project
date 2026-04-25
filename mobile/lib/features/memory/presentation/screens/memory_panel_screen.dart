@@ -133,7 +133,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             '记忆面板',
             style: DS.titleLarge.copyWith(
               color: DS.textPrimary,
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           iconTheme: IconThemeData(color: DS.textPrimary),
@@ -445,7 +445,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                      ?.copyWith(fontWeight: DS.fontWeightBold),
                 ),
               ],
             ),
@@ -498,7 +498,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                        ?.copyWith(fontWeight: DS.fontWeightBold),
                   ),
                   const Spacer(),
                   Text(

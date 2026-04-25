@@ -88,7 +88,7 @@ class _BlockedUserTile extends ConsumerWidget {
         title: Text(
           user.nickname ?? user.username,
           style: TextStyle(
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
             color: DS.textPrimary,
           ),
         ),

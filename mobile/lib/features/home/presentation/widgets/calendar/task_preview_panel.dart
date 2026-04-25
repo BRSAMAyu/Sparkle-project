@@ -77,7 +77,7 @@ class TaskPreviewPanel extends ConsumerWidget {
                   Text(
                     isToday ? '今天' : DateFormat('M月d日', 'zh_CN').format(selectedDate),
                     style: context.sparkleTypography.titleLarge.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                       color: DS.textPrimary,
                     ),
                   ),
@@ -225,7 +225,7 @@ class TaskPreviewPanel extends ConsumerWidget {
               '查看全部 $totalCount 个任务',
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.brandPrimaryConst,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
             ),
             const SizedBox(width: DS.spacing4),

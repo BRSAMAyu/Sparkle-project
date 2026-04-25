@@ -201,7 +201,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           label,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
             color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
           ),
         ),

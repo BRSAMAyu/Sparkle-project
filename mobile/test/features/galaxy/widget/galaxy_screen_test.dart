@@ -359,7 +359,13 @@ class _MockGalaxyNotifier extends StateNotifier<GalaxyState>
   }
 
   @override
-  Future<void> loadGalaxy({bool forceRefresh = false}) async {
+  Stream<MasteryMilestoneEvent> get masteryMilestones => const Stream.empty();
+
+  @override
+  Future<void> loadGalaxy({
+    bool forceRefresh = false,
+    bool showLoading = true,
+  }) async {
     state = state.copyWith(isLoading: true);
     await Future<void>.delayed(const Duration(milliseconds: 100));
     state = state.copyWith(isLoading: false);

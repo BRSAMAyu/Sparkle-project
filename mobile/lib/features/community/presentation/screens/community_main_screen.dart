@@ -253,7 +253,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           context.l10n.communityTitle,
           style: DS.titleLarge.copyWith(
             color: DS.textPrimary,
-            fontWeight: FontWeight.w700,
+            fontWeight: DS.fontWeightBold,
           ),
         ),
         centerTitle: false,

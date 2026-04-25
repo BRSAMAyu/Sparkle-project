@@ -1807,7 +1807,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontWeight: DS.fontWeightBold),
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
@@ -1879,7 +1879,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const SizedBox(height: DS.spacing4),
@@ -2005,7 +2005,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           l10n.selectTimeSlots,
                           style: DS.labelLarge.copyWith(
                             color: DS.textPrimary,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: DS.fontWeightSemibold,
                           ),
                         ),
                         const SizedBox(height: DS.xs),
@@ -2649,7 +2649,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           Text(
             '今日 AI 额度与消耗',
             style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -2674,7 +2674,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     child: Text(
                       label,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ),
@@ -2794,7 +2794,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           Text(
             '用户视角',
             style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -2918,7 +2918,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           Text(
             '开发运营视角',
             style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -3046,7 +3046,7 @@ class _MetricChip extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],

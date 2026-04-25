@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
@@ -190,7 +191,7 @@ class GalaxySectorIndicator extends StatelessWidget {
                   style: TextStyle(
                     color: isDarkMode ? Colors.white : Colors.black87,
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                     letterSpacing: 0.2,
                   ),
                 ),

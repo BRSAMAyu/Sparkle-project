@@ -183,7 +183,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                                 .labelMedium
                                 ?.copyWith(
                                   color: accent,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                           ),
                         ],
@@ -218,7 +218,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                                   .labelMedium
                                   ?.copyWith(
                                     color: DS.textSecondary,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: DS.fontWeightSemibold,
                                   ),
                             ),
                           ),

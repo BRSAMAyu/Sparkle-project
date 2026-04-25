@@ -184,7 +184,7 @@ class _ReflectionPromptField extends StatelessWidget {
             label,
             style: TextStyle(
               color: DS.brandPrimaryConst,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: 8),

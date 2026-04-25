@@ -200,7 +200,7 @@ class _HeroCard extends StatelessWidget {
             Text(
               '把错题复习、夜间回顾和计划任务放在同一个入口里管理。',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -253,7 +253,7 @@ class _SummaryCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
               ],
@@ -312,7 +312,7 @@ class _PlanBridgeCard extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const SizedBox(height: DS.spacing4),

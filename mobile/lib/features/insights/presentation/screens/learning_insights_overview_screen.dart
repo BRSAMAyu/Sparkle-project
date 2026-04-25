@@ -355,7 +355,7 @@ class _OverviewHero extends StatelessWidget {
               focusLabel,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.info,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ),
@@ -458,7 +458,7 @@ class _InsightModuleCard extends StatelessWidget {
                       '推荐先看',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: accent,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                   ),
@@ -468,7 +468,7 @@ class _InsightModuleCard extends StatelessWidget {
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                     height: 1.35,
                   ),
             ),

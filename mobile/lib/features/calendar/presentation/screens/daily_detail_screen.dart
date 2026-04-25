@@ -225,7 +225,7 @@ class DailyDetailScreen extends ConsumerWidget {
                           '${plan.progress.toInt()}%',
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: DS.fontWeightSemibold,
                             color: DS.info,
                           ),
                         ),
@@ -290,7 +290,7 @@ class DailyDetailScreen extends ConsumerWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                     color: color,
                   ),
                 ),
@@ -363,7 +363,7 @@ class DailyDetailScreen extends ConsumerWidget {
                           achievement.achievement.name,
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: DS.fontWeightMedium,
                             color: DS.brandPrimaryConst,
                           ),
                         ),
@@ -442,7 +442,7 @@ class DailyDetailScreen extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 18,
                     color: DS.textPrimary,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: DS.fontWeightMedium,
                   ),
                 ),
                 Text(

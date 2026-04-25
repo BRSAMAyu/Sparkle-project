@@ -353,7 +353,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -418,7 +418,7 @@ class _SocialAccountCard extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                                ?.copyWith(fontWeight: DS.fontWeightBold),
                           ),
                           _AccountStatusPill(linked: linked),
                         ],
@@ -487,7 +487,7 @@ class _AccountStatusPill extends StatelessWidget {
         linked ? '已连接' : '未连接',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: color,
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
       ),
     );

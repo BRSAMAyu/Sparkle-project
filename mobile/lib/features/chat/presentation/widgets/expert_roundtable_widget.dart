@@ -259,9 +259,15 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(compact ? 12 : 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F9FC),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? DS.surfacePrimaryElevated
+            : const Color(0xFFF7F9FC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD8E1EF)),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? DS.borderSubtle
+              : const Color(0xFFD8E1EF),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

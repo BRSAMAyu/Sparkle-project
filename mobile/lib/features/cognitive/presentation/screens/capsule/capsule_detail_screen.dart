@@ -372,7 +372,7 @@ class _DepthBadge extends StatelessWidget {
             capsule.depthLabel,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
               color: fg,
             ),
           ),
@@ -475,7 +475,7 @@ class _PersonalizationCard extends StatelessWidget {
                 Text(
                   l10n.capsulePersonalizationTitle,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                     fontSize: 13,
                   ),
                 ),
@@ -643,7 +643,7 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
             l10n.capsuleFeedbackQuestion,
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
               color: DS.textSecondary,
             ),
           ),
@@ -677,7 +677,7 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
             l10n.capsuleFeedbackCategoryLabel,
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
               color: DS.textSecondary,
             ),
           ),
@@ -703,7 +703,7 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
                 labelStyle: TextStyle(
                   fontSize: 12,
                   color: selected ? DS.brandPrimary : DS.textPrimary,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: selected ? DS.fontWeightSemibold : FontWeight.normal,
                 ),
                 side: BorderSide(
                   color: selected

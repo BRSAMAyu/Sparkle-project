@@ -160,7 +160,7 @@ class _SprintHistoryCard extends StatelessWidget {
                   child: Text(
                     item.name,
                     style: context.sparkleTypography.labelLarge.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ),
@@ -330,7 +330,7 @@ class _StatusChip extends StatelessWidget {
         text,
         style: context.sparkleTypography.labelSmall.copyWith(
           color: color,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
           fontSize: 10,
         ),
       ),

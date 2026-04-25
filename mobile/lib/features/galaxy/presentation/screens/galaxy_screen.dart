@@ -8,6 +8,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
@@ -2840,7 +2841,7 @@ class _StatusPanel extends StatelessWidget {
                                     color:
                                         foregroundColor.withValues(alpha: 0.72),
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: DS.fontWeightSemibold,
                                   ),
                                 ),
                               ),
@@ -2955,7 +2956,7 @@ class _OverviewMetric extends StatelessWidget {
           style: TextStyle(
             color: secondary,
             fontSize: 11,
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
           ),
         ),
         const SizedBox(height: 2),

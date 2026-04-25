@@ -657,7 +657,7 @@ class _InteractiveOnboardingScreenState
                     style: TextStyle(
                       color: enabled ? DS.success : DS.brandPrimaryConst,
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ),

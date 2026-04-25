@@ -347,7 +347,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                     : context.l10n.errorBookNoErrors,
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                   color: DS.textSecondary,
                 ),
               ),
@@ -389,7 +389,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 context.l10n.loadingFailed,
                 style: const TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
               ),
               const SizedBox(height: DS.spacing8),
@@ -508,7 +508,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 Text(
                   '认知维度',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                 ),
                 const SizedBox(height: DS.spacing12),

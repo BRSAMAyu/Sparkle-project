@@ -110,7 +110,7 @@ class AgentStatusIndicator extends StatelessWidget {
               status.label,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: color,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
             ),
           ],

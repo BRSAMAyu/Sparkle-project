@@ -151,7 +151,7 @@ class SubjectChip extends StatelessWidget {
             subject.label,
             style: TextStyle(
               fontSize: compact ? 10 : DS.fontSizeXs,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
               color: subject.color,
             ),
           ),

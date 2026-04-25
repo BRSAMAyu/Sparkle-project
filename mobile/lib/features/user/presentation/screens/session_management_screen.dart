@@ -247,7 +247,7 @@ class _SessionManagementScreenState
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -306,7 +306,7 @@ class _SessionCard extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                                ?.copyWith(fontWeight: DS.fontWeightBold),
                           ),
                           if (session.isCurrent)
                             _SessionTag(
@@ -413,7 +413,7 @@ class _SessionTag extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             color: color,
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
           ),
         ),
       );

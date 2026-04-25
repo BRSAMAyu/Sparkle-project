@@ -199,7 +199,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
           context.l10n.cognitiveFutureDays(_currentDays.round()),
           style: TextStyle(
             color: Theme.of(context).colorScheme.onPrimaryContainer,
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
             fontSize: 14,
           ),
         ),
@@ -303,7 +303,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
           Text(
             label,
             style: theme.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           Text(
@@ -344,7 +344,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
                           widget.selectedNodeIds.length,
                         ),
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(

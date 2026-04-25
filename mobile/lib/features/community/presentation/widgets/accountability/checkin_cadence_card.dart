@@ -27,7 +27,7 @@ class AccountabilityCheckInCadenceCard extends StatelessWidget {
             Text(
               '伙伴打卡节奏',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.xs),

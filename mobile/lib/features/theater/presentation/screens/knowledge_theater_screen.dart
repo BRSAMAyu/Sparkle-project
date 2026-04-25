@@ -849,7 +849,7 @@ class _KnowledgeTheaterScreenState
                                 .labelLarge
                                 ?.copyWith(
                                   color: _riskColor(node.riskLevel, scheme),
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                           ),
                           const SizedBox(height: 6),
@@ -1050,7 +1050,7 @@ class _KnowledgeTheaterScreenState
                 Text(
                   _relationLabel(edge.relationType),
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: 6),
@@ -1551,7 +1551,7 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                   '当前目标：$currentTargetName',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: DS.info,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: 12),
@@ -1794,14 +1794,14 @@ class _TheaterIntroState extends StatelessWidget {
                 Text(
                   '最近一次推演',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   latestSnapshot!.title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: 6),
@@ -1825,7 +1825,7 @@ class _TheaterIntroState extends StatelessWidget {
                 Text(
                   '从这些主题开始更顺手',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: 10),
@@ -2004,7 +2004,7 @@ class _PredictionView extends StatelessWidget {
                   Text(
                     '关系图谱主舞台',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                         ),
                   ),
                   _MetricPill(
@@ -2136,7 +2136,7 @@ class _PredictionView extends StatelessWidget {
               Text(
                 '校准与落地',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: 8),
@@ -2245,7 +2245,7 @@ class _TheaterErrorCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: scheme.error,
                         height: 1.5,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                 ),
               ),
@@ -2304,7 +2304,7 @@ class _TheaterEmptyState extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: 8),
@@ -2348,7 +2348,7 @@ class _SemanticMatchSummary extends StatelessWidget {
           Text(
             '自由节点与星图参考',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: 6),
@@ -2509,7 +2509,7 @@ class _PredictionLoadingStateState extends State<_PredictionLoadingState>
                           item.title,
                           style:
                               Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: DS.fontWeightBold,
                                     color: isCurrent || isCompleted
                                         ? null
                                         : DS.textSecondary,
@@ -2694,7 +2694,7 @@ class _TimelineSection extends StatelessWidget {
               Text(
                 '推演时间轴',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: 4),
@@ -2770,7 +2770,7 @@ class _TimelineSection extends StatelessWidget {
                       '讲到这里',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: DS.textSecondary,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const SizedBox(height: 4),
@@ -2948,7 +2948,7 @@ class _RouteSectionState extends State<_RouteSection> {
                         '路径对比',
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                       ),
                       const SizedBox(height: 12),
@@ -2964,7 +2964,7 @@ class _RouteSectionState extends State<_RouteSection> {
                     Text(
                       '路径对比',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const Spacer(),
@@ -3014,7 +3014,7 @@ class _RouteSectionState extends State<_RouteSection> {
                       '已创建计划：${widget.adoptionResult!.planName}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.success,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     if (widget.adoptionResult!.createdTasks.isNotEmpty) ...[
@@ -3664,7 +3664,7 @@ class _RouteFlowChain extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                       ),
                       const SizedBox(height: 4),
@@ -3702,7 +3702,7 @@ class _RouteMetricRow extends StatelessWidget {
           color: DS.textSecondary,
         );
     final valueStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w700,
+          fontWeight: DS.fontWeightBold,
         );
     if (compact) {
       return Container(
@@ -4121,7 +4121,7 @@ class _BranchDeltaCard extends StatelessWidget {
             '掌握度 ${masteryDelta >= 0 ? '+' : ''}${masteryDelta.round()}% · 完成率 ${(completionDelta * 100).round()}%',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: masteryDelta >= 0 ? DS.success : DS.warning,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: 6),
@@ -4199,7 +4199,7 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
           Text(
             'What-if 沙盘',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: 8),
@@ -4399,7 +4399,7 @@ class _PreviewMetricBar extends StatelessWidget {
                     color: improving
                         ? DS.success
                         : Theme.of(context).colorScheme.error,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -4443,7 +4443,7 @@ class _DiscussionSection extends StatelessWidget {
             Text(
               '专家圆桌',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: 12),
@@ -4465,7 +4465,7 @@ class _DiscussionSection extends StatelessWidget {
                         turn.displayName.characters.first,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                     ),
@@ -4479,7 +4479,7 @@ class _DiscussionSection extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                                ?.copyWith(fontWeight: DS.fontWeightBold),
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -4559,7 +4559,7 @@ class _SnapshotSection extends StatelessWidget {
                 Text(
                   '保存当前快照',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: 6),
@@ -4622,7 +4622,7 @@ class _AccuracyCard extends StatelessWidget {
             Text(
               '预测校准',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: 8),
@@ -4655,7 +4655,7 @@ class _AccuracyCard extends StatelessWidget {
               Text(
                 '建议回填日期：${tracking!.dueOn}',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: 10),

@@ -796,7 +796,7 @@ class _CalendarCellState extends State<_CalendarCell>
               '${record.day.day}',
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
                 color: textColor,
               ),
             ),

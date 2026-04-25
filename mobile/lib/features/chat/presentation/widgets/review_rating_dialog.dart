@@ -394,7 +394,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   color: isSelected
                       ? selectedColor
                       : theme.colorScheme.onSurfaceVariant,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: isSelected ? DS.fontWeightSemibold : FontWeight.normal,
                 ),
               ),
             ],
@@ -538,7 +538,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                         ? selectedColor
                         : theme.colorScheme.onSurfaceVariant,
                     fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                        isSelected ? DS.fontWeightSemibold : FontWeight.normal,
                   ),
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,

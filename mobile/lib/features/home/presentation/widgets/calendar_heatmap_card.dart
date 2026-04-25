@@ -220,7 +220,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
               DateFormat('MMMM yyyy', 'zh_CN').format(DateTime.now()),
               style: TextStyle(
                 fontSize: dense ? 12 : 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
                 color: DS.textPrimary,
               ),
               overflow: TextOverflow.ellipsis,
@@ -252,7 +252,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
                     '今日',
                     style: TextStyle(
                       fontSize: dense ? 10 : 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                       color: DS.brandPrimary,
                     ),
                   ),
@@ -482,7 +482,7 @@ class _CompactCalendarSidebar extends ConsumerWidget {
                     : '今天还没有密集安排',
                 style: TextStyle(
                   fontSize: 10,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                   color: hasActivity ? DS.brandPrimary : DS.textSecondary,
                   height: 1.35,
                 ),
@@ -554,7 +554,7 @@ class _StatChip extends StatelessWidget {
               value,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight: FontWeight.w700,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
             ),
@@ -616,7 +616,7 @@ class _DayCell extends StatelessWidget {
           '$day',
           style: TextStyle(
             fontSize: fontSize,
-            fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: isToday ? DS.fontWeightBold : DS.fontWeightMedium,
             color: _getTextColor(isDark, intensity),
           ),
         ),

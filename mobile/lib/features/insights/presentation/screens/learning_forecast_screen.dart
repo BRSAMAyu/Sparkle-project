@@ -130,7 +130,7 @@ class _LearningForecastScreenState
                               style: TextStyle(
                                 color: DS.textPrimary,
                                 fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: DS.fontWeightSemibold,
                               ),
                             ),
                             const SizedBox(height: DS.sm),
@@ -367,7 +367,7 @@ class _LearningForecastScreenState
               const SizedBox(height: DS.lg),
               const Text(
                 '推荐学习时段',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
               ),
               const SizedBox(height: DS.sm),
               Wrap(
@@ -394,7 +394,7 @@ class _LearningForecastScreenState
               const SizedBox(height: DS.lg),
               const Text(
                 '推荐学习日',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
               ),
               const SizedBox(height: DS.sm),
               Wrap(

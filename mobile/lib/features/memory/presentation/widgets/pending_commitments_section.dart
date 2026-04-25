@@ -27,7 +27,7 @@ class PendingCommitmentsSection extends StatelessWidget {
       children: [
         const Text(
           '待跟进承诺',
-          style: TextStyle(fontSize: DS.fontSizeLg, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: DS.fontSizeLg, fontWeight: DS.fontWeightBold),
         ),
         const SizedBox(height: DS.sm),
         ...items.map(
@@ -38,7 +38,7 @@ class PendingCommitmentsSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.summary, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(item.summary, style: const TextStyle(fontWeight: DS.fontWeightSemibold)),
                   const SizedBox(height: DS.xs),
                   Text(
                     '到期时间 ${item.dueAt.year}-${item.dueAt.month.toString().padLeft(2, '0')}-${item.dueAt.day.toString().padLeft(2, '0')}',

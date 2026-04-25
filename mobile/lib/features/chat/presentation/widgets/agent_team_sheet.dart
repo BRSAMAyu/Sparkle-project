@@ -267,7 +267,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             checkmarkColor: color,
             labelStyle: TextStyle(
               color: isSelected ? color : DS.textPrimary,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
             ),
             onSelected: (selected) {
               setState(() {
@@ -325,7 +325,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 selected: isSelected,
                 selectedColor: DS.brandPrimary.withValues(alpha: 0.16),
                 labelStyle: TextStyle(
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
                   color: isSelected ? DS.brandPrimary : DS.textPrimary,
                 ),
                 onSelected: (_) =>

@@ -277,7 +277,7 @@ class UnifiedNotificationCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 10,
           color: badgeColor,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
         ),
       ),
     );
@@ -386,7 +386,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 Text(
                   '建议动作：${notification.suggestedStep!}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                 ),
               ],

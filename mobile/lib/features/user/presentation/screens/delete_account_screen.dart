@@ -229,7 +229,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                         context.l10n.deleteAccountChecklistTitle,
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                       ),
                       const SizedBox(height: DS.spacing12),
@@ -254,7 +254,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                         context.l10n.deleteAccountConfirmInputTitle,
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                       ),
                       const SizedBox(height: DS.spacing4),
@@ -413,7 +413,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: color,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -423,7 +423,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   Widget _buildLabel(String text) => Text(
         text,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
       );
 

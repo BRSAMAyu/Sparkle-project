@@ -1023,7 +1023,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     style:
                         Theme.of(sheetContext).textTheme.labelLarge?.copyWith(
                               color: masteryColor,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                   ),
                 ),
@@ -1084,7 +1084,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                   card.title,
                   style: Theme.of(sheetContext).textTheme.labelLarge?.copyWith(
                         color: accent,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: 8),
@@ -1405,7 +1405,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
                 '掌握度 $selectedMastery%',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
               if (selectedMinutes != null)
@@ -1413,7 +1413,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
                   '学习时长 $selectedMinutes 分钟',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.warning,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
             ],
@@ -1477,7 +1477,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
                                 .labelSmall
                                 ?.copyWith(
                                   color: DS.warning,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                           ),
                           Text(
@@ -1804,7 +1804,7 @@ class _DiagnosisCard extends StatelessWidget {
                     tag!,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: accent,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                         ),
                   ),
                 ),
@@ -1973,7 +1973,7 @@ class _InlineStatusPill extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: DS.warning,
-                fontWeight: FontWeight.w700,
+                fontWeight: DS.fontWeightBold,
               ),
         ),
       );
@@ -2132,7 +2132,7 @@ class _ActionSuggestionTile extends StatelessWidget {
                     actionCard.badge!,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: accent,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                         ),
                   ),
                 ),
@@ -2196,7 +2196,7 @@ class _TrendComparisonChip extends StatelessWidget {
             comparison.label,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: accent,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: 6),
@@ -2506,7 +2506,7 @@ class _TrendLegendChip extends StatelessWidget {
               label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: color,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],

@@ -645,7 +645,7 @@ class _AchievementDetailScreenState
             ],
           ),
           if (chips.isNotEmpty) ...[
-            const SizedBox(height: DS.spacing14),
+            const SizedBox(height: DS.spacing12),
             Wrap(
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,

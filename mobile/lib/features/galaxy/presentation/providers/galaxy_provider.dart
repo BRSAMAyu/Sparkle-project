@@ -618,7 +618,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
       if (!mounted || requestId != _layoutRequestId) return;
 
       if (result.isFailure || result.data == null) {
-        final error = result.error ?? 'Unknown error';
+        final error = result.error ?? '未知错误';
         final galaxyError = error is GalaxyError
             ? error
             : GalaxyError.unknown(error.toString());

@@ -1080,7 +1080,7 @@ class _RecommendationCard extends StatelessWidget {
                             '${(recommendation.matchScore * 100).round()}%',
                             style: DS.labelSmall.copyWith(
                               color: accentColor,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                         ),
@@ -1200,7 +1200,7 @@ class _RecommendationBadge extends StatelessWidget {
           label,
           style: DS.labelSmall.copyWith(
             color: color,
-            fontWeight: FontWeight.w700,
+            fontWeight: DS.fontWeightBold,
           ),
         ),
       );

@@ -565,7 +565,7 @@ class _KnowledgeTheaterPainter extends CustomPainter {
               alpha: isSelected ? 1 : (isFocused ? 0.96 : 0.72),
             ),
             fontSize: isSelected ? 11.5 : 11,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            fontWeight: isSelected ? DS.fontWeightBold : DS.fontWeightSemibold,
           ),
         ),
         maxLines: 1,

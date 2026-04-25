@@ -284,7 +284,7 @@ class _AvatarSelectionDialogState extends State<AvatarSelectionDialog> {
                                 overflow: TextOverflow.ellipsis,
                                 style: DS.titleLarge.copyWith(
                                   color: DS.textPrimary,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                               ),
                               const SizedBox(height: DS.spacing4),
@@ -430,8 +430,8 @@ class _AvatarSelectionDialogState extends State<AvatarSelectionDialog> {
                                 overflow: TextOverflow.ellipsis,
                                 style: DS.bodySmall.copyWith(
                                   fontWeight: isSelected || isPreview
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
+                                      ? DS.fontWeightBold
+                                      : DS.fontWeightMedium,
                                   color: isSelected || isPreview
                                       ? option.accent
                                       : DS.textPrimary,

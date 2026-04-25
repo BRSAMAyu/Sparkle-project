@@ -187,14 +187,14 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               Text(
                 '进度: $current/$total',
                 style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
               Text(
                 '${(progress * 100).toInt()}%',
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ],
@@ -258,7 +258,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   '题目',
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
                 const SizedBox(height: DS.spacing12),
@@ -326,7 +326,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     '你的答案',
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: theme.colorScheme.error,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ],
@@ -366,7 +366,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     '正确答案',
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: DS.success,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ],
@@ -393,7 +393,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               Text(
                 'AI 分析',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
               ),
               TextButton.icon(
@@ -441,7 +441,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   minimumSize: const Size(double.infinity, 0),
                   textStyle: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
               ),
@@ -564,7 +564,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               customMessage ?? '暂无需要复习的错题',
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
                 color: DS.textSecondary,
               ),
             ),
@@ -645,7 +645,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   Text(
                     '复习成果',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -796,7 +796,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               '加载失败',
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
             ),
             const SizedBox(height: DS.spacing8),

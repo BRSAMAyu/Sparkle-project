@@ -1745,7 +1745,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
                     l10n.chatHistoryTitle,
                     style: DS.titleLarge.copyWith(
                       color: DS.textPrimary,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
@@ -1838,8 +1838,8 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
                               style: DS.bodyLarge.copyWith(
                                 color: DS.textPrimary,
                                 fontWeight: isCurrent
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
+                                    ? DS.fontWeightBold
+                                    : DS.fontWeightMedium,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -2011,7 +2011,7 @@ class _ChatContextToggle extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: DS.bodySmall.copyWith(
                       color: labelColor,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ),

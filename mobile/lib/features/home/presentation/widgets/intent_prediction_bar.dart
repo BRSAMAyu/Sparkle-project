@@ -306,7 +306,7 @@ class _PredictionChip extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: context.sparkleTypography.labelSmall.copyWith(
                     color: prediction.color ?? DS.brandPrimary,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: DS.fontWeightMedium,
                   ),
                 ),
               ],

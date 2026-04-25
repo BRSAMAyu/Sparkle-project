@@ -84,7 +84,7 @@ class AuroraIndicator extends StatelessWidget {
                 'Aurora',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: DS.textPrimary,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
               Text(

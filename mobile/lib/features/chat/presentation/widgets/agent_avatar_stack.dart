@@ -156,21 +156,21 @@ class AgentInfo {
       case 'math':
         return AgentInfo(
           type: 'math',
-          name: 'Math Expert',
+          name: '数学专家',
           icon: Icons.functions,
           color: DS.brandPrimary.shade600,
         );
       case 'code':
         return AgentInfo(
           type: 'code',
-          name: 'Code Expert',
+          name: '编程专家',
           icon: Icons.code,
           color: DS.success.shade600,
         );
       case 'writing':
         return AgentInfo(
           type: 'writing',
-          name: 'Writing Expert',
+          name: '写作专家',
           icon: Icons.edit,
           color: DS.brandPrimary.shade600,
         );
@@ -178,49 +178,49 @@ class AgentInfo {
       case 'science_agent':
         return AgentInfo(
           type: 'science',
-          name: 'Science Expert',
+          name: '科学专家',
           icon: Icons.science,
           color: DS.prismPurple,
         );
       case 'galaxy_guide':
         return AgentInfo(
           type: 'galaxy_guide',
-          name: 'Galaxy Guide',
+          name: '星图向导',
           icon: Icons.auto_awesome,
           color: DS.info,
         );
       case 'exam_oracle':
         return AgentInfo(
           type: 'exam_oracle',
-          name: 'Exam Oracle',
+          name: '考试预言家',
           icon: Icons.quiz,
           color: DS.warning,
         );
       case 'time_tutor':
         return AgentInfo(
           type: 'time_tutor',
-          name: 'Time Tutor',
+          name: '时间导师',
           icon: Icons.schedule,
           color: DS.success,
         );
       case 'deep_analyst':
         return AgentInfo(
           type: 'deep_analyst',
-          name: 'Deep Analyst',
+          name: '深度分析师',
           icon: Icons.psychology_alt,
           color: DS.brandSecondary,
         );
       case 'error_analyst':
         return AgentInfo(
           type: 'error_analyst',
-          name: 'Error Analyst',
+          name: '错题分析师',
           icon: Icons.rule_folder,
           color: DS.errorAccent,
         );
       case 'study_buddy':
         return AgentInfo(
           type: 'study_buddy',
-          name: 'Study Buddy',
+          name: '学习伙伴',
           icon: Icons.favorite_border,
           color: DS.capsuleAccent,
         );
@@ -228,7 +228,7 @@ class AgentInfo {
       case 'search_agent':
         return AgentInfo(
           type: 'search_agent',
-          name: 'Search Expert',
+          name: '搜索专家',
           icon: Icons.search,
           color: DS.infoLight,
         );
@@ -236,7 +236,7 @@ class AgentInfo {
       default:
         return AgentInfo(
           type: 'orchestrator',
-          name: 'Orchestrator',
+          name: '调度中枢',
           icon: Icons.hub,
           color: DS.brandPrimary.shade700,
         );

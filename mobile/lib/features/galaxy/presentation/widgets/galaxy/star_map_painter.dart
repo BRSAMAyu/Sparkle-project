@@ -470,7 +470,7 @@ class StarMapPainter extends CustomPainter {
           cacheKey: 'prediction:$nodeId:${predictedMastery.round()}',
           text: '${predictedMastery.round()}%',
           fontSize: 10,
-          fontWeight: FontWeight.w700,
+          fontWeight: DS.fontWeightBold,
           color: Colors.white,
           maxWidth: 44,
         );
@@ -725,7 +725,7 @@ class StarMapPainter extends CustomPainter {
           style: TextStyle(
             color: glow.withValues(alpha: labelAlpha * 0.8),
             fontSize: lod == GalaxyLod.l0 ? (isDarkMode ? 16 : 15) : 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: DS.fontWeightBold,
             letterSpacing: 1.2,
             shadows: [
               Shadow(
@@ -1594,7 +1594,7 @@ class StarMapPainter extends CustomPainter {
             style: TextStyle(
               color: style.baseColor.withValues(alpha: 0.42 * nodeAlpha),
               fontSize: math.max(10, radius * 1.05),
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           textDirection: TextDirection.ltr,
@@ -1798,7 +1798,7 @@ class StarMapPainter extends CustomPainter {
           : camera.scale > 1.0
               ? 12.0
               : 10.0;
-      final fontWeight = isSelected ? FontWeight.w700 : FontWeight.w600;
+      final fontWeight = isSelected ? DS.fontWeightBold : DS.fontWeightSemibold;
       final labelColor = (isDarkMode ? Colors.white : Colors.black87)
           .withValues(alpha: labelAlpha);
       final cacheKey =

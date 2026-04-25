@@ -124,7 +124,7 @@ class ErrorCard extends StatelessWidget {
                           context.l10n.errorBookTabNeedReview,
                           style: TextStyle(
                             fontSize: 10,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: DS.fontWeightMedium,
                             color: theme.colorScheme.error,
                           ),
                         ),
@@ -153,7 +153,7 @@ class ErrorCard extends StatelessWidget {
                 Text(
                   error.questionText,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
+                    fontWeight: DS.fontWeightMedium,
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
@@ -202,7 +202,7 @@ class ErrorCard extends StatelessWidget {
                       Text(
                         '${(error.masteryLevel * 100).toInt()}%',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: DS.fontWeightSemibold,
                           color: _getMasteryColor(error.masteryLevel),
                         ),
                       ),
@@ -237,7 +237,7 @@ class ErrorCard extends StatelessWidget {
                         label: context.l10n.errorBookAIAnalyzed,
                         color: theme.colorScheme.primary,
                         textStyle: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w500,
+                          fontWeight: DS.fontWeightMedium,
                         ),
                       ),
                   ],
@@ -375,7 +375,7 @@ class _AffectedKnowledgeTag extends StatelessWidget {
                       link.nodeName,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: labelColor,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -392,7 +392,7 @@ class _AffectedKnowledgeTag extends StatelessWidget {
                       delta.toStringAsFixed(delta.abs() >= 1 ? 0 : 1),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: labelColor,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ],

@@ -341,7 +341,7 @@ class _SchedulePreferencesScreenState
                     '日历智能排程',
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                       color: DS.brandPrimary,
                     ),
                   ),
@@ -398,7 +398,7 @@ class _SchedulePreferencesScreenState
                       _getFocusPeriodLabel(period),
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight: isSelected ? DS.fontWeightSemibold : FontWeight.normal,
                         color: isSelected ? DS.brandPrimary : DS.textSecondary,
                       ),
                     ),
@@ -466,7 +466,7 @@ class _SchedulePreferencesScreenState
                   '$value$unit',
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                     color: DS.brandPrimary,
                   ),
                 ),

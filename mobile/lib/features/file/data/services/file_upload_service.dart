@@ -179,7 +179,7 @@ class UploadFailedException implements Exception {
 
   factory UploadFailedException.fromDio(DioException e) {
     // Sanitize message to remove URLs (simple heuristic)
-    var msg = e.message ?? 'Unknown error';
+    var msg = e.message ?? '未知错误';
     if (msg.contains('http')) {
       msg = 'Request failed';
     }

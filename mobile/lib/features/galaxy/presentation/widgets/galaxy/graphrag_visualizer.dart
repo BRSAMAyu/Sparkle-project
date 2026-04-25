@@ -172,7 +172,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
                         style: TextStyle(
                           color: DS.brandPrimary.withValues(alpha: 0.8),
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: DS.fontWeightMedium,
                         ),
                       ),
                     ),

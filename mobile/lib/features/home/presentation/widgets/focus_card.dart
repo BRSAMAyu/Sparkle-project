@@ -80,7 +80,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                     '专注核心',
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: DS.textSecondary,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ),

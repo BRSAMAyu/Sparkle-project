@@ -761,7 +761,7 @@ class _PlanScheduleStep extends StatelessWidget {
         const SizedBox(height: DS.spacing16),
         Text(
           '总预估工时 ${totalEstimatedHours.toStringAsFixed(1)} 小时',
-          style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+          style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
         ),
         Slider(
           value: totalEstimatedHours.clamp(4, 80),
@@ -926,7 +926,7 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
           if (widget.pendingTasks.isNotEmpty) ...[
             Text(
               '参考已有任务',
-              style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+              style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
             ),
             const SizedBox(height: DS.spacing8),
             ...widget.pendingTasks.map(
@@ -1106,7 +1106,7 @@ class _PlanGuideStep extends StatelessWidget {
         if (enableStage4Experience) ...[
           Text(
             '任务指南视角',
-            style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+            style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: DS.spacing8),
           SegmentedButton<PlanGuideAudience>(
@@ -1152,7 +1152,7 @@ class _PlanGuideStep extends StatelessWidget {
             Expanded(
               child: Text(
                 isHuman || !enableStage4Experience ? '用户版执行指南' : '给 AI 的执行版本',
-                style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+                style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
               ),
             ),
             SparkleButton(
@@ -1278,7 +1278,7 @@ class _PlanReviewStep extends StatelessWidget {
           const SizedBox(height: DS.spacing16),
           Text(
             '最终写入的计划描述',
-            style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+            style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: DS.spacing8),
           Container(

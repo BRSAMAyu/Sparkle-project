@@ -119,7 +119,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
             labelStyle: TextStyle(
               color: DS.success.shade700,
               fontSize: 11,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
         ],
@@ -256,7 +256,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                       style: TextStyle(
                         fontSize: 10,
                         color: step.agentColor.withValues(alpha: 0.8),
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                       ),
                     ),
                   ),
@@ -295,7 +295,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
               style: TextStyle(
                 fontSize: 12,
                 color: step.agentColor,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
           ],

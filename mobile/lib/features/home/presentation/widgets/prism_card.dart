@@ -105,7 +105,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                       Text(
                         '认知棱镜',
                         style: context.sparkleTypography.labelSmall.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: DS.fontWeightSemibold,
                           color: DS.textPrimary,
                         ),
                       ),

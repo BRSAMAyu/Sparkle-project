@@ -688,7 +688,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 style: TextStyle(
                                   fontSize: DS.fontSizeSm,
                                   color: DS.neutral500,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: DS.fontWeightMedium,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
