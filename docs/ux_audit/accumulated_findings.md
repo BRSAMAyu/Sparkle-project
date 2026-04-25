@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 4 / 20 chains audited
+> **Status**: 6 / 20 chains audited
 
 ---
 
@@ -92,3 +92,39 @@
 
 ### Confirmed by Both Reviewers
 无交叉确认（不同 chain）
+
+---
+
+## Round 3 — 2026-04-25
+*Reviewer A: C11 — 间隔重复提醒链路（Celery→推送→复习chat） | Reviewer B: C14 — 学习档案页完整性（历史冲刺+Galaxy摘要展开）*
+
+### C11: 间隔重复提醒链路（Celery→推送→复习chat） (Reviewer A)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`celery_tasks.py:1150`**: `_spaced_repetition_due_interval_days()` 用 `elapsed_days in (1,3,7,14,30)` 精确匹配。Celery 扫描若在 day 7 因宕机/队列积压被跳过，day 8 不匹配任何间隔，day-7 复习永久丢失，下次机会是 day 14。无容差窗口（应有 `>= interval and < interval + grace`）。对间隔重复学习科学而言，漏间隔直接影响记忆留存。
+- **`celery_tasks.py:1105`**: `SPACED_REPETITION_INTERVAL_DAYS = (1,3,7,14,30)` 对所有 mastery 30-80% 的节点使用相同间隔。31% mastery（几乎不会）和 79%（较好掌握）获得相同复习计划。标准间隔重复算法（SM-2、Anki）应按掌握度调整间隔长度。
+
+**Minor Issues 🟢**
+- **`celery_tasks.py:1250/1265`**: 每次扫描限 500 用户（`limit=500`）。超过 500 活跃用户时部分用户当天无复习提醒，造成 UX 不一致。
+- **`celery_tasks.py:1195`**: `mastery < 0.3` 的节点被完全跳过。这些最弱节点可能最需要复习，30% 阈值过于激进（低于此值的节点可能需要重新学习而非复习，但阈值值得重新评估）。
+
+**Working Well ✅**: 端到端链路完整（Celery Beat 9:30 → per-user task → notification payload 含 deep link → push_navigation_service → DeepLinkService → routes.dart query 提取 → ChatScreen → Aurora review prompt）；24h cooldown 防重复；有测试覆盖（payload + 路由集成测试）。
+
+---
+
+### C14: 学习档案页完整性（历史冲刺+Galaxy摘要展开） (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`exam_sprint_review_service.py:374` vs `:397`**: 已完成冲刺用 `covered_topics_after`（mastery≥60% 的节点数，来自复习归档），进行中冲刺用 `plan.mastery_level * 100`（Plan 表聚合百分比换算）。两者含义不同：前者是节点计数，后者是百分比值转换。用户比较"掌握 5 节点"vs"掌握 3 节点"时，数字不可比。
+- **`exam_sprint_review_service.py:61+1044`**: `MAX_ARCHIVE_ENTRIES = 10` + `entries[-10:]` 截断。学习 10+ 门课程后最早冲刺的详细 Galaxy 摘要（weakest_points、proud_nodes 等）变为空值。
+
+**Minor Issues 🟢**
+- **`learning_portfolio_screen.dart:247-280`**: ExpansionTile 展开后仅显示聚合计数"掌握 X 节点"和摘要文本，无节点级下钻。用户需离开档案页去星图查看每个节点的具体 mastery。
+
+**Working Well ✅**: 三组分类（进行中/已完成/计划中）视觉清晰；ExpansionTile 内联展开无需跳转；展开内容丰富（headline/chips/最薄弱点/骄傲节点/成绩备注）；全屏空状态有 CTA；错误处理三层（loading/error+retry/SnackBar）；Profile 入口可见。
