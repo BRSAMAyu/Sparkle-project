@@ -663,7 +663,7 @@ class ChatLayerAdapter:
             return ["我已经抓到够用的轮廓了。接下来可以直接进入更贴合你的规划。"]
         if readout.surface == "aurora_checkpoint":
             return ["这个检查点我先记下。我们只抓最关键的偏差，别把复盘变成新的负担。"]
-        question = self._choose_question_for_domain(target_domain, readout)
+        question = self._context_aware_fallback_question(decision, readout)
         if question:
             return [question]
         strategy = self._teaching_strategy(self._effective_activity_profile(decision, readout))
@@ -674,6 +674,9 @@ class ChatLayerAdapter:
         if strategy.get("concept_first"):
             return ["这轮我先把关键概念钉稳，再马上接一个小检查题。"]
         return ["我先把这部分记住。你不用一次讲完整，我们会边走边把关键线索补齐。"]
+
+    def _context_aware_fallback_question(self, decision: AuroraDecision, readout: DashboardReadout) -> str | None:
+        return self._choose_question_for_domain(self._target_domain(decision), readout)
 
     def _target_domain(self, decision: AuroraDecision) -> str | None:
         directive = decision.chat_directive or {}
@@ -738,7 +741,9 @@ class ChatLayerAdapter:
         for candidate in _DOMAIN_QUESTION_ORDER:
             if candidate not in unavailable and candidate not in recent:
                 return candidate
-        return canonical_domain
+        if canonical_domain and canonical_domain not in unavailable and canonical_domain not in recent:
+            return canonical_domain
+        return None
 
     def _already_said(self, readout: DashboardReadout) -> str:
         parts = [str(readout.user_message or "")]

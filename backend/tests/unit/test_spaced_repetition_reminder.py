@@ -67,8 +67,14 @@ async def test_seven_day_mid_mastery_triggers_spaced_repetition_push(db_session,
     assert "子网划分" in notification.content
     assert "7 天" in notification.content
     assert "10 分钟" in notification.content
+    assert "55%" in notification.content
     assert notification.data["node_id"] == str(node.id)
-    assert notification.data["deep_link"] == f"/galaxy?nodeId={node.id}"
+    assert notification.data["destination_route"].startswith("/chat?")
+    assert f"review_node={node.id}" in notification.data["destination_route"]
+    assert "node_label=%E5%AD%90%E7%BD%91%E5%88%92%E5%88%86" in notification.data["destination_route"]
+    assert notification.data["deep_link"] == notification.data["destination_route"]
+    assert notification.data["primary_action"]["route"] == notification.data["destination_route"]
+    assert notification.data["primary_action"]["payload"]["review_node"] == str(node.id)
     assert notification.data["primary_action"]["label"] == "开始复习"
 
 

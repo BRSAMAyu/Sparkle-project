@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -79,9 +80,18 @@ class NotificationCenterService:
         title = "Aurora 复习提醒"
         content = (
             f"{display_name}已经 {interval_days} 天没复习了，"
+            f"当前掌握度约 {int(round(float(mastery) * 100))}%，"
             f"今天花 {estimated_minutes} 分钟巩固一下是最佳时机。"
         )
-        route = f"/galaxy?nodeId={node_id}"
+        route_query = urlencode(
+            {
+                "chat_mode": "study_plan",
+                "review_node": str(node_id),
+                "node_label": display_name,
+                "prompt": f"带我复习「{display_name}」。请先定位我最容易丢分的薄弱点，再给我两道短练习。",
+            }
+        )
+        route = f"/chat?{route_query}"
 
         return await NotificationService.create(
             self.db,
@@ -98,6 +108,7 @@ class NotificationCenterService:
                     "mastery": round(float(mastery), 4),
                     "interval_days": interval_days,
                     "estimated_minutes": estimated_minutes,
+                    "destination_route": route,
                     "deep_link": route,
                     "route": route,
                     "primary_action": {
@@ -106,7 +117,9 @@ class NotificationCenterService:
                         "action_type": "galaxy_node_review",
                         "payload": {
                             "node_id": str(node_id),
+                            "node_label": display_name,
                             "review_mode": "spaced_repetition",
+                            "review_node": str(node_id),
                         },
                     },
                 },

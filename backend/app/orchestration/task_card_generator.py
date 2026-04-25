@@ -253,6 +253,21 @@ class TaskCardGenerator:
                 knowledge_state=knowledge_state,
             )
 
+        stuck_help = self._normalize_existing_stuck_help(
+            guide.get("stuck_help")
+            or guide.get("aurora_stuck_help")
+            or guide.get("stuck_micro_teaching")
+            or guide.get("micro_teaching")
+            or guide.get("diagnostic_help")
+        )
+        if not stuck_help:
+            stuck_help = self._build_stuck_help(
+                template=template,
+                guide_json=guide,
+                focus=focus,
+                knowledge_state=knowledge_state,
+            )
+
         aurora_triggers = self._normalize_existing_aurora_triggers(guide.get("aurora_triggers"))
         if not aurora_triggers:
             aurora_triggers = self._build_aurora_triggers(
@@ -265,6 +280,7 @@ class TaskCardGenerator:
             "done_criteria": done_criteria,
             "mini_quiz": mini_quiz,
             "fallback_if_stuck": fallback_if_stuck,
+            "stuck_help": stuck_help,
             "aurora_triggers": aurora_triggers,
         }
         if template:
@@ -544,6 +560,62 @@ class TaskCardGenerator:
             },
         ]
 
+    def _build_stuck_help(
+        self,
+        *,
+        template: dict[str, Any] | None,
+        guide_json: dict[str, Any],
+        focus: str,
+        knowledge_state: dict[str, Any],
+    ) -> dict[str, Any]:
+        template_id = _strip((template or {}).get("template_id")).lower()
+        focus_label = _strip(focus) or _strip(guide_json.get("objective")) or "这一块内容"
+        weak_nodes = self._weak_node_names(knowledge_state)
+        weak_label = _strip(weak_nodes[0] if weak_nodes else "")
+        common_mistakes = _split_lines(guide_json.get("common_mistakes"))
+        common_mistake = _strip(common_mistakes[0] if common_mistakes else "")
+        check_subject = weak_label or focus_label
+
+        if template_id == "process_trace_card" or any(
+            token in focus_label.lower() for token in ("状态", "握手", "挥手", "流程", "时序")
+        ):
+            diagnosis_question = (
+                f"{focus_label}这里你更像卡在“哪些状态/步骤要连起来”，"
+                "还是“每一步是在什么条件下触发”的判断？"
+            )
+            targeted_fix = (
+                f"先只修这个断点：{common_mistake}"
+                if common_mistake
+                else f"先只盯一条关键迁移：写出 {focus_label} 的起点、触发条件和终点，再把这条边接回全流程。"
+            )
+            check_question = f"小检查：不看资料，试着说出 {check_subject} 里下一步是怎么触发的。"
+            options = ["状态/步骤连线", "触发条件判断"]
+        elif template_id == "comparison_table_card":
+            diagnosis_question = f"{focus_label}这里你更像卡在“对比维度记不住”，还是“题目里不会拿维度去判断”？"
+            targeted_fix = (
+                f"先把 {common_mistake} 改写成一个对比维度，再只补这一行。"
+                if common_mistake
+                else f"先只列出 {focus_label} 的 2 个最关键对比维度，再用维度回看一道题。"
+            )
+            check_question = f"小检查：{check_subject} 至少说出一个最容易混淆的对比点。"
+            options = ["对比维度记不住", "不会拿维度判断"]
+        else:
+            diagnosis_question = f"{focus_label}这里你更像卡在“概念没钉稳”，还是“会概念但落不到题目步骤”？"
+            targeted_fix = (
+                f"先只修这个高频误区：{common_mistake}"
+                if common_mistake
+                else f"先用一句话说清 {focus_label} 要解决什么问题，再拿一题只验证这一个判断点。"
+            )
+            check_question = f"小检查：不用看资料，先说出 {check_subject} 的一个关键判断点。"
+            options = ["概念没钉稳", "步骤落不到题目"]
+
+        return {
+            "diagnosis_question": diagnosis_question,
+            "diagnosis_options": options,
+            "targeted_fix": targeted_fix,
+            "check_question": check_question,
+        }
+
     def _build_aurora_triggers(
         self,
         *,
@@ -659,6 +731,41 @@ class TaskCardGenerator:
                     }
                 )
         return fallback
+
+    def _normalize_existing_stuck_help(self, value: Any) -> dict[str, Any]:
+        source = _as_dict(value)
+        if not source:
+            return {}
+
+        diagnosis_question = _strip(
+            source.get("diagnosis_question")
+            or source.get("diagnostic_question")
+            or source.get("question")
+            or source.get("step_1")
+        )
+        targeted_fix = _strip(
+            source.get("targeted_fix")
+            or source.get("one_targeted_fix")
+            or source.get("fix")
+            or source.get("step_2")
+        )
+        if not diagnosis_question or not targeted_fix:
+            return {}
+
+        options = _dedupe(_split_lines(source.get("diagnosis_options") or source.get("options")))
+        check_question = _strip(
+            source.get("check_question")
+            or source.get("practice_question")
+            or source.get("confirmation_question")
+        )
+        payload = {
+            "diagnosis_question": diagnosis_question,
+            "diagnosis_options": options[:2],
+            "targeted_fix": targeted_fix,
+        }
+        if check_question:
+            payload["check_question"] = check_question
+        return payload
 
     def _normalize_existing_aurora_triggers(self, value: Any) -> list[dict[str, Any]]:
         triggers: list[dict[str, Any]] = []

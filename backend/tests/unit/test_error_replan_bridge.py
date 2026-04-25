@@ -18,6 +18,7 @@ from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.error_replan_bridge import ErrorReplanBridge
 from app.services.notification_center_service import NotificationCenterService
+from app.services.task_service import TaskService
 
 
 class _FakeRedis:
@@ -183,6 +184,149 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
     assert repair_tasks[0].estimated_minutes == 15
     assert repair_tasks[0].guide_json["daily_spec"]["task_kind"] == "targeted_repair"
     assert repair_tasks[0].guide_json["output_action"] == "闭卷复述错因 + 1 道同类题独立完成"
+
+
+@pytest.mark.asyncio
+async def test_error_replan_bridge_inserts_next_day_first_repair_task_and_completion_lifts_mastery(db_session) -> None:
+    user = User(
+        username="bridge_repair_user",
+        email="bridge_repair_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    plan = Plan(
+        user_id=user.id,
+        name="计网冲刺",
+        type=PlanType.SPRINT,
+        description="修复高频错因",
+        plan_stage=PlanStage.DAILY,
+        target_date=datetime.utcnow().date() + timedelta(days=7),
+        daily_available_minutes=90,
+        total_estimated_hours=10,
+        subject="计算机网络",
+        mastery_level=0.35,
+        progress=0.1,
+        is_active=True,
+        priority=PlanPriority.HIGH,
+        is_primary=True,
+        source_metadata={"day_highlights": {"day": 1}},
+    )
+    db_session.add(plan)
+    await db_session.flush()
+
+    node = KnowledgeNode(name="TCP 滑动窗口机制", description="流量控制")
+    db_session.add(node)
+    await db_session.flush()
+
+    db_session.add(
+        UserNodeStatus(
+            user_id=user.id,
+            node_id=node.id,
+            mastery_score=38,
+            bkt_mastery_prob=0.38,
+            total_minutes=0,
+            total_study_minutes=0,
+            study_count=0,
+            is_unlocked=True,
+        )
+    )
+    day_one_task = Task(
+        user_id=user.id,
+        plan_id=plan.id,
+        title="Day 1 · 先做常规复盘",
+        type=TaskType.LEARNING,
+        tags=["day:1"],
+        estimated_minutes=25,
+        difficulty=2,
+        energy_cost=2,
+        status=TaskStatus.PENDING,
+        priority=1,
+        order_index=1000,
+        due_date=datetime.utcnow().date(),
+        knowledge_node_id=node.id,
+    )
+    db_session.add(day_one_task)
+    await db_session.flush()
+    db_session.add(
+        TaskKnowledgeLink(
+            task_id=day_one_task.id,
+            knowledge_node_id=node.id,
+            relation_type="primary",
+            is_primary=True,
+        )
+    )
+    errors = [
+        ErrorRecord(
+            user_id=user.id,
+            subject_code="network",
+            chapter="transport",
+            question_text=f"tcp-window-{idx}",
+            mastery_level=0.2,
+            latest_analysis={"error_type": "concept_confusion"},
+            linked_knowledge_node_ids=[str(node.id)],
+            created_at=datetime.utcnow() - timedelta(days=idx),
+        )
+        for idx in range(3)
+    ]
+    db_session.add_all(errors)
+    await db_session.commit()
+
+    bridge = ErrorReplanBridge(db_session)
+    with (
+        patch(
+            "app.services.error_replan_bridge.AdaptiveReplanner.evaluate_plan_health_now",
+            new=AsyncMock(),
+        ),
+        patch(
+            "app.services.system_update_service.SystemUpdateService.enqueue",
+            new=AsyncMock(return_value=True),
+        ),
+    ):
+        result = await bridge.on_error_created(
+            user_id=user.id,
+            error_id=errors[-1].id,
+            linked_node_ids=[node.id],
+        )
+
+    task_rows = await db_session.execute(
+        select(Task).where(Task.plan_id == plan.id, Task.user_id == user.id).order_by(Task.order_index.asc())
+    )
+    repair_task = next(
+        task for task in task_rows.scalars().all() if (task.guide_json or {}).get("task_kind") == "targeted_repair"
+    )
+
+    assert result["triggered"] is True
+    assert repair_task.order_index == 2000
+    assert repair_task.knowledge_node_id == node.id
+    lowered_mastery = float((result.get("mastery_update") or {}).get("new_mastery") or 0.0)
+
+    with (
+        patch("app.services.plan_service.PlanService.update_progress", new=AsyncMock(return_value=None)),
+        patch("app.services.task_state_sync.TaskStateSyncService.on_task_completed", new=AsyncMock(return_value=None)),
+        patch("app.services.plan_state_service.PlanStateService.append_task_summary", new=AsyncMock(return_value=None)),
+        patch("app.services.task_service.event_bus_reliable.publish", new=AsyncMock(return_value=None)),
+        patch("app.services.task_service.publish_srl_event", new=AsyncMock(return_value=None)),
+        patch(
+            "app.aurora.runtime_v1.self_model.SparkleSelfModelService.record_task_outcome",
+            new=AsyncMock(return_value=None),
+        ),
+    ):
+        await TaskService.complete(db_session, repair_task, actual_minutes=15)
+
+    await db_session.refresh(repair_task)
+    updated_status = (
+        await db_session.execute(
+            select(UserNodeStatus).where(
+                UserNodeStatus.user_id == user.id,
+                UserNodeStatus.node_id == node.id,
+            )
+        )
+    ).scalar_one()
+
+    assert repair_task.status == TaskStatus.COMPLETED
+    assert float(updated_status.mastery_score or 0.0) > lowered_mastery
 
 
 @pytest.mark.asyncio

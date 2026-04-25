@@ -17,6 +17,55 @@ from loguru import logger
 from app.core.celery_app import _run_async, celery_app
 
 
+def _notification_data_matches(actual, expected) -> bool:
+    if expected is None:
+        return actual in (None, "")
+    if isinstance(expected, float):
+        try:
+            return abs(float(actual) - expected) < 1e-6
+        except (TypeError, ValueError):
+            return False
+    return str(actual) == str(expected)
+
+
+async def _has_recent_notification(
+    session,
+    *,
+    user_id,
+    notification_type: str,
+    match_data: dict[str, object] | None = None,
+    within_hours: int = 24,
+    now=None,
+) -> bool:
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import desc, select
+
+    from app.models.notification import Notification
+
+    reference_time = now or datetime.now(UTC).replace(tzinfo=None)
+    since = reference_time - timedelta(hours=within_hours)
+    result = await session.execute(
+        select(Notification)
+        .where(
+            Notification.user_id == user_id,
+            Notification.type == notification_type,
+            Notification.created_at >= since,
+            Notification.deleted_at.is_(None),
+        )
+        .order_by(desc(Notification.created_at))
+    )
+    notifications = result.scalars().all()
+    if not match_data:
+        return bool(notifications)
+
+    for notification in notifications:
+        payload = notification.data if isinstance(notification.data, dict) else {}
+        if all(_notification_data_matches(payload.get(key), value) for key, value in match_data.items()):
+            return True
+    return False
+
+
 @celery_app.task(bind=True, name="app.core.celery_tasks.health_check_task")
 def health_check_task(self):
     """健康检查任务"""
@@ -1256,9 +1305,12 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
     from app.services.notification_service import NotificationService
 
     async def _run():
+        from datetime import UTC, datetime
+
         async with AsyncSessionLocal() as session:
             dashboard_service = ExamSprintDashboardService(session)
             dashboard = await dashboard_service.get_dashboard(UUID(user_id))
+            reference_time = datetime.now(UTC).replace(tzinfo=None)
 
             if not dashboard.active or str(dashboard.plan_id) != plan_id:
                 logger.debug(
@@ -1295,9 +1347,34 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
 
             subject = dashboard.subject or dashboard.plan_name or "Sprint"
             days_left = dashboard.days_left
+            completion_percent = int(round(completion_rate * 100))
+            destination_route = f"/plans/{plan_id}?source=push_sprint_reminder"
 
-            title = "今日 Sprint 还差一步"
-            content = f"{subject} 还剩 {days_left} 天，今天的「{primary_task_title}」还没完成。现在还来得及 💪"
+            if await _has_recent_notification(
+                session,
+                user_id=UUID(user_id),
+                notification_type="sprint_reminder",
+                match_data={"plan_id": plan_id},
+                now=reference_time,
+            ):
+                logger.debug(
+                    "daily_sprint_reminder_task: duplicate reminder suppressed for user %s plan %s",
+                    user_id,
+                    plan_id,
+                )
+                return {
+                    "status": "skipped",
+                    "reason": "duplicate_recent",
+                    "completion_rate": completion_rate,
+                    "days_left": days_left,
+                }
+
+            title = f"今日 Sprint 完成率 {completion_percent}%"
+            content = (
+                f"{subject} 还剩 {days_left} 天，"
+                f"你今天的完成率是 {completion_percent}%，"
+                f"主任务「{primary_task_title or '今日冲刺任务'}」还没收尾。现在继续，还来得及。"
+            )
 
             await NotificationService.create(
                 session,
@@ -1311,7 +1388,8 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
                         "days_left": days_left,
                         "completion_rate": completion_rate,
                         "primary_task": primary_task_title,
-                        "deep_link": "/plan/detail",
+                        "destination_route": destination_route,
+                        "deep_link": destination_route,
                     },
                 ),
                 push_via_websocket=True,
@@ -1388,7 +1466,7 @@ def scan_daily_sprint_reminders(self, limit: int = 500):
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.comeback_nudge_task")
 def comeback_nudge_task(self, user_id: str):
     """
-    G22: 当用户有活跃计划但 last_login_at > 5 天时，生成 comeback 消息并推送。
+    G22: 当用户有活跃计划且至少 3 天未活跃时，生成 comeback 消息并推送。
 
     消息包含：剩余天数、最近任务简介、轻量启动提议（"30分钟保底版"）。
     """
@@ -1399,11 +1477,14 @@ def comeback_nudge_task(self, user_id: str):
     from app.services.notification_service import NotificationService
     from app.schemas.notification import NotificationCreate
 
-    COMEBACK_THRESHOLD_DAYS = 5
+    COMEBACK_THRESHOLD_DAYS = 3
 
     async def _run():
+        from datetime import UTC, datetime
+
         async with AsyncSessionLocal() as session:
             service = AuroraRuntimeV1Service()
+            reference_time = datetime.now(UTC).replace(tzinfo=None)
             payload = await service.get_comeback_context(
                 active_db=session,
                 user_id=user_id,
@@ -1411,6 +1492,24 @@ def comeback_nudge_task(self, user_id: str):
             )
             if payload is None:
                 return {"status": "skipped", "reason": "not_eligible"}
+
+            plan_id = str(payload.get("plan_id") or "").strip()
+            destination_route = (
+                f"/plans/{plan_id}?source=comeback_nudge" if plan_id else "/chat?entry=comeback_nudge"
+            )
+            if await _has_recent_notification(
+                session,
+                user_id=UUID(user_id),
+                notification_type="comeback_nudge",
+                match_data={"plan_id": plan_id} if plan_id else None,
+                now=reference_time,
+            ):
+                logger.debug("comeback_nudge_task: duplicate reminder suppressed for user %s", user_id)
+                return {
+                    "status": "skipped",
+                    "reason": "duplicate_recent",
+                    "plan_id": plan_id or None,
+                }
 
             await NotificationService.create(
                 session,
@@ -1420,14 +1519,15 @@ def comeback_nudge_task(self, user_id: str):
                     content=str(payload.get("message") or ""),
                     type="comeback_nudge",
                     data={
-                        "plan_id": payload.get("plan_id"),
+                        "plan_id": plan_id or payload.get("plan_id"),
                         "days_away": payload.get("days_away"),
                         "days_remaining": payload.get("days_remaining"),
                         "subject": payload.get("subject"),
                         "next_task_title": payload.get("next_task_title"),
                         "recent_task_summary": payload.get("recent_task_summary"),
                         "light_restart_suggestion": payload.get("light_restart_suggestion"),
-                        "deep_link": "/chat",
+                        "destination_route": destination_route,
+                        "deep_link": destination_route,
                     },
                 ),
                 push_via_websocket=True,
@@ -1456,7 +1556,7 @@ def comeback_nudge_task(self, user_id: str):
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_comeback_nudges")
 def scan_comeback_nudges(self, limit: int = 500):
     """
-    G22: 每日扫描所有用户，为 last_login_at > 5 天且有活跃计划的用户派发 comeback_nudge_task。
+    G22: 每日扫描所有用户，为至少 3 天未活跃且有活跃计划的用户派发 comeback_nudge_task。
     """
     from datetime import datetime, timedelta, timezone
 
@@ -1466,7 +1566,7 @@ def scan_comeback_nudges(self, limit: int = 500):
     from app.models.plan import Plan
     from app.models.user import User
 
-    COMEBACK_THRESHOLD_DAYS = 5
+    COMEBACK_THRESHOLD_DAYS = 3
 
     async def _run():
         async with AsyncSessionLocal() as session:
@@ -1559,6 +1659,7 @@ def weekly_growth_narrative_task(self, user_id: str):
     然后通过 NotificationService 推送给用户。
     """
     from datetime import UTC, datetime, time, timedelta
+    from urllib.parse import urlencode
     from uuid import UUID
 
     from app.core.cache import cache_service
@@ -1583,6 +1684,29 @@ def weekly_growth_narrative_task(self, user_id: str):
 
             highlights = narrative.highlights or narrative.sentences[:3]
             body = narrative.body or "".join(highlights)
+            destination_query = urlencode(
+                {
+                    "initialPanel": "weeklyNarrative",
+                    "weekStart": str(narrative.week_start),
+                    "weekEnd": str(narrative.week_end),
+                }
+            )
+            destination_route = f"/learning/insights?{destination_query}"
+
+            if await _has_recent_notification(
+                session,
+                user_id=UUID(user_id),
+                notification_type="weekly_growth_narrative",
+                match_data={"week_start": narrative.week_start},
+                now=generated_at,
+            ):
+                logger.debug("weekly_growth_narrative_task: duplicate narrative suppressed for user %s", user_id)
+                return {
+                    "status": "skipped",
+                    "reason": "duplicate_recent",
+                    "week_start": narrative.week_start,
+                    "week_end": narrative.week_end,
+                }
 
             title = "你的本周成长报告来了"
             content = body if len(body) <= 200 else body[:197] + "..."
@@ -1602,7 +1726,8 @@ def weekly_growth_narrative_task(self, user_id: str):
                         "week_end": narrative.week_end,
                         "data_points": narrative.data_points,
                         "is_placeholder": narrative.is_placeholder,
-                        "deep_link": "/insights",
+                        "destination_route": destination_route,
+                        "deep_link": destination_route,
                     },
                 ),
                 push_via_websocket=True,

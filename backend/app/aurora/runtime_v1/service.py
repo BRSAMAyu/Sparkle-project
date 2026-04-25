@@ -29,6 +29,7 @@ from app.aurora.runtime_v1.wake_policy import AuroraWakePolicyService
 from app.aurora.runtime_v1.write_pipeline import InferenceClaim
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
+from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.memory_service import MemoryService
 from app.sprint_packs.last_24h_mode import (
@@ -156,6 +157,11 @@ class AuroraRuntimeTurnPlan:
 
 
 class AuroraRuntimeV1Service:
+    _REVIEW_NODE_LABEL_ALIASES: dict[str, str] = {
+        "cn.tcp_flow": "TCP 流量控制",
+        "cn.tcp_flow_control": "TCP 流量控制",
+    }
+
     def __init__(
         self,
         redis_client=None,
@@ -208,18 +214,29 @@ class AuroraRuntimeV1Service:
             days_left=days_left,
             tasks=tasks,
         )
+        display_name = await self._resolve_user_display_name(active_db=active_db, user_id=user_uuid)
         today_tasks = [task for task in tasks if self._task_day_index(task) == current_day_index]
         yesterday_rate = self._completion_rate_for_day(tasks=tasks, day_index=current_day_index - 1)
+        plan_context = self._daily_startup_plan_context(
+            plan=plan,
+            day_index=current_day_index,
+            tasks=today_tasks,
+            display_name=display_name,
+        )
 
         today_focus = (
-            self._today_focus_from_tasks(today_tasks)
+            _strip(plan_context.get("today_focus"))
+            or self._today_focus_from_tasks(today_tasks)
             or self._stored_day_recommendation(plan=plan, day_index=current_day_index)
             or _strip(plan.subject)
             or _strip(plan.name)
             or "今天的核心任务"
         )
         estimated_minutes = self._estimated_minutes(today_tasks, fallback=plan.daily_available_minutes)
-        day_recommendation = self._stored_day_recommendation(plan=plan, day_index=current_day_index)
+        day_recommendation = (
+            _strip(plan_context.get("day_recommendation"))
+            or self._stored_day_recommendation(plan=plan, day_index=current_day_index)
+        )
 
         wake_decision_payload: dict[str, Any] = {}
         try:
@@ -253,6 +270,7 @@ class AuroraRuntimeV1Service:
             completion_rate=yesterday_rate,
             adjustment_reason=adjustment_reason,
             day_recommendation=day_recommendation,
+            display_name=display_name,
         )
         return {
             "message": message,
@@ -422,6 +440,18 @@ class AuroraRuntimeV1Service:
         control_surface_reading = await self._read_control_surface(active_db=active_db, user_id=user_id)
         activity_profile = self._build_activity_profile(surface=surface, request_extra_context=request_extra_context)
         activity_profile.update(self._activity_payload(control_surface_reading.adjustable))
+        review_focus = self._review_focus_from_context(request_extra_context)
+        if review_focus is not None:
+            return AuroraRuntimeTurnPlan(
+                surface=surface,
+                messages=[self._build_review_node_first_turn_message(review_focus)],
+                surface_complete=False,
+                modeling_complete=False,
+                activity_profile=activity_profile,
+                hard_boundaries=control_surface_reading.hard_bounds.model_dump(mode="json"),
+                informational_tensions=[],
+                wake_policy={},
+            )
         if self._is_last_24h_policy(request_extra_context.get("exam_sprint_policy")):
             activity_profile = merge_activity_profile_payload(
                 activity_profile,
@@ -731,6 +761,36 @@ class AuroraRuntimeV1Service:
         if isinstance(request_extra_context.get("expression"), dict):
             profile = merge_activity_profile_payload(profile, {"expression": request_extra_context["expression"]})
         return profile
+
+    def _review_focus_from_context(self, request_extra_context: Mapping[str, Any]) -> dict[str, str] | None:
+        review_node = _strip(request_extra_context.get("review_node"))
+        if not review_node:
+            return None
+
+        node_label = _strip(request_extra_context.get("node_label"))
+        if not node_label:
+            node_label = self._REVIEW_NODE_LABEL_ALIASES.get(review_node, self._humanize_review_node_id(review_node))
+
+        return {
+            "review_node": review_node,
+            "node_label": node_label or "这个知识点",
+        }
+
+    @staticmethod
+    def _humanize_review_node_id(review_node: str) -> str:
+        compact = _strip(review_node).replace(".", " ").replace("_", " ")
+        if not compact:
+            return ""
+        return compact.upper() if compact.isascii() else compact
+
+    @staticmethod
+    def _build_review_node_first_turn_message(review_focus: Mapping[str, str]) -> str:
+        node_label = _strip(review_focus.get("node_label")) or "这个知识点"
+        return (
+            f"收到，我们先围绕「{node_label}」做一轮 15 分钟的定点复习任务。"
+            "先用你自己的话说清它要解决什么问题，再对比一个最容易混淆的相邻概念，"
+            "最后我会给你 2 个短检查点，专门盯住这个节点最容易丢分的薄弱处。"
+        )
 
     def _with_surface_state(self, *, surface: str, request_extra_context: dict[str, Any]) -> dict[str, Any]:
         if surface != "aurora_planning":
@@ -1567,6 +1627,42 @@ class AuroraRuntimeV1Service:
         keyed = _as_dict(highlights.get(str(day_index)))
         return self._compact_focus_text(keyed.get("recommendation") or keyed.get("ai_recommendation"))
 
+    async def _resolve_user_display_name(self, *, active_db: AsyncSession, user_id: UUID) -> str:
+        result = await active_db.execute(select(User).where(User.id == user_id).limit(1))
+        user = result.scalar_one_or_none()
+        if user is None:
+            return ""
+        return _strip(user.nickname or user.full_name or user.username or "")
+
+    def _daily_startup_plan_context(
+        self,
+        *,
+        plan: Plan,
+        day_index: int,
+        tasks: list[Task],
+        display_name: str,
+    ) -> dict[str, Any]:
+        metadata = _as_dict(plan.source_metadata)
+        raw_plan_context = _as_dict(metadata.get("plan_context"))
+        day_context = _as_dict(raw_plan_context.get("daily_startup"))
+        keyed = _as_dict(day_context.get(str(day_index)))
+        current = keyed or _as_dict(day_context.get("current_day"))
+        return {
+            "display_name": display_name,
+            "today_focus": (
+                self._compact_focus_text(current.get("today_focus"))
+                or self._compact_focus_text(current.get("task"))
+                or self._compact_focus_text(raw_plan_context.get("today_focus"))
+                or self._today_focus_from_tasks(tasks)
+            ),
+            "day_recommendation": (
+                self._compact_focus_text(current.get("recommendation"))
+                or self._compact_focus_text(current.get("message"))
+                or self._compact_focus_text(raw_plan_context.get("day_recommendation"))
+                or self._stored_day_recommendation(plan=plan, day_index=day_index)
+            ),
+        }
+
     def _daily_adjustment_reason(self, *, completion_rate: float | None, wake_energy: str) -> str:
         if completion_rate is None:
             return "今天是这个冲刺日程的新启动点，先按当前计划进入状态。"
@@ -1589,20 +1685,30 @@ class AuroraRuntimeV1Service:
         completion_rate: float | None,
         adjustment_reason: str,
         day_recommendation: str = "",
+        display_name: str = "",
     ) -> str:
         subject = _strip(plan.subject) or _strip(plan.name) or "这场考试"
         greeting = self._daily_greeting()
         recommendation_tail = self._daily_recommendation_tail(day_recommendation, today_focus=today_focus)
+        name_prefix = f"{display_name}，" if display_name and len(display_name) <= 12 else ""
+        greeting_prefix = f"{greeting}，{name_prefix}" if name_prefix else f"{greeting}，"
         opening = (
-            f"{greeting}，今天是你备考{subject}的第 {day_index} 天。"
+            f"{greeting_prefix}今天是你备考{subject}的第 {day_index} 天。"
             f"今天的核心任务是 {today_focus}，预计 {estimated_minutes} 分钟。"
         )
         if completion_rate is None:
             return f"{opening}{adjustment_reason}{recommendation_tail}准备好了吗？"
+        percent = int(round(completion_rate * 100))
         if completion_rate >= 0.8:
-            return f"{opening}昨天做得很好，推进很顺利，今天我们保持这个手感。{recommendation_tail}准备好了吗？"
+            return (
+                f"{opening}昨天完成率 {percent}%，做得很好，推进很顺利，"
+                f"今天我们保持这个手感。{recommendation_tail}准备好了吗？"
+            )
         if completion_rate < 0.5:
-            return f"{opening}昨天完成得偏少，今天我们轻一点，先缩小到最核心的一步。{recommendation_tail}准备好了吗？"
+            return (
+                f"{opening}昨天完成率 {percent}%，完成得偏少，"
+                f"今天我们轻一点，先缩小到最核心的一步。{recommendation_tail}准备好了吗？"
+            )
         return f"{opening}{adjustment_reason}{recommendation_tail}准备好了吗？"
 
     def _daily_recommendation_tail(self, recommendation: str, *, today_focus: str) -> str:

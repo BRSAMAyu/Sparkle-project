@@ -1,0 +1,250 @@
+{
+  "workflow_version": "1.0",
+  "status": "running",
+  "current_round": 0,
+  "reviewer_a_next": 0,
+  "reviewer_b_next": 0,
+  "reviewer_a_last_timestamp": null,
+  "reviewer_b_last_timestamp": null,
+  "validator_last_timestamp": null,
+  "steering_notes": "",
+  "architect_override_a": null,
+  "architect_override_b": null,
+  "architect_last_check": null,
+  "reviewer_a_queue": ["C01","C03","C05","C07","C09","C11","C13","C15","C17","C19"],
+  "reviewer_b_queue": ["C02","C04","C06","C08","C10","C12","C14","C16","C18","C20"],
+  "chains": {
+    "C01": {
+      "name": "冷启动建模→计划生成→首个任务可见",
+      "description": "新用户完成Aurora建模对话后，系统自动衔接到计划生成，生成后首个任务在计划页可见可执行",
+      "key_files": [
+        "backend/app/orchestration/orchestrator.py",
+        "backend/app/aurora/runtime_v1/service.py",
+        "mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart",
+        "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
+        "mobile/lib/app/routes.dart"
+      ],
+      "status": "pending"
+    },
+    "C02": {
+      "name": "任务完成→Galaxy节点mastery更新→星图颜色变深",
+      "description": "用户完成一个Sprint任务后，对应Galaxy节点mastery立即+0.25，星图颜色在下次打开时变深，不需要手动刷新",
+      "key_files": [
+        "backend/app/services/task_service.py",
+        "backend/app/services/galaxy_service.py",
+        "mobile/lib/features/task/presentation/providers/task_provider.dart",
+        "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart",
+        "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart"
+      ],
+      "status": "pending"
+    },
+    "C03": {
+      "name": "任务卡点(stuck)→卡点帮助面板→Aurora诊断内容",
+      "description": "用户在任务执行中触发stuck状态，stuck_help_sheet弹出，内容来自Aurora真实诊断而非静态文案",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/decision_loop.py",
+        "backend/app/aurora/runtime_v1/service.py",
+        "mobile/lib/features/task/presentation/widgets/stuck_help_sheet.dart",
+        "mobile/lib/features/task/presentation/providers/task_provider.dart"
+      ],
+      "status": "pending"
+    },
+    "C04": {
+      "name": "错题录入→修复任务插入→计划页橙色卡可见",
+      "description": "用户记录一个错题后，error_replan_bridge自动在次日计划首位插入15min修复任务，计划页显示橙色卡",
+      "key_files": [
+        "backend/app/services/error_replan_bridge.py",
+        "backend/app/orchestration/planning_workflow.py",
+        "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
+        "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart",
+        "mobile/lib/features/task/presentation/providers/task_provider.dart"
+      ],
+      "status": "pending"
+    },
+    "C05": {
+      "name": "7天冲刺完成→庆祝页→学习档案状态变completed",
+      "description": "用户完成冲刺所有任务后自动跳转sprint_completion_screen，完成后learning_portfolio该条目状态变completed",
+      "key_files": [
+        "backend/app/services/exam_sprint_review_service.py",
+        "backend/app/api/v1/exam_sprint.py",
+        "mobile/lib/features/plan/presentation/screens/sprint_completion_screen.dart",
+        "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart",
+        "mobile/lib/features/plan/presentation/providers/learning_portfolio_provider.dart"
+      ],
+      "status": "pending"
+    },
+    "C06": {
+      "name": "Galaxy节点点击→节点详情→开始复习进入chat携带context",
+      "description": "用户点击Galaxy节点，节点详情sheet显示mastery和学习历史，点击'开始复习'跳转chat并携带review_node context",
+      "key_files": [
+        "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart",
+        "mobile/lib/features/galaxy/presentation/widgets/node_detail_sheet.dart",
+        "mobile/lib/features/chat/presentation/screens/chat_screen.dart",
+        "backend/app/aurora/runtime_v1/service.py",
+        "backend/app/api/v1/galaxy.py"
+      ],
+      "status": "pending"
+    },
+    "C07": {
+      "name": "成就里程碑解锁→推送通知→点击打开庆祝页",
+      "description": "achievement_engine解锁里程碑成就后发推送，用户点击通知进入milestone_celebration_screen并看到正确数据",
+      "key_files": [
+        "backend/app/services/achievement_engine.py",
+        "backend/app/services/achievement_event_consumer.py",
+        "mobile/lib/features/achievement/presentation/screens/milestone_celebration_screen.dart",
+        "mobile/lib/core/services/push_navigation_service.dart",
+        "mobile/lib/core/services/deep_link_service.dart"
+      ],
+      "status": "pending"
+    },
+    "C08": {
+      "name": "用户≥3天未活跃→comeback消息出现在chat首屏",
+      "description": "用户3天或以上未打开app再次进入chat，看到comeback消息（含离开天数、剩余天数、保底方案），不显示通用欢迎",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/service.py",
+        "backend/app/api/v1/aurora.py",
+        "backend/app/core/celery_tasks.py",
+        "mobile/lib/features/chat/presentation/screens/chat_screen.dart",
+        "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
+        "mobile/lib/features/aurora/data/repositories/aurora_daily_startup_repository.dart"
+      ],
+      "status": "pending"
+    },
+    "C09": {
+      "name": "每日启动消息个性化（昨日完成率+今日任务）",
+      "description": "用户每天首次打开chat，看到包含昨日完成率和今日具体任务的个性化启动消息，不是通用问候语",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/service.py",
+        "backend/app/api/v1/aurora.py",
+        "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
+        "mobile/lib/features/chat/presentation/screens/chat_screen.dart"
+      ],
+      "status": "pending"
+    },
+    "C10": {
+      "name": "跨会话记忆注入（新会话Aurora引用旧内容）",
+      "description": "用户在第二次对话中，Aurora在第一轮回复中主动引用上次会话的内容（目标、已完成、困难），而非从零开始",
+      "key_files": [
+        "backend/app/orchestration/orchestrator.py",
+        "backend/app/core/context_manager.py",
+        "backend/app/orchestration/prompts.py",
+        "backend/app/services/memory_service.py"
+      ],
+      "status": "pending"
+    },
+    "C11": {
+      "name": "间隔重复提醒链路（Celery→推送→复习chat）",
+      "description": "Celery定时任务扫描需要复习的Galaxy节点，发送推送，用户点击后进入携带节点context的复习chat",
+      "key_files": [
+        "backend/app/core/celery_tasks.py",
+        "backend/app/services/notification_center_service.py",
+        "mobile/lib/core/services/push_navigation_service.dart",
+        "mobile/lib/features/chat/presentation/screens/chat_screen.dart"
+      ],
+      "status": "pending"
+    },
+    "C12": {
+      "name": "低完成率+临近截止→自适应压缩→计划页显示精简",
+      "description": "用户完成率<50%且距截止≤5天时，次日计划自动压缩为1任务/35分钟，计划页显示精简提示",
+      "key_files": [
+        "backend/app/orchestration/adaptive_replanner.py",
+        "backend/app/orchestration/planning_workflow.py",
+        "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
+        "backend/app/api/v1/plans.py"
+      ],
+      "status": "pending"
+    },
+    "C13": {
+      "name": "每周报告生成→推送→周报卡展示亮点",
+      "description": "周日Celery生成WeeklyGrowthNarrative，推送给用户，用户在insights页看到含highlights/biggest_improvement的展开卡",
+      "key_files": [
+        "backend/app/services/progress_narrative_service.py",
+        "backend/app/core/celery_tasks.py",
+        "mobile/lib/features/insights/data/models/weekly_growth_narrative.dart",
+        "mobile/lib/features/insights/presentation/widgets/weekly_growth_narrative_card.dart"
+      ],
+      "status": "pending"
+    },
+    "C14": {
+      "name": "学习档案页完整性（历史冲刺+Galaxy摘要展开）",
+      "description": "用户在profile进入学习档案页，看到所有历史冲刺分组（进行中/已完成/计划中），展开一条可见Galaxy掌握度摘要",
+      "key_files": [
+        "backend/app/api/v1/exam_sprint.py",
+        "backend/app/services/exam_sprint_review_service.py",
+        "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart",
+        "mobile/lib/features/plan/presentation/providers/learning_portfolio_provider.dart",
+        "mobile/lib/features/user/presentation/screens/profile_screen.dart"
+      ],
+      "status": "pending"
+    },
+    "C15": {
+      "name": "全局空状态质量（6个关键页面）",
+      "description": "任务列表/错题本/Galaxy星图/成就页/学习洞察/记忆列表在无数据时，每个都显示含操作入口的引导文案，不显示空白或裸零值",
+      "key_files": [
+        "mobile/lib/features/task/",
+        "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart",
+        "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart",
+        "mobile/lib/features/achievement/",
+        "mobile/lib/features/insights/",
+        "mobile/lib/features/memory/"
+      ],
+      "status": "pending"
+    },
+    "C16": {
+      "name": "导航死路检查（完成页/庆祝页/建模完成后）",
+      "description": "sprint_completion_screen、milestone_celebration_screen、modeling完成后，用户知道下一步做什么，back键不会崩溃或去错地方",
+      "key_files": [
+        "mobile/lib/app/routes.dart",
+        "mobile/lib/features/plan/presentation/screens/sprint_completion_screen.dart",
+        "mobile/lib/features/achievement/presentation/screens/milestone_celebration_screen.dart",
+        "mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart"
+      ],
+      "status": "pending"
+    },
+    "C17": {
+      "name": "API失败恢复（加载→错误→重试）",
+      "description": "任何API请求失败时，用户看到有意义的错误提示和重试按钮，而不是白屏、无限转圈或被遗忘的请求",
+      "key_files": [
+        "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
+        "mobile/lib/features/plan/presentation/providers/",
+        "mobile/lib/features/galaxy/presentation/providers/",
+        "mobile/lib/features/aurora/data/repositories/aurora_daily_startup_repository.dart"
+      ],
+      "status": "pending"
+    },
+    "C18": {
+      "name": "所有推送通知路由正确性（6种类型）",
+      "description": "每日提醒/间隔重复/回访唤回/里程碑/周报/冲刺提醒六种推送，点击后分别路由到正确的目标页面",
+      "key_files": [
+        "backend/app/core/celery_tasks.py",
+        "mobile/lib/core/services/push_navigation_service.dart",
+        "mobile/lib/core/services/deep_link_service.dart",
+        "mobile/lib/features/home/presentation/screens/notification_list_screen.dart"
+      ],
+      "status": "pending"
+    },
+    "C19": {
+      "name": "Aurora建模对话质量（不重复/上下文感知/自然过渡）",
+      "description": "Aurora建模对话不重复问已回答的域，fallback问题根据已知context调整，对话自然衔接到计划生成",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/planning.py",
+        "backend/app/aurora/runtime_v1/chat_adapter.py",
+        "backend/app/aurora/runtime_v1/dashboard.py",
+        "backend/app/aurora/runtime_v1/decision_loop.py"
+      ],
+      "status": "pending"
+    },
+    "C20": {
+      "name": "Sprint Pack端到端集成（节点→任务spec→mastery回写）",
+      "description": "Sprint Pack节点出现在计划任务spec中，任务完成后对应节点mastery+0.25，Galaxy星图反映真实进度",
+      "key_files": [
+        "backend/app/sprint_packs/computer_networks_v1.json",
+        "backend/app/orchestration/task_card_generator.py",
+        "backend/app/orchestration/planning_workflow.py",
+        "backend/app/services/task_service.py",
+        "backend/app/services/galaxy_service.py"
+      ],
+      "status": "pending"
+    }
+  }
+}

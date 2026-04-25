@@ -20,6 +20,7 @@ from app.models.error_book import ErrorRecord
 from app.models.execution_intent import ExecutionIntent
 from app.models.execution_record import ExecutionRecord
 from app.models.galaxy import UserNodeStatus
+from app.models.notification import Notification
 from app.models.plan import Plan, PlanType
 from app.models.task import Task
 from app.schemas.notification import NotificationCreate
@@ -235,6 +236,9 @@ class AchievementEventConsumer:
         achievement_id = str(event.get("achievement_id") or "").strip()
         if achievement_id not in self.MILESTONE_ACHIEVEMENT_IDS:
             return None
+        if await self._has_recent_milestone_notification(db, user_id, achievement_id):
+            logger.info(f"Skipped duplicate milestone notification for achievement {achievement_id} and user {user_id}")
+            return None
 
         stats = await self._collect_milestone_stats(db, user_id)
         title, content = self._build_milestone_copy(achievement_id, stats)
@@ -267,6 +271,21 @@ class AchievementEventConsumer:
         )
         logger.info(f"Created milestone notification for achievement {achievement_id} and user {user_id}")
         return notification
+
+    async def _has_recent_milestone_notification(self, db, user_id: UUID, achievement_id: str) -> bool:
+        result = await db.execute(
+            select(Notification).where(
+                Notification.user_id == user_id,
+                Notification.type == "milestone_notification",
+                Notification.created_at >= (_utcnow() - timedelta(hours=24)),
+                Notification.deleted_at.is_(None),
+            )
+        )
+        for notification in result.scalars().all():
+            payload = notification.data if isinstance(notification.data, dict) else {}
+            if str(payload.get("achievement_id") or "") == achievement_id:
+                return True
+        return False
 
     async def _collect_milestone_stats(self, db, user_id: UUID) -> dict[str, int]:
         streak_result = await db.execute(

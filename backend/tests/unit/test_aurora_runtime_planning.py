@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 
 from app.aurora.runtime_v1 import AuroraRuntimePlanningAdapter
+from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
 from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
 from app.aurora.runtime_v1.control_surface import ActivityProfile, AuroraHardBounds, ControlSurfaceReading
 from app.aurora.runtime_v1.dashboard import DashboardReadoutBuilder
@@ -261,6 +262,31 @@ async def test_chat_fallback_uses_natural_transition_after_zero_baseline_and_sco
     assert "好，零基础的话，咱们" in messages[0]
     assert "请告诉我你的基础" not in messages[0]
     assert "每天大概能拿出多少时间" in messages[0]
+
+
+@pytest.mark.asyncio
+async def test_review_node_context_generates_first_turn_targeted_review_task() -> None:
+    service = AuroraRuntimeV1Service()
+
+    plan = await service.plan_turn(
+        active_db=None,
+        user_id="review-user",
+        surface="chat",
+        conversation_id="review-conversation",
+        request_id="review-request",
+        user_message="带我复习 TCP 流量控制",
+        request_extra_context={
+            "review_node": "cn.tcp_flow",
+            "node_label": "TCP 流量控制",
+        },
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    assert plan.messages
+    assert "TCP 流量控制" in plan.messages[0]
+    assert "15 分钟" in plan.messages[0]
+    assert "短检查点" in plan.messages[0]
 
 
 @pytest.mark.asyncio

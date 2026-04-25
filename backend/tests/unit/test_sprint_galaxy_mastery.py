@@ -90,3 +90,48 @@ async def test_task_completion_increments_sprint_pack_node_mastery(db_session, m
 
     assert completed_task.status == TaskStatus.COMPLETED
     assert summary["cn.tcp_flow_control"] == pytest.approx(0.25)
+
+
+@pytest.mark.asyncio
+async def test_complete_task_api_updates_sprint_pack_node_mastery(db_session, monkeypatch) -> None:
+    user = User(
+        username=f"sprint_complete_{uuid4().hex[:8]}",
+        email=f"sprint_complete_{uuid4().hex[:8]}@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(
+        user_id=user.id,
+        title="Day 2 · TCP 流量控制复盘",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        tags=["exam_sprint"],
+        estimated_minutes=20,
+        difficulty=2,
+        energy_cost=2,
+        guide_json={
+            "sprint_mode": "seven_day_survival",
+            "knowledge_node_ids": ["cn.tcp_flow_control"],
+        },
+    )
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    async def _noop(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr("app.services.task_service.event_bus_reliable.publish", _noop)
+    monkeypatch.setattr("app.services.task_service.publish_srl_event", _noop)
+
+    await TaskService.complete_task(db_session, task.id, user.id, actual_minutes=20)
+
+    summary = await GalaxyService(db_session).get_sprint_mastery_summary(
+        user.id,
+        ["cn.tcp_flow_control"],
+    )
+
+    assert summary["cn.tcp_flow_control"] == pytest.approx(0.25)

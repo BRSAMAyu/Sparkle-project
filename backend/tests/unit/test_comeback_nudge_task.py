@@ -3,9 +3,21 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
+class _FakeScalarResult:
+    def __init__(self, items):
+        self._items = items
+
+    def scalars(self):
+        return self
+
+    def all(self):
+        return list(self._items)
+
+
 class _FakeSessionCM:
     def __init__(self):
         self.session = AsyncMock()
+        self.session.execute = AsyncMock(return_value=_FakeScalarResult([]))
 
     async def __aenter__(self):
         return self.session
@@ -68,3 +80,52 @@ def test_comeback_nudge_task_uses_runtime_payload_for_notification():
     assert notif_create.data["plan_id"] == payload["plan_id"]
     assert notif_create.data["days_remaining"] == payload["days_remaining"]
     assert notif_create.data["recent_task_summary"] == payload["recent_task_summary"]
+    assert notif_create.data["destination_route"] == f"/plans/{payload['plan_id']}?source=comeback_nudge"
+    assert notif_create.data["deep_link"] == notif_create.data["destination_route"]
+
+
+def test_comeback_nudge_task_skips_duplicate_within_24h():
+    user_id = "00000000-0000-0000-0000-000000000001"
+    payload = {
+        "title": "好久不见，我一直在等你",
+        "message": "你已经 4 天没来了，回来把 TCP 流量控制补成一个最小闭环吧。",
+        "days_away": 4,
+        "days_remaining": 2,
+        "subject": "计算机网络",
+        "plan_id": "00000000-0000-0000-0000-000000000002",
+    }
+
+    fake_session_local = _FakeSessionCM()
+    fake_session_local.session.execute = AsyncMock(
+        return_value=_FakeScalarResult([MagicMock(data={"plan_id": payload["plan_id"]})])
+    )
+
+    mock_runtime_cls = MagicMock()
+    mock_runtime_instance = MagicMock()
+    mock_runtime_instance.get_comeback_context = AsyncMock(return_value=payload)
+    mock_runtime_cls.return_value = mock_runtime_instance
+
+    mock_notif_create = AsyncMock()
+    mock_notif_cls = MagicMock()
+    mock_notif_cls.create = staticmethod(mock_notif_create)
+
+    patches = [
+        patch("app.db.session.AsyncSessionLocal", return_value=fake_session_local),
+        patch("app.aurora.runtime_v1.service.AuroraRuntimeV1Service", mock_runtime_cls),
+        patch("app.services.notification_service.NotificationService", mock_notif_cls),
+    ]
+
+    for current_patch in patches:
+        current_patch.start()
+
+    try:
+        from app.core.celery_tasks import comeback_nudge_task
+
+        result = comeback_nudge_task(user_id)
+    finally:
+        for current_patch in reversed(patches):
+            current_patch.stop()
+
+    assert result["status"] == "skipped"
+    assert result["reason"] == "duplicate_recent"
+    mock_notif_create.assert_not_awaited()

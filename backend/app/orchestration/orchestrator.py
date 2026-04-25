@@ -557,6 +557,75 @@ class ChatOrchestrator(
                 rendered[str(key)] = str(value)
         return rendered
 
+    @staticmethod
+    def _is_truthy_metadata_flag(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "on"}
+        if isinstance(value, (int, float)):
+            return value != 0
+        return False
+
+    @classmethod
+    def _extract_fast_track_launch_metadata(
+        cls,
+        planning_response: dict[str, Any] | None,
+    ) -> dict[str, str]:
+        response_payload = dict(planning_response or {})
+        raw_metadata = dict(response_payload.get("metadata") or {})
+        widgets = response_payload.get("widgets")
+
+        plan_id = str(raw_metadata.get("plan_id") or raw_metadata.get("planId") or "").strip()
+        recommended_task_id = str(
+            raw_metadata.get("recommended_task_id") or raw_metadata.get("recommendedTaskId") or ""
+        ).strip()
+        first_day_task_ids: list[str] = []
+
+        if isinstance(widgets, list):
+            for widget in widgets:
+                if not isinstance(widget, dict):
+                    continue
+                widget_type = str(widget.get("type") or "").strip()
+                payload = widget.get("data")
+                if not isinstance(payload, dict):
+                    continue
+
+                if widget_type == "plan_card" and not plan_id:
+                    plan_id = str(payload.get("plan_id") or payload.get("id") or "").strip()
+
+                if widget_type != "task_list":
+                    continue
+
+                tasks = payload.get("tasks")
+                if not isinstance(tasks, list):
+                    continue
+
+                for item in tasks:
+                    if not isinstance(item, dict):
+                        continue
+                    task_id = str(item.get("id") or "").strip()
+                    item_plan_id = str(item.get("plan_id") or item.get("planId") or "").strip()
+                    if item_plan_id and not plan_id:
+                        plan_id = item_plan_id
+                    if not task_id:
+                        continue
+                    if task_id not in first_day_task_ids:
+                        first_day_task_ids.append(task_id)
+                    if not recommended_task_id:
+                        recommended_task_id = task_id
+
+        launch_metadata: dict[str, str] = {}
+        if plan_id:
+            launch_metadata["plan_id"] = plan_id
+            launch_metadata["plan_route"] = f"/plans/{plan_id}"
+        if first_day_task_ids:
+            launch_metadata["first_day_task_ids_json"] = json.dumps(first_day_task_ids, ensure_ascii=False)
+        if recommended_task_id:
+            launch_metadata["recommended_task_id"] = recommended_task_id
+            launch_metadata["recommended_task_route"] = f"/tasks/{recommended_task_id}"
+        return launch_metadata
+
     async def _fast_track_exam_sprint(
         self,
         *,
@@ -576,9 +645,13 @@ class ChatOrchestrator(
         try:
             active_session = await manager.get_active_session(session_id)
             fast_track_context = None
+            from_modeling_complete = self._is_truthy_metadata_flag(
+                (request_extra_context or {}).get("from_modeling_complete")
+            )
             if active_session is None or not manager.is_fast_track_exam_sprint_session(active_session):
-                fast_track_context = manager.build_exam_sprint_fast_track_context(user_message)
-                if not fast_track_context:
+                if not from_modeling_complete:
+                    fast_track_context = manager.build_exam_sprint_fast_track_context(user_message)
+                if not fast_track_context and not from_modeling_complete:
                     return False
 
             try:
@@ -618,6 +691,7 @@ class ChatOrchestrator(
                     "session_id": session_id,
                 }
             )
+            metadata.update(self._extract_fast_track_launch_metadata(planning_response))
             widgets = planning_response.get("widgets")
             if widgets:
                 metadata["planning_widgets_json"] = json.dumps(widgets, ensure_ascii=False, default=str)

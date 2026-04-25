@@ -87,8 +87,38 @@ async def test_milestone_notification_contains_personalized_numbers(db_session, 
     assert notification.data["completed_sprints"] == 2
     assert notification.data["error_count"] == 23
     assert notification.data["share_hashtag"] == "#30天打卡"
+    assert notification.data["celebration_value"] == 30
     assert notification.data["destination_route"].startswith("/achievements/milestone/30_day_learner")
+    assert "study_days=30" in notification.data["destination_route"]
+    assert "mastered_nodes=67" in notification.data["destination_route"]
     assert notification.data["deep_link"].startswith("sparkle://milestone/30_day_learner")
 
     stored = await db_session.execute(select(Notification).where(Notification.id == notification.id))
     assert stored.scalar_one().title == "你已经坚持学习 30 天了"
+
+
+@pytest.mark.asyncio
+async def test_milestone_notification_skips_duplicates_within_24h(db_session, test_user):
+    db_session.add(
+        Notification(
+            user_id=test_user.id,
+            title="你已经坚持学习 30 天了",
+            content="这段时间你完成了 2 次冲刺备考。",
+            type="milestone_notification",
+            data={"achievement_id": "30_day_learner"},
+        )
+    )
+    await db_session.commit()
+
+    consumer = AchievementEventConsumer(event_bus=AsyncMock())
+
+    notification = await consumer._maybe_create_milestone_notification(
+        db=db_session,
+        user_id=test_user.id,
+        event={
+            "achievement_id": "30_day_learner",
+            "achievement_name": "30 天学习者",
+        },
+    )
+
+    assert notification is None
