@@ -1,7 +1,7 @@
 {
   "status": "PASS",
   "scenario": "xiaolin_full_lifecycle_exam_sprint",
-  "generated_at": "2026-04-25T03:17:36.133610",
+  "generated_at": "2026-04-25T04:32:04.082247",
   "coverage": [
     "register_login_surrogate",
     "aurora_multiturn_modeling_with_detour",
@@ -18,7 +18,7 @@
   "trace": [
     {
       "event": "user_registered",
-      "user_id": "64895d5a-253f-4042-82a4-5bf1f60a6362",
+      "user_id": "cd935215-008d-4aad-9e86-befcf6b5b629",
       "login": "email",
       "galaxy_nodes": 5
     },
@@ -175,7 +175,7 @@
     },
     {
       "event": "planning_generated",
-      "plan_id": "528bebae-5089-4dcc-bc01-a466cc7f18f5",
+      "plan_id": "43be5bdc-9a22-46e6-befe-8712ed9aa6ad",
       "plan_name": "7天计算机网络冲刺",
       "task_count": 7,
       "first_task": "Day 1 · 诊断分诊 - 诊断分诊",
@@ -183,7 +183,7 @@
     },
     {
       "event": "execution_adapted",
-      "feedback_id": "68818048-2895-465b-a4ce-ad5696ad59c2",
+      "feedback_id": "d2278b44-f87d-4a01-a5c2-df5d892c3909",
       "knowledge_gap": "Day 1 · 诊断分诊 - 诊断分诊: TCP 三次握手还是搞不懂，题目一换就没思路",
       "remedial_title": "[补强] Day 1 · 诊断分诊 - 诊断分诊: TCP 三次握手还是搞不懂，题目一换就没思路",
       "checkpoint_remedial": "[复盘补强] Day 3 检查点回顾"

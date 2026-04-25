@@ -275,6 +275,8 @@ Aurora 的动作来自整体推理，不来自关键词匹配或硬编码回复�
 ### §3.9 规格文档
 
 > [`docs/product/SPARKLE_AURORA_RUNTIME_V1_SPEC_2026-04-24.md`](product/SPARKLE_AURORA_RUNTIME_V1_SPEC_2026-04-24.md) — v2.0, 991 行
+>
+> [`docs/product/SPARKLE_AURORA_MVP_ENGINEERING_SCOPE_EXAM_SPRINT_MODE_2026-04-25.md`](product/SPARKLE_AURORA_MVP_ENGINEERING_SCOPE_EXAM_SPRINT_MODE_2026-04-25.md) — Exam Sprint Mode 第一阶段工程范围，锁定“计算机网络 + 7 天 minimum pass”切片
 
 ---
 
