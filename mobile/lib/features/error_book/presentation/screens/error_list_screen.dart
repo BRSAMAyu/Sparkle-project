@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
@@ -386,46 +387,16 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       );
 
   Widget _buildEmptyState(bool isReviewTab) => Builder(
-        builder: (context) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isReviewTab ? Icons.check_circle_outline : Icons.inbox_outlined,
-                size: 80,
-                color: DS.textTertiary,
-              ),
-              const SizedBox(height: DS.spacing16),
-              Text(
-                isReviewTab
-                    ? context.l10n.errorBookNoReview
-                    : context.l10n.errorBookNoErrors,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: DS.fontWeightMedium,
-                  color: DS.textSecondary,
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              Text(
-                isReviewTab
-                    ? context.l10n.errorBookNoReviewHint
-                    : context.l10n.errorBookNoErrorsHint,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: DS.textSecondary,
-                ),
-              ),
-              if (!isReviewTab) ...[
-                const SizedBox(height: DS.spacing24),
-                FilledButton.icon(
-                  onPressed: () => _navigateToAddError(context),
-                  icon: const Icon(Icons.add),
-                  label: Text(context.l10n.errorBookAddFirst),
-                ),
-              ],
-            ],
-          ),
+        builder: (context) => EmptyState(
+          icon: isReviewTab ? Icons.check_circle_outline : Icons.inbox_outlined,
+          title: isReviewTab
+              ? context.l10n.errorBookNoReview
+              : context.l10n.errorBookNoErrors,
+          description: isReviewTab
+              ? '${context.l10n.errorBookNoReviewHint} 先补记最近做错的一题，系统才会安排后续复习。'
+              : context.l10n.errorBookNoErrorsHint,
+          actionText: isReviewTab ? '去记录第一道错题' : context.l10n.errorBookAddFirst,
+          onAction: () => _navigateToAddError(context),
         ),
       );
 

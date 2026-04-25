@@ -10,9 +10,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
+import 'package:sparkle/features/plan/plan_routes.dart';
+import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 
 class SprintCompletionScreen extends ConsumerStatefulWidget {
   const SprintCompletionScreen({
@@ -140,6 +145,23 @@ class _SprintCompletionScreenState
       '修复 ${summary.repairedErrorsCount} 个错误模式，完成 ${summary.completedTasksCount} 个任务。'
       '最强项：${summary.strongestArea}。#Sparkle备考';
 
+  void _invalidateLinkedViews() {
+    ref.invalidate(learningPortfolioProvider);
+    ref.invalidate(weeklyGrowthNarrativeProvider);
+    final planId = widget.planId.trim();
+    if (planId.isNotEmpty) {
+      ref.invalidate(planDetailProvider(planId));
+    }
+  }
+
+  void _closeScreen() {
+    _invalidateLinkedViews();
+    RouteResilience.popOrGo(
+      context,
+      fallbackRoute: PlanRoutes.learningPortfolio,
+    );
+  }
+
   void _openPostExamReview() {
     final query = <String, String>{
       if (widget.planId.trim().isNotEmpty) 'plan_id': widget.planId.trim(),
@@ -150,60 +172,74 @@ class _SprintCompletionScreenState
     unawaited(context.push(uri.toString()));
   }
 
+  void _openLearningPortfolio() {
+    _invalidateLinkedViews();
+    context.go(PlanRoutes.learningPortfolio);
+  }
+
   @override
   Widget build(BuildContext context) {
     final summary = _summary;
 
-    return Scaffold(
-      backgroundColor: DS.surfacePrimary,
-      body: SparkleConfetti(
-        play: summary != null,
-        intensity: SparkleCelebrationIntensity.large,
-        child: SafeArea(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        DS.surfacePrimary,
-                        DS.surfaceSecondary,
-                        DS.success.withValues(alpha: 0.14),
-                        DS.warning.withValues(alpha: 0.10),
-                      ],
+    return RouteResilienceScope(
+      fallbackRoute: PlanRoutes.learningPortfolio,
+      child: PopScope(
+        onPopInvokedWithResult: (didPop, result) {
+          _invalidateLinkedViews();
+        },
+        child: Scaffold(
+          backgroundColor: DS.surfacePrimary,
+          body: SparkleConfetti(
+            play: summary != null,
+            intensity: SparkleCelebrationIntensity.large,
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            DS.surfacePrimary,
+                            DS.surfaceSecondary,
+                            DS.success.withValues(alpha: 0.14),
+                            DS.warning.withValues(alpha: 0.10),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              Positioned(
-                top: DS.spacing8,
-                left: DS.spacing8,
-                child: Tooltip(
-                  message: '返回',
-                  child: SparkleIconButton(
-                    variant: ButtonVariant.ghost,
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => context.pop(),
+                  Positioned(
+                    top: DS.spacing8,
+                    left: DS.spacing8,
+                    child: Tooltip(
+                      message: '返回',
+                      child: SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: _closeScreen,
+                      ),
+                    ),
                   ),
-                ),
+                  if (_isLoading && summary == null)
+                    const Center(child: LoadingIndicator())
+                  else if (summary == null)
+                    _CompletionUnavailable(onRetry: _loadSummary)
+                  else
+                    _CompletionContent(
+                      subjectLabel: _subjectLabel,
+                      summary: summary,
+                      shareBoundaryKey: _shareBoundaryKey,
+                      isSharing: _isSharing,
+                      onShare: _share,
+                      onPostExamReview: _openPostExamReview,
+                      onViewPortfolio: _openLearningPortfolio,
+                    ),
+                ],
               ),
-              if (_isLoading && summary == null)
-                const Center(child: LoadingIndicator())
-              else if (summary == null)
-                _CompletionUnavailable(onRetry: _loadSummary)
-              else
-                _CompletionContent(
-                  subjectLabel: _subjectLabel,
-                  summary: summary,
-                  shareBoundaryKey: _shareBoundaryKey,
-                  isSharing: _isSharing,
-                  onShare: _share,
-                  onPostExamReview: _openPostExamReview,
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -219,6 +255,7 @@ class _CompletionContent extends StatelessWidget {
     required this.isSharing,
     required this.onShare,
     required this.onPostExamReview,
+    required this.onViewPortfolio,
   });
 
   final String subjectLabel;
@@ -227,6 +264,7 @@ class _CompletionContent extends StatelessWidget {
   final bool isSharing;
   final VoidCallback onShare;
   final VoidCallback onPostExamReview;
+  final VoidCallback onViewPortfolio;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -270,6 +308,11 @@ class _CompletionContent extends StatelessWidget {
                           label: '记录考试结果',
                           icon: const Icon(Icons.fact_check_outlined),
                           onPressed: onPostExamReview,
+                        ),
+                        TextButton.icon(
+                          onPressed: onViewPortfolio,
+                          icon: const Icon(Icons.collections_bookmark_outlined),
+                          label: const Text('查看学习档案'),
                         ),
                       ],
                     ),

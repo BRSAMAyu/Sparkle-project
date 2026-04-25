@@ -4,6 +4,10 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
+import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 part 'error_book_provider.g.dart';
@@ -452,7 +456,12 @@ class ErrorOperations extends _$ErrorOperations {
         ..invalidate(errorDetailProvider(errorId))
         ..invalidate(errorListProvider)
         ..invalidate(todayReviewListProvider)
-        ..invalidate(errorStatsProvider);
+        ..invalidate(errorStatsProvider)
+        ..invalidate(planListProvider)
+        ..invalidate(planDetailProvider)
+        ..invalidate(taskListProvider)
+        ..invalidate(systemUpdatesProvider)
+        ..invalidate(weeklyGrowthNarrativeProvider);
 
       state = state.copyWith(isLoading: false);
       return result;

@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
@@ -382,13 +383,23 @@ class NotificationService {
 
     final destinationRoute = payload['destination_route'] as String?;
     if (destinationRoute != null && destinationRoute.isNotEmpty) {
-      unawaited(GoRouter.of(context).push(destinationRoute));
+      unawaited(
+        RouteResilience.openExternalRoute(
+          context,
+          destinationRoute,
+          currentContextLookup: () => navigatorKey.currentContext,
+        ),
+      );
       return;
     }
 
     final deepLink = payload['deep_link']?.toString().trim();
     if (deepLink != null && deepLink.isNotEmpty) {
-      if (DeepLinkService.handleDeepLink(context, deepLink)) {
+      if (DeepLinkService.handleExternalDeepLink(
+        context,
+        deepLink,
+        currentContextLookup: () => navigatorKey.currentContext,
+      )) {
         return;
       }
     }
@@ -397,9 +408,10 @@ class NotificationService {
         payload['taskId']?.toString() ?? payload['entity_id']?.toString();
     if (taskId != null && taskId.isNotEmpty) {
       unawaited(
-        GoRouter.of(context).pushNamed(
-          'taskExecution',
-          pathParameters: {'id': taskId},
+        RouteResilience.openExternalRoute(
+          context,
+          '/tasks/$taskId/execute',
+          currentContextLookup: () => navigatorKey.currentContext,
         ),
       );
       return;
@@ -521,8 +533,12 @@ class NotificationPermissionStatusNotifier
     extends AsyncNotifier<NotificationPermissionStatus> {
   @override
   Future<NotificationPermissionStatus> build() async {
-    final notificationService = ref.read(notificationServiceProvider);
-    return notificationService.checkPermissionStatus();
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+      return await notificationService.checkPermissionStatus();
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   /// 刷新权限状态

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -15,6 +16,7 @@ import 'package:sparkle/features/achievement/presentation/widgets/achievement_ca
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_stats_panel.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
+import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -44,7 +46,8 @@ class AchievementFilterOptions {
     Object? status = _unset,
   }) =>
       AchievementFilterOptions(
-        category: identical(category, _unset) ? this.category : category as String?,
+        category:
+            identical(category, _unset) ? this.category : category as String?,
         rarity: identical(rarity, _unset)
             ? this.rarity
             : rarity as AchievementRarity?,
@@ -101,10 +104,12 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
     _headerSlide = Tween<Offset>(
       begin: const Offset(0, -0.05),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _headerController,
-      curve: Curves.easeOutCubic,
-    ),);
+    ).animate(
+      CurvedAnimation(
+        parent: _headerController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
     unawaited(_headerController.forward());
   }
 
@@ -117,6 +122,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(achievementEventConsumerProvider);
     final state = ref.watch(achievementProvider);
     final l10n = context.l10n;
 
@@ -269,7 +275,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               icon: Icons.grid_view,
               isActive: _viewMode == AchievementViewMode.grid,
               onTap: () {
-                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                unawaited(SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection));
                 setState(() => _viewMode = AchievementViewMode.grid);
               },
             ),
@@ -277,7 +284,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               icon: Icons.view_list,
               isActive: _viewMode == AchievementViewMode.list,
               onTap: () {
-                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                unawaited(SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection));
                 setState(() => _viewMode = AchievementViewMode.list);
               },
             ),
@@ -285,44 +293,45 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
         ),
       );
 
-  Widget _buildQuickActions(BuildContext context, AppLocalizations l10n) => LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 420;
-        final singleColumn = constraints.maxWidth < 350;
-        final cardWidth = singleColumn
-            ? constraints.maxWidth
-            : compact
-            ? (constraints.maxWidth - DS.spacing12) / 2
-            : (constraints.maxWidth - DS.spacing16) / 2;
+  Widget _buildQuickActions(BuildContext context, AppLocalizations l10n) =>
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 420;
+          final singleColumn = constraints.maxWidth < 350;
+          final cardWidth = singleColumn
+              ? constraints.maxWidth
+              : compact
+                  ? (constraints.maxWidth - DS.spacing12) / 2
+                  : (constraints.maxWidth - DS.spacing16) / 2;
 
-        return Wrap(
-          spacing: DS.spacing12,
-          runSpacing: DS.spacing12,
-          children: [
-            SizedBox(
-              width: cardWidth,
-              child: _QuickActionCard(
-                icon: Icons.hub_outlined,
-                title: l10n.achievementMapTitle,
-                subtitle: l10n.achievementMapSubtitle,
-                onTap: () => context.push(AchievementRoutes.map),
-                index: 0,
+          return Wrap(
+            spacing: DS.spacing12,
+            runSpacing: DS.spacing12,
+            children: [
+              SizedBox(
+                width: cardWidth,
+                child: _QuickActionCard(
+                  icon: Icons.hub_outlined,
+                  title: l10n.achievementMapTitle,
+                  subtitle: l10n.achievementMapSubtitle,
+                  onTap: () => context.push(AchievementRoutes.map),
+                  index: 0,
+                ),
               ),
-            ),
-            SizedBox(
-              width: cardWidth,
-              child: _QuickActionCard(
-                icon: Icons.handshake_outlined,
-                title: l10n.contractEntryTitle,
-                subtitle: l10n.contractEntrySubtitle,
-                onTap: () => context.push(AchievementRoutes.contract),
-                index: 1,
+              SizedBox(
+                width: cardWidth,
+                child: _QuickActionCard(
+                  icon: Icons.handshake_outlined,
+                  title: l10n.contractEntryTitle,
+                  subtitle: l10n.contractEntrySubtitle,
+                  onTap: () => context.push(AchievementRoutes.contract),
+                  index: 1,
+                ),
               ),
-            ),
-          ],
-        );
-      },
-    );
+            ],
+          );
+        },
+      );
 
   Widget _buildViewModeButton({
     required IconData icon,
@@ -618,8 +627,16 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
     final filteredAchievements = _filterAchievements(state.achievements);
 
     if (filteredAchievements.isEmpty) {
-      return SliverFillRemaining(
-        child: _buildEmptyView(context, context.l10n),
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing16,
+            DS.spacing16,
+            DS.spacing32,
+          ),
+          child: _buildEmptyView(context, context.l10n),
+        ),
       );
     }
 
@@ -692,34 +709,30 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
     );
   }
 
-  Widget _buildEmptyView(BuildContext context, AppLocalizations l10n) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.emoji_events_outlined,
-              size: 64,
-              color: DS.textTertiary,
-            ),
-            const SizedBox(height: DS.spacing16),
-            Text(
-              l10n.achievementNoMatch,
-              style: TextStyle(
-                fontSize: DS.fontSizeBase,
-                color: DS.textSecondary,
-              ),
-            ),
-            const SizedBox(height: DS.spacing8),
-            Text(
-              l10n.achievementAdjustFilter,
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                color: DS.textTertiary,
-              ),
-            ),
-          ],
-        ),
-      );
+  Widget _buildEmptyView(BuildContext context, AppLocalizations l10n) {
+    final hasFilters =
+        _searchQuery.trim().isNotEmpty || _filterOptions.hasFilters;
+
+    return EmptyState(
+      icon: Icons.emoji_events_outlined,
+      title: hasFilters ? l10n.achievementNoMatch : '还没有解锁任何成就',
+      description: hasFilters
+          ? l10n.achievementAdjustFilter
+          : '先完成一个任务、坚持一次学习或点亮一个知识节点，这里就会开始记录你的里程碑。',
+      actionText: hasFilters ? '清空筛选' : '去创建今日任务',
+      onAction: () {
+        if (hasFilters) {
+          _searchController.clear();
+          setState(() {
+            _searchQuery = '';
+            _filterOptions = const AchievementFilterOptions();
+          });
+          return;
+        }
+        context.push(TaskRoutes.taskCreate);
+      },
+    );
+  }
 
   Widget _buildErrorView(
     BuildContext context,
@@ -937,21 +950,21 @@ class _AnimatedSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        // Apply the delay by clamping based on elapsed time
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 12 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: child,
-    );
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          // Apply the delay by clamping based on elapsed time
+          return Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 12 * (1 - value)),
+              child: child,
+            ),
+          );
+        },
+        child: child,
+      );
 }
 
 // ─── Animated category chip with selection feedback ─────────────────────────
@@ -969,41 +982,41 @@ class _AnimatedCategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? DS.brandPrimary : DS.surfaceSecondary,
-          borderRadius: DS.borderRadiusFull,
-          border: Border.all(
-            color: isSelected ? DS.brandPrimary : DS.border,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing8,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: DS.brandPrimary.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          category,
-          style: TextStyle(
-            fontSize: DS.fontSizeSm,
-            fontWeight:
-                isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
-            color: isSelected ? DS.textOnPrimary : DS.textSecondary,
+          decoration: BoxDecoration(
+            color: isSelected ? DS.brandPrimary : DS.surfaceSecondary,
+            borderRadius: DS.borderRadiusFull,
+            border: Border.all(
+              color: isSelected ? DS.brandPrimary : DS.border,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: DS.brandPrimary.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            category,
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight:
+                  isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
+              color: isSelected ? DS.textOnPrimary : DS.textSecondary,
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 // ─── Animated limited card entrance ─────────────────────────────────────────
@@ -1045,22 +1058,22 @@ class _AnimatedLimitedCardState extends State<_AnimatedLimitedCard>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final curve = Curves.easeOutCubic.transform(_controller.value);
-        return Opacity(
-          opacity: curve,
-          child: Transform.translate(
-            offset: Offset(20 * (1 - curve), 0),
-            child: Transform.scale(
-              scale: 0.92 + 0.08 * curve,
-              child: child,
+        animation: _controller,
+        builder: (context, child) {
+          final curve = Curves.easeOutCubic.transform(_controller.value);
+          return Opacity(
+            opacity: curve,
+            child: Transform.translate(
+              offset: Offset(20 * (1 - curve), 0),
+              child: Transform.scale(
+                scale: 0.92 + 0.08 * curve,
+                child: child,
+              ),
             ),
-          ),
-        );
-      },
-      child: widget.child,
-    );
+          );
+        },
+        child: widget.child,
+      );
 }
 
 // ─── Quick action card with tap scale ───────────────────────────────────────
@@ -1109,69 +1122,69 @@ class _QuickActionCardState extends State<_QuickActionCard>
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      onTapDown: (_) => _tapController.forward(),
-      onTapUp: (_) {
-        _tapController.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _tapController.reverse(),
-      child: ScaleTransition(
-        scale: _tapScale,
-        child: Container(
-          padding: const EdgeInsets.all(DS.spacing12),
-          decoration: BoxDecoration(
-            color: DS.surfacePrimary,
-            borderRadius: DS.borderRadius12,
-            border: Border.all(color: DS.border),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: DS.brandPrimary.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+        onTapDown: (_) => _tapController.forward(),
+        onTapUp: (_) {
+          _tapController.reverse();
+          widget.onTap();
+        },
+        onTapCancel: () => _tapController.reverse(),
+        child: ScaleTransition(
+          scale: _tapScale,
+          child: Container(
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              color: DS.surfacePrimary,
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: DS.brandPrimary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    widget.icon,
+                    color: DS.brandPrimary,
+                    size: DS.iconSizeSm,
+                  ),
                 ),
-                child: Icon(
-                  widget.icon,
-                  color: DS.brandPrimary,
-                  size: DS.iconSizeSm,
-                ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeSm,
-                        fontWeight: DS.fontWeightSemibold,
-                        color: DS.textPrimary,
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          fontWeight: DS.fontWeightSemibold,
+                          color: DS.textPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: DS.spacing4),
-                    Text(
-                      widget.subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        color: DS.textSecondary,
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        widget.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textSecondary,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: DS.spacing8),
-              Icon(Icons.chevron_right, color: DS.textTertiary),
-            ],
+                const SizedBox(width: DS.spacing8),
+                Icon(Icons.chevron_right, color: DS.textTertiary),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 }
 
 // ─── Limited achievement card with countdown and glow ───────────────────────
@@ -1310,27 +1323,26 @@ class _LimitedAchievementCard extends StatelessWidget {
                 duration: const Duration(milliseconds: 800),
                 curve: Curves.easeOutCubic,
                 builder: (context, value, _) => Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(3)),
-                        child: LinearProgressIndicator(
-                          value: value,
-                          minHeight: 6,
-                          backgroundColor: DS.neutral200,
-                          color: rarityColor,
-                        ),
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.all(Radius.circular(3)),
+                      child: LinearProgressIndicator(
+                        value: value,
+                        minHeight: 6,
+                        backgroundColor: DS.neutral200,
+                        color: rarityColor,
                       ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        '${(value * 100).toInt()}%',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeXs,
-                          color: DS.textSecondary,
-                        ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      '${(value * 100).toInt()}%',
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.textSecondary,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -1384,16 +1396,16 @@ class _PulsingBadgeState extends State<_PulsingBadge>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final opacity = 0.7 + 0.3 * _controller.value;
-        return Opacity(
-          opacity: opacity,
-          child: child,
-        );
-      },
-      child: widget.child,
-    );
+        animation: _controller,
+        builder: (context, child) {
+          final opacity = 0.7 + 0.3 * _controller.value;
+          return Opacity(
+            opacity: opacity,
+            child: child,
+          );
+        },
+        child: widget.child,
+      );
 }
 
 // ─── Filter sheet ───────────────────────────────────────────────────────────
@@ -1508,7 +1520,8 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
                 isSelected,
                 accentColor: RarityColorProvider.getColor(rarity),
                 onTap: () {
-                  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                  unawaited(SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection));
                   setState(() {
                     _options = _options.copyWith(
                       rarity: _options.rarity == rarity ? null : rarity,
@@ -1545,7 +1558,8 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
                 _getStatusDisplayName(status, l10n),
                 isSelected,
                 onTap: () {
-                  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                  unawaited(SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection));
                   setState(() {
                     if (status == AchievementStatus.all) {
                       _options = _options.copyWith(status: null);
@@ -1610,7 +1624,9 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
   }
 
   String _getStatusDisplayName(
-      AchievementStatus status, AppLocalizations l10n,) {
+    AchievementStatus status,
+    AppLocalizations l10n,
+  ) {
     switch (status) {
       case AchievementStatus.all:
         return l10n.achievementAll;

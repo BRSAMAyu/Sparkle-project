@@ -98,6 +98,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   // P0修复: 计划切换进行中标志，阻止切换期间发送消息防止消息发送到错误上下文
   bool isSwitchingPlan = false;
+  _PendingChatRequest? _retryableRequest;
 
   // Any response stream created before the latest generation value becomes
   // stale and must not mutate the current chat UI.
@@ -181,11 +182,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   void _beginRun({
     required String runId,
-    required ChatMessageModel userMessage,
+    ChatMessageModel? userMessage,
   }) {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     state = state.copyWith(
-      messages: [...state.messages, userMessage],
+      messages: userMessage == null
+          ? state.messages
+          : [...state.messages, userMessage],
       isSending: true,
       hasMoreMessages: false,
       streamingContent: '',
@@ -797,6 +800,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     String content, {
     String? taskId,
     Map<String, dynamic>? extraContextOverrides,
+    bool reuseLastUserMessage = false,
   }) async {
     // P0修复: 计划切换期间禁止发送，防止消息关联到错误的计划上下文
     if (isSwitchingPlan) {
@@ -827,23 +831,39 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
 
     final runId = _nextClientRunId();
+    final request = _PendingChatRequest(
+      content: content,
+      taskId: taskId,
+      extraContextOverrides: extraContextOverrides == null
+          ? null
+          : Map<String, dynamic>.from(extraContextOverrides),
+    );
+    _retryableRequest = request;
     final requestGeneration = ++_streamGeneration;
     bool isCurrentRequest() => requestGeneration == _streamGeneration;
     final queuedAttachments = List<StoredFile>.from(state.attachedFiles);
     final hasQueuedAttachments = queuedAttachments.isNotEmpty;
 
-    // 1. 立即添加用户消息到 UI
-    final userMessage = ChatMessageModel(
-      id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
-      userId: userId,
-      conversationId: state.conversationId ?? 'temp_conversation',
-      role: MessageRole.user,
-      content: content,
-      taskId: taskId,
-      createdAt: DateTime.now(),
-    );
+    final canReuseLastUserMessage = reuseLastUserMessage &&
+        state.messages.isNotEmpty &&
+        state.messages.last.role == MessageRole.user &&
+        state.messages.last.content == content &&
+        state.messages.last.taskId == taskId;
 
-    _beginRun(runId: runId, userMessage: userMessage);
+    if (canReuseLastUserMessage) {
+      _beginRun(runId: runId);
+    } else {
+      final userMessage = ChatMessageModel(
+        id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
+        userId: userId,
+        conversationId: state.conversationId ?? 'temp_conversation',
+        role: MessageRole.user,
+        content: content,
+        taskId: taskId,
+        createdAt: DateTime.now(),
+      );
+      _beginRun(runId: runId, userMessage: userMessage);
+    }
 
     var accumulatedContent = '';
     String? responseId;
@@ -1021,6 +1041,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         isErrorRetryable: errorMessage == null ? false : isRetryable,
         attachedFiles: restoreAttachments ? queuedAttachments : const [],
       );
+      if (phase == ChatRunPhase.completed) {
+        _retryableRequest = null;
+      }
       shouldResetSending = false;
     }
 
@@ -1742,4 +1765,35 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     }
   }
+
+  Future<void> retryLastMessage() async {
+    final request = _retryableRequest;
+    if (request == null) {
+      if (state.wsConnectionState == WsConnectionState.failed ||
+          state.wsConnectionState == WsConnectionState.disconnected) {
+        await reconnect();
+      }
+      return;
+    }
+
+    state = state.copyWith(clearError: true);
+    await sendMessage(
+      request.content,
+      taskId: request.taskId,
+      extraContextOverrides: request.extraContextOverrides,
+      reuseLastUserMessage: true,
+    );
+  }
+}
+
+class _PendingChatRequest {
+  const _PendingChatRequest({
+    required this.content,
+    this.taskId,
+    this.extraContextOverrides,
+  });
+
+  final String content;
+  final String? taskId;
+  final Map<String, dynamic>? extraContextOverrides;
 }

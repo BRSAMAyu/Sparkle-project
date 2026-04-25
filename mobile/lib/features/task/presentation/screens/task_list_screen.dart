@@ -15,14 +15,14 @@ import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 enum TaskFilterOptions { all, pending, inProgress, completed }
+
 enum TaskPriorityFilterOptions { all, high, medium, low }
 
 final taskFilterProvider =
     StateProvider<TaskFilterOptions>((ref) => TaskFilterOptions.all);
-final taskPriorityFilterProvider =
-    StateProvider<TaskPriorityFilterOptions>(
-      (ref) => TaskPriorityFilterOptions.all,
-    );
+final taskPriorityFilterProvider = StateProvider<TaskPriorityFilterOptions>(
+  (ref) => TaskPriorityFilterOptions.all,
+);
 
 class TaskListScreen extends ConsumerStatefulWidget {
   const TaskListScreen({super.key});
@@ -35,6 +35,31 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
   bool _isSearching = false;
   bool _isReorderMode = false;
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual<String?>(
+      taskListProvider.select((state) => state.error),
+      (previous, next) {
+        if (!mounted || next == null || next == previous) {
+          return;
+        }
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(next),
+              action: SnackBarAction(
+                label: context.l10n.retry,
+                onPressed: () =>
+                    ref.read(taskListProvider.notifier).refreshTasks(),
+              ),
+            ),
+          );
+      },
+    );
+  }
 
   @override
   void dispose() {
@@ -323,121 +348,120 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     if (_isReorderMode && canReorder) {
       return ScrollEdgeHaptics(
         child: ReorderableListView.builder(
-        padding: const EdgeInsets.fromLTRB(
-          DS.spacing16,
-          DS.spacing6,
-          DS.spacing16,
-          80,
-        ),
-        onReorder: (oldIndex, newIndex) async {
-          await ref.read(taskListProvider.notifier).reorderTasks(
-                oldIndex,
-                newIndex,
-              );
-        },
-        itemCount: tasks.length,
-        buildDefaultDragHandles: false,
-        itemBuilder: (context, index) {
-          final task = tasks[index];
-          return Container(
-            key: ValueKey('task-reorder-${task.id}'),
-            margin: const EdgeInsets.only(bottom: DS.spacing8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TaskCard(
-                    task: task,
-                    compact: true,
-                    onTap: () => context.push('/tasks/${task.id}'),
-                    onStart: () {
-                      ref.read(taskListProvider.notifier).startTask(task.id);
-                    },
-                    onComplete: () {
-                      ref
-                          .read(taskListProvider.notifier)
-                          .completeTask(task.id, task.estimatedMinutes, null);
-                    },
-                  ),
-                ),
-                const SizedBox(width: DS.spacing8),
-                ReorderableDragStartListener(
-                  index: index,
-                  child: Container(
-                    margin: const EdgeInsets.only(top: DS.spacing12),
-                    padding: const EdgeInsets.all(DS.spacing8),
-                    decoration: BoxDecoration(
-                      color: DS.surfaceSecondary,
-                      borderRadius: DS.borderRadius12,
-                    ),
-                    child: Icon(
-                      Icons.drag_indicator_rounded,
-                      color: DS.textSecondary,
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing6,
+            DS.spacing16,
+            80,
+          ),
+          onReorder: (oldIndex, newIndex) async {
+            await ref.read(taskListProvider.notifier).reorderTasks(
+                  oldIndex,
+                  newIndex,
+                );
+          },
+          itemCount: tasks.length,
+          buildDefaultDragHandles: false,
+          itemBuilder: (context, index) {
+            final task = tasks[index];
+            return Container(
+              key: ValueKey('task-reorder-${task.id}'),
+              margin: const EdgeInsets.only(bottom: DS.spacing8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TaskCard(
+                      task: task,
+                      compact: true,
+                      onTap: () => context.push('/tasks/${task.id}'),
+                      onStart: () {
+                        ref.read(taskListProvider.notifier).startTask(task.id);
+                      },
+                      onComplete: () {
+                        ref
+                            .read(taskListProvider.notifier)
+                            .completeTask(task.id, task.estimatedMinutes, null);
+                      },
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                  const SizedBox(width: DS.spacing8),
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Container(
+                      margin: const EdgeInsets.only(top: DS.spacing12),
+                      padding: const EdgeInsets.all(DS.spacing8),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceSecondary,
+                        borderRadius: DS.borderRadius12,
+                      ),
+                      child: Icon(
+                        Icons.drag_indicator_rounded,
+                        color: DS.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       );
     }
 
-    final showSummary =
-        !_isSearching &&
+    final showSummary = !_isSearching &&
         ref.read(taskFilterProvider) == TaskFilterOptions.all &&
         tasks.length > 2;
 
     return ScrollEdgeHaptics(
       child: ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        DS.spacing16,
-        DS.spacing6,
-        DS.spacing16,
-        72,
-      ),
-      itemCount: tasks.length + (showSummary ? 1 : 0),
-      separatorBuilder: (_, __) => const SizedBox(height: DS.spacing8),
-      itemBuilder: (context, index) {
-        if (showSummary && index == 0) {
-          return _TaskListSummary(
-            totalCount: tasks.length,
-            pendingCount: tasks
-                .where((task) => task.status == TaskStatus.pending)
-                .length,
-            inProgressCount: tasks
-                .where((task) => task.status == TaskStatus.inProgress)
-                .length,
-            completedCount: tasks
-                .where((task) => task.status == TaskStatus.completed)
-                .length,
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing6,
+          DS.spacing16,
+          72,
+        ),
+        itemCount: tasks.length + (showSummary ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: DS.spacing8),
+        itemBuilder: (context, index) {
+          if (showSummary && index == 0) {
+            return _TaskListSummary(
+              totalCount: tasks.length,
+              pendingCount: tasks
+                  .where((task) => task.status == TaskStatus.pending)
+                  .length,
+              inProgressCount: tasks
+                  .where((task) => task.status == TaskStatus.inProgress)
+                  .length,
+              completedCount: tasks
+                  .where((task) => task.status == TaskStatus.completed)
+                  .length,
+            );
+          }
+          final task = tasks[index - (showSummary ? 1 : 0)];
+          return RepaintBoundary(
+            child: TaskCard(
+              task: task,
+              compact: true,
+              onTap: () => context.push('/tasks/${task.id}'),
+              onStart: () {
+                unawaited(
+                  ref.read(taskListProvider.notifier).startTask(task.id),
+                );
+              },
+              onComplete: () {
+                unawaited(
+                  ref
+                      .read(taskListProvider.notifier)
+                      .completeTask(task.id, task.estimatedMinutes, null),
+                );
+              },
+            ),
           );
-        }
-        final task = tasks[index - (showSummary ? 1 : 0)];
-        return RepaintBoundary(
-          child: TaskCard(
-            task: task,
-            compact: true,
-            onTap: () => context.push('/tasks/${task.id}'),
-            onStart: () {
-              unawaited(
-                ref.read(taskListProvider.notifier).startTask(task.id),
-              );
-            },
-            onComplete: () {
-              unawaited(
-                ref
-                    .read(taskListProvider.notifier)
-                    .completeTask(task.id, task.estimatedMinutes, null),
-              );
-            },
-          ),
-        );
-      },
+        },
       ),
     );
   }

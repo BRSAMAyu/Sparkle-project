@@ -22,6 +22,7 @@ import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_se
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_error_dialog.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_gesture_handler.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart';
@@ -33,6 +34,7 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -111,6 +113,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   late final ProviderSubscription<GalaxyDisplaySettings>
       _displaySettingsSubscription;
   late final ProviderSubscription<GalaxyState> _galaxySubscription;
+  late final ProviderSubscription<int> _refreshTriggerSubscription;
 
   GalaxyGraphResponse? _graph;
   Map<String, Offset> _positions = const <String, Offset>{};
@@ -213,6 +216,20 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _galaxySubscription = ref.listenManual<GalaxyState>(
       galaxyProvider,
       _handleGalaxyStateChanged,
+    );
+    _refreshTriggerSubscription = ref.listenManual<int>(
+      galaxyRefreshTriggerProvider,
+      (previous, next) {
+        if (previous == null || previous == next || !mounted) {
+          return;
+        }
+        unawaited(
+          _loadGraph(
+            forceRefresh: true,
+            preserveCamera: true,
+          ),
+        );
+      },
     );
     // Subscribe to mastery milestone events for celebration animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -324,6 +341,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _entranceController.dispose();
     _displaySettingsSubscription.close();
     _galaxySubscription.close();
+    _refreshTriggerSubscription.close();
     unawaited(_milestoneSubscription?.cancel());
     _previewDismissTimer?.cancel();
     _initialBuildReplayTimer?.cancel();
@@ -345,6 +363,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
 
     if (next.lastError != null && !next.isLoading) {
+      if (previous?.lastError?.message != next.lastError!.message) {
+        GalaxyErrorSnackBar.show(
+          context,
+          error: next.lastError!,
+          onRetry: _loadGraph,
+        );
+      }
       setState(() {
         _isLoading = false;
         _loadError = next.lastError!.message;
@@ -2442,6 +2467,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final currentSector = _currentSector();
     final blendedColors = isDarkMode ? _darkBlendedColors : _lightBlendedColors;
     final overviewStats = graph == null ? null : _buildOverviewStats(graph);
+    final showMasteryEmptyBanner = overviewStats != null &&
+        overviewStats.totalNodes > 0 &&
+        overviewStats.masteryAverage == 0;
     final contributionStats = ref.watch(galaxyContributionProvider);
     final theaterOverlay = ref.watch(theaterOverlayProvider);
     final examSprintActive =
@@ -2513,14 +2541,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
               );
             }
 
-            if (graph == null) {
+            if (graph == null || graph.nodes.isEmpty) {
               return _StatusPanel(
                 backgroundColor: backgroundColor,
                 foregroundColor: isDarkMode ? Colors.white : Colors.black,
                 title: context.l10n.galaxyEmptyTitle,
-                message: context.l10n.galaxyEmptyMessage,
-                actionLabel: context.l10n.galaxyReload,
-                onAction: _loadGraph,
+                message: '先完成一个学习任务或创建一次冲刺，知识节点和掌握记录才会在这里慢慢点亮。',
+                highlights: const <String>['完成任务', '记录错题', '开始冲刺'],
+                actionLabel: '去创建学习任务',
+                onAction: () async {
+                  context.push(TaskRoutes.taskCreate);
+                },
               );
             }
 
@@ -2679,6 +2710,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                             error: (_, __) => const SizedBox.shrink(),
                           ),
                         ),
+                        if (showMasteryEmptyBanner)
+                          Positioned(
+                            top: 132,
+                            left: 16,
+                            right: 16,
+                            child: _GalaxyMasteryEmptyBanner(
+                              onAction: () => context.push(
+                                TaskRoutes.taskCreate,
+                              ),
+                            ),
+                          ),
                         Positioned(
                           left: 16,
                           bottom: 16,
@@ -2939,6 +2981,8 @@ class _GalaxyOverviewStats extends StatelessWidget {
                 label: context.l10n.galaxyOverviewNodes,
                 value: stats.totalNodes.toDouble(),
                 suffix: '',
+                emptyLabel: '尚未开始',
+                isEmpty: stats.totalNodes == 0,
                 isDarkMode: isDarkMode,
               ),
               const SizedBox(width: 14),
@@ -2946,6 +2990,8 @@ class _GalaxyOverviewStats extends StatelessWidget {
                 label: context.l10n.galaxyOverviewUnlocked,
                 value: stats.unlockRatio * 100,
                 suffix: '%',
+                emptyLabel: '尚未点亮',
+                isEmpty: stats.unlockedNodes == 0,
                 isDarkMode: isDarkMode,
               ),
               const SizedBox(width: 14),
@@ -2953,6 +2999,8 @@ class _GalaxyOverviewStats extends StatelessWidget {
                 label: context.l10n.galaxyOverviewMastery,
                 value: stats.masteryAverage.toDouble(),
                 suffix: '%',
+                emptyLabel: '尚未开始',
+                isEmpty: stats.masteryAverage == 0,
                 isDarkMode: isDarkMode,
               ),
             ],
@@ -2966,12 +3014,16 @@ class _OverviewMetric extends StatelessWidget {
     required this.label,
     required this.value,
     required this.suffix,
+    required this.emptyLabel,
+    required this.isEmpty,
     required this.isDarkMode,
   });
 
   final String label;
   final double value;
   final String suffix;
+  final String emptyLabel;
+  final bool isEmpty;
   final bool isDarkMode;
 
   @override
@@ -2992,20 +3044,97 @@ class _OverviewMetric extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0, end: value),
-          duration: const Duration(milliseconds: 720),
-          curve: Curves.easeOutCubic,
-          builder: (context, animatedValue, _) => Text(
-            '${animatedValue.round()}$suffix',
+        if (isEmpty)
+          Text(
+            emptyLabel,
             style: TextStyle(
               color: foreground,
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
             ),
+          )
+        else
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: value),
+            duration: const Duration(milliseconds: 720),
+            curve: Curves.easeOutCubic,
+            builder: (context, animatedValue, _) => Text(
+              '${animatedValue.round()}$suffix',
+              style: TextStyle(
+                color: foreground,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
-        ),
       ],
+    );
+  }
+}
+
+class _GalaxyMasteryEmptyBanner extends StatelessWidget {
+  const _GalaxyMasteryEmptyBanner({required this.onAction});
+
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xE6101929),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.auto_awesome_outlined,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '还没有点亮掌握记录',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '先完成一个学习任务或复习一个知识点，星图才会开始出现真实掌握度。',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.72),
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton(
+              onPressed: onAction,
+              child: const Text('去学习'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

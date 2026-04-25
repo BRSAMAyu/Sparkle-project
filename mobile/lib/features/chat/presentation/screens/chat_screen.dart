@@ -987,6 +987,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  if (chatState.isErrorRetryable)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: DS.spacing8,
+                                      ),
+                                      child: SparkleButton(
+                                        label: context.l10n.retry,
+                                        icon: const Icon(Icons.refresh_rounded),
+                                        onPressed: () => unawaited(
+                                          ref
+                                              .read(chatProvider.notifier)
+                                              .retryLastMessage(),
+                                        ),
+                                        variant: ButtonVariant.secondary,
+                                      ),
+                                    ),
                                   Material(
                                     color:
                                         DS.surfacePrimary.withValues(alpha: 0),

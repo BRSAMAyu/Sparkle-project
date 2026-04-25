@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
@@ -38,7 +39,42 @@ class PlanDetailScreen extends ConsumerStatefulWidget {
 class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
   bool _completionCheckInFlight = false;
   String? _lastCompletionProbeSignature;
+  String? _lastPlanErrorMessage;
   final Set<String> _navigatedCompletionPlanIds = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual<AsyncValue<PlanModel>>(
+      planDetailProvider(widget.planId),
+      (previous, next) {
+        next.whenOrNull(
+          error: (error, _) {
+            final message = error.toString();
+            if (!mounted || message == _lastPlanErrorMessage) {
+              return;
+            }
+            _lastPlanErrorMessage = message;
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(context.l10n.planLoadFailed(message)),
+                  action: SnackBarAction(
+                    label: context.l10n.retry,
+                    onPressed: () =>
+                        ref.refresh(planDetailProvider(widget.planId)),
+                  ),
+                ),
+              );
+          },
+        );
+        if (!next.hasError) {
+          _lastPlanErrorMessage = null;
+        }
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,15 +138,34 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
               ],
             );
           },
-          loading: () => const Center(child: LoadingIndicator()),
+          loading: () => const _PlanDetailLoadingView(),
           error: (err, _) => CustomErrorWidget.page(
             context: context,
-            message: l10n.planLoadFailed(err.toString()),
-            onRetry: () => ref.refresh(planDetailProvider(widget.planId)),
+            title: '计划加载失败',
+            message: _buildPlanLoadErrorMessage(err),
+            onRetry: () => ref.invalidate(planDetailProvider(widget.planId)),
           ),
         ),
       ),
     );
+  }
+
+  String _buildPlanLoadErrorMessage(Object error) {
+    final raw = error.toString().trim();
+    final normalized = raw.toLowerCase();
+
+    if (normalized.contains('404') ||
+        normalized.contains('not found') ||
+        normalized.contains('plan ') && normalized.contains('not')) {
+      return '计划刚生成完成，详情可能还在同步。点“重试”继续加载就好。';
+    }
+    if (normalized.contains('timeout')) {
+      return '加载计划超时了，请检查网络后再试一次。';
+    }
+    if (raw.isEmpty) {
+      return '计划详情暂时没加载出来，请重试一次。';
+    }
+    return '计划详情暂时没加载出来：$raw';
   }
 
   Future<void> _showShareSheet(BuildContext context, PlanModel plan) async {
@@ -236,6 +291,7 @@ class _PlanOverviewTab extends ConsumerWidget {
         ? Formatters.formatDateMedium(plan.targetDate!)
         : null;
     final parsedDescription = PlanDescriptionCodec.parse(plan.description);
+    final mergedTasks = _mergedPlanTasks(plan);
 
     return ContentConstraint(
       child: ListView(
@@ -256,7 +312,14 @@ class _PlanOverviewTab extends ConsumerWidget {
                     padding: EdgeInsets.only(bottom: DS.lg),
                     child: Center(child: LoadingIndicator()),
                   ),
-                  error: (err, _) => const SizedBox.shrink(),
+                  error: (err, _) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.lg),
+                    child: _InlinePlanSectionError(
+                      message: '学习路径进度加载失败：$err',
+                      onRetry: () =>
+                          ref.invalidate(learningPathProgressProvider(plan.id)),
+                    ),
+                  ),
                 );
               },
             ),
@@ -328,6 +391,13 @@ class _PlanOverviewTab extends ConsumerWidget {
           const SizedBox(height: DS.lg),
           if (_isLast24hMode(plan)) ...[
             _Last24hSprintBanner(plan: plan),
+            const SizedBox(height: DS.lg),
+          ],
+          if (_hasExamSprintContext(plan, mergedTasks)) ...[
+            _ExamSprintContextSection(
+              plan: plan,
+              tasks: mergedTasks,
+            ),
             const SizedBox(height: DS.lg),
           ],
           _PlanExecutionSection(
@@ -578,6 +648,227 @@ class _PlanExecutionSection extends StatelessWidget {
           _ExpandableFullPlan(plan: plan, tasks: tasks),
         ],
       ],
+    );
+  }
+}
+
+class _ExamSprintContextSection extends StatelessWidget {
+  const _ExamSprintContextSection({
+    required this.plan,
+    required this.tasks,
+  });
+
+  final PlanModel plan;
+  final List<TaskModel> tasks;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = _buildPlanDayGroups(tasks);
+    final highlightDay = _highlightDay(plan, groups);
+    final highlightedTasks = _highlightTasks(plan, groups, highlightDay);
+    final packName = _sprintPackName(plan);
+    final sprintModeLabel = _sprintModeLabel(plan, tasks);
+    final compressionSummary = _compressionSummary(
+      plan: plan,
+      tasks: highlightedTasks,
+      day: highlightDay,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GraphiteCardSurface(
+          key: const ValueKey('exam-sprint-context-card'),
+          surfaceRole: SparkleSurfaceRole.card,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
+                  _PlanMetaChip(
+                    icon: Icons.flash_on_rounded,
+                    label: sprintModeLabel,
+                  ),
+                  if (packName != null)
+                    _PlanMetaChip(
+                      icon: Icons.inventory_2_outlined,
+                      label: packName,
+                    ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing12),
+              Text(
+                'Sprint Pack 节点',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: DS.fontWeightBold,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing6),
+              Text(
+                '今天先把这些高收益节点接稳，任务完成后对应圆点会点亮。',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              if (highlightedTasks.isEmpty)
+                Text(
+                  '冲刺节点还在整理中。',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                )
+              else
+                ...highlightedTasks.map(
+                  (task) => Padding(
+                    padding: const EdgeInsets.only(bottom: DS.spacing8),
+                    child: _SprintPackNodeRow(task: task),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (compressionSummary != null) ...[
+          const SizedBox(height: DS.spacing12),
+          _AdaptiveCompressionBanner(summary: compressionSummary),
+        ],
+      ],
+    );
+  }
+}
+
+class _SprintPackNodeRow extends StatelessWidget {
+  const _SprintPackNodeRow({required this.task});
+
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final dotColor = _taskStatusColor(task.status);
+    final kind = _taskProtocolKind(task);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing12,
+        vertical: DS.spacing10,
+      ),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          Container(
+            key: ValueKey('sprint-pack-node-dot-${task.id}'),
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: DS.spacing10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _sprintPackNodeLabel(task),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+                if (kind != null) ...[
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    kind,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Text(
+            '${task.estimatedMinutes} 分钟',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdaptiveCompressionBanner extends StatelessWidget {
+  const _AdaptiveCompressionBanner({required this.summary});
+
+  final _CompressionSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('plan-adaptive-compression-banner'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        color: DS.warning.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: DS.warning.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(DS.spacing8),
+            decoration: BoxDecoration(
+              color: DS.warning.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.content_cut_rounded, color: DS.warning, size: 18),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '已为你精简今日计划',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing6),
+                Text(
+                  '今天只保留 ${summary.taskCount} 个任务 / ${summary.totalMinutes} 分钟，先把主线接回来。',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                ),
+                if (summary.reason != null) ...[
+                  const SizedBox(height: DS.spacing6),
+                  Text(
+                    summary.reason!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.45,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -842,6 +1133,13 @@ class _TodayTaskCard extends StatelessWidget {
                 label: _taskStatusLabel(task.status),
                 color: statusColor,
               ),
+              if (_taskProtocolKind(task) != null)
+                _TaskMetaPill(
+                  key: ValueKey('plan-task-kind-pill-${task.id}'),
+                  icon: Icons.hub_outlined,
+                  label: _taskProtocolKind(task)!,
+                  color: DS.brandPrimary,
+                ),
               if (isLast24hTask)
                 _TaskMetaPill(
                   icon: Icons.block_rounded,
@@ -1132,6 +1430,7 @@ class _TaskMetaPill extends StatelessWidget {
   const _TaskMetaPill({
     required this.icon,
     required this.label,
+    super.key,
     this.color,
   });
 
@@ -1218,6 +1517,18 @@ class _PlanDayGroup {
       tasks.fold<int>(0, (sum, task) => sum + task.estimatedMinutes);
 }
 
+class _CompressionSummary {
+  const _CompressionSummary({
+    required this.taskCount,
+    required this.totalMinutes,
+    this.reason,
+  });
+
+  final int taskCount;
+  final int totalMinutes;
+  final String? reason;
+}
+
 List<TaskModel> _mergedPlanTasks(PlanModel plan) {
   final merged = <TaskModel>[];
   final seen = <String>{};
@@ -1239,6 +1550,19 @@ List<TaskModel> _mergedPlanTasks(PlanModel plan) {
   return merged;
 }
 
+bool _hasExamSprintContext(PlanModel plan, List<TaskModel> tasks) {
+  if (plan.type != PlanType.sprint) return false;
+  if ((plan.sourceMetadata ??
+          const <String, dynamic>{})['exam_sprint_intake'] !=
+      null) {
+    return true;
+  }
+  return tasks.any(
+    (task) =>
+        task.tags.contains('exam_sprint') || _taskProtocolKind(task) != null,
+  );
+}
+
 bool _isLast24hMode(PlanModel plan) {
   final metadata = plan.sourceMetadata ?? const <String, dynamic>{};
   if (metadata['last_24h_mode'] == true) return true;
@@ -1251,6 +1575,133 @@ bool _isLast24hMode(PlanModel plan) {
   final today = DateTime(now.year, now.month, now.day);
   final examDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
   return examDay.difference(today).inDays <= 1;
+}
+
+String? _sprintPackName(PlanModel plan) {
+  final metadata = plan.sourceMetadata ?? const <String, dynamic>{};
+  final intake = metadata['exam_sprint_intake'];
+  if (intake is! Map) return null;
+  final selectedPack = intake['selected_pack'];
+  if (selectedPack is! Map) return null;
+  final name = '${selectedPack['pack_name'] ?? ''}'.trim();
+  return name.isEmpty ? null : name;
+}
+
+String _sprintModeLabel(PlanModel plan, List<TaskModel> tasks) {
+  final metadata = plan.sourceMetadata ?? const <String, dynamic>{};
+  final intake = metadata['exam_sprint_intake'];
+  if (intake is Map) {
+    final goalModel = intake['goal_model'];
+    final daysLeft = goalModel is Map
+        ? int.tryParse('${goalModel['days_left'] ?? ''}')
+        : null;
+    if (daysLeft == 7) {
+      return '7 天冲刺模式';
+    }
+    final strategyPreview = intake['strategy_preview'];
+    final sprintMode = strategyPreview is Map
+        ? '${strategyPreview['sprint_mode'] ?? ''}'.trim()
+        : '';
+    if (sprintMode.contains('seven_day')) {
+      return '7 天冲刺模式';
+    }
+  }
+  final totalDays = tasks
+      .map(_taskDay)
+      .fold<int>(0, (maxDay, day) => day > maxDay ? day : maxDay);
+  return totalDays >= 7 ? '7 天冲刺模式' : '考试冲刺模式';
+}
+
+String _sprintPackNodeLabel(TaskModel task) {
+  final guide = task.guideJson ?? const <String, dynamic>{};
+  final subjectStrategy = _asStringKeyedMap(guide['subject_strategy']);
+  final dailySpec = _asStringKeyedMap(guide['daily_spec']);
+  final candidates = [
+    subjectStrategy?['primary_node_label'],
+    guide['primary_target'],
+    dailySpec?['primary_target'],
+    guide['title_focus'],
+    task.title,
+  ];
+  for (final candidate in candidates) {
+    final text = '$candidate'.trim();
+    if (text.isNotEmpty) return text;
+  }
+  return task.title;
+}
+
+String? _taskProtocolKind(TaskModel task) {
+  final guide = task.guideJson ?? const <String, dynamic>{};
+  final dailySpec = _asStringKeyedMap(guide['daily_spec']);
+  final candidates = [
+    guide['task_card_template_id'],
+    guide['template_id'],
+    guide['task_kind'],
+    dailySpec?['task_card_template_id'],
+    dailySpec?['template_id'],
+    dailySpec?['task_kind'],
+  ];
+  for (final candidate in candidates) {
+    final text = '$candidate'.trim();
+    if (text.isEmpty || text == 'null' || text == 'generic_task') continue;
+    return text;
+  }
+  return null;
+}
+
+_CompressionSummary? _compressionSummary({
+  required PlanModel plan,
+  required List<TaskModel> tasks,
+  required int day,
+}) {
+  if (tasks.isEmpty) return null;
+  final metadata = plan.sourceMetadata ?? const <String, dynamic>{};
+  final adaptive = _asStringKeyedMap(metadata['adaptive_compressions']);
+  final dayCompression =
+      adaptive != null ? _asStringKeyedMap(adaptive['$day']) : null;
+  final compressedTasks = tasks.where((task) {
+    final guide = task.guideJson ?? const <String, dynamic>{};
+    final dailySpec = _asStringKeyedMap(guide['daily_spec']);
+    return guide['compressed'] == true ||
+        dailySpec?['compressed'] == true ||
+        _taskProtocolKind(task) == 'compressed_recovery' ||
+        task.tags.contains('adaptive_compressed');
+  }).toList();
+  if (dayCompression == null && compressedTasks.isEmpty) return null;
+
+  final relevantTasks = compressedTasks.isEmpty ? tasks : compressedTasks;
+  final reason = [
+    if (dayCompression != null)
+      '${dayCompression['compression_reason'] ?? ''}'.trim(),
+    ...relevantTasks
+        .map(
+          (task) =>
+              '${(task.guideJson ?? const <String, dynamic>{})['compression_reason'] ?? ''}'
+                  .trim(),
+        )
+        .where((text) => text.isNotEmpty),
+  ].where((text) => text.isNotEmpty).cast<String>().toSet().join(' ');
+
+  return _CompressionSummary(
+    taskCount: relevantTasks.length,
+    totalMinutes: relevantTasks.fold<int>(
+      0,
+      (sum, task) => sum + task.estimatedMinutes,
+    ),
+    reason: reason.isEmpty ? null : reason,
+  );
+}
+
+Map<String, dynamic>? _asStringKeyedMap(Object? value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    try {
+      return Map<String, dynamic>.from(value);
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
 }
 
 bool _isLast24hTask(TaskModel task) {
@@ -1404,6 +1855,50 @@ Color _taskStatusColor(TaskStatus status) {
     case TaskStatus.abandoned:
       return DS.textSecondary;
   }
+}
+
+class _PlanDetailLoadingView extends StatelessWidget {
+  const _PlanDetailLoadingView();
+
+  @override
+  Widget build(BuildContext context) => ContentConstraint(
+        child: ListView(
+          padding: const EdgeInsets.all(DS.lg),
+          children: const [
+            SparkleCardSkeleton(),
+            SizedBox(height: DS.spacing16),
+            _PlanTaskSectionSkeleton(),
+            SizedBox(height: DS.spacing16),
+            _PlanTaskSectionSkeleton(compact: true),
+          ],
+        ),
+      );
+}
+
+class _PlanTaskSectionSkeleton extends StatelessWidget {
+  const _PlanTaskSectionSkeleton({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SparkleSkeleton(
+            width: compact ? 88 : 120,
+            height: 20,
+            borderRadius: 10,
+          ),
+          const SizedBox(height: DS.spacing12),
+          if (compact)
+            const SparkleCardSkeleton()
+          else ...const [
+            TaskCardSkeleton(),
+            SizedBox(height: DS.spacing12),
+            TaskCardSkeleton(),
+          ],
+        ],
+      );
 }
 
 class _PlanMetaChip extends StatelessWidget {
@@ -1812,11 +2307,9 @@ class _PlanPhaseSection extends ConsumerWidget {
           children: [
             const _SectionHeader(title: '计划阶段'),
             const SizedBox(height: DS.spacing12),
-            Text(
-              '阶段加载失败: $err',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: DS.semanticError,
-                  ),
+            _InlinePlanSectionError(
+              message: '阶段加载失败：$err',
+              onRetry: () => ref.invalidate(planPhasesProvider(plan.id)),
             ),
           ],
         ),
@@ -2072,6 +2565,49 @@ class _PlanPhaseSection extends ConsumerWidget {
         AppFeedback.error(context, 'Submit feedback failed: $e');
       }
     }
+  }
+}
+
+class _InlinePlanSectionError extends StatelessWidget {
+  const _InlinePlanSectionError({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.semanticError.withValues(alpha: 0.08),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: DS.semanticError.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, color: DS.semanticError),
+          const SizedBox(width: DS.spacing10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.semanticError,
+                  ),
+            ),
+          ),
+          const SizedBox(width: DS.spacing10),
+          SparkleButton.ghost(
+            onPressed: onRetry,
+            label: '重试',
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+    );
   }
 }
 

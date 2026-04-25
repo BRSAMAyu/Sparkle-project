@@ -2,66 +2,103 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 
 class LearningPortfolioScreen extends ConsumerWidget {
   const LearningPortfolioScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<AsyncValue<LearningPortfolioResult>>(
+      learningPortfolioProvider,
+      (previous, next) {
+        next.whenOrNull(
+          error: (error, _) {
+            final previousMessage =
+                previous?.hasError == true ? previous!.error.toString() : null;
+            final nextMessage = error.toString();
+            if (previousMessage == nextMessage) {
+              return;
+            }
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text('学习档案加载失败'),
+                  action: SnackBarAction(
+                    label: '重试',
+                    onPressed: () => ref.invalidate(learningPortfolioProvider),
+                  ),
+                ),
+              );
+          },
+        );
+      },
+    );
+
     final portfolioAsync = ref.watch(learningPortfolioProvider);
 
-    return SparklePageScaffold(
-      role: SparklePageRole.content,
-      appBar: AppBar(
-        leading: SparkleIconButton(
-          variant: ButtonVariant.ghost,
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('我的学习档案'),
-      ),
-      child: ContentConstraint(
-        child: portfolioAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (Object error, StackTrace stackTrace) => _PortfolioErrorState(
-            message: error.toString(),
+    return RouteResilienceScope(
+      fallbackRoute: UserRoutes.profile,
+      child: SparklePageScaffold(
+        role: SparklePageRole.content,
+        appBar: AppBar(
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => RouteResilience.popOrGo(
+              context,
+              fallbackRoute: UserRoutes.profile,
+            ),
           ),
-          data: (LearningPortfolioResult portfolio) {
-            if (portfolio.isEmpty) {
-              return _PortfolioEmptyState(
-                onStartSprint: () => context.push(PlanRoutes.examSprintSetup),
-              );
-            }
+          title: const Text('我的学习档案'),
+        ),
+        child: ContentConstraint(
+          child: portfolioAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (Object error, StackTrace stackTrace) =>
+                _PortfolioErrorState(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(learningPortfolioProvider),
+            ),
+            data: (LearningPortfolioResult portfolio) {
+              if (portfolio.isEmpty) {
+                return _PortfolioEmptyState(
+                  onStartSprint: () => context.push(PlanRoutes.examSprintSetup),
+                );
+              }
 
-            return ListView(
-              padding: const EdgeInsets.all(DS.spacing16),
-              children: [
-                _PortfolioSummaryCard(portfolio: portfolio),
-                const SizedBox(height: DS.spacing16),
-                _PortfolioGroupSection(
-                  title: '进行中',
-                  subtitle: '继续追踪每一门课当前冲刺的节奏与掌握进展。',
-                  entries: portfolio.activeEntries,
-                ),
-                const SizedBox(height: DS.spacing16),
-                _PortfolioGroupSection(
-                  title: '已完成',
-                  subtitle: '回看已经跑完的冲刺，保留每次考试前后的成长轨迹。',
-                  entries: portfolio.completedEntries,
-                ),
-                const SizedBox(height: DS.spacing16),
-                _PortfolioGroupSection(
-                  title: '计划中',
-                  subtitle: '已经排进学习档案，但还没正式开跑的冲刺。',
-                  entries: portfolio.plannedEntries,
-                ),
-                const SizedBox(height: DS.spacing32),
-              ],
-            );
-          },
+              return ListView(
+                padding: const EdgeInsets.all(DS.spacing16),
+                children: [
+                  _PortfolioSummaryCard(portfolio: portfolio),
+                  const SizedBox(height: DS.spacing16),
+                  _PortfolioGroupSection(
+                    title: '进行中',
+                    subtitle: '继续追踪每一门课当前冲刺的节奏与掌握进展。',
+                    entries: portfolio.activeEntries,
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  _PortfolioGroupSection(
+                    title: '已完成',
+                    subtitle: '回看已经跑完的冲刺，保留每次考试前后的成长轨迹。',
+                    entries: portfolio.completedEntries,
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  _PortfolioGroupSection(
+                    title: '计划中',
+                    subtitle: '已经排进学习档案，但还没正式开跑的冲刺。',
+                    entries: portfolio.plannedEntries,
+                  ),
+                  const SizedBox(height: DS.spacing32),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -431,19 +468,34 @@ class _PortfolioEmptyState extends StatelessWidget {
 }
 
 class _PortfolioErrorState extends StatelessWidget {
-  const _PortfolioErrorState({required this.message});
+  const _PortfolioErrorState({
+    required this.message,
+    required this.onRetry,
+  });
 
   final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing24),
-        child: Text(
-          '学习档案加载失败：$message',
-          textAlign: TextAlign.center,
-          style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '学习档案加载失败：$message',
+              textAlign: TextAlign.center,
+              style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+            ),
+            const SizedBox(height: DS.spacing16),
+            SparkleButton(
+              label: '重试',
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: onRetry,
+            ),
+          ],
         ),
       ),
     );

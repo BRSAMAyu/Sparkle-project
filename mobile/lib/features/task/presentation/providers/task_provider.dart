@@ -16,6 +16,7 @@ import 'package:sparkle/features/calendar/data/repositories/calendar_repository.
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
+import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
@@ -408,6 +409,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           // retryToken: updatedTask.retryToken, // Repo needs to return this or we assume updatedTask has it
         ),
       );
+      _ref.read(galaxyRefreshTriggerProvider.notifier).state++;
       unawaited(
         _ref.read(galaxyProvider.notifier).refreshForTaskCompletion(
               galaxyUpdate: result.galaxyUpdate,
@@ -416,6 +418,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       if (updatedTask.planId != null) {
         _ref.invalidate(planDetailProvider(updatedTask.planId!));
       }
+      _ref.invalidate(weeklyGrowthNarrativeProvider);
 
       final linkedPrediction = await _ref
           .read(predictionAttributionServiceProvider)
@@ -503,6 +506,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           syncStatus: TaskSyncStatus.synced,
         ),
       );
+      _ref.read(galaxyRefreshTriggerProvider.notifier).state++;
       unawaited(
         _ref.read(galaxyProvider.notifier).refreshForTaskCompletion(
               galaxyUpdate: result.galaxyUpdate,
@@ -511,6 +515,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       if (updatedTask.planId != null) {
         _ref.invalidate(planDetailProvider(updatedTask.planId!));
       }
+      _ref.invalidate(weeklyGrowthNarrativeProvider);
       final linkedPrediction = await _ref
           .read(predictionAttributionServiceProvider)
           .consumeForExecution(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -158,6 +159,15 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               ),
       );
 
+  bool get _hasAnyMemoryContent =>
+      _preferences.isNotEmpty ||
+      _goals.isNotEmpty ||
+      _episodic.isNotEmpty ||
+      _recentScenes.isNotEmpty ||
+      (_foresightHint?.hintText?.isNotEmpty ?? false) ||
+      _pendingCommitments.isNotEmpty ||
+      _unresolvedConflicts.isNotEmpty;
+
   Widget _buildError(BuildContext context) => Center(
         child: Padding(
           padding: const EdgeInsets.all(DS.lg),
@@ -185,56 +195,60 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(DS.lg),
           children: [
-            if (_foresightHint?.hintText?.isNotEmpty ?? false) ...[
-              const _SectionHeader(title: '前瞻提示'),
+            if (!_hasAnyMemoryContent)
+              _buildGuidedEmptyState(context)
+            else ...[
+              if (_foresightHint?.hintText?.isNotEmpty ?? false) ...[
+                const _SectionHeader(title: '前瞻提示'),
+                const SizedBox(height: DS.sm),
+                _buildForesightHintSection(),
+                const SizedBox(height: DS.xl),
+              ],
+              if (_recentScenes.isNotEmpty) ...[
+                const _SectionHeader(title: '最近场景'),
+                const SizedBox(height: DS.sm),
+                _buildRecentScenesSection(),
+                const SizedBox(height: DS.xl),
+              ],
+              const _SectionHeader(title: '偏好'),
               const SizedBox(height: DS.sm),
-              _buildForesightHintSection(),
+              ..._preferences.map(_buildPreferenceCard),
               const SizedBox(height: DS.xl),
-            ],
-            if (_recentScenes.isNotEmpty) ...[
-              const _SectionHeader(title: '最近场景'),
+              const _SectionHeader(title: '目标'),
               const SizedBox(height: DS.sm),
-              _buildRecentScenesSection(),
+              ..._goals.map(_buildGoalCard),
+              if (_autoMemoryEntries.isNotEmpty) ...[
+                const SizedBox(height: DS.xl),
+                const _SectionHeader(title: 'AI 自动记忆'),
+                const SizedBox(height: DS.sm),
+                ..._autoMemoryEntries.map((item) => _buildEpisodicCard(item)),
+              ],
+              if (_unresolvedConflicts.isNotEmpty) ...[
+                const SizedBox(height: DS.xl),
+                UnresolvedConflictsSection(
+                  items: _unresolvedConflicts,
+                  processingIds: _processingConflictIds,
+                  onSelectLeft: _selectConflictLeft,
+                  onSelectRight: _selectConflictRight,
+                  onSelectNone: _selectConflictNone,
+                ),
+              ],
+              if (_pendingCommitments.isNotEmpty) ...[
+                const SizedBox(height: DS.xl),
+                PendingCommitmentsSection(
+                  items: _pendingCommitments,
+                  processingIds: _processingCommitmentIds,
+                  onResolve: _resolvePendingCommitment,
+                  onDismiss: _dismissPendingCommitment,
+                ),
+              ],
               const SizedBox(height: DS.xl),
-            ],
-            const _SectionHeader(title: '偏好'),
-            const SizedBox(height: DS.sm),
-            ..._preferences.map(_buildPreferenceCard),
-            const SizedBox(height: DS.xl),
-            const _SectionHeader(title: '目标'),
-            const SizedBox(height: DS.sm),
-            ..._goals.map(_buildGoalCard),
-            if (_autoMemoryEntries.isNotEmpty) ...[
-              const SizedBox(height: DS.xl),
-              const _SectionHeader(title: 'AI 自动记忆'),
+              const _SectionHeader(title: '经历'),
               const SizedBox(height: DS.sm),
-              ..._autoMemoryEntries.map((item) => _buildEpisodicCard(item)),
+              ..._episodic
+                  .where((item) => !_isInferredAutoMemory(item))
+                  .map(_buildEpisodicCard),
             ],
-            if (_unresolvedConflicts.isNotEmpty) ...[
-              const SizedBox(height: DS.xl),
-              UnresolvedConflictsSection(
-                items: _unresolvedConflicts,
-                processingIds: _processingConflictIds,
-                onSelectLeft: _selectConflictLeft,
-                onSelectRight: _selectConflictRight,
-                onSelectNone: _selectConflictNone,
-              ),
-            ],
-            if (_pendingCommitments.isNotEmpty) ...[
-              const SizedBox(height: DS.xl),
-              PendingCommitmentsSection(
-                items: _pendingCommitments,
-                processingIds: _processingCommitmentIds,
-                onResolve: _resolvePendingCommitment,
-                onDismiss: _dismissPendingCommitment,
-              ),
-            ],
-            const SizedBox(height: DS.xl),
-            const _SectionHeader(title: '经历'),
-            const SizedBox(height: DS.sm),
-            ..._episodic
-                .where((item) => !_isInferredAutoMemory(item))
-                .map(_buildEpisodicCard),
           ],
         ),
       );
@@ -249,46 +263,49 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         children: [
           SparkleStaggerItem(index: 0, child: _buildFilterBar(context)),
           const SizedBox(height: DS.md),
-          if (_foresightHint?.hintText?.isNotEmpty ?? false) ...[
-            SparkleStaggerItem(index: 1, child: _buildForesightHintSection()),
-            const SizedBox(height: DS.md),
-          ],
-          if (_recentScenes.isNotEmpty) ...[
-            SparkleStaggerItem(
-              index: _foresightHint?.hintText?.isNotEmpty ?? false ? 2 : 1,
-              child: _buildRecentScenesSection(),
-            ),
-            const SizedBox(height: DS.md),
-          ],
-          if (_unresolvedConflicts.isNotEmpty)
-            UnresolvedConflictsSection(
-              items: _unresolvedConflicts,
-              processingIds: _processingConflictIds,
-              onSelectLeft: _selectConflictLeft,
-              onSelectRight: _selectConflictRight,
-              onSelectNone: _selectConflictNone,
-            ),
-          if (_unresolvedConflicts.isNotEmpty) const SizedBox(height: DS.md),
-          if (_pendingCommitments.isNotEmpty)
-            PendingCommitmentsSection(
-              items: _pendingCommitments,
-              processingIds: _processingCommitmentIds,
-              onResolve: _resolvePendingCommitment,
-              onDismiss: _dismissPendingCommitment,
-            ),
-          if (_pendingCommitments.isNotEmpty) const SizedBox(height: DS.md),
-          if (entries.isEmpty)
-            _buildEmptyState()
-          else
-            ...entries.indexed.map(
-              (entry) => SparkleStaggerItem(
-                index:
-                    entry.$1 +
-                    (_recentScenes.isNotEmpty ? 2 : 1) +
-                    ((_foresightHint?.hintText?.isNotEmpty ?? false) ? 1 : 0),
-                child: _buildEntryCard(entry.$2),
+          if (!_hasAnyMemoryContent) ...[
+            _buildGuidedEmptyState(context),
+          ] else ...[
+            if (_foresightHint?.hintText?.isNotEmpty ?? false) ...[
+              SparkleStaggerItem(index: 1, child: _buildForesightHintSection()),
+              const SizedBox(height: DS.md),
+            ],
+            if (_recentScenes.isNotEmpty) ...[
+              SparkleStaggerItem(
+                index: _foresightHint?.hintText?.isNotEmpty ?? false ? 2 : 1,
+                child: _buildRecentScenesSection(),
               ),
-            ),
+              const SizedBox(height: DS.md),
+            ],
+            if (_unresolvedConflicts.isNotEmpty)
+              UnresolvedConflictsSection(
+                items: _unresolvedConflicts,
+                processingIds: _processingConflictIds,
+                onSelectLeft: _selectConflictLeft,
+                onSelectRight: _selectConflictRight,
+                onSelectNone: _selectConflictNone,
+              ),
+            if (_unresolvedConflicts.isNotEmpty) const SizedBox(height: DS.md),
+            if (_pendingCommitments.isNotEmpty)
+              PendingCommitmentsSection(
+                items: _pendingCommitments,
+                processingIds: _processingCommitmentIds,
+                onResolve: _resolvePendingCommitment,
+                onDismiss: _dismissPendingCommitment,
+              ),
+            if (_pendingCommitments.isNotEmpty) const SizedBox(height: DS.md),
+            if (entries.isEmpty)
+              _buildEmptyState()
+            else
+              ...entries.indexed.map(
+                (entry) => SparkleStaggerItem(
+                  index: entry.$1 +
+                      (_recentScenes.isNotEmpty ? 2 : 1) +
+                      ((_foresightHint?.hintText?.isNotEmpty ?? false) ? 1 : 0),
+                  child: _buildEntryCard(entry.$2),
+                ),
+              ),
+          ],
         ],
       ),
     );
@@ -417,6 +434,17 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             '暂无符合条件的记忆',
             style: TextStyle(color: DS.textSecondary),
           ),
+        ),
+      );
+
+  Widget _buildGuidedEmptyState(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: DS.xl),
+        child: EmptyState(
+          icon: Icons.psychology_alt_outlined,
+          title: '记忆面板还没有内容',
+          description: '先聊一聊你的目标、偏好或刚完成的学习动作，系统才会开始在这里整理长期记忆。',
+          actionText: '去开始对话',
+          onAction: () => context.go('/chat'),
         ),
       );
 

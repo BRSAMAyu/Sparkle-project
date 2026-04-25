@@ -7,10 +7,12 @@ class StuckHelpSheet extends StatelessWidget {
     required this.task,
     super.key,
     this.onChatPressed,
+    this.onContinuePressed,
   });
 
   final TaskModel task;
   final VoidCallback? onChatPressed;
+  final VoidCallback? onContinuePressed;
 
   static const List<String> genericSuggestions = [
     '把卡住的具体位置写下来',
@@ -103,6 +105,20 @@ class StuckHelpSheet extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              SizedBox(
+                width: double.infinity,
+                child: SparkleButton(
+                  key: const Key('stuck-help-continue-button'),
+                  label: '好了，继续',
+                  variant: ButtonVariant.outline,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  onPressed: () {
+                    onContinuePressed?.call();
+                    Navigator.of(context).maybePop();
+                  },
                 ),
               ),
               const SizedBox(height: DS.spacing16),

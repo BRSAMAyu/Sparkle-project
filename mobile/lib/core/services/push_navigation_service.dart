@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/features/plan/plan_routes.dart';
 
 class PushNavigationService {
   PushNavigationService(this._ref);
@@ -66,13 +67,23 @@ class PushNavigationService {
 
     final destinationRoute = payload['destination_route']?.toString();
     if (destinationRoute != null && destinationRoute.isNotEmpty) {
-      unawaited(GoRouter.of(context).push(destinationRoute));
+      unawaited(
+        RouteResilience.openExternalRoute(
+          context,
+          destinationRoute,
+          currentContextLookup: () => navigatorKey.currentContext,
+        ),
+      );
       return;
     }
 
     final deepLink = payload['deep_link']?.toString();
     if (deepLink != null && deepLink.isNotEmpty) {
-      if (DeepLinkService.handleDeepLink(context, deepLink)) {
+      if (DeepLinkService.handleExternalDeepLink(
+        context,
+        deepLink,
+        currentContextLookup: () => navigatorKey.currentContext,
+      )) {
         return;
       }
       final uri = Uri.tryParse(deepLink);
@@ -85,9 +96,10 @@ class PushNavigationService {
           case 'task':
             if (entityId != null) {
               unawaited(
-                GoRouter.of(context).pushNamed(
-                  'taskExecution',
-                  pathParameters: {'id': entityId},
+                RouteResilience.openExternalRoute(
+                  context,
+                  '/tasks/$entityId/execute',
+                  currentContextLookup: () => navigatorKey.currentContext,
                 ),
               );
             }
@@ -95,9 +107,10 @@ class PushNavigationService {
           case 'achievement':
             if (entityId != null) {
               unawaited(
-                GoRouter.of(context).pushNamed(
-                  'achievementDetail',
-                  pathParameters: {'id': entityId},
+                RouteResilience.openExternalRoute(
+                  context,
+                  '/achievements/$entityId',
+                  currentContextLookup: () => navigatorKey.currentContext,
                 ),
               );
             }
@@ -105,9 +118,13 @@ class PushNavigationService {
           case 'chat':
             if (entityId != null) {
               unawaited(
-                GoRouter.of(context).pushNamed(
-                  'chat',
-                  queryParameters: {'session_id': entityId},
+                RouteResilience.openExternalRoute(
+                  context,
+                  Uri(
+                    path: '/chat',
+                    queryParameters: {'session_id': entityId},
+                  ).toString(),
+                  currentContextLookup: () => navigatorKey.currentContext,
                 ),
               );
             }
@@ -117,16 +134,21 @@ class PushNavigationService {
                 uri.pathSegments.length > 1 &&
                 uri.pathSegments[1] == 'review') {
               unawaited(
-                GoRouter.of(context).pushNamed(
-                  'planReview',
-                  pathParameters: {'id': entityId},
+                RouteResilience.openExternalRoute(
+                  context,
+                  Uri(
+                    path: PlanRoutes.examSprintReview,
+                    queryParameters: {'plan_id': entityId},
+                  ).toString(),
+                  currentContextLookup: () => navigatorKey.currentContext,
                 ),
               );
             } else if (entityId != null) {
               unawaited(
-                GoRouter.of(context).pushNamed(
-                  'planDetail',
-                  pathParameters: {'id': entityId},
+                RouteResilience.openExternalRoute(
+                  context,
+                  '/plans/$entityId',
+                  currentContextLookup: () => navigatorKey.currentContext,
                 ),
               );
             }
@@ -141,9 +163,10 @@ class PushNavigationService {
     final entityId = payload['entity_id']?.toString();
     if (entityId != null && entityId.isNotEmpty) {
       unawaited(
-        GoRouter.of(context).pushNamed(
-          'taskExecution',
-          pathParameters: {'id': entityId},
+        RouteResilience.openExternalRoute(
+          context,
+          '/tasks/$entityId/execute',
+          currentContextLookup: () => navigatorKey.currentContext,
         ),
       );
     }

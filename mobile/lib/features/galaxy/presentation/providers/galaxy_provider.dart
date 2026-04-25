@@ -308,6 +308,8 @@ final galaxyProvider =
   return GalaxyNotifier(repository, ref);
 });
 
+final galaxyRefreshTriggerProvider = StateProvider<int>((ref) => 0);
+
 /// Broadcast when a node crosses a mastery milestone threshold.
 class MasteryMilestoneEvent {
   const MasteryMilestoneEvent({

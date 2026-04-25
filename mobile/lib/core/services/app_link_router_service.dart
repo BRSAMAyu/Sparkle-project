@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/push_navigation_service.dart';
@@ -70,7 +70,9 @@ class AppLinkRouterService {
     }
     final container = ProviderScope.containerOf(context, listen: false);
     if (container.read(pushNavigationServiceProvider).canHandleDebugUri(uri)) {
-      unawaited(container.read(pushNavigationServiceProvider).handleDebugUri(uri));
+      unawaited(
+        container.read(pushNavigationServiceProvider).handleDebugUri(uri),
+      );
       return;
     }
     final route = DeepLinkService.resolveRoute(uri.toString());
@@ -79,6 +81,12 @@ class AppLinkRouterService {
       return;
     }
     debugPrint('AppLinkRouterService navigating to: $route');
-    GoRouter.of(context).go(route);
+    unawaited(
+      RouteResilience.openExternalRoute(
+        context,
+        route,
+        currentContextLookup: () => navigatorKey.currentContext,
+      ),
+    );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 
 /// 深链接导航服务
 /// 处理 sparkle:// 协议的路由跳转
@@ -13,6 +14,7 @@ class DeepLinkService {
   static const _routeMapping = {
     'achievement': '/achievements',
     'milestone': '/achievements/milestone',
+    'insights': '/learning/insights',
     'task': '/tasks',
     'plan': '/plans',
     'capsule': '/curiosity-capsule',
@@ -40,8 +42,32 @@ class DeepLinkService {
     }
   }
 
+  /// 外部入口专用：先建立一个可退回的落点，再进入目标页面。
+  static bool handleExternalDeepLink(
+    BuildContext context,
+    String deepLink, {
+    BuildContext? Function()? currentContextLookup,
+  }) {
+    final route = resolveRoute(deepLink);
+    if (route == null || !context.mounted) return false;
+
+    unawaited(
+      RouteResilience.openExternalRoute(
+        context,
+        route,
+        currentContextLookup: currentContextLookup,
+      ),
+    );
+    return true;
+  }
+
   /// 根据资源类型和 ID 导航到对应页面
   static String? resolveRoute(String deepLink) {
+    final directRoute = deepLink.trim();
+    if (directRoute.startsWith('/')) {
+      return directRoute;
+    }
+
     final uri = Uri.tryParse(deepLink);
     if (uri == null || uri.scheme != 'sparkle') return null;
 
@@ -55,13 +81,22 @@ class DeepLinkService {
     // 构建完整路由路径
     final route = switch (type) {
       // 使用路径参数的类型
-      'achievement' => id != null ? '$baseRoute/$id' : null,
+      'achievement' => id != null
+          ? _appendQueryParameters('$baseRoute/$id', uri.queryParameters)
+          : null,
       'milestone' => id != null
           ? _appendQueryParameters('$baseRoute/$id', uri.queryParameters)
           : _appendQueryParameters(baseRoute, uri.queryParameters),
-      'task' => id != null ? '$baseRoute/$id' : null,
-      'plan' => id != null ? '$baseRoute/$id' : null,
-      'node' => id != null ? '$baseRoute/$id' : null,
+      'insights' => _resolveInsightsRoute(id, uri.queryParameters, baseRoute),
+      'task' => id != null
+          ? _appendQueryParameters('$baseRoute/$id', uri.queryParameters)
+          : null,
+      'plan' => id != null
+          ? _appendQueryParameters('$baseRoute/$id', uri.queryParameters)
+          : null,
+      'node' => id != null
+          ? _appendQueryParameters('$baseRoute/$id', uri.queryParameters)
+          : null,
       // 使用 query 参数的类型
       'capsule' => id != null ? '$baseRoute?highlight=$id' : baseRoute,
       'prism' => id != null ? '$baseRoute?highlight=$id' : baseRoute,
@@ -73,6 +108,19 @@ class DeepLinkService {
       _ => null,
     };
     return route;
+  }
+
+  static String _resolveInsightsRoute(
+    String? id,
+    Map<String, String> queryParameters,
+    String baseRoute,
+  ) {
+    final merged = <String, String>{...queryParameters};
+    if ((id == 'weekly' || id == 'narrative') &&
+        !merged.containsKey('initialPanel')) {
+      merged['initialPanel'] = 'weeklyNarrative';
+    }
+    return _appendQueryParameters(baseRoute, merged);
   }
 
   /// 检查深链接是否有效

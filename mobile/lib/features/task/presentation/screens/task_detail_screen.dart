@@ -368,6 +368,23 @@ class _TaskDetailView extends ConsumerWidget {
                                 fontWeight: DS.fontWeightBold,
                               ),
                             ),
+                            if (_taskProtocolKind(task) != null)
+                              Chip(
+                                key: const ValueKey('task-protocol-kind-chip'),
+                                label: Text(
+                                  _taskProtocolKind(task)!,
+                                  style:
+                                      const TextStyle(fontSize: DS.fontSizeSm),
+                                ),
+                                backgroundColor:
+                                    DS.surfaceOverlay.withValues(alpha: 0.92),
+                                avatar: Icon(
+                                  Icons.hub_outlined,
+                                  size: DS.iconSizeXs,
+                                  color: DS.textSecondary,
+                                ),
+                                labelStyle: TextStyle(color: DS.textPrimary),
+                              ),
                           ],
                         ),
                       ],
@@ -639,6 +656,25 @@ class _TaskDetailView extends ConsumerWidget {
       case TaskType.ocr:
         return l10n.taskTypeLearning;
     }
+  }
+
+  String? _taskProtocolKind(TaskModel task) {
+    final guide = task.guideJson ?? const <String, dynamic>{};
+    final dailySpec = guide['daily_spec'];
+    final candidates = [
+      guide['task_card_template_id'],
+      guide['template_id'],
+      guide['task_kind'],
+      if (dailySpec is Map) dailySpec['task_card_template_id'],
+      if (dailySpec is Map) dailySpec['template_id'],
+      if (dailySpec is Map) dailySpec['task_kind'],
+    ];
+    for (final candidate in candidates) {
+      final text = '$candidate'.trim();
+      if (text.isEmpty || text == 'null' || text == 'generic_task') continue;
+      return text;
+    }
+    return null;
   }
 
   String _taskStatusLabel(BuildContext context, TaskStatus status) {

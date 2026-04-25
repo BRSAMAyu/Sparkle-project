@@ -5,11 +5,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/features/achievement/achievement_routes.dart';
+import 'package:sparkle/features/home/home_routes.dart';
 
 class MilestoneCelebrationPayload {
   const MilestoneCelebrationPayload({
@@ -212,78 +214,92 @@ class _MilestoneCelebrationScreenState
       '累计学习 ${payload.studyDays} 天，掌握 ${payload.masteredNodes} 个知识节点，'
       '完成 ${payload.completedSprints} 次冲刺，记录 ${payload.errorCount} 道错题。';
 
+  void _dismissToAchievements() {
+    RouteResilience.popOrGo(
+      context,
+      fallbackRoute: AchievementRoutes.basePath,
+    );
+  }
+
+  void _continueLearning() {
+    RouteResilience.popOrGo(context, fallbackRoute: HomeRoutes.home);
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: DS.surfacePrimary,
-        body: SparkleConfetti(
-          play: true,
-          intensity: SparkleCelebrationIntensity.large,
-          child: SafeArea(
-            child: Stack(
-              children: [
-                const Positioned.fill(child: _MilestoneBackdrop()),
-                Positioned(
-                  top: DS.spacing8,
-                  left: DS.spacing8,
-                  child: SparkleIconButton(
-                    variant: ButtonVariant.ghost,
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => context.pop(),
-                  ),
-                ),
-                Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
-                      DS.spacing20,
-                      DS.spacing56,
-                      DS.spacing20,
-                      DS.spacing24,
+  Widget build(BuildContext context) => RouteResilienceScope(
+        fallbackRoute: AchievementRoutes.basePath,
+        child: Scaffold(
+          backgroundColor: DS.surfacePrimary,
+          body: SparkleConfetti(
+            play: true,
+            intensity: SparkleCelebrationIntensity.large,
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  const Positioned.fill(child: _MilestoneBackdrop()),
+                  Positioned(
+                    top: DS.spacing8,
+                    left: DS.spacing8,
+                    child: SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: _dismissToAchievements,
                     ),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          RepaintBoundary(
-                            key: _shareBoundaryKey,
-                            child: _MilestoneHeroCard(
-                              payload: widget.payload,
-                              numberController: _numberController,
+                  ),
+                  Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(
+                        DS.spacing20,
+                        DS.spacing56,
+                        DS.spacing20,
+                        DS.spacing24,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 760),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RepaintBoundary(
+                              key: _shareBoundaryKey,
+                              child: _MilestoneHeroCard(
+                                payload: widget.payload,
+                                numberController: _numberController,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: DS.spacing20),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: DS.spacing12,
-                            runSpacing: DS.spacing12,
-                            children: [
-                              FilledButton.icon(
-                                key: const ValueKey('milestone-share'),
-                                onPressed: _isSharing ? null : _share,
-                                icon: _isSharing
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(Icons.ios_share_rounded),
-                                label: Text(_isSharing ? '分享中...' : '分享这一刻'),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: () => context.pop(),
-                                icon: const Icon(Icons.check_circle_outline),
-                                label: const Text('继续学习'),
-                              ),
-                            ],
-                          ),
-                        ],
+                            const SizedBox(height: DS.spacing20),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: DS.spacing12,
+                              runSpacing: DS.spacing12,
+                              children: [
+                                FilledButton.icon(
+                                  key: const ValueKey('milestone-share'),
+                                  onPressed: _isSharing ? null : _share,
+                                  icon: _isSharing
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.ios_share_rounded),
+                                  label: Text(_isSharing ? '分享中...' : '分享这一刻'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: _continueLearning,
+                                  icon: const Icon(Icons.check_circle_outline),
+                                  label: const Text('继续学习'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

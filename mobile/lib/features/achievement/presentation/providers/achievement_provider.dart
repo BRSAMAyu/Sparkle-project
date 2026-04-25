@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:sparkle/features/achievement/data/repositories/achievement_repos
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
+import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 // ========== Achievement State ==========
@@ -243,6 +245,45 @@ final pendingAchievementUnlockProvider = StateNotifierProvider<
     ({chat.AchievementUnlockEvent event, int? comboCount})?>(
   (ref) => PendingAchievementUnlockNotifier(),
 );
+
+final achievementEventConsumerProvider = Provider.autoDispose<void>((ref) {
+  final stream = ref.watch(communityEventsStreamProvider);
+  final subscription = stream.listen((dynamic event) {
+    final payload = _decodeAchievementEventPayload(event);
+    if (payload == null || payload['type'] != 'achievement_unlock') {
+      return;
+    }
+    ref.invalidate(achievementProvider);
+    ref.invalidate(streakHistoryProvider);
+  });
+
+  ref.onDispose(() {
+    unawaited(subscription.cancel());
+  });
+});
+
+Map<String, dynamic>? _decodeAchievementEventPayload(dynamic event) {
+  if (event is Map<String, dynamic>) {
+    return event;
+  }
+  if (event is Map) {
+    return Map<String, dynamic>.from(event);
+  }
+  if (event is String && event.isNotEmpty) {
+    try {
+      final decoded = jsonDecode(event);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
 
 class PendingAchievementUnlockNotifier extends StateNotifier<
     ({chat.AchievementUnlockEvent event, int? comboCount})?> {

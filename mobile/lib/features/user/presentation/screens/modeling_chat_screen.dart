@@ -5,12 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/features/user/user_routes.dart';
 
 class ModelingChatScreen extends ConsumerStatefulWidget {
   const ModelingChatScreen({
@@ -36,10 +41,13 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
 
   String? _conversationId;
   bool _completed = false;
+  bool _planningInFlight = false;
+  bool _planningStarted = false;
   bool _skipInFlight = false;
   int _requestSequence = 0;
   int _messageSequence = 0;
   Map<String, dynamic>? _modelingOutput;
+  String? _planningErrorMessage;
 
   bool get _hasActiveAuroraRun => _runSubscriptions.isNotEmpty;
 
@@ -69,189 +77,187 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SparklePageScaffold(
-        role: SparklePageRole.content,
-        appBar: AppBar(
-          title: const Text('让我更了解你（约2分钟）'),
-          actions: [
-            TextButton(
-              onPressed: _skipInFlight ? null : () => unawaited(_skip()),
-              child: const Text('跳过'),
-            ),
-          ],
-        ),
-        child: ContentConstraint(
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(DS.spacing16),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final message = _messages[index];
-                    final isUser = message.isUser;
-                    final label = isUser ? '你' : 'Aurora';
-                    return Align(
-                      alignment:
-                          isUser ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Column(
-                        crossAxisAlignment: isUser
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              left: DS.spacing4,
-                              right: DS.spacing4,
-                              bottom: DS.spacing4,
-                            ),
-                            child: Text(
-                              label,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(
-                                    color: DS.textSecondary,
-                                    fontWeight: DS.fontWeightSemibold,
-                                  ),
-                            ),
-                          ),
-                          Container(
-                            margin: const EdgeInsets.only(bottom: DS.spacing12),
-                            padding: const EdgeInsets.all(DS.spacing12),
-                            constraints: const BoxConstraints(maxWidth: 520),
-                            decoration: BoxDecoration(
-                              color:
-                                  isUser ? DS.primaryBase : DS.surfaceSecondary,
-                              borderRadius: DS.borderRadius16,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  message.text,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: isUser
-                                            ? DS.brandPrimaryConst
-                                            : DS.textPrimary,
-                                        height: 1.45,
-                                      ),
-                                ),
-                                if (!isUser && message.isStreaming)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: DS.spacing8,
-                                    ),
-                                    child: Text(
-                                      '输入中…',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(color: DS.textSecondary),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+  Widget build(BuildContext context) => RouteResilienceScope(
+        fallbackRoute: UserRoutes.personaOnboarding,
+        child: SparklePageScaffold(
+          role: SparklePageRole.content,
+          appBar: AppBar(
+            title: const Text('让我更了解你（约2分钟）'),
+            actions: [
+              TextButton(
+                onPressed: (_skipInFlight || _planningInFlight)
+                    ? null
+                    : () => unawaited(_skip()),
+                child: const Text('跳过'),
               ),
-              if (_completed)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    DS.spacing16,
-                    0,
-                    DS.spacing16,
-                    DS.spacing16,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SparkleButton(
-                        label: '开始规划',
-                        onPressed: _finishWithPlanning,
-                      ),
-                      const SizedBox(height: DS.spacing8),
-                      TextButton(
-                        onPressed: _finish,
-                        child: Text(
-                          '还想聊聊',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: DS.textSecondary,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                SafeArea(
-                  top: false,
-                  child: Padding(
+            ],
+          ),
+          child: ContentConstraint(
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(DS.spacing16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_hasActiveAuroraRun)
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: DS.spacing8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: DS.spacing12,
-                              vertical: DS.spacing10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: DS.surfaceSecondary,
-                              borderRadius: DS.borderRadius12,
-                            ),
-                            child: Text(
-                              'Aurora 可能会连续发几条，你也可以直接插话。',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: DS.textSecondary),
-                            ),
-                          ),
-                        Row(
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      final isUser = message.isUser;
+                      final label = isUser ? '你' : 'Aurora';
+                      return Align(
+                        alignment: isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Column(
+                          crossAxisAlignment: isUser
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _inputController,
-                                enabled: !_skipInFlight,
-                                onSubmitted: (_) => _handleSubmit(),
-                                decoration: const InputDecoration(
-                                  hintText: '输入你的回答…',
-                                ),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                left: DS.spacing4,
+                                right: DS.spacing4,
+                                bottom: DS.spacing4,
+                              ),
+                              child: Text(
+                                label,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: DS.textSecondary,
+                                      fontWeight: DS.fontWeightSemibold,
+                                    ),
                               ),
                             ),
-                            const SizedBox(width: DS.spacing8),
-                            SparkleIconButton(
-                              icon: _skipInFlight
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
+                            Container(
+                              margin:
+                                  const EdgeInsets.only(bottom: DS.spacing12),
+                              padding: const EdgeInsets.all(DS.spacing12),
+                              constraints: const BoxConstraints(maxWidth: 520),
+                              decoration: BoxDecoration(
+                                color: isUser
+                                    ? DS.primaryBase
+                                    : DS.surfaceSecondary,
+                                borderRadius: DS.borderRadius16,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    message.text,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: isUser
+                                              ? DS.brandPrimaryConst
+                                              : DS.textPrimary,
+                                          height: 1.45,
+                                        ),
+                                  ),
+                                  if (!isUser && message.isStreaming)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: DS.spacing8,
                                       ),
-                                    )
-                                  : const Icon(Icons.send_rounded),
-                              onPressed: _skipInFlight ? null : _handleSubmit,
+                                      child: Text(
+                                        '输入中…',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(color: DS.textSecondary),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
-            ],
+                if (_completed)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      DS.spacing16,
+                      0,
+                      DS.spacing16,
+                      DS.spacing16,
+                    ),
+                    child: _PlanningBridgeStatus(
+                      isLoading: _planningInFlight || _planningStarted,
+                      errorMessage: _planningErrorMessage,
+                      onRetry: _planningInFlight
+                          ? null
+                          : () => unawaited(_autoStartPlanning()),
+                      onSkip: _planningInFlight ? null : _finish,
+                    ),
+                  )
+                else
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_hasActiveAuroraRun)
+                            Container(
+                              width: double.infinity,
+                              margin:
+                                  const EdgeInsets.only(bottom: DS.spacing8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: DS.spacing12,
+                                vertical: DS.spacing10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: DS.surfaceSecondary,
+                                borderRadius: DS.borderRadius12,
+                              ),
+                              child: Text(
+                                'Aurora 可能会连续发几条，你也可以直接插话。',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: DS.textSecondary),
+                              ),
+                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _inputController,
+                                  enabled: !_skipInFlight,
+                                  onSubmitted: (_) => _handleSubmit(),
+                                  decoration: const InputDecoration(
+                                    hintText: '输入你的回答…',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: DS.spacing8),
+                              SparkleIconButton(
+                                icon: _skipInFlight
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.send_rounded),
+                                onPressed: _skipInFlight ? null : _handleSubmit,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       );
@@ -519,6 +525,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     }
     if (mounted) {
       setState(() {});
+      _scheduleAutoPlanningIfReady();
     }
   }
 
@@ -547,6 +554,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       }
     });
     ref.invalidate(profileContextProvider);
+    _scheduleAutoPlanningIfReady();
   }
 
   Future<void> _skip() async {
@@ -604,17 +612,6 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     }
   }
 
-  Future<void> _finishWithPlanning() async {
-    await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
-    ref.invalidate(profileContextProvider);
-    if (!mounted) return;
-    context.go('/chat', extra: {
-      'initial_user_message': '开始规划',
-      'from_modeling_complete': true,
-      if (_modelingOutput != null) 'modeling_output': _modelingOutput,
-    });
-  }
-
   Future<void> _finish() async {
     await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
     ref.invalidate(profileContextProvider);
@@ -649,6 +646,191 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     });
   }
 
+  void _scheduleAutoPlanningIfReady() {
+    if (!_completed || _planningStarted || _runSubscriptions.isNotEmpty) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_completed ||
+          _planningStarted ||
+          _runSubscriptions.isNotEmpty) {
+        return;
+      }
+      unawaited(_autoStartPlanning());
+    });
+  }
+
+  Future<void> _autoStartPlanning() async {
+    if (!_completed || _planningInFlight) {
+      return;
+    }
+
+    setState(() {
+      _planningStarted = true;
+      _planningInFlight = true;
+      _planningErrorMessage = null;
+    });
+
+    try {
+      await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
+      ref.invalidate(profileContextProvider);
+
+      final authState = ref.read(authProvider);
+      final userId = authState.user?.id ??
+          await ref.read(guestServiceProvider).getGuestId();
+      final token = await ref.read(authRepositoryProvider).getAccessToken();
+
+      String? resolvedPlanId;
+      String? resolvedPlanRoute;
+
+      final stream = ref.read(chatRepositoryProvider).chatStream(
+        '开始规划',
+        _conversationId,
+        userId: userId,
+        requestId: _nextRequestId(),
+        token: token,
+        extraContext: {
+          'from_modeling_complete': true,
+          if (_modelingOutput != null) 'modeling_output': _modelingOutput,
+        },
+      ).timeout(
+        const Duration(seconds: 75),
+        onTimeout: (sink) {
+          sink
+            ..add(
+              ErrorEvent(
+                code: 'PLANNING_TIMEOUT',
+                message: '计划生成超时了，请重试一次。',
+                retryable: true,
+              ),
+            )
+            ..close();
+        },
+      );
+
+      await for (final event in stream) {
+        if (!mounted) return;
+
+        final sessionId = event.sessionId?.trim();
+        if (sessionId != null && sessionId.isNotEmpty) {
+          _conversationId = sessionId;
+        }
+
+        final launch = _extractPlanningLaunch(event.metadata);
+        resolvedPlanId ??= launch.planId;
+        resolvedPlanRoute ??= launch.planRoute;
+
+        if (event is ErrorEvent) {
+          throw Exception(event.message);
+        }
+      }
+
+      resolvedPlanRoute ??=
+          await _resolveFallbackPlanRoute(preferredPlanId: resolvedPlanId);
+      if (resolvedPlanRoute == null || resolvedPlanRoute.isEmpty) {
+        throw Exception('计划已经开始生成，但入口还没准备好，请重试一次。');
+      }
+
+      if (!mounted) return;
+      if (resolvedPlanId != null && resolvedPlanId.isNotEmpty) {
+        ref.read(activePlanProvider.notifier).selectPlan(resolvedPlanId);
+        ref.invalidate(planDetailProvider(resolvedPlanId));
+      }
+      ref.invalidate(planListProvider);
+      context.go(resolvedPlanRoute);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _planningInFlight = false;
+        _planningStarted = false;
+        _planningErrorMessage = '计划生成遇到问题：$error';
+      });
+    }
+  }
+
+  _PlanningLaunchTarget _extractPlanningLaunch(Map<String, dynamic>? metadata) {
+    if (metadata == null || metadata.isEmpty) {
+      return const _PlanningLaunchTarget();
+    }
+
+    var planId = _readNonEmptyString(metadata['plan_id']);
+    var planRoute = _readNonEmptyString(metadata['plan_route']);
+
+    final widgetsJson = _readNonEmptyString(metadata['planning_widgets_json']);
+    if ((planId == null || planRoute == null) &&
+        widgetsJson != null &&
+        widgetsJson.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(widgetsJson);
+        if (decoded is List) {
+          for (final item in decoded) {
+            if (item is! Map) continue;
+            final widget = Map<String, dynamic>.from(item);
+            final widgetType = widget['type']?.toString().trim();
+            final data = widget['data'];
+            if (data is! Map) continue;
+            final payload = Map<String, dynamic>.from(data);
+            if (widgetType == 'plan_card') {
+              planId ??= _readNonEmptyString(payload['plan_id']) ??
+                  _readNonEmptyString(payload['id']);
+              planRoute ??=
+                  planId != null && planId.isNotEmpty ? '/plans/$planId' : null;
+            }
+            if (widgetType == 'task_list') {
+              final tasks = payload['tasks'];
+              if (tasks is! List || tasks.isEmpty) continue;
+              for (final task in tasks) {
+                if (task is! Map) continue;
+                final taskPayload = Map<String, dynamic>.from(task);
+                planId ??= _readNonEmptyString(taskPayload['plan_id']);
+                if (planId != null && planId.isNotEmpty) {
+                  planRoute ??= '/plans/$planId';
+                  break;
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (planRoute == null && planId != null && planId.isNotEmpty) {
+      planRoute = '/plans/$planId';
+    }
+
+    return _PlanningLaunchTarget(
+      planId: planId,
+      planRoute: planRoute,
+    );
+  }
+
+  Future<String?> _resolveFallbackPlanRoute({String? preferredPlanId}) async {
+    if (preferredPlanId != null && preferredPlanId.trim().isNotEmpty) {
+      return '/plans/${preferredPlanId.trim()}';
+    }
+
+    await ref.read(planListProvider.notifier).refresh();
+    final sprint = ref
+        .read(planListProvider)
+        .activePlans
+        .where((plan) => plan.type == PlanType.sprint)
+        .firstOrNull;
+    if (sprint == null) {
+      return null;
+    }
+    ref.read(activePlanProvider.notifier).selectPlan(sprint.id);
+    return '/plans/${sprint.id}';
+  }
+
+  String? _readNonEmptyString(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) {
+      return null;
+    }
+    return text;
+  }
+
   bool _isTruthy(dynamic value) {
     if (value is bool) {
       return value;
@@ -669,6 +851,108 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     }
     return surface == _auroraModelingSurface || surface == 'modeling';
   }
+}
+
+class _PlanningBridgeStatus extends StatelessWidget {
+  const _PlanningBridgeStatus({
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onRetry,
+    required this.onSkip,
+  });
+
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback? onRetry;
+  final VoidCallback? onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2.2),
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '正在生成你的第一份冲刺计划',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    '马上就会带你进入任务页，不需要再点下一步。',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '计划生成没成功',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: DS.fontWeightBold,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            errorMessage ?? '暂时没能把计划拉起来，请再试一次。',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.45,
+                ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          SparkleButton(
+            label: '重试生成计划',
+            onPressed: onRetry,
+          ),
+          const SizedBox(height: DS.spacing8),
+          TextButton(
+            onPressed: onSkip,
+            child: Text(
+              '稍后再说',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanningLaunchTarget {
+  const _PlanningLaunchTarget({
+    this.planId,
+    this.planRoute,
+  });
+
+  final String? planId;
+  final String? planRoute;
 }
 
 class _ModelingMessage {

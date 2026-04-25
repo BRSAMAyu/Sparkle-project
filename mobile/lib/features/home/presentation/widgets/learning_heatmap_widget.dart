@@ -2,10 +2,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/materials.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/features/task/task_routes.dart';
 
 class HeatmapDay {
   const HeatmapDay({
@@ -110,6 +112,9 @@ class _HeatmapContent extends StatelessWidget {
         .languageCode
         .toLowerCase()
         .startsWith('zh');
+    final isEmpty = data.every(
+      (day) => day.minutes <= 0 && day.tasksCompleted <= 0,
+    );
     final today = DateTime.now();
     final startDate = DateTime(
       today.year,
@@ -151,22 +156,26 @@ class _HeatmapContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: DS.spacing12),
-          _HeatmapGrid(
-            brightness: brightness,
-            data: dayMap,
-            days: days,
-            isChinese: isChinese,
-            leadingEmpty: leadingEmpty,
-            startDate: startDate,
-            today: DateTime(today.year, today.month, today.day),
-            totalCells: totalCells,
-            totalWeeks: totalWeeks,
-          ),
-          const SizedBox(height: DS.spacing8),
-          _HeatmapLegend(
-            brightness: brightness,
-            isChinese: isChinese,
-          ),
+          if (isEmpty)
+            _HeatmapEmptyState(isChinese: isChinese)
+          else ...[
+            _HeatmapGrid(
+              brightness: brightness,
+              data: dayMap,
+              days: days,
+              isChinese: isChinese,
+              leadingEmpty: leadingEmpty,
+              startDate: startDate,
+              today: DateTime(today.year, today.month, today.day),
+              totalCells: totalCells,
+              totalWeeks: totalWeeks,
+            ),
+            const SizedBox(height: DS.spacing8),
+            _HeatmapLegend(
+              brightness: brightness,
+              isChinese: isChinese,
+            ),
+          ],
         ],
       ),
     );
@@ -304,10 +313,77 @@ class _HeatmapGrid extends StatelessWidget {
     required bool isChinese,
   }) {
     final roundedMinutes = minutes.round();
-    final summary = isChinese
-        ? '学习了 $roundedMinutes 分钟 · 完成了 $tasksCompleted 个任务'
-        : 'Studied $roundedMinutes min · Completed $tasksCompleted task${tasksCompleted == 1 ? '' : 's'}';
+    final summary = roundedMinutes == 0 && tasksCompleted == 0
+        ? (isChinese
+            ? '尚未开始学习，先完成一个 15 分钟的小任务吧'
+            : 'Not started yet. Begin with one 15-minute task.')
+        : isChinese
+            ? '学习了 $roundedMinutes 分钟 · 完成了 $tasksCompleted 个任务'
+            : 'Studied $roundedMinutes min · Completed $tasksCompleted task${tasksCompleted == 1 ? '' : 's'}';
     return '$dateKey\n$summary';
+  }
+}
+
+class _HeatmapEmptyState extends StatelessWidget {
+  const _HeatmapEmptyState({required this.isChinese});
+
+  final bool isChinese;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary.withValues(alpha: 0.55),
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: DS.border.withValues(alpha: 0.75)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.local_fire_department_outlined,
+              color: DS.brandPrimary,
+            ),
+          ),
+          const SizedBox(height: DS.spacing12),
+          Text(
+            isChinese ? '学习热力图尚未开始' : 'Heatmap not started yet',
+            style: TextStyle(
+              fontSize: DS.fontSizeBase,
+              fontWeight: DS.fontWeightBold,
+              color: DS.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            isChinese
+                ? '先创建一个今日任务并开始学习，连续记录后这里会逐渐亮起来。'
+                : 'Create a task and start learning. Your streak will light up here soon.',
+            style: TextStyle(
+              fontSize: DS.fontSizeSm,
+              color: DS.textSecondary,
+              height: 1.45,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: DS.spacing16),
+          FilledButton.icon(
+            onPressed: () => context.push(TaskRoutes.taskCreate),
+            icon: const Icon(Icons.add_task_rounded),
+            label: Text(isChinese ? '去创建今日任务' : 'Create task'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
