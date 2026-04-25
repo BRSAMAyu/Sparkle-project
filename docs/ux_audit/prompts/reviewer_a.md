@@ -30,13 +30,17 @@ Read `docs/ux_audit/audit_state.json`:
 
 ## STEP 2 — Deep audit (READ ONLY)
 
-Read ALL files in the chain's `key_files`. Then read additional files you discover are part of the flow. Trace the COMPLETE user journey end-to-end:
+The `key_files` in the chain definition are **起点，不是边界**。从这些文件开始追踪，但如果你在追踪过程中发现相关的问题涉及其他文件，**必须继续追下去**，不要因为问题不在 key_files 里就跳过。你的审查范围是"这条用户体验链路涉及的所有代码"，不是"key_files 列表"。
 
+如果你在追踪中发现 key_files 之外存在更严重的问题（比如数据流断裂、安全隐患、死路径），作为额外发现一并写入。
+
+追踪维度：
 1. **Trigger**: What user action or system event starts this chain?
 2. **Backend**: Which services run? What gets written to DB? What events are published?
 3. **API**: Is there an endpoint that returns data? Read it. Does it handle errors?
 4. **Mobile**: Which provider fetches the data? Which widget renders it? Is there a `ref.invalidate()` after mutation?
 5. **Edge cases**: What happens if data is empty? API fails? User navigates away mid-flow?
+6. **Adjacent impact**: Does this chain's data flow affect or depend on other features not listed in key_files?
 
 ---
 

@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 16 / 20 chains audited
+> **Status**: 18 / 20 chains audited (C04, C20 still need review)
 
 ---
 
@@ -296,3 +296,59 @@
 - None
 
 **Working Well ✅**: Tension 追踪系统完整（4 域独立 tension + 每轮重算 + 自动识别已回答域）；上下文感知问题生成（零基础/有scope/Sprint Pack 各有专用措辞）；Chat adapter 双层降级（LLM→静态→fallback）；Modeling complete 基于域全覆盖集合运算非关键词匹配；每个域有高质量 fallback 问题。
+
+---
+
+## Round 8 — 2026-04-26
+*Reviewer B: C07 — 成就里程碑链路 + C08 — Comeback 消息 + C12 — 自适应压缩*
+
+### C07: 成就里程碑解锁→推送通知→点击打开庆祝页 (Reviewer B — re-audit)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- None
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: 完整链路已确认——achievement_event_consumer 24h 去重 + stats 收集全面；`_build_milestone_route` 和 `_build_milestone_deep_link` 正确传递所有 stats；DeepLinkService milestone 路由映射正确；MilestoneCelebrationScreen `fromQueryParameters` 工厂方法容错解析；`_dismissToAchievements` 和 `_continueLearning` 使用 `RouteResilience.popOrGo` 无导航死路。
+
+---
+
+### C08: 用户≥3天未活跃→comeback消息出现在chat首屏 (Reviewer B — re-audit)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`service.py:306`**: Comeback 检测基于 `user.last_login_at` 而非真实最后活跃时间。变量名 `last_activity_at` 暗示应是活跃时间，但实际取自 JWT 认证时更新的 `last_login_at`。Expected: 基于用户最后一次有意义操作（完成任务、发消息等）。Actual: 基于登录时间。用户持续活跃但未重新认证时可能误触发 comeback 消息。多数场景下不影响（多日未开 app 确实会重登），但语义不精确。
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: `get_comeback_context` 逻辑完善（活跃状态检查 + 活跃计划查找 + 剩余天数计算 + 下一个未完成任务 + 个性化消息生成）；前端去重逻辑（signature check）+ 5 秒超时保护 + 多层 `_canShowAuroraOpenerOver` 防覆盖；自动切换到 comeback 关联的计划 session；comeback 消息不会被通用欢迎覆盖。
+
+---
+
+### C12: 低完成率+临近截止→自适应压缩→计划页显示精简 (Reviewer B — re-audit)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- None
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: `should_compress` 逻辑清晰（50% + 5 天参数合理）；`build_compressed_sprint_day_spec` 生成完整保底任务含 method_steps/fail_safe_rule/compression_reason；mobile `_compressionSummary` 四重检测覆盖所有压缩标记来源；`_AdaptiveCompressionBanner` 橙色+剪刀图标视觉清晰；compression_reason 含具体数字（完成率%、剩余天数）。
+
+---
+
+### C04: 错题录入→修复任务插入→计划页橙色卡可见
+**Status**: ⚠️ 无 reviewer 文件 — 原始发现丢失，重新审查未产出文件。仍需审查。
+
+### C20: Sprint Pack端到端集成（节点→任务spec→mastery回写）
+**Status**: ⚠️ 无 reviewer 文件 — 原始发现丢失，无重新审查记录。仍需审查。但 C02 Critical 已间接覆盖 mastery 回写路径（0-1 刻度 bug）。
