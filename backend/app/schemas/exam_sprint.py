@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date as date_type
 from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
@@ -32,7 +32,7 @@ class ExamSprintIntakeRequest(BaseModel):
     """Cold-start intake request for exam sprint mode."""
 
     subject: str = Field(min_length=1, max_length=120, description="Course or exam subject")
-    exam_date: date = Field(description="Exam date")
+    exam_date: date_type = Field(description="Exam date")
     target_mode: TargetMode = Field(description="User-selected goal mode")
     scope_context: ExamSprintScopeContext = Field(default_factory=ExamSprintScopeContext)
     baseline: ExamSprintBaselineInput = Field(description="Current baseline and weak chapters")
@@ -59,7 +59,7 @@ class ExamSprintUserModel(BaseModel):
 class ExamSprintGoalModel(BaseModel):
     """Initial goal model returned after intake."""
 
-    exam_date: date
+    exam_date: date_type
     days_left: int = Field(ge=1)
     target_mode: TargetMode
     estimated_score_now: int = Field(ge=0, le=100)
@@ -116,6 +116,165 @@ class ExamSprintIntakeResponse(BaseModel):
     initial_assessment: ExamSprintAssessment
     strategy_preview: ExamSprintStrategyPreview
     launch: ExamSprintLaunchPayload
+
+
+class HelpfulFeature(StrEnum):
+    TASK_CARDS = "task_cards"
+    ERROR_REVIEW = "error_review"
+    STRATEGY_ADJUSTMENT = "strategy_adjustment"
+    CALIBRATION_CARDS = "calibration_cards"
+
+
+class ReviewTopicSelection(BaseModel):
+    node_id: UUID | None = None
+    node_name: str = Field(..., min_length=1, max_length=255)
+
+
+class ReviewPlanSelection(BaseModel):
+    task_id: UUID | None = None
+    label: str = Field(..., min_length=1, max_length=255)
+
+
+class PostExamReviewRequest(BaseModel):
+    plan_id: UUID | None = None
+    self_rating: int = Field(..., ge=1, le=10)
+    underprepared_topics: list[ReviewTopicSelection] = Field(default_factory=list)
+    prepared_but_not_tested_topics: list[ReviewPlanSelection] = Field(default_factory=list)
+    sparkle_helped: bool = True
+    helpful_features: list[HelpfulFeature] = Field(default_factory=list)
+
+
+class SprintTaskStats(BaseModel):
+    total: int = Field(default=0, ge=0)
+    completed: int = Field(default=0, ge=0)
+    completion_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class SprintScoreStats(BaseModel):
+    baseline_score: float | None = Field(default=None, ge=0.0, le=100.0)
+    current_score: float | None = Field(default=None, ge=0.0, le=100.0)
+    delta: float | None = None
+    baseline_source: str | None = None
+
+
+class SprintMasteryDelta(BaseModel):
+    node_id: UUID | None = None
+    node_name: str
+    before_mastery: float = Field(..., ge=0.0, le=100.0)
+    after_mastery: float = Field(..., ge=0.0, le=100.0)
+    delta: float
+
+
+class SprintCoverageStats(BaseModel):
+    baseline_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    current_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    delta_rate: float
+    total_topics: int = Field(default=0, ge=0)
+    covered_topics_before: int = Field(default=0, ge=0)
+    covered_topics_after: int = Field(default=0, ge=0)
+
+
+class SprintErrorRecoveryStats(BaseModel):
+    total_errors: int = Field(default=0, ge=0)
+    repaired_errors: int = Field(default=0, ge=0)
+    repair_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class SprintDailyStudyPoint(BaseModel):
+    date: date_type
+    minutes: int = Field(default=0, ge=0)
+
+
+class SprintInvitationStatus(BaseModel):
+    eligible: bool = False
+    invited_at: str | None = None
+    notification_id: str | None = None
+    completed_at: str | None = None
+    review_id: str | None = None
+
+
+class SprintSummaryResponse(BaseModel):
+    plan_id: UUID
+    plan_name: str
+    subject: str | None = None
+    exam_date: date_type | None = None
+    started_at: str
+    days_used: int = Field(..., ge=1)
+    headline: str
+    task_stats: SprintTaskStats
+    score_stats: SprintScoreStats
+    mastery_changes: list[SprintMasteryDelta] = Field(default_factory=list)
+    top_improvement: SprintMasteryDelta | None = None
+    high_frequency_coverage: SprintCoverageStats
+    error_recovery: SprintErrorRecoveryStats
+    daily_study_trend: list[SprintDailyStudyPoint] = Field(default_factory=list)
+    narrative_highlights: list[str] = Field(default_factory=list)
+    invitation_status: SprintInvitationStatus = Field(default_factory=SprintInvitationStatus)
+
+
+class PostExamReviewResponse(BaseModel):
+    review_id: str
+    plan_id: UUID
+    archived_in_growth_profile: bool = True
+    helpful_features: list[HelpfulFeature] = Field(default_factory=list)
+    summary: SprintSummaryResponse
+    unlocked_achievements: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ExamSprintDashboardTaskItem(BaseModel):
+    """One task entry shown inside the sprint dashboard card."""
+
+    id: str
+    title: str
+    status: str
+    estimated_minutes: int = Field(default=0, ge=0)
+    is_completed: bool = False
+    knowledge_node_id: str | None = None
+    due_date: date_type | None = None
+
+
+class ExamSprintDashboardTaskGroup(BaseModel):
+    """Tasks bucketed by sprint day."""
+
+    day_index: int = Field(ge=1)
+    date: date_type | None = None
+    is_today: bool = False
+    completed_count: int = Field(default=0, ge=0)
+    total_count: int = Field(default=0, ge=0)
+    tasks: list[ExamSprintDashboardTaskItem] = Field(default_factory=list)
+
+
+class ExamSprintDashboardProgress(BaseModel):
+    """Today's completion summary."""
+
+    completed: int = Field(default=0, ge=0)
+    total: int = Field(default=0, ge=0)
+    completion_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class ExamSprintDashboardResponse(BaseModel):
+    """Aggregated payload for the exam sprint dashboard home card."""
+
+    active: bool
+    plan_id: str | None = None
+    plan_name: str | None = None
+    subject: str | None = None
+    days_left: int | None = Field(default=None, ge=0)
+    target_mode: TargetMode | None = None
+    estimated_score_now: float | None = Field(default=None, ge=0.0, le=100.0)
+    baseline_estimated_score: float | None = Field(default=None, ge=0.0, le=100.0)
+    pass_probability: float | None = Field(default=None, ge=0.0, le=1.0)
+    baseline_pass_probability: float | None = Field(default=None, ge=0.0, le=1.0)
+    today_progress: ExamSprintDashboardProgress = Field(default_factory=ExamSprintDashboardProgress)
+    high_freq_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
+    high_freq_covered_count: int = Field(default=0, ge=0)
+    high_freq_total_count: int = Field(default=0, ge=0)
+    mistake_fix_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    fixed_mistake_count: int = Field(default=0, ge=0)
+    total_mistake_count: int = Field(default=0, ge=0)
+    streak_days: int = Field(default=0, ge=0)
+    high_yield_low_mastery_topics: list[str] = Field(default_factory=list)
+    task_groups: list[ExamSprintDashboardTaskGroup] = Field(default_factory=list)
 
 
 class DiagnoseConfidence(StrEnum):

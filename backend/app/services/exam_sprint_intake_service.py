@@ -17,7 +17,12 @@ from app.core.cache import cache_service
 from app.models.plan import PlanPriority, PlanStage, PlanType
 from app.models.task import Task
 from app.orchestration.bottleneck_analyzer import bottleneck_analyzer
-from app.orchestration.planning_workflow import PLANNING_PROFILE_KEYS, PlanningSession, PlanningWorkflowManager
+from app.orchestration.planning_workflow import (
+    PLANNING_PROFILE_KEYS,
+    PlanningSession,
+    PlanningWorkflowManager,
+    _task_type_for_day_spec,
+)
 from app.scenario_packs.exam_prep_14d import load_exam_prep_14d_manifest
 from app.schemas.exam_sprint import (
     ExamSprintAssessment,
@@ -96,6 +101,7 @@ class ExamSprintIntakeService:
             "target_mode": goal_model.target_mode,
             "recommended_mode": goal_model.recommended_mode,
             "estimated_score_now": goal_model.estimated_score_now,
+            "exam_date": request.exam_date.isoformat(),
             "study_time_minutes": request.daily_study_minutes,
             "weak_chapters": list(request.baseline.weak_chapters),
             "scope_text": self._strip(request.scope_context.text),
@@ -219,6 +225,17 @@ class ExamSprintIntakeService:
         subject = self._strip(
             session.collected.get("subject") or session.collected.get("exam_scope") or request.subject
         )
+        sprint_policy = self._as_dict(strategy.get("sprint_policy"))
+        last_24h_mode = bool(sprint_policy.get("last_24h_mode"))
+        last_24h_error_clusters = (
+            await self.planning_manager._load_last_24h_error_clusters(
+                db=self.db,
+                user_id=user_id,
+                subject=subject,
+            )
+            if last_24h_mode
+            else []
+        )
         plan = await PlanService.create(
             db=self.db,
             obj_in=PlanCreate(
@@ -249,7 +266,12 @@ class ExamSprintIntakeService:
         first_day_output = ""
 
         for index, phase in enumerate(phases, start=1):
-            for day_spec in self.planning_manager._daily_task_specs(phase, phase_index=index):
+            for day_spec in self.planning_manager._daily_task_specs(
+                phase,
+                phase_index=index,
+                session=session,
+                error_clusters=last_24h_error_clusters,
+            ):
                 guide_json = self.planning_manager._build_task_guide_json(
                     session=session,
                     phase=phase,
@@ -267,7 +289,7 @@ class ExamSprintIntakeService:
                             f"Day {day_spec['day']} · {self._strip(phase.get('label'))}"
                             f" - {self._strip(day_spec.get('title_focus') or day_spec.get('task_kind') or '检索推进')}"
                         ),
-                        type=coerce_task_type("learning"),
+                        type=coerce_task_type(_task_type_for_day_spec(day_spec)),
                         plan_id=plan.id,
                         estimated_minutes=max(
                             self._safe_int(day_spec.get("estimated_minutes"))
@@ -298,13 +320,15 @@ class ExamSprintIntakeService:
                             subject,
                             f"phase:{index}",
                             f"day:{day_spec['day']}",
-                            self._strip(strategy.get("sprint_policy", {}).get("sprint_mode") or "exam_sprint"),
+                            self._strip(sprint_policy.get("sprint_mode") or "exam_sprint"),
                             self._strip(day_spec.get("task_kind") or "retrieval"),
                         ],
                     ),
                     user_id=user_id,
                 )
-                task.order_index = int(day_spec["day"]) * 1000
+                task.order_index = int(day_spec["day"]) * 1000 + (
+                    self._safe_int(day_spec.get("order_index_offset")) or 0
+                )
                 created_tasks.append(task)
                 if int(day_spec["day"]) == 1 and not first_day_focus:
                     first_day_focus = self._strip(day_spec.get("focus") or task.guide_content)
@@ -313,10 +337,13 @@ class ExamSprintIntakeService:
         first_day_tasks = [task for task in created_tasks if int(task.order_index or 0) // 1000 == 1]
         first_day_task_ids = [str(task.id) for task in first_day_tasks]
         recommended_task_id = first_day_task_ids[0] if first_day_task_ids else None
-        recommendation = self.planning_manager._first_day_recommendation_fallback(
-            subject=subject,
-            task_count=len(first_day_tasks) or 1,
-        )
+        if last_24h_mode:
+            recommendation = "今天不再学新内容：先过高频知识点，再按错因回看错题，最后完成 30 分钟短模拟。"
+        else:
+            recommendation = self.planning_manager._first_day_recommendation_fallback(
+                subject=subject,
+                task_count=len(first_day_tasks) or 1,
+            )
         plan.source_metadata = {
             **self._as_dict(plan.source_metadata),
             "day_highlights": {
@@ -329,7 +356,22 @@ class ExamSprintIntakeService:
                 "study_time_minutes": request.daily_study_minutes,
                 "weak_chapters": list(request.baseline.weak_chapters),
             },
+            "post_exam_review": {
+                "eligible_after": request.exam_date.isoformat(),
+                "invited_at": None,
+                "notification_id": None,
+                "completed_at": None,
+                "review_id": None,
+            },
         }
+        if last_24h_mode:
+            plan.source_metadata.update(
+                {
+                    "last_24h_mode": True,
+                    "last_24h_strategy": self._as_dict(sprint_policy.get("last_24h_strategy")),
+                    "last_24h_error_clusters": last_24h_error_clusters,
+                }
+            )
         await self.db.commit()
 
         return GeneratedPlanBundle(
@@ -431,6 +473,7 @@ class ExamSprintIntakeService:
             "daily_available_hours": self._daily_hours(request.daily_study_minutes),
             "study_time_minutes": request.daily_study_minutes,
             "time_constraint_days": goal_model.days_left,
+            "exam_date": request.exam_date.isoformat(),
             "available_materials": materials,
             "scope_file_ids": list(request.scope_context.file_ids),
             "scope_file_names": list(request.scope_context.file_names),

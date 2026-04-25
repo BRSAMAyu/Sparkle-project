@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.memory import MemoryCorrection
 from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
+from app.aurora.runtime_v1.write_pipeline import INFERENCE_PIPELINE_KEY
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -62,6 +63,7 @@ async def test_get_calibration_cards_returns_up_to_three_pending_items(
                             "title": "你最近两天的可用时间可能被高估了",
                             "statement": "我目前的判断：你最近两天的可用时间可能被高估了。",
                             "confidence": 0.91,
+                            "status": "candidate",
                             "needs_confirmation": True,
                             "evidence": [
                                 "两张 90 分钟任务卡都超过 130 分钟。",
@@ -69,37 +71,51 @@ async def test_get_calibration_cards_returns_up_to_three_pending_items(
                             "updated_at": "2026-04-25T08:00:00",
                         },
                         {
-                            "id": "low-confidence-1",
-                            "title": "TCP 这部分的掌握度还不稳定",
-                            "confidence": 0.31,
-                            "needs_confirmation": False,
-                            "evidence_summary": "证据：最近三次相关题目正确率波动较大。",
+                            "id": "candidate-short-card",
+                            "title": "你更适合短任务卡推进",
+                            "status": "candidate",
+                            "confidence": 0.74,
+                            "needs_confirmation": True,
+                            "evidence_summary": "证据：25 分钟任务的完成率明显高于长卡。",
                             "updated_at": "2026-04-25T09:00:00",
                         },
                         {
-                            "id": "low-confidence-2",
-                            "title": "你更适合短任务卡推进",
-                            "confidence": 0.52,
-                            "needs_confirmation": False,
-                            "evidence": [
-                                "25 分钟内完成率明显高于 60 分钟任务。",
-                            ],
+                            "id": "candidate-tcp",
+                            "title": "TCP 这部分的掌握度还不稳定",
+                            "status": "candidate",
+                            "confidence": 0.71,
+                            "needs_confirmation": True,
+                            "evidence_summary": "证据：最近三次相关题目正确率波动较大。",
                             "updated_at": "2026-04-24T09:00:00",
                         },
                         {
-                            "id": "hidden-high-confidence",
-                            "title": "这个判断已经比较稳定",
-                            "confidence": 0.88,
+                            "id": "observed-hidden",
+                            "title": "这条观察还不足以升级成候选",
+                            "status": "observed",
+                            "confidence": 0.66,
                             "needs_confirmation": False,
+                            "evidence": [
+                                "目前只有一条弱证据。",
+                            ],
                             "updated_at": "2026-04-25T10:00:00",
                         },
                         {
-                            "id": "suppressed-item",
+                            "id": "trial-hidden",
+                            "title": "已经进入试用，不应继续显示",
+                            "status": "trial",
+                            "confidence": 0.88,
+                            "needs_confirmation": False,
+                            "trial_started_at": "2026-04-24T10:00:00",
+                            "trial_expires_at": "2026-05-01T10:00:00",
+                            "updated_at": "2026-04-25T11:00:00",
+                        },
+                        {
+                            "id": "revoked-item",
                             "title": "不应再显示的假设",
                             "confidence": 0.21,
-                            "status": "suppressed",
+                            "status": "revoked",
                             "needs_confirmation": False,
-                            "updated_at": "2026-04-25T11:00:00",
+                            "updated_at": "2026-04-25T12:00:00",
                         },
                     ]
                 }
@@ -117,11 +133,12 @@ async def test_get_calibration_cards_returns_up_to_three_pending_items(
     assert payload["surface"]["label"] == "Aurora · 需要确认"
     assert [item["id"] for item in payload["items"]] == [
         "needs-confirmation",
-        "low-confidence-1",
-        "low-confidence-2",
+        "candidate-short-card",
+        "candidate-tcp",
     ]
     assert payload["items"][0]["evidence"][0] == "两张 90 分钟任务卡都超过 130 分钟。"
-    assert payload["items"][1]["confidence_label"] == "31%"
+    assert payload["items"][1]["status"] == "candidate"
+    assert payload["items"][2]["confidence_label"] == "71%"
 
 
 @pytest.mark.asyncio
@@ -150,18 +167,23 @@ async def test_respond_calibration_card_updates_self_model_and_logs_feedback(
                         {
                             "id": "confirm-me",
                             "title": "你现在更适合短任务卡推进",
+                            "status": "candidate",
                             "confidence": 0.61,
                             "needs_confirmation": True,
+                            "preference_key": "task_card_preference",
+                            "preference_value": {"duration": "short"},
                         },
                         {
                             "id": "reject-me",
                             "title": "你每天都能稳定学 90 分钟",
+                            "status": "candidate",
                             "confidence": 0.66,
                             "needs_confirmation": True,
                         },
                         {
                             "id": "mute-me",
                             "title": "系统想继续监测这个判断",
+                            "status": "candidate",
                             "confidence": 0.49,
                             "needs_confirmation": True,
                         },
@@ -197,20 +219,26 @@ async def test_respond_calibration_card_updates_self_model_and_logs_feedback(
     self_model = prefs.inferred["self_model"]
     assumptions = {item["id"]: item for item in self_model["known_assumptions"]}
 
-    assert assumptions["confirm-me"]["status"] == "confirmed"
+    assert assumptions["confirm-me"]["status"] == "trial"
     assert assumptions["confirm-me"]["needs_confirmation"] is False
     assert assumptions["confirm-me"]["confidence"] >= 0.85
     assert assumptions["confirm-me"]["response_history"][-1]["response"] == "confirm"
+    assert assumptions["confirm-me"]["trial_started_at"] is not None
+    assert assumptions["confirm-me"]["trial_expires_at"] is not None
 
-    assert assumptions["reject-me"]["status"] == "rejected"
+    assert assumptions["reject-me"]["status"] == "revoked"
     assert assumptions["reject-me"]["needs_confirmation"] is False
     assert assumptions["reject-me"]["confidence"] <= 0.25
     assert assumptions["reject-me"]["response_history"][-1]["response"] == "incorrect"
     assert assumptions["reject-me"]["response_history"][-1]["reason"] == "最近节奏和以前不一样"
 
-    assert assumptions["mute-me"]["status"] == "suppressed"
-    assert assumptions["mute-me"]["suppressed_by_user"] is True
+    assert assumptions["mute-me"]["status"] == "revoked"
     assert assumptions["mute-me"]["response_history"][-1]["response"] == "mute"
+
+    durable_claims = ((prefs.inferred or {}).get(INFERENCE_PIPELINE_KEY) or {}).get("claims") or {}
+    assert durable_claims["confirm-me"]["status"] == "trial"
+    assert "reject-me" not in durable_claims
+    assert "mute-me" not in durable_claims
 
     corrections = (
         (await db_session.execute(select(MemoryCorrection).where(MemoryCorrection.user_id == user_id))).scalars().all()

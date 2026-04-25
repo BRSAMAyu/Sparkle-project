@@ -8,6 +8,11 @@ def _guide_json() -> dict:
         "objective": "Day 1：极限与连续代表题",
         "output_action": "不看答案先做 3 道代表题，并写下每道题的判断依据或错因。",
         "success_criteria": "至少完成 3 道代表题，其中至少 2 道能独立判断。",
+        "method_steps": [
+            "先闭卷写出题目的已知条件和判断依据。",
+            "独立完成 3 道代表题，不先看答案。",
+            "对照解析补错因并重做 1 道同型题。",
+        ],
         "key_points": ["极限与连续", "代表题判断依据"],
         "minimum_output": "闭卷复述或小测",
     }
@@ -28,6 +33,12 @@ def test_enrich_sync_adds_non_empty_guide_fields() -> None:
     assert "极限与连续" in result["focus_cue"]
     assert result["why_now"].endswith("。")
     assert result["objective"] == "Day 1：极限与连续代表题"
+    assert len(result["steps"]) == 4
+    assert all(step["name"] and step["duration_min"] > 0 for step in result["steps"])
+    assert len(result["done_criteria"]) >= 2
+    assert len(result["mini_quiz"]["items"]) == 3
+    assert len(result["fallback_if_stuck"]) >= 2
+    assert any(trigger["code"] == "accuracy_below_0.5" for trigger in result["aurora_triggers"])
 
 
 @pytest.mark.asyncio

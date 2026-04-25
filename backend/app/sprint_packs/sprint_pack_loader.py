@@ -141,9 +141,12 @@ def get_archetypes_by_nodes(pack: dict[str, Any], node_ids: list[str]) -> list[d
     return matches
 
 
-def get_task_template(pack: dict[str, Any], scenario: str) -> dict[str, Any] | None:
-    """Find a task card template by scenario name."""
+def get_task_template(pack: dict[str, Any], template_id: str) -> dict[str, Any] | None:
+    """Find a task card template by template_id or label (case-insensitive)."""
+    needle = template_id.lower()
     for template in pack.get("task_card_templates", []):
-        if template.get("scenario", "").lower() == scenario.lower():
+        if template.get("template_id", "").lower() == needle:
+            return template
+        if template.get("label", "").lower() == needle:
             return template
     return None

@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 
 from app.orchestration.planning_workflow import PlanningSession, PlanningWorkflowManager
+from app.sprint_packs.sprint_pack_loader import load_pack
 
 
 class FakeRedis:
@@ -102,6 +103,152 @@ def test_daily_task_specs_expands_each_phase_to_one_task_per_day() -> None:
 
     assert [spec["day"] for spec in specs] == [3, 4, 5]
     assert all("核心攻克" in spec["focus"] for spec in specs)
+
+
+def test_daily_task_specs_use_sprint_pack_for_computer_networks() -> None:
+    manager = PlanningWorkflowManager(redis_client=FakeRedis())
+    session = PlanningSession(
+        planning_session_id=str(uuid4()),
+        chat_session_id="chat-session-pack",
+        user_id=str(uuid4()),
+        state="CLARIFYING",
+        goal_raw="7天后考计算机网络，帮我规划",
+        collected={
+            "time_constraint_days": 7,
+            "daily_available_hours": 2,
+            "subject": "计算机网络",
+            "exam_scope": "计算机网络期末",
+            "knowledge_baseline": "上过课但没复习",
+            "avg_mastery_score": 38,
+            "recommended_path": "minimum_pass",
+            "weak_nodes": [
+                {"node_id": "cn.tcp_congestion_control", "mastery_score": 38},
+                {"node_id": "cn.subnetting", "mastery_score": 32},
+            ],
+        },
+    )
+
+    strategy = manager._build_strategy(session)
+    all_specs: list[dict[str, object]] = []
+    for index, phase in enumerate(strategy["phases"], start=1):
+        all_specs.extend(manager._daily_task_specs(phase, phase_index=index, session=session))
+
+    assert len(all_specs) == 7
+    assert all(_spec.get("subject_strategy") for _spec in all_specs[:3])
+    pack = load_pack("计算机网络")
+    assert pack is not None
+    nodes_by_id = {node["node_id"]: node for node in pack["knowledge_nodes"]}
+    first_three_node_ids = [
+        node_id
+        for spec in all_specs[:3]
+        for node_id in spec["subject_strategy"]["node_ids"]  # type: ignore[index]
+    ]
+    assert first_three_node_ids
+    assert all(float(nodes_by_id[node_id]["exam_weight"]) > 0.7 for node_id in first_three_node_ids)
+
+    day_one_spec = manager._daily_task_specs(strategy["phases"][0], phase_index=1, session=session)[0]
+    day_one_guide = manager._build_task_guide_json(
+        session=session,
+        phase=strategy["phases"][0],
+        phase_index=1,
+        default_daily_hours=2,
+        day_number=day_one_spec["day"],
+        day_focus=day_one_spec["focus"],
+        day_spec=day_one_spec,
+    )
+
+    assert day_one_spec["title_focus"] != "诊断分诊"
+    assert day_one_guide["why_now"]
+    assert "掌握度" in day_one_guide["why_now"]
+    assert "权重" in day_one_guide["why_now"]
+    assert day_one_guide["related_archetypes"]
+    assert day_one_guide["common_mistakes_to_watch"]
+
+
+def test_last_24h_mode_overrides_strategy_and_generates_cram_tasks() -> None:
+    manager = PlanningWorkflowManager(redis_client=FakeRedis())
+    session = PlanningSession(
+        planning_session_id=str(uuid4()),
+        chat_session_id="chat-session-last-24h",
+        user_id=str(uuid4()),
+        state="CLARIFYING",
+        goal_raw="明天考计算机网络，帮我规划最后一天",
+        collected={
+            "time_constraint_days": 1,
+            "daily_available_hours": 3,
+            "subject": "计算机网络",
+            "exam_scope": "计算机网络期末",
+            "knowledge_baseline": "上过课但错题很多",
+            "avg_mastery_score": 48,
+            "recommended_path": "minimum_pass",
+        },
+    )
+
+    strategy = manager._build_strategy(session)
+    policy = strategy["sprint_policy"]
+    specs = manager._daily_task_specs(
+        strategy["phases"][0],
+        phase_index=1,
+        session=session,
+        error_clusters=[
+            {
+                "label": "TCP 状态变化混淆",
+                "count": 3,
+                "focus_summary": "三次握手、四次挥手",
+                "chapters": ["传输层"],
+                "examples": ["TIME_WAIT 作用遗漏"],
+                "lowest_mastery": 40,
+            }
+        ],
+    )
+
+    assert policy["last_24h_mode"] is True
+    assert policy["drop_low_roi_topics"] is True
+    assert policy["new_topic_allowed"] is False
+    assert policy["error_analysis_required"] is True
+    assert "new_chapter_introduction" in policy["standard_layer_contract"]["must_not_include"]
+    assert len(strategy["phases"]) == 1
+    assert [spec["task_kind"] for spec in specs] == [
+        "retrieval_triage",
+        "retrieval_repair",
+        "mock_review",
+    ]
+    assert all(spec["day"] == 1 for spec in specs)
+    assert all(spec["subject_strategy"]["last_24h_mode"] is True for spec in specs)
+    assert specs[0]["subject_strategy"]["focus_nodes"]
+    assert specs[1]["subject_strategy"]["error_clusters"][0]["label"] == "TCP 状态变化混淆"
+    assert "new_chapter_introduction" in specs[0]["subject_strategy"]["must_not_include"]
+
+
+def test_daily_task_specs_fallback_when_sprint_pack_missing() -> None:
+    manager = PlanningWorkflowManager(redis_client=FakeRedis())
+    phase = {
+        "start_day": 1,
+        "end_day": 2,
+        "label": "基础梳理",
+        "focus": "先把概念和典型题的主线梳理清楚",
+        "daily_hours": 2,
+        "sprint_mode": "seven_day_survival",
+        "retrieval_policy": {"minimum_output": "闭卷复述或小测"},
+    }
+    session = PlanningSession(
+        planning_session_id=str(uuid4()),
+        chat_session_id="chat-session-no-pack",
+        user_id=str(uuid4()),
+        state="CLARIFYING",
+        goal_raw="7天后考高数，帮我规划",
+        collected={
+            "time_constraint_days": 7,
+            "daily_available_hours": 2,
+            "subject": "高等数学",
+            "knowledge_baseline": "上过课但没复习",
+        },
+    )
+
+    baseline_specs = manager._daily_task_specs(phase, phase_index=1)
+    fallback_specs = manager._daily_task_specs(phase, phase_index=1, session=session)
+
+    assert fallback_specs == baseline_specs
 
 
 @pytest.mark.asyncio

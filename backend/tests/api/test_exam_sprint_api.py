@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 from fastapi import FastAPI
@@ -145,3 +146,167 @@ def test_exam_sprint_intake_endpoint_rejects_past_exam_date(exam_sprint_client):
     response = client.post("/exam-sprint/intake", json=payload)
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_post_exam_review_endpoint_returns_structured_payload(exam_sprint_client, db_session):
+    client, state = exam_sprint_client
+    user = User(
+        username="exam_sprint_review_user",
+        email="exam_sprint_review_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = user
+
+    plan_id = str(uuid4())
+    payload = {
+        "self_rating": 7,
+        "underprepared_topics": [{"node_name": "TCP 拥塞控制"}],
+        "prepared_but_not_tested_topics": [{"label": "Day 6 · 套题回测"}],
+        "sparkle_helped": True,
+        "helpful_features": ["error_review", "strategy_adjustment"],
+    }
+    response_payload = {
+        "review_id": "review-1",
+        "plan_id": plan_id,
+        "archived_in_growth_profile": True,
+        "helpful_features": ["error_review", "strategy_adjustment"],
+        "summary": {
+            "plan_id": plan_id,
+            "plan_name": "7天计算机网络冲刺",
+            "subject": "计算机网络",
+            "exam_date": (date.today() - timedelta(days=1)).isoformat(),
+            "started_at": "2026-04-18T09:00:00",
+            "days_used": 7,
+            "headline": "你用了 7 天，完成了 18 项任务，TCP 拥塞控制从 38 分提升到 72 分。",
+            "task_stats": {"total": 21, "completed": 18, "completion_rate": 0.8571},
+            "score_stats": {
+                "baseline_score": 38.0,
+                "current_score": 65.0,
+                "delta": 27.0,
+                "baseline_source": "diagnostic",
+            },
+            "mastery_changes": [
+                {
+                    "node_id": None,
+                    "node_name": "TCP 拥塞控制",
+                    "before_mastery": 38.0,
+                    "after_mastery": 72.0,
+                    "delta": 34.0,
+                }
+            ],
+            "top_improvement": {
+                "node_id": None,
+                "node_name": "TCP 拥塞控制",
+                "before_mastery": 38.0,
+                "after_mastery": 72.0,
+                "delta": 34.0,
+            },
+            "high_frequency_coverage": {
+                "baseline_rate": 0.25,
+                "current_rate": 0.75,
+                "delta_rate": 0.5,
+                "total_topics": 4,
+                "covered_topics_before": 1,
+                "covered_topics_after": 3,
+            },
+            "error_recovery": {
+                "total_errors": 6,
+                "repaired_errors": 4,
+                "repair_rate": 0.6667,
+            },
+            "daily_study_trend": [
+                {"date": "2026-04-18", "minutes": 90},
+                {"date": "2026-04-19", "minutes": 120},
+            ],
+            "narrative_highlights": [
+                "你用了 7 天，完成了 18 / 21 项任务。",
+                "TCP 拥塞控制从 38 分提升到 72 分。",
+            ],
+            "invitation_status": {
+                "eligible": True,
+                "invited_at": "2026-04-25T09:00:00",
+                "notification_id": "notif-1",
+                "completed_at": "2026-04-25T09:03:00",
+                "review_id": "review-1",
+            },
+        },
+        "unlocked_achievements": [{"achievement_id": "sprint_first", "name": "初出茅庐"}],
+    }
+
+    with patch(
+        "app.api.v1.exam_sprint.ExamSprintReviewService.submit_post_exam_review",
+        new=AsyncMock(return_value=response_payload),
+    ) as mock_review:
+        response = client.post("/exam-sprint/post-exam-review", json=payload)
+
+    assert response.status_code == 200
+    assert response.json() == response_payload
+    mock_review.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_sprint_summary_endpoint_returns_payload(exam_sprint_client, db_session):
+    client, state = exam_sprint_client
+    user = User(
+        username="exam_sprint_summary_user",
+        email="exam_sprint_summary_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = user
+
+    plan_id = str(uuid4())
+    response_payload = {
+        "plan_id": plan_id,
+        "plan_name": "7天计算机网络冲刺",
+        "subject": "计算机网络",
+        "exam_date": (date.today() - timedelta(days=1)).isoformat(),
+        "started_at": "2026-04-18T09:00:00",
+        "days_used": 7,
+        "headline": "你用了 7 天，完成了 18 项任务，TCP 拥塞控制从 38 分提升到 72 分。",
+        "task_stats": {"total": 21, "completed": 18, "completion_rate": 0.8571},
+        "score_stats": {
+            "baseline_score": 38.0,
+            "current_score": 65.0,
+            "delta": 27.0,
+            "baseline_source": "diagnostic",
+        },
+        "mastery_changes": [],
+        "top_improvement": None,
+        "high_frequency_coverage": {
+            "baseline_rate": 0.25,
+            "current_rate": 0.75,
+            "delta_rate": 0.5,
+            "total_topics": 4,
+            "covered_topics_before": 1,
+            "covered_topics_after": 3,
+        },
+        "error_recovery": {
+            "total_errors": 6,
+            "repaired_errors": 4,
+            "repair_rate": 0.6667,
+        },
+        "daily_study_trend": [{"date": "2026-04-18", "minutes": 90}],
+        "narrative_highlights": ["你用了 7 天，完成了 18 / 21 项任务。"],
+        "invitation_status": {
+            "eligible": True,
+            "invited_at": "2026-04-25T09:00:00",
+            "notification_id": "notif-1",
+            "completed_at": None,
+            "review_id": None,
+        },
+    }
+
+    with patch(
+        "app.api.v1.exam_sprint.ExamSprintReviewService.get_sprint_summary",
+        new=AsyncMock(return_value=response_payload),
+    ) as mock_summary:
+        response = client.get(f"/exam-sprint/sprint-summary?plan_id={plan_id}")
+
+    assert response.status_code == 200
+    assert response.json() == response_payload
+    mock_summary.assert_awaited_once()

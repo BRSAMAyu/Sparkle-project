@@ -9,15 +9,29 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aurora.runtime_v1 import AuroraRuntimePlanningAdapter, AuroraRuntimePlanningState
 from app.core.cache import cache_service
+from app.models.error_book import ErrorRecord
 from app.models.plan import PlanPriority, PlanStage, PlanType
 from app.models.task import Task
 from app.orchestration.exam_sprint_policy import ExamSprintPolicyEngine, ExamSprintPolicyInput
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate, coerce_task_type
+from app.sprint_packs.last_24h_mode import (
+    apply_last_24h_policy_overrides,
+    calculate_days_left,
+    extract_exam_date,
+    is_last_24h_window,
+)
+from app.sprint_packs.sprint_pack_loader import (
+    get_archetypes_by_nodes,
+    get_mistake_by_nodes,
+    load_pack,
+    query_nodes_by_priority,
+)
 from app.services.plan_service import PlanService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.task_service import TaskService
@@ -124,12 +138,44 @@ def _strip(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _listish(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list | tuple | set):
+        return [item for item in value if item not in (None, "")]
+    return [value] if value not in (None, "") else []
+
+
 def _safe_int(value: Any) -> int | None:
     try:
         parsed = int(float(value))
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _subject_to_error_book_code(subject: str) -> str | None:
+    text = _strip(subject).lower()
+    if not text:
+        return None
+    if any(token in text for token in ("计算机", "计网", "computer", "network", "操作系统", "数据库")):
+        return "computer"
+    if any(token in text for token in ("英语", "english")):
+        return "english"
+    if any(token in text for token in ("高数", "数学", "math")):
+        return "math"
+    if any(token in text for token in ("物理", "physics")):
+        return "physics"
+    return None
+
+
+def _task_type_for_day_spec(day_spec: dict[str, Any]) -> str:
+    task_kind = _strip(day_spec.get("task_kind")).lower()
+    if task_kind in {"retrieval_repair", "error_review", "error_fix"}:
+        return "error_fix"
+    if task_kind in {"mock_review", "stage_mock", "short_mock", "training"}:
+        return "training"
+    return "learning"
 
 
 @dataclass
@@ -646,6 +692,13 @@ class PlanningWorkflowManager:
         days = _safe_int(strategy.get("total_days")) or _safe_int(session.collected.get("time_constraint_days")) or 7
         daily_hours = _safe_int(session.collected.get("daily_available_hours")) or 2
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "考试科目")
+        sprint_policy = _as_dict(strategy.get("sprint_policy"))
+        last_24h_mode = bool(sprint_policy.get("last_24h_mode"))
+        last_24h_error_clusters = (
+            await self._load_last_24h_error_clusters(db=db, user_id=user_id, subject=subject)
+            if last_24h_mode
+            else []
+        )
         plan = await PlanService.create(
             db=db,
             obj_in=PlanCreate(
@@ -668,7 +721,12 @@ class PlanningWorkflowManager:
         created_tasks: list[Task] = []
         phases = list(strategy.get("phases") or [])
         for index, phase in enumerate(phases, start=1):
-            for day_spec in self._daily_task_specs(phase, phase_index=index):
+            for day_spec in self._daily_task_specs(
+                phase,
+                phase_index=index,
+                session=session,
+                error_clusters=last_24h_error_clusters,
+            ):
                 guide_json = self._build_task_guide_json(
                     session=session,
                     phase=phase,
@@ -689,7 +747,7 @@ class PlanningWorkflowManager:
                             f"Day {day_spec['day']} · {_strip(phase.get('label'))}"
                             f" - {_strip(day_spec.get('title_focus') or day_spec.get('task_kind') or '检索推进')}"
                         ),
-                        type=coerce_task_type("learning"),
+                        type=coerce_task_type(_task_type_for_day_spec(day_spec)),
                         plan_id=plan.id,
                         estimated_minutes=max(
                             _safe_int(day_spec.get("estimated_minutes"))
@@ -718,27 +776,41 @@ class PlanningWorkflowManager:
                             subject,
                             f"phase:{index}",
                             f"day:{day_spec['day']}",
-                            _strip(strategy.get("sprint_policy", {}).get("sprint_mode") or "exam_sprint"),
+                            _strip(sprint_policy.get("sprint_mode") or "exam_sprint"),
                             _strip(day_spec.get("task_kind") or "retrieval"),
                         ],
                     ),
                     user_id=user_id,
                 )
-                task.order_index = int(day_spec["day"]) * 1000
+                task.order_index = int(day_spec["day"]) * 1000 + (_safe_int(day_spec.get("order_index_offset")) or 0)
                 created_tasks.append(task)
         if created_tasks:
+            first_day_tasks = [
+                task for task in created_tasks if int(task.order_index or 0) // 1000 == 1
+            ] or created_tasks[:1]
+            if last_24h_mode:
+                recommendation = "今天不再学新内容：先过高频知识点，再按错因回看错题，最后完成 30 分钟短模拟。"
+            else:
+                recommendation = await self._build_first_day_recommendation(
+                    session=session,
+                    subject=subject,
+                    tasks=first_day_tasks,
+                )
             plan.source_metadata = {
                 **_as_dict(plan.source_metadata),
                 "day_highlights": {
                     "day": 1,
-                    "recommendation": await self._build_first_day_recommendation(
-                        session=session,
-                        subject=subject,
-                        tasks=[task for task in created_tasks if int(task.order_index or 0) // 1000 == 1]
-                        or created_tasks[:1],
-                    ),
+                    "recommendation": recommendation,
                 },
             }
+            if last_24h_mode:
+                plan.source_metadata.update(
+                    {
+                        "last_24h_mode": True,
+                        "last_24h_strategy": _as_dict(sprint_policy.get("last_24h_strategy")),
+                        "last_24h_error_clusters": last_24h_error_clusters,
+                    }
+                )
             await db.commit()
 
         session.state = "DONE"
@@ -1163,6 +1235,7 @@ class PlanningWorkflowManager:
         focus = _strip(day_focus or phase.get("focus"))
         output = _strip(phase.get("output"))
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
+        subject_strategy = _as_dict((day_spec or {}).get("subject_strategy"))
         sprint_policy = _as_dict(phase.get("sprint_policy"))
         retrieval_policy = _as_dict(phase.get("retrieval_policy") or sprint_policy.get("retrieval_policy"))
         sprint_mode = _strip(sprint_policy.get("sprint_mode") or phase.get("sprint_mode") or "exam_sprint")
@@ -1177,6 +1250,39 @@ class PlanningWorkflowManager:
             minimum_output=minimum_output,
             day_number=day_number,
         )
+        node_labels = [
+            item
+            for item in list(subject_strategy.get("node_labels") or [])
+            if _strip(item)
+        ]
+        related_archetypes = [
+            item
+            for item in list(subject_strategy.get("related_archetypes") or [])
+            if _strip(item)
+        ]
+        common_mistakes_to_watch = [
+            item
+            for item in list(subject_strategy.get("common_mistakes_to_watch") or [])
+            if _strip(item)
+        ]
+        error_clusters = [
+            dict(item)
+            for item in list(subject_strategy.get("error_clusters") or [])
+            if isinstance(item, dict) and _strip(item.get("label"))
+        ]
+        must_not_include = [
+            _strip(item)
+            for item in list(subject_strategy.get("must_not_include") or [])
+            if _strip(item)
+        ]
+        pack_why_now = _strip(subject_strategy.get("why_now"))
+        output_action = _strip(subject_strategy.get("output_action")) or contract["output_action"]
+        success_criteria = _strip(subject_strategy.get("success_criteria")) or contract["success_criteria"]
+        if node_labels:
+            node_summary = self._format_compact_list(node_labels)
+            objective = f"Day {day_number or '?'}：优先拿下 {node_summary} 这些考试收益最高的节点。"
+        else:
+            objective = contract["objective"]
         brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
         materials = [
             item
@@ -1189,11 +1295,27 @@ class PlanningWorkflowManager:
             if _strip(item)
         ]
         guide_steps = list(contract["method_steps"])
+        if node_labels:
+            guide_steps.insert(0, f"今天优先节点：{self._format_compact_list(node_labels)}。")
+        for action in [
+            item
+            for item in list(subject_strategy.get("recommended_actions") or [])
+            if _strip(item)
+        ][:2]:
+            action_line = action if action.endswith("。") else f"{action}。"
+            guide_steps.insert(len(guide_steps), action_line)
+        if error_clusters:
+            cluster_line = "、".join(
+                f"{_strip(item.get('label'))} x{int(item.get('count') or 0)}" for item in error_clusters[:3]
+            )
+            guide_steps.insert(len(guide_steps), f"优先回看这些高频错因：{cluster_line}。")
+        if related_archetypes:
+            guide_steps.append(f"最后用这些高频题型回测：{'、'.join(related_archetypes[:3])}。")
         if materials:
             guide_steps.insert(1, f"优先使用你手头已有的资料：{'、'.join(materials[:3])}。")
         guide_steps.insert(
             min(2, len(guide_steps)),
-            f"执行时只围绕今天这一个明确产出动作推进：{contract['output_action']}",
+            f"执行时只围绕今天这一个明确产出动作推进：{output_action}",
         )
         if method:
             guide_steps.append(f"阶段方法提醒：{method}")
@@ -1205,10 +1327,19 @@ class PlanningWorkflowManager:
             guide_steps.append(f"如果碰到这些忙碌时段，就把任务压缩成保底版：{'；'.join(blocked_days[:2])}。")
         key_points = [
             focus or f"{subject} 的阶段重点",
-            contract["output_action"],
-            contract["success_criteria"],
+            output_action,
+            success_criteria,
             f"检索优先：{minimum_output}",
         ]
+        if node_labels:
+            key_points.append(f"今天覆盖节点：{self._format_compact_list(node_labels)}")
+        if related_archetypes:
+            key_points.append(f"重点题型：{'、'.join(related_archetypes[:2])}")
+        if error_clusters:
+            key_points.append(
+                "错因聚类："
+                + "、".join(f"{_strip(item.get('label'))} x{int(item.get('count') or 0)}" for item in error_clusters[:2])
+            )
         if materials:
             key_points.append(f"优先吃透手头资料里的高频材料：{'、'.join(materials[:2])}")
         if session.bottlenecks:
@@ -1220,14 +1351,16 @@ class PlanningWorkflowManager:
             for item in (session.bottlenecks or [])[:2]
             if _strip(item.get("specific_risk"))
         ]
+        if common_mistakes_to_watch:
+            common_mistakes = common_mistakes_to_watch
         if not common_mistakes:
             common_mistakes = ["只看内容不做自测，最后很难知道自己到底会不会。"]
         guide_json = {
-            "objective": contract["objective"],
+            "objective": objective,
             "method_steps": guide_steps,
             "time_estimate_minutes": _safe_int((day_spec or {}).get("estimated_minutes")) or max(phase_hours * 60, 30),
-            "output_action": contract["output_action"],
-            "success_criteria": contract["success_criteria"],
+            "output_action": output_action,
+            "success_criteria": success_criteria,
             "key_points": key_points,
             "common_mistakes": common_mistakes,
             "retrieval_first": True,
@@ -1238,16 +1371,48 @@ class PlanningWorkflowManager:
             "success_checklist": contract["success_checklist"],
             "fail_safe_rule": contract["fail_safe_rule"],
         }
+        if subject_strategy:
+            guide_json["related_archetypes"] = related_archetypes
+            guide_json["common_mistakes_to_watch"] = common_mistakes_to_watch
+            guide_json["knowledge_nodes"] = node_labels
+            guide_json["knowledge_node_ids"] = [
+                item for item in list(subject_strategy.get("node_ids") or []) if _strip(item)
+            ]
+            guide_json["path_mode"] = _strip(subject_strategy.get("path_mode"))
+            guide_json["last_24h_mode"] = bool(subject_strategy.get("last_24h_mode"))
+            if error_clusters:
+                guide_json["error_clusters"] = error_clusters
+            if must_not_include:
+                guide_json["must_not_include"] = must_not_include
+            if subject_strategy.get("focus_nodes"):
+                guide_json["focus_nodes"] = list(subject_strategy.get("focus_nodes") or [])
+        raw_weak_nodes = session.collected.get("galaxy_weak_nodes")
+        if raw_weak_nodes is None:
+            raw_weak_nodes = session.collected.get("weak_nodes")
+        weak_nodes = [item for item in _listish(raw_weak_nodes) if item]
+        if not weak_nodes and node_labels:
+            weak_nodes = node_labels
+        knowledge_state = {
+            "overall_mastery": session.collected.get("avg_mastery_score"),
+            "weak_nodes": weak_nodes,
+            "recommended_path": _strip(session.collected.get("recommended_path") or guide_json.get("path_mode")),
+        }
+        aurora_control_signal = _as_dict(brief.get("activity_profile"))
         from app.orchestration.task_guide_enricher import TaskGuideEnricher
 
         _enricher = TaskGuideEnricher()
-        return _enricher.enrich_sync(
+        enriched = _enricher.enrich_sync(
             guide_json=guide_json,
             task_kind=task_kind,
             subject=subject,
             focus=focus,
             bottlenecks=session.bottlenecks,
+            knowledge_state=knowledge_state,
+            aurora_control_signal=aurora_control_signal,
         )
+        if pack_why_now:
+            enriched["why_now"] = pack_why_now
+        return enriched
 
     async def _enrich_task_guide_with_ai(
         self,
@@ -1267,6 +1432,11 @@ class PlanningWorkflowManager:
             subject=subject,
             focus=focus,
             bottlenecks=session.bottlenecks,
+            knowledge_state={
+                "overall_mastery": session.collected.get("avg_mastery_score"),
+                "weak_nodes": session.collected.get("galaxy_weak_nodes") or session.collected.get("weak_nodes") or [],
+                "recommended_path": _strip(session.collected.get("recommended_path")),
+            },
             use_llm=True,
         )
 
@@ -1385,11 +1555,19 @@ class PlanningWorkflowManager:
         output_action = _strip(guide_json.get("output_action"))
         micro_contract = _strip(guide_json.get("micro_contract"))
         fail_safe_rule = _strip(guide_json.get("fail_safe_rule"))
+        must_not_include = [
+            _strip(item) for item in list(guide_json.get("must_not_include") or []) if _strip(item)
+        ]
+        last_24h_line = ""
+        if guide_json.get("last_24h_mode"):
+            last_24h_line = "【考前冲刺模式】今天不再学新内容，只做高频速览、错题回看和短模拟。\n"
+        must_not_line = f"【禁止引入】{'、'.join(must_not_include[:4])}。\n" if must_not_include else ""
         return (
             f"【背景】我是学生，目标是 {session.goal_raw or f'在限定时间内完成 {subject} 备考'}。\n"
             f"{motivation_line}\n"
             f"【我的情况】科目是 {subject}，当前基础是 {baseline}，每天大概能投入 {daily_hours} 小时。\n"
             f"{materials_line}{blocked_days_line}{latent_line}\n"
+            f"{last_24h_line}{must_not_line}"
             f"【冲刺策略】{sprint_mode}；本任务必须有输出动作：{minimum_output}。\n"
             f"【当前阶段】{phase_label}\n"
             f"重点：{_strip(phase.get('focus'))}\n"
@@ -1425,6 +1603,7 @@ class PlanningWorkflowManager:
             "blocked_days": cold_start.get("blocked_days") or [],
             "available_materials": cold_start.get("available_materials") or [],
             "subject": _strip(cold_start.get("subject")),
+            "exam_date": _strip(cold_start.get("exam_date")),
             "time_constraint_days": _safe_int(cold_start.get("time_constraint_days")),
             "avg_mastery_score": galaxy_avg,
             "weak_nodes": galaxy_baseline.get("weak_nodes") if galaxy_baseline else None,
@@ -1498,12 +1677,102 @@ class PlanningWorkflowManager:
 
         return [asdict(item) for item in analysis.bottlenecks]
 
+    def _resolve_exam_date(self, session: PlanningSession) -> Any:
+        cold_start = _as_dict(session.collected.get("cold_start_context"))
+        return extract_exam_date(session.collected, cold_start)
+
+    def _resolved_days_left(self, session: PlanningSession) -> int:
+        exam_date = self._resolve_exam_date(session)
+        resolved = calculate_days_left(exam_date)
+        if resolved is not None:
+            return max(resolved, 1)
+        return _safe_int(session.collected.get("time_constraint_days")) or 7
+
+    def _is_last_24h_mode(self, session: PlanningSession) -> bool:
+        return is_last_24h_window(
+            exam_date=self._resolve_exam_date(session),
+            days_left=_safe_int(session.collected.get("time_constraint_days")),
+        )
+
+    async def _load_last_24h_error_clusters(
+        self,
+        *,
+        db: AsyncSession | None,
+        user_id: UUID,
+        subject: str,
+    ) -> list[dict[str, Any]]:
+        if db is None:
+            return []
+
+        stmt = select(ErrorRecord).where(
+            ErrorRecord.user_id == user_id,
+            ErrorRecord.is_deleted.is_(False),
+        )
+        subject_code = _subject_to_error_book_code(subject)
+        if subject_code:
+            stmt = stmt.where(ErrorRecord.subject_code == subject_code)
+        stmt = stmt.order_by(
+            ErrorRecord.next_review_at.asc().nullslast(),
+            ErrorRecord.mastery_level.asc(),
+            ErrorRecord.created_at.desc(),
+        ).limit(40)
+
+        records = (await db.execute(stmt)).scalars().all()
+        if not records:
+            return []
+
+        grouped: dict[str, dict[str, Any]] = {}
+        for record in records:
+            analysis = _as_dict(record.latest_analysis)
+            label = _strip(analysis.get("error_type_label") or analysis.get("error_type") or "高频错因")
+            cluster = grouped.setdefault(
+                label,
+                {
+                    "label": label,
+                    "count": 0,
+                    "chapters": [],
+                    "focus_points": [],
+                    "examples": [],
+                    "lowest_mastery": 1.0,
+                },
+            )
+            cluster["count"] += 1
+            cluster["lowest_mastery"] = min(float(cluster["lowest_mastery"]), float(record.mastery_level or 0.0))
+
+            chapter = _strip(record.chapter)
+            if chapter and chapter not in cluster["chapters"] and len(cluster["chapters"]) < 3:
+                cluster["chapters"].append(chapter)
+
+            for focus_point in list(analysis.get("recommended_knowledge") or []):
+                text = _strip(focus_point)
+                if text and text not in cluster["focus_points"] and len(cluster["focus_points"]) < 4:
+                    cluster["focus_points"].append(text)
+
+            root_cause = _strip(analysis.get("root_cause"))
+            if root_cause and root_cause not in cluster["examples"] and len(cluster["examples"]) < 2:
+                cluster["examples"].append(root_cause[:80])
+
+        clusters = sorted(
+            grouped.values(),
+            key=lambda item: (-int(item["count"]), float(item["lowest_mastery"]), _strip(item["label"])),
+        )
+        for cluster in clusters:
+            chapters = list(cluster.get("chapters") or [])
+            focus_points = list(cluster.get("focus_points") or [])
+            focus_summary = "、".join(chapters[:2] or focus_points[:2])
+            if focus_summary:
+                cluster["focus_summary"] = focus_summary
+            else:
+                cluster["focus_summary"] = "回看最近最容易重复出错的题"
+            cluster["lowest_mastery"] = int(round(float(cluster["lowest_mastery"]) * 100))
+        return clusters[:3]
+
     def _build_exam_sprint_policy(
         self,
         session: PlanningSession,
         aurora_state: AuroraRuntimePlanningState | None = None,
     ) -> dict[str, Any]:
-        days = _safe_int(session.collected.get("time_constraint_days")) or 7
+        days = self._resolved_days_left(session)
         hours = _safe_int(session.collected.get("daily_available_hours")) or 2
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
         brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
@@ -1529,7 +1798,19 @@ class PlanningWorkflowManager:
                 },
             )
         )
-        return policy.to_dict()
+        payload = policy.to_dict()
+        exam_date = self._resolve_exam_date(session)
+        payload["days_left"] = days
+        if exam_date is not None:
+            payload["exam_date"] = exam_date.isoformat()
+        if self._is_last_24h_mode(session):
+            payload = apply_last_24h_policy_overrides(
+                payload,
+                subject=subject,
+                exam_date=exam_date,
+                days_left=days,
+            )
+        return payload
 
     def _build_strategy(
         self,
@@ -1537,7 +1818,7 @@ class PlanningWorkflowManager:
         aurora_state: AuroraRuntimePlanningState | None = None,
     ) -> dict[str, Any]:
         # Phase II: replace this V1 rule template with LLM-backed strategy generation for non-demo domains.
-        days = _safe_int(session.collected.get("time_constraint_days")) or 7
+        days = self._resolved_days_left(session)
         hours = _safe_int(session.collected.get("daily_available_hours")) or 2
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
         brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
@@ -1558,6 +1839,63 @@ class PlanningWorkflowManager:
         ]
         open_tensions = list(brief.get("open_tensions") or [])
         latent_threads = list(brief.get("latent_threads") or [])
+        if sprint_policy.get("last_24h_mode"):
+            last_24h_strategy = _as_dict(sprint_policy.get("last_24h_strategy"))
+            focus_labels = [
+                _strip(item.get("label") or item.get("node_id"))
+                for item in list(last_24h_strategy.get("focus") or [])
+                if isinstance(item, dict) and _strip(item.get("label") or item.get("node_id"))
+            ]
+            mock_exam = _as_dict(last_24h_strategy.get("mock_exam"))
+            focus_summary = self._format_compact_list(focus_labels[:4]) if focus_labels else "高频高收益知识点"
+            phase = {
+                "phase": 1,
+                "start_day": 1,
+                "end_day": 1,
+                "days": "Day 1",
+                "label": "考前冲刺模式",
+                "daily_hours": max(1, min(hours, 4)),
+                "focus": f"今天不再学新内容，只复习 {focus_summary}，并把时间留给错题回看和短模拟。",
+                "method": (
+                    "先做高频节点速览，再按错因聚类回看最近最容易丢分的题，最后用短模拟确认最后失分点。"
+                ),
+                "output": (
+                    f"完成一次高频速览、一次错题错因回看，以及 {mock_exam.get('duration_minutes') or 30} 分钟短模拟。"
+                ),
+                "sprint_mode": sprint_policy.get("sprint_mode"),
+                "sprint_policy": sprint_policy,
+                "retrieval_policy": sprint_policy.get("retrieval_policy") or {},
+            }
+            recommendation = "今天不再学新内容，只做高频速览、错题回看和 30 分钟短模拟。"
+            return {
+                "total_days": 1,
+                "actual_days_left": days,
+                "sprint_policy": sprint_policy,
+                "daily_commitment_range": f"{max(1, min(hours, 4))}–{max(1, min(hours + 1, 4))}小时",
+                "phases": [phase],
+                "checkpoints": [
+                    {
+                        "day": 1,
+                        "description": "今天结束前确认：高频节点是否还能闭卷提取，错题高频错因是否过了一轮，短模拟是否完成。",
+                    },
+                ],
+                "adjustment_triggers": [
+                    "如果高频速览时仍有大片空白，就继续压缩范围，只保留最常考和最容易补回的点。",
+                    "如果短模拟暴露出重复错因，优先回看同类错题，不再切去新章节。",
+                ],
+                "strategy_notes": [
+                    recommendation,
+                    *list(sprint_policy.get("strategy_notes") or []),
+                ],
+                "user_context_digest": {
+                    "goal_raw": _strip(session.goal_raw),
+                    "blocked_days": blocked_days,
+                    "available_materials": materials,
+                    "open_tensions": open_tensions,
+                    "latent_threads": latent_threads,
+                },
+                "aurora_brief": brief,
+            }
         ranges = self._phase_day_ranges(days)
         if sprint_policy.get("sprint_mode") == "seven_day_survival":
             templates = [
@@ -1690,7 +2028,7 @@ class PlanningWorkflowManager:
 
     def _phase_day_ranges(self, total_days: int) -> list[dict[str, int]]:
         days = max(1, int(total_days or 1))
-        phase_count = 2 if days <= 4 else 3
+        phase_count = 1 if days == 1 else 2 if days <= 4 else 3
         base = days // phase_count
         remainder = days % phase_count
         ranges: list[dict[str, int]] = []
@@ -1708,7 +2046,468 @@ class PlanningWorkflowManager:
             return f"Day {start}"
         return f"Day {start}–{end}"
 
-    def _daily_task_specs(self, phase: dict[str, Any], *, phase_index: int) -> list[dict[str, Any]]:
+    @staticmethod
+    def _pack_match_key(value: Any) -> str:
+        return re.sub(r"\s+", "", _strip(value).lower())
+
+    @staticmethod
+    def _normalize_mastery_ratio(value: Any) -> float | None:
+        try:
+            mastery = float(value)
+        except (TypeError, ValueError):
+            return None
+        if mastery < 0:
+            return None
+        if mastery > 1.0:
+            mastery = mastery / 100.0
+        return max(0.0, min(mastery, 1.0))
+
+    @staticmethod
+    def _format_compact_list(items: list[str], *, limit: int = 3, suffix: str = "个点") -> str:
+        cleaned = [_strip(item) for item in items if _strip(item)]
+        if not cleaned:
+            return ""
+        if len(cleaned) <= limit:
+            return "、".join(cleaned)
+        return f"{'、'.join(cleaned[:limit])} 等{len(cleaned)}{suffix}"
+
+    @staticmethod
+    def _dedupe_text(items: list[str], *, limit: int = 4) -> list[str]:
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for item in items:
+            text = _strip(item)
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            deduped.append(text)
+            if len(deduped) >= limit:
+                break
+        return deduped
+
+    def _pack_mastery_map(self, *, session: PlanningSession, pack: dict[str, Any]) -> dict[str, float]:
+        nodes = list(pack.get("knowledge_nodes") or [])
+        avg_mastery = self._normalize_mastery_ratio(
+            session.collected.get("avg_mastery_score") or session.collected.get("diagnostic_estimated_score")
+        )
+        mastery_map: dict[str, float] = {
+            _strip(node.get("node_id")): avg_mastery
+            for node in nodes
+            if _strip(node.get("node_id")) and avg_mastery is not None
+        }
+        node_lookup: dict[str, str] = {}
+        for node in nodes:
+            node_id = _strip(node.get("node_id"))
+            label = _strip(node.get("label"))
+            for candidate in (node_id, label):
+                key = self._pack_match_key(candidate)
+                if key:
+                    node_lookup[key] = node_id
+
+        raw_sources: list[Any] = []
+        for key in ("galaxy_weak_nodes", "weak_nodes"):
+            raw_value = session.collected.get(key)
+            if isinstance(raw_value, list):
+                raw_sources.extend(raw_value)
+            elif raw_value:
+                raw_sources.append(raw_value)
+
+        weak_default = max(0.0, (avg_mastery or 0.25) - 0.18)
+        for raw in raw_sources:
+            if isinstance(raw, dict):
+                candidates = (
+                    raw.get("node_id"),
+                    raw.get("id"),
+                    raw.get("slug"),
+                    raw.get("name"),
+                    raw.get("node_name"),
+                    raw.get("title"),
+                    raw.get("label"),
+                )
+                node_id = ""
+                for candidate in candidates:
+                    matched_id = node_lookup.get(self._pack_match_key(candidate))
+                    if matched_id:
+                        node_id = matched_id
+                        break
+                if not node_id:
+                    continue
+                mastery = self._normalize_mastery_ratio(
+                    raw.get("mastery_score")
+                    or raw.get("mastery")
+                    or raw.get("score")
+                    or raw.get("avg_mastery")
+                    or raw.get("current_mastery")
+                    or raw.get("new_mastery")
+                )
+                if mastery is None:
+                    mastery = weak_default
+                mastery_map[node_id] = mastery
+                continue
+
+            node_id = node_lookup.get(self._pack_match_key(raw))
+            if node_id:
+                mastery_map[node_id] = min(mastery_map.get(node_id, weak_default), weak_default)
+
+        return mastery_map
+
+    def _select_pack_strategy_preset(self, pack: dict[str, Any], *, total_days: int) -> dict[str, Any]:
+        presets = _as_dict(pack.get("strategy_presets"))
+        if total_days <= 7 and _as_dict(presets.get("7d")):
+            return _as_dict(presets.get("7d"))
+        if total_days <= 14 and _as_dict(presets.get("14d")):
+            return _as_dict(presets.get("14d"))
+        return _as_dict(presets.get("14d") or presets.get("7d"))
+
+    def _match_pack_phase_hint(self, phase_plan: list[dict[str, Any]], *, day: int) -> dict[str, Any]:
+        for phase in phase_plan:
+            day_range = _strip(phase.get("days"))
+            match = re.search(r"(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?", day_range)
+            if not match:
+                continue
+            start = int(match.group("start"))
+            end = int(match.group("end") or start)
+            if start <= day <= end:
+                return phase
+        return {}
+
+    @staticmethod
+    def _format_pack_mistake(mistake: dict[str, Any]) -> str:
+        label = _strip(mistake.get("label"))
+        repair = _strip(mistake.get("repair_strategy"))
+        if label and repair:
+            return f"{label}：{repair}"
+        return label or repair
+
+    def _build_pack_why_now(
+        self,
+        *,
+        primary_node: dict[str, Any],
+        mastery: float | None,
+        path_mode: str,
+    ) -> str:
+        label = _strip(primary_node.get("label") or "这个节点")
+        exam_weight = float(primary_node.get("exam_weight", 0.0))
+        mastery_ratio = mastery if mastery is not None else 0.0
+        mastery_pct = int(round(mastery_ratio * 100))
+        gap_pct = max(0, 100 - mastery_pct)
+        path_hint = "保底路线" if path_mode == "minimum_pass" else "提分路线"
+        weight_hint = "高权重" if exam_weight >= 0.7 else "中高权重"
+        return (
+            f"先做{label}，因为它属于 {path_hint} 里的{weight_hint}节点（权重 {exam_weight:.2f}），"
+            f"你当前掌握度约 {mastery_pct}%，还有 {gap_pct}% 的掌握缺口，现在补它最容易换分。"
+        )
+
+    def _build_pack_output_action(
+        self,
+        *,
+        actions: list[str],
+        archetypes: list[str],
+        phase_output: str,
+        node_labels: list[str],
+    ) -> str:
+        clean_actions = self._dedupe_text(actions, limit=2)
+        if clean_actions:
+            action_line = "；".join(clean_actions)
+        else:
+            action_line = f"闭卷拿下 {self._format_compact_list(node_labels, limit=2, suffix='个节点')}"
+        if archetypes:
+            action_line = f"{action_line}；再做 1 道{archetypes[0]}验证"
+        elif phase_output:
+            action_line = f"{action_line}；最后对照阶段目标：{phase_output}"
+        action_line = action_line.rstrip("。")
+        return f"{action_line}。"
+
+    def _build_pack_success_criteria(
+        self,
+        *,
+        node_labels: list[str],
+        archetypes: list[str],
+        mistakes: list[str],
+    ) -> str:
+        node_target = min(max(len(node_labels), 1), 2)
+        parts = [f"至少完成 {node_target} 个高优先节点的闭卷输出"]
+        if archetypes:
+            parts.append(f"并能独立完成 1 道{archetypes[0]}")
+        if mistakes:
+            parts.append(f"复盘时明确避开「{mistakes[0].split('：', 1)[0]}」")
+        return "，".join(parts).rstrip("。") + "。"
+
+    @staticmethod
+    def _fallback_last_24h_clusters() -> list[dict[str, Any]]:
+        return [
+            {
+                "label": "最近高频错因",
+                "count": 0,
+                "focus_summary": "回看最近 3 道最容易重复出错的题",
+                "chapters": [],
+                "examples": [],
+                "lowest_mastery": 0,
+            }
+        ]
+
+    def _build_last_24h_custom_tasks(
+        self,
+        *,
+        subject: str,
+        last_24h_strategy: dict[str, Any],
+        error_clusters: list[dict[str, Any]] | None,
+    ) -> list[dict[str, Any]]:
+        focus_nodes = [
+            dict(item)
+            for item in list(last_24h_strategy.get("focus") or [])
+            if isinstance(item, dict) and _strip(item.get("label") or item.get("node_id"))
+        ]
+        focus_labels = [
+            _strip(item.get("label") or item.get("node_id"))
+            for item in focus_nodes
+            if _strip(item.get("label") or item.get("node_id"))
+        ]
+        high_yield_labels = focus_labels[:4]
+        high_yield_summary = self._format_compact_list(high_yield_labels) if high_yield_labels else "高频高收益节点"
+        top_clusters = list(error_clusters or self._fallback_last_24h_clusters())[:3]
+        cluster_labels = [
+            f"{_strip(item.get('label'))} x{int(item.get('count') or 0)}"
+            for item in top_clusters
+            if _strip(item.get("label"))
+        ]
+        mock_exam = _as_dict(last_24h_strategy.get("mock_exam"))
+        mock_minutes = _safe_int(mock_exam.get("duration_minutes")) or 30
+        mock_instruction = _strip(
+            mock_exam.get("instruction") or "做一轮压缩模拟，做完只归因，不展开新章节。"
+        )
+        forbidden_actions = [
+            _strip(item)
+            for item in list(last_24h_strategy.get("forbidden_actions") or [])
+            if _strip(item)
+        ]
+
+        return [
+            {
+                "day": 1,
+                "focus": f"考前冲刺：只复习 {high_yield_summary}，今天不再学新内容。",
+                "task_kind": "retrieval_triage",
+                "title_focus": "高频知识点速览",
+                "estimated_minutes": 35,
+                "order_index_offset": 1,
+                "subject_strategy": {
+                    "node_ids": [_strip(item.get("node_id")) for item in focus_nodes[:4] if _strip(item.get("node_id"))],
+                    "node_labels": high_yield_labels,
+                    "why_now": f"明天就考试了，先把 {high_yield_summary} 这些高频高收益节点压成可提取的闭卷输出，比开新章节更值分。",
+                    "output_action": f"闭卷速览 {high_yield_summary}，每个点至少说出 1 个关键判断或流程。",
+                    "success_criteria": f"至少 4 个高频节点能闭卷提取，并明确今天不再开新章节。",
+                    "recommended_actions": [
+                        _strip(item.get("recommended_action"))
+                        for item in focus_nodes[:3]
+                        if _strip(item.get("recommended_action"))
+                    ],
+                    "must_not_include": ["new_chapter_introduction", *forbidden_actions],
+                    "last_24h_mode": True,
+                    "focus_nodes": focus_nodes[:6],
+                },
+            },
+            {
+                "day": 1,
+                "focus": "考前冲刺：按错因聚类回看自己的错题，只修最容易重复丢分的错误类型。",
+                "task_kind": "retrieval_repair",
+                "title_focus": "错题错因回看",
+                "estimated_minutes": 40,
+                "order_index_offset": 2,
+                "subject_strategy": {
+                    "node_ids": [_strip(item.get("node_id")) for item in focus_nodes[:2] if _strip(item.get("node_id"))],
+                    "node_labels": high_yield_labels[:2],
+                    "why_now": "最后一天最值钱的是把已经暴露过的错因再修一轮，避免同类错误在考场上重复出现。",
+                    "output_action": (
+                        f"按错因聚类回看最近错题：{'、'.join(cluster_labels[:3]) or '回看最近 3 道错题'}，"
+                        "每类至少写 1 句触发提醒。"
+                    ),
+                    "success_criteria": "至少完成 2 类高频错因回看，并写出对应的触发提醒或判断步骤。",
+                    "common_mistakes_to_watch": cluster_labels,
+                    "error_clusters": top_clusters,
+                    "must_not_include": ["new_chapter_introduction", *forbidden_actions],
+                    "last_24h_mode": True,
+                },
+            },
+            {
+                "day": 1,
+                "focus": f"考前冲刺：完成 {mock_minutes} 分钟短模拟卷，只校准失分点，不再深挖新内容。",
+                "task_kind": "mock_review",
+                "title_focus": "30分钟短模拟卷",
+                "estimated_minutes": mock_minutes,
+                "order_index_offset": 3,
+                "subject_strategy": {
+                    "node_ids": [_strip(item.get("node_id")) for item in focus_nodes[:5] if _strip(item.get("node_id"))],
+                    "node_labels": high_yield_labels,
+                    "why_now": "短模拟能在最短时间里暴露最后还会丢分的点，收益比开新章节高得多。",
+                    "output_action": f"{mock_instruction} 做完后只整理 Top 3 失分来源。",
+                    "success_criteria": f"完成 {mock_minutes} 分钟短模拟，并写出 Top 3 失分来源和最后回看顺序。",
+                    "related_archetypes": [
+                        _strip(item)
+                        for item in list(mock_exam.get("coverage_labels") or [])
+                        if _strip(item)
+                    ],
+                    "must_not_include": ["new_chapter_introduction", *forbidden_actions],
+                    "last_24h_mode": True,
+                },
+            },
+        ]
+
+    def _build_pack_daily_specs(
+        self,
+        *,
+        session: PlanningSession,
+        total_days: int,
+        daily_minutes: int,
+        error_clusters: list[dict[str, Any]] | None = None,
+    ) -> dict[int, dict[str, Any]]:
+        subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope"))
+        pack = load_pack(subject)
+        if not pack:
+            return {}
+
+        if self._is_last_24h_mode(session):
+            sprint_policy = self._build_exam_sprint_policy(session)
+            last_24h_strategy = _as_dict(sprint_policy.get("last_24h_strategy") or pack.get("last_24h_strategy"))
+            if not last_24h_strategy:
+                return {}
+            return {
+                1: {
+                    "custom_tasks": self._build_last_24h_custom_tasks(
+                        subject=subject,
+                        last_24h_strategy=last_24h_strategy,
+                        error_clusters=error_clusters,
+                    ),
+                }
+            }
+
+        path_mode = _strip(session.collected.get("recommended_path")).lower()
+        if path_mode not in {"minimum_pass", "score_max"}:
+            path_mode = "minimum_pass"
+
+        mastery_map = self._pack_mastery_map(session=session, pack=pack)
+        prioritized_nodes = query_nodes_by_priority(
+            pack,
+            current_mastery=mastery_map,
+            days_left=total_days,
+            path_mode=path_mode,
+        )
+        if not prioritized_nodes:
+            return {}
+
+        if total_days <= 7:
+            high_weight = [node for node in prioritized_nodes if float(node.get("exam_weight", 0.0)) > 0.7]
+            other_nodes = [node for node in prioritized_nodes if float(node.get("exam_weight", 0.0)) <= 0.7]
+            prioritized_nodes = high_weight + other_nodes
+
+        preset = self._select_pack_strategy_preset(pack, total_days=total_days)
+        daily_targets = _as_dict(preset.get("daily_targets"))
+        phase_plan = list(preset.get("phase_plan") or [])
+        nodes_by_id = {_strip(node.get("node_id")): node for node in pack.get("knowledge_nodes", [])}
+        max_new_nodes = _safe_int(daily_targets.get("max_new_nodes")) or max(1, daily_minutes // 35)
+        max_new_nodes = max(1, min(max_new_nodes, 5))
+        recent_node_ids: list[str] = []
+        cursor = 0
+        day_specs: dict[int, dict[str, Any]] = {}
+
+        for day in range(1, max(total_days, 1) + 1):
+            remaining_budget = daily_minutes
+            selected_nodes: list[dict[str, Any]] = []
+
+            while cursor < len(prioritized_nodes):
+                candidate = prioritized_nodes[cursor]
+                node_minutes = max(15, min(int(float(candidate.get("time_cost", 25))), 60))
+                if selected_nodes and (len(selected_nodes) >= max_new_nodes or remaining_budget < min(node_minutes, 25)):
+                    break
+                selected_nodes.append(candidate)
+                remaining_budget -= node_minutes
+                cursor += 1
+                if remaining_budget <= 15:
+                    break
+
+            if not selected_nodes and cursor < len(prioritized_nodes):
+                selected_nodes.append(prioritized_nodes[cursor])
+                cursor += 1
+
+            if not selected_nodes and recent_node_ids:
+                selected_nodes = [nodes_by_id[node_id] for node_id in recent_node_ids[-3:] if nodes_by_id.get(node_id)]
+
+            if not selected_nodes:
+                continue
+
+            node_ids = [_strip(node.get("node_id")) for node in selected_nodes if _strip(node.get("node_id"))]
+            node_labels = [_strip(node.get("label")) for node in selected_nodes if _strip(node.get("label"))]
+            recent_node_ids.extend(node_ids[:2])
+            phase_hint = self._match_pack_phase_hint(phase_plan, day=day)
+            phase_focus = _strip(phase_hint.get("focus"))
+            phase_output = _strip(phase_hint.get("output"))
+            archetypes = self._dedupe_text(
+                [_strip(item.get("label")) for item in get_archetypes_by_nodes(pack, node_ids)],
+                limit=4,
+            )
+            mistakes = self._dedupe_text(
+                [self._format_pack_mistake(item) for item in get_mistake_by_nodes(pack, node_ids)],
+                limit=4,
+            )
+            actions = self._dedupe_text(
+                [_strip(node.get("recommended_action")) for node in selected_nodes],
+                limit=3,
+            )
+            primary_node = selected_nodes[0]
+            primary_node_id = _strip(primary_node.get("node_id"))
+            primary_label = _strip(primary_node.get("label") or "高优先节点")
+            primary_mastery = mastery_map.get(primary_node_id)
+            why_now = self._build_pack_why_now(
+                primary_node=primary_node,
+                mastery=primary_mastery,
+                path_mode=path_mode,
+            )
+            node_summary = self._format_compact_list(node_labels)
+            focus_prefix = f"{phase_focus}：" if phase_focus else ""
+            focus = (
+                f"{focus_prefix}优先拿下 {node_summary}，先把 {primary_label} 这类高收益节点变成今天能闭卷输出的内容。"
+            )
+            output_action = self._build_pack_output_action(
+                actions=actions,
+                archetypes=archetypes,
+                phase_output=phase_output,
+                node_labels=node_labels,
+            )
+            success_criteria = self._build_pack_success_criteria(
+                node_labels=node_labels,
+                archetypes=archetypes,
+                mistakes=mistakes,
+            )
+            estimated_minutes = min(
+                daily_minutes,
+                max(30, sum(max(15, min(int(float(node.get("time_cost", 25))), 60)) for node in selected_nodes) + 10),
+            )
+            day_specs[day] = {
+                "focus": focus,
+                "title_focus": primary_label if len(node_labels) == 1 else f"{primary_label} 等{len(node_labels)}个点",
+                "estimated_minutes": estimated_minutes,
+                "subject_strategy": {
+                    "pack_id": _strip(pack.get("id")),
+                    "path_mode": path_mode,
+                    "node_ids": node_ids,
+                    "node_labels": node_labels,
+                    "primary_node_id": primary_node_id,
+                    "primary_node_label": primary_label,
+                    "primary_node_exam_weight": float(primary_node.get("exam_weight", 0.0)),
+                    "primary_node_mastery": int(round((primary_mastery or 0.0) * 100)),
+                    "why_now": why_now,
+                    "phase_focus": phase_focus,
+                    "phase_output": phase_output,
+                    "output_action": output_action,
+                    "success_criteria": success_criteria,
+                    "related_archetypes": archetypes,
+                    "common_mistakes_to_watch": mistakes,
+                    "recommended_actions": actions,
+                },
+            }
+
+        return day_specs
+
+    def _default_daily_task_specs(self, phase: dict[str, Any], *, phase_index: int) -> list[dict[str, Any]]:
         start_day = _safe_int(phase.get("start_day"))
         end_day = _safe_int(phase.get("end_day"))
         if start_day is None or end_day is None:
@@ -1779,6 +2578,53 @@ class PlanningWorkflowManager:
             )
         return specs
 
+    def _daily_task_specs(
+        self,
+        phase: dict[str, Any],
+        *,
+        phase_index: int,
+        session: PlanningSession | None = None,
+        error_clusters: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
+        specs = self._default_daily_task_specs(phase, phase_index=phase_index)
+        if session is None or not specs:
+            return specs
+
+        total_days = self._resolved_days_left(session) or max(spec["day"] for spec in specs)
+        daily_minutes = max((_safe_int(phase.get("daily_hours")) or 1) * 60, 30)
+        pack_specs = self._build_pack_daily_specs(
+            session=session,
+            total_days=total_days,
+            daily_minutes=daily_minutes,
+            error_clusters=error_clusters,
+        )
+        if not pack_specs:
+            return specs
+
+        merged_specs: list[dict[str, Any]] = []
+        for spec in specs:
+            pack_spec = _as_dict(pack_specs.get(int(spec["day"])))
+            if not pack_spec:
+                merged_specs.append(spec)
+                continue
+            custom_tasks = list(pack_spec.get("custom_tasks") or [])
+            if custom_tasks:
+                merged_specs.extend(
+                    [dict(item) for item in custom_tasks if isinstance(item, dict) and _safe_int(item.get("day"))]
+                )
+                continue
+            merged_spec = dict(spec)
+            merged_spec["focus"] = _strip(pack_spec.get("focus")) or merged_spec["focus"]
+            merged_spec["title_focus"] = _strip(pack_spec.get("title_focus")) or merged_spec["title_focus"]
+            merged_spec["estimated_minutes"] = (
+                _safe_int(pack_spec.get("estimated_minutes")) or merged_spec["estimated_minutes"]
+            )
+            subject_strategy = _as_dict(pack_spec.get("subject_strategy"))
+            if subject_strategy:
+                merged_spec["subject_strategy"] = subject_strategy
+            merged_specs.append(merged_spec)
+        return merged_specs
+
     def _estimated_minutes_for_task(
         self,
         *,
@@ -1843,6 +2689,7 @@ class PlanningWorkflowManager:
             "goal_type": "exam",
             "subject": _strip(collected.get("subject")),
             "exam_scope": _strip(collected.get("exam_scope")),
+            "exam_date": _strip(collected.get("exam_date")),
             "time_constraint_days": _safe_int(collected.get("time_constraint_days")) or 7,
             "knowledge_baseline": _strip(collected.get("knowledge_baseline")),
             "daily_available_hours": _safe_int(collected.get("daily_available_hours")) or 0,

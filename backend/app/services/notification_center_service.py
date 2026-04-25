@@ -904,6 +904,11 @@ class NotificationCenterService:
                 InterventionAcceptanceStatus.SNOOZED,
             }:
                 await service.mark_accepted(record.id)
+            await self._materialize_specialized_repair_task_if_needed(
+                user_id=user_id,
+                record_id=record.id,
+                action_payload=payload,
+            )
             return
 
         if action == "acted":
@@ -913,8 +918,13 @@ class NotificationCenterService:
                 InterventionAcceptanceStatus.SNOOZED,
             }:
                 await service.mark_accepted(record.id)
+            materialized_payload = await self._materialize_specialized_repair_task_if_needed(
+                user_id=user_id,
+                record_id=record.id,
+                action_payload=payload,
+            )
             if record.acceptance_status == InterventionAcceptanceStatus.ACCEPTED:
-                await service.mark_acted(record.id, action_payload=payload)
+                await service.mark_acted(record.id, action_payload={**payload, **materialized_payload})
             return
 
         if action == "dismissed":
@@ -933,6 +943,27 @@ class NotificationCenterService:
             }:
                 snooze_hours = int(payload.get("snooze_hours", 24))
                 await service.mark_snoozed(record.id, snooze_hours=snooze_hours)
+
+    async def _materialize_specialized_repair_task_if_needed(
+        self,
+        *,
+        user_id: UUID,
+        record_id: UUID,
+        action_payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        record = await self.db.get(InterventionRecord, record_id)
+        if not record or record.user_id != user_id:
+            return {}
+        if not dict(record.diagnosis_payload or {}).get("specialized_repair"):
+            return {}
+
+        from app.services.error_replan_bridge import ErrorReplanBridge
+
+        return await ErrorReplanBridge(self.db).materialize_specialized_repair_task_from_record(
+            user_id=user_id,
+            record=record,
+            action_payload=action_payload,
+        )
 
     @staticmethod
     def _extract_notification_record_id(notification: Notification) -> UUID | None:

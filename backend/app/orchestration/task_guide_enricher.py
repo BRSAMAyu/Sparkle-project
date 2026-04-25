@@ -6,6 +6,8 @@ from typing import Any
 
 from loguru import logger
 
+from app.orchestration.task_card_generator import TaskCardGenerator
+
 
 def _strip(value: Any) -> str:
     return str(value or "").strip()
@@ -112,9 +114,21 @@ class TaskGuideEnricher:
         subject: str,
         focus: str,
         bottlenecks: list[dict] | None = None,
+        knowledge_state: dict[str, Any] | None = None,
+        aurora_control_signal: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """同步规则版 enrichment，用于规划流程里的 task guide_json 初始生成。"""
         enriched = dict(guide_json or {})
+        enriched.update(
+            TaskCardGenerator().generate(
+                guide_json=enriched,
+                task_kind=task_kind,
+                subject=subject,
+                focus=focus,
+                knowledge_state=knowledge_state,
+                aurora_control_signal=aurora_control_signal,
+            )
+        )
         enriched["if_stuck"] = self.RULE_BASED_IF_STUCK.get(task_kind, self.RULE_BASED_IF_STUCK["default"])
         enriched["prerequisite_check"] = self._build_prerequisite_check(task_kind, subject, enriched)
         enriched["focus_cue"] = self._build_focus_cue(focus=focus, guide_json=enriched)
@@ -135,6 +149,8 @@ class TaskGuideEnricher:
         subject: str,
         focus: str,
         bottlenecks: list[dict] | None,
+        knowledge_state: dict[str, Any] | None = None,
+        aurora_control_signal: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """异步 LLM 版 enrichment，供任务创建后的后台补充流程调用。"""
         return await self.enrich(
@@ -143,6 +159,8 @@ class TaskGuideEnricher:
             subject=subject,
             focus=focus,
             bottlenecks=bottlenecks,
+            knowledge_state=knowledge_state,
+            aurora_control_signal=aurora_control_signal,
             use_llm=True,
         )
 
@@ -154,6 +172,8 @@ class TaskGuideEnricher:
         subject: str,
         focus: str,
         bottlenecks: list[dict] | None,
+        knowledge_state: dict[str, Any] | None = None,
+        aurora_control_signal: dict[str, Any] | None = None,
         use_llm: bool = True,
     ) -> dict[str, Any]:
         """
@@ -164,6 +184,16 @@ class TaskGuideEnricher:
         - why_now: str (一句话说明为什么现在做)
         """
         enriched = dict(guide_json or {})
+        enriched.update(
+            TaskCardGenerator().generate(
+                guide_json=enriched,
+                task_kind=task_kind,
+                subject=subject,
+                focus=focus,
+                knowledge_state=knowledge_state,
+                aurora_control_signal=aurora_control_signal,
+            )
+        )
 
         if use_llm:
             try:
@@ -188,11 +218,13 @@ class TaskGuideEnricher:
                 logger.warning("TaskGuideEnricher LLM failed: {}", exc)
 
         return self.enrich_sync(
-            guide_json=guide_json,
+            guide_json=enriched,
             task_kind=task_kind,
             subject=subject,
             focus=focus,
             bottlenecks=bottlenecks,
+            knowledge_state=knowledge_state,
+            aurora_control_signal=aurora_control_signal,
         )
 
     async def _llm_enrich(

@@ -78,6 +78,34 @@ class ExamSprintPolicyEngine:
             "stable_traits": STABLE_TRAITS_POLICY,
         }
 
+        if days <= 1:
+            density = 0.45 if hours <= 2 else 0.55
+            return ExamSprintPolicy(
+                sprint_mode="last_24h_cram",
+                triage_level="emergency",
+                retrieval_policy={
+                    "daily_retrieval_required": True,
+                    "default_task_shape": "high_yield_review_error_book_short_mock",
+                    "spaced_retrieval": "same_day_compact_refresh",
+                    "allow_deep_learn": False,
+                    "deep_learn_budget": "none",
+                    "output_gate": "every_block_requires_visible_output",
+                    "success_gate": "no_new_topics_visible_output_required",
+                    "density_mode": "final_day_compact",
+                    "max_primary_targets_per_day": 3,
+                    "minimum_output": "高频速览、错题回看或 30 分钟短模拟",
+                    "new_topic_allowed": False,
+                },
+                task_density_hint=density,
+                sleep_guard_hint="最后一天以稳定输出为先，停止新章节，避免熬夜。",
+                strategy_notes=[
+                    "今天不再开新坑，只做高频高收益节点速览、错题回看和短模拟。",
+                    "低 ROI、新章节、长耗时题全部暂停，先保住最容易拿到的分数。",
+                    "任何复习块都必须留下可见输出，例如闭卷页、错因清单或短模拟结果。",
+                ],
+                user_modeling_boundary=boundary,
+            )
+
         if days <= 7:
             density = 0.55 if hours <= 2 else 0.65
             return ExamSprintPolicy(

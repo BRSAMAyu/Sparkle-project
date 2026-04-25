@@ -650,6 +650,7 @@ _SOURCE_PATTERN_LABELS = {
 }
 
 _RESERVED_INFERRED_KEYS = {
+    "inference_write_pipeline",
     "self_model",
 }
 

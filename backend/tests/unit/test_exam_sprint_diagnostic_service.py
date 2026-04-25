@@ -8,14 +8,13 @@ from sqlalchemy import select
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.user_preferences import UserPreferencesCenter
 from app.schemas.exam_sprint import (
+    DiagnoseConfidence,
     DiagnosticAnswerSubmission,
     DiagnosticGenerateRequest,
     DiagnosticGradeRequest,
     DiagnosticKnowledgeNode,
-    DiagnoseConfidence,
 )
 from app.services.exam_sprint_diagnostic_service import ExamSprintDiagnosticService
-
 
 _NODE_NAMES = (
     "分层模型与协议栈",
@@ -124,4 +123,6 @@ async def test_exam_sprint_diagnostic_service_generates_grades_and_updates_maste
     ).scalar_one()
     assert prefs.explicit["cold_start_context"]["recommended_path"] == "minimum_pass"
     assert prefs.explicit["cold_start_context"]["diagnostic_estimated_score"] == graded.estimated_score_now
+    assert len(prefs.explicit["cold_start_context"]["diagnostic_node_mastery_snapshot"]) >= 5
+    assert "TCP 拥塞控制" in prefs.explicit["cold_start_context"]["diagnostic_coverage_domains"]
     assert len(prefs.explicit["knowledge_gaps"]) >= 2

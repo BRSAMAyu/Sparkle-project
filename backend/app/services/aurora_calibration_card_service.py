@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.aurora.runtime_v1.write_pipeline import InferenceWritePipeline
 from app.core.cache import cache_service
 from app.models.memory import MemoryCorrection
 from app.services.personalization.preference_service import PreferenceService
@@ -16,16 +17,6 @@ SELF_MODEL_KEY = "self_model"
 KNOWN_ASSUMPTIONS_KEY = "known_assumptions"
 MAX_VISIBLE_CARDS = 3
 VISIBLE_CONFIDENCE_THRESHOLD = 0.7
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
-def _utcnow_iso() -> str:
-    return _utcnow().isoformat()
-
-
 def _strip(value: Any) -> str:
     return str(value or "").strip()
 
@@ -89,6 +80,7 @@ class AuroraCalibrationCardService:
         self.db = db
         self.redis = redis or cache_service.redis
         self.pref_service = PreferenceService(db, self.redis)
+        self.write_pipeline = InferenceWritePipeline(db, self.redis, pref_service=self.pref_service)
 
     async def list_cards(
         self,
@@ -96,6 +88,7 @@ class AuroraCalibrationCardService:
         user_id: UUID,
         plan_id: str | None = None,
     ) -> dict[str, Any]:
+        await self.write_pipeline.promote_due_trials(user_id=user_id)
         prefs = await self.pref_service.get_preferences(user_id)
         self_model = self._get_self_model(prefs.inferred or {})
         assumptions = _as_list(self_model.get(KNOWN_ASSUMPTIONS_KEY))
@@ -129,36 +122,13 @@ class AuroraCalibrationCardService:
         if normalized_response not in {"confirm", "incorrect", "mute"}:
             raise ValueError("unsupported response")
 
-        prefs = await self.pref_service.get_preferences(user_id)
-        inferred = dict(prefs.inferred or {})
-        self_model = self._get_self_model(inferred)
-        assumptions = _as_list(self_model.get(KNOWN_ASSUMPTIONS_KEY))
-        now_iso = _utcnow_iso()
-
-        updated_assumption: dict[str, Any] | None = None
-        updated_items: list[dict[str, Any]] = []
-        for raw_item in assumptions:
-            item = _as_dict(raw_item)
-            if _strip(item.get("id")) != normalized_card_id:
-                updated_items.append(item)
-                continue
-            updated_assumption = self._apply_response(
-                item=item,
-                response=normalized_response,
-                reason=reason,
-                corrected_assumption=corrected_assumption,
-                responded_at=now_iso,
-            )
-            updated_items.append(updated_assumption)
-
-        if updated_assumption is None:
-            raise LookupError("calibration card not found")
-
-        self_model[KNOWN_ASSUMPTIONS_KEY] = updated_items
-        self_model["updated_at"] = now_iso
-        inferred[SELF_MODEL_KEY] = self_model
-
-        updated_prefs = await self.pref_service.update_inferred_raw(user_id, inferred)
+        updated_prefs, updated_claim = await self.write_pipeline.respond_to_claim(
+            user_id=user_id,
+            claim_id=normalized_card_id,
+            response=normalized_response,
+            reason=reason,
+            corrected_assumption=corrected_assumption,
+        )
 
         self.db.add(
             MemoryCorrection(
@@ -195,7 +165,7 @@ class AuroraCalibrationCardService:
 
         return {
             "status": "ok",
-            "card": self._serialize_card(updated_assumption),
+            "card": self._serialize_card(updated_claim.to_dict()),
             "preference_version": updated_prefs.version or 0,
         }
 
@@ -215,8 +185,8 @@ class AuroraCalibrationCardService:
         if not assumption:
             return False
 
-        status = _strip(assumption.get("status") or "pending").lower()
-        if status in {"confirmed", "rejected", "suppressed", "dismissed", "archived"}:
+        status = _strip(assumption.get("status")).lower()
+        if status in {"trial", "confirmed", "rejected", "revoked", "suppressed", "dismissed", "archived"}:
             return False
         if _as_bool(assumption.get("suppressed_by_user")):
             return False
@@ -226,17 +196,24 @@ class AuroraCalibrationCardService:
             if assumption_plan_id and assumption_plan_id != _strip(plan_id):
                 return False
 
+        if status == "candidate":
+            return True
+        if status == "observed":
+            return False
+
         return _as_bool(assumption.get("needs_confirmation")) or (
-            _confidence(assumption.get("confidence")) < VISIBLE_CONFIDENCE_THRESHOLD
+            not status and _confidence(assumption.get("confidence")) < VISIBLE_CONFIDENCE_THRESHOLD
         )
 
     @staticmethod
     def _sort_key(item: Any) -> tuple[int, float, float]:
         assumption = _as_dict(item)
         updated_at = assumption.get("updated_at") or assumption.get("last_observed_at")
+        status = _strip(assumption.get("status")).lower()
+        priority = 0 if status == "candidate" else 1 if _as_bool(assumption.get("needs_confirmation")) else 2
         return (
-            0 if _as_bool(assumption.get("needs_confirmation")) else 1,
-            _confidence(assumption.get("confidence")),
+            priority,
+            -_confidence(assumption.get("confidence")) if status == "candidate" else _confidence(assumption.get("confidence")),
             _recency_sort_value(updated_at),
         )
 
@@ -254,52 +231,12 @@ class AuroraCalibrationCardService:
             "statement": statement or "我有一个判断需要你确认。",
             "confidence": _confidence(item.get("confidence")),
             "confidence_label": _confidence_label(item.get("confidence")),
+            "status": _strip(item.get("status") or "observed"),
             "needs_confirmation": _as_bool(item.get("needs_confirmation")),
             "evidence_summary": evidence_summary,
             "evidence": evidence,
             "plan_id": _strip(item.get("plan_id")) or None,
             "source": _strip(item.get("source")) or None,
             "last_observed_at": _strip(item.get("last_observed_at")) or None,
+            "trial_expires_at": _strip(item.get("trial_expires_at")) or None,
         }
-
-    @staticmethod
-    def _apply_response(
-        *,
-        item: dict[str, Any],
-        response: str,
-        reason: str | None,
-        corrected_assumption: str | None,
-        responded_at: str,
-    ) -> dict[str, Any]:
-        updated = dict(item)
-        history = _as_list(updated.get("response_history"))
-        history.append(
-            {
-                "response": response,
-                "reason": _strip(reason) or None,
-                "corrected_assumption": _strip(corrected_assumption) or None,
-                "responded_at": responded_at,
-            }
-        )
-        updated["response_history"] = history[-10:]
-        updated["last_user_response"] = response
-        updated["last_responded_at"] = responded_at
-        updated["updated_at"] = responded_at
-        updated["needs_confirmation"] = False
-
-        if response == "confirm":
-            updated["status"] = "confirmed"
-            updated["confirmed_at"] = responded_at
-            updated["confidence"] = max(_confidence(updated.get("confidence")), 0.85)
-        elif response == "incorrect":
-            updated["status"] = "rejected"
-            updated["rejected_at"] = responded_at
-            updated["confidence"] = min(_confidence(updated.get("confidence")), 0.25)
-            if _strip(corrected_assumption):
-                updated["user_correction"] = _strip(corrected_assumption)
-        else:
-            updated["status"] = "suppressed"
-            updated["suppressed_by_user"] = True
-            updated["suppressed_at"] = responded_at
-
-        return updated

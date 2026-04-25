@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_active_superuser, get_current_user, get_db
+from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.core.cache import cache_service
 from app.models.user import User
 from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
@@ -56,3 +57,14 @@ async def respond_calibration_card(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
+
+# route-tier: admin
+@router.get("/telemetry/summary")
+async def get_aurora_telemetry_summary(
+    days: int = Query(30, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser),
+) -> dict[str, Any]:
+    del current_user
+    return await AuroraDecisionTelemetryService(db).build_summary(days=days)

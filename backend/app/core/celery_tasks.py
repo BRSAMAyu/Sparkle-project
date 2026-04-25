@@ -523,6 +523,27 @@ def deliver_weekly_growth_digests(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=60)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_post_exam_review_invitations")
+def scan_post_exam_review_invitations(self, limit: int = 200):
+    """Scan exam sprint plans and invite users into post-exam review when due."""
+    from app.core.cache import cache_service
+    from app.db.session import AsyncSessionLocal
+    from app.services.exam_sprint_review_service import ExamSprintReviewService
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            service = ExamSprintReviewService(session, cache_service.redis)
+            return await service.scan_due_review_invitations(limit=limit)
+
+    try:
+        result = _run_async(_run())
+        logger.info(f"✅ Post-exam review invitation scan finished: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to scan post-exam review invitations: {exc}")
+        raise self.retry(exc=exc, countdown=60)
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.check_prediction_accuracy")
 def check_prediction_accuracy(self):
     """每日自动回填到期的 Theater 预测准确度。"""

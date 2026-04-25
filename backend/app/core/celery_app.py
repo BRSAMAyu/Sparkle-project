@@ -1021,6 +1021,12 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(day_of_week="mon", hour=8, minute=0),
         "options": {"queue": "default"},
     },
+    "post-exam-review-invitation-scan": {
+        "task": "app.core.celery_tasks.scan_post_exam_review_invitations",
+        "schedule": crontab(minute=15, hour="*/1"),
+        "args": (200,),
+        "options": {"queue": "default"},
+    },
     "theater-prediction-accuracy-daily": {
         "task": "app.core.celery_tasks.check_prediction_accuracy",
         "schedule": crontab(hour=4, minute=10),

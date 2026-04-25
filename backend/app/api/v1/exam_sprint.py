@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
@@ -9,13 +11,20 @@ from app.schemas.exam_sprint import (
     DiagnosticGenerateResponse,
     DiagnosticGradeRequest,
     DiagnosticGradeResponse,
+    ExamSprintDashboardResponse,
     ExamSprintIntakeRequest,
     ExamSprintIntakeResponse,
+    PostExamReviewRequest,
+    PostExamReviewResponse,
+    SprintSummaryResponse,
 )
+from app.services.exam_sprint_dashboard_service import ExamSprintDashboardService
 from app.services.exam_sprint_diagnostic_service import ExamSprintDiagnosticService
 from app.services.exam_sprint_intake_service import ExamSprintIntakeService
+from app.services.exam_sprint_review_service import ExamSprintReviewService
 
 router = APIRouter()
+
 
 # route-tier: authed
 @router.post("/intake", response_model=ExamSprintIntakeResponse)
@@ -31,6 +40,17 @@ async def intake_exam_sprint(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+
+# route-tier: authed
+@router.get("/dashboard", response_model=ExamSprintDashboardResponse)
+async def get_exam_sprint_dashboard(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ExamSprintDashboardService(db)
+    return await service.get_dashboard(user_id=current_user.id)
+
+
 # route-tier: authed
 @router.post("/diagnose/generate", response_model=DiagnosticGenerateResponse)
 async def generate_exam_sprint_diagnostic(
@@ -44,6 +64,7 @@ async def generate_exam_sprint_diagnostic(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
+
 # route-tier: authed
 @router.post("/diagnose/grade", response_model=DiagnosticGradeResponse)
 async def grade_exam_sprint_diagnostic(
@@ -56,3 +77,33 @@ async def grade_exam_sprint_diagnostic(
         return await service.grade(user_id=current_user.id, request=payload)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+# route-tier: authed
+@router.post("/post-exam-review", response_model=PostExamReviewResponse)
+async def submit_post_exam_review(
+    payload: PostExamReviewRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ExamSprintReviewService(db=db, redis_client=cache_service.redis)
+    try:
+        return await service.submit_post_exam_review(user_id=current_user.id, request=payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+# route-tier: authed
+@router.get("/sprint-summary", response_model=SprintSummaryResponse)
+async def get_exam_sprint_summary(
+    plan_id: UUID | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ExamSprintReviewService(db=db, redis_client=cache_service.redis)
+    try:
+        return await service.get_sprint_summary(user_id=current_user.id, plan_id=plan_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

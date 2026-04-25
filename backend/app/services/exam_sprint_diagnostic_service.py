@@ -18,6 +18,8 @@ from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.user_preferences import UserPreferencesCenter
 from app.scenario_packs.exam_prep_14d import EXAM_PREP_14D_MANIFEST_PATH, EXAM_PREP_14D_PACK_ID
 from app.schemas.exam_sprint import (
+    DiagnoseConfidence,
+    DiagnoseQuestionType,
     DiagnosticBottleneck,
     DiagnosticGenerateRequest,
     DiagnosticGenerateResponse,
@@ -27,8 +29,6 @@ from app.schemas.exam_sprint import (
     DiagnosticMasteryUpdate,
     DiagnosticQuestionGrader,
     DiagnosticQuestionPrompt,
-    DiagnoseConfidence,
-    DiagnoseQuestionType,
     RecommendedPath,
 )
 from app.services.galaxy_service import GalaxyService
@@ -515,6 +515,10 @@ class ExamSprintDiagnosticService:
             pass_probability=pass_probability,
             recommended_path=recommended_path,
             top_bottlenecks=top_bottlenecks,
+            node_mastery_updates=all_node_mastery_updates,
+            coverage_domains=sorted(
+                {item.domain for item in top_bottlenecks} | {item.node_name for item in all_node_mastery_updates}
+            ),
         )
 
         return DiagnosticGradeResponse(
@@ -805,6 +809,8 @@ class ExamSprintDiagnosticService:
         pass_probability: float,
         recommended_path: RecommendedPath,
         top_bottlenecks: list[DiagnosticBottleneck],
+        node_mastery_updates: list[DiagnosticMasteryUpdate],
+        coverage_domains: list[str],
     ) -> None:
         explicit_result = await self.db.execute(select(UserPreferencesCenter.explicit).where(UserPreferencesCenter.user_id == user_id))
         explicit = explicit_result.scalar_one_or_none() or {}
@@ -819,6 +825,16 @@ class ExamSprintDiagnosticService:
                 "diagnostic_pass_probability": pass_probability,
                 "recommended_path": recommended_path.value,
                 "diagnostic_top_bottlenecks": [item.node_name for item in top_bottlenecks],
+                "diagnostic_node_mastery_snapshot": [
+                    {
+                        "node_id": str(item.node_id) if item.node_id else None,
+                        "node_name": item.node_name,
+                        "node_slug": item.node_slug,
+                        "mastery": item.mastery,
+                    }
+                    for item in node_mastery_updates
+                ],
+                "diagnostic_coverage_domains": list(coverage_domains),
                 "diagnostic_updated_at": _utcnow().isoformat(),
             }
         )
