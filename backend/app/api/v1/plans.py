@@ -8,6 +8,7 @@ Plans API Endpoints - Full CRUD operations
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime, timezone
 from typing import Any
 from uuid import UUID
@@ -195,6 +196,8 @@ def _serialize_task_for_plan_detail(task: Task, *, subject: str | None) -> dict[
             guide_json=guide,
         )
     payload["guide_json"] = guide
+    payload["compressed"] = bool(guide.get("compressed"))
+    payload["compression_reason"] = _strip(guide.get("compression_reason")) or None
     return payload
 
 
@@ -213,6 +216,7 @@ def _task_kind_from_tags(tags: Any) -> str:
         "spaced_retrieval",
         "integration_retrieval",
         "stage_mock",
+        "targeted_repair",
     }
     for tag in tags:
         text = _strip(tag)
@@ -309,6 +313,70 @@ def _build_day_highlights(
         ),
         "tasks": highlight_tasks,
     }
+
+
+def _task_day_from_model(task: Task) -> int:
+    try:
+        order_value = int(task.order_index or 0)
+    except (TypeError, ValueError):
+        order_value = 0
+    if order_value >= 1000:
+        return max(1, order_value // 1000)
+    for tag in list(task.tags or []):
+        text = _strip(tag)
+        if text.startswith("day:"):
+            try:
+                return max(1, int(text.split(":", 1)[1]))
+            except ValueError:
+                continue
+    return 1
+
+
+def _strategy_from_plan(plan: Plan) -> dict[str, Any]:
+    description = _strip(plan.description)
+    if not description:
+        return {}
+    try:
+        payload = json.loads(description)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    strategy = payload.get("strategy")
+    return strategy if isinstance(strategy, dict) else {}
+
+
+def _initial_days_for_today(plan: Plan, tasks: list[Task]) -> int:
+    strategy = _strategy_from_plan(plan)
+    for candidate in (
+        strategy.get("actual_days_left"),
+        strategy.get("total_days"),
+        (plan.source_metadata or {}).get("initial_days_left") if isinstance(plan.source_metadata, dict) else None,
+    ):
+        try:
+            parsed = int(float(candidate))
+        except (TypeError, ValueError):
+            continue
+        if parsed > 0:
+            return parsed
+    if plan.target_date and plan.created_at:
+        return max((plan.target_date - plan.created_at.date()).days, 1)
+    return max((_task_day_from_model(task) for task in tasks), default=1)
+
+
+def _today_day_index(plan: Plan, tasks: list[Task]) -> int:
+    initial_days = _initial_days_for_today(plan, tasks)
+    max_task_day = max((_task_day_from_model(task) for task in tasks), default=initial_days)
+    if plan.target_date is None:
+        pending_days = [
+            _task_day_from_model(task)
+            for task in tasks
+            if getattr(task.status, "value", task.status) != TaskStatus.COMPLETED.value
+        ]
+        return min(pending_days) if pending_days else max(1, max_task_day)
+    days_left = max((plan.target_date - date.today()).days, 0)
+    derived = max(initial_days - days_left + 1, 1)
+    return min(derived, max(max_task_day, 1))
 
 
 async def _get_plan_card_or_500(db: AsyncSession, plan: Plan, user_id: UUID):
@@ -725,6 +793,61 @@ async def advance_plan_phase(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return {"success": True, "data": payload}
+
+
+@router.get("/{plan_id:uuid}/today", response_model=dict[str, Any])
+async def get_plan_today(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+
+    tasks_result = await db.execute(
+        select(Task)
+        .where(
+            and_(
+                Task.plan_id == plan.id,
+                Task.user_id == current_user.id,
+                Task.not_deleted_filter(),
+            )
+        )
+        .order_by(Task.order_index.asc(), Task.created_at.asc())
+    )
+    tasks = list(tasks_result.scalars().all())
+    today_day = _today_day_index(plan, tasks)
+    today_tasks = [
+        task
+        for task in tasks
+        if _task_day_from_model(task) == today_day
+        and getattr(task.status, "value", task.status) != TaskStatus.ABANDONED.value
+    ]
+    if not today_tasks:
+        today_tasks = [
+            task
+            for task in tasks
+            if getattr(task.status, "value", task.status) != TaskStatus.COMPLETED.value
+            and getattr(task.status, "value", task.status) != TaskStatus.ABANDONED.value
+        ][:1]
+
+    task_payloads = [_serialize_task_for_plan_detail(task, subject=plan.subject) for task in today_tasks]
+    compression_reason = next(
+        (
+            _strip(task.get("compression_reason"))
+            for task in task_payloads
+            if task.get("compressed") and _strip(task.get("compression_reason"))
+        ),
+        None,
+    )
+    return {
+        "plan_id": str(plan.id),
+        "day": today_day,
+        "compressed": any(bool(task.get("compressed")) for task in task_payloads),
+        "compression_reason": compression_reason,
+        "tasks": task_payloads,
+    }
 
 
 @router.get("/{plan_id:uuid}", response_model=PlanDetail)

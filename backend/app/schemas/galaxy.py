@@ -107,6 +107,48 @@ class ApplyNodeExpansionResponse(BaseModel):
 # ==========================================
 # 响应模型
 # ==========================================
+class NodeHistoryErrorItem(BaseModel):
+    id: UUID
+    question_text: str | None = None
+    question_image_url: str | None = None
+    subject_code: str | None = None
+    chapter: str | None = None
+    mastery_level: float = 0.0
+    review_count: int = 0
+    analysis_summary: str | None = None
+    affected_node_id: UUID | None = None
+    linked_knowledge_node_ids: list[str] = Field(default_factory=list)
+    created_at: datetime | None = None
+    last_reviewed_at: datetime | None = None
+
+
+class NodeHistoryResponse(BaseModel):
+    node_id: str
+    resolved_node_id: UUID | None = None
+    node_label: str | None = None
+    mastery: float = Field(0.0, ge=0.0, le=1.0)
+    last_studied_at: datetime | None = None
+    study_count: int = 0
+    related_errors: list[NodeHistoryErrorItem] = Field(default_factory=list)
+
+
+class GalaxyContributionNode(BaseModel):
+    node_id: UUID
+    node_name: str
+    reason: str | None = None
+    mastery_delta: int = 0
+    updated_at: datetime | None = None
+
+
+class UserGalaxyContribution(BaseModel):
+    first_activation_count: int = 0
+    error_repaired_count: int = 0
+    conversation_updated_count: int = 0
+    first_activated_nodes: list[GalaxyContributionNode] = Field(default_factory=list)
+    error_repaired_nodes: list[GalaxyContributionNode] = Field(default_factory=list)
+    conversation_updated_nodes: list[GalaxyContributionNode] = Field(default_factory=list)
+
+
 class NodeBase(BaseModel):
     id: UUID
     name: str

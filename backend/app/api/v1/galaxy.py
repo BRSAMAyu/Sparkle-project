@@ -18,10 +18,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user_id, get_db
+from app.api.deps import get_current_user_id, get_db, get_optional_current_user
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task
+from app.models.user import User
 from app.schemas.galaxy import (
     ApplyNodeExpansionRequest,
     ApplyNodeExpansionResponse,
@@ -34,6 +35,7 @@ from app.schemas.galaxy import (
     NodeExpansionCandidateRequest,
     NodeExpansionCandidatesResponse,
     NodeDetailResponse,
+    NodeHistoryResponse,
     NodeRelationInfo,
     ReviewSuggestion,
     ReviewSuggestionsResponse,
@@ -42,6 +44,7 @@ from app.schemas.galaxy import (
     SectorCode,
     SparkRequest,
     SparkResult,
+    UserGalaxyContribution,
 )
 from app.services.decay_service import DecayService
 from app.services.expansion_service import ExpansionService
@@ -171,6 +174,22 @@ async def get_galaxy_graph(
     )
 
 
+@router.get("/contribution-stats", response_model=UserGalaxyContribution)
+async def get_galaxy_contribution_stats(
+    user_id_query: str | None = Query(None, alias="user_id", description="验收/调试场景可显式指定用户 ID"),
+    current_user: User | None = Depends(get_optional_current_user),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Return per-user Galaxy contribution stats and detail lists."""
+    effective_user_id = user_id_query or (str(current_user.id) if current_user else None)
+    if not effective_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing user_id or authentication",
+        )
+    return await galaxy_service.get_user_contribution_stats(UUID(effective_user_id))
+
+
 # route-tier: authed
 @router.post("/nodes", response_model=NodeBase)
 async def create_galaxy_node(
@@ -218,6 +237,48 @@ async def spark_node(
     )
 
 
+@router.get("/node/{node_id}/history", response_model=NodeHistoryResponse)
+async def get_node_history(
+    node_id: str,
+    user_id_query: str | None = Query(None, alias="user_id", description="验收/调试场景可显式指定用户 ID"),
+    pack_id: str | None = Query(None, description="可选 Sprint Pack ID，用于 pack 节点消歧"),
+    current_user: User | None = Depends(get_optional_current_user),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """
+    获取知识节点的个人学习历史。
+
+    支持 UUID Galaxy 节点和 `cn.tcp_flow_control` 这类 Sprint Pack 节点 ID。
+    """
+    effective_user_id = user_id_query or (str(current_user.id) if current_user else None)
+    if not effective_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing user_id or authentication",
+        )
+
+    try:
+        user_uuid = UUID(effective_user_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid user_id",
+        ) from exc
+
+    try:
+        return await galaxy_service.get_node_history(
+            user_id=user_uuid,
+            node_id=node_id,
+            pack_id=pack_id,
+            related_errors_limit=2,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+
 @router.get("/node/{node_id}")
 async def get_node_detail(
     node_id: UUID,
@@ -234,9 +295,7 @@ async def get_node_detail(
 
     # 获取节点（eager-load subject）
     result = await db.execute(
-        select(KnowledgeNode)
-        .options(joinedload(KnowledgeNode.subject))
-        .where(KnowledgeNode.id == node_id)
+        select(KnowledgeNode).options(joinedload(KnowledgeNode.subject)).where(KnowledgeNode.id == node_id)
     )
     node = result.scalar_one_or_none()
     if not node:
@@ -252,9 +311,7 @@ async def get_node_detail(
             joinedload(NodeRelation.source_node),
             joinedload(NodeRelation.target_node),
         )
-        .where(
-            or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id)
-        )
+        .where(or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id))
     )
     relations_result = await db.execute(relations_query)
     relations = relations_result.unique().scalars().all()
@@ -338,13 +395,12 @@ async def get_node_detail(
         .limit(6)
     )
     related_plans = [
-        plan for plan in related_plans_result.scalars().all()
+        plan
+        for plan in related_plans_result.scalars().all()
         if isinstance(plan.source_metadata, dict)
         and (
             str(plan.source_metadata.get("target_node_id")) == str(node_id)
-            or str(node_id) in {
-                str(item) for item in (plan.source_metadata.get("path_node_ids") or [])
-            }
+            or str(node_id) in {str(item) for item in (plan.source_metadata.get("path_node_ids") or [])}
         )
     ]
 
@@ -437,14 +493,8 @@ async def apply_node_expansion_candidates(
         UUID(user_id),
         candidates=[candidate.model_dump() for candidate in request.candidates],
     )
-    created = [
-        NodeBase.from_model(created_node)
-        for created_node in apply_result.created_nodes
-    ]
-    reused = [
-        NodeBase.from_model(reused_node)
-        for reused_node in apply_result.reused_nodes
-    ]
+    created = [NodeBase.from_model(created_node) for created_node in apply_result.created_nodes]
+    reused = [NodeBase.from_model(reused_node) for reused_node in apply_result.reused_nodes]
     return ApplyNodeExpansionResponse(
         success=True,
         requested_count=len(request.candidates),

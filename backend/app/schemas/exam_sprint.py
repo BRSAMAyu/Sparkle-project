@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 TargetMode = Literal["pass", "hold", "high_score"]
 PackSelectionType = Literal["scenario_pack", "generic_policy"]
@@ -136,12 +136,29 @@ class ReviewPlanSelection(BaseModel):
 
 
 class PostExamReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     plan_id: UUID | None = None
-    self_rating: int = Field(..., ge=1, le=10)
+    self_rating: int | None = Field(default=None, ge=1, le=10)
+    result_rating: int | None = Field(default=None, ge=1, le=5)
+    result_description: str = Field(default="", max_length=2000)
+    biggest_challenge: str = Field(default="", max_length=2000)
+    strategy_feedback: str = Field(default="", max_length=2000)
+    self_advice: str = Field(default="", max_length=2000)
     underprepared_topics: list[ReviewTopicSelection] = Field(default_factory=list)
     prepared_but_not_tested_topics: list[ReviewPlanSelection] = Field(default_factory=list)
     sparkle_helped: bool = True
     helpful_features: list[HelpfulFeature] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def normalize_rating_scales(self) -> PostExamReviewRequest:
+        if self.self_rating is None and self.result_rating is None:
+            raise ValueError("self_rating or result_rating is required")
+        if self.result_rating is None and self.self_rating is not None:
+            self.result_rating = max(1, min(5, round(self.self_rating / 2)))
+        if self.self_rating is None and self.result_rating is not None:
+            self.self_rating = max(1, min(10, self.result_rating * 2))
+        return self
 
 
 class SprintTaskStats(BaseModel):
@@ -221,6 +238,19 @@ class PostExamReviewResponse(BaseModel):
     unlocked_achievements: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class SprintCompletionSummary(BaseModel):
+    mastered_nodes_count: int = Field(default=0, ge=0)
+    repaired_errors_count: int = Field(default=0, ge=0)
+    completed_tasks_count: int = Field(default=0, ge=0)
+    strongest_area: str
+    growth_area: str
+
+
+class SprintCompletionCheckResponse(BaseModel):
+    completed: bool = False
+    summary: SprintCompletionSummary | None = None
+
+
 class ExamSprintDashboardTaskItem(BaseModel):
     """One task entry shown inside the sprint dashboard card."""
 
@@ -231,6 +261,8 @@ class ExamSprintDashboardTaskItem(BaseModel):
     is_completed: bool = False
     knowledge_node_id: str | None = None
     due_date: date_type | None = None
+    compressed: bool = False
+    compression_reason: str | None = None
 
 
 class ExamSprintDashboardTaskGroup(BaseModel):
@@ -396,6 +428,40 @@ class DiagnosticMasteryUpdate(BaseModel):
     source: str = "exam_sprint_diagnose"
 
 
+class PortfolioSprintEntry(BaseModel):
+    """One sprint entry in the learning portfolio."""
+
+    plan_id: UUID
+    plan_name: str
+    subject: str | None = None
+    sprint_mode: str | None = None
+    status: str = Field(description="active | completed | planned")
+    mastered_nodes_count: int = Field(default=0, ge=0)
+    started_at: str | None = None
+    completed_at: str | None = None
+    target_date: date_type | None = None
+    progress: float = Field(default=0.0, ge=0.0, le=1.0)
+    strongest_area: str | None = None
+    growth_area: str | None = None
+    self_rating: int | None = Field(default=None, ge=1, le=10)
+    result_rating: int | None = Field(default=None, ge=1, le=5)
+    result_description: str | None = None
+    headline: str | None = None
+    current_score: float | None = Field(default=None, ge=0.0, le=100.0)
+    weakest_points: list[str] = Field(default_factory=list)
+    proud_nodes: list[str] = Field(default_factory=list)
+
+
+class LearningPortfolioResponse(BaseModel):
+    """Aggregated learning portfolio across all exam sprints."""
+
+    entries: list[PortfolioSprintEntry] = Field(default_factory=list)
+    total_mastered_nodes: int = Field(default=0, ge=0)
+    active_count: int = Field(default=0, ge=0)
+    completed_count: int = Field(default=0, ge=0)
+    planned_count: int = Field(default=0, ge=0)
+
+
 class DiagnosticGradeResponse(BaseModel):
     estimated_score_now: float = Field(..., ge=0.0, le=100.0)
     pass_probability: float = Field(..., ge=0.0, le=1.0)
@@ -406,3 +472,31 @@ class DiagnosticGradeResponse(BaseModel):
     node_mastery_updates: list[DiagnosticMasteryUpdate] = Field(default_factory=list)
     coverage_domains: list[str] = Field(default_factory=list)
     confidence_calibration: dict[str, float] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# G27: Sprint Pack Node Quality Alert
+# ---------------------------------------------------------------------------
+
+
+class NodeQualityAlert(BaseModel):
+    """Alert indicating a pack node's difficulty may be miscalibrated."""
+
+    node_id: str
+    node_label: str
+    current_difficulty: int = Field(ge=1, le=5)
+    suggested_difficulty: int = Field(ge=1, le=5)
+    average_post_sprint_mastery: float = Field(ge=0.0, le=100.0)
+    expected_mastery: float = Field(ge=0.0, le=100.0)
+    evidence_count: int = Field(ge=0)
+
+
+class PackQualityReport(BaseModel):
+    """Quality report for a Sprint Pack, generated from user mastery data."""
+
+    pack_id: str
+    pack_name: str
+    total_nodes: int = Field(ge=0)
+    nodes_analyzed: int = Field(ge=0)
+    alerts: list[NodeQualityAlert] = Field(default_factory=list)
+    insufficient_data_nodes: int = Field(ge=0, default=0)

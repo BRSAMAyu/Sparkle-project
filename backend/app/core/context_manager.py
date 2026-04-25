@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import contextlib
 import json
 from collections import defaultdict
 from datetime import date, timedelta, timezone, datetime
@@ -21,6 +22,7 @@ from app.services.aurora_stage40_calendar_kill_switch_service import AuroraStage
 from app.services.error_book_service import ErrorBookService
 from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
+from app.services.memory_service import MemoryService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 from app.services.social_signal_bridge import SocialSignalBridge
@@ -37,6 +39,7 @@ class CognitiveContext(BaseModel):
     User's aggregated cognitive context for LLM injection.
     Reflects the 'Learning Profile' of the user.
     """
+
     user_id: str
     timestamp: datetime
 
@@ -55,12 +58,22 @@ class CognitiveContext(BaseModel):
     # User Profile (User)
     preferences: dict[str, Any] = Field(default_factory=dict, description="Learning preferences")
     engagement_metrics: dict[str, Any] = Field(default_factory=dict, description="Engagement level and patterns")
-    community_context: dict[str, Any] = Field(default_factory=dict, description="Active community participation snapshot")
-    social_context: dict[str, Any] = Field(default_factory=dict, description="Stage 17 isolated social context namespace")
-    social_context_v1: dict[str, Any] = Field(default_factory=dict, description="Stage 33 read-only social signal summary")
+    community_context: dict[str, Any] = Field(
+        default_factory=dict, description="Active community participation snapshot"
+    )
+    social_context: dict[str, Any] = Field(
+        default_factory=dict, description="Stage 17 isolated social context namespace"
+    )
+    social_context_v1: dict[str, Any] = Field(
+        default_factory=dict, description="Stage 33 read-only social signal summary"
+    )
     profile_context: dict[str, Any] | None = Field(default=None, description="Unified profile context payload")
     achievement_summary: dict[str, Any] = Field(default_factory=dict, description="Read-only achievement summary")
     calendar_context: dict[str, Any] = Field(default_factory=dict, description="Read-only calendar constraints")
+    past_session_memory: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Recent cross-session episodic memories for prompt continuity",
+    )
 
     # Preference Version (for cache invalidation)
     preference_version: int = Field(default=0, description="Preference version for cache validation")
@@ -68,7 +81,7 @@ class CognitiveContext(BaseModel):
     def to_llm_system_prompt_context(self) -> str:
         """Convert to a string representation suitable for System Prompt injection"""
         # Compact representation
-        return json.dumps(self.model_dump(mode='json', exclude={'user_id', 'timestamp'}), ensure_ascii=False)
+        return json.dumps(self.model_dump(mode="json", exclude={"user_id", "timestamp"}), ensure_ascii=False)
 
 
 class ContextOrchestrator:
@@ -140,10 +153,14 @@ class ContextOrchestrator:
                 # 验证偏好版本是否一致
                 current_version = await self._get_preference_version(user_id)
                 if cached.preference_version == current_version:
+                    with contextlib.suppress(Exception):
+                        cached.past_session_memory = await self._get_past_session_memory(UUID(user_id))
                     return cached
                 # 版本不一致，需要刷新
-                logger.info(f"Preference version changed for user {user_id}: "
-                           f"cached={cached.preference_version}, current={current_version}, refreshing context")
+                logger.info(
+                    f"Preference version changed for user {user_id}: "
+                    f"cached={cached.preference_version}, current={current_version}, refreshing context"
+                )
 
         uid = UUID(user_id)
 
@@ -167,7 +184,7 @@ class ContextOrchestrator:
             _with_session(lambda db: self._get_social_context_v1(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_achievement_context(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_calendar_context(uid, db)),  # type: ignore[misc]
-            return_exceptions=True
+            return_exceptions=True,
         )
 
         # Unpack results
@@ -179,6 +196,7 @@ class ContextOrchestrator:
         social_data = self._handle_result(results[5], "social", {})
         achievement_data = self._handle_result(results[6], "achievement", {})
         calendar_data = self._handle_result(results[7], "calendar", {})
+        past_session_memory = await self._get_past_session_memory(uid)
 
         knowledge_summary = {}
         preference_version = 0
@@ -188,27 +206,24 @@ class ContextOrchestrator:
             profile_context_payload = profile_context.to_prompt_context()
             preferences = profile_context.preferences or {}
             preference_version = profile_context.preference_version or 0
-            knowledge_summary = (profile_context.knowledge_summary.model_dump(mode="json")
-                                 if profile_context.knowledge_summary else {})
+            knowledge_summary = (
+                profile_context.knowledge_summary.model_dump(mode="json") if profile_context.knowledge_summary else {}
+            )
 
         # Construct Context Object
         context = CognitiveContext(
             user_id=user_id,
             timestamp=_utcnow(),
-
             knowledge_stats={
                 "overall_mastery": knowledge_summary.get("overall_mastery", 0.0),
                 "active_learning_subjects": knowledge_summary.get("active_learning_subjects", []),
                 "weak_spots": knowledge_summary.get("weak_spots", []),
             },
             recent_mastery_changes=knowledge_summary.get("recent_mastery_changes", []),
-
             error_summary=error_data.get("summary", {}),
             recent_errors=error_data.get("recent", []),
-
             active_tasks=task_data.get("tasks", []),
             focus_stats=task_data.get("focus", {}),
-
             preferences=preferences,
             engagement_metrics=metrics_data or {},
             community_context=self._assert_allowed_community_context(community_data or {}),
@@ -217,7 +232,7 @@ class ContextOrchestrator:
             profile_context=profile_context_payload,
             achievement_summary=achievement_data or {},
             calendar_context=calendar_data or {},
-
+            past_session_memory=past_session_memory,
             # 记录偏好版本用于缓存验证
             preference_version=preference_version,
         )
@@ -229,8 +244,13 @@ class ContextOrchestrator:
 
         return context
 
+    async def get_context(self, user_id: str, force_refresh: bool = False) -> CognitiveContext:
+        """Compatibility wrapper for call sites that refer to the aggregate context as get_context."""
+        return await self.get_user_context(user_id, force_refresh=force_refresh)
+
     def _sanitize_context(self, context: CognitiveContext) -> CognitiveContext:
         sensitive_keys = {"email", "phone", "device_id", "ip_address", "raw_content", "sensitive_tags"}
+
         def _clean(data: dict[str, Any]) -> dict[str, Any]:
             return {k: v for k, v in data.items() if k not in sensitive_keys}
 
@@ -239,6 +259,38 @@ class ContextOrchestrator:
         context.achievement_summary = _clean(context.achievement_summary)
         context.calendar_context = _clean(context.calendar_context)
         return context
+
+    async def _get_past_session_memory(
+        self,
+        user_id: UUID,
+        db_session: AsyncSession | None = None,
+        limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        try:
+            service = MemoryService(db_session or self.db)
+            rows = await service.get_recent_episodic(user_id, limit=limit)
+        except Exception as exc:
+            logger.warning(f"Failed to load past session memory: {exc}")
+            return []
+
+        memories: list[dict[str, Any]] = []
+        for item in rows:
+            summary = str(getattr(item, "summary", "") or "").strip()
+            if not summary:
+                continue
+            memories.append(
+                {
+                    "id": str(getattr(item, "id", "")),
+                    "summary": summary,
+                    "subject_type": str(getattr(item, "subject_type", "") or "").strip(),
+                    "source_type": str(getattr(item, "source_type", "") or "").strip(),
+                    "occurred_at": (
+                        item.occurred_at.isoformat() if getattr(item, "occurred_at", None) is not None else None
+                    ),
+                    "tags": list(getattr(item, "tags", None) or []),
+                }
+            )
+        return memories
 
     async def _get_social_context_v1(
         self,
@@ -299,10 +351,7 @@ class ContextOrchestrator:
         # Assuming we might want to add a method to GalaxyService later for "recent updates".
         recent = []
 
-        return {
-            "stats": stats,
-            "recent": recent
-        }
+        return {"stats": stats, "recent": recent}
 
     async def _get_error_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch Error Book stats and recent errors"""
@@ -313,24 +362,22 @@ class ContextOrchestrator:
         # 2. Recent Errors (Top 5 pending review or just created)
         # We want "Recent High Frequency Errors" or just "Recent Errors"
         errors, _ = await service.list_errors(
-            user_id,
-            ErrorQueryParams(page=1, page_size=5, need_review=False) # Just latest
+            user_id, ErrorQueryParams(page=1, page_size=5, need_review=False)  # Just latest
         )
 
         recent_errors_data = []
         for e in errors:
-            recent_errors_data.append({
-                "id": str(e.id),
-                "question_preview": e.question_text[:50] if e.question_text else "Image Question",
-                "subject": e.subject_code,
-                "error_type": e.latest_analysis.get("error_type_label") if e.latest_analysis else "Unknown",
-                "mastery": e.mastery_level
-            })
+            recent_errors_data.append(
+                {
+                    "id": str(e.id),
+                    "question_preview": e.question_text[:50] if e.question_text else "Image Question",
+                    "subject": e.subject_code,
+                    "error_type": e.latest_analysis.get("error_type_label") if e.latest_analysis else "Unknown",
+                    "mastery": e.mastery_level,
+                }
+            )
 
-        return {
-            "summary": stats,
-            "recent": recent_errors_data
-        }
+        return {"summary": stats, "recent": recent_errors_data}
 
     async def _get_task_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch Active Tasks and Focus Stats"""
@@ -338,28 +385,25 @@ class ContextOrchestrator:
         db = db_session if db_session is not None else self.db
         # 1. Active Tasks
         tasks, _ = await TaskService.get_multi(
-            db,
-            user_id,
-            TaskListQuery(page=1, page_size=5, status=TaskStatus.PENDING)
+            db, user_id, TaskListQuery(page=1, page_size=5, status=TaskStatus.PENDING)
         )
 
         active_tasks_data = []
         for t in tasks:
-            active_tasks_data.append({
-                "id": str(t.id),
-                "title": t.title,
-                "priority": t.priority,
-                "due_date": t.due_date.isoformat() if t.due_date else None,
-                "type": t.type.value
-            })
+            active_tasks_data.append(
+                {
+                    "id": str(t.id),
+                    "title": t.title,
+                    "priority": t.priority,
+                    "due_date": t.due_date.isoformat() if t.due_date else None,
+                    "type": t.type.value,
+                }
+            )
 
         # 2. Focus Stats
         focus = await focus_service.get_today_stats(db, user_id)
 
-        return {
-            "tasks": active_tasks_data,
-            "focus": focus
-        }
+        return {"tasks": active_tasks_data, "focus": focus}
 
     async def _get_user_profile(self, user_id: UUID) -> dict[str, Any]:
         """Fetch User Context and Analytics"""
@@ -373,10 +417,7 @@ class ContextOrchestrator:
         # 2. Analytics
         analytics = await service.get_analytics_summary(user_id)
 
-        return {
-            "preferences": preferences,
-            "metrics": analytics
-        }
+        return {"preferences": preferences, "metrics": analytics}
 
     async def _get_user_metrics(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch analytics metrics only."""
@@ -451,7 +492,11 @@ class ContextOrchestrator:
         }
         total_score = 0.0
         for user_achievement, achievement in score_result.all():
-            rarity = achievement.rarity.value if hasattr(achievement.rarity, "value") else str(achievement.rarity or "common")
+            rarity = (
+                achievement.rarity.value
+                if hasattr(achievement.rarity, "value")
+                else str(achievement.rarity or "common")
+            )
             weight = rarity_weights.get(rarity, 1.0)
             progress = float(user_achievement.progress or 0.0)
             total_score += weight if user_achievement.unlocked_at else (progress * weight)
@@ -606,7 +651,7 @@ class ContextOrchestrator:
                 total_claims, completed_claims = claim_map.get(group.id, (0, 0))
                 progress = round((completed_claims / total_claims) * 100) if total_claims else 0
                 sprint_summaries.append(
-                    f"\"{group.name}\" 群组进度 {progress}%，你的贡献 {completed_claims}/{max(total_claims, 1)} 任务"
+                    f'"{group.name}" 群组进度 {progress}%，你的贡献 {completed_claims}/{max(total_claims, 1)} 任务'
                 )
 
         unfinished_claims = await db.execute(

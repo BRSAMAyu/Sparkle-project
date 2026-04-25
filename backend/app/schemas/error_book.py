@@ -255,6 +255,7 @@ class ErrorQueryParams(BaseModel):
 
     subject: SubjectEnum | None = None
     chapter: str | None = None
+    node_id: str | None = None
     error_type: ErrorTypeEnum | None = None
     mastery_min: float | None = Field(None, ge=0, le=1)
     mastery_max: float | None = Field(None, ge=0, le=1)

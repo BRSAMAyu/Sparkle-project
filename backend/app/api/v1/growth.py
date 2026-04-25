@@ -45,7 +45,8 @@ async def get_weekly_growth_narrative(
 ):
     """Return this week's cached growth story for the Insights page."""
     service = ProgressNarrativeService(db, redis=cache_service.redis, cache=cache_service)
-    return await service.get_weekly_narrative(current_user.id)
+    narrative = await service.get_weekly_narrative(current_user.id)
+    return narrative.to_dict() if hasattr(narrative, "to_dict") else narrative
 
 
 # route-tier: authed
@@ -56,4 +57,5 @@ async def generate_weekly_growth_narrative(
 ):
     """Regenerate this week's growth story for testing and manual refresh."""
     service = ProgressNarrativeService(db, redis=cache_service.redis, cache=cache_service)
-    return await service.get_weekly_narrative(current_user.id, force=True)
+    narrative = await service.get_weekly_narrative(current_user.id, force=True)
+    return narrative.to_dict() if hasattr(narrative, "to_dict") else narrative

@@ -544,6 +544,41 @@ def scan_post_exam_review_invitations(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=60)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.pack_quality_analysis_task")
+def pack_quality_analysis_task(self, pack_id: str):
+    """Analyze Sprint Pack node quality and persist the report into Redis."""
+    from app.core.cache import cache_service
+    from app.db.session import AsyncSessionLocal
+    from app.services.exam_sprint_review_service import ExamSprintReviewService
+
+    async def _run():
+        if cache_service.redis is None:
+            await cache_service.init_redis()
+
+        async with AsyncSessionLocal() as session:
+            service = ExamSprintReviewService(session, cache_service.redis)
+            alerts = await service.analyze_pack_node_effectiveness(pack_id)
+            eligible_alerts = [
+                alert for alert in alerts if int(getattr(alert, "evidence_count", 0)) >= service.PACK_QUALITY_MIN_EVIDENCE_COUNT
+            ]
+            report = await service.build_pack_quality_report(pack_id, alerts=eligible_alerts)
+            cache_key = service.build_pack_quality_alerts_cache_key(pack_id)
+            await cache_service.set(
+                cache_key,
+                report.model_dump(mode="json"),
+                ttl=service.PACK_QUALITY_REPORT_TTL_SECONDS,
+            )
+            return report.model_dump(mode="json")
+
+    try:
+        result = _run_async(_run())
+        logger.info(f"✅ Pack quality analysis finished for {pack_id}: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to analyze pack quality for {pack_id}: {exc}")
+        raise self.retry(exc=exc, countdown=60)
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.check_prediction_accuracy")
 def check_prediction_accuracy(self):
     """每日自动回填到期的 Theater 预测准确度。"""
@@ -1018,6 +1053,186 @@ def retry_achievement_photon_reward(
             raise
         raise self.retry(exc=exc, countdown=30 * (2 ** int(self.request.retries or 0)))
 
+SPACED_REPETITION_INTERVAL_DAYS = (1, 3, 7, 14, 30)
+SPACED_REPETITION_MASTERY_MIN = 0.3
+SPACED_REPETITION_MASTERY_MAX = 0.8
+
+
+def _spaced_repetition_as_utc_naive(value):
+    from datetime import UTC
+
+    if value is None:
+        return None
+    if isinstance(value, str):
+        from datetime import datetime
+
+        value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if value.tzinfo is not None:
+        return value.astimezone(UTC).replace(tzinfo=None)
+    return value
+
+
+def _spaced_repetition_mastery_ratio(status) -> float:
+    mastery_score = float(getattr(status, "mastery_score", 0.0) or 0.0)
+    if mastery_score > 0:
+        return max(0.0, min(mastery_score / 100.0 if mastery_score > 1.0 else mastery_score, 1.0))
+
+    bkt_mastery = float(getattr(status, "bkt_mastery_prob", 0.0) or 0.0)
+    return max(0.0, min(bkt_mastery, 1.0))
+
+
+def _spaced_repetition_last_updated_at(status):
+    for attr in ("bkt_last_updated_at", "last_study_at", "updated_at", "last_interacted_at"):
+        value = _spaced_repetition_as_utc_naive(getattr(status, attr, None))
+        if value is not None:
+            return value
+    return None
+
+
+def _spaced_repetition_due_interval_days(last_updated_at, now) -> int | None:
+    last_updated = _spaced_repetition_as_utc_naive(last_updated_at)
+    reference_time = _spaced_repetition_as_utc_naive(now)
+    if last_updated is None or reference_time is None:
+        return None
+    elapsed_seconds = (reference_time - last_updated).total_seconds()
+    if elapsed_seconds < 0:
+        return None
+    elapsed_days = int(elapsed_seconds // 86400)
+    return elapsed_days if elapsed_days in SPACED_REPETITION_INTERVAL_DAYS else None
+
+
+async def _run_spaced_repetition_reminders_for_user(session, user_id: str, now=None) -> dict:
+    from datetime import UTC, datetime
+    from uuid import UUID
+
+    from sqlalchemy import select
+
+    from app.models.galaxy import KnowledgeNode, UserNodeStatus
+    from app.services.notification_center_service import NotificationCenterService
+
+    user_uuid = UUID(str(user_id))
+    reference_time = _spaced_repetition_as_utc_naive(now) or datetime.now(UTC).replace(tzinfo=None)
+
+    stmt = (
+        select(UserNodeStatus, KnowledgeNode)
+        .join(KnowledgeNode, UserNodeStatus.node_id == KnowledgeNode.id)
+        .where(
+            UserNodeStatus.user_id == user_uuid,
+            KnowledgeNode.deleted_at.is_(None),
+        )
+    )
+    result = await session.execute(stmt)
+    rows = result.all()
+    notification_service = NotificationCenterService(session)
+
+    summary = {
+        "status": "completed",
+        "user_id": str(user_uuid),
+        "evaluated": len(rows),
+        "sent": 0,
+        "skipped_mastery": 0,
+        "skipped_window": 0,
+        "skipped_duplicate": 0,
+        "skipped_paused": 0,
+        "sent_node_ids": [],
+    }
+
+    for status, node in rows:
+        if bool(getattr(status, "decay_paused", False)):
+            summary["skipped_paused"] += 1
+            continue
+
+        mastery = _spaced_repetition_mastery_ratio(status)
+        if mastery < SPACED_REPETITION_MASTERY_MIN or mastery > SPACED_REPETITION_MASTERY_MAX:
+            summary["skipped_mastery"] += 1
+            continue
+
+        last_updated_at = _spaced_repetition_last_updated_at(status)
+        due_interval_days = _spaced_repetition_due_interval_days(last_updated_at, reference_time)
+        if due_interval_days is None:
+            summary["skipped_window"] += 1
+            continue
+
+        notification = await notification_service.send_spaced_repetition_reminder(
+            user_id=user_uuid,
+            node_id=node.id,
+            node_name=node.name,
+            interval_days=due_interval_days,
+            mastery=mastery,
+            now=reference_time,
+        )
+        if notification is None:
+            summary["skipped_duplicate"] += 1
+            continue
+
+        summary["sent"] += 1
+        summary["sent_node_ids"].append(str(node.id))
+
+    return summary
+
+
+@celery_app.task(
+    bind=True,
+    max_retries=2,
+    name="app.core.celery_tasks.spaced_repetition_reminder_task",
+)
+def spaced_repetition_reminder_task(self, user_id: str, now_iso: str | None = None):
+    """G12: Send precise spaced-repetition reminders for one user's Galaxy nodes."""
+    from app.db.session import AsyncSessionLocal
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            return await _run_spaced_repetition_reminders_for_user(session, user_id, now=now_iso)
+
+    try:
+        result = _run_async(_run())
+        logger.info("✅ Spaced repetition reminder task finished for user %s: %s", user_id, result)
+        return result
+    except Exception as exc:
+        logger.error("❌ spaced_repetition_reminder_task failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=60)
+
+
+@celery_app.task(
+    bind=True,
+    max_retries=2,
+    name="app.core.celery_tasks.scan_spaced_repetition_reminders",
+)
+def scan_spaced_repetition_reminders(self, limit: int = 500):
+    """Daily scan that dispatches G12 spaced-repetition reminders per active user."""
+    from sqlalchemy import select
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.galaxy import UserNodeStatus
+    from app.models.user import User
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            stmt = (
+                select(UserNodeStatus.user_id)
+                .join(User, User.id == UserNodeStatus.user_id)
+                .where(User.is_active.is_(True))
+                .distinct()
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            user_ids = [row[0] for row in result.all()]
+            for user_uuid in user_ids:
+                celery_app.send_task(
+                    "app.core.celery_tasks.spaced_repetition_reminder_task",
+                    args=(str(user_uuid),),
+                    queue="default",
+                )
+
+            logger.info("✅ Dispatched %d spaced repetition reminder tasks", len(user_ids))
+            return {"dispatched": len(user_ids)}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("❌ scan_spaced_repetition_reminders failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
 
 @celery_app.task(
     bind=True,
@@ -1036,9 +1251,9 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
+    from app.schemas.notification import NotificationCreate
     from app.services.exam_sprint_dashboard_service import ExamSprintDashboardService
     from app.services.notification_service import NotificationService
-    from app.schemas.notification import NotificationCreate
 
     async def _run():
         async with AsyncSessionLocal() as session:
@@ -1132,10 +1347,10 @@ def scan_daily_sprint_reminders(self, limit: int = 500):
     """
     F17: 每日扫描所有活跃 sprint 用户，为每个用户派发 daily_sprint_reminder_task。
     """
-    from uuid import UUID
-
-    from app.models.plan import Plan, PlanType
     from sqlalchemy import and_, select
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.plan import Plan, PlanType
 
     async def _run():
         async with AsyncSessionLocal() as session:
@@ -1170,6 +1385,140 @@ def scan_daily_sprint_reminders(self, limit: int = 500):
         raise self.retry(exc=exc, countdown=120)
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.comeback_nudge_task")
+def comeback_nudge_task(self, user_id: str):
+    """
+    G22: 当用户有活跃计划但 last_login_at > 5 天时，生成 comeback 消息并推送。
+
+    消息包含：剩余天数、最近任务简介、轻量启动提议（"30分钟保底版"）。
+    """
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationCreate
+
+    COMEBACK_THRESHOLD_DAYS = 5
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            service = AuroraRuntimeV1Service()
+            payload = await service.get_comeback_context(
+                active_db=session,
+                user_id=user_id,
+                inactive_threshold_days=COMEBACK_THRESHOLD_DAYS,
+            )
+            if payload is None:
+                return {"status": "skipped", "reason": "not_eligible"}
+
+            await NotificationService.create(
+                session,
+                UUID(user_id),
+                NotificationCreate(
+                    title=str(payload.get("title") or "好久不见，我一直在等你"),
+                    content=str(payload.get("message") or ""),
+                    type="comeback_nudge",
+                    data={
+                        "plan_id": payload.get("plan_id"),
+                        "days_away": payload.get("days_away"),
+                        "days_remaining": payload.get("days_remaining"),
+                        "subject": payload.get("subject"),
+                        "next_task_title": payload.get("next_task_title"),
+                        "recent_task_summary": payload.get("recent_task_summary"),
+                        "light_restart_suggestion": payload.get("light_restart_suggestion"),
+                        "deep_link": "/chat",
+                    },
+                ),
+                push_via_websocket=True,
+            )
+
+            logger.info(
+                "✅ Comeback nudge sent to user %s (plan %s, days_remaining=%d)",
+                user_id,
+                payload.get("plan_id"),
+                int(payload.get("days_remaining") or 0),
+            )
+            return {
+                "status": "sent",
+                "user_id": user_id,
+                "plan_id": payload.get("plan_id"),
+                "days_remaining": payload.get("days_remaining"),
+            }
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("❌ comeback_nudge_task failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=60)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_comeback_nudges")
+def scan_comeback_nudges(self, limit: int = 500):
+    """
+    G22: 每日扫描所有用户，为 last_login_at > 5 天且有活跃计划的用户派发 comeback_nudge_task。
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import and_, select
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.plan import Plan
+    from app.models.user import User
+
+    COMEBACK_THRESHOLD_DAYS = 5
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=COMEBACK_THRESHOLD_DAYS)
+
+            # Users who are active but haven't logged in for > threshold days,
+            # and have at least one active plan with a target_date
+            active_plan_users = (
+                select(Plan.user_id)
+                .where(
+                    and_(
+                        Plan.is_active.is_(True),
+                        Plan.target_date.isnot(None),
+                        Plan.not_deleted_filter(),
+                    )
+                )
+                .distinct()
+            )
+
+            stmt = (
+                select(User.id)
+                .where(
+                    and_(
+                        User.is_active.is_(True),
+                        User.last_login_at <= cutoff,
+                        User.id.in_(active_plan_users),
+                    )
+                )
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            user_ids = [row[0] for row in result.all()]
+
+            dispatched = 0
+            for user_uuid in user_ids:
+                celery_app.send_task(
+                    "app.core.celery_tasks.comeback_nudge_task",
+                    args=(str(user_uuid),),
+                    queue="default",
+                )
+                dispatched += 1
+
+            logger.info("✅ Dispatched %d comeback nudge tasks", dispatched)
+            return {"dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("❌ scan_comeback_nudges failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.recompute_persdyn_attractors")
 def recompute_persdyn_attractors(self):
     """Recompute Stage 27 PersDyn attractors for all users."""
@@ -1190,3 +1539,153 @@ def recompute_persdyn_attractors(self):
     except Exception as exc:
         logger.error("❌ Failed to recompute PersDyn attractors: {}", exc)
         raise self.retry(exc=exc, countdown=60 * (2 ** int(self.request.retries or 0)))
+
+
+# =============================================================================
+# G25: 每周成长叙事 — 生成 + 推送
+# =============================================================================
+
+
+@celery_app.task(
+    bind=True,
+    max_retries=2,
+    name="app.core.celery_tasks.weekly_growth_narrative_task",
+)
+def weekly_growth_narrative_task(self, user_id: str):
+    """
+    G25: 为单个用户生成每周成长叙事并推送通知。
+
+    调用 progress_narrative_service.get_weekly_narrative 生成报告，
+    然后通过 NotificationService 推送给用户。
+    """
+    from datetime import UTC, datetime, time, timedelta
+    from uuid import UUID
+
+    from app.core.cache import cache_service
+    from app.db.session import AsyncSessionLocal
+    from app.schemas.notification import NotificationCreate
+    from app.services.notification_service import NotificationService
+    from app.services.progress_narrative_service import ProgressNarrativeService
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            service = ProgressNarrativeService(session, redis=cache_service.redis)
+            generated_at = datetime.now(UTC).replace(tzinfo=None)
+            week_start = datetime.combine(generated_at.date() - timedelta(days=generated_at.weekday()), time.min)
+            week_end = week_start + timedelta(days=7)
+            narrative = await service.get_weekly_narrative(
+                UUID(user_id),
+                week_start,
+                week_end,
+                force=True,
+                now=generated_at,
+            )
+
+            highlights = narrative.highlights or narrative.sentences[:3]
+            body = narrative.body or "".join(highlights)
+
+            title = "你的本周成长报告来了"
+            content = body if len(body) <= 200 else body[:197] + "..."
+
+            await NotificationService.create(
+                session,
+                UUID(user_id),
+                NotificationCreate(
+                    title=title,
+                    content=content,
+                    type="weekly_growth_narrative",
+                    data={
+                        "highlights": highlights,
+                        "biggest_improvement": narrative.biggest_improvement,
+                        "next_week_suggestion": narrative.next_week_suggestion,
+                        "week_start": narrative.week_start,
+                        "week_end": narrative.week_end,
+                        "data_points": narrative.data_points,
+                        "is_placeholder": narrative.is_placeholder,
+                        "deep_link": "/insights",
+                    },
+                ),
+                push_via_websocket=True,
+            )
+
+            logger.info(
+                "✅ Weekly growth narrative sent to user %s (placeholder=%s)",
+                user_id,
+                narrative.is_placeholder,
+            )
+            return {
+                "status": "sent",
+                "user_id": user_id,
+                "is_placeholder": narrative.is_placeholder,
+                "highlights_count": len(highlights),
+                "week_start": narrative.week_start,
+                "week_end": narrative.week_end,
+            }
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("❌ weekly_growth_narrative_task failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=60)
+
+
+@celery_app.task(
+    bind=True,
+    max_retries=2,
+    name="app.core.celery_tasks.scan_weekly_growth_narratives",
+)
+def scan_weekly_growth_narratives(self, limit: int = 500):
+    """
+    G25: 扫描活跃用户并为每个用户派发 weekly_growth_narrative_task。
+
+    由 beat 每周日 10:00 UTC (18:00 UTC+8) 触发。
+    """
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import distinct, select
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.galaxy import StudyRecord
+    from app.models.task import Task
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=14)
+            task_rows = await session.execute(
+                select(distinct(Task.user_id))
+                .where(
+                    Task.completed_at >= cutoff,
+                    Task.deleted_at.is_(None),
+                )
+                .limit(limit)
+            )
+            study_rows = await session.execute(
+                select(distinct(StudyRecord.user_id))
+                .where(
+                    StudyRecord.created_at >= cutoff,
+                )
+                .limit(limit)
+            )
+            user_ids = {
+                uid
+                for (uid,) in task_rows.all() + study_rows.all()
+                if uid is not None
+            }
+
+            dispatched = 0
+            for user_id in sorted(user_ids, key=str):
+                celery_app.send_task(
+                    "app.core.celery_tasks.weekly_growth_narrative_task",
+                    args=(str(user_id),),
+                    queue="default",
+                )
+                dispatched += 1
+
+            logger.info("✅ Dispatched %d weekly growth narrative tasks", dispatched)
+            return {"dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("❌ scan_weekly_growth_narratives failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)

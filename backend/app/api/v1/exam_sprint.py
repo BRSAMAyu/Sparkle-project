@@ -14,8 +14,10 @@ from app.schemas.exam_sprint import (
     ExamSprintDashboardResponse,
     ExamSprintIntakeRequest,
     ExamSprintIntakeResponse,
+    LearningPortfolioResponse,
     PostExamReviewRequest,
     PostExamReviewResponse,
+    SprintCompletionCheckResponse,
     SprintSummaryResponse,
 )
 from app.services.exam_sprint_dashboard_service import ExamSprintDashboardService
@@ -107,3 +109,31 @@ async def get_exam_sprint_summary(
         return await service.get_sprint_summary(user_id=current_user.id, plan_id=plan_id)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+# route-tier: authed
+@router.get("/completion", response_model=SprintCompletionCheckResponse)
+async def check_exam_sprint_completion(
+    plan_id: UUID = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ExamSprintReviewService(db=db, redis_client=cache_service.redis)
+    try:
+        return await service.check_sprint_completion(user_id=current_user.id, plan_id=plan_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+# route-tier: authed
+@router.get("/portfolio", response_model=LearningPortfolioResponse)
+async def get_learning_portfolio(
+    user_id: UUID | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if user_id is not None and user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权查看其他用户的学习档案")
+
+    service = ExamSprintReviewService(db=db, redis_client=cache_service.redis)
+    return await service.get_portfolio(user_id=user_id or current_user.id)
