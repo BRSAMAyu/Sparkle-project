@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 27 / 30 chains audited + 1 E-chain (C04, C20, D01, D07 pending, E01-E20 in progress)
+> **Status**: 27 / 30 C+D chains + 14 E-chains audited (C04, C20, D01, D07 pending; E11, E13, E15, E17, E19, E20 not yet audited by reviewers)
 
 ---
 
@@ -515,3 +515,195 @@
 - None
 
 **Working Well ✅**: Proto 17 RPC 分组清晰有注释；Python 全部实现含 error handling + 权限检查（admin for Arbitration）；Go StreamChatWithFallback 有熔断降级；context cancellation 和 deadline 处理正确。
+
+---
+
+## Round 13 — 2026-04-26 (E-chain deep validation)
+*Validator: Independent source-code verification of all E-chain findings from Reviewer A (E03, E05, E07, E09) and Reviewer B (E02, E04, E06, E08, E10, E12, E14, E16, E18)*
+
+> **Validation method**: Every Critical and Major finding verified by reading source code directly (Read/Grep tools). No Agent tool delegation.
+
+---
+
+### E02: EventBus可靠性——Redis Streams消费组/DLQ/重试 (Reviewer B)
+
+**Critical Issues 🔴**
+- **`event_bus.py:1161-1173`** ✅ VERIFIED: `_process_stream_message` 在 callback 抛异常时直接调用 `_move_to_dlq`（line 1165），完全绕过 `_handle_failed_message`（line 911-951）的 retry 路由逻辑。`_requeue_for_retry`（line 871-909）实现了完整的递增 retry_count + xack + re-publish 机制，但从未被调用。消费者任何一次失败（包括瞬时 DB 连接抖动、超时）都直接进 DLQ，零重试。
+
+**Major Issues 🟡**
+- **事件覆盖缺口**: 15+ 已定义事件类型无消费者——包括 `task.started`、`plan.created`、`user.registered`、`reflection.completed`、`trait_observed`、`coldstart_completed`、`user_settings.updated`、`calendar.event.*`、Card Protocol 7 种事件。这些事件写入 Redis Stream 但永远不被消费，占用 maxlen 50000 的空间。
+
+**Working Well ✅**: publish 有指数退避重试（base 200ms × 2^attempt, max 2000ms）；DLQ 双写（Redis stream + PostgreSQL DB）；`_claim_stale_messages` 用 xautoclaim 回收崩溃遗留的 pending messages；幂等性机制完善（idempotency store TTL 86400s）。
+
+---
+
+### E03: Kill Switch实效性——off/shadow/live切换 (Reviewer A)
+
+**Critical Issues 🔴**
+- **`idiographic_association_service.py:192`** ✅ VERIFIED: `recompute_user()` 仅检查 `mode == "off"`，shadow 模式下执行全部操作：upsert daily vectors（line 197）、upsert changepoints（line 200）、后续全部 DB 写入。shadow = live 行为完全一致。
+- **`srl_phase_tracker_service.py:118`** ✅ VERIFIED: `handle_transition_event()` 仅检查 `mode == "off"`，shadow 模式执行完整状态转换和 DB 持久化。
+- **`social_signal_bridge.py`** ✅ VERIFIED: grep `kill_switch` 返回 0 匹配。该服务处理 accountability struggle 检测、伙伴通知、社交信号聚合，但无任何 kill switch 保护。
+- **`state_aggregator/service.py`** ✅ VERIFIED: grep `kill_switch` 返回 0 匹配。核心状态聚合服务从 15+ 子系统计算 UserStateV1，无法通过 kill switch 降级。
+- **`aurora/privacy.py`** ✅ VERIFIED: PII 脱敏始终运行无 kill switch。对安全性是好事，但 shadow 模式无法验证脱敏效果。
+
+**Major Issues 🟡**
+- **shadow 语义不一致**: 三种解读并存——Shadow=Live（Idiographic/SRL）、Shadow=Off（Scene Consolidation `mode != "live"`）、Shadow=True Tri-State（Policy Scheduler/Push Service）。无统一规范。
+- **仅 8 个 drill 脚本覆盖 20+ kill switch 服务**。Stage 18 Push 和 Stage 23 Bayesian 无 drill 验证。
+- **Admin API 仅覆盖 3 个阶段**（Stage 18, 19, 21），其余 17+ 需直接操作 Redis。
+
+**Working Well ✅**: Core kill_switch.py tri-state 实现扎实；Policy Scheduler 和 Push Service 正确实现 tri-state；Prometheus KILL_SWITCH_MODE gauge 自动更新。
+
+---
+
+### E04: 错题本完整生命周期 (Reviewer B)
+
+**Critical Issues 🔴**
+- **双倍掌握度扣减** ✅ VERIFIED: Path A 同步——`error_book_service.py:354` 调用 `ErrorBookMasterySyncService.apply_error_diagnosis()` 按 ERROR_TYPE_IMPACT 权重扣减。Path B 异步——`galaxy_event_consumer.py:100-103` 创建 ErrorReplanBridge → `_update_mastery_from_error()`（line 218-224）再次扣减。`galaxy_event_consumer.py:81-83` 注释明确说"节点掌握度更新已迁移到 ErrorBookMasterySyncService"但 bridge 仍无条件扣减。一道 knowledge_gap 错题被扣 -10（Path A）+ -8（Path B）= -18，远超设计意图。
+
+**Major Issues 🟡**
+- **`error_book_provider.dart:456-464`** ✅ VERIFIED: `submitReview()` invalidate 了 error/plan/task/stats 等 9 个 provider，但零 Galaxy provider（`galaxyProvider`、`galaxyNodeStatusProvider`）。用户复习错题后切到星图页看到旧数据。
+- **`error_book_service.py:266`**: OCR 条件 `question_image_url and (not question_text or len(question_text) < 10)` 过于武断，文字 ≥10 字符时 OCR 被跳过。
+
+**Working Well ✅**: SM-2 间隔重复有上下界保护（EF 1.3-2.5）；双重节点检索（向量 + 关键词降级）；ErrorReplanBridge 支持冲刺包聚类匹配；mastery sync 有 _clamp_impact（最大 10 分）和 _clamp_mastery（0-100）边界保护。
+
+---
+
+### E05: Achievement Engine事件消费者完整性 (Reviewer A)
+
+**Critical Issues 🔴**
+- **8 个 AchievementEvent 类型从未被触发** ✅ VERIFIED: `CONTRACT_COMPLETED`、`CONTRACT_FAILED`、`MUTUAL_STUDY`、`HIDDEN_TRIGGER`、`SPRINT_STARTED`、`SPRINT_ABANDONED`、`DAILY_CHECKIN`、`WEEKEND_WARRIOR` 仅出现在定义处（line 95-111）和 `_get_relevant_achievements` 的 case 匹配处。grep `process_event.*(CONTRACT_COMPLETED|...)` 返回零匹配。这些成就永远无法解锁。
+- **`achievement_engine.py:1322` achievement.progress 事件无消费者** ✅ VERIFIED: `achievement.progress` 发布到 EventBus（line 1322-1332），但 `context_manager.py` 中的 `achievement.progress` 匹配仅是 `user_achievement.progress` 模型字段访问，非事件订阅。事件写入 Redis Streams 后无人读取。
+
+**Major Issues 🟡**
+- **里程碑通知显示过于短暂**: 里程碑仅在 chat 中显示 3 秒 `lastActionStatus: 'milestone_reached'`，无 toast/snackbar，不刷新成就地图。
+- **EventBus 消费者失败跳过重试** — 与 E02 Critical 相同发现，两轮独立确认。
+
+**Working Well ✅**: task.completed EventBus 路径完整通畅；focus.session.completed 双路径冗余；plan.created 单独 consumer 正确处理；成就解锁通知 WebSocket type 正确；session completion 幂等（INSERT ON CONFLICT DO NOTHING）。
+
+---
+
+### E06: 学习预测→实际准确度反馈闭环 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`prediction_theater_service.py:1850-1856`**: `_compute_actual_from_prediction` 仅在 `adopted_plan_id` 不为 None 时从 plan.progress 读取 completion_rate。"仅参考未采纳"的预测 completion 永远为 0.0，accuracy_score 被严重低估，污染校准基线。
+- **`celery_app.py:1069-1072`**: `check_prediction_accuracy` Celery beat 配置为每天凌晨 4:10 仅运行一次。到期预测最多等 24h 才被自动回填。
+
+**Working Well ✅**: 完整闭环设计（Celery auto + UI manual + calibration bias application）；DB + Redis 双层持久化；Simulation ↔ Theater 双向连接；经验校准使用统计量标记 data_status。
+
+---
+
+### E07: 认知胶囊→行为分析→双核路由数据流 (Reviewer A)
+
+**Critical Issues 🔴**
+- **胶囊收藏→行为分析链路完全断裂** ✅ VERIFIED: `behavior_signal_collector.py` 只处理 5 种事件（task_feedback/abandoned/completed、plan_replanned、behavior_pattern）——grep `capsule` 返回 0 匹配。收藏胶囊 → DB 写入 + EventBus 事件 → ProfileEventConsumer 仅刷缓存 → 链路终止。
+- **`capsule_favorite_service.py:200-260 get_preferences()` 死代码** ✅ VERIFIED: grep `get_preferences` 在 `backend/app/core/` 和 `backend/app/orchestration/` 返回零匹配（除 service 自身）。`context_manager.py` 零 capsule 引用。用户花时间收藏的每个胶囊偏好，AI 教练完全忽略。
+
+**Major Issues 🟡**
+- **`profile_event_consumer.py:191-198`**: `CAPSULE_FAVORITE_UPDATED` 事件处理仅调用 `_invalidate_profile_context_cache()`，不做数据写入。缓存失效后胶囊偏好仍不出现在新 context 中。
+- **`dual_core_router.py:41-66`**: `DualCoreRoutingInput` 无任何胶囊/内容偏好字段。路由完全不考虑用户认知胶囊偏好。
+- **`CAPSULE_FEEDBACK_SUBMITTED` 同样不流入 AI**——用户给胶囊评分/标记 helpful/写评论，行为信号全部丢失。
+
+**Working Well ✅**: 胶囊收藏 DB 层完整（idempotency + EventBus 事件）；Flutter UI 用 optimistic update + error 时 refresh；空状态和加载状态完善；行为模式→路由链路本身通畅（当 BehaviorSignalCollector 创建的 fragment 触发时）。
+
+---
+
+### E08: WebSocket断线重连 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- None
+
+**Minor Issues 🟢**
+- **`websocket_chat_service_v2.dart:1955-1971`**: 超过 6 次重连后 pending messages 被丢弃，用户无法重试这些消息，需重新输入。
+
+**Working Well ✅**: 6 级退避调度合理（800ms→12.2s + 250ms jitter）；重连成功后主动调用 loadConversationHistory 补偿断线消息；retryLastMessage 支持手动重试最后一条；manualReconnect 允许用户触发重连。
+
+---
+
+### E09: Sprint Pack Schema验证 (Reviewer A)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`sprint_pack_loader.py`** ✅ VERIFIED: 全文 grep `schema|validate|SprintPackV1` 返回 0 匹配。`_load_pack_file()` 只做 `json.loads()` + 返回 dict。Pydantic schema 和离线验证脚本存在但加载路径完全不使用。
+- **`data_structures_algorithms_v1.json`**: 4 个 task_card_templates 只有 `template_id`、`label`、`instruction`，缺少 `steps`、`done_criteria`、`duration_minutes`、`description`（其他 3 个包完整）。
+- **`data_structures_algorithms_v1.json`**: 缺少 `checkpoint_rules` 键（其他 3 个包都有），planning_workflow.py checkpoint 逻辑使用空 dict。
+
+**Working Well ✅**: 4 个包 knowledge_nodes 全部 12 个必需字段完整；路径覆盖（minimum_pass + score_max）和策略预设（7d + 14d）齐全；TaskCardGenerator 降级健壮（helper 函数兜底）；计算机网络包质量极高（45 节点、18 题型、48 错误类型）。
+
+---
+
+### E10: 通知偏好设置→实际投递行为 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`notification_interaction.py` + `notification_center_service.py:930-933`**: 通知偏好只有 `enable_system`（全局）和 `enable_interventions`（干预类）两个粗粒度开关，无 per-type 开关。用户无法关闭复习提醒但保留冲刺提醒。6 种推送类型中 5 种跟随 enable_system。
+
+**Working Well ✅**: `_should_push_notification` 正确检查全局开关 + quiet_hours + timezone；跨午夜时段处理正确；push 抑制有完整日志；间隔重复提醒按节点去重 + 冷却期检查。
+
+---
+
+### E12: 专注模式→streak/achievement集成 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- None
+
+**Minor Issues 🟢**
+- **`focus_service.py:187-190`**: 事件发布失败用 `logging.warning` 静默忽略。已有的 EventBus DLQ 机制不会捕获此处异常（publish 调用被 try/except 包裹）。
+
+**Working Well ✅**: 专注完成事件 payload 完整；3 个消费者订阅同一事件（achievement/profile/idiographic）；`STUDY_MINUTES_ACCUMULATED` 正确累积学习分钟数；streak_days 和 longest_streak 从 API 获取有 fallback。
+
+---
+
+### E14: Calculator→学习上下文→AI感知 (Reviewer B)
+
+**Critical Issues 🔴**
+- **计算器完全不可见——后端零感知** ✅ VERIFIED: `calculator_tool.dart` 仅 import `flutter/material.dart`、`flutter/services.dart`（Clipboard）、`math_expressions`、design_system、tool_definition、tool_shell——无任何 HTTP/API/backend 调用。历史 `_history` 是纯内存 List，退出页面丢失。后端 `behavior_signal_collector.py`、`context_manager.py` grep `calculator/tool_use/tool_history` 零匹配。`tool_history_service.py` 有 `record_tool_execution()` 方法但从未被计算器调用。
+
+**Working Well ✅**: 工具在 ToolRegistry 正确注册；UI 质量高（表达式显示、ANS 回填、复制结果）；后端 tool_history 基础设施已就绪（接线点存在）。
+
+---
+
+### E16: 社区社交功能→个人AI教练 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`settings.py:320` `AURORA_STAGE33_SOCIAL_MODE` 默认 "shadow"** — 与 D08 Major 相同发现，社交信号被计算但不注入 Aurora prompt。
+- **Accountability 伙伴进度不通过 social_signal_bridge 传递**: bridge 的 `build_social_signals_v1` 仅聚合当前用户社交统计（mention count、relationship count），不包含具体伙伴的学习进度事件。Aurora 完全不知道伙伴的具体学习活动。
+
+**Working Well ✅**: accountability_screen 功能完整；community_service 正确记录多种交互类型到 Redis；SocialSignalBridge 基础设施完善。
+
+---
+
+### E18: Plan health score计算准确性 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`home_growth_provider.dart:27-33`** ✅ VERIFIED: `healthScore` 通过 fallback 链 `json['health_score'] → healthScore → mastery_level → progress` 读取。后端 `plans.py` 不返回 `health_score`（grep 0 匹配），最终 fallback 到 `mastery_level`。Home 页"计划健康度"显示的是掌握度，非后端 PlanProgressService 的 health evaluation。后端认为 critical 的计划在 Home 页可能显示 5 个满点。
+- **`plan_detail_screen.dart`** ✅ VERIFIED: grep `health_score|plan_health|severity` 零匹配。用户完全看不到计划健康状态，health 评估是纯后端内部信号。
+
+**Working Well ✅**: `evaluate_progress` 四维评估完整；AdaptiveReplanner 基于 recommended_action 分流有 cooldown 保护；struggle streak 机制可 bypass cooldown；PlanHealthSignalService 有去重和频率控制。
+
+---
+
+### Cross-Confirmed E-chain Findings
+
+- **EventBus retry bypass**: E02 Critical（Reviewer B 直接发现 `_process_stream_message` 绕过 `_handle_failed_message`）+ E05 Major #2（Reviewer A 从 Achievement consumer 视角发现同一 bug）= 两轮独立确认。
+- **Social mode default shadow**: E16 Major + D08 Major = 同一 kill switch 问题两轮确认。
+- **Orphan data sources**: E07 Critical（capsule favorites 零消费者）+ E14 Critical（calculator 零后端感知）+ E02 Major（15+ 事件无消费者）= 三个独立子系统存在数据收集但无消费的问题模式。
+- **Mobile provider invalidation gaps**: E04 Major（review 后不刷新 Galaxy）+ D02 Major（同问题）+ D10 Major（completeTask 不刷新 portfolio/achievement）= 系统性问题模式。
