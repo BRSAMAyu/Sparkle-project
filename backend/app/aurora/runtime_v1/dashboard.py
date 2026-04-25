@@ -110,7 +110,22 @@ _DOMAIN_TEXT_HINTS: dict[str, tuple[str, ...]] = {
     "scope": ("范围", "章节", "题型", "考哪些", "哪几章", "哪些内容", "scope", "chapter", "topic"),
     "baseline": ("基础", "掌握", "学过", "熟悉", "会不会", "薄弱", "baseline", "foundation", "mastery"),
     "time": ("每天", "几天", "多久", "时间", "日程", "小时", "deadline", "schedule", "available"),
-    "motivation": ("为什么", "为了", "动机", "原因", "不想挂", "想冲", "保研", "必须过", "目的", "重要", "有意义", "motivation", "reason", "why"),
+    "motivation": (
+        "为什么",
+        "为了",
+        "动机",
+        "原因",
+        "不想挂",
+        "想冲",
+        "保研",
+        "必须过",
+        "目的",
+        "重要",
+        "有意义",
+        "motivation",
+        "reason",
+        "why",
+    ),
 }
 
 _QUESTION_MARKERS = ("？", "?", "吗", "呢", "多少", "哪些", "哪几", "多久", "几点", "什么", "告诉我")
@@ -125,9 +140,10 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "missing_domains",
             "cold_start_context",
             "informational_tensions",
+            "wake_policy",
         }
     ),
-    "wait": frozenset({"user_message", "covered_domains", "missing_domains"}),
+    "wait": frozenset({"user_message", "covered_domains", "missing_domains", "wake_policy"}),
     "schedule_wake": frozenset({"activity_profile", "explicit_user_constraints"}),
     "update_harness": frozenset(
         {
@@ -138,6 +154,7 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "informational_tensions",
             "activity_profile",
             "explicit_user_constraints",
+            "wake_policy",
         }
     ),
     "update_state": frozenset(
@@ -147,6 +164,7 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "missing_domains",
             "cold_start_context",
             "informational_tensions",
+            "wake_policy",
         }
     ),
     "soft_return_topic": frozenset(
@@ -157,6 +175,7 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "cold_start_context",
             "informational_tensions",
             "latent_thread_recovery_candidates",
+            "wake_policy",
         }
     ),
     "drop_thread": frozenset(
@@ -164,19 +183,24 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "covered_domains",
             "missing_domains",
             "latent_thread_recovery_candidates",
+            "wake_policy",
         }
     ),
 }
 
 _SURFACE_CONTEXT_ADDITIONS: dict[str, frozenset[str]] = {
     "aurora_checkpoint": frozenset({"checkpoint_state"}),
-    "aurora_planning": frozenset({"sprint_policy_summary", "task_state"}),
+    # last_24h_mode is a synthesised flag exposed to the decision loop even when
+    # exam_sprint_policy itself is excluded from the planning surface LLM payload.
+    "aurora_planning": frozenset({"sprint_policy_summary", "task_state", "last_24h_mode"}),
 }
 
 _SURFACE_CONTEXT_EXCLUSIONS: dict[str, frozenset[str]] = {
     "aurora_checkpoint": frozenset({"cold_start_context"}),
     "aurora_modeling": frozenset({"task_state", "checkpoint_state", "exam_sprint_policy", "sprint_policy_summary"}),
-    "aurora_planning": frozenset({"cold_start_context", "achievement_signals", "checkpoint_state", "exam_sprint_policy"}),
+    "aurora_planning": frozenset(
+        {"cold_start_context", "achievement_signals", "checkpoint_state", "exam_sprint_policy"}
+    ),
 }
 
 
@@ -230,6 +254,10 @@ class DashboardReadout:
     request_extra_context: dict[str, Any] = field(default_factory=dict)
     achievement_signals: dict[str, Any] = field(default_factory=dict)
     self_model: dict[str, Any] = field(default_factory=dict)
+    wake_policy: dict[str, Any] = field(default_factory=dict)
+    # Synthesised convenience flag: True when sprint_mode == "last_24h_cram" or exam_sprint_policy.last_24h_mode.
+    # Exposed to the decision loop even for surfaces where exam_sprint_policy is excluded from the LLM payload.
+    last_24h_mode: bool = False
 
     def to_llm_payload(self, *, action: str | None = None) -> dict[str, Any]:
         payload = {
@@ -256,6 +284,8 @@ class DashboardReadout:
             "request_extra_context": self.request_extra_context,
             "achievement_signals": self.achievement_signals,
             "self_model": self.self_model,
+            "wake_policy": self.wake_policy,
+            "last_24h_mode": self.last_24h_mode,
         }
         allowed_keys = self._context_mask_keys(action=action)
         return {key: value for key, value in payload.items() if key in allowed_keys}
@@ -288,6 +318,7 @@ class DashboardReadoutBuilder:
         activity_profile: dict[str, Any],
         candidate_affordances: list[SkillAffordance],
         self_model: dict[str, Any] | None = None,
+        wake_policy: dict[str, Any] | None = None,
     ) -> DashboardReadout:
         profile_context = user_context_payload.get("profile_context")
         if not isinstance(profile_context, dict):
@@ -341,6 +372,10 @@ class DashboardReadoutBuilder:
         )
 
         achievement_signals = self._extract_achievement_signals(request_extra_context, user_context_payload)
+        last_24h_mode = bool(
+            exam_sprint_policy.get("sprint_mode") == "last_24h_cram"
+            or exam_sprint_policy.get("last_24h_mode") is True
+        )
 
         return DashboardReadout(
             surface=surface,
@@ -375,6 +410,8 @@ class DashboardReadoutBuilder:
             request_extra_context=dict(request_extra_context),
             achievement_signals=achievement_signals,
             self_model=dict(self_model or {}),
+            wake_policy=dict(wake_policy or {}),
+            last_24h_mode=last_24h_mode,
         )
 
     def _extract_cold_start_context(
@@ -406,9 +443,7 @@ class DashboardReadoutBuilder:
         )
         if direct:
             return direct
-        cognitive = self._as_dict(
-            (user_context_payload.get("cognitive_context") or {}).get("achievement_summary")
-        )
+        cognitive = self._as_dict((user_context_payload.get("cognitive_context") or {}).get("achievement_summary"))
         if not cognitive:
             return {}
         in_progress = list(cognitive.get("in_progress_achievements") or [])
@@ -444,16 +479,8 @@ class DashboardReadoutBuilder:
         checkpoint_state: dict[str, Any],
     ) -> tuple[list[str], list[str]]:
         status_by_domain = self._collect_domain_statuses(informational_tensions)
-        covered = {
-            domain
-            for domain, status in status_by_domain.items()
-            if status == "resolved"
-        }
-        missing = {
-            domain
-            for domain, status in status_by_domain.items()
-            if status in {"open", "partially_resolved"}
-        }
+        covered = {domain for domain, status in status_by_domain.items() if status == "resolved"}
+        missing = {domain for domain, status in status_by_domain.items() if status in {"open", "partially_resolved"}}
         evidence_sources: list[Any] = [
             request_extra_context,
             user_context_payload,
@@ -577,6 +604,9 @@ class DashboardReadoutBuilder:
             summary["non_negotiables"] = [str(item) for item in non_negotiables[:3] if _normalize_text(item)]
         if isinstance(defer_or_skip, list) and defer_or_skip:
             summary["defer_or_skip"] = [str(item) for item in defer_or_skip[:3] if _normalize_text(item)]
+        for key in ("last_24h_mode", "drop_low_roi_topics", "new_topic_allowed", "error_analysis_required"):
+            if key in exam_sprint_policy:
+                summary[key] = exam_sprint_policy.get(key)
         return summary
 
     def _build_explicit_user_constraints(
@@ -637,7 +667,9 @@ class DashboardReadoutBuilder:
             if target_domain in covered:
                 continue
             salience = float(thread.get("salience") or 0.0)
-            priority = salience + (0.25 if target_domain in missing else 0.0) - (0.15 if target_domain in recent else 0.0)
+            priority = (
+                salience + (0.25 if target_domain in missing else 0.0) - (0.15 if target_domain in recent else 0.0)
+            )
             candidates.append(
                 {
                     "thread_id": str(thread.get("thread_id") or ""),

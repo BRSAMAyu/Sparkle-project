@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Awaitable, Callable, Mapping
@@ -55,9 +56,134 @@ STRATEGY_FIELDS = (
     "interleaving",
     "spaced_review",
     "error_analysis_required",
+    "drop_low_roi_topics",
+    "new_topic_allowed",
 )
-HIGH_URGENCY_SPRINT_MODES = {"seven_day_survival"}
+HIGH_URGENCY_SPRINT_MODES = {"seven_day_survival", "last_24h_cram"}
 HIGH_URGENCY_TRIAGE_LEVELS = {"high", "emergency"}
+STANDARD_LAYER_RESPONSE_TYPES = {
+    "task_help",
+    "plan_discussion",
+    "emotional_support",
+    "diagnostic",
+    "calibration",
+    "general_chat",
+}
+STANDARD_LAYER_MAX_RESPONSE_LENGTHS = {"brief", "normal", "extended"}
+TASK_HELP_INTENTS = {
+    "teach_with_example",
+    "assign_questions",
+    "handle_current_task_first",
+    "continue_current_task",
+    "task_help",
+}
+DIAGNOSTIC_INTENTS = {
+    "diagnostic",
+    "diagnose_breakpoint",
+    "error_analysis",
+    "checkpoint_repair",
+}
+CALIBRATION_INTENTS = {
+    "calibration",
+    "calibration_check",
+    "assumption_check",
+    "confirm_assumption",
+}
+TASK_HELP_STAGE_TOKENS = {
+    "task_card",
+    "current_task",
+    "current_task_card",
+    "practice",
+    "execution",
+    "doing",
+    "solving",
+    "drill",
+    "repair",
+}
+FAILURE_STATE_TOKENS = {
+    "failed",
+    "failure",
+    "timed_out",
+    "timeout",
+    "stuck",
+    "derailed",
+    "overwhelmed",
+    "frustrated",
+    "blocked",
+}
+STANDARD_LAYER_RESPONSE_TYPE_ALIASES = {
+    "task": "task_help",
+    "task_support": "task_help",
+    "taskhelp": "task_help",
+    "plan": "plan_discussion",
+    "planning": "plan_discussion",
+    "emotion_support": "emotional_support",
+    "support": "emotional_support",
+    "diagnose": "diagnostic",
+    "diag": "diagnostic",
+    "recalibration": "calibration",
+    "calibrate": "calibration",
+    "chat": "general_chat",
+}
+STANDARD_LAYER_MAX_LENGTH_ALIASES = {
+    "short": "brief",
+    "medium": "normal",
+    "long": "extended",
+}
+STANDARD_LAYER_TOKEN_ALIASES = {
+    "one_worked_example": "worked_example",
+    "worked_example_first": "worked_example",
+    "worked_example": "worked_example",
+    "three_practice_questions": "three_practice_questions",
+    "practice_questions": "three_practice_questions",
+    "completion_check": "completion_check",
+    "emotional_acknowledgement": "emotional_acknowledgment",
+    "emotional_acknowledgment": "emotional_acknowledgment",
+    "one_concrete_next_step": "one_concrete_next_step",
+    "concrete_next_step": "one_concrete_next_step",
+    "full_week_replan": "full_week_replan",
+    "long_motivational_speech": "long_motivational_speech",
+    "long_motivation_speech": "long_motivational_speech",
+    "plan_delta": "plan_delta_or_tradeoff",
+    "plan_tradeoff": "plan_delta_or_tradeoff",
+    "plan_delta_or_tradeoff": "plan_delta_or_tradeoff",
+    "one_decision_or_question": "one_decision_or_question",
+    "mistake_diagnosis": "mistake_diagnosis",
+    "one_targeted_fix": "one_targeted_fix",
+    "blame": "blame_or_shame",
+    "blame_or_shame": "blame_or_shame",
+    "explicit_uncertainty": "explicit_uncertainty",
+    "calibration_question": "calibration_question_or_assumption_check",
+    "assumption_check": "calibration_question_or_assumption_check",
+    "calibration_question_or_assumption_check": "calibration_question_or_assumption_check",
+    "overconfident_claim": "overconfident_claims",
+    "overconfident_claims": "overconfident_claims",
+    "high_pressure_task_load": "high_pressure_task_load",
+    "direct_answer": "direct_answer_or_acknowledgment",
+    "answer_or_acknowledgment": "direct_answer_or_acknowledgment",
+    "direct_answer_or_acknowledgment": "direct_answer_or_acknowledgment",
+    "unsolicited_three_practice_questions": "unsolicited_three_practice_questions",
+}
+STANDARD_LAYER_TOKEN_DESCRIPTIONS = {
+    "worked_example": "Include one concise worked example before asking the user to continue.",
+    "three_practice_questions": "Include exactly three short practice questions or drills.",
+    "completion_check": "End with a concrete check step so the user can reply with answers or status.",
+    "emotional_acknowledgment": "Explicitly acknowledge the user's frustration, setback, or emotional load.",
+    "one_concrete_next_step": "Give one immediate, concrete next action the user can take now.",
+    "full_week_replan": "Do not drift into a full-week or multi-day replanning pass.",
+    "long_motivational_speech": "Do not add a long encouragement speech or morale monologue.",
+    "plan_delta_or_tradeoff": "Name the specific plan adjustment, tradeoff, or constraint that matters now.",
+    "one_decision_or_question": "Close with one concrete decision, option, or missing-variable question.",
+    "mistake_diagnosis": "Identify the likely breakpoint, error pattern, or misunderstanding.",
+    "one_targeted_fix": "Offer one targeted repair step tied to the diagnosed mistake.",
+    "blame_or_shame": "Do not blame, shame, or moralize the user's difficulty.",
+    "explicit_uncertainty": "State uncertainty or calibration status explicitly instead of sounding overconfident.",
+    "calibration_question_or_assumption_check": "Ask one calibration question or assumption-check to reduce uncertainty.",
+    "overconfident_claims": "Do not present uncertain assumptions as settled facts.",
+    "high_pressure_task_load": "Do not pile on a heavy new workload while calibration is unresolved.",
+    "direct_answer_or_acknowledgment": "Give a direct answer or brief acknowledgment that matches the user's turn.",
+    "unsolicited_three_practice_questions": "Do not inject a three-question drill unless the turn is task-help oriented.",
+}
 
 LLMFactory = Callable[[], Any | Awaitable[Any]]
 
@@ -107,6 +233,267 @@ class AuroraDecision:
         }
 
 
+def _normalize_standard_layer_token(value: Any) -> str | None:
+    text = re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
+    if not text:
+        return None
+    return STANDARD_LAYER_TOKEN_ALIASES.get(text, text)
+
+
+def _normalize_standard_layer_token_list(value: Any) -> list[str]:
+    items = value if isinstance(value, (list, tuple, set)) else [value]
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        token = _normalize_standard_layer_token(item)
+        if token and token not in seen:
+            seen.add(token)
+            normalized.append(token)
+    return normalized
+
+
+def _normalize_standard_layer_response_type(value: Any) -> str | None:
+    token = _normalize_standard_layer_token(value)
+    if not token:
+        return None
+    canonical = STANDARD_LAYER_RESPONSE_TYPE_ALIASES.get(token, token)
+    return canonical if canonical in STANDARD_LAYER_RESPONSE_TYPES else None
+
+
+def _normalize_standard_layer_length(value: Any) -> str | None:
+    token = _normalize_standard_layer_token(value)
+    if not token:
+        return None
+    canonical = STANDARD_LAYER_MAX_LENGTH_ALIASES.get(token, token)
+    return canonical if canonical in STANDARD_LAYER_MAX_RESPONSE_LENGTHS else None
+
+
+def describe_standard_layer_tokens(tokens: list[str] | None = None) -> dict[str, str]:
+    if not tokens:
+        return {}
+    descriptions: dict[str, str] = {}
+    for token in tokens:
+        canonical = _normalize_standard_layer_token(token)
+        if canonical and canonical in STANDARD_LAYER_TOKEN_DESCRIPTIONS:
+            descriptions[canonical] = STANDARD_LAYER_TOKEN_DESCRIPTIONS[canonical]
+    return descriptions
+
+
+def _normalize_marker(value: Any) -> str | None:
+    text = re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
+    return text or None
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _effective_strategy_flags(decision: AuroraDecision, readout: DashboardReadout) -> dict[str, bool]:
+    merged: dict[str, bool] = {}
+    for candidate in (
+        readout.activity_profile.get("strategy"),
+        decision.harness_updates.get("strategy"),
+    ):
+        if not isinstance(candidate, Mapping):
+            continue
+        for field in STRATEGY_FIELDS:
+            if field in candidate:
+                merged[field] = bool(candidate[field])
+    return merged
+
+
+def _intent_token(decision: AuroraDecision) -> str | None:
+    directive = decision.chat_directive if isinstance(decision.chat_directive, Mapping) else {}
+    return _normalize_marker(directive.get("intent"))
+
+
+def _task_stage_tokens(readout: DashboardReadout) -> set[str]:
+    tokens: set[str] = set()
+    for value in (
+        readout.task_state.get("stage"),
+        readout.task_state.get("status"),
+        readout.task_state.get("mode"),
+        readout.checkpoint_state.get("last_status"),
+        readout.checkpoint_state.get("status"),
+    ):
+        token = _normalize_marker(value)
+        if token:
+            tokens.add(token)
+    return tokens
+
+
+def _failure_streak(readout: DashboardReadout) -> int:
+    candidates = (
+        readout.self_model.get("task_failure_streak"),
+        readout.task_state.get("failure_streak"),
+        readout.checkpoint_state.get("failure_streak"),
+        readout.checkpoint_state.get("recent_failures"),
+    )
+    numeric = [_safe_int(value) for value in candidates]
+    return max((value for value in numeric if value is not None), default=0)
+
+
+def _is_emotional_support_scene(decision: AuroraDecision, readout: DashboardReadout) -> bool:
+    if _failure_streak(readout) >= 2:
+        return True
+    if _task_stage_tokens(readout).intersection(FAILURE_STATE_TOKENS):
+        return True
+    text = str(readout.user_message or "").lower()
+    return any(marker in text for marker in ("连续失败", "一直错", "崩了", "学不会", "frustrat", "failed"))
+
+
+def _is_calibration_scene(decision: AuroraDecision, readout: DashboardReadout) -> bool:
+    self_model = readout.self_model if isinstance(readout.self_model, Mapping) else {}
+    if bool(self_model.get("needs_recalibration")):
+        return True
+    confidence = self_model.get("strategy_confidence")
+    try:
+        if confidence is not None and float(confidence) <= 0.45:
+            return True
+    except (TypeError, ValueError):
+        pass
+    return _intent_token(decision) in CALIBRATION_INTENTS
+
+
+def _is_diagnostic_scene(decision: AuroraDecision, readout: DashboardReadout) -> bool:
+    if readout.surface == "aurora_checkpoint":
+        return True
+    strategy = _effective_strategy_flags(decision, readout)
+    if strategy.get("error_analysis_required"):
+        return True
+    return _intent_token(decision) in DIAGNOSTIC_INTENTS
+
+
+def _is_task_help_scene(decision: AuroraDecision, readout: DashboardReadout) -> bool:
+    task_state = readout.task_state if isinstance(readout.task_state, Mapping) else {}
+    if _intent_token(decision) in TASK_HELP_INTENTS:
+        return True
+    if any(task_state.get(key) for key in ("task_card_id", "current_task_id", "current_task")):
+        return True
+    if _task_stage_tokens(readout).intersection(TASK_HELP_STAGE_TOKENS):
+        return True
+    return False
+
+
+def _infer_standard_layer_response_type(
+    decision: AuroraDecision,
+    readout: DashboardReadout,
+    contract: Mapping[str, Any] | None = None,
+) -> str:
+    requested = _normalize_standard_layer_response_type((contract or {}).get("response_type"))
+    if _is_emotional_support_scene(decision, readout):
+        return "emotional_support"
+    if _is_calibration_scene(decision, readout):
+        return "calibration"
+    if _is_diagnostic_scene(decision, readout):
+        return "diagnostic"
+    if _is_task_help_scene(decision, readout):
+        return "task_help"
+    if readout.surface == "aurora_planning":
+        return "plan_discussion"
+    return requested or "general_chat"
+
+
+def _default_standard_layer_contract(
+    response_type: str,
+    decision: AuroraDecision,
+    readout: DashboardReadout,
+) -> dict[str, Any]:
+    strategy = _effective_strategy_flags(decision, readout)
+    if response_type == "task_help":
+        must_include: list[str] = []
+        if strategy.get("worked_example_first") or _is_task_help_scene(decision, readout):
+            must_include.append("worked_example")
+        if (
+            strategy.get("problem_first")
+            or strategy.get("retrieval_practice")
+            or _is_task_help_scene(decision, readout)
+        ):
+            must_include.append("three_practice_questions")
+        if must_include or strategy.get("error_analysis_required"):
+            must_include.append("completion_check")
+        if not must_include:
+            must_include.append("one_concrete_next_step")
+        return {
+            "response_type": response_type,
+            "must_include": must_include,
+            "must_not_include": ["full_week_replan", "long_motivational_speech"],
+            "max_response_length": "extended",
+        }
+    if response_type == "plan_discussion":
+        return {
+            "response_type": response_type,
+            "must_include": ["plan_delta_or_tradeoff", "one_decision_or_question"],
+            "must_not_include": ["long_motivational_speech", "unsolicited_three_practice_questions"],
+            "max_response_length": "normal",
+        }
+    if response_type == "emotional_support":
+        return {
+            "response_type": response_type,
+            "must_include": ["emotional_acknowledgment", "one_concrete_next_step"],
+            "must_not_include": ["full_week_replan", "long_motivational_speech", "blame_or_shame"],
+            "max_response_length": "normal",
+        }
+    if response_type == "diagnostic":
+        return {
+            "response_type": response_type,
+            "must_include": ["mistake_diagnosis", "one_targeted_fix"],
+            "must_not_include": ["full_week_replan", "long_motivational_speech"],
+            "max_response_length": "normal",
+        }
+    if response_type == "calibration":
+        return {
+            "response_type": response_type,
+            "must_include": ["explicit_uncertainty", "calibration_question_or_assumption_check"],
+            "must_not_include": ["overconfident_claims", "high_pressure_task_load", "long_motivational_speech"],
+            "max_response_length": "brief",
+        }
+    return {
+        "response_type": "general_chat",
+        "must_include": ["direct_answer_or_acknowledgment"],
+        "must_not_include": ["full_week_replan", "long_motivational_speech"],
+        "max_response_length": "brief",
+    }
+
+
+def build_standard_layer_contract(decision: AuroraDecision, readout: DashboardReadout) -> dict[str, Any]:
+    directive = decision.chat_directive if isinstance(decision.chat_directive, Mapping) else {}
+    raw_contract = directive.get("standard_layer_contract")
+    contract = dict(raw_contract) if isinstance(raw_contract, Mapping) else {}
+    response_type = _infer_standard_layer_response_type(decision, readout, contract)
+    defaults = _default_standard_layer_contract(response_type, decision, readout)
+    must_not_include = _normalize_standard_layer_token_list(defaults.get("must_not_include"))
+    must_not_include.extend(
+        token
+        for token in _normalize_standard_layer_token_list(contract.get("must_not_include"))
+        if token not in must_not_include
+    )
+    must_include = [
+        token
+        for token in _normalize_standard_layer_token_list(defaults.get("must_include"))
+        + _normalize_standard_layer_token_list(contract.get("must_include"))
+        if token not in must_not_include
+    ]
+    deduped_include: list[str] = []
+    seen_include: set[str] = set()
+    for token in must_include:
+        if token not in seen_include:
+            seen_include.add(token)
+            deduped_include.append(token)
+    max_response_length = _normalize_standard_layer_length(contract.get("max_response_length")) or str(
+        defaults.get("max_response_length") or "normal"
+    )
+    return {
+        "response_type": response_type,
+        "must_include": deduped_include,
+        "must_not_include": must_not_include,
+        "max_response_length": max_response_length,
+    }
+
+
 class AuroraDecisionLoop:
     """LLM-driven Aurora cognition.
 
@@ -127,7 +514,11 @@ class AuroraDecisionLoop:
         messages = self.build_prompt(readout)
         try:
             llm = await self._resolve_llm()
-            raw = await llm.chat_json(messages, temperature=self.temperature)
+            raw = await llm.chat_json(
+                messages,
+                temperature=self.temperature,
+                max_tokens=self._max_tokens_for_readout(readout),
+            )
         except Exception as exc:
             logger.warning("Aurora decision loop fell back after LLM failure: {}", exc)
             return self._fallback_decision(readout, reason="llm_failure")
@@ -136,6 +527,7 @@ class AuroraDecisionLoop:
         return self.validate_decision(decision, readout)
 
     def build_prompt(self, readout: DashboardReadout) -> list[dict[str, str]]:
+        wake_policy = self._wake_policy_from_readout(readout)
         schema = {
             "action": sorted(ALLOWED_ACTIONS),
             "surface_complete": "boolean",
@@ -152,10 +544,19 @@ class AuroraDecisionLoop:
                     "task_density_hint",
                     "strategy",
                 ],
-                "strategy": {field: "boolean" for field in STRATEGY_FIELDS},
+                "strategy": dict.fromkeys(STRATEGY_FIELDS, "boolean"),
             },
             "wake_schedule": "object or null",
-            "chat_directive": "object describing communicative intent, not final user-visible wording",
+            "chat_directive": {
+                "intent": "string",
+                "target_domain": "string or null",
+                "standard_layer_contract": {
+                    "response_type": sorted(STANDARD_LAYER_RESPONSE_TYPES),
+                    "must_include": "list[str]",
+                    "must_not_include": "list[str]",
+                    "max_response_length": sorted(STANDARD_LAYER_MAX_RESPONSE_LENGTHS),
+                },
+            },
             "metadata": {"reasoning_summary": "brief, non-sensitive rationale"},
         }
         system = (
@@ -188,8 +589,20 @@ class AuroraDecisionLoop:
             "error_analysis_required when repeated mistakes, transition errors, or misunderstanding patterns should be "
             "diagnosed before more drilling. Default strategy heuristics matter: aurora_modeling should usually lean "
             "concept_first=true; aurora_planning should usually lean problem_first=true; high exam urgency should "
-            "usually lean worked_example_first=true unless stronger evidence suggests otherwise."
+            "usually lean worked_example_first=true unless stronger evidence suggests otherwise. "
+            "Always populate chat_directive.standard_layer_contract with all four fields. "
+            "Choose response_type from task_help, plan_discussion, emotional_support, diagnostic, calibration, or general_chat. "
+            "Scene guidance: active task/card help should usually be task_help; planning turns should usually be "
+            "plan_discussion; repeated failure or frustration should usually be emotional_support; checkpoint or "
+            "mistake-analysis turns should usually be diagnostic; low-confidence self-model or assumption-check turns "
+            "should usually be calibration. "
+            "must_include and must_not_include are hard content constraints for the standard chat layer, not style suggestions. "
+            "Use concise canonical tokens such as worked_example, three_practice_questions, completion_check, "
+            "emotional_acknowledgment, one_concrete_next_step, full_week_replan, and long_motivational_speech."
         )
+        wake_instruction = str(wake_policy.get("diagnostic_prompt") or "").strip()
+        if wake_instruction:
+            system = f"{system} {wake_instruction}"
         user = {
             "decision_schema": schema,
             "dashboard_readout": self._slim_readout_for_surface(readout),
@@ -198,6 +611,7 @@ class AuroraDecisionLoop:
                 readout.activity_profile.get("strategy"),
                 include_defaults=False,
             ),
+            "wake_policy": wake_policy,
             "rules": [
                 "If the user is detouring and the detour matters more, choose wait or emit_message without forcing topic return.",
                 "If dashboard_readout.surface_state.in_detour is true, use latent_thread_recovery_candidates to decide whether a soft_return_topic is warranted.",
@@ -205,9 +619,39 @@ class AuroraDecisionLoop:
                 "If dashboard coverage already closes the core modeling domains, stop asking questions and let modeling_complete become true.",
                 "If you need more information, put the missing domain in state_updates.informational_tensions.",
                 "Always return harness_updates.strategy with all seven boolean fields, starting from strategy_defaults and overriding them only when current evidence warrants it.",
+                "Always return chat_directive.standard_layer_contract with response_type, must_include, must_not_include, and max_response_length.",
+                "Treat standard_layer_contract.must_include and must_not_include as structural requirements for the chat layer, not soft preferences.",
                 "Never request or infer forbidden psychological or social-identity domains.",
             ],
         }
+        energy = str(wake_policy.get("energy") or "silent").lower()
+        if energy == "moderate":
+            user["rules"].append(
+                "Moderate wake means a lightweight diagnostic nudge: do not start a full calibration dialogue, and prefer one concise reminder tied to the current bottleneck."
+            )
+        elif energy == "full" and wake_policy.get("full_allowed"):
+            user["rules"].append(
+                "Full wake is allowed: Aurora may initiate a more explicit calibration move, widen the context it uses, and structure a short multi-step reset."
+            )
+        elif wake_policy.get("full_candidate") and not wake_policy.get("full_allowed"):
+            user["rules"].append(
+                "A full wake candidate is on cooldown, so stay below full-calibration intensity and keep the intervention lighter."
+            )
+        # Last-24h mode overrides: detected from readout.last_24h_mode or exam_sprint_policy sprint_mode.
+        _in_last_24h = bool(
+            getattr(readout, "last_24h_mode", False)
+            or (isinstance(readout.exam_sprint_policy, Mapping) and readout.exam_sprint_policy.get("sprint_mode") == "last_24h_cram")
+            or (isinstance(readout.exam_sprint_policy, Mapping) and readout.exam_sprint_policy.get("last_24h_mode") is True)
+        )
+        if _in_last_24h:
+            user["rules"].append(
+                "LAST-24H EXAM MODE is active. "
+                "Do NOT probe for new information, open new modeling domains, or increase task density. "
+                "The exam is tomorrow — the user needs confidence, stability, and final-pass reinforcement, not new calibration. "
+                "Focus exclusively on high-yield review, error-book recall, and short mock items that are already scoped. "
+                "response_type must be task_help or emotional_support — never calibration or diagnostic unless the user explicitly asks. "
+                "Keep responses short and reassuring. new_topic_allowed is false."
+            )
         return [
             {"role": "system", "content": system},
             {"role": "user", "content": json.dumps(user, ensure_ascii=False, default=str)},
@@ -240,7 +684,9 @@ class AuroraDecisionLoop:
                 }
         agenda_priority = decision.harness_updates.get("agenda_priority")
         if agenda_priority:
-            decision.harness_updates["agenda_priority"] = canonicalize_runtime_domain(agenda_priority) or str(agenda_priority)
+            decision.harness_updates["agenda_priority"] = canonicalize_runtime_domain(agenda_priority) or str(
+                agenda_priority
+            )
 
         if hard_bounds.is_action_disabled("proactive_follow_up") and decision.action == "schedule_wake":
             return self._fallback_decision(readout, reason="proactive_follow_up_disabled")
@@ -308,7 +754,9 @@ class AuroraDecisionLoop:
 
         agenda_priority = decision.harness_updates.get("agenda_priority")
         if agenda_priority:
-            decision.harness_updates["agenda_priority"] = canonicalize_runtime_domain(agenda_priority) or str(agenda_priority)
+            decision.harness_updates["agenda_priority"] = canonicalize_runtime_domain(agenda_priority) or str(
+                agenda_priority
+            )
 
         return decision
 
@@ -394,7 +842,11 @@ class AuroraDecisionLoop:
             normalized = self._stabilize_drop_thread(normalized, readout)
             target_domain = self._extract_target_domain(normalized)
 
-        if normalized.action in {"emit_message", "update_harness", "update_state"} and not target_domain and missing_domains:
+        if (
+            normalized.action in {"emit_message", "update_harness", "update_state"}
+            and not target_domain
+            and missing_domains
+        ):
             target_domain = preferred_missing or self._select_missing_domain(readout, exclude_recent=False)
 
         if target_domain:
@@ -428,6 +880,10 @@ class AuroraDecisionLoop:
                 **normalized.chat_directive,
                 "intent": normalized.chat_directive.get("intent") or "confirm_modeling_ready",
             }
+        normalized.chat_directive = {
+            **normalized.chat_directive,
+            "standard_layer_contract": build_standard_layer_contract(normalized, readout),
+        }
         if not normalized.metadata.get("fallback_reason") and not normalized.metadata.get("harness_update_rejected"):
             normalized.harness_updates = self._merge_strategy_harness_updates(normalized.harness_updates, readout)
         return normalized
@@ -564,6 +1020,12 @@ class AuroraDecisionLoop:
         surface_state = self._surface_state_from_readout(readout)
         if surface_state:
             payload["surface_state"] = surface_state
+        wake_policy = self._wake_policy_from_readout(readout)
+        if wake_policy.get("context_budget") == "extended":
+            if readout.achievement_signals:
+                payload["achievement_signals"] = readout.achievement_signals
+            if readout.conversation_summary:
+                payload["conversation_summary"] = readout.conversation_summary
         return payload
 
     def _surface_state_from_readout(self, readout: DashboardReadout) -> dict[str, Any]:
@@ -667,9 +1129,35 @@ class AuroraDecisionLoop:
                 defaults["retrieval_practice"] = True
             if retrieval_policy.get("spaced_retrieval"):
                 defaults["spaced_review"] = True
+            if retrieval_policy.get("new_topic_allowed") is False:
+                defaults["new_topic_allowed"] = False
+
+        if readout.exam_sprint_policy.get("drop_low_roi_topics") is True:
+            defaults["drop_low_roi_topics"] = True
+        if readout.exam_sprint_policy.get("error_analysis_required") is True:
+            defaults["error_analysis_required"] = True
 
         if self._is_high_exam_urgency(readout):
             defaults["worked_example_first"] = True
+        # Detect last-24h mode via either the explicit boolean flag or sprint_mode value.
+        # exam_sprint_policy is built from ExamSprintPolicy.to_dict() which uses sprint_mode,
+        # not a separate last_24h_mode key — so both checks are needed.
+        _is_last_24h = bool(
+            readout.exam_sprint_policy.get("last_24h_mode") is True
+            or readout.exam_sprint_policy.get("sprint_mode") == "last_24h_cram"
+            or getattr(readout, "last_24h_mode", False)
+        )
+        if _is_last_24h:
+            defaults.update(
+                {
+                    "worked_example_first": True,
+                    "retrieval_practice": True,
+                    "spaced_review": True,
+                    "error_analysis_required": True,
+                    "drop_low_roi_topics": True,
+                    "new_topic_allowed": False,
+                }
+            )
         return defaults
 
     def _normalize_strategy_payload(self, value: Any, *, include_defaults: bool) -> dict[str, bool]:
@@ -680,7 +1168,8 @@ class AuroraDecisionLoop:
         if (
             not include_defaults
             and set(payload.keys()) == set(STRATEGY_FIELDS)
-            and not any(bool(flag) for flag in payload.values())
+            and not any(bool(flag) for key, flag in payload.items() if key != "new_topic_allowed")
+            and payload.get("new_topic_allowed") is True
         ):
             return {}
         return payload
@@ -700,7 +1189,11 @@ class AuroraDecisionLoop:
         for candidate in (
             summary.get("urgent"),
             policy.get("urgent"),
-            (policy.get("exam_urgency") or {}).get("urgent") if isinstance(policy.get("exam_urgency"), Mapping) else None,
+            (
+                (policy.get("exam_urgency") or {}).get("urgent")
+                if isinstance(policy.get("exam_urgency"), Mapping)
+                else None
+            ),
         ):
             if candidate is True:
                 return True
@@ -711,7 +1204,11 @@ class AuroraDecisionLoop:
             policy.get("days_remaining"),
             policy.get("days_left"),
             policy.get("time_constraint_days"),
-            (policy.get("exam_urgency") or {}).get("days_left") if isinstance(policy.get("exam_urgency"), Mapping) else None,
+            (
+                (policy.get("exam_urgency") or {}).get("days_left")
+                if isinstance(policy.get("exam_urgency"), Mapping)
+                else None
+            ),
         ):
             days = self._coerce_positive_int(raw_days)
             if days is not None and days <= 7:
@@ -738,6 +1235,13 @@ class AuroraDecisionLoop:
             return parsed.astimezone(UTC).replace(tzinfo=None)
         return parsed
 
+    def _wake_policy_from_readout(self, readout: DashboardReadout) -> dict[str, Any]:
+        return dict(readout.wake_policy or {})
+
+    def _max_tokens_for_readout(self, readout: DashboardReadout) -> int:
+        wake_policy = self._wake_policy_from_readout(readout)
+        return 600 if wake_policy.get("context_budget") == "extended" else 320
+
     async def _resolve_llm(self) -> Any:
         service_or_awaitable = self.llm_factory()
         if inspect.isawaitable(service_or_awaitable):
@@ -761,7 +1265,7 @@ class AuroraDecisionLoop:
         }
         if target_domain and not modeling_complete:
             chat_directive["target_domain"] = target_domain
-        return AuroraDecision(
+        fallback = AuroraDecision(
             action=safe_action,
             surface_complete=bool(readout.request_extra_context.get("surface_complete"))
             or bool(readout.surface == "aurora_modeling" and modeling_complete),
@@ -773,3 +1277,8 @@ class AuroraDecisionLoop:
                 "fallback_reason": reason,
             },
         )
+        fallback.chat_directive = {
+            **fallback.chat_directive,
+            "standard_layer_contract": build_standard_layer_contract(fallback, readout),
+        }
+        return fallback
