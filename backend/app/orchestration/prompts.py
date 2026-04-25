@@ -29,6 +29,7 @@ from typing import Any
 import json
 import math
 import random
+import re
 
 from loguru import logger
 
@@ -54,6 +55,9 @@ class _SafeFormatDict(dict):
 
 
 PROMPT_SECTION_SOFT_LIMIT_TOKENS = 4000
+CONVERSATION_MEMORY_MIN_MESSAGE_COUNT = 4
+CONVERSATION_MEMORY_RECENT_MESSAGE_LIMIT = 6
+CONVERSATION_MEMORY_ITEM_LIMIT = 2
 
 # 各 tier 的 prompt token 预算（与 ModelTier 对应但避免循环导入，用字符串 key）
 _TIER_PROMPT_BUDGET: dict[str, int] = {
@@ -989,6 +993,7 @@ def build_system_prompt(
         context_level=context_level,
         context_focus=context_focus,
     )
+    past_session_memory_section = _format_past_session_memory_section(user_context)
 
     llm_profile = _extract_llm_profile(user_context)
     understanding_depth_hint = None
@@ -1003,7 +1008,11 @@ def build_system_prompt(
         context_focus=context_focus,
     )
 
-    conversation_history_section = _format_conversation_history(conversation_history)
+    conversation_memory_section = build_conversation_memory_fragment(conversation_history)
+    raw_conversation_history_section = _format_conversation_history(conversation_history)
+    conversation_history_section = "\n\n".join(
+        section for section in (conversation_memory_section, raw_conversation_history_section) if section
+    )
 
     # 2.5 格式化计划上下文
 
@@ -1362,9 +1371,7 @@ def build_system_prompt(
         )
     if isinstance(prompt_signal_telemetry, dict):
         visible_fields = [
-            key
-            for key, meta in prompt_signal_telemetry.get("high_value_fields", {}).items()
-            if meta.get("rendered")
+            key for key, meta in prompt_signal_telemetry.get("high_value_fields", {}).items() if meta.get("rendered")
         ]
         prompt_signal_telemetry["prompt_visible_high_value_fields"] = visible_fields
         for key in prompt_signal_telemetry["tracked_fields"]:
@@ -1530,6 +1537,9 @@ def build_system_prompt(
         if suffix:
             prompt = f"{prompt}\n\n{suffix}"
 
+    if past_session_memory_section:
+        prompt = f"{past_session_memory_section}\n\n{prompt}"
+
     # 4. 版本特定修饰
 
     if prompt_version == "v2":
@@ -1631,6 +1641,156 @@ def _is_anchor_message(msg: dict[str, Any]) -> bool:
         return True
     anchor_keywords = ["计划已创建", "任务完成", "阶段", "里程碑", "目标确认", "关键决策"]
     return any(keyword in content for keyword in anchor_keywords)
+
+
+_CLAUSE_SPLIT_RE = re.compile(r"[。！？!?；;\n]+")
+_CONVERSATION_MEMORY_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    "困难": (
+        re.compile(
+            r"(?:最)?(?:头疼|头痛|困难|难点|痛点|短板|薄弱|卡在|卡住|搞不懂|不懂|不会|不熟)"
+            r"(?:的是|是|在|：|:)?\s*(?P<item>[^，,。！？!?；;\n]{2,40})"
+        ),
+        re.compile(
+            r"(?P<item>[\w\u4e00-\u9fff（）()·/+\-\s]{2,40}?)"
+            r"(?:很|太|特别|有点|还是)?(?:难|头疼|头痛|搞不懂|不懂|不会|不熟|卡住)"
+        ),
+    ),
+    "目标": (
+        re.compile(
+            r"(?:目标|目的|这次想要|希望|打算|准备|想要|想拿|想把|想在|要)"
+            r"(?:是|：|:)?\s*(?P<item>[^，,。！？!?；;\n]{2,40})"
+        ),
+    ),
+    "已完成": (
+        re.compile(
+            r"(?:已完成|已经完成|完成了|做完了|刷完了|看完了|复述了|"
+            r"背完了|过完了|搞定了)"
+            r"\s*(?P<item>[^，,。！？!?；;\n]{2,40})"
+        ),
+        re.compile(
+            r"(?P<item>[\w\u4e00-\u9fff（）()·/+\-\s]{2,40}?)"
+            r"(?:已完成|已经完成|完成了|做完了|刷完了|看完了|复述完了|"
+            r"背完了|过完了|搞定了)"
+        ),
+        re.compile(r"(?:能|可以)?闭卷复述\s*(?P<item>[^，,。！？!?；;\n]{2,40})"),
+    ),
+}
+
+
+def _conversation_messages_from_context(conversation_context: Any) -> tuple[list[dict[str, Any]], int]:
+    if isinstance(conversation_context, dict):
+        raw_messages = conversation_context.get("messages")
+        if not isinstance(raw_messages, list):
+            raw_messages = conversation_context.get("recent_messages")
+        messages = [msg for msg in raw_messages or [] if isinstance(msg, dict)]
+        raw_count = conversation_context.get("message_count")
+        if raw_count is None:
+            raw_count = conversation_context.get("original_count")
+        try:
+            message_count = int(raw_count)
+        except (TypeError, ValueError):
+            message_count = len(messages)
+        return messages, max(message_count, len(messages))
+
+    if isinstance(conversation_context, list):
+        messages = [msg for msg in conversation_context if isinstance(msg, dict)]
+        return messages, len(messages)
+
+    return [], 0
+
+
+def _message_content(message: dict[str, Any]) -> str:
+    content = message.get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict) and isinstance(item.get("text"), str):
+                parts.append(item["text"])
+        return " ".join(parts)
+    text = message.get("text")
+    return str(text or "")
+
+
+def _clean_conversation_memory_item(raw_item: str, *, category: str) -> str:
+    item = " ".join(str(raw_item or "").split()).strip(" ：:，,。！？!?；;")
+    if not item:
+        return ""
+
+    item = re.sub(r"\s+(?=[\u4e00-\u9fff])|(?<=[\u4e00-\u9fff])\s+", "", item)
+    item = re.sub(
+        r"^(我|我的|目前|现在|最近|这一轮|这次|最|觉得|感觉|" r"对我来说|主要|就是|是|在|还|还是)+",
+        "",
+        item,
+    )
+    item = re.sub(r"^(的是|的是：|的是:|是|在|为|要|想要|希望|打算|准备)", "", item)
+
+    if category == "困难":
+        item = re.sub(
+            r"(很|太|特别|有点|还是)?(难|头疼|头痛|搞不懂|不懂|不会|不熟|卡住|卡在)$",
+            "",
+            item,
+        )
+    elif category == "目标":
+        item = re.sub(r"(一下|一下子|吧|了)$", "", item)
+    elif category == "已完成":
+        item = re.sub(
+            r"(已完成|已经完成|完成了|做完了|刷完了|看完了|复述完了|" r"背完了|过完了|搞定了|了)$",
+            "",
+            item,
+        )
+
+    item = item.strip(" ：:，,。！？!?；;")
+    if not item or len(item) < 2:
+        return ""
+    if len(item) > 28:
+        item = item[:28].rstrip(" ：:，,。！？!?；;") + "..."
+    return item
+
+
+def _extract_conversation_key_points(messages: list[dict[str, Any]]) -> dict[str, list[str]]:
+    key_points: dict[str, list[str]] = {"困难": [], "目标": [], "已完成": []}
+    for message in messages:
+        if str(message.get("role") or "").lower() != "user":
+            continue
+        content = _message_content(message)
+        if not content:
+            continue
+        clauses = [clause.strip() for clause in _CLAUSE_SPLIT_RE.split(content) if clause.strip()]
+        for clause in clauses:
+            if any(negation in clause for negation in ("不难", "没那么难", "不是很难")):
+                continue
+            for category, patterns in _CONVERSATION_MEMORY_PATTERNS.items():
+                if len(key_points[category]) >= CONVERSATION_MEMORY_ITEM_LIMIT:
+                    continue
+                for pattern in patterns:
+                    match = pattern.search(clause)
+                    if not match:
+                        continue
+                    item = _clean_conversation_memory_item(match.group("item"), category=category)
+                    if item and item not in key_points[category]:
+                        key_points[category].append(item)
+                    break
+    return key_points
+
+
+def build_conversation_memory_fragment(conversation_context: Any) -> str:
+    """Render compact, non-transcript key points from the recent conversation."""
+    messages, message_count = _conversation_messages_from_context(conversation_context)
+    if message_count < CONVERSATION_MEMORY_MIN_MESSAGE_COUNT or not messages:
+        return ""
+
+    recent_messages = messages[-CONVERSATION_MEMORY_RECENT_MESSAGE_LIMIT:]
+    key_points = _extract_conversation_key_points(recent_messages)
+    lines = ["## 对话记忆片段", "本轮对话中用户已提及："]
+    for category in ("困难", "目标", "已完成"):
+        for item in key_points[category]:
+            lines.append(f"- {category}：{item}")
+
+    return "\n".join(lines) if len(lines) > 2 else ""
 
 
 def _format_conversation_history(conversation_history: dict = None) -> str:
@@ -2193,7 +2353,11 @@ def _format_galaxy_snapshot_section(*, user_context: dict) -> str:
         detail_bits = [role]
         if mastery_score is not None:
             detail_bits.append(f"mastery {mastery_score}")
-        line = f"- {name} ({', '.join(detail_bits)}): {description}" if description else f"- {name} ({', '.join(detail_bits)})"
+        line = (
+            f"- {name} ({', '.join(detail_bits)}): {description}"
+            if description
+            else f"- {name} ({', '.join(detail_bits)})"
+        )
         lines.append(line[:180])
     return "\n" + "\n".join(lines)
 
@@ -2543,11 +2707,7 @@ def _extract_stage33_srl_payload(context: dict[str, Any] | None) -> dict[str, An
     payload = context if isinstance(context, dict) else {}
     cognitive_context = _extract_cognitive_context_payload(payload)
     profile_context = _extract_profile_context_payload(payload)
-    insight_state = (
-        profile_context.get("user_insight_state")
-        if isinstance(profile_context, dict)
-        else None
-    )
+    insight_state = profile_context.get("user_insight_state") if isinstance(profile_context, dict) else None
     insight_state = insight_state if isinstance(insight_state, dict) else {}
 
     for candidate in (
@@ -2568,17 +2728,9 @@ def _format_stage33_social_signal_section(payload: dict[str, Any] | None) -> str
     if not isinstance(payload, dict) or not payload:
         return ""
 
-    summary_lines = [
-        str(item).strip()
-        for item in (payload.get("summary_lines") or [])
-        if str(item).strip()
-    ]
+    summary_lines = [str(item).strip() for item in (payload.get("summary_lines") or []) if str(item).strip()]
     if not summary_lines and str(payload.get("summary_text") or "").strip():
-        summary_lines = [
-            part.strip()
-            for part in str(payload.get("summary_text") or "").split("；")
-            if part.strip()
-        ]
+        summary_lines = [part.strip() for part in str(payload.get("summary_text") or "").split("；") if part.strip()]
     if not summary_lines:
         mention_count = int(payload.get("mention_count") or 0)
         relationship_count = int(payload.get("relationship_count") or 0)
@@ -3122,9 +3274,7 @@ def _render_user_context_content(
 
     stage33_social_mode = _resolve_stage33_feature_mode(context, "social")
     if stage33_social_mode == "live":
-        social_signal_section = _format_stage33_social_signal_section(
-            normalized.get("social_signals_summary")
-        )
+        social_signal_section = _format_stage33_social_signal_section(normalized.get("social_signals_summary"))
         if social_signal_section:
             lines.append(social_signal_section)
             _mark_rendered("social_signals_summary")
@@ -3132,17 +3282,16 @@ def _render_user_context_content(
                 "items": len(
                     [
                         item
-                        for item in str(normalized.get("social_signals_summary", {}).get("summary_text") or "").split("；")
+                        for item in str(normalized.get("social_signals_summary", {}).get("summary_text") or "").split(
+                            "；"
+                        )
                         if item.strip()
                     ]
                 )
                 or len((normalized.get("social_signals_summary") or {}).get("summary_lines") or []),
                 "approx_tokens": _estimate_prompt_tokens(social_signal_section),
             }
-    elif (
-        settings.SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED
-        or settings.SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED
-    ):
+    elif settings.SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED or settings.SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED:
         social_context = context.get("social_context") if isinstance(context, dict) else None
         social_lines = render_social_context_lines(social_context if isinstance(social_context, dict) else None)
         if social_lines:
@@ -3162,9 +3311,7 @@ def _render_user_context_content(
 
     working_memory_mode = _resolve_stage33_feature_mode(context, "wm_prompt")
     if working_memory_mode == "live":
-        working_memory_section = _format_working_memory_section(
-            normalized.get("working_memory_snapshot")
-        )
+        working_memory_section = _format_working_memory_section(normalized.get("working_memory_snapshot"))
         if working_memory_section:
             lines.append(working_memory_section)
             _mark_rendered("working_memory_snapshot")
@@ -3255,6 +3402,35 @@ def format_user_context(
         context_focus=context_focus,
     )
     return rendered
+
+
+def _format_past_session_memory_section(user_context: dict[str, Any] | None) -> str:
+    if not isinstance(user_context, dict):
+        return ""
+    raw_items = user_context.get("past_session_memory") or []
+    if not isinstance(raw_items, list):
+        return ""
+
+    lines: list[str] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        summary = ""
+        if isinstance(item, dict):
+            summary = str(
+                item.get("summary") or item.get("text") or item.get("content") or item.get("title") or ""
+            ).strip()
+        else:
+            summary = str(getattr(item, "summary", item) or "").strip()
+        if not summary or summary in seen:
+            continue
+        seen.add(summary)
+        lines.append(summary)
+        if len(lines) >= 3:
+            break
+
+    if not lines:
+        return ""
+    return "你之前了解的关于用户的信息：\n" + "\n".join(f"- {line}" for line in lines)
 
 
 def _extract_canonical_signal(

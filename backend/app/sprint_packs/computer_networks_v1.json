@@ -1289,6 +1289,15 @@
       "repair_strategy": "画四次挥手完整时序图，重点理解 TIME_WAIT 的 2MSL 等待和为什么需要四次而非三次"
     },
     {
+      "mistake_id": "mistake.tcp_state_diagram",
+      "label": "TCP 状态机图连线/触发条件混淆",
+      "related_nodes": [
+        "cn.tcp_three_way",
+        "cn.tcp_four_way"
+      ],
+      "repair_strategy": "先只分两类：连线表示状态能否相邻转换，触发条件写 SYN/ACK/FIN/超时；不要一次背完整图"
+    },
+    {
       "mistake_id": "mistake.bit_byte_confusion",
       "label": "位与字节单位混淆",
       "related_nodes": [

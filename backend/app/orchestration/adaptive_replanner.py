@@ -22,6 +22,7 @@ from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIV
 from app.core.event_bus import event_bus
 from app.models.card_protocol import Card, CardType
 from app.models.cognitive import BehaviorPattern
+from app.models.plan import Plan
 from app.models.task import SubTask, SubTaskStatus, Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.dual_core_router import AdaptationRecord
@@ -42,6 +43,31 @@ if TYPE_CHECKING:
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    if hasattr(value, "to_dict"):
+        try:
+            value = value.to_dict()
+        except Exception:
+            return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _strip(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        parsed = int(float(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _task_status_value(task: Task) -> str:
+    return str(getattr(task.status, "value", task.status) or "")
 
 
 @dataclass
@@ -294,6 +320,212 @@ class AdaptiveReplanner:
         self.plan_health_signal_service = PlanHealthSignalService(db, redis)
         self.cognitive_pattern_trigger = CognitivePatternTrigger(db, redis)
         self._card_bridge: ReplannerCardBridge | None = None
+
+    @classmethod
+    def should_compress(cls, *, completion_rate: float | None, days_left: int | None) -> bool:
+        """Trigger sprint compression only when the user is behind and time is short."""
+        try:
+            rate = float(completion_rate)
+            days = int(float(days_left))
+        except (TypeError, ValueError):
+            return False
+        if days < 0:
+            return False
+        return rate < 0.5 and days <= 5
+
+    @classmethod
+    def build_compressed_sprint_day_spec(
+        cls,
+        *,
+        day_number: int,
+        completion_rate: float,
+        sprint_policy: dict[str, Any],
+        source_daily_spec: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        policy = _as_dict(sprint_policy)
+        retrieval_policy = _as_dict(policy.get("retrieval_policy"))
+        fail_safe = _as_dict(policy.get("fail_safe") or retrieval_policy.get("fail_safe"))
+        behind_rule = _strip(fail_safe.get("behind")) or "下一天只保留 1 个核心任务和 1 个最小输出。"
+        minimum_output = (
+            _strip(policy.get("minimum_output"))
+            or _strip(retrieval_policy.get("minimum_output"))
+            or "闭卷复述、3题小测或一道典型题独立完成"
+        )
+        source_spec = _as_dict(source_daily_spec)
+        subject_strategy = _as_dict(source_spec.get("subject_strategy"))
+        node_labels = [
+            _strip(item)
+            for item in list(subject_strategy.get("node_labels") or [])
+            if _strip(item)
+        ]
+        primary_target = (
+            _strip(subject_strategy.get("primary_node_label"))
+            or (node_labels[0] if node_labels else "")
+            or _strip(source_spec.get("primary_target"))
+            or _strip(source_spec.get("title_focus"))
+            or "最高收益核心点"
+        )
+        days_left = _safe_int(policy.get("days_left") or policy.get("actual_days_left") or policy.get("total_days"))
+        if days_left is None:
+            days_left = 5
+        completion_pct = max(0, min(100, int(round(float(completion_rate) * 100))))
+        day_number = max(1, int(day_number or 1))
+        compression_reason = (
+            f"前一天完成率只有 {completion_pct}%，低于 50%，而距离考试只剩 {days_left} 天；"
+            f"所以 Day {day_number} 自动压缩为保底版：{behind_rule}"
+        )
+        objective = f"Day {day_number} 保底恢复：只拿下「{primary_target}」，并留下 1 个最小输出。"
+        output_action = f"围绕「{primary_target}」完成 {minimum_output}。"
+        success_criteria = f"只要完成「{primary_target}」的 {minimum_output}，今天就算把主线接回来了。"
+        return {
+            "day": day_number,
+            "focus": objective,
+            "title_focus": "压缩保底",
+            "task_kind": "compressed_recovery",
+            "estimated_minutes": 35,
+            "minimum_output": minimum_output,
+            "primary_target": primary_target,
+            "optional_tasks": [],
+            "compressed": True,
+            "completion_rate": float(completion_rate),
+            "compression_reason": compression_reason,
+            "output_action": output_action,
+            "success_criteria": success_criteria,
+            "objective": objective,
+            "method_steps": [
+                f"先锁定 1 个核心点：{primary_target}。",
+                f"只做 1 个最小输出：{minimum_output}。",
+                "完成后写一句明天从哪里继续，不把今天扩成补完整章。",
+            ],
+            "fail_safe_rule": behind_rule,
+            "daily_spec": {
+                "day": day_number,
+                "task_kind": "compressed_recovery",
+                "compressed": True,
+                "primary_target": primary_target,
+                "minimum_output": minimum_output,
+                "optional_tasks": [],
+                "estimated_minutes": 35,
+                "compression_reason": compression_reason,
+            },
+        }
+
+    async def compress_sprint_day(
+        self,
+        *,
+        plan_id: UUID | None = None,
+        day_number: int = 1,
+        completion_rate: float,
+        sprint_policy: dict[str, Any],
+        source_daily_spec: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Compress one sprint day to a single recovery task and persist it when possible."""
+        compressed_spec = self.build_compressed_sprint_day_spec(
+            day_number=day_number,
+            completion_rate=completion_rate,
+            sprint_policy=sprint_policy,
+            source_daily_spec=source_daily_spec,
+        )
+        if plan_id is not None and getattr(self, "db", None) is not None:
+            await self._write_compressed_sprint_day(
+                plan_id=plan_id,
+                day_number=day_number,
+                compressed_spec=compressed_spec,
+            )
+        return [compressed_spec]
+
+    async def _write_compressed_sprint_day(
+        self,
+        *,
+        plan_id: UUID,
+        day_number: int,
+        compressed_spec: dict[str, Any],
+    ) -> None:
+        result = await self.db.execute(select(Plan).where(Plan.id == plan_id, Plan.not_deleted_filter()))
+        plan = result.scalar_one_or_none()
+        if plan is None:
+            return
+
+        day_number = max(1, int(day_number or 1))
+        user_id = plan.user_id
+        metadata = _as_dict(plan.source_metadata).copy()
+        daily_specs = _as_dict(metadata.get("daily_specs")).copy()
+        daily_specs[str(day_number)] = compressed_spec
+        compressions = _as_dict(metadata.get("adaptive_compressions")).copy()
+        compressions[str(day_number)] = {
+            "day": day_number,
+            "compressed": True,
+            "compression_reason": compressed_spec["compression_reason"],
+            "completion_rate": compressed_spec.get("completion_rate"),
+            "task_kind": "compressed_recovery",
+        }
+        metadata["daily_specs"] = daily_specs
+        metadata["adaptive_compressions"] = compressions
+        plan.source_metadata = metadata
+        self.db.add(plan)
+
+        day_start = day_number * 1000
+        day_end = (day_number + 1) * 1000
+        task_result = await self.db.execute(
+            select(Task)
+            .where(Task.plan_id == plan_id, Task.not_deleted_filter())
+            .where(Task.order_index >= day_start, Task.order_index < day_end)
+            .order_by(Task.order_index.asc(), Task.created_at.asc())
+        )
+        day_tasks = list(task_result.scalars().all())
+        kept_task = next(
+            (task for task in day_tasks if _task_status_value(task) != TaskStatus.COMPLETED.value),
+            day_tasks[0] if day_tasks else None,
+        )
+
+        if kept_task is not None:
+            existing_guide = _as_dict(kept_task.guide_json).copy()
+            kept_task.title = f"Day {day_number} · 压缩保底 - {_strip(compressed_spec.get('primary_target'))}"
+            kept_task.estimated_minutes = min(_safe_int(compressed_spec.get("estimated_minutes")) or 35, 35)
+            kept_task.difficulty = 1
+            kept_task.energy_cost = 1
+            kept_task.guide_content = _strip(compressed_spec.get("objective"))
+            kept_task.success_criteria = _strip(compressed_spec.get("success_criteria"))
+            kept_task.order_index = day_start
+            kept_task.guide_json = {
+                **existing_guide,
+                **compressed_spec,
+                "time_estimate_minutes": kept_task.estimated_minutes,
+                "daily_spec": compressed_spec["daily_spec"],
+            }
+            tags = list(kept_task.tags or [])
+            for tag in ("compressed_recovery", "sprint_fail_safe", "adaptive_compressed", f"day:{day_number}"):
+                if tag not in tags:
+                    tags.append(tag)
+            kept_task.tags = tags
+            self.db.add(kept_task)
+
+        for task in day_tasks:
+            if kept_task is not None and task.id == kept_task.id:
+                continue
+            if _task_status_value(task) == TaskStatus.COMPLETED.value:
+                continue
+            task.soft_delete()
+            self.db.add(task)
+
+        await self.db.commit()
+        if kept_task is not None:
+            await self.db.refresh(kept_task)
+            await _sync_task_card_projection(self.db, kept_task)
+
+        try:
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan.id,
+                patch={
+                    "facts": {
+                        "daily_spec": {str(day_number): compressed_spec},
+                        "adaptive_compressions": compressions,
+                    }
+                },
+            )
+        except Exception as exc:
+            logger.warning("Failed to persist compressed daily_spec for plan {}: {}", plan_id, exc)
 
     async def on_task_completed(
         self,

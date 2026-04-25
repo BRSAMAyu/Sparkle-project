@@ -8,6 +8,7 @@ This is a *mixin* -- it relies on attributes that live on the concrete
 ``ChatOrchestrator`` instance (``self.redis``, ``self.context_pruner``,
 ``self.state_manager``, etc.).
 """
+
 from __future__ import annotations
 
 
@@ -47,10 +48,10 @@ from app.services.user_service import UserService
 from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
 from app.state_aggregator.service import StateAggregatorService
 
-
 # ---------------------------------------------------------------------------
 # Helpers (duplicated from orchestrator to avoid circular imports)
 # ---------------------------------------------------------------------------
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -59,6 +60,7 @@ def _utcnow() -> datetime:
 # ---------------------------------------------------------------------------
 # Mixin
 # ---------------------------------------------------------------------------
+
 
 class ContextBuilderMixin:
     """Mixin providing context building methods for ChatOrchestrator."""
@@ -85,15 +87,9 @@ class ContextBuilderMixin:
             "source_type": str(memory.source_type or "").strip(),
             "occurred_at": memory.occurred_at.isoformat() if memory.occurred_at else None,
             "importance_score": (
-                float(memory.importance_score)
-                if getattr(memory, "importance_score", None) is not None
-                else None
+                float(memory.importance_score) if getattr(memory, "importance_score", None) is not None else None
             ),
-            "confidence": (
-                float(memory.confidence)
-                if getattr(memory, "confidence", None) is not None
-                else None
-            ),
+            "confidence": (float(memory.confidence) if getattr(memory, "confidence", None) is not None else None),
             "tags": list(memory.tags or []),
         }
 
@@ -121,12 +117,8 @@ class ContextBuilderMixin:
                 "scaffolding_prompt_mode": str(
                     getattr(settings, "AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE", "live") or "live"
                 ),
-                "cogload_route_mode": str(
-                    getattr(settings, "AURORA_STAGE39_COGLOAD_ROUTE_MODE", "shadow") or "shadow"
-                ),
-                "galaxy_inject_mode": str(
-                    getattr(settings, "AURORA_STAGE39_GALAXY_INJECT_MODE", "shadow") or "shadow"
-                ),
+                "cogload_route_mode": str(getattr(settings, "AURORA_STAGE39_COGLOAD_ROUTE_MODE", "shadow") or "shadow"),
+                "galaxy_inject_mode": str(getattr(settings, "AURORA_STAGE39_GALAXY_INJECT_MODE", "shadow") or "shadow"),
             }
 
     @staticmethod
@@ -163,9 +155,7 @@ class ContextBuilderMixin:
         return {
             "mode": mode,
             "current_scaffolding_stage": str(snapshot.get("current_zone") or "flow"),
-            "intervention_intensity": self._stage39_intervention_intensity(
-                snapshot.get("template_support_level")
-            ),
+            "intervention_intensity": self._stage39_intervention_intensity(snapshot.get("template_support_level")),
             "template_support_level": int(snapshot.get("template_support_level") or 0),
             "support_level": round(float(snapshot.get("support_level") or 0.0), 2),
             "capability_level": round(float(snapshot.get("capability_level") or 0.0), 2),
@@ -314,8 +304,7 @@ class ContextBuilderMixin:
             # Pending count
             result = await db_session.execute(
                 select(func.count(Task.id)).where(
-                    Task.user_id == uuid.UUID(user_id),
-                    Task.status == ModelTaskStatus.PENDING
+                    Task.user_id == uuid.UUID(user_id), Task.status == ModelTaskStatus.PENDING
                 )
             )
             pending = result.scalar() or 0
@@ -323,8 +312,7 @@ class ContextBuilderMixin:
             # In progress count
             result = await db_session.execute(
                 select(func.count(Task.id)).where(
-                    Task.user_id == uuid.UUID(user_id),
-                    Task.status == ModelTaskStatus.IN_PROGRESS
+                    Task.user_id == uuid.UUID(user_id), Task.status == ModelTaskStatus.IN_PROGRESS
                 )
             )
             in_progress = result.scalar() or 0
@@ -334,16 +322,12 @@ class ContextBuilderMixin:
                 select(func.count(Task.id)).where(
                     Task.user_id == uuid.UUID(user_id),
                     Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
-                    Task.due_date < _utcnow()
+                    Task.due_date < _utcnow(),
                 )
             )
             overdue = result.scalar() or 0
 
-            return {
-                "pending": pending,
-                "in_progress": in_progress,
-                "overdue": overdue
-            }
+            return {"pending": pending, "in_progress": in_progress, "overdue": overdue}
         except Exception as e:
             logger.warning(f"Failed to get task status summary: {e}")
             return {"pending": 0, "in_progress": 0, "overdue": 0}
@@ -373,6 +357,7 @@ class ContextBuilderMixin:
 
                 # Map ORM BehaviorPattern → policy_signals via the canonical map
                 from app.services.profile_context_service import ProfileContextService
+
                 policy_map = ProfileContextService.PATTERN_POLICY_MAP
                 policy_signals = []
                 for p in patterns:
@@ -390,9 +375,7 @@ class ContextBuilderMixin:
                             "confidence": round(float(pattern.confidence_score or 0.0), 2),
                             "description": present_pattern_description(pattern.pattern_name, pattern.description),
                             "last_observed_at": (
-                                pattern.last_observed_at.isoformat()
-                                if pattern.last_observed_at
-                                else None
+                                pattern.last_observed_at.isoformat() if pattern.last_observed_at else None
                             ),
                         }
                     )
@@ -533,9 +516,7 @@ class ContextBuilderMixin:
 
         active_goal_rows = await PlanService.list_active(db_session, user_uuid, limit=3)
         active_goals = [
-            self._serialize_stage34_active_goal(plan)
-            for plan in active_goal_rows
-            if str(plan.name or "").strip()
+            self._serialize_stage34_active_goal(plan) for plan in active_goal_rows if str(plan.name or "").strip()
         ]
 
         episodic_rows = await memory_service.list_recent_episodic(user_uuid, limit=5)
@@ -623,7 +604,9 @@ class ContextBuilderMixin:
     # _build_user_context
     # ------------------------------------------------------------------
 
-    async def _build_user_context(self, user_id: str, db_session: AsyncSession, session_id: str | None = None) -> dict[str, Any]:
+    async def _build_user_context(
+        self, user_id: str, db_session: AsyncSession, session_id: str | None = None
+    ) -> dict[str, Any]:
         """
         Build comprehensive user context from UserService
 
@@ -695,12 +678,7 @@ class ContextBuilderMixin:
                 # Active plans (latest 3)
                 plans_stmt = (
                     select(Plan)
-                    .where(
-                        and_(
-                            Plan.user_id == uuid.UUID(user_id),
-                            Plan.is_active
-                        )
-                    )
+                    .where(and_(Plan.user_id == uuid.UUID(user_id), Plan.is_active))
                     .order_by(desc(Plan.created_at))
                     .limit(3)
                 )
@@ -739,14 +717,12 @@ class ContextBuilderMixin:
                 if getattr(cognitive_context, "profile_context", None):
                     profile_context_payload = cognitive_context.profile_context
 
-                cognitive_context_payload = cognitive_context.model_dump(
-                    exclude={"user_id", "timestamp"}
-                )
+                cognitive_context_payload = cognitive_context.model_dump(exclude={"user_id", "timestamp"})
                 if working_memory_snapshot:
                     cognitive_context_payload["working_memory_snapshot"] = working_memory_snapshot
 
                 payload = {
-                    "user_context": user_context_data, # Legacy field
+                    "user_context": user_context_data,  # Legacy field
                     "analytics_summary": cognitive_context.engagement_metrics or {},
                     "preferences": (
                         profile_context_payload.get("preferences")
@@ -765,13 +741,11 @@ class ContextBuilderMixin:
                     "profile": profile_payload,
                     "profile_context": profile_context_payload,
                     "working_memory_snapshot": working_memory_snapshot,
-
+                    "past_session_memory": cognitive_context.past_session_memory,
                     # New field for full context injection
                     "cognitive_context": cognitive_context_payload,
-
                     # 认知棱镜数据
                     "cognitive_insights": cognitive_insights,
-
                     # 种子库 few-shot 示例
                     "seed_library": seed_library_context,
                     "learning_gaps_summary": learning_gaps_summary,
@@ -800,12 +774,7 @@ class ContextBuilderMixin:
             # Next actions (top pending tasks)
             tasks_stmt = (
                 select(Task)
-                .where(
-                    and_(
-                        Task.user_id == uuid.UUID(user_id),
-                        Task.status == ModelTaskStatus.PENDING
-                    )
-                )
+                .where(and_(Task.user_id == uuid.UUID(user_id), Task.status == ModelTaskStatus.PENDING))
                 .order_by(desc(Task.priority), asc(Task.due_date), desc(Task.created_at))
                 .limit(3)
             )
@@ -817,7 +786,7 @@ class ContextBuilderMixin:
                     "title": task.title,
                     "type": task.type.value,
                     "estimated_minutes": task.estimated_minutes,
-                    "priority": task.priority
+                    "priority": task.priority,
                 }
                 for task in tasks
             ]
@@ -825,12 +794,7 @@ class ContextBuilderMixin:
             # Active plans (latest 3)
             plans_stmt = (
                 select(Plan)
-                .where(
-                    and_(
-                        Plan.user_id == uuid.UUID(user_id),
-                        Plan.is_active
-                    )
-                )
+                .where(and_(Plan.user_id == uuid.UUID(user_id), Plan.is_active))
                 .order_by(desc(Plan.created_at))
                 .limit(3)
             )
@@ -842,7 +806,7 @@ class ContextBuilderMixin:
                     "title": plan.name,
                     "type": plan.type.value,
                     "target_date": plan.target_date.isoformat() if plan.target_date else None,
-                    "progress": plan.progress or 0
+                    "progress": plan.progress or 0,
                 }
                 for plan in plans
             ]
@@ -857,7 +821,7 @@ class ContextBuilderMixin:
                     prefs = user_context_data["preferences"]
                     if isinstance(prefs, dict):
                         preferences_dict = prefs
-                    elif hasattr(prefs, 'model_dump'):
+                    elif hasattr(prefs, "model_dump"):
                         preferences_dict = prefs.model_dump()
                     else:
                         logger.warning(f"Unexpected preferences type: {type(prefs)}")
@@ -877,27 +841,32 @@ class ContextBuilderMixin:
                     experiment_cohort=experiment_cohort,
                 )
 
-                return await self._attach_stage39_context({
-                    "user_context": user_context_data,
-                    "analytics_summary": analytics,
-                    "preferences": {
-                        "depth_preference": preferences_dict.get("depth_preference", 0.5),
-                        "curiosity_preference": preferences_dict.get("curiosity_preference", 0.5),
+                return await self._attach_stage39_context(
+                    {
+                        "user_context": user_context_data,
+                        "analytics_summary": analytics,
+                        "preferences": {
+                            "depth_preference": preferences_dict.get("depth_preference", 0.5),
+                            "curiosity_preference": preferences_dict.get("curiosity_preference", 0.5),
+                        },
+                        "next_actions": next_actions,
+                        "active_plans": active_plans,
+                        "focus_stats": focus_stats,
+                        "preference_version": preference_version,
+                        "llm_profile": llm_profile_data,
+                        "experiment_cohort": experiment_cohort,
+                        "task_status_summary": task_status_summary,
+                        "returning_context": returning_context,
+                        "understanding_depth": understanding_depth,
+                        "profile": profile_payload,
+                        "past_session_memory": [],
+                        "active_goals": [],
+                        "episodic_memories": [],
+                        "aurora_stage34_modes": await self._stage34_modes_payload(),
                     },
-                    "next_actions": next_actions,
-                    "active_plans": active_plans,
-                    "focus_stats": focus_stats,
-                    "preference_version": preference_version,
-                    "llm_profile": llm_profile_data,
-                    "experiment_cohort": experiment_cohort,
-                    "task_status_summary": task_status_summary,
-                    "returning_context": returning_context,
-                    "understanding_depth": understanding_depth,
-                    "profile": profile_payload,
-                    "active_goals": [],
-                    "episodic_memories": [],
-                    "aurora_stage34_modes": await self._stage34_modes_payload(),
-                }, user_id=user_id, db_session=db_session)
+                    user_id=user_id,
+                    db_session=db_session,
+                )
             else:
                 # Fallback to basic context
                 logger.warning(f"User {user_id} not found, using fallback context")
@@ -908,48 +877,57 @@ class ContextBuilderMixin:
                     preference_version=preference_version,
                     experiment_cohort=experiment_cohort,
                 )
-                return await self._attach_stage39_context({
-                    "user_context": None,
-                    "analytics_summary": {"is_active": True, "engagement_level": "medium"},
-                    "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
-                    "next_actions": next_actions,
-                    "active_plans": active_plans,
-                    "focus_stats": focus_stats,
-                    "preference_version": preference_version,
-                    "llm_profile": llm_profile_data,
-                    "experiment_cohort": experiment_cohort,
-                    "task_status_summary": task_status_summary,
-                    "returning_context": returning_context,
-                    "understanding_depth": understanding_depth,
-                    "profile": profile_payload,
-                    "active_goals": [],
-                    "episodic_memories": [],
-                    "aurora_stage34_modes": await self._stage34_modes_payload(),
-                }, user_id=user_id, db_session=db_session)
+                return await self._attach_stage39_context(
+                    {
+                        "user_context": None,
+                        "analytics_summary": {"is_active": True, "engagement_level": "medium"},
+                        "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+                        "next_actions": next_actions,
+                        "active_plans": active_plans,
+                        "focus_stats": focus_stats,
+                        "preference_version": preference_version,
+                        "llm_profile": llm_profile_data,
+                        "experiment_cohort": experiment_cohort,
+                        "task_status_summary": task_status_summary,
+                        "returning_context": returning_context,
+                        "understanding_depth": understanding_depth,
+                        "profile": profile_payload,
+                        "active_goals": [],
+                        "episodic_memories": [],
+                        "aurora_stage34_modes": await self._stage34_modes_payload(),
+                    },
+                    user_id=user_id,
+                    db_session=db_session,
+                )
 
         except Exception as e:
             logger.error(f"Failed to build user context: {e}")
             # Fallback
-            return await self._attach_stage39_context({
-                "user_context": None,
-                "analytics_summary": {"is_active": True, "engagement_level": "medium"},
-                "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
-                "preference_version": 0,
-                "llm_profile": None,
-                "returning_context": None,
-                "understanding_depth": None,
-                "profile": self._build_profile_payload(
-                    user_context_data=None,
-                    preferences={"depth_preference": 0.5, "curiosity_preference": 0.5},
-                    llm_profile_data=None,
-                    preference_version=0,
-                    experiment_cohort=self._experiment_cohort_for_user(user_id),
-                ),
-                "experiment_cohort": self._experiment_cohort_for_user(user_id),
-                "active_goals": [],
-                "episodic_memories": [],
-                "aurora_stage34_modes": await self._stage34_modes_payload(),
-            }, user_id=user_id, db_session=db_session)
+            return await self._attach_stage39_context(
+                {
+                    "user_context": None,
+                    "analytics_summary": {"is_active": True, "engagement_level": "medium"},
+                    "preferences": {"depth_preference": 0.5, "curiosity_preference": 0.5},
+                    "preference_version": 0,
+                    "llm_profile": None,
+                    "returning_context": None,
+                    "understanding_depth": None,
+                    "profile": self._build_profile_payload(
+                        user_context_data=None,
+                        preferences={"depth_preference": 0.5, "curiosity_preference": 0.5},
+                        llm_profile_data=None,
+                        preference_version=0,
+                        experiment_cohort=self._experiment_cohort_for_user(user_id),
+                    ),
+                    "experiment_cohort": self._experiment_cohort_for_user(user_id),
+                    "past_session_memory": [],
+                    "active_goals": [],
+                    "episodic_memories": [],
+                    "aurora_stage34_modes": await self._stage34_modes_payload(),
+                },
+                user_id=user_id,
+                db_session=db_session,
+            )
 
     # ------------------------------------------------------------------
     # _build_returning_context
@@ -1058,10 +1036,7 @@ class ContextBuilderMixin:
             return {"messages": [], "summary": None}
 
         try:
-            pruned_result = await self.context_pruner.get_pruned_history(
-                session_id=session_id,
-                user_id=user_id
-            )
+            pruned_result = await self.context_pruner.get_pruned_history(session_id=session_id, user_id=user_id)
 
             logger.debug(
                 f"Conversation context for session {session_id}: "
@@ -1097,14 +1072,16 @@ class ContextBuilderMixin:
             last_activity = user_ctx.get("last_activity_time") or user_ctx.get("last_login")
 
         if not last_activity and isinstance(context.get("analytics_summary"), dict):
-            last_activity = context["analytics_summary"].get("last_login") or context["analytics_summary"].get("last_activity_time")
+            last_activity = context["analytics_summary"].get("last_login") or context["analytics_summary"].get(
+                "last_activity_time"
+            )
 
         logger.info(
             "Context injection for user {}: {} tasks, {} plans, last_activity={}",
             user_id,
             tasks_count,
             plans_count,
-            last_activity
+            last_activity,
         )
 
     # ------------------------------------------------------------------
@@ -1121,7 +1098,9 @@ class ContextBuilderMixin:
         user_message: str,
         request_id: str,
         tracer,
-    ) -> tuple[dict[str, Any], uuid.UUID | None, bool, dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    ) -> tuple[
+        dict[str, Any], uuid.UUID | None, bool, dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None
+    ]:
         grpc_context = {}
         if request.user_profile and request.user_profile.extra_context:
             try:
@@ -1152,6 +1131,7 @@ class ContextBuilderMixin:
             with tracer.start_as_current_span("orchestrator.auto_switch_plan"):
                 try:
                     from app.services.plan_matching_service import PlanMatchingService
+
                     plan_matching = PlanMatchingService(active_db)
                     matched_plan_id = await self.state_manager.auto_switch_plan(
                         session_id=session_id,
@@ -1208,9 +1188,7 @@ class ContextBuilderMixin:
                             try:
                                 plan_state_svc = PlanStateService(active_db, self.redis)
                                 normalized_plan_id = uuid.UUID(str(plan_id))
-                                plan_state = await plan_state_svc.get_plan_state(
-                                    uuid.UUID(user_id), normalized_plan_id
-                                )
+                                plan_state = await plan_state_svc.get_plan_state(uuid.UUID(user_id), normalized_plan_id)
                                 if plan_state and plan_state.constraints.get("require_phase_rollback"):
                                     logger.info(f"Phase rollback triggered for plan_id={plan_id}")
                                     await plan_state_svc.upsert_plan_state(
@@ -1266,6 +1244,7 @@ class ContextBuilderMixin:
                     await active_db.rollback()
 
         return grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context
+
     @staticmethod
     def _build_cognitive_prompt_guidance(top_patterns: list[dict[str, Any]]) -> str:
         if not top_patterns:

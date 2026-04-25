@@ -156,6 +156,7 @@ from app.services.custom_expert_service import CustomExpertService, is_custom_ex
 from app.services.execution_preference_service import ExecutionPreferenceService
 from app.services.focus_service import focus_service  # noqa: F401
 from app.services.llm_service import llm_service  # noqa: F401
+from app.services.memory_service import MemoryService
 from app.services.plan_progress_service import PlanProgressService  # noqa: F401
 from app.services.progress_narrative_service import ProgressNarrativeService  # noqa: F401
 from app.services.plan_execution_record_service import PlanExecutionRecordService  # noqa: F401
@@ -545,6 +546,102 @@ class ChatOrchestrator(
             return ""
 
     @staticmethod
+    def _stringify_response_metadata(metadata: dict[str, Any] | None) -> dict[str, str]:
+        rendered: dict[str, str] = {}
+        for key, value in dict(metadata or {}).items():
+            if isinstance(value, bool):
+                rendered[str(key)] = str(value).lower()
+            elif isinstance(value, (dict, list)):
+                rendered[str(key)] = json.dumps(value, ensure_ascii=False, default=str)
+            elif value is not None:
+                rendered[str(key)] = str(value)
+        return rendered
+
+    async def _fast_track_exam_sprint(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        user_message: str,
+        request_extra_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+        stream_callback,
+    ) -> bool:
+        """Handle cold-start exam sprint planning before generic sufficiency checks."""
+        if not user_message:
+            return False
+
+        manager = self.planning_workflow_manager
+        try:
+            active_session = await manager.get_active_session(session_id)
+            fast_track_context = None
+            if active_session is None or not manager.is_fast_track_exam_sprint_session(active_session):
+                fast_track_context = manager.build_exam_sprint_fast_track_context(user_message)
+                if not fast_track_context:
+                    return False
+
+            try:
+                parsed_user_id = uuid.UUID(str(user_id))
+            except (TypeError, ValueError):
+                logger.debug("Skipping exam sprint fast-track for non-UUID user_id: {}", user_id)
+                return False
+
+            profile_context = {}
+            if isinstance(user_context_payload, dict) and isinstance(user_context_payload.get("profile_context"), dict):
+                profile_context = user_context_payload["profile_context"]
+
+            planning_context = dict(request_extra_context or {})
+            planning_context["profile_context"] = profile_context
+            if fast_track_context:
+                planning_context["exam_sprint_fast_track"] = fast_track_context
+
+            planning_response = await manager.process_planning_turn(
+                db=active_db,  # type: ignore[arg-type]
+                user_id=parsed_user_id,
+                chat_session_id=session_id,
+                message=user_message,
+                context=planning_context,
+            )
+            if not planning_response or planning_response.get("bypass_planning"):
+                return False
+
+            text = str(planning_response.get("message") or "").strip()
+            if not text:
+                return False
+
+            metadata = self._stringify_response_metadata(planning_response.get("metadata"))
+            metadata.update(
+                {
+                    "planning_fast_track": "exam_sprint",
+                    "planning_surface": "aurora_planning",
+                    "session_id": session_id,
+                }
+            )
+            widgets = planning_response.get("widgets")
+            if widgets:
+                metadata["planning_widgets_json"] = json.dumps(widgets, ensure_ascii=False, default=str)
+
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    full_text=text,
+                    finish_reason=agent_service_pb2.STOP,
+                    session_id=session_id,
+                    metadata=metadata,
+                )
+            )
+            await self._persist_assistant_message(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                full_response=text,
+            )
+            return True
+        except Exception as exc:
+            logger.warning("Exam sprint fast-track failed, continuing generic path: {}", exc)
+            return False
+
+    @staticmethod
     def _merge_aurora_planning_hard_bounds(
         control_surface_bounds: dict[str, Any] | None,
         scaffold_bounds: dict[str, Any] | None,
@@ -585,6 +682,101 @@ class ChatOrchestrator(
         return AuroraHardBounds.model_validate(merged)
 
     @staticmethod
+    def _safe_float(value: Any) -> float | None:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    @classmethod
+    def _extract_struggle_score(cls, payload: Any) -> float | None:
+        if not isinstance(payload, dict):
+            return None
+        direct = cls._safe_float(payload.get("struggle_score"))
+        if direct is not None:
+            return direct
+        for key in ("task_state", "checkpoint_state", "signals", "context", "metadata"):
+            nested = payload.get(key)
+            if isinstance(nested, dict):
+                score = cls._extract_struggle_score(nested)
+                if score is not None:
+                    return score
+        return None
+
+    @staticmethod
+    def _wake_policy_energy(wake_policy: dict[str, Any] | None) -> str:
+        if not isinstance(wake_policy, dict):
+            return ""
+        return str(wake_policy.get("energy") or "").strip().lower()
+
+    @classmethod
+    def _should_record_stressed_session_mood(
+        cls,
+        *,
+        request_extra_context: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None = None,
+        wake_policy: dict[str, Any] | None = None,
+    ) -> bool:
+        if cls._wake_policy_energy(wake_policy) == "full":
+            return True
+
+        request_context = dict(request_extra_context or {})
+        nested_wake_policy = request_context.get("wake_policy")
+        if isinstance(nested_wake_policy, dict) and cls._wake_policy_energy(nested_wake_policy) == "full":
+            return True
+
+        candidates: list[Any] = [request_context]
+        conversation = dict(conversation_context or {})
+        messages = conversation.get("messages")
+        if isinstance(messages, list):
+            candidates.extend(item for item in messages[-6:] if isinstance(item, dict))
+        for candidate in candidates:
+            if isinstance(candidate, dict):
+                candidate_wake_policy = candidate.get("wake_policy")
+                if isinstance(candidate_wake_policy, dict) and cls._wake_policy_energy(candidate_wake_policy) == "full":
+                    return True
+                metadata = candidate.get("metadata")
+                if isinstance(metadata, dict):
+                    metadata_wake_policy = metadata.get("wake_policy")
+                    if (
+                        isinstance(metadata_wake_policy, dict)
+                        and cls._wake_policy_energy(metadata_wake_policy) == "full"
+                    ):
+                        return True
+            score = cls._extract_struggle_score(candidate)
+            if score is not None and score > 0.6:
+                return True
+        return False
+
+    async def _maybe_upsert_session_mood(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        request_extra_context: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None = None,
+        wake_policy: dict[str, Any] | None = None,
+    ) -> None:
+        if not self._should_record_stressed_session_mood(
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            wake_policy=wake_policy,
+        ):
+            return
+        try:
+            await MemoryService(active_db, redis_client=self.redis).upsert_session_mood(
+                user_id=user_id,
+                session_id=session_id,
+                mood_score=0.7,
+                mood_label="stressed",
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to upsert stressed session mood for user {} session {}: {}", user_id, session_id, exc
+            )
+
+    @staticmethod
     def _resolve_aurora_runtime_surface(request_extra_context: dict[str, Any]) -> str | None:
         if not getattr(settings, "ENABLE_AURORA_RUNTIME_V1", False):
             return None
@@ -610,12 +802,353 @@ class ChatOrchestrator(
         }
         if modeling_complete and modeling_snapshot:
             try:
-                meta["modeling_output_json"] = json.dumps(
-                    modeling_snapshot, ensure_ascii=False, default=str
-                )
+                meta["modeling_output_json"] = json.dumps(modeling_snapshot, ensure_ascii=False, default=str)
             except Exception:
                 pass
         return meta
+
+    @staticmethod
+    def _memory_dict(value: Any) -> dict[str, Any]:
+        return value if isinstance(value, dict) else {}
+
+    @staticmethod
+    def _memory_text(value: Any) -> str:
+        if value in (None, "", [], {}):
+            return ""
+        if isinstance(value, (list, tuple)):
+            return "、".join(str(item).strip() for item in value if str(item).strip())
+        return str(value).strip()
+
+    @classmethod
+    def _first_memory_value(cls, sources: list[dict[str, Any]], keys: tuple[str, ...]) -> str:
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+            for key in keys:
+                text = cls._memory_text(source.get(key))
+                if text:
+                    return text
+        return ""
+
+    @staticmethod
+    def _memory_json_dict(value: Any) -> dict[str, Any]:
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str) and value.strip():
+            with contextlib.suppress(Exception):
+                parsed = json.loads(value)
+                if isinstance(parsed, dict):
+                    return parsed
+        return {}
+
+    @classmethod
+    def _build_aurora_modeling_memory_summary(
+        cls,
+        *,
+        modeling_snapshot: dict[str, Any] | None,
+        request_extra_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+    ) -> str:
+        snapshot = cls._memory_dict(modeling_snapshot)
+        request_context = cls._memory_dict(request_extra_context)
+        user_context = cls._memory_dict(user_context_payload)
+        profile_context = cls._memory_dict(user_context.get("profile_context") or snapshot.get("user_model_snapshot"))
+        preferences = cls._memory_dict(profile_context.get("preferences"))
+        cold_start = cls._memory_dict(
+            snapshot.get("cold_start_context")
+            or user_context.get("cold_start_context")
+            or profile_context.get("cold_start_context")
+            or preferences.get("cold_start_context")
+        )
+        task_state = cls._memory_dict(request_context.get("task_state") or user_context.get("task_state"))
+        galaxy_baseline = cls._memory_dict(
+            snapshot.get("galaxy_baseline")
+            or request_context.get("galaxy_baseline")
+            or user_context.get("galaxy_baseline")
+        )
+
+        sources = [
+            request_context,
+            task_state,
+            cold_start,
+            profile_context,
+            preferences,
+            snapshot,
+        ]
+        subject = cls._first_memory_value(
+            sources,
+            ("subject", "exam_subject", "course", "topic", "goal_subject"),
+        )
+        goal = cls._first_memory_value(
+            sources,
+            ("goal_raw", "primary_goal_description", "goal", "target", "learning_goal"),
+        )
+        scope = cls._first_memory_value(
+            sources,
+            ("exam_scope", "scope", "study_scope", "material_scope"),
+        )
+        baseline = cls._first_memory_value(
+            sources,
+            ("knowledge_baseline", "baseline", "foundation", "starting_point"),
+        )
+        time_text = cls._first_memory_value(
+            sources,
+            ("time_available", "available_time", "time_constraint", "time_budget"),
+        )
+        if not time_text:
+            daily_hours = cls._first_memory_value(sources, ("daily_available_hours",))
+            days_left = cls._first_memory_value(sources, ("time_constraint_days", "days_left"))
+            time_parts = []
+            if daily_hours:
+                time_parts.append(f"每天约 {daily_hours} 小时")
+            if days_left:
+                time_parts.append(f"剩余约 {days_left} 天")
+            time_text = "，".join(time_parts)
+
+        weak_nodes = cls._memory_text(
+            galaxy_baseline.get("weak_nodes")
+            or cold_start.get("confirmed_weak_nodes")
+            or cold_start.get("galaxy_weak_nodes")
+        )
+        strong_nodes = cls._memory_text(galaxy_baseline.get("strong_nodes"))
+        if weak_nodes and weak_nodes not in baseline:
+            baseline = f"{baseline}；薄弱={weak_nodes}" if baseline else f"薄弱={weak_nodes}"
+        if strong_nodes and strong_nodes not in baseline:
+            baseline = f"{baseline}；优势={strong_nodes}" if baseline else f"优势={strong_nodes}"
+
+        parts = [
+            ("subject", subject),
+            ("goal", goal),
+            ("scope", scope),
+            ("baseline", baseline),
+            ("time", time_text),
+        ]
+        rendered = [f"{label}={text}" for label, text in parts if text]
+        if not rendered:
+            return "Aurora 建模完成：已完成用户学习建模。"
+        return "Aurora 建模完成：" + "；".join(rendered)
+
+    @classmethod
+    def _extract_completion_state_from_response_data(cls, final_response_data: dict[str, Any] | None) -> str:
+        metadata = cls._memory_dict((final_response_data or {}).get("metadata"))
+        ux_result = cls._memory_json_dict(metadata.get("ux_result"))
+        return str(ux_result.get("completion_state") or metadata.get("completion_state") or "").strip().lower()
+
+    async def _find_completed_task_since(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        turn_started_at: datetime | None,
+    ) -> Any | None:
+        if active_db is None or turn_started_at is None:
+            return None
+        try:
+            result = await active_db.execute(
+                select(Task)
+                .where(
+                    Task.user_id == uuid.UUID(str(user_id)),
+                    Task.status == ModelTaskStatus.COMPLETED,
+                    Task.completed_at.is_not(None),
+                    Task.completed_at >= turn_started_at,
+                )
+                .order_by(desc(Task.completed_at))
+                .limit(1)
+            )
+            return result.scalar_one_or_none()
+        except Exception as exc:
+            logger.debug("Skipping completed-task memory lookup: {}", exc)
+            with contextlib.suppress(Exception):
+                await active_db.rollback()
+            return None
+
+    async def _build_task_completion_memory_summary(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        turn_started_at: datetime | None,
+        final_state: WorkflowState | None,
+        final_response_data: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+    ) -> str:
+        context_data = getattr(final_state, "context_data", {}) or {}
+        metadata = self._memory_dict((final_response_data or {}).get("metadata"))
+        for key in ("task_completion", "completed_task", "task_completed"):
+            candidate = context_data.get(key, metadata.get(key))
+            if isinstance(candidate, bool) and candidate:
+                task_context = self._derive_task_context_for_execution(
+                    task_context=context_data.get("task_context"),
+                    plan_context=plan_context,
+                    user_context_payload=context_data.get("user_context"),
+                )
+                topic = self._memory_text((task_context or {}).get("task_description")) or "current task"
+                return f"completed {topic}"
+            if isinstance(candidate, str) and candidate.strip():
+                return f"completed {candidate.strip()}"
+            if isinstance(candidate, dict):
+                status = str(candidate.get("status") or "").strip().lower()
+                completed = candidate.get("completed")
+                if completed is True or status in {"completed", "done", "success"}:
+                    topic = self._memory_text(
+                        candidate.get("topic")
+                        or candidate.get("title")
+                        or candidate.get("task_title")
+                        or candidate.get("name")
+                    )
+                    return f"completed {topic or 'current task'}"
+
+        completed_task = await self._find_completed_task_since(
+            active_db=active_db,
+            user_id=user_id,
+            turn_started_at=turn_started_at,
+        )
+        if completed_task is not None:
+            topic = self._memory_text(getattr(completed_task, "title", ""))
+            return f"completed {topic or str(getattr(completed_task, 'id', 'task'))}"
+
+        completion_state = self._extract_completion_state_from_response_data(final_response_data)
+        task_context = self._derive_task_context_for_execution(
+            task_context=context_data.get("task_context"),
+            plan_context=plan_context,
+            user_context_payload=context_data.get("user_context"),
+        )
+        if completion_state == "done" and task_context and task_context.get("active_task_id"):
+            topic = self._memory_text(task_context.get("task_description"))
+            return f"completed {topic or task_context.get('active_task_id')}"
+        return ""
+
+    @classmethod
+    def _build_error_memory_summary(
+        cls,
+        *,
+        request_extra_context: dict[str, Any] | None,
+        final_state: WorkflowState | None,
+        user_message: str,
+        error: Exception | None,
+    ) -> str:
+        context = cls._memory_dict(request_extra_context)
+        bridge = cls._memory_dict(context.get("error_replan_bridge"))
+        state_context = getattr(final_state, "context_data", {}) or {}
+        candidate = cls._memory_text(
+            bridge.get("node_name")
+            or bridge.get("node")
+            or state_context.get("failed_node")
+            or state_context.get("current_node")
+            or state_context.get("node_name")
+        )
+        if not candidate:
+            errors = getattr(final_state, "errors", None) or []
+            if errors:
+                last_error = str(errors[-1])
+                marker = "Node "
+                if marker in last_error and " failed" in last_error:
+                    candidate = last_error.split(marker, 1)[1].split(" failed", 1)[0].strip()
+                else:
+                    candidate = last_error[:80].strip()
+        if not candidate and error is not None:
+            candidate = type(error).__name__
+        if not candidate:
+            candidate = cls._memory_text(user_message)[:80] or "current turn"
+        return f"struggled with {candidate}"
+
+    async def _write_turn_end_episodic_memory(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        request_id: str,
+        user_message: str,
+        assistant_message: str,
+        event_kind: str,
+        request_extra_context: dict[str, Any] | None = None,
+        user_context_payload: dict[str, Any] | None = None,
+        modeling_snapshot: dict[str, Any] | None = None,
+        final_state: WorkflowState | None = None,
+        final_response_data: dict[str, Any] | None = None,
+        plan_context: dict[str, Any] | None = None,
+        turn_started_at: datetime | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        if active_db is None:
+            return
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except (TypeError, ValueError):
+            return
+
+        summary = ""
+        tags: list[str] = ["turn_end", event_kind]
+        subject_type = "self"
+        importance_score = 0.65
+
+        if event_kind == "aurora_modeling_complete":
+            summary = self._build_aurora_modeling_memory_summary(
+                modeling_snapshot=modeling_snapshot,
+                request_extra_context=request_extra_context,
+                user_context_payload=user_context_payload,
+            )
+            tags.extend(["aurora", "modeling_complete"])
+            subject_type = "learning_profile"
+            importance_score = 0.86
+        elif event_kind == "task_completed":
+            summary = await self._build_task_completion_memory_summary(
+                active_db=active_db,
+                user_id=user_id,
+                turn_started_at=turn_started_at,
+                final_state=final_state,
+                final_response_data=final_response_data,
+                plan_context=plan_context,
+            )
+            tags.append("task_completed")
+            subject_type = "task_outcome"
+            importance_score = 0.72
+        elif event_kind == "error":
+            summary = self._build_error_memory_summary(
+                request_extra_context=request_extra_context,
+                final_state=final_state,
+                user_message=user_message,
+                error=error,
+            )
+            tags.append("struggle")
+            subject_type = "struggle"
+            importance_score = 0.78
+
+        summary = " ".join(str(summary or "").split())
+        if not summary:
+            return
+        if len(summary) > 1800:
+            summary = f"{summary[:1799]}…"
+
+        evidence_id = str(request_id or session_id or uuid.uuid4())
+        semantic_key = hashlib.sha256(
+            f"{user_uuid}:{session_id}:{evidence_id}:{event_kind}:{summary}".encode()
+        ).hexdigest()[:64]
+        try:
+            await MemoryService(active_db).create_episodic_memory(
+                user_id=user_uuid,
+                summary=summary,
+                source_type="chat_turn",
+                source_id=evidence_id[:100],
+                occurred_at=_utcnow().replace(tzinfo=None),
+                importance_score=importance_score,
+                confidence=0.78,
+                tags=tags,
+                evidence_refs=[
+                    {
+                        "type": "chat_turn",
+                        "id": evidence_id,
+                        "schema_version": "chat_turn.v1",
+                    }
+                ],
+                source_lane="direct_capture",
+                semantic_key=semantic_key,
+                subject_type=subject_type,
+                emit_system_update=False,
+            )
+        except Exception as exc:
+            logger.warning("Failed to write turn-end episodic memory: {}", exc)
 
     async def _stream_aurora_runtime_v1(
         self,
@@ -652,16 +1185,12 @@ class ChatOrchestrator(
         modeling_snapshot: dict[str, Any] | None = None
         if plan.modeling_complete:
             profile_context = (
-                user_context_payload.get("profile_context")
-                if isinstance(user_context_payload, dict)
-                else None
+                user_context_payload.get("profile_context") if isinstance(user_context_payload, dict) else None
             )
             modeling_snapshot = {
                 "activity_profile": plan.activity_profile,
                 "user_model_snapshot": profile_context or {},
-                "cold_start_context": (
-                    (profile_context or {}).get("preferences", {}).get("cold_start_context")
-                ),
+                "cold_start_context": ((profile_context or {}).get("preferences", {}).get("cold_start_context")),
                 "galaxy_baseline": request_extra_context.get("galaxy_baseline"),
             }
 
@@ -688,9 +1217,7 @@ class ChatOrchestrator(
             )
         for index, message in enumerate(plan.messages):
             combined_messages.append(message)
-            finish_reason = (
-                agent_service_pb2.CONTINUE if index < total_messages - 1 else agent_service_pb2.STOP
-            )
+            finish_reason = agent_service_pb2.CONTINUE if index < total_messages - 1 else agent_service_pb2.STOP
             is_terminal = index == total_messages - 1
             metadata = self._build_aurora_runtime_metadata(
                 surface=plan.surface,
@@ -732,6 +1259,27 @@ class ChatOrchestrator(
                 ),
             },
         )
+        await self._maybe_upsert_session_mood(
+            active_db=active_db,
+            user_id=user_id,
+            session_id=session_id,
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            wake_policy=plan.wake_policy,
+        )
+        if plan.modeling_complete:
+            await self._write_turn_end_episodic_memory(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                request_id=request_id,
+                user_message=request.message or "",
+                assistant_message=combined_text,
+                event_kind="aurora_modeling_complete",
+                request_extra_context=request_extra_context,
+                user_context_payload=user_context_payload,
+                modeling_snapshot=modeling_snapshot,
+            )
 
     async def _emit_early_ack_progress(
         self,
@@ -1221,6 +1769,7 @@ class ChatOrchestrator(
 
         try:
             start_time = time.time()
+            turn_started_at = _utcnow().replace(tzinfo=None)
             ACTIVE_SESSIONS.inc()
             request_id = request.request_id
             session_id = request.session_id
@@ -1544,6 +2093,26 @@ class ChatOrchestrator(
                 )
 
                 state.context_data["resolved_active_tools"] = list(resolved_active_tools)
+
+                if chat_mode == CHAT_MODE_STANDARD and not request.HasField("tool_result"):
+                    fast_track_handled = await self._fast_track_exam_sprint(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        user_message=user_message,
+                        request_extra_context=request_extra_context,
+                        user_context_payload=user_context_payload,
+                        stream_callback=stream_callback,
+                    )
+                    if fast_track_handled:
+                        async for queued in self._drain_queue(queue):
+                            yield queued
+                        await self._update_state(session_id, STATE_DONE, "Exam sprint fast-track completed")
+                        REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+                        COLLABORATION_SUCCESS.labels(
+                            workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
+                        ).inc()
+                        return
 
                 # Step 4.5: Proactively emit unread evolution/system updates at session start
                 await self._maybe_enqueue_perceptible_insight(
@@ -2263,6 +2832,21 @@ class ChatOrchestrator(
                         total_completion_tokens=total_completion_tokens,
                     )
                     await self._cache_response(session_id, request_id, final_response_data)
+                    await self._write_turn_end_episodic_memory(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        request_id=request_id,
+                        user_message=user_message,
+                        assistant_message=str(final_response_data.get("message") or ""),
+                        event_kind="task_completed",
+                        request_extra_context=request_extra_context,
+                        user_context_payload=user_context_payload,
+                        final_state=final_state,
+                        final_response_data=final_response_data,
+                        plan_context=plan_context,
+                        turn_started_at=turn_started_at,
+                    )
                     try:
                         turn_index = 1
                         if isinstance(conversation_context, dict):
@@ -2303,6 +2887,13 @@ class ChatOrchestrator(
                     for update_resp in followup_updates:
                         yield update_resp
                     await self._update_state(session_id, STATE_DONE, "Response completed")
+                    await self._maybe_upsert_session_mood(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        request_extra_context=request_extra_context,
+                        conversation_context=conversation_context,
+                    )
                     yield final_response
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
@@ -2317,6 +2908,21 @@ class ChatOrchestrator(
                 ).inc()
                 logger.opt(exception=e).error("Orchestration Error")
                 await self._update_state(session_id, STATE_FAILED, str(e))
+                await self._write_turn_end_episodic_memory(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    request_id=request_id,
+                    user_message=user_message if "user_message" in locals() else "",
+                    assistant_message="",
+                    event_kind="error",
+                    request_extra_context=(request_extra_context if "request_extra_context" in locals() else None),
+                    user_context_payload=(user_context_payload if "user_context_payload" in locals() else None),
+                    final_state=state if "state" in locals() else None,
+                    plan_context=plan_context if "plan_context" in locals() else None,
+                    turn_started_at=turn_started_at if "turn_started_at" in locals() else None,
+                    error=e,
+                )
                 if transparency_generator is not None and emit_transparency_event is not None:
                     await emit_transparency_event(transparency_generator.get_complete_event())
                 # ✅ Fix C4: Drain queue before yielding error to ensure all queued messages are sent

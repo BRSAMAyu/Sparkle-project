@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -74,6 +75,8 @@ class ErrorReplanBridge:
     REPLAN_MASTERY_THRESHOLD = 40.0
     ERROR_PRESSURE_LOOKBACK_DAYS = 7
     ERROR_PRESSURE_TRIGGER_COUNT = 3
+    RECURRING_ERROR_LOOKBACK_DAYS = 30
+    RECURRING_ERROR_TRIGGER_COUNT = 3
     HIGH_SEVERITY_TRIGGER_COUNT = 2
     COOLDOWN_HOURS = 24
     TRIGGERING_ERROR_TYPES = {
@@ -90,6 +93,22 @@ class ErrorReplanBridge:
     HIGH_SEVERITY_VALUES = {"high", "critical", "severe", "urgent", "error", "3", "4", "5"}
     SPECIALIZED_REPAIR_DURATION_MINUTES = 30
     SPECIALIZED_REPAIR_SCHEDULE_OPTIONS = ("today", "tomorrow")
+    RECURRING_CAUSE_INTERVENTIONS: dict[str, tuple[str, str]] = {
+        "trigger_condition_confusion": (
+            "反复混淆状态转换的触发条件，可能不是单个状态名没记住，而是还没有把协议状态机理解成"
+            "“事件触发的设计约束”。",
+            "暂停继续刷同类题，安排 20 分钟从 TCP 的设计目标出发重建状态机：先说清每个状态存在的目的，"
+            "再给每条转换边标注触发报文、主动/被动方和为什么必须这样切换。",
+        ),
+        "state_transition_confusion": (
+            "反复在状态转换上出错，可能说明状态名、事件和时序还没有被绑定成一张完整的因果图。",
+            "先重画完整状态图，只保留一个协议流程，用“当前状态 + 收到/发送什么 + 下一个状态”的三列表重建。",
+        ),
+        "concept_boundary_confusion": (
+            "同一错因多次出现，可能是相邻概念边界没有稳定下来，而不是题量不足。",
+            "先做一张对比表，把容易混淆的概念按定义、触发条件、典型题眼分开，再做 1 道迁移检查题。",
+        ),
+    }
     NETWORK_PACK_SUBJECT = "计算机网络"
     NETWORK_PACK_SIGNAL_TOKENS = (
         "计算机网络",
@@ -253,6 +272,12 @@ class ErrorReplanBridge:
             )
             if specialized_match is not None and specialized_match.streak_count >= self.ERROR_PRESSURE_TRIGGER_COUNT:
                 primary_plan_id = await self._select_primary_plan_id(user_id=user_id, plan_ids=eligible_plan_ids)
+                repair_task_ids = await self._insert_next_day_repair_tasks(
+                    plan_ids={primary_plan_id} if primary_plan_id else set(),
+                    error=error,
+                    fallback_node_ids=normalized_node_ids,
+                    error_type=error_type,
+                )
                 intervention_id, notification_id = await self._create_specialized_repair_intervention(
                     user_id=user_id,
                     error_type=error_type,
@@ -289,6 +314,7 @@ class ErrorReplanBridge:
                     "mastery_update": mastery_update,
                     "intervention_id": intervention_id,
                     "notification_id": notification_id,
+                    "repair_task_ids": repair_task_ids,
                     "mode": mode,
                 }
 
@@ -373,6 +399,12 @@ class ErrorReplanBridge:
                 except Exception as exc:
                     raise PlanHealthError(f"plan_health_eval_failed:{plan_id}") from exc
                 triggered_plan_ids.append(str(plan_id))
+            repair_task_ids = await self._insert_next_day_repair_tasks(
+                plan_ids=eligible_plan_ids,
+                error=error,
+                fallback_node_ids=normalized_node_ids,
+                error_type=error_type,
+            )
 
             intervention_id = await self._create_error_intervention_record(
                 user_id=user_id,
@@ -412,6 +444,7 @@ class ErrorReplanBridge:
                 "threshold_applied": effective_decision.threshold,
                 "is_new_user": is_new_user,
                 "mastery_update": mastery_update,
+                "repair_task_ids": repair_task_ids,
                 "mode": mode,
             }
         except BridgeEvaluationError as exc:
@@ -511,6 +544,170 @@ class ErrorReplanBridge:
         )
         return list(result.scalars().all())
 
+    async def _analyze_recurring_errors(self, user_id: UUID | str, node_id: UUID | str) -> dict[str, Any]:
+        """Detect same-cause error recurrence for one knowledge node over the last 30 days."""
+        coerced_user_id = self._coerce_uuid(user_id)
+        node_key = self._normalize_node_key(node_id)
+        if coerced_user_id is None or not node_key:
+            return {
+                "recurring": False,
+                "node_id": str(node_id or "").strip(),
+                "lookback_days": self.RECURRING_ERROR_LOOKBACK_DAYS,
+                "reason": "invalid_user_or_node",
+            }
+
+        recent_errors = await self._load_recent_user_errors(
+            user_id=coerced_user_id,
+            days=self.RECURRING_ERROR_LOOKBACK_DAYS,
+            limit=200,
+        )
+        cause_counts: Counter[str] = Counter()
+        matched_errors_by_cause: dict[str, list[ErrorRecord]] = {}
+
+        for error in recent_errors:
+            if not self._error_matches_node_key(error, node_key):
+                continue
+            cause_category = self._extract_cause_category(error)
+            if not cause_category:
+                continue
+            cause_counts[cause_category] += 1
+            matched_errors_by_cause.setdefault(cause_category, []).append(error)
+
+        if not cause_counts:
+            return {
+                "recurring": False,
+                "node_id": str(node_id),
+                "lookback_days": self.RECURRING_ERROR_LOOKBACK_DAYS,
+                "matched_error_count": 0,
+            }
+
+        cause_category, occurrence_count = cause_counts.most_common(1)[0]
+        matched_errors = matched_errors_by_cause.get(cause_category, [])
+        payload: dict[str, Any] = {
+            "recurring": occurrence_count >= self.RECURRING_ERROR_TRIGGER_COUNT,
+            "node_id": str(node_id),
+            "cause_category": cause_category,
+            "occurrence_count": occurrence_count,
+            "threshold": self.RECURRING_ERROR_TRIGGER_COUNT,
+            "lookback_days": self.RECURRING_ERROR_LOOKBACK_DAYS,
+            "recent_error_ids": [str(error.id) for error in matched_errors[:5]],
+        }
+        latest_error = matched_errors[0] if matched_errors else None
+        if latest_error is not None and latest_error.created_at is not None:
+            payload["latest_error_at"] = latest_error.created_at.isoformat()
+
+        if payload["recurring"]:
+            hypothesis, intervention = self._recurring_cause_guidance(cause_category, node_id=str(node_id))
+            payload.update(
+                {
+                    "root_cause_hypothesis": hypothesis,
+                    "recommended_intervention": intervention,
+                }
+            )
+        return payload
+
+    def _error_matches_node_key(self, error: ErrorRecord, node_key: str) -> bool:
+        if not node_key:
+            return False
+
+        affected_node_id = self._normalize_node_key(getattr(error, "affected_node_id", None))
+        if affected_node_id and affected_node_id == node_key:
+            return True
+
+        linked_node_ids = {
+            self._normalize_node_key(value)
+            for value in (getattr(error, "linked_knowledge_node_ids", None) or [])
+            if value is not None
+        }
+        if node_key in linked_node_ids:
+            return True
+
+        suggested_concepts = {
+            self._normalize_node_key(value)
+            for value in (getattr(error, "suggested_concepts", None) or [])
+            if value is not None
+        }
+        if node_key in suggested_concepts:
+            return True
+
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        candidate_values: list[Any] = []
+        for key in (
+            "node_id",
+            "node_ids",
+            "knowledge_node_id",
+            "knowledge_node_ids",
+            "knowledge_node",
+            "knowledge_nodes",
+            "concept_id",
+            "concept_ids",
+            "concept",
+            "concepts",
+            "error_concept",
+            "weak_concept",
+            "pack_node_id",
+            "sprint_pack_node_id",
+            "related_node",
+            "related_nodes",
+            "related_node_ids",
+        ):
+            if key in analysis:
+                candidate_values.extend(self._flatten_node_candidates(analysis.get(key)))
+        return any(self._normalize_node_key(value) == node_key for value in candidate_values)
+
+    def _extract_cause_category(self, error: ErrorRecord) -> str | None:
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        for key in (
+            "cause_category",
+            "mistake_cause_category",
+            "error_cause_category",
+            "root_cause_category",
+            "misconception_category",
+        ):
+            value = str(analysis.get(key) or "").strip().lower()
+            if value:
+                return re.sub(r"[^\w]+", "_", value).strip("_")
+        return None
+
+    def _recurring_cause_guidance(self, cause_category: str, *, node_id: str) -> tuple[str, str]:
+        guidance = self.RECURRING_CAUSE_INTERVENTIONS.get(cause_category)
+        if guidance is not None:
+            return guidance
+        return (
+            f"最近 30 天内，{node_id} 上同一错因“{cause_category}”已经重复出现，"
+            "更像是底层理解结构没有补齐，而不是一次性的粗心。",
+            "先暂停继续刷同类题，花 15-20 分钟回到概念的设计目的、判定条件和反例边界，"
+            "最后只做 1 道同型题验证这个错因是否消失。",
+        )
+
+    @staticmethod
+    def _normalize_node_key(value: Any) -> str:
+        return str(value or "").strip().lower()
+
+    def _flatten_node_candidates(self, value: Any) -> list[Any]:
+        if value in (None, "", [], {}):
+            return []
+        if isinstance(value, dict):
+            direct = (
+                value.get("node_id")
+                or value.get("id")
+                or value.get("knowledge_node_id")
+                or value.get("concept_id")
+                or value.get("value")
+            )
+            values = [direct] if direct is not None else []
+            for nested in value.values():
+                if nested is direct:
+                    continue
+                values.extend(self._flatten_node_candidates(nested))
+            return values
+        if isinstance(value, (list, tuple, set)):
+            values: list[Any] = []
+            for item in value:
+                values.extend(self._flatten_node_candidates(item))
+            return values
+        return [value]
+
     async def _load_node_name_map_for_errors(self, errors: list[ErrorRecord]) -> dict[str, str]:
         node_ids: set[UUID] = set()
         for error in errors:
@@ -566,9 +763,7 @@ class ErrorReplanBridge:
 
         for cluster in list(pack.get("mistake_taxonomy") or pack.get("mistake_types") or []):
             related_nodes = tuple(
-                str(node_id).strip()
-                for node_id in (cluster.get("related_nodes") or [])
-                if str(node_id).strip()
+                str(node_id).strip() for node_id in (cluster.get("related_nodes") or []) if str(node_id).strip()
             )
             if not related_nodes:
                 continue
@@ -610,8 +805,7 @@ class ErrorReplanBridge:
                 ),
             )
             related_labels = tuple(
-                str((pack_nodes_by_id.get(node_id) or {}).get("label") or node_id)
-                for node_id in related_nodes
+                str((pack_nodes_by_id.get(node_id) or {}).get("label") or node_id) for node_id in related_nodes
             )
             template = get_task_template(pack, template_id) if get_task_template else None
             if template is not None:
@@ -689,16 +883,11 @@ class ErrorReplanBridge:
         analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
         db_node_ids = tuple(
             str(node_id)
-            for node_id in (
-                self._coerce_uuid(value)
-                for value in (error.linked_knowledge_node_ids or [])
-            )
+            for node_id in (self._coerce_uuid(value) for value in (error.linked_knowledge_node_ids or []))
             if node_id is not None
         )
         node_names = tuple(
-            node_name_map.get(str(node_id), "")
-            for node_id in db_node_ids
-            if node_name_map.get(str(node_id), "")
+            node_name_map.get(str(node_id), "") for node_id in db_node_ids if node_name_map.get(str(node_id), "")
         )
         raw_text = " ".join(
             filter(
@@ -783,6 +972,73 @@ class ErrorReplanBridge:
             )
         )
         return result.scalars().first()
+
+    async def _insert_next_day_repair_tasks(
+        self,
+        *,
+        plan_ids: set[UUID],
+        error: ErrorRecord,
+        fallback_node_ids: list[UUID],
+        error_type: str,
+    ) -> list[str]:
+        error_node_id = self._primary_error_node_id(error, fallback_node_ids)
+        if error_node_id is None or not plan_ids:
+            return []
+
+        from app.orchestration.planning_workflow import PlanningWorkflowManager
+
+        manager = PlanningWorkflowManager(redis_client=self.redis)
+        repair_task_ids: list[str] = []
+        for plan_id in sorted(plan_ids, key=str):
+            task = await manager._insert_repair_task(
+                db=self.db,
+                plan_id=plan_id,
+                next_day=await self._next_repair_day_for_plan(plan_id),
+                error_node_id=error_node_id,
+                error_cause_category=error_type,
+            )
+            if task is not None:
+                repair_task_ids.append(str(task.id))
+        return repair_task_ids
+
+    async def _next_repair_day_for_plan(self, plan_id: UUID) -> int:
+        plan = await self.db.get(Plan, plan_id)
+        metadata = (
+            dict(plan.source_metadata or {}) if plan is not None and isinstance(plan.source_metadata, dict) else {}
+        )
+        highlights = metadata.get("day_highlights")
+        if isinstance(highlights, dict):
+            try:
+                highlighted_day = int(highlights.get("day") or 0)
+            except (TypeError, ValueError):
+                highlighted_day = 0
+            if highlighted_day > 0:
+                return highlighted_day + 1
+
+        task_rows = (
+            await self.db.execute(
+                select(Task.order_index, Task.tags)
+                .where(Task.plan_id == plan_id)
+                .where(Task.status.in_((TaskStatus.PENDING, TaskStatus.IN_PROGRESS)))
+                .order_by(Task.order_index.asc(), Task.created_at.asc())
+            )
+        ).all()
+        for order_index, tags in task_rows:
+            try:
+                order_value = int(order_index or 0)
+            except (TypeError, ValueError):
+                order_value = 0
+            if order_value >= 1000:
+                return max(1, order_value // 1000) + 1
+            for tag in list(tags or []):
+                text = str(tag or "").strip()
+                if not text.startswith("day:"):
+                    continue
+                try:
+                    return max(1, int(text.split(":", 1)[1])) + 1
+                except ValueError:
+                    continue
+        return 2
 
     async def _create_specialized_repair_intervention(
         self,
@@ -870,11 +1126,7 @@ class ErrorReplanBridge:
 
     def _build_specialized_repair_task_payload(self, match: MistakeClusterMatch) -> dict[str, Any]:
         template = self._load_repair_template(match)
-        template_steps = [
-            str(step).strip()
-            for step in (template.get("steps") or [])
-            if str(step).strip()
-        ]
+        template_steps = [str(step).strip() for step in (template.get("steps") or []) if str(step).strip()]
         step_instructions = [
             f"先回看最近 {match.streak_count} 次错误，只写出这类题反复卡住的同一个触发点。",
             *template_steps[:3],
@@ -885,10 +1137,7 @@ class ErrorReplanBridge:
             if step and step not in deduped_steps:
                 deduped_steps.append(step)
 
-        structured_steps = [
-            {"index": index, "instruction": step}
-            for index, step in enumerate(deduped_steps, start=1)
-        ]
+        structured_steps = [{"index": index, "instruction": step} for index, step in enumerate(deduped_steps, start=1)]
         output_action = self._output_action_for_template(match.task_template_id, match.cluster_label)
         success_criteria = str(template.get("done_criteria") or "").strip() or (
             f"能说清「{match.cluster_label}」的判断依据，并完成 1 道同型检查题。"
@@ -996,16 +1245,15 @@ class ErrorReplanBridge:
 
         due_date = self._repair_due_date_from_action_payload(action_payload)
         anchor_task = await self._find_anchor_task_for_plan(user_id=user_id, plan_id=plan_id)
-        cluster_label = str(diagnosis.get("cluster_label") or task_payload.get("repair_cluster_label") or "专项修复").strip()
+        cluster_label = str(
+            diagnosis.get("cluster_label") or task_payload.get("repair_cluster_label") or "专项修复"
+        ).strip()
         priority_boost = await self._next_repair_priority(user_id=user_id, plan_id=plan_id)
 
         from app.schemas.task import TaskCreate
         from app.services.task_service import TaskService
 
-        db_node_ids = [
-            self._coerce_uuid(value)
-            for value in (diagnosis.get("node_ids") or [])
-        ]
+        db_node_ids = [self._coerce_uuid(value) for value in (diagnosis.get("node_ids") or [])]
         materialized = await TaskService.create(
             self.db,
             TaskCreate(
@@ -1018,7 +1266,9 @@ class ErrorReplanBridge:
                     f"cluster:{diagnosis.get('cluster_id')}",
                     f"repair_source:{diagnosis.get('cluster_source')}",
                 ],
-                estimated_minutes=int(task_payload.get("estimated_minutes") or self.SPECIALIZED_REPAIR_DURATION_MINUTES),
+                estimated_minutes=int(
+                    task_payload.get("estimated_minutes") or self.SPECIALIZED_REPAIR_DURATION_MINUTES
+                ),
                 difficulty=1,
                 energy_cost=1,
                 guide_content=str(task_payload.get("objective") or f"专项修复：{cluster_label}"),
@@ -1131,8 +1381,7 @@ class ErrorReplanBridge:
 
     def _build_specialized_repair_ai_prompt(self, *, cluster_label: str, task_payload: dict[str, Any]) -> str:
         step_lines = "\n".join(
-            f"{index}. {step}"
-            for index, step in enumerate(task_payload.get("method_steps") or [], start=1)
+            f"{index}. {step}" for index, step in enumerate(task_payload.get("method_steps") or [], start=1)
         )
         return (
             f"【专项修复主题】{cluster_label}\n"
