@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 6 / 20 chains audited
+> **Status**: 7 / 20 chains audited
 
 ---
 
@@ -128,3 +128,27 @@
 - **`learning_portfolio_screen.dart:247-280`**: ExpansionTile 展开后仅显示聚合计数"掌握 X 节点"和摘要文本，无节点级下钻。用户需离开档案页去星图查看每个节点的具体 mastery。
 
 **Working Well ✅**: 三组分类（进行中/已完成/计划中）视觉清晰；ExpansionTile 内联展开无需跳转；展开内容丰富（headline/chips/最薄弱点/骄傲节点/成绩备注）；全屏空状态有 CTA；错误处理三层（loading/error+retry/SnackBar）；Profile 入口可见。
+
+---
+
+## Round 4 — 2026-04-25
+*Reviewer A: (stale, no new findings) | Reviewer B: C16 — 导航死路检查（完成页/庆祝页/建模完成后）*
+
+### C16: 导航死路检查（完成页/庆祝页/建模完成后） (Reviewer B)
+
+**Critical Issues 🔴**
+- **`modeling_chat_screen.dart:80-81`**: `RouteResilienceScope(fallbackRoute: UserRoutes.personaOnboarding)` — 建模完成后按系统返回键回退到 `/onboarding/persona` 而非 `/home`。与 `_finish()` 方法（line 615-624 导航到 `/home` 或 `/chat`）行为不一致。新用户完成建模按返回键 → 回到 onboarding 造成困惑或循环。**修复仅需改一行 `fallbackRoute: HomeRoutes.home`**。与 Round 1 C01 Major #3（同一文件成功路径导航断裂）互为补充。
+
+**Major Issues 🟡**
+- **`sprint_completion_screen.dart:300-316`**: 三个 CTA—"分享"、"记录考试结果"（→ review）、"查看学习档案"（→ portfolio），均不导航到 home。`_closeScreen()` (line 159-161) 回退到 `PlanRoutes.learningPortfolio`。用户完成冲刺后无法直接返回首页，需额外步骤。
+- **`modeling_chat_screen.dart:856-945`**: `_PlanningBridgeStatus` 是 `StatelessWidget`，错误状态仅有"重试生成计划"+"稍后再说"按钮，无 Timer 或自动跳转。用户不操作则界面无限停留在错误状态。
+
+**Minor Issues 🟢**
+- **`sprint_completion_screen.dart`**: Confetti 动画播放完毕后界面静止（grep Timer/Future.delayed/autoNavigate 无匹配），无自动过渡到下一个逻辑页面。用户可能出现短暂的"然后呢？"困惑。
+
+**Working Well ✅**: 三个页面均有 RouteResilienceScope（不会白屏）；三个页面均有明确关闭按钮；Sprint completion 用 `RouteResilience.popOrGo()` 智能导航；Milestone celebration "继续学习" → `/home` 引导清晰；Modeling 成功路径自动导航无摩擦；PopScope 处理 Android 返回手势。
+
+---
+
+### Confirmed by Both Reviewers
+- **`modeling_chat_screen.dart` 导航问题**: C01 Major #3（成功路径 root navigator 断裂）+ C16 Critical（返回键 fallback 路由错误）共同指向同一文件的导航缺陷。两轮独立确认。
