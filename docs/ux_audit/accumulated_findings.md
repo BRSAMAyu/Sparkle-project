@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 27 / 30 C+D chains + 14 E-chains audited (C04, C20, D01, D07 pending; E11, E13, E15, E17, E19, E20 not yet audited by reviewers)
+> **Status**: 48/50 chains audited (C20, D01 no reviewer files — indirectly covered by C02/E08)
 
 ---
 
@@ -707,3 +707,144 @@
 - **Social mode default shadow**: E16 Major + D08 Major = 同一 kill switch 问题两轮确认。
 - **Orphan data sources**: E07 Critical（capsule favorites 零消费者）+ E14 Critical（calculator 零后端感知）+ E02 Major（15+ 事件无消费者）= 三个独立子系统存在数据收集但无消费的问题模式。
 - **Mobile provider invalidation gaps**: E04 Major（review 后不刷新 Galaxy）+ D02 Major（同问题）+ D10 Major（completeTask 不刷新 portfolio/achievement）= 系统性问题模式。
+
+---
+
+## Round 14 — 2026-04-26 (E-chain final batch)
+*Validator: Independent source-code verification of E11, E13, E15, E17, E19 from Reviewer A*
+
+---
+
+### E11: 种子库→聊天集成→计划集成 (Reviewer A)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`seed.created` / `seed.consumed` 事件无任何消费者**: `seed_library_service.py:456,1057` 发布事件但全局 grep 仅在 service 自身找到引用。种子创建/使用行为不影响用户画像或 AI 推理。
+- **Sprint Pack 桥接 F19 是死路径**: `planning_workflow.py:1949-1954` 读取 `seed_library_nodes`，但 `context_builder.py` 从未设置此字段——只设置 `seed_library`（含 few_shot_examples）。`matched_seeds` 永远为空。
+- **质量评分不影响推荐排序**: `get_few_shot_examples()` 排序用 subscription priority → featured → official — 不使用 quality_score。`semantic_search_items()` 的 RRF fusion 也不考虑。
+
+**Working Well ✅**: Few-shot → Prompt 注入链路完整；种子库分类（4 类）和订阅机制完善；质量评分混合算法合理；社区分享支持种子库。
+
+---
+
+### E13: 呼吸练习→任务/专注集成 (Reviewer A)
+
+**Critical Issues 🔴**
+- **`breathing_tool.dart:584-618` BreathingTool 完成时不保存任何数据** ✅ VERIFIED: grep `api|http|dio|repository|saveSession` 零匹配。仅做触觉反馈 + TTS + 本地 toast。关闭屏幕后数据消失。behavior_signal_collector.py grep `breathing|breath` 零匹配。后端完全不知道呼吸练习的存在。
+
+**Major Issues 🟡**
+- **BreathingTool 与后端零集成**: behavior_signal_collector 无 breathing 代码，context_manager 无 breathing 引用。Aurora 无法感知用户情绪/压力状态变化。
+- **手动停止练习时数据同样丢失**: `_stopBreathing` 直接清空状态，部分完成的练习也无记录。
+
+**Working Well ✅**: MindfulnessModeScreen（正念模式）有完整数据流（saveSession → focus_service → achievement_engine）；BreathingTool 本地功能完善（3 种模式、TTS 引导、暂停恢复、后台通知）。
+
+---
+
+### E15: DB迁移健康 (Reviewer A)
+
+**Critical Issues 🔴**
+- **E15-C1（修正）: 2 unmerged heads（非报告的 23）** ⚠️ PARTIALLY VERIFIED: 实际 `alembic heads` 返回 2 个头（`c18a1b2c3d4` + `stage_c5_aurora_decision_telemetry`），非 reviewer 报告的 23。但 2 个头仍违反单链要求，`alembic upgrade head` 仍会失败。
+- **E15-C3: 39 SQLAlchemy 模型表在 Go schema.sql 中不存在** — reviewer 列出了完整清单含 Aurora/Card Protocol/Theater/Simulation 等子系统表。Go 管理的生产 DB 中这些表不存在，相关服务会 crash。
+- **E15-C4: Baseline schema 完全孤立** — `cc9383c4c29f` 创建 126 张基础表但 `down_revision = None`，无其他迁移链接到它。
+
+**Major Issues 🟡**
+- **88 迁移文件 vs 文档 52**: 差异 36 个，文档过时。
+- **14 ghost tables**: 迁移创建但无 SQLAlchemy model 的表。
+- **`FORCE_STAMP=1` 掩盖问题**: Makefile 用 stamp heads 绕过迁移检查。
+- **db-dump 从 live DB 覆盖 schema.sql**: 不反映迁移定义。
+
+**Working Well ✅**: env.py 正确 import 所有 models；baseline schema 126 表覆盖核心功能；Makefile 有多 head 检测；无 `create_all()` 绕过。
+
+---
+
+### E17: Aurora checkpoint surface交互正确性 (Reviewer A)
+
+**Critical Issues 🔴**
+- **`load_runtime_state` 定义但生产代码从未调用** ✅ VERIFIED: grep 仅在 `state.py:394` 定义处匹配（1 个），无任何调用点。每轮 checkpoint 都从零构建 dashboard，之前 checkpoint 的 tensions/latent threads 全部丢失。
+- **Checkpoint debrief 是硬编码 3 轮脚本，零 Aurora 认知**: `checkpoint_nudge_service.py:192-300` 用固定文案，无 LLM 调用无 decision loop。Aurora 仅在 finalize 后才被调用。
+- **`aurora_checkpoint` surface 排除 `cold_start_context`**: `dashboard.py:253-258` 的 `_SURFACE_CONTEXT_EXCLUSIONS` 排除了最重要的诊断数据。
+
+**Major Issues 🟡**
+- **Goal-met 检测粗糙** ✅ VERIFIED: `_goal_met_from_text` 仅检查 NEGATIVE_MARKERS（line 378-380），缺失 hedging 语言如"还行/差不多/不太确定"。
+- **并发 checkpoint debriefs 可碰撞**: Redis 只跟踪一个 active debrief，新的会覆盖旧的。
+- **Follow-up wake messages 绕过 Aurora chat 渲染路径**: `aurora_runtime_follow_up` action type 在 mobile 端无 UI handler。
+
+**Working Well ✅**: 状态持久化 DB+Redis 双写完善；Wake 调度安全机制全面（DND/隐私/urgency/grace period）；Sprint Pack mistake 注入正确；Mobile widget 集成正确。
+
+---
+
+### E19: 数据导出/可移植性 (Reviewer A)
+
+**Critical Issues 🔴**
+- **无统一数据导出端点**: 仅 3 个碎片化导出（memory/persona/ai-usage），缺失 chat/plans/tasks/errors/galaxy/achievements/focus/calendar/community 等全部用户数据。
+- **Mobile 无数据导出 UI**: 搜索全部 mobile/lib 无 export screen 或"导出我的数据"按钮。
+- **DeletionProtocol 从未被 API 层调用** ✅ VERIFIED: grep `backend/app/api/` 零匹配。`delete_account` 端点直接 soft-delete，不调用合规流程。⚠️ 修正：`CryptoEraseManager` 在 `analytics_service.py` 和 `cognitive_stream_worker.py` 中有使用，非完全死代码。
+
+**Major Issues 🟡**
+- **仅 soft-delete 无 hard-delete**: `is_active=False` 后无定时清理。
+- **60+ 表无 ON DELETE CASCADE**: 即使 hard-delete 也会产生孤儿记录。
+- **注销确认文案误导**: 声称"永久移除"但实际仅 soft-delete。
+
+**Working Well ✅**: Account deletion mobile flow 完整（确认/re-auth/loading/success）；Session revocation 正确；Social re-auth 覆盖 Google/Apple/WeChat；合规模型设计完整。
+
+---
+
+### Cross-Confirmation (Round 14)
+
+- **Backend-invisible local tools**: E13 Critical（BreathingTool 无后端保存）+ E14 Critical（Calculator 无后端感知）= 两个独立的纯本地工具，后端完全无感知。
+- **Orphan events pattern**: E11 Major #1（seed.created/consumed 无消费者）+ E02 Major（15+ 事件无消费者）= EventBus 发布-消费对齐问题的系统模式。
+
+---
+
+## Round 15 — 2026-04-26 (Recovered C04/D07 + E20 final)
+*Validator: C04 recovered from findings/reviewer_b_C04.md, D07 from reviewer_b_D07.md, E20 from reviewer_b_E20.md. C20/D01: no reviewer files exist.*
+
+---
+
+### C04: 错题录入→修复任务插入→计划页橙色卡可见 (Reviewer B — recovered)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **Specialized repair 任务不被识别为橙色卡** ✅ VERIFIED: `plan_detail_screen.dart:1719-1729` `_isTargetedRepairTask` 只匹配 `targeted_repair` tag/task_kind，但 `error_replan_bridge.py:1263` specialized repair 用 `specialized_repair` tag。专项修复任务在计划页显示为普通任务。
+- **Bridge 对分析为空的情况跳过**: `TRIGGERING_ERROR_TYPES` 仅 8 种类型（line 82-91），`error_type="other"` 或分析未完成时 bridge 返回 `blocked(gate="unsupported_error_type")`，不触发修复。
+
+**Working Well ✅**: 普通修复路径完整（`targeted_repair` tag + `task_kind` 正确传递）；橙色卡视觉设计完整；新增错题后 invalidate 正确。
+
+---
+
+### D07: 设置/隐私控制——用户能控制数据流向吗 (Reviewer B — re-audit)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **用户无法按维度控制数据收集** ✅ VERIFIED: `transparency_settings_screen.dart` 仅有 `enabled`（全局）和 `pureModeEnabled`（UI 卡片隐藏）两个 toggle。`context_manager.py` 的 calendar/social/galaxy 收集方法不检查用户 preference。Kill switch 是管理员设置，用户无法操作。
+
+**Working Well ✅**: PII 红脱实现正确（4 种类型）；Kill switch tri-state 三级降级完善；Calendar context 有 kill switch 检查。
+
+---
+
+### E20: Go Gateway中间件链顺序与安全性 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- None
+
+**Minor Issues 🟢**
+- **CORS 缺少 `Access-Control-Max-Age` 头**: 每次跨域请求都发 preflight OPTIONS，增加少量网络开销。
+
+**Working Well ✅**: 中间件顺序正确（SecurityHeaders → CORS → rate_limit → timeout → auth per-route）；Panic 安全（gin.Default 内含 Recovery）；Security Headers 全局覆盖含 NoRoute；Timing-attack 防护用 constant-time compare；CORS 生产环境白名单；所有 11 个中间件文件均已注册。
+
+---
+
+### C20: Sprint Pack端到端集成
+**Status**: ⚠️ 无 reviewer 文件。C02 Critical 间接覆盖了 mastery 0-1 刻度 bug。
+
+### D01: 离线/弱网行为
+**Status**: ⚠️ 无 reviewer 文件。E08 审查了 WebSocket 断线重连机制。

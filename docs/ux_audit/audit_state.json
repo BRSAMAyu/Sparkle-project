@@ -1,12 +1,12 @@
 {
   "workflow_version": "1.0",
   "status": "running",
-  "current_round": 13,
-  "reviewer_a_next": 20,
+  "current_round": 15,
+  "reviewer_a_next": 25,
   "reviewer_b_next": 33,
   "reviewer_a_last_timestamp": "2026-04-26T13:30:00+08:00",
   "reviewer_b_last_timestamp": "2026-04-26T15:20:00+08:00",
-  "validator_last_timestamp": "2026-04-26T16:30:00+08:00",
+  "validator_last_timestamp": "2026-04-26T17:30:00+08:00",
   "steering_notes": "",
   "architect_override_a": null,
   "architect_override_b": null,
@@ -382,7 +382,7 @@
         "backend/app/core/kill_switch.py",
         "backend/app/core/context_manager.py"
       ],
-      "status": "re-audit"
+      "status": "done"
     },
     "D08": {
       "name": "社区→个人AI体验——伙伴活动影响教练吗",
@@ -404,7 +404,7 @@
         "backend/gateway/internal/middleware/cors.go",
         "backend/gateway/internal/middleware/security.go"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "D10": {
       "name": "数据新鲜度全屏检查——切换屏幕后数据是否陈旧",
@@ -529,7 +529,7 @@
         "backend/app/services/seed_library_service.py",
         "backend/app/orchestration/orchestrator.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E12": {
       "name": "专注模式→streak/achievement集成",
@@ -549,7 +549,7 @@
         "mobile/lib/features/focus/presentation/providers/",
         "backend/app/services/behavior_signal_collector.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E14": {
       "name": "Calculator→学习上下文→AI感知",
@@ -569,7 +569,7 @@
         "backend/alembic/versions/",
         "backend/app/models/"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E16": {
       "name": "社区社交功能→个人AI教练数据流",
@@ -590,7 +590,7 @@
         "backend/app/aurora/runtime_v1/state.py",
         "backend/app/aurora/runtime_v1/decision_loop.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E18": {
       "name": "Plan health score计算准确性",
@@ -610,7 +610,7 @@
         "backend/gateway/internal/handler/",
         "backend/app/services/memory_service.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E20": {
       "name": "Go Gateway中间件链顺序与安全性",
