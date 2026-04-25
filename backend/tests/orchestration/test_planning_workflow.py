@@ -118,20 +118,29 @@ async def test_irrelevant_message_during_clarifying_bypasses_without_advancing_s
         turns_in_state=2,
     )
     await manager.save_session(session)
+    turn_user_id = uuid4()
 
     result = await manager.process_planning_turn(
         db=None,  # type: ignore[arg-type]
-        user_id=uuid4(),
+        user_id=turn_user_id,
         chat_session_id="chat-session-1",
         message="等等，先帮我查一下这个任务完成没有",
         context={},
     )
 
     persisted = await manager.get_active_session("chat-session-1")
+    runtime_state = await manager.runtime_adapter.load_state(
+        user_id=str(turn_user_id),
+        conversation_id="chat-session-1",
+    )
+    scaffold = manager.runtime_adapter.build_detour_scaffold(runtime_state) if runtime_state is not None else {}
     assert result == {"bypass_planning": True}
     assert persisted is not None
     assert persisted.state == "CLARIFYING"
     assert persisted.turns_in_state == 2
+    assert runtime_state is not None
+    assert scaffold["current_intent"]["intent_type"] == "answer_detour"
+    assert scaffold["top_latent_thread"] is not None
 
 
 @pytest.mark.asyncio
@@ -148,19 +157,28 @@ async def test_relevant_message_during_clarifying_advances_turn_counter() -> Non
         turns_in_state=0,
     )
     await manager.save_session(session)
+    turn_user_id = uuid4()
 
     result = await manager.process_planning_turn(
         db=None,  # type: ignore[arg-type]
-        user_id=uuid4(),
+        user_id=turn_user_id,
         chat_session_id="chat-session-2",
         message="考传输层、网络层和应用层，我是零基础",
         context={},
     )
 
     persisted = await manager.get_active_session("chat-session-2")
+    runtime_state = await manager.runtime_adapter.load_state(
+        user_id=str(turn_user_id),
+        conversation_id="chat-session-2",
+    )
+    scaffold = manager.runtime_adapter.build_detour_scaffold(runtime_state) if runtime_state is not None else {}
     assert result is not None
     assert result.get("bypass_planning") is None
     assert persisted is not None
     assert persisted.turns_in_state == 1
     assert persisted.collected["knowledge_baseline"] == "完全没学过"
     assert "daily_available_hours" not in persisted.collected
+    assert runtime_state is not None
+    assert scaffold["top_tension"]["domain"] == "time_available"
+    assert all(item["domain"] != "knowledge_baseline" for item in scaffold["open_tensions"])

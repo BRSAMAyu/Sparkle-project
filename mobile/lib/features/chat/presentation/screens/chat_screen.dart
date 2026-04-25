@@ -68,6 +68,9 @@ class ChatScreen extends ConsumerStatefulWidget {
     this.initialChatMode,
     this.initialConversationId,
     this.initialAiMessage,
+    this.initialUserMessage,
+    this.fromModelingComplete = false,
+    this.modelingOutput,
   });
 
   final String? initialPrompt;
@@ -77,6 +80,13 @@ class ChatScreen extends ConsumerStatefulWidget {
   /// Pre-generated AI opening message shown immediately on first open (no backend call).
   /// Used after onboarding to make the AI feel present from the very first moment.
   final String? initialAiMessage;
+
+  /// User message to dispatch automatically after modeling is complete.
+  /// Sent with modeling context overrides so the planning workflow receives
+  /// the full Aurora modeling output.
+  final String? initialUserMessage;
+  final bool fromModelingComplete;
+  final Map<String, dynamic>? modelingOutput;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -95,6 +105,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showContextControls = false;
   String? _dispatchedInitialPrompt;
+  String? _dispatchedInitialUserMessage;
   String? _hydratedConversationId;
   String? _hydratedChatOpeningConversationId;
 
@@ -249,8 +260,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await ref.read(chatProvider.notifier).loadConversationHistory(sessionId);
     }
     _queueInitialPromptDispatch();
+    _queueInitialUserMessageDispatch();
     _injectWelcomeMessageIfNeeded();
     await _hydrateChatOpeningIfNeeded();
+  }
+
+  void _queueInitialUserMessageDispatch() {
+    if (!widget.fromModelingComplete) return;
+    final msg = widget.initialUserMessage?.trim();
+    if (msg == null || msg.isEmpty || msg == _dispatchedInitialUserMessage) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final nextMsg = widget.initialUserMessage?.trim();
+      if (nextMsg == null ||
+          nextMsg.isEmpty ||
+          nextMsg == _dispatchedInitialUserMessage) {
+        return;
+      }
+      _dispatchedInitialUserMessage = nextMsg;
+      final overrides = <String, dynamic>{'from_modeling_complete': true};
+      if (widget.modelingOutput != null) {
+        overrides['modeling_output'] = widget.modelingOutput;
+      }
+      await ref.read(chatProvider.notifier).sendMessage(
+            nextMsg,
+            extraContextOverrides: overrides,
+          );
+    });
   }
 
   void _injectWelcomeMessageIfNeeded() {

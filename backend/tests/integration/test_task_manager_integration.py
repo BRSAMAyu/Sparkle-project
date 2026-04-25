@@ -244,6 +244,25 @@ class TestTaskManagerIntegration:
         assert "cleanup-every-day" in beat_schedule
         assert beat_schedule["cleanup-every-day"]["task"] == "cleanup_old_data"
 
+    def test_checkpoint_wake_celery_schedule_and_route(self):
+        """Aurora checkpoint due wakes must be wired into Celery beat."""
+        from app.tasks.checkpoint_nudge_task import run_due_checkpoint_wakes
+
+        task_name = "tasks.checkpoint_nudge.run_due_checkpoint_wakes"
+        daily_scan_task_name = "tasks.checkpoint_nudge.scan_daily_checkpoints"
+
+        assert run_due_checkpoint_wakes.name == task_name
+        assert celery_app.conf.task_routes[task_name] == {"queue": "default"}
+
+        beat_schedule = celery_app.conf.beat_schedule
+        assert beat_schedule["checkpoint-due-wake-scan"]["task"] == task_name
+        assert beat_schedule["checkpoint-due-wake-scan"]["schedule"] == 600.0
+        assert beat_schedule["checkpoint-due-wake-scan"]["options"] == {
+            "queue": "default"
+        }
+
+        assert beat_schedule["checkpoint-nudge-daily-8am"]["task"] == daily_scan_task_name
+
     @pytest.mark.asyncio
     async def test_task_to_celery_migration(self):
         """测试从 TaskManager 到 Celery 的迁移路径"""

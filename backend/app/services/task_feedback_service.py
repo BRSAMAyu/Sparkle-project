@@ -41,6 +41,7 @@ class TaskFeedbackService:
     """
 
     REMEDIAL_TRIGGER_CATEGORIES = {"unclear", "too_difficult"}
+    TIME_PRESSURE_TRIGGER_CATEGORIES = {"too_long"}
     REMEDIAL_TEXT_MARKERS = (
         "不懂",
         "不理解",
@@ -53,6 +54,7 @@ class TaskFeedbackService:
         "don't understand",
         "do not understand",
     )
+    TIME_PRESSURE_TEXT_MARKERS = ("没时间", "来不及", "时间不够", "太长", "做不完", "排不开")
     MAX_CONSECUTIVE_REMEDIAL_TASKS = 2
 
     def __init__(self, db: AsyncSession, redis=None):
@@ -167,21 +169,30 @@ class TaskFeedbackService:
         except Exception as e:
             logger.warning(f"[TaskFeedback] Reflection prompt generation failed: {e}")
 
-        if task_snapshot["plan_id"] and self._is_knowledge_gap_signal(
+        fail_safe_signal = self._classify_fail_safe_signal(
             feedback_snapshot["category"],
             feedback_snapshot["feedback_text"],
-        ):
+        )
+        if task_snapshot["plan_id"] and fail_safe_signal:
             try:
-                knowledge_gap = await self._record_knowledge_gap(
-                    user_id=user_id,
-                    task_snapshot=task_snapshot,
-                    feedback_snapshot=feedback_snapshot,
-                )
+                if fail_safe_signal == "knowledge_gap":
+                    knowledge_gap = await self._record_knowledge_gap(
+                        user_id=user_id,
+                        task_snapshot=task_snapshot,
+                        feedback_snapshot=feedback_snapshot,
+                    )
+                else:
+                    knowledge_gap = self._build_fail_safe_gap(
+                        task_snapshot=task_snapshot,
+                        feedback_snapshot=feedback_snapshot,
+                        signal_type=fail_safe_signal,
+                    )
                 await self._insert_remedial_task(
                     user_id=user_id,
                     plan_id=task_snapshot["plan_id"],
                     task_id=task_snapshot["id"],
                     knowledge_gap=knowledge_gap,
+                    signal_type=fail_safe_signal,
                 )
             except Exception as e:
                 logger.warning(f"[TaskFeedback] Remedial task insertion skipped: {e}")
@@ -233,6 +244,49 @@ class TaskFeedbackService:
             return True
         haystack = str(feedback_text or "").strip().lower()
         return bool(haystack) and any(marker in haystack for marker in self.REMEDIAL_TEXT_MARKERS)
+
+    def _classify_fail_safe_signal(self, category: str | None, feedback_text: str | None) -> str | None:
+        if self._is_knowledge_gap_signal(category, feedback_text):
+            return "knowledge_gap"
+        normalized_category = str(category or "").strip().lower()
+        if normalized_category in self.TIME_PRESSURE_TRIGGER_CATEGORIES:
+            return "time_pressure"
+        haystack = str(feedback_text or "").strip().lower()
+        if bool(haystack) and any(marker in haystack for marker in self.TIME_PRESSURE_TEXT_MARKERS):
+            return "time_pressure"
+        return None
+
+    def _build_fail_safe_gap(
+        self,
+        *,
+        task_snapshot: dict[str, Any],
+        feedback_snapshot: dict[str, Any],
+        signal_type: str,
+    ) -> dict[str, Any]:
+        description = self._build_fail_safe_description(
+            task_title=str(task_snapshot.get("title") or "当前任务"),
+            feedback_text=str(feedback_snapshot.get("feedback_text") or "").strip(),
+            signal_type=signal_type,
+        )
+        return {
+            "id": f"fallback:{task_snapshot['id']}:{feedback_snapshot['id']}",
+            "task_id": str(task_snapshot["id"]),
+            "plan_id": str(task_snapshot["plan_id"]) if task_snapshot.get("plan_id") else None,
+            "task_title": task_snapshot.get("title"),
+            "description": description,
+            "feedback_text": str(feedback_snapshot.get("feedback_text") or "").strip(),
+            "category": feedback_snapshot.get("category"),
+            "source": "task_feedback",
+            "signal_type": signal_type,
+            "created_at": _utcnow().isoformat(),
+        }
+
+    def _build_fail_safe_description(self, task_title: str, feedback_text: str, signal_type: str) -> str:
+        if signal_type == "time_pressure":
+            if feedback_text:
+                return f"{task_title}: 时间不够，先压缩成最小保底版（{feedback_text[:60]}）"
+            return f"{task_title}: 时间不够，先压缩成最小保底版"
+        return self._build_knowledge_gap_description(task_title, feedback_text)
 
     async def _record_knowledge_gap(
         self,
@@ -291,6 +345,7 @@ class TaskFeedbackService:
         plan_id: UUID,
         task_id: UUID,
         knowledge_gap: dict[str, Any],
+        signal_type: str = "knowledge_gap",
     ) -> Task | None:
         task = await self._get_and_validate_task(task_id, user_id)
         result = await self.db.execute(
@@ -321,15 +376,33 @@ class TaskFeedbackService:
             )
             .values(order_index=Task.order_index + 1)
         )
-        guide_json = self._build_remedial_guide_json(task, knowledge_gap)
+        guide_json = self._build_remedial_guide_json(
+            task,
+            knowledge_gap,
+            signal_type=signal_type,
+            consecutive_failures=consecutive,
+        )
+        extra_tags = []
+        if signal_type == "time_pressure":
+            extra_tags.extend(["time_boxed", "compressed_recovery"])
+        if consecutive > 0:
+            extra_tags.append("streak_fail_safe")
         remedial_task = Task(
             user_id=task.user_id,
             plan_id=task.plan_id,
             title=f"[补强] {knowledge_gap['description'][:80]}",
             type=TaskType.LEARNING,
-            tags=["remedial", "knowledge_gap", f"source_task:{task.id}"],
-            estimated_minutes=min(30, max(15, int((task.estimated_minutes or 30) * 0.5))),
-            difficulty=max(1, int(task.difficulty or 2) - 1),
+            tags=[
+                "remedial",
+                "knowledge_gap",
+                "scaffolded",
+                "reduced_density",
+                "sprint_fail_safe",
+                *extra_tags,
+                f"source_task:{task.id}",
+            ],
+            estimated_minutes=int(guide_json["time_estimate_minutes"]),
+            difficulty=int(guide_json.get("difficulty", max(1, int(task.difficulty or 2) - 1))),
             energy_cost=1,
             guide_content=guide_json["objective"],
             guide_json=guide_json,
@@ -350,19 +423,58 @@ class TaskFeedbackService:
         tags = [str(tag) for tag in (task.tags or [])]
         return task.title.startswith("[补强]") or "remedial" in tags
 
-    def _build_remedial_guide_json(self, task: Task, knowledge_gap: dict[str, Any]) -> dict[str, Any]:
+    def _build_remedial_guide_json(
+        self,
+        task: Task,
+        knowledge_gap: dict[str, Any],
+        *,
+        signal_type: str = "knowledge_gap",
+        consecutive_failures: int = 0,
+    ) -> dict[str, Any]:
         description = str(knowledge_gap.get("description") or task.title)
+        if signal_type == "time_pressure":
+            minutes = 20 if consecutive_failures > 0 else min(25, max(15, int((task.estimated_minutes or 30) * 0.45)))
+            return {
+                "objective": f"把刚才没做完的内容压缩成今天能交付的最小保底版：{description}",
+                "method_steps": [
+                    "先把原任务缩成 1 个最小可见产出，例如 3 个保底点、1 道代表题或 1 张错因卡。",
+                    "只回收最影响下一步的 1 个知识点或题型，不追完整章。",
+                    "最后写一句下次从哪里继续，避免重新启动成本。",
+                ],
+                "time_estimate_minutes": minutes,
+                "difficulty": 1,
+                "success_criteria": "留下 1 个最小可检查产出，并明确下次从哪里继续。",
+                "output_action": "完成 1 个最小保底产出，例如 3 个保底点、1 道代表题或 1 张错因卡。",
+                "key_points": [description, "先保可继续推进的最小结果"],
+                "common_mistakes": ["想一次补回全部进度，结果又把任务做得过重。"],
+                "sprint_fail_safe": True,
+                "density_adjustment": "minimum_viable",
+                "scaffolding_mode": "time_boxed_minimum_viable",
+                "micro_contract": "如果开始，就只保 1 个最小产出；没做完前，不允许再加第二个模块。",
+                "fail_safe_rule": "今天不补整章，只回收下一步最需要的最小结果。",
+            }
+
+        minutes = min(30, max(15, int((task.estimated_minutes or 30) * 0.5)))
+        if consecutive_failures > 0:
+            minutes = min(minutes, 20)
         return {
             "objective": f"把刚才卡住的点补到能说清：{description}",
             "method_steps": [
                 "用 5 分钟回看原任务里最卡的句子或题目，圈出一个具体问题。",
                 "用自己的话写出这个知识点的定义、适用条件和一个反例。",
-                "做 1 道最小练习题或口头复述一次，确认不是只看懂答案。",
+                "只做 1 道最小练习题或口头复述一次，确认不是只看懂答案；今天不额外加新难点。",
             ],
-            "time_estimate_minutes": 30,
+            "time_estimate_minutes": minutes,
+            "difficulty": 1 if consecutive_failures > 0 else max(1, int(task.difficulty or 2) - 1),
             "success_criteria": "能不用资料解释这个卡点，并完成 1 个最小检查题。",
+            "output_action": "补清 1 个卡点，并完成 1 个最小检查题。",
             "key_points": [description, "先补前置理解，再回到原任务"],
             "common_mistakes": ["直接重做原任务，但没有先定位到底是哪一个概念卡住。"],
+            "sprint_fail_safe": True,
+            "density_adjustment": "minimum_viable" if consecutive_failures > 0 else "reduced",
+            "scaffolding_mode": "single_gap_minimal_check",
+            "micro_contract": "如果开始，就只处理 1 个卡点；没讲清前，不切到第二个漏洞。",
+            "fail_safe_rule": "今天不继续加新难点，只修当前最关键的一处理解断点。",
         }
 
     def _build_remedial_ai_prompt(
@@ -375,11 +487,13 @@ class TaskFeedbackService:
             f"【背景】我刚做任务「{task.title}」时卡住了。\n\n"
             f"【具体卡点】{knowledge_gap.get('description')}\n\n"
             f"【补强目标】{guide_json['objective']}\n"
+            f"【输出动作】{guide_json.get('output_action')}\n"
             f"【完成标准】{guide_json['success_criteria']}\n\n"
             "【请帮我】\n"
-            "1. 先判断我可能缺的是概念、题感还是前置知识\n"
-            "2. 用最短路径讲清这个卡点\n"
-            "3. 给我 1 道最小检查题，不要先给答案\n\n"
+            "1. 先判断我现在更需要概念补强还是时间压缩版保底任务\n"
+            "2. 用最短路径给我一个更轻、更具体的补强动作\n"
+            "3. 给我 1 道最小检查题，不要先给答案\n"
+            "4. 不要继续加更难的新内容\n\n"
             "【风格要求】直接、具体、不要泛泛鼓励。"
         )
 

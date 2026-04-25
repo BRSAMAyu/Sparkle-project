@@ -200,9 +200,90 @@ async def test_task_feedback_inserts_remedial_task_and_records_knowledge_gap(
     assert remedial[0].estimated_minutes <= 30
     assert remedial[0].guide_json is not None
     assert remedial[0].ai_prompt
+    assert "reduced_density" in (remedial[0].tags or [])
+    assert remedial[0].guide_json["sprint_fail_safe"] is True
+    assert remedial[0].guide_json["density_adjustment"] == "reduced"
+    assert remedial[0].guide_json["output_action"] == "补清 1 个卡点，并完成 1 个最小检查题。"
+    assert "只处理 1 个卡点" in remedial[0].guide_json["micro_contract"]
     current_task_index = next(index for index, item in enumerate(tasks) if item.id == task_id)
     assert tasks.index(remedial[0]) == current_task_index + 1
     assert remedial[0].phase_index == task_phase_index
+
+
+@pytest.mark.asyncio
+async def test_task_feedback_time_pressure_inserts_time_boxed_fail_safe_task(
+    db_session,
+    test_user,
+    monkeypatch,
+) -> None:
+    user_id = test_user.id
+    plan_id = uuid4()
+    task = Task(
+        user_id=user_id,
+        plan_id=plan_id,
+        title="Day 5 · 阶段练习",
+        type=TaskType.LEARNING,
+        tags=["规划生成", "phase:2"],
+        estimated_minutes=60,
+        difficulty=3,
+        energy_cost=2,
+        status=TaskStatus.COMPLETED,
+        order_index=1000,
+    )
+    next_task = Task(
+        user_id=user_id,
+        plan_id=plan_id,
+        title="Day 6 · 阶段练习",
+        type=TaskType.LEARNING,
+        tags=["规划生成", "phase:2"],
+        estimated_minutes=60,
+        difficulty=3,
+        energy_cost=2,
+        status=TaskStatus.PENDING,
+        order_index=2000,
+    )
+    db_session.add_all([task, next_task])
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    class _FakeAdaptiveReplanner:
+        def __init__(self, db, redis):
+            self.on_task_feedback = AsyncMock(return_value=[])
+
+        @staticmethod
+        def is_strong_cognitive_struggle_feedback(*, category, feedback_text) -> bool:
+            return category in {"unclear", "too_difficult"} or "不懂" in str(feedback_text or "")
+
+    monkeypatch.setattr("app.services.task_feedback_service.AdaptiveReplanner", _FakeAdaptiveReplanner)
+    monkeypatch.setattr(
+        "app.services.task_feedback_service.TaskReflectionService",
+        lambda db, redis: SimpleNamespace(maybe_enqueue_reflection_prompt=AsyncMock(return_value=None)),
+    )
+    monkeypatch.setattr(
+        "app.services.task_feedback_service.RoutingProfileService",
+        lambda db, redis: SimpleNamespace(record_session_outcome=AsyncMock(return_value={})),
+    )
+    monkeypatch.setattr("app.services.task_feedback_service.event_bus.publish", AsyncMock(return_value=None))
+
+    service = TaskFeedbackService(db_session, redis=None)
+    await service.submit_feedback(
+        user_id=user_id,
+        task_id=task.id,
+        feedback_text="今天没时间，这个任务太长了，根本做不完",
+        category="too_long",
+    )
+
+    rows = await db_session.execute(
+        select(Task).where(Task.user_id == user_id, Task.plan_id == plan_id).order_by(Task.order_index.asc())
+    )
+    tasks = list(rows.scalars().all())
+    remedial = next(item for item in tasks if item.title.startswith("[补强]"))
+    assert remedial.estimated_minutes <= 25
+    assert "time_boxed" in (remedial.tags or [])
+    assert remedial.guide_json["density_adjustment"] == "minimum_viable"
+    assert remedial.guide_json["scaffolding_mode"] == "time_boxed_minimum_viable"
+    assert "最小保底产出" in remedial.guide_json["output_action"]
+    assert "时间压缩版保底任务" in remedial.ai_prompt
 
 
 @pytest.mark.asyncio

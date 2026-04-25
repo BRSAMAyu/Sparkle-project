@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,6 +39,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
   bool _skipInFlight = false;
   int _requestSequence = 0;
   int _messageSequence = 0;
+  Map<String, dynamic>? _modelingOutput;
 
   bool get _hasActiveAuroraRun => _runSubscriptions.isNotEmpty;
 
@@ -530,8 +532,19 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       return;
     }
 
+    Map<String, dynamic>? capturedOutput;
+    final outputJson = metadata['modeling_output_json'];
+    if (outputJson is String && outputJson.isNotEmpty) {
+      try {
+        capturedOutput = jsonDecode(outputJson) as Map<String, dynamic>?;
+      } catch (_) {}
+    }
+
     setState(() {
       _completed = true;
+      if (capturedOutput != null) {
+        _modelingOutput = capturedOutput;
+      }
     });
     ref.invalidate(profileContextProvider);
   }
@@ -598,6 +611,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     context.go('/chat', extra: {
       'initial_user_message': '开始规划',
       'from_modeling_complete': true,
+      if (_modelingOutput != null) 'modeling_output': _modelingOutput,
     });
   }
 

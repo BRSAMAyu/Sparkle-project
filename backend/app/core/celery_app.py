@@ -133,6 +133,7 @@ celery_app.conf.update(
         "tasks.accountability.notify_partner_checkin": {"queue": "default"},
         "tasks.policy.process_due_policies": {"queue": "default"},
         "tasks.checkpoint_nudge.scan_daily_checkpoints": {"queue": "default"},
+        "tasks.checkpoint_nudge.run_due_checkpoint_wakes": {"queue": "default"},
         "verify_intervention_outcomes_engaged": {"queue": "low_priority"},
         "verify_intervention_outcomes_full": {"queue": "low_priority"},
         "app.core.celery_tasks.generate_weekly_growth_digests": {"queue": "default"},
@@ -961,6 +962,11 @@ celery_app.conf.beat_schedule = {
     "checkpoint-nudge-daily-8am": {
         "task": "tasks.checkpoint_nudge.scan_daily_checkpoints",
         "schedule": crontab(hour=8, minute=0),
+        "options": {"queue": "default"},
+    },
+    "checkpoint-due-wake-scan": {
+        "task": "tasks.checkpoint_nudge.run_due_checkpoint_wakes",
+        "schedule": 600.0,
         "options": {"queue": "default"},
     },
     "intervention-outcomes-engaged": {

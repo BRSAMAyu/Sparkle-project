@@ -156,6 +156,76 @@ def _coalesce_mapping_value(source: dict[str, Any], key: str, default: Any) -> A
     return default if value is None else value
 
 
+def _format_aurora_planning_sidecar_section(
+    *,
+    sidecar_payload: dict[str, Any] | None,
+    legacy_prompt: str = "",
+) -> str:
+    payload = dict(sidecar_payload or {})
+    if not payload:
+        prompt = str(legacy_prompt or "").strip()
+        return "\n## AURORA PLANNING SIDECAR [L2 引导]\n" + prompt if prompt else ""
+
+    decision = payload.get("decision")
+    if not isinstance(decision, dict):
+        decision = {}
+    scaffold = payload.get("scaffold")
+    if not isinstance(scaffold, dict):
+        scaffold = {}
+    directive = decision.get("chat_directive")
+    if not isinstance(directive, dict):
+        directive = {}
+    top_tension = scaffold.get("top_tension")
+    if not isinstance(top_tension, dict):
+        top_tension = {}
+    top_thread = scaffold.get("top_latent_thread")
+    if not isinstance(top_thread, dict):
+        top_thread = {}
+
+    action = str(decision.get("action") or "wait").strip() or "wait"
+    lines = [
+        "## AURORA PLANNING SIDECAR [L2 引导]",
+        "这是 Aurora decision loop 给主聊天链的意图级指令，不是可直接复述给用户的话术。",
+        f"Aurora action: {action}",
+    ]
+
+    if action == "soft_return_topic":
+        lines.append("先处理用户当前需求；如果收口自然，再用一句短桥接带回规划，不要生硬切题。")
+    elif action == "drop_thread":
+        lines.append("把先前那条规划追问放下，本轮不要带回，也不要补问刚才那块信息。")
+    else:
+        lines.append("本轮先处理当前需求，不要主动把话题拉回规划；只在用户自己回到规划时继续。")
+
+    intent = str(directive.get("intent") or "").strip()
+    if intent:
+        lines.append(f"Directive intent: {intent}")
+    brief = str(directive.get("brief") or "").strip()
+    if brief:
+        lines.append(f"Directive brief: {brief}")
+
+    goal_raw = str(scaffold.get("goal_raw") or "").strip()
+    if goal_raw:
+        lines.append(f"Planning goal: {goal_raw}")
+
+    if action != "drop_thread" and top_tension:
+        domain = str(top_tension.get("domain") or "").strip()
+        description = str(top_tension.get("description") or "").strip()
+        if domain and description:
+            lines.append(f"Only unresolved tension worth tracking now: {domain} - {description}")
+
+    if action == "soft_return_topic":
+        context_snapshot = str(top_thread.get("context_snapshot") or "").strip()
+        if context_snapshot:
+            lines.append(f"Latent thread to recover naturally: {context_snapshot}")
+
+    resolved_facts = [str(item).strip() for item in list(scaffold.get("resolved_facts") or []) if str(item).strip()]
+    if resolved_facts:
+        lines.append("Already resolved facts: " + "；".join(resolved_facts[:3]))
+
+    lines.append("不要把已经补齐的信息重新问一遍。")
+    return "\n" + "\n".join(lines)
+
+
 def _describe_warmth_level(value: float) -> str:
     if value <= 0.2:
         return "保持克制而不过度外露"
@@ -868,6 +938,8 @@ def build_system_prompt(
     persona_constraints_summary = ""
     agent_memory_context = ""
     collaboration_narrative = ""
+    aurora_planning_sidecar = {}
+    aurora_planning_sidecar_prompt = ""
     agent_persona_section = ""
     if isinstance(user_context, dict):
         raw_trace = user_context.get("orchestration_trace")
@@ -891,6 +963,10 @@ def build_system_prompt(
         persona_constraints_summary = str(user_context.get("persona_constraints_summary") or "").strip()
         agent_memory_context = str(user_context.get("agent_memory_context") or "").strip()
         collaboration_narrative = str(user_context.get("collaboration_narrative") or "").strip()
+        raw_sidecar = user_context.get("aurora_planning_sidecar")
+        if isinstance(raw_sidecar, dict):
+            aurora_planning_sidecar = raw_sidecar
+        aurora_planning_sidecar_prompt = str(user_context.get("aurora_planning_sidecar_prompt") or "").strip()
 
     # 1. 首先检查 AgentProfile 是否有专用 prompt
 
@@ -1033,6 +1109,11 @@ def build_system_prompt(
     agent_memory_section = ""
     if agent_memory_context:
         agent_memory_section = "\n## 专家交互记忆 [L2 引导]\n" + agent_memory_context
+
+    aurora_planning_sidecar_section = _format_aurora_planning_sidecar_section(
+        sidecar_payload=aurora_planning_sidecar,
+        legacy_prompt=aurora_planning_sidecar_prompt,
+    )
 
     situation_brief_section = ""
     if isinstance(user_context, dict):
@@ -1181,6 +1262,7 @@ def build_system_prompt(
         "constitution_guardrail_section": constitution_guardrail_section,
         "agent_persona_section": agent_persona_section,
         "agent_memory_section": agent_memory_section,
+        "aurora_planning_sidecar_section": aurora_planning_sidecar_section,
         "cognitive_prism_section": cognitive_prism_section,
         "seed_library_section": seed_library_section,
         "conversation_history_section": (
@@ -1231,6 +1313,7 @@ def build_system_prompt(
             "constitution_guardrail_section": 1,
             "agent_persona_section": 2,
             "agent_memory_section": 2,
+            "aurora_planning_sidecar_section": 2,
             "cognitive_prism_section": cognitive_priority,
             "seed_library_section": 3,
             "conversation_history_section": 3,
@@ -1264,6 +1347,7 @@ def build_system_prompt(
     constitution_guardrail_section = section_map["constitution_guardrail_section"]
     agent_persona_section = section_map["agent_persona_section"]
     agent_memory_section = section_map["agent_memory_section"]
+    aurora_planning_sidecar_section = section_map["aurora_planning_sidecar_section"]
     cognitive_prism_section = section_map["cognitive_prism_section"]
     conversation_history_section = section_map["conversation_history_section"]
     task_awareness_section = section_map["task_awareness_section"]
@@ -1333,6 +1417,7 @@ def build_system_prompt(
                 constitution_guardrail_section=constitution_guardrail_section,
                 agent_persona_section=agent_persona_section,
                 agent_memory_section=agent_memory_section,
+                aurora_planning_sidecar_section=aurora_planning_sidecar_section,
                 situation_brief_section=situation_brief_section,
                 decision_policy_section=decision_policy_section,
                 planning_strategy_section=planning_strategy_section,
@@ -1376,6 +1461,7 @@ def build_system_prompt(
                 orchestration_context_section,
                 collaboration_narrative_section,
                 agent_memory_section,
+                aurora_planning_sidecar_section,
                 cognitive_prism_section,
                 seed_library_section,
             ]
@@ -1436,6 +1522,7 @@ def build_system_prompt(
             orchestration_context_section,
             collaboration_narrative_section,
             agent_memory_section,
+            aurora_planning_sidecar_section,
             cognitive_prism_section,
             seed_library_section,
         ]

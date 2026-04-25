@@ -11,6 +11,7 @@ from app.aurora.runtime_v1 import (
     AuroraCheckpointRuntimeService,
     build_aurora_surface_metadata,
 )
+from app.aurora.runtime_v1.decision_loop import AuroraDecision
 from app.aurora.runtime_v1.models import AuroraScheduledWake, AuroraStateSnapshot
 from app.models.chat import ChatMessage, MessageRole
 from app.models.plan import Plan, PlanType
@@ -32,6 +33,29 @@ class _FakeRedis:
 
     async def delete(self, key: str) -> None:
         self.values.pop(key, None)
+
+
+class _FakeDecisionLoop:
+    def __init__(self, decision: AuroraDecision | None = None) -> None:
+        self.decision = decision or AuroraDecision(
+            action="emit_message",
+            metadata={"reasoning_summary": "test decision"},
+        )
+        self.readouts = []
+
+    async def decide(self, readout):
+        self.readouts.append(readout)
+        return self.decision
+
+
+class _FakeChatAdapter:
+    def __init__(self, messages: list[str] | None = None) -> None:
+        self.messages = messages or ["我们先只补最卡的那块。", "传输层这块现在最卡在哪一步？"]
+        self.calls = []
+
+    async def render(self, decision, readout):
+        self.calls.append((decision, readout))
+        return list(self.messages)
 
 
 def _utc(year: int, month: int, day: int, hour: int, minute: int = 0) -> datetime:
@@ -189,7 +213,7 @@ async def test_checkpoint_runtime_keeps_smooth_user_unscheduled(
 
 
 @pytest.mark.asyncio
-async def test_due_wake_emits_two_messages_and_keeps_original_blocker_after_detour(
+async def test_due_wake_defers_when_user_recently_active_after_detour(
     db_session, test_user
 ) -> None:
     redis = _FakeRedis()
@@ -213,7 +237,58 @@ async def test_due_wake_emits_two_messages_and_keeps_original_blocker_after_deto
         now=_utc(2026, 4, 24, 10, 5)
     )
 
+    assert summary["deferred"] == 1
+    refreshed = await db_session.get(AuroraScheduledWake, wake.id)
+    assert refreshed.status == "pending"
+    assert refreshed.suppression_reason == "recent_user_activity"
+    assert refreshed.scheduled_at > _utc(2026, 4, 24, 10, 5)
+    rows = await db_session.execute(
+        select(ChatMessage)
+        .where(
+            ChatMessage.user_id == test_user.id,
+            ChatMessage.session_id == wake.session_id,
+            ChatMessage.role == MessageRole.ASSISTANT,
+        )
+        .order_by(ChatMessage.created_at.asc())
+    )
+    assert list(rows.scalars().all()) == []
+    assert refreshed.conversation_id == conversation_id
+
+
+@pytest.mark.asyncio
+async def test_due_wake_executes_after_decision_loop_when_timing_allows(
+    db_session, test_user
+) -> None:
+    redis = _FakeRedis()
+    final, _, conversation_id = await _run_blocked_debrief(
+        db_session, test_user.id, redis
+    )
+    wake_id = final["aurora_runtime"]["wake"]["wake_id"]
+    wake = await db_session.get(AuroraScheduledWake, wake_id)
+    wake.scheduled_at = _utc(2026, 4, 24, 10, 0)
+    await db_session.commit()
+
+    decision_loop = _FakeDecisionLoop()
+    chat_adapter = _FakeChatAdapter(
+        ["我们先把传输层最卡的那块补起来。", "你现在更想先补概念，还是先补题感？"]
+    )
+    service = AuroraCheckpointRuntimeService(
+        db_session,
+        redis,
+        decision_loop=decision_loop,
+        chat_adapter=chat_adapter,
+    )
+
+    summary = await service.process_due_wakes(now=_utc(2026, 4, 24, 10, 5))
+
     assert summary["executed"] == 1
+    assert len(decision_loop.readouts) == 1
+    assert decision_loop.readouts[0].request_extra_context["decision_loop_required"] is True
+    assert len(chat_adapter.calls) == 1
+    refreshed = await db_session.get(AuroraScheduledWake, wake.id)
+    assert refreshed.status == "executed"
+    assert refreshed.payload["aurora_decision"]["action"] == "emit_message"
+
     rows = await db_session.execute(
         select(ChatMessage)
         .where(
@@ -225,10 +300,8 @@ async def test_due_wake_emits_two_messages_and_keeps_original_blocker_after_deto
     )
     messages = list(rows.scalars().all())
     assert len(messages) == 2
-    assert "传输层" in messages[0].content or "传输层" in messages[1].content
-    assert messages[0].actions[0]["data"]["surface_complete"] is False
+    assert "传输层" in messages[0].content
     assert messages[1].actions[0]["data"]["surface_complete"] is True
-    assert messages[1].actions[0]["data"]["modeling_complete"] is False
     assert messages[1].actions[0]["data"]["conversation_id"] == conversation_id
 
 
@@ -313,6 +386,125 @@ async def test_due_wake_suppresses_when_inside_dnd(db_session, test_user) -> Non
     refreshed = await db_session.get(AuroraScheduledWake, wake.id)
     assert refreshed.status == "suppressed"
     assert refreshed.suppression_reason == "dnd_window"
+
+
+@pytest.mark.asyncio
+async def test_due_wake_suppresses_disabled_action_before_decision_loop(
+    db_session, test_user
+) -> None:
+    db_session.add(
+        UserPreferencesCenter(
+            user_id=test_user.id,
+            explicit={
+                "aurora_preferences": {
+                    "disabled_actions": ["proactive_follow_up"],
+                }
+            },
+        )
+    )
+    wake = AuroraScheduledWake(
+        user_id=test_user.id,
+        surface=AURORA_CHECKPOINT_SURFACE,
+        conversation_id="cp:test:3",
+        session_id=uuid4(),
+        scheduled_at=_utc(2026, 4, 24, 10, 0),
+        status="pending",
+        reason="传输层还没补完",
+        planned_action="checkpoint_follow_up",
+        urgency_score=0.91,
+        payload={
+            "blocker_summary": "传输层还没补完",
+            "blocker_keywords": ["传输层"],
+            "agenda_priority": "knowledge_gap",
+            "time_pressure": False,
+            "understanding_gap": True,
+        },
+        runtime_metadata=build_aurora_surface_metadata(
+            surface=AURORA_CHECKPOINT_SURFACE,
+            surface_complete=True,
+            modeling_complete=False,
+        ),
+    )
+    db_session.add(wake)
+    await db_session.commit()
+
+    decision_loop = _FakeDecisionLoop()
+    summary = await AuroraCheckpointRuntimeService(
+        db_session,
+        _FakeRedis(),
+        decision_loop=decision_loop,
+    ).process_due_wakes(now=_utc(2026, 4, 24, 10, 5))
+
+    assert summary["suppressed"] == 1
+    assert decision_loop.readouts == []
+    refreshed = await db_session.get(AuroraScheduledWake, wake.id)
+    assert refreshed.status == "suppressed"
+    assert refreshed.suppression_reason == "disabled_action"
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_runtime_keeps_low_urgency_gap_quiet(
+    db_session, test_user
+) -> None:
+    session_id = uuid4()
+    plan_id = uuid4()
+    plan = Plan(
+        id=plan_id,
+        user_id=test_user.id,
+        name="7天计网冲刺",
+        type=PlanType.SPRINT,
+        is_active=True,
+    )
+    next_task = Task(
+        user_id=test_user.id,
+        plan_id=plan_id,
+        title="Day 4 · 核心攻克",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=60,
+        difficulty=3,
+        energy_cost=2,
+        status=TaskStatus.PENDING,
+        order_index=1000,
+        phase_index=2,
+    )
+    db_session.add_all([plan, next_task])
+    await db_session.commit()
+
+    service = CheckpointDebriefService(db_session, _FakeRedis())
+    await service.process_turn(
+        user_id=test_user.id,
+        chat_session_id=session_id,
+        user_message="我来复盘一下",
+        context={
+            "debrief_context": {
+                "nudge_id": f"cp:{plan_id}:2",
+                "plan_id": str(plan_id),
+                "checkpoint_day": 2,
+                "checkpoint_description": "Day 2 晚：做20题自测",
+            }
+        },
+    )
+    await service.process_turn(
+        user_id=test_user.id,
+        chat_session_id=session_id,
+        user_message="落后了一点，不过整体还行",
+        context={},
+    )
+    final = await service.process_turn(
+        user_id=test_user.id,
+        chat_session_id=session_id,
+        user_message="就差最后几题了，其他都顺着在走",
+        context={},
+    )
+
+    assert final["goal_met"] is False
+    assert final["aurora_runtime"]["wake"]["status"] == "not_scheduled"
+    assert final["aurora_runtime"]["wake"]["reason"] == "low_urgency_quiet"
+    wakes = await db_session.execute(
+        select(AuroraScheduledWake).where(AuroraScheduledWake.user_id == test_user.id)
+    )
+    assert list(wakes.scalars().all()) == []
 
 
 def test_build_aurora_surface_metadata_supports_modeling_complete_contract() -> None:

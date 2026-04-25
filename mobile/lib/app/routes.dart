@@ -166,9 +166,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/chat',
                 pageBuilder: (context, state) {
                   final extra = state.extra;
-                  final initialAiMessage = (extra is Map<String, dynamic>)
-                      ? extra['initial_ai_message'] as String?
-                      : null;
+                  final extraMap =
+                      extra is Map<String, dynamic> ? extra : null;
+                  final initialAiMessage =
+                      extraMap?['initial_ai_message'] as String?;
+                  final initialUserMessage =
+                      extraMap?['initial_user_message'] as String?;
+                  final fromModelingComplete =
+                      (extraMap?['from_modeling_complete'] as bool?) ?? false;
+                  final modelingOutput =
+                      extraMap?['modeling_output'] as Map<String, dynamic>?;
                   return NoTransitionPage<void>(
                     key: state.pageKey,
                     child: SceneAudioScope(
@@ -179,6 +186,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                         initialConversationId:
                             state.uri.queryParameters['session_id'],
                         initialAiMessage: initialAiMessage,
+                        initialUserMessage: initialUserMessage,
+                        fromModelingComplete: fromModelingComplete,
+                        modelingOutput: modelingOutput,
                       ),
                     ),
                   );

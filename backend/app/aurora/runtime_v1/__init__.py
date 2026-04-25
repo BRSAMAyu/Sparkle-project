@@ -130,12 +130,27 @@ from app.aurora.runtime_v1.service import (
     AuroraRuntimeTurnPlan,
     AuroraRuntimeV1Service,
 )
+from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
+from app.aurora.runtime_v1.dashboard import (
+    CORE_MODELING_DOMAINS,
+    DashboardReadout,
+    DashboardReadoutBuilder,
+    canonicalize_runtime_domain,
+)
+from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
 
 _export(
     "AURORA_RUNTIME_MODE_SURFACES",
     "AURORA_RUNTIME_STATE_KEY_TEMPLATE",
     "AURORA_RUNTIME_STATE_TTL_SECONDS",
     "AURORA_SURFACE_MODELING",
+    "AuroraDecision",
+    "AuroraDecisionLoop",
+    "ChatLayerAdapter",
+    "CORE_MODELING_DOMAINS",
+    "DashboardReadout",
+    "DashboardReadoutBuilder",
     "AuroraRuntimeTurnPlan",
     "AuroraRuntimeV1Service",
+    "canonicalize_runtime_domain",
 )

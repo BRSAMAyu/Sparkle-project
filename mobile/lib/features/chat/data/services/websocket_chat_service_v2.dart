@@ -1106,6 +1106,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   // WebSocket 连接
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _socketSubscription;
+  Future<void> _incomingMessageChain = Future<void>.value();
   bool _disposed = false;
   int _connGen = 0;
 
@@ -1470,7 +1471,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       // 监听 WebSocket 流
       _socketSubscription = _channel!.stream.listen(
-        _handleIncomingMessage,
+        _queueIncomingMessage,
         onError: _handleConnectionError,
         onDone: _handleConnectionClosed,
         cancelOnError: false,
@@ -1604,6 +1605,12 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _scheduleTerminalFallback(targetRequestId);
       return;
     }
+    if (event is ContinueEvent) {
+      // CONTINUE is the authoritative segment boundary for Aurora multi-turn
+      // streams. Keep the request open and avoid synthesizing a false DoneEvent.
+      _cancelTerminalFallback(targetRequestId);
+      return;
+    }
     if (_terminalFallbackTimers.containsKey(targetRequestId) &&
         event is! DoneEvent &&
         event is! ErrorEvent) {
@@ -1667,6 +1674,14 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
   }
 
+  void _queueIncomingMessage(dynamic data) {
+    _incomingMessageChain = _incomingMessageChain
+        .then((_) => _handleIncomingMessage(data))
+        .catchError((Object error, StackTrace stackTrace) {
+      _log('❌ Incoming message queue error: $error');
+    });
+  }
+
   /// 处理接收到的消息
   Future<void> _handleIncomingMessage(dynamic data) async {
     if (_disposed) return;
@@ -1690,8 +1705,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         // 解析失败，继续正常处理
       }
 
-      // Parse event in isolate to avoid blocking main thread
-      final event = await compute(_parseChatEvent, data);
+      // Small control/status frames are latency-sensitive; large text frames
+      // still go through an isolate to avoid blocking the UI thread.
+      final event = data.length < 12000
+          ? _parseChatEvent(data)
+          : await compute(_parseChatEvent, data);
       final requestId = _extractRequestIdFromRawMessage(data);
 
       // 🔧 P0修复：标记流活跃状态，抑制心跳超时触发的假性重连

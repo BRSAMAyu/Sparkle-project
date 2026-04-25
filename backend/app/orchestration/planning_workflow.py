@@ -256,8 +256,12 @@ class PlanningWorkflowManager:
         planning workflow without requiring the user to re-state their goal.
         """
         profile = _as_dict(modeling_output.get("activity_profile"))
-        cold_start = _as_dict(modeling_output.get("cold_start_context") or modeling_output.get("cold_start"))
         user_model = _as_dict(modeling_output.get("user_model_snapshot"))
+        cold_start = _as_dict(
+            modeling_output.get("cold_start_context")
+            or modeling_output.get("cold_start")
+            or (user_model.get("preferences") or {}).get("cold_start_context")
+        )
 
         goal_raw = (
             _strip(cold_start.get("goal_raw") or cold_start.get("goal_summary") or cold_start.get("goal"))
@@ -297,6 +301,7 @@ class PlanningWorkflowManager:
                 ),
             },
             "activity_profile": profile,
+            "galaxy_baseline": modeling_output.get("galaxy_baseline"),
         }
 
     async def process_planning_turn(
@@ -325,7 +330,10 @@ class PlanningWorkflowManager:
                 user_id=str(user_id),
                 goal_raw=goal_raw,
             )
-            session.collected.update(await self._prefill_from_profile_context(context))
+            prefill_context = dict(context)
+            if bridge.get("galaxy_baseline"):
+                prefill_context["galaxy_baseline"] = bridge["galaxy_baseline"]
+            session.collected.update(await self._prefill_from_profile_context(prefill_context))
             if bridge.get("collected"):
                 for key, value in _as_dict(bridge["collected"]).items():
                     if value and not session.collected.get(key):
@@ -713,7 +721,10 @@ class PlanningWorkflowManager:
                     ),
                     user_id=user_id,
                 )
+                task.order_index = int(day_spec["day"]) * 1000
                 created_tasks.append(task)
+        if created_tasks:
+            await db.commit()
 
         session.state = "DONE"
         await self.save_session(session)
@@ -1224,6 +1235,7 @@ class PlanningWorkflowManager:
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
         baseline = _strip(session.collected.get("knowledge_baseline") or "基础不稳")
         daily_hours = _safe_int(session.collected.get("daily_available_hours")) or 2
+        motivation = _strip(session.collected.get("motivation"))
         phase_label = _strip(phase.get("label") or "当前阶段")
         sprint_policy = _as_dict(phase.get("sprint_policy"))
         sprint_mode = _strip(sprint_policy.get("sprint_mode") or phase.get("sprint_mode") or "exam_sprint")
@@ -1248,11 +1260,13 @@ class PlanningWorkflowManager:
         materials_line = f"手头资料包括：{'、'.join(materials[:3])}。\n" if materials else ""
         blocked_days_line = f"已知忙碌时段：{'；'.join(blocked_days[:2])}。\n" if blocked_days else ""
         latent_line = f"还需要顺手照顾的潜在线索：{latent_threads[0]['context_snapshot']}。\n" if latent_threads else ""
+        motivation_line = f"【核心驱动】{motivation}。\n" if motivation else ""
         output_action = _strip(guide_json.get("output_action"))
         micro_contract = _strip(guide_json.get("micro_contract"))
         fail_safe_rule = _strip(guide_json.get("fail_safe_rule"))
         return (
-            f"【背景】我是学生，目标是 {session.goal_raw or f'在限定时间内完成 {subject} 备考'}。\n\n"
+            f"【背景】我是学生，目标是 {session.goal_raw or f'在限定时间内完成 {subject} 备考'}。\n"
+            f"{motivation_line}\n"
             f"【我的情况】科目是 {subject}，当前基础是 {baseline}，每天大概能投入 {daily_hours} 小时。\n"
             f"{materials_line}{blocked_days_line}{latent_line}\n"
             f"【冲刺策略】{sprint_mode}；本任务必须有输出动作：{minimum_output}。\n"

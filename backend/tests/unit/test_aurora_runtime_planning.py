@@ -47,14 +47,71 @@ async def test_detour_keeps_latent_thread_for_planning_surface() -> None:
     )
 
     state = await manager.runtime_adapter.load_state(user_id=str(user_id), conversation_id=conversation_id)
+    scaffold = manager.runtime_adapter.build_detour_scaffold(state) if state is not None else {}
 
     assert first_turn is not None
     assert detour_turn is not None and detour_turn["bypass_planning"] is True
     assert state is not None
-    assert "Aurora planning sidecar is active" in manager.runtime_adapter.build_detour_prompt(state)
+    assert scaffold["top_tension"]["domain"] in {"exam_scope", "knowledge_baseline", "time_available"}
+    assert scaffold["top_latent_thread"] is not None
+    assert "Treat this as state context, not final user wording." in manager.runtime_adapter.build_detour_prompt(state)
     assert state.surface == "aurora_planning"
     assert any(thread.status == "active" for thread in state.latent_threads)
     assert state.activity_profile.agenda_priority in {"exam_scope", "knowledge_baseline", "time_available"}
+
+
+@pytest.mark.asyncio
+async def test_detour_decision_can_wait_soft_return_or_drop_thread() -> None:
+    redis = FakeRedis()
+    manager = PlanningWorkflowManager(redis_client=redis)
+    user_id = uuid4()
+    conversation_id = "aurora-planning-detour-decision"
+
+    await manager.process_planning_turn(
+        db=None,  # type: ignore[arg-type]
+        user_id=user_id,
+        chat_session_id=conversation_id,
+        message="7天后考计算机网络，帮我规划一下",
+        context={},
+    )
+    await manager.process_planning_turn(
+        db=None,  # type: ignore[arg-type]
+        user_id=user_id,
+        chat_session_id=conversation_id,
+        message="先帮我查一下这个任务完成没有",
+        context={},
+    )
+
+    state = await manager.runtime_adapter.load_state(user_id=str(user_id), conversation_id=conversation_id)
+    assert state is not None
+
+    wait_state = await manager.runtime_adapter.apply_detour_decision(
+        state=state,
+        db=None,  # type: ignore[arg-type]
+        action="wait",
+        chat_directive={"intent": "handle_current_task_first"},
+    )
+    assert wait_state.current_intent["intent_type"] == "wait"
+    assert any(thread.status == "active" for thread in wait_state.latent_threads)
+
+    soft_return_state = await manager.runtime_adapter.apply_detour_decision(
+        state=wait_state,
+        db=None,  # type: ignore[arg-type]
+        action="soft_return_topic",
+        chat_directive={"intent": "recover_planning_naturally"},
+    )
+    top_tension = manager.runtime_adapter.select_next_tension(soft_return_state)
+    assert soft_return_state.current_intent["intent_type"] == "soft_return"
+    assert top_tension is not None and top_tension.last_attempted_at is not None
+
+    dropped_state = await manager.runtime_adapter.apply_detour_decision(
+        state=soft_return_state,
+        db=None,  # type: ignore[arg-type]
+        action="drop_thread",
+        chat_directive={"intent": "drop_stale_followup"},
+    )
+    assert dropped_state.current_intent["intent_type"] == "drop_thread"
+    assert not any(thread.status == "active" for thread in dropped_state.latent_threads)
 
 
 @pytest.mark.asyncio
@@ -89,11 +146,14 @@ async def test_user_supplied_info_resolves_tension_without_reasking_same_domain(
     )
 
     state = await manager.runtime_adapter.load_state(user_id=str(user_id), conversation_id=conversation_id)
+    scaffold = manager.runtime_adapter.build_detour_scaffold(state) if state is not None else {}
 
     assert reply is not None
     assert "每天大概能投入多少时间" in reply["message"]
     assert "基础大概在哪个位置" not in reply["message"]
     assert state is not None
+    assert scaffold["top_tension"]["domain"] == "time_available"
+    assert all(item["domain"] != "knowledge_baseline" for item in scaffold["open_tensions"])
     baseline_tension = next(item for item in state.informational_tensions if item.domain == "knowledge_baseline")
     time_tension = next(item for item in state.informational_tensions if item.domain == "time_available")
     assert baseline_tension.status == "resolved"
@@ -132,13 +192,15 @@ async def test_strategy_and_task_prompt_consume_richer_aurora_runtime_state() ->
     )
 
     strategy = manager._build_strategy(session, aurora_state=state)
+    daily_specs = manager._daily_task_specs(strategy["phases"][0], phase_index=1)
     guide_json = manager._build_task_guide_json(
         session=session,
         phase=strategy["phases"][0],
         phase_index=1,
         default_daily_hours=2,
-        day_number=1,
-        day_focus=strategy["phases"][0]["focus"],
+        day_number=daily_specs[0]["day"],
+        day_focus=daily_specs[0]["focus"],
+        day_spec=daily_specs[0],
         aurora_state=state,
     )
     task_prompt = manager._build_task_ai_prompt(
@@ -149,10 +211,71 @@ async def test_strategy_and_task_prompt_consume_richer_aurora_runtime_state() ->
     )
 
     assert strategy["user_context_digest"]["available_materials"] == ["真题", "课件"]
+    assert strategy["sprint_policy"]["sprint_mode"] == "seven_day_survival"
+    assert strategy["sprint_policy"]["retrieval_policy"]["allow_deep_learn"] is False
+    assert any("defer_or_skip" in note for note in strategy["strategy_notes"])
+    assert daily_specs[0]["task_kind"] == "diagnostic_triage"
+    assert daily_specs[0]["estimated_minutes"] <= 55
+    assert guide_json["retrieval_first"] is True
+    assert guide_json["output_action"].startswith("先做 5 题探针")
+    assert "三栏清单" in guide_json["success_criteria"]
+    assert "探针" in guide_json["micro_contract"]
+    assert "只剩 20 分钟" in guide_json["fail_safe_rule"]
+    assert "有三栏清单" in guide_json["success_checklist"][0]
+    assert any("闭卷" in step or "小测" in step or "复述" in step for step in guide_json["method_steps"])
     assert "周三下午有实验" in strategy["checkpoints"][0]["description"]
     assert "真题" in strategy["phases"][0]["method"]
     assert "手头资料包括：真题、课件" in task_prompt
     assert "已知忙碌时段：周三下午有实验" in task_prompt
+    assert "闭卷" in task_prompt
+    assert "今天的输出动作" in task_prompt
+    assert "失手时降压规则" in task_prompt
+
+
+def test_fourteen_day_strategy_uses_build_and_spaced_retrieval_mode() -> None:
+    manager = PlanningWorkflowManager(redis_client=FakeRedis())
+    session = PlanningSession(
+        planning_session_id="planning-runtime-14-day",
+        chat_session_id="planning-runtime-14-day-chat",
+        user_id=str(uuid4()),
+        state="CLARIFYING",
+        goal_raw="14天后考操作系统，帮我规划",
+        collected={
+            "time_constraint_days": 14,
+            "daily_available_hours": 3,
+            "subject": "操作系统",
+            "exam_scope": "进程、内存、文件系统",
+            "knowledge_baseline": "学过一些",
+            "time_available": "每天约 3 小时",
+            "available_materials": ["课件"],
+        },
+    )
+
+    strategy = manager._build_strategy(session)
+    phase_two_specs = manager._daily_task_specs(strategy["phases"][1], phase_index=2)
+    deep_learn_spec = phase_two_specs[0]
+    guide_json = manager._build_task_guide_json(
+        session=session,
+        phase=strategy["phases"][1],
+        phase_index=2,
+        default_daily_hours=3,
+        day_number=deep_learn_spec["day"],
+        day_focus=deep_learn_spec["focus"],
+        day_spec=deep_learn_spec,
+    )
+
+    assert strategy["sprint_policy"]["sprint_mode"] == "fourteen_day_build_and_retrieve"
+    assert strategy["sprint_policy"]["retrieval_policy"]["spaced_retrieval"] == "multi_day_successive_relearning"
+    assert strategy["sprint_policy"]["retrieval_policy"]["allow_deep_learn"] is True
+    assert any("deep learn" in note for note in strategy["strategy_notes"])
+    assert deep_learn_spec["task_kind"] == "deep_learn_retrieval"
+    assert any(spec["task_kind"] == "spaced_retrieval" for spec in phase_two_specs)
+    assert all("阅读完成" not in spec["focus"] for spec in phase_two_specs)
+    assert "limited deep learn" in deep_learn_spec["focus"]
+    assert "先复测 6 个旧点" in guide_json["output_action"]
+    assert "旧点至少 4/6 可提取" in guide_json["success_criteria"]
+    assert "旧点没过，不追加第二个新难点" in guide_json["micro_contract"]
+    assert guide_json["time_estimate_minutes"] >= 45
 
 
 @pytest.mark.asyncio
@@ -203,3 +326,27 @@ async def test_planning_runtime_state_isolated_from_other_surfaces() -> None:
     assert reloaded is not None
     assert reloaded.surface == "aurora_planning"
     assert reloaded.user_model_snapshot["knowledge_baseline"] == "完全没学过"
+
+
+def test_mastery_to_difficulty_mastery_buckets() -> None:
+    fn = PlanningWorkflowManager._mastery_to_difficulty
+    # Mastery-based buckets
+    assert fn(10.0, 0) == 5   # < 20  → hardest
+    assert fn(20.0, 0) == 4   # 20-39
+    assert fn(39.9, 0) == 4
+    assert fn(40.0, 0) == 3   # 40-59
+    assert fn(59.9, 0) == 3
+    assert fn(60.0, 0) == 2   # 60-79
+    assert fn(79.9, 0) == 2
+    assert fn(80.0, 0) == 1   # ≥ 80  → easiest
+    assert fn(100.0, 0) == 1
+
+
+def test_mastery_to_difficulty_phase_fallback() -> None:
+    fn = PlanningWorkflowManager._mastery_to_difficulty
+    # No mastery → phase-index formula: min(5, 2 + phase_index)
+    assert fn(None, 0) == 2
+    assert fn(None, 1) == 3
+    assert fn(None, 2) == 4
+    assert fn(None, 3) == 5
+    assert fn(None, 10) == 5   # capped at 5

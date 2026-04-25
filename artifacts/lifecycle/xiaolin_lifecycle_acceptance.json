@@ -1,0 +1,232 @@
+{
+  "status": "PASS",
+  "scenario": "xiaolin_full_lifecycle_exam_sprint",
+  "generated_at": "2026-04-25T01:32:59.487998",
+  "coverage": [
+    "register_login_surrogate",
+    "aurora_multiturn_modeling_with_detour",
+    "modeling_complete_to_planning_bridge",
+    "galaxy_mastery_prefill",
+    "seven_day_exam_sprint_plan_generation",
+    "retrieval_first_task_cards",
+    "task_feedback_to_knowledge_gap",
+    "remedial_task_insertion",
+    "checkpoint_recovery_task",
+    "achievement_signals_to_dashboard",
+    "fourteen_day_policy_generalization"
+  ],
+  "trace": [
+    {
+      "event": "user_registered",
+      "user_id": "0c6b4084-de41-43fc-a5e4-8858a03f493e",
+      "login": "email",
+      "galaxy_nodes": 5
+    },
+    {
+      "event": "aurora_decision_readout",
+      "turn": 1,
+      "surface": "aurora_modeling",
+      "covered_domains": [],
+      "missing_domains": [
+        "goal",
+        "scope",
+        "baseline",
+        "time",
+        "motivation"
+      ],
+      "recently_asked_domains": [],
+      "galaxy_baseline": {
+        "avg_mastery": 22.4,
+        "weak_nodes": [
+          "TCP 三次握手",
+          "拥塞控制",
+          "OSI/TCP-IP 分层",
+          "IP 地址与子网划分"
+        ],
+        "strong_nodes": [],
+        "total_nodes_tracked": 5
+      }
+    },
+    {
+      "event": "aurora_messages",
+      "turn": 1,
+      "messages": [
+        "我先不急着排表，先把考试边界摸清楚。",
+        "这次计网主要考哪些范围？如果只有课件或老师划重点，也直接说。"
+      ]
+    },
+    {
+      "event": "aurora_decision_readout",
+      "turn": 2,
+      "surface": "aurora_modeling",
+      "covered_domains": [],
+      "missing_domains": [
+        "goal",
+        "scope",
+        "baseline",
+        "time",
+        "motivation"
+      ],
+      "recently_asked_domains": [
+        "scope"
+      ],
+      "galaxy_baseline": {
+        "avg_mastery": 22.4,
+        "weak_nodes": [
+          "TCP 三次握手",
+          "拥塞控制",
+          "OSI/TCP-IP 分层",
+          "IP 地址与子网划分"
+        ],
+        "strong_nodes": [],
+        "total_nodes_tracked": 5
+      }
+    },
+    {
+      "event": "aurora_messages",
+      "turn": 2,
+      "messages": [
+        "这个插曲我收到了，不会把你刚才的目标丢掉。",
+        "回到备考本身：你现在最虚的是概念、题型，还是整门课都还没建立框架？"
+      ]
+    },
+    {
+      "event": "aurora_decision_readout",
+      "turn": 3,
+      "surface": "aurora_modeling",
+      "covered_domains": [],
+      "missing_domains": [
+        "goal",
+        "scope",
+        "baseline",
+        "time",
+        "motivation"
+      ],
+      "recently_asked_domains": [
+        "scope"
+      ],
+      "galaxy_baseline": {
+        "avg_mastery": 22.4,
+        "weak_nodes": [
+          "TCP 三次握手",
+          "拥塞控制",
+          "OSI/TCP-IP 分层",
+          "IP 地址与子网划分"
+        ],
+        "strong_nodes": [],
+        "total_nodes_tracked": 5
+      }
+    },
+    {
+      "event": "aurora_messages",
+      "turn": 3,
+      "messages": [
+        "范围和基础我已经有数了。接下来只差一个硬约束：这 7 天每天能拿出几小时？"
+      ]
+    },
+    {
+      "event": "aurora_decision_readout",
+      "turn": 4,
+      "surface": "aurora_modeling",
+      "covered_domains": [
+        "motivation"
+      ],
+      "missing_domains": [
+        "goal",
+        "scope",
+        "baseline",
+        "time"
+      ],
+      "recently_asked_domains": [
+        "scope",
+        "baseline",
+        "time"
+      ],
+      "galaxy_baseline": {
+        "avg_mastery": 22.4,
+        "weak_nodes": [
+          "TCP 三次握手",
+          "拥塞控制",
+          "OSI/TCP-IP 分层",
+          "IP 地址与子网划分"
+        ],
+        "strong_nodes": [],
+        "total_nodes_tracked": 5
+      }
+    },
+    {
+      "event": "aurora_messages",
+      "turn": 4,
+      "messages": [
+        "够了，我已经能给你做一个生存优先的 7 天计网冲刺方案。",
+        "我会优先保传输层、网络层和典型题，不把计划做成泛泛阅读清单。"
+      ]
+    },
+    {
+      "event": "modeling_complete",
+      "messages": 11,
+      "avg_mastery": 22.4,
+      "weak_nodes": [
+        "TCP 三次握手",
+        "拥塞控制",
+        "OSI/TCP-IP 分层",
+        "IP 地址与子网划分"
+      ]
+    },
+    {
+      "event": "planning_generated",
+      "plan_id": "57079fb4-0287-4a86-a45c-bf8e01a7bd11",
+      "plan_name": "7天计算机网络冲刺",
+      "task_count": 7,
+      "first_task": "Day 1 · 诊断分诊 - 诊断分诊",
+      "sprint_mode": "seven_day_survival"
+    },
+    {
+      "event": "execution_adapted",
+      "feedback_id": "205b1a48-a9b4-46f7-9489-db91a76e9963",
+      "knowledge_gap": "Day 1 · 诊断分诊 - 诊断分诊: TCP 三次握手还是搞不懂，题目一换就没思路",
+      "remedial_title": "[补强] Day 1 · 诊断分诊 - 诊断分诊: TCP 三次握手还是搞不懂，题目一换就没思路",
+      "checkpoint_remedial": "[复盘补强] Day 3 检查点回顾"
+    },
+    {
+      "event": "achievement_reinforcement_visible",
+      "achievement_signals": {
+        "active_streaks": [],
+        "recent_unlocks": [
+          {
+            "name": "第一次闭卷输出",
+            "rarity": "common"
+          }
+        ],
+        "in_progress_count": 1,
+        "momentum": 0.7
+      }
+    },
+    {
+      "event": "fourteen_day_generalization",
+      "sprint_mode": "fourteen_day_build_and_retrieve",
+      "triage_level": "balanced",
+      "retrieval_policy": {
+        "daily_retrieval_required": true,
+        "default_task_shape": "learn_recall_space_relearn",
+        "spaced_retrieval": "multi_day_successive_relearning",
+        "allow_deep_learn": true,
+        "deep_learn_budget": "limited_high_weight_topics_only",
+        "review_rounds": 2,
+        "mock_checkpoints": 2,
+        "output_gate": "every_day_requires_visible_output",
+        "success_gate": "every_day_requires_checkable_success_criterion",
+        "density_mode": "moderate_with_spacing",
+        "max_primary_targets_per_day": 2,
+        "deep_learn_quota_per_cycle": 1,
+        "minimum_output": "闭卷复述、间隔复测或阶段模拟",
+        "fail_safe": {
+          "unclear": "先回到上一轮旧点复测，再只深挖 1 个高权重难点。",
+          "behind": "砍掉并行任务，改成 1 个主线输出 + 1 个补测动作。",
+          "no_time": "当天改成压缩版复测，不牺牲检索闭环。",
+          "consecutive_failures": "暂停 deep learn，回到 spaced retrieval + scaffold repair。"
+        }
+      }
+    }
+  ]
+}

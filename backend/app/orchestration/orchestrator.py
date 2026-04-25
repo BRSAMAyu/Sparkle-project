@@ -38,6 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.standard_workflow import create_standard_chat_graph
 from app.aurora.runtime_v1 import AURORA_RUNTIME_MODE_SURFACES, AuroraRuntimeV1Service
+from app.aurora.runtime_v1.control_surface import AuroraHardBounds
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.config import settings
 from app.core.business_metrics import (  # noqa: F401
@@ -111,6 +112,7 @@ from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
 from app.orchestration.agent_activity import emit_agent_activity, emit_routing_preview
 from app.orchestration.orchestration_trace import OrchestrationTrace
 from app.orchestration.persona_aware_planner import PersonaAwarePlanner  # noqa: F401
+from app.orchestration.planning_workflow import PlanningWorkflowManager
 from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service  # noqa: F401
 from app.orchestration.run_ledger import RunLedgerRecorder
@@ -350,6 +352,7 @@ class ChatOrchestrator(
 
         # Phase 1: Initialize new components
         self.grounding_validator = GroundingValidator(redis_client)
+        self.planning_workflow_manager = PlanningWorkflowManager(redis_client=redis_client)
 
         # Unified Intent Router (Fix #1): 统一功能入口路由
         self.unified_router = UnifiedIntentRouter(
@@ -405,13 +408,189 @@ class ChatOrchestrator(
         self.multi_agent_adapter = MultiAgentWorkflowAdapter(self)
         self.aurora_runtime_v1 = AuroraRuntimeV1Service(redis_client)
 
+    async def _attach_aurora_planning_sidecar(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        request_id: str,
+        user_message: str,
+        request_extra_context: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+        state: WorkflowState,
+    ) -> str:
+        """Attach Aurora planning detour guidance driven by the Aurora decision loop."""
+        if not user_message or not isinstance(user_context_payload, dict):
+            return ""
+
+        manager = self.planning_workflow_manager
+        try:
+            session = await manager.get_active_session(session_id)
+            if session is None:
+                return ""
+
+            extracted_fields = manager._extract_clarifying_fields(user_message)
+            if manager.is_message_relevant_to_planning(
+                session,
+                user_message,
+                extracted_fields=extracted_fields,
+            ):
+                return ""
+
+            try:
+                parsed_user_id = uuid.UUID(str(user_id))
+            except (TypeError, ValueError):
+                logger.debug("Skipping Aurora planning sidecar for non-UUID user_id: {}", user_id)
+                return ""
+
+            profile_context = {}
+            raw_profile_context = user_context_payload.get("profile_context")
+            if isinstance(raw_profile_context, dict):
+                profile_context = raw_profile_context
+            planning_context = dict(request_extra_context or {})
+            planning_context["profile_context"] = profile_context
+
+            planning_response = await manager.process_planning_turn(
+                db=active_db,  # type: ignore[arg-type]
+                user_id=parsed_user_id,
+                chat_session_id=session_id,
+                message=user_message,
+                context=planning_context,
+            )
+            if not (planning_response and planning_response.get("bypass_planning")):
+                return ""
+
+            planning_runtime_state = await manager.runtime_adapter.load_state(
+                user_id=str(parsed_user_id),
+                conversation_id=session_id,
+                db=active_db,
+            )
+            if planning_runtime_state is None:
+                return ""
+
+            detour_scaffold = manager.runtime_adapter.build_detour_scaffold(planning_runtime_state)
+            open_tensions = list(detour_scaffold.get("open_tensions") or [])
+            latent_threads = list(detour_scaffold.get("latent_threads") or [])
+            if not open_tensions and not latent_threads:
+                return ""
+
+            sidecar_request_context = dict(request_extra_context or {})
+            sidecar_request_context.update(
+                {
+                    "surface_complete": False,
+                    "modeling_complete": False,
+                    "planning_detour_scaffold": detour_scaffold,
+                    "informational_tensions": open_tensions,
+                    "latent_threads": latent_threads,
+                }
+            )
+
+            control_surface_reading = await self.aurora_runtime_v1._read_control_surface(
+                active_db=active_db,
+                user_id=user_id,
+            )
+            merged_hard_bounds = self._merge_aurora_planning_hard_bounds(
+                control_surface_reading.hard_bounds.model_dump(mode="json"),
+                detour_scaffold.get("hard_bounds"),
+            )
+            control_surface_reading = control_surface_reading.model_copy(update={"hard_bounds": merged_hard_bounds})
+
+            activity_profile = self.aurora_runtime_v1._build_activity_profile(
+                surface=planning_runtime_state.surface,
+                request_extra_context=sidecar_request_context,
+            )
+            activity_profile.update(planning_runtime_state.activity_profile.to_dict())
+            activity_profile.update(self.aurora_runtime_v1._activity_payload(control_surface_reading.adjustable))
+
+            readout = self.aurora_runtime_v1.dashboard_builder.build(
+                surface=planning_runtime_state.surface,
+                user_id=user_id,
+                conversation_id=session_id,
+                request_id=request_id,
+                user_message=user_message,
+                request_extra_context=sidecar_request_context,
+                conversation_context=dict(conversation_context or {}),
+                user_context_payload=user_context_payload,
+                control_surface_reading=control_surface_reading,
+                activity_profile=activity_profile,
+                candidate_affordances=self.aurora_runtime_v1.skill_registry.load_candidate_affordances(
+                    planning_runtime_state.surface
+                ),
+            )
+            decision = await self.aurora_runtime_v1.decision_loop.decide(readout)
+
+            planning_runtime_state = await manager.runtime_adapter.apply_detour_decision(
+                state=planning_runtime_state,
+                db=active_db,
+                action=decision.action,
+                chat_directive=decision.chat_directive,
+                harness_updates=decision.harness_updates,
+            )
+            final_scaffold = manager.runtime_adapter.build_detour_scaffold(planning_runtime_state)
+            sidecar_meta = {
+                "surface": planning_runtime_state.surface,
+                "planning_session_id": planning_runtime_state.planning_session_id or session.planning_session_id,
+                "bypass_planning": True,
+                "decision": decision.to_payload(),
+                "scaffold": final_scaffold,
+                "source": "aurora_decision_loop",
+            }
+            user_context_payload["aurora_planning_sidecar"] = sidecar_meta
+            state.context_data["aurora_planning_sidecar"] = dict(sidecar_meta)
+            return str(decision.action or "")
+        except Exception as exc:
+            logger.debug("Aurora planning sidecar attach skipped: {}", exc)
+            return ""
+
+    @staticmethod
+    def _merge_aurora_planning_hard_bounds(
+        control_surface_bounds: dict[str, Any] | None,
+        scaffold_bounds: dict[str, Any] | None,
+    ) -> AuroraHardBounds:
+        merged = dict(control_surface_bounds or {})
+        overlay = dict(scaffold_bounds or {})
+
+        for field in ("privacy_boundaries", "disabled_actions"):
+            values: list[str] = []
+            seen: set[str] = set()
+            for candidate in list(merged.get(field) or []) + list(overlay.get(field) or []):
+                token = str(candidate or "").strip().lower()
+                if not token or token in seen:
+                    continue
+                seen.add(token)
+                values.append(token)
+            if values:
+                merged[field] = values
+
+        dnd_windows: list[dict[str, str]] = []
+        seen_windows: set[tuple[str, str]] = set()
+        for candidate in list(merged.get("dnd_windows") or []) + list(overlay.get("dnd_windows") or []):
+            if not isinstance(candidate, dict):
+                continue
+            start = str(candidate.get("start") or "").strip()
+            end = str(candidate.get("end") or "").strip()
+            if not start or not end or (start, end) in seen_windows:
+                continue
+            seen_windows.add((start, end))
+            dnd_windows.append({"start": start, "end": end})
+        if dnd_windows:
+            merged["dnd_windows"] = dnd_windows
+
+        timezone_name = str(overlay.get("timezone_name") or "").strip()
+        if timezone_name:
+            merged["timezone_name"] = timezone_name
+
+        return AuroraHardBounds.model_validate(merged)
+
     @staticmethod
     def _resolve_aurora_runtime_surface(request_extra_context: dict[str, Any]) -> str | None:
         if not getattr(settings, "ENABLE_AURORA_RUNTIME_V1", False):
             return None
         explicit_surface = str(request_extra_context.get("aurora_surface") or "").strip()
         if explicit_surface:
-            return explicit_surface
+            return AURORA_RUNTIME_MODE_SURFACES.get(explicit_surface, explicit_surface)
         mode = str(request_extra_context.get("mode") or "").strip()
         return AURORA_RUNTIME_MODE_SURFACES.get(mode)
 
@@ -421,13 +600,22 @@ class ChatOrchestrator(
         surface: str,
         surface_complete: bool,
         modeling_complete: bool,
+        modeling_snapshot: dict[str, Any] | None = None,
     ) -> dict[str, str]:
-        return {
+        meta: dict[str, str] = {
             "aurora_surface": surface,
             "aurora_runtime_enabled": "true",
             "surface_complete": str(surface_complete).lower(),
             "modeling_complete": str(modeling_complete).lower(),
         }
+        if modeling_complete and modeling_snapshot:
+            try:
+                meta["modeling_output_json"] = json.dumps(
+                    modeling_snapshot, ensure_ascii=False, default=str
+                )
+            except Exception:
+                pass
+        return meta
 
     async def _stream_aurora_runtime_v1(
         self,
@@ -461,17 +649,54 @@ class ChatOrchestrator(
             user_context_payload=user_context_payload,
         )
 
+        modeling_snapshot: dict[str, Any] | None = None
+        if plan.modeling_complete:
+            profile_context = (
+                user_context_payload.get("profile_context")
+                if isinstance(user_context_payload, dict)
+                else None
+            )
+            modeling_snapshot = {
+                "activity_profile": plan.activity_profile,
+                "user_model_snapshot": profile_context or {},
+                "cold_start_context": (
+                    (profile_context or {}).get("preferences", {}).get("cold_start_context")
+                ),
+                "galaxy_baseline": request_extra_context.get("galaxy_baseline"),
+            }
+
         combined_messages: list[str] = []
         total_messages = len(plan.messages)
+        if total_messages == 0:
+            terminal_metadata = self._build_aurora_runtime_metadata(
+                surface=plan.surface,
+                surface_complete=plan.surface_complete,
+                modeling_complete=plan.modeling_complete,
+                modeling_snapshot=modeling_snapshot,
+            )
+            yield agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                session_id=session_id,
+                full_text="",
+                finish_reason=agent_service_pb2.STOP,
+                metadata=terminal_metadata,
+            )
         for index, message in enumerate(plan.messages):
             combined_messages.append(message)
             finish_reason = (
                 agent_service_pb2.CONTINUE if index < total_messages - 1 else agent_service_pb2.STOP
             )
+            is_terminal = index == total_messages - 1
             metadata = self._build_aurora_runtime_metadata(
                 surface=plan.surface,
-                surface_complete=plan.surface_complete if index == total_messages - 1 else False,
-                modeling_complete=plan.modeling_complete if index == total_messages - 1 else False,
+                surface_complete=plan.surface_complete if is_terminal else False,
+                modeling_complete=plan.modeling_complete if is_terminal else False,
+                modeling_snapshot=modeling_snapshot if is_terminal else None,
             )
             yield agent_service_pb2.ChatResponse(
                 response_id=response_id,
@@ -494,19 +719,19 @@ class ChatOrchestrator(
                 session_id=session_id,
                 full_response=combined_text,
             )
-            await self._cache_response(
-                session_id,
-                request_id,
-                {
-                    "message": combined_text,
-                    "tool_results": [],
-                    "metadata": self._build_aurora_runtime_metadata(
-                        surface=plan.surface,
-                        surface_complete=plan.surface_complete,
-                        modeling_complete=plan.modeling_complete,
-                    ),
-                },
-            )
+        await self._cache_response(
+            session_id,
+            request_id,
+            {
+                "message": combined_text,
+                "tool_results": [],
+                "metadata": self._build_aurora_runtime_metadata(
+                    surface=plan.surface,
+                    surface_complete=plan.surface_complete,
+                    modeling_complete=plan.modeling_complete,
+                ),
+            },
+        )
 
     async def _emit_early_ack_progress(
         self,
@@ -1261,6 +1486,18 @@ class ChatOrchestrator(
                     state.context_data["session_adaptation"] = session_adaptation_context.to_dict()
                 if conversation_rhythm is not None:
                     state.context_data["conversation_rhythm"] = conversation_rhythm
+
+                await self._attach_aurora_planning_sidecar(
+                    active_db=active_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    request_id=request_id,
+                    user_message=user_message,
+                    request_extra_context=request_extra_context,
+                    conversation_context=conversation_context,
+                    user_context_payload=user_context_payload,
+                    state=state,
+                )
 
                 # Bound stream buffering while preserving critical terminal/content events.
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):

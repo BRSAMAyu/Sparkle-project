@@ -42,7 +42,7 @@ void main() {
           'type': 'done',
           'finish_reason': 'CONTINUE',
           'metadata': {
-            'aurora_surface': 'modeling',
+            'aurora_surface': 'aurora_modeling',
             'aurora_runtime_enabled': true,
           },
         }),
@@ -51,7 +51,7 @@ void main() {
       expect(event, isA<ContinueEvent>());
       final continueEvent = event as ContinueEvent;
       expect(continueEvent.finishReason, 'CONTINUE');
-      expect(continueEvent.metadata?['aurora_surface'], 'modeling');
+      expect(continueEvent.metadata?['aurora_surface'], 'aurora_modeling');
     });
 
     test('treats finish_reason frames as DoneEvent', () {

@@ -143,7 +143,6 @@ class AuroraRuntimeV1Service:
         modeling_complete = bool(decision.modeling_complete)
         if surface == AURORA_SURFACE_MODELING and modeling_complete:
             surface_complete = True
-            activity_profile["planning_ready"] = True
 
         informational_tensions = self._extract_informational_tensions(decision)
 

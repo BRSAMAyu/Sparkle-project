@@ -43,27 +43,73 @@ class TaskGuidanceModel {
   });
 
   factory TaskGuidanceModel.fromJson(Map<String, dynamic> json) {
+    dynamic valueForKeys(List<String> keys) {
+      for (final key in keys) {
+        if (json.containsKey(key)) {
+          return json[key];
+        }
+      }
+      return null;
+    }
+
+    String readString(List<String> keys, {String fallback = ''}) {
+      final value = valueForKeys(keys);
+      return value?.toString() ?? fallback;
+    }
+
+    DateTime readDateTime(List<String> keys) {
+      final value = valueForKeys(keys);
+      if (value is DateTime) {
+        return value;
+      }
+      final parsed = DateTime.tryParse(value?.toString() ?? '');
+      if (parsed == null) {
+        throw FormatException(
+          'Invalid task guidance datetime for ${keys.first}: $value',
+        );
+      }
+      return parsed;
+    }
+
+    DateTime? readNullableDateTime(List<String> keys) {
+      final value = valueForKeys(keys);
+      if (value == null) {
+        return null;
+      }
+      if (value is DateTime) {
+        return value;
+      }
+      return DateTime.tryParse(value.toString());
+    }
+
     final audienceValue =
-        (json['audience'] as String? ?? 'human').toLowerCase();
+        readString(['audience'], fallback: 'human').toLowerCase();
     final audience = audienceValue == 'ai'
         ? TaskGuidanceAudience.ai
         : TaskGuidanceAudience.human;
     return TaskGuidanceModel(
-      id: json['id'] as String,
-      taskId: json['task_id'] as String,
-      userId: json['user_id'] as String,
+      id: readString(['id']),
+      taskId: readString(['task_id', 'taskId']),
+      userId: readString(['user_id', 'userId']),
       audience: audience,
-      content: json['content'] as String? ?? '',
-      generatedBy: json['generated_by'] as String? ?? 'unknown',
-      policyVersion:
-          json['policy_version'] as String? ?? 'stage4.task_guidance.v1',
-      contentFormat: json['content_format'] as String? ?? 'markdown',
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      sourceGuidanceId: json['source_guidance_id'] as String?,
-      sourceTaskUpdatedAt: json['source_task_updated_at'] != null
-          ? DateTime.tryParse(json['source_task_updated_at'] as String)
-          : null,
+      content: readString(['content']),
+      generatedBy:
+          readString(['generated_by', 'generatedBy'], fallback: 'unknown'),
+      policyVersion: readString(
+        ['policy_version', 'policyVersion'],
+        fallback: 'stage4.task_guidance.v1',
+      ),
+      contentFormat: readString(
+        ['content_format', 'contentFormat'],
+        fallback: 'markdown',
+      ),
+      createdAt: readDateTime(['created_at', 'createdAt']),
+      updatedAt: readDateTime(['updated_at', 'updatedAt']),
+      sourceGuidanceId:
+          valueForKeys(['source_guidance_id', 'sourceGuidanceId'])?.toString(),
+      sourceTaskUpdatedAt: readNullableDateTime(
+        ['source_task_updated_at', 'sourceTaskUpdatedAt'],
+      ),
     );
   }
 
@@ -616,7 +662,7 @@ class TaskRepository {
       // Handle both wrapped and direct formats
       final taskData =
           ApiResponseParser.unwrapMap(payload, action: 'createTaskWithNudges');
-      final nudgesData = payload['nudges'] as List<dynamic>?;
+      final nudgesData = _extractNudges(payload, taskData);
       final taskModel = TaskModel.fromJson(taskData);
       final nudges = nudgesData
               ?.map((json) => TaskNudge.fromJson(json as Map<String, dynamic>))
@@ -626,6 +672,27 @@ class TaskRepository {
     } on DioException catch (e) {
       return _handleDioError(e, 'createTaskWithNudges');
     }
+  }
+
+  List<dynamic>? _extractNudges(
+    Map<String, dynamic> responsePayload,
+    Map<String, dynamic> taskPayload,
+  ) {
+    final candidates = <dynamic>[
+      responsePayload['nudges'],
+      responsePayload['nudge'],
+      taskPayload['nudges'],
+      taskPayload['nudge'],
+    ];
+    for (final candidate in candidates) {
+      if (candidate is List<dynamic>) {
+        return candidate;
+      }
+      if (candidate is Map<String, dynamic>) {
+        return <dynamic>[candidate];
+      }
+    }
+    return null;
   }
 
   Future<TaskModel> updateTask(String id, TaskUpdate task) async {

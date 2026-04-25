@@ -4,12 +4,18 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 class TestApiClient implements ApiClient {
   Future<Response<dynamic>> Function(
     String path,
     Map<String, dynamic>? queryParameters,
   )? getHandler;
+  Future<Response<dynamic>> Function(
+    String path,
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  )? postHandler;
 
   @override
   Dio get dio => throw UnimplementedError();
@@ -41,8 +47,22 @@ class TestApiClient implements ApiClient {
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
-  }) {
-    throw UnimplementedError();
+  }) async {
+    final handler = postHandler;
+    if (handler == null) {
+      throw UnimplementedError('No post handler configured');
+    }
+    final response = await handler(path, data, queryParameters);
+    return Response<T>(
+      data: response.data as T,
+      requestOptions: response.requestOptions,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      isRedirect: response.isRedirect,
+      redirects: response.redirects,
+      extra: response.extra,
+      headers: response.headers,
+    );
   }
 
   @override
@@ -158,5 +178,100 @@ void main() {
     final result = await repository.getTask('task-2');
 
     expect(result.id, 'task-2');
+  });
+
+  test('createTaskWithNudges parses nudges from wrapped task payloads',
+      () async {
+    final task = TaskCreate(
+      title: 'Sprint prep',
+      type: TaskType.learning,
+      estimatedMinutes: 30,
+      difficulty: 2,
+    );
+
+    apiClient.postHandler = (path, data, queryParameters) async {
+      expect(path, ApiEndpoints.tasks);
+      return Response(
+        requestOptions: RequestOptions(path: ApiEndpoints.tasks),
+        data: {
+          'data': {
+            'id': 'task-3',
+            'user_id': 'user-1',
+            'title': 'Sprint prep',
+            'type': 'LEARNING',
+            'tags': ['exam'],
+            'estimated_minutes': 30,
+            'difficulty': 2,
+            'energy_cost': 1,
+            'status': 'PENDING',
+            'priority': 1,
+            'created_at': '2024-01-01T00:00:00.000Z',
+            'updated_at': '2024-01-01T00:00:00.000Z',
+            'nudges': [
+              {
+                'type': 'time_adjustment',
+                'title': '预估偏紧',
+                'description': '建议放宽一点时间预算',
+                'suggestedValue': 45,
+                'patternId': 'optimism-bias',
+                'confidence': 0.82,
+              },
+            ],
+          },
+        },
+      );
+    };
+
+    final result = await repository.createTaskWithNudges(task);
+    final createdTask = result.task as TaskModel;
+
+    expect(createdTask.id, 'task-3');
+    expect(result.nudges, hasLength(1));
+    expect(result.nudges.single.message, '建议放宽一点时间预算');
+    expect(result.nudges.single.suggestedValue, 45);
+    expect(result.nudges.single.patternId, 'optimism-bias');
+  });
+
+  test('getTaskGuidance accepts camelCase guidance contracts', () async {
+    apiClient.getHandler = (path, queryParameters) async {
+      expect(path, '${ApiEndpoints.task('task-1')}/guidance');
+      return Response(
+        requestOptions: RequestOptions(path: path),
+        data: {
+          'data': {
+            'id': 'guidance-1',
+            'taskId': 'task-1',
+            'userId': 'user-1',
+            'audience': 'ai',
+            'content': 'TASK_GUIDANCE_SCAFFOLD v2',
+            'generatedBy': 'task_guidance_ai_scaffold',
+            'policyVersion': 'stage4.task_guidance.v2',
+            'contentFormat': 'plaintext',
+            'createdAt': '2024-01-01T00:00:00.000Z',
+            'updatedAt': '2024-01-01T00:05:00.000Z',
+            'sourceGuidanceId': 'guidance-0',
+            'sourceTaskUpdatedAt': '2024-01-01T00:03:00.000Z',
+          },
+        },
+      );
+    };
+
+    final result = await repository.getTaskGuidance(
+      'task-1',
+      audience: TaskGuidanceAudience.ai,
+    );
+
+    expect(result, isNotNull);
+    expect(result!.taskId, 'task-1');
+    expect(result.userId, 'user-1');
+    expect(result.audience, TaskGuidanceAudience.ai);
+    expect(result.generatedBy, 'task_guidance_ai_scaffold');
+    expect(result.policyVersion, 'stage4.task_guidance.v2');
+    expect(result.contentFormat, 'plaintext');
+    expect(result.sourceGuidanceId, 'guidance-0');
+    expect(
+      result.sourceTaskUpdatedAt,
+      DateTime.parse('2024-01-01T00:03:00.000Z'),
+    );
   });
 }

@@ -128,8 +128,13 @@ async def test_checkpoint_debrief_inserts_remedial_when_behind(db_session, test_
     tasks = list(rows.scalars().all())
     remedials = [task for task in tasks if task.title.startswith("[复盘补强]")]
     assert len(remedials) == 1
-    assert remedials[0].estimated_minutes == 45
+    assert remedials[0].estimated_minutes == 25
     assert remedials[0].order_index == 1000
+    assert "reduced_density" in (remedials[0].tags or [])
+    assert "time_boxed" in (remedials[0].tags or [])
+    assert remedials[0].guide_json["sprint_fail_safe"] is True
+    assert remedials[0].guide_json["density_adjustment"] == "minimum_viable"
+    assert remedials[0].guide_json["scaffolding_mode"] == "checkpoint_time_boxed_recovery"
 
 
 @pytest.mark.asyncio
@@ -149,7 +154,9 @@ async def test_checkpoint_debrief_does_not_adjust_when_progress_good(db_session,
         context={"debrief_context": {"nudge_id": f"cp:{plan_id}:2", "plan_id": str(plan_id), "checkpoint_day": 2}},
     )
     await service.process_turn(user_id=user_id, chat_session_id=session_id, user_message="进展不错", context={})
-    final = await service.process_turn(user_id=user_id, chat_session_id=session_id, user_message="框架部分最踏实", context={})
+    final = await service.process_turn(
+        user_id=user_id, chat_session_id=session_id, user_message="框架部分最踏实", context={}
+    )
 
     assert final["goal_met"] is True
     rows = await db_session.execute(select(Task).where(Task.user_id == user_id, Task.plan_id == plan_id))

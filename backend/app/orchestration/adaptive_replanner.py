@@ -1123,6 +1123,7 @@ class AdaptiveReplanner:
                 "last_replan_reason": report.reasons,
                 "recent_adaptations": [record.to_dict()],
                 "recent_revision_summaries": [revision_summary.to_dict()],
+                "struggle_streak_since_last_replan": 0,
             }
         }
 
