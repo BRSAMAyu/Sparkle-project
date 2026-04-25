@@ -26,7 +26,6 @@ from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwi
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.route_history_service import RouteHistoryService
 
-
 # Preserve the Stage 34 patch target while Stage 38 owns the live kill-switch path.
 AuroraStage34KillSwitchService = AuroraStage38KillSwitchService
 
@@ -54,17 +53,23 @@ class ErrorReplanBridge:
     """Separates ErrorCreated -> immediate plan-health evaluation from mastery sync."""
 
     LOW_MASTERY_THRESHOLD = 50.0
+    REPLAN_MASTERY_THRESHOLD = 40.0
     ERROR_PRESSURE_LOOKBACK_DAYS = 7
     ERROR_PRESSURE_TRIGGER_COUNT = 3
+    HIGH_SEVERITY_TRIGGER_COUNT = 2
     COOLDOWN_HOURS = 24
     TRIGGERING_ERROR_TYPES = {
         "concept_confusion",
-        "knowledge_gap",
-        "procedural_error",
-        "careless_mistake",
-        "time_management",
-        "strategy_mismatch",
+        "repeated_mistake",
+        "baseline_gap",
+        "comprehension_failure",
+        "time_pressure_miss",
+        "knowledge_transfer_fail",
+        "prerequisite_missing",
+        "careless_error",
     }
+    REPLAN_ELIGIBLE_ERROR_TYPES = TRIGGERING_ERROR_TYPES - {"careless_error"}
+    HIGH_SEVERITY_VALUES = {"high", "critical", "severe", "urgent", "error", "3", "4", "5"}
 
     def __init__(self, db, redis=None) -> None:
         self.db = db
@@ -97,9 +102,49 @@ class ErrorReplanBridge:
                     reason=f"unsupported_error_type:{self._extract_error_type(error)}",
                 )
 
+            try:
+                recent_error_count = await self._count_recent_triggering_errors(
+                    user_id=user_id,
+                    node_ids=normalized_node_ids,
+                    days=self.ERROR_PRESSURE_LOOKBACK_DAYS,
+                )
+                error_concept = await self._resolve_error_concept(error, normalized_node_ids)
+                mastery_update = await self._update_mastery_from_error(
+                    user_id=user_id,
+                    knowledge_node_id=normalized_node_ids[0],
+                    knowledge_node_name=error_concept,
+                    error_type=error_type,
+                    error_count=recent_error_count,
+                )
+                await self._record_error_mastery_echo(
+                    error=error,
+                    mastery_update=mastery_update,
+                    fallback_node_id=normalized_node_ids[0],
+                )
+                node_mastery_scores = await self._get_node_mastery_scores(
+                    user_id=user_id,
+                    node_ids=normalized_node_ids,
+                )
+                is_new_user = await self._is_new_user(user_id)
+            except Exception as exc:
+                raise BridgeEvaluationError("stage34_bridge_evaluation_failed") from exc
+
+            if error_type == "careless_error":
+                return self._blocked(
+                    mode=mode,
+                    gate="careless_error_no_replan",
+                    mastery_update=mastery_update,
+                    recent_error_count=recent_error_count,
+                )
+
             plan_ids = await self._find_relevant_active_plan_ids(user_id=user_id, node_ids=normalized_node_ids)
             if not plan_ids:
-                return self._blocked(mode=mode, gate="no_relevant_active_plan")
+                return self._blocked(
+                    mode=mode,
+                    gate="no_relevant_active_plan",
+                    mastery_update=mastery_update,
+                    recent_error_count=recent_error_count,
+                )
 
             eligible_plan_ids = await self._filter_plan_ids_by_cooldown(
                 user_id=user_id,
@@ -107,30 +152,31 @@ class ErrorReplanBridge:
                 error_type=error_type,
             )
             if not eligible_plan_ids:
-                return self._blocked(mode=mode, gate="trigger_cooldown_active")
-
-            low_mastery_nodes = await self._find_low_mastery_nodes(user_id=user_id, node_ids=normalized_node_ids)
-            if not low_mastery_nodes:
-                return self._blocked(mode=mode, gate="mastery_not_low")
-
-            try:
-                is_new_user = await self._is_new_user(user_id)
-                recent_error_count = await self._count_recent_triggering_errors(
-                    user_id=user_id,
-                    node_ids=low_mastery_nodes,
-                    days=self.ERROR_PRESSURE_LOOKBACK_DAYS,
+                return self._blocked(
+                    mode=mode,
+                    gate="trigger_cooldown_active",
+                    mastery_update=mastery_update,
+                    recent_error_count=recent_error_count,
                 )
-            except Exception as exc:
-                raise BridgeEvaluationError("stage34_bridge_evaluation_failed") from exc
 
+            low_mastery_nodes = [
+                node_id
+                for node_id in normalized_node_ids
+                if node_mastery_scores.get(node_id, 100.0) < self.REPLAN_MASTERY_THRESHOLD
+            ]
+            high_severity_decision = ErrorPressureDecision(
+                triggered=self._is_high_severity(error) and recent_error_count >= self.HIGH_SEVERITY_TRIGGER_COUNT,
+                threshold=self.HIGH_SEVERITY_TRIGGER_COUNT,
+                recent_error_count=recent_error_count,
+            )
             legacy_decision = ErrorPressureDecision(
-                triggered=recent_error_count >= self.ERROR_PRESSURE_TRIGGER_COUNT,
+                triggered=bool(low_mastery_nodes) and recent_error_count >= self.ERROR_PRESSURE_TRIGGER_COUNT,
                 threshold=self.ERROR_PRESSURE_TRIGGER_COUNT,
                 recent_error_count=recent_error_count,
             )
             stage34_threshold = 1 if is_new_user else self.ERROR_PRESSURE_TRIGGER_COUNT
             stage34_decision = ErrorPressureDecision(
-                triggered=recent_error_count >= stage34_threshold,
+                triggered=bool(low_mastery_nodes) and recent_error_count >= stage34_threshold,
                 threshold=stage34_threshold,
                 recent_error_count=recent_error_count,
             )
@@ -151,14 +197,34 @@ class ErrorReplanBridge:
             else:
                 effective_decision = legacy_decision
 
+            mastery_floor_decision = (
+                mastery_update is not None
+                and float(mastery_update["new_mastery"]) < self.REPLAN_MASTERY_THRESHOLD
+                and recent_error_count >= self.ERROR_PRESSURE_TRIGGER_COUNT
+            )
+            if high_severity_decision.triggered:
+                effective_decision = high_severity_decision
+            if mastery_floor_decision and not effective_decision.triggered:
+                effective_decision = ErrorPressureDecision(
+                    triggered=True,
+                    threshold=self.ERROR_PRESSURE_TRIGGER_COUNT,
+                    recent_error_count=recent_error_count,
+                )
+
             if not effective_decision.triggered:
+                gate = (
+                    "mastery_not_low"
+                    if not low_mastery_nodes and not high_severity_decision.triggered
+                    else "insufficient_error_pressure"
+                )
                 return self._blocked(
                     mode=mode,
-                    gate="insufficient_error_pressure",
+                    gate=gate,
                     plan_ids=[],
                     recent_error_count=recent_error_count,
                     threshold_applied=effective_decision.threshold,
                     is_new_user=is_new_user,
+                    mastery_update=mastery_update,
                 )
 
             replanner = AdaptiveReplanner(self.db, self.redis)
@@ -177,7 +243,7 @@ class ErrorReplanBridge:
 
             intervention_id = await self._create_error_intervention_record(
                 user_id=user_id,
-                low_mastery_nodes=low_mastery_nodes,
+                low_mastery_nodes=low_mastery_nodes or normalized_node_ids,
                 recent_error_count=recent_error_count,
                 plan_ids=triggered_plan_ids,
                 error_type=error_type,
@@ -185,7 +251,7 @@ class ErrorReplanBridge:
 
             await self._notify_plan_adjusted(
                 user_id=user_id,
-                low_mastery_nodes=low_mastery_nodes,
+                low_mastery_nodes=low_mastery_nodes or normalized_node_ids,
                 recent_error_count=recent_error_count,
                 intervention_id=intervention_id,
             )
@@ -207,6 +273,7 @@ class ErrorReplanBridge:
                 "recent_error_count": recent_error_count,
                 "threshold_applied": effective_decision.threshold,
                 "is_new_user": is_new_user,
+                "mastery_update": mastery_update,
                 "mode": mode,
             }
         except BridgeEvaluationError as exc:
@@ -259,6 +326,27 @@ class ErrorReplanBridge:
         except Exception as exc:
             logger.warning("ErrorReplanBridge: failed to create intervention record: {}", exc)
             return None
+
+    async def _record_error_mastery_echo(
+        self,
+        *,
+        error: ErrorRecord,
+        mastery_update: dict | None,
+        fallback_node_id: UUID,
+    ) -> None:
+        """Persist the user-facing link between an error and its primary galaxy node."""
+        node_id = fallback_node_id
+        if mastery_update and mastery_update.get("node_id"):
+            try:
+                node_id = UUID(str(mastery_update["node_id"]))
+            except (TypeError, ValueError):
+                node_id = fallback_node_id
+
+        error.affected_node_id = node_id
+        if mastery_update and mastery_update.get("delta") is not None:
+            error.mastery_delta = float(mastery_update["delta"])
+
+        await self.db.flush()
 
     async def _notify_plan_adjusted(
         self,
@@ -403,6 +491,59 @@ class ErrorReplanBridge:
             return ""
         return str(node.name or "").strip()
 
+    async def _resolve_error_concept(self, error: ErrorRecord, node_ids: list[UUID]) -> str:
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        for key in (
+            "knowledge_node_name",
+            "knowledge_node",
+            "error_concept",
+            "concept_name",
+            "concept",
+            "weak_concept",
+        ):
+            value = str(analysis.get(key) or "").strip()
+            if value:
+                return value
+
+        suggested_concepts = list(error.suggested_concepts or [])
+        for concept in suggested_concepts:
+            value = str(concept or "").strip()
+            if value:
+                return value
+
+        return await self._resolve_node_name(node_ids)
+
+    async def _update_mastery_from_error(
+        self,
+        *,
+        user_id: UUID,
+        knowledge_node_id: UUID | None,
+        knowledge_node_name: str | None,
+        error_type: str,
+        error_count: int,
+    ) -> dict | None:
+        from app.services.galaxy_service import GalaxyService
+
+        return await GalaxyService(self.db).update_mastery_from_error(
+            self.db,
+            user_id=str(user_id),
+            knowledge_node_id=str(knowledge_node_id) if knowledge_node_id else None,
+            knowledge_node_name=knowledge_node_name,
+            error_type=error_type,
+            error_count=error_count,
+        )
+
+    async def _get_node_mastery_scores(self, *, user_id: UUID, node_ids: list[UUID]) -> dict[UUID, float]:
+        if not node_ids:
+            return {}
+
+        result = await self.db.execute(
+            select(UserNodeStatus.node_id, UserNodeStatus.mastery_score)
+            .where(UserNodeStatus.user_id == user_id)
+            .where(UserNodeStatus.node_id.in_(node_ids))
+        )
+        return {node_id: float(mastery_score or 0.0) for node_id, mastery_score in result.all()}
+
     @staticmethod
     def _extract_error_type(error: ErrorRecord) -> str:
         analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
@@ -414,24 +555,43 @@ class ErrorReplanBridge:
 
     def _classify_trigger_type_from_analysis(self, analysis: dict[str, object]) -> str | None:
         raw_error_type = str(analysis.get("error_type") or "other").strip().lower()
-        if raw_error_type in {"concept_confusion", "knowledge_gap"}:
+        if raw_error_type in self.TRIGGERING_ERROR_TYPES:
             return raw_error_type
-        if raw_error_type in {"procedural_error", "method_wrong"}:
-            return "procedural_error"
+        if raw_error_type in {"knowledge_gap", "foundation_gap", "basic_gap"}:
+            return "baseline_gap"
+        if raw_error_type in {"procedural_error", "method_wrong", "understanding_gap"}:
+            return "comprehension_failure"
         if raw_error_type in {"careless_mistake", "reading_careless", "calculation_error"}:
-            return "careless_mistake"
+            return "careless_error"
+        if raw_error_type in {"time_management", "time_pressure", "rushed_miss", "skipped_due_time"}:
+            return "time_pressure_miss"
+        if raw_error_type in {"strategy_mismatch", "logic_error", "transfer_error"}:
+            return "knowledge_transfer_fail"
+        if raw_error_type in {"missing_prerequisite", "prereq_missing"}:
+            return "prerequisite_missing"
 
         root_cause = str(analysis.get("root_cause") or "").strip().lower()
         study_suggestions = str(analysis.get("study_suggestions") or "").strip().lower()
-        if raw_error_type == "time_management" or any(
-            token in f"{root_cause} {study_suggestions}" for token in ("time", "rush", "pace", "deadline")
+        signal_text = f"{root_cause} {study_suggestions}"
+        if any(token in signal_text for token in ("time", "rush", "pace", "deadline")):
+            return "time_pressure_miss"
+        if any(
+            token in signal_text
+            for token in ("prerequisite", "prereq", "前置", "foundation", "basic knowledge", "基础")
         ):
-            return "time_management"
-        if raw_error_type in {"strategy_mismatch", "logic_error"} or any(
-            token in f"{root_cause} {study_suggestions}" for token in ("strategy", "approach", "method selection")
-        ):
-            return "strategy_mismatch"
+            return "prerequisite_missing"
+        if any(token in signal_text for token in ("strategy", "approach", "method selection", "transfer", "迁移")):
+            return "knowledge_transfer_fail"
         return None
+
+    def _is_high_severity(self, error: ErrorRecord) -> bool:
+        analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
+        raw_severity = analysis.get("severity")
+        if raw_severity is None:
+            raw_severity = analysis.get("severity_level")
+        if raw_severity is None:
+            raw_severity = analysis.get("risk_level")
+        return str(raw_severity or "").strip().lower() in self.HIGH_SEVERITY_VALUES
 
     async def _find_low_mastery_nodes(self, *, user_id: UUID, node_ids: list[UUID]) -> list[UUID]:
         result = await self.db.execute(
@@ -490,7 +650,7 @@ class ErrorReplanBridge:
 
             analysis = latest_analysis if isinstance(latest_analysis, dict) else {}
             error_type = self._classify_trigger_type_from_analysis(analysis)
-            if error_type not in self.TRIGGERING_ERROR_TYPES:
+            if error_type not in self.REPLAN_ELIGIBLE_ERROR_TYPES:
                 continue
 
             linked = {str(value) for value in (linked_ids or []) if value is not None}

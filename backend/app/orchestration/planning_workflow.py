@@ -514,7 +514,7 @@ class PlanningWorkflowManager:
         )
         if self._is_ready_for_bottlenecks(session, user_message):
             session.state = "BOTTLENECK"
-            session.bottlenecks = self._build_bottlenecks(session, aurora_state=runtime_state)
+            session.bottlenecks = await self._build_bottlenecks(session, aurora_state=runtime_state)
             strategy = self._build_strategy(session, aurora_state=runtime_state)
             session.confirmed_strategy = strategy
             session.state = "AWAITING_CONFIRM"
@@ -679,6 +679,9 @@ class PlanningWorkflowManager:
                     day_spec=day_spec,
                     aurora_state=runtime_state,
                 )
+                # guide_json is already sync-enriched by _build_task_guide_json (enrich_sync path).
+                # LLM enrichment (_enrich_task_guide_with_ai) is a background post-creation step
+                # and must NOT block the per-task creation loop — see P1 constraint.
                 task = await TaskService.create(
                     db=db,
                     obj_in=TaskCreate(
@@ -724,6 +727,18 @@ class PlanningWorkflowManager:
                 task.order_index = int(day_spec["day"]) * 1000
                 created_tasks.append(task)
         if created_tasks:
+            plan.source_metadata = {
+                **_as_dict(plan.source_metadata),
+                "day_highlights": {
+                    "day": 1,
+                    "recommendation": await self._build_first_day_recommendation(
+                        session=session,
+                        subject=subject,
+                        tasks=[task for task in created_tasks if int(task.order_index or 0) // 1000 == 1]
+                        or created_tasks[:1],
+                    ),
+                },
+            }
             await db.commit()
 
         session.state = "DONE"
@@ -731,7 +746,7 @@ class PlanningWorkflowManager:
         runtime_state.current_intent = {"intent_type": "wait", "target_tension_id": None, "payload": {}}
         await self.runtime_adapter.save_state(runtime_state, db=db)
         return {
-            "message": "方案已经确认，我把第一阶段任务卡生成好了。你现在可以直接进入第一个任务开始执行。",
+            "message": "方案已经确认，我先把今天聚焦成第一天任务；后面的 Day 2–7 可以在计划详情里展开看。",
             "widgets": [
                 {"type": "planning_progress_strip", "data": self._progress_data("DONE")},
                 {
@@ -1207,7 +1222,7 @@ class PlanningWorkflowManager:
         ]
         if not common_mistakes:
             common_mistakes = ["只看内容不做自测，最后很难知道自己到底会不会。"]
-        return {
+        guide_json = {
             "objective": contract["objective"],
             "method_steps": guide_steps,
             "time_estimate_minutes": _safe_int((day_spec or {}).get("estimated_minutes")) or max(phase_hours * 60, 30),
@@ -1223,6 +1238,112 @@ class PlanningWorkflowManager:
             "success_checklist": contract["success_checklist"],
             "fail_safe_rule": contract["fail_safe_rule"],
         }
+        from app.orchestration.task_guide_enricher import TaskGuideEnricher
+
+        _enricher = TaskGuideEnricher()
+        return _enricher.enrich_sync(
+            guide_json=guide_json,
+            task_kind=task_kind,
+            subject=subject,
+            focus=focus,
+            bottlenecks=session.bottlenecks,
+        )
+
+    async def _enrich_task_guide_with_ai(
+        self,
+        *,
+        guide_json: dict[str, Any],
+        session: PlanningSession,
+        day_spec: dict[str, Any],
+        subject: str,
+    ) -> dict[str, Any]:
+        from app.orchestration.task_guide_enricher import TaskGuideEnricher
+
+        task_kind = _strip(day_spec.get("task_kind") or guide_json.get("task_kind") or "retrieval_drill")
+        focus = _strip(day_spec.get("focus") or guide_json.get("objective"))
+        return await TaskGuideEnricher().enrich(
+            guide_json=guide_json,
+            task_kind=task_kind,
+            subject=subject,
+            focus=focus,
+            bottlenecks=session.bottlenecks,
+            use_llm=True,
+        )
+
+    async def _build_first_day_recommendation(
+        self,
+        *,
+        session: PlanningSession,
+        subject: str,
+        tasks: list[Task],
+    ) -> str:
+        fallback = self._first_day_recommendation_fallback(subject=subject, task_count=len(tasks))
+        try:
+            from app.services.llm_service import llm_service
+
+            task_summaries = [
+                {
+                    "title": task.title,
+                    "estimated_minutes": task.estimated_minutes,
+                    "why_now": _as_dict(task.guide_json).get("why_now"),
+                }
+                for task in tasks[:4]
+            ]
+            result = await llm_service.reason_json(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "你是一个温和但务实的学习教练。为计划详情页生成一句第一天引导语。"
+                            "只输出 JSON，不讲方法论，不制造压力。"
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": json.dumps(
+                            {
+                                "goal": session.goal_raw,
+                                "subject": subject,
+                                "task_count": len(tasks),
+                                "tasks": task_summaries,
+                                "output_schema": {
+                                    "recommendation": "一句话，鼓励用户今天只聚焦这些任务"
+                                },
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                ],
+                temperature=0.4,
+            )
+            if isinstance(result, dict):
+                return self._clean_short_sentence(result.get("recommendation")) or fallback
+        except Exception as exc:
+            logger.warning("first day recommendation LLM failed: {}", exc)
+        return fallback
+
+    @staticmethod
+    def _first_day_recommendation_fallback(*, subject: str, task_count: int) -> str:
+        thing_label = f"这 {max(1, task_count)} 件事" if task_count != 1 else "这 1 件事"
+        subject_label = _strip(subject)
+        if subject_label:
+            return f"今天先做好{thing_label}，{subject_label} 的第一步就稳下来了。"
+        return f"今天先做好{thing_label}，你已经走在正确路上了。"
+
+    @staticmethod
+    def _clean_short_sentence(value: Any) -> str:
+        text = _strip(value)
+        if not text:
+            return ""
+        text = re.sub(r"\s+", " ", text)
+        first_sentence = re.split(r"(?<=[。！？!?])", text, maxsplit=1)[0].strip()
+        if first_sentence:
+            text = first_sentence
+        if len(text) > 80:
+            text = text[:80].rstrip("，,；;：: ") + "。"
+        if text[-1] not in "。！？!?":
+            text = f"{text}。"
+        return text
 
     def _build_task_ai_prompt(
         self,
@@ -1312,60 +1433,66 @@ class PlanningWorkflowManager:
         }
         return {key: value for key, value in merged.items() if value not in (None, "", [], {})}
 
-    def _build_bottlenecks(
+    async def _build_bottlenecks(
         self,
         session: PlanningSession,
         aurora_state: AuroraRuntimePlanningState | None = None,
     ) -> list[dict[str, Any]]:
-        # Phase II: replace this V1 rule template with LLM-backed analysis once richer study signals are available.
+        from app.orchestration.bottleneck_analyzer import bottleneck_analyzer
+
+        def _listish(value: Any) -> list[Any]:
+            if value is None:
+                return []
+            if isinstance(value, list | tuple | set):
+                return [item for item in value if _strip(item)]
+            return [value] if _strip(value) else []
+
+        def _safe_float(value: Any, default: float) -> float:
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError):
+                return default
+            return parsed if parsed > 0 else default
+
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "这门课")
         baseline = _strip(session.collected.get("knowledge_baseline") or "基础不稳")
         days = _safe_int(session.collected.get("time_constraint_days")) or 7
-        hours = _safe_int(session.collected.get("daily_available_hours")) or 2
+        hours = _safe_float(session.collected.get("daily_available_hours"), 2.0)
         brief = self.runtime_adapter.build_strategy_brief(aurora_state) if aurora_state is not None else {}
+        galaxy_baseline = session.collected.get("avg_mastery_score")
+        if galaxy_baseline is not None and "掌握度" not in baseline:
+            baseline = f"{baseline}；知识星图平均掌握度 {galaxy_baseline}"
+        raw_weak_nodes = session.collected.get("galaxy_weak_nodes")
+        if raw_weak_nodes is None:
+            raw_weak_nodes = session.collected.get("weak_nodes")
+        weak_nodes = _listish(raw_weak_nodes)
         blocked_days = [
-            item
-            for item in list(brief.get("blocked_days") or session.collected.get("blocked_days") or [])
-            if _strip(item)
+            _strip(item)
+            for item in _listish(brief.get("blocked_days") or session.collected.get("blocked_days"))
         ]
         materials = [
-            item
-            for item in list(brief.get("available_materials") or session.collected.get("available_materials") or [])
-            if _strip(item)
+            _strip(item)
+            for item in _listish(brief.get("available_materials") or session.collected.get("available_materials"))
         ]
-        open_tensions = list(brief.get("open_tensions") or [])
-        return [
-            {
-                "id": "b1",
-                "description": (
-                    f"知识覆盖率不足：{subject} 需要在 {days} 天内完成压缩复习，但你当前只有每天约 {hours} 小时的有效时间。"
-                    if not blocked_days
-                    else f"知识覆盖率不足：{subject} 需要在 {days} 天内完成压缩复习，而你这几天还夹着忙碌时段（{'；'.join(blocked_days[:2])}）。"
-                ),
-                "severity": "high",
-                "specific_risk": "如果前两天没有快速建立章节框架，后半程很容易只顾着赶进度，留不出完整模拟的时间。",
-            },
-            {
-                "id": "b2",
-                "description": f"理解成本偏高：你目前属于“{baseline}”状态，说明核心概念需要先用框架化方式补起来，而不能直接堆题。",
-                "severity": "high",
-                "specific_risk": f"像 {subject} 这类概念多、易混淆的科目，如果不先拉出对比框架，考试时会出现‘看着眼熟但不会判断’的问题。",
-            },
-            {
-                "id": "b3",
-                "description": (
-                    "题感不足：当前信息里还没有看到你做过稳定的真题或自测，这意味着知识点可能学过却不会落到题型上。"
-                    if not materials
-                    else f"题感转化压力：你手头已经有 {'、'.join(materials[:2])}，但如果这些材料没被尽快转成自测回路，后面还是会只顾输入不顾检验。"
-                ),
-                "severity": "medium",
-                "specific_risk": (
-                    "后两天如果才第一次接触题目，会来不及暴露高频错误类型，冲刺效率会明显下降。"
-                    if not open_tensions
-                    else f"目前还有 {len(open_tensions)} 块信息缺口没完全闭合，如果不尽早用题目和资料一起校准，计划会越来越像按假设推进。"
-                ),
-            },
-        ]
+        open_tensions = [_strip(item) for item in _listish(brief.get("open_tensions"))]
+        analysis_kwargs = {
+            "subject": subject,
+            "knowledge_baseline": baseline,
+            "time_constraint_days": days,
+            "daily_available_hours": hours,
+            "galaxy_weak_nodes": weak_nodes,
+            "available_materials": materials,
+            "blocked_days": blocked_days,
+            "open_tensions": open_tensions,
+        }
+
+        try:
+            analysis = await bottleneck_analyzer.analyze(**analysis_kwargs)
+        except Exception as exc:
+            logger.warning("_build_bottlenecks LLM analysis failed, using rule fallback: {}", exc)
+            analysis = bottleneck_analyzer._rule_fallback(**analysis_kwargs)
+
+        return [asdict(item) for item in analysis.bottlenecks]
 
     def _build_exam_sprint_policy(
         self,

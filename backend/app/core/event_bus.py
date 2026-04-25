@@ -11,6 +11,7 @@ import os
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import suppress
+from dataclasses import dataclass as _dataclass
 from datetime import timezone, datetime
 from functools import wraps
 from typing import Any
@@ -90,6 +91,32 @@ class ErrorCreated(Event):
             "error_id": self.error_id,
             "linked_node_ids": self.linked_node_ids,
             "timestamp": self.timestamp.isoformat(),
+        }
+
+
+@_dataclass
+class MasteryUpdatedFromError:
+    event_type: str = "mastery_updated_from_error"
+    user_id: str = ""
+    node_id: str = ""
+    node_name: str = ""
+    old_mastery: float = 0.0
+    new_mastery: float = 0.0
+    delta: float = 0.0
+    error_type: str = ""
+    triggered_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "node_id": self.node_id,
+            "node_name": self.node_name,
+            "old_mastery": self.old_mastery,
+            "new_mastery": self.new_mastery,
+            "delta": self.delta,
+            "error_type": self.error_type,
+            "triggered_at": self.triggered_at,
         }
 
 
@@ -1328,3 +1355,44 @@ class EventBusReliablePublisher:
 
 
 event_bus_reliable = EventBusReliablePublisher(event_bus)
+
+
+from dataclasses import dataclass
+
+
+@dataclass
+class InterventionRecorded:
+    event_type: str = "intervention_recorded"
+    user_id: str = ""
+    intervention_id: str = ""
+    intervention_type: str = ""
+    triggered_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "intervention_id": self.intervention_id,
+            "intervention_type": self.intervention_type,
+            "triggered_at": self.triggered_at,
+        }
+
+
+@dataclass
+class InterventionOutcomeRecorded:
+    event_type: str = "intervention_outcome_recorded"
+    user_id: str = ""
+    intervention_id: str = ""
+    effective: bool | None = None
+    status: str = ""
+    checked_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "intervention_id": self.intervention_id,
+            "effective": self.effective,
+            "status": self.status,
+            "checked_at": self.checked_at,
+        }

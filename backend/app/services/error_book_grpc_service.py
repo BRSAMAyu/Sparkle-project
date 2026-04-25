@@ -1,6 +1,7 @@
 """
 gRPC Implementation for Error Book Service
 """
+
 from uuid import UUID
 
 import grpc
@@ -58,7 +59,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 await task_manager.spawn(
                     self._run_analysis_task(error.id, UUID(request.user_id)),
                     task_name="error_analysis",
-                    user_id=request.user_id
+                    user_id=request.user_id,
                 )
 
                 # 方案2: 使用 Celery (长时任务, > 10秒) - 可选
@@ -87,13 +88,13 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 subject=SubjectEnum(request.subject_code) if request.subject_code else None,
                 chapter=request.chapter if request.chapter else None,
                 error_type=ErrorTypeEnum(request.error_type) if request.error_type else None,
-                mastery_min=request.mastery_min if request.HasField('mastery_min') else None,
-                mastery_max=request.mastery_max if request.HasField('mastery_max') else None,
-                need_review=request.need_review if request.HasField('need_review') else None,
+                mastery_min=request.mastery_min if request.HasField("mastery_min") else None,
+                mastery_max=request.mastery_max if request.HasField("mastery_max") else None,
+                need_review=request.need_review if request.HasField("need_review") else None,
                 keyword=request.keyword if request.keyword else None,
                 cognitive_dimension=request.cognitive_dimension if request.cognitive_dimension else None,
                 page=request.page if request.page > 0 else 1,
-                page_size=request.page_size if request.page_size > 0 else 20
+                page_size=request.page_size if request.page_size > 0 else 20,
             )
 
             items, total = await service.list_errors(UUID(request.user_id), params)
@@ -103,7 +104,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 total=total,
                 page=params.page,
                 page_size=params.page_size,
-                has_next=(params.page * params.page_size) < total
+                has_next=(params.page * params.page_size) < total,
             )
 
     async def GetError(self, request, context):
@@ -133,14 +134,14 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             service = ErrorBookService(db)
 
             data = ErrorRecordUpdate(
-                question_text=request.question_text if request.HasField('question_text') else None,
-                user_answer=request.user_answer if request.HasField('user_answer') else None,
-                correct_answer=request.correct_answer if request.HasField('correct_answer') else None,
-                subject=SubjectEnum(request.subject_code) if request.HasField('subject_code') else None,
-                chapter=request.chapter if request.HasField('chapter') else None,
-                question_image_url=request.question_image_url if request.HasField('question_image_url') else None,
+                question_text=request.question_text if request.HasField("question_text") else None,
+                user_answer=request.user_answer if request.HasField("user_answer") else None,
+                correct_answer=request.correct_answer if request.HasField("correct_answer") else None,
+                subject=SubjectEnum(request.subject_code) if request.HasField("subject_code") else None,
+                chapter=request.chapter if request.HasField("chapter") else None,
+                question_image_url=request.question_image_url if request.HasField("question_image_url") else None,
                 cognitive_tags=list(request.cognitive_tags) if request.cognitive_tags else None,
-                ai_analysis_summary=request.ai_analysis_summary if request.HasField('ai_analysis_summary') else None,
+                ai_analysis_summary=request.ai_analysis_summary if request.HasField("ai_analysis_summary") else None,
             )
 
             error = await service.update_error(UUID(request.error_id), UUID(request.user_id), data)
@@ -179,7 +180,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             try:
                 data = ReviewAction(
                     performance=ReviewPerformanceEnum(request.performance),
-                    time_spent_seconds=request.time_spent_seconds
+                    time_spent_seconds=request.time_spent_seconds,
                 )
 
                 error = await service.submit_review(UUID(request.user_id), UUID(request.error_id), data)
@@ -200,11 +201,11 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             stats = await service.get_review_stats(UUID(request.user_id))
 
             return error_book_pb2.ReviewStatsResponse(
-                total_errors=stats['total_errors'],
-                mastered_count=stats['mastered_count'],
-                need_review_count=stats['need_review_count'],
-                review_streak_days=stats['review_streak_days'],
-                subject_distribution=stats['subject_distribution']
+                total_errors=stats["total_errors"],
+                mastered_count=stats["mastered_count"],
+                need_review_count=stats["need_review_count"],
+                review_streak_days=stats["review_streak_days"],
+                subject_distribution=stats["subject_distribution"],
             )
 
     async def GetTodayReviews(self, request, context):
@@ -213,7 +214,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             params = ErrorQueryParams(
                 need_review=True,
                 page=request.page if request.page > 0 else 1,
-                page_size=request.page_size if request.page_size > 0 else 20
+                page_size=request.page_size if request.page_size > 0 else 20,
             )
 
             items, total = await service.list_errors(UUID(request.user_id), params)
@@ -223,7 +224,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 total=total,
                 page=params.page,
                 page_size=params.page_size,
-                has_next=(params.page * params.page_size) < total
+                has_next=(params.page * params.page_size) < total,
             )
 
     @staticmethod
@@ -266,23 +267,29 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             proto.created_at.FromDatetime(error.created_at)
         if error.updated_at:
             proto.updated_at.FromDatetime(error.updated_at)
+        if getattr(error, "affected_node_id", None):
+            proto.affected_node_id = str(error.affected_node_id)
+        if getattr(error, "mastery_delta", None) is not None:
+            proto.mastery_delta = float(error.mastery_delta)
 
         if error.latest_analysis:
             # error.latest_analysis is dict (from JSONB)
             la = error.latest_analysis
-            proto.latest_analysis.CopyFrom(error_book_pb2.ErrorAnalysisResult(
-                error_type=self._stringify(la.get('error_type', '')),
-                error_type_label=self._stringify(la.get('error_type_label', '')),
-                root_cause=self._stringify(la.get('root_cause', '')),
-                correct_approach=self._stringify(la.get('correct_approach', '')),
-                similar_traps=self._string_list(la.get('similar_traps', [])),
-                recommended_knowledge=self._string_list(la.get('recommended_knowledge', [])),
-                study_suggestion=self._stringify(la.get('study_suggestion', '')),
-                ocr_text=self._stringify(la.get('ocr_text', '')),
-            ))
+            proto.latest_analysis.CopyFrom(
+                error_book_pb2.ErrorAnalysisResult(
+                    error_type=self._stringify(la.get("error_type", "")),
+                    error_type_label=self._stringify(la.get("error_type_label", "")),
+                    root_cause=self._stringify(la.get("root_cause", "")),
+                    correct_approach=self._stringify(la.get("correct_approach", "")),
+                    similar_traps=self._string_list(la.get("similar_traps", [])),
+                    recommended_knowledge=self._string_list(la.get("recommended_knowledge", [])),
+                    study_suggestion=self._stringify(la.get("study_suggestion", "")),
+                    ocr_text=self._stringify(la.get("ocr_text", "")),
+                )
+            )
 
         # Mapping transient knowledge links if available
-        if hasattr(error, 'knowledge_links') and error.knowledge_links:
+        if hasattr(error, "knowledge_links") and error.knowledge_links:
             for link in error.knowledge_links:
                 # link is KnowledgeLinkBrief (Pydantic) or similar object
                 l = proto.knowledge_links.add()

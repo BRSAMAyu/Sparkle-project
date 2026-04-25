@@ -1,6 +1,7 @@
 """Plan Schemas - Plan creation, update, query, etc."""
 
 from __future__ import annotations
+
 from datetime import date
 from uuid import UUID
 
@@ -70,6 +71,14 @@ class PlanBase(BaseSchema):
     plan_stage: PlanStage = Field(description="Plan stage")
 
 
+class PlanDayHighlights(BaseModel):
+    """Today-first plan highlight payload."""
+
+    day: int = Field(default=1, ge=1, description="Highlighted day number")
+    recommendation: str = Field(description="AI coach recommendation for the highlighted day")
+    tasks: list[TaskDetail] = Field(default_factory=list, description="Tasks for the highlighted day")
+
+
 class PlanDetail(PlanBase):
     """Plan detailed information"""
 
@@ -83,6 +92,10 @@ class PlanDetail(PlanBase):
     source: str | None = Field(default=None, description="Plan source (e.g., 'learning_path')")
     source_metadata: dict | None = Field(default=None, description="Source-specific metadata")
     tasks: list[TaskDetail] | None = Field(default=None, description="Related tasks for the plan")
+    day_highlights: PlanDayHighlights | None = Field(
+        default=None,
+        description="Today-first highlights for plan detail",
+    )
 
 
 class PlanProgress(BaseModel):

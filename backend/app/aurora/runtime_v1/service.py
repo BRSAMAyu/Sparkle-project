@@ -108,6 +108,7 @@ class AuroraRuntimeV1Service:
         conversation_context = dict(conversation_context or {})
         user_context_payload = dict(user_context_payload or {})
         surface = AURORA_RUNTIME_MODE_SURFACES.get(surface, surface)
+        request_extra_context = self._with_surface_state(surface=surface, request_extra_context=request_extra_context)
 
         if not request_extra_context.get("galaxy_baseline") and active_db is not None:
             galaxy_baseline = await self._fetch_galaxy_baseline(active_db=active_db, user_id=user_id)
@@ -136,6 +137,12 @@ class AuroraRuntimeV1Service:
         decision = await self.decision_loop.decide(readout)
         activity_profile = self._merge_harness_updates(activity_profile, decision)
         messages = await self.chat_adapter.render(decision, readout)
+        if not messages and decision.action not in {"wait", "drop_thread"}:
+            messages = await self.chat_adapter._fallback_messages(
+                decision=decision,
+                readout=readout,
+                reason="empty_render",
+            )
         if not messages and decision.action not in {"wait", "drop_thread"}:
             logger.warning("Aurora runtime v1 produced no chat output for non-wait action {}", decision.action)
 
@@ -229,6 +236,23 @@ class AuroraRuntimeV1Service:
         if request_extra_context.get("conversation_style") in {"warm", "structured", "exploratory"}:
             profile["conversation_style"] = request_extra_context["conversation_style"]
         return profile
+
+    def _with_surface_state(self, *, surface: str, request_extra_context: dict[str, Any]) -> dict[str, Any]:
+        if surface != "aurora_planning":
+            return request_extra_context
+
+        enriched = dict(request_extra_context)
+        surface_state = dict(enriched.get("surface_state") or {}) if isinstance(enriched.get("surface_state"), dict) else {}
+        scaffold = enriched.get("planning_detour_scaffold")
+        if isinstance(scaffold, dict):
+            scaffold_state = scaffold.get("surface_state")
+            if isinstance(scaffold_state, dict):
+                surface_state.update(scaffold_state)
+            if scaffold.get("recent_detours") or scaffold.get("top_latent_thread"):
+                surface_state.setdefault("in_detour", True)
+        if surface_state:
+            enriched["surface_state"] = surface_state
+        return enriched
 
     def _activity_payload(self, profile: ActivityProfile) -> dict[str, Any]:
         default_payload = ActivityProfile().model_dump(mode="python")
@@ -350,7 +374,8 @@ class AuroraRuntimeV1Service:
         user_id: str,
     ) -> dict | None:
         try:
-            from sqlalchemy import func, select
+            from sqlalchemy import select
+
             from app.models.galaxy import KnowledgeNode, UserNodeStatus
 
             user_uuid = UUID(str(user_id))

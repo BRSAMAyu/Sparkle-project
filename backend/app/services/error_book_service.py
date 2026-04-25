@@ -19,6 +19,7 @@ import httpx
 from loguru import logger
 from sqlalchemy import String, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import set_committed_value
 
 from app.config import settings
 from app.core.event_bus import ErrorCreated, event_bus
@@ -62,7 +63,7 @@ class ReviewSchedulerService:
         easiness_factor: float,
         interval_days: float,
         review_count: int,
-        performance: ReviewPerformanceEnum
+        performance: ReviewPerformanceEnum,
     ) -> tuple[float, float, float, datetime]:
         """
         Returns: (new_mastery, new_ef, new_interval, next_review_date)
@@ -75,19 +76,19 @@ class ReviewSchedulerService:
             quality = 5
         elif performance == ReviewPerformanceEnum.FUZZY:
             quality = 3
-        else: # Forgotten
+        else:  # Forgotten
             quality = 1
 
         # 1. Update Easiness Factor (EF)
         # EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
         new_ef = easiness_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-        new_ef = max(1.3, min(new_ef, self.MAX_EASINESS_FACTOR)) # SM-2 EF bounded to prevent runaway intervals
+        new_ef = max(1.3, min(new_ef, self.MAX_EASINESS_FACTOR))  # SM-2 EF bounded to prevent runaway intervals
 
         # 2. Update Interval
         if quality < 3:
             # Failed
             new_interval = 1.0
-            review_count = 0 # Reset count or keep? SM-2 usually resets interval chain
+            review_count = 0  # Reset count or keep? SM-2 usually resets interval chain
         else:
             if review_count == 0:
                 new_interval = 1.0
@@ -141,6 +142,75 @@ class ErrorBookService:
             except Exception as exc:
                 logger.warning(f"Failed to publish deferred mastery event: {exc}")
 
+    @staticmethod
+    def _coerce_uuid(value: object) -> UUID | None:
+        if value is None:
+            return None
+        if isinstance(value, UUID):
+            return value
+        try:
+            return UUID(str(value))
+        except (TypeError, ValueError):
+            return None
+
+    def _primary_affected_node_id(self, error: ErrorRecord) -> UUID | None:
+        affected_node_id = self._coerce_uuid(getattr(error, "affected_node_id", None))
+        if affected_node_id:
+            return affected_node_id
+
+        linked_ids = getattr(error, "linked_knowledge_node_ids", None) or []
+        if not linked_ids:
+            return None
+        return self._coerce_uuid(linked_ids[0])
+
+    async def _attach_knowledge_links(self, records: list[ErrorRecord]) -> None:
+        """Attach transient knowledge link summaries for API responses."""
+        node_ids: set[UUID] = set()
+        normalized_links_by_error: dict[UUID, list[UUID]] = {}
+
+        for error in records:
+            linked_ids = [
+                node_id
+                for node_id in (self._coerce_uuid(value) for value in (error.linked_knowledge_node_ids or []))
+                if node_id is not None
+            ]
+            primary_id = self._primary_affected_node_id(error)
+            if primary_id is not None and primary_id not in linked_ids:
+                linked_ids.insert(0, primary_id)
+
+            normalized_links_by_error[error.id] = linked_ids
+            node_ids.update(linked_ids)
+
+            # Backfill response-only primary node from legacy linked ids. This is intentionally
+            # not committed here; the next write path will persist the column.
+            if getattr(error, "affected_node_id", None) is None and primary_id is not None:
+                set_committed_value(error, "affected_node_id", primary_id)
+
+        if not node_ids:
+            for error in records:
+                error.knowledge_links = []
+            return
+
+        node_stmt = select(KnowledgeNode).where(KnowledgeNode.id.in_(node_ids))
+        nodes = (await self.db.execute(node_stmt)).scalars().all()
+        node_names = {node.id: node.name for node in nodes}
+
+        for error in records:
+            primary_id = self._primary_affected_node_id(error)
+            links: list[KnowledgeLinkBrief] = []
+            for node_id in normalized_links_by_error.get(error.id, []):
+                name = node_names.get(node_id)
+                if not name:
+                    continue
+                links.append(
+                    KnowledgeLinkBrief(
+                        id=node_id,
+                        name=name,
+                        is_primary=primary_id == node_id,
+                    )
+                )
+            error.knowledge_links = links
+
     async def create_error(self, user_id: UUID, data: ErrorRecordCreate) -> ErrorRecord:
         error = ErrorRecord(
             user_id=user_id,
@@ -150,16 +220,14 @@ class ErrorBookService:
             correct_answer=data.correct_answer,
             subject_code=data.subject.value,
             chapter=data.chapter,
-
             cognitive_tags=data.cognitive_tags,
             ai_analysis_summary=data.ai_analysis_summary,
-
             # Initial State
-            next_review_at=_utcnow(), # Immediate review or +1 day? Usually immediate for first learn.
+            next_review_at=_utcnow(),  # Immediate review or +1 day? Usually immediate for first learn.
             interval_days=0.0,
             easiness_factor=2.5,
             review_count=0,
-            mastery_level=0.0
+            mastery_level=0.0,
         )
 
         self.db.add(error)
@@ -230,11 +298,11 @@ class ErrorBookService:
                 question=final_text,
                 user_ans=error.user_answer,
                 correct_ans=error.correct_answer,
-                linked_nodes=nodes if 'nodes' in locals() and nodes else []
+                linked_nodes=nodes if "nodes" in locals() and nodes else [],
             )
 
             if ocr_text:
-                analysis_result['ocr_text'] = ocr_text
+                analysis_result["ocr_text"] = ocr_text
 
             # Extract suggested concepts if any (from LLM or fallback)
             # Currently strict JSON schema doesn't have 'suggested_concepts' in top level,
@@ -243,6 +311,7 @@ class ErrorBookService:
             # --- Step 4: Update DB ---
             error.latest_analysis = analysis_result
             error.linked_knowledge_node_ids = linked_ids
+            error.affected_node_id = linked_ids[0] if linked_ids else None
             # error.suggested_concepts = ... (if LLM returns them)
 
             # 先落库核心分析结果，保证前端/验收链能尽快读取 latest_analysis。
@@ -280,8 +349,13 @@ class ErrorBookService:
             # --- Mastery sync: error diagnosis → knowledge node mastery ---
             try:
                 from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
+
                 mastery_sync = ErrorBookMasterySyncService(self.db)
                 mastery_results = await mastery_sync.apply_error_diagnosis(user_id, error)
+                if mastery_results:
+                    primary_result = mastery_results[0]
+                    error.affected_node_id = self._coerce_uuid(primary_result.get("node_id")) or error.affected_node_id
+                    error.mastery_delta = float(primary_result.get("delta") or 0.0)
                 await self.db.commit()
                 await self._flush_pending_mastery_events(mastery_results)
             except Exception as e:
@@ -290,11 +364,9 @@ class ErrorBookService:
             # Publish Error Created Event
             try:
                 event = ErrorCreated(
-                    user_id=str(user_id),
-                    error_id=str(error.id),
-                    linked_node_ids=[str(i) for i in linked_ids]
+                    user_id=str(user_id), error_id=str(error.id), linked_node_ids=[str(i) for i in linked_ids]
                 )
-                await event_bus.publish(event.to_dict()['event_type'], event.to_dict())
+                await event_bus.publish(event.to_dict()["event_type"], event.to_dict())
             except Exception as e:
                 logger.error(f"Failed to publish ErrorCreated event: {e}")
 
@@ -432,9 +504,7 @@ class ErrorBookService:
             return []
 
         keywords = [
-            token
-            for token in re.split(r"[\s,，。！？；;:：/\\\\()\\[\\]{}]+", cleaned_text)
-            if len(token) >= 2
+            token for token in re.split(r"[\s,，。！？；;:：/\\\\()\\[\\]{}]+", cleaned_text) if len(token) >= 2
         ][:6]
         if not keywords:
             keywords = [cleaned_text[:40]]
@@ -496,7 +566,7 @@ class ErrorBookService:
                 llm_client.chat_completion(
                     messages=[
                         {"role": "system", "content": "You are an expert tutor."},
-                        {"role": "user", "content": prompt}
+                        {"role": "user", "content": prompt},
                     ],
                     response_format={"type": "json_object"},
                     max_tokens=700,
@@ -506,7 +576,8 @@ class ErrorBookService:
             # Parse JSON
             if isinstance(response, str):
                 import re
-                json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
+
+                json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
                 content = json_match.group(1) if json_match else response
                 return json.loads(content)
             return response
@@ -565,27 +636,13 @@ class ErrorBookService:
 
     async def get_error(self, error_id: UUID, user_id: UUID) -> ErrorRecord | None:
         stmt = select(ErrorRecord).where(
-            and_(
-                ErrorRecord.id == error_id,
-                ErrorRecord.user_id == user_id,
-                ErrorRecord.is_deleted.is_(False)
-            )
+            and_(ErrorRecord.id == error_id, ErrorRecord.user_id == user_id, ErrorRecord.is_deleted.is_(False))
         )
         result = await self.db.execute(stmt)
         record = result.scalar_one_or_none()
 
-        if record and record.linked_knowledge_node_ids:
-            # Manually fetch knowledge nodes for response mapping
-            # This transient data handling is tricky with Pydantic from_attributes=True
-            # We might need to attach it to the record instance dynamically
-            node_stmt = select(KnowledgeNode).where(KnowledgeNode.id.in_(record.linked_knowledge_node_ids))
-            nodes = (await self.db.execute(node_stmt)).scalars().all()
-
-            # Create transient list of dicts/objects expected by Schema
-            record.knowledge_links = [
-                KnowledgeLinkBrief(id=n.id, name=n.name, is_primary=True)
-                for n in nodes
-            ]
+        if record:
+            await self._attach_knowledge_links([record])
 
         return record
 
@@ -604,10 +661,7 @@ class ErrorBookService:
                 select(KnowledgeNode).where(KnowledgeNode.id.in_(error.linked_knowledge_node_ids))
             )
             nodes = result.scalars().all()
-            concepts = [
-                ConceptBrief(id=node.id, name=node.name, description=node.description)
-                for node in nodes
-            ]
+            concepts = [ConceptBrief(id=node.id, name=node.name, description=node.description) for node in nodes]
 
         root_cause = (error.latest_analysis or {}).get("root_cause") if error.latest_analysis else None
         return ErrorSemanticSummary(
@@ -637,26 +691,15 @@ class ErrorBookService:
             metadata={"strategy_count": len(strategies), "similar_error_count": len(similar_errors)},
         )
 
-    async def list_errors(
-        self,
-        user_id: UUID,
-        params: ErrorQueryParams
-    ) -> tuple[list[ErrorRecord], int]:
-        query = select(ErrorRecord).where(
-            and_(
-                ErrorRecord.user_id == user_id,
-                ErrorRecord.is_deleted.is_(False)
-            )
-        )
+    async def list_errors(self, user_id: UUID, params: ErrorQueryParams) -> tuple[list[ErrorRecord], int]:
+        query = select(ErrorRecord).where(and_(ErrorRecord.user_id == user_id, ErrorRecord.is_deleted.is_(False)))
 
         if params.subject:
             query = query.where(ErrorRecord.subject_code == params.subject.value)
         if params.chapter:
             query = query.where(ErrorRecord.chapter.ilike(f"%{params.chapter}%"))
         if params.error_type:
-            query = query.where(
-                ErrorRecord.latest_analysis["error_type"].astext == params.error_type.value
-            )
+            query = query.where(ErrorRecord.latest_analysis["error_type"].astext == params.error_type.value)
         if params.mastery_min is not None:
             query = query.where(ErrorRecord.mastery_level >= params.mastery_min)
         if params.mastery_max is not None:
@@ -671,7 +714,7 @@ class ErrorBookService:
             query = query.where(
                 or_(
                     ErrorRecord.question_text.ilike(f"%{params.keyword}%"),
-                    func.cast(ErrorRecord.latest_analysis, String).ilike(f"%{params.keyword}%")
+                    func.cast(ErrorRecord.latest_analysis, String).ilike(f"%{params.keyword}%"),
                 )
             )
 
@@ -680,16 +723,16 @@ class ErrorBookService:
         total = (await self.db.execute(count_query)).scalar() or 0
 
         # Order
-        query = query.order_by(
-            ErrorRecord.next_review_at.asc().nullslast(),
-            ErrorRecord.created_at.desc()
-        ).offset((params.page - 1) * params.page_size).limit(params.page_size)
+        query = (
+            query.order_by(ErrorRecord.next_review_at.asc().nullslast(), ErrorRecord.created_at.desc())
+            .offset((params.page - 1) * params.page_size)
+            .limit(params.page_size)
+        )
 
         result = await self.db.execute(query)
         items = result.scalars().all()
 
-        # Optimizing list view: likely don't need full knowledge link details for every item
-        # If needed, we'd need a batched fetch strategy.
+        await self._attach_knowledge_links(items)
 
         return items, total
 
@@ -700,8 +743,8 @@ class ErrorBookService:
 
         update_data = data.dict(exclude_unset=True)
         # Rename subject to subject_code if present
-        if 'subject' in update_data:
-            update_data['subject_code'] = update_data.pop('subject').value
+        if "subject" in update_data:
+            update_data["subject_code"] = update_data.pop("subject").value
 
         for key, value in update_data.items():
             if hasattr(error, key):
@@ -712,9 +755,7 @@ class ErrorBookService:
         return error
 
     async def delete_error(self, error_id: UUID, user_id: UUID) -> bool:
-        stmt = select(ErrorRecord).where(
-            and_(ErrorRecord.id == error_id, ErrorRecord.user_id == user_id)
-        )
+        stmt = select(ErrorRecord).where(and_(ErrorRecord.id == error_id, ErrorRecord.user_id == user_id))
         result = await self.db.execute(stmt)
         error = result.scalar_one_or_none()
 
@@ -738,7 +779,7 @@ class ErrorBookService:
             easiness_factor=error.easiness_factor or 2.5,
             interval_days=error.interval_days or 0.0,
             review_count=error.review_count or 0,
-            performance=data.performance
+            performance=data.performance,
         )
 
         # Update Record
@@ -773,6 +814,7 @@ class ErrorBookService:
         # --- Mastery sync: review feedback → knowledge node mastery ---
         try:
             from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
+
             mastery_sync = ErrorBookMasterySyncService(self.db)
             mastery_results = await mastery_sync.apply_review_feedback(user_id, error, data.performance.value)
             await self.db.commit()
@@ -792,10 +834,7 @@ class ErrorBookService:
     ) -> None:
         memory_service = MemoryService(self.db)
         current_mastery = float(error.mastery_level or 0.0)
-        summary = (
-            f"错题复习结果：{performance.value}，掌握度 {previous_mastery:.2f} → "
-            f"{current_mastery:.2f}。"
-        )
+        summary = f"错题复习结果：{performance.value}，掌握度 {previous_mastery:.2f} → " f"{current_mastery:.2f}。"
         tags = [
             "practice_outcome",
             f"performance:{performance.value}",
@@ -823,32 +862,24 @@ class ErrorBookService:
             ErrorRecord.is_deleted.is_(False),
         )
 
-        total = await self.db.scalar(
-            select(func.count()).select_from(ErrorRecord).where(base_filter)
-        )
+        total = await self.db.scalar(select(func.count()).select_from(ErrorRecord).where(base_filter))
 
         mastered = await self.db.scalar(
-            select(func.count()).select_from(ErrorRecord).where(
-                and_(base_filter, ErrorRecord.mastery_level >= 0.8)
-            )
+            select(func.count()).select_from(ErrorRecord).where(and_(base_filter, ErrorRecord.mastery_level >= 0.8))
         )
 
         need_review = await self.db.scalar(
-            select(func.count()).select_from(ErrorRecord).where(
-                and_(base_filter, ErrorRecord.next_review_at <= _utcnow())
-            )
+            select(func.count())
+            .select_from(ErrorRecord)
+            .where(and_(base_filter, ErrorRecord.next_review_at <= _utcnow()))
         )
 
         subject_result = await self.db.execute(
-            select(ErrorRecord.subject_code, func.count())
-            .where(base_filter)
-            .group_by(ErrorRecord.subject_code)
+            select(ErrorRecord.subject_code, func.count()).where(base_filter).group_by(ErrorRecord.subject_code)
         )
         subject_distribution = {row[0]: row[1] for row in subject_result}
 
-        streak_stats = await self.db.scalar(
-            select(UserStreakStats).where(UserStreakStats.user_id == user_id)
-        )
+        streak_stats = await self.db.scalar(select(UserStreakStats).where(UserStreakStats.user_id == user_id))
         review_streak_days = int(streak_stats.current_streak or 0) if streak_stats else 0
 
         return {
@@ -856,5 +887,5 @@ class ErrorBookService:
             "mastered_count": mastered or 0,
             "need_review_count": need_review or 0,
             "review_streak_days": review_streak_days,
-            "subject_distribution": subject_distribution
+            "subject_distribution": subject_distribution,
         }

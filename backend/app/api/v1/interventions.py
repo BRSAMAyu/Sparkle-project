@@ -20,6 +20,7 @@ from app.schemas.intervention import (
     PassiveSignalRequest,
 )
 from app.services.behavioral_outcome_tracker import BehavioralOutcomeTracker
+from app.services.intervention_outcome_tracker import InterventionOutcomeTracker
 from app.services.intervention_service import InterventionService
 from app.services.passive_signal_tracker import PassiveSignalTracker
 
@@ -186,3 +187,14 @@ async def list_outcomes(
         }
         for o in outcomes
     ]
+
+
+@router.get("/ai-outcome-effectiveness")
+async def get_ai_outcome_effectiveness(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取AI干预效果汇总：有效率、按类型分组统计"""
+    tracker = InterventionOutcomeTracker()
+    summary = await tracker.get_effectiveness_summary(db, user_id=str(current_user.id))
+    return summary

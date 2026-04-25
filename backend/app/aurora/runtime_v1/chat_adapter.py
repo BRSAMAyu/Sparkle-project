@@ -67,7 +67,7 @@ class ChatLayerAdapter:
         messages = self._sanitize_messages(messages)
         if messages:
             return messages
-        return self._fallback_messages(decision, readout)
+        return await self._fallback_messages(decision=decision, readout=readout, reason="empty_or_invalid_llm_output")
 
     def _build_prompt(self, decision: AuroraDecision, readout: DashboardReadout) -> list[dict[str, str]]:
         system = (
@@ -181,7 +181,13 @@ class ChatLayerAdapter:
             return {text}
         return {text[index : index + 2] for index in range(len(text) - 1)}
 
-    def _fallback_messages(self, decision: AuroraDecision, readout: DashboardReadout) -> list[str]:
+    async def _fallback_messages(
+        self,
+        decision: AuroraDecision,
+        readout: DashboardReadout,
+        *,
+        reason: str | None = None,
+    ) -> list[str]:
         target_domain = self._target_domain(decision)
         if decision.action == "soft_return_topic":
             label = self._domain_label(target_domain)

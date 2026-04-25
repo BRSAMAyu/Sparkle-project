@@ -22,7 +22,7 @@ from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIV
 from app.core.event_bus import event_bus
 from app.models.card_protocol import Card, CardType
 from app.models.cognitive import BehaviorPattern
-from app.models.task import Task, TaskStatus, TaskType
+from app.models.task import SubTask, SubTaskStatus, Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_revision_summary import PlanRevisionSummary
@@ -445,6 +445,257 @@ class AdaptiveReplanner:
         await self.db.flush()
         await _sync_task_card_projection(self.db, task)
         return task
+
+    async def break_down_single_task_for_too_hard(
+        self,
+        *,
+        user_id: UUID,
+        task_id: UUID,
+        feedback_text: str | None = None,
+    ) -> list[SubTask]:
+        """
+        Split one currently-too-hard task into smaller subtasks.
+
+        This is intentionally task-local: it does not rewrite the plan or move
+        neighboring tasks. The surrounding plan can still learn from the signal
+        through PlanState feedback and normal health evaluation later.
+        """
+        result = await self.db.execute(
+            select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        )
+        task = result.scalar_one_or_none()
+        if task is None:
+            return []
+
+        breakdown_items = await self._generate_too_hard_breakdown(
+            task=task,
+            feedback_text=feedback_text,
+        )
+        if not breakdown_items:
+            breakdown_items = self._fallback_too_hard_breakdown(task)
+
+        order_result = await self.db.execute(
+            select(SubTask)
+            .where(SubTask.parent_task_id == task.id)
+            .order_by(desc(SubTask.order))
+            .limit(1)
+        )
+        last_subtask = order_result.scalar_one_or_none()
+        next_order = int(last_subtask.order + 1) if last_subtask else 0
+
+        created: list[SubTask] = []
+        for index, raw_item in enumerate(breakdown_items[:5]):
+            normalized = self._normalize_too_hard_subtask(raw_item, index=index, parent_title=task.title)
+            if not normalized:
+                continue
+            subtask = SubTask(
+                parent_task_id=task.id,
+                title=normalized["title"],
+                description=normalized.get("description"),
+                estimated_minutes=normalized["estimated_minutes"],
+                guide_content=normalized.get("guide_content"),
+                order=next_order,
+                status=SubTaskStatus.PENDING,
+                knowledge_node_id=task.knowledge_node_id,
+            )
+            self.db.add(subtask)
+            created.append(subtask)
+            next_order += 1
+
+        if not created:
+            return []
+
+        tags = list(task.tags or [])
+        for tag in ("too_hard", "adaptive_breakdown"):
+            if tag not in tags:
+                tags.append(tag)
+        task.tags = tags
+        task.difficulty = max(1, int(task.difficulty or 1) - 1)
+        self.db.add(task)
+
+        try:
+            feedback = TaskFeedback(
+                user_id=user_id,
+                task_id=task.id,
+                completion_quality=None,
+                feedback_text=feedback_text or "用户在任务卡上标记：太难",
+                category="too_difficult",
+                task_difficulty_snapshot=task.difficulty,
+                task_type_snapshot=task.type.value if task.type else None,
+                actual_minutes_snapshot=task.actual_minutes,
+            )
+            self.db.add(feedback)
+        except Exception as exc:
+            logger.debug("Failed to attach too-hard feedback row: {}", exc)
+
+        await self.db.flush()
+        await self.db.refresh(
+            task,
+            attribute_names=["subtasks_total", "subtasks_completed"],
+        )
+        await _sync_task_card_projection(self.db, task)
+
+        if task.plan_id:
+            record = AdaptationRecord(
+                what_changed=f"把「{task.title}」拆成了 {len(created)} 个更小的步骤",
+                why="用户在任务卡上标记了太难，说明当前任务颗粒度超过了可启动范围。",
+                expected_effect=(
+                    "先把启动门槛降下来，避免因为一张任务卡过重而放弃整段计划。"
+                ),
+                user_facing_message=f"我把「{task.title}」拆小了，先做第一步就够。",
+                source="adaptive_replanner.task_quick_action",
+            )
+            state = await self.plan_state_service.get_plan_state(user_id, task.plan_id)
+            adaptive_meta = dict((((state.facts or {}) if state else {}).get("adaptive_meta")) or {})
+            recent = list(adaptive_meta.get("recent_adaptations") or [])
+            recent.append(record.to_dict())
+            adaptive_meta["recent_adaptations"] = recent[-10:]
+            adaptive_meta["last_task_too_hard_at"] = _utcnow().isoformat()
+            feedback_entry = self._build_feedback_entry(
+                feedback_type="task_quick_action_too_hard",
+                content=f"用户将任务标记为太难，已拆成 {len(created)} 个子任务。",
+                task_id=task.id,
+                applied_adjustment={
+                    "inserted_subtask_ids": [str(item.id) for item in created],
+                    "difficulty_after": task.difficulty,
+                },
+            )
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=task.plan_id,
+                patch={
+                    "facts": {"adaptive_meta": adaptive_meta},
+                    "feedback_log": feedback_entry,
+                },
+                bump_version=False,
+            )
+
+        return created
+
+    async def _generate_too_hard_breakdown(
+        self,
+        *,
+        task: Task,
+        feedback_text: str | None,
+    ) -> list[dict[str, Any]]:
+        try:
+            from app.services.focus_service import FocusService
+
+            description_parts = [
+                str(task.guide_content or "").strip(),
+                str(task.success_criteria or "").strip(),
+                self._format_task_guide_json(task.guide_json),
+                str(feedback_text or "").strip(),
+            ]
+            description = "\n".join(part for part in description_parts if part)
+            persona_prompt = (
+                "用户刚刚主动标记这个任务太难。请把任务拆成 3-5 个更小的启动步骤，"
+                "每一步控制在 5-20 分钟，第一步必须非常容易开始。"
+            )
+            result = await FocusService.breakdown_task_via_llm(
+                task_title=task.title,
+                task_description=description,
+                persona_prompt=persona_prompt,
+            )
+            return [item for item in result if isinstance(item, dict)]
+        except Exception as exc:
+            logger.warning("Too-hard task breakdown LLM failed for {}: {}", task.id, exc)
+            return []
+
+    @staticmethod
+    def _format_task_guide_json(guide_json: Any) -> str:
+        if not isinstance(guide_json, dict):
+            return ""
+        parts: list[str] = []
+        for key in (
+            "objective",
+            "method_steps",
+            "success_criteria",
+            "output_action",
+            "if_stuck",
+        ):
+            value = guide_json.get(key)
+            if value in (None, "", []):
+                continue
+            if isinstance(value, list):
+                rendered = "；".join(str(item).strip() for item in value if str(item).strip())
+            else:
+                rendered = str(value).strip()
+            if rendered:
+                parts.append(f"{key}: {rendered}")
+        return "\n".join(parts)
+
+    @staticmethod
+    def _normalize_too_hard_subtask(
+        raw_item: dict[str, Any] | str,
+        *,
+        index: int,
+        parent_title: str,
+    ) -> dict[str, Any] | None:
+        if isinstance(raw_item, str):
+            item: dict[str, Any] = {"title": raw_item}
+        else:
+            item = dict(raw_item)
+
+        title = str(
+            item.get("title")
+            or item.get("name")
+            or item.get("step")
+            or f"小步 {index + 1}: {parent_title}"
+        ).strip()
+        if not title:
+            return None
+
+        raw_minutes = (
+            item.get("estimated_minutes")
+            or item.get("minutes")
+            or item.get("duration")
+            or 15
+        )
+        try:
+            estimated_minutes = int(float(raw_minutes))
+        except (TypeError, ValueError):
+            estimated_minutes = 15
+        estimated_minutes = max(5, min(30, estimated_minutes))
+
+        description = str(item.get("description") or item.get("detail") or "").strip() or None
+        guide_content = str(item.get("guide_content") or item.get("guide") or "").strip()
+        if not guide_content:
+            guide_content = (
+                "这是从“太难”快速操作里拆出来的小步。"
+                "只需要完成这一小步，不要顺手加码。"
+            )
+
+        return {
+            "title": title[:255],
+            "description": description,
+            "estimated_minutes": estimated_minutes,
+            "guide_content": guide_content,
+        }
+
+    @staticmethod
+    def _fallback_too_hard_breakdown(task: Task) -> list[dict[str, Any]]:
+        base_minutes = max(5, min(15, int((task.estimated_minutes or 30) / 3)))
+        return [
+            {
+                "title": f"圈出「{task.title}」里最卡的一点",
+                "description": "只定位一个具体卡点，不解决整张任务卡。",
+                "estimated_minutes": 5,
+                "guide_content": "写下最卡的一句话、一道题或一个步骤。写清楚就算完成。",
+            },
+            {
+                "title": "用自己的话复述这个卡点",
+                "description": "把卡点讲成一句能听懂的话，再补一个例子或反例。",
+                "estimated_minutes": base_minutes,
+                "guide_content": "目标不是完整掌握，而是把最小理解断点补上。",
+            },
+            {
+                "title": "完成一个最小检查动作",
+                "description": "做一道最小题、写一个小结，或列出下一步需要问 AI 的问题。",
+                "estimated_minutes": base_minutes,
+                "guide_content": "只检查刚才那个卡点，不扩展到新的难点。",
+            },
+        ]
 
     @classmethod
     def _checkpoint_recovery_contract(
@@ -1853,6 +2104,112 @@ class AdaptiveReplanner:
                 }
             )
         return failed
+
+    async def check_proactive_intervention(
+        self,
+        *,
+        user_id: str,
+        plan_id: str,
+        redis=None,
+    ) -> dict | None:
+        """
+        主动干预检查。由 Celery beat 每6小时调用一次。
+
+        返回 None：不需要干预
+        返回 dict：{action, message_hint, struggle_context}
+        """
+        from app.services.struggle_signal_aggregator import struggle_signal_aggregator
+
+        struggle_context = await struggle_signal_aggregator.get_struggle_context(
+            self.db, user_id=user_id, plan_id=plan_id
+        )
+        score = float(struggle_context.get("struggle_score", 0.0) or 0.0)
+
+        if score < 0.6:
+            return None
+
+        # 检查最近是否已经主动联系过（冷却期8h）
+        last_proactive = self._coerce_meta_datetime(
+            await self._get_meta_value(user_id, plan_id, "last_proactive_at")
+        )
+        if last_proactive and _utcnow() - last_proactive < timedelta(hours=8):
+            return None
+
+        # 构建主动干预上下文
+        stuck_concepts = list(struggle_context.get("stuck_concepts") or [])
+
+        if stuck_concepts:
+            # 有具体卡点
+            try:
+                days_behind = float(struggle_context.get("days_behind", 1) or 1)
+            except (TypeError, ValueError):
+                days_behind = 1.0
+            message_hint = (
+                f"我注意到你在{stuck_concepts[0]}这块已经{max(days_behind, 1.0):.0f}天没有明显推进，"
+                f"我们来看看是不是路径需要调整一下？"
+            )
+        else:
+            # 通用挣扎
+            message_hint = (
+                "你最近学习节奏似乎遇到了一些阻力，这很正常——"
+                "我们来看看是卡点的问题还是任务节奏需要调整？"
+            )
+
+        await self._set_meta_value(user_id, plan_id, "last_proactive_at", _utcnow())
+
+        return {
+            "action": "send_proactive_aurora_message",
+            "message_hint": message_hint,
+            "struggle_score": score,
+            "struggle_context": struggle_context,
+        }
+
+    async def _get_meta_value(
+        self,
+        user_id: UUID | str,
+        plan_id: UUID | str,
+        key: str,
+    ) -> Any:
+        state = await self.plan_state_service.get_plan_state(
+            UUID(str(user_id)),
+            UUID(str(plan_id)),
+        )
+        adaptive_meta = dict(((state.facts or {}) if state else {}).get("adaptive_meta") or {})
+        return adaptive_meta.get(key)
+
+    async def _set_meta_value(
+        self,
+        user_id: UUID | str,
+        plan_id: UUID | str,
+        key: str,
+        value: Any,
+    ) -> None:
+        user_uuid = UUID(str(user_id))
+        plan_uuid = UUID(str(plan_id))
+        state = await self.plan_state_service.get_plan_state(user_uuid, plan_uuid)
+        adaptive_meta = dict(((state.facts or {}) if state else {}).get("adaptive_meta") or {})
+        adaptive_meta[key] = value.isoformat() if isinstance(value, datetime) else value
+        await self.plan_state_service.upsert_plan_state(
+            user_id=user_uuid,
+            plan_id=plan_uuid,
+            patch={"facts": {"adaptive_meta": adaptive_meta}},
+            bump_version=False,
+        )
+
+    @staticmethod
+    def _coerce_meta_datetime(value: Any) -> datetime | None:
+        if value in (None, ""):
+            return None
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            try:
+                parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            except (TypeError, ValueError):
+                return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
 
     async def _enqueue_adaptation_update(
         self,

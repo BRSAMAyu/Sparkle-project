@@ -71,6 +71,7 @@ async def log_focus_session(
             "success": True,
             "id": result["session_id"],
             "rewards": rewards, # {flame_earned, leveled_up, new_level}
+            "mastery_updates": result.get("mastery_updates", []),
             "unlocked_achievements": result.get("unlocked_achievements", []),
         }
     except ValueError as e:

@@ -10,6 +10,8 @@ CAPSULE_REGENERATE_REQUESTED = "capsule.regenerate.requested"
 TOOL_HISTORY_RECORDED = "tool.history.recorded"
 ACCOUNTABILITY_PARTNERSHIP_UPDATED = "accountability.partnership.updated"
 ACCOUNTABILITY_CHECKIN_CREATED = "accountability.checkin.created"
+ACCOUNTABILITY_STRUGGLE_DETECTED = "accountability.struggle_detected"
+ACCOUNTABILITY_ENCOURAGEMENT_SENT = "accountability.encouragement_sent"
 EXECUTION_DELEGATED = "execution.delegated"
 EXECUTION_STATUS_CHANGED = "execution.status_changed"
 EXECUTION_WAITING_APPROVAL = "execution.waiting_approval"
@@ -38,6 +40,8 @@ __all__ = [
     "TOOL_HISTORY_RECORDED",
     "ACCOUNTABILITY_PARTNERSHIP_UPDATED",
     "ACCOUNTABILITY_CHECKIN_CREATED",
+    "ACCOUNTABILITY_STRUGGLE_DETECTED",
+    "ACCOUNTABILITY_ENCOURAGEMENT_SENT",
     "EXECUTION_DELEGATED",
     "EXECUTION_STATUS_CHANGED",
     "EXECUTION_WAITING_APPROVAL",

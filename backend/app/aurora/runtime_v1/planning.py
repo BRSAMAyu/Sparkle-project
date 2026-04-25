@@ -43,10 +43,16 @@ TENSION_FIELD_MAP = {
     "knowledge_baseline": "knowledge_baseline",
     "time_available": "time_available",
 }
-TENSION_PROMPTS = {
+_TENSION_PROMPT_REGISTRY: dict[str, str] = {
     "exam_scope": "这次更具体考哪些范围？如果你手上有教材目录、老师画的重点或真题来源，也可以一起告诉我。",
     "knowledge_baseline": "你现在对这门课的基础大概在哪个位置？比如完全没学过、上过课但没复习，或者已经能讲清一部分核心内容。",
     "time_available": "接下来这几天你每天大概能投入多少时间？有没有哪几天会明显更忙、需要我主动避开？",
+}
+_DEFAULT_TENSION_PROMPT = "我还差一块关键信息，方便你再补一句吗？"
+_TENSION_DOMAIN_ALIASES = {
+    "scope": "exam_scope",
+    "baseline": "knowledge_baseline",
+    "time": "time_available",
 }
 
 
@@ -98,6 +104,14 @@ def _safe_int(value: Any) -> int | None:
 
 def _serialize_payload(payload: dict[str, Any]) -> str:
     return json.dumps(payload, ensure_ascii=False)
+
+
+def get_tension_prompt(domain: str) -> str:
+    normalized = _strip(domain)
+    registry_key = normalized if normalized in _TENSION_PROMPT_REGISTRY else _TENSION_DOMAIN_ALIASES.get(normalized)
+    if registry_key:
+        return _TENSION_PROMPT_REGISTRY.get(registry_key, _DEFAULT_TENSION_PROMPT)
+    return _DEFAULT_TENSION_PROMPT
 
 
 _TENSION_IMPORTANCE: dict[str, str] = {
@@ -387,12 +401,19 @@ class AuroraRuntimePlanningAdapter:
         if extracted_fields:
             self._merge_snapshot(state, extracted_fields, goal_raw=None)
         self._recompute_tensions(state)
+        self._set_surface_state(
+            state,
+            {
+                "in_detour": bool(is_detour),
+                "last_detour_message": cleaned_message if is_detour else None,
+            },
+        )
         if is_detour:
             self._upsert_latent_thread(state)
             state.current_intent = {
                 "intent_type": "answer_detour",
                 "target_tension_id": self._top_open_tension(state).tension_id if self._top_open_tension(state) else None,
-                "payload": {"message": cleaned_message},
+                "payload": {"message": cleaned_message, "surface_state": self._surface_state(state)},
             }
         else:
             self._resolve_latent_threads(state)
@@ -436,6 +457,7 @@ class AuroraRuntimePlanningAdapter:
 
         if normalized_action == "soft_return_topic":
             self._mark_tension_attempted(state, target_tension.domain if target_tension else directive.get("target_domain"))
+            self._set_surface_state(state, {"in_detour": False})
             state.current_intent = {
                 "intent_type": "soft_return",
                 "target_tension_id": target_tension.tension_id if target_tension else None,
@@ -443,6 +465,7 @@ class AuroraRuntimePlanningAdapter:
             }
         elif normalized_action == "drop_thread":
             self._drop_latent_threads(state, target_tension_id=target_tension.tension_id if target_tension else None)
+            self._set_surface_state(state, {"in_detour": False})
             state.current_intent = {
                 "intent_type": "drop_thread",
                 "target_tension_id": target_tension.tension_id if target_tension else None,
@@ -496,35 +519,11 @@ class AuroraRuntimePlanningAdapter:
         tension = self.select_next_tension(state)
         if tension is None:
             return "我已经拿到够用的信息了，你如果愿意，我现在就把最关键的瓶颈和推进策略整理出来。", None
-        prompt = TENSION_PROMPTS.get(tension.domain) or "我还差一块关键信息，方便你再补一句吗？"
-        return prompt, tension.domain
+        return get_tension_prompt(tension.domain), tension.domain
 
     def build_detour_prompt(self, state: AuroraRuntimePlanningState) -> str:
-        scaffold = self.build_detour_scaffold(state)
-        hard_bounds = _as_dict(scaffold.get("hard_bounds"))
-        disabled_actions = {item.strip() for item in _as_list(hard_bounds.get("disabled_actions")) if _strip(item)}
-        if "proactive_follow_up" in disabled_actions:
-            return ""
-
-        top_tension = _as_dict(scaffold.get("top_tension"))
-        if not top_tension:
-            return ""
-
-        lines = [
-            "Aurora planning scaffold is active for this conversation.",
-            "Treat this as state context, not final user wording.",
-            f"Planning surface: {state.surface}",
-            f"Current goal: {_strip(scaffold.get('goal_raw')) or '帮助用户完成当前规划'}",
-            f"Most salient unresolved tension: {_strip(top_tension.get('domain'))} - {_strip(top_tension.get('description'))}",
-        ]
-        top_thread = _as_dict(scaffold.get("top_latent_thread"))
-        if _strip(top_thread.get("context_snapshot")):
-            lines.append(f"Latent thread to keep warm: {_strip(top_thread.get('context_snapshot'))}")
-        resolved_facts = [_strip(item) for item in list(scaffold.get("resolved_facts") or []) if _strip(item)]
-        if resolved_facts:
-            lines.append("Resolved planning facts:")
-            lines.extend(f"- {item}" for item in resolved_facts)
-        return "\n".join(lines)
+        """Returns empty string — detour context is conveyed via build_detour_scaffold(), not sidecar prompts."""
+        return ""
 
     def build_detour_scaffold(self, state: AuroraRuntimePlanningState) -> dict[str, Any]:
         top_thread = self._top_active_thread(state)
@@ -555,6 +554,7 @@ class AuroraRuntimePlanningAdapter:
         ]
         return {
             "surface": state.surface,
+            "surface_state": self._surface_state(state),
             "planning_session_id": state.planning_session_id,
             "goal_raw": _strip(state.user_model_snapshot.get("goal_raw")) or "帮助用户完成当前规划",
             "activity_profile": state.activity_profile.to_dict(),
@@ -592,6 +592,12 @@ class AuroraRuntimePlanningAdapter:
                 else None
             ),
             "hard_bounds": _as_dict(state.user_model_snapshot.get("aurora_hard_bounds")),
+            "detour_instruction": (
+                "Treat this as state context, not final user wording. "
+                "The DecisionLoop should decide whether to follow the detour or gently return to the agenda."
+                if self._surface_state(state).get("in_detour")
+                else None
+            ),
         }
 
     def build_strategy_brief(self, state: AuroraRuntimePlanningState) -> dict[str, Any]:
@@ -685,9 +691,30 @@ class AuroraRuntimePlanningAdapter:
                         **_as_dict(value),
                     }
                 continue
+            if key == "surface_state":
+                if isinstance(value, dict):
+                    snapshot["surface_state"] = {
+                        **_as_dict(snapshot.get("surface_state")),
+                        **_as_dict(value),
+                    }
+                continue
             if value in (None, "", [], {}):
                 continue
             snapshot[key] = value
+        state.user_model_snapshot = snapshot
+
+    def _surface_state(self, state: AuroraRuntimePlanningState) -> dict[str, Any]:
+        return _as_dict(_as_dict(state.user_model_snapshot).get("surface_state"))
+
+    def _set_surface_state(self, state: AuroraRuntimePlanningState, updates: dict[str, Any]) -> None:
+        snapshot = dict(state.user_model_snapshot or {})
+        surface_state = _as_dict(snapshot.get("surface_state"))
+        for key, value in updates.items():
+            if value is None:
+                surface_state.pop(key, None)
+            else:
+                surface_state[key] = value
+        snapshot["surface_state"] = surface_state
         state.user_model_snapshot = snapshot
 
     def _recompute_tensions(self, state: AuroraRuntimePlanningState) -> None:

@@ -17,12 +17,12 @@ from datetime import timezone, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.cache import cache_service, cached
-from app.core.event_bus import KnowledgeNodeUpdated, event_bus
+from app.core.event_bus import KnowledgeNodeUpdated, MasteryUpdatedFromError, event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.galaxy import KnowledgeNode, NodeRelation
 from app.models.galaxy import UserNodeStatus
@@ -39,6 +39,7 @@ from app.services.expansion_service import ExpansionService, validate_knowledge_
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.ontology_generator import relation_type_to_wire_name
 from app.services.galaxy.ontology_generator import OntologyExtractionResult, OntologyGenerator
+from app.services.galaxy.review_urgency_service import ReviewUrgencyService
 from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.galaxy.structure_service import GraphStructureService
 from app.services.node_sector_service import NodeSectorService
@@ -54,6 +55,7 @@ class GalaxyService:
         self.structure = GraphStructureService(db)
         self.retrieval = KnowledgeRetrievalService(db)
         self.stats = GalaxyStatsService(db)
+        self.review_urgency = ReviewUrgencyService()
         self.ontology_generator = OntologyGenerator()
 
         # Subscribe to error.created events
@@ -74,9 +76,7 @@ class GalaxyService:
         Prefer the current `event_outbox` table used by gateway/CQRS. Fall back to
         the legacy `outbox_events` table only if that older schema is what's available.
         """
-        event_outbox_exists = (
-            await self.db.execute(text("SELECT to_regclass('event_outbox')"))
-        ).scalar_one_or_none()
+        event_outbox_exists = (await self.db.execute(text("SELECT to_regclass('event_outbox')"))).scalar_one_or_none()
         if event_outbox_exists:
             seq_result = await self.db.execute(
                 text("""
@@ -110,9 +110,7 @@ class GalaxyService:
             )
             return
 
-        legacy_outbox_exists = (
-            await self.db.execute(text("SELECT to_regclass('outbox_events')"))
-        ).scalar_one_or_none()
+        legacy_outbox_exists = (await self.db.execute(text("SELECT to_regclass('outbox_events')"))).scalar_one_or_none()
         if legacy_outbox_exists:
             await self.db.execute(
                 text("""
@@ -171,6 +169,113 @@ class GalaxyService:
 
         except Exception as e:
             logger.error(f"Failed to handle error_created event: {e}")
+
+    async def update_mastery_from_error(
+        self,
+        db: AsyncSession | None = None,
+        *,
+        user_id: str,
+        knowledge_node_id: str | None,
+        knowledge_node_name: str | None,
+        error_type: str,
+        error_count: int,
+    ) -> dict | None:
+        """
+        根据错题分析更新知识节点掌握度。
+
+        掌握度更新公式：
+        - 轻度错误（careless）：mastery -= 3
+        - 中度错误（comprehension_failure）：mastery -= 8
+        - 重度错误（repeated >= 3次）：mastery -= 15
+        - 最低下限：10（不设为0，避免过度惩罚）
+
+        返回：{"node_id": ..., "old_mastery": ..., "new_mastery": ..., "delta": ...}
+        如果节点不存在：返回 None（不报错）
+        """
+        active_db = db or self.db
+        coerced_user_id = self._coerce_uuid(user_id)
+        coerced_node_id = self._coerce_uuid(knowledge_node_id)
+        node_name = str(knowledge_node_name or "").strip()
+
+        row = None
+        if coerced_node_id is not None:
+            result = await active_db.execute(
+                select(KnowledgeNode, UserNodeStatus)
+                .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
+                .where(UserNodeStatus.user_id == coerced_user_id)
+                .where(KnowledgeNode.id == coerced_node_id)
+                .limit(1)
+            )
+            row = result.first()
+
+        if row is None and node_name:
+            result = await active_db.execute(
+                select(KnowledgeNode, UserNodeStatus)
+                .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
+                .where(UserNodeStatus.user_id == coerced_user_id)
+                .where(func.lower(KnowledgeNode.name).like(f"%{node_name.lower()}%"))
+                .order_by(KnowledgeNode.name)
+                .limit(1)
+            )
+            row = result.first()
+
+        if row is None:
+            return None
+
+        node, status = row
+        old_mastery = float(status.mastery_score or 0.0)
+        requested_delta = self._error_mastery_delta(error_type=error_type, error_count=error_count)
+        new_mastery = max(10.0, old_mastery + requested_delta)
+        actual_delta = new_mastery - old_mastery
+        update_time = _utcnow()
+
+        status.mastery_score = new_mastery
+        status.bkt_mastery_prob = max(0.0, min(new_mastery / 100.0, 1.0))
+        status.bkt_last_updated_at = update_time
+        status.updated_at = update_time
+        status.last_interacted_at = update_time
+        status.is_unlocked = True
+        await active_db.flush()
+
+        event = MasteryUpdatedFromError(
+            user_id=str(user_id),
+            node_id=str(node.id),
+            node_name=str(node.name or ""),
+            old_mastery=old_mastery,
+            new_mastery=new_mastery,
+            delta=actual_delta,
+            error_type=str(error_type or "").strip().lower(),
+            triggered_at=update_time.isoformat(),
+        )
+        await event_bus.publish(event.event_type, event.to_dict())
+
+        return {
+            "node_id": str(node.id),
+            "node_name": str(node.name or ""),
+            "old_mastery": old_mastery,
+            "new_mastery": new_mastery,
+            "delta": actual_delta,
+        }
+
+    @staticmethod
+    def _coerce_uuid(value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, UUID):
+            return value
+        try:
+            return UUID(str(value))
+        except (TypeError, ValueError):
+            return value
+
+    @staticmethod
+    def _error_mastery_delta(*, error_type: str, error_count: int) -> float:
+        normalized_type = str(error_type or "").strip().lower()
+        if error_count >= 3 or normalized_type == "repeated_mistake":
+            return -15.0
+        if normalized_type in {"careless_error", "careless_mistake", "reading_careless", "calculation_error"}:
+            return -3.0
+        return -8.0
 
     # --- Delegated to GraphStructureService ---
 
@@ -303,10 +408,7 @@ class GalaxyService:
                     NodeRelation.target_node_id,
                     NodeRelation.relation_type,
                 )
-                .where(
-                    NodeRelation.source_node_id.in_(seed_node_ids)
-                    | NodeRelation.target_node_id.in_(seed_node_ids)
-                )
+                .where(NodeRelation.source_node_id.in_(seed_node_ids) | NodeRelation.target_node_id.in_(seed_node_ids))
                 .limit(32)
             )
         ).all()
@@ -323,8 +425,7 @@ class GalaxyService:
                 select(KnowledgeNode, UserNodeStatus.mastery_score, UserNodeStatus.is_unlocked)
                 .join(
                     UserNodeStatus,
-                    (UserNodeStatus.node_id == KnowledgeNode.id)
-                    & (UserNodeStatus.user_id == user_id),
+                    (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id),
                 )
                 .where(KnowledgeNode.id.in_(candidate_ids))
             )
@@ -509,11 +610,20 @@ class GalaxyService:
 
         # 5. Fetch recent error counts per node (single batch query, last 14 days)
         error_counts = await self._get_recent_error_counts_by_node(user_id, days=14)
+        review_signals = self.review_urgency.score_graph_nodes(
+            nodes_with_status,
+            recent_error_counts=error_counts,
+        )
 
         # 6. Assemble with Flutter-compatible fields
         return GalaxyGraphResponse(
             nodes=[
-                NodeWithStatus.from_models(node, status, recent_error_count=error_counts.get(node.id, 0))
+                NodeWithStatus.from_models(
+                    node,
+                    status,
+                    recent_error_count=error_counts.get(node.id, 0),
+                    review_signal=review_signals.get(node.id),
+                )
                 for node, status in nodes_with_status
             ],
             relations=edge_list,
@@ -538,7 +648,7 @@ class GalaxyService:
             )
             counts: dict[UUID, int] = {}
             for (linked_ids,) in result.all():
-                for nid in (linked_ids or []):
+                for nid in linked_ids or []:
                     try:
                         key = UUID(str(nid)) if not isinstance(nid, UUID) else nid
                         counts[key] = counts.get(key, 0) + 1
@@ -822,14 +932,17 @@ class GalaxyService:
                     SELECT current.mastery_score AS old_mastery, updated.new_revision
                     FROM current, updated
                 """)
-                result = await self.db.execute(atomic_update, {
-                    "user_id": user_id,
-                    "node_id": node_id,
-                    "mastery": new_mastery,
-                    "bkt_mastery_prob": bkt_mastery_prob,
-                    "expected_revision": revision,
-                    "updated_at": update_time,
-                })
+                result = await self.db.execute(
+                    atomic_update,
+                    {
+                        "user_id": user_id,
+                        "node_id": node_id,
+                        "mastery": new_mastery,
+                        "bkt_mastery_prob": bkt_mastery_prob,
+                        "expected_revision": revision,
+                        "updated_at": update_time,
+                    },
+                )
                 row = result.fetchone()
 
                 if not row:

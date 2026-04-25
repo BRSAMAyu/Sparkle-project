@@ -61,6 +61,7 @@ from app.services.intervention_event_consumer import InterventionEventConsumer
 from app.services.main_chain_artifact_consumer import MainChainArtifactConsumer
 from app.services.cognitive_event_consumer import CognitiveEventConsumer
 from app.services.nudge_event_consumer import NudgeEventConsumer
+from app.services.social_signal_event_consumer import SocialSignalEventConsumer
 from app.services.scheduler_service import scheduler_service
 from app.services.srl_phase_tracker_service import SRLPhaseTrackerService
 from app.services.subject_service import SubjectService
@@ -254,6 +255,13 @@ async def lifespan(app: FastAPI):
         intervention_consumer = InterventionEventConsumer(event_bus=event_bus)
         intervention_consumer_task = asyncio.create_task(intervention_consumer.start())
         app.state.intervention_consumer_task = intervention_consumer_task
+
+    social_signal_consumer_task = None
+    if cache_service.redis and event_bus is not None:
+        social_signal_consumer = SocialSignalEventConsumer(event_bus=event_bus)
+        social_signal_consumer_task = asyncio.create_task(social_signal_consumer.start())
+        app.state.social_signal_consumer = social_signal_consumer
+        app.state.social_signal_consumer_task = social_signal_consumer_task
 
     main_chain_artifact_consumer_task = None
     if cache_service.redis and event_bus is not None:
@@ -490,6 +498,15 @@ async def lifespan(app: FastAPI):
         intervention_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await intervention_consumer_task
+
+    social_signal_consumer = getattr(app.state, "social_signal_consumer", None)
+    social_signal_consumer_task = getattr(app.state, "social_signal_consumer_task", None)
+    if social_signal_consumer:
+        social_signal_consumer.stop()
+    if social_signal_consumer_task:
+        social_signal_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await social_signal_consumer_task
 
     main_chain_artifact_consumer_task = getattr(app.state, "main_chain_artifact_consumer_task", None)
     if main_chain_artifact_consumer_task:

@@ -1,15 +1,57 @@
 from __future__ import annotations
 
+import inspect
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.core.event_bus import event_bus
+from app.core.event_types import ACCOUNTABILITY_STRUGGLE_DETECTED
+from app.models.accountability import AccountabilityPartnership, AccountabilityStatus
+from app.models.notification import Notification
+from app.models.user import User
 from app.services.personalization.preference_service import PreferenceService
 from app.services.social_signal_types import SocialSignalsV1
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _user_display_name(user: User | None, default: str = "好友") -> str:
+    if user is None:
+        return default
+    return user.nickname or user.full_name or user.username or default
+
+
+PRESET_ENCOURAGEMENTS: tuple[dict[str, str], ...] = (
+    {
+        "id": "spark_small_step",
+        "emoji": "👏",
+        "message": "先完成一个小块就很好，我在看着你。",
+    },
+    {
+        "id": "spark_restart",
+        "emoji": "💪",
+        "message": "今天从 5 分钟开始也算数，加油。",
+    },
+    {
+        "id": "spark_warm",
+        "emoji": "✨",
+        "message": "别急着证明什么，先把节奏接回来。",
+    },
+)
+
+
 class SocialSignalBridge:
+    ACCOUNTABILITY_STRUGGLE_THRESHOLD = 0.6
+    ACCOUNTABILITY_STRUGGLE_DEDUP_TTL = 20 * 3600
+
     def __init__(self, db: AsyncSession, redis=None) -> None:
         self.db = db
         self.redis = redis
@@ -74,3 +116,204 @@ class SocialSignalBridge:
         if not signals.summary_lines and mention_count <= 0 and relationship_count <= 0:
             return None
         return signals
+
+    async def maybe_publish_accountability_struggle_signal(
+        self,
+        *,
+        user_id: UUID | str,
+        plan_id: UUID | str,
+        struggle_context: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Publish a social accountability event when a plan stall becomes visible."""
+        try:
+            score = float(struggle_context.get("struggle_score", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            score = 0.0
+        try:
+            no_completion_days = int(struggle_context.get("no_completion_days", 0) or 0)
+        except (TypeError, ValueError):
+            no_completion_days = 0
+
+        if score < self.ACCOUNTABILITY_STRUGGLE_THRESHOLD:
+            return {"published": False, "reason": "below_threshold", "struggle_score": score}
+        if no_completion_days < 2:
+            return {"published": False, "reason": "completion_gap_too_short", "struggle_score": score}
+
+        user_uuid = UUID(str(user_id))
+        plan_uuid = UUID(str(plan_id))
+        partnerships = await self._active_partnerships_for_user(user_uuid)
+        if not partnerships:
+            return {"published": False, "reason": "no_active_accountability_partner", "struggle_score": score}
+
+        dedupe_key = f"accountability:struggle:{user_uuid}:{plan_uuid}:{no_completion_days // 2}"
+        if not await self._claim_dedupe_key(dedupe_key):
+            return {"published": False, "reason": "deduped", "struggle_score": score}
+
+        target = await self.db.get(User, user_uuid)
+        target_name = _user_display_name(target, "你的伙伴")
+        partner_payloads = []
+        for partnership in partnerships:
+            partner_id = (
+                partnership.partner_id
+                if str(partnership.initiator_id) == str(user_uuid)
+                else partnership.initiator_id
+            )
+            partner_payloads.append(
+                {
+                    "partnership_id": str(partnership.id),
+                    "partner_id": str(partner_id),
+                }
+            )
+
+        payload = {
+            "event_type": ACCOUNTABILITY_STRUGGLE_DETECTED,
+            "user_id": str(user_uuid),
+            "plan_id": str(plan_uuid),
+            "target_name": target_name,
+            "struggle_score": score,
+            "primary_signal": struggle_context.get("primary_signal"),
+            "no_completion_days": no_completion_days,
+            "recent_completion_count": struggle_context.get("recent_completion_count", 0),
+            "last_completed_at": struggle_context.get("last_completed_at"),
+            "partnerships": partner_payloads,
+            "dedupe_key": dedupe_key,
+            "timestamp": _utcnow().isoformat(),
+        }
+        await event_bus.publish(ACCOUNTABILITY_STRUGGLE_DETECTED, payload)
+        logger.info(
+            "Published accountability struggle signal for user={} plan={} partners={} score={}",
+            user_uuid,
+            plan_uuid,
+            len(partner_payloads),
+            score,
+        )
+        return {
+            "published": True,
+            "event_type": ACCOUNTABILITY_STRUGGLE_DETECTED,
+            "partner_count": len(partner_payloads),
+            "struggle_score": score,
+        }
+
+    async def handle_accountability_struggle_detected(self, event: dict[str, Any]) -> dict[str, Any]:
+        """Consume a struggle event and create actionable partner notifications."""
+        if event.get("event_type") != ACCOUNTABILITY_STRUGGLE_DETECTED:
+            return {"handled": False, "reason": "ignored_event_type"}
+
+        user_id = event.get("user_id")
+        plan_id = event.get("plan_id")
+        if not user_id or not plan_id:
+            return {"handled": False, "reason": "missing_identifiers"}
+
+        target_user_id = UUID(str(user_id))
+        partnerships = await self._active_partnerships_for_user(target_user_id)
+        if not partnerships:
+            return {"handled": False, "reason": "no_active_accountability_partner"}
+
+        sent_count = 0
+        from app.services.accountability_notification_service import accountability_notification_service
+
+        for partnership in partnerships:
+            partner_id = (
+                partnership.partner_id
+                if str(partnership.initiator_id) == str(target_user_id)
+                else partnership.initiator_id
+            )
+            if await self._has_recent_partner_alert(
+                partner_id=partner_id,
+                target_user_id=target_user_id,
+                plan_id=UUID(str(plan_id)),
+                dedupe_key=str(event.get("dedupe_key") or ""),
+            ):
+                continue
+
+            await accountability_notification_service.send_struggle_alert(
+                self.db,
+                partner_id=partner_id,
+                target_user_id=target_user_id,
+                partnership_id=partnership.id,
+                plan_id=UUID(str(plan_id)),
+                target_name=str(event.get("target_name") or "你的伙伴"),
+                no_completion_days=int(event.get("no_completion_days") or 2),
+                struggle_score=float(event.get("struggle_score") or 0.0),
+                dedupe_key=str(event.get("dedupe_key") or ""),
+                preset_encouragements=list(PRESET_ENCOURAGEMENTS),
+            )
+            sent_count += 1
+
+        return {"handled": True, "sent_count": sent_count}
+
+    async def _active_partnerships_for_user(self, user_id: UUID) -> list[AccountabilityPartnership]:
+        result = await self.db.execute(
+            select(AccountabilityPartnership)
+            .options(
+                selectinload(AccountabilityPartnership.initiator),
+                selectinload(AccountabilityPartnership.partner),
+            )
+            .where(
+                AccountabilityPartnership.status == AccountabilityStatus.ACTIVE,
+                AccountabilityPartnership.deleted_at.is_(None),
+                or_(
+                    AccountabilityPartnership.initiator_id == user_id,
+                    AccountabilityPartnership.partner_id == user_id,
+                ),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def _has_recent_partner_alert(
+        self,
+        *,
+        partner_id: UUID,
+        target_user_id: UUID,
+        plan_id: UUID,
+        dedupe_key: str,
+    ) -> bool:
+        from app.services.accountability_notification_service import AccountabilityNotificationType
+
+        cutoff = _utcnow() - timedelta(hours=20)
+        result = await self.db.execute(
+            select(Notification)
+            .where(
+                and_(
+                    Notification.user_id == partner_id,
+                    Notification.type == AccountabilityNotificationType.STRUGGLE_ALERT.value,
+                    Notification.created_at >= cutoff,
+                    Notification.deleted_at.is_(None),
+                )
+            )
+            .order_by(Notification.created_at.desc())
+        )
+        for notification in result.scalars().all():
+            data = notification.data or {}
+            if dedupe_key and data.get("dedupe_key") == dedupe_key:
+                return True
+            if data.get("target_user_id") == str(target_user_id) and data.get("plan_id") == str(plan_id):
+                return True
+        return False
+
+    async def _claim_dedupe_key(self, key: str) -> bool:
+        if self.redis is None:
+            return True
+        try:
+            result = await self._redis_call(
+                self.redis,
+                "set",
+                key,
+                "1",
+                ex=self.ACCOUNTABILITY_STRUGGLE_DEDUP_TTL,
+                nx=True,
+            )
+            return bool(result)
+        except Exception as exc:
+            logger.debug("Accountability struggle dedupe unavailable: {}", exc)
+            return True
+
+    @staticmethod
+    async def _redis_call(redis, method_name: str, *args, **kwargs):
+        method = getattr(redis, method_name, None)
+        if method is None:
+            return None
+        result = method(*args, **kwargs)
+        if inspect.isawaitable(result):
+            return await result
+        return result

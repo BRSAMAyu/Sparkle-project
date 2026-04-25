@@ -8,7 +8,7 @@ Plans API Endpoints - Full CRUD operations
 
 from __future__ import annotations
 
-from datetime import timezone, date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -28,6 +28,13 @@ from app.models.plan import Plan, PlanType
 from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.orchestration.discovery_manager import (
+    PHASE_DESIGN_WORKFLOW_STATE,
+    PHASE_SKETCH_REVIEW_WORKFLOW_STATE,
+    DiscoveryManager,
+)
+from app.orchestration.phase_sketch_service import PhaseSketchService
+from app.orchestration.task_guide_enricher import TaskGuideEnricher
 from app.schemas.plan import (
     PlanCreate,
     PlanDetail,
@@ -38,26 +45,21 @@ from app.schemas.plan import (
     SetPrimaryPlanRequest,
 )
 from app.schemas.task import TaskDetail
+from app.services.card_protocol.feedback_gate_engine import FeedbackGateEngine
+from app.services.card_protocol.global_compass_manager import GlobalCompassManager
+from app.services.card_protocol.phase_design_service import PhaseDesignService
+from app.services.card_protocol.phase_service import PhaseService
+from app.services.card_protocol.planning_memory_service import PlanningMemoryService
 from app.services.plan_quota_service import PlanQuotaService
 from app.services.plan_service import PlanService, _sync_plan_card_projection
 from app.services.plan_state_service import PlanStateService
-from app.services.card_protocol.phase_service import PhaseService
-from app.services.card_protocol.global_compass_manager import GlobalCompassManager
-from app.services.card_protocol.feedback_gate_engine import FeedbackGateEngine
-from app.services.card_protocol.phase_design_service import PhaseDesignService
-from app.services.card_protocol.planning_memory_service import PlanningMemoryService
 from app.services.planning_artifact_service import PlanningArtifactService
-from app.orchestration.discovery_manager import (
-    PHASE_DESIGN_WORKFLOW_STATE,
-    PHASE_SKETCH_REVIEW_WORKFLOW_STATE,
-    DiscoveryManager,
-)
-from app.orchestration.phase_sketch_service import PhaseSketchService
 from app.services.state_notification_service import state_notification_service
 from app.tools.plan_tools import GenerateTasksForPlanTool
 from app.tools.schemas import GenerateTasksForPlanParams
 
 router = APIRouter()
+_task_guide_enricher = TaskGuideEnricher()
 
 
 class GenerateTasksRequest(BaseModel):
@@ -134,6 +136,7 @@ def _serialize_plan(
     task_count: int,
     completed_task_count: int,
     tasks: list[Task] | None = None,
+    user_display_name: str | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "id": plan.id,
@@ -159,8 +162,153 @@ def _serialize_plan(
         "source_metadata": plan.source_metadata,
     }
     if tasks is not None:
-        payload["tasks"] = [TaskDetail.model_validate(task).model_dump(mode="json") for task in tasks]
+        task_payloads = [_serialize_task_for_plan_detail(task, subject=plan.subject) for task in tasks]
+        payload["tasks"] = task_payloads
+        payload["day_highlights"] = _build_day_highlights(
+            plan=plan,
+            task_payloads=task_payloads,
+            user_display_name=user_display_name,
+        )
     return payload
+
+
+def _strip(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _serialize_task_for_plan_detail(task: Task, *, subject: str | None) -> dict[str, Any]:
+    payload = TaskDetail.model_validate(task).model_dump(mode="json")
+    guide_json = payload.get("guide_json")
+    guide = dict(guide_json) if isinstance(guide_json, dict) else {}
+    if not _strip(guide.get("why_now")):
+        task_kind = _strip(guide.get("task_kind")) or _task_kind_from_tags(payload.get("tags")) or "retrieval_drill"
+        focus = (
+            _strip(guide.get("focus_cue"))
+            or _strip(guide.get("objective"))
+            or _strip(payload.get("guide_content"))
+            or _strip(payload.get("title"))
+        )
+        guide["why_now"] = _task_guide_enricher.build_rule_based_why_now(
+            task_kind=task_kind,
+            subject=_strip(subject) or "当前科目",
+            focus=focus,
+            guide_json=guide,
+        )
+    payload["guide_json"] = guide
+    return payload
+
+
+def _task_kind_from_tags(tags: Any) -> str:
+    if not isinstance(tags, list):
+        return ""
+    known_kinds = {
+        "diagnostic_triage",
+        "retrieval_triage",
+        "retrieval_drill",
+        "retrieval_repair",
+        "mock_review",
+        "diagnostic_map",
+        "closed_book_map",
+        "deep_learn_retrieval",
+        "spaced_retrieval",
+        "integration_retrieval",
+        "stage_mock",
+    }
+    for tag in tags:
+        text = _strip(tag)
+        if text in known_kinds:
+            return text
+    return ""
+
+
+def _task_day_from_payload(task_payload: dict[str, Any]) -> int:
+    order_index = task_payload.get("order_index")
+    try:
+        order_value = int(order_index or 0)
+    except (TypeError, ValueError):
+        order_value = 0
+    if order_value >= 1000:
+        return max(1, order_value // 1000)
+    tags = task_payload.get("tags")
+    if isinstance(tags, list):
+        for tag in tags:
+            text = _strip(tag)
+            if text.startswith("day:"):
+                try:
+                    return max(1, int(text.split(":", 1)[1]))
+                except ValueError:
+                    continue
+    return 1
+
+
+def _stored_day_recommendation(plan: Plan, day: int) -> str:
+    metadata = plan.source_metadata if isinstance(plan.source_metadata, dict) else {}
+    highlights = metadata.get("day_highlights")
+    if not isinstance(highlights, dict):
+        return ""
+    try:
+        stored_day = int(highlights.get("day") or 0)
+    except (TypeError, ValueError):
+        stored_day = 0
+    if stored_day == day:
+        return _strip(highlights.get("recommendation") or highlights.get("ai_recommendation"))
+    keyed = highlights.get(str(day))
+    if isinstance(keyed, dict):
+        return _strip(keyed.get("recommendation") or keyed.get("ai_recommendation"))
+    return ""
+
+
+def _build_day_recommendation(
+    *,
+    plan: Plan,
+    day: int,
+    task_payloads: list[dict[str, Any]],
+    user_display_name: str | None,
+) -> str:
+    stored = _stored_day_recommendation(plan, day)
+    display_name = _strip(user_display_name)
+    if stored:
+        if display_name and len(display_name) <= 12 and not stored.startswith(f"{display_name}，"):
+            return f"{display_name}，{stored}"
+        return stored
+    name_prefix = f"{display_name}，" if display_name and len(display_name) <= 12 else ""
+    task_count = max(1, len(task_payloads))
+    thing_label = f"这 {task_count} 件事" if task_count > 1 else "这 1 件事"
+    subject_tail = f"{_strip(plan.subject)} 的第一步就稳下来了" if _strip(plan.subject) else "你已经走在正确路上了"
+    if day == 1:
+        return f"{name_prefix}今天先做好{thing_label}，{subject_tail}。"
+    return f"{name_prefix}先看 Day {day} 的{thing_label}，把节奏稳稳接上。"
+
+
+def _build_day_highlights(
+    *,
+    plan: Plan,
+    task_payloads: list[dict[str, Any]],
+    user_display_name: str | None,
+) -> dict[str, Any] | None:
+    if not task_payloads:
+        return None
+
+    day_groups: dict[int, list[dict[str, Any]]] = {}
+    for task_payload in task_payloads:
+        day = _task_day_from_payload(task_payload)
+        day_groups.setdefault(day, []).append(task_payload)
+
+    highlight_day = 1 if day_groups.get(1) else min(day_groups)
+    highlight_tasks = sorted(
+        day_groups[highlight_day],
+        key=lambda task: (int(task.get("order_index") or 0), _strip(task.get("created_at"))),
+    )
+    return {
+        "day": highlight_day,
+        "recommendation": _build_day_recommendation(
+            plan=plan,
+            day=highlight_day,
+            task_payloads=highlight_tasks,
+            user_display_name=user_display_name,
+        ),
+        "tasks": highlight_tasks,
+    }
 
 
 async def _get_plan_card_or_500(db: AsyncSession, plan: Plan, user_id: UUID):
@@ -601,7 +749,11 @@ async def get_plan(
         and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
     )
     completed_count = (await db.execute(completed_query)).scalar() or 0
-    tasks_result = await db.execute(select(Task).where(Task.plan_id == plan.id).order_by(desc(Task.created_at)))
+    tasks_result = await db.execute(
+        select(Task)
+        .where(and_(Task.plan_id == plan.id, Task.user_id == current_user.id))
+        .order_by(Task.order_index.asc(), Task.created_at.asc())
+    )
     tasks = tasks_result.scalars().all()
 
     return _serialize_plan(
@@ -609,6 +761,7 @@ async def get_plan(
         task_count=task_count,
         completed_task_count=completed_count,
         tasks=list(tasks),
+        user_display_name=current_user.nickname or current_user.full_name or current_user.username,
     )
 
 
@@ -1314,8 +1467,9 @@ async def get_learning_path_progress(
             "overall_progress": 0.0,
         }
 
-    from app.models.galaxy import KnowledgeNode, UserNodeStatus
     from sqlalchemy import or_
+
+    from app.models.galaxy import KnowledgeNode, UserNodeStatus
 
     nodes_result = await db.execute(select(KnowledgeNode).where(KnowledgeNode.id.in_(path_node_ids)))
     nodes = {str(n.id): n for n in nodes_result.scalars().all()}

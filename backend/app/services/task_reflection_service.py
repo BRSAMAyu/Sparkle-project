@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import math
+import re
 import uuid
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -10,26 +11,30 @@ from loguru import logger
 from prometheus_client import Counter, Gauge, Histogram
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.agents.reflection_agent import TriggeredReflectionResult, get_reflection_agent
 from app.config import settings
 from app.core.event_bus import event_bus
 from app.core.metrics import get_or_create_metric
+from app.event_publishers.srl_events import publish_srl_event
+from app.models.galaxy import KnowledgeNode
 from app.models.task import Task
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
+from app.models.task_resources import TaskKnowledgeLink
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.aurora_stage25_reflection_kill_switch_service import AuroraStage25ReflectionKillSwitchService
 from app.services.cognitive_service import CognitiveService
-from app.services.srl_phase_traits import derive_reflection_prompt_style
-from app.event_publishers.srl_events import publish_srl_event
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate, MemoryInferredWriteLaneService
+from app.services.memory_service import MemoryService
 from app.services.route_history_service import RouteHistoryService
 from app.services.rule_y_adapter import RuleYAdapter
+from app.services.srl_phase_traits import derive_reflection_prompt_style
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 REFLECTION_TRIGGER_FIRED_TOTAL = get_or_create_metric(
@@ -345,6 +350,9 @@ class TaskReflectionService:
         feedback_id: UUID,
         selected_option: str | None,
         free_text: str | None,
+        stuck_point: str | None = None,
+        effective_method: str | None = None,
+        adjustment_intention: str | None = None,
     ) -> dict[str, object]:
         result = await self.db.execute(
             select(TaskFeedback, Task)
@@ -367,10 +375,39 @@ class TaskReflectionService:
             user_id=user_id,
             task_title=task.title,
         )
+        structured = self._normalize_structured_reflection(
+            selected_option=selected_option,
+            free_text=free_text,
+            stuck_point=stuck_point,
+            effective_method=effective_method,
+            adjustment_intention=adjustment_intention,
+        )
+        recent_reflections = await self._load_recent_reflection_memories(user_id=user_id, feedback_id=feedback.id)
+        linked_nodes = await self._resolve_reflection_knowledge_nodes(
+            user_id=user_id,
+            task=task,
+            stuck_point=structured["stuck_point"],
+        )
+        await self._persist_reflection_node_links(
+            task=task,
+            linked_nodes=linked_nodes,
+            stuck_point=structured["stuck_point"],
+        )
+        ai_response = self._build_connection_response(
+            task=task,
+            structured=structured,
+            linked_nodes=linked_nodes,
+            recent_reflections=recent_reflections,
+        )
         payload = {
             "prompt": prompt,
             "selected_option": (selected_option or "").strip() or None,
             "free_text": (free_text or "").strip() or None,
+            "stuck_point": structured["stuck_point"],
+            "effective_method": structured["effective_method"],
+            "adjustment_intention": structured["adjustment_intention"],
+            "linked_knowledge_nodes": linked_nodes,
+            "ai_response": ai_response,
             "submitted_at": _utcnow().isoformat(),
             "status": "completed",
         }
@@ -385,6 +422,12 @@ class TaskReflectionService:
             fragment_parts.append(f"用户选择：{payload['selected_option']}")
         if payload["free_text"]:
             fragment_parts.append(f"补充说明：{payload['free_text']}")
+        if structured["stuck_point"]:
+            fragment_parts.append(f"卡点：{structured['stuck_point']}")
+        if structured["effective_method"]:
+            fragment_parts.append(f"有效方法：{structured['effective_method']}")
+        if structured["adjustment_intention"]:
+            fragment_parts.append(f"下次调整：{structured['adjustment_intention']}")
 
         cognitive_service = CognitiveService(self.db)
         fragment = await cognitive_service.create_fragment(
@@ -396,6 +439,10 @@ class TaskReflectionService:
                 "plan_id": str(task.plan_id) if task.plan_id else "",
                 "feedback_id": str(feedback.id),
                 "selected_option": payload["selected_option"],
+                "stuck_point": structured["stuck_point"],
+                "effective_method": structured["effective_method"],
+                "adjustment_intention": structured["adjustment_intention"],
+                "linked_knowledge_node_ids": [item["id"] for item in linked_nodes],
                 "reflection_category": str(feedback.category or ""),
             },
             error_tags=[f"reflection.{str(feedback.category or 'unknown')}"],
@@ -404,6 +451,19 @@ class TaskReflectionService:
             source_event_id=f"reflection_auto:{feedback.id}",
         )
         await cognitive_service.analyze_behavior(user_id, fragment.id)
+        memory = await self._write_structured_reflection_memory(
+            user_id=user_id,
+            task=task,
+            feedback=feedback,
+            structured=structured,
+            linked_nodes=linked_nodes,
+            ai_response=ai_response,
+        )
+        if memory is not None:
+            payload["memory_id"] = str(memory.id)
+            feedback.reflection_payload = dict(payload)
+            flag_modified(feedback, "reflection_payload")
+            await self.db.flush()
 
         if task.plan_id:
             try:
@@ -460,10 +520,375 @@ class TaskReflectionService:
             "feedback_id": str(feedback_id) if feedback_id else "",
             "task_title": task_title,
             "category": category,
-            "question": question,
+            "question": "把这次任务变成下次更会做的线索：先抓住 3 个具体点。",
             "options": options,
+            "legacy_question": question,
+            "fields": [
+                {
+                    "key": "stuck_point",
+                    "label": "这个任务中你卡在哪里了？",
+                    "hint": "例如：热力学公式看得懂，但不知道什么时候套用",
+                    "required": True,
+                },
+                {
+                    "key": "effective_method",
+                    "label": "哪个方法让你觉得有进展？",
+                    "hint": "例如：先画能量流向图，再列方程",
+                    "required": False,
+                },
+                {
+                    "key": "adjustment_intention",
+                    "label": "下次会换什么做法？",
+                    "hint": "例如：先做 1 道代表题，再进入整组练习",
+                    "required": False,
+                },
+            ],
             "reflection_prompt_style": reflection_prompt_style,
         }
+
+    def _normalize_structured_reflection(
+        self,
+        *,
+        selected_option: str | None,
+        free_text: str | None,
+        stuck_point: str | None,
+        effective_method: str | None,
+        adjustment_intention: str | None,
+    ) -> dict[str, str | None]:
+        selected = (selected_option or "").strip()
+        free = (free_text or "").strip()
+        stuck = (stuck_point or "").strip()
+        method = (effective_method or "").strip()
+        adjustment = (adjustment_intention or "").strip()
+        if not stuck:
+            if selected and free:
+                stuck = f"{selected}：{free}"
+            else:
+                stuck = selected or free
+        return {
+            "stuck_point": stuck or None,
+            "effective_method": method or None,
+            "adjustment_intention": adjustment or None,
+        }
+
+    async def _load_recent_reflection_memories(
+        self,
+        *,
+        user_id: UUID,
+        feedback_id: UUID,
+    ) -> list[dict[str, Any]]:
+        try:
+            rows = await MemoryService(self.db).list_recent_episodic(user_id, limit=8)
+        except Exception as exc:
+            logger.warning(f"Failed to load recent reflection memories: {exc}")
+            return []
+        current_source_id = str(feedback_id)
+        memories: list[dict[str, Any]] = []
+        for row in rows:
+            if str(getattr(row, "source_type", "") or "") != "reflection":
+                continue
+            if str(getattr(row, "source_id", "") or "") == current_source_id:
+                continue
+            summary = str(getattr(row, "summary", "") or "").strip()
+            if summary:
+                memories.append(
+                    {
+                        "id": str(row.id),
+                        "summary": summary,
+                        "occurred_at": row.occurred_at.isoformat() if row.occurred_at else None,
+                    }
+                )
+            if len(memories) >= 3:
+                break
+        return memories
+
+    async def _resolve_reflection_knowledge_nodes(
+        self,
+        *,
+        user_id: UUID,
+        task: Task,
+        stuck_point: str | None,
+    ) -> list[dict[str, Any]]:
+        haystack = f"{task.title or ''} {stuck_point or ''} {' '.join(str(tag) for tag in (task.tags or []))}".strip()
+        nodes_by_id: dict[str, dict[str, Any]] = {}
+
+        if task.knowledge_node_id:
+            node = await self.db.get(KnowledgeNode, task.knowledge_node_id)
+            if node is not None:
+                nodes_by_id[str(node.id)] = self._serialize_reflection_node(
+                    node,
+                    source="task_primary",
+                    confidence=0.95,
+                )
+
+        link_result = await self.db.execute(
+            select(TaskKnowledgeLink, KnowledgeNode)
+            .join(KnowledgeNode, TaskKnowledgeLink.knowledge_node_id == KnowledgeNode.id)
+            .where(TaskKnowledgeLink.task_id == task.id)
+            .order_by(TaskKnowledgeLink.is_primary.desc(), TaskKnowledgeLink.order_index.asc())
+        )
+        for link, node in link_result.all():
+            node_id = str(node.id)
+            nodes_by_id.setdefault(
+                node_id,
+                self._serialize_reflection_node(
+                    node,
+                    source="task_link",
+                    confidence=float(link.strength or (0.86 if link.is_primary else 0.72)),
+                ),
+            )
+
+        if haystack:
+            try:
+                result = await self.db.execute(
+                    select(KnowledgeNode)
+                    .where(KnowledgeNode.deleted_at.is_(None))
+                    .order_by(KnowledgeNode.is_seed.desc(), KnowledgeNode.updated_at.desc())
+                    .limit(500)
+                )
+                for node in result.scalars().all():
+                    score = self._score_reflection_node_match(node, haystack)
+                    if score < 0.35:
+                        continue
+                    node_id = str(node.id)
+                    existing = nodes_by_id.get(node_id)
+                    if existing is None or score > float(existing.get("confidence") or 0.0):
+                        nodes_by_id[node_id] = self._serialize_reflection_node(
+                            node,
+                            source="stuck_point_parse",
+                            confidence=score,
+                        )
+            except Exception as exc:
+                logger.warning(f"Failed to parse reflection stuck point into Galaxy nodes: {exc}")
+
+        return sorted(
+            nodes_by_id.values(),
+            key=lambda item: float(item.get("confidence") or 0.0),
+            reverse=True,
+        )[:3]
+
+    async def _persist_reflection_node_links(
+        self,
+        *,
+        task: Task,
+        linked_nodes: list[dict[str, Any]],
+        stuck_point: str | None,
+    ) -> None:
+        if not linked_nodes:
+            return
+        for index, item in enumerate(linked_nodes):
+            try:
+                node_id = UUID(str(item["id"]))
+            except (ValueError, KeyError):
+                continue
+            existing = await self.db.execute(
+                select(TaskKnowledgeLink).where(
+                    TaskKnowledgeLink.task_id == task.id,
+                    TaskKnowledgeLink.knowledge_node_id == node_id,
+                )
+            )
+            link = existing.scalar_one_or_none()
+            if link is not None:
+                if not link.notes and stuck_point:
+                    link.notes = f"reflection_stuck_point: {stuck_point[:180]}"
+                continue
+            self.db.add(
+                TaskKnowledgeLink(
+                    task_id=task.id,
+                    knowledge_node_id=node_id,
+                    relation_type="reflection_stuck_point",
+                    strength=float(item.get("confidence") or 0.7),
+                    notes=f"reflection_stuck_point: {(stuck_point or '')[:180]}",
+                    order_index=100 + index,
+                    is_primary=False,
+                )
+            )
+        await self.db.flush()
+
+    async def _write_structured_reflection_memory(
+        self,
+        *,
+        user_id: UUID,
+        task: Task,
+        feedback: TaskFeedback,
+        structured: dict[str, str | None],
+        linked_nodes: list[dict[str, Any]],
+        ai_response: str,
+    ):
+        summary = self._build_reflection_memory_summary(
+            task=task,
+            structured=structured,
+            linked_nodes=linked_nodes,
+        )
+        if not summary:
+            return None
+        tags = [
+            "task_reflection",
+            "reflection:structured",
+            f"reflection_category:{str(feedback.category or 'unknown')}",
+            f"task:{task.id}",
+        ]
+        tags.extend(f"knowledge_node:{item['id']}" for item in linked_nodes if item.get("id"))
+        semantic_seed = f"{user_id}:{task.id}:{structured.get('stuck_point') or ''}:{structured.get('adjustment_intention') or ''}"
+        try:
+            return await MemoryService(self.db).create_episodic_memory(
+                user_id=user_id,
+                summary=summary,
+                source_type="reflection",
+                source_id=str(feedback.id),
+                occurred_at=_utcnow(),
+                importance_score=0.78,
+                tags=tags,
+                evidence_refs=[
+                    {"type": "task", "id": str(task.id), "schema_version": "task.v1"},
+                    {
+                        "type": "summary",
+                        "id": str(feedback.id),
+                        "schema_version": "task_reflection.v1",
+                        "stuck_point": structured.get("stuck_point"),
+                        "effective_method": structured.get("effective_method"),
+                        "adjustment_intention": structured.get("adjustment_intention"),
+                        "linked_knowledge_nodes": linked_nodes,
+                        "ai_response": ai_response,
+                    },
+                ],
+                confidence=0.88,
+                evidence_token=f"task_reflection:{feedback.id}",
+                decay_policy="60d",
+                source_lane="direct_capture",
+                semantic_key=str(uuid.uuid5(uuid.NAMESPACE_URL, semantic_seed)),
+                subject_type="reflection",
+                mentioned_entity_hash=(
+                    uuid.uuid5(uuid.NAMESPACE_URL, str(linked_nodes[0]["id"])).hex
+                    if linked_nodes
+                    else None
+                ),
+                mentioned_entity_owner_user_id=user_id if linked_nodes else None,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to write task reflection memory: {exc}")
+            return None
+
+    def _build_connection_response(
+        self,
+        *,
+        task: Task,
+        structured: dict[str, str | None],
+        linked_nodes: list[dict[str, Any]],
+        recent_reflections: list[dict[str, Any]],
+    ) -> str:
+        stuck = self._compact_text(structured.get("stuck_point") or "这个卡点", limit=42)
+        method = self._compact_text(structured.get("effective_method") or "", limit=36)
+        adjustment = self._compact_text(structured.get("adjustment_intention") or "", limit=42)
+        node_name = self._compact_text(str(linked_nodes[0].get("name") or ""), limit=28) if linked_nodes else ""
+        previous = self._compact_text(
+            str(recent_reflections[0].get("summary") or "") if recent_reflections else "",
+            limit=46,
+        )
+
+        if previous and node_name:
+            return (
+                f"你这次卡在「{stuck}」，我先把它挂到「{node_name}」上；"
+                f"它和之前「{previous}」那条反思有相似的阻力，我会在下次对话里带着这条线索接上。"
+            )
+        if previous:
+            return (
+                f"你这次提到的「{stuck}」和之前「{previous}」里的阻力有点像；"
+                f"我记下来了，下次会先从这个重复卡点切入。"
+            )
+        if node_name:
+            tail = f"下次我会优先按「{adjustment}」帮你接上。" if adjustment else "下次对话我会优先从这个节点接上。"
+            return f"你这次卡在「{stuck}」，我把它先挂到「{node_name}」下面；{tail}"
+        if method or adjustment:
+            method_part = f"，有效推进方式是「{method}」" if method else ""
+            next_part = f"；下次先试「{adjustment}」" if adjustment else ""
+            return f"你这次的卡点是「{stuck}」{method_part}{next_part}，我会把它作为下次任务前的提醒。"
+        return f"你这次的卡点是「{stuck}」，我会把它作为后续对话里需要回到的线索。"
+
+    def _build_reflection_memory_summary(
+        self,
+        *,
+        task: Task,
+        structured: dict[str, str | None],
+        linked_nodes: list[dict[str, Any]],
+    ) -> str:
+        parts = [f"任务《{task.title}》反思"]
+        if structured.get("stuck_point"):
+            parts.append(f"卡点：{structured['stuck_point']}")
+        if structured.get("effective_method"):
+            parts.append(f"有效方法：{structured['effective_method']}")
+        if structured.get("adjustment_intention"):
+            parts.append(f"下次调整：{structured['adjustment_intention']}")
+        if linked_nodes:
+            node_names = "、".join(str(item.get("name") or item.get("id")) for item in linked_nodes[:2])
+            parts.append(f"关联节点：{node_names}")
+        return "；".join(part for part in parts if part).strip()
+
+    @staticmethod
+    def _serialize_reflection_node(
+        node: KnowledgeNode,
+        *,
+        source: str,
+        confidence: float,
+    ) -> dict[str, Any]:
+        return {
+            "id": str(node.id),
+            "name": str(node.name or "").strip(),
+            "source": source,
+            "confidence": round(max(0.0, min(float(confidence), 1.0)), 2),
+        }
+
+    def _score_reflection_node_match(self, node: KnowledgeNode, haystack: str) -> float:
+        lowered = haystack.lower()
+        score = 0.0
+        name = str(node.name or "").strip()
+        if name and name in haystack:
+            score = max(score, 0.92)
+        if name and haystack in name and len(haystack) >= 3:
+            score = max(score, 0.5)
+        name_en = str(node.name_en or "").strip().lower()
+        if name_en and name_en in lowered:
+            score = max(score, 0.84)
+        keyword_hits = 0
+        for keyword in list(node.keywords or []):
+            keyword_text = str(keyword or "").strip()
+            if keyword_text and keyword_text.lower() in lowered:
+                keyword_hits += 1
+        if keyword_hits:
+            score = max(score, min(0.85, 0.42 + keyword_hits * 0.14))
+        terms = self._reflection_terms(haystack)
+        if terms:
+            node_text = " ".join(
+                [
+                    name,
+                    str(node.name_en or ""),
+                    str(node.description or "")[:300],
+                    " ".join(str(keyword or "") for keyword in list(node.keywords or [])),
+                ]
+            ).lower()
+            overlap = sum(1 for term in terms if term.lower() in node_text)
+            if overlap:
+                score = max(score, min(0.72, 0.25 + overlap * 0.12))
+        return score
+
+    @staticmethod
+    def _reflection_terms(text: str) -> list[str]:
+        raw_terms = re.findall(r"[A-Za-z][A-Za-z0-9_+.-]{2,}|[\u4e00-\u9fff]{2,}", text or "")
+        stopwords = {"这个", "任务", "哪里", "下次", "方法", "觉得", "有点", "还是", "不会", "不懂", "卡住"}
+        terms: list[str] = []
+        for term in raw_terms:
+            if term in stopwords or len(term.strip()) < 2:
+                continue
+            if term not in terms:
+                terms.append(term)
+        return terms[:12]
+
+    @staticmethod
+    def _compact_text(value: str, *, limit: int) -> str:
+        text = re.sub(r"\s+", " ", value or "").strip()
+        if len(text) <= limit:
+            return text
+        return f"{text[: limit - 1]}…"
 
     async def _get_reflection_prompt_style(self, user_id: UUID | None) -> str:
         if user_id is None:

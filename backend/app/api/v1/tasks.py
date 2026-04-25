@@ -8,7 +8,7 @@ Tasks API Endpoints
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -25,14 +25,17 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_resources import TaskResourceLink, TaskResourceType
 from app.models.user import User
 from app.schemas.task import (
+    SubTaskDetail,
     TaskAbandon,
     TaskCompleteRequest,
     TaskCreate,
     TaskDetail,
+    TaskQuickActionRequest,
     TaskRecommendationResponse,
     TaskReorderRequest,
     TaskResourceLinkCreate,
     TaskResourceLinkInfo,
+    TaskSnoozeRequest,
     TaskSuggestionRequest,
     TaskSuggestionResponse,
     TaskUpdate,
@@ -55,6 +58,10 @@ from app.task_guidance import TaskGuidance, TaskGuidanceAudience
 router = APIRouter()
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 def _serialize_task_guidance(guidance: TaskGuidance) -> dict[str, Any]:
     return guidance.model_dump(mode="json")
 
@@ -64,6 +71,45 @@ async def _get_user_task_or_404(db: AsyncSession, task_id: UUID, user_id: UUID) 
     if not task or task.user_id != user_id:
         raise NotFoundError(message="Task not found")
     return task
+
+
+async def _find_today_focus_task(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    exclude_task_id: UUID,
+) -> Task | None:
+    today = date.today()
+    result = await db.execute(
+        select(Task)
+        .where(
+            Task.user_id == user_id,
+            Task.id != exclude_task_id,
+            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]),
+            (Task.due_date.is_(None)) | (Task.due_date <= today),
+        )
+        .order_by(Task.order_index.asc(), desc(Task.priority), desc(Task.updated_at))
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+def _action_response(
+    *,
+    action: str,
+    message: str,
+    task: Task,
+    subtasks: list[Any] | None = None,
+) -> dict[str, Any]:
+    data: dict[str, Any] = {"task": TaskDetail.model_validate(task)}
+    if subtasks is not None:
+        data["subtasks"] = [SubTaskDetail.model_validate(item) for item in subtasks]
+    return {
+        "success": True,
+        "action": action,
+        "message": message,
+        "data": data,
+    }
 
 
 async def _resolve_task_resource_defaults(
@@ -549,6 +595,105 @@ async def create_or_refresh_task_guidance(
     return {"data": _serialize_task_guidance(guidance)}
 
 
+@router.post("/{task_id}/snooze", response_model=dict[str, Any])
+async def snooze_task(
+    request: TaskSnoozeRequest | None = None,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Push one task to a later date without changing the plan structure."""
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
+    target_date = (request.target_date if request else None) or (
+        date.today() + timedelta(days=(request.days if request else 1))
+    )
+    task.due_date = target_date
+    tags = list(task.tags or [])
+    if "snoozed" not in tags:
+        tags.append("snoozed")
+    task.tags = tags
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+
+    next_task = await _find_today_focus_task(
+        db,
+        user_id=current_user.id,
+        exclude_task_id=task.id,
+    )
+    if next_task:
+        message = f"已推迟到明天，你现在多一点时间给「{next_task.title}」。"
+    else:
+        message = "已推迟到明天，今天先把节奏放轻一点。"
+    return _action_response(action="snooze", message=message, task=task)
+
+
+@router.post("/{task_id}/too-hard", response_model=dict[str, Any])
+@router.post(
+    "/{task_id}/too_hard",
+    response_model=dict[str, Any],
+    include_in_schema=False,
+)
+async def mark_task_too_hard(
+    request: TaskQuickActionRequest | None = None,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Break a task into smaller subtasks when the current card feels too hard."""
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
+    from app.orchestration.adaptive_replanner import AdaptiveReplanner
+
+    replanner = AdaptiveReplanner(db, cache_service.redis)
+    subtasks = await replanner.break_down_single_task_for_too_hard(
+        user_id=current_user.id,
+        task_id=task.id,
+        feedback_text=request.reason if request else None,
+    )
+    await db.commit()
+    await db.refresh(task)
+    for subtask in subtasks:
+        await db.refresh(subtask)
+
+    if subtasks:
+        message = f"我把它拆成 {len(subtasks)} 小步了，先做「{subtasks[0].title}」。"
+    else:
+        message = "我知道这张有点硬，先别硬扛；可以直接找 AI 一起拆卡点。"
+    return _action_response(
+        action="too_hard",
+        message=message,
+        task=task,
+        subtasks=subtasks,
+    )
+
+
+@router.post("/{task_id}/skip", response_model=dict[str, Any])
+async def skip_task(
+    request: TaskQuickActionRequest | None = None,
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Hide a task from active surfaces by marking it abandoned as a quick skip."""
+    reason = (request.reason if request else None) or "quick_action_skip"
+    task = await TaskService.abandon_task(
+        db=db,
+        task_id=task_id,
+        user_id=current_user.id,
+        reason=reason,
+    )
+    task.user_note = "Skipped from quick action"
+    task.completed_at = task.completed_at or _utcnow()
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+    return _action_response(
+        action="skip",
+        message="已跳过，这张卡不会再挤在今天了。",
+        task=task,
+    )
+
+
 @router.delete("/{task_id}")
 async def delete_task(
     task_id: UUID = Path(..., description="Task ID"),
@@ -839,6 +984,9 @@ async def submit_task_feedback(
             completion_quality=feedback_in.completion_quality,
             feedback_text=feedback_in.feedback_text,
             category=feedback_in.category,
+            stuck_point=feedback_in.stuck_point,
+            effective_method=feedback_in.effective_method,
+            adjustment_intention=feedback_in.adjustment_intention,
         )
 
         # 构建偏好更新详情
@@ -855,6 +1003,12 @@ async def submit_task_feedback(
             data=TaskFeedbackResponse.model_validate(feedback),
             preference_updates=preference_updates,
             reflection_prompt=reflection_prompt,
+            reflection_payload=feedback.reflection_payload,
+            ai_response=(
+                feedback.reflection_payload.get("ai_response")
+                if isinstance(feedback.reflection_payload, dict)
+                else None
+            ),
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -880,12 +1034,18 @@ async def submit_task_reflection_answer(
             feedback_id=feedback_id,
             selected_option=reflection_in.selected_option,
             free_text=reflection_in.free_text,
+            stuck_point=reflection_in.stuck_point,
+            effective_method=reflection_in.effective_method,
+            adjustment_intention=reflection_in.adjustment_intention,
         )
         await db.commit()
         return ReflectionAnswerResponse(
             success=True,
-            message="谢谢你的反馈，我会据此优化后续计划。",
+            message=reflection_payload.get("ai_response") or "谢谢你的反馈，我会据此优化后续计划。",
             reflection_payload=reflection_payload,
+            ai_response=reflection_payload.get("ai_response"),
+            memory_id=reflection_payload.get("memory_id"),
+            linked_knowledge_nodes=reflection_payload.get("linked_knowledge_nodes"),
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

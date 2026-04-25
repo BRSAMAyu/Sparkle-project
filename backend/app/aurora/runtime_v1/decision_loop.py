@@ -10,7 +10,6 @@ from loguru import logger
 
 from app.aurora.runtime_v1.control_surface import AuroraHardBounds, ControlSurfaceService, HarnessUpdateRejectedError
 from app.aurora.runtime_v1.dashboard import (
-    CORE_MODELING_DOMAINS,
     REQUIRED_MODELING_DOMAINS,
     DashboardReadout,
     canonicalize_runtime_domain,
@@ -159,6 +158,7 @@ class AuroraDecisionLoop:
             "dashboard_readout": self._slim_readout_for_surface(readout),
             "rules": [
                 "If the user is detouring and the detour matters more, choose wait or emit_message without forcing topic return.",
+                "If dashboard_readout.surface_state.in_detour is true, use latent_thread_recovery_candidates to decide whether a soft_return_topic is warranted.",
                 "If a latent thread should be gently recovered, choose soft_return_topic.",
                 "If dashboard coverage already closes the core modeling domains, stop asking questions and let modeling_complete become true.",
                 "If you need more information, put the missing domain in state_updates.informational_tensions.",
@@ -516,6 +516,9 @@ class AuroraDecisionLoop:
 
     def _slim_readout_for_surface(self, readout: DashboardReadout) -> dict[str, Any]:
         payload = readout.to_llm_payload()
+        surface_state = self._surface_state_from_readout(readout)
+        if surface_state:
+            payload["surface_state"] = surface_state
         if readout.surface == "aurora_modeling":
             for key in ("task_state", "checkpoint_state", "exam_sprint_policy"):
                 payload.pop(key, None)
@@ -525,6 +528,26 @@ class AuroraDecisionLoop:
         elif readout.surface == "aurora_planning":
             payload.pop("cold_start_context", None)
         return payload
+
+    def _surface_state_from_readout(self, readout: DashboardReadout) -> dict[str, Any]:
+        request_context = readout.request_extra_context if isinstance(readout.request_extra_context, Mapping) else {}
+        surface_state: dict[str, Any] = {}
+
+        direct_state = request_context.get("surface_state")
+        if isinstance(direct_state, Mapping):
+            surface_state.update(dict(direct_state))
+
+        detour_scaffold = request_context.get("planning_detour_scaffold")
+        if isinstance(detour_scaffold, Mapping):
+            scaffold_state = detour_scaffold.get("surface_state")
+            if isinstance(scaffold_state, Mapping):
+                surface_state.update(dict(scaffold_state))
+            if readout.surface == "aurora_planning" and (
+                detour_scaffold.get("recent_detours") or detour_scaffold.get("top_latent_thread")
+            ):
+                surface_state.setdefault("in_detour", True)
+
+        return surface_state
 
     def _extract_target_domain(self, decision: AuroraDecision) -> str | None:
         directive = decision.chat_directive or {}

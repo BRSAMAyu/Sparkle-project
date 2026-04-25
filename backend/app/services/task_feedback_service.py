@@ -4,9 +4,10 @@ Task Feedback Service
 处理任务反馈，更新用户推断偏好
 """
 from __future__ import annotations
+
 import inspect
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -27,7 +28,7 @@ from app.services.task_reflection_service import TaskReflectionService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class TaskFeedbackService:
@@ -69,6 +70,9 @@ class TaskFeedbackService:
         completion_quality: int | None = None,
         feedback_text: str | None = None,
         category: str | None = None,
+        stuck_point: str | None = None,
+        effective_method: str | None = None,
+        adjustment_intention: str | None = None,
     ) -> tuple[TaskFeedback, dict[str, Any] | None]:
         """
         提交任务反馈
@@ -157,15 +161,32 @@ class TaskFeedbackService:
             logger.warning(f"[TaskFeedback] Routing profile update skipped: {e}")
 
         reflection_prompt = None
+        has_structured_reflection = any(
+            str(value or "").strip()
+            for value in (stuck_point, effective_method, adjustment_intention)
+        )
         try:
             reflection_service = TaskReflectionService(self.db, self.redis)
-            reflection_prompt = await reflection_service.maybe_enqueue_reflection_prompt(
-                user_id=user_id,
-                task=task,
-                feedback=feedback,
-                category=feedback_snapshot["category"],
-                time_spent_minutes=task_snapshot["actual_minutes"],
-            )
+            if has_structured_reflection:
+                reflection_payload = await reflection_service.submit_reflection_answer(
+                    user_id=user_id,
+                    feedback_id=feedback.id,
+                    selected_option=category,
+                    free_text=feedback_text,
+                    stuck_point=stuck_point,
+                    effective_method=effective_method,
+                    adjustment_intention=adjustment_intention,
+                )
+                prompt_value = reflection_payload.get("prompt")
+                reflection_prompt = prompt_value if isinstance(prompt_value, dict) else None
+            else:
+                reflection_prompt = await reflection_service.maybe_enqueue_reflection_prompt(
+                    user_id=user_id,
+                    task=task,
+                    feedback=feedback,
+                    category=feedback_snapshot["category"],
+                    time_spent_minutes=task_snapshot["actual_minutes"],
+                )
         except Exception as e:
             logger.warning(f"[TaskFeedback] Reflection prompt generation failed: {e}")
 
@@ -212,6 +233,7 @@ class TaskFeedbackService:
                 "task_difficulty_snapshot",
                 "task_type_snapshot",
                 "actual_minutes_snapshot",
+                "reflection_payload",
                 "created_at",
                 "updated_at",
             ],
@@ -669,7 +691,7 @@ class TaskFeedbackService:
             return None
 
         if observed_at.tzinfo is not None:
-            observed_at = observed_at.astimezone(timezone.utc).replace(tzinfo=None)
+            observed_at = observed_at.astimezone(UTC).replace(tzinfo=None)
 
         if observed_at < _utcnow() - timedelta(hours=12):
             return None

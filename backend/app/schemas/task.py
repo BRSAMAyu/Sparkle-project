@@ -162,6 +162,19 @@ class TaskAbandon(BaseModel):
     reason: str | None = Field(default=None, description="Abandon reason")
 
 
+class TaskQuickActionRequest(BaseModel):
+    """Lightweight task-card action request."""
+
+    reason: str | None = Field(default=None, max_length=500, description="Optional user-facing reason")
+
+
+class TaskSnoozeRequest(TaskQuickActionRequest):
+    """Snooze a task without changing the plan structure."""
+
+    days: int = Field(default=1, ge=1, le=30, description="Days to move the task forward")
+    target_date: date | None = Field(default=None, description="Explicit target date")
+
+
 # ========== Response Schemas ==========
 
 

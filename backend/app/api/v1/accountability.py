@@ -23,7 +23,11 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus
-from app.core.event_types import ACCOUNTABILITY_CHECKIN_CREATED, ACCOUNTABILITY_PARTNERSHIP_UPDATED
+from app.core.event_types import (
+    ACCOUNTABILITY_CHECKIN_CREATED,
+    ACCOUNTABILITY_ENCOURAGEMENT_SENT,
+    ACCOUNTABILITY_PARTNERSHIP_UPDATED,
+)
 from app.models.accountability import (
     AccountabilityCheckin,
     AccountabilityPartnership,
@@ -32,9 +36,10 @@ from app.models.accountability import (
 )
 from app.models.achievement import UserAchievement
 from app.models.community import Friendship, FriendshipStatus, SharedResource
+from app.models.notification import Notification
 from app.models.user import User
 from app.schemas.community import UserBrief as CommunityUserBrief
-from app.services.accountability_notification_service import _user_display_name
+from app.services.accountability_notification_service import AccountabilityNotificationType, _user_display_name
 from app.services.community_service import UserBlockService
 from app.services.leaderboard_service import LeaderboardService
 from app.services.policy_scheduler_service import PolicySchedulerService
@@ -174,6 +179,7 @@ class AccountabilityOverviewOut(BaseModel):
     leaderboard_summary: dict = Field(default_factory=dict)
     relationship_summary: dict | None = None
     quick_actions: dict = Field(default_factory=dict)
+    in_app_hints: list[dict] = Field(default_factory=list)
 
 
 class AccountabilityDashboardOut(BaseModel):
@@ -193,6 +199,11 @@ class AccountabilityDashboardOut(BaseModel):
 
 class AccountabilityNudgeRequest(BaseModel):
     message: str | None = Field(default=None, max_length=200)
+
+
+class StruggleEncouragementRequest(BaseModel):
+    preset_id: str | None = Field(default=None, max_length=80)
+    message: str | None = Field(default=None, max_length=120)
 
 
 def _user_timezone(user: User) -> str:
@@ -792,6 +803,43 @@ async def _build_foresight_hint_summary(
     }
 
 
+async def _build_in_app_hints_payload(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    limit: int = 3,
+) -> list[dict]:
+    result = await db.execute(
+        select(Notification)
+        .where(
+            and_(
+                Notification.user_id == user_id,
+                Notification.type == AccountabilityNotificationType.ENCOURAGEMENT_RECEIVED.value,
+                Notification.is_read.is_(False),
+                Notification.deleted_at.is_(None),
+            )
+        )
+        .order_by(Notification.created_at.desc())
+        .limit(limit)
+    )
+    hints: list[dict] = []
+    for notification in result.scalars().all():
+        data = dict(notification.data or {})
+        hints.append(
+            {
+                "id": str(notification.id),
+                "type": notification.type,
+                "message": data.get("hint") or notification.content,
+                "sender_name": data.get("sender_name"),
+                "sender_id": data.get("sender_id"),
+                "partnership_id": data.get("partnership_id"),
+                "source_notification_id": data.get("source_notification_id"),
+                "created_at": notification.created_at.isoformat() if notification.created_at else None,
+            }
+        )
+    return hints
+
+
 async def _build_quick_actions_payload(
     db: AsyncSession,
     partnership: AccountabilityPartnership | None,
@@ -1076,6 +1124,7 @@ async def get_accountability_overview(
         leaderboard_summary=leaderboard_summary,
         relationship_summary=relationship_summary,
         quick_actions=await _build_quick_actions_payload(db, active, current_user),
+        in_app_hints=await _build_in_app_hints_payload(db, user_id=current_user.id),
     )
 
 
@@ -1165,6 +1214,137 @@ async def nudge_partner(
             else f"{sender_name} 提醒你：{message}"
         ),
     }
+
+
+@router.post("/struggle-alerts/{notification_id}/encourage")
+async def encourage_from_struggle_alert(
+    notification_id: UUID,
+    body: StruggleEncouragementRequest = Body(default=StruggleEncouragementRequest()),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """One-tap encouragement from a system-generated accountability alert."""
+    result = await db.execute(
+        select(Notification).where(
+            and_(
+                Notification.id == notification_id,
+                Notification.user_id == current_user.id,
+                Notification.type == AccountabilityNotificationType.STRUGGLE_ALERT.value,
+                Notification.deleted_at.is_(None),
+            )
+        )
+    )
+    notification = result.scalar_one_or_none()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Struggle alert not found")
+
+    data = dict(notification.data or {})
+    if data.get("encouragement_status") == "sent":
+        return {
+            "success": True,
+            "message": "他收到了你的鼓励",
+            "already_sent": True,
+            "hint": data.get("sent_hint"),
+        }
+
+    partnership_id = data.get("partnership_id")
+    target_user_id = data.get("target_user_id")
+    if not partnership_id or not target_user_id:
+        raise HTTPException(status_code=400, detail="Alert is missing accountability context")
+
+    partnership = await AccountabilityPartnership.get_by_id(db, UUID(str(partnership_id)))
+    if not partnership:
+        raise HTTPException(status_code=404, detail="Partnership not found")
+    partner_id = await _ensure_partnership_access(db, partnership, current_user, require_active=True)
+    if str(partner_id) != str(target_user_id):
+        raise HTTPException(status_code=403, detail="Alert does not belong to this partnership")
+
+    preset_items = data.get("preset_encouragements")
+    presets = preset_items if isinstance(preset_items, list) else []
+    selected_message = (body.message or "").strip()
+    if not selected_message and body.preset_id:
+        for item in presets:
+            if isinstance(item, dict) and item.get("id") == body.preset_id:
+                selected_message = str(item.get("message") or "").strip()
+                break
+    if not selected_message:
+        first_preset = presets[0] if presets and isinstance(presets[0], dict) else {}
+        selected_message = str(first_preset.get("message") or "先完成一个小块就很好，我在看着你。").strip()
+
+    sender = await db.get(User, current_user.id)
+    sender_name = _user_display_name(sender, "你的伙伴")
+
+    from app.services.accountability_notification_service import accountability_notification_service
+
+    hint_notification = await accountability_notification_service.send_encouragement_received(
+        db,
+        user_id=UUID(str(target_user_id)),
+        partnership_id=partnership.id,
+        sender_id=current_user.id,
+        sender_name=sender_name,
+        message=selected_message,
+        source_notification_id=notification.id,
+        plan_id=UUID(str(data["plan_id"])) if data.get("plan_id") else None,
+    )
+
+    sent_at = _utcnow()
+    notification.data = {
+        **data,
+        "encouragement_status": "sent",
+        "sent_at": sent_at.isoformat(),
+        "sent_message": selected_message,
+        "sent_hint": hint_notification.content,
+        "hint_notification_id": str(hint_notification.id),
+    }
+    notification.is_read = True
+    notification.read_at = sent_at
+    await db.commit()
+
+    await event_bus.publish(
+        ACCOUNTABILITY_ENCOURAGEMENT_SENT,
+        {
+            "event_type": ACCOUNTABILITY_ENCOURAGEMENT_SENT,
+            "partnership_id": str(partnership.id),
+            "sender_id": str(current_user.id),
+            "target_user_id": str(target_user_id),
+            "source_notification_id": str(notification.id),
+            "hint_notification_id": str(hint_notification.id),
+            "timestamp": sent_at.isoformat(),
+        },
+    )
+
+    return {
+        "success": True,
+        "message": "他收到了你的鼓励",
+        "target_user_id": str(target_user_id),
+        "partnership_id": str(partnership.id),
+        "hint": hint_notification.content,
+    }
+
+
+@router.post("/hints/{notification_id}/dismiss")
+async def dismiss_accountability_hint(
+    notification_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Notification).where(
+            and_(
+                Notification.id == notification_id,
+                Notification.user_id == current_user.id,
+                Notification.type == AccountabilityNotificationType.ENCOURAGEMENT_RECEIVED.value,
+                Notification.deleted_at.is_(None),
+            )
+        )
+    )
+    notification = result.scalar_one_or_none()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Hint not found")
+    notification.is_read = True
+    notification.read_at = _utcnow()
+    await db.commit()
+    return {"success": True}
 
 
 @router.delete("/{partnership_id}", status_code=204)

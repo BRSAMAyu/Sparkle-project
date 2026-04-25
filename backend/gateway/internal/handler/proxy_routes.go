@@ -98,6 +98,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.POST("/:id/start", h.proxyWithHeaders)
 		tasks.POST("/:id/complete", h.proxyWithHeaders)
 		tasks.POST("/:id/abandon", h.proxyWithHeaders)
+		tasks.POST("/:id/snooze", h.proxyWithHeaders)
+		tasks.POST("/:id/too-hard", h.proxyWithHeaders)
+		tasks.POST("/:id/too_hard", h.proxyWithHeaders)
+		tasks.POST("/:id/skip", h.proxyWithHeaders)
 		tasks.POST("/:id/feedback", h.proxyWithHeaders)
 		// route-tier: authed
 		tasks.GET("/:id/feedback", h.proxyWithHeaders)

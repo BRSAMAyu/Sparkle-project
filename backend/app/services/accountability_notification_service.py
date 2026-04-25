@@ -35,6 +35,8 @@ class AccountabilityNotificationType(str, Enum):
     PARTNERSHIP_ENDED = "accountability_partnership_ended"
     MANUAL_NUDGE = "accountability_manual_nudge"
     POLICY_TRIGGERED = "accountability_policy_triggered"
+    STRUGGLE_ALERT = "accountability_struggle_alert"
+    ENCOURAGEMENT_RECEIVED = "accountability_encouragement_received"
 
 
 def _utcnow() -> datetime:
@@ -459,6 +461,104 @@ class AccountabilityNotificationService:
             db, user_id, notification_data, push_via_websocket=True
         )
         logger.info(f"Sent policy notification {policy_id} to {user_id}")
+        return notification
+
+    async def send_struggle_alert(
+        self,
+        db: AsyncSession,
+        *,
+        partner_id: UUID,
+        target_user_id: UUID,
+        partnership_id: UUID,
+        plan_id: UUID,
+        target_name: str,
+        no_completion_days: int,
+        struggle_score: float,
+        dedupe_key: str,
+        preset_encouragements: list[dict],
+    ) -> Notification:
+        """Tell an accountability partner that their partner may need a light touch."""
+        days = max(2, int(no_completion_days or 2))
+        title = "责任伙伴轻提醒"
+        content = f"{target_name} 已经 {days} 天没有完成学习任务了，也许可以发一条鼓励。"
+
+        notification_data = NotificationCreate(
+            title=title,
+            content=content,
+            type=AccountabilityNotificationType.STRUGGLE_ALERT.value,
+            data={
+                "kind": "accountability_struggle_alert",
+                "partnership_id": str(partnership_id),
+                "target_user_id": str(target_user_id),
+                "target_name": target_name,
+                "plan_id": str(plan_id),
+                "no_completion_days": days,
+                "struggle_score": struggle_score,
+                "dedupe_key": dedupe_key,
+                "encouragement_status": "pending",
+                "preset_encouragements": preset_encouragements,
+                "primary_action": {
+                    "type": "send_accountability_encouragement",
+                    "label": "发个鼓励",
+                },
+            },
+        )
+
+        notification = await notification_service.create(
+            db,
+            partner_id,
+            notification_data,
+            push_via_websocket=True,
+        )
+        logger.info(
+            "Sent accountability struggle alert to partner {} for target {} partnership {}",
+            partner_id,
+            target_user_id,
+            partnership_id,
+        )
+        return notification
+
+    async def send_encouragement_received(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: UUID,
+        partnership_id: UUID,
+        sender_id: UUID,
+        sender_name: str,
+        message: str,
+        source_notification_id: UUID | None = None,
+        plan_id: UUID | None = None,
+    ) -> Notification:
+        """Create a weak in-app hint for the struggling user without realtime push."""
+        hint = f"{sender_name} 正在看着你，加油"
+        notification_data = NotificationCreate(
+            title="伙伴鼓励",
+            content=hint,
+            type=AccountabilityNotificationType.ENCOURAGEMENT_RECEIVED.value,
+            data={
+                "kind": "accountability_encouragement_hint",
+                "partnership_id": str(partnership_id),
+                "sender_id": str(sender_id),
+                "sender_name": sender_name,
+                "message": message,
+                "hint": hint,
+                "source_notification_id": str(source_notification_id) if source_notification_id else None,
+                "plan_id": str(plan_id) if plan_id else None,
+                "display_mode": "weak_in_app_hint",
+            },
+        )
+        notification = await notification_service.create(
+            db,
+            user_id,
+            notification_data,
+            push_via_websocket=False,
+        )
+        logger.info(
+            "Created in-app accountability encouragement hint for user {} from {}",
+            user_id,
+            sender_id,
+        )
         return notification
 
     @staticmethod

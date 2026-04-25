@@ -7,6 +7,7 @@ from app.api.deps import get_current_user, get_db
 from app.models.user import User
 from app.schemas.user import UserProfile
 from app.services.audit_service import AuditService
+from app.services.kill_switch_readiness_service import KillSwitchReadinessService
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
@@ -51,3 +52,13 @@ async def reject_avatar(
     if not user:
         raise HTTPException(status_code=404, detail="没有找到待审核的用户")
     return user
+
+
+@router.get("/kill-switch-readiness")
+async def get_kill_switch_readiness(
+    _admin=Depends(admin_required),
+):
+    """返回所有 Aurora kill switch 的升级就绪报告（管理员专用）"""
+    svc = KillSwitchReadinessService()
+    report = svc.get_readiness_report()
+    return report

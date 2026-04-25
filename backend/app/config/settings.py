@@ -238,7 +238,7 @@ class Settings(BaseSettings):
     AURORA_STAGE21_SKILL_SHARE_MODE: str = "off"  # off | shadow | live
 
     # Aurora Stage 23
-    AURORA_BAYESIAN_MODE: str = "off"  # off | shadow | live
+    AURORA_BAYESIAN_MODE: str = "shadow"  # Promoted to shadow: Stage 23 SQAM complete, begin real data collection (2026-04-25)
     AURORA_BAYESIAN_LIVE_CANARY_PERCENT: int = 5
     AURORA_BAYESIAN_TTL_DAYS: int = 30
 
@@ -338,8 +338,8 @@ class Settings(BaseSettings):
     # Aurora Stage 39
     AURORA_STAGE39_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE: str = "live"  # off | shadow | live
-    AURORA_STAGE39_COGLOAD_ROUTE_MODE: str = "shadow"  # off | shadow | live
-    AURORA_STAGE39_GALAXY_INJECT_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE39_COGLOAD_ROUTE_MODE: str = "live"  # Promoted to live: Stage 39 tests pass, shadow soak complete (2026-04-22)
+    AURORA_STAGE39_GALAXY_INJECT_MODE: str = "live"  # Promoted to live: Stage 39 tests pass, shadow soak complete (2026-04-22)
 
     # Aurora Stage 40
     AURORA_STAGE40_CALENDAR_MODE: str = "live"  # off | shadow | live

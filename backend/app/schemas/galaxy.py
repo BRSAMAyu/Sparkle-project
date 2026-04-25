@@ -18,6 +18,7 @@ from app.services.node_sector_service import (
     resolve_sector_weights,
 )
 
+
 class NodeStatus(str, Enum):
     LOCKED = "locked"  # 未解锁
     UNLIT = "unlit"  # 已解锁但未学习
@@ -171,11 +172,18 @@ class UserStatusInfo(BaseModel):
     is_favorite: bool
     first_unlock_at: datetime | None = None
     last_study_at: datetime | None = None
+    mastery_last_updated_at: datetime | None = None
     next_review_at: datetime | None = None
     decay_paused: bool
 
     # Evidence-mode: recent errors on this node (last 14 days)
     recent_error_count: int = 0
+
+    # Predictive review overlay: 0.0-1.0 urgency + top recommendation marker.
+    review_urgency_score: float = 0.0
+    is_review_recommended: bool = False
+    review_urgency_reason: str | None = None
+    days_since_mastery_update: float = 0.0
 
     # 计算属性
     status: NodeStatus
@@ -194,12 +202,25 @@ class NodeWithStatus(NodeBase):
     position_y: float
 
     @classmethod
-    def from_models(cls, node, status, recent_error_count: int = 0):
+    def from_models(cls, node, status, recent_error_count: int = 0, review_signal=None):
         user_status = None
         if status:
             # 计算视觉状态
             visual_status = cls._calculate_status(status)
             brightness = cls._calculate_brightness(status)
+            mastery_last_updated_at = next(
+                (
+                    value
+                    for value in (
+                        getattr(review_signal, "mastery_last_updated_at", None),
+                        getattr(status, "bkt_last_updated_at", None),
+                        getattr(status, "last_study_at", None),
+                        getattr(status, "updated_at", None),
+                    )
+                    if isinstance(value, datetime)
+                ),
+                None,
+            )
 
             user_status = UserStatusInfo(
                 mastery_score=status.mastery_score,
@@ -210,9 +231,14 @@ class NodeWithStatus(NodeBase):
                 is_favorite=status.is_favorite,
                 first_unlock_at=status.first_unlock_at,
                 last_study_at=status.last_study_at,
+                mastery_last_updated_at=mastery_last_updated_at,
                 next_review_at=status.next_review_at,
                 decay_paused=status.decay_paused,
                 recent_error_count=recent_error_count,
+                review_urgency_score=float(getattr(review_signal, "score", 0.0) or 0.0),
+                is_review_recommended=bool(getattr(review_signal, "is_recommended", False)),
+                review_urgency_reason=getattr(review_signal, "reason", None),
+                days_since_mastery_update=float(getattr(review_signal, "days_since_mastery_update", 0.0) or 0.0),
                 status=visual_status,
                 brightness=brightness,
             )
