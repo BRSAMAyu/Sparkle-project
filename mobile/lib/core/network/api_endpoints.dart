@@ -171,6 +171,7 @@ class ApiEndpoints {
   static const String statsOverview = '/stats/overview';
   static const String statsWeekly = '/stats/weekly';
   static const String statsFlame = '/stats/flame';
+  static const String statsActivityHeatmap = '/stats/activity/heatmap';
   static const String growthDashboard = '/growth/dashboard';
   static const String growthWeeklyNarrative = '/growth/weekly-narrative';
   static const String growthWeeklyNarrativeGenerate =
@@ -179,13 +180,18 @@ class ApiEndpoints {
   static const String examSprintDashboard = '/exam-sprint/dashboard';
   static const String examSprintPostExamReview =
       '/exam-sprint/post-exam-review';
+  static const String examSprintCompletion = '/exam-sprint/completion';
+  static const String examSprintPortfolio = '/exam-sprint/portfolio';
   static const String profileChatOpening = '/profile/chat-opening';
+  static const String auroraDailyStartup = '/aurora/daily-startup';
+  static const String auroraComebackContext = '/aurora/comeback-context';
   static const String auroraCalibrationCards = '/aurora/calibration-cards';
   static String auroraCalibrationCardRespond(String id) =>
       '/aurora/calibration-cards/$id/respond';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';
+  static const String galaxyContributionStats = '/galaxy/contribution-stats';
   static const String galaxyViewport = '/galaxy/nodes/viewport';
   static const String galaxyPositions = '/galaxy/nodes/positions';
   static String galaxyUpdateMastery(String id) => '/galaxy/nodes/$id/mastery';
@@ -194,6 +200,7 @@ class ApiEndpoints {
   static String sparkNode(String id) => '/galaxy/node/$id/spark';
   static const String galaxyEvents = '/galaxy/events';
   static String galaxyNodeDetail(String id) => '/galaxy/node/$id';
+  static String galaxyNodeHistory(String id) => '/galaxy/node/$id/history';
   static String galaxyNodeFavorite(String id) => '/galaxy/node/$id/favorite';
   static String galaxyNodeExpansionCandidates(String id) =>
       '/galaxy/node/$id/expansion/candidates';

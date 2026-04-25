@@ -215,10 +215,9 @@ class GalaxyNodeModel {
       isUnlocked: (json['is_unlocked'] as bool?) ??
           (userStatus?['is_unlocked'] as bool?) ??
           false,
-      masteryScore:
-          ((json['mastery_score'] ?? userStatus?['mastery_score']) as num?)
-                  ?.toInt() ??
-              0,
+      masteryScore: GalaxyNodeModel._readMasteryScore(
+        json['mastery_score'] ?? userStatus?['mastery_score'],
+      ),
       studyCount: (GalaxyNodeModel._readStudyCount(json, 'study_count') as num?)
               ?.toInt() ??
           0,
@@ -362,6 +361,15 @@ class GalaxyNodeModel {
       return DateTime.tryParse(raw);
     }
     return null;
+  }
+
+  static int _readMasteryScore(Object? raw) {
+    final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
+    if (value == null || value.isNaN) {
+      return 0;
+    }
+    final percent = value <= 1.0 ? value * 100 : value;
+    return percent.clamp(0.0, 100.0).round();
   }
 
   /// 节点半径（基于重要程度）

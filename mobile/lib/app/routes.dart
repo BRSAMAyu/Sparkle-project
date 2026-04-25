@@ -159,6 +159,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                       initialMasteryDelta: double.tryParse(
                         state.uri.queryParameters['mastery_delta'] ?? '',
                       ),
+                      initialPackId: state.uri.queryParameters['pack_id'],
                     ),
                   ),
                 ),
@@ -181,6 +182,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                       (extraMap?['from_modeling_complete'] as bool?) ?? false;
                   final modelingOutput =
                       extraMap?['modeling_output'] as Map<String, dynamic>?;
+                  final extraInitialContext =
+                      extraMap?['initial_context'] is Map
+                          ? Map<String, dynamic>.from(
+                              extraMap!['initial_context'] as Map,
+                            )
+                          : null;
+                  final initialContext = <String, dynamic>{
+                    ...?extraInitialContext,
+                    if (state.uri.queryParameters['review_node'] != null)
+                      'review_node': state.uri.queryParameters['review_node'],
+                    if (state.uri.queryParameters['node_label'] != null)
+                      'node_label': state.uri.queryParameters['node_label'],
+                  };
                   return NoTransitionPage<void>(
                     key: state.pageKey,
                     child: SceneAudioScope(
@@ -194,6 +208,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         initialUserMessage: initialUserMessage,
                         fromModelingComplete: fromModelingComplete,
                         modelingOutput: modelingOutput,
+                        initialExtraContext:
+                            initialContext.isEmpty ? null : initialContext,
                       ),
                     ),
                   );

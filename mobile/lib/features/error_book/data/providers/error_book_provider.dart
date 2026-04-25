@@ -30,6 +30,7 @@ class ErrorListQuery {
   const ErrorListQuery({
     this.subject,
     this.chapter,
+    this.nodeId,
     this.needReview,
     this.keyword,
     this.cognitiveDimension,
@@ -38,6 +39,7 @@ class ErrorListQuery {
   });
   final String? subject;
   final String? chapter;
+  final String? nodeId;
   final bool? needReview;
   final String? keyword;
   final CognitiveDimension? cognitiveDimension;
@@ -51,6 +53,7 @@ class ErrorListQuery {
           runtimeType == other.runtimeType &&
           subject == other.subject &&
           chapter == other.chapter &&
+          nodeId == other.nodeId &&
           needReview == other.needReview &&
           keyword == other.keyword &&
           cognitiveDimension == other.cognitiveDimension &&
@@ -61,6 +64,7 @@ class ErrorListQuery {
   int get hashCode =>
       subject.hashCode ^
       chapter.hashCode ^
+      nodeId.hashCode ^
       needReview.hashCode ^
       keyword.hashCode ^
       cognitiveDimension.hashCode ^
@@ -86,6 +90,7 @@ Future<ErrorListResponse> errorList(
     return await repository.getErrors(
       subject: query.subject,
       chapter: query.chapter,
+      nodeId: query.nodeId,
       needReview: query.needReview,
       keyword: query.keyword,
       cognitiveDimension: query.cognitiveDimension,
@@ -98,6 +103,11 @@ Future<ErrorListResponse> errorList(
           query.subject == null || query.subject == item.subject;
       final chapterMatches =
           query.chapter == null || query.chapter == item.chapter;
+      final nodeKeyword = query.nodeId?.trim().toLowerCase() ?? '';
+      final nodeMatches = nodeKeyword.isEmpty ||
+          item.questionText.toLowerCase().contains(nodeKeyword) ||
+          (item.aiAnalysisSummary?.toLowerCase().contains(nodeKeyword) ??
+              false);
       final needReviewMatches = query.needReview != true ||
           item.nextReviewAt == null ||
           !item.nextReviewAt!.isAfter(DateTime.now());
@@ -107,6 +117,7 @@ Future<ErrorListResponse> errorList(
           item.correctAnswer.toLowerCase().contains(keyword);
       return subjectMatches &&
           chapterMatches &&
+          nodeMatches &&
           needReviewMatches &&
           keywordMatches;
     }).toList();
@@ -469,12 +480,16 @@ class ErrorFilterState {
   const ErrorFilterState({
     this.selectedSubject,
     this.chapterFilter,
+    this.nodeId,
+    this.nodeLabel,
     this.showOnlyNeedReview = false,
     this.searchKeyword = '',
     this.cognitiveDimension,
   });
   final String? selectedSubject;
   final String? chapterFilter;
+  final String? nodeId;
+  final String? nodeLabel;
   final bool showOnlyNeedReview;
   final String searchKeyword;
   final CognitiveDimension? cognitiveDimension;
@@ -482,6 +497,8 @@ class ErrorFilterState {
   ErrorFilterState copyWith({
     String? selectedSubject,
     String? chapterFilter,
+    String? nodeId,
+    String? nodeLabel,
     bool? showOnlyNeedReview,
     String? searchKeyword,
     CognitiveDimension? cognitiveDimension,
@@ -489,6 +506,8 @@ class ErrorFilterState {
       ErrorFilterState(
         selectedSubject: selectedSubject ?? this.selectedSubject,
         chapterFilter: chapterFilter ?? this.chapterFilter,
+        nodeId: nodeId ?? this.nodeId,
+        nodeLabel: nodeLabel ?? this.nodeLabel,
         showOnlyNeedReview: showOnlyNeedReview ?? this.showOnlyNeedReview,
         searchKeyword: searchKeyword ?? this.searchKeyword,
         cognitiveDimension: cognitiveDimension ?? this.cognitiveDimension,
@@ -498,6 +517,7 @@ class ErrorFilterState {
   ErrorListQuery toQuery({int page = 1, int pageSize = 20}) => ErrorListQuery(
         subject: selectedSubject,
         chapter: chapterFilter,
+        nodeId: nodeId,
         needReview: showOnlyNeedReview ? true : null,
         keyword: searchKeyword.isEmpty ? null : searchKeyword,
         cognitiveDimension: cognitiveDimension,
@@ -532,6 +552,10 @@ class ErrorFilter extends _$ErrorFilter {
 
   void setCognitiveDimension(CognitiveDimension? dimension) {
     state = state.copyWith(cognitiveDimension: dimension);
+  }
+
+  void setNodeFilter(String nodeId, String? nodeLabel) {
+    state = state.copyWith(nodeId: nodeId, nodeLabel: nodeLabel);
   }
 
   void reset() {

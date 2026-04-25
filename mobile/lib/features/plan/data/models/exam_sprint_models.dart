@@ -89,6 +89,64 @@ class PostExamReviewRequest {
       };
 }
 
+class SprintCompletionSummary {
+  const SprintCompletionSummary({
+    required this.masteredNodesCount,
+    required this.repairedErrorsCount,
+    required this.completedTasksCount,
+    required this.strongestArea,
+    required this.growthArea,
+  });
+
+  factory SprintCompletionSummary.fromJson(Map<String, dynamic> json) =>
+      SprintCompletionSummary(
+        masteredNodesCount:
+            (json['mastered_nodes_count'] as num?)?.toInt() ?? 0,
+        repairedErrorsCount:
+            (json['repaired_errors_count'] as num?)?.toInt() ?? 0,
+        completedTasksCount:
+            (json['completed_tasks_count'] as num?)?.toInt() ?? 0,
+        strongestArea: json['strongest_area']?.toString() ?? '',
+        growthArea: json['growth_area']?.toString() ?? '',
+      );
+
+  final int masteredNodesCount;
+  final int repairedErrorsCount;
+  final int completedTasksCount;
+  final String strongestArea;
+  final String growthArea;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'mastered_nodes_count': masteredNodesCount,
+        'repaired_errors_count': repairedErrorsCount,
+        'completed_tasks_count': completedTasksCount,
+        'strongest_area': strongestArea,
+        'growth_area': growthArea,
+      };
+}
+
+class SprintCompletionCheckResult {
+  const SprintCompletionCheckResult({
+    required this.completed,
+    this.summary,
+  });
+
+  factory SprintCompletionCheckResult.fromJson(Map<String, dynamic> json) {
+    final rawSummary = json['summary'];
+    return SprintCompletionCheckResult(
+      completed: json['completed'] == true,
+      summary: rawSummary is Map
+          ? SprintCompletionSummary.fromJson(
+              Map<String, dynamic>.from(rawSummary),
+            )
+          : null,
+    );
+  }
+
+  final bool completed;
+  final SprintCompletionSummary? summary;
+}
+
 class ExamSprintGoalModel {
   ExamSprintGoalModel({
     required this.examDate,
@@ -316,4 +374,137 @@ class ExamSprintIntakeResult {
   final ExamSprintAssessment initialAssessment;
   final ExamSprintStrategyPreview strategyPreview;
   final ExamSprintLaunchPayload launch;
+}
+
+class LearningPortfolioEntry {
+  const LearningPortfolioEntry({
+    required this.planId,
+    required this.planName,
+    required this.subject,
+    required this.status,
+    required this.masteredNodesCount,
+    required this.progress,
+    this.sprintMode,
+    this.startedAt,
+    this.completedAt,
+    this.targetDate,
+    this.strongestArea,
+    this.growthArea,
+    this.selfRating,
+    this.resultRating,
+    this.resultDescription,
+    this.headline,
+    this.currentScore,
+    this.weakestPoints = const <String>[],
+    this.proudNodes = const <String>[],
+  });
+
+  factory LearningPortfolioEntry.fromJson(Map<String, dynamic> json) =>
+      LearningPortfolioEntry(
+        planId: json['plan_id']?.toString() ?? '',
+        planName: json['plan_name']?.toString() ?? '',
+        subject: json['subject']?.toString() ?? '',
+        sprintMode: json['sprint_mode']?.toString(),
+        status: json['status']?.toString() ?? 'planned',
+        masteredNodesCount:
+            (json['mastered_nodes_count'] as num?)?.toInt() ?? 0,
+        startedAt: _tryParseDateTime(json['started_at']?.toString()),
+        completedAt: _tryParseDateTime(json['completed_at']?.toString()),
+        targetDate: _tryParseDateTime(json['target_date']?.toString()),
+        progress: (json['progress'] as num?)?.toDouble() ?? 0,
+        strongestArea: json['strongest_area']?.toString(),
+        growthArea: json['growth_area']?.toString(),
+        selfRating: (json['self_rating'] as num?)?.toInt(),
+        resultRating: (json['result_rating'] as num?)?.toInt(),
+        resultDescription: json['result_description']?.toString(),
+        headline: json['headline']?.toString(),
+        currentScore: (json['current_score'] as num?)?.toDouble(),
+        weakestPoints:
+            (json['weakest_points'] as List<dynamic>? ?? const <dynamic>[])
+                .map((dynamic item) => item.toString())
+                .where((String item) => item.trim().isNotEmpty)
+                .toList(),
+        proudNodes: (json['proud_nodes'] as List<dynamic>? ?? const <dynamic>[])
+            .map((dynamic item) => item.toString())
+            .where((String item) => item.trim().isNotEmpty)
+            .toList(),
+      );
+
+  final String planId;
+  final String planName;
+  final String subject;
+  final String? sprintMode;
+  final String status;
+  final int masteredNodesCount;
+  final DateTime? startedAt;
+  final DateTime? completedAt;
+  final DateTime? targetDate;
+  final double progress;
+  final String? strongestArea;
+  final String? growthArea;
+  final int? selfRating;
+  final int? resultRating;
+  final String? resultDescription;
+  final String? headline;
+  final double? currentScore;
+  final List<String> weakestPoints;
+  final List<String> proudNodes;
+
+  bool get isActive => status == 'active';
+  bool get isCompleted => status == 'completed';
+  bool get isPlanned => status == 'planned';
+}
+
+class LearningPortfolioResult {
+  const LearningPortfolioResult({
+    required this.entries,
+    required this.totalMasteredNodes,
+    required this.activeCount,
+    required this.completedCount,
+    required this.plannedCount,
+  });
+
+  factory LearningPortfolioResult.fromJson(Map<String, dynamic> json) =>
+      LearningPortfolioResult(
+        entries: (json['entries'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<Map<dynamic, dynamic>>()
+            .map(
+              (Map<dynamic, dynamic> item) => LearningPortfolioEntry.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList(),
+        totalMasteredNodes:
+            (json['total_mastered_nodes'] as num?)?.toInt() ?? 0,
+        activeCount: (json['active_count'] as num?)?.toInt() ?? 0,
+        completedCount: (json['completed_count'] as num?)?.toInt() ?? 0,
+        plannedCount: (json['planned_count'] as num?)?.toInt() ?? 0,
+      );
+
+  final List<LearningPortfolioEntry> entries;
+  final int totalMasteredNodes;
+  final int activeCount;
+  final int completedCount;
+  final int plannedCount;
+
+  List<LearningPortfolioEntry> get activeEntries => entries
+      .where((LearningPortfolioEntry entry) => entry.isActive)
+      .toList(growable: false);
+
+  List<LearningPortfolioEntry> get completedEntries => entries
+      .where((LearningPortfolioEntry entry) => entry.isCompleted)
+      .toList(growable: false);
+
+  List<LearningPortfolioEntry> get plannedEntries => entries
+      .where((LearningPortfolioEntry entry) => entry.isPlanned)
+      .toList(growable: false);
+
+  bool get isEmpty => entries.isEmpty;
+}
+
+DateTime? _tryParseDateTime(String? raw) {
+  if (raw == null || raw.trim().isEmpty) {
+    return null;
+  }
+  return DateTime.tryParse(raw);
 }

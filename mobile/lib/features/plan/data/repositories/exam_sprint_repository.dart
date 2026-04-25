@@ -57,4 +57,56 @@ class ExamSprintRepository {
       throw Exception(e.message ?? '考试复盘提交失败');
     }
   }
+
+  Future<SprintCompletionCheckResult> checkSprintCompletion(
+    String planId,
+  ) async {
+    try {
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.examSprintCompletion,
+        queryParameters: {'plan_id': planId},
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'examSprintCompletion',
+      );
+      return SprintCompletionCheckResult.fromJson(payload);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        final detail = data['detail']?.toString();
+        if (detail != null && detail.isNotEmpty) {
+          throw Exception(detail);
+        }
+      }
+      throw Exception(e.message ?? '冲刺完成检测失败');
+    }
+  }
+
+  Future<LearningPortfolioResult> fetchLearningPortfolio({
+    String? userId,
+  }) async {
+    try {
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.examSprintPortfolio,
+        queryParameters: {
+          if (userId != null && userId.trim().isNotEmpty) 'user_id': userId,
+        },
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'examSprintPortfolio',
+      );
+      return LearningPortfolioResult.fromJson(payload);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        final detail = data['detail']?.toString();
+        if (detail != null && detail.isNotEmpty) {
+          throw Exception(detail);
+        }
+      }
+      throw Exception(e.message ?? '学习档案加载失败');
+    }
+  }
 }

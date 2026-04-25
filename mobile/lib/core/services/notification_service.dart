@@ -5,9 +5,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
-import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
+import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -383,6 +384,13 @@ class NotificationService {
     if (destinationRoute != null && destinationRoute.isNotEmpty) {
       unawaited(GoRouter.of(context).push(destinationRoute));
       return;
+    }
+
+    final deepLink = payload['deep_link']?.toString().trim();
+    if (deepLink != null && deepLink.isNotEmpty) {
+      if (DeepLinkService.handleDeepLink(context, deepLink)) {
+        return;
+      }
     }
 
     final taskId =

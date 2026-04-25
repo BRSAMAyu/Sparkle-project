@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 
@@ -18,13 +19,13 @@ class PushNavigationService {
     String surface = 'push_open',
   }) async {
     await _ref.read(interventionActionServiceProvider).reportActionFromPayload(
-          payload: payload,
-          action: 'seen',
-          surface: surface,
-          extraPayload: <String, dynamic>{
-            'source': source,
-          },
-        );
+      payload: payload,
+      action: 'seen',
+      surface: surface,
+      extraPayload: <String, dynamic>{
+        'source': source,
+      },
+    );
 
     _navigate(payload);
   }
@@ -71,6 +72,9 @@ class PushNavigationService {
 
     final deepLink = payload['deep_link']?.toString();
     if (deepLink != null && deepLink.isNotEmpty) {
+      if (DeepLinkService.handleDeepLink(context, deepLink)) {
+        return;
+      }
       final uri = Uri.tryParse(deepLink);
       if (uri != null && uri.scheme == 'sparkle') {
         final entityType = uri.host;

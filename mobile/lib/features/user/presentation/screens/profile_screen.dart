@@ -10,6 +10,7 @@ import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/widgets/achievement_summary_card.dart';
@@ -636,6 +637,15 @@ class ProfileScreen extends ConsumerWidget {
           GraphiteCardSurface(
             child: Column(
               children: [
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.collections_bookmark_outlined,
+                  title: '学习档案',
+                  subtitle: '查看所有科目的冲刺历史、进行中与计划中记录',
+                  accentColor: const Color(0xFF5F8C72),
+                  onTap: () => context.push(PlanRoutes.learningPortfolio),
+                ),
+                const Divider(height: 1, indent: 60),
                 _buildSettingsTile(
                   context,
                   icon: Icons.emoji_events_outlined,

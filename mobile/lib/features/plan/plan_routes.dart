@@ -6,13 +6,16 @@ import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
+import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/presentation/screens/exam_sprint_setup_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
+import 'package:sparkle/features/plan/presentation/screens/learning_portfolio_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_create_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_edit_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_history_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/post_exam_review_screen.dart';
+import 'package:sparkle/features/plan/presentation/screens/sprint_completion_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_history_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_screen.dart';
 
@@ -28,8 +31,62 @@ class PlanRoutes {
   static const String growth = '/growth';
   static const String examSprintSetup = '/exam-sprint/setup';
   static const String examSprintReview = '/exam-sprint/review';
+  static const String examSprintCompletion = '/exam-sprint/completion';
+  static const String learningPortfolio = '/exam-sprint/portfolio';
 
   static List<RouteBase> get routes => [
+        GoRoute(
+          path: learningPortfolio,
+          name: 'learningPortfolio',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.plan,
+              ),
+              child: const LearningPortfolioScreen(),
+            ),
+            type: SharedAxisTransitionType.scaled,
+          ),
+        ),
+        GoRoute(
+          path: examSprintCompletion,
+          name: 'examSprintCompletion',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final extra = state.extra;
+            final extraMap = extra is Map ? extra : null;
+            final summary = extraMap?['summary'];
+            final planId = state.uri.queryParameters['plan_id'] ??
+                state.uri.queryParameters['planId'] ??
+                extraMap?['plan_id']?.toString() ??
+                extraMap?['planId']?.toString() ??
+                '';
+            final subjectName = state.uri.queryParameters['subject'] ??
+                state.uri.queryParameters['subject_name'] ??
+                extraMap?['subject']?.toString() ??
+                extraMap?['subjectName']?.toString() ??
+                '';
+            return buildSparkleTransitionPage(
+              state: state,
+              motionToken: SparkleMotionToken.scene,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                  trackOverride: BgmTrack.plan,
+                ),
+                child: SprintCompletionScreen(
+                  planId: planId,
+                  subjectName: subjectName,
+                  initialSummary:
+                      summary is SprintCompletionSummary ? summary : null,
+                ),
+              ),
+              type: SharedAxisTransitionType.scaled,
+            );
+          },
+        ),
         GoRoute(
           path: examSprintReview,
           name: 'examSprintReview',

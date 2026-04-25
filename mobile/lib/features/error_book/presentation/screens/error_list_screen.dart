@@ -20,8 +20,15 @@ import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 /// 2. 状态清晰：loading/empty/error 状态都有明确提示
 /// 3. 性能优化：分页加载、滑动删除
 class ErrorListScreen extends ConsumerStatefulWidget {
-  const ErrorListScreen({super.key, this.filterByDimension});
+  const ErrorListScreen({
+    super.key,
+    this.filterByDimension,
+    this.filterByNodeId,
+    this.filterByNodeLabel,
+  });
   final CognitiveDimension? filterByDimension;
+  final String? filterByNodeId;
+  final String? filterByNodeLabel;
 
   @override
   ConsumerState<ErrorListScreen> createState() => _ErrorListScreenState();
@@ -44,6 +51,12 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           .read(errorFilterProvider.notifier)
           .setCognitiveDimension(widget.filterByDimension);
     }
+    final nodeId = widget.filterByNodeId?.trim();
+    if (nodeId != null && nodeId.isNotEmpty) {
+      ref
+          .read(errorFilterProvider.notifier)
+          .setNodeFilter(nodeId, widget.filterByNodeLabel);
+    }
   }
 
   @override
@@ -59,6 +72,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
     final filterState = ref.watch(errorFilterProvider);
     final hasAdvancedFilters =
         (filterState.chapterFilter?.trim().isNotEmpty ?? false) ||
+            (filterState.nodeId?.trim().isNotEmpty ?? false) ||
             filterState.showOnlyNeedReview ||
             filterState.cognitiveDimension != null;
 
@@ -182,6 +196,47 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                       onTap: () => ref
                           .read(errorFilterProvider.notifier)
                           .setCognitiveDimension(null),
+                      borderRadius: DS.borderRadiusFull,
+                      child: const Padding(
+                        padding: EdgeInsets.all(DS.spacing4),
+                        child: Icon(Icons.close, size: DS.iconSizeXs),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            if (filterState.nodeId != null)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing8,
+                ),
+                color:
+                    theme.colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.hub_rounded,
+                      size: 16,
+                      color: theme.colorScheme.secondary,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        '知识点：${filterState.nodeLabel ?? filterState.nodeId}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: theme.colorScheme.secondary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () =>
+                          ref.read(errorFilterProvider.notifier).reset(),
                       borderRadius: DS.borderRadiusFull,
                       child: const Padding(
                         padding: EdgeInsets.all(DS.spacing4),
@@ -589,6 +644,7 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
   ErrorListQuery copyWith({
     String? subject,
     String? chapter,
+    String? nodeId,
     bool? needReview,
     String? keyword,
     CognitiveDimension? cognitiveDimension,
@@ -598,6 +654,7 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
       ErrorListQuery(
         subject: subject ?? this.subject,
         chapter: chapter ?? this.chapter,
+        nodeId: nodeId ?? this.nodeId,
         needReview: needReview ?? this.needReview,
         keyword: keyword ?? this.keyword,
         cognitiveDimension: cognitiveDimension ?? this.cognitiveDimension,

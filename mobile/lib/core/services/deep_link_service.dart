@@ -12,6 +12,7 @@ class DeepLinkService {
   /// 路由来源: achievement_routes.dart, task_routes.dart, plan_routes.dart, etc.
   static const _routeMapping = {
     'achievement': '/achievements',
+    'milestone': '/achievements/milestone',
     'task': '/tasks',
     'plan': '/plans',
     'capsule': '/curiosity-capsule',
@@ -55,6 +56,9 @@ class DeepLinkService {
     final route = switch (type) {
       // 使用路径参数的类型
       'achievement' => id != null ? '$baseRoute/$id' : null,
+      'milestone' => id != null
+          ? _appendQueryParameters('$baseRoute/$id', uri.queryParameters)
+          : _appendQueryParameters(baseRoute, uri.queryParameters),
       'task' => id != null ? '$baseRoute/$id' : null,
       'plan' => id != null ? '$baseRoute/$id' : null,
       'node' => id != null ? '$baseRoute/$id' : null,
@@ -63,9 +67,9 @@ class DeepLinkService {
       'prism' => id != null ? '$baseRoute?highlight=$id' : baseRoute,
       'openclaw' => _appendQueryParameters(baseRoute, uri.queryParameters),
       'openclaw-settings' => _appendQueryParameters(
-        baseRoute,
-        uri.queryParameters,
-      ),
+          baseRoute,
+          uri.queryParameters,
+        ),
       _ => null,
     };
     return route;
