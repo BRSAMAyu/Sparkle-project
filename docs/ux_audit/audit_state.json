@@ -2,10 +2,10 @@
   "workflow_version": "1.0",
   "status": "running",
   "current_round": 12,
-  "reviewer_a_next": 18,
-  "reviewer_b_next": 22,
+  "reviewer_a_next": 19,
+  "reviewer_b_next": 26,
   "reviewer_a_last_timestamp": "2026-04-26T11:35:00+08:00",
-  "reviewer_b_last_timestamp": "2026-04-26T01:30:00+08:00",
+  "reviewer_b_last_timestamp": "2026-04-26T11:35:00+08:00",
   "validator_last_timestamp": "2026-04-26T03:20:00+08:00",
   "steering_notes": "",
   "architect_override_a": null,
@@ -436,7 +436,7 @@
         "backend/app/services/achievement_event_consumer.py",
         "backend/app/services/galaxy_event_consumer.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E03": {
       "name": "Kill Switch实效性——off/shadow/live切换是否真正生效",
@@ -499,7 +499,7 @@
         "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
         "backend/gateway/internal/handler/websocket_proxy.go"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E09": {
       "name": "Sprint Pack Schema验证——4个科目JSON完整性",
