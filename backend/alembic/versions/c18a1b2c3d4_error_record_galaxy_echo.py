@@ -1,7 +1,7 @@
 """add error record galaxy echo fields
 
 Revision ID: c18a1b2c3d4
-Revises: stage_c4_intervention_outcomes
+Revises: c17a1b2c3d4
 Create Date: 2026-04-25 00:00:00
 """
 
@@ -15,7 +15,7 @@ import app.models.base
 from alembic import op
 
 revision: str = "c18a1b2c3d4"
-down_revision: str | None = "stage_c4_intervention_outcomes"
+down_revision: str | None = "c17a1b2c3d4"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -66,6 +66,39 @@ from app.services.task_feedback_service import TaskFeedbackService
 logger.remove()
 logger.add(sys.stderr, level="ERROR")
 
+# ---------------------------------------------------------------------------
+# Stub out real LLM calls so planning workflow uses rule-based fallbacks.
+# Both bottleneck_analyzer.analyze() and llm_service.reason_json() already
+# have try/except → fallback paths; we just make them fail immediately.
+# ---------------------------------------------------------------------------
+import app.services.llm_service as _llm_mod
+import app.orchestration.bottleneck_analyzer as _bn_mod
+
+
+class _StubLLMService:
+    """Redirects every LLM call to an immediate exception so callers hit their fallback."""
+
+    def __getattr__(self, name: str) -> Any:
+        async def _fail(*_: Any, **__: Any) -> None:
+            raise RuntimeError("stub: no real LLM in lifecycle acceptance")
+
+        return _fail
+
+
+_original_llm_service = _llm_mod.llm_service
+
+_original_bn_analyze = _bn_mod.bottleneck_analyzer.analyze
+_original_bn_rule_fallback = _bn_mod.bottleneck_analyzer._rule_fallback
+
+
+async def _stub_bn_analyze(*args: Any, **kwargs: Any) -> Any:
+    """Skip the LLM round-trip; jump straight to rule-based fallback."""
+    return _original_bn_rule_fallback(*args, **kwargs)
+
+
+_llm_mod.llm_service = _StubLLMService()  # type: ignore[assignment]
+_bn_mod.bottleneck_analyzer.analyze = _stub_bn_analyze  # type: ignore[assignment]
+
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 

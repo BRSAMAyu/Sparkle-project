@@ -391,7 +391,7 @@ class Settings(BaseSettings):
     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
     XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
     XIAOMI_STANDARD_MODEL: str = "mimo-v2-flash"
-    XIAOMI_PRO_MODEL: str = "mimo-v2-pro"
+    XIAOMI_PRO_MODEL: str = "MiMo-V2.5"
     XIAOMI_TEMPERATURE: float = 0.3
     XIAOMI_PRO_TEMPERATURE: float = 0.3
 
@@ -407,8 +407,8 @@ class Settings(BaseSettings):
     # DeepSeek Configuration (核心模型 - 思考模式)
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
-    DEEPSEEK_CHAT_MODEL: str = "deepseek-chat"
-    DEEPSEEK_REASON_MODEL: str = "deepseek-reasoner"
+    DEEPSEEK_CHAT_MODEL: str = "deepseek-v4-flash"
+    DEEPSEEK_REASON_MODEL: str = "deepseek-v4-pro"
 
     # Zhipu GLM Configuration (编程/工具调用)
     ZHIPU_API_KEY: str = ""
@@ -463,9 +463,9 @@ class Settings(BaseSettings):
     DASHSCOPE_API_KEY: str = ""
     DASHSCOPE_BASE_HTTP_API_URL: str = "https://dashscope.aliyuncs.com/api/v1"
     DASHSCOPE_BASE_URL_COMPATIBLE: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    DASHSCOPE_CHAT_MODEL: str = "qwen3.5-plus"  # 标准/推理模型
-    DASHSCOPE_REASON_MODEL: str = "qwen3.5-plus"
-    DASHSCOPE_FAST_MODEL: str = "qwen3.5-flash"  # 快速响应模型
+    DASHSCOPE_CHAT_MODEL: str = "qwen3.6-plus"  # 标准/推理模型
+    DASHSCOPE_REASON_MODEL: str = "qwen3.6-plus"
+    DASHSCOPE_FAST_MODEL: str = "qwen3.6-flash"  # 快速响应模型
     DASHSCOPE_STANDARD_MODEL: str = "qwen3.5-flash"
     DASHSCOPE_TEMPERATURE: float = 0.7
     DASHSCOPE_EMBEDDING_MODEL: str = "text-embedding-v4"
