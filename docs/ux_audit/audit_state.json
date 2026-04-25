@@ -2,17 +2,17 @@
   "workflow_version": "1.0",
   "status": "running",
   "current_round": 5,
-  "reviewer_a_next": 7,
-  "reviewer_b_next": 9,
-  "reviewer_a_last_timestamp": "2026-04-25T22:45:00+08:00",
-  "reviewer_b_last_timestamp": "2026-04-25T21:35:00Z",
+  "reviewer_a_next": 8,
+  "reviewer_b_next": 10,
+  "reviewer_a_last_timestamp": "2026-04-25T23:15:00+08:00",
+  "reviewer_b_last_timestamp": null,
   "validator_last_timestamp": "2026-04-25T23:00:00+08:00",
-  "steering_notes": "C02/C03/C04/C05 原始发现已丢失，待全部 20 链路完成后评估是否重新审查。当前审查质量极好，请保持 file:line 引用和 expected/actual 格式。三大跨切主题：(1) Backend→Mobile 集成断裂 (2) 冷启动路径结构缺陷 (3) 静默降级。",
+  "steering_notes": "第二轮审查：B 重新审查 7 条丢失发现的链路（C03→C04→C05→C02→C07→C08→C12），按优先级排序。保持 file:line 引用和 expected/actual 格式。",
   "architect_override_a": null,
   "architect_override_b": null,
-  "architect_last_check": "2026-04-25T21:30:00+08:00",
+  "architect_last_check": "2026-04-25T23:30:00+08:00",
   "reviewer_a_queue": ["C01","C03","C05","C07","C09","C11","C13","C15","C17","C19"],
-  "reviewer_b_queue": ["C02","C04","C06","C08","C10","C12","C14","C16","C18","C20"],
+  "reviewer_b_queue": ["C02","C04","C06","C08","C10","C12","C14","C16","C18","C20","C03","C04","C05","C02","C07","C08","C12"],
   "chains": {
     "C01": {
       "name": "冷启动建模→计划生成→首个任务可见",
@@ -36,7 +36,7 @@
         "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart",
         "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart"
       ],
-      "status": "done"
+      "status": "re-audit"
     },
     "C03": {
       "name": "任务卡点(stuck)→卡点帮助面板→Aurora诊断内容",
@@ -59,7 +59,7 @@
         "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart",
         "mobile/lib/features/task/presentation/providers/task_provider.dart"
       ],
-      "status": "done"
+      "status": "re-audit"
     },
     "C05": {
       "name": "7天冲刺完成→庆祝页→学习档案状态变completed",
@@ -71,7 +71,7 @@
         "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart",
         "mobile/lib/features/plan/presentation/providers/learning_portfolio_provider.dart"
       ],
-      "status": "done"
+      "status": "re-audit"
     },
     "C06": {
       "name": "Galaxy节点点击→节点详情→开始复习进入chat携带context",
@@ -152,7 +152,7 @@
         "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
         "backend/app/api/v1/plans.py"
       ],
-      "status": "done"
+      "status": "re-audit"
     },
     "C13": {
       "name": "每周报告生成→推送→周报卡展示亮点",
@@ -188,7 +188,7 @@
         "mobile/lib/features/insights/",
         "mobile/lib/features/memory/"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C16": {
       "name": "导航死路检查（完成页/庆祝页/建模完成后）",
@@ -244,7 +244,7 @@
         "backend/app/services/task_service.py",
         "backend/app/services/galaxy_service.py"
       ],
-      "status": "pending"
+      "status": "done"
     }
   }
 }

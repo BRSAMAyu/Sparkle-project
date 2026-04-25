@@ -10,6 +10,19 @@ You are REVIEWER B in the Sparkle UX Audit Workflow. You run one audit cycle per
 
 ---
 
+## QUALITY GATE — 自审查协议（每次 Cycle 强制执行）
+
+1. **Agent 仅用于广域探索**：可以用 Agent 并行搜索、定位文件、获取上下文概要
+2. **关键代码必须亲自确认**：Agent 返回的行号、代码片段、结论——凡是写入 finding 的部分，必须用 Read/Grep 工具亲自验证原始文件。**绝不允许把 Agent 返回结果直接当作 finding 写入**
+3. **写入前自审**：在写入 `reviewer_b_current.md` 之前，对每条 finding 执行以下检查：
+   - [ ] 文件路径是否正确？文件是否真的存在？
+   - [ ] 行号引用是否对得上实际代码？
+   - [ ] "Expected / Actual" 描述是否与代码行为严格一致？
+   - [ ] 是否混淆了"代码存在但未调用"与"代码不存在"？
+4. **自审通过后才可写入** `reviewer_b_current.md` 并更新 `audit_state.json`
+
+---
+
 ## BEFORE YOU START — Read Steering Notes
 
 Read `docs/ux_audit/audit_state.json` first. If `steering_notes` is non-empty, apply those instructions to this cycle.
