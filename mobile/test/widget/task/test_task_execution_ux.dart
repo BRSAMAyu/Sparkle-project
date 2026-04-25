@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/screens/task_execution_screen.dart';
@@ -8,6 +9,12 @@ import 'package:sparkle/features/task/presentation/widgets/stuck_help_sheet.dart
 import 'package:sparkle/features/task/presentation/widgets/task_guide_panel.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+
+abstract class _AuroraChatCallback {
+  void call(String message);
+}
+
+class _MockAuroraChatCallback extends Mock implements _AuroraChatCallback {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -106,6 +113,92 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('1/2'), findsOneWidget);
+  });
+
+  testWidgets('TaskGuidePanel renders Aurora signals and sends trigger',
+      (tester) async {
+    final chatCallback = _MockAuroraChatCallback();
+    final task = _task(
+      guideJson: const <String, dynamic>{
+        'micro_contract': '我只需要完成一版可提交草稿。',
+        'fail_safe_rule': '如果超过10分钟卡住，就把范围降到一个例子。',
+        'aurora_triggers': ['不知道下一步', '开始逃避'],
+        'steps': [
+          {
+            'name': '先写一个最小草稿。',
+            'duration_min': 5,
+            'output': '留下第一版。',
+          },
+        ],
+      },
+    );
+
+    await tester.pumpWidget(
+      _materialHost(
+        SingleChildScrollView(
+          child: TaskGuidePanel(
+            task: task,
+            onAuroraTriggerPressed: chatCallback.call,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('task-micro-contract-banner')), findsOneWidget);
+    expect(find.text('我只需要完成一版可提交草稿。'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('task-guide-toggle')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('fail-safe-rule-card')), findsOneWidget);
+    expect(find.text('失手时降压规则'), findsOneWidget);
+    expect(find.text('失手规则：如果超过10分钟卡住，就把范围降到一个例子。'), findsNothing);
+    expect(find.byKey(const Key('aurora-triggers-section')), findsOneWidget);
+    expect(find.text('遇到这些情况时问 AI'), findsOneWidget);
+    expect(find.text('不知道下一步'), findsOneWidget);
+    expect(find.text('开始逃避'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('fail-safe-rule-toggle')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('失手规则：如果超过10分钟卡住，就把范围降到一个例子。'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('aurora-trigger-chip-1')));
+    await tester.tap(find.byKey(const Key('aurora-trigger-chip-1')));
+    await tester.pump();
+
+    verify(chatCallback.call('开始逃避')).called(1);
+  });
+
+  testWidgets('TaskGuidePanel hides empty Aurora signal fields',
+      (tester) async {
+    final task = _task(
+      guideJson: const <String, dynamic>{
+        'micro_contract': ' ',
+        'fail_safe_rule': '',
+        'aurora_triggers': [' ', ''],
+      },
+      guideContent: null,
+      successCriteria: null,
+    );
+
+    await tester.pumpWidget(
+      _materialHost(
+        SingleChildScrollView(
+          child: TaskGuidePanel(task: task),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('task-micro-contract-banner')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('task-guide-toggle')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('fail-safe-rule-card')), findsNothing);
+    expect(find.byKey(const Key('aurora-triggers-section')), findsNothing);
+    expect(find.text('失手时降压规则'), findsNothing);
+    expect(find.text('遇到这些情况时问 AI'), findsNothing);
   });
 
   testWidgets('StuckHelpSheet prefers structured fallback levels',

@@ -282,7 +282,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (examSprintDashboard != null)
         _staggeredSection(
           index: growthSectionIndex++,
-          child: ExamSprintDashboardCard(data: examSprintDashboard),
+          child: ExamSprintDashboardCard(
+            data: examSprintDashboard,
+            onRecordResult: () {
+              unawaited(
+                context.push(
+                  '/exam-sprint/review?plan_id=${examSprintDashboard.planId}'
+                  '&subject=${Uri.encodeComponent(examSprintDashboard.subject)}',
+                ),
+              );
+            },
+          ),
         ),
       _staggeredSection(
         index: growthSectionIndex++,

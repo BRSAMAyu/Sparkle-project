@@ -39,4 +39,22 @@ class ExamSprintRepository {
       throw Exception(e.message ?? '考试冲刺设置提交失败');
     }
   }
+
+  Future<void> submitPostExamReview(PostExamReviewRequest request) async {
+    try {
+      await _apiClient.post<dynamic>(
+        ApiEndpoints.examSprintPostExamReview,
+        data: request.toJson(),
+      );
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        final detail = data['detail']?.toString();
+        if (detail != null && detail.isNotEmpty) {
+          throw Exception(detail);
+        }
+      }
+      throw Exception(e.message ?? '考试复盘提交失败');
+    }
+  }
 }

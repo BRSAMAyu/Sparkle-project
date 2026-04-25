@@ -24,6 +24,7 @@ import 'package:sparkle/features/task/data/models/execution_template_model.dart'
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/task_chat_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_approval_card.dart';
@@ -476,6 +477,31 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     context.go(route);
   }
 
+  void _sendAuroraTrigger(TaskModel task, String trigger) {
+    final message = trigger.trim();
+    if (message.isEmpty) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+
+    if (isServerTaskId(task.id)) {
+      unawaited(
+        ref.read(taskChatProvider(task.id).notifier).sendMessage(message),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已发送给 Aurora')),
+      );
+      return;
+    }
+
+    final route = Uri(
+      path: '/chat',
+      queryParameters: {
+        'chat_mode': 'study_plan',
+        'prompt': message,
+      },
+    ).toString();
+    context.go(route);
+  }
+
   String _buildStuckChatPrompt(TaskModel task) {
     final guide = task.guideJson ?? const <String, dynamic>{};
     final focusCue = (guide['focus_cue']?.toString() ?? '').trim();
@@ -699,7 +725,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               // 1. Focus Mode Entry Card (Prominent)
                               _buildFocusEntryCard(context, activeTask),
                               const SizedBox(height: DS.spacing24),
-                              TaskGuidePanel(task: activeTask),
+                              TaskGuidePanel(
+                                task: activeTask,
+                                onAuroraTriggerPressed: (trigger) =>
+                                    _sendAuroraTrigger(activeTask, trigger),
+                              ),
                               const SizedBox(height: DS.spacing24),
 
                               // Divider

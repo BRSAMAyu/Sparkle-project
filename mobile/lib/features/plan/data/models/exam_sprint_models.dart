@@ -62,6 +62,33 @@ class ExamSprintIntakeRequest {
       };
 }
 
+class PostExamReviewRequest {
+  PostExamReviewRequest({
+    required this.planId,
+    required this.resultRating,
+    required this.resultDescription,
+    required this.biggestChallenge,
+    required this.strategyFeedback,
+    required this.selfAdvice,
+  });
+
+  final String planId;
+  final int resultRating;
+  final String resultDescription;
+  final String biggestChallenge;
+  final String strategyFeedback;
+  final String selfAdvice;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'plan_id': planId.trim(),
+        'result_rating': resultRating,
+        'result_description': resultDescription.trim(),
+        'biggest_challenge': biggestChallenge.trim(),
+        'strategy_feedback': strategyFeedback.trim(),
+        'self_advice': selfAdvice.trim(),
+      };
+}
+
 class ExamSprintGoalModel {
   ExamSprintGoalModel({
     required this.examDate,

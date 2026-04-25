@@ -9,9 +9,11 @@ class ExamSprintDashboardCard extends StatefulWidget {
   const ExamSprintDashboardCard({
     required this.data,
     super.key,
+    this.onRecordResult,
   });
 
   final ExamSprintDashboardData data;
+  final VoidCallback? onRecordResult;
 
   @override
   State<ExamSprintDashboardCard> createState() =>
@@ -39,8 +41,14 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
           DS.spacing16,
           DS.spacing8,
         ),
-        child: DashboardSectionShell(
-          tone: DashboardSurfaceTone.hero,
+        child: data.daysLeft == 0
+            ? _DayZeroBanner(
+                data: data,
+                isChinese: isChinese,
+                onRecordResult: widget.onRecordResult,
+              )
+            : DashboardSectionShell(
+                tone: DashboardSurfaceTone.hero,
           padding: const EdgeInsets.all(DS.spacing18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,6 +202,166 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
   }
 }
 
+class _DayZeroBanner extends StatefulWidget {
+  const _DayZeroBanner({
+    required this.data,
+    required this.isChinese,
+    this.onRecordResult,
+  });
+
+  final ExamSprintDashboardData data;
+  final bool isChinese;
+  final VoidCallback? onRecordResult;
+
+  @override
+  State<_DayZeroBanner> createState() => _DayZeroBannerState();
+}
+
+class _DayZeroBannerState extends State<_DayZeroBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _floatController;
+
+  @override
+  void initState() {
+    super.initState();
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.data;
+    final isChinese = widget.isChinese;
+    final tipText = data.sleepGuardHint;
+
+    return AnimatedBuilder(
+      animation: _floatController,
+      builder: (context, child) {
+        final offset = Curves.easeInOut.transform(_floatController.value) * 5;
+        return Transform.translate(
+          offset: Offset(0, offset - 2.5),
+          child: child,
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing20,
+          vertical: DS.spacing24,
+        ),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1A237E), Color(0xFF283593)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: DS.borderRadius20,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1A237E).withValues(alpha: 0.2),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              isChinese
+                  ? '今天考试 · 你已经准备好了 🎓'
+                  : 'Exam Day · You\'re Ready 🎓',
+              style: context.sparkleTypography.headingLarge.copyWith(
+                color: Colors.white,
+                fontWeight: DS.fontWeightBold,
+                height: 1.2,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (data.subject.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing8),
+              Text(
+                data.subject,
+                style: context.sparkleTypography.labelLarge.copyWith(
+                  color: Colors.white.withValues(alpha: 0.75),
+                  fontWeight: DS.fontWeightMedium,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            if (tipText != null && tipText.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing18),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isChinese ? '考场建议' : 'Exam Tips',
+                      style: context.sparkleTypography.labelSmall.copyWith(
+                        color: Colors.white.withValues(alpha: 0.65),
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing6),
+                    Text(
+                      tipText,
+                      style: context.sparkleTypography.bodyMedium.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: DS.spacing20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: widget.onRecordResult,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.18),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Text(
+                  isChinese ? '记录考试结果' : 'Record Exam Result',
+                  style: context.sparkleTypography.labelLarge.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CardHeader extends StatelessWidget {
   const _CardHeader({
     required this.isChinese,
@@ -314,7 +482,7 @@ class _HeadlineBlock extends StatelessWidget {
   }
 }
 
-class _PassProbabilityArc extends StatelessWidget {
+class _PassProbabilityArc extends StatefulWidget {
   const _PassProbabilityArc({
     required this.data,
     required this.isChinese,
@@ -326,174 +494,170 @@ class _PassProbabilityArc extends StatelessWidget {
   final Color accentColor;
 
   @override
-  Widget build(BuildContext context) {
-    final progress = data.currentPassProbability.clamp(0.0, 1.0);
-    final baseline = data.baselinePassProbabilitySafe.clamp(0.0, 1.0);
+  State<_PassProbabilityArc> createState() => _PassProbabilityArcState();
+}
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: progress),
-      duration: DS.durationSlow,
-      curve: Curves.easeOutCubic,
-      builder: (context, animatedProgress, _) => SizedBox(
-        width: 220,
-        height: 180,
-        child: CustomPaint(
-          painter: _PassProbabilityArcPainter(
-            progress: animatedProgress,
-            baseline: baseline,
-            accentColor: accentColor,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.only(top: DS.spacing24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+class _PassProbabilityArcState extends State<_PassProbabilityArc>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PassProbabilityArc oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data.passProbability != widget.data.passProbability) {
+      _controller.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final probability = widget.data.passProbability;
+    final isNull = probability == null;
+    final target = isNull ? 0.0 : probability.clamp(0.0, 1.0);
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final eased = Curves.easeOutCubic.transform(_controller.value);
+        final value = target * eased;
+        final ringColor = isNull
+            ? DS.textSecondary.withValues(alpha: 0.3)
+            : _probabilityColor(value);
+
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 108,
+              height: 108,
+              child: CustomPaint(
+                painter: _PassProbabilityRingPainter(
+                  progress: value,
+                  color: ringColor,
+                ),
+                child: Center(
+                  child: isNull
+                      ? Text(
+                          '--',
+                          style:
+                              context.sparkleTypography.headingLarge.copyWith(
+                            color: DS.textSecondary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        )
+                      : Text(
+                          _formatPercent(value),
+                          style:
+                              context.sparkleTypography.headingLarge.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(width: DS.spacing12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _formatPercent(animatedProgress),
-                  style: context.sparkleTypography.headingLarge.copyWith(
-                    color: DS.textPrimary,
-                    fontWeight: DS.fontWeightBold,
+                  widget.data.daysLeft == 0
+                      ? (widget.isChinese ? '今天考试' : 'Exam day')
+                      : (widget.isChinese
+                          ? '还有 ${widget.data.daysLeft} 天'
+                          : '${widget.data.daysLeft} days left'),
+                  style: context.sparkleTypography.labelLarge.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: DS.fontWeightMedium,
                   ),
                 ),
-                const SizedBox(height: DS.spacing4),
+                const SizedBox(height: DS.spacing6),
                 Text(
-                  isChinese ? '通过概率' : 'Pass Probability',
-                  style: context.sparkleTypography.labelLarge.copyWith(
+                  widget.isChinese
+                      ? '今日 ${widget.data.todayProgress.completed}/${widget.data.todayProgress.total} 完成'
+                      : 'Today ${widget.data.todayProgress.completed}/${widget.data.todayProgress.total} done',
+                  style: context.sparkleTypography.bodySmall.copyWith(
                     color: DS.textSecondary,
                   ),
                 ),
-                const SizedBox(height: DS.spacing8),
-                Text(
-                  _deltaLabel(data, isChinese: isChinese),
-                  style: context.sparkleTypography.bodySmall.copyWith(
-                    color: data.passProbabilityDelta >= 0
-                        ? DS.success
-                        : DS.warning,
-                    fontWeight: DS.fontWeightSemibold,
-                  ),
-                ),
-                if (data.estimatedScoreNow != null) ...[
-                  const SizedBox(height: DS.spacing4),
-                  Text(
-                    isChinese
-                        ? '当前估分 ${data.estimatedScoreNow!.round()}'
-                        : 'Est. score ${data.estimatedScoreNow!.round()}',
-                    style: context.sparkleTypography.bodySmall.copyWith(
-                      color: DS.textSecondary,
-                    ),
-                  ),
-                ],
               ],
             ),
-          ),
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 
-  String _deltaLabel(ExamSprintDashboardData data, {required bool isChinese}) {
-    if (!data.hasPassProbabilityDelta) {
-      return isChinese ? '等待新诊断更新' : 'Waiting for next diagnostic';
-    }
-    final delta = (data.passProbabilityDelta * 100).round();
-    if (delta == 0) {
-      return isChinese ? '与诊断持平' : 'Flat vs diagnostic';
-    }
-    final sign = delta > 0 ? '+' : '';
-    return isChinese ? '较诊断 $sign$delta%' : '$sign$delta% vs diagnostic';
+  static Color _probabilityColor(double value) {
+    if (value < 0.4) return Colors.red[400]!;
+    if (value <= 0.6) return Colors.amber[600]!;
+    return Colors.green[400]!;
   }
 }
 
-class _PassProbabilityArcPainter extends CustomPainter {
-  _PassProbabilityArcPainter({
+class _PassProbabilityRingPainter extends CustomPainter {
+  _PassProbabilityRingPainter({
     required this.progress,
-    required this.baseline,
-    required this.accentColor,
+    required this.color,
   });
 
   final double progress;
-  final double baseline;
-  final Color accentColor;
-
-  static const double _startAngle = math.pi * 0.85;
-  static const double _sweepAngle = math.pi * 1.3;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height * 0.92);
-    final radius = math.min(size.width * 0.38, size.height * 0.72);
-    const strokeWidth = 12.0;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (math.min(size.width, size.height) / 2) - 7;
+    const strokeWidth = 8.0;
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    final backgroundPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.12)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = color.withValues(alpha: 0.15)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
 
-    final progressPaint = Paint()
-      ..color = Color.lerp(accentColor, DS.success, 0.18)!
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    canvas
-      ..drawArc(rect, _startAngle, _sweepAngle, false, backgroundPaint)
-      ..drawArc(
+    if (progress > 0.001) {
+      const startAngle = -math.pi / 2;
+      final sweepAngle = 2 * math.pi * progress.clamp(0.0, 1.0);
+      canvas.drawArc(
         rect,
-        _startAngle,
-        _sweepAngle * progress.clamp(0.0, 1.0),
+        startAngle,
+        sweepAngle,
         false,
-        progressPaint,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..strokeCap = StrokeCap.round,
       );
-
-    _drawMarker(
-      canvas,
-      center: center,
-      radius: radius,
-      angle: _startAngle + _sweepAngle * baseline.clamp(0.0, 1.0),
-      color: DS.warning,
-    );
-    _drawMarker(
-      canvas,
-      center: center,
-      radius: radius,
-      angle: _startAngle + _sweepAngle * progress.clamp(0.0, 1.0),
-      color: accentColor,
-      size: 5.5,
-    );
-  }
-
-  void _drawMarker(
-    Canvas canvas, {
-    required Offset center,
-    required double radius,
-    required double angle,
-    required Color color,
-    double size = 4.5,
-  }) {
-    final offset = Offset(
-      center.dx + radius * math.cos(angle),
-      center.dy + radius * math.sin(angle),
-    );
-    canvas
-      ..drawCircle(
-        offset,
-        size + 2,
-        Paint()..color = DS.surfacePrimaryElevated,
-      )
-      ..drawCircle(
-        offset,
-        size,
-        Paint()..color = color,
-      );
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _PassProbabilityArcPainter oldDelegate) =>
-      oldDelegate.progress != progress ||
-      oldDelegate.baseline != baseline ||
-      oldDelegate.accentColor != accentColor;
+  bool shouldRepaint(covariant _PassProbabilityRingPainter old) =>
+      old.progress != progress || old.color != color;
 }
 
 class _MetricPill extends StatelessWidget {

@@ -3,9 +3,14 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskGuidePanel extends StatefulWidget {
-  const TaskGuidePanel({required this.task, super.key});
+  const TaskGuidePanel({
+    required this.task,
+    this.onAuroraTriggerPressed,
+    super.key,
+  });
 
   final TaskModel task;
+  final ValueChanged<String>? onAuroraTriggerPressed;
 
   @override
   State<TaskGuidePanel> createState() => _TaskGuidePanelState();
@@ -32,6 +37,9 @@ class _TaskGuidePanelState extends State<TaskGuidePanel> {
     final task = widget.task;
     final guide = task.guideJson ?? const <String, dynamic>{};
     final focusCue = _readText(guide['focus_cue']);
+    final microContract = _readText(guide['micro_contract']);
+    final failSafeRule = _readText(guide['fail_safe_rule']);
+    final auroraTriggers = _readList(guide['aurora_triggers']);
     final guidePreview = _firstChars(task.guideContent, 50);
     final todayFocus = focusCue.isNotEmpty ? focusCue : guidePreview;
     final methodSteps = _readList(guide['method_steps']);
@@ -56,7 +64,9 @@ class _TaskGuidePanelState extends State<TaskGuidePanel> {
         structuredSteps.isNotEmpty ||
         keyPoints.isNotEmpty ||
         doneCriteria.isNotEmpty ||
-        commonMistakes.isNotEmpty;
+        commonMistakes.isNotEmpty ||
+        failSafeRule.isNotEmpty ||
+        auroraTriggers.isNotEmpty;
 
     return GraphiteCardSurface(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -105,6 +115,10 @@ class _TaskGuidePanelState extends State<TaskGuidePanel> {
               ),
             ],
           ),
+          if (microContract.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            _MicroContractBanner(microContract: microContract),
+          ],
           const SizedBox(height: DS.spacing12),
           Align(
             alignment: Alignment.centerLeft,
@@ -153,6 +167,9 @@ class _TaskGuidePanelState extends State<TaskGuidePanel> {
                       completedCriteria: _completedCriteria,
                       onCriterionTapped: _toggleCriterion,
                       commonMistakes: commonMistakes,
+                      failSafeRule: failSafeRule,
+                      auroraTriggers: auroraTriggers,
+                      onAuroraTriggerPressed: widget.onAuroraTriggerPressed,
                     )
                   : Text(
                       '这张卡还没有更细的指南，先从你能确定的一小步开始。',
@@ -219,6 +236,9 @@ class _GuideBody extends StatelessWidget {
     required this.completedCriteria,
     required this.onCriterionTapped,
     required this.commonMistakes,
+    required this.failSafeRule,
+    required this.auroraTriggers,
+    required this.onAuroraTriggerPressed,
   });
 
   final String todayFocus;
@@ -231,6 +251,9 @@ class _GuideBody extends StatelessWidget {
   final Set<int> completedCriteria;
   final ValueChanged<int> onCriterionTapped;
   final List<String> commonMistakes;
+  final String failSafeRule;
+  final List<String> auroraTriggers;
+  final ValueChanged<String>? onAuroraTriggerPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -273,6 +296,8 @@ class _GuideBody extends StatelessWidget {
               ],
             ),
           ),
+        if (failSafeRule.isNotEmpty)
+          _FailSafeRuleCard(failSafeRule: failSafeRule),
         if (keyPoints.isNotEmpty)
           _GuideSection(
             title: '关键提示',
@@ -324,9 +349,205 @@ class _GuideBody extends StatelessWidget {
           ),
         if (commonMistakes.isNotEmpty)
           _CommonMistakesSection(commonMistakes: commonMistakes),
+        if (auroraTriggers.isNotEmpty)
+          _AuroraTriggersSection(
+            triggers: auroraTriggers,
+            onTriggerPressed: onAuroraTriggerPressed,
+          ),
       ],
     );
   }
+}
+
+class _MicroContractBanner extends StatelessWidget {
+  const _MicroContractBanner({required this.microContract});
+
+  final String microContract;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        key: const Key('task-micro-contract-banner'),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing10,
+        ),
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+          border: Border.all(color: DS.warning.withValues(alpha: 0.32)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('📋', style: DS.bodyMedium),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                microContract,
+                style: DS.bodySmall.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: DS.fontWeightMedium,
+                  height: 1.45,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _FailSafeRuleCard extends StatelessWidget {
+  const _FailSafeRuleCard({required this.failSafeRule});
+
+  final String failSafeRule;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: DS.spacing12),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: DecoratedBox(
+            key: const Key('fail-safe-rule-card'),
+            decoration: BoxDecoration(
+              color: DS.warning.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(DS.borderRadiusLG),
+              border: Border.all(color: DS.warning.withValues(alpha: 0.28)),
+            ),
+            child: ExpansionTile(
+              key: const Key('fail-safe-rule-toggle'),
+              tilePadding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: DS.spacing4,
+              ),
+              childrenPadding: const EdgeInsets.fromLTRB(
+                DS.spacing12,
+                0,
+                DS.spacing12,
+                DS.spacing12,
+              ),
+              leading: Icon(
+                Icons.warning_amber_rounded,
+                color: DS.warning,
+                size: 20,
+              ),
+              title: Text(
+                '失手时降压规则',
+                style: DS.bodyMedium.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: DS.fontWeightBold,
+                ),
+              ),
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    key: const Key('fail-safe-rule-content'),
+                    '失手规则：$failSafeRule',
+                    style: DS.bodySmall.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+class _AuroraTriggersSection extends StatelessWidget {
+  const _AuroraTriggersSection({
+    required this.triggers,
+    required this.onTriggerPressed,
+  });
+
+  final List<String> triggers;
+  final ValueChanged<String>? onTriggerPressed;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        key: const Key('aurora-triggers-section'),
+        padding: const EdgeInsets.only(bottom: DS.spacing4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '遇到这些情况时问 AI',
+              style: DS.bodyMedium.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightBold,
+              ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: [
+                for (var index = 0; index < triggers.length; index++)
+                  _AuroraTriggerChip(
+                    key: Key('aurora-trigger-chip-$index'),
+                    label: triggers[index],
+                    onPressed: onTriggerPressed == null
+                        ? null
+                        : () => onTriggerPressed!(triggers[index]),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+}
+
+class _AuroraTriggerChip extends StatelessWidget {
+  const _AuroraTriggerChip({
+    required this.label,
+    required this.onPressed,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: DS.info.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onPressed,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing10,
+              vertical: DS.spacing6,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: DS.info.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.auto_awesome, size: 14, color: DS.info),
+                const SizedBox(width: DS.spacing4),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 240),
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: DS.bodySmall.copyWith(
+                      color: DS.info,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 class _GuideSection extends StatelessWidget {
@@ -770,7 +991,10 @@ List<_GuideStepData> _readStructuredSteps(
     '留下这一步的起手框架或关键词。',
     '完成一次不看答案的独立输出。',
     '标出关键缺口，并补一句提醒。',
-    minimumOutput.isNotEmpty ? '完成最小检查：$minimumOutput。' : '完成最小检查，确认不是只看懂。',
+    if (minimumOutput.isNotEmpty)
+      '完成最小检查：$minimumOutput。'
+    else
+      '完成最小检查，确认不是只看懂。',
   ];
   return [
     for (var index = 0; index < normalizedSteps.length; index++)

@@ -702,6 +702,10 @@ class _TodayTaskCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing12),
           _WhyNowNote(text: _taskWhyNow(task)),
+          _CommonMistakesToWatch(
+            taskId: task.id,
+            mistakes: _taskCommonMistakesToWatch(task),
+          ),
           const SizedBox(height: DS.spacing12),
           Wrap(
             spacing: DS.spacing8,
@@ -902,6 +906,92 @@ class _WhyNowNote extends StatelessWidget {
       );
 }
 
+class _CommonMistakesToWatch extends StatelessWidget {
+  const _CommonMistakesToWatch({
+    required this.taskId,
+    required this.mistakes,
+  });
+
+  final String taskId;
+  final List<String> mistakes;
+
+  @override
+  Widget build(BuildContext context) {
+    if (mistakes.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: DS.spacing12),
+      child: Column(
+        key: ValueKey('plan-common-mistakes-section-$taskId'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '⚠️ 常见误区',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: DS.warning,
+                  fontWeight: FontWeight.w800,
+                  height: 1.25,
+                ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          ...mistakes.asMap().entries.map(
+                (entry) => Padding(
+                  padding: EdgeInsets.only(
+                    bottom: entry.key == mistakes.length - 1 ? 0 : DS.spacing8,
+                  ),
+                  child: _CommonMistakeCard(
+                    key: ValueKey(
+                      'plan-common-mistake-card-$taskId-${entry.key}',
+                    ),
+                    description: entry.value,
+                  ),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CommonMistakeCard extends StatelessWidget {
+  const _CommonMistakeCard({required this.description, super.key});
+
+  final String description;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing10),
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: DS.warning.withValues(alpha: 0.22)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '⚠️',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.warning,
+                    height: 1.35,
+                  ),
+            ),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                description,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textPrimary,
+                      height: 1.4,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
 class _TaskMetaPill extends StatelessWidget {
   const _TaskMetaPill({
     required this.icon,
@@ -941,6 +1031,45 @@ class _TaskMetaPill extends StatelessWidget {
       ),
     );
   }
+}
+
+List<String> _taskCommonMistakesToWatch(TaskModel task) {
+  final guide = task.guideJson;
+  if (guide == null) return const <String>[];
+
+  final raw = guide['common_mistakes_to_watch'] ??
+      (guide['daily_spec'] is Map<String, dynamic>
+          ? (guide['daily_spec']
+              as Map<String, dynamic>)['common_mistakes_to_watch']
+          : null);
+  if (raw is! List) return const <String>[];
+
+  final mistakes = <String>[];
+  for (final item in raw) {
+    final description = _mistakeDescription(item);
+    if (description.isEmpty) continue;
+    mistakes.add(description);
+    if (mistakes.length == 3) break;
+  }
+  return mistakes;
+}
+
+String _mistakeDescription(Object? item) {
+  if (item is String) return item.trim();
+  if (item is Map) {
+    for (final key in const [
+      'description',
+      'label',
+      'specific_risk',
+      'repair_strategy',
+    ]) {
+      final value = item[key];
+      if (value == null) continue;
+      final text = '$value'.trim();
+      if (text.isNotEmpty) return text;
+    }
+  }
+  return '';
 }
 
 class _PlanDayGroup {

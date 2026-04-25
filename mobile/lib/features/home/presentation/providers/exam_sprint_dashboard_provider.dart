@@ -24,6 +24,7 @@ class ExamSprintDashboardData {
     this.passProbability,
     this.baselinePassProbability,
     this.highYieldLowMasteryTopics = const [],
+    this.sleepGuardHint,
   });
 
   factory ExamSprintDashboardData.fromJson(Map<String, dynamic> json) =>
@@ -57,6 +58,7 @@ class ExamSprintDashboardData {
             .whereType<Map<String, dynamic>>()
             .map(ExamSprintTaskGroup.fromJson)
             .toList(growable: false),
+        sleepGuardHint: _asNullableString(json['sleep_guard_hint']),
       );
 
   final String planId;
@@ -78,6 +80,7 @@ class ExamSprintDashboardData {
   final int streakDays;
   final List<String> highYieldLowMasteryTopics;
   final List<ExamSprintTaskGroup> taskGroups;
+  final String? sleepGuardHint;
 
   ExamSprintTaskGroup? get todayGroup {
     for (final group in taskGroups) {

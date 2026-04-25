@@ -12,6 +12,7 @@ import 'package:sparkle/features/plan/presentation/screens/plan_create_screen.da
 import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_edit_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_history_screen.dart';
+import 'package:sparkle/features/plan/presentation/screens/post_exam_review_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_history_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_screen.dart';
 
@@ -26,8 +27,42 @@ class PlanRoutes {
   static const String sprintHistory = '/sprint/history';
   static const String growth = '/growth';
   static const String examSprintSetup = '/exam-sprint/setup';
+  static const String examSprintReview = '/exam-sprint/review';
 
   static List<RouteBase> get routes => [
+        GoRoute(
+          path: examSprintReview,
+          name: 'examSprintReview',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final extra = state.extra;
+            final extraMap = extra is Map ? extra : null;
+            final planId = state.uri.queryParameters['plan_id'] ??
+                state.uri.queryParameters['planId'] ??
+                extraMap?['plan_id']?.toString() ??
+                extraMap?['planId']?.toString() ??
+                '';
+            final subjectName = state.uri.queryParameters['subject'] ??
+                state.uri.queryParameters['subject_name'] ??
+                extraMap?['subject']?.toString() ??
+                extraMap?['subjectName']?.toString() ??
+                '';
+            return buildSparkleTransitionPage(
+              state: state,
+              motionToken: SparkleMotionToken.scene,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                  trackOverride: BgmTrack.plan,
+                ),
+                child: PostExamReviewScreen(
+                  planId: planId,
+                  subjectName: subjectName,
+                ),
+              ),
+              type: SharedAxisTransitionType.scaled,
+            );
+          },
+        ),
         GoRoute(
           path: examSprintSetup,
           name: 'examSprintSetup',

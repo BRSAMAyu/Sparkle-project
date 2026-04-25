@@ -159,13 +159,14 @@ void main() {
       ]));
     });
 
-    test('plan routes (8 paths)', () {
+    test('plan routes (9 paths)', () {
       final paths = _extractPaths(PlanRoutes.routes);
-      expect(paths.length, greaterThanOrEqualTo(7));
+      expect(paths.length, greaterThanOrEqualTo(9));
       expect(paths, containsAll([
         '/plans',
         '/plans/new',
         '/plans/:id',
+        '/exam-sprint/review',
       ]));
     });
 
