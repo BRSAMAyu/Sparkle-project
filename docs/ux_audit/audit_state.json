@@ -2,17 +2,17 @@
   "workflow_version": "1.0",
   "status": "running",
   "current_round": 9,
-  "reviewer_a_next": 12,
+  "reviewer_a_next": 13,
   "reviewer_b_next": 22,
-  "reviewer_a_last_timestamp": "2026-04-26T01:45:00+08:00",
+  "reviewer_a_last_timestamp": "2026-04-26T02:10:00+08:00",
   "reviewer_b_last_timestamp": "2026-04-26T01:30:00+08:00",
   "validator_last_timestamp": "2026-04-26T02:00:00+08:00",
   "steering_notes": "第二轮审查：B 重新审查 7 条丢失发现的链路（C03→C04→C05→C02→C07→C08→C12），按优先级排序。保持 file:line 引用和 expected/actual 格式。",
   "architect_override_a": null,
   "architect_override_b": null,
   "architect_last_check": "2026-04-25T23:30:00+08:00",
-  "reviewer_a_queue": ["C01","C03","C05","C07","C09","C11","C13","C15","C17","C19","D01","D03","D05","D07","D09"],
-  "reviewer_b_queue": ["C02","C04","C06","C08","C10","C12","C14","C16","C18","C20","C03","C04","C05","C02","C07","C08","C12","D02","D04","D06","D08","D10"],
+  "reviewer_a_queue": ["C01","C03","C05","C07","C09","C11","C13","C15","C17","C19","D01","D03","D05","D07","D09","E01","E03","E05","E07","E09","E11","E13","E15","E17","E19"],
+  "reviewer_b_queue": ["C02","C04","C06","C08","C10","C12","C14","C16","C18","C20","C03","C04","C05","C02","C07","C08","C12","D02","D04","D06","D08","D10","E02","E04","E06","E08","E10","E12","E14","E16","E18","E20"],
   "chains": {
     "C01": {
       "name": "冷启动建模→计划生成→首个任务可见",
@@ -300,7 +300,7 @@
         "backend/app/services/task_service.py",
         "backend/gateway/internal/middleware/auth.go"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "D06": {
       "name": "长期用户（30天+）体验——记忆/归档/推送是否退化",
@@ -356,6 +356,213 @@
         "mobile/lib/features/task/presentation/providers/task_provider.dart"
       ],
       "status": "done"
+    },
+    "E01": {
+      "name": "Proto/gRPC契约完整性——Go与Python接口是否对齐",
+      "description": "proto定义的RPC方法在Go client和Python service中是否都有实现？是否有proto字段在Python端序列化但Go端忽略？请求/响应消息是否严格匹配？",
+      "key_files": [
+        "proto/agent_service.proto",
+        "proto/galaxy_service.proto",
+        "backend/gateway/internal/agent/client.go",
+        "backend/app/services/agent_grpc_service.py"
+      ],
+      "status": "pending"
+    },
+    "E02": {
+      "name": "EventBus可靠性——Redis Streams消费组/DLQ/重试",
+      "description": "EventBus发布的每个事件是否都有消费者？DLQ中的死信是否会被重试？消费者崩溃后消息是否丢失？event_bus.py的publish和subscribe是否正确处理异常？",
+      "key_files": [
+        "backend/app/core/event_bus.py",
+        "backend/app/services/achievement_event_consumer.py",
+        "backend/app/services/galaxy_event_consumer.py"
+      ],
+      "status": "pending"
+    },
+    "E03": {
+      "name": "Kill Switch实效性——off/shadow/live切换是否真正生效",
+      "description": "将kill switch设为off后，对应功能是否真的停止？shadow模式下计算结果是否被正确丢弃？Prometheus gauge是否准确反映当前状态？drill脚本覆盖了哪些switch？",
+      "key_files": [
+        "backend/app/core/kill_switch.py",
+        "backend/app/aurora/privacy.py",
+        "backend/app/services/social_signal_bridge.py"
+      ],
+      "status": "pending"
+    },
+    "E04": {
+      "name": "错题本完整生命周期——录入→OCR→RAG→分析→节点关联→复习→掌握度",
+      "description": "用户拍照录入错题后：OCR是否提取文本？是否进入RAG索引？分析结果是否关联Galaxy节点？复习后掌握度是否更新？从录入到星图变色的完整链路是否通畅？",
+      "key_files": [
+        "backend/app/services/error_book_service.py",
+        "backend/app/services/error_replan_bridge.py",
+        "backend/app/services/galaxy_event_consumer.py",
+        "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart"
+      ],
+      "status": "pending"
+    },
+    "E05": {
+      "name": "Achievement Engine事件消费者完整性",
+      "description": "achievement_engine发布19种事件，但achievement_event_consumer是否订阅了所有19种？是否有事件被发布但永远无人消费？解锁通知是否能正确路由到前端？",
+      "key_files": [
+        "backend/app/services/achievement_engine.py",
+        "backend/app/services/achievement_event_consumer.py",
+        "backend/app/core/event_bus.py"
+      ],
+      "status": "pending"
+    },
+    "E06": {
+      "name": "学习预测→实际准确度反馈闭环",
+      "description": "TheaterService做出的学习预测（考试分数/通过概率）在考试结束后是否有回填验证？预测偏差是否反馈给模型？用户看到的历史预测是否与实际结果对比？",
+      "key_files": [
+        "backend/app/services/theater/",
+        "backend/app/services/simulation/",
+        "mobile/lib/features/theater/",
+        "mobile/lib/features/simulation/"
+      ],
+      "status": "pending"
+    },
+    "E07": {
+      "name": "认知胶囊→行为分析→双核路由数据流",
+      "description": "用户收藏认知胶囊后，该行为是否被behavior_signal_collector捕获？是否流入cognitive_service？是否影响dual_core_router的决策？收藏行为对AI后续对话有任何影响吗？",
+      "key_files": [
+        "backend/app/services/cognitive_service.py",
+        "backend/app/services/behavior_signal_collector.py",
+        "backend/app/orchestration/dual_core_router.py",
+        "mobile/lib/features/cognitive/"
+      ],
+      "status": "pending"
+    },
+    "E08": {
+      "name": "WebSocket断线重连——移动端恢复机制",
+      "description": "用户在地铁里WebSocket断开后：客户端是否有指数退避重连？重连后丢失的消息如何补偿？chat_provider是否在重连后刷新？长时间断连是否有用户提示？",
+      "key_files": [
+        "mobile/lib/core/services/websocket_chat_service_v2.dart",
+        "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
+        "backend/gateway/internal/handler/websocket_proxy.go"
+      ],
+      "status": "pending"
+    },
+    "E09": {
+      "name": "Sprint Pack Schema验证——4个科目JSON完整性",
+      "description": "sprint_packs目录下的JSON文件是否都符合task_card_generator期望的schema？缺失字段是否有降级处理？所有科目的节点是否都在Galaxy中有对应？",
+      "key_files": [
+        "backend/app/sprint_packs/",
+        "backend/app/orchestration/task_card_generator.py",
+        "backend/app/orchestration/planning_workflow.py"
+      ],
+      "status": "pending"
+    },
+    "E10": {
+      "name": "通知偏好设置→实际投递行为一致性",
+      "description": "用户在设置中关闭某类通知后，notification_center_service是否真的停止投递？偏好设置是否被Celery任务尊重？关闭所有通知后是否还有推送漏出？",
+      "key_files": [
+        "mobile/lib/features/settings/",
+        "backend/app/services/notification_center_service.py",
+        "backend/app/core/celery_tasks.py"
+      ],
+      "status": "pending"
+    },
+    "E11": {
+      "name": "种子库→聊天集成→计划集成的完整链路",
+      "description": "用户从种子库选择一个学习种子后：能否在聊天中被Aurora引用？能否转化为计划任务？种子质量评分是否影响推荐？种子与Galaxy节点的关联是否被利用？",
+      "key_files": [
+        "mobile/lib/features/seed_library/",
+        "backend/app/services/seed_library_service.py",
+        "backend/app/orchestration/orchestrator.py"
+      ],
+      "status": "pending"
+    },
+    "E12": {
+      "name": "专注模式→streak/achievement集成",
+      "description": "用户完成一个专注番茄钟后：streak是否更新？achievement是否触发？专注时长是否计入学习统计？专注完成事件是否发布到EventBus？",
+      "key_files": [
+        "mobile/lib/features/focus/presentation/providers/",
+        "backend/app/services/achievement_engine.py",
+        "backend/app/core/event_bus.py"
+      ],
+      "status": "pending"
+    },
+    "E13": {
+      "name": "呼吸练习→任务/专注集成",
+      "description": "用户完成一次呼吸练习后：是否有任何后续引导（回到任务/进入专注）？呼吸练习的完成数据是否被记录？是否能被Aurora感知用于了解用户状态？",
+      "key_files": [
+        "mobile/lib/features/focus/presentation/screens/breathing_exercise_screen.dart",
+        "mobile/lib/features/focus/presentation/providers/",
+        "backend/app/services/behavior_signal_collector.py"
+      ],
+      "status": "pending"
+    },
+    "E14": {
+      "name": "Calculator→学习上下文→AI感知",
+      "description": "用户使用内置计算器时：计算历史是否保存？Aurora是否知道用户用了计算器？计算行为是否影响任务难度推荐？计算器与当前学习主题是否有关联？",
+      "key_files": [
+        "mobile/lib/features/tools/",
+        "backend/app/services/behavior_signal_collector.py",
+        "backend/app/core/context_manager.py"
+      ],
+      "status": "pending"
+    },
+    "E15": {
+      "name": "DB迁移健康——52个Alembic迁移一致性",
+      "description": "52个Alembic迁移文件是否都能从头顺序执行？是否存在被跳过的迁移？SQLAlchemy模型是否与最新迁移一致？是否有迁移创建了索引但代码未使用？",
+      "key_files": [
+        "backend/alembic/",
+        "backend/alembic/versions/",
+        "backend/app/models/"
+      ],
+      "status": "pending"
+    },
+    "E16": {
+      "name": "社区社交功能→个人AI教练数据流",
+      "description": "学习伙伴完成某节点复习后：social_signal_bridge是否捕获？数据是否流入dashboard？Aurora在对话中是否真的引用伙伴进度？accountability partner功能是否端到端通畅？",
+      "key_files": [
+        "backend/app/services/social_signal_bridge.py",
+        "backend/app/services/community_service.py",
+        "backend/app/aurora/runtime_v1/dashboard.py",
+        "mobile/lib/features/community/"
+      ],
+      "status": "pending"
+    },
+    "E17": {
+      "name": "Aurora checkpoint surface交互正确性",
+      "description": "Aurora在checkpoint surface暂停时：用户能否正确恢复？恢复后context是否完整？多次暂停/恢复是否导致状态损坏？checkpoint数据是否持久化？",
+      "key_files": [
+        "backend/app/aurora/runtime_v1/service.py",
+        "backend/app/aurora/runtime_v1/state.py",
+        "backend/app/aurora/runtime_v1/decision_loop.py"
+      ],
+      "status": "pending"
+    },
+    "E18": {
+      "name": "Plan health score计算准确性",
+      "description": "plan health score的计算公式是什么？输入数据（完成率/延迟/压缩次数）是否准确？health score变化是否触发adaptive_replanner？用户是否能看到health score？",
+      "key_files": [
+        "backend/app/orchestration/adaptive_replanner.py",
+        "backend/app/orchestration/planning_workflow.py",
+        "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart"
+      ],
+      "status": "pending"
+    },
+    "E19": {
+      "name": "数据导出/可移植性——用户能取回自己的数据吗",
+      "description": "用户要求导出数据时：是否有API支持？导出格式是否包含所有用户生成内容（聊天/计划/任务/错题/Galaxy）？导出过程是否异步处理大数据量？GDPR删除请求是否真正清除所有数据？",
+      "key_files": [
+        "backend/app/api/v1/",
+        "backend/gateway/internal/handler/",
+        "backend/app/services/memory_service.py"
+      ],
+      "status": "pending"
+    },
+    "E20": {
+      "name": "Go Gateway中间件链顺序与安全性",
+      "description": "Go Gateway的16个middleware是否按正确顺序执行？CORS是否在auth之前？rate_limit是否在timeout之前？一个middleware的panic是否会导致后续全部跳过？security headers是否在所有响应路径上都生效？",
+      "key_files": [
+        "backend/gateway/internal/middleware/auth.go",
+        "backend/gateway/internal/middleware/cors.go",
+        "backend/gateway/internal/middleware/rate_limit.go",
+        "backend/gateway/internal/middleware/security.go",
+        "backend/gateway/cmd/server/main.go"
+      ],
+      "status": "pending"
     }
   }
 }
