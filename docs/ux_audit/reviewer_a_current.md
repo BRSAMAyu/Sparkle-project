@@ -1,14 +1,14 @@
-# Reviewer A — D07: 设置/隐私控制——用户能控制数据流向吗
-Timestamp: 2026-04-26T02:25:00+08:00
-Chain Index: 13
+# Reviewer A — D09: Go Gateway 中间件——限流误杀与WebSocket断连恢复
+Timestamp: 2026-04-26T02:40:00+08:00
+Chain Index: 14
 
 ## 自我审查声明
 
-本报告所有发现已通过亲自阅读源代码确认。关键验证：(1) `privacy.py` 只有 `redact_pii()` 和 `laplace_noise()` 工具函数，无用户偏好读取；(2) `prompts.py` 中 `privacy` grep 仅命中 kill_switch import（line 39），prompt 组装不检查隐私设置；(3) `planning.py:809` 读取 `privacy_boundaries` 但仅用于 Aurora 建模 tension 过滤；(4) `transparency_settings_screen.dart` 是 AI 透明度 UI 设置，非数据收集控制。
+本报告所有发现已通过亲自阅读源代码确认。关键验证：(1) `rate_limit.go:331-338` 全局配置合理（10 req/s + burst 30）；(2) `cors.go:13` 检查 `IsOriginAllowed` 而非通配符；(3) `security.go:16-17` CSP `script-src 'self'` 无 unsafe-inline；(4) `websocket_proxy.go:115,139,152` 三层 defer 确保 cleanup。
 
 ## Chain Flow Summary
 
-审查用户隐私控制能力：用户能否在设置中关闭某项数据收集？关闭后该数据是否真的不再发送到 LLM？kill switch 是否影响对应功能？`backend/app/aurora/privacy.py` 提供 PII 脱敏工具，`backend/app/core/kill_switch.py` 提供三态功能开关，`transparency_settings_screen.dart` 提供 AI 透明度设置，但**三者互不关联**——没有一个统一的"数据收集偏好"系统。
+审查 Go Gateway 四个中间件层：(1) IP/User/Adaptive rate limiting — 是否在正常使用下误杀请求 (2) WebSocket proxy 断连处理 (3) CORS 配置是否阻断正常前端请求 (4) Security headers 是否过于严格。
 
 ## Critical Issues 🔴
 
@@ -16,72 +16,57 @@ None found.
 
 ## Major Issues 🟡
 
-**1. 无统一的用户数据收集偏好系统——PII 脱敏是自动的，但用户无法选择性关闭特定数据流**
-
-现状分析：
-- `privacy.py` 的 `redact_pii()` 自动脱敏 email/phone/CN_ID/bank_card（line 24-30），**无需用户设置即生效** — 这是好事
-- `kill_switch.py` 提供三态开关（off/shadow/live），但这是**运维工具**，控制的是功能启停，不是用户数据偏好
-- `transparency_settings_screen.dart` 控制的是 AI 回答的**展示方式**（透明模式、纯净模式），不是数据收集范围
-- `planning.py:809` 的 `privacy_boundaries` 仅用于建模阶段跳过特定 tension 域，不影响 prompt assembly
-
-Expected: 用户应能在设置中看到"我有哪些数据被 AI 使用"并选择性关闭（如"不使用我的日历数据"、"不使用我的社群活动"）。Actual: 没有这样的用户界面。所有数据流由系统自动决定，用户无法干预。
-
-**2. `prompts.py` 不检查任何隐私偏好——所有用户数据无条件进入 prompt assembly**
-
-`prompts.py` 是 prompt 组装的核心文件（3000+ 行）。grep `privacy|privacy_bound|redact` 仅命中 `kill_switch` import（line 39）。这意味着：
-- 用户的日历数据（如果 stage40 kill switch 为 live）无条件进入 prompt
-- 用户的社群活动（social_signal_bridge）无条件进入 dashboard
-- 用户的专注记录无条件进入 context
-- 没有任何机制让用户说"不要把我的 X 数据发给 AI"
-
-Expected: prompt assembly 应查询用户偏好，跳过用户关闭的数据维度。Actual: 所有启用的数据维度无条件组装到 prompt。
+None found.
 
 ## Minor Issues 🟢
 
-None found.
+**1. `websocket_proxy.go`: WebSocket 断连时不主动通知 Python 后端清理**
+
+当客户端 WebSocket 断连时，Go gateway 通过 `defer` 链（line 115, 139, 152）关闭 client 和 backend 连接。但 Go 端没有发送显式的 "disconnect" 控制消息给 Python 后端。Python 端依赖 TCP 连接关闭事件来检测断连（`backend/app/core/websocket.py:255-261` 的 `disconnect()` 方法）。
+
+在正常情况下，TCP FIN/RST 会触发 Python 端的 cleanup。但在网络中断（如设备进入隧道）场景下，TCP 连接可能长时间处于半开状态，Python 端直到心跳超时（60秒）才知道连接已断开。
+
+Expected: 发送显式 WebSocket close frame 给 Python 后端加速 cleanup。Actual: 依赖 TCP 层关闭，最坏情况60秒延迟。
+
+**Note**: Go gateway 的 ping ticker（line 253-271）每30秒发送 ping，配合 Python 端60秒超时，实际检测延迟为 30-90 秒。对实时应用可接受但非最优。
 
 ## Working Well ✅
 
-**PII 自动脱敏** (`privacy.py:24-30`):
-- 自动脱敏 email、手机号、中国身份证号、银行卡号
-- 使用正则匹配，覆盖常见格式
-- 在 LLM 调用前统一应用
+**Rate limiting** (`rate_limit.go`):
+- IP 限流：10 req/s + burst 30（line 331-332）— 正常使用不会触发
+- Auth 限流：5 req/s + burst 15（line 334-335）— 防止暴力破解
+- WebSocket 限流：5 conn/min + burst 10（line 337-338）— 允许合理重连
+- 自适应限流：写操作用更严格策略（baseRate*0.8, burst*0.8）（line 261）
+- 限流响应包含 `retry_after` 头（line 165）和 `X-RateLimit-*` 头（line 172-174）
+- 过期 visitor 自动清理（goroutine，line 52-60）
+- `maxVisitors` 上限防止内存溢出（line 75-76），LRU 淘汰策略（line 126-133）
 
-**差分隐私噪声** (`privacy.py:33-56`):
-- `laplace_noise()` 实现差分隐私
-- epsilon 和 sensitivity 参数可配置
-- 用于 mastery 分数等统计值的隐私保护
+**CORS** (`cors.go`):
+- 使用 `cfg.IsOriginAllowed(origin)` 白名单（line 13），非通配符 `*`
+- 仅在 origin 匹配时设置 CORS 头（line 14-18）
+- OPTIONS 请求正确返回 204 No Content（line 21-23）
+- `connect-src` 允许 `wss:` 和 `https:`（security.go line 20）
 
-**Kill switch 三态控制** (`kill_switch.py`):
-- off/shadow/live 三态
-- Redis 持久化 + settings.py fallback
-- Prometheus gauge 暴露状态
-- 每个功能独立控制
+**Security headers** (`security.go`):
+- CSP `script-src 'self'` 无 `unsafe-inline`/`unsafe-eval`（line 16-17）— 严格但安全
+- `style-src` 保留 `unsafe-inline`（line 18）— CSS 框架兼容性需要
+- `X-Frame-Options: DENY`（line 28）— 防止 clickjacking
+- `HSTS` 仅在生产环境启用（line 37-39）
+- `Permissions-Policy` 禁用 geolocation/camera/microphone/payment（line 45）
+- `Referrer-Policy: strict-origin-when-cross-origin`（line 42）
 
-**Aurora 建模隐私边界** (`planning.py:807-810, 882-883`):
-- `privacy_boundaries` 列表可跳过特定建模域
-- 匹配到的域被标记为 `status = "dropped"`，不会被追问
-- 当前机制存在但前端无 UI 控制它
-
-**AI 透明度设置** (`transparency_settings_screen.dart`):
-- 全局开关（enabled/disabled）
-- 展示模式选择（折叠悬浮/底部抽屉/仅详情页）
-- 纯净模式（隐藏卡片和反馈组件）
-- 自动折叠 + 允许单轮关闭
-
-**Profile transparency API** (`backend/app/api/v1/profile_transparency.py`):
-- 提供数据使用透明度端点
-- 列出各数据类别（focus_sessions、error_book、achievement_signals 等）
-- 用户可查看哪些数据被系统使用
+**WebSocket proxy** (`websocket_proxy.go`):
+- 三层 defer 确保 cleanup：unregisterConnection + backendConn.Close + clientConn.Close（line 115, 139, 152）
+- 双向 goroutine 代理：client→backend 和 backend→client（line 195-249）
+- Ping ticker 每30秒双向保活（line 253-271）
+- 错误通道 + done 信号优雅关闭（line 274-285）
+- Per-user 连接数限制（line 291-303）
 
 ## Files Examined
 
-1. `backend/app/aurora/privacy.py` (全文 57 行 — PII redaction + Laplace noise)
-2. `backend/app/core/kill_switch.py` (KillSwitchBinding dataclass + read_mode)
-3. `backend/app/orchestration/prompts.py` (line 39, grep: no privacy checks in prompt assembly)
-4. `backend/app/aurora/runtime_v1/planning.py` (lines 807-810, privacy_boundaries in hard bounds; 882-883, dropped domains)
-5. `mobile/lib/features/settings/presentation/screens/transparency_settings_screen.dart` (AI display settings, not data collection)
-6. `backend/app/api/v1/profile_transparency.py` (read-only transparency API)
-7. `backend/app/services/aurora_stage40_calendar_kill_switch_service.py` (calendar kill switch — ops tool)
+1. `backend/gateway/internal/middleware/rate_limit.go` (全文 — rate limiter with token bucket, IP/User/Endpoint/Adaptive variants)
+2. `backend/gateway/internal/middleware/cors.go` (全文 29 行 — origin whitelist)
+3. `backend/gateway/internal/middleware/security.go` (全文 50 行 — CSP + security headers)
+4. `backend/gateway/internal/handler/websocket_proxy.go` (lines 110-289, proxy lifecycle)
 
-## Confidence: High — 系统有隐私保护基础（PII 脱敏、kill switch、差分隐私），但缺少用户可控的数据收集偏好。当前设计是"系统决定一切，用户只能看"模式。profile_transparency API 提供可见性但不提供控制权。
+## Confidence: High — 四个中间件层逐一审查。限流配置合理（不会误杀正常用户），CORS/Security 配置正确且严格。唯一 Minor 是 WebSocket 断连检测依赖 TCP 超时而非显式通知。

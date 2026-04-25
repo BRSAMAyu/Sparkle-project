@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 25 / 30 chains audited (C04, C20, D01, D07, D09 pending)
+> **Status**: 26 / 30 chains audited (C04, C20, D01, D07 pending)
 
 ---
 
@@ -474,3 +474,26 @@
 
 ### C04: 错题录入→修复任务插入→计划页橙色卡可见
 **Status**: ⚠️ audit_state 已标记 "done" 但无 reviewer 文件。D02 Critical 间接覆盖了错题→mastery 链路。
+
+---
+
+## Round 11 — 2026-04-26
+*Reviewer A: D09 — Go Gateway 中间件*
+
+### D09: Go Gateway 中间件——限流误杀与WebSocket断连恢复 (Reviewer A)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- None
+
+**Minor Issues 🟢**
+- **`websocket_proxy.go`**: WebSocket 断连时不主动发送 close frame 给 Python 后端，依赖 TCP FIN/RST。网络中断（隧道/地铁）时 TCP 半开状态最长 60-90 秒后 Python 才检测到断连。ping ticker 间隔可配置（默认 pongWait/2 ≈ 45s），配合 Python 端超时实际检测延迟 45-90 秒。
+
+**Working Well ✅**: Rate limiting 配置合理（IP 10/s burst 30, Auth 5/s burst 15, WS 5/min burst 10）正常使用不误杀；CORS 用白名单非通配符；CSP `script-src 'self'` 无 unsafe-inline；三层 defer 确保 WebSocket cleanup；per-user 连接数限制；自适应限流写操作更严格。
+
+---
+
+### D07: 设置/隐私控制——用户能控制数据流向吗
+**Status**: ⚠️ Reviewer A 完成了 D07（queue index 13→14→15）但写入 reviewer_a_current.md 后被 D09 覆盖。**单文件覆盖问题再次发生**。仍需审查。
