@@ -146,6 +146,21 @@ _TENSION_IMPORTANCE: dict[str, str] = {
     "time_available": "决定密度和取舍策略——时间约束直接决定 seven_day_survival 模式是否激活",
     "motivation": "决定干预语言和策略——为什么做决定了 AI 如何调整节奏和语气",
 }
+_ZERO_BASELINE_MARKERS = ("完全没学过", "没学过", "零基础", "完全不会", "zero")
+_UNCERTAIN_BASELINE_MARKERS = ("不太会", "不太懂", "薄弱", "有点虚", "学了一点", "会一点")
+_SCOPE_TOPIC_MARKERS = ("传输层", "网络层", "应用层", "数据链路层", "物理层", "TCP", "UDP", "路由", "子网")
+
+
+def _importance_tail(domain: str) -> str:
+    reasoning = _strip(_TENSION_IMPORTANCE.get(domain))
+    if not reasoning:
+        return ""
+    return _strip(reasoning.split("——", 1)[-1])
+
+
+def _has_any_marker(value: Any, markers: tuple[str, ...]) -> bool:
+    text = _strip(value).lower()
+    return any(marker.lower() in text for marker in markers)
 
 
 @dataclass
@@ -249,6 +264,14 @@ class AuroraRuntimePlanningState:
     planning_session_id: str | None = None
     covered_domains: list[str] = field(default_factory=list)
     missing_domains: list[str] = field(default_factory=list)
+
+    @property
+    def cold_start_context(self) -> dict[str, Any]:
+        context = self.user_model_snapshot.get("cold_start_context")
+        if not isinstance(context, dict):
+            context = {}
+            self.user_model_snapshot["cold_start_context"] = context
+        return context
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -555,10 +578,77 @@ class AuroraRuntimePlanningAdapter:
         return max(candidates, key=sort_key)
 
     def build_next_prompt(self, state: AuroraRuntimePlanningState) -> tuple[str, str | None]:
+        first_question = self._build_first_question(state)
+        if first_question is not None:
+            return first_question
+
         tension = self.select_next_tension(state)
         if tension is None:
             return "我已经拿到够用的信息了，你如果愿意，我现在就把最关键的瓶颈和推进策略整理出来。", None
-        return get_tension_prompt(tension.domain), tension.domain
+        return self._contextual_tension_prompt(tension.domain, state), tension.domain
+
+    def _build_first_question(self, state: AuroraRuntimePlanningState) -> tuple[str, str | None] | None:
+        snapshot = _as_dict(state.user_model_snapshot)
+        sprint_pack_id = _strip(snapshot.get("sprint_pack_id"))
+        if not sprint_pack_id:
+            return None
+        if any(item.last_attempted_at for item in state.informational_tensions):
+            return None
+
+        subject = _strip(snapshot.get("sprint_pack_subject") or snapshot.get("subject") or snapshot.get("exam_scope"))
+        subject_clause = (
+            f"我先按【{subject}】冲刺来处理，范围用内置 Sprint Pack 兜底。"
+            if subject
+            else "我先按这次考试冲刺来处理，范围用内置 Sprint Pack 兜底。"
+        )
+        if not _strip(snapshot.get("knowledge_baseline")):
+            return (
+                f"{subject_clause}你目前大概在哪个水平：完全没学过、上过课但没复习，还是已经学过一部分？",
+                "knowledge_baseline",
+            )
+        if not _strip(snapshot.get("time_available")):
+            return (
+                f"{subject_clause}接下来这几天你每天大概能投入多少时间？",
+                "time_available",
+            )
+        return None
+
+    def _contextual_tension_prompt(self, domain: str, state: AuroraRuntimePlanningState) -> str:
+        snapshot = _as_dict(state.user_model_snapshot)
+        subject = _strip(snapshot.get("subject") or "这门课")
+        scope = self._scope_phrase(snapshot)
+        baseline = _strip(snapshot.get("knowledge_baseline"))
+        goal = _strip(snapshot.get("goal_raw"))
+
+        if domain == "exam_scope":
+            if _has_any_marker(baseline, _ZERO_BASELINE_MARKERS):
+                return f"好，零基础先别急着铺满全书。{subject}这次主要考哪几块？章节、题型或老师画过的重点都可以。"
+            return f"{subject}这门课，最让你头疼的是哪部分？如果你已经知道考试范围，也可以直接说章节或题型。"
+        if domain == "knowledge_baseline":
+            if _has_any_marker(goal, _UNCERTAIN_BASELINE_MARKERS):
+                return "大概是完全没接触过，还是学了一点点但串不起来？"
+            if scope:
+                return f"{scope}这几块里，你更像完全没接触过，还是上过课但现在不稳？"
+            return get_tension_prompt(domain)
+        if domain == "time_available":
+            if _has_any_marker(baseline, _ZERO_BASELINE_MARKERS):
+                scope_part = f"先围绕{scope}" if scope else "先按最核心范围"
+                return f"好，零基础的话，咱们{scope_part}排一个保底节奏。接下来这几天你每天大概能投入多少时间？有没有哪天会特别忙？"
+            if scope:
+                return f"好，范围先按{scope}来抓。接下来这几天你每天大概能投入多少时间？有没有哪天会特别忙？"
+            return get_tension_prompt(domain)
+        if domain == "motivation":
+            return get_tension_prompt(domain)
+        return get_tension_prompt(domain)
+
+    def _scope_phrase(self, snapshot: dict[str, Any]) -> str:
+        raw_scope = _strip(snapshot.get("exam_scope") or snapshot.get("subject"))
+        if not raw_scope:
+            return ""
+        topics = [marker for marker in _SCOPE_TOPIC_MARKERS if marker.lower() in raw_scope.lower()]
+        if topics:
+            return "、".join(dict.fromkeys(topics))
+        return raw_scope[:40]
 
     def build_detour_prompt(self, state: AuroraRuntimePlanningState) -> str:
         """Returns empty string — detour context is conveyed via build_detour_scaffold(), not sidecar prompts."""
@@ -703,11 +793,16 @@ class AuroraRuntimePlanningAdapter:
             "available_materials": _as_list(cold_start.get("available_materials")),
             "subject": _strip(cold_start.get("subject")),
             "time_constraint_days": _safe_int(cold_start.get("time_constraint_days")),
+            "previous_exam_weak_nodes": _as_list(cold_start.get("previous_exam_weak_nodes")),
             "motivation_context": _strip(
                 cold_start.get("motivation_context")
                 or cold_start.get("motivation")
                 or cold_start.get("goal_motivation")
             ),
+            "sprint_pack_id": _strip(cold_start.get("sprint_pack_id")),
+            "sprint_pack_subject": _strip(cold_start.get("sprint_pack_subject")),
+            "pre_filled_domain_hints": _as_list(cold_start.get("pre_filled_domain_hints")),
+            "fast_track_exam_sprint": bool(cold_start.get("fast_track_exam_sprint")),
             "modeling_complete": bool(modeling_state.get("completed")),
             "aurora_hard_bounds": {
                 "dnd_windows": _as_list(aurora_prefs.get("dnd_windows")),
@@ -745,6 +840,10 @@ class AuroraRuntimePlanningAdapter:
             if value in (None, "", [], {}):
                 continue
             snapshot[key] = value
+            if key == "previous_exam_weak_nodes":
+                cold_start = _as_dict(snapshot.get("cold_start_context"))
+                cold_start["previous_exam_weak_nodes"] = _as_list(value)
+                snapshot["cold_start_context"] = cold_start
         state.user_model_snapshot = snapshot
 
     def _surface_state(self, state: AuroraRuntimePlanningState) -> dict[str, Any]:
@@ -824,15 +923,16 @@ class AuroraRuntimePlanningAdapter:
 
     def _describe_tension(self, domain: str, snapshot: dict[str, Any]) -> str:
         subject = _strip(snapshot.get("subject") or "这次规划")
+        reason = _importance_tail(domain)
         if domain == "exam_scope":
-            return f"还没看清 {subject} 具体考哪些范围，暂时没法判断最该优先压缩哪部分。"
+            return f"{subject}具体抓哪些章节或题型？我先问这个，是因为{reason}。"
         if domain == "knowledge_baseline":
-            return f"还不清楚你在 {subject} 上的起点，计划强度容易过轻或过重。"
+            return f"{subject}你现在是完全没接触，还是学过一点但不稳？我先校准起点，是因为{reason}。"
         if domain == "time_available":
-            return "还没摸清你这几天真实能投入的时间，生成的节奏容易和你的日程冲突。"
+            return f"接下来几天每天大概能拿出多久？我先对齐时间，是因为{reason}。"
         if domain == "motivation":
-            return f"还不知道 {subject} 对你意味着什么，计划语气和难度策略暂时无法贴合。"
-        return "还有一块信息缺口没有闭合。"
+            return f"{subject}这次更像必须过线，还是想尽量冲高分？我先问动机，是因为{reason}。"
+        return "还有一块信息缺口没闭合：你愿意先补哪句最影响计划的话？"
 
     def _upsert_latent_thread(self, state: AuroraRuntimePlanningState) -> None:
         top_tension = self.select_next_tension(state)

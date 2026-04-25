@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date as date_type, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -19,14 +20,17 @@ from app.aurora.runtime_v1.control_surface import (
     ControlSurfaceService,
 )
 from app.aurora.runtime_v1.dashboard import DashboardReadoutBuilder, canonicalize_runtime_domain
-from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
+from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop, STRATEGY_FIELDS
 from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
-from app.aurora.runtime_v1.state import ActivityProfile, merge_activity_profile_payload
+from app.aurora.runtime_v1.state import ActivityProfile, AuroraTeachingStrategy, merge_activity_profile_payload
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.aurora.runtime_v1.wake_policy import AuroraWakePolicyService
 from app.aurora.runtime_v1.write_pipeline import InferenceClaim
+from app.models.plan import Plan, PlanType
+from app.models.task import Task, TaskStatus
 from app.models.user_preferences import UserPreferencesCenter
+from app.services.memory_service import MemoryService
 from app.sprint_packs.last_24h_mode import (
     apply_last_24h_policy_overrides,
     calculate_days_left,
@@ -35,7 +39,11 @@ from app.sprint_packs.last_24h_mode import (
 )
 
 GALAXY_BASELINE_TTL_SECONDS = 300  # 5-min stale-acceptable cache
+CORRECT_ANSWER_MASTERY_DELTA = 0.15
+CORRECT_ANSWER_MASTERY_REASON = "aurora_completion_check_correct"
 CHINA_TIMEZONE = timezone(timedelta(hours=8))
+LAST_SESSION_MOOD_WINDOW_SECONDS = 24 * 60 * 60
+LAST_SESSION_MOOD_TRIGGER_LABELS = {"stressed", "frustrated", "overwhelmed"}
 SLEEP_GUARD_START_HOUR = 23
 SLEEP_GUARD_END_HOUR = 6
 REQUEST_TIMESTAMP_KEYS = (
@@ -113,12 +121,26 @@ def _strip(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _as_utc_naive(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if getattr(value, "tzinfo", None) is not None:
+        return value.astimezone(UTC).replace(tzinfo=None)
+    return value
+
+
 def _safe_int(value: Any) -> int | None:
     try:
         parsed = int(float(value))
     except (TypeError, ValueError):
         return None
     return parsed
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, Mapping) else {}
 
 
 @dataclass(slots=True)
@@ -144,6 +166,8 @@ class AuroraRuntimeV1Service:
         self_model_service: SparkleSelfModelService | None = None,
         skill_registry: AuroraSkillRegistry | None = None,
         wake_policy_service: AuroraWakePolicyService | None = None,
+        galaxy_service: Any | None = None,
+        galaxy_service_factory: Any | None = None,
     ):
         self.redis = redis_client
         self.decision_loop = decision_loop or AuroraDecisionLoop()
@@ -152,6 +176,186 @@ class AuroraRuntimeV1Service:
         self.self_model_service = self_model_service or SparkleSelfModelService(redis_client)
         self.skill_registry = skill_registry or AuroraSkillRegistry()
         self.wake_policy_service = wake_policy_service or AuroraWakePolicyService(redis_client)
+        self.galaxy_service = galaxy_service
+        self.galaxy_service_factory = galaxy_service_factory
+
+    async def get_daily_startup_message(
+        self,
+        *,
+        active_db: AsyncSession,
+        user_id: str | UUID,
+        plan_id: str | UUID,
+        session_date: date_type | datetime | str | None = None,
+    ) -> dict[str, Any]:
+        """Build Aurora's proactive daily opener for an active sprint plan."""
+        user_uuid = UUID(str(user_id))
+        plan_uuid = UUID(str(plan_id))
+        session_day = self._coerce_session_date(session_date)
+
+        plan = await self._fetch_active_sprint_plan(
+            active_db=active_db,
+            user_id=user_uuid,
+            plan_id=plan_uuid,
+        )
+        if plan is None:
+            raise LookupError("active sprint plan not found")
+
+        tasks = await self._list_plan_tasks(active_db=active_db, plan_id=plan_uuid)
+        initial_days_left = self._derive_initial_days_left(plan=plan, tasks=tasks)
+        days_left = self._days_left(plan.target_date, session_day=session_day, fallback=initial_days_left)
+        current_day_index = self._current_day_index(
+            initial_days_left=initial_days_left,
+            days_left=days_left,
+            tasks=tasks,
+        )
+        today_tasks = [task for task in tasks if self._task_day_index(task) == current_day_index]
+        yesterday_rate = self._completion_rate_for_day(tasks=tasks, day_index=current_day_index - 1)
+
+        today_focus = (
+            self._today_focus_from_tasks(today_tasks)
+            or self._stored_day_recommendation(plan=plan, day_index=current_day_index)
+            or _strip(plan.subject)
+            or _strip(plan.name)
+            or "今天的核心任务"
+        )
+        estimated_minutes = self._estimated_minutes(today_tasks, fallback=plan.daily_available_minutes)
+        day_recommendation = self._stored_day_recommendation(plan=plan, day_index=current_day_index)
+
+        wake_decision_payload: dict[str, Any] = {}
+        try:
+            wake_decision = await self.wake_policy_service.evaluate(
+                active_db=active_db,
+                user_id=str(user_uuid),
+                user_message="",
+                request_extra_context={
+                    "plan_id": str(plan_uuid),
+                    "days_left": days_left,
+                    "plan_completion_rate": yesterday_rate,
+                    "expected_completion_rate": 0.75,
+                    "struggle_score": 0.0,
+                },
+                user_context_payload={},
+                self_model={},
+            )
+            wake_decision_payload = wake_decision.to_payload()
+        except Exception as exc:
+            logger.warning("Aurora daily startup wake policy evaluation failed: {}", exc)
+
+        adjustment_reason = self._daily_adjustment_reason(
+            completion_rate=yesterday_rate,
+            wake_energy=_strip(wake_decision_payload.get("energy")),
+        )
+        message = self._daily_startup_message(
+            plan=plan,
+            day_index=current_day_index,
+            today_focus=today_focus,
+            estimated_minutes=estimated_minutes,
+            completion_rate=yesterday_rate,
+            adjustment_reason=adjustment_reason,
+            day_recommendation=day_recommendation,
+        )
+        return {
+            "message": message,
+            "today_focus": today_focus,
+            "estimated_minutes": estimated_minutes,
+            "adjustment_reason": adjustment_reason,
+        }
+
+    async def get_comeback_context(
+        self,
+        *,
+        active_db: AsyncSession,
+        user_id: str | UUID,
+        inactive_threshold_days: int = 3,
+    ) -> dict[str, Any] | None:
+        """Build a comeback message for users who have been away with an active plan.
+
+        Returns ``None`` when the user does not qualify (recently active or no
+        active sprint plan).
+        """
+        from sqlalchemy import and_, select
+
+        from app.models.plan import Plan
+        from app.models.task import Task
+        from app.models.user import User
+
+        user_uuid = UUID(str(user_id))
+        user = await active_db.get(User, user_uuid)
+        if user is None or not user.is_active:
+            return None
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        last_activity_at = _as_utc_naive(user.last_login_at)
+        if last_activity_at is None:
+            return None
+        days_away = max(0, (now - last_activity_at).days)
+        if days_away <= inactive_threshold_days:
+            return None
+
+        # Most recent active plan with a target date
+        stmt = (
+            select(Plan)
+            .where(
+                and_(
+                    Plan.user_id == user_uuid,
+                    Plan.is_active.is_(True),
+                    Plan.target_date.isnot(None),
+                    Plan.not_deleted_filter(),
+                )
+            )
+            .order_by(Plan.is_primary.desc(), Plan.created_at.desc())
+            .limit(1)
+        )
+        result = await active_db.execute(stmt)
+        plan = result.scalar_one_or_none()
+        if plan is None:
+            return None
+
+        days_remaining = max(0, (plan.target_date - now.date()).days) if plan.target_date else 0
+        subject = _strip(plan.subject) or _strip(plan.name) or "你的计划"
+
+        # Next incomplete task
+        task_stmt = (
+            select(Task)
+            .where(
+                and_(
+                    Task.plan_id == plan.id,
+                    Task.deleted_at.is_(None),
+                    Task.status != TaskStatus.COMPLETED,
+                )
+            )
+            .order_by(Task.due_date.asc().nullslast())
+            .limit(1)
+        )
+        task_result = await active_db.execute(task_stmt)
+        next_task = task_result.scalar_one_or_none()
+        next_task_title = next_task.title if next_task else None
+        recent_task_summary = self._comeback_recent_task_summary(next_task)
+        light_restart_suggestion = self._comeback_light_restart_suggestion(
+            subject=subject,
+            recent_task_summary=recent_task_summary,
+            next_task_title=next_task_title,
+        )
+        message = self._comeback_message(
+            subject=subject,
+            days_away=days_away,
+            days_remaining=days_remaining,
+            recent_task_summary=recent_task_summary,
+            next_task_title=next_task_title,
+            light_restart_suggestion=light_restart_suggestion,
+        )
+
+        return {
+            "title": "好久不见，我一直在等你",
+            "message": message,
+            "days_away": days_away,
+            "days_remaining": days_remaining,
+            "subject": subject,
+            "next_task_title": next_task_title or "",
+            "recent_task_summary": recent_task_summary,
+            "light_restart_suggestion": light_restart_suggestion,
+            "plan_id": str(plan.id),
+        }
 
     async def plan_turn(
         self,
@@ -170,6 +374,18 @@ class AuroraRuntimeV1Service:
         conversation_context = dict(conversation_context or {})
         user_context_payload = dict(user_context_payload or {})
         surface = AURORA_RUNTIME_MODE_SURFACES.get(surface, surface)
+        request_extra_context = await self._with_strategy_recalibration_context(
+            active_db=active_db,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            request_extra_context=request_extra_context,
+        )
+        request_extra_context = await self._with_last_session_mood_context(
+            active_db=active_db,
+            user_id=user_id,
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+        )
         request_extra_context = self._with_surface_state(surface=surface, request_extra_context=request_extra_context)
         request_extra_context = self._with_last_24h_exam_policy(
             request_extra_context=request_extra_context,
@@ -190,6 +406,18 @@ class AuroraRuntimeV1Service:
             user_context_payload=user_context_payload,
             redis_client=self.redis,
         )
+        user_context_payload = await self.dashboard_builder.with_confirmed_strategy_preference_from_redis(
+            user_id=user_id,
+            user_context_payload=user_context_payload,
+            redis_client=self.redis,
+        )
+        if active_db is not None:
+            user_context_payload = await self.dashboard_builder.with_deep_pattern_alerts_from_error_history(
+                active_db=active_db,
+                user_id=user_id,
+                user_context_payload=user_context_payload,
+                redis_client=self.redis,
+            )
 
         control_surface_reading = await self._read_control_surface(active_db=active_db, user_id=user_id)
         activity_profile = self._build_activity_profile(surface=surface, request_extra_context=request_extra_context)
@@ -304,7 +532,7 @@ class AuroraRuntimeV1Service:
                 policy=wake_decision.cooldown_policy,
             )
         if active_db is not None:
-            await AuroraDecisionTelemetryService(active_db).record_turn(
+            await AuroraDecisionTelemetryService(active_db, redis_client=self.redis).record_turn(
                 user_id=user_id,
                 surface=surface,
                 conversation_id=conversation_id,
@@ -315,6 +543,18 @@ class AuroraRuntimeV1Service:
                 decision=decision,
                 plan=plan,
             )
+        await self._check_strategy_pattern(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            decision=decision,
+        )
+        await self._apply_correct_answer_mastery_update(
+            active_db=active_db,
+            user_id=user_id,
+            request_id=request_id,
+            decision=decision,
+            readout=readout,
+        )
         await self._persist_runtime_state(
             user_id=user_id,
             surface=surface,
@@ -328,6 +568,102 @@ class AuroraRuntimeV1Service:
             wake_policy=wake_decision.to_payload(),
         )
         return plan
+
+    async def _with_strategy_recalibration_context(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        conversation_id: str,
+        request_extra_context: dict[str, Any],
+    ) -> dict[str, Any]:
+        if self.redis is None:
+            return request_extra_context
+
+        try:
+            stale_signal = await AuroraDecisionTelemetryService(
+                active_db,
+                redis_client=self.redis,
+            ).detect_stale_strategy(
+                user_id=user_id,
+                conversation_id=conversation_id,
+            )
+        except Exception as exc:
+            logger.warning("Aurora runtime v1 failed to detect stale strategy: {}", exc)
+            return request_extra_context
+
+        if not stale_signal or stale_signal.get("stale") is not True:
+            return request_extra_context
+
+        enriched = dict(request_extra_context)
+        enriched["strategy_recalibration_needed"] = True
+        if stale_signal.get("stuck_on"):
+            enriched["stuck_domain"] = stale_signal["stuck_on"]
+        return enriched
+
+    async def _with_last_session_mood_context(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        request_extra_context: dict[str, Any],
+        conversation_context: dict[str, Any],
+    ) -> dict[str, Any]:
+        if request_extra_context.get("last_session_mood"):
+            return request_extra_context
+        if not self._is_new_conversation(conversation_context):
+            return request_extra_context
+
+        try:
+            mood = await MemoryService(active_db, redis_client=self.redis).get_last_session_mood(user_id)
+        except Exception as exc:
+            logger.warning("Aurora runtime v1 failed to read last session mood: {}", exc)
+            return request_extra_context
+
+        if not isinstance(mood, dict):
+            return request_extra_context
+        mood_label = str(mood.get("mood_label") or "").strip().lower()
+        if mood_label not in LAST_SESSION_MOOD_TRIGGER_LABELS:
+            return request_extra_context
+
+        recorded_at = self._coerce_session_mood_datetime(
+            mood.get("recorded_at") or mood.get("updated_at") or mood.get("created_at")
+        )
+        if recorded_at is None:
+            return request_extra_context
+        age_seconds = (datetime.now(UTC) - recorded_at).total_seconds()
+        if age_seconds < 0 or age_seconds > LAST_SESSION_MOOD_WINDOW_SECONDS:
+            return request_extra_context
+
+        enriched = dict(request_extra_context)
+        enriched["last_session_mood"] = mood_label
+        enriched["last_session_mood_at"] = recorded_at.isoformat().replace("+00:00", "Z")
+        if mood.get("mood_score") is not None:
+            enriched["last_session_mood_score"] = mood.get("mood_score")
+        return enriched
+
+    @staticmethod
+    def _is_new_conversation(conversation_context: dict[str, Any]) -> bool:
+        messages = conversation_context.get("messages")
+        if not isinstance(messages, list):
+            return True
+        return len(messages) <= 1
+
+    @staticmethod
+    def _coerce_session_mood_datetime(value: Any) -> datetime | None:
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            text = _strip(value)
+            if not text:
+                return None
+            try:
+                parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
 
     async def _read_control_surface(
         self,
@@ -673,9 +1009,7 @@ class AuroraRuntimeV1Service:
         self_model: dict[str, Any],
     ) -> dict[str, Any]:
         task_state = dict(
-            request_extra_context.get("task_state")
-            or user_context_payload.get("task_state")
-            or {},
+            request_extra_context.get("task_state") or user_context_payload.get("task_state") or {},
         )
         if not task_state.get("day_completed"):
             return self_model
@@ -745,6 +1079,217 @@ class AuroraRuntimeV1Service:
                 "priority": 0.7,
             }
         ]
+
+    async def _apply_correct_answer_mastery_update(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        request_id: str,
+        decision: AuroraDecision,
+        readout: Any,
+    ) -> None:
+        node_ids = self._extract_correct_answer_node_ids(decision.state_updates or {})
+        if not node_ids:
+            return
+
+        allowed_node_ids = self._allowed_sprint_pack_node_ids(readout)
+        if not allowed_node_ids:
+            logger.warning(
+                "Aurora correct-answer mastery update skipped: no Sprint Pack node whitelist for user {}",
+                user_id,
+            )
+            return
+
+        galaxy_service = self._galaxy_service(active_db)
+        if galaxy_service is None:
+            return
+
+        try:
+            user_uuid = UUID(str(user_id))
+        except (TypeError, ValueError):
+            user_uuid = None
+
+        if active_db is not None and self.galaxy_service is None and self.galaxy_service_factory is None:
+            if user_uuid is None:
+                return
+
+        user_ref = user_uuid or str(user_id)
+        updated_nodes: set[str] = set()
+        for raw_node_id in node_ids:
+            node_id = self._canonical_correct_answer_node_id(raw_node_id, allowed_node_ids)
+            if not node_id or node_id in updated_nodes:
+                continue
+            updated_nodes.add(node_id)
+
+            current_mastery = self._mastery_from_context(readout, node_id)
+            current_mastery = await self._current_sprint_node_mastery(
+                galaxy_service=galaxy_service,
+                user_id=user_uuid,
+                node_id=node_id,
+                fallback=current_mastery,
+            )
+
+            new_mastery = self._increment_mastery(current_mastery)
+            try:
+                await galaxy_service.update_node_mastery(
+                    user_id=user_ref,
+                    node_id=node_id,
+                    new_mastery=new_mastery,
+                    reason=CORRECT_ANSWER_MASTERY_REASON,
+                    request_id=request_id,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Aurora correct-answer mastery update failed for user {} node {}: {}",
+                    user_id,
+                    node_id,
+                    exc,
+                )
+
+    def _extract_correct_answer_node_ids(self, updates: Mapping[str, Any]) -> list[str]:
+        raw_values: list[Any] = []
+        for key in ("correct_answer_node", "correct_answer_nodes"):
+            value = updates.get(key)
+            if value in (None, "", [], {}):
+                continue
+            if isinstance(value, (list, tuple, set)):
+                raw_values.extend(value)
+            else:
+                raw_values.append(value)
+
+        node_ids: list[str] = []
+        seen: set[str] = set()
+        for value in raw_values:
+            if isinstance(value, Mapping):
+                value = value.get("node_id") or value.get("id") or value.get("name")
+            node_id = str(value or "").strip()
+            if node_id and node_id not in seen:
+                seen.add(node_id)
+                node_ids.append(node_id)
+        return node_ids
+
+    def _allowed_sprint_pack_node_ids(self, readout: Any) -> set[str]:
+        allowed: set[str] = set()
+
+        def add_nodes(value: Any) -> None:
+            values = value if isinstance(value, (list, tuple, set)) else [value]
+            for item in values:
+                if isinstance(item, Mapping):
+                    item = item.get("node_id") or item.get("id") or item.get("name")
+                node_id = str(item or "").strip()
+                if node_id:
+                    allowed.add(node_id)
+
+        cold_start = getattr(readout, "cold_start_context", {}) or {}
+        checkpoint = getattr(readout, "checkpoint_state", {}) or {}
+        if isinstance(cold_start, Mapping):
+            add_nodes(cold_start.get("sprint_pack_nodes"))
+            subject = _strip(cold_start.get("subject"))
+        else:
+            subject = ""
+
+        if isinstance(checkpoint, Mapping):
+            sprint_pack_id = _strip(checkpoint.get("sprint_pack_id"))
+            if sprint_pack_id and "@" in sprint_pack_id:
+                subject = subject or sprint_pack_id.split("@", 1)[0]
+
+        if subject:
+            try:
+                from app.sprint_packs.sprint_pack_loader import load_pack
+
+                pack = load_pack(subject)
+            except Exception as exc:
+                logger.warning("Aurora failed to load Sprint Pack for correct-answer whitelist {}: {}", subject, exc)
+                pack = None
+            if isinstance(pack, Mapping):
+                add_nodes(
+                    [node.get("node_id") for node in pack.get("knowledge_nodes", []) if isinstance(node, Mapping)]
+                )
+        return allowed
+
+    def _canonical_correct_answer_node_id(self, node_id: str, allowed_node_ids: set[str]) -> str | None:
+        if node_id in allowed_node_ids:
+            return node_id
+        aliases = {
+            "cn.tcp_handshake": "cn.tcp_three_way",
+            "cn.tcp_three_way_handshake": "cn.tcp_three_way",
+        }
+        alias_target = aliases.get(node_id)
+        if alias_target in allowed_node_ids:
+            return alias_target
+        return None
+
+    def _galaxy_service(self, active_db: AsyncSession | None) -> Any | None:
+        if self.galaxy_service is not None:
+            return self.galaxy_service
+        if active_db is None:
+            return None
+        if self.galaxy_service_factory is not None:
+            return self.galaxy_service_factory(active_db)
+        from app.services.galaxy_service import GalaxyService
+
+        return GalaxyService(active_db)
+
+    async def _current_sprint_node_mastery(
+        self,
+        *,
+        galaxy_service: Any,
+        user_id: UUID | None,
+        node_id: str,
+        fallback: float,
+    ) -> float:
+        if user_id is None:
+            return fallback
+        getter = getattr(galaxy_service, "get_sprint_mastery_summary", None)
+        if getter is None:
+            return fallback
+        try:
+            summary = await getter(user_id, [node_id])
+            if isinstance(summary, Mapping) and node_id in summary:
+                return float(summary[node_id])
+        except Exception as exc:
+            logger.warning("Aurora failed to read Sprint Pack mastery summary for node {}: {}", node_id, exc)
+        return fallback
+
+    def _mastery_from_context(self, readout: Any, node_id: str) -> float:
+        for source in (
+            getattr(readout, "request_extra_context", {}),
+            getattr(readout, "cold_start_context", {}),
+            getattr(readout, "profile_context", {}),
+            getattr(readout, "task_state", {}),
+        ):
+            value = self._find_node_mastery(source, node_id)
+            if value is not None:
+                return value
+        return 0.0
+
+    def _find_node_mastery(self, payload: Any, node_id: str) -> float | None:
+        if payload in (None, "", [], {}):
+            return None
+        if isinstance(payload, Mapping):
+            for key in ("galaxy_mastery", "current_mastery", "node_mastery", "mastery_by_node"):
+                value = payload.get(key)
+                if isinstance(value, Mapping) and node_id in value:
+                    try:
+                        return float(value[node_id])
+                    except (TypeError, ValueError):
+                        return None
+            for value in payload.values():
+                found = self._find_node_mastery(value, node_id)
+                if found is not None:
+                    return found
+        elif isinstance(payload, list):
+            for item in payload:
+                found = self._find_node_mastery(item, node_id)
+                if found is not None:
+                    return found
+        return None
+
+    def _increment_mastery(self, current_mastery: float) -> float:
+        scale_cap = 1.0 if current_mastery <= 1.0 else 100.0
+        delta = CORRECT_ANSWER_MASTERY_DELTA if scale_cap == 1.0 else CORRECT_ANSWER_MASTERY_DELTA * 100.0
+        return round(min(scale_cap, max(0.0, current_mastery) + delta), 4)
 
     def _extract_inference_claims_from_decision(
         self,
@@ -876,6 +1421,256 @@ class AuroraRuntimeV1Service:
                 continue
         return default
 
+    def _coerce_session_date(self, value: date_type | datetime | str | None) -> date_type:
+        if value is None:
+            return datetime.now(CHINA_TIMEZONE).date()
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date_type):
+            return value
+        text = _strip(value)
+        if not text:
+            return datetime.now(CHINA_TIMEZONE).date()
+        try:
+            return date_type.fromisoformat(text[:10])
+        except ValueError as exc:
+            raise ValueError("session_date must be an ISO date") from exc
+
+    async def _fetch_active_sprint_plan(
+        self,
+        *,
+        active_db: AsyncSession,
+        user_id: UUID,
+        plan_id: UUID,
+    ) -> Plan | None:
+        stmt = (
+            select(Plan)
+            .where(
+                Plan.id == plan_id,
+                Plan.user_id == user_id,
+                Plan.type == PlanType.SPRINT,
+                Plan.is_active.is_(True),
+                Plan.not_deleted_filter(),
+            )
+            .limit(1)
+        )
+        result = await active_db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def _list_plan_tasks(self, *, active_db: AsyncSession, plan_id: UUID) -> list[Task]:
+        stmt = (
+            select(Task)
+            .where(Task.plan_id == plan_id, Task.not_deleted_filter())
+            .order_by(Task.order_index.asc(), Task.created_at.asc())
+        )
+        result = await active_db.execute(stmt)
+        return list(result.scalars().all())
+
+    def _derive_initial_days_left(self, *, plan: Plan, tasks: list[Task]) -> int:
+        metadata = _as_dict(plan.source_metadata)
+        exam_sprint = _as_dict(metadata.get("exam_sprint_intake"))
+        goal_model = _as_dict(exam_sprint.get("goal_model"))
+        from_goal_model = _safe_int(goal_model.get("days_left"))
+        if from_goal_model is not None and from_goal_model > 0:
+            return from_goal_model
+
+        max_task_day = max((self._task_day_index(task) for task in tasks), default=0)
+        if max_task_day > 0:
+            return max_task_day
+
+        if plan.target_date and plan.created_at:
+            return max((plan.target_date - plan.created_at.date()).days, 1)
+        return 1
+
+    def _days_left(self, target_date: date_type | None, *, session_day: date_type, fallback: int) -> int:
+        if target_date is None:
+            return max(fallback, 0)
+        return max((target_date - session_day).days, 0)
+
+    def _current_day_index(self, *, initial_days_left: int, days_left: int, tasks: list[Task]) -> int:
+        max_task_day = max((self._task_day_index(task) for task in tasks), default=initial_days_left)
+        derived = max(initial_days_left - days_left + 1, 1)
+        return min(derived, max(max_task_day, 1))
+
+    def _task_day_index(self, task: Task) -> int:
+        order_index = int(task.order_index or 0)
+        if order_index >= 1000:
+            return max(order_index // 1000, 1)
+
+        for tag in list(task.tags or []):
+            tag_text = _strip(tag).lower()
+            if not tag_text.startswith("day:"):
+                continue
+            parsed = _safe_int(tag_text.split(":", maxsplit=1)[1])
+            if parsed is not None and parsed > 0:
+                return parsed
+        return 1
+
+    def _task_status(self, task: Task) -> str:
+        raw = getattr(task.status, "value", task.status)
+        return _strip(raw or TaskStatus.PENDING.value)
+
+    def _completion_rate_for_day(self, *, tasks: list[Task], day_index: int) -> float | None:
+        if day_index <= 0:
+            return None
+        day_tasks = [task for task in tasks if self._task_day_index(task) == day_index]
+        if not day_tasks:
+            return None
+        completed = sum(1 for task in day_tasks if self._task_status(task) == TaskStatus.COMPLETED.value)
+        return round(completed / len(day_tasks), 4)
+
+    def _estimated_minutes(self, tasks: list[Task], *, fallback: int | None) -> int:
+        total = sum(max(int(task.estimated_minutes or 0), 0) for task in tasks)
+        if total > 0:
+            return total
+        return max(int(fallback or 0), 0)
+
+    def _today_focus_from_tasks(self, tasks: list[Task]) -> str:
+        if not tasks:
+            return ""
+
+        for task in tasks:
+            guide = _as_dict(task.guide_json)
+            knowledge_nodes = [_strip(item) for item in list(guide.get("knowledge_nodes") or []) if _strip(item)]
+            if knowledge_nodes:
+                return "、".join(knowledge_nodes[:2])
+
+        for task in tasks:
+            guide = _as_dict(task.guide_json)
+            for key in ("focus", "focus_cue", "objective", "output_action"):
+                focus = self._compact_focus_text(guide.get(key))
+                if focus:
+                    return focus
+            for key in ("guide_content", "title"):
+                focus = self._compact_focus_text(getattr(task, key, ""))
+                if focus:
+                    return focus
+        return ""
+
+    def _compact_focus_text(self, value: Any) -> str:
+        text = " ".join(_strip(value).split())
+        if not text:
+            return ""
+        text = re.sub(r"^Day\s*\d+\s*[：:·-]*\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"^第\s*\d+\s*天[：:，,]*\s*", "", text)
+        text = re.sub(r"^优先拿下\s*", "", text)
+        text = text.replace("这些考试收益最高的节点", "")
+        text = text.strip(" 。；;，,")
+        return text[:42].rstrip("，,。")
+
+    def _stored_day_recommendation(self, *, plan: Plan, day_index: int) -> str:
+        metadata = _as_dict(plan.source_metadata)
+        highlights = _as_dict(metadata.get("day_highlights"))
+        stored_day = _safe_int(highlights.get("day"))
+        if stored_day == day_index:
+            return self._compact_focus_text(highlights.get("recommendation") or highlights.get("ai_recommendation"))
+        keyed = _as_dict(highlights.get(str(day_index)))
+        return self._compact_focus_text(keyed.get("recommendation") or keyed.get("ai_recommendation"))
+
+    def _daily_adjustment_reason(self, *, completion_rate: float | None, wake_energy: str) -> str:
+        if completion_rate is None:
+            return "今天是这个冲刺日程的新启动点，先按当前计划进入状态。"
+        percent = int(round(completion_rate * 100))
+        if completion_rate >= 0.8:
+            return f"昨天完成率 {percent}%，今天保持当前节奏。"
+        if completion_rate < 0.5:
+            return f"昨天完成率 {percent}%，今天先缩小任务切口，优先完成核心任务。"
+        if wake_energy in {"light", "moderate", "full"}:
+            return f"昨天完成率 {percent}%，Aurora 会把今天的推进提示放轻一点。"
+        return f"昨天完成率 {percent}%，今天稳住节奏，先完成一个闭环。"
+
+    def _daily_startup_message(
+        self,
+        *,
+        plan: Plan,
+        day_index: int,
+        today_focus: str,
+        estimated_minutes: int,
+        completion_rate: float | None,
+        adjustment_reason: str,
+        day_recommendation: str = "",
+    ) -> str:
+        subject = _strip(plan.subject) or _strip(plan.name) or "这场考试"
+        greeting = self._daily_greeting()
+        recommendation_tail = self._daily_recommendation_tail(day_recommendation, today_focus=today_focus)
+        opening = (
+            f"{greeting}，今天是你备考{subject}的第 {day_index} 天。"
+            f"今天的核心任务是 {today_focus}，预计 {estimated_minutes} 分钟。"
+        )
+        if completion_rate is None:
+            return f"{opening}{adjustment_reason}{recommendation_tail}准备好了吗？"
+        if completion_rate >= 0.8:
+            return f"{opening}昨天做得很好，推进很顺利，今天我们保持这个手感。{recommendation_tail}准备好了吗？"
+        if completion_rate < 0.5:
+            return f"{opening}昨天完成得偏少，今天我们轻一点，先缩小到最核心的一步。{recommendation_tail}准备好了吗？"
+        return f"{opening}{adjustment_reason}{recommendation_tail}准备好了吗？"
+
+    def _daily_recommendation_tail(self, recommendation: str, *, today_focus: str) -> str:
+        text = self._compact_focus_text(recommendation)
+        if not text:
+            return ""
+        if text == today_focus:
+            return ""
+        if not text.endswith(("。", "！", "？")):
+            text = f"{text}。"
+        return text
+
+    def _comeback_recent_task_summary(self, task: Task | None) -> str:
+        if task is None:
+            return ""
+
+        guide = _as_dict(task.guide_json)
+        knowledge_nodes = [_strip(item) for item in list(guide.get("knowledge_nodes") or []) if _strip(item)]
+        if knowledge_nodes:
+            return "、".join(knowledge_nodes[:2])
+
+        for key in ("objective", "focus", "focus_cue", "output_action"):
+            focus = self._compact_focus_text(guide.get(key))
+            if focus:
+                return focus
+
+        return self._compact_focus_text(task.title)
+
+    def _comeback_light_restart_suggestion(
+        self,
+        *,
+        subject: str,
+        recent_task_summary: str,
+        next_task_title: str | None,
+    ) -> str:
+        focus = recent_task_summary or _strip(next_task_title) or subject or "今天最简单的一步"
+        return f"先开一个「30分钟保底版」，把「{focus}」推进到一个最小闭环。"
+
+    def _comeback_message(
+        self,
+        *,
+        subject: str,
+        days_away: int,
+        days_remaining: int,
+        recent_task_summary: str,
+        next_task_title: str | None,
+        light_restart_suggestion: str,
+    ) -> str:
+        plan_label = subject if subject.endswith("冲刺") else f"{subject}冲刺"
+        focus = recent_task_summary or _strip(next_task_title) or subject or "最简单的一步"
+        days_str = f"{days_remaining} 天" if days_remaining > 0 else "最后一点收尾窗口"
+        still_time = "现在回来还来得及" if days_remaining > 0 else "现在回来也还能先追回一点节奏"
+        return (
+            f"你已经 {days_away} 天没来了，我一直在等你。"
+            f"你的{plan_label}还剩 {days_str}，最近最适合重新捡起来的是「{focus}」。"
+            f"{still_time}——如果累了，{light_restart_suggestion}"
+        )
+
+    def _daily_greeting(self) -> str:
+        hour = datetime.now(CHINA_TIMEZONE).hour
+        if 5 <= hour < 12:
+            return "早上好"
+        if 12 <= hour < 18:
+            return "下午好"
+        if 18 <= hour < 23:
+            return "晚上好"
+        return "夜深了"
+
     async def _persist_runtime_state(
         self,
         *,
@@ -971,6 +1766,87 @@ class AuroraRuntimeV1Service:
         except Exception as exc:
             logger.warning("Aurora runtime v1 failed to fetch Galaxy baseline: {}", exc)
             return None
+
+    # --- G13: Learning Style Persistence ---
+    STRATEGY_PATTERN_WINDOW = 10
+    STRATEGY_PATTERN_THRESHOLD = 0.80
+    STRATEGY_PATTERN_MIN_ROUNDS = 5
+
+    async def _check_strategy_pattern(
+        self,
+        *,
+        user_id: str,
+        conversation_id: str,
+        decision: AuroraDecision,
+    ) -> None:
+        """Detect repeated strategy flags in recent telemetry and submit a confirmed claim."""
+        if self.redis is None:
+            return
+        strategy = (decision.harness_updates or {}).get("strategy")
+        if not isinstance(strategy, Mapping):
+            return
+        try:
+            telemetry_service = AuroraDecisionTelemetryService(None, redis_client=self.redis)
+            key = telemetry_service.recent_telemetry_key(user_id=user_id, conversation_id=conversation_id)
+            raw_items = await telemetry_service._redis_call("lrange", key, 0, self.STRATEGY_PATTERN_WINDOW - 1)
+        except Exception as exc:
+            logger.warning("Aurora G13 strategy pattern read failed for user {}: {}", user_id, exc)
+            return
+
+        records: list[dict[str, Any]] = []
+        for item in raw_items or []:
+            if isinstance(item, bytes):
+                item = item.decode("utf-8")
+            if isinstance(item, str):
+                try:
+                    item = json.loads(item)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+            if isinstance(item, Mapping):
+                records.append(dict(item))
+
+        if len(records) < self.STRATEGY_PATTERN_MIN_ROUNDS:
+            return
+
+        tracked_strategy_flags = tuple(
+            flag_name
+            for flag_name, default_value in AuroraTeachingStrategy().model_dump(mode="python").items()
+            if default_value is False and flag_name in STRATEGY_FIELDS
+        )
+
+        flag_counts: dict[str, int] = {}
+        for record in records:
+            payload = record.get("strategy_payload")
+            if not isinstance(payload, Mapping):
+                continue
+            for flag_name in tracked_strategy_flags:
+                if bool(payload.get(flag_name)):
+                    flag_counts[flag_name] = flag_counts.get(flag_name, 0) + 1
+
+        total = len(records)
+        for flag_name, count in flag_counts.items():
+            if count / total >= self.STRATEGY_PATTERN_THRESHOLD:
+                claim = InferenceClaim(
+                    user_id=user_id,
+                    domain="preferred_strategy",
+                    evidence_type="repeated_strategy_flag",
+                    value=flag_name,
+                    confidence=0.85,
+                    status="confirmed",
+                    needs_confirmation=False,
+                    evidence=[
+                        f"Strategy flag {flag_name}=True appeared in {count}/{total} recent telemetry turns (>=80%)."
+                    ],
+                    source="aurora_runtime_v1_g13",
+                )
+                try:
+                    await write_pipeline.submit_claim(claim, redis=self.redis)
+                except Exception as exc:
+                    logger.warning(
+                        "Aurora G13 failed to submit preferred_strategy claim for user {}: {}",
+                        user_id,
+                        exc,
+                    )
 
     def _intent_type_from_decision(self, decision: AuroraDecision, plan: AuroraRuntimeTurnPlan) -> str:
         if decision.action == "drop_thread":

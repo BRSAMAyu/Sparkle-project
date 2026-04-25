@@ -17,6 +17,8 @@ from app.sprint_packs.sprint_pack_loader import load_pack
 
 REQUIRED_MODELING_DOMAINS: tuple[str, ...] = ("goal", "scope", "baseline", "time")
 AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY = "_aurora_confirmed_weak_nodes"
+AURORA_DEEP_PATTERN_ALERTS_CONTEXT_KEY = "_aurora_deep_pattern_alerts"
+AURORA_CONFIRMED_STRATEGY_PREFERENCE_CONTEXT_KEY = "_aurora_confirmed_strategy_preference"
 _MISSING = object()
 
 _DOMAIN_IMPORTANCE: dict[str, str] = {
@@ -116,9 +118,44 @@ _DOMAIN_ALIASES: dict[str, set[str]] = {
 }
 
 _DOMAIN_TEXT_HINTS: dict[str, tuple[str, ...]] = {
-    "goal": ("目标", "想达到", "想要", "希望", "打算", "通过", "goal", "target", "objective"),
-    "scope": ("范围", "章节", "题型", "考哪些", "哪几章", "哪些内容", "scope", "chapter", "topic"),
-    "baseline": ("基础", "掌握", "学过", "熟悉", "会不会", "薄弱", "baseline", "foundation", "mastery"),
+    "goal": ("目标", "想达到", "想要", "想考", "备考", "考试", "期末", "希望", "打算", "通过", "goal", "target", "objective"),
+    "scope": (
+        "范围",
+        "章节",
+        "题型",
+        "考哪些",
+        "哪几章",
+        "哪些内容",
+        "传输层",
+        "网络层",
+        "应用层",
+        "数据链路层",
+        "物理层",
+        "tcp",
+        "udp",
+        "路由",
+        "子网",
+        "拥塞控制",
+        "scope",
+        "chapter",
+        "topic",
+    ),
+    "baseline": (
+        "基础",
+        "掌握",
+        "学过",
+        "没学过",
+        "零基础",
+        "完全不会",
+        "不太会",
+        "不太懂",
+        "熟悉",
+        "会不会",
+        "薄弱",
+        "baseline",
+        "foundation",
+        "mastery",
+    ),
     "time": ("每天", "几天", "多久", "时间", "日程", "小时", "deadline", "schedule", "available"),
     "motivation": (
         "为什么",
@@ -147,6 +184,8 @@ _DOMAIN_TEXT_HINTS: dict[str, tuple[str, ...]] = {
 _QUESTION_MARKERS = ("？", "?", "吗", "呢", "多少", "哪些", "哪几", "多久", "几点", "什么", "告诉我")
 
 _PROMPT_CONTEXT_MASK: frozenset[str] = frozenset({"surface", "recently_asked_domains"})
+
+COMPACT_CONTEXT_KEYS: frozenset[str] = frozenset({"user_message", "task_state", "wake_policy"})
 
 _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
     "emit_message": frozenset(
@@ -275,7 +314,7 @@ class DashboardReadout:
     # Exposed to the decision loop even for surfaces where exam_sprint_policy is excluded from the LLM payload.
     last_24h_mode: bool = False
 
-    def to_llm_payload(self, *, action: str | None = None) -> dict[str, Any]:
+    def to_llm_payload(self, *, action: str | None = None, context_budget: str | None = None) -> dict[str, Any]:
         payload = {
             "surface": self.surface,
             "user_message": self.user_message,
@@ -303,10 +342,14 @@ class DashboardReadout:
             "wake_policy": self.wake_policy,
             "last_24h_mode": self.last_24h_mode,
         }
-        allowed_keys = self._context_mask_keys(action=action)
+        allowed_keys = self._context_mask_keys(action=action, context_budget=context_budget)
         return {key: value for key, value in payload.items() if key in allowed_keys}
 
-    def _context_mask_keys(self, *, action: str | None) -> set[str]:
+    def _context_mask_keys(self, *, action: str | None, context_budget: str | None = None) -> set[str]:
+        normalized_context_budget = str(context_budget or "").strip().lower()
+        # G28: compact budget returns the minimal COMPACT_CONTEXT_KEYS set only.
+        if normalized_context_budget == "compact":
+            return set(COMPACT_CONTEXT_KEYS)
         if action:
             allowed_keys = set(_ACTION_CONTEXT_MASK.get(action, _ACTION_CONTEXT_MASK["emit_message"]))
         else:
@@ -348,6 +391,12 @@ class DashboardReadoutBuilder:
             user_context_payload,
             user_id=user_id,
         )
+        request_cold_start_context = self._as_dict(request_extra_context.get("cold_start_context"))
+        if request_cold_start_context:
+            cold_start_context = {
+                **cold_start_context,
+                **request_cold_start_context,
+            }
         messages = conversation_context.get("messages")
         if not isinstance(messages, list):
             messages = []
@@ -483,6 +532,48 @@ class DashboardReadoutBuilder:
                 weak_nodes,
             )
 
+        strategy_preference = self._collect_confirmed_strategy_preference_from_payload(user_context_payload)
+        if strategy_preference:
+            cold_start_context["confirmed_strategy_preference"] = strategy_preference
+
+        deep_pattern_alerts = self._coerce_deep_pattern_alerts(
+            user_context_payload.get(AURORA_DEEP_PATTERN_ALERTS_CONTEXT_KEY)
+        )
+        if deep_pattern_alerts:
+            cold_start_context["deep_pattern_alerts"] = self._merge_deep_pattern_alerts(
+                self._coerce_deep_pattern_alerts(cold_start_context.get("deep_pattern_alerts")),
+                deep_pattern_alerts,
+            )
+
+        # G11: Carry cross-sprint mastery hints into planning so the next
+        # sprint can keep mastered nodes light and push persistent weak nodes up.
+        previous_sprint_summary = user_context_payload.get("previous_sprint_summary")
+        if isinstance(previous_sprint_summary, Mapping):
+            strongest_nodes = self._coerce_weak_node_values(previous_sprint_summary.get("strongest_nodes"))
+            persistent_weak_nodes = self._coerce_weak_node_values(
+                previous_sprint_summary.get("persistent_weak_nodes")
+            )
+            mastery_snapshot = self._coerce_mastery_snapshot(previous_sprint_summary.get("mastery_snapshot"))
+            sanitized_summary: dict[str, Any] = {}
+            if strongest_nodes:
+                cold_start_context["strongest_nodes"] = self._merge_unique(
+                    self._coerce_weak_node_values(cold_start_context.get("strongest_nodes")),
+                    strongest_nodes,
+                )
+                sanitized_summary["strongest_nodes"] = strongest_nodes
+            if persistent_weak_nodes:
+                cold_start_context["persistent_weak_nodes"] = self._merge_unique(
+                    self._coerce_weak_node_values(cold_start_context.get("persistent_weak_nodes")),
+                    persistent_weak_nodes,
+                )
+                sanitized_summary["persistent_weak_nodes"] = persistent_weak_nodes
+            if mastery_snapshot:
+                existing_snapshot = self._coerce_mastery_snapshot(cold_start_context.get("mastery_snapshot"))
+                cold_start_context["mastery_snapshot"] = {**existing_snapshot, **mastery_snapshot}
+                sanitized_summary["mastery_snapshot"] = mastery_snapshot
+            if sanitized_summary:
+                cold_start_context["previous_sprint_summary"] = sanitized_summary
+
         # F16: Extract Galaxy weak nodes (mastery < 0.4) for sprint priority injection.
         galaxy_mastery = user_context_payload.get("galaxy_mastery")
         if isinstance(galaxy_mastery, dict):
@@ -502,6 +593,16 @@ class DashboardReadoutBuilder:
                     str(nid) for nid in node_ids if str(nid).strip()
                 ]
 
+        # G13: Inject confirmed strategy preference from Redis claims.
+        effective_redis = redis_client or self.redis
+        if not strategy_preference and user_id and effective_redis is not None:
+            strategy_preference = self._read_confirmed_strategy_preference(
+                user_id=user_id,
+                redis_client=effective_redis,
+            )
+            if strategy_preference:
+                cold_start_context["confirmed_strategy_preference"] = strategy_preference
+
         return cold_start_context
 
     @staticmethod
@@ -515,6 +616,20 @@ class DashboardReadoutBuilder:
         pack = load_pack(str(subject).strip())
         if not pack:
             return
+        if pack.get("id"):
+            cold_start_context["sprint_pack_id"] = str(pack["id"])
+        # Expose the canonical Sprint Pack node ids so Aurora can bind
+        # completion-check answers back to Galaxy without inventing node ids.
+        pack_node_ids = [
+            str(node.get("node_id") or "").strip()
+            for node in pack.get("knowledge_nodes", [])
+            if isinstance(node, Mapping) and str(node.get("node_id") or "").strip()
+        ]
+        if pack_node_ids:
+            cold_start_context["sprint_pack_nodes"] = DashboardReadoutBuilder._merge_unique(
+                DashboardReadoutBuilder._coerce_node_ids(cold_start_context.get("sprint_pack_nodes")),
+                pack_node_ids,
+            )
         # Inject minimum_output from strategy_presets["7d"]["daily_targets"]
         strategy_presets = pack.get("strategy_presets", {})
         preset_7d = strategy_presets.get("7d", {}) if isinstance(strategy_presets, dict) else {}
@@ -558,6 +673,92 @@ class DashboardReadoutBuilder:
         if mistakes:
             checkpoint_state["sprint_pack_mistakes"] = mistakes[:5]
 
+    def _read_confirmed_strategy_preference(
+        self,
+        *,
+        user_id: str,
+        redis_client: Any,
+    ) -> str | None:
+        """G13: Read confirmed preferred_strategy claim from Redis and return the flag name."""
+        key = AURORA_CLAIM_KEY_TEMPLATE.format(user_id=str(user_id), domain="preferred_strategy")
+        raw = self._peek_redis_mapping(redis_client, key)
+        if raw is _MISSING:
+            getter = getattr(redis_client, "get", None)
+            if getter is None:
+                return None
+            if inspect.iscoroutinefunction(getter):
+                try:
+                    asyncio.get_running_loop()
+                    return None
+                except RuntimeError:
+                    try:
+                        raw = asyncio.run(getter(key))
+                    except Exception:
+                        return None
+            else:
+                try:
+                    raw = getter(key)
+                except Exception:
+                    return None
+                if inspect.isawaitable(raw):
+                    try:
+                        asyncio.get_running_loop()
+                        if inspect.iscoroutine(raw):
+                            raw.close()
+                        return None
+                    except RuntimeError:
+                        try:
+                            raw = asyncio.run(raw)
+                        except Exception:
+                            return None
+        return self._extract_strategy_preference_value(raw)
+
+    def _extract_strategy_preference_value(self, raw: Any) -> str | None:
+        """Extract the strategy flag name from a claim payload."""
+        if not raw:
+            return None
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except json.JSONDecodeError:
+                return None
+        if not isinstance(raw, Mapping):
+            return None
+        # Direct value field
+        value = raw.get("value")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        # Nested in claims list
+        claims = raw.get("claims")
+        if isinstance(claims, list) and claims:
+            for claim in reversed(claims):
+                if not isinstance(claim, Mapping):
+                    continue
+                claim_value = claim.get("value")
+                if isinstance(claim_value, str) and claim_value.strip():
+                    return claim_value.strip()
+        # Nested in single claim
+        claim_payload = raw.get("claim")
+        if isinstance(claim_payload, Mapping):
+            claim_value = claim_payload.get("value")
+            if isinstance(claim_value, str) and claim_value.strip():
+                return claim_value.strip()
+        return None
+
+    @staticmethod
+    def _coerce_node_ids(value: Any) -> list[str]:
+        values = value if isinstance(value, list) else [value]
+        node_ids: list[str] = []
+        for item in values:
+            if isinstance(item, Mapping):
+                item = item.get("node_id") or item.get("id") or item.get("name")
+            node_id = str(item or "").strip()
+            if node_id:
+                node_ids.append(node_id)
+        return node_ids
+
     async def with_confirmed_weak_nodes_from_redis(
         self,
         *,
@@ -575,6 +776,61 @@ class DashboardReadoutBuilder:
         payload[AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY] = self._merge_unique(
             self._coerce_weak_node_values(payload.get(AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY)),
             weak_nodes,
+        )
+        return payload
+
+    async def with_confirmed_strategy_preference_from_redis(
+        self,
+        *,
+        user_id: str,
+        user_context_payload: dict[str, Any],
+        redis_client=None,
+    ) -> dict[str, Any]:
+        strategy_preference = await self._load_confirmed_strategy_preference_from_redis(
+            user_id=user_id,
+            redis_client=redis_client or self.redis,
+        )
+        if not strategy_preference:
+            return user_context_payload
+        payload = dict(user_context_payload)
+        payload[AURORA_CONFIRMED_STRATEGY_PREFERENCE_CONTEXT_KEY] = strategy_preference
+        return payload
+
+    async def with_deep_pattern_alerts_from_error_history(
+        self,
+        *,
+        active_db: Any,
+        user_id: str,
+        user_context_payload: dict[str, Any],
+        redis_client=None,
+    ) -> dict[str, Any]:
+        weak_nodes = self._collect_confirmed_weak_nodes_from_payload(user_context_payload)
+        if not weak_nodes:
+            weak_nodes = await self._load_confirmed_weak_nodes_from_redis(
+                user_id=user_id,
+                redis_client=redis_client or self.redis,
+            )
+        if active_db is None or not weak_nodes:
+            return user_context_payload
+
+        from app.services.error_replan_bridge import ErrorReplanBridge
+
+        bridge = ErrorReplanBridge(active_db, redis=redis_client or self.redis)
+        alerts: list[dict[str, Any]] = []
+        for weak_node in weak_nodes:
+            try:
+                analysis = await bridge._analyze_recurring_errors(user_id=user_id, node_id=weak_node)
+            except Exception:
+                continue
+            if isinstance(analysis, Mapping) and analysis.get("recurring") is True:
+                alerts.append(dict(analysis))
+
+        if not alerts:
+            return user_context_payload
+        payload = dict(user_context_payload)
+        payload[AURORA_DEEP_PATTERN_ALERTS_CONTEXT_KEY] = self._merge_deep_pattern_alerts(
+            self._coerce_deep_pattern_alerts(payload.get(AURORA_DEEP_PATTERN_ALERTS_CONTEXT_KEY)),
+            alerts,
         )
         return payload
 
@@ -598,6 +854,27 @@ class DashboardReadoutBuilder:
         except Exception:
             return []
         return self._confirmed_weak_nodes_from_claim_payload(raw)
+
+    async def _load_confirmed_strategy_preference_from_redis(
+        self,
+        *,
+        user_id: str,
+        redis_client=None,
+    ) -> str | None:
+        redis = redis_client or self.redis
+        if redis is None:
+            return None
+        key = AURORA_CLAIM_KEY_TEMPLATE.format(user_id=str(user_id), domain="preferred_strategy")
+        getter = getattr(redis, "get", None)
+        if getter is None:
+            return None
+        try:
+            raw = getter(key)
+            if inspect.isawaitable(raw):
+                raw = await raw
+        except Exception:
+            return None
+        return self._extract_strategy_preference_value(raw)
 
     def _read_confirmed_weak_nodes_from_redis_sync(
         self,
@@ -709,6 +986,91 @@ class DashboardReadoutBuilder:
         normalized = str(value).strip()
         return [normalized] if normalized else []
 
+    def _collect_confirmed_weak_nodes_from_payload(self, user_context_payload: dict[str, Any]) -> list[str]:
+        profile_context = user_context_payload.get("profile_context")
+        profile_context = profile_context if isinstance(profile_context, Mapping) else {}
+        preferences = profile_context.get("preferences")
+        preferences = preferences if isinstance(preferences, Mapping) else {}
+        candidates = [
+            user_context_payload.get(AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY),
+            user_context_payload.get("confirmed_weak_nodes"),
+            self._as_dict(user_context_payload.get("cold_start_context")).get("confirmed_weak_nodes"),
+            self._as_dict(profile_context.get("cold_start_context")).get("confirmed_weak_nodes"),
+            self._as_dict(preferences.get("cold_start_context")).get("confirmed_weak_nodes"),
+        ]
+        return self._merge_unique(*[self._coerce_weak_node_values(candidate) for candidate in candidates])
+
+    def _collect_confirmed_strategy_preference_from_payload(
+        self,
+        user_context_payload: dict[str, Any],
+    ) -> str | None:
+        profile_context = user_context_payload.get("profile_context")
+        profile_context = profile_context if isinstance(profile_context, Mapping) else {}
+        preferences = profile_context.get("preferences")
+        preferences = preferences if isinstance(preferences, Mapping) else {}
+        candidates = [
+            user_context_payload.get(AURORA_CONFIRMED_STRATEGY_PREFERENCE_CONTEXT_KEY),
+            user_context_payload.get("confirmed_strategy_preference"),
+            self._as_dict(user_context_payload.get("cold_start_context")).get("confirmed_strategy_preference"),
+            self._as_dict(profile_context.get("cold_start_context")).get("confirmed_strategy_preference"),
+            self._as_dict(preferences.get("cold_start_context")).get("confirmed_strategy_preference"),
+        ]
+        for candidate in candidates:
+            if isinstance(candidate, str) and candidate.strip():
+                return candidate.strip()
+        return None
+
+    def _coerce_deep_pattern_alerts(self, value: Any) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+        alerts: list[dict[str, Any]] = []
+        for item in value:
+            if not isinstance(item, Mapping):
+                continue
+            alert = dict(item)
+            node_id = str(alert.get("node_id") or "").strip()
+            if not node_id:
+                continue
+            alert["node_id"] = node_id
+            alert["recurring"] = bool(alert.get("recurring"))
+            if alert.get("recurring") is not True:
+                continue
+            alerts.append(alert)
+        return alerts
+
+    def _merge_deep_pattern_alerts(
+        self,
+        *groups: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        merged: list[dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+        for group in groups:
+            for item in group:
+                node_id = str(item.get("node_id") or "").strip()
+                cause_category = str(item.get("cause_category") or "").strip()
+                key = (node_id, cause_category)
+                if not node_id or key in seen:
+                    continue
+                seen.add(key)
+                merged.append(dict(item))
+        return merged
+
+    def _coerce_mastery_snapshot(self, value: Any) -> dict[str, float]:
+        if not isinstance(value, Mapping):
+            return {}
+        snapshot: dict[str, float] = {}
+        for node_id, mastery in value.items():
+            normalized_id = str(node_id or "").strip()
+            if not normalized_id:
+                continue
+            parsed = self._safe_float(mastery, default=None)
+            if parsed is None or parsed < 0:
+                continue
+            if parsed > 1.0:
+                parsed = parsed / 100.0
+            snapshot[normalized_id] = max(0.0, min(float(parsed), 1.0))
+        return snapshot
+
     @staticmethod
     def _merge_unique(*groups: list[str]) -> list[str]:
         merged: list[str] = []
@@ -732,14 +1094,15 @@ class DashboardReadoutBuilder:
         request_extra_context: dict[str, Any],
         user_context_payload: dict[str, Any],
     ) -> dict[str, Any]:
+        streak_info = self._extract_streak_info(user_context_payload)
         direct = self._as_dict(
             request_extra_context.get("achievement_signals") or user_context_payload.get("achievement_signals")
         )
         if direct:
-            return self._normalize_achievement_signals(direct)
+            return self._normalize_achievement_signals({**streak_info, **direct})
         cognitive = self._as_dict((user_context_payload.get("cognitive_context") or {}).get("achievement_summary"))
         if not cognitive:
-            return {}
+            return self._normalize_achievement_signals(streak_info) if streak_info else {}
         active_streaks = list(cognitive.get("active_streaks") or [])
         recent_unlocks = list(cognitive.get("recent_unlocks") or [])
         in_progress = list(cognitive.get("in_progress_achievements") or [])
@@ -750,6 +1113,7 @@ class DashboardReadoutBuilder:
                 "recent_unlocks": recent_unlocks,
                 "in_progress_count": len(in_progress),
                 "momentum": min(1.0, round(total_score / 50.0, 3)),
+                **streak_info,
             }
         )
 
@@ -762,9 +1126,27 @@ class DashboardReadoutBuilder:
         elif not isinstance(active_streaks, list):
             active_streaks = []
 
+        current_streak_days = self._first_nonnegative_int(
+            normalized.get("current_streak_days"),
+            normalized.get("current_streak"),
+            normalized.get("streak_days"),
+            normalized.get("streak"),
+        )
+        if current_streak_days is not None:
+            normalized["current_streak_days"] = current_streak_days
+
+        gap_since_last_study_days = self._first_nonnegative_int(
+            normalized.get("gap_since_last_study_days"),
+            normalized.get("days_since_last_study"),
+            normalized.get("study_gap_days"),
+            normalized.get("inactive_days"),
+        )
+        if gap_since_last_study_days is not None:
+            normalized["gap_since_last_study_days"] = gap_since_last_study_days
+
         streak_active = self._coerce_bool(normalized.get("streak_active"))
         if streak_active is None:
-            streak_active = bool(active_streaks)
+            streak_active = bool(active_streaks) or bool(current_streak_days and current_streak_days > 0)
         normalized["streak_active"] = streak_active
 
         recently_unlocked = self._coerce_bool(normalized.get("recently_unlocked"))
@@ -780,6 +1162,149 @@ class DashboardReadoutBuilder:
         if momentum is not None:
             normalized["momentum"] = min(1.0, max(0.0, momentum))
         return normalized
+
+    def _extract_streak_info(self, user_context_payload: dict[str, Any]) -> dict[str, int]:
+        payloads = self._achievement_streak_payloads(user_context_payload)
+        current_streak_days = self._first_nonnegative_int(
+            *(
+                candidate.get(key)
+                for candidate in payloads
+                for key in (
+                    "current_streak_days",
+                    "current_streak",
+                    "streak_days",
+                    "streak",
+                    "study_streak_days",
+                    "daily_streak_days",
+                    "currentStudyStreak",
+                )
+            )
+        )
+        if current_streak_days is None:
+            current_streak_days = self._current_streak_from_active_streaks(payloads)
+
+        gap_since_last_study_days = self._first_nonnegative_int(
+            *(
+                candidate.get(key)
+                for candidate in payloads
+                for key in (
+                    "gap_since_last_study_days",
+                    "days_since_last_study",
+                    "study_gap_days",
+                    "last_study_gap_days",
+                    "inactive_days",
+                    "break_days",
+                    "gap_days",
+                    "days_since_last_activity",
+                )
+            )
+        )
+        if gap_since_last_study_days is None:
+            gap_since_last_study_days = self._gap_days_from_last_study_at(payloads)
+
+        streak_info: dict[str, int] = {}
+        if current_streak_days is not None:
+            streak_info["current_streak_days"] = current_streak_days
+        if gap_since_last_study_days is not None:
+            streak_info["gap_since_last_study_days"] = gap_since_last_study_days
+        return streak_info
+
+    def _achievement_streak_payloads(self, user_context_payload: dict[str, Any]) -> list[dict[str, Any]]:
+        payloads: list[dict[str, Any]] = []
+
+        def add(value: Any) -> None:
+            payload = self._as_mapping_dict(value)
+            if not payload:
+                return
+            payloads.append(payload)
+            nested_value = self._as_mapping_dict(payload.get("value"))
+            if nested_value:
+                payloads.append(nested_value)
+            nested_streak = self._as_mapping_dict(payload.get("streak") or payload.get("streak_info"))
+            if nested_streak:
+                payloads.append(nested_streak)
+
+        add(user_context_payload)
+        for key in (
+            "achievement_signals",
+            "achievement",
+            "achievements",
+            "achievement_summary",
+            "achievement_engine",
+            "growth_signal_contract",
+            "growth_signal_summary",
+            "streak_info",
+            "streak",
+            "streak_stats",
+            "study_streak",
+            "engagement_state",
+        ):
+            add(user_context_payload.get(key))
+
+        for parent_key in ("cognitive_context", "profile_context", "state", "user_state"):
+            parent = self._as_mapping_dict(user_context_payload.get(parent_key))
+            if not parent:
+                continue
+            for key in (
+                "achievement_signals",
+                "achievement",
+                "achievement_summary",
+                "achievement_engine",
+                "growth_signal_contract",
+                "growth_signal_summary",
+                "streak_info",
+                "streak",
+                "streak_stats",
+                "study_streak",
+                "engagement_state",
+            ):
+                add(parent.get(key))
+
+        optional_signals = self._as_mapping_dict(user_context_payload.get("optional_signals"))
+        achievement_engine = self._as_mapping_dict(optional_signals.get("achievement_engine"))
+        add(achievement_engine)
+        add(achievement_engine.get("growth_signal_contract"))
+        add(achievement_engine.get("growth_signal_summary"))
+        return payloads
+
+    def _current_streak_from_active_streaks(self, payloads: list[dict[str, Any]]) -> int | None:
+        values: list[Any] = []
+        for payload in payloads:
+            active_streaks = payload.get("active_streaks")
+            if not isinstance(active_streaks, list):
+                continue
+            for item in active_streaks:
+                if isinstance(item, Mapping):
+                    values.extend(
+                        item.get(key)
+                        for key in ("current_streak_days", "current_streak", "streak_days", "days", "count")
+                    )
+                else:
+                    values.append(item)
+        return self._first_nonnegative_int(*values)
+
+    def _gap_days_from_last_study_at(self, payloads: list[dict[str, Any]]) -> int | None:
+        for payload in payloads:
+            raw_timestamp = next(
+                (
+                    payload.get(key)
+                    for key in (
+                        "last_study_at",
+                        "last_learning_at",
+                        "last_activity_at",
+                        "last_active_at",
+                        "last_checkin_at",
+                        "last_session_at",
+                    )
+                    if payload.get(key)
+                ),
+                None,
+            )
+            timestamp = self._coerce_datetime(raw_timestamp)
+            if timestamp is None:
+                continue
+            return max(0, (datetime.now(UTC).date() - timestamp.date()).days)
+        return None
 
     def _has_recent_unlock(self, value: Any) -> bool:
         if isinstance(value, bool):
@@ -835,6 +1360,18 @@ class DashboardReadoutBuilder:
         except (TypeError, ValueError):
             return default
 
+    def _first_nonnegative_int(self, *values: Any) -> int | None:
+        for value in values:
+            if isinstance(value, bool) or value is None:
+                continue
+            try:
+                parsed = int(float(value))
+            except (TypeError, ValueError):
+                continue
+            if parsed >= 0:
+                return parsed
+        return None
+
     def _coerce_bool(self, value: Any) -> bool | None:
         if isinstance(value, bool):
             return value
@@ -851,6 +1388,16 @@ class DashboardReadoutBuilder:
 
     def _as_dict(self, value: Any) -> dict[str, Any]:
         return dict(value) if isinstance(value, dict) else {}
+
+    def _as_mapping_dict(self, value: Any) -> dict[str, Any]:
+        if isinstance(value, Mapping):
+            return dict(value)
+        if hasattr(value, "model_dump"):
+            dumped = value.model_dump(mode="python")
+            return dict(dumped) if isinstance(dumped, Mapping) else {}
+        if hasattr(value, "__dict__"):
+            return {str(key): item for key, item in vars(value).items() if not str(key).startswith("_")}
+        return {}
 
     def _as_list_of_dicts(self, value: Any) -> list[dict[str, Any]]:
         if not isinstance(value, list):
@@ -894,7 +1441,16 @@ class DashboardReadoutBuilder:
                 if isinstance(item, dict) and str(item.get("role") or "").lower() == "user"
             ],
         ]
+        user_supplied_domains = {
+            domain
+            for text in user_texts
+            for domain in self._infer_domains_from_text(text)
+        }
         for domain in CORE_MODELING_DOMAINS:
+            if domain in missing and domain in user_supplied_domains:
+                covered.add(domain)
+                missing.discard(domain)
+                continue
             if domain in missing:
                 continue
             if self._sources_have_domain_evidence(domain, evidence_sources, user_texts):

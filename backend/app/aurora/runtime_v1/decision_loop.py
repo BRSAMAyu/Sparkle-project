@@ -47,6 +47,15 @@ FORBIDDEN_MODELING_DOMAINS = {
     "pathology",
     "personality_disorder",
 }
+ALLOWED_DOMAIN_GUARD_TERMS = {
+    "diagnose_stuck_point",
+    "diagnose_breakpoint",
+    "diagnostic",
+    "mistake_diagnosis",
+    "root_cause_intervention",
+    "checkpoint_repair",
+    "error_analysis",
+}
 
 STRATEGY_FIELDS = (
     "concept_first",
@@ -75,13 +84,16 @@ TASK_HELP_INTENTS = {
     "assign_questions",
     "handle_current_task_first",
     "continue_current_task",
+    "diagnose_stuck_point",
     "task_help",
 }
 DIAGNOSTIC_INTENTS = {
     "diagnostic",
     "diagnose_breakpoint",
+    "diagnose_stuck_point",
     "error_analysis",
     "checkpoint_repair",
+    "root_cause_intervention",
 }
 CALIBRATION_INTENTS = {
     "calibration",
@@ -111,6 +123,7 @@ FAILURE_STATE_TOKENS = {
     "frustrated",
     "blocked",
 }
+STUCK_TASK_STAGE_TOKENS = {"stuck", "blocked"}
 STANDARD_LAYER_RESPONSE_TYPE_ALIASES = {
     "task": "task_help",
     "task_support": "task_help",
@@ -193,6 +206,10 @@ STANDARD_LAYER_TOKEN_DESCRIPTIONS = {
 SLEEP_GUARD_MUST_NOT_INCLUDE = ("full_week_replan", "three_practice_questions")
 SLEEP_GUARD_RULE = (
     "睡眠守卫激活：当前为深夜时段。不要增加任务密度，不要追加新内容，回复要简短，鼓励用户设置好第二天的计划后休息。"
+)
+STRATEGY_RECALIBRATION_RULE = (
+    "当前策略已失效（连续 3 轮相同策略），必须切换到不同的 response_type 和不同的教学策略。"
+    "优先选择 concept_first 或 worked_example_first。"
 )
 
 LLMFactory = Callable[[], Any | Awaitable[Any]]
@@ -304,7 +321,32 @@ def _sleep_guard_context(readout: DashboardReadout) -> dict[str, Any]:
     }
 
 
+def _is_stressed_new_session_check_in(readout: DashboardReadout) -> bool:
+    request_context = readout.request_extra_context if isinstance(readout.request_extra_context, Mapping) else {}
+    if str(request_context.get("last_session_mood") or "").strip().lower() != "stressed":
+        return False
+    summary = readout.conversation_summary if isinstance(readout.conversation_summary, Mapping) else {}
+    message_count = _safe_int(summary.get("message_count"))
+    return message_count is None or message_count <= 1
+
+
+def _strategy_recalibration_context(readout: DashboardReadout) -> dict[str, Any]:
+    request_context = readout.request_extra_context if isinstance(readout.request_extra_context, Mapping) else {}
+    if request_context.get("strategy_recalibration_needed") is not True:
+        return {"active": False, "stuck_domain": ""}
+    stuck_domain = (
+        canonicalize_runtime_domain(request_context.get("stuck_domain"))
+        or str(request_context.get("stuck_domain") or "").strip()
+    )
+    return {
+        "active": True,
+        "stuck_domain": stuck_domain,
+    }
+
+
 def _safe_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
     try:
         return int(float(value))
     except (TypeError, ValueError):
@@ -316,6 +358,14 @@ def _safe_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _first_nonnegative_int(*values: Any) -> int | None:
+    for value in values:
+        parsed = _safe_int(value)
+        if parsed is not None and parsed >= 0:
+            return parsed
+    return None
 
 
 def _coerce_bool(value: Any) -> bool | None:
@@ -336,15 +386,31 @@ def _coerce_bool(value: Any) -> bool | None:
 def _achievement_signal_state(readout: DashboardReadout) -> dict[str, Any]:
     signals = readout.achievement_signals if isinstance(readout.achievement_signals, Mapping) else {}
     active_streaks = signals.get("active_streaks")
+    current_streak_days = _first_nonnegative_int(
+        signals.get("current_streak_days"),
+        signals.get("current_streak"),
+        signals.get("streak_days"),
+        signals.get("streak"),
+    )
+    gap_since_last_study_days = _first_nonnegative_int(
+        signals.get("gap_since_last_study_days"),
+        signals.get("days_since_last_study"),
+        signals.get("study_gap_days"),
+        signals.get("inactive_days"),
+    )
     streak_active = _coerce_bool(signals.get("streak_active"))
     if streak_active is None:
-        streak_active = bool(active_streaks) if isinstance(active_streaks, list) else False
+        streak_active = (bool(active_streaks) if isinstance(active_streaks, list) else False) or bool(
+            current_streak_days and current_streak_days > 0
+        )
     recently_unlocked = _coerce_bool(signals.get("recently_unlocked"))
     if recently_unlocked is None:
         recent_unlocks = signals.get("recent_unlocks")
         recently_unlocked = bool(recent_unlocks) if isinstance(recent_unlocks, list) else False
     return {
         "momentum": _safe_float(signals.get("momentum")),
+        "current_streak_days": current_streak_days,
+        "gap_since_last_study_days": gap_since_last_study_days,
         "recently_unlocked": recently_unlocked,
         "streak_active": streak_active,
     }
@@ -362,10 +428,37 @@ def _achievement_stalled_scene(readout: DashboardReadout) -> bool:
     return momentum is not None and momentum < 0.2 and state["streak_active"] is False
 
 
+def _achievement_high_streak_scene(readout: DashboardReadout) -> bool:
+    state = _achievement_signal_state(readout)
+    current_streak_days = state.get("current_streak_days")
+    return current_streak_days is not None and current_streak_days >= 5
+
+
+def _achievement_reentry_gap_scene(readout: DashboardReadout) -> bool:
+    state = _achievement_signal_state(readout)
+    gap_since_last_study_days = state.get("gap_since_last_study_days")
+    return gap_since_last_study_days is not None and gap_since_last_study_days >= 3
+
+
 def _achievement_signal_rules(readout: DashboardReadout) -> list[str]:
     state = _achievement_signal_state(readout)
     momentum = state.get("momentum")
+    current_streak_days = state.get("current_streak_days")
+    gap_since_last_study_days = state.get("gap_since_last_study_days")
     rules: list[str] = []
+    if current_streak_days is not None and current_streak_days >= 5:
+        rules.append(
+            "Achievement streak rule: current_streak_days >= 5; set "
+            "harness_updates.strategy.retrieval_practice = true to consolidate the current streak state, "
+            "and allow direct_answer_or_acknowledgment in chat_directive.standard_layer_contract.must_include "
+            "so Aurora can briefly confirm the user's momentum before the next challenge."
+        )
+    if gap_since_last_study_days is not None and gap_since_last_study_days >= 3:
+        rules.append(
+            "Achievement re-entry rule: gap_since_last_study_days >= 3; 减压 by lowering "
+            "harness_updates.task_density_hint by 0.1 from the dashboard value, prefer "
+            "response_type=emotional_support, and include one_concrete_next_step in the first response."
+        )
     if momentum is not None and momentum > 0.7 and state["recently_unlocked"] is True:
         rules.append(
             "Achievement rule: momentum > 0.7 AND recently_unlocked == true; add "
@@ -403,6 +496,18 @@ def _effective_strategy_flags(decision: AuroraDecision, readout: DashboardReadou
 def _intent_token(decision: AuroraDecision) -> str | None:
     directive = decision.chat_directive if isinstance(decision.chat_directive, Mapping) else {}
     return _normalize_marker(directive.get("intent"))
+
+
+def _deep_pattern_alerts(readout: DashboardReadout) -> list[dict[str, Any]]:
+    cold_start = readout.cold_start_context if isinstance(readout.cold_start_context, Mapping) else {}
+    alerts = cold_start.get("deep_pattern_alerts")
+    if not isinstance(alerts, list):
+        return []
+    return [dict(alert) for alert in alerts if isinstance(alert, Mapping) and alert.get("recurring") is True]
+
+
+def _has_deep_pattern_alerts(readout: DashboardReadout) -> bool:
+    return bool(_deep_pattern_alerts(readout))
 
 
 def _task_stage_tokens(readout: DashboardReadout) -> set[str]:
@@ -510,6 +615,8 @@ def _is_calibration_scene(decision: AuroraDecision, readout: DashboardReadout) -
 
 
 def _is_diagnostic_scene(decision: AuroraDecision, readout: DashboardReadout) -> bool:
+    if _has_deep_pattern_alerts(readout):
+        return True
     if readout.surface == "aurora_checkpoint":
         return True
     strategy = _effective_strategy_flags(decision, readout)
@@ -520,6 +627,8 @@ def _is_diagnostic_scene(decision: AuroraDecision, readout: DashboardReadout) ->
 
 def _is_task_help_scene(decision: AuroraDecision, readout: DashboardReadout) -> bool:
     task_state = readout.task_state if isinstance(readout.task_state, Mapping) else {}
+    if _is_stuck_task_scene(readout):
+        return True
     if _intent_token(decision) in TASK_HELP_INTENTS:
         return True
     if any(task_state.get(key) for key in ("task_card_id", "current_task_id", "current_task")):
@@ -529,6 +638,12 @@ def _is_task_help_scene(decision: AuroraDecision, readout: DashboardReadout) -> 
     return False
 
 
+def _is_stuck_task_scene(readout: DashboardReadout) -> bool:
+    task_state = readout.task_state if isinstance(readout.task_state, Mapping) else {}
+    stage = _normalize_marker(task_state.get("stage"))
+    return stage in STUCK_TASK_STAGE_TOKENS
+
+
 def _infer_standard_layer_response_type(
     decision: AuroraDecision,
     readout: DashboardReadout,
@@ -536,9 +651,17 @@ def _infer_standard_layer_response_type(
 ) -> str:
     requested = _normalize_standard_layer_response_type((contract or {}).get("response_type"))
     motivation_kind = _motivation_kind(readout)
+    if _has_deep_pattern_alerts(readout):
+        return "diagnostic"
+    if _is_stressed_new_session_check_in(readout):
+        return "emotional_support"
+    if _is_stuck_task_scene(readout):
+        return "diagnostic"
     if _is_emotional_support_scene(decision, readout):
         return "emotional_support"
     if _achievement_stalled_scene(readout):
+        return "emotional_support"
+    if _achievement_reentry_gap_scene(readout):
         return "emotional_support"
     if _is_calibration_scene(decision, readout):
         return "calibration"
@@ -602,6 +725,13 @@ def _default_standard_layer_contract(
             "max_response_length": "normal",
         }
     if response_type == "diagnostic":
+        if _is_stuck_task_scene(readout):
+            return {
+                "response_type": response_type,
+                "must_include": ["mistake_diagnosis", "one_targeted_fix"],
+                "must_not_include": ["full_week_replan", "long_motivational_speech", "three_practice_questions"],
+                "max_response_length": "normal",
+            }
         return {
             "response_type": response_type,
             "must_include": ["mistake_diagnosis", "one_targeted_fix"],
@@ -646,6 +776,8 @@ def build_standard_layer_contract(decision: AuroraDecision, readout: DashboardRe
         if token not in must_not_include
     ]
     if _achievement_recent_unlock_scene(readout) and "direct_answer_or_acknowledgment" not in must_not_include:
+        must_include.append("direct_answer_or_acknowledgment")
+    if _achievement_high_streak_scene(readout) and "direct_answer_or_acknowledgment" not in must_not_include:
         must_include.append("direct_answer_or_acknowledgment")
     deduped_include: list[str] = []
     seen_include: set[str] = set()
@@ -745,6 +877,8 @@ class AuroraDecisionLoop:
             "appears in recently_asked_domains. modeling_complete must follow dashboard coverage, not user keywords like "
             "'差不多了' or '就这些'. Optimize for concrete user value: better goal fit, less execution friction, "
             "earlier bottleneck detection. "
+            "When covered_domains already has 2 or more domains, confirm the known information in a natural coaching "
+            "tone and ask only the single most important remaining gap. "
             "When setting informational_tensions, include importance_reasoning explaining why this gap blocks downstream "
             "planning (e.g. 'baseline 缺失会导致任务难度无法个性化'). "
             "Use self_model as Aurora's self-check: when strategy_confidence is low, task_failure_streak is high, or "
@@ -770,13 +904,23 @@ class AuroraDecisionLoop:
             "plan_discussion; repeated failure or frustration should usually be emotional_support; checkpoint or "
             "mistake-analysis turns should usually be diagnostic; low-confidence self-model or assumption-check turns "
             "should usually be calibration. "
+            "When cold_start_context.deep_pattern_alerts is non-empty, prioritize root-cause diagnosis before normal "
+            "task help: set chat_directive.intent exactly to root_cause_intervention, set "
+            "chat_directive.standard_layer_contract.response_type to diagnostic, and base the move on "
+            "root_cause_hypothesis plus recommended_intervention. "
             "must_include and must_not_include are hard content constraints for the standard chat layer, not style suggestions. "
             "Use concise canonical tokens such as worked_example, three_practice_questions, completion_check, "
-            "emotional_acknowledgment, one_concrete_next_step, full_week_replan, and long_motivational_speech."
+            "emotional_acknowledgment, one_concrete_next_step, full_week_replan, and long_motivational_speech. "
+            "When the previous Aurora turn asked a completion_check and the user correctly restates the knowledge point, "
+            "choose action=emit_message and include state_updates.correct_answer_node=<node_id>. "
+            "Use only node_id values from the Sprint Pack, especially cold_start_context.sprint_pack_nodes; omit the field when unsure."
         )
         wake_instruction = str(wake_policy.get("diagnostic_prompt") or "").strip()
         if wake_instruction:
             system = f"{system} {wake_instruction}"
+        recalibration = _strategy_recalibration_context(readout)
+        if recalibration.get("active"):
+            system = f"{system} {STRATEGY_RECALIBRATION_RULE}"
         user = {
             "decision_schema": schema,
             "dashboard_readout": self._slim_readout_for_surface(readout),
@@ -799,6 +943,19 @@ class AuroraDecisionLoop:
             ],
         }
         user["rules"].extend(_achievement_signal_rules(readout))
+        deep_pattern_alerts = _deep_pattern_alerts(readout)
+        if deep_pattern_alerts:
+            user["rules"].append(
+                "Deep pattern alert rule: cold_start_context.deep_pattern_alerts is non-empty, so prioritize 根因干预. "
+                "Set chat_directive.intent='root_cause_intervention', set "
+                "chat_directive.standard_layer_contract.response_type='diagnostic', and do not downgrade this turn to "
+                "task_help just because a current task exists."
+            )
+        if recalibration.get("active"):
+            stuck_domain = recalibration.get("stuck_domain") or "unknown"
+            user["rules"].append(
+                f"Strategy recalibration is required for stuck_domain={stuck_domain}; switch away from the repeated response_type and teaching strategy."
+            )
         sleep_guard = _sleep_guard_context(readout)
         if sleep_guard.get("active"):
             sleep_guard_rule = SLEEP_GUARD_RULE
@@ -824,6 +981,15 @@ class AuroraDecisionLoop:
             user["rules"].append(
                 "A full wake candidate is on cooldown, so stay below full-calibration intensity and keep the intervention lighter."
             )
+        if _is_stuck_task_scene(readout):
+            user["rules"].append(
+                "Task stuck rule: when dashboard_readout.task_state.stage is stuck or blocked, set "
+                "chat_directive.intent='diagnose_stuck_point' instead of continue_current_task. "
+                "Use micro_teaching: first narrow the stuck point with one two-choice diagnosis, then provide only "
+                "one targeted fix after the user's answer. standard_layer_contract.must_include must contain "
+                "mistake_diagnosis and one_targeted_fix; standard_layer_contract.must_not_include must contain "
+                "full_week_replan and three_practice_questions."
+            )
         # Last-24h mode overrides: detected from readout.last_24h_mode or exam_sprint_policy sprint_mode.
         _in_last_24h = bool(
             getattr(readout, "last_24h_mode", False)
@@ -842,7 +1008,8 @@ class AuroraDecisionLoop:
                 "Do NOT probe for new information, open new modeling domains, or increase task density. "
                 "The exam is tomorrow — the user needs confidence, stability, and final-pass reinforcement, not new calibration. "
                 "Focus exclusively on high-yield review, error-book recall, and short mock items that are already scoped. "
-                "response_type must be task_help or emotional_support — never calibration or diagnostic unless the user explicitly asks. "
+                "response_type must be task_help or emotional_support — never calibration or diagnostic unless the user explicitly asks "
+                "or cold_start_context.deep_pattern_alerts is non-empty. "
                 "Keep responses short and reassuring. new_topic_allowed is false."
             )
         # F18: Inject Sprint Pack aurora hint into system prompt when available.
@@ -926,6 +1093,8 @@ class AuroraDecisionLoop:
 
     def _contains_forbidden_domain(self, payload: Any) -> bool:
         text = json.dumps(payload, ensure_ascii=False, default=str).lower()
+        for allowed in ALLOWED_DOMAIN_GUARD_TERMS:
+            text = text.replace(allowed, "")
         return any(token in text for token in FORBIDDEN_MODELING_DOMAINS)
 
     def _revalidate_stabilized_decision(self, decision: AuroraDecision, readout: DashboardReadout) -> AuroraDecision:
@@ -1001,6 +1170,7 @@ class AuroraDecisionLoop:
         preferred_missing = self._select_missing_domain(readout, exclude_recent=True)
         target_domain = self._extract_target_domain(normalized)
         recent_domains = set(readout.recently_asked_domains)
+        deep_pattern_active = _has_deep_pattern_alerts(readout)
 
         if target_domain in covered_domains:
             normalized.metadata = {
@@ -1047,12 +1217,13 @@ class AuroraDecisionLoop:
             normalized.action in {"emit_message", "update_harness", "update_state"}
             and not target_domain
             and missing_domains
+            and not deep_pattern_active
         ):
             target_domain = preferred_missing or self._select_missing_domain(readout, exclude_recent=False)
 
         if target_domain:
             normalized = self._apply_target_domain(normalized, target_domain, readout)
-        elif missing_domains and normalized.action in {"emit_message", "soft_return_topic"}:
+        elif missing_domains and normalized.action in {"emit_message", "soft_return_topic"} and not deep_pattern_active:
             fallback_domain = preferred_missing or self._select_missing_domain(readout, exclude_recent=False)
             if fallback_domain:
                 normalized = self._apply_target_domain(normalized, fallback_domain, readout)
@@ -1080,6 +1251,39 @@ class AuroraDecisionLoop:
             normalized.chat_directive = {
                 **normalized.chat_directive,
                 "intent": normalized.chat_directive.get("intent") or "confirm_modeling_ready",
+            }
+        if _is_stuck_task_scene(readout):
+            normalized.chat_directive = {
+                **normalized.chat_directive,
+                "intent": "diagnose_stuck_point",
+                "micro_teaching_mode": True,
+            }
+        if _is_stressed_new_session_check_in(readout):
+            normalized.action = "emit_message"
+            normalized.chat_directive = {
+                key: value
+                for key, value in normalized.chat_directive.items()
+                if key not in {"target_domain", "domain", "question_domain"}
+            }
+            normalized.chat_directive["intent"] = "empathy_check_in"
+        if deep_pattern_active:
+            normalized.chat_directive = {
+                key: value
+                for key, value in normalized.chat_directive.items()
+                if key not in {"target_domain", "domain", "question_domain"}
+            }
+            normalized.chat_directive["intent"] = "root_cause_intervention"
+            strategy = dict(normalized.harness_updates.get("strategy") or {})
+            strategy.update(
+                {
+                    "concept_first": True,
+                    "problem_first": False,
+                    "error_analysis_required": True,
+                }
+            )
+            normalized.harness_updates = {
+                **normalized.harness_updates,
+                "strategy": strategy,
             }
         normalized.chat_directive = {
             **normalized.chat_directive,
@@ -1169,6 +1373,15 @@ class AuroraDecisionLoop:
                 for item in tensions
                 if isinstance(item, Mapping) and canonicalize_runtime_domain(item.get("domain"))
             ]
+        correct_node = normalized.get("correct_answer_node")
+        if isinstance(correct_node, Mapping):
+            correct_node = correct_node.get("node_id") or correct_node.get("id")
+        if isinstance(correct_node, str):
+            correct_node = correct_node.strip()
+            if correct_node:
+                normalized["correct_answer_node"] = correct_node
+            else:
+                normalized.pop("correct_answer_node", None)
         return normalized
 
     def _normalize_informational_tensions(
@@ -1217,12 +1430,29 @@ class AuroraDecisionLoop:
         return set(REQUIRED_MODELING_DOMAINS).issubset(covered) and not missing.intersection(REQUIRED_MODELING_DOMAINS)
 
     def _slim_readout_for_surface(self, readout: DashboardReadout) -> dict[str, Any]:
-        payload = readout.to_llm_payload()
+        wake_policy = self._wake_policy_from_readout(readout)
+        context_budget = str(wake_policy.get("context_budget") or "").strip().lower() or None
+        payload = readout.to_llm_payload(context_budget=context_budget)
         surface_state = self._surface_state_from_readout(readout)
         if surface_state:
             payload["surface_state"] = surface_state
-        wake_policy = self._wake_policy_from_readout(readout)
-        if wake_policy.get("context_budget") == "extended":
+        deep_pattern_alerts = _deep_pattern_alerts(readout)
+        if deep_pattern_alerts:
+            cold_start_context = dict(payload.get("cold_start_context") or {})
+            cold_start_context["deep_pattern_alerts"] = deep_pattern_alerts
+            payload["cold_start_context"] = cold_start_context
+        if context_budget == "compact":
+            # G28: compact mode keeps only the highest-signal task/error context.
+            compact_payload = {
+                key: payload[key]
+                for key in ("user_message", "task_state", "wake_policy")
+                if key in payload
+            }
+            tensions = readout.informational_tensions
+            if isinstance(tensions, list) and tensions:
+                compact_payload["informational_tensions"] = tensions[:2]
+            return compact_payload
+        if context_budget == "extended":
             if readout.achievement_signals:
                 payload["achievement_signals"] = readout.achievement_signals
             if readout.conversation_summary:
@@ -1313,6 +1543,14 @@ class AuroraDecisionLoop:
         if requested_strategy.get("problem_first") and "concept_first" not in requested_strategy:
             strategy["concept_first"] = False
         merged["strategy"] = strategy
+        if _achievement_reentry_gap_scene(readout):
+            current_density = _safe_float(merged.get("task_density_hint"))
+            baseline_density = _safe_float(readout.activity_profile.get("task_density_hint"))
+            if baseline_density is None:
+                baseline_density = 0.7
+            reduced_density = round(max(0.0, min(1.0, baseline_density) - 0.1), 4)
+            if current_density is None or current_density > reduced_density:
+                merged["task_density_hint"] = reduced_density
         return merged
 
     def _strategy_defaults_for_readout(self, readout: DashboardReadout) -> dict[str, bool]:
@@ -1342,8 +1580,15 @@ class AuroraDecisionLoop:
         if readout.exam_sprint_policy.get("error_analysis_required") is True:
             defaults["error_analysis_required"] = True
 
+        if _has_deep_pattern_alerts(readout):
+            defaults["concept_first"] = True
+            defaults["problem_first"] = False
+            defaults["error_analysis_required"] = True
+
         if self._is_high_exam_urgency(readout):
             defaults["worked_example_first"] = True
+        if _achievement_high_streak_scene(readout):
+            defaults["retrieval_practice"] = True
         # Detect last-24h mode via either the explicit boolean flag or sprint_mode value.
         # exam_sprint_policy is built from ExamSprintPolicy.to_dict() which uses sprint_mode,
         # not a separate last_24h_mode key — so both checks are needed.
@@ -1363,6 +1608,20 @@ class AuroraDecisionLoop:
                     "new_topic_allowed": False,
                 }
             )
+
+        # G13: Apply confirmed strategy preference from persistent learning style.
+        cold_start_context = readout.cold_start_context if isinstance(readout.cold_start_context, Mapping) else {}
+        confirmed_preference = cold_start_context.get("confirmed_strategy_preference")
+        if isinstance(confirmed_preference, str) and confirmed_preference.strip():
+            flag_name = confirmed_preference.strip()
+            if flag_name in STRATEGY_FIELDS:
+                defaults[flag_name] = True
+                # Clear conflicting opposite flags
+                if flag_name == "concept_first":
+                    defaults.pop("problem_first", None)
+                elif flag_name == "problem_first":
+                    defaults.pop("concept_first", None)
+
         return defaults
 
     def _normalize_strategy_payload(self, value: Any, *, include_defaults: bool) -> dict[str, bool]:
