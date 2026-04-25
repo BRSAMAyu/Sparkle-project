@@ -2,9 +2,9 @@
   "workflow_version": "1.0",
   "status": "running",
   "current_round": 12,
-  "reviewer_a_next": 19,
-  "reviewer_b_next": 26,
-  "reviewer_a_last_timestamp": "2026-04-26T11:35:00+08:00",
+  "reviewer_a_next": 20,
+  "reviewer_b_next": 31,
+  "reviewer_a_last_timestamp": "2026-04-26T13:30:00+08:00",
   "reviewer_b_last_timestamp": "2026-04-26T11:35:00+08:00",
   "validator_last_timestamp": "2026-04-26T03:20:00+08:00",
   "steering_notes": "",
@@ -539,7 +539,7 @@
         "backend/app/services/achievement_engine.py",
         "backend/app/core/event_bus.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E13": {
       "name": "呼吸练习→任务/专注集成",
@@ -559,7 +559,7 @@
         "backend/app/services/behavior_signal_collector.py",
         "backend/app/core/context_manager.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E15": {
       "name": "DB迁移健康——52个Alembic迁移一致性",
