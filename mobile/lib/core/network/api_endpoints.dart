@@ -175,7 +175,11 @@ class ApiEndpoints {
   static const String growthWeeklyNarrative = '/growth/weekly-narrative';
   static const String growthWeeklyNarrativeGenerate =
       '/growth/weekly-narrative/generate';
+  static const String examSprintIntake = '/exam-sprint/intake';
   static const String profileChatOpening = '/profile/chat-opening';
+  static const String auroraCalibrationCards = '/aurora/calibration-cards';
+  static String auroraCalibrationCardRespond(String id) =>
+      '/aurora/calibration-cards/$id/respond';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';

@@ -115,6 +115,70 @@ _DOMAIN_TEXT_HINTS: dict[str, tuple[str, ...]] = {
 
 _QUESTION_MARKERS = ("？", "?", "吗", "呢", "多少", "哪些", "哪几", "多久", "几点", "什么", "告诉我")
 
+_PROMPT_CONTEXT_MASK: frozenset[str] = frozenset({"surface", "recently_asked_domains"})
+
+_ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
+    "emit_message": frozenset(
+        {
+            "user_message",
+            "covered_domains",
+            "missing_domains",
+            "cold_start_context",
+            "informational_tensions",
+        }
+    ),
+    "wait": frozenset({"user_message", "covered_domains", "missing_domains"}),
+    "schedule_wake": frozenset({"activity_profile", "explicit_user_constraints"}),
+    "update_harness": frozenset(
+        {
+            "user_message",
+            "covered_domains",
+            "missing_domains",
+            "cold_start_context",
+            "informational_tensions",
+            "activity_profile",
+            "explicit_user_constraints",
+        }
+    ),
+    "update_state": frozenset(
+        {
+            "user_message",
+            "covered_domains",
+            "missing_domains",
+            "cold_start_context",
+            "informational_tensions",
+        }
+    ),
+    "soft_return_topic": frozenset(
+        {
+            "user_message",
+            "covered_domains",
+            "missing_domains",
+            "cold_start_context",
+            "informational_tensions",
+            "latent_thread_recovery_candidates",
+        }
+    ),
+    "drop_thread": frozenset(
+        {
+            "covered_domains",
+            "missing_domains",
+            "latent_thread_recovery_candidates",
+        }
+    ),
+}
+
+_SURFACE_CONTEXT_ADDITIONS: dict[str, frozenset[str]] = {
+    "aurora_checkpoint": frozenset({"checkpoint_state"}),
+    "aurora_planning": frozenset({"sprint_policy_summary", "task_state"}),
+}
+
+_SURFACE_CONTEXT_EXCLUSIONS: dict[str, frozenset[str]] = {
+    "aurora_checkpoint": frozenset({"cold_start_context"}),
+    "aurora_modeling": frozenset({"task_state", "checkpoint_state", "exam_sprint_policy", "sprint_policy_summary"}),
+    "aurora_planning": frozenset({"cold_start_context", "achievement_signals", "checkpoint_state", "exam_sprint_policy"}),
+}
+
 
 def _normalize_text(value: Any) -> str:
     return " ".join(str(value or "").split()).strip()
@@ -165,17 +229,12 @@ class DashboardReadout:
     checkpoint_state: dict[str, Any] = field(default_factory=dict)
     request_extra_context: dict[str, Any] = field(default_factory=dict)
     achievement_signals: dict[str, Any] = field(default_factory=dict)
+    self_model: dict[str, Any] = field(default_factory=dict)
 
-    def to_llm_payload(self) -> dict[str, Any]:
-        return {
+    def to_llm_payload(self, *, action: str | None = None) -> dict[str, Any]:
+        payload = {
             "surface": self.surface,
-            "user_id": self.user_id,
-            "conversation_id": self.conversation_id,
-            "request_id": self.request_id,
-            "new_event": {
-                "type": "user_message",
-                "content": self.user_message,
-            },
+            "user_message": self.user_message,
             "activity_profile": self.activity_profile,
             "hard_boundaries": self.hard_bounds.model_dump(mode="json"),
             "candidate_affordances": [affordance.model_dump(mode="json") for affordance in self.candidate_affordances],
@@ -183,11 +242,9 @@ class DashboardReadout:
             "cold_start_context": self.cold_start_context,
             "informational_tensions": self.informational_tensions,
             "latent_threads": self.latent_threads,
-            "domain_coverage": {
-                "covered_domains": self.covered_domains,
-                "missing_domains": self.missing_domains,
-                "recently_asked_domains": self.recently_asked_domains,
-            },
+            "covered_domains": self.covered_domains,
+            "missing_domains": self.missing_domains,
+            "recently_asked_domains": self.recently_asked_domains,
             "sprint_policy_summary": self.sprint_policy_summary,
             "explicit_user_constraints": self.explicit_user_constraints,
             "latent_thread_recovery_candidates": self.latent_thread_recovery_candidates,
@@ -198,7 +255,21 @@ class DashboardReadout:
             "checkpoint_state": self.checkpoint_state,
             "request_extra_context": self.request_extra_context,
             "achievement_signals": self.achievement_signals,
+            "self_model": self.self_model,
         }
+        allowed_keys = self._context_mask_keys(action=action)
+        return {key: value for key, value in payload.items() if key in allowed_keys}
+
+    def _context_mask_keys(self, *, action: str | None) -> set[str]:
+        if action:
+            allowed_keys = set(_ACTION_CONTEXT_MASK.get(action, _ACTION_CONTEXT_MASK["emit_message"]))
+        else:
+            allowed_keys: set[str] = set(_PROMPT_CONTEXT_MASK)
+            for keys in _ACTION_CONTEXT_MASK.values():
+                allowed_keys.update(keys)
+        allowed_keys.update(_SURFACE_CONTEXT_ADDITIONS.get(self.surface, frozenset()))
+        allowed_keys.difference_update(_SURFACE_CONTEXT_EXCLUSIONS.get(self.surface, frozenset()))
+        return allowed_keys
 
 
 class DashboardReadoutBuilder:
@@ -216,6 +287,7 @@ class DashboardReadoutBuilder:
         control_surface_reading: ControlSurfaceReading,
         activity_profile: dict[str, Any],
         candidate_affordances: list[SkillAffordance],
+        self_model: dict[str, Any] | None = None,
     ) -> DashboardReadout:
         profile_context = user_context_payload.get("profile_context")
         if not isinstance(profile_context, dict):
@@ -302,6 +374,7 @@ class DashboardReadoutBuilder:
             checkpoint_state=checkpoint_state,
             request_extra_context=dict(request_extra_context),
             achievement_signals=achievement_signals,
+            self_model=dict(self_model or {}),
         )
 
     def _extract_cold_start_context(

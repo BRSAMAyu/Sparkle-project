@@ -19,6 +19,7 @@ from app.aurora.runtime_v1.dashboard import DashboardReadout
 from app.aurora.runtime_v1.decision_loop import AuroraDecisionLoop
 from app.aurora.runtime_v1.models import AuroraScheduledWake, AuroraStateSnapshot
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
+from app.aurora.runtime_v1.state import merge_expression_settings
 from app.models.chat import ChatMessage, MessageRole
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
@@ -639,6 +640,7 @@ class AuroraCheckpointRuntimeService:
         activity_profile.setdefault("conversation_style", "warm")
         activity_profile.setdefault("task_density_hint", 0.45)
         activity_profile.setdefault("agenda_priority", payload.get("agenda_priority"))
+        activity_profile["expression"] = merge_expression_settings(activity_profile.get("expression"))
         informational_tensions = []
         blocker_summary = str(payload.get("blocker_summary") or "").strip()
         if blocker_summary:
@@ -1169,6 +1171,13 @@ class AuroraCheckpointRuntimeService:
                 "proactive_intensity": 0.34,
                 "next_wake_at": None,
                 "conversation_style": "warm",
+                "expression": {
+                    "tone_warmth": 0.76,
+                    "directness": 0.32,
+                    "brevity": 0.52,
+                    "friendliness": 0.78,
+                    "challenge_intensity": 0.24,
+                },
                 "agenda_priority": None,
                 "task_density_hint": 0.72,
             }
@@ -1190,12 +1199,37 @@ class AuroraCheckpointRuntimeService:
                 delay_hours -= 2.0
         delay_hours = max(4.0, min(42.0, delay_hours))
         next_wake_at = now + timedelta(hours=delay_hours)
+        if blocker["time_pressure"]:
+            expression = {
+                "tone_warmth": 0.44,
+                "directness": 0.86,
+                "brevity": 0.82,
+                "friendliness": 0.4,
+                "challenge_intensity": 0.74,
+            }
+        elif blocker["understanding_gap"]:
+            expression = {
+                "tone_warmth": 0.72,
+                "directness": 0.54,
+                "brevity": 0.44,
+                "friendliness": 0.76,
+                "challenge_intensity": 0.48,
+            }
+        else:
+            expression = {
+                "tone_warmth": 0.62,
+                "directness": 0.6,
+                "brevity": 0.56,
+                "friendliness": 0.68,
+                "challenge_intensity": 0.56,
+            }
         return {
             "proactive_intensity": round(min(0.9, 0.52 + float(blocker["urgency_score"]) * 0.4), 2),
             "next_wake_at": next_wake_at.isoformat(),
             "conversation_style": (
                 "structured" if blocker["understanding_gap"] or blocker["time_pressure"] else "warm"
             ),
+            "expression": expression,
             "agenda_priority": blocker["agenda_priority"],
             "task_density_hint": 0.38 if blocker["time_pressure"] else 0.52,
         }

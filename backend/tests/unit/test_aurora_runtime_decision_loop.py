@@ -29,11 +29,18 @@ def _readout(
     hard_bounds: AuroraHardBounds | None = None,
     surface: str = "aurora_modeling",
     user_message: str = "7天后考计网，从没学过。",
+    activity_profile: dict[str, Any] | None = None,
     covered_domains: list[str] | None = None,
     missing_domains: list[str] | None = None,
     recently_asked_domains: list[str] | None = None,
     request_extra_context: dict[str, Any] | None = None,
     latent_thread_recovery_candidates: list[dict[str, Any]] | None = None,
+    sprint_policy_summary: dict[str, Any] | None = None,
+    exam_sprint_policy: dict[str, Any] | None = None,
+    explicit_user_constraints: dict[str, Any] | None = None,
+    task_state: dict[str, Any] | None = None,
+    checkpoint_state: dict[str, Any] | None = None,
+    achievement_signals: dict[str, Any] | None = None,
 ) -> DashboardReadout:
     return DashboardReadout(
         surface=surface,
@@ -43,7 +50,15 @@ def _readout(
         user_message=user_message,
         activity_profile={
             "conversation_style": "warm",
+            "expression": {
+                "tone_warmth": 0.78,
+                "directness": 0.32,
+                "brevity": 0.44,
+                "friendliness": 0.82,
+                "challenge_intensity": 0.28,
+            },
             "task_density_hint": 0.35,
+            **dict(activity_profile or {}),
         },
         hard_bounds=hard_bounds or AuroraHardBounds(),
         candidate_affordances=AuroraSkillRegistry().load_candidate_affordances("aurora_modeling"),
@@ -52,15 +67,19 @@ def _readout(
         covered_domains=list(covered_domains or ["goal"]),
         missing_domains=list(missing_domains or ["scope", "baseline", "time"]),
         recently_asked_domains=list(recently_asked_domains or []),
-        sprint_policy_summary={"mode": "seven_day_survival", "days_remaining": 7},
-        explicit_user_constraints={"hard_bounds": {"privacy_boundaries": []}},
+        sprint_policy_summary=dict(sprint_policy_summary or {"mode": "seven_day_survival", "days_remaining": 7}),
+        explicit_user_constraints=dict(explicit_user_constraints or {"hard_bounds": {"privacy_boundaries": []}}),
         latent_thread_recovery_candidates=list(latent_thread_recovery_candidates or []),
+        exam_sprint_policy=dict(exam_sprint_policy or {}),
+        task_state=dict(task_state or {"stage": "triage"}),
+        checkpoint_state=dict(checkpoint_state or {"last_status": "stable"}),
         request_extra_context=dict(request_extra_context or {}),
+        achievement_signals=dict(achievement_signals or {"plan_completion_rate": 0.48}),
     )
 
 
 @pytest.mark.asyncio
-async def test_decision_loop_prompt_contains_dashboard_boundaries_and_no_final_copy_instruction() -> None:
+async def test_decision_loop_prompt_uses_masked_dashboard_context_and_no_final_copy_instruction() -> None:
     fake = _FakeJsonLLM(
         {
             "action": "emit_message",
@@ -76,13 +95,76 @@ async def test_decision_loop_prompt_contains_dashboard_boundaries_and_no_final_c
 
     serialized_prompt = json.dumps(fake.calls[0], ensure_ascii=False)
     assert "dashboard_readout" in serialized_prompt
-    assert "hard_boundaries" in serialized_prompt
-    assert "candidate_affordances" in serialized_prompt
+    assert "user_message" in serialized_prompt
     assert "covered_domains" in serialized_prompt
-    assert "recently_asked_domains" in serialized_prompt
-    assert "sprint_policy_summary" in serialized_prompt
+    assert "missing_domains" in serialized_prompt
+    assert "informational_tensions" in serialized_prompt
+    assert "candidate_affordances" not in serialized_prompt
+    assert "hard_boundaries" not in serialized_prompt
+    assert "achievement_signals" not in serialized_prompt
+    assert "sprint_policy_summary" not in serialized_prompt
+    assert "strategy_defaults" in serialized_prompt
+    assert "concept_first" in serialized_prompt
+    assert "Teaching strategy is a first-class decision" in serialized_prompt
     assert "Do not generate final user-facing text" in serialized_prompt
     assert '"messages"' not in serialized_prompt
+
+
+def test_aurora_decision_round_trip_preserves_strategy_payload() -> None:
+    payload = {
+        "action": "emit_message",
+        "harness_updates": {
+            "strategy": {
+                "concept_first": True,
+                "problem_first": False,
+                "worked_example_first": True,
+                "retrieval_practice": True,
+                "interleaving": False,
+                "spaced_review": True,
+                "error_analysis_required": True,
+            }
+        },
+    }
+
+    decision = AuroraDecision.from_payload(payload)
+
+    assert decision.harness_updates["strategy"]["worked_example_first"] is True
+    assert decision.harness_updates["strategy"]["spaced_review"] is True
+    assert decision.to_payload()["harness_updates"]["strategy"] == payload["harness_updates"]["strategy"]
+
+
+def test_decision_loop_defaults_modeling_strategy_and_high_urgency_worked_example() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(action="emit_message", chat_directive={"intent": "continue_modeling"})
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            sprint_policy_summary={"mode": "seven_day_survival", "days_remaining": 3},
+            exam_sprint_policy={"triage_level": "emergency"},
+        ),
+    )
+
+    strategy = validated.harness_updates["strategy"]
+    assert strategy["concept_first"] is True
+    assert strategy["worked_example_first"] is True
+
+
+def test_decision_loop_defaults_planning_strategy_to_problem_first() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(action="emit_message", chat_directive={"intent": "tighten_plan"})
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            sprint_policy_summary={"mode": "standard_exam_sprint", "days_remaining": 14},
+        ),
+    )
+
+    strategy = validated.harness_updates["strategy"]
+    assert strategy["problem_first"] is True
+    assert strategy["concept_first"] is False
 
 
 @pytest.mark.asyncio
@@ -222,7 +304,8 @@ def test_decision_loop_rejects_privacy_boundary_harness_update() -> None:
     )
 
     assert validated.action == "update_harness"
-    assert validated.harness_updates == {}
+    assert "agenda_priority" not in validated.harness_updates
+    assert "strategy" in validated.harness_updates
     assert validated.metadata["harness_update_rejected"] is True
 
 
@@ -244,7 +327,8 @@ def test_decision_loop_rejects_privacy_blocked_domain_reintroduced_during_stabil
 
     assert validated.action == "wait"
     assert validated.metadata["fallback_reason"] == "privacy_blocked_domain"
-    assert validated.harness_updates == {}
+    assert "strategy" in validated.harness_updates
+    assert "agenda_priority" not in validated.harness_updates
 
 
 def test_decision_loop_suppresses_wake_inside_dnd_and_disabled_followup() -> None:
@@ -310,6 +394,109 @@ async def test_chat_adapter_merges_split_messages_and_removes_overlap() -> None:
     ]
 
 
+@pytest.mark.asyncio
+async def test_chat_adapter_prompt_includes_expression_controls_and_same_turn_override() -> None:
+    chat_llm = _FakeJsonLLM({"messages": ["好，先做 3 道题。"]})
+    adapter = ChatLayerAdapter(llm_factory=lambda: chat_llm)
+    decision = AuroraDecision(
+        action="emit_message",
+        harness_updates={
+            "expression": {
+                "tone_warmth": 0.22,
+                "directness": 0.94,
+                "brevity": 0.9,
+                "friendliness": 0.28,
+                "challenge_intensity": 0.76,
+            }
+        },
+        chat_directive={"intent": "assign_questions"},
+    )
+
+    await adapter.render(decision, _readout(user_message="我知道了，给我题做"))
+
+    user_prompt = json.loads(chat_llm.calls[0][1]["content"])
+    assert user_prompt["expression_controls"]["directness"] == pytest.approx(0.94)
+    assert user_prompt["expression_controls"]["tone_warmth"] == pytest.approx(0.22)
+    assert user_prompt["activity_profile"]["expression"]["challenge_intensity"] == pytest.approx(0.76)
+    assert "Do not add extra encouragement" in user_prompt["expression_instruction"]
+
+
+@pytest.mark.asyncio
+async def test_chat_adapter_prompt_includes_teaching_strategy() -> None:
+    chat_llm = _FakeJsonLLM({"messages": ["我们先看一道完整例题。"]})
+    adapter = ChatLayerAdapter(llm_factory=lambda: chat_llm)
+    decision = AuroraDecision(
+        action="emit_message",
+        harness_updates={
+            "strategy": {
+                "concept_first": True,
+                "problem_first": False,
+                "worked_example_first": True,
+                "retrieval_practice": False,
+                "interleaving": False,
+                "spaced_review": False,
+                "error_analysis_required": False,
+            }
+        },
+        chat_directive={"intent": "teach_with_example"},
+    )
+
+    await adapter.render(decision, _readout(user_message="TCP 拥塞控制我有点乱"))
+
+    user_prompt = json.loads(chat_llm.calls[0][1]["content"])
+    assert user_prompt["teaching_strategy"]["concept_first"] is True
+    assert user_prompt["teaching_strategy"]["worked_example_first"] is True
+    assert "strategy" in user_prompt["activity_profile"]
+
+
+def test_service_surface_defaults_include_distinct_expression_profiles() -> None:
+    service = AuroraRuntimeV1Service()
+
+    modeling_profile = service._build_activity_profile(surface="aurora_modeling", request_extra_context={})
+    planning_profile = service._build_activity_profile(surface="aurora_planning", request_extra_context={})
+    checkpoint_profile = service._build_activity_profile(surface="aurora_checkpoint", request_extra_context={})
+
+    assert modeling_profile["expression"] != planning_profile["expression"]
+    assert checkpoint_profile["expression"] != planning_profile["expression"]
+    assert modeling_profile["expression"]["tone_warmth"] > planning_profile["expression"]["tone_warmth"]
+    assert planning_profile["expression"]["directness"] > modeling_profile["expression"]["directness"]
+
+
+@pytest.mark.asyncio
+async def test_service_merges_expression_harness_updates_without_losing_surface_defaults() -> None:
+    decision_loop = AuroraDecisionLoop(
+        llm_factory=lambda: _FakeJsonLLM(
+            {
+                "action": "emit_message",
+                "harness_updates": {"expression": {"directness": 0.91, "brevity": 0.87}},
+                "chat_directive": {"intent": "assign_questions"},
+            }
+        )
+    )
+    chat_adapter = ChatLayerAdapter(llm_factory=lambda: _FakeJsonLLM({"messages": ["先做 3 道题。"]}))
+    service = AuroraRuntimeV1Service(
+        decision_loop=decision_loop,
+        chat_adapter=chat_adapter,
+    )
+
+    plan = await service.plan_turn(
+        active_db=None,
+        user_id="user-1",
+        surface="aurora_planning",
+        conversation_id="conv-1",
+        request_id="req-1",
+        user_message="我知道了，给我题做。",
+        request_extra_context={},
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    assert plan.activity_profile["expression"]["directness"] == pytest.approx(0.91)
+    assert plan.activity_profile["expression"]["brevity"] == pytest.approx(0.87)
+    assert plan.activity_profile["expression"]["tone_warmth"] == pytest.approx(0.34)
+    assert plan.activity_profile["expression"]["friendliness"] == pytest.approx(0.42)
+
+
 def test_slim_readout_for_aurora_modeling_excludes_task_and_checkpoint_state() -> None:
     loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
     readout = _readout()
@@ -317,7 +504,9 @@ def test_slim_readout_for_aurora_modeling_excludes_task_and_checkpoint_state() -
     assert "task_state" not in payload
     assert "checkpoint_state" not in payload
     assert "exam_sprint_policy" not in payload
-    assert "domain_coverage" in payload
+    assert "sprint_policy_summary" not in payload
+    assert "covered_domains" in payload
+    assert "missing_domains" in payload
     assert "informational_tensions" in payload
 
 
@@ -399,6 +588,53 @@ def test_planning_detour_surface_state_is_visible_to_decision_loop() -> None:
     payload = loop._slim_readout_for_surface(readout)
 
     assert payload["surface_state"]["in_detour"] is True
+    assert "cold_start_context" not in payload
+    assert "sprint_policy_summary" in payload
+    assert "task_state" in payload
+
+
+def test_dashboard_readout_emit_message_context_mask_excludes_unrelated_fields() -> None:
+    payload = _readout().to_llm_payload(action="emit_message")
+
+    assert "user_message" in payload
+    assert "covered_domains" in payload
+    assert "missing_domains" in payload
+    assert "cold_start_context" in payload
+    assert "informational_tensions" in payload
+    assert "candidate_affordances" not in payload
+    assert "hard_boundaries" not in payload
+    assert "achievement_signals" not in payload
+    assert "sprint_policy_summary" not in payload
+
+
+def test_dashboard_readout_wait_context_mask_is_smaller_than_emit_message() -> None:
+    emit_payload = _readout().to_llm_payload(action="emit_message")
+    wait_payload = _readout().to_llm_payload(action="wait")
+
+    assert "cold_start_context" not in wait_payload
+    assert "informational_tensions" not in wait_payload
+    assert len(json.dumps(wait_payload, ensure_ascii=False)) < len(json.dumps(emit_payload, ensure_ascii=False))
+
+
+def test_dashboard_readout_schedule_wake_context_keeps_activity_and_constraints() -> None:
+    payload = _readout().to_llm_payload(action="schedule_wake")
+
+    assert "activity_profile" in payload
+    assert "explicit_user_constraints" in payload
+    assert "informational_tensions" not in payload
+    assert "cold_start_context" not in payload
+
+
+def test_dashboard_readout_planning_surface_includes_planning_fields_without_achievement_signals() -> None:
+    payload = _readout(
+        surface="aurora_planning",
+        task_state={"stage": "planning"},
+        achievement_signals={"plan_completion_rate": 0.48},
+    ).to_llm_payload(action="emit_message")
+
+    assert "sprint_policy_summary" in payload
+    assert "task_state" in payload
+    assert "achievement_signals" not in payload
     assert "cold_start_context" not in payload
 
 

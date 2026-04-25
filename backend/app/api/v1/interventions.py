@@ -189,6 +189,7 @@ async def list_outcomes(
     ]
 
 
+# route-tier: authed
 @router.get("/ai-outcome-effectiveness")
 async def get_ai_outcome_effectiveness(
     db: AsyncSession = Depends(get_db),

@@ -1412,6 +1412,7 @@ class PlanningWorkflowManager:
         profile_context = _as_dict(context.get("profile_context"))
         prefs = _as_dict(profile_context.get("preferences"))
         cold_start = _as_dict(prefs.get(PLANNING_PROFILE_KEYS["cold_start_context"]))
+        knowledge_gaps = prefs.get(PLANNING_PROFILE_KEYS["knowledge_gaps"])
         galaxy_baseline = _as_dict(context.get("galaxy_baseline") or context.get("request_extra_context", {}).get("galaxy_baseline"))
         galaxy_avg = galaxy_baseline.get("avg_mastery") if galaxy_baseline else None
         galaxy_derived_baseline = self._classify_baseline_from_galaxy(galaxy_avg) if galaxy_avg is not None else None
@@ -1427,6 +1428,9 @@ class PlanningWorkflowManager:
             "time_constraint_days": _safe_int(cold_start.get("time_constraint_days")),
             "avg_mastery_score": galaxy_avg,
             "weak_nodes": galaxy_baseline.get("weak_nodes") if galaxy_baseline else None,
+            "diagnostic_estimated_score": cold_start.get("diagnostic_estimated_score"),
+            "recommended_path": _strip(cold_start.get("recommended_path")),
+            "knowledge_gaps": knowledge_gaps if isinstance(knowledge_gaps, list) else [],
             "motivation": _strip(
                 cold_start.get("motivation") or cold_start.get("goal_motivation")
             ),

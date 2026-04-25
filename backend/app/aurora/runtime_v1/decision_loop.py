@@ -14,6 +14,7 @@ from app.aurora.runtime_v1.dashboard import (
     DashboardReadout,
     canonicalize_runtime_domain,
 )
+from app.aurora.runtime_v1.state import AuroraTeachingStrategy
 from app.core.agent_profiles import AgentRole, TaskType
 from app.services.llm_service import get_configured_llm_service
 
@@ -45,6 +46,18 @@ FORBIDDEN_MODELING_DOMAINS = {
     "pathology",
     "personality_disorder",
 }
+
+STRATEGY_FIELDS = (
+    "concept_first",
+    "problem_first",
+    "worked_example_first",
+    "retrieval_practice",
+    "interleaving",
+    "spaced_review",
+    "error_analysis_required",
+)
+HIGH_URGENCY_SPRINT_MODES = {"seven_day_survival"}
+HIGH_URGENCY_TRIAGE_LEVELS = {"high", "emergency"}
 
 LLMFactory = Callable[[], Any | Awaitable[Any]]
 
@@ -128,15 +141,27 @@ class AuroraDecisionLoop:
             "surface_complete": "boolean",
             "modeling_complete": "boolean",
             "state_updates": "object",
-            "harness_updates": "object using only proactive_intensity,next_wake_at,conversation_style,agenda_priority,task_density_hint",
+            "harness_updates": {
+                "type": "object",
+                "allowed_fields": [
+                    "proactive_intensity",
+                    "next_wake_at",
+                    "conversation_style",
+                    "expression",
+                    "agenda_priority",
+                    "task_density_hint",
+                    "strategy",
+                ],
+                "strategy": {field: "boolean" for field in STRATEGY_FIELDS},
+            },
             "wake_schedule": "object or null",
             "chat_directive": "object describing communicative intent, not final user-visible wording",
             "metadata": {"reasoning_summary": "brief, non-sensitive rationale"},
         }
         system = (
             "You are Aurora's cognitive decision loop for Sparkle. "
-            "You are NOT the final chat writer. Decide what should happen next from dashboard readouts, "
-            "hard boundaries, and affordances. Return strict JSON only. "
+            "You are NOT the final chat writer. Decide what should happen next from action-masked dashboard readouts. "
+            "Return strict JSON only. "
             "Do not generate final user-facing text or polished dialogue. "
             "Do not make clinical diagnoses, personality/pathology labels, unconscious interpretations, trauma claims, "
             "or inferred social identity guesses. Social roles must come only from explicit user-provided data. "
@@ -149,19 +174,37 @@ class AuroraDecisionLoop:
             "earlier bottleneck detection. "
             "When setting informational_tensions, include importance_reasoning explaining why this gap blocks downstream "
             "planning (e.g. 'baseline 缺失会导致任务难度无法个性化'). "
-            "Use achievement_signals (if present) to calibrate encouragement: if momentum is high, reinforce; "
-            "if stalled, reduce pressure. "
-            "motivation domain is optional — ask about it if covered_domains has goal/scope/baseline/time but not motivation."
+            "Use self_model as Aurora's self-check: when strategy_confidence is low, task_failure_streak is high, or "
+            "needs_recalibration is true, prefer shorter and safer next steps, lower task density, and avoid assuming "
+            "the user can sustain the previous workload estimate. "
+            "motivation domain is optional — ask about it if covered_domains has goal/scope/baseline/time but not motivation. "
+            "Teaching strategy is a first-class decision. Always set harness_updates.strategy with the boolean switches "
+            "concept_first, problem_first, worked_example_first, retrieval_practice, interleaving, spaced_review, "
+            "and error_analysis_required. Use concept_first when the user needs conceptual scaffolding before more tasks. "
+            "Use problem_first when concepts are already mostly understood and practice is the best next move. "
+            "Use worked_example_first when confusion is high or exam urgency is high and you need one concrete anchor fast. "
+            "Use retrieval_practice for recall checks, mini-tests, or closed-book prompts. Use interleaving for mixed "
+            "nearby problem types. Use spaced_review when earlier material should be resurfaced. Use "
+            "error_analysis_required when repeated mistakes, transition errors, or misunderstanding patterns should be "
+            "diagnosed before more drilling. Default strategy heuristics matter: aurora_modeling should usually lean "
+            "concept_first=true; aurora_planning should usually lean problem_first=true; high exam urgency should "
+            "usually lean worked_example_first=true unless stronger evidence suggests otherwise."
         )
         user = {
             "decision_schema": schema,
             "dashboard_readout": self._slim_readout_for_surface(readout),
+            "strategy_defaults": self._strategy_defaults_for_readout(readout),
+            "current_strategy": self._normalize_strategy_payload(
+                readout.activity_profile.get("strategy"),
+                include_defaults=False,
+            ),
             "rules": [
                 "If the user is detouring and the detour matters more, choose wait or emit_message without forcing topic return.",
                 "If dashboard_readout.surface_state.in_detour is true, use latent_thread_recovery_candidates to decide whether a soft_return_topic is warranted.",
                 "If a latent thread should be gently recovered, choose soft_return_topic.",
                 "If dashboard coverage already closes the core modeling domains, stop asking questions and let modeling_complete become true.",
                 "If you need more information, put the missing domain in state_updates.informational_tensions.",
+                "Always return harness_updates.strategy with all seven boolean fields, starting from strategy_defaults and overriding them only when current evidence warrants it.",
                 "Never request or infer forbidden psychological or social-identity domains.",
             ],
         }
@@ -189,7 +232,7 @@ class AuroraDecisionLoop:
                     hard_bounds=hard_bounds,
                 )
             except HarnessUpdateRejectedError as exc:
-                decision.harness_updates = {}
+                decision.harness_updates = self._merge_strategy_harness_updates({}, readout)
                 decision.metadata = {
                     **decision.metadata,
                     "harness_update_rejected": True,
@@ -256,7 +299,7 @@ class AuroraDecisionLoop:
                     hard_bounds=hard_bounds,
                 )
             except HarnessUpdateRejectedError as exc:
-                decision.harness_updates = {}
+                decision.harness_updates = self._merge_strategy_harness_updates({}, readout)
                 decision.metadata = {
                     **decision.metadata,
                     "harness_update_rejected": True,
@@ -385,6 +428,8 @@ class AuroraDecisionLoop:
                 **normalized.chat_directive,
                 "intent": normalized.chat_directive.get("intent") or "confirm_modeling_ready",
             }
+        if not normalized.metadata.get("fallback_reason") and not normalized.metadata.get("harness_update_rejected"):
+            normalized.harness_updates = self._merge_strategy_harness_updates(normalized.harness_updates, readout)
         return normalized
 
     def _stabilize_drop_thread(self, decision: AuroraDecision, readout: DashboardReadout) -> AuroraDecision:
@@ -519,14 +564,6 @@ class AuroraDecisionLoop:
         surface_state = self._surface_state_from_readout(readout)
         if surface_state:
             payload["surface_state"] = surface_state
-        if readout.surface == "aurora_modeling":
-            for key in ("task_state", "checkpoint_state", "exam_sprint_policy"):
-                payload.pop(key, None)
-        elif readout.surface == "aurora_checkpoint":
-            for key in ("cold_start_context", "candidate_affordances"):
-                payload.pop(key, None)
-        elif readout.surface == "aurora_planning":
-            payload.pop("cold_start_context", None)
         return payload
 
     def _surface_state_from_readout(self, readout: DashboardReadout) -> dict[str, Any]:
@@ -592,6 +629,102 @@ class AuroraDecisionLoop:
             return dict(candidate)
         return None
 
+    def _merge_strategy_harness_updates(
+        self,
+        harness_updates: Mapping[str, Any] | None,
+        readout: DashboardReadout,
+    ) -> dict[str, Any]:
+        merged = dict(harness_updates or {})
+        current_strategy = self._normalize_strategy_payload(
+            readout.activity_profile.get("strategy"),
+            include_defaults=False,
+        )
+        requested_strategy = self._normalize_strategy_payload(merged.get("strategy"), include_defaults=False)
+        strategy = {
+            **self._strategy_defaults_for_readout(readout),
+            **current_strategy,
+            **requested_strategy,
+        }
+        if requested_strategy.get("concept_first") and "problem_first" not in requested_strategy:
+            strategy["problem_first"] = False
+        if requested_strategy.get("problem_first") and "concept_first" not in requested_strategy:
+            strategy["concept_first"] = False
+        merged["strategy"] = strategy
+        return merged
+
+    def _strategy_defaults_for_readout(self, readout: DashboardReadout) -> dict[str, bool]:
+        defaults = AuroraTeachingStrategy().model_dump(mode="python")
+        if readout.surface == "aurora_modeling":
+            defaults["concept_first"] = True
+        elif readout.surface == "aurora_planning":
+            defaults["problem_first"] = True
+        elif readout.surface == "aurora_checkpoint":
+            defaults["error_analysis_required"] = True
+
+        retrieval_policy = readout.exam_sprint_policy.get("retrieval_policy")
+        if isinstance(retrieval_policy, Mapping):
+            if retrieval_policy.get("daily_retrieval_required"):
+                defaults["retrieval_practice"] = True
+            if retrieval_policy.get("spaced_retrieval"):
+                defaults["spaced_review"] = True
+
+        if self._is_high_exam_urgency(readout):
+            defaults["worked_example_first"] = True
+        return defaults
+
+    def _normalize_strategy_payload(self, value: Any, *, include_defaults: bool) -> dict[str, bool]:
+        if not isinstance(value, Mapping):
+            return {}
+        strategy = AuroraTeachingStrategy.model_validate(dict(value))
+        payload = strategy.model_dump(mode="python", exclude_unset=not include_defaults)
+        if (
+            not include_defaults
+            and set(payload.keys()) == set(STRATEGY_FIELDS)
+            and not any(bool(flag) for flag in payload.values())
+        ):
+            return {}
+        return payload
+
+    def _is_high_exam_urgency(self, readout: DashboardReadout) -> bool:
+        summary = readout.sprint_policy_summary if isinstance(readout.sprint_policy_summary, Mapping) else {}
+        policy = readout.exam_sprint_policy if isinstance(readout.exam_sprint_policy, Mapping) else {}
+
+        triage = str(policy.get("triage_level") or summary.get("triage_level") or "").strip().lower()
+        if triage in HIGH_URGENCY_TRIAGE_LEVELS:
+            return True
+
+        mode = str(policy.get("sprint_mode") or policy.get("mode") or summary.get("mode") or "").strip().lower()
+        if mode in HIGH_URGENCY_SPRINT_MODES:
+            return True
+
+        for candidate in (
+            summary.get("urgent"),
+            policy.get("urgent"),
+            (policy.get("exam_urgency") or {}).get("urgent") if isinstance(policy.get("exam_urgency"), Mapping) else None,
+        ):
+            if candidate is True:
+                return True
+
+        for raw_days in (
+            summary.get("days_remaining"),
+            summary.get("days_left"),
+            policy.get("days_remaining"),
+            policy.get("days_left"),
+            policy.get("time_constraint_days"),
+            (policy.get("exam_urgency") or {}).get("days_left") if isinstance(policy.get("exam_urgency"), Mapping) else None,
+        ):
+            days = self._coerce_positive_int(raw_days)
+            if days is not None and days <= 7:
+                return True
+        return False
+
+    def _coerce_positive_int(self, value: Any) -> int | None:
+        try:
+            parsed = int(float(value))
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
+
     def _coerce_datetime(self, value: Any) -> datetime | None:
         if value in (None, ""):
             return None
@@ -633,6 +766,7 @@ class AuroraDecisionLoop:
             surface_complete=bool(readout.request_extra_context.get("surface_complete"))
             or bool(readout.surface == "aurora_modeling" and modeling_complete),
             modeling_complete=modeling_complete,
+            harness_updates=self._merge_strategy_harness_updates({}, readout),
             chat_directive=chat_directive,
             metadata={
                 "reasoning_summary": "Fallback decision preserved safety and continuity.",

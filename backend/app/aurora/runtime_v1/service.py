@@ -12,14 +12,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
 from app.aurora.runtime_v1.control_surface import (
-    ActivityProfile,
     AuroraHardBounds,
     ControlSurfaceReading,
     ControlSurfaceService,
 )
 from app.aurora.runtime_v1.dashboard import DashboardReadoutBuilder, canonicalize_runtime_domain
 from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
+from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
+from app.aurora.runtime_v1.state import ActivityProfile, merge_activity_profile_payload
 from app.models.user_preferences import UserPreferencesCenter
 
 GALAXY_BASELINE_TTL_SECONDS = 300  # 5-min stale-acceptable cache
@@ -40,6 +41,13 @@ _SURFACE_ACTIVITY_DEFAULTS = {
         "proactive_intensity": 0.6,
         "next_wake_at": None,
         "conversation_style": "warm",
+        "expression": {
+            "tone_warmth": 0.84,
+            "directness": 0.34,
+            "brevity": 0.62,
+            "friendliness": 0.86,
+            "challenge_intensity": 0.24,
+        },
         "agenda_priority": None,
         "task_density_hint": 0.35,
     },
@@ -47,6 +55,13 @@ _SURFACE_ACTIVITY_DEFAULTS = {
         "proactive_intensity": 0.45,
         "next_wake_at": None,
         "conversation_style": "structured",
+        "expression": {
+            "tone_warmth": 0.34,
+            "directness": 0.84,
+            "brevity": 0.82,
+            "friendliness": 0.42,
+            "challenge_intensity": 0.78,
+        },
         "agenda_priority": None,
         "task_density_hint": 0.65,
     },
@@ -54,6 +69,13 @@ _SURFACE_ACTIVITY_DEFAULTS = {
         "proactive_intensity": 0.5,
         "next_wake_at": None,
         "conversation_style": "warm",
+        "expression": {
+            "tone_warmth": 0.68,
+            "directness": 0.58,
+            "brevity": 0.54,
+            "friendliness": 0.74,
+            "challenge_intensity": 0.52,
+        },
         "agenda_priority": None,
         "task_density_hint": 0.45,
     },
@@ -83,12 +105,14 @@ class AuroraRuntimeV1Service:
         decision_loop: AuroraDecisionLoop | None = None,
         chat_adapter: ChatLayerAdapter | None = None,
         dashboard_builder: DashboardReadoutBuilder | None = None,
+        self_model_service: SparkleSelfModelService | None = None,
         skill_registry: AuroraSkillRegistry | None = None,
     ):
         self.redis = redis_client
         self.decision_loop = decision_loop or AuroraDecisionLoop()
         self.chat_adapter = chat_adapter or ChatLayerAdapter()
         self.dashboard_builder = dashboard_builder or DashboardReadoutBuilder()
+        self.self_model_service = self_model_service or SparkleSelfModelService(redis_client)
         self.skill_registry = skill_registry or AuroraSkillRegistry()
 
     async def plan_turn(
@@ -120,6 +144,11 @@ class AuroraRuntimeV1Service:
         activity_profile.update(self._activity_payload(control_surface_reading.adjustable))
 
         candidate_affordances = self.skill_registry.load_candidate_affordances(surface)
+        self_model = await self.self_model_service.get_readout_summary(
+            user_id=user_id,
+            request_extra_context=request_extra_context,
+            user_context_payload=user_context_payload,
+        )
         readout = self.dashboard_builder.build(
             surface=surface,
             user_id=user_id,
@@ -132,6 +161,7 @@ class AuroraRuntimeV1Service:
             control_surface_reading=control_surface_reading,
             activity_profile=activity_profile,
             candidate_affordances=candidate_affordances,
+            self_model=self_model,
         )
 
         decision = await self.decision_loop.decide(readout)
@@ -232,9 +262,14 @@ class AuroraRuntimeV1Service:
         surface: str,
         request_extra_context: dict[str, Any],
     ) -> dict[str, Any]:
-        profile = dict(_SURFACE_ACTIVITY_DEFAULTS.get(surface, _SURFACE_ACTIVITY_DEFAULTS[AURORA_SURFACE_MODELING]))
+        profile = merge_activity_profile_payload(
+            _SURFACE_ACTIVITY_DEFAULTS.get(surface, _SURFACE_ACTIVITY_DEFAULTS[AURORA_SURFACE_MODELING]),
+            {},
+        )
         if request_extra_context.get("conversation_style") in {"warm", "structured", "exploratory"}:
             profile["conversation_style"] = request_extra_context["conversation_style"]
+        if isinstance(request_extra_context.get("expression"), dict):
+            profile = merge_activity_profile_payload(profile, {"expression": request_extra_context["expression"]})
         return profile
 
     def _with_surface_state(self, *, surface: str, request_extra_context: dict[str, Any]) -> dict[str, Any]:
@@ -264,11 +299,7 @@ class AuroraRuntimeV1Service:
         }
 
     def _merge_harness_updates(self, activity_profile: dict[str, Any], decision: AuroraDecision) -> dict[str, Any]:
-        merged = dict(activity_profile)
-        for key, value in (decision.harness_updates or {}).items():
-            if value not in (None, ""):
-                merged[key] = value
-        return merged
+        return merge_activity_profile_payload(activity_profile, decision.harness_updates or {})
 
     def _extract_informational_tensions(self, decision: AuroraDecision) -> list[dict[str, Any]]:
         if decision.modeling_complete:

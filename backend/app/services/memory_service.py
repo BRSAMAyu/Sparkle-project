@@ -930,15 +930,14 @@ class MemoryService:
             raise ValueError(f"Unsupported correction action: {action}")
 
         record.correction_count = (record.correction_count or 0) + 1
-        self.db.add(
-            MemoryCorrection(
-                user_id=user_id,
-                memory_type=kind,
-                memory_id=record.id,
-                action=action,
-                reason=reason,
-            )
+        correction_entry = MemoryCorrection(
+            user_id=user_id,
+            memory_type=kind,
+            memory_id=record.id,
+            action=action,
+            reason=reason,
         )
+        self.db.add(correction_entry)
 
         await self.db.commit()
         await self.db.refresh(record)
@@ -949,6 +948,18 @@ class MemoryService:
             memory_id=record.id,
             action=action,
         )
+        try:
+            from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+            from app.core.cache import cache_service
+
+            await SparkleSelfModelService(cache_service.redis).record_user_correction(
+                user_id=str(user_id),
+                signal_id=f"memory_correction:{correction_entry.id or record.id}:{action}",
+                reason=reason or action,
+                source="memory_correction",
+            )
+        except Exception as exc:
+            logger.warning("Failed to update Aurora self model for memory correction {}: {}", record.id, exc)
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(

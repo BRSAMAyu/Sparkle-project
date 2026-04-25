@@ -401,6 +401,22 @@ class TaskService:
             source_metadata=source_metadata,
         )
         await event_bus_reliable.publish("task.completed", event.to_dict())
+        try:
+            from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+
+            await SparkleSelfModelService(cache_service.redis).record_task_outcome(
+                user_id=str(db_obj.user_id),
+                signal_id=f"task.completed:{db_obj.id}:{db_obj.completed_at.isoformat() if db_obj.completed_at else actual_minutes}",
+                completed=True,
+                timed_out=bool(estimated > 0 and actual_minutes > estimated),
+                estimated_minutes=estimated,
+                actual_minutes=actual_minutes,
+                difficulty=db_obj.difficulty,
+                source="task.completed",
+                reason=note,
+            )
+        except Exception as exc:
+            logger.warning("Failed to update Aurora self model for completed task {}: {}", db_obj.id, exc)
         await publish_srl_event(
             user_id=db_obj.user_id,
             trigger_event_type="task.completed",
@@ -490,6 +506,26 @@ class TaskService:
             plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
         )
         await event_bus_reliable.publish("task.abandoned", event.to_dict())
+        try:
+            from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+
+            await SparkleSelfModelService(cache_service.redis).record_task_outcome(
+                user_id=str(db_obj.user_id),
+                signal_id=f"task.abandoned:{db_obj.id}:{db_obj.completed_at.isoformat() if db_obj.completed_at else time_spent}",
+                completed=False,
+                timed_out=bool(
+                    time_spent is not None
+                    and (db_obj.estimated_minutes or 0) > 0
+                    and time_spent > int(db_obj.estimated_minutes or 0)
+                ),
+                estimated_minutes=db_obj.estimated_minutes,
+                actual_minutes=time_spent,
+                difficulty=db_obj.difficulty,
+                source="task.abandoned",
+                reason=reason,
+            )
+        except Exception as exc:
+            logger.warning("Failed to update Aurora self model for abandoned task {}: {}", db_obj.id, exc)
         await publish_srl_event(
             user_id=db_obj.user_id,
             trigger_event_type="task.abandoned",

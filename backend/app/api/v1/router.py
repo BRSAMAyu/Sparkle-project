@@ -7,21 +7,21 @@ API v1 Router
 聚合所有 v1 版本的 API 路由
 """
 
-
 from fastapi import APIRouter
 
 from app.api.v1 import (
     accountability,
     achievements,
     agent_stats,
-    calendar,
-    cards,
     analytics,
     assets,
     audit,
+    aurora,
     auth,
     background_tasks,
+    calendar,
     capsules,
+    cards,
     chat,
     client_telemetry,
     cognitive,
@@ -33,10 +33,11 @@ from app.api.v1 import (
     devices,
     dlq_admin,
     error_book,
-    executions,
-    executions_admin,
     event_bus_health,
     events,
+    exam_sprint,
+    executions,
+    executions_admin,
     experiments,
     feedback_admin,
     files,
@@ -50,8 +51,8 @@ from app.api.v1 import (
     interventions,
     inventory,
     leaderboards,
-    learning_reports,
     learning_paths,
+    learning_reports,
     memory,
     memory_admin,
     memory_settings,
@@ -73,9 +74,9 @@ from app.api.v1 import (
     recommendations,
     seed_libraries,
     shop,
-    skills,
     signals,
     simulation,
+    skills,
     statistics,
     stt,
     subjects,
@@ -110,6 +111,7 @@ api_router.include_router(galaxy.router, tags=["galaxy"])
 api_router.include_router(error_book.router)  # Prefix is defined in router itself (/errors)
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+api_router.include_router(aurora.router)
 api_router.include_router(client_telemetry.router)
 api_router.include_router(signals.router)
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
@@ -128,6 +130,7 @@ api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitiv
 api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(growth.router, prefix="/growth", tags=["growth"])
+api_router.include_router(exam_sprint.router, prefix="/exam-sprint", tags=["exam-sprint"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(background_tasks.router, prefix="/background-tasks", tags=["background_tasks"])
 api_router.include_router(simulation.router)
@@ -199,6 +202,7 @@ async def api_root():
             "/capsules",
             "/omnibar",
             "/dashboard",
+            "/exam-sprint",
             "/multi-intent",
             "/prediction",
             "/predictive",

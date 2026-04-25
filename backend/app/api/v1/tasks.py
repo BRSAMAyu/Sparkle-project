@@ -595,6 +595,7 @@ async def create_or_refresh_task_guidance(
     return {"data": _serialize_task_guidance(guidance)}
 
 
+# route-tier: authed
 @router.post("/{task_id}/snooze", response_model=dict[str, Any])
 async def snooze_task(
     request: TaskSnoozeRequest | None = None,
@@ -628,7 +629,9 @@ async def snooze_task(
     return _action_response(action="snooze", message=message, task=task)
 
 
+# route-tier: authed
 @router.post("/{task_id}/too-hard", response_model=dict[str, Any])
+# route-tier: authed
 @router.post(
     "/{task_id}/too_hard",
     response_model=dict[str, Any],
@@ -667,6 +670,7 @@ async def mark_task_too_hard(
     )
 
 
+# route-tier: authed
 @router.post("/{task_id}/skip", response_model=dict[str, Any])
 async def skip_task(
     request: TaskQuickActionRequest | None = None,

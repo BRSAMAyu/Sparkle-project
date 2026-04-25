@@ -1216,6 +1216,7 @@ async def nudge_partner(
     }
 
 
+# route-tier: authed
 @router.post("/struggle-alerts/{notification_id}/encourage")
 async def encourage_from_struggle_alert(
     notification_id: UUID,
@@ -1322,6 +1323,7 @@ async def encourage_from_struggle_alert(
     }
 
 
+# route-tier: authed
 @router.post("/hints/{notification_id}/dismiss")
 async def dismiss_accountability_hint(
     notification_id: UUID,

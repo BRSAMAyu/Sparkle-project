@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 from datetime import datetime, timezone
 from typing import Any, Mapping
 from uuid import UUID
@@ -9,7 +10,14 @@ from zoneinfo import ZoneInfo
 from pydantic import Field, field_validator
 
 from app.aurora.common import AuroraSchemaBase
-from app.aurora.runtime_v1.state import ActivityProfile, build_aurora_runtime_metadata
+from app.aurora.runtime_v1.state import (
+    ActivityProfile,
+    AuroraTeachingStrategy,
+    build_aurora_runtime_metadata,
+    merge_activity_profile_payload,
+    merge_expression_settings,
+    normalize_expression_update,
+)
 from app.config import settings
 from app.services.personalization.preference_service import PreferenceService
 
@@ -133,8 +141,10 @@ class ControlSurfaceService:
         "proactive_intensity",
         "next_wake_at",
         "conversation_style",
+        "expression",
         "agenda_priority",
         "task_density_hint",
+        "strategy",
     }
 
     def __init__(
@@ -184,6 +194,8 @@ class ControlSurfaceService:
         bounds = hard_bounds or AuroraHardBounds()
         normalized: dict[str, Any] = {}
         errors: list[str] = []
+        expression_update: dict[str, float] | None = None
+        strategy_update: dict[str, bool] | None = None
 
         try:
             if "proactive_intensity" in updates:
@@ -192,12 +204,24 @@ class ControlSurfaceService:
                 normalized["task_density_hint"] = float(updates["task_density_hint"])
             if "conversation_style" in updates:
                 normalized["conversation_style"] = _normalize_text(updates["conversation_style"])
+            if "expression" in updates:
+                expression_update = normalize_expression_update(updates["expression"])
+                normalized["expression"] = merge_expression_settings(updates=expression_update)
             if "agenda_priority" in updates:
                 agenda_priority = _normalize_text(updates["agenda_priority"])
                 normalized["agenda_priority"] = agenda_priority or None
             if "next_wake_at" in updates:
                 normalized["next_wake_at"] = _coerce_datetime(updates["next_wake_at"])
-            normalized = ActivityProfile.model_validate(normalized).model_dump(mode="python")
+            if "strategy" in updates:
+                strategy_update = AuroraTeachingStrategy.model_validate(updates["strategy"]).model_dump(
+                    mode="python",
+                    exclude_unset=True,
+                )
+            normalized = ActivityProfile.model_validate(normalized).model_dump(mode="python", exclude_unset=True)
+            if expression_update is not None:
+                normalized["expression"] = expression_update
+            if strategy_update is not None:
+                normalized["strategy"] = strategy_update
         except Exception as exc:
             raise HarnessUpdateRejectedError([str(exc)]) from exc
 
@@ -224,9 +248,16 @@ class ControlSurfaceService:
         normalized = self.validate_harness_update(updates, hard_bounds=reading.hard_bounds)
 
         if self.enabled and self.redis is not None and normalized:
+            persisted = ActivityProfile.model_validate(
+                merge_activity_profile_payload(reading.adjustable.model_dump(mode="python"), normalized)
+            ).model_dump(mode="python")
             payload = {
-                key: value.isoformat() if isinstance(value, datetime) else ("" if value is None else str(value))
-                for key, value in normalized.items()
+                key: (
+                    value.isoformat()
+                    if isinstance(value, datetime)
+                    else (json.dumps(value, ensure_ascii=False) if isinstance(value, dict) else ("" if value is None else str(value)))
+                )
+                for key, value in persisted.items()
             }
             await self._redis_call("hset", self.control_key(user_id), mapping=payload)
             await self._redis_call("expire", self.control_key(user_id), self.CONTROL_TTL_SECONDS)
@@ -263,6 +294,19 @@ class ControlSurfaceService:
                 normalized_value = value
             if normalized_key == "next_wake_at":
                 normalized[normalized_key] = _coerce_datetime(normalized_value)
+            elif normalized_key == "expression":
+                try:
+                    parsed = json.loads(str(normalized_value))
+                except Exception:
+                    parsed = {}
+                normalized[normalized_key] = merge_expression_settings(updates=parsed if isinstance(parsed, Mapping) else {})
+            elif normalized_key == "strategy":
+                try:
+                    parsed = json.loads(str(normalized_value))
+                except Exception:
+                    continue
+                if isinstance(parsed, Mapping):
+                    normalized[normalized_key] = dict(parsed)
             else:
                 normalized[normalized_key] = normalized_value
         return normalized

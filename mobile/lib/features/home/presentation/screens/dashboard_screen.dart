@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
+import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_strip.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
@@ -433,6 +434,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           [
                             ...growthSections,
                             ...dashboardSections,
+                            const AuroraCalibrationStrip(),
                           ],
                         ),
                       ),

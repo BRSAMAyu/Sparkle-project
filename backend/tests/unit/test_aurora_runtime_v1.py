@@ -99,6 +99,27 @@ def _make_state(*, user_id, surface: str, conversation_id: str, session_suffix: 
     )
 
 
+def test_activity_profile_expression_defaults_round_trip() -> None:
+    profile = ActivityProfile(expression={"directness": 0.82, "brevity": 0.9})
+
+    assert profile.expression["directness"] == pytest.approx(0.82)
+    assert profile.expression["brevity"] == pytest.approx(0.9)
+    assert profile.expression["tone_warmth"] == pytest.approx(0.68)
+    assert profile.expression["friendliness"] == pytest.approx(0.74)
+    assert profile.expression["challenge_intensity"] == pytest.approx(0.36)
+
+    dumped = profile.model_dump(mode="python")
+
+    assert set(dumped["expression"].keys()) == {
+        "tone_warmth",
+        "directness",
+        "brevity",
+        "friendliness",
+        "challenge_intensity",
+    }
+    assert ActivityProfile.model_validate(dumped).expression["directness"] == pytest.approx(0.82)
+
+
 @pytest.mark.asyncio
 async def test_runtime_state_isolated_by_surface_and_conversation_id(test_user) -> None:
     redis = _FakeRedis()
@@ -215,6 +236,21 @@ async def test_illegal_harness_update_is_rejected(db_session, test_user) -> None
         )
 
     assert "privacy boundary" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_control_surface_expression_update_round_trips(db_session, test_user) -> None:
+    service = ControlSurfaceService(db_session, redis=_FakeRedis(), enabled=True)
+
+    reading = await service.apply_harness_update(
+        test_user.id,
+        {"expression": {"directness": 0.92, "brevity": 0.88}},
+    )
+
+    assert reading.adjustable.expression["directness"] == pytest.approx(0.92)
+    assert reading.adjustable.expression["brevity"] == pytest.approx(0.88)
+    assert reading.adjustable.expression["tone_warmth"] == pytest.approx(0.68)
+    assert reading.adjustable.expression["friendliness"] == pytest.approx(0.74)
 
 
 @pytest.mark.asyncio

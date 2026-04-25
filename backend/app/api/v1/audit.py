@@ -53,7 +53,7 @@ async def reject_avatar(
         raise HTTPException(status_code=404, detail="没有找到待审核的用户")
     return user
 
-
+# route-tier: authed
 @router.get("/kill-switch-readiness")
 async def get_kill_switch_readiness(
     _admin=Depends(admin_required),

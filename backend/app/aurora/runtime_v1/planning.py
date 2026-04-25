@@ -14,6 +14,9 @@ from app.aurora.runtime_v1.state import (
     ActivityProfile as PersistedActivityProfile,
 )
 from app.aurora.runtime_v1.state import (
+    AuroraTeachingStrategy as PersistedTeachingStrategy,
+)
+from app.aurora.runtime_v1.state import (
     AuroraIntent as PersistedAuroraIntent,
 )
 from app.aurora.runtime_v1.state import (
@@ -25,6 +28,7 @@ from app.aurora.runtime_v1.state import (
 from app.aurora.runtime_v1.state import (
     LatentThread as PersistedLatentThread,
 )
+from app.aurora.runtime_v1.state import default_activity_expression, merge_expression_settings
 
 AURORA_PLANNING_SURFACE = "aurora_planning"
 AURORA_RUNTIME_TTL_SECONDS = 24 * 60 * 60
@@ -100,6 +104,25 @@ def _safe_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _default_strategy_payload() -> dict[str, bool]:
+    return PersistedTeachingStrategy().model_dump(mode="python")
+
+
+def _normalize_strategy_payload(value: Any, *, include_defaults: bool) -> dict[str, bool]:
+    if not isinstance(value, dict):
+        return _default_strategy_payload() if include_defaults else {}
+    strategy = PersistedTeachingStrategy.model_validate(value)
+    return strategy.model_dump(mode="python", exclude_unset=not include_defaults)
+
+
+def _merge_strategy_payload(current: dict[str, bool] | None, updates: Any) -> dict[str, bool]:
+    merged = _default_strategy_payload()
+    if isinstance(current, dict):
+        merged.update(_normalize_strategy_payload(current, include_defaults=False))
+    merged.update(_normalize_strategy_payload(updates, include_defaults=False))
+    return merged
 
 
 def _serialize_payload(payload: dict[str, Any]) -> str:
@@ -182,8 +205,10 @@ class AuroraActivityProfile:
     proactive_intensity: float = 0.6
     next_wake_at: str | None = None
     conversation_style: str = "structured"
+    expression: dict[str, float] = field(default_factory=default_activity_expression)
     agenda_priority: str | None = None
     task_density_hint: float = 0.7
+    strategy: dict[str, bool] = field(default_factory=_default_strategy_payload)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -194,8 +219,10 @@ class AuroraActivityProfile:
             proactive_intensity=max(0.0, min(1.0, _safe_float(payload.get("proactive_intensity"), 0.6))),
             next_wake_at=_coerce_iso(payload.get("next_wake_at")),
             conversation_style=_strip(payload.get("conversation_style")) or "structured",
+            expression=merge_expression_settings(updates=payload.get("expression")),
             agenda_priority=_strip(payload.get("agenda_priority")) or None,
             task_density_hint=max(0.0, min(1.0, _safe_float(payload.get("task_density_hint"), 0.7))),
+            strategy=_normalize_strategy_payload(payload.get("strategy"), include_defaults=True),
         )
 
 
@@ -495,10 +522,14 @@ class AuroraRuntimePlanningAdapter:
             profile.next_wake_at = _coerce_iso(updates.get("next_wake_at"))
         if _strip(updates.get("conversation_style")):
             profile.conversation_style = _strip(updates.get("conversation_style"))
+        if isinstance(updates.get("expression"), dict):
+            profile.expression = merge_expression_settings(profile.expression, updates.get("expression"))
         if "agenda_priority" in updates:
             profile.agenda_priority = _strip(updates.get("agenda_priority")) or None
         if "task_density_hint" in updates:
             profile.task_density_hint = max(0.0, min(1.0, _safe_float(updates.get("task_density_hint"), profile.task_density_hint)))
+        if "strategy" in updates:
+            profile.strategy = _merge_strategy_payload(profile.strategy, updates.get("strategy"))
         await self.save_state(state, db=db)
         return state
 
@@ -827,10 +858,14 @@ class AuroraRuntimePlanningAdapter:
             profile.next_wake_at = _coerce_iso(updates.get("next_wake_at"))
         if _strip(updates.get("conversation_style")):
             profile.conversation_style = _strip(updates.get("conversation_style"))
+        if isinstance(updates.get("expression"), dict):
+            profile.expression = merge_expression_settings(profile.expression, updates.get("expression"))
         if "agenda_priority" in updates:
             profile.agenda_priority = _strip(updates.get("agenda_priority")) or None
         if "task_density_hint" in updates:
             profile.task_density_hint = max(0.0, min(1.0, _safe_float(updates.get("task_density_hint"), profile.task_density_hint)))
+        if "strategy" in updates:
+            profile.strategy = _merge_strategy_payload(profile.strategy, updates.get("strategy"))
 
     def _mark_tension_attempted(self, state: AuroraRuntimePlanningState, domain: str | None) -> bool:
         normalized_domain = _strip(domain)

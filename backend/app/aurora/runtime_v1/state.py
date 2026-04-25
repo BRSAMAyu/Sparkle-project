@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import json
 from datetime import datetime, timezone
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 from uuid import UUID
 
 from pydantic import Field, field_validator
@@ -25,6 +25,28 @@ AuroraIntentType = Literal[
 ConversationStyle = Literal["warm", "structured", "exploratory"]
 WakeStatus = Literal["pending", "executed", "cancelled", "suppressed"]
 StreamingStatus = Literal["idle", "emitting", "waiting_user"]
+ExpressionDimension = Literal[
+    "tone_warmth",
+    "directness",
+    "brevity",
+    "friendliness",
+    "challenge_intensity",
+]
+
+EXPRESSION_DIMENSIONS: tuple[ExpressionDimension, ...] = (
+    "tone_warmth",
+    "directness",
+    "brevity",
+    "friendliness",
+    "challenge_intensity",
+)
+DEFAULT_ACTIVITY_EXPRESSION: dict[ExpressionDimension, float] = {
+    "tone_warmth": 0.68,
+    "directness": 0.48,
+    "brevity": 0.55,
+    "friendliness": 0.74,
+    "challenge_intensity": 0.36,
+}
 
 
 def _utcnow() -> datetime:
@@ -42,6 +64,72 @@ def _normalize_user_id(value: UUID | str) -> str:
     if not text:
         raise ValueError("user_id is required")
     return text
+
+
+def default_activity_expression() -> dict[str, float]:
+    return dict(DEFAULT_ACTIVITY_EXPRESSION)
+
+
+def normalize_expression_update(value: Any) -> dict[str, float]:
+    if value in (None, ""):
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError("expression must be a mapping")
+
+    unknown = sorted(str(key) for key in value.keys() if str(key) not in EXPRESSION_DIMENSIONS)
+    if unknown:
+        raise ValueError(f"unsupported expression field: {unknown[0]}")
+
+    normalized: dict[str, float] = {}
+    for key in EXPRESSION_DIMENSIONS:
+        if key not in value:
+            continue
+        try:
+            numeric = float(value[key])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"expression.{key} must be numeric") from exc
+        if not 0.0 <= numeric <= 1.0:
+            raise ValueError(f"expression.{key} must be within [0.0, 1.0]")
+        normalized[key] = numeric
+    return normalized
+
+
+def merge_expression_settings(
+    base: Mapping[str, Any] | None = None,
+    updates: Mapping[str, Any] | None = None,
+) -> dict[str, float]:
+    merged = default_activity_expression()
+    if isinstance(base, Mapping):
+        merged.update(normalize_expression_update(base))
+    if isinstance(updates, Mapping):
+        merged.update(normalize_expression_update(updates))
+    return merged
+
+
+def merge_activity_profile_payload(
+    base: Mapping[str, Any] | None = None,
+    updates: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    merged = dict(base or {})
+    merged["expression"] = merge_expression_settings(merged.get("expression"))
+    if not isinstance(updates, Mapping):
+        return merged
+
+    for key, value in updates.items():
+        if key == "expression":
+            if isinstance(value, Mapping):
+                merged["expression"] = merge_expression_settings(merged.get("expression"), value)
+            continue
+        if key == "strategy":
+            if isinstance(value, Mapping):
+                base_strategy = dict(merged.get("strategy") or {}) if isinstance(merged.get("strategy"), Mapping) else {}
+                base_strategy.update(dict(value))
+                merged["strategy"] = base_strategy
+            continue
+        if value in (None, ""):
+            continue
+        merged[str(key)] = value
+    return merged
 
 
 class InformationalTension(AuroraSchemaBase):
@@ -111,12 +199,24 @@ class LatentThread(AuroraSchemaBase):
         return numeric
 
 
+class AuroraTeachingStrategy(AuroraSchemaBase):
+    concept_first: bool = False
+    problem_first: bool = False
+    worked_example_first: bool = False
+    retrieval_practice: bool = False
+    interleaving: bool = False
+    spaced_review: bool = False
+    error_analysis_required: bool = False
+
+
 class ActivityProfile(AuroraSchemaBase):
     proactive_intensity: float = 0.6
     next_wake_at: datetime | None = None
     conversation_style: ConversationStyle = "warm"
+    expression: dict[str, float] = Field(default_factory=default_activity_expression)
     agenda_priority: str | None = None
     task_density_hint: float = 0.7
+    strategy: AuroraTeachingStrategy = Field(default_factory=AuroraTeachingStrategy)
 
     @field_validator("proactive_intensity", "task_density_hint")
     @classmethod
@@ -133,6 +233,13 @@ class ActivityProfile(AuroraSchemaBase):
             return None
         text = _normalize_text(value)
         return text or None
+
+    @field_validator("expression", mode="before")
+    @classmethod
+    def _normalize_expression(cls, value: Any) -> dict[str, float]:
+        if value in (None, ""):
+            return default_activity_expression()
+        return merge_expression_settings(updates=normalize_expression_update(value))
 
 
 class ScheduledWake(AuroraSchemaBase):

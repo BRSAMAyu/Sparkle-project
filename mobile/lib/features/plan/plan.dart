@@ -5,6 +5,7 @@ export 'presentation/providers/sprint_actions_provider.dart';
 export 'presentation/providers/sprint_history_provider.dart';
 export 'presentation/providers/sprint_statistics_provider.dart';
 export 'presentation/screens/growth_screen.dart';
+export 'presentation/screens/exam_sprint_setup_screen.dart';
 export 'presentation/screens/plan_create_screen.dart';
 export 'presentation/screens/plan_detail_screen.dart';
 export 'presentation/screens/plan_edit_screen.dart';

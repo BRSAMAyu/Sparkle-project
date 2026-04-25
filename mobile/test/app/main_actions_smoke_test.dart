@@ -28,6 +28,7 @@ import 'package:sparkle/features/community/presentation/screens/create_group_scr
 import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
 import 'package:sparkle/features/home/data/repositories/notification_repository.dart';
+import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/notification_list_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
@@ -350,6 +351,23 @@ Future<void> _pumpPage(
   final container = ProviderContainer(
     overrides: [
       authProvider.overrideWith((ref) => _FakeAuthNotifier()),
+      homeGrowthDashboardSnapshotProvider.overrideWith(
+        (ref) => <String, dynamic>{},
+      ),
+      homeDailyContextLineProvider.overrideWith(
+        (ref) => HomeDailyContextLine.fallback(),
+      ),
+      homeActivePlanStatusProvider.overrideWith((ref) => null),
+      homeTodayTasksSnapshotProvider.overrideWith(
+        (ref) => const HomeTodayTasksSnapshot.empty(),
+      ),
+      homeStreakProvider.overrideWith((ref) => 0),
+      homePlanBottlenecksProvider.overrideWith(
+        (ref) => const <HomeBottleneck>[],
+      ),
+      homeGrowthStateProvider.overrideWith(
+        (ref) => const HomeGrowthState.empty(),
+      ),
       ...overrides,
     ],
   );

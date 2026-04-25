@@ -27,6 +27,23 @@ except ModuleNotFoundError:
     pass
 
 try:
+    from app.aurora.runtime_v1.self_model import (
+        DEFAULT_STRATEGY_CONFIDENCE,
+        SPARKLE_SELF_MODEL_KEY_TEMPLATE,
+        SPARKLE_SELF_MODEL_TTL_SECONDS,
+        SparkleSelfModelService,
+    )
+
+    _export(
+        "DEFAULT_STRATEGY_CONFIDENCE",
+        "SPARKLE_SELF_MODEL_KEY_TEMPLATE",
+        "SPARKLE_SELF_MODEL_TTL_SECONDS",
+        "SparkleSelfModelService",
+    )
+except ModuleNotFoundError:
+    pass
+
+try:
     from app.aurora.runtime_v1.state import (
         ActivityProfile,
         AuroraCognitiveSnapshot,

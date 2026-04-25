@@ -9,6 +9,7 @@ from loguru import logger
 
 from app.aurora.runtime_v1.dashboard import DashboardReadout, canonicalize_runtime_domain
 from app.aurora.runtime_v1.decision_loop import AuroraDecision
+from app.aurora.runtime_v1.state import merge_activity_profile_payload, merge_expression_settings
 from app.core.agent_profiles import AgentRole, TaskType
 from app.services.llm_service import get_configured_llm_service
 
@@ -55,7 +56,7 @@ class ChatLayerAdapter:
         if decision.action in {"wait", "drop_thread"}:
             return []
 
-        prompt = self._build_prompt(decision, readout)
+        prompt = self._build_render_prompt(decision, readout)
         try:
             llm = await self._resolve_llm()
             raw = await llm.chat_json(prompt, temperature=self.temperature)
@@ -70,18 +71,33 @@ class ChatLayerAdapter:
         return await self._fallback_messages(decision=decision, readout=readout, reason="empty_or_invalid_llm_output")
 
     def _build_prompt(self, decision: AuroraDecision, readout: DashboardReadout) -> list[dict[str, str]]:
+        return self._build_render_prompt(decision, readout)
+
+    def _build_render_prompt(self, decision: AuroraDecision, readout: DashboardReadout) -> list[dict[str, str]]:
+        effective_profile = self._effective_activity_profile(decision, readout)
+        expression_controls = merge_expression_settings(effective_profile.get("expression"))
         system = (
             "You are Sparkle's chat layer adapter. Aurora has already made the cognitive decision. "
             "Write 1-3 short, natural, non-overlapping messages for the user. "
             "Every message must stand on its own as a complete thought. Do not split one sentence across messages. "
             "Adjacent messages must add different value instead of paraphrasing each other. "
             "Do not expose internal decision fields. "
+            "Follow expression_controls first when calibrating tone; treat the legacy conversation_style only as a coarse fallback hint. "
+            "Honor teaching_strategy when wording the next move: concept_first means lead with a concise concept scaffold "
+            "before practice, problem_first means move directly into practice, worked_example_first means start with a "
+            "solved example, retrieval_practice means use recall or mini-test language, interleaving means mix nearby "
+            "types, spaced_review means briefly resurface earlier material, and error_analysis_required means explicitly "
+            "name the mistake-diagnosis step before more drills. "
             "Stay task-level and avoid clinical, personality, or social-identity inference. "
             'Return JSON: {"messages": ["..."]}.'
         )
         user = {
             "surface": readout.surface,
-            "style": readout.activity_profile.get("conversation_style"),
+            "style": effective_profile.get("conversation_style"),
+            "activity_profile": effective_profile,
+            "teaching_strategy": self._teaching_strategy(effective_profile),
+            "expression_controls": expression_controls,
+            "expression_instruction": self._build_expression_instruction(expression_controls),
             "user_message": readout.user_message,
             "decision": decision.to_payload(),
             "dashboard_digest": {
@@ -102,6 +118,54 @@ class ChatLayerAdapter:
             {"role": "system", "content": system},
             {"role": "user", "content": json.dumps(user, ensure_ascii=False, default=str)},
         ]
+
+    def _effective_activity_profile(self, decision: AuroraDecision, readout: DashboardReadout) -> dict[str, Any]:
+        profile = merge_activity_profile_payload(readout.activity_profile, {})
+        return merge_activity_profile_payload(profile, decision.harness_updates or {})
+
+    def _build_expression_instruction(self, expression: dict[str, float]) -> str:
+        tone_warmth = float(expression.get("tone_warmth", 0.0))
+        directness = float(expression.get("directness", 0.0))
+        brevity = float(expression.get("brevity", 0.0))
+        friendliness = float(expression.get("friendliness", 0.0))
+        challenge_intensity = float(expression.get("challenge_intensity", 0.0))
+
+        guidance: list[str] = [
+            "Primary expression control.",
+            f"tone_warmth={tone_warmth:.2f}, directness={directness:.2f}, brevity={brevity:.2f}, friendliness={friendliness:.2f}, challenge_intensity={challenge_intensity:.2f}.",
+        ]
+
+        if directness >= 0.7:
+            guidance.append("Lead with the answer, decision, or next step instead of easing in slowly.")
+        elif directness <= 0.35:
+            guidance.append("Use softer transitions and invitational phrasing instead of blunt directives.")
+        else:
+            guidance.append("Balance clarity with a light amount of framing.")
+
+        if brevity >= 0.7:
+            guidance.append("Keep it concise and cut filler, hedging, and repeated reassurance.")
+        elif brevity <= 0.35:
+            guidance.append("Add a little context or explanation when it helps the user stay oriented.")
+
+        if tone_warmth >= 0.7:
+            guidance.append("Sound noticeably warm and emotionally containing.")
+        elif tone_warmth <= 0.35:
+            guidance.append("Keep warmth light and do not over-cushion the message.")
+
+        if friendliness >= 0.7:
+            guidance.append("Let the tone feel friendly and companionable.")
+        elif friendliness <= 0.35:
+            guidance.append("Stay neutral-professional, not chatty.")
+
+        if tone_warmth <= 0.35 and friendliness <= 0.4 and directness >= 0.7:
+            guidance.append("Do not add extra encouragement or praise unless it materially helps.")
+
+        if challenge_intensity >= 0.7:
+            guidance.append("Increase action pressure a bit: move the user toward a concrete next move or clear constraint.")
+        elif challenge_intensity <= 0.35:
+            guidance.append("Reduce pressure: support first, then invite the next step gently.")
+
+        return " ".join(guidance)
 
     def _extract_messages(self, raw: Any) -> list[str]:
         if isinstance(raw, dict):
@@ -206,6 +270,13 @@ class ChatLayerAdapter:
             return ["这个检查点我先记下。我们只抓最关键的偏差，别把复盘变成新的负担。"]
         if target_domain in _DOMAIN_FALLBACK_QUESTIONS:
             return [_DOMAIN_FALLBACK_QUESTIONS[target_domain]]
+        strategy = self._teaching_strategy(self._effective_activity_profile(decision, readout))
+        if strategy.get("worked_example_first"):
+            return ["我们先看一道完整例题，跟着走一遍，再决定下一步补哪块。"]
+        if strategy.get("problem_first"):
+            return ["这轮先不铺太多，我们直接做几道小题，做错的地方我再带你拆。"]
+        if strategy.get("concept_first"):
+            return ["这轮我先把关键概念钉稳，再马上接一个小检查题。"]
         return ["我先把这部分记住。你不用一次讲完整，我们会边走边把关键线索补齐。"]
 
     def _target_domain(self, decision: AuroraDecision) -> str | None:
@@ -235,6 +306,10 @@ class ChatLayerAdapter:
             "time": "时间约束",
             "motivation": "动机",
         }.get(str(domain or ""))
+
+    def _teaching_strategy(self, activity_profile: dict[str, Any]) -> dict[str, bool]:
+        strategy = activity_profile.get("strategy")
+        return dict(strategy) if isinstance(strategy, dict) else {}
 
     async def _resolve_llm(self) -> Any:
         service_or_awaitable = self.llm_factory()

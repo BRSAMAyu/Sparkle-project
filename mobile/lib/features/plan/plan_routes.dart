@@ -6,6 +6,7 @@ import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
+import 'package:sparkle/features/plan/presentation/screens/exam_sprint_setup_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_create_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
@@ -24,8 +25,25 @@ class PlanRoutes {
   static const String sprint = '/sprint';
   static const String sprintHistory = '/sprint/history';
   static const String growth = '/growth';
+  static const String examSprintSetup = '/exam-sprint/setup';
 
   static List<RouteBase> get routes => [
+        GoRoute(
+          path: examSprintSetup,
+          name: 'examSprintSetup',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            motionToken: SparkleMotionToken.scene,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.plan,
+              ),
+              child: const ExamSprintSetupScreen(),
+            ),
+            type: SharedAxisTransitionType.scaled,
+          ),
+        ),
         // Plan create (modal-like, full-screen)
         GoRoute(
           path: planCreate,

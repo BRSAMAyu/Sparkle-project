@@ -113,8 +113,13 @@ async def test_memory_inferred_write_lane_respects_feature_flag(db_session, monk
 async def test_memory_inferred_revoke_hides_from_prompt_read_path(db_session, monkeypatch):
     monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED", True, raising=False)
     monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED", False, raising=False)
-    monkeypatch.setattr(settings, "SPARKLE_WORKING_MEMORY_ENABLED", False, raising=False)
-    monkeypatch.setattr("app.services.aurora_stage19_kill_switch_service.cache_service.redis", None)
+    # Directly ensure the working-memory kill switch returns False so the L1
+    # (episodic) write path is taken instead of the working-memory pipeline.
+    from unittest.mock import AsyncMock
+
+    from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
+
+    monkeypatch.setattr(AuroraStage19KillSwitchService, "is_enabled", AsyncMock(return_value=False))
 
     user = await _create_user(db_session)
     session_id = uuid4()

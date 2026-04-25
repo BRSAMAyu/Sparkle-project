@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
 import json
 from datetime import date, datetime
@@ -17,8 +18,9 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
-from app.core.cache import cache_service
+from app.api.v1.accountability import _build_relationship_summary
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.core.cache import cache_service
 from app.core.metrics import METACOG_DASHBOARD_VIEW_TOTAL
 from app.models.accountability import (
     AccountabilityPartnership,
@@ -26,11 +28,12 @@ from app.models.accountability import (
     AccountabilityStatus,
 )
 from app.models.card_protocol import InterventionAcceptanceStatus, InterventionRecord
-from app.models.chat import ChatMessage, ChatSession as ChatSessionModel, MessageRole
+from app.models.chat import ChatMessage, MessageRole
+from app.models.chat import ChatSession as ChatSessionModel
 from app.models.user import User
-from app.api.v1.accountability import _build_relationship_summary
 from app.orchestration.session_state_mixin import SessionStateMixin
 from app.services.cognitive_service import CognitiveService
+from app.services.insight_copy import present_pattern_name
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.llm_service import get_configured_llm_service_for_tier
 from app.services.memory_service import MemoryService
@@ -43,7 +46,6 @@ from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 from app.services.profile_insight_control_service import ProfileInsightControlService
 from app.services.profile_write_service import ProfileWriteService
-from app.services.insight_copy import present_pattern_name
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.traits_coldstart_service import (
     COLDSTART_QUESTIONS,
@@ -59,7 +61,7 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 def _snippet(value: str, limit: int = 80) -> str:
     if not value:
         return ""
-    return value if len(value) <= limit else f"{value[:limit - 1]}…"
+    return value if len(value) <= limit else f"{value[: limit - 1]}…"
 
 
 def _strip(value: Any) -> str:
@@ -98,9 +100,7 @@ def _is_chat_opening_update(update: dict[str, Any]) -> bool:
     if not isinstance(update, dict):
         return False
     update_type = str(update.get("type") or "").strip()
-    metadata = (
-        update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
-    )
+    metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
     evolution_kind = str(metadata.get("evolution_kind") or "").strip()
     return update_type == "plan_adjusted_from_error" or evolution_kind in {
         "adjustment",
@@ -128,9 +128,7 @@ def _extract_intervention_id(updates: list[dict[str, Any]]) -> UUID | None:
     for update in updates:
         if not isinstance(update, dict):
             continue
-        metadata = (
-            update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
-        )
+        metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
         raw = metadata.get("intervention_id")
         if not raw:
             continue
@@ -261,9 +259,7 @@ def _build_first_session_message(
     lines = [f"你好！我已经了解你想推进「{goal}」这个{goal_label}目标。"]
     if level_label:
         lines.append(f"你目前{level_label}，我会根据这个来调整节奏和难度。")
-    lines.append(
-        f"我们用{time_label}来开始——先告诉我：你现在这个目标里，觉得最卡住的是哪一块？"
-    )
+    lines.append(f"我们用{time_label}来开始——先告诉我：你现在这个目标里，觉得最卡住的是哪一块？")
     return "\n".join(lines)
 
 
@@ -315,9 +311,7 @@ async def _generate_first_session_message(
         {"role": "user", "content": "\n".join(summary_bits)},
     ]
     try:
-        message = await asyncio.wait_for(
-            llm.chat(messages, temperature=0.3), timeout=8.0
-        )
+        message = await asyncio.wait_for(llm.chat(messages, temperature=0.3), timeout=8.0)
         message = " ".join((message or "").split())
         return message if message else fallback
     except Exception:
@@ -379,9 +373,7 @@ async def _generate_onboarding_preview(
     ]
 
     try:
-        preview = await asyncio.wait_for(
-            llm.chat(messages, temperature=0.2), timeout=8.0
-        )
+        preview = await asyncio.wait_for(llm.chat(messages, temperature=0.2), timeout=8.0)
         preview = " ".join((preview or "").split())
         if not preview:
             return fallback, "fallback", True
@@ -415,10 +407,7 @@ def _editability_meta(
         包含可编辑性元数据的字典
     """
     score = (
-        0.4 * _source_score(source)
-        + 0.3 * confidence
-        - 0.2 * _risk_score(risk_level)
-        + 0.1 * _field_score(field_type)
+        0.4 * _source_score(source) + 0.3 * confidence - 0.2 * _risk_score(risk_level) + 0.1 * _field_score(field_type)
     )
     if score > 0.6:
         level = "editable"
@@ -542,28 +531,20 @@ def _coerce_preference_value(pref_key: str, value: Any) -> dict[str, Any]:
 
 
 def _display_preference_value(pref_key: str, value: Any) -> Any:
-    if (
-        pref_key == "study_time_preference"
-        and isinstance(value, dict)
-        and "minutes" in value
-    ):
+    if pref_key == "study_time_preference" and isinstance(value, dict) and "minutes" in value:
         return value.get("minutes")
     if isinstance(value, dict) and set(value.keys()) == {"value"}:
         return value.get("value")
     return value
 
 
-def _merge_preferences(
-    explicit: dict[str, Any], inferred: dict[str, Any]
-) -> dict[str, Any]:
+def _merge_preferences(explicit: dict[str, Any], inferred: dict[str, Any]) -> dict[str, Any]:
     merged = dict(inferred or {})
     merged.update(explicit or {})
     return merged
 
 
-def _merge_scope_overrides(
-    merged_preferences: dict[str, Any], target_id: str, scope: str | None
-) -> dict[str, Any]:
+def _merge_scope_overrides(merged_preferences: dict[str, Any], target_id: str, scope: str | None) -> dict[str, Any]:
     current = dict(merged_preferences.get("insight_scope_overrides") or {})
     if scope:
         current[target_id] = {"scope": scope}
@@ -668,6 +649,10 @@ _SOURCE_PATTERN_LABELS = {
     "behavior_pattern": "行为模式",
 }
 
+_RESERVED_INFERRED_KEYS = {
+    "self_model",
+}
+
 
 def _present_value_text(value: Any) -> str:
     if isinstance(value, str):
@@ -677,47 +662,39 @@ def _present_value_text(value: Any) -> str:
     if isinstance(value, list):
         return "、".join(str(item) for item in value[:5]) if value else "暂无"
     if isinstance(value, dict):
-        return (
-            "；".join(f"{key}: {raw}" for key, raw in list(value.items())[:5])
-            if value
-            else "暂无"
-        )
+        return "；".join(f"{key}: {raw}" for key, raw in list(value.items())[:5]) if value else "暂无"
     return str(value)
 
 
 def _localize_inferred_explanation(key: str, value: Any, fallback: str) -> str:
     label = _INFERRED_KEY_LABELS.get(key, key)
     if key == "achievement_peak_hours" and isinstance(value, list):
-        return f"系统观察到你最近更常在 { _present_value_text(value) } 解锁成就，这些时段会被视为更容易形成正反馈的窗口。"
+        return f"系统观察到你最近更常在 {_present_value_text(value)} 解锁成就，这些时段会被视为更容易形成正反馈的窗口。"
     if key == "achievement_motivation_response":
-        return f"最近成就行为显示，你更容易被「{ _present_value_text(value) }」这类反馈方式带动。"
+        return f"最近成就行为显示，你更容易被「{_present_value_text(value)}」这类反馈方式带动。"
     if key == "achievement_pace_style":
-        return f"结合最近的成就节奏，系统判断你当前更接近 { _present_value_text(value) } 的推进方式。"
+        return f"结合最近的成就节奏，系统判断你当前更接近 {_present_value_text(value)} 的推进方式。"
     if key == "achievement_reward_sensitivity":
-        return f"根据最近成就的稀有度与分享行为，系统认为你对奖励反馈的敏感度大约是 { _present_value_text(value) }。"
+        return f"根据最近成就的稀有度与分享行为，系统认为你对奖励反馈的敏感度大约是 {_present_value_text(value)}。"
     if key == "peak_focus_hours" and isinstance(value, list):
-        return f"系统根据最近专注记录判断，你更容易进入状态的时间集中在 { _present_value_text(value) }。"
+        return f"系统根据最近专注记录判断，你更容易进入状态的时间集中在 {_present_value_text(value)}。"
     if key == "chat_active_hours" and isinstance(value, list):
-        return f"系统观察到你最近更常在 { _present_value_text(value) } 发起对话，这些时段会被视为更自然的互动窗口。"
+        return f"系统观察到你最近更常在 {_present_value_text(value)} 发起对话，这些时段会被视为更自然的互动窗口。"
     if key == "error_density_score":
-        return f"最近错题密度约为 { _present_value_text(value) }，偏高时系统会放慢节奏并提高复盘优先级。"
+        return f"最近错题密度约为 {_present_value_text(value)}，偏高时系统会放慢节奏并提高复盘优先级。"
     if key == "error_correction_rate":
-        return f"最近错题纠正率约为 { _present_value_text(value) }，这会影响系统对你复盘力度的判断。"
+        return f"最近错题纠正率约为 {_present_value_text(value)}，这会影响系统对你复盘力度的判断。"
     if key == "recurring_error_tags" and isinstance(value, list):
-        return f"系统最近识别到这些高频错误模式：{ _present_value_text(value) }。"
+        return f"系统最近识别到这些高频错误模式：{_present_value_text(value)}。"
     if key == "social_learning_preference":
-        return (
-            f"从最近互动看，你对社交式学习的偏好约为 { _present_value_text(value) }。"
-        )
+        return f"从最近互动看，你对社交式学习的偏好约为 {_present_value_text(value)}。"
     if key == "depth_preference_signal":
-        return (
-            "系统发现你常常围绕同一主题连续追问，因此会更倾向于提供更深入、分层的解释。"
-        )
+        return "系统发现你常常围绕同一主题连续追问，因此会更倾向于提供更深入、分层的解释。"
     if key == "response_satisfaction_rate":
-        return f"结合最近聊天反馈，系统估计你当前的回答满意度约为 { _present_value_text(value) }。"
+        return f"结合最近聊天反馈，系统估计你当前的回答满意度约为 {_present_value_text(value)}。"
     if fallback and any("\u4e00" <= ch <= "\u9fff" for ch in fallback):
         return fallback
-    return f"系统根据最近行为推断出「{label}」目前约为 { _present_value_text(value) }。"
+    return f"系统根据最近行为推断出「{label}」目前约为 {_present_value_text(value)}。"
 
 
 def _present_source_pattern_label(value: str) -> str:
@@ -746,10 +723,10 @@ def _build_inferred_entries(
 
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
-    all_keys = (
-        set(inferred.keys()) | set(backups.keys()) | set(baseline_inferred.keys())
-    )
+    all_keys = set(inferred.keys()) | set(backups.keys()) | set(baseline_inferred.keys())
     for key in sorted(all_keys):
+        if key in _RESERVED_INFERRED_KEYS:
+            continue
         meta = INFERRED_META.get(key)
         source = meta.source if meta is not None else "behavior"
         adjustable = meta.adjustable if meta is not None else False
@@ -758,9 +735,7 @@ def _build_inferred_entries(
         backup_value = backups.get(key, {}).get("value")
         effective_value = explicit.get(key) if overridden else stored_value
         display_value = _normalize_inferred_display_value(effective_value)
-        explanation_value = (
-            backup_value if overridden and backup_value is not None else stored_value
-        )
+        explanation_value = backup_value if overridden and backup_value is not None else stored_value
         explanation = build_inferred_explanation(
             key,
             explanation_value,
@@ -776,9 +751,7 @@ def _build_inferred_entries(
                 "value": display_value,
                 "source": source,
                 "source_label": _INFERRED_SOURCE_LABELS.get(source, source),
-                "explanation": _localize_inferred_explanation(
-                    key, display_value, explanation
-                ),
+                "explanation": _localize_inferred_explanation(key, display_value, explanation),
                 "updated_at": updated_at,
                 "adjustable": adjustable,
                 "overridden": overridden,
@@ -789,9 +762,7 @@ def _build_inferred_entries(
     return items
 
 
-def _serialize_policy_explanations(
-    profile_name: str, items: list[Any]
-) -> list[dict[str, Any]]:
+def _serialize_policy_explanations(profile_name: str, items: list[Any]) -> list[dict[str, Any]]:
     serialized: list[dict[str, Any]] = []
     for item in items:
         serialized.append(
@@ -802,9 +773,7 @@ def _serialize_policy_explanations(
                 "signal_label": _POLICY_SIGNAL_LABELS.get(item.signal, item.signal),
                 "effect": _POLICY_EFFECT_LABELS.get(item.signal, item.effect),
                 "source_pattern": item.source_pattern,
-                "source_pattern_label": _present_source_pattern_label(
-                    item.source_pattern
-                ),
+                "source_pattern_label": _present_source_pattern_label(item.source_pattern),
             }
         )
     return serialized
@@ -828,23 +797,14 @@ def _build_preference_entries(
             {
                 "id": str(history_item.id) if history_item is not None else pref_key,
                 "key": pref_key,
-                "value": _display_preference_value(
-                    pref_key, explicit_prefs.get(pref_key)
-                ),
-                "confidence": (
-                    history_item.confidence if history_item is not None else None
-                ),
+                "value": _display_preference_value(pref_key, explicit_prefs.get(pref_key)),
+                "confidence": (history_item.confidence if history_item is not None else None),
                 "version": history_item.version if history_item is not None else 1,
                 "can_rollback": history_count.get(pref_key, 0) > 1,
-                "updated_at": (
-                    history_item.updated_at if history_item is not None else None
-                ),
+                "updated_at": (history_item.updated_at if history_item is not None else None),
                 "metadata": _editability_meta(
                     source="user",
-                    confidence=float(
-                        (history_item.confidence if history_item is not None else 0.9)
-                        or 0.9
-                    ),
+                    confidence=float((history_item.confidence if history_item is not None else 0.9) or 0.9),
                     risk_level="low",
                     field_type="preference",
                 ),
@@ -863,9 +823,7 @@ async def get_profile_transparent(
     cognitive_service = CognitiveService(db)
     profile_context_service = ProfileContextService(db, cache_service.redis)
 
-    prefs_center = await profile_write_service.pref_service.get_preferences(
-        current_user.id
-    )
+    prefs_center = await profile_write_service.pref_service.get_preferences(current_user.id)
     preferences = await memory_service.list_preference_history(current_user.id)
     goals = await memory_service.list_active_goals(current_user.id)
     profile_context = await profile_context_service.get_profile_context(current_user.id)
@@ -873,9 +831,7 @@ async def get_profile_transparent(
     fragments = await cognitive_service.get_fragments(current_user.id, limit=5)
 
     layer_1 = {
-        "preferences": _build_preference_entries(
-            prefs_center.explicit or {}, preferences
-        ),
+        "preferences": _build_preference_entries(prefs_center.explicit or {}, preferences),
         "goals": [
             {
                 "id": str(item.id),
@@ -922,9 +878,7 @@ async def get_profile_transparent(
                 for k, v in {
                     "overall_mastery": profile_context.knowledge_summary.overall_mastery,
                     "active_learning_subjects": profile_context.knowledge_summary.active_learning_subjects,
-                    "weak_spot_count": len(
-                        profile_context.knowledge_summary.weak_spots
-                    ),
+                    "weak_spot_count": len(profile_context.knowledge_summary.weak_spots),
                 }.items()
             ],
             "meta": {
@@ -990,20 +944,14 @@ async def get_profile_context(
     context = await profile_context_service.get_profile_context(current_user.id)
     prefs = await pref_service.get_preferences(current_user.id)
     merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
-    inferred_backups = await profile_write_service.list_inferred_backups(
-        current_user.id
-    )
+    inferred_backups = await profile_write_service.list_inferred_backups(current_user.id)
 
     payload = context.to_prompt_context()
     payload["preferences"] = merged_preferences
-    payload["preference_version"] = prefs.version or payload.get(
-        "preference_version", 0
-    )
+    payload["preference_version"] = prefs.version or payload.get("preference_version", 0)
     user_insight_state = getattr(context, "user_insight_state", None)
     if user_insight_state is not None:
-        payload[
-            "user_insight_transparency"
-        ] = UserInsightTransparencyService().build_payload(
+        payload["user_insight_transparency"] = UserInsightTransparencyService().build_payload(
             state=user_insight_state,
             merged_preferences=merged_preferences,
             inferred_backups=inferred_backups,
@@ -1034,13 +982,9 @@ async def get_profile_context(
     )
     if active_partnership is not None:
         payload["accountability_summary"]["has_core_partner"] = True
-    dashboard = (
-        payload.get("metacognition_dashboard") if isinstance(payload, dict) else None
-    )
+    dashboard = payload.get("metacognition_dashboard") if isinstance(payload, dict) else None
     if isinstance(dashboard, dict) and dashboard.get("available"):
-        METACOG_DASHBOARD_VIEW_TOTAL.labels(
-            visibility="hidden" if dashboard.get("hidden") else "visible"
-        ).inc()
+        METACOG_DASHBOARD_VIEW_TOTAL.labels(visibility="hidden" if dashboard.get("hidden") else "visible").inc()
     return payload
 
 
@@ -1076,9 +1020,7 @@ async def get_profile_insights(
     context = await profile_context_service.get_profile_context(current_user.id)
     prefs = await pref_service.get_preferences(current_user.id)
     merged_preferences = _merge_preferences(prefs.explicit or {}, prefs.inferred or {})
-    inferred_backups = await profile_write_service.list_inferred_backups(
-        current_user.id
-    )
+    inferred_backups = await profile_write_service.list_inferred_backups(current_user.id)
 
     state = context.user_insight_state
     if state is None:
@@ -1156,20 +1098,14 @@ async def create_chat_opening(
     if not relevant_updates:
         for update in reversed(deferred_updates):
             await service.enqueue(current_user.id, update)
-        return ChatOpeningResponse(
-            created=False, conversation_id=payload.conversation_id
-        )
+        return ChatOpeningResponse(created=False, conversation_id=payload.conversation_id)
 
-    prompt_context = SessionStateMixin._build_system_update_prompt_context(
-        relevant_updates
-    )
+    prompt_context = SessionStateMixin._build_system_update_prompt_context(relevant_updates)
     content = _compose_chat_opening_content(prompt_context)
     if not content:
         for update in reversed(updates):
             await service.enqueue(current_user.id, update)
-        return ChatOpeningResponse(
-            created=False, conversation_id=payload.conversation_id
-        )
+        return ChatOpeningResponse(created=False, conversation_id=payload.conversation_id)
 
     intervention_id = _extract_intervention_id(relevant_updates)
     widgets = _build_chat_opening_widgets(
@@ -1189,9 +1125,7 @@ async def create_chat_opening(
         )
         db.add(session_meta)
     elif session_meta.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
     else:
         session_meta.is_active = True
         session_meta.last_message_at = now
@@ -1233,9 +1167,7 @@ async def submit_onboarding(
     memory_service = MemoryService(db)
     profile_write_service = ProfileWriteService(db, cache_service.redis)
 
-    evidence_refs = [
-        {"type": "user_state", "id": "onboarding", "schema_version": "onboarding.v1"}
-    ]
+    evidence_refs = [{"type": "user_state", "id": "onboarding", "schema_version": "onboarding.v1"}]
 
     updated: dict[str, Any] = {}
     preference_updates: dict[str, Any] = {}
@@ -1284,16 +1216,14 @@ async def submit_onboarding(
         updated["response_style"] = style
 
     if payload.curiosity_preference is not None:
-        preference_updates["curiosity_preference"] = {
-            "value": payload.curiosity_preference
-        }
+        preference_updates["curiosity_preference"] = {"value": payload.curiosity_preference}
         updated["curiosity_preference"] = payload.curiosity_preference
 
     if preference_updates:
         await profile_write_service.set_explicit_preferences(
             user_id=current_user.id,
             updates=preference_updates,
-            evidence_refs_by_key={key: evidence_refs for key in preference_updates},
+            evidence_refs_by_key=dict.fromkeys(preference_updates, evidence_refs),
             source_type="user_state",
             source="onboarding",
         )
@@ -1326,9 +1256,7 @@ async def submit_onboarding(
     except Exception as _exc:
         import logging
 
-        logging.getLogger(__name__).warning(
-            "Galaxy bootstrap failed during onboarding: %s", _exc
-        )
+        logging.getLogger(__name__).warning("Galaxy bootstrap failed during onboarding: %s", _exc)
 
     # Generate personalized first-session opener for the chat
     first_message = await _generate_first_session_message(
@@ -1394,14 +1322,10 @@ async def update_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.pref_key:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="pref_key required"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="pref_key required")
 
     profile_write_service = ProfileWriteService(db, cache_service.redis)
-    evidence_refs = [
-        {"type": "user_state", "id": "manual_edit", "schema_version": "manual_edit.v1"}
-    ]
+    evidence_refs = [{"type": "user_state", "id": "manual_edit", "schema_version": "manual_edit.v1"}]
     value_payload = _coerce_preference_value(payload.pref_key, payload.value)
     result = await profile_write_service.set_explicit_preference(
         user_id=current_user.id,
@@ -1425,18 +1349,12 @@ async def override_inferred_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.key:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="key required"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key required")
     meta = INFERRED_META.get(payload.key)
     if meta is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="unknown inferred key"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="unknown inferred key")
     if not meta.adjustable:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="key is not adjustable"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key is not adjustable")
 
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     evidence_refs = [
@@ -1468,9 +1386,7 @@ async def reset_override_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.key:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="key required"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key required")
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     result = await profile_write_service.reset_override_preference(
         user_id=current_user.id,
@@ -1492,9 +1408,7 @@ async def control_profile_insight(
     target_id = _strip(payload.target_id)
     action = _strip(payload.action).lower()
     if not target_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="target_id required"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="target_id required")
     service = ProfileInsightControlService(db, cache_service.redis)
     try:
         result = await service.apply_control(
@@ -1506,13 +1420,9 @@ async def control_profile_insight(
             source="insight_control",
         )
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except LookupError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return {
         "status": result.status,
         "target_id": result.target_id,
@@ -1528,23 +1438,17 @@ async def rollback_preference(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not payload.pref_key:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="pref_key required"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="pref_key required")
 
     memory_service = MemoryService(db)
     history = await memory_service.list_preference_history(current_user.id)
     candidates = [item for item in history if item.pref_key == payload.pref_key]
     if len(candidates) < 2:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="no previous version"
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="no previous version")
 
     current = candidates[0]
     previous = candidates[1]
-    evidence_refs = [
-        {"type": "user_state", "id": "rollback", "schema_version": "rollback.v1"}
-    ]
+    evidence_refs = [{"type": "user_state", "id": "rollback", "schema_version": "rollback.v1"}]
     profile_write_service = ProfileWriteService(db, cache_service.redis)
     result = await profile_write_service.set_explicit_preference(
         user_id=current_user.id,
@@ -1565,11 +1469,7 @@ async def rollback_preference(
         "from_version": current.version,
         "to_version": previous.version,
         "new_version": result.history_version,
-        "preference_version": (
-            restored.preference_version
-            if restored is not None
-            else result.preference_version
-        ),
+        "preference_version": (restored.preference_version if restored is not None else result.preference_version),
     }
 
 
@@ -1589,17 +1489,11 @@ async def update_goal(
         updates["target_date"] = payload.target_date
 
     if not updates:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="no updates"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no updates")
 
-    record = await memory_service.update_goal(
-        current_user.id, payload.goal_id, **updates
-    )
+    record = await memory_service.update_goal(current_user.id, payload.goal_id, **updates)
     if record is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="goal not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="goal not found")
 
     await SystemUpdateService(cache_service.redis).enqueue(
         current_user.id,
@@ -1627,9 +1521,7 @@ async def submit_correction(
     from app.models.memory import MemoryCorrection
 
     if not payload.target_type:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="target_type required"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="target_type required")
 
     correction = MemoryCorrection(
         user_id=current_user.id,
