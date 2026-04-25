@@ -10,6 +10,7 @@ import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
+import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 /// 错题列表页面
@@ -317,6 +318,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 return ErrorCard(
                   error: error,
                   onTap: () => _navigateToDetail(context, error.id),
+                  onKnowledgeNodeTap: (nodeId, masteryDelta) =>
+                      _navigateToGalaxyNode(context, nodeId, masteryDelta),
                   onDelete: () => _deleteError(error.id),
                 );
               },
@@ -431,6 +434,21 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         ..invalidate(errorListProvider)
         ..invalidate(errorStatsProvider);
     }
+  }
+
+  void _navigateToGalaxyNode(
+    BuildContext context,
+    String nodeId,
+    double? masteryDelta,
+  ) {
+    final uri = Uri(
+      path: GalaxyRoutes.home,
+      queryParameters: {
+        'focus_node_id': nodeId,
+        if (masteryDelta != null) 'mastery_delta': masteryDelta.toString(),
+      },
+    );
+    context.go(uri.toString());
   }
 
   Future<void> _deleteError(String errorId) async {

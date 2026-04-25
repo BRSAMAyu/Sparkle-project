@@ -223,6 +223,8 @@ class UserAchievementProgress {
     this.isFirstUnlocker = false,
     this.unlockedAt,
     this.lastProgressUpdate,
+    this.contextSnapshot,
+    this.contextStory,
   });
 
   factory UserAchievementProgress.fromJson(Map<String, dynamic> json) =>
@@ -241,9 +243,14 @@ class UserAchievementProgress {
   final int shareCount;
   @JsonKey(name: 'is_first_unlocker')
   final bool isFirstUnlocker;
+  @JsonKey(name: 'unlocked_at')
   final DateTime? unlockedAt;
   @JsonKey(name: 'last_progress_update')
   final DateTime? lastProgressUpdate;
+  @JsonKey(name: 'context_snapshot')
+  final Map<String, dynamic>? contextSnapshot;
+  @JsonKey(name: 'context_story')
+  final String? contextStory;
 
   Map<String, dynamic> toJson() => _$UserAchievementProgressToJson(this);
 
@@ -257,6 +264,8 @@ class UserAchievementProgress {
     bool? isFirstUnlocker,
     DateTime? unlockedAt,
     DateTime? lastProgressUpdate,
+    Map<String, dynamic>? contextSnapshot,
+    String? contextStory,
   }) =>
       UserAchievementProgress(
         achievementId: achievementId ?? this.achievementId,
@@ -268,6 +277,8 @@ class UserAchievementProgress {
         isFirstUnlocker: isFirstUnlocker ?? this.isFirstUnlocker,
         unlockedAt: unlockedAt ?? this.unlockedAt,
         lastProgressUpdate: lastProgressUpdate ?? this.lastProgressUpdate,
+        contextSnapshot: contextSnapshot ?? this.contextSnapshot,
+        contextStory: contextStory ?? this.contextStory,
       );
 }
 
@@ -669,6 +680,8 @@ class AchievementUnlockEvent {
     this.rewardPreview = const [],
     this.surfacePreview = const [],
     this.gloryLines = const [],
+    this.contextSnapshot,
+    this.contextStory,
   });
 
   factory AchievementUnlockEvent.fromJson(Map<String, dynamic> json) =>
@@ -693,6 +706,10 @@ class AchievementUnlockEvent {
   final List<String> surfacePreview;
   @JsonKey(name: 'glory_lines')
   final List<String> gloryLines;
+  @JsonKey(name: 'context_snapshot')
+  final Map<String, dynamic>? contextSnapshot;
+  @JsonKey(name: 'context_story')
+  final String? contextStory;
 
   Map<String, dynamic> toJson() => _$AchievementUnlockEventToJson(this);
 }

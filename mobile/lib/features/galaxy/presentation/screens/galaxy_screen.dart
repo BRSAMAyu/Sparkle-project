@@ -67,7 +67,14 @@ class GalaxyPlaybackSnapshot {
 }
 
 class GalaxyScreen extends ConsumerStatefulWidget {
-  const GalaxyScreen({super.key});
+  const GalaxyScreen({
+    super.key,
+    this.initialFocusNodeId,
+    this.initialMasteryDelta,
+  });
+
+  final String? initialFocusNodeId;
+  final double? initialMasteryDelta;
 
   @override
   ConsumerState<GalaxyScreen> createState() => _GalaxyScreenState();
@@ -158,11 +165,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   bool _physicsUsesViewportCulling = true;
   Timer? _previewDismissTimer;
   Timer? _initialBuildReplayTimer;
+  Timer? _pendingExternalFocusTimer;
   int _layoutOptimizationEpoch = 0;
   Map<String, Offset> _layoutBlendStartPositions = const <String, Offset>{};
   Map<String, Offset> _layoutBlendTargetPositions = const <String, Offset>{};
   bool _didApplyProviderGraph = false;
   bool? _nextProviderGraphPreserveCamera;
+  String? _pendingExternalFocusNodeId;
+  double? _pendingExternalMasteryDelta;
 
   // Mastery milestone subscription
   StreamSubscription<MasteryMilestoneEvent>? _milestoneSubscription;
@@ -173,6 +183,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   @override
   void initState() {
     super.initState();
+    _pendingExternalFocusNodeId = widget.initialFocusNodeId;
+    _pendingExternalMasteryDelta = widget.initialMasteryDelta;
     _spatialIndex = GalaxySpatialIndex();
     _forceEngine = GalaxyForceEngine();
     _accessibilityService = GalaxyAccessibilityService();
@@ -252,8 +264,22 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         return;
       }
       unawaited(_ambientTicker.start());
-      unawaited(_loadGraph());
+      unawaited(_loadGraph().whenComplete(_schedulePendingExternalFocus));
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant GalaxyScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final sameInitialFocus =
+        widget.initialFocusNodeId == oldWidget.initialFocusNodeId &&
+            widget.initialMasteryDelta == oldWidget.initialMasteryDelta;
+    if (widget.initialFocusNodeId == null || sameInitialFocus) {
+      return;
+    }
+    _pendingExternalFocusNodeId = widget.initialFocusNodeId;
+    _pendingExternalMasteryDelta = widget.initialMasteryDelta;
+    _schedulePendingExternalFocus();
   }
 
   @override
@@ -294,6 +320,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     unawaited(_milestoneSubscription?.cancel());
     _previewDismissTimer?.cancel();
     _initialBuildReplayTimer?.cancel();
+    _pendingExternalFocusTimer?.cancel();
     SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
     super.dispose();
   }
@@ -355,6 +382,74 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     await ref
         .read(galaxyProvider.notifier)
         .loadGalaxy(forceRefresh: forceRefresh);
+  }
+
+  void _schedulePendingExternalFocus() {
+    if (_pendingExternalFocusNodeId == null) {
+      return;
+    }
+    _pendingExternalFocusTimer?.cancel();
+    _pendingExternalFocusTimer = Timer(
+      const Duration(milliseconds: 180),
+      _applyPendingExternalFocus,
+    );
+  }
+
+  void _applyPendingExternalFocus() {
+    final nodeId = _pendingExternalFocusNodeId;
+    if (!mounted || nodeId == null || _graph == null) {
+      return;
+    }
+    if (_viewportSize == Size.zero || !_renderPositions.containsKey(nodeId)) {
+      _schedulePendingExternalFocus();
+      return;
+    }
+
+    final node = _nodesById[nodeId];
+    if (node == null) {
+      _pendingExternalFocusNodeId = null;
+      _pendingExternalMasteryDelta = null;
+      return;
+    }
+
+    final masteryDelta = _pendingExternalMasteryDelta;
+    _pendingExternalFocusNodeId = null;
+    _pendingExternalMasteryDelta = null;
+
+    ref
+        .read(galaxyProvider.notifier)
+        .setEvidenceHighlight({nodeId}, focusId: nodeId);
+    _focusOnNode(nodeId, targetScale: 0.9);
+    _pulseNodeWithoutNavigation(nodeId);
+    _showErrorImpactMessage(node, masteryDelta);
+  }
+
+  void _pulseNodeWithoutNavigation(String nodeId) {
+    setState(() {
+      _tapFeedbackNodeId = nodeId;
+      _pendingNavigationNodeId = null;
+    });
+    _tapFeedbackController
+      ..stop()
+      ..reset();
+    unawaited(_tapFeedbackController.forward());
+  }
+
+  void _showErrorImpactMessage(GalaxyNodeModel node, double? masteryDelta) {
+    final deltaText = masteryDelta == null
+        ? ''
+        : masteryDelta < 0
+            ? '，下降 ${masteryDelta.abs().toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1)}'
+            : '，变化 +${masteryDelta.toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1)}';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('「${node.name}」当前掌握度 ${node.masteryScore}%$deltaText'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
   }
 
   void _syncProviderSelection(String? nodeId) {
@@ -451,6 +546,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _startGraphSettleSimulation(impulse: 0.28);
       }
     }
+    _schedulePendingExternalFocus();
   }
 
   Map<String, Offset> get _renderPositions =>
@@ -571,6 +667,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
     _previewScreenPosition = _computePreviewPosition(
       anchor: _camera.worldToScreen(anchor),
+      node: previewNode,
     );
   }
 
@@ -678,6 +775,58 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
+  void _startReviewForPreviewNode() {
+    final previewNode = _previewNode;
+    if (previewNode == null) {
+      return;
+    }
+    _startReviewForNode(previewNode);
+  }
+
+  void _startReviewForNode(GalaxyNodeModel node) {
+    final focusPrompt = node.reviewUrgencyReason == 'recent_errors'
+        ? '带我复习「${node.name}」。我上次掌握度 ${node.masteryScore} 分，而且最近这里又出现了错题。请先帮我定位最容易再错的点，再给我一个 15 分钟内可以开始的练习顺序。'
+        : '带我复习「${node.name}」。我上次掌握度 ${node.masteryScore} 分，请根据我现在的遗忘风险，给我一个 15 分钟就能开始的强化步骤。';
+    final chatMode = node.reviewUrgencyReason == 'recent_errors'
+        ? 'error_diagnosis'
+        : 'study_plan';
+    final query = <String, String>{
+      'prompt': focusPrompt,
+      'chat_mode': chatMode,
+      'target_node_id': node.id,
+    };
+    setState(_clearPreviewState);
+    unawaited(
+      context.push(
+        Uri(path: '/chat', queryParameters: query).toString(),
+      ),
+    );
+  }
+
+  void _showPreviewForNode(
+    GalaxyNodeModel node, {
+    required Offset anchor,
+    bool scheduleDismiss = false,
+  }) {
+    _previewDismissTimer?.cancel();
+    setState(() {
+      _cancelTapFeedbackState();
+      _selectedNodeId = node.id;
+      _spotlightAnchorId = node.id;
+      _spotlightNodeIds = _spotlightSetFor(node.id);
+      _draggingNodeId = null;
+      _previewNode = node;
+      _previewScreenPosition = _computePreviewPosition(
+        anchor: anchor,
+        node: node,
+      );
+    });
+    _syncProviderSelection(node.id);
+    if (scheduleDismiss) {
+      _schedulePreviewDismiss();
+    }
+  }
+
   void _handleGestureCommand(GalaxyGestureCommand command) {
     _noteInteraction();
 
@@ -739,17 +888,20 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
       if (!tappedNode.isUnlocked) {
         unawaited(_accessibilityService.lightHaptic());
-        setState(() {
-          _cancelTapFeedbackState();
-          _selectedNodeId = tappedNode.id;
-          _spotlightAnchorId = tappedNode.id;
-          _previewNode = tappedNode;
-          _previewScreenPosition = _computePreviewPosition(
-            anchor: _camera.worldToScreen(command.hit!.worldPosition),
-          );
-          _spotlightNodeIds = _spotlightSetFor(tappedNode.id);
-        });
-        _syncProviderSelection(tappedNode.id);
+        _showPreviewForNode(
+          tappedNode,
+          anchor: _camera.worldToScreen(command.hit!.worldPosition),
+        );
+        return;
+      }
+
+      if (tappedNode.shouldPulseForReview) {
+        unawaited(_accessibilityService.lightHaptic());
+        _showPreviewForNode(
+          tappedNode,
+          anchor: _camera.worldToScreen(command.hit!.worldPosition),
+          scheduleDismiss: true,
+        );
         return;
       }
 
@@ -775,18 +927,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       }
 
       unawaited(_accessibilityService.mediumHaptic());
-      setState(() {
-        _cancelTapFeedbackState();
-        _selectedNodeId = previewNode.id;
-        _spotlightAnchorId = previewNode.id;
-        _spotlightNodeIds = _spotlightSetFor(previewNode.id);
-        _draggingNodeId = null;
-        _previewNode = previewNode;
-        _previewScreenPosition = _computePreviewPosition(
-          anchor: _camera.worldToScreen(command.hit!.worldPosition),
-        );
-      });
-      _syncProviderSelection(previewNode.id);
+      _showPreviewForNode(
+        previewNode,
+        anchor: _camera.worldToScreen(command.hit!.worldPosition),
+      );
       _schedulePreviewDismiss();
       return;
     }
@@ -952,9 +1096,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           ? <String>{nodeId, ...?_adjacency[nodeId]}
           : <String>{nodeId};
 
-  Offset _computePreviewPosition({required Offset anchor}) {
-    const cardWidth = 220.0;
-    const cardHeight = 132.0;
+  Offset _computePreviewPosition({
+    required Offset anchor,
+    GalaxyNodeModel? node,
+  }) {
+    final activeNode = node ?? _previewNode;
+    final hasReviewOverlay = activeNode?.shouldPulseForReview ?? false;
+    final cardWidth = hasReviewOverlay ? 252.0 : 220.0;
+    final cardHeight = hasReviewOverlay ? 352.0 : 244.0;
     const gap = 16.0;
     const edgePadding = 12.0;
 
@@ -2167,10 +2316,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           if (anchor != null) {
             _previewScreenPosition = _computePreviewPosition(
               anchor: _camera.worldToScreen(anchor),
+              node: _previewNode,
             );
           }
         }
       });
+      _schedulePendingExternalFocus();
     });
   }
 
@@ -2461,6 +2612,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                             onViewDetails: () => unawaited(
                               _openKnowledgeDetail(_previewNode!.id),
                             ),
+                            onStartReview: _startReviewForPreviewNode,
                             onLaunchPrediction: _launchPredictionForPreviewNode,
                           ),
                         ),

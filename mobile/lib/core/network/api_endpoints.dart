@@ -53,6 +53,9 @@ class ApiEndpoints {
   static String startTask(String id) => '/tasks/$id/start';
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
+  static String snoozeTask(String id) => '/tasks/$id/snooze';
+  static String taskTooHard(String id) => '/tasks/$id/too-hard';
+  static String skipTask(String id) => '/tasks/$id/skip';
   static String taskGenerateGuide(String id) => '/tasks/$id/generate-guide';
   static String taskFeedback(String id) => '/tasks/$id/feedback';
   static String taskFeedbackReflection(String feedbackId) =>
@@ -169,6 +172,9 @@ class ApiEndpoints {
   static const String statsWeekly = '/stats/weekly';
   static const String statsFlame = '/stats/flame';
   static const String growthDashboard = '/growth/dashboard';
+  static const String growthWeeklyNarrative = '/growth/weekly-narrative';
+  static const String growthWeeklyNarrativeGenerate =
+      '/growth/weekly-narrative/generate';
   static const String profileChatOpening = '/profile/chat-opening';
 
   // Galaxy
@@ -537,6 +543,10 @@ class ApiEndpoints {
   static String accountabilityCheckin(String id) =>
       '/accountability/$id/checkin';
   static String accountabilityNudge(String id) => '/accountability/$id/nudge';
+  static String accountabilityStruggleAlertEncourage(String notificationId) =>
+      '/accountability/struggle-alerts/$notificationId/encourage';
+  static String accountabilityHintDismiss(String notificationId) =>
+      '/accountability/hints/$notificationId/dismiss';
   static String accountabilityDashboard(String id) =>
       '/accountability/$id/dashboard';
   static String accountabilityStats(String id) => '/accountability/$id/stats';

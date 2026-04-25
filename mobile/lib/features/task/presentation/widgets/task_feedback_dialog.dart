@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart' as custom;
-import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -37,13 +37,18 @@ class TaskFeedbackDialog extends ConsumerStatefulWidget {
 class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   int? _rating;
   String? _selectedCategory;
-  final _feedbackController = TextEditingController();
+  final _stuckController = TextEditingController();
+  final _methodController = TextEditingController();
+  final _adjustmentController = TextEditingController();
   bool _hasRecordedSkip = false;
   bool _isSubmitting = false;
+  bool _reflectionSaved = false;
   Timer? _typewriterTimer;
   String _visibleFeedback = '';
   bool _showStreakCelebration = false;
   bool _typewriterCompleted = false;
+  String? _aiReflectionResponse;
+  List<Map<String, dynamic>> _linkedKnowledgeNodes = const [];
 
   bool get _hasStreakMilestone {
     final streakDays =
@@ -63,7 +68,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   @override
   void dispose() {
     _typewriterTimer?.cancel();
-    _feedbackController.dispose();
+    _stuckController.dispose();
+    _methodController.dispose();
+    _adjustmentController.dispose();
     // Track skip if user hasn't interacted with any next action
     _recordSkipIfNeeded();
     super.dispose();
@@ -80,7 +87,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
             SensoryFeedbackEvent.success,
             SensoryFeedbackEvent.streak,
           ],
-          gap: Duration(milliseconds: 150),
+          gap: const Duration(milliseconds: 150),
           enableSound: false,
         ),
       );
@@ -137,12 +144,24 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
   Future<void> _handleSubmit() async {
     if (_isSubmitting) return;
+    if (_reflectionSaved) {
+      widget.onClose();
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
     try {
       TaskFeedbackResponse? response;
-      if (_rating != null || _feedbackController.text.trim().isNotEmpty) {
+      final stuckPoint = _stuckController.text.trim();
+      final effectiveMethod = _methodController.text.trim();
+      final adjustmentIntention = _adjustmentController.text.trim();
+      final hasStructuredReflection = stuckPoint.isNotEmpty ||
+          effectiveMethod.isNotEmpty ||
+          adjustmentIntention.isNotEmpty;
+      if (_rating != null ||
+          _selectedCategory != null ||
+          hasStructuredReflection) {
         await SensoryFeedbackService.emit(
           SensoryFeedbackEvent.confirm,
           enableHaptic: false,
@@ -157,10 +176,13 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
               widget.taskId,
               TaskFeedbackSubmission(
                 completionQuality: _rating,
-                feedbackText: _feedbackController.text.trim().isEmpty
-                    ? null
-                    : _feedbackController.text.trim(),
+                feedbackText: stuckPoint.isEmpty ? null : stuckPoint,
                 category: _selectedCategory,
+                stuckPoint: stuckPoint.isEmpty ? null : stuckPoint,
+                effectiveMethod:
+                    effectiveMethod.isEmpty ? null : effectiveMethod,
+                adjustmentIntention:
+                    adjustmentIntention.isEmpty ? null : adjustmentIntention,
               ),
             );
       }
@@ -170,6 +192,17 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
       if (!mounted) return;
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       _showFeedbackSuccess(response);
+      final aiResponse = response?.aiResponse ??
+          response?.reflectionPayload?['ai_response']?.toString();
+      final linkedNodes = _parseLinkedNodes(response?.reflectionPayload);
+      if ((aiResponse ?? '').isNotEmpty) {
+        setState(() {
+          _reflectionSaved = true;
+          _aiReflectionResponse = aiResponse;
+          _linkedKnowledgeNodes = linkedNodes;
+        });
+        return;
+      }
       widget.onClose();
     } catch (e) {
       if (mounted) {
@@ -180,6 +213,17 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  List<Map<String, dynamic>> _parseLinkedNodes(Map<String, dynamic>? payload) {
+    final raw = payload?['linked_knowledge_nodes'];
+    if (raw is! List) {
+      return const [];
+    }
+    return raw
+        .whereType<Map<dynamic, dynamic>>()
+        .map((item) => item.map((key, value) => MapEntry('$key', value)))
+        .toList();
   }
 
   void _showFeedbackSuccess(TaskFeedbackResponse? response) {
@@ -282,6 +326,15 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
     );
   }
 
+  String _copyForLocale(
+    BuildContext context, {
+    required String zh,
+    required String en,
+  }) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    return code.startsWith('zh') ? zh : en;
+  }
+
   String _formatDelta(double? delta) {
     if (delta == null) return '-';
     final sign = delta >= 0 ? '+' : '';
@@ -334,16 +387,15 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
           child: Stack(
             children: [
               if (_showStreakCelebration)
-                Positioned.fill(
+                const Positioned.fill(
                   child: IgnorePointer(
                     child: RepaintBoundary(
                       child: SparkleConfetti(
                         play: true,
                         enableSensory: false,
-                        alignment: Alignment.topCenter,
                         intensity: SparkleCelebrationIntensity.large,
                         particleCount: 36,
-                        colors: const [
+                        colors: [
                           Color(0xFFFFA726),
                           Color(0xFFFF7043),
                           Color(0xFFFFD54F),
@@ -438,10 +490,10 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                   Container(
                                     padding: const EdgeInsets.all(DS.spacing12),
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(
+                                      gradient: const LinearGradient(
                                         colors: [
-                                          const Color(0xFFFFF3E0),
-                                          const Color(0xFFFFE0B2),
+                                          Color(0xFFFFF3E0),
+                                          Color(0xFFFFE0B2),
                                         ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
@@ -453,9 +505,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(
+                                        const Icon(
                                           Icons.local_fire_department_rounded,
-                                          color: const Color(0xFFFF7043),
+                                          color: Color(0xFFFF7043),
                                         ),
                                         const SizedBox(width: DS.spacing8),
                                         Expanded(
@@ -524,7 +576,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                                       height: 5,
                                                       margin:
                                                           const EdgeInsets.only(
-                                                              top: 8, right: 8),
+                                                        top: 8,
+                                                        right: 8,
+                                                      ),
                                                       decoration: BoxDecoration(
                                                         color: theme
                                                                 .textTheme
@@ -590,11 +644,11 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                           _StatItem(
                                             icon: Icons.schedule_rounded,
                                             color: DS.info,
-                                            value: ((widget.result.statsUpdate![
+                                            value: (widget.result.statsUpdate![
                                                             'total_minutes']
                                                         as num?)
                                                     ?.toDouble() ??
-                                                0),
+                                                0,
                                             suffix: 'm',
                                             label: '今日累计',
                                           ),
@@ -602,10 +656,10 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                           _StatItem(
                                             icon: Icons.emoji_events,
                                             color: DS.rarityRare,
-                                            value: ((widget.result.statsUpdate![
+                                            value: (widget.result.statsUpdate![
                                                         'streak_days'] as num?)
                                                     ?.toDouble() ??
-                                                0),
+                                                0,
                                             suffix: '天',
                                             label: l10n.taskFeedbackStreak,
                                           ),
@@ -678,30 +732,59 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
                                 const SizedBox(height: DS.spacing16),
 
-                                // Text Feedback (Optional)
-                                Text(
-                                  l10n.taskFeedbackOptionalComment,
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: DS.textSecondary,
+                                _ReflectionQuestionField(
+                                  label: _copyForLocale(
+                                    context,
+                                    zh: '这个任务中你卡在哪里了？',
+                                    en: 'Where did you get stuck in this task?',
                                   ),
+                                  hint: _copyForLocale(
+                                    context,
+                                    zh: '例如：公式会背，但不知道什么时候套用',
+                                    en: 'Example: I knew the formula, but not when to use it.',
+                                  ),
+                                  controller: _stuckController,
                                 ),
-                                const SizedBox(height: DS.xs),
-                                TextField(
-                                  controller: _feedbackController,
-                                  maxLines: 3,
-                                  decoration: InputDecoration(
-                                    hintText: l10n.taskFeedbackCommentHint,
-                                    border: OutlineInputBorder(
-                                      borderRadius: DS.borderRadius8,
-                                      borderSide:
-                                          BorderSide(color: DS.neutral300),
+                                const SizedBox(height: DS.spacing12),
+                                _ReflectionQuestionField(
+                                  label: _copyForLocale(
+                                    context,
+                                    zh: '哪个方法让你觉得有进展？',
+                                    en: 'What helped you feel some progress?',
+                                  ),
+                                  hint: _copyForLocale(
+                                    context,
+                                    zh: '例如：先画状态图，再列方程',
+                                    en: 'Example: sketching the state diagram before writing equations.',
+                                  ),
+                                  controller: _methodController,
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                                _ReflectionQuestionField(
+                                  label: _copyForLocale(
+                                    context,
+                                    zh: '下次会换什么做法？',
+                                    en: 'What would you change next time?',
+                                  ),
+                                  hint: _copyForLocale(
+                                    context,
+                                    zh: '例如：先做 1 道代表题，再进入整组练习',
+                                    en: 'Example: do one representative problem before the full set.',
+                                  ),
+                                  controller: _adjustmentController,
+                                ),
+                                if (_aiReflectionResponse != null) ...[
+                                  const SizedBox(height: DS.spacing16),
+                                  _ReflectionResponseCard(
+                                    title: _copyForLocale(
+                                      context,
+                                      zh: 'AI 已记下这条反思',
+                                      en: 'AI saved this reflection',
                                     ),
-                                    filled: true,
-                                    fillColor: DS.neutral50,
-                                    contentPadding:
-                                        const EdgeInsets.all(DS.spacing12),
+                                    response: _aiReflectionResponse!,
+                                    linkedKnowledgeNodes: _linkedKnowledgeNodes,
                                   ),
-                                ),
+                                ],
 
                                 // Next Actions Section
                                 if (widget.result.nextActions.isNotEmpty) ...[
@@ -732,7 +815,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                           action: entry.value,
                                           position: entry.key,
                                           onTap: () => _handleNextAction(
-                                              entry.value, entry.key),
+                                            entry.value,
+                                            entry.key,
+                                          ),
                                         ),
                                       ),
                                 ],
@@ -748,7 +833,13 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                           children: [
                             Expanded(
                               child: SparkleButton(
-                                label: l10n.taskFeedbackSkip,
+                                label: _reflectionSaved
+                                    ? _copyForLocale(
+                                        context,
+                                        zh: '关闭',
+                                        en: 'Close',
+                                      )
+                                    : l10n.taskFeedbackSkip,
                                 onPressed: widget.onClose,
                                 variant: ButtonVariant.ghost,
                                 disabled: _isSubmitting,
@@ -758,7 +849,17 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                             Expanded(
                               flex: 2,
                               child: custom.CustomButton.primary(
-                                text: l10n.taskFeedbackComplete,
+                                text: _reflectionSaved
+                                    ? _copyForLocale(
+                                        context,
+                                        zh: '完成',
+                                        en: 'Done',
+                                      )
+                                    : _copyForLocale(
+                                        context,
+                                        zh: '保存',
+                                        en: 'Save',
+                                      ),
                                 onPressed: _isSubmitting ? null : _handleSubmit,
                                 isLoading: _isSubmitting,
                               ),
@@ -773,6 +874,127 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ReflectionQuestionField extends StatelessWidget {
+  const _ReflectionQuestionField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+  });
+
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
+          const SizedBox(height: DS.xs),
+          TextField(
+            controller: controller,
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: hint,
+              border: OutlineInputBorder(
+                borderRadius: DS.borderRadius8,
+                borderSide: BorderSide(color: DS.neutral300),
+              ),
+              filled: true,
+              fillColor: DS.neutral50,
+              contentPadding: const EdgeInsets.all(DS.spacing12),
+            ),
+          ),
+        ],
+      );
+}
+
+class _ReflectionResponseCard extends StatelessWidget {
+  const _ReflectionResponseCard({
+    required this.title,
+    required this.response,
+    this.linkedKnowledgeNodes = const [],
+  });
+
+  final String title;
+  final String response;
+  final List<Map<String, dynamic>> linkedKnowledgeNodes;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.info.withValues(alpha: 0.08),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: DS.info.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.forum_rounded, size: 18, color: DS.info),
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            response,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: DS.textPrimary,
+              height: 1.4,
+            ),
+          ),
+          if (linkedKnowledgeNodes.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing10),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: linkedKnowledgeNodes
+                  .map(
+                    (node) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing10,
+                        vertical: DS.spacing6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.info.withValues(alpha: 0.12),
+                        borderRadius: DS.borderRadius20,
+                      ),
+                      child: Text(
+                        (node['name'] ?? node['id'] ?? '').toString(),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: DS.info,
+                          fontWeight: DS.fontWeightSemibold,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
       ),
     );
   }

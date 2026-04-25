@@ -9,6 +9,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
     required this.onFocus,
     required this.onInspectConnections,
     required this.onViewDetails,
+    required this.onStartReview,
     required this.onLaunchPrediction,
     super.key,
   });
@@ -17,11 +18,13 @@ class GalaxyNodePreviewCard extends StatelessWidget {
   final VoidCallback onFocus;
   final VoidCallback onInspectConnections;
   final VoidCallback onViewDetails;
+  final VoidCallback onStartReview;
   final VoidCallback onLaunchPrediction;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isChinese = Localizations.localeOf(context).languageCode == 'zh';
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final sectorStyle = SectorConfig.getStyle(node.sector);
     final sectorName = SectorConfig.getLocalizedName(node.sector);
@@ -45,7 +48,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 220),
+        constraints: const BoxConstraints(maxWidth: 252),
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -182,6 +185,26 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                       ? Colors.white.withValues(alpha: 0.1)
                       : Colors.black.withValues(alpha: 0.08),
                 ),
+                if (node.shouldPulseForReview) ...[
+                  const SizedBox(height: 12),
+                  _ReviewUrgencyCallout(
+                    node: node,
+                    sectorColor: sectorColor,
+                    glowColor: glowColor,
+                    isDarkMode: isDarkMode,
+                    isChinese: isChinese,
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _CardActionButton(
+                      label: isChinese ? '立刻学习' : 'Start Review',
+                      icon: Icons.bolt_rounded,
+                      color: glowColor,
+                      onPressed: onStartReview,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -290,6 +313,135 @@ class _CardActionButton extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _ReviewUrgencyCallout extends StatelessWidget {
+  const _ReviewUrgencyCallout({
+    required this.node,
+    required this.sectorColor,
+    required this.glowColor,
+    required this.isDarkMode,
+    required this.isChinese,
+  });
+
+  final GalaxyNodeModel node;
+  final Color sectorColor;
+  final Color glowColor;
+  final bool isDarkMode;
+  final bool isChinese;
+
+  @override
+  Widget build(BuildContext context) {
+    final secondaryColor = isDarkMode ? Colors.white70 : Colors.black54;
+    final scorePercent = (node.reviewUrgencyScore * 100).round();
+    final daysSince = node.daysSinceMasteryUpdate.round();
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          glowColor.withValues(alpha: isDarkMode ? 0.12 : 0.08),
+          isDarkMode
+              ? Colors.white.withValues(alpha: 0.03)
+              : Colors.black.withValues(alpha: 0.02),
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: glowColor.withValues(alpha: isDarkMode ? 0.2 : 0.14),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 14,
+                  color: glowColor,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isChinese ? '推荐复习' : 'Best Review Window',
+                  style: TextStyle(
+                    color: sectorColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '$scorePercent%',
+                  style: TextStyle(
+                    color: secondaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _buildReviewMessage(),
+              style: TextStyle(
+                color: isDarkMode ? Colors.white : Colors.black87,
+                fontSize: 12,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _buildReviewHint(daysSince),
+              style: TextStyle(
+                color: secondaryColor,
+                fontSize: 11,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _buildReviewMessage() {
+    if (isChinese) {
+      return '这个知识点你上次掌握度 ${node.masteryScore} 分，基于你的学习频率，现在是强化它的好时机。';
+    }
+    return 'Your last mastery here was ${node.masteryScore}/100. Based on your study rhythm, now is a good time to reinforce it.';
+  }
+
+  String _buildReviewHint(int daysSince) {
+    if (isChinese) {
+      switch (node.reviewUrgencyReason) {
+        case 'recent_errors':
+          return '最近相关错题有回流，趁现在补一轮更容易稳住。';
+        case 'review_window':
+          return daysSince > 0
+              ? '距离上次强化已经约 $daysSince 天，正好卡在复习窗口。'
+              : '它已经进入复习窗口，补一轮会更划算。';
+        case 'low_mastery':
+          return '当前掌握度还不稳，趁记忆还在时再加固一次。';
+        default:
+          return '现在补一次，能更顺手地把它重新点亮。';
+      }
+    }
+
+    switch (node.reviewUrgencyReason) {
+      case 'recent_errors':
+        return 'Recent mistakes are pointing back here, so a quick refresh should help.';
+      case 'review_window':
+        return daysSince > 0
+            ? 'It has been about $daysSince days since your last reinforcement.'
+            : 'It is right inside the ideal review window.';
+      case 'low_mastery':
+        return 'The concept is still fragile, so another pass should help it stick.';
+      default:
+        return 'A short review now should make this concept easier to retain.';
+    }
+  }
 }
 
 class _MasteryRingPainter extends CustomPainter {

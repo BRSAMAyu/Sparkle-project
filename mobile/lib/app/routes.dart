@@ -153,7 +153,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                     policy: ExperienceProfiles.focusImmersive.audioPolicy(
                       trackOverride: BgmTrack.galaxy,
                     ),
-                    child: const GalaxyScreen(),
+                    child: GalaxyScreen(
+                      initialFocusNodeId:
+                          state.uri.queryParameters['focus_node_id'],
+                      initialMasteryDelta: double.tryParse(
+                        state.uri.queryParameters['mastery_delta'] ?? '',
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -166,8 +172,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/chat',
                 pageBuilder: (context, state) {
                   final extra = state.extra;
-                  final extraMap =
-                      extra is Map<String, dynamic> ? extra : null;
+                  final extraMap = extra is Map<String, dynamic> ? extra : null;
                   final initialAiMessage =
                       extraMap?['initial_ai_message'] as String?;
                   final initialUserMessage =

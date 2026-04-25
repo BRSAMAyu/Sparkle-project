@@ -197,6 +197,40 @@ void main() {
       harness.container.dispose();
     });
 
+    testWidgets('passes galaxy focus query parameters into GalaxyScreen',
+        (tester) async {
+      final harness = await _pumpRouter(
+        tester,
+        authState: AuthState(
+          isAuthenticated: true,
+          user: _buildUser(),
+        ),
+        onboardingCompleted: true,
+      );
+
+      harness.router
+          .go('/galaxy?focus_node_id=node-thermo-1&mastery_delta=-0.3');
+      await _pumpFrames(tester);
+
+      expect(
+        harness.router.routeInformationProvider.value.uri.queryParameters,
+        {
+          'focus_node_id': 'node-thermo-1',
+          'mastery_delta': '-0.3',
+        },
+      );
+
+      final galaxyScreen =
+          tester.widget<GalaxyScreen>(find.byType(GalaxyScreen));
+      expect(galaxyScreen.initialFocusNodeId, 'node-thermo-1');
+      expect(galaxyScreen.initialMasteryDelta, -0.3);
+
+      PerformanceService.instance.stopMonitoring();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      harness.container.dispose();
+    });
+
     testWidgets(
         'loads critical secondary routes used by dashboard and community actions',
         (tester) async {

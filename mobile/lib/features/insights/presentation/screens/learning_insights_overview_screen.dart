@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
@@ -80,6 +81,8 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const WeeklyGrowthNarrativeCard(),
+              const SizedBox(height: DS.spacing16),
               _OverviewHero(activePanel: initialPanel),
               const SizedBox(height: DS.spacing16),
               _InsightModuleCard(

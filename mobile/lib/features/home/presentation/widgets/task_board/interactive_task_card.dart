@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -38,6 +39,12 @@ class InteractiveTaskCard extends ConsumerWidget {
             onTap: () => ref
                 .read(taskBoardProvider.notifier)
                 .toggleTaskExpansion(task.id),
+            onLongPress: () => showTaskQuickActionMenu(
+              context: context,
+              ref: ref,
+              task: task,
+              onChanged: () => ref.read(dashboardProvider.notifier).refresh(),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(DS.spacing12),
               child: Row(
@@ -117,7 +124,10 @@ class InteractiveTaskCard extends ConsumerWidget {
   }
 
   Widget _buildExpandedContent(
-          BuildContext context, WidgetRef ref, TaskModel task,) =>
+    BuildContext context,
+    WidgetRef ref,
+    TaskModel task,
+  ) =>
       Container(
         padding: const EdgeInsets.fromLTRB(
           DS.spacing12,
@@ -187,7 +197,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                     onTap: () {
                       // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
                       ref.read(activeTaskProvider.notifier).state = task;
-                      context.push('/tasks/${task.id}/execute');
+                      unawaited(context.push('/tasks/${task.id}/execute'));
                     },
                     color: Color.lerp(DS.surfaceSecondary, DS.success, 0.82)!,
                   ),
@@ -351,25 +361,28 @@ class InteractiveTaskCard extends ConsumerWidget {
   }
 
   void _confirmAbandon(BuildContext context, WidgetRef ref, TaskModel task) {
-    showSensoryDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('放弃任务'),
-        content: Text('确定要放弃「${task.title}」吗？'),
-        actions: [
-          SparkleButton.ghost(
-            label: '取消',
-            onPressed: () => Navigator.pop(context),
-          ),
-          SparkleButton.destructive(
-            label: '放弃',
-            onPressed: () {
-              Navigator.pop(context);
-              unawaited(
-                  ref.read(taskListProvider.notifier).abandonTask(task.id),);
-            },
-          ),
-        ],
+    unawaited(
+      showSensoryDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('放弃任务'),
+          content: Text('确定要放弃「${task.title}」吗？'),
+          actions: [
+            SparkleButton.ghost(
+              label: '取消',
+              onPressed: () => Navigator.pop(context),
+            ),
+            SparkleButton.destructive(
+              label: '放弃',
+              onPressed: () {
+                Navigator.pop(context);
+                unawaited(
+                  ref.read(taskListProvider.notifier).abandonTask(task.id),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

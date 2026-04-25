@@ -222,6 +222,10 @@ extension ChatNotifierActions on ChatNotifier {
               feedbackId,
               selectedOption: _actionString(payload, 'selected_option'),
               freeText: _actionString(payload, 'free_text'),
+              stuckPoint: _actionString(payload, 'stuck_point'),
+              effectiveMethod: _actionString(payload, 'effective_method'),
+              adjustmentIntention:
+                  _actionString(payload, 'adjustment_intention'),
             );
         state = state.copyWith(
           lastActionStatus: 'reflection_submitted',

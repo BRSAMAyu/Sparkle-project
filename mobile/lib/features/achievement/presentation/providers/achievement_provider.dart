@@ -388,6 +388,29 @@ class AchievementNotifier extends StateNotifier<AchievementState> {
     }
   }
 
+  /// Load one achievement detail and merge the richer payload into list state.
+  Future<AchievementWithProgress?> loadAchievementDetail(
+    String achievementId,
+  ) async {
+    try {
+      final detail = await _repository.getAchievementDetail(achievementId);
+      final updated = <AchievementWithProgress>[...state.achievements];
+      final index = updated.indexWhere(
+        (item) => item.achievement.id == achievementId,
+      );
+      if (index >= 0) {
+        updated[index] = detail;
+      } else {
+        updated.add(detail);
+      }
+      state = state.copyWith(achievements: updated, isLoading: false);
+      return detail;
+    } catch (e) {
+      debugPrint('Error loading achievement detail: $e');
+      return null;
+    }
+  }
+
   /// Refresh stats
   Future<void> refreshStats() async {
     try {

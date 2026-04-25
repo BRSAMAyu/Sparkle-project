@@ -34,6 +34,8 @@ _$ErrorRecordImpl _$$ErrorRecordImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => KnowledgeLink.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      affectedNodeId: _nullableStringFromJson(json['affected_node_id']),
+      masteryDelta: _nullableDoubleFromJson(json['mastery_delta']),
       cognitiveTags: (json['cognitive_tags'] as List<dynamic>?)
               ?.map((e) => $enumDecode(_$CognitiveDimensionEnumMap, e))
               .toList() ??
@@ -59,6 +61,8 @@ Map<String, dynamic> _$$ErrorRecordImplToJson(_$ErrorRecordImpl instance) =>
       'last_reviewed_at': instance.lastReviewedAt?.toIso8601String(),
       'latest_analysis': instance.latestAnalysis,
       'knowledge_links': instance.knowledgeLinks,
+      'affected_node_id': instance.affectedNodeId,
+      'mastery_delta': instance.masteryDelta,
       'cognitive_tags': instance.cognitiveTags
           .map((e) => _$CognitiveDimensionEnumMap[e]!)
           .toList(),

@@ -920,8 +920,15 @@ class StarMapPainter extends CustomPainter {
     }
 
     nodes.sort(
-      (a, b) =>
-          a.distanceToViewportCenter.compareTo(b.distanceToViewportCenter),
+      (a, b) {
+        final priorityCompare = _nodeSelectionPriority(b.node).compareTo(
+          _nodeSelectionPriority(a.node),
+        );
+        if (priorityCompare != 0) {
+          return priorityCompare;
+        }
+        return a.distanceToViewportCenter.compareTo(b.distanceToViewportCenter);
+      },
     );
 
     final budget = _nodeBudgetFor(lod);
@@ -929,7 +936,38 @@ class StarMapPainter extends CustomPainter {
       nodes.removeRange(budget, nodes.length);
     }
 
+    nodes.sort(
+      (a, b) =>
+          a.distanceToViewportCenter.compareTo(b.distanceToViewportCenter),
+    );
+
     return nodes;
+  }
+
+  int _nodeSelectionPriority(GalaxyNodeModel node) {
+    var priority = 0;
+    if (node.id == selectedNodeId) {
+      priority += 48;
+    }
+    if (node.id == previewNodeId) {
+      priority += 40;
+    }
+    if (node.id == draggingNodeId) {
+      priority += 36;
+    }
+    if (node.shouldPulseForReview) {
+      priority += 28;
+    }
+    if (spotlightNodeIds.contains(node.id)) {
+      priority += 20;
+    }
+    if (searchMatchedNodeIds.contains(node.id)) {
+      priority += 12;
+    }
+    if (node.recentErrorCount > 0) {
+      priority += 4;
+    }
+    return priority;
   }
 
   Offset? _renderWorldPosition(String nodeId) {
@@ -1310,31 +1348,32 @@ class StarMapPainter extends CustomPainter {
     }
 
     final tailPath = metric.extractPath(tailStart, headOffset);
-    canvas.drawPath(
-      tailPath,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = edge.strokeWidth + 0.8
-        ..strokeCap = StrokeCap.round
-        ..color = edge.color.withValues(
-          alpha: edge.color.a * (0.24 + trailStrength * 0.16),
-        )
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
-    canvas.drawCircle(
-      tangent.position,
-      5.2,
-      Paint()
-        ..color = edge.color.withValues(
-          alpha: edge.color.a * (0.18 + trailStrength * 0.18),
-        )
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-    );
-    canvas.drawCircle(
-      tangent.position,
-      2.2 + trailStrength * 1.6,
-      Paint()..color = Colors.white.withValues(alpha: 0.92),
-    );
+    canvas
+      ..drawPath(
+        tailPath,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = edge.strokeWidth + 0.8
+          ..strokeCap = StrokeCap.round
+          ..color = edge.color.withValues(
+            alpha: edge.color.a * (0.24 + trailStrength * 0.16),
+          )
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      )
+      ..drawCircle(
+        tangent.position,
+        5.2,
+        Paint()
+          ..color = edge.color.withValues(
+            alpha: edge.color.a * (0.18 + trailStrength * 0.18),
+          )
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      )
+      ..drawCircle(
+        tangent.position,
+        2.2 + trailStrength * 1.6,
+        Paint()..color = Colors.white.withValues(alpha: 0.92),
+      );
   }
 
   Path _extractPathReveal(Path path, double reveal) {
@@ -1438,6 +1477,22 @@ class StarMapPainter extends CustomPainter {
           Paint()
             ..color = style.baseColor.withValues(alpha: 0.14 * nodeAlpha)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+        );
+      }
+
+      if (!performanceDegraded &&
+          node.shouldPulseForReview &&
+          node.isUnlocked &&
+          nodeAlpha > 0 &&
+          lod.index >= GalaxyLod.l2.index) {
+        _drawReviewPulse(
+          canvas: canvas,
+          center: nodeCenter,
+          radius: radius,
+          color: style.baseColor,
+          urgency: node.reviewUrgencyScore,
+          nodeAlpha: nodeAlpha,
+          seed: _nodeSeed(node.id),
         );
       }
 
@@ -1571,12 +1626,14 @@ class StarMapPainter extends CustomPainter {
           node.isUnlocked &&
           lod.index >= GalaxyLod.l2.index) {
         final errorIntensity = (node.recentErrorCount / 5.0).clamp(0.15, 0.55);
-        final pulseFactor = 1.0 + 0.08 * math.sin(ambientPhase * 1.7 + _nodeSeed(node.id));
+        final pulseFactor =
+            1.0 + 0.08 * math.sin(ambientPhase * 1.7 + _nodeSeed(node.id));
         canvas.drawCircle(
           nodeCenter,
           radius * 1.55 * pulseFactor,
           Paint()
-            ..color = const Color(0xFFFF4444).withValues(alpha: errorIntensity * nodeAlpha)
+            ..color = const Color(0xFFFF4444)
+                .withValues(alpha: errorIntensity * nodeAlpha)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.2,
@@ -1674,6 +1731,50 @@ class StarMapPainter extends CustomPainter {
           );
       }
     }
+  }
+
+  void _drawReviewPulse({
+    required Canvas canvas,
+    required Offset center,
+    required double radius,
+    required Color color,
+    required double urgency,
+    required double nodeAlpha,
+    required double seed,
+  }) {
+    final clampedUrgency = urgency.clamp(0.0, 1.0);
+    final pulse = 0.5 + 0.5 * math.sin(ambientPhase * 2.4 + seed);
+    final accent = Color.lerp(color, const Color(0xFFFFD166), 0.28)!;
+    final outerRadius = radius * ui.lerpDouble(1.8, 2.65, pulse)!;
+    final innerRadius = radius * ui.lerpDouble(1.35, 1.9, pulse)!;
+    final haloAlpha = (0.08 + clampedUrgency * 0.12) * nodeAlpha;
+    final ringAlpha =
+        (0.12 + clampedUrgency * 0.18) * (1.0 - pulse * 0.24) * nodeAlpha;
+
+    canvas
+      ..drawCircle(
+        center,
+        outerRadius,
+        Paint()
+          ..color = accent.withValues(alpha: haloAlpha)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+      )
+      ..drawCircle(
+        center,
+        innerRadius,
+        Paint()
+          ..color = accent.withValues(alpha: ringAlpha)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4,
+      )
+      ..drawCircle(
+        center,
+        outerRadius,
+        Paint()
+          ..color = accent.withValues(alpha: ringAlpha * 0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0,
+      );
   }
 
   void _drawLabels(Canvas canvas, GalaxyLod lod, List<_PaintNode> nodes) {

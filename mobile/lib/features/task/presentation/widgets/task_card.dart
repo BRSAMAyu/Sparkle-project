@@ -10,6 +10,7 @@ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCard extends ConsumerStatefulWidget {
@@ -183,6 +184,11 @@ class _TaskCardState extends ConsumerState<TaskCard> {
             type: MaterialType.transparency,
             child: SparkleTappable(
               onTap: widget.onTap,
+              onLongPress: () => showTaskQuickActionMenu(
+                context: context,
+                ref: ref,
+                task: widget.task,
+              ),
               borderRadius: _radius(context),
               child: RepaintBoundary(
                 child: Container(

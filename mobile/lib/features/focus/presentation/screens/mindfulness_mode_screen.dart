@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/features/focus/presentation/widgets/exit_confirmation_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/flip_clock.dart';
+import 'package:sparkle/features/focus/presentation/widgets/focus_session_summary_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/star_background.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -220,7 +221,15 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
             ),
           );
         }
-        if (result.message != null) {
+        if (result.masteryUpdates.isNotEmpty) {
+          await showFocusSessionSummaryDialog(
+            context,
+            durationMinutes: elapsedMinutes,
+            flameEarned: result.flameEarned,
+            masteryUpdates: result.masteryUpdates,
+          );
+          if (!mounted) return;
+        } else if (result.message != null) {
           AppFeedback.info(context, result.message!);
         }
         context.pop();

@@ -227,6 +227,10 @@ class _NotificationCenterScreenState
                   notification.isPush && notification.canDisablePushCategory
                       ? () => _disablePushCategory(notification)
                       : null,
+              onAccountabilityEncourage:
+                  notification.canSendAccountabilityEncouragement
+                      ? () => _sendAccountabilityEncouragement(notification)
+                      : null,
             ),
           );
         },
@@ -440,6 +444,22 @@ class _NotificationCenterScreenState
       return;
     }
     AppFeedback.success(context, '这类主动提醒已关闭');
+  }
+
+  Future<void> _sendAccountabilityEncouragement(
+    UnifiedNotification notification,
+  ) async {
+    final result = await ref
+        .read(notificationCenterProvider.notifier)
+        .sendAccountabilityEncouragement(notification);
+    if (!mounted) {
+      return;
+    }
+    final message = result['message'] as String? ?? '他收到了你的鼓励';
+    AppFeedback.success(context, message);
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+    );
   }
 
   Future<void> _clearReadNotifications() async {

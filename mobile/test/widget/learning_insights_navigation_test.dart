@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart';
+import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
+import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/insights/presentation/screens/learning_insights_overview_screen.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
@@ -197,6 +199,9 @@ void main() {
                 },
               ],
             ),
+            weeklyGrowthNarrativeProvider.overrideWith(
+              (ref) async => WeeklyGrowthNarrative.placeholder(),
+            ),
           ],
           child: MaterialApp.router(routerConfig: router),
         ),
@@ -298,6 +303,9 @@ void main() {
                   },
                 },
               ],
+            ),
+            weeklyGrowthNarrativeProvider.overrideWith(
+              (ref) async => WeeklyGrowthNarrative.placeholder(),
             ),
           ],
           child: MaterialApp.router(routerConfig: router),

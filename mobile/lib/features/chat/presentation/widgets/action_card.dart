@@ -85,6 +85,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   late Animation<double> _iconScaleAnimation;
   late AnimationController _pressController;
   final TextEditingController _reflectionController = TextEditingController();
+  final TextEditingController _reflectionStuckController =
+      TextEditingController();
+  final TextEditingController _reflectionMethodController =
+      TextEditingController();
+  final TextEditingController _reflectionAdjustmentController =
+      TextEditingController();
   String? _selectedReflectionOption;
   bool _reflectionSubmitted = false;
   late bool _detailsExpanded;
@@ -121,12 +127,21 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     if (oldWidget.action != widget.action) {
       _detailsExpanded = !_shouldCollapseByDefault(widget.action);
       _hiddenAfterAction = false;
+      _reflectionSubmitted = false;
+      _selectedReflectionOption = null;
+      _reflectionController.clear();
+      _reflectionStuckController.clear();
+      _reflectionMethodController.clear();
+      _reflectionAdjustmentController.clear();
     }
   }
 
   @override
   void dispose() {
     _reflectionController.dispose();
+    _reflectionStuckController.dispose();
+    _reflectionMethodController.dispose();
+    _reflectionAdjustmentController.dispose();
     _pulseController.dispose();
     _pressController.dispose();
     super.dispose();
@@ -3119,8 +3134,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         .map((e) => '$e')
         .where((e) => e.isNotEmpty)
         .toList();
+    final fields = (action.data['fields'] as List<dynamic>? ?? [])
+        .whereType<Map<dynamic, dynamic>>()
+        .map((item) => item.map((key, value) => MapEntry('$key', value)))
+        .toList();
     final initialStatus = action.data['status']?.toString() ?? '';
     final submitted = _reflectionSubmitted || initialStatus == 'completed';
+    final usesStructuredFields = fields.isNotEmpty;
 
     if (submitted) {
       return Text(
@@ -3135,12 +3155,24 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       if (feedbackId.isEmpty) {
         return;
       }
+      if (usesStructuredFields &&
+          _reflectionStuckController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_reflectionFieldLabel(fields, 'stuck_point')),
+          ),
+        );
+        return;
+      }
       await widget.onWidgetAction?.call(
         'reflection_submit',
         {
           'feedback_id': feedbackId,
           'selected_option': _selectedReflectionOption,
           'free_text': _reflectionController.text.trim(),
+          'stuck_point': _reflectionStuckController.text.trim(),
+          'effective_method': _reflectionMethodController.text.trim(),
+          'adjustment_intention': _reflectionAdjustmentController.text.trim(),
         },
       );
       if (mounted) {
@@ -3161,7 +3193,31 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   fontWeight: DS.fontWeightSemibold,
                 ),
           ),
-        if (options.isNotEmpty) ...[
+        if (usesStructuredFields) ...[
+          const SizedBox(height: DS.spacing12),
+          ...fields.map(
+            (field) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing12),
+              child: _ActionReflectionField(
+                label: _reflectionFieldLabel(
+                  fields,
+                  field['key']?.toString() ?? '',
+                ),
+                hint: _reflectionFieldHint(
+                  fields,
+                  field['key']?.toString() ?? '',
+                ),
+                required: field['required'] == true,
+                controller: switch (field['key']?.toString()) {
+                  'effective_method' => _reflectionMethodController,
+                  'adjustment_intention' => _reflectionAdjustmentController,
+                  _ => _reflectionStuckController,
+                },
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+          ),
+        ] else if (options.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Wrap(
             spacing: DS.spacing8,
@@ -3180,18 +3236,18 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 )
                 .toList(),
           ),
-        ],
-        const SizedBox(height: DS.spacing12),
-        TextField(
-          controller: _reflectionController,
-          minLines: 1,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: context.l10n.chatOptionalNotesHint,
-            border: const OutlineInputBorder(),
-            isDense: true,
+          const SizedBox(height: DS.spacing12),
+          TextField(
+            controller: _reflectionController,
+            minLines: 1,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: context.l10n.chatOptionalNotesHint,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: DS.spacing12),
         Align(
           alignment: Alignment.centerRight,
@@ -3204,6 +3260,52 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ),
       ],
     );
+  }
+
+  String _reflectionFieldLabel(
+    List<Map<String, dynamic>> fields,
+    String key,
+  ) {
+    for (final field in fields) {
+      if (field['key']?.toString() == key) {
+        final label = field['label']?.toString().trim() ?? '';
+        if (label.isNotEmpty) {
+          return label;
+        }
+      }
+    }
+    switch (key) {
+      case 'effective_method':
+        return '哪个方法让你觉得有进展？';
+      case 'adjustment_intention':
+        return '下次会换什么做法？';
+      case 'stuck_point':
+      default:
+        return '这个任务中你卡在哪里了？';
+    }
+  }
+
+  String _reflectionFieldHint(
+    List<Map<String, dynamic>> fields,
+    String key,
+  ) {
+    for (final field in fields) {
+      if (field['key']?.toString() == key) {
+        final hint = field['hint']?.toString().trim() ?? '';
+        if (hint.isNotEmpty) {
+          return hint;
+        }
+      }
+    }
+    switch (key) {
+      case 'effective_method':
+        return '例如：先画图，再列式';
+      case 'adjustment_intention':
+        return '例如：先做 1 道代表题';
+      case 'stuck_point':
+      default:
+        return '例如：公式会背，但不知道什么时候套用';
+    }
   }
 
   Widget _buildAdaptationSummary(BuildContext context, WidgetPayload action) {
@@ -3522,4 +3624,46 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       .split('_')
       .map((word) => word[0].toUpperCase() + word.substring(1))
       .join(' ');
+}
+
+class _ActionReflectionField extends StatelessWidget {
+  const _ActionReflectionField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+    this.required = false,
+    this.onChanged,
+  });
+
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+  final bool required;
+  final ValueChanged<String>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            required ? '$label *' : label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral700,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+          const SizedBox(height: DS.spacing6),
+          TextField(
+            controller: controller,
+            onChanged: onChanged,
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: hint,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+        ],
+      );
 }

@@ -14,10 +14,40 @@ class LoggedFocusSession {
   const LoggedFocusSession({
     required this.response,
     this.unlockedAchievements = const <Map<String, dynamic>>[],
+    this.masteryUpdates = const <FocusMasteryUpdate>[],
   });
 
   final FocusSessionResponse response;
   final List<Map<String, dynamic>> unlockedAchievements;
+  final List<FocusMasteryUpdate> masteryUpdates;
+}
+
+class FocusMasteryUpdate {
+  const FocusMasteryUpdate({
+    required this.nodeId,
+    required this.nodeName,
+    required this.oldMastery,
+    required this.newMastery,
+    required this.delta,
+  });
+
+  factory FocusMasteryUpdate.fromJson(Map<String, dynamic> json) {
+    int readInt(String key) => ((json[key] as num?) ?? 0).round();
+
+    return FocusMasteryUpdate(
+      nodeId: (json['node_id'] ?? '').toString(),
+      nodeName: (json['node_name'] ?? '').toString(),
+      oldMastery: readInt('old_mastery'),
+      newMastery: readInt('new_mastery'),
+      delta: readInt('delta'),
+    );
+  }
+
+  final String nodeId;
+  final String nodeName;
+  final int oldMastery;
+  final int newMastery;
+  final int delta;
 }
 
 /// Repository for focus session operations (P0.3)
@@ -94,9 +124,20 @@ class FocusRepository {
                   .map((item) => Map<String, dynamic>.from(item))
                   .toList() ??
               const <Map<String, dynamic>>[];
+      final masteryUpdates = (payload['mastery_updates'] as List<dynamic>?)
+              ?.whereType<Map<Object?, Object?>>()
+              .map(
+                (item) => FocusMasteryUpdate.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .where((item) => item.nodeName.isNotEmpty)
+              .toList() ??
+          const <FocusMasteryUpdate>[];
       return LoggedFocusSession(
         response: FocusSessionResponse.fromJson(payload),
         unlockedAchievements: unlockedAchievements,
+        masteryUpdates: masteryUpdates,
       );
     } on DioException catch (e) {
       debugPrint('❌ Failed to log focus session: ${e.message}');

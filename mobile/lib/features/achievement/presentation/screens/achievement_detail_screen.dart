@@ -77,6 +77,20 @@ class _AchievementDetailScreenState
       ),
     );
     unawaited(_entranceController.forward());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestAchievementDetail();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant AchievementDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.achievementId != widget.achievementId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _requestAchievementDetail();
+      });
+    }
   }
 
   @override
@@ -85,6 +99,15 @@ class _AchievementDetailScreenState
     _particleController.dispose();
     _entranceController.dispose();
     super.dispose();
+  }
+
+  void _requestAchievementDetail() {
+    if (!mounted) return;
+    unawaited(
+      ref
+          .read(achievementProvider.notifier)
+          .loadAchievementDetail(widget.achievementId),
+    );
   }
 
   @override
@@ -298,6 +321,7 @@ class _AchievementDetailScreenState
     AppLocalizations l10n,
   ) {
     var sectionIndex = 0;
+    final contextStory = _achievementContextStory(achievement);
 
     return Container(
       padding: const EdgeInsets.all(DS.spacing20),
@@ -335,6 +359,19 @@ class _AchievementDetailScreenState
             _AnimatedSection(
               index: sectionIndex++,
               child: _buildDescription(achievement, l10n),
+            ),
+            const SizedBox(height: DS.spacing24),
+          ],
+
+          if (achievement.isUnlocked && contextStory != null) ...[
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildSectionTitle('解锁时刻'),
+            ),
+            const SizedBox(height: DS.spacing12),
+            _AnimatedSection(
+              index: sectionIndex++,
+              child: _buildContextStoryCard(achievement, contextStory),
             ),
             const SizedBox(height: DS.spacing24),
           ],
@@ -542,10 +579,166 @@ class _AchievementDetailScreenState
         ),
       );
 
-  bool _hasEventWindow(AchievementModel achievement) => achievement.isLimited ||
-        achievement.activeFrom != null ||
-        achievement.activeTo != null ||
-        achievement.eventTag != null;
+  Widget _buildContextStoryCard(
+    AchievementWithProgress achievement,
+    String story,
+  ) {
+    final rarityColor =
+        RarityColorProvider.getColor(achievement.achievement.rarity);
+    final chips = _contextStoryChips(achievement);
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            DS.surfaceSecondary,
+            Color.alphaBlend(
+              rarityColor.withValues(alpha: 0.045),
+              DS.surfacePrimary,
+            ),
+          ],
+        ),
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: rarityColor.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: rarityColor.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: rarityColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.history_edu_rounded,
+                  color: rarityColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Text(
+                  story,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeBase,
+                    color: DS.textPrimary,
+                    height: 1.5,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (chips.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing14),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: chips,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String? _achievementContextStory(AchievementWithProgress achievement) {
+    if (!achievement.isUnlocked) return null;
+    final progress = achievement.userProgress;
+    final explicit = progress?.contextStory?.trim();
+    if (explicit != null && explicit.isNotEmpty) {
+      return explicit;
+    }
+
+    final snapshot = progress?.contextSnapshot ?? const <String, dynamic>{};
+    final snapshotStory = snapshot['story']?.toString().trim();
+    if (snapshotStory != null && snapshotStory.isNotEmpty) {
+      return snapshotStory;
+    }
+
+    final unlockedAt = progress?.unlockedAt;
+    if (unlockedAt == null) return null;
+    return '${_formatDate(unlockedAt)}，你解锁了「${achievement.achievement.name}」。';
+  }
+
+  List<Widget> _contextStoryChips(AchievementWithProgress achievement) {
+    final snapshot =
+        achievement.userProgress?.contextSnapshot ?? const <String, dynamic>{};
+    final plan = _asStringMap(snapshot['current_plan']);
+    final task = _asStringMap(snapshot['task']);
+    final progress = _asStringMap(snapshot['progress']);
+    final chips = <Widget>[];
+
+    final planName = _cleanSnapshotText(plan['name']);
+    final daysToTarget = _asInt(plan['days_to_target']);
+    if (planName != null) {
+      final label = daysToTarget == null
+          ? planName
+          : daysToTarget >= 0
+              ? '$planName · 目标日前 $daysToTarget 天'
+              : '$planName · 目标日后 ${daysToTarget.abs()} 天';
+      chips.add(_ContextChip(icon: Icons.flag_rounded, label: label));
+    }
+
+    final taskTitle = _cleanSnapshotText(task['title']);
+    if (taskTitle != null) {
+      chips.add(_ContextChip(icon: Icons.task_alt_rounded, label: taskTitle));
+    }
+
+    final value = _asInt(progress['value']);
+    final target = _asInt(progress['target']);
+    if (value != null && target != null && target > 0) {
+      chips.add(
+        _ContextChip(
+          icon: Icons.stacked_line_chart_rounded,
+          label: '$value / $target',
+        ),
+      );
+    }
+
+    return chips;
+  }
+
+  Map<String, dynamic> _asStringMap(Object? value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return const <String, dynamic>{};
+  }
+
+  String? _cleanSnapshotText(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty || text == 'null') return null;
+    return text;
+  }
+
+  int? _asInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  bool _hasEventWindow(AchievementModel achievement) =>
+      achievement.isLimited ||
+      achievement.activeFrom != null ||
+      achievement.activeTo != null ||
+      achievement.eventTag != null;
 
   Widget _buildEventWindow(
     AchievementModel achievement,
@@ -1109,7 +1302,9 @@ class _AchievementDetailScreenState
   }
 
   Future<void> _equipVisualElement(String elementId) async {
-    await ref.read(visualElementsNotifierProvider.notifier).equipElement(elementId);
+    await ref
+        .read(visualElementsNotifierProvider.notifier)
+        .equipElement(elementId);
   }
 
   Widget _buildStats(
@@ -1330,6 +1525,53 @@ class _AchievementDetailScreenState
   }
 }
 
+class _ContextChip extends StatelessWidget {
+  const _ContextChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(maxWidth: 320),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
+        ),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimary.withValues(alpha: 0.72),
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: DS.border.withValues(alpha: 0.55)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: DS.textSecondary,
+            ),
+            const SizedBox(width: DS.spacing6),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  color: DS.textSecondary,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
 /// Staggered entrance animation wrapper for content sections.
 /// Each section fades + slides in with a stagger delay based on its index.
 class _AnimatedSection extends StatelessWidget {
@@ -1359,8 +1601,7 @@ class _AnimatedSection extends StatelessWidget {
         if (rawValue <= delayFraction) {
           progress = 0.0;
         } else {
-          final localT =
-              (rawValue - delayFraction) / (1.0 - delayFraction);
+          final localT = (rawValue - delayFraction) / (1.0 - delayFraction);
           // Apply easeOutCubic curve
           progress = 1.0 - math.pow(1.0 - localT, 3).toDouble();
         }
@@ -1425,8 +1666,10 @@ class _HeaderParticlePainter extends CustomPainter {
 
       // Twinkle effect: vary opacity with sin
       final twinklePhase = random.nextDouble() * 2 * math.pi;
-      final twinkle =
-          0.2 + 0.6 * ((math.sin(animationValue * 2 * math.pi * 2 + twinklePhase) + 1) / 2);
+      final twinkle = 0.2 +
+          0.6 *
+              ((math.sin(animationValue * 2 * math.pi * 2 + twinklePhase) + 1) /
+                  2);
 
       // Outer glow
       final glowPaint = Paint()

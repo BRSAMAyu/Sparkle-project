@@ -10,16 +10,21 @@ import 'package:sparkle/features/achievement/presentation/widgets/achievement_pr
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/active_bottleneck_alert.dart';
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
+import 'package:sparkle/features/home/presentation/widgets/daily_context_line.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
+import 'package:sparkle/features/home/presentation/widgets/next_action_prompt.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/today_growth_status_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
@@ -47,15 +52,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isBriefingExpanded = false;
   double? _omniBarHeight;
 
-  SliverToBoxAdapter _staggeredSection({
+  Widget _staggeredSection({
     required int index,
     required Widget child,
   }) =>
-      SliverToBoxAdapter(
-        child: SparkleStaggerItem(
-          index: index,
-          child: child,
-        ),
+      SparkleStaggerItem(
+        index: index,
+        child: child,
       );
 
   bool _shouldShowFirstGoalEmptyState(DashboardState state) {
@@ -79,6 +82,57 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     setState(() {
       _omniBarHeight = height;
     });
+  }
+
+  Future<void> _refreshHomeGrowthState() async {
+    ref
+      ..invalidate(homeActivePlanStatusProvider)
+      ..invalidate(homeTodayTasksSnapshotProvider)
+      ..invalidate(homeStreakProvider)
+      ..invalidate(homePlanBottlenecksProvider)
+      ..invalidate(homeDailyContextLineProvider)
+      ..invalidate(homeGrowthDashboardSnapshotProvider)
+      ..invalidate(homeGrowthStateProvider);
+
+    try {
+      await Future.wait([
+        ref.read(homeGrowthStateProvider.future),
+        ref.read(homeDailyContextLineProvider.future),
+      ]);
+    } catch (_) {
+      // The card falls back to an empty-plan state if growth data is unavailable.
+    }
+  }
+
+  void _openBottleneckChat(HomeBottleneck bottleneck) {
+    final prompt = '我想换个方式理解${bottleneck.topic}。请结合这个卡点，帮我调整接下来的学习路径。';
+    context.go(
+      Uri(
+        path: '/chat',
+        queryParameters: {
+          'prompt': prompt,
+          'chat_mode': 'growth',
+        },
+      ).toString(),
+    );
+  }
+
+  void _startNextAction(HomeGrowthTask task) {
+    if (task.id.isEmpty) {
+      unawaited(context.push('/tasks'));
+      return;
+    }
+
+    final taskModel = task.taskModel;
+    if (taskModel == null) {
+      unawaited(context.push('/tasks/${task.id}'));
+      return;
+    }
+
+    ref.read(activeTaskProvider.notifier).state = taskModel;
+    unawaited(
+      context.push('/tasks/${task.id}/execute?origin=home_growth'),
+    );
   }
 
   Widget _buildFirstGoalEmptyState() => ContentConstraint(
@@ -167,6 +221,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final dashboardState = ref.watch(dashboardProvider);
+    final growthAsync = ref.watch(homeGrowthStateProvider);
+    final dailyContextAsync = ref.watch(homeDailyContextLineProvider);
     final predictions = ref.watch(visiblePredictionsProvider);
     final l10n = AppLocalizations.of(context)!;
     final showFirstGoalEmptyState =
@@ -196,6 +252,133 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       DeviceCategory.phone => double.infinity,
       DeviceCategory.phablet => double.infinity,
     };
+
+    final growthState = growthAsync.maybeWhen(
+      data: (state) => state,
+      error: (_, __) => const HomeGrowthState.empty(),
+      orElse: () => null,
+    );
+    final dailyContextLine = dailyContextAsync.maybeWhen(
+      data: (line) => line,
+      error: (_, __) => HomeDailyContextLine.fallback(),
+      orElse: () => null,
+    );
+    final activeBottleneck = growthState?.activeBottleneck;
+    var growthSectionIndex = 0;
+    final growthSections = <Widget>[
+      _staggeredSection(
+        index: growthSectionIndex++,
+        child: DailyContextLine(
+          text: dailyContextLine?.text,
+          isLoading: dailyContextLine == null && dailyContextAsync.isLoading,
+        ),
+      ),
+      _staggeredSection(
+        index: growthSectionIndex++,
+        child: TodayGrowthStatusCard(
+          state: growthState,
+          isLoading: growthState == null && growthAsync.isLoading,
+          onCreatePlan: () {
+            unawaited(context.push('/plans/new?type=growth'));
+          },
+        ),
+      ),
+      if (activeBottleneck != null)
+        _staggeredSection(
+          index: growthSectionIndex++,
+          child: ActiveBottleneckAlert(
+            bottleneck: activeBottleneck,
+            onOpenChat: _openBottleneckChat,
+          ),
+        ),
+      _staggeredSection(
+        index: growthSectionIndex++,
+        child: NextActionPrompt(
+          task: growthState?.nextAction,
+          isLoading: growthState == null && growthAsync.isLoading,
+          onStart: _startNextAction,
+          onOpenTasks: () {
+            unawaited(context.push('/tasks'));
+          },
+        ),
+      ),
+    ];
+
+    var sectionIndex = growthSections.length;
+    final dashboardSections = <Widget>[];
+    if (dashboardState.isLoading) {
+      dashboardSections.add(
+        _staggeredSection(
+          index: sectionIndex++,
+          child: CompactStatusBar(
+            user: user,
+            dashboardState: dashboardState,
+          ),
+        ),
+      );
+      for (final skeleton in _buildDashboardSkeletonSections()) {
+        dashboardSections.add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: skeleton,
+          ),
+        );
+      }
+    } else {
+      dashboardSections.addAll([
+        _staggeredSection(
+          index: sectionIndex++,
+          child: CompactStatusBar(
+            user: user,
+            dashboardState: dashboardState,
+          ),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: _DailyBriefingCard(
+            dashboardState: dashboardState,
+            isExpanded: _isBriefingExpanded,
+            onToggleExpanded: () {
+              setState(() {
+                _isBriefingExpanded = !_isBriefingExpanded;
+              });
+            },
+          ),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: MetricsRow(dashboardState: dashboardState),
+        ),
+      ]);
+
+      if (showFirstGoalEmptyState) {
+        dashboardSections.add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: _buildFirstGoalEmptyState(),
+          ),
+        );
+      } else {
+        dashboardSections.addAll([
+          _staggeredSection(
+            index: sectionIndex++,
+            child: const _DashboardUpdatesSection(),
+          ),
+          _staggeredSection(
+            index: sectionIndex++,
+            child: const DashboardCardSection(),
+          ),
+          _staggeredSection(
+            index: sectionIndex++,
+            child: const AchievementProgressCard(),
+          ),
+          _staggeredSection(
+            index: sectionIndex++,
+            child: const TaskBoardCard(),
+          ),
+        ]);
+      }
+    }
 
     return SparklePageScaffold(
       role: SparklePageRole.dashboard,
@@ -237,6 +420,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onRefresh: () async {
                 await ref.read(dashboardProvider.notifier).refresh();
                 await ref.read(taskListProvider.notifier).refreshTasks();
+                await _refreshHomeGrowthState();
               },
               child: Padding(
                 padding: EdgeInsets.only(bottom: viewportBottomInset),
@@ -244,72 +428,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
-                      if (dashboardState.isLoading) ...[
-                        _staggeredSection(
-                          index: 0,
-                          child: CompactStatusBar(
-                            user: user,
-                            dashboardState: dashboardState,
-                          ),
+                      SliverList(
+                        delegate: SliverChildListDelegate(
+                          [
+                            ...growthSections,
+                            ...dashboardSections,
+                          ],
                         ),
-                        ..._buildDashboardSkeletonSections()
-                            .asMap()
-                            .entries
-                            .map(
-                              (entry) => _staggeredSection(
-                                index: entry.key + 1,
-                                child: entry.value,
-                              ),
-                            ),
-                      ] else ...[
-                        _staggeredSection(
-                          index: 0,
-                          child: CompactStatusBar(
-                            user: user,
-                            dashboardState: dashboardState,
-                          ),
-                        ),
-                        _staggeredSection(
-                          index: 1,
-                          child: _DailyBriefingCard(
-                            dashboardState: dashboardState,
-                            isExpanded: _isBriefingExpanded,
-                            onToggleExpanded: () {
-                              setState(() {
-                                _isBriefingExpanded = !_isBriefingExpanded;
-                              });
-                            },
-                          ),
-                        ),
-                        _staggeredSection(
-                          index: 2,
-                          child: MetricsRow(dashboardState: dashboardState),
-                        ),
-                        if (showFirstGoalEmptyState)
-                          _staggeredSection(
-                            index: 3,
-                            child: _buildFirstGoalEmptyState(),
-                          )
-                        else ...[
-                          _staggeredSection(
-                            index: 3,
-                            child: const _DashboardUpdatesSection(),
-                          ),
-                          _staggeredSection(
-                            index: 4,
-                            child: const DashboardCardSection(),
-                          ),
-                          _staggeredSection(
-                            index: 5,
-                            child: const AchievementProgressCard(),
-                          ),
-                          _staggeredSection(
-                            index: 6,
-                            child: const TaskBoardCard(),
-                          ),
-                        ],
-                      ],
-
+                      ),
                       SliverToBoxAdapter(
                         child: SizedBox(
                           height: totalBottomHeight,

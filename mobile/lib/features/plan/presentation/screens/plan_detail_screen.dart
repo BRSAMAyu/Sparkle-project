@@ -223,6 +223,15 @@ class _PlanOverviewTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: DS.lg),
+          _PlanExecutionSection(
+            plan: plan,
+            onAddNewTask: () => context.push(
+              '/tasks/new?planId=${plan.id}&planName=${Uri.encodeComponent(plan.name)}',
+            ),
+            onAddExistingTask: () =>
+                unawaited(_showAddExistingTaskPicker(context, ref)),
+          ),
+          const SizedBox(height: DS.lg),
           _PlanPhaseSection(plan: plan),
           if (parsedDescription.hasStructuredSections) ...[
             const SizedBox(height: DS.lg),
@@ -251,45 +260,6 @@ class _PlanOverviewTab extends ConsumerWidget {
                 content: parsedDescription.guide,
               ),
           ],
-          const SizedBox(height: DS.lg),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.planRelatedTasks,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              SparkleButton.ghost(
-                onPressed: () => context.push(
-                  '/tasks/new?planId=${plan.id}&planName=${Uri.encodeComponent(plan.name)}',
-                ),
-                icon: const Icon(Icons.add_task_rounded),
-                label: '新增计划任务',
-              ),
-              const SizedBox(width: DS.spacing8),
-              SparkleButton.ghost(
-                onPressed: () =>
-                    unawaited(_showAddExistingTaskPicker(context, ref)),
-                icon: const Icon(Icons.playlist_add_rounded),
-                label: '添加已有任务',
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.sm),
-          if (plan.tasks == null || plan.tasks!.isEmpty)
-            Text(l10n.planNoTasks, style: TextStyle(color: DS.textSecondary))
-          else
-            ...plan.tasks!.map(
-              (task) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(task.title),
-                subtitle: Text(task.status.name),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/tasks/${task.id}'),
-              ),
-            ),
-          const SizedBox(height: DS.lg),
           _buildArchiveActions(context, ref),
         ],
       ),
@@ -441,6 +411,619 @@ class _PlanOverviewTab extends ConsumerWidget {
       if (!context.mounted) return;
       AppFeedback.error(context, 'Add task failed: $e');
     }
+  }
+}
+
+class _PlanExecutionSection extends StatelessWidget {
+  const _PlanExecutionSection({
+    required this.plan,
+    required this.onAddNewTask,
+    required this.onAddExistingTask,
+  });
+
+  final PlanModel plan;
+  final VoidCallback onAddNewTask;
+  final VoidCallback onAddExistingTask;
+
+  @override
+  Widget build(BuildContext context) {
+    final tasks = _mergedPlanTasks(plan);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(child: _SectionHeader(title: '今日聚焦')),
+            if (!context.isMobile)
+              _PlanTaskActions(
+                onAddNewTask: onAddNewTask,
+                onAddExistingTask: onAddExistingTask,
+              ),
+          ],
+        ),
+        if (context.isMobile) ...[
+          const SizedBox(height: DS.spacing12),
+          _PlanTaskActions(
+            onAddNewTask: onAddNewTask,
+            onAddExistingTask: onAddExistingTask,
+          ),
+        ],
+        const SizedBox(height: DS.spacing12),
+        if (tasks.isEmpty)
+          GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            child: Text(
+              context.l10n.planNoTasks,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+          )
+        else ...[
+          _TodayFocusPlan(plan: plan, tasks: tasks),
+          const SizedBox(height: DS.spacing20),
+          _ExpandableFullPlan(plan: plan, tasks: tasks),
+        ],
+      ],
+    );
+  }
+}
+
+class _PlanTaskActions extends StatelessWidget {
+  const _PlanTaskActions({
+    required this.onAddNewTask,
+    required this.onAddExistingTask,
+  });
+
+  final VoidCallback onAddNewTask;
+  final VoidCallback onAddExistingTask;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: [
+          SparkleButton.ghost(
+            onPressed: onAddNewTask,
+            icon: const Icon(Icons.add_task_rounded),
+            label: '新增任务',
+          ),
+          SparkleButton.ghost(
+            onPressed: onAddExistingTask,
+            icon: const Icon(Icons.playlist_add_rounded),
+            label: '添加已有',
+          ),
+        ],
+      );
+}
+
+class _TodayFocusPlan extends StatelessWidget {
+  const _TodayFocusPlan({required this.plan, required this.tasks});
+
+  final PlanModel plan;
+  final List<TaskModel> tasks;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = _buildPlanDayGroups(tasks);
+    final highlightDay = _highlightDay(plan, groups);
+    final highlightedTasks = _highlightTasks(plan, groups, highlightDay);
+    final recommendation = _highlightRecommendation(
+      plan,
+      highlightedTasks,
+      highlightDay,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            color: DS.brandPrimary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.18)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.spacing8),
+                decoration: BoxDecoration(
+                  color: DS.brandPrimary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 18,
+                  color: DS.brandPrimary,
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Text(
+                  recommendation,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: DS.textPrimary,
+                        height: 1.45,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: DS.spacing12),
+        ...highlightedTasks.asMap().entries.map(
+              (entry) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: entry.key == highlightedTasks.length - 1
+                      ? 0
+                      : DS.spacing12,
+                ),
+                child: _TodayTaskCard(
+                  task: entry.value,
+                  sequence: entry.key + 1,
+                ),
+              ),
+            ),
+      ],
+    );
+  }
+}
+
+class _TodayTaskCard extends StatelessWidget {
+  const _TodayTaskCard({required this.task, required this.sequence});
+
+  final TaskModel task;
+  final int sequence;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = _taskStatusColor(task.status);
+
+    return GraphiteCardSurface(
+      onTap: () => context.push('/tasks/${task.id}'),
+      borderColor: statusColor.withValues(alpha: 0.32),
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(DS.spacing18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(17),
+                ),
+                child: task.status == TaskStatus.completed
+                    ? Icon(Icons.check_rounded, color: statusColor, size: 20)
+                    : Text(
+                        '$sequence',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                      ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Text(
+                  task.title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        height: 1.25,
+                      ),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: DS.textSecondary),
+            ],
+          ),
+          const SizedBox(height: DS.spacing12),
+          _WhyNowNote(text: _taskWhyNow(task)),
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              _TaskMetaPill(
+                icon: Icons.schedule_rounded,
+                label: '${task.estimatedMinutes} 分钟',
+              ),
+              _TaskMetaPill(
+                icon: Icons.bolt_rounded,
+                label: '难度 ${task.difficulty}',
+              ),
+              _TaskMetaPill(
+                icon: _taskStatusIcon(task.status),
+                label: _taskStatusLabel(task.status),
+                color: statusColor,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExpandableFullPlan extends StatelessWidget {
+  const _ExpandableFullPlan({required this.plan, required this.tasks});
+
+  final PlanModel plan;
+  final List<TaskModel> tasks;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = _buildPlanDayGroups(tasks);
+    final highlightDay = _highlightDay(plan, groups);
+    final futureGroups =
+        groups.where((group) => group.day != highlightDay).toList();
+    if (futureGroups.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: '完整计划'),
+        const SizedBox(height: DS.spacing12),
+        ...futureGroups.map(
+          (group) => Padding(
+            padding: const EdgeInsets.only(bottom: DS.spacing10),
+            child: _PlanDayExpansion(group: group),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlanDayExpansion extends StatelessWidget {
+  const _PlanDayExpansion({required this.group});
+
+  final _PlanDayGroup group;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing4,
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            0,
+            DS.spacing16,
+            DS.spacing12,
+          ),
+          shape: const Border(),
+          collapsedShape: const Border(),
+          title: Text(
+            'Day ${group.day}',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          subtitle: Text(
+            '${group.tasks.length} 件 · ${group.totalMinutes} 分钟',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.textSecondary,
+                ),
+          ),
+          children: group.tasks
+              .map(
+                (task) => _CompactPlanTaskTile(task: task),
+              )
+              .toList(),
+        ),
+      );
+}
+
+class _CompactPlanTaskTile extends StatelessWidget {
+  const _CompactPlanTaskTile({required this.task});
+
+  final TaskModel task;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = _taskStatusColor(task.status);
+
+    return InkWell(
+      onTap: () => context.push('/tasks/${task.id}'),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: DS.spacing10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _taskStatusIcon(task.status),
+                  size: 18,
+                  color: statusColor,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    task.title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, size: 18),
+              ],
+            ),
+            const SizedBox(height: DS.spacing6),
+            Padding(
+              padding: const EdgeInsets.only(left: 26),
+              child: Text(
+                _taskWhyNow(task),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.35,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WhyNowNote extends StatelessWidget {
+  const _WhyNowNote({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceTertiary.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.psychology_alt_rounded,
+              size: 17,
+              color: DS.textSecondary,
+            ),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                text,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _TaskMetaPill extends StatelessWidget {
+  const _TaskMetaPill({
+    required this.icon,
+    required this.label,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedColor = color ?? DS.textSecondary;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing10,
+        vertical: DS.spacing6,
+      ),
+      decoration: BoxDecoration(
+        color: resolvedColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: resolvedColor),
+          const SizedBox(width: DS.spacing6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: resolvedColor,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanDayGroup {
+  _PlanDayGroup({required this.day, required this.tasks});
+
+  final int day;
+  final List<TaskModel> tasks;
+
+  int get totalMinutes =>
+      tasks.fold<int>(0, (sum, task) => sum + task.estimatedMinutes);
+}
+
+List<TaskModel> _mergedPlanTasks(PlanModel plan) {
+  final merged = <TaskModel>[];
+  final seen = <String>{};
+
+  void addTask(TaskModel task) {
+    if (seen.add(task.id)) merged.add(task);
+  }
+
+  (plan.tasks ?? const <TaskModel>[]).forEach(addTask);
+  (plan.dayHighlights?.tasks ?? const <TaskModel>[]).forEach(addTask);
+
+  merged.sort(
+    (a, b) {
+      final byOrder = a.orderIndex.compareTo(b.orderIndex);
+      if (byOrder != 0) return byOrder;
+      return a.createdAt.compareTo(b.createdAt);
+    },
+  );
+  return merged;
+}
+
+List<_PlanDayGroup> _buildPlanDayGroups(List<TaskModel> tasks) {
+  final groups = <int, List<TaskModel>>{};
+  for (final task in tasks) {
+    groups.putIfAbsent(_taskDay(task), () => <TaskModel>[]).add(task);
+  }
+  final result = groups.entries
+      .map((entry) => _PlanDayGroup(day: entry.key, tasks: entry.value))
+      .toList()
+    ..sort((a, b) => a.day.compareTo(b.day));
+  for (final group in result) {
+    group.tasks.sort(
+      (a, b) {
+        final byOrder = a.orderIndex.compareTo(b.orderIndex);
+        if (byOrder != 0) return byOrder;
+        return a.createdAt.compareTo(b.createdAt);
+      },
+    );
+  }
+  return result;
+}
+
+int _taskDay(TaskModel task) {
+  if (task.orderIndex >= 1000) {
+    return task.orderIndex ~/ 1000;
+  }
+  for (final tag in task.tags) {
+    if (!tag.startsWith('day:')) continue;
+    final parsed = int.tryParse(tag.substring(4));
+    if (parsed != null && parsed > 0) return parsed;
+  }
+  return 1;
+}
+
+int _highlightDay(PlanModel plan, List<_PlanDayGroup> groups) {
+  final serverDay = plan.dayHighlights?.day;
+  if (serverDay != null && serverDay > 0) return serverDay;
+  if (groups.any((group) => group.day == 1)) return 1;
+  return groups.isEmpty ? 1 : groups.first.day;
+}
+
+List<TaskModel> _highlightTasks(
+  PlanModel plan,
+  List<_PlanDayGroup> groups,
+  int day,
+) {
+  final serverTasks = plan.dayHighlights?.tasks ?? const <TaskModel>[];
+  if (serverTasks.isNotEmpty) return serverTasks;
+  return groups
+      .firstWhere(
+        (group) => group.day == day,
+        orElse: () => groups.isEmpty
+            ? _PlanDayGroup(day: day, tasks: const <TaskModel>[])
+            : groups.first,
+      )
+      .tasks;
+}
+
+String _highlightRecommendation(
+  PlanModel plan,
+  List<TaskModel> tasks,
+  int day,
+) {
+  final serverText = plan.dayHighlights?.recommendation.trim();
+  if (serverText != null && serverText.isNotEmpty) return serverText;
+  final thingLabel = tasks.length == 1 ? '这 1 件事' : '这 ${tasks.length} 件事';
+  if (day == 1) {
+    return '今天先做好$thingLabel，你已经走在正确路上了。';
+  }
+  return '先看 Day $day 的$thingLabel，把节奏稳稳接上。';
+}
+
+String _taskWhyNow(TaskModel task) {
+  final guide = task.guideJson;
+  final whyNow = guide == null ? '' : '${guide['why_now'] ?? ''}'.trim();
+  if (whyNow.isNotEmpty) return whyNow;
+  switch (task.type) {
+    case TaskType.learning:
+      return '现在先处理它，是为了把今天的学习推进变成一个看得见的输出。';
+    case TaskType.training:
+      return '现在做练习，能尽快确认刚学的内容是不是真的会用。';
+    case TaskType.errorFix:
+      return '现在修这个错因，能避免后面的任务被同一个漏洞反复拖住。';
+    case TaskType.reflection:
+      return '现在复盘，能把今天的结果转成明天更轻的选择。';
+    case TaskType.social:
+      return '现在完成协作动作，能让外部反馈及时接进你的学习节奏。';
+    case TaskType.planning:
+      return '现在整理计划，能让下一步执行少一点犹豫。';
+    case TaskType.ocr:
+      return '现在处理资料，能先把可用信息变成后续任务的入口。';
+  }
+}
+
+String _taskStatusLabel(TaskStatus status) {
+  switch (status) {
+    case TaskStatus.pending:
+      return '待开始';
+    case TaskStatus.inProgress:
+      return '进行中';
+    case TaskStatus.completed:
+      return '已完成';
+    case TaskStatus.abandoned:
+      return '已放弃';
+  }
+}
+
+IconData _taskStatusIcon(TaskStatus status) {
+  switch (status) {
+    case TaskStatus.pending:
+      return Icons.radio_button_unchecked_rounded;
+    case TaskStatus.inProgress:
+      return Icons.play_circle_outline_rounded;
+    case TaskStatus.completed:
+      return Icons.check_circle_rounded;
+    case TaskStatus.abandoned:
+      return Icons.pause_circle_outline_rounded;
+  }
+}
+
+Color _taskStatusColor(TaskStatus status) {
+  switch (status) {
+    case TaskStatus.pending:
+      return DS.brandPrimary;
+    case TaskStatus.inProgress:
+      return DS.info;
+    case TaskStatus.completed:
+      return DS.success;
+    case TaskStatus.abandoned:
+      return DS.textSecondary;
   }
 }
 

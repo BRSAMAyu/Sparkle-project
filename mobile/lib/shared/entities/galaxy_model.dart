@@ -167,6 +167,11 @@ class GalaxyNodeModel {
     required this.masteryScore,
     this.studyCount = 0,
     this.recentErrorCount = 0,
+    this.reviewUrgencyScore = 0,
+    this.isReviewRecommended = false,
+    this.reviewUrgencyReason,
+    this.masteryLastUpdatedAt,
+    this.daysSinceMasteryUpdate = 0,
     this.firstUnlockAt,
     this.parentId,
     this.baseColor,
@@ -217,7 +222,28 @@ class GalaxyNodeModel {
       studyCount: (GalaxyNodeModel._readStudyCount(json, 'study_count') as num?)
               ?.toInt() ??
           0,
-      recentErrorCount: (userStatus?['recent_error_count'] as num?)?.toInt() ?? 0,
+      recentErrorCount: ((userStatus?['recent_error_count'] ??
+                  json['recent_error_count']) as num?)
+              ?.toInt() ??
+          0,
+      reviewUrgencyScore: ((userStatus?['review_urgency_score'] ??
+                  json['review_urgency_score']) as num?)
+              ?.toDouble() ??
+          0,
+      isReviewRecommended: (userStatus?['is_review_recommended'] as bool?) ??
+          (json['is_review_recommended'] as bool?) ??
+          false,
+      reviewUrgencyReason: (userStatus?['review_urgency_reason'] ??
+              json['review_urgency_reason'])
+          ?.toString(),
+      masteryLastUpdatedAt: GalaxyNodeModel._readDateTime(
+        userStatus?['mastery_last_updated_at'] ??
+            json['mastery_last_updated_at'],
+      ),
+      daysSinceMasteryUpdate: ((userStatus?['days_since_mastery_update'] ??
+                  json['days_since_mastery_update']) as num?)
+              ?.toDouble() ??
+          0,
       firstUnlockAt: GalaxyNodeModel._readDateTime(
         json['first_unlock_at'] ?? userStatus?['first_unlock_at'],
       ),
@@ -269,12 +295,27 @@ class GalaxyNodeModel {
   @JsonKey(name: 'mastery_score')
   final int masteryScore;
 
-  @JsonKey(name: 'study_count', readValue: _readStudyCount, defaultValue: 0)
+  @JsonKey(name: 'study_count', readValue: _readStudyCount)
   final int studyCount;
 
   /// Recent error count (last 14 days) — drives error cluster tint in star map
-  @JsonKey(name: 'recent_error_count', defaultValue: 0)
+  @JsonKey(name: 'recent_error_count')
   final int recentErrorCount;
+
+  @JsonKey(name: 'review_urgency_score')
+  final double reviewUrgencyScore;
+
+  @JsonKey(name: 'is_review_recommended')
+  final bool isReviewRecommended;
+
+  @JsonKey(name: 'review_urgency_reason')
+  final String? reviewUrgencyReason;
+
+  @JsonKey(name: 'mastery_last_updated_at')
+  final DateTime? masteryLastUpdatedAt;
+
+  @JsonKey(name: 'days_since_mastery_update')
+  final double daysSinceMasteryUpdate;
 
   @JsonKey(name: 'first_unlock_at')
   final DateTime? firstUnlockAt;
@@ -330,9 +371,13 @@ class GalaxyNodeModel {
 
   List<String> get autoTags => tags ?? const [];
 
+  bool get shouldPulseForReview =>
+      isUnlocked && isReviewRecommended && reviewUrgencyScore > 0;
+
   Map<SectorEnum, double> get normalizedSectorWeights {
     if (sectorWeights.isNotEmpty) {
-      final total = sectorWeights.values.fold<double>(0, (sum, value) => sum + value);
+      final total =
+          sectorWeights.values.fold<double>(0, (sum, value) => sum + value);
       if (total > 0) {
         return {
           for (final entry in sectorWeights.entries)
@@ -374,6 +419,11 @@ class GalaxyNodeModel {
     int? masteryScore,
     int? studyCount,
     int? recentErrorCount,
+    double? reviewUrgencyScore,
+    bool? isReviewRecommended,
+    String? reviewUrgencyReason,
+    DateTime? masteryLastUpdatedAt,
+    double? daysSinceMasteryUpdate,
     DateTime? firstUnlockAt,
     List<String>? tags,
     String? description,
@@ -396,6 +446,12 @@ class GalaxyNodeModel {
         masteryScore: masteryScore ?? this.masteryScore,
         studyCount: studyCount ?? this.studyCount,
         recentErrorCount: recentErrorCount ?? this.recentErrorCount,
+        reviewUrgencyScore: reviewUrgencyScore ?? this.reviewUrgencyScore,
+        isReviewRecommended: isReviewRecommended ?? this.isReviewRecommended,
+        reviewUrgencyReason: reviewUrgencyReason ?? this.reviewUrgencyReason,
+        masteryLastUpdatedAt: masteryLastUpdatedAt ?? this.masteryLastUpdatedAt,
+        daysSinceMasteryUpdate:
+            daysSinceMasteryUpdate ?? this.daysSinceMasteryUpdate,
         firstUnlockAt: firstUnlockAt ?? this.firstUnlockAt,
         tags: tags ?? this.tags,
         description: description ?? this.description,

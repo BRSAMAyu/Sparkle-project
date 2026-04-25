@@ -49,6 +49,10 @@ mixin _$ErrorRecord {
   ErrorAnalysis? get latestAnalysis => throw _privateConstructorUsedError;
   @JsonKey(name: 'knowledge_links')
   List<KnowledgeLink> get knowledgeLinks => throw _privateConstructorUsedError;
+  @JsonKey(name: 'affected_node_id', fromJson: _nullableStringFromJson)
+  String? get affectedNodeId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'mastery_delta', fromJson: _nullableDoubleFromJson)
+  double? get masteryDelta => throw _privateConstructorUsedError;
   @JsonKey(name: 'cognitive_tags')
   List<CognitiveDimension> get cognitiveTags =>
       throw _privateConstructorUsedError;
@@ -87,6 +91,10 @@ abstract class $ErrorRecordCopyWith<$Res> {
       @JsonKey(name: 'last_reviewed_at') DateTime? lastReviewedAt,
       @JsonKey(name: 'latest_analysis') ErrorAnalysis? latestAnalysis,
       @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks,
+      @JsonKey(name: 'affected_node_id', fromJson: _nullableStringFromJson)
+      String? affectedNodeId,
+      @JsonKey(name: 'mastery_delta', fromJson: _nullableDoubleFromJson)
+      double? masteryDelta,
       @JsonKey(name: 'cognitive_tags') List<CognitiveDimension> cognitiveTags,
       @JsonKey(name: 'ai_analysis_summary') String? aiAnalysisSummary});
 
@@ -122,6 +130,8 @@ class _$ErrorRecordCopyWithImpl<$Res, $Val extends ErrorRecord>
     Object? lastReviewedAt = freezed,
     Object? latestAnalysis = freezed,
     Object? knowledgeLinks = null,
+    Object? affectedNodeId = freezed,
+    Object? masteryDelta = freezed,
     Object? cognitiveTags = null,
     Object? aiAnalysisSummary = freezed,
   }) {
@@ -190,6 +200,14 @@ class _$ErrorRecordCopyWithImpl<$Res, $Val extends ErrorRecord>
           ? _value.knowledgeLinks
           : knowledgeLinks // ignore: cast_nullable_to_non_nullable
               as List<KnowledgeLink>,
+      affectedNodeId: freezed == affectedNodeId
+          ? _value.affectedNodeId
+          : affectedNodeId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      masteryDelta: freezed == masteryDelta
+          ? _value.masteryDelta
+          : masteryDelta // ignore: cast_nullable_to_non_nullable
+              as double?,
       cognitiveTags: null == cognitiveTags
           ? _value.cognitiveTags
           : cognitiveTags // ignore: cast_nullable_to_non_nullable
@@ -242,6 +260,10 @@ abstract class _$$ErrorRecordImplCopyWith<$Res>
       @JsonKey(name: 'last_reviewed_at') DateTime? lastReviewedAt,
       @JsonKey(name: 'latest_analysis') ErrorAnalysis? latestAnalysis,
       @JsonKey(name: 'knowledge_links') List<KnowledgeLink> knowledgeLinks,
+      @JsonKey(name: 'affected_node_id', fromJson: _nullableStringFromJson)
+      String? affectedNodeId,
+      @JsonKey(name: 'mastery_delta', fromJson: _nullableDoubleFromJson)
+      double? masteryDelta,
       @JsonKey(name: 'cognitive_tags') List<CognitiveDimension> cognitiveTags,
       @JsonKey(name: 'ai_analysis_summary') String? aiAnalysisSummary});
 
@@ -276,6 +298,8 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
     Object? lastReviewedAt = freezed,
     Object? latestAnalysis = freezed,
     Object? knowledgeLinks = null,
+    Object? affectedNodeId = freezed,
+    Object? masteryDelta = freezed,
     Object? cognitiveTags = null,
     Object? aiAnalysisSummary = freezed,
   }) {
@@ -344,6 +368,14 @@ class __$$ErrorRecordImplCopyWithImpl<$Res>
           ? _value._knowledgeLinks
           : knowledgeLinks // ignore: cast_nullable_to_non_nullable
               as List<KnowledgeLink>,
+      affectedNodeId: freezed == affectedNodeId
+          ? _value.affectedNodeId
+          : affectedNodeId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      masteryDelta: freezed == masteryDelta
+          ? _value.masteryDelta
+          : masteryDelta // ignore: cast_nullable_to_non_nullable
+              as double?,
       cognitiveTags: null == cognitiveTags
           ? _value._cognitiveTags
           : cognitiveTags // ignore: cast_nullable_to_non_nullable
@@ -381,6 +413,10 @@ class _$ErrorRecordImpl implements _ErrorRecord {
       @JsonKey(name: 'latest_analysis') this.latestAnalysis,
       @JsonKey(name: 'knowledge_links')
       final List<KnowledgeLink> knowledgeLinks = const [],
+      @JsonKey(name: 'affected_node_id', fromJson: _nullableStringFromJson)
+      this.affectedNodeId,
+      @JsonKey(name: 'mastery_delta', fromJson: _nullableDoubleFromJson)
+      this.masteryDelta,
       @JsonKey(name: 'cognitive_tags')
       final List<CognitiveDimension> cognitiveTags = const [],
       @JsonKey(name: 'ai_analysis_summary') this.aiAnalysisSummary})
@@ -441,6 +477,12 @@ class _$ErrorRecordImpl implements _ErrorRecord {
     return EqualUnmodifiableListView(_knowledgeLinks);
   }
 
+  @override
+  @JsonKey(name: 'affected_node_id', fromJson: _nullableStringFromJson)
+  final String? affectedNodeId;
+  @override
+  @JsonKey(name: 'mastery_delta', fromJson: _nullableDoubleFromJson)
+  final double? masteryDelta;
   final List<CognitiveDimension> _cognitiveTags;
   @override
   @JsonKey(name: 'cognitive_tags')
@@ -456,7 +498,7 @@ class _$ErrorRecordImpl implements _ErrorRecord {
 
   @override
   String toString() {
-    return 'ErrorRecord(id: $id, questionText: $questionText, userAnswer: $userAnswer, correctAnswer: $correctAnswer, subject: $subject, masteryLevel: $masteryLevel, reviewCount: $reviewCount, createdAt: $createdAt, updatedAt: $updatedAt, questionImageUrl: $questionImageUrl, chapter: $chapter, difficulty: $difficulty, nextReviewAt: $nextReviewAt, lastReviewedAt: $lastReviewedAt, latestAnalysis: $latestAnalysis, knowledgeLinks: $knowledgeLinks, cognitiveTags: $cognitiveTags, aiAnalysisSummary: $aiAnalysisSummary)';
+    return 'ErrorRecord(id: $id, questionText: $questionText, userAnswer: $userAnswer, correctAnswer: $correctAnswer, subject: $subject, masteryLevel: $masteryLevel, reviewCount: $reviewCount, createdAt: $createdAt, updatedAt: $updatedAt, questionImageUrl: $questionImageUrl, chapter: $chapter, difficulty: $difficulty, nextReviewAt: $nextReviewAt, lastReviewedAt: $lastReviewedAt, latestAnalysis: $latestAnalysis, knowledgeLinks: $knowledgeLinks, affectedNodeId: $affectedNodeId, masteryDelta: $masteryDelta, cognitiveTags: $cognitiveTags, aiAnalysisSummary: $aiAnalysisSummary)';
   }
 
   @override
@@ -493,6 +535,10 @@ class _$ErrorRecordImpl implements _ErrorRecord {
                 other.latestAnalysis == latestAnalysis) &&
             const DeepCollectionEquality()
                 .equals(other._knowledgeLinks, _knowledgeLinks) &&
+            (identical(other.affectedNodeId, affectedNodeId) ||
+                other.affectedNodeId == affectedNodeId) &&
+            (identical(other.masteryDelta, masteryDelta) ||
+                other.masteryDelta == masteryDelta) &&
             const DeepCollectionEquality()
                 .equals(other._cognitiveTags, _cognitiveTags) &&
             (identical(other.aiAnalysisSummary, aiAnalysisSummary) ||
@@ -501,26 +547,29 @@ class _$ErrorRecordImpl implements _ErrorRecord {
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      questionText,
-      userAnswer,
-      correctAnswer,
-      subject,
-      masteryLevel,
-      reviewCount,
-      createdAt,
-      updatedAt,
-      questionImageUrl,
-      chapter,
-      difficulty,
-      nextReviewAt,
-      lastReviewedAt,
-      latestAnalysis,
-      const DeepCollectionEquality().hash(_knowledgeLinks),
-      const DeepCollectionEquality().hash(_cognitiveTags),
-      aiAnalysisSummary);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        questionText,
+        userAnswer,
+        correctAnswer,
+        subject,
+        masteryLevel,
+        reviewCount,
+        createdAt,
+        updatedAt,
+        questionImageUrl,
+        chapter,
+        difficulty,
+        nextReviewAt,
+        lastReviewedAt,
+        latestAnalysis,
+        const DeepCollectionEquality().hash(_knowledgeLinks),
+        affectedNodeId,
+        masteryDelta,
+        const DeepCollectionEquality().hash(_cognitiveTags),
+        aiAnalysisSummary
+      ]);
 
   @JsonKey(ignore: true)
   @override
@@ -559,6 +608,10 @@ abstract class _ErrorRecord implements ErrorRecord {
       @JsonKey(name: 'latest_analysis') final ErrorAnalysis? latestAnalysis,
       @JsonKey(name: 'knowledge_links')
       final List<KnowledgeLink> knowledgeLinks,
+      @JsonKey(name: 'affected_node_id', fromJson: _nullableStringFromJson)
+      final String? affectedNodeId,
+      @JsonKey(name: 'mastery_delta', fromJson: _nullableDoubleFromJson)
+      final double? masteryDelta,
       @JsonKey(name: 'cognitive_tags')
       final List<CognitiveDimension> cognitiveTags,
       @JsonKey(name: 'ai_analysis_summary')
@@ -612,6 +665,12 @@ abstract class _ErrorRecord implements ErrorRecord {
   @override
   @JsonKey(name: 'knowledge_links')
   List<KnowledgeLink> get knowledgeLinks;
+  @override
+  @JsonKey(name: 'affected_node_id', fromJson: _nullableStringFromJson)
+  String? get affectedNodeId;
+  @override
+  @JsonKey(name: 'mastery_delta', fromJson: _nullableDoubleFromJson)
+  double? get masteryDelta;
   @override
   @JsonKey(name: 'cognitive_tags')
   List<CognitiveDimension> get cognitiveTags;

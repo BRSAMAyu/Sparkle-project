@@ -553,6 +553,69 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     });
   }
 
+  Future<TaskQuickActionResult> snoozeTask(String id) async {
+    final previousTask = _findTaskInState(id);
+    final result = await _taskRepository.snoozeTask(id);
+
+    if (result.task.dueDate != null) {
+      final config = _ref.read(taskReminderConfigProvider);
+      try {
+        await _notificationScheduler.rescheduleTaskReminders(
+          result.task,
+          config: config,
+        );
+      } catch (e) {
+        debugPrint('Failed to reschedule snoozed task reminders: $e');
+      }
+    }
+
+    await _syncCalendarForTask(result.task);
+    if (previousTask?.dueDate != null &&
+        result.task.dueDate != previousTask!.dueDate) {
+      await _refreshCalendarSurfacesForDate(previousTask.dueDate!);
+    }
+
+    if (!mounted) return result;
+    _applyQuickAction(result);
+    return result;
+  }
+
+  Future<TaskQuickActionResult> markTaskTooHard(
+    String id, {
+    String? reason,
+  }) async {
+    final result = await _taskRepository.markTaskTooHard(id, reason: reason);
+    if (!mounted) return result;
+    _applyQuickAction(result);
+    return result;
+  }
+
+  Future<TaskQuickActionResult> skipTask(String id) async {
+    final previousTask = _findTaskInState(id);
+    final result = await _taskRepository.skipTask(id);
+
+    try {
+      await _notificationScheduler.cancelTaskReminders(id);
+    } catch (e) {
+      debugPrint('Failed to cancel skipped task reminders: $e');
+    }
+
+    try {
+      await _ref.read(calendarRepositoryProvider).removeTaskLinkedEvent(id);
+      if (previousTask?.dueDate != null) {
+        await _refreshCalendarSurfacesForDate(previousTask!.dueDate!);
+      } else {
+        unawaited(_ref.read(calendarProvider.notifier).loadEvents());
+      }
+    } catch (e) {
+      debugPrint('Failed to remove skipped task from calendar: $e');
+    }
+
+    if (!mounted) return result;
+    _applyQuickAction(result);
+    return result;
+  }
+
   Future<void> moveTaskToPlan(
     String taskId,
     String? targetPlanId, {
@@ -869,6 +932,9 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       tasks: state.tasks.map((t) => t.id == task.id ? task : t).toList(),
       todayTasks:
           state.todayTasks.map((t) => t.id == task.id ? task : t).toList(),
+      recommendedTasks: state.recommendedTasks
+          .map((t) => t.id == task.id ? task : t)
+          .toList(),
     );
   }
 
@@ -893,7 +959,71 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       tasks: state.tasks.map((t) => t.id == taskId ? updater(t) : t).toList(),
       todayTasks:
           state.todayTasks.map((t) => t.id == taskId ? updater(t) : t).toList(),
+      recommendedTasks: state.recommendedTasks
+          .map((t) => t.id == taskId ? updater(t) : t)
+          .toList(),
     );
+  }
+
+  TaskModel? _findTaskInState(String taskId) {
+    for (final task in state.tasks) {
+      if (task.id == taskId) return task;
+    }
+    for (final task in state.todayTasks) {
+      if (task.id == taskId) return task;
+    }
+    for (final task in state.recommendedTasks) {
+      if (task.id == taskId) return task;
+    }
+    final activeTask = _ref.read(activeTaskProvider);
+    if (activeTask?.id == taskId) {
+      return activeTask;
+    }
+    return null;
+  }
+
+  List<TaskModel> _replaceTaskInList(
+    List<TaskModel> tasks,
+    TaskModel task, {
+    required bool keep,
+  }) {
+    final index = tasks.indexWhere((item) => item.id == task.id);
+    if (index == -1) return tasks;
+
+    final next = List<TaskModel>.from(tasks);
+    if (keep) {
+      next[index] = task;
+    } else {
+      next.removeAt(index);
+    }
+    return next;
+  }
+
+  void _applyQuickAction(TaskQuickActionResult result) {
+    final task = result.task;
+    final keepTask = task.status != TaskStatus.abandoned;
+    final keepInToday = keepTask && _shouldIncludeInToday(task);
+    final keepInRecommended = keepTask && result.action == 'too_hard';
+
+    state = state.copyWith(
+      tasks: _replaceTaskInList(state.tasks, task, keep: keepTask),
+      todayTasks: _replaceTaskInList(
+        state.todayTasks,
+        task,
+        keep: keepInToday,
+      ),
+      recommendedTasks: _replaceTaskInList(
+        state.recommendedTasks,
+        task,
+        keep: keepInRecommended,
+      ),
+      clearError: true,
+    );
+
+    final activeTask = _ref.read(activeTaskProvider);
+    if (activeTask?.id == task.id) {
+      _ref.read(activeTaskProvider.notifier).state = keepTask ? task : null;
+    }
   }
 
   void _setTaskExecution(String taskId, ExecutionIntentModel? intent) {

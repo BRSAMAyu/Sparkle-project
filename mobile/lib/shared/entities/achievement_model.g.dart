@@ -113,12 +113,14 @@ UserAchievementProgress _$UserAchievementProgressFromJson(
       isPinned: json['is_pinned'] as bool? ?? false,
       shareCount: (json['share_count'] as num?)?.toInt() ?? 0,
       isFirstUnlocker: json['is_first_unlocker'] as bool? ?? false,
-      unlockedAt: json['unlockedAt'] == null
+      unlockedAt: json['unlocked_at'] == null
           ? null
-          : DateTime.parse(json['unlockedAt'] as String),
+          : DateTime.parse(json['unlocked_at'] as String),
       lastProgressUpdate: json['last_progress_update'] == null
           ? null
           : DateTime.parse(json['last_progress_update'] as String),
+      contextSnapshot: json['context_snapshot'] as Map<String, dynamic>?,
+      contextStory: json['context_story'] as String?,
     );
 
 Map<String, dynamic> _$UserAchievementProgressToJson(
@@ -131,8 +133,10 @@ Map<String, dynamic> _$UserAchievementProgressToJson(
       'is_pinned': instance.isPinned,
       'share_count': instance.shareCount,
       'is_first_unlocker': instance.isFirstUnlocker,
-      'unlockedAt': instance.unlockedAt?.toIso8601String(),
+      'unlocked_at': instance.unlockedAt?.toIso8601String(),
       'last_progress_update': instance.lastProgressUpdate?.toIso8601String(),
+      'context_snapshot': instance.contextSnapshot,
+      'context_story': instance.contextStory,
     };
 
 AchievementWithProgress _$AchievementWithProgressFromJson(
@@ -456,6 +460,8 @@ AchievementUnlockEvent _$AchievementUnlockEventFromJson(
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      contextSnapshot: json['context_snapshot'] as Map<String, dynamic>?,
+      contextStory: json['context_story'] as String?,
     );
 
 Map<String, dynamic> _$AchievementUnlockEventToJson(
@@ -473,4 +479,6 @@ Map<String, dynamic> _$AchievementUnlockEventToJson(
       'reward_preview': instance.rewardPreview,
       'surface_preview': instance.surfacePreview,
       'glory_lines': instance.gloryLines,
+      'context_snapshot': instance.contextSnapshot,
+      'context_story': instance.contextStory,
     };

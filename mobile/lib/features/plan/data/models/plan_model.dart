@@ -55,6 +55,7 @@ class PlanModel {
     this.tasks,
     this.source,
     this.sourceMetadata,
+    this.dayHighlights,
     this.planStage = PlanStage.sprint,
     this.priority = PlanPriority.normal,
     this.isPrimary = false,
@@ -88,12 +89,30 @@ class PlanModel {
   final String? source;
   @JsonKey(name: 'source_metadata')
   final Map<String, dynamic>? sourceMetadata;
+  @JsonKey(name: 'day_highlights')
+  final PlanDayHighlights? dayHighlights;
   @JsonKey(name: 'plan_stage')
   final PlanStage planStage;
   final PlanPriority priority;
   @JsonKey(name: 'is_primary')
   final bool isPrimary;
   Map<String, dynamic> toJson() => _$PlanModelToJson(this);
+}
+
+@JsonSerializable()
+class PlanDayHighlights {
+  PlanDayHighlights({
+    required this.day,
+    required this.recommendation,
+    required this.tasks,
+  });
+
+  factory PlanDayHighlights.fromJson(Map<String, dynamic> json) =>
+      _$PlanDayHighlightsFromJson(json);
+  final int day;
+  final String recommendation;
+  final List<TaskModel> tasks;
+  Map<String, dynamic> toJson() => _$PlanDayHighlightsToJson(this);
 }
 
 @JsonSerializable()

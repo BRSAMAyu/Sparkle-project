@@ -14,6 +14,7 @@ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
+import 'package:sparkle/shared/entities/subtask_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
 
@@ -127,6 +128,44 @@ class TaskGuidanceModel {
   final DateTime? sourceTaskUpdatedAt;
 }
 
+class TaskQuickActionResult {
+  const TaskQuickActionResult({
+    required this.action,
+    required this.message,
+    required this.task,
+    this.subtasks = const [],
+  });
+
+  factory TaskQuickActionResult.fromResponse(Map<String, dynamic> response) {
+    final payload = ApiResponseParser.unwrapMap(
+      response,
+      action: 'taskQuickAction',
+    );
+    final taskPayload = (payload['task'] is Map<String, dynamic>)
+        ? payload['task'] as Map<String, dynamic>
+        : payload;
+    final subtasksPayload = payload['subtasks'] as List<dynamic>? ?? const [];
+
+    return TaskQuickActionResult(
+      action:
+          response['action']?.toString() ?? payload['action']?.toString() ?? '',
+      message: response['message']?.toString() ??
+          payload['message']?.toString() ??
+          '',
+      task: TaskModel.fromJson(taskPayload),
+      subtasks: subtasksPayload
+          .whereType<Map<String, dynamic>>()
+          .map(SubTaskModel.fromJson)
+          .toList(),
+    );
+  }
+
+  final String action;
+  final String message;
+  final TaskModel task;
+  final List<SubTaskModel> subtasks;
+}
+
 class TaskRepository {
   TaskRepository(this._apiClient);
   final ApiClient _apiClient;
@@ -197,6 +236,16 @@ class TaskRepository {
 
   String _taskGuidancePath(String taskId) =>
       '${ApiEndpoints.task(taskId)}/guidance';
+
+  TaskQuickActionResult _parseQuickActionResponse(
+    Map<String, dynamic>? responseData, {
+    required String action,
+  }) {
+    if (responseData == null) {
+      throw Exception('$action response is empty');
+    }
+    return TaskQuickActionResult.fromResponse(responseData);
+  }
 
   Future<PaginatedResponse<TaskModel>> getTasks({
     Map<String, dynamic>? filters,
@@ -881,6 +930,171 @@ class TaskRepository {
     }
   }
 
+  Future<TaskQuickActionResult> snoozeTask(
+    String id, {
+    int days = 1,
+    DateTime? targetDate,
+    String? reason,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex == -1) {
+        throw Exception('Task not found in demo data');
+      }
+      final existing = DemoDataService().demoTasks[existingIndex];
+      final nextDate = targetDate ?? DateTime.now().add(Duration(days: days));
+      final updated = existing.copyWith(
+        dueDate: DateTime(nextDate.year, nextDate.month, nextDate.day),
+        tags: {
+          ...existing.tags,
+          'snoozed',
+        }.toList(),
+        updatedAt: DateTime.now(),
+      );
+      DemoDataService().demoTasks[existingIndex] = updated;
+      return TaskQuickActionResult(
+        action: 'snooze',
+        message: '已推迟到明天，今天先把节奏放轻一点。',
+        task: updated,
+      );
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.snoozeTask(id),
+        data: {
+          'days': days,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+          if (targetDate != null)
+            'target_date': DateFormat('yyyy-MM-dd').format(targetDate),
+        },
+      );
+      return _parseQuickActionResponse(response.data, action: 'snoozeTask');
+    } on DioException catch (e) {
+      return _handleDioError(e, 'snoozeTask');
+    }
+  }
+
+  Future<TaskQuickActionResult> markTaskTooHard(
+    String id, {
+    String? reason,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex == -1) {
+        throw Exception('Task not found in demo data');
+      }
+      final existing = DemoDataService().demoTasks[existingIndex];
+      final now = DateTime.now();
+      final subtasks = [
+        SubTaskModel(
+          id: 'demo_${id}_step_1',
+          parentTaskId: id,
+          title: '先找出最卡的一点',
+          order: 0,
+          status: SubTaskStatus.pending,
+          createdAt: now,
+          updatedAt: now,
+          estimatedMinutes: 5,
+          guideContent: '只定位卡点，不解决整张任务卡。',
+        ),
+        SubTaskModel(
+          id: 'demo_${id}_step_2',
+          parentTaskId: id,
+          title: '把这个卡点讲成一句人话',
+          order: 1,
+          status: SubTaskStatus.pending,
+          createdAt: now,
+          updatedAt: now,
+          estimatedMinutes: 10,
+          guideContent: '先讲清楚，再决定下一步。',
+        ),
+        SubTaskModel(
+          id: 'demo_${id}_step_3',
+          parentTaskId: id,
+          title: '做一个最小验证动作',
+          order: 2,
+          status: SubTaskStatus.pending,
+          createdAt: now,
+          updatedAt: now,
+          estimatedMinutes: 10,
+          guideContent: '只验证刚拆出来的这一步。',
+        ),
+      ];
+      final updated = existing.copyWith(
+        difficulty: existing.difficulty > 1 ? existing.difficulty - 1 : 1,
+        subtasksTotal: subtasks.length,
+        tags: {
+          ...existing.tags,
+          'too_hard',
+          'adaptive_breakdown',
+        }.toList(),
+        updatedAt: now,
+      );
+      DemoDataService().demoTasks[existingIndex] = updated;
+      return TaskQuickActionResult(
+        action: 'too_hard',
+        message: '我把它拆成 3 小步了，先做「${subtasks.first.title}」。',
+        task: updated,
+        subtasks: subtasks,
+      );
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.taskTooHard(id),
+        data: {
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
+      return _parseQuickActionResponse(
+        response.data,
+        action: 'markTaskTooHard',
+      );
+    } on DioException catch (e) {
+      return _handleDioError(e, 'markTaskTooHard');
+    }
+  }
+
+  Future<TaskQuickActionResult> skipTask(
+    String id, {
+    String? reason,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex == -1) {
+        throw Exception('Task not found in demo data');
+      }
+      final updated = DemoDataService().demoTasks[existingIndex].copyWith(
+            status: TaskStatus.abandoned,
+            userNote: 'Skipped from quick action',
+            completedAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+      DemoDataService().demoTasks[existingIndex] = updated;
+      return TaskQuickActionResult(
+        action: 'skip',
+        message: '已跳过，这张卡不会再挤在今天了。',
+        task: updated,
+      );
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.skipTask(id),
+        data: {
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
+      return _parseQuickActionResponse(response.data, action: 'skipTask');
+    } on DioException catch (e) {
+      return _handleDioError(e, 'skipTask');
+    }
+  }
+
   String _demoGuide(String title) => '''
 # $title
 
@@ -1108,6 +1322,9 @@ class TaskRepository {
     String feedbackId, {
     String? selectedOption,
     String? freeText,
+    String? stuckPoint,
+    String? effectiveMethod,
+    String? adjustmentIntention,
   }) async {
     if (DemoDataService.isDemoMode) {
       return;
@@ -1119,6 +1336,12 @@ class TaskRepository {
           if (selectedOption != null && selectedOption.isNotEmpty)
             'selected_option': selectedOption,
           if (freeText != null && freeText.isNotEmpty) 'free_text': freeText,
+          if (stuckPoint != null && stuckPoint.isNotEmpty)
+            'stuck_point': stuckPoint,
+          if (effectiveMethod != null && effectiveMethod.isNotEmpty)
+            'effective_method': effectiveMethod,
+          if (adjustmentIntention != null && adjustmentIntention.isNotEmpty)
+            'adjustment_intention': adjustmentIntention,
         },
       );
     } on DioException catch (e) {
