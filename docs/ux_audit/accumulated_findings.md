@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 11 / 20 chains audited
+> **Status**: 12 / 20 chains audited
 
 ---
 
@@ -210,3 +210,23 @@
 - None — 其余 5 个页面（任务列表/错题本/Galaxy星图/成就页/学习洞察）全部达标，各有上下文感知的引导文案和 CTA。
 
 **Working Well ✅**: 任务列表有 `EmptyState.noResults()` 变体和 CTA"创建第一项任务"；错题本有双 tab 差异化空状态+CTA"添加第一道错题"；Galaxy 有自定义 orb 动画+action highlight chips+CTA"去创建学习任务"；成就页有筛选/非筛选双空状态+CTA"清空筛选"；学习洞察有多数据源联合检测+CTA"去创建学习任务"；记忆面板主空状态有标准 EmptyState widget。
+
+---
+
+## Round 6.1 — 2026-04-25 (Recovered from git commit 11997100)
+*Reviewer A: C03 — 任务卡点(stuck)→卡点帮助面板→Aurora诊断内容*
+
+### C03: 任务卡点(stuck)→卡点帮助面板→Aurora诊断内容 (Reviewer A — recovered)
+
+**Critical Issues 🔴**
+- **`backend/app/models/task.py:47-51` + `task_execution_screen.dart:452-466`**: TaskStatus enum 仅有 `PENDING`, `IN_PROGRESS`, `COMPLETED`, `ABANDONED`，无 `STUCK` 状态。无 API 端点标记任务为 stuck。Mobile 端打开 help sheet 为纯本地 UI 动作——无 API 调用、无状态更新、无事件。后端永远不知道用户卡住了。`decision_loop.py:641` 的 `_is_stuck_task_scene()` 检查 `task_state.stage == "stuck"` 但无任何代码设置此值。Expected: 点击"卡住了?"应设置 task status 为 STUCK 并通知后端。Actual: 纯本地 UI 无后端通信。
+- **`stuck_help_sheet.dart:27-31` + `task_card_generator.py:256-283`**: Sheet 内容来自 `task.guideJson`——plan 创建时由 `task_card_generator.py` 生成的静态元数据，非基于用户当前状态的 Aurora 实时诊断。唯一的 Aurora 交互是"和Sparkle聊聊这个问题"按钮，需用户手动对话。Expected: Sheet 显示 Aurora 基于当前状态的上下文诊断。Actual: Sheet 显示任务创建时的静态帮助内容。
+
+**Major Issues 🟡**
+- **`task_execution_screen.dart:477`**: `_openStuckChat` 使用 `context.go()` 替换整个导航栈。任务执行页被销毁，运行中的计时器丢失。用户无法从 chat 返回任务。chat 的返回按钮到 `/home`，而非回到任务。Expected: Chat 以 overlay 或 push 方式打开，保留任务执行上下文。Actual: 任务执行页被销毁。
+- **`task_execution_screen.dart:480-493`**: `_sendAuroraTrigger` 发送消息时不包含 `task_state.stage="stuck"` 或任何卡点上下文。Aurora 的 decision loop 无法激活卡点诊断模式（`_is_stuck_task_scene` 返回 False）。响应将是通用内容，非 `decision_loop.py:727-740` 描述的 micro-teaching 诊断。
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: StuckHelpSheet widget 设计精良（渐进式内容回退 micro_teaching → fallback_if_stuck → if_stuck → genericSuggestions，读取 5+ 字段名变体增强韧性）；双步 micro-teaching 卡片（诊断问题 + 针对修复）；Stuck chat prompt 结构良好（含任务标题、预估时间、聚焦提示、步骤、成功标准）；FAB 位置恰当不遮挡计时器；后端卡点诊断基础设施完整（STUCK_TASK_STAGE_TOKENS 检测、standard_layer_contract、micro-teaching 模式激活、规则注入）。
