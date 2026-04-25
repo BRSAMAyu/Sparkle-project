@@ -2,15 +2,15 @@
   "workflow_version": "1.0",
   "status": "running",
   "current_round": 0,
-  "reviewer_a_next": 0,
-  "reviewer_b_next": 0,
-  "reviewer_a_last_timestamp": null,
-  "reviewer_b_last_timestamp": null,
+  "reviewer_a_next": 2,
+  "reviewer_b_next": 3,
+  "reviewer_a_last_timestamp": "2026-04-25T18:28:00+08:00",
+  "reviewer_b_last_timestamp": "2026-04-25T12:35:00Z",
   "validator_last_timestamp": null,
-  "steering_notes": "",
-  "architect_override_a": null,
-  "architect_override_b": null,
-  "architect_last_check": null,
+  "steering_notes": "C01/C02 原始发现已被后续轮次覆盖丢失。所有当前 reviewer 文件中的发现（C03/C04/C06）质量很好，请保持。Validator 已因时间戳匹配逻辑跳过两轮，请立即重新运行 validator 处理所有未验证的发现。",
+  "architect_override_a": "C01",
+  "architect_override_b": "C02",
+  "architect_last_check": "2026-04-25T19:00:00+08:00",
   "reviewer_a_queue": ["C01","C03","C05","C07","C09","C11","C13","C15","C17","C19"],
   "reviewer_b_queue": ["C02","C04","C06","C08","C10","C12","C14","C16","C18","C20"],
   "chains": {
@@ -24,7 +24,7 @@
         "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
         "mobile/lib/app/routes.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C02": {
       "name": "任务完成→Galaxy节点mastery更新→星图颜色变深",
@@ -36,7 +36,7 @@
         "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart",
         "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C03": {
       "name": "任务卡点(stuck)→卡点帮助面板→Aurora诊断内容",
@@ -47,7 +47,7 @@
         "mobile/lib/features/task/presentation/widgets/stuck_help_sheet.dart",
         "mobile/lib/features/task/presentation/providers/task_provider.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C04": {
       "name": "错题录入→修复任务插入→计划页橙色卡可见",
@@ -59,7 +59,7 @@
         "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart",
         "mobile/lib/features/task/presentation/providers/task_provider.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C05": {
       "name": "7天冲刺完成→庆祝页→学习档案状态变completed",
@@ -83,7 +83,7 @@
         "backend/app/aurora/runtime_v1/service.py",
         "backend/app/api/v1/galaxy.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C07": {
       "name": "成就里程碑解锁→推送通知→点击打开庆祝页",
