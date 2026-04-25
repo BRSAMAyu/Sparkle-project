@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 26 / 30 chains audited (C04, C20, D01, D07 pending)
+> **Status**: 27 / 30 chains audited + 1 E-chain (C04, C20, D01, D07 pending, E01-E20 in progress)
 
 ---
 
@@ -497,3 +497,21 @@
 
 ### D07: 设置/隐私控制——用户能控制数据流向吗
 **Status**: ⚠️ Reviewer A 完成了 D07（queue index 13→14→15）但写入 reviewer_a_current.md 后被 D09 覆盖。**单文件覆盖问题再次发生**。仍需审查。
+
+---
+
+## Round 12 — 2026-04-26 (Phase 3 E-chains begin)
+*Reviewer A: E01 — Proto/gRPC 契约完整性*
+
+### E01: Proto/gRPC契约完整性——Go与Python接口是否对齐 (Reviewer A)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`client.go`**: Go Gateway 仅封装 4/17 proto RPC 方法（StreamChat, SubmitResponseFeedback, SubmitPlanReview + StreamChatWithFallback wrapper）。Python 端 `agent_grpc_service.py` 实现全部 17 个（line 148-1651），但 13 个 RPC（RetrieveMemory, GetUserProfile, GetWeeklyReport, SubmitContentReviewFeedback, SubmitReviewOverride, SubmitReviewAppeal, GetAppealStatus, SubmitReviewFeedback, RequestRegeneration, GetFeedbackStatistics, 4×Arbitration RPCs）在 Go `client.go` 和 `backend/gateway/internal/` 全目录中零匹配。这些 RPC 只能通过直连 Python gRPC 端口调用。Expected: 面向客户端的 proto RPC 有 Go client 封装。Actual: 13 个 RPC 有完整 Python 实现但无 Go Gateway 集成。**Note**: 如果这些 RPC 仅用于内部服务间调用则非 bug，但 Flutter 若需调用则缺 REST 等价端点。
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: Proto 17 RPC 分组清晰有注释；Python 全部实现含 error handling + 权限检查（admin for Arbitration）；Go StreamChatWithFallback 有熔断降级；context cancellation 和 deadline 处理正确。

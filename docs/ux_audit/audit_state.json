@@ -1,12 +1,12 @@
 {
   "workflow_version": "1.0",
   "status": "running",
-  "current_round": 11,
-  "reviewer_a_next": 15,
+  "current_round": 12,
+  "reviewer_a_next": 16,
   "reviewer_b_next": 22,
-  "reviewer_a_last_timestamp": "2026-04-26T02:40:00+08:00",
+  "reviewer_a_last_timestamp": "2026-04-26T03:00:00+08:00",
   "reviewer_b_last_timestamp": "2026-04-26T01:30:00+08:00",
-  "validator_last_timestamp": "2026-04-26T03:00:00+08:00",
+  "validator_last_timestamp": "2026-04-26T03:20:00+08:00",
   "steering_notes": "第二轮审查：B 重新审查 7 条丢失发现的链路（C03→C04→C05→C02→C07→C08→C12），按优先级排序。保持 file:line 引用和 expected/actual 格式。",
   "architect_override_a": null,
   "architect_override_b": null,
@@ -366,7 +366,7 @@
         "backend/gateway/internal/agent/client.go",
         "backend/app/services/agent_grpc_service.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E02": {
       "name": "EventBus可靠性——Redis Streams消费组/DLQ/重试",
