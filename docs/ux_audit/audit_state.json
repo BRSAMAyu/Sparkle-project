@@ -1,13 +1,12 @@
 {
   "workflow_version": "1.0",
   "status": "running",
-  "current_round": 1,
-  "reviewer_a_next": 4,
-  "reviewer_b_next": 4,
-  "reviewer_a_last_timestamp": "2026-04-25T19:05:00+08:00",
-  "reviewer_b_last_timestamp": "2026-04-25T12:35:00Z",
-  "validator_last_timestamp": "2026-04-25T19:30:00+08:00",
-  "validator_last_timestamp": null,
+  "current_round": 2,
+  "reviewer_a_next": 5,
+  "reviewer_b_next": 5,
+  "reviewer_a_last_timestamp": "2026-04-25T19:55:00+08:00",
+  "reviewer_b_last_timestamp": "2026-04-25T19:10:00Z",
+  "validator_last_timestamp": "2026-04-25T20:00:00+08:00",
   "steering_notes": "C01/C02 原始发现已被后续轮次覆盖丢失。所有当前 reviewer 文件中的发现（C03/C04/C06）质量很好，请保持。Validator 已因时间戳匹配逻辑跳过两轮，请立即重新运行 validator 处理所有未验证的发现。",
   "architect_override_a": null,
   "architect_override_b": null,
@@ -120,7 +119,7 @@
         "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
         "mobile/lib/features/chat/presentation/screens/chat_screen.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C10": {
       "name": "跨会话记忆注入（新会话Aurora引用旧内容）",
@@ -131,7 +130,7 @@
         "backend/app/orchestration/prompts.py",
         "backend/app/services/memory_service.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C11": {
       "name": "间隔重复提醒链路（Celery→推送→复习chat）",
