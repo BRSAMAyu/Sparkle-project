@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 7 / 20 chains audited
+> **Status**: 9 / 20 chains audited
 
 ---
 
@@ -152,3 +152,43 @@
 
 ### Confirmed by Both Reviewers
 - **`modeling_chat_screen.dart` 导航问题**: C01 Major #3（成功路径 root navigator 断裂）+ C16 Critical（返回键 fallback 路由错误）共同指向同一文件的导航缺陷。两轮独立确认。
+- **周报通知到达后 UI 不展开**: C13 Major #1（insights 页不识别 `initialPanel=weeklyNarrative`）+ C18 表格第 5 行（路由存在且导航正确）共同验证——导航成功但目标页未响应参数。
+- **Celery 500 用户扫描上限**: C11 Minor #3（间隔重复）+ C13 Minor #3（周报）独立发现同一模式。
+
+---
+
+## Round 5 — 2026-04-25
+*Reviewer A: C13 — 每周报告生成→推送→周报卡展示亮点 | Reviewer B: C18 — 所有推送通知路由正确性（6种类型）*
+
+### C13: 每周报告生成→推送→周报卡展示亮点 (Reviewer A)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`celery_tasks.py:1689` + `learning_insights_overview_screen.dart:25-27`**: 后端推送携带 `destination_route=/learning/insights?initialPanel=weeklyNarrative`，但 insights 页仅定义 `panelSimulation`/`panelTheater`/`panelReport` 三个常量（line 25-27），无 `panelWeeklyNarrative`。switch 表达式（line 351-353）匹配不到任何 case，无模块卡高亮。周报卡默认收起（`_expanded = false`，card line 17），用户需手动展开才能看到 highlights/biggest_improvement。
+- **`weekly_growth_narrative_card.dart:17`**: `bool _expanded = false` 硬编码初始值，无 `initialExpanded` 参数，不从路由参数控制。通知驱动的场景无法自动展开。
+
+**Minor Issues 🟢**
+- **`celery_tasks.py:1757-1817`**: 500 用户扫描上限（与 C11 Minor #3 同模式）。
+- **`progress_narrative_service.py:551-606`**: `biggest_improvement` 在无掌握度增长时返回 None。设计如此，移动端 `hasBiggestImprovement` getter 正确处理，影响极小。
+
+**Working Well ✅**: Celery 周日 18:00 调度合理；三级降级叙事生成；24h 去重防重复；`FutureProvider.autoDispose` 保证数据新鲜；highlights 有 fallback 文案；卡片 loading/error/空状态完善。
+
+---
+
+### C18: 所有推送通知路由正确性（6种类型） (Reviewer B)
+
+**Critical Issues 🔴**
+- None — 所有 6 种通知类型的目标路由均存在于 GoRouter 配置中。
+
+**Major Issues 🟡**
+- **`notification_list_screen.dart:87`**: 通知列表点击用 `context.push(destinationRoute)` 而非 `RouteResilience.openExternalRoute()`（对比 `notification_service.dart:387-393` 推送点击路径）。深链进入后点击列表通知可能因导航栈无效而失败。
+- **`notification_list_screen.dart:94`**: 列表深链接用 `DeepLinkService.handleDeepLink()` 而非 `handleExternalDeepLink()`（后者含 RouteResilience 回退）。列表导航路径比 push handler 更脆弱。
+- **`celery_tasks.py:907-923`**: `send_task_reminders` 已返回 `{"status": "disabled"}`，服务端每日提醒停用。移动端 `TaskNotificationScheduler` 创建的 payload 无 `destination_route`，走 fallback 路径 `/tasks/$taskId/execute`。当前可工作但依赖 fallback 稳定性。
+
+**Minor Issues 🟢**
+- **`celery_tasks.py:1387,1392,1529,1530`**: Sprint reminder 和 comeback nudge 的 `deep_link` 字段使用原始路由路径（如 `/plans/{id}?source=...`）而非 `sparkle://` 协议，与 milestone 的 `sparkle://milestone/...` 格式不一致。`destination_route` 优先匹配不影响功能。
+- **`notification_list_screen.dart:29-30`**: 空通知列表仅显示 "No new notifications" 纯文本，无解释或操作引导。对比 C15 全局空状态质量要求。
+
+**Working Well ✅**: 全部 5 种服务端通知路由正确且可被目标页解析；双通道投递（WebSocket+FCM/JPush）；Milestone payload 解析支持三种入口方式；所有类型 24h 去重保护；RouteResilience 回退路由完整（chat→home, plans→plan home）；间隔重复通知携带完整复习 context 对接 C06 路径；有 intervention action tracking。
