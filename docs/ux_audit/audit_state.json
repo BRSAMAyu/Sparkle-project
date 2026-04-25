@@ -1,15 +1,16 @@
 {
   "workflow_version": "1.0",
   "status": "running",
-  "current_round": 0,
-  "reviewer_a_next": 2,
-  "reviewer_b_next": 3,
-  "reviewer_a_last_timestamp": "2026-04-25T18:28:00+08:00",
+  "current_round": 1,
+  "reviewer_a_next": 4,
+  "reviewer_b_next": 4,
+  "reviewer_a_last_timestamp": "2026-04-25T19:05:00+08:00",
   "reviewer_b_last_timestamp": "2026-04-25T12:35:00Z",
+  "validator_last_timestamp": "2026-04-25T19:30:00+08:00",
   "validator_last_timestamp": null,
   "steering_notes": "C01/C02 原始发现已被后续轮次覆盖丢失。所有当前 reviewer 文件中的发现（C03/C04/C06）质量很好，请保持。Validator 已因时间戳匹配逻辑跳过两轮，请立即重新运行 validator 处理所有未验证的发现。",
-  "architect_override_a": "C01",
-  "architect_override_b": "C02",
+  "architect_override_a": null,
+  "architect_override_b": null,
   "architect_last_check": "2026-04-25T19:00:00+08:00",
   "reviewer_a_queue": ["C01","C03","C05","C07","C09","C11","C13","C15","C17","C19"],
   "reviewer_b_queue": ["C02","C04","C06","C08","C10","C12","C14","C16","C18","C20"],
@@ -71,7 +72,7 @@
         "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart",
         "mobile/lib/features/plan/presentation/providers/learning_portfolio_provider.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C06": {
       "name": "Galaxy节点点击→节点详情→开始复习进入chat携带context",
