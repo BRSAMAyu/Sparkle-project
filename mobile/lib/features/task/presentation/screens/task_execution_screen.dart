@@ -479,9 +479,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   String _buildStuckChatPrompt(TaskModel task) {
     final guide = task.guideJson ?? const <String, dynamic>{};
     final focusCue = (guide['focus_cue']?.toString() ?? '').trim();
-    final steps = _guideList(guide['method_steps']).take(5).join('；');
+    final steps = _guideStepNames(guide).take(5).join('；');
     final criteria = taskSuccessCriteriaLines(task).take(3).join('；').trim();
-    final ifStuck = _guideList(guide['if_stuck']).take(5).join('；').trim();
+    final structuredFallback = _guideFallbackLines(guide['fallback_if_stuck']);
+    final ifStuck = (structuredFallback.isNotEmpty
+            ? structuredFallback
+            : _guideList(guide['if_stuck']))
+        .take(5)
+        .join('；')
+        .trim();
     final fallback = StuckHelpSheet.genericSuggestions.join('；');
     final parts = <String>[
       '我在做这个任务时卡住了，想和你一起拆一下具体卡点。',
@@ -511,6 +517,33 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         .map((item) => item.trim())
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
+  }
+
+  List<String> _guideStepNames(Map<String, dynamic> guide) {
+    final structured = guide['steps'];
+    if (structured is Iterable) {
+      final names = structured
+          .map((item) {
+            if (item is Map) {
+              return (item['name'] ?? '').toString().trim();
+            }
+            return item?.toString().trim() ?? '';
+          })
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+      if (names.isNotEmpty) return names;
+    }
+    return _guideList(guide['method_steps']);
+  }
+
+  List<String> _guideFallbackLines(Object? value) {
+    if (value is! Iterable) return const [];
+    final lines = <String>[];
+    for (final item in value) {
+      if (item is! Map) continue;
+      lines.addAll(_guideList(item['guidance'] ?? item['content']));
+    }
+    return lines;
   }
 
   Widget _buildStuckHelpFab(TaskModel task) => Positioned(

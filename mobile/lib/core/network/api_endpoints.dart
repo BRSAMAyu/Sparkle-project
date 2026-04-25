@@ -176,6 +176,7 @@ class ApiEndpoints {
   static const String growthWeeklyNarrativeGenerate =
       '/growth/weekly-narrative/generate';
   static const String examSprintIntake = '/exam-sprint/intake';
+  static const String examSprintDashboard = '/exam-sprint/dashboard';
   static const String profileChatOpening = '/profile/chat-opening';
   static const String auroraCalibrationCards = '/aurora/calibration-cards';
   static String auroraCalibrationCardRespond(String id) =>

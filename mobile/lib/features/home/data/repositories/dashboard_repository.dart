@@ -53,6 +53,99 @@ class DashboardRepository {
     );
   }
 
+  Future<Map<String, dynamic>> getExamSprintDashboard() async {
+    if (DemoDataService.isDemoMode) {
+      final today = DateTime.now();
+      final tomorrow = today.add(const Duration(days: 1));
+      return {
+        'active': true,
+        'plan_id': 'demo-exam-sprint-plan',
+        'plan_name': '计算机网络考前冲刺',
+        'subject': '计算机网络',
+        'days_left': 5,
+        'target_mode': 'pass',
+        'estimated_score_now': 71.0,
+        'baseline_estimated_score': 54.0,
+        'pass_probability': 0.76,
+        'baseline_pass_probability': 0.42,
+        'today_progress': {
+          'completed': 2,
+          'total': 3,
+          'completion_rate': 0.6667,
+        },
+        'high_freq_coverage': 0.72,
+        'high_freq_covered_count': 13,
+        'high_freq_total_count': 18,
+        'mistake_fix_rate': 0.68,
+        'fixed_mistake_count': 17,
+        'total_mistake_count': 25,
+        'streak_days': 9,
+        'high_yield_low_mastery_topics': ['传输层可靠传输', 'TCP 拥塞控制'],
+        'task_groups': [
+          {
+            'day_index': 1,
+            'date': today.toIso8601String(),
+            'is_today': true,
+            'completed_count': 2,
+            'total_count': 3,
+            'tasks': [
+              {
+                'id': 'demo-sprint-task-1',
+                'title': '闭卷默写 TCP 三次握手与四次挥手',
+                'status': 'COMPLETED',
+                'estimated_minutes': 25,
+                'is_completed': true,
+              },
+              {
+                'id': 'demo-sprint-task-2',
+                'title': '订正 3 道可靠传输错题',
+                'status': 'COMPLETED',
+                'estimated_minutes': 20,
+                'is_completed': true,
+              },
+              {
+                'id': 'demo-sprint-task-3',
+                'title': '口述拥塞控制四阶段并自测',
+                'status': 'PENDING',
+                'estimated_minutes': 30,
+                'is_completed': false,
+              },
+            ],
+          },
+          {
+            'day_index': 2,
+            'date': tomorrow.toIso8601String(),
+            'is_today': false,
+            'completed_count': 0,
+            'total_count': 2,
+            'tasks': [
+              {
+                'id': 'demo-sprint-task-4',
+                'title': '整理高频考点保底清单',
+                'status': 'PENDING',
+                'estimated_minutes': 35,
+                'is_completed': false,
+              },
+              {
+                'id': 'demo-sprint-task-5',
+                'title': '做一组路由算法选择题',
+                'status': 'PENDING',
+                'estimated_minutes': 30,
+                'is_completed': false,
+              },
+            ],
+          },
+        ],
+      };
+    }
+    final response =
+        await _apiClient.get<dynamic>(ApiEndpoints.examSprintDashboard);
+    return ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'getExamSprintDashboard',
+    );
+  }
+
   Future<Map<String, dynamic>> getPredictiveDashboard() async {
     if (DemoDataService.isDemoMode) {
       return {

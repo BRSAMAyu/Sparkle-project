@@ -223,6 +223,10 @@ class _PlanOverviewTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: DS.lg),
+          if (_isLast24hMode(plan)) ...[
+            _Last24hSprintBanner(plan: plan),
+            const SizedBox(height: DS.lg),
+          ],
           _PlanExecutionSection(
             plan: plan,
             onAddNewTask: () => context.push(
@@ -428,21 +432,26 @@ class _PlanExecutionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tasks = _mergedPlanTasks(plan);
+    final isLast24hMode = _isLast24hMode(plan);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Expanded(child: _SectionHeader(title: '今日聚焦')),
-            if (!context.isMobile)
+            Expanded(
+              child: _SectionHeader(
+                title: isLast24hMode ? '考前冲刺任务' : '今日聚焦',
+              ),
+            ),
+            if (!context.isMobile && !isLast24hMode)
               _PlanTaskActions(
                 onAddNewTask: onAddNewTask,
                 onAddExistingTask: onAddExistingTask,
               ),
           ],
         ),
-        if (context.isMobile) ...[
+        if (context.isMobile && !isLast24hMode) ...[
           const SizedBox(height: DS.spacing12),
           _PlanTaskActions(
             onAddNewTask: onAddNewTask,
@@ -496,6 +505,69 @@ class _PlanTaskActions extends StatelessWidget {
           ),
         ],
       );
+}
+
+class _Last24hSprintBanner extends StatelessWidget {
+  const _Last24hSprintBanner({required this.plan});
+
+  final PlanModel plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final recommendation = plan.dayHighlights?.recommendation.trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing18),
+      decoration: BoxDecoration(
+        color: DS.warning.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: DS.warning.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(DS.spacing8),
+            decoration: BoxDecoration(
+              color: DS.warning.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.timer_rounded,
+              color: DS.warning,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '考前冲刺模式',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: DS.textPrimary,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing6),
+                Text(
+                  recommendation != null && recommendation.isNotEmpty
+                      ? recommendation
+                      : '今天不再学新内容，只做高频知识点速览、错题错因回看和 30 分钟短模拟。',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.45,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _TodayFocusPlan extends StatelessWidget {
@@ -583,6 +655,7 @@ class _TodayTaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = _taskStatusColor(task.status);
+    final isLast24hTask = _isLast24hTask(task);
 
     return GraphiteCardSurface(
       onTap: () => context.push('/tasks/${task.id}'),
@@ -647,6 +720,12 @@ class _TodayTaskCard extends StatelessWidget {
                 label: _taskStatusLabel(task.status),
                 color: statusColor,
               ),
+              if (isLast24hTask)
+                _TaskMetaPill(
+                  icon: Icons.block_rounded,
+                  label: '不学新内容',
+                  color: DS.warning,
+                ),
             ],
           ),
         ],
@@ -893,6 +972,28 @@ List<TaskModel> _mergedPlanTasks(PlanModel plan) {
     },
   );
   return merged;
+}
+
+bool _isLast24hMode(PlanModel plan) {
+  final metadata = plan.sourceMetadata ?? const <String, dynamic>{};
+  if (metadata['last_24h_mode'] == true) return true;
+  if (metadata['exam_sprint_intake'] == null && plan.type != PlanType.sprint) {
+    return false;
+  }
+  final targetDate = plan.targetDate;
+  if (targetDate == null) return false;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final examDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
+  return examDay.difference(today).inDays <= 1;
+}
+
+bool _isLast24hTask(TaskModel task) {
+  final guide = task.guideJson ?? const <String, dynamic>{};
+  if (guide['last_24h_mode'] == true) return true;
+  return task.tags.any(
+    (tag) => tag == 'last_24h_cram' || tag == 'exam_sprint:last_24h_cram',
+  );
 }
 
 List<_PlanDayGroup> _buildPlanDayGroups(List<TaskModel> tasks) {

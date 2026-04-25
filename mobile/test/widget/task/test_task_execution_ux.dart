@@ -45,6 +45,97 @@ void main() {
     expect(find.text('标记这个点，继续其他部分'), findsOneWidget);
   });
 
+  testWidgets(
+      'TaskGuidePanel renders structured steps and done criteria progress',
+      (tester) async {
+    final task = _task(
+      guideJson: const <String, dynamic>{
+        'focus_cue': '今天最核心的一件事：把三次握手画顺。',
+        'steps': [
+          {
+            'name': '先写出每一步的角色和目的。',
+            'duration_min': 5,
+            'output': '留下第一版时序骨架。',
+          },
+          {
+            'name': '独立画出完整三次握手流程。',
+            'duration_min': 8,
+            'output': '画出关键报文和方向。',
+          },
+          {
+            'name': '对照标准答案补标志位和序号。',
+            'duration_min': 6,
+            'output': '标出遗漏和混淆点。',
+          },
+          {
+            'name': '闭卷再重画一遍。',
+            'duration_min': 4,
+            'output': '完成最小检查。',
+          },
+        ],
+        'done_criteria': [
+          '能说出每一步的目的。',
+          '能不看资料重画一遍。',
+        ],
+      },
+    );
+
+    await tester.pumpWidget(
+      _materialHost(
+        SingleChildScrollView(
+          child: TaskGuidePanel(task: task),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('task-guide-toggle')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('先写出每一步的角色和目的。'), findsOneWidget);
+    expect(find.text('已完成 0/4'), findsOneWidget);
+    expect(find.text('0/2'), findsOneWidget);
+    expect(find.text('当前进行中'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('guide-step-0')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已完成 1/4'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('done-criterion-0')));
+    await tester.tap(find.byKey(const Key('done-criterion-0')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1/2'), findsOneWidget);
+  });
+
+  testWidgets('StuckHelpSheet prefers structured fallback levels',
+      (tester) async {
+    final task = _task(
+      guideJson: const <String, dynamic>{
+        'fallback_if_stuck': [
+          {
+            'level': 1,
+            'title': '先给半成品框架',
+            'guidance': ['定义：___ | 条件：___ | 例子：___'],
+          },
+          {
+            'level': 2,
+            'title': '再给关键步骤',
+            'guidance': ['先写角色', '再写报文'],
+          },
+        ],
+      },
+    );
+
+    await tester.pumpWidget(
+      _materialHost(StuckHelpSheet(task: task)),
+    );
+
+    expect(find.text('Level 1 · 先给半成品框架'), findsOneWidget);
+    expect(find.text('定义：___ | 条件：___ | 例子：___'), findsOneWidget);
+    expect(find.text('Level 2 · 再给关键步骤'), findsOneWidget);
+  });
+
   testWidgets('stuck FAB opens help sheet from task execution screen',
       (tester) async {
     final task = _task();

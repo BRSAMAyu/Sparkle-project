@@ -11,6 +11,7 @@ import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
@@ -19,6 +20,7 @@ import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.da
 import 'package:sparkle/features/home/presentation/widgets/daily_context_line.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
+import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_action_prompt.dart';
@@ -93,7 +95,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ..invalidate(homePlanBottlenecksProvider)
       ..invalidate(homeDailyContextLineProvider)
       ..invalidate(homeGrowthDashboardSnapshotProvider)
-      ..invalidate(homeGrowthStateProvider);
+      ..invalidate(homeGrowthStateProvider)
+      ..invalidate(examSprintDashboardProvider);
 
     try {
       await Future.wait([
@@ -222,6 +225,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final dashboardState = ref.watch(dashboardProvider);
+    final examSprintDashboardAsync = ref.watch(examSprintDashboardProvider);
     final growthAsync = ref.watch(homeGrowthStateProvider);
     final dailyContextAsync = ref.watch(homeDailyContextLineProvider);
     final predictions = ref.watch(visiblePredictionsProvider);
@@ -265,6 +269,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       orElse: () => null,
     );
     final activeBottleneck = growthState?.activeBottleneck;
+    final examSprintDashboard = examSprintDashboardAsync.valueOrNull;
     var growthSectionIndex = 0;
     final growthSections = <Widget>[
       _staggeredSection(
@@ -274,6 +279,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           isLoading: dailyContextLine == null && dailyContextAsync.isLoading,
         ),
       ),
+      if (examSprintDashboard != null)
+        _staggeredSection(
+          index: growthSectionIndex++,
+          child: ExamSprintDashboardCard(data: examSprintDashboard),
+        ),
       _staggeredSection(
         index: growthSectionIndex++,
         child: TodayGrowthStatusCard(

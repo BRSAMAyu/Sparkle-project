@@ -22,6 +22,9 @@ class StuckHelpSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fallbackLevels = _readFallbackLevels(
+      task.guideJson?['fallback_if_stuck'],
+    );
     final ifStuck = _readList(task.guideJson?['if_stuck']);
     final suggestions = ifStuck.isNotEmpty ? ifStuck : genericSuggestions;
 
@@ -48,16 +51,25 @@ class StuckHelpSheet extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing20),
               _SheetSection(
-                title: '具体该怎么做',
-                child: Column(
-                  children: [
-                    for (var index = 0; index < suggestions.length; index++)
-                      _SuggestionRow(
-                        number: index + 1,
-                        text: suggestions[index],
+                title: fallbackLevels.isNotEmpty ? '卡住时按这个顺序救火' : '具体该怎么做',
+                child: fallbackLevels.isNotEmpty
+                    ? Column(
+                        children: [
+                          for (final level in fallbackLevels)
+                            _FallbackLevelCard(level: level),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          for (var index = 0;
+                              index < suggestions.length;
+                              index++)
+                            _SuggestionRow(
+                              number: index + 1,
+                              text: suggestions[index],
+                            ),
+                        ],
                       ),
-                  ],
-                ),
               ),
               const SizedBox(height: DS.spacing20),
               _SheetSection(
@@ -165,6 +177,76 @@ class _SuggestionRow extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _FallbackLevelCard extends StatelessWidget {
+  const _FallbackLevelCard({required this.level});
+
+  final _FallbackLevelData level;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: DS.spacing12),
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(DS.borderRadiusLG),
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Level ${level.level} · ${level.title}',
+              style: DS.bodyMedium.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightBold,
+              ),
+            ),
+            const SizedBox(height: DS.spacing8),
+            for (var index = 0; index < level.guidance.length; index++)
+              _SuggestionRow(
+                number: index + 1,
+                text: level.guidance[index],
+              ),
+          ],
+        ),
+      );
+}
+
+class _FallbackLevelData {
+  const _FallbackLevelData({
+    required this.level,
+    required this.title,
+    required this.guidance,
+  });
+
+  final int level;
+  final String title;
+  final List<String> guidance;
+}
+
+List<_FallbackLevelData> _readFallbackLevels(Object? value) {
+  if (value is! Iterable) return const [];
+  final levels = <_FallbackLevelData>[];
+  for (final item in value) {
+    if (item is! Map) continue;
+    final title = (item['title'] ?? item['label'] ?? '').toString().trim();
+    final level = item['level'] is num
+        ? (item['level'] as num).toInt()
+        : int.tryParse(item['level']?.toString() ?? '') ?? levels.length + 1;
+    final guidance = _readList(item['guidance'] ?? item['content']);
+    if (title.isEmpty || guidance.isEmpty) continue;
+    levels.add(
+      _FallbackLevelData(
+        level: level,
+        title: title,
+        guidance: guidance,
+      ),
+    );
+  }
+  return levels;
 }
 
 List<String> _readList(Object? value) {
