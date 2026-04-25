@@ -1,3 +1,4 @@
+# FIXED: 2026-04-25 - Integration DB schema was behind task planning migrations - verified cache teardown after Alembic head.
 """
 Cache Consistency Integration Tests
 

@@ -1,3 +1,4 @@
+# FIXED: 2026-04-25 - Integration DB schema was behind task planning migrations - verified personalization profile flow after Alembic head.
 """
 End-to-End Test: Preference Update → Plan Generation Change
 端到端测试：偏好修改 → 计划生成变化

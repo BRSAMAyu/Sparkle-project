@@ -54,7 +54,7 @@ async def test_detour_keeps_latent_thread_for_planning_surface() -> None:
     assert state is not None
     assert scaffold["top_tension"]["domain"] in {"exam_scope", "knowledge_baseline", "time_available"}
     assert scaffold["top_latent_thread"] is not None
-    assert "Treat this as state context, not final user wording." in manager.runtime_adapter.build_detour_prompt(state)
+    assert "Treat this as state context, not final user wording." in (scaffold.get("detour_instruction") or "")
     assert state.surface == "aurora_planning"
     assert any(thread.status == "active" for thread in state.latent_threads)
     assert state.activity_profile.agenda_priority in {"exam_scope", "knowledge_baseline", "time_available"}
@@ -220,6 +220,7 @@ async def test_strategy_and_task_prompt_consume_richer_aurora_runtime_state() ->
     assert guide_json["output_action"].startswith("先做 5 题探针")
     assert "三栏清单" in guide_json["success_criteria"]
     assert "探针" in guide_json["micro_contract"]
+    assert guide_json["why_now"]
     assert "只剩 20 分钟" in guide_json["fail_safe_rule"]
     assert "有三栏清单" in guide_json["success_checklist"][0]
     assert any("闭卷" in step or "小测" in step or "复述" in step for step in guide_json["method_steps"])
@@ -275,6 +276,7 @@ def test_fourteen_day_strategy_uses_build_and_spaced_retrieval_mode() -> None:
     assert "先复测 6 个旧点" in guide_json["output_action"]
     assert "旧点至少 4/6 可提取" in guide_json["success_criteria"]
     assert "旧点没过，不追加第二个新难点" in guide_json["micro_contract"]
+    assert guide_json["why_now"]
     assert guide_json["time_estimate_minutes"] >= 45
 
 

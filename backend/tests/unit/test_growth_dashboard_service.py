@@ -1,10 +1,11 @@
+from datetime import date
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 
-from app.services.growth_dashboard_service import GrowthDashboardService
+from app.services.growth_dashboard_service import DailyContextLineContext, GrowthDashboardService
 
 
 @pytest.mark.asyncio
@@ -58,3 +59,78 @@ async def test_growth_status_reads_like_growth_briefing():
     assert next_move is not None
     assert "下一步先做" in next_move["headline"]
     assert "如果今天状态不稳" in next_move["reassurance"]
+
+
+def test_daily_context_rule_line_uses_real_context_points():
+    service = GrowthDashboardService(db=None)
+    context = DailyContextLineContext(
+        target_day=date(2026, 4, 25),
+        display_name="Mina",
+        plan_name="热力学考试",
+        days_to_deadline=3,
+        yesterday_total=4,
+        yesterday_completed=2,
+        bottleneck="热力学",
+        streak_days=3,
+        next_action_title="整理可逆过程错题",
+    )
+
+    line = service._rule_daily_context_line(context)
+
+    assert "热力学" in line
+    assert "整理可逆过程错题" in line or "3天" in line or "2/4" in line
+    assert line.endswith("。")
+
+
+def test_daily_context_rule_line_falls_back_without_data():
+    service = GrowthDashboardService(db=None)
+    context = DailyContextLineContext(
+        target_day=date(2026, 4, 25),
+        display_name="Mina",
+    )
+
+    line = service._rule_daily_context_line(context)
+
+    assert line
+    assert "早上好" in line or "今天" in line
+    assert line.endswith("。")
+
+
+@pytest.mark.asyncio
+async def test_daily_context_line_uses_ai_when_it_references_context():
+    service = GrowthDashboardService(db=None)
+    user_id = uuid4()
+    context = DailyContextLineContext(
+        target_day=date(2026, 4, 25),
+        display_name="Mina",
+        plan_name="热力学考试",
+        days_to_deadline=3,
+        bottleneck="热力学",
+        streak_days=4,
+        next_action_title="整理错题",
+    )
+
+    class FakeCache:
+        def __init__(self):
+            self.values = {}
+
+        async def get(self, key):
+            return self.values.get(key)
+
+        async def set(self, key, value, ttl=None):
+            self.values[key] = value
+
+    fake_cache = FakeCache()
+    service._build_daily_context_line_context = AsyncMock(return_value=context)  # type: ignore[method-assign]
+    service._generate_daily_context_line_with_ai = AsyncMock(  # type: ignore[method-assign]
+        return_value="离「热力学考试」还有 3 天，今天先把热力学错题接上。"
+    )
+
+    with patch("app.services.growth_dashboard_service.cache_service", fake_cache):
+        payload = await service.get_daily_context_line(user_id, target_day=context.target_day)
+        cached = await service.get_daily_context_line(user_id, target_day=context.target_day)
+
+    assert payload["source"] == "ai"
+    assert payload["text"] == "离「热力学考试」还有3天，今天先把热力学错题接上。"
+    assert cached == payload
+    service._generate_daily_context_line_with_ai.assert_awaited_once()

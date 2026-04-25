@@ -6,6 +6,7 @@ import pytest
 
 from app.aurora.runtime_v1.control_surface import ControlSurfaceService, HarnessUpdateRejectedError
 from app.aurora.runtime_v1.persistence import AuroraPersistenceStore
+from app.aurora.runtime_v1.planning import AuroraRuntimePlanningAdapter, get_tension_prompt
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
 from app.aurora.runtime_v1.state import (
     ActivityProfile,
@@ -271,3 +272,35 @@ def test_skill_registry_only_filters_candidates_without_fixed_sorting() -> None:
         "aurora.agenda_priority",
         "aurora.conversation_style",
     ]
+
+
+def test_tension_prompt_registry_supports_planning_domain_aliases() -> None:
+    assert "具体考哪些范围" in get_tension_prompt("exam_scope")
+    assert "具体考哪些范围" in get_tension_prompt("scope")
+    assert "关键信息" in get_tension_prompt("unknown_domain")
+
+
+@pytest.mark.asyncio
+async def test_planning_detour_marks_surface_state_without_sidecar_prompt() -> None:
+    adapter = AuroraRuntimePlanningAdapter(redis_client=_FakeRedis())
+    state = await adapter.get_or_create_state(
+        user_id="user-1",
+        conversation_id="conv-1",
+        db=None,
+        planning_session_id="planning-1",
+        goal_raw="7天后考计算机网络",
+        collected={"goal_raw": "7天后考计算机网络"},
+    )
+
+    state = await adapter.absorb_user_turn(
+        state=state,
+        db=None,
+        message="先帮我查一下这个任务完成没有",
+        extracted_fields={},
+        is_detour=True,
+    )
+    scaffold = adapter.build_detour_scaffold(state)
+
+    assert scaffold["surface_state"]["in_detour"] is True
+    assert scaffold["recent_detours"] == ["先帮我查一下这个任务完成没有"]
+    assert adapter.build_detour_prompt(state) == ""

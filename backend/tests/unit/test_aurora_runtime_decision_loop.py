@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
-from app.aurora.runtime_v1.control_surface import AuroraHardBounds, ControlSurfaceReading, ActivityProfile, DndWindow
+from app.aurora.runtime_v1.control_surface import ActivityProfile, AuroraHardBounds, ControlSurfaceReading, DndWindow
 from app.aurora.runtime_v1.dashboard import DashboardReadout, DashboardReadoutBuilder
 from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
@@ -27,13 +27,16 @@ class _FakeJsonLLM:
 def _readout(
     *,
     hard_bounds: AuroraHardBounds | None = None,
+    surface: str = "aurora_modeling",
     user_message: str = "7天后考计网，从没学过。",
     covered_domains: list[str] | None = None,
     missing_domains: list[str] | None = None,
     recently_asked_domains: list[str] | None = None,
+    request_extra_context: dict[str, Any] | None = None,
+    latent_thread_recovery_candidates: list[dict[str, Any]] | None = None,
 ) -> DashboardReadout:
     return DashboardReadout(
-        surface="aurora_modeling",
+        surface=surface,
         user_id="user-1",
         conversation_id="conv-1",
         request_id="req-1",
@@ -51,6 +54,8 @@ def _readout(
         recently_asked_domains=list(recently_asked_domains or []),
         sprint_policy_summary={"mode": "seven_day_survival", "days_remaining": 7},
         explicit_user_constraints={"hard_bounds": {"privacy_boundaries": []}},
+        latent_thread_recovery_candidates=list(latent_thread_recovery_candidates or []),
+        request_extra_context=dict(request_extra_context or {}),
     )
 
 
@@ -331,9 +336,6 @@ def test_informational_tension_accepts_importance_reasoning() -> None:
 
 
 def test_dashboard_builder_enriches_tensions_with_importance_reasoning() -> None:
-    from app.aurora.runtime_v1.dashboard import DashboardReadoutBuilder
-    from app.aurora.runtime_v1.control_surface import AuroraHardBounds, ControlSurfaceReading, ActivityProfile
-
     builder = DashboardReadoutBuilder()
     reading = ControlSurfaceReading(
         adjustable=ActivityProfile(),
@@ -380,6 +382,46 @@ def test_modeling_complete_requires_only_four_core_domains_not_motivation() -> N
     assert validated.surface_complete is True
 
 
+def test_planning_detour_surface_state_is_visible_to_decision_loop() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(
+        surface="aurora_planning",
+        covered_domains=["goal"],
+        missing_domains=["scope"],
+        request_extra_context={
+            "planning_detour_scaffold": {
+                "surface_state": {"in_detour": True},
+                "recent_detours": ["先帮我查一下这个任务完成没有"],
+            }
+        },
+    )
+
+    payload = loop._slim_readout_for_surface(readout)
+
+    assert payload["surface_state"]["in_detour"] is True
+    assert "cold_start_context" not in payload
+
+
+def test_soft_return_topic_uses_latent_candidate_after_planning_detour() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(action="soft_return_topic", chat_directive={"intent": "recover_planning_naturally"})
+    readout = _readout(
+        surface="aurora_planning",
+        covered_domains=["goal"],
+        missing_domains=["scope"],
+        request_extra_context={"surface_state": {"in_detour": True}},
+        latent_thread_recovery_candidates=[
+            {"thread_id": "thread-scope", "target_domain": "scope", "recovery_priority": 0.9}
+        ],
+    )
+
+    validated = loop.validate_decision(decision, readout)
+
+    assert validated.action == "soft_return_topic"
+    assert validated.chat_directive["thread_id"] == "thread-scope"
+    assert validated.chat_directive["target_domain"] == "scope"
+
+
 @pytest.mark.asyncio
 async def test_service_keeps_wait_turn_silent_without_extra_fallback() -> None:
     decision_loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({"action": "wait"}))
@@ -402,6 +444,55 @@ async def test_service_keeps_wait_turn_silent_without_extra_fallback() -> None:
     )
 
     assert plan.messages == []
+
+
+@pytest.mark.asyncio
+async def test_service_uses_chat_adapter_as_single_fallback_source() -> None:
+    class EmptyRenderAdapter(ChatLayerAdapter):
+        def __init__(self) -> None:
+            super().__init__(llm_factory=lambda: _FakeJsonLLM({}))
+            self.fallback_reason: str | None = None
+
+        async def render(self, decision: AuroraDecision, readout: DashboardReadout) -> list[str]:
+            return []
+
+        async def _fallback_messages(
+            self,
+            decision: AuroraDecision,
+            readout: DashboardReadout,
+            *,
+            reason: str | None = None,
+        ) -> list[str]:
+            self.fallback_reason = reason
+            return ["adapter fallback"]
+
+    adapter = EmptyRenderAdapter()
+    service = AuroraRuntimeV1Service(
+        decision_loop=AuroraDecisionLoop(
+            llm_factory=lambda: _FakeJsonLLM(
+                {
+                    "action": "emit_message",
+                    "chat_directive": {"intent": "ask_scope", "target_domain": "scope"},
+                }
+            )
+        ),
+        chat_adapter=adapter,
+    )
+
+    plan = await service.plan_turn(
+        active_db=None,
+        user_id="user-1",
+        surface="aurora_modeling",
+        conversation_id="conv-1",
+        request_id="req-1",
+        user_message="我想备考。",
+        request_extra_context={},
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    assert plan.messages == ["adapter fallback"]
+    assert adapter.fallback_reason == "empty_render"
 
 
 def test_extract_achievement_signals_falls_back_to_cognitive_context() -> None:

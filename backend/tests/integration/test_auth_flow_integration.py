@@ -1,3 +1,4 @@
+# FIXED: 2026-04-25 - Stage 38 failure no longer reproduces with current auth implementation - reran and retained assertions.
 """
 Authentication and Authorization Integration Tests
 

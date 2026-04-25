@@ -77,9 +77,7 @@ async def test_check_prerequisites_requires_all_prerequisites(db_session, test_u
         )
     )
     await db_session.commit()
-    await cache_service.delete(
-        f"{settings.APP_NAME}:achievement:{test_user.id}:{prerequisite.id}:unlocked"
-    )
+    await cache_service.delete(f"{settings.APP_NAME}:achievement:{test_user.id}:{prerequisite.id}:unlocked")
 
     assert await engine._check_prerequisites(test_user.id, child) is True
 
@@ -117,9 +115,7 @@ async def test_grant_rewards_unlocks_titles_skins_and_freeze_charges(db_session,
             )
         )
     )
-    stats_result = await db_session.execute(
-        select(UserStreakStats).where(UserStreakStats.user_id == test_user.id)
-    )
+    stats_result = await db_session.execute(select(UserStreakStats).where(UserStreakStats.user_id == test_user.id))
 
     assert title_result.scalar_one_or_none() is not None
     assert skin_result.scalar_one_or_none() is not None
@@ -143,9 +139,7 @@ async def test_grant_rewards_records_photon_balance_and_history(db_session, test
     await db_session.refresh(test_user)
 
     transaction_result = await db_session.execute(
-        select(PhotonTransactionHistory).where(
-            PhotonTransactionHistory.user_id == test_user.id
-        )
+        select(PhotonTransactionHistory).where(PhotonTransactionHistory.user_id == test_user.id)
     )
     transaction = transaction_result.scalar_one_or_none()
 
@@ -228,15 +222,17 @@ async def test_sprint_progress_variants(db_session, test_user):
         trigger_config={"count": 1},
     )
 
-    db_session.add_all([
-        plan1,
-        plan2,
-        plan3,
-        achievement_total,
-        achievement_perfect,
-        achievement_streak,
-        achievement_ahead,
-    ])
+    db_session.add_all(
+        [
+            plan1,
+            plan2,
+            plan3,
+            achievement_total,
+            achievement_perfect,
+            achievement_streak,
+            achievement_ahead,
+        ]
+    )
     await db_session.commit()
 
     engine = AchievementEngine(db_session)
@@ -316,6 +312,68 @@ async def test_unlock_achievement_is_idempotent_for_existing_unlocked_record(db_
     assert result is None
     await db_session.refresh(achievement)
     assert achievement.total_unlocked == 1
+
+
+@pytest.mark.asyncio
+async def test_unlock_achievement_saves_context_snapshot_with_plan_and_task(db_session, test_user):
+    achievement = _achievement(
+        "streak_witness",
+        trigger_code="TASKS_TOTAL",
+        trigger_config={"count": 1},
+    )
+    plan = Plan(
+        user_id=test_user.id,
+        name="考前冲刺",
+        type=PlanType.SPRINT,
+        target_date=datetime(2026, 3, 15).date(),
+        subject="高数",
+        progress=0.42,
+        is_active=True,
+        is_primary=True,
+    )
+    task = Task(
+        user_id=test_user.id,
+        plan=plan,
+        title="导数专项练习",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=25,
+        actual_minutes=30,
+        difficulty=2,
+        energy_cost=2,
+        status=TaskStatus.COMPLETED,
+        completed_at=datetime(2026, 3, 10, 10, 0, 0),
+    )
+    db_session.add_all([achievement, plan, task])
+    await db_session.commit()
+
+    engine = AchievementEngine(db_session)
+    unlocked = await engine.process_event(
+        user_id=str(test_user.id),
+        event_type=AchievementEvent.TASK_COMPLETED,
+        task_id=str(task.id),
+        actual_minutes=30,
+    )
+
+    result = await db_session.execute(
+        select(UserAchievement).where(
+            and_(
+                UserAchievement.user_id == test_user.id,
+                UserAchievement.achievement_id == achievement.id,
+            )
+        )
+    )
+    stored = result.scalar_one()
+    snapshot = stored.context_snapshot
+
+    assert len(unlocked) == 1
+    assert unlocked[0]["context_snapshot"]["task"]["title"] == "导数专项练习"
+    assert unlocked[0]["context_story"]
+    assert snapshot["event_type"] == AchievementEvent.TASK_COMPLETED
+    assert snapshot["current_plan"]["name"] == "考前冲刺"
+    assert snapshot["current_plan"]["days_to_target"] is not None
+    assert snapshot["task"]["title"] == "导数专项练习"
+    assert "导数专项练习" in snapshot["story"]
 
 
 @pytest.mark.asyncio
@@ -592,7 +650,9 @@ async def test_duplicate_task_completion_short_circuits_before_mutation(db_sessi
         task_id=str(task.id),
     )
 
-    with patch.object(engine, "_update_streak_stats", AsyncMock(side_effect=AssertionError("duplicate should not mutate"))):
+    with patch.object(
+        engine, "_update_streak_stats", AsyncMock(side_effect=AssertionError("duplicate should not mutate"))
+    ):
         second = await engine.process_event(
             user_id=str(test_user.id),
             event_type=AchievementEvent.TASK_COMPLETED,
@@ -618,15 +678,20 @@ async def test_focus_service_publishes_session_id_for_deduplication(db_session, 
     start_time = datetime(2026, 3, 10, 7, 0, 0)
     end_time = datetime(2026, 3, 10, 7, 30, 0)
 
-    with patch("app.services.achievement_engine.AchievementEngine.process_event", AsyncMock(return_value=[])), patch(
-        "app.services.focus_service.event_bus.publish",
-        AsyncMock(),
-    ) as publish_mock, patch(
-        "app.services.focus_service.AutoFragmentCollector.collect_from_focus_session",
-        AsyncMock(),
-    ), patch(
-        "app.services.focus_service.MemoryService.create_episodic_memory",
-        AsyncMock(),
+    with (
+        patch("app.services.achievement_engine.AchievementEngine.process_event", AsyncMock(return_value=[])),
+        patch(
+            "app.services.focus_service.event_bus.publish",
+            AsyncMock(),
+        ) as publish_mock,
+        patch(
+            "app.services.focus_service.AutoFragmentCollector.collect_from_focus_session",
+            AsyncMock(),
+        ),
+        patch(
+            "app.services.focus_service.MemoryService.create_episodic_memory",
+            AsyncMock(),
+        ),
     ):
         result = await FocusService.log_session(
             db=db_session,

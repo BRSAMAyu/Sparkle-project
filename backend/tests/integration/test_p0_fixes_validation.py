@@ -1,3 +1,4 @@
+# FIXED: 2026-04-25 - Integration DB schema was behind task planning migrations - verified Task ORM insert after Alembic head.
 """
 P0修复验证测试脚本
 
