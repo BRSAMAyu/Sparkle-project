@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 13 / 20 chains audited
+> **Status**: 16 / 20 chains audited
 
 ---
 
@@ -247,3 +247,52 @@
 - None
 
 **Working Well ✅**: 计划详情页三态完整（data/loading/error 含重试按钮），错误消息可识别 404/超时/网络错误；Galaxy 主加载区分首次/后台刷新错误，SSE 断线 5 秒自动重连；Chat WebSocket 断线自动重连。
+
+---
+
+## Round 7 — 2026-04-26
+*Reviewer A: C19 — Aurora建模对话质量 | Reviewer B: C02 — Galaxy mastery双刻度bug + C05 — 冲刺完成状态*
+
+### C02: 任务完成→Galaxy节点mastery更新→星图颜色变深 (Reviewer B — re-audit, recovered)
+
+**Critical Issues 🔴**
+- **`task_service.py:477` + `galaxy_service.py:1396` + `galaxy_llm_protocol.g.dart:88`**: Sprint Pack 使用 0-1 刻度写入 mastery（line 477: `min(1.0, current_mastery + 0.25)`），`update_node_mastery` 夹到 0.25 写入 DB。Mobile 端 `galaxy_llm_protocol.g.dart:88` 用 `(json['mastery_score'] as num?)?.toInt()` 将 0.25 截断为 0，`galaxyMasteryRatio(0) = 0/100 = 0`。Sprint pack 节点 mastery 在 mobile 端始终显示为 0，颜色永远灰色。Expected: 完成 4 个 sprint 任务后 mastery 到 1.0，颜色变深。Actual: Sprint pack 节点在移动端始终显示灰色。普通 Galaxy 节点（0-100 刻度）不受影响。
+
+**Major Issues 🟡**
+- None
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: 任务完成后 galaxy 刷新触发正确（`galaxyRefreshTriggerProvider.state++` + `refreshForTaskCompletion`）；颜色映射 4 级逻辑正确（0-25%→25-50%→50-75%→75-100%）；后端 `_mastery_ratio` 归一化一致。
+
+---
+
+### C05: 7天冲刺完成→庆祝页→学习档案状态变completed (Reviewer B — re-audit)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`exam_sprint_review_service.py:393-414` vs `173-255`**: 如果用户跳过"记录考试结果"按钮（直接点"查看学习档案"或关闭庆祝页），冲刺计划不会被 archive，portfolio 中仍显示 `status="active"`（line 396: `status = "active" if plan.is_active else "planned"`）。只有完成考后评估（`submit_post_exam_review`）才会归档并显示 `completed`。Expected: 冲刺所有任务完成后 portfolio 状态变为 completed。Actual: 用户永远不做考后评估则冲刺永远显示 active。
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: `_invalidateLinkedViews()` 正确刷新 portfolio/weeklyGrowth/planDetail providers；RouteResilienceScope + PopScope 确保退出触发 invalidate；summary 为 null 时有 loading/error/retry 状态；三个 CTA 按钮清晰无导航死路。
+
+---
+
+### C19: Aurora建模对话质量（不重复/上下文感知/自然过渡） (Reviewer A)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`chat_adapter.py:113-137`**: `_infer_context_answers()` 使用简单关键词匹配推断用户回答。`_BASELINE_LIGHT_PATTERNS` 包含 "不太会"、"不太懂" 等模式，可能将特定知识点困难（如"TCP有点难懂"）误分类为整体 baseline="不太稳"。推断用 `setdefault` 语义不覆盖明确回答，但推断本身误报率可能偏高。实际影响有限——推断只影响问题措辞，不影响 tension 解析。
+- **`planning.py:884`**: `_recompute_tensions()` 判断 resolved 的逻辑为 `field_value not in (None, "", [], {})`。任何非空字符串（含"不知道"、"随便"等敷衍回答）都被视为有效回答并标记 resolved，后续不再追问。设计权衡——严格验证可能导致循环追问。
+
+**Minor Issues 🟢**
+- None
+
+**Working Well ✅**: Tension 追踪系统完整（4 域独立 tension + 每轮重算 + 自动识别已回答域）；上下文感知问题生成（零基础/有scope/Sprint Pack 各有专用措辞）；Chat adapter 双层降级（LLM→静态→fallback）；Modeling complete 基于域全覆盖集合运算非关键词匹配；每个域有高质量 fallback 问题。
