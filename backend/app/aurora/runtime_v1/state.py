@@ -47,6 +47,7 @@ DEFAULT_ACTIVITY_EXPRESSION: dict[ExpressionDimension, float] = {
     "friendliness": 0.74,
     "challenge_intensity": 0.36,
 }
+CORE_MODELING_DOMAINS: tuple[str, ...] = ("goal", "scope", "baseline", "time", "motivation")
 
 
 def _utcnow() -> datetime:
@@ -143,12 +144,22 @@ class InformationalTension(AuroraSchemaBase):
     created_at: datetime = Field(default_factory=_utcnow)
     last_attempted_at: datetime | None = None
 
-    @field_validator("tension_id", "domain", "description")
+    @field_validator("tension_id", "description")
     @classmethod
     def _validate_text(cls, value: str) -> str:
         text = _normalize_text(value)
         if not text:
             raise ValueError("text field is required")
+        return text
+
+    @field_validator("domain")
+    @classmethod
+    def _validate_domain(cls, value: str) -> str:
+        text = _normalize_text(value)
+        if not text:
+            raise ValueError("text field is required")
+        if text.lower() == "motivation":
+            return "motivation"
         return text
 
     @field_validator("priority")

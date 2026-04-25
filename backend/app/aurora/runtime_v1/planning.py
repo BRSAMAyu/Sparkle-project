@@ -46,17 +46,20 @@ TENSION_FIELD_MAP = {
     "exam_scope": "exam_scope",
     "knowledge_baseline": "knowledge_baseline",
     "time_available": "time_available",
+    "motivation": "motivation_context",
 }
 _TENSION_PROMPT_REGISTRY: dict[str, str] = {
     "exam_scope": "这次更具体考哪些范围？如果你手上有教材目录、老师画的重点或真题来源，也可以一起告诉我。",
     "knowledge_baseline": "你现在对这门课的基础大概在哪个位置？比如完全没学过、上过课但没复习，或者已经能讲清一部分核心内容。",
     "time_available": "接下来这几天你每天大概能投入多少时间？有没有哪几天会明显更忙、需要我主动避开？",
+    "motivation": "最后一个问题：这次考试对你来说意味着什么？是一定要过还是想尽量考高分？",
 }
 _DEFAULT_TENSION_PROMPT = "我还差一块关键信息，方便你再补一句吗？"
 _TENSION_DOMAIN_ALIASES = {
     "scope": "exam_scope",
     "baseline": "knowledge_baseline",
     "time": "time_available",
+    "motivation_context": "motivation",
 }
 
 
@@ -141,6 +144,7 @@ _TENSION_IMPORTANCE: dict[str, str] = {
     "exam_scope": "决定任务分解粒度——不知道考什么就无法生成有效计划",
     "knowledge_baseline": "决定起点和难度梯度——高估或低估都会造成计划不可执行",
     "time_available": "决定密度和取舍策略——时间约束直接决定 seven_day_survival 模式是否激活",
+    "motivation": "决定干预语言和策略——为什么做决定了 AI 如何调整节奏和语气",
 }
 
 
@@ -243,6 +247,8 @@ class AuroraRuntimePlanningState:
     last_decision_at: str | None = None
     updated_at: str = field(default_factory=lambda: _utcnow().isoformat())
     planning_session_id: str | None = None
+    covered_domains: list[str] = field(default_factory=list)
+    missing_domains: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -273,6 +279,8 @@ class AuroraRuntimePlanningState:
             last_decision_at=_coerce_iso(payload.get("last_decision_at")),
             updated_at=_strip(payload.get("updated_at")) or _utcnow().isoformat(),
             planning_session_id=_strip(payload.get("planning_session_id")) or None,
+            covered_domains=[_strip(item) for item in list(payload.get("covered_domains") or []) if _strip(item)],
+            missing_domains=[_strip(item) for item in list(payload.get("missing_domains") or []) if _strip(item)],
         )
 
 
@@ -695,6 +703,11 @@ class AuroraRuntimePlanningAdapter:
             "available_materials": _as_list(cold_start.get("available_materials")),
             "subject": _strip(cold_start.get("subject")),
             "time_constraint_days": _safe_int(cold_start.get("time_constraint_days")),
+            "motivation_context": _strip(
+                cold_start.get("motivation_context")
+                or cold_start.get("motivation")
+                or cold_start.get("goal_motivation")
+            ),
             "modeling_complete": bool(modeling_state.get("completed")),
             "aurora_hard_bounds": {
                 "dnd_windows": _as_list(aurora_prefs.get("dnd_windows")),
@@ -776,6 +789,8 @@ class AuroraRuntimePlanningAdapter:
                 current.status = "open"
             rebuilt.append(current)
         state.informational_tensions = rebuilt
+        state.covered_domains = [item.domain for item in rebuilt if item.status == "resolved"]
+        state.missing_domains = [item.domain for item in rebuilt if item.status in {"open", "partially_resolved"}]
         state.activity_profile.agenda_priority = self.select_next_tension(state).domain if self.select_next_tension(state) else None
         state.activity_profile.conversation_style = state.activity_profile.conversation_style or "structured"
 
@@ -789,6 +804,7 @@ class AuroraRuntimePlanningAdapter:
             "exam_scope": 0.78,
             "knowledge_baseline": 0.74,
             "time_available": 0.70,
+            "motivation": 0.52,
         }.get(domain, 0.65)
         days = _safe_int(snapshot.get("time_constraint_days")) or 7
         hours = _safe_int(snapshot.get("daily_available_hours")) or 0
@@ -798,6 +814,10 @@ class AuroraRuntimePlanningAdapter:
             base += 0.12
         if domain == "exam_scope" and (_strip(snapshot.get("subject")) or _as_list(snapshot.get("available_materials"))):
             base += 0.05
+        if domain == "motivation" and set(REQUIRED_PLANNING_FIELDS).issubset(
+            {field_name for field_name in REQUIRED_PLANNING_FIELDS if snapshot.get(field_name) not in (None, "", [], {})}
+        ):
+            base += 0.12
         if any(domain == thread.source_intent.get("target_domain") for thread in state.latent_threads if thread.status == "active"):
             base += 0.04
         return max(0.0, min(1.0, round(base, 3)))
@@ -810,6 +830,8 @@ class AuroraRuntimePlanningAdapter:
             return f"还不清楚你在 {subject} 上的起点，计划强度容易过轻或过重。"
         if domain == "time_available":
             return "还没摸清你这几天真实能投入的时间，生成的节奏容易和你的日程冲突。"
+        if domain == "motivation":
+            return f"还不知道 {subject} 对你意味着什么，计划语气和难度策略暂时无法贴合。"
         return "还有一块信息缺口没有闭合。"
 
     def _upsert_latent_thread(self, state: AuroraRuntimePlanningState) -> None:
@@ -929,6 +951,7 @@ class AuroraRuntimePlanningAdapter:
             ("exam_scope", "考试范围"),
             ("knowledge_baseline", "当前基础"),
             ("time_available", "可投入时间"),
+            ("motivation_context", "动机"),
             ("blocked_days", "忙碌时段"),
             ("available_materials", "现有资料"),
         ):

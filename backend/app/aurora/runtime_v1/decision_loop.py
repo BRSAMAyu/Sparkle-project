@@ -163,6 +163,10 @@ STANDARD_LAYER_TOKEN_ALIASES = {
     "answer_or_acknowledgment": "direct_answer_or_acknowledgment",
     "direct_answer_or_acknowledgment": "direct_answer_or_acknowledgment",
     "unsolicited_three_practice_questions": "unsolicited_three_practice_questions",
+    "safety_margin": "safety_margin",
+    "safety_buffer": "safety_margin",
+    "deep_learn": "deep_learn_allowed",
+    "deep_learn_allowed": "deep_learn_allowed",
 }
 STANDARD_LAYER_TOKEN_DESCRIPTIONS = {
     "worked_example": "Include one concise worked example before asking the user to continue.",
@@ -183,7 +187,13 @@ STANDARD_LAYER_TOKEN_DESCRIPTIONS = {
     "high_pressure_task_load": "Do not pile on a heavy new workload while calibration is unresolved.",
     "direct_answer_or_acknowledgment": "Give a direct answer or brief acknowledgment that matches the user's turn.",
     "unsolicited_three_practice_questions": "Do not inject a three-question drill unless the turn is task-help oriented.",
+    "safety_margin": "Emphasize pass-first buffers, conservative scope, and fallback room instead of risky overload.",
+    "deep_learn_allowed": "Allow deeper conceptual learning or stretch practice after the core pass line is protected.",
 }
+SLEEP_GUARD_MUST_NOT_INCLUDE = ("full_week_replan", "three_practice_questions")
+SLEEP_GUARD_RULE = (
+    "睡眠守卫激活：当前为深夜时段。不要增加任务密度，不要追加新内容，回复要简短，鼓励用户设置好第二天的计划后休息。"
+)
 
 LLMFactory = Callable[[], Any | Awaitable[Any]]
 
@@ -284,11 +294,96 @@ def _normalize_marker(value: Any) -> str | None:
     return text or None
 
 
+def _sleep_guard_context(readout: DashboardReadout) -> dict[str, Any]:
+    request_context = readout.request_extra_context if isinstance(readout.request_extra_context, Mapping) else {}
+    if request_context.get("sleep_guard_active") is not True:
+        return {"active": False, "hint": ""}
+    return {
+        "active": True,
+        "hint": str(request_context.get("sleep_guard_hint") or "").strip(),
+    }
+
+
 def _safe_int(value: Any) -> int | None:
     try:
         return int(float(value))
     except (TypeError, ValueError):
         return None
+
+
+def _safe_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _coerce_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "y", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "n", "off"}:
+            return False
+        return None
+    return bool(value)
+
+
+def _achievement_signal_state(readout: DashboardReadout) -> dict[str, Any]:
+    signals = readout.achievement_signals if isinstance(readout.achievement_signals, Mapping) else {}
+    active_streaks = signals.get("active_streaks")
+    streak_active = _coerce_bool(signals.get("streak_active"))
+    if streak_active is None:
+        streak_active = bool(active_streaks) if isinstance(active_streaks, list) else False
+    recently_unlocked = _coerce_bool(signals.get("recently_unlocked"))
+    if recently_unlocked is None:
+        recent_unlocks = signals.get("recent_unlocks")
+        recently_unlocked = bool(recent_unlocks) if isinstance(recent_unlocks, list) else False
+    return {
+        "momentum": _safe_float(signals.get("momentum")),
+        "recently_unlocked": recently_unlocked,
+        "streak_active": streak_active,
+    }
+
+
+def _achievement_recent_unlock_scene(readout: DashboardReadout) -> bool:
+    state = _achievement_signal_state(readout)
+    momentum = state.get("momentum")
+    return momentum is not None and momentum > 0.7 and state["recently_unlocked"] is True
+
+
+def _achievement_stalled_scene(readout: DashboardReadout) -> bool:
+    state = _achievement_signal_state(readout)
+    momentum = state.get("momentum")
+    return momentum is not None and momentum < 0.2 and state["streak_active"] is False
+
+
+def _achievement_signal_rules(readout: DashboardReadout) -> list[str]:
+    state = _achievement_signal_state(readout)
+    momentum = state.get("momentum")
+    rules: list[str] = []
+    if momentum is not None and momentum > 0.7 and state["recently_unlocked"] is True:
+        rules.append(
+            "Achievement rule: momentum > 0.7 AND recently_unlocked == true; add "
+            "direct_answer_or_acknowledgment to chat_directive.standard_layer_contract.must_include, "
+            "briefly confirm progress, and do not add a new burden."
+        )
+    if momentum is not None and momentum < 0.2 and state["streak_active"] is False:
+        rules.append(
+            "Achievement rule: momentum < 0.2 AND streak_active == false; prefer response_type "
+            "emotional_support, and add three_practice_questions to "
+            "chat_directive.standard_layer_contract.must_not_include."
+        )
+    if state["streak_active"] is True:
+        rules.append(
+            "Achievement rule: streak_active == true; the response may briefly mention 连续打卡, but only as a side "
+            "acknowledgment and never as a shift away from the user's current focus."
+        )
+    return rules
 
 
 def _effective_strategy_flags(decision: AuroraDecision, readout: DashboardReadout) -> dict[str, bool]:
@@ -323,6 +418,62 @@ def _task_stage_tokens(readout: DashboardReadout) -> set[str]:
         if token:
             tokens.add(token)
     return tokens
+
+
+def _iter_text_values(value: Any) -> list[str]:
+    values: list[str] = []
+    if isinstance(value, Mapping):
+        for nested in value.values():
+            values.extend(_iter_text_values(nested))
+        return values
+    if isinstance(value, (list, tuple, set)):
+        for item in value:
+            values.extend(_iter_text_values(item))
+        return values
+    if value in (None, "", [], {}):
+        return values
+    values.append(str(value))
+    return values
+
+
+def _motivation_context_text(readout: DashboardReadout) -> str:
+    candidate_texts: list[str] = []
+
+    def collect_keyed_values(value: Any) -> None:
+        if isinstance(value, Mapping):
+            for key, nested in value.items():
+                key_text = str(key or "").lower()
+                if "motivation" in key_text or key_text in {"reason", "why", "purpose", "pressure"}:
+                    candidate_texts.extend(_iter_text_values(nested))
+                collect_keyed_values(nested)
+            return
+        if isinstance(value, (list, tuple, set)):
+            for item in value:
+                collect_keyed_values(item)
+
+    for source in (
+        readout.request_extra_context,
+        readout.cold_start_context,
+        readout.profile_context,
+        readout.task_state,
+        readout.exam_sprint_policy,
+    ):
+        collect_keyed_values(source)
+    candidate_texts.append(str(readout.user_message or ""))
+    return " ".join(text for text in candidate_texts if text).lower()
+
+
+def _motivation_kind(readout: DashboardReadout) -> str | None:
+    if "motivation" not in set(readout.covered_domains):
+        return None
+    text = _motivation_context_text(readout)
+    if any(marker in text for marker in ("必须过", "一定要过", "不能挂", "不挂科", "不想挂", "保底", "过线")):
+        return "must_pass"
+    if any(marker in text for marker in ("想拿高分", "尽量考高分", "考高分", "冲高分", "高分", "拿高分")):
+        return "high_score"
+    if any(marker in text for marker in ("探索兴趣", "探索", "兴趣", "想了解")):
+        return "explore_interest"
+    return None
 
 
 def _failure_streak(readout: DashboardReadout) -> int:
@@ -384,13 +535,20 @@ def _infer_standard_layer_response_type(
     contract: Mapping[str, Any] | None = None,
 ) -> str:
     requested = _normalize_standard_layer_response_type((contract or {}).get("response_type"))
+    motivation_kind = _motivation_kind(readout)
     if _is_emotional_support_scene(decision, readout):
+        return "emotional_support"
+    if _achievement_stalled_scene(readout):
         return "emotional_support"
     if _is_calibration_scene(decision, readout):
         return "calibration"
     if _is_diagnostic_scene(decision, readout):
         return "diagnostic"
+    if motivation_kind == "must_pass":
+        return "emotional_support"
     if _is_task_help_scene(decision, readout):
+        return "task_help"
+    if motivation_kind == "high_score":
         return "task_help"
     if readout.surface == "aurora_planning":
         return "plan_discussion"
@@ -403,6 +561,7 @@ def _default_standard_layer_contract(
     readout: DashboardReadout,
 ) -> dict[str, Any]:
     strategy = _effective_strategy_flags(decision, readout)
+    motivation_kind = _motivation_kind(readout)
     if response_type == "task_help":
         must_include: list[str] = []
         if strategy.get("worked_example_first") or _is_task_help_scene(decision, readout):
@@ -417,6 +576,8 @@ def _default_standard_layer_contract(
             must_include.append("completion_check")
         if not must_include:
             must_include.append("one_concrete_next_step")
+        if motivation_kind == "high_score":
+            must_include.append("deep_learn_allowed")
         return {
             "response_type": response_type,
             "must_include": must_include,
@@ -431,9 +592,12 @@ def _default_standard_layer_contract(
             "max_response_length": "normal",
         }
     if response_type == "emotional_support":
+        must_include = ["emotional_acknowledgment", "one_concrete_next_step"]
+        if motivation_kind == "must_pass":
+            must_include.append("safety_margin")
         return {
             "response_type": response_type,
-            "must_include": ["emotional_acknowledgment", "one_concrete_next_step"],
+            "must_include": must_include,
             "must_not_include": ["full_week_replan", "long_motivational_speech", "blame_or_shame"],
             "max_response_length": "normal",
         }
@@ -471,12 +635,18 @@ def build_standard_layer_contract(decision: AuroraDecision, readout: DashboardRe
         for token in _normalize_standard_layer_token_list(contract.get("must_not_include"))
         if token not in must_not_include
     )
+    if _achievement_stalled_scene(readout) and "three_practice_questions" not in must_not_include:
+        must_not_include.append("three_practice_questions")
+    if _sleep_guard_context(readout).get("active"):
+        must_not_include.extend(token for token in SLEEP_GUARD_MUST_NOT_INCLUDE if token not in must_not_include)
     must_include = [
         token
         for token in _normalize_standard_layer_token_list(defaults.get("must_include"))
         + _normalize_standard_layer_token_list(contract.get("must_include"))
         if token not in must_not_include
     ]
+    if _achievement_recent_unlock_scene(readout) and "direct_answer_or_acknowledgment" not in must_not_include:
+        must_include.append("direct_answer_or_acknowledgment")
     deduped_include: list[str] = []
     seen_include: set[str] = set()
     for token in must_include:
@@ -486,6 +656,8 @@ def build_standard_layer_contract(decision: AuroraDecision, readout: DashboardRe
     max_response_length = _normalize_standard_layer_length(contract.get("max_response_length")) or str(
         defaults.get("max_response_length") or "normal"
     )
+    if _sleep_guard_context(readout).get("active"):
+        max_response_length = "brief"
     return {
         "response_type": response_type,
         "must_include": deduped_include,
@@ -579,6 +751,8 @@ class AuroraDecisionLoop:
             "needs_recalibration is true, prefer shorter and safer next steps, lower task density, and avoid assuming "
             "the user can sustain the previous workload estimate. "
             "motivation domain is optional — ask about it if covered_domains has goal/scope/baseline/time but not motivation. "
+            "When motivation is covered and the value is '必须过', prefer response_type=emotional_support and emphasize safety margin; "
+            "when the value is '想拿高分', prefer response_type=task_help and allow deep learn. "
             "Teaching strategy is a first-class decision. Always set harness_updates.strategy with the boolean switches "
             "concept_first, problem_first, worked_example_first, retrieval_practice, interleaving, spaced_review, "
             "and error_analysis_required. Use concept_first when the user needs conceptual scaffolding before more tasks. "
@@ -624,6 +798,19 @@ class AuroraDecisionLoop:
                 "Never request or infer forbidden psychological or social-identity domains.",
             ],
         }
+        user["rules"].extend(_achievement_signal_rules(readout))
+        sleep_guard = _sleep_guard_context(readout)
+        if sleep_guard.get("active"):
+            sleep_guard_rule = SLEEP_GUARD_RULE
+            if sleep_guard.get("hint"):
+                sleep_guard_rule = f"{sleep_guard_rule} sprint_policy.sleep_guard_hint：{sleep_guard['hint']}"
+            user["rules"].append(sleep_guard_rule)
+            user["chat_directive_constraints"] = {
+                "assistant_tone_constraints": [sleep_guard["hint"]] if sleep_guard.get("hint") else [],
+                "must_not_include": list(SLEEP_GUARD_MUST_NOT_INCLUDE),
+                "standard_layer_contract_must_not_include": list(SLEEP_GUARD_MUST_NOT_INCLUDE),
+                "max_response_length": "brief",
+            }
         energy = str(wake_policy.get("energy") or "silent").lower()
         if energy == "moderate":
             user["rules"].append(
@@ -640,8 +827,14 @@ class AuroraDecisionLoop:
         # Last-24h mode overrides: detected from readout.last_24h_mode or exam_sprint_policy sprint_mode.
         _in_last_24h = bool(
             getattr(readout, "last_24h_mode", False)
-            or (isinstance(readout.exam_sprint_policy, Mapping) and readout.exam_sprint_policy.get("sprint_mode") == "last_24h_cram")
-            or (isinstance(readout.exam_sprint_policy, Mapping) and readout.exam_sprint_policy.get("last_24h_mode") is True)
+            or (
+                isinstance(readout.exam_sprint_policy, Mapping)
+                and readout.exam_sprint_policy.get("sprint_mode") == "last_24h_cram"
+            )
+            or (
+                isinstance(readout.exam_sprint_policy, Mapping)
+                and readout.exam_sprint_policy.get("last_24h_mode") is True
+            )
         )
         if _in_last_24h:
             user["rules"].append(
@@ -652,6 +845,14 @@ class AuroraDecisionLoop:
                 "response_type must be task_help or emotional_support — never calibration or diagnostic unless the user explicitly asks. "
                 "Keep responses short and reassuring. new_topic_allowed is false."
             )
+        # F18: Inject Sprint Pack aurora hint into system prompt when available.
+        _aurora_hint = (
+            readout.cold_start_context.get("sprint_pack_aurora_hint")
+            if isinstance(readout.cold_start_context, Mapping)
+            else None
+        )
+        if _aurora_hint:
+            system = f"{system} Sprint Pack自适应提示：{_aurora_hint}"
         return [
             {"role": "system", "content": system},
             {"role": "user", "content": json.dumps(user, ensure_ascii=False, default=str)},
@@ -1121,6 +1322,10 @@ class AuroraDecisionLoop:
         elif readout.surface == "aurora_planning":
             defaults["problem_first"] = True
         elif readout.surface == "aurora_checkpoint":
+            defaults["error_analysis_required"] = True
+
+        # F20: When checkpoint has sprint_pack_mistakes, force error analysis.
+        if readout.checkpoint_state.get("sprint_pack_mistakes"):
             defaults["error_analysis_required"] = True
 
         retrieval_policy = readout.exam_sprint_policy.get("retrieval_policy")

@@ -1,14 +1,23 @@
 from __future__ import annotations
 
+import asyncio
+import inspect
+import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.aurora.runtime_v1.control_surface import AuroraHardBounds, ControlSurfaceReading
 from app.aurora.runtime_v1.skills import SkillAffordance
+from app.aurora.runtime_v1.state import CORE_MODELING_DOMAINS
+from app.aurora.runtime_v1.write_pipeline import AURORA_CLAIM_KEY_TEMPLATE
+from app.sprint_packs.sprint_pack_loader import load_pack
 
-CORE_MODELING_DOMAINS: tuple[str, ...] = ("goal", "scope", "baseline", "time", "motivation")
 REQUIRED_MODELING_DOMAINS: tuple[str, ...] = ("goal", "scope", "baseline", "time")
+AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY = "_aurora_confirmed_weak_nodes"
+_MISSING = object()
 
 _DOMAIN_IMPORTANCE: dict[str, str] = {
     "goal": "锚定整个规划方向——目标模糊会导致后续所有决策偏移",
@@ -93,6 +102,7 @@ _DOMAIN_ALIASES: dict[str, set[str]] = {
         "purpose",
         "drive",
         "pressure",
+        "motivation_context",
         "goal_motivation",
         "exam_motivation",
         "study_motivation",
@@ -116,7 +126,13 @@ _DOMAIN_TEXT_HINTS: dict[str, tuple[str, ...]] = {
         "动机",
         "原因",
         "不想挂",
+        "不挂科",
+        "一定要过",
         "想冲",
+        "想拿高分",
+        "尽量考高分",
+        "考高分",
+        "探索兴趣",
         "保研",
         "必须过",
         "目的",
@@ -189,7 +205,7 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
 }
 
 _SURFACE_CONTEXT_ADDITIONS: dict[str, frozenset[str]] = {
-    "aurora_checkpoint": frozenset({"checkpoint_state"}),
+    "aurora_checkpoint": frozenset({"checkpoint_state", "sprint_pack_mistakes"}),
     # last_24h_mode is a synthesised flag exposed to the decision loop even when
     # exam_sprint_policy itself is excluded from the planning surface LLM payload.
     "aurora_planning": frozenset({"sprint_policy_summary", "task_state", "last_24h_mode"}),
@@ -303,6 +319,9 @@ class DashboardReadout:
 
 
 class DashboardReadoutBuilder:
+    def __init__(self, redis_client=None) -> None:
+        self.redis = redis_client
+
     def build(
         self,
         *,
@@ -324,7 +343,11 @@ class DashboardReadoutBuilder:
         if not isinstance(profile_context, dict):
             profile_context = {}
 
-        cold_start_context = self._extract_cold_start_context(profile_context, user_context_payload)
+        cold_start_context = self._extract_cold_start_context(
+            profile_context,
+            user_context_payload,
+            user_id=user_id,
+        )
         messages = conversation_context.get("messages")
         if not isinstance(messages, list):
             messages = []
@@ -377,6 +400,12 @@ class DashboardReadoutBuilder:
             or exam_sprint_policy.get("last_24h_mode") is True
         )
 
+        # F18: Auto-load Sprint Pack when goal_type == "exam" and subject is known.
+        self._inject_sprint_pack_into_cold_start(cold_start_context)
+
+        # F20: Inject Sprint Pack mistake types into checkpoint_state when sprint_pack_id is present.
+        self._inject_sprint_pack_mistakes_into_checkpoint(checkpoint_state)
+
         return DashboardReadout(
             surface=surface,
             user_id=str(user_id),
@@ -418,6 +447,9 @@ class DashboardReadoutBuilder:
         self,
         profile_context: dict[str, Any],
         user_context_payload: dict[str, Any],
+        *,
+        user_id: str | None = None,
+        redis_client=None,
     ) -> dict[str, Any]:
         candidates = [
             profile_context.get("cold_start_context"),
@@ -428,10 +460,272 @@ class DashboardReadoutBuilder:
             ),
             user_context_payload.get("cold_start_context"),
         ]
+        cold_start_context: dict[str, Any] = {}
         for candidate in candidates:
             if isinstance(candidate, dict):
-                return dict(candidate)
-        return {}
+                cold_start_context = dict(candidate)
+                break
+
+        weak_nodes = self._coerce_weak_node_values(
+            user_context_payload.get(AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY)
+        )
+        if user_id:
+            weak_nodes = self._merge_unique(
+                weak_nodes,
+                self._read_confirmed_weak_nodes_from_redis_sync(
+                    user_id=user_id,
+                    redis_client=redis_client or self.redis,
+                ),
+            )
+        if weak_nodes:
+            cold_start_context["confirmed_weak_nodes"] = self._merge_unique(
+                self._coerce_weak_node_values(cold_start_context.get("confirmed_weak_nodes")),
+                weak_nodes,
+            )
+
+        # F16: Extract Galaxy weak nodes (mastery < 0.4) for sprint priority injection.
+        galaxy_mastery = user_context_payload.get("galaxy_mastery")
+        if isinstance(galaxy_mastery, dict):
+            galaxy_weak = [
+                node_id for node_id, mastery in galaxy_mastery.items()
+                if isinstance(mastery, (int, float)) and float(mastery) < 0.4
+            ]
+            if galaxy_weak:
+                cold_start_context["galaxy_weak_nodes"] = galaxy_weak
+
+        # F19: Extract seed library nodes for sprint pack bridging.
+        seed_library_summary = user_context_payload.get("seed_library_summary")
+        if isinstance(seed_library_summary, dict):
+            node_ids = seed_library_summary.get("node_ids")
+            if isinstance(node_ids, list) and node_ids:
+                cold_start_context["seed_library_nodes"] = [
+                    str(nid) for nid in node_ids if str(nid).strip()
+                ]
+
+        return cold_start_context
+
+    @staticmethod
+    def _inject_sprint_pack_into_cold_start(cold_start_context: dict[str, Any]) -> None:
+        """Load Sprint Pack data into cold_start_context when exam intent is detected."""
+        if cold_start_context.get("goal_type") != "exam":
+            return
+        subject = cold_start_context.get("subject")
+        if not subject or not str(subject).strip():
+            return
+        pack = load_pack(str(subject).strip())
+        if not pack:
+            return
+        # Inject minimum_output from strategy_presets["7d"]["daily_targets"]
+        strategy_presets = pack.get("strategy_presets", {})
+        preset_7d = strategy_presets.get("7d", {}) if isinstance(strategy_presets, dict) else {}
+        daily_targets = preset_7d.get("daily_targets", {}) if isinstance(preset_7d, dict) else {}
+        if isinstance(daily_targets, dict) and daily_targets.get("minimum_output"):
+            cold_start_context["sprint_pack_minimum_output"] = daily_targets["minimum_output"]
+        # Inject aurora_rules hint (trigger_conditions + actions → concise instruction)
+        aurora_rules = pack.get("aurora_rules", {})
+        if isinstance(aurora_rules, dict):
+            medium = aurora_rules.get("medium_aurora", {})
+            if isinstance(medium, dict):
+                parts: list[str] = []
+                triggers = medium.get("trigger_conditions")
+                if isinstance(triggers, list) and triggers:
+                    parts.append("触发条件：" + "；".join(str(t) for t in triggers))
+                actions = medium.get("actions")
+                if isinstance(actions, list) and actions:
+                    parts.append("介入动作：" + "；".join(str(a) for a in actions))
+                if parts:
+                    cold_start_context["sprint_pack_aurora_hint"] = " ".join(parts)
+
+    @staticmethod
+    def _inject_sprint_pack_mistakes_into_checkpoint(checkpoint_state: dict[str, Any]) -> None:
+        """F20: Load Sprint Pack mistakes for today_nodes when sprint_pack_id is set."""
+        sprint_pack_id = checkpoint_state.get("sprint_pack_id")
+        if not sprint_pack_id or not str(sprint_pack_id).strip():
+            return
+        pack_id_str = str(sprint_pack_id).strip()
+        # sprint_pack_id format: "computer_networks@v1" → subject="computer_networks", version="v1"
+        parts = pack_id_str.split("@", 1)
+        subject = parts[0]
+        version = parts[1] if len(parts) > 1 else "v1"
+        pack = load_pack(subject, version)
+        if not pack:
+            return
+        today_nodes = checkpoint_state.get("today_nodes")
+        if not isinstance(today_nodes, list) or not today_nodes:
+            return
+        from app.sprint_packs.sprint_pack_loader import get_mistake_by_nodes
+        mistakes = get_mistake_by_nodes(pack, today_nodes)
+        if mistakes:
+            checkpoint_state["sprint_pack_mistakes"] = mistakes[:5]
+
+    async def with_confirmed_weak_nodes_from_redis(
+        self,
+        *,
+        user_id: str,
+        user_context_payload: dict[str, Any],
+        redis_client=None,
+    ) -> dict[str, Any]:
+        weak_nodes = await self._load_confirmed_weak_nodes_from_redis(
+            user_id=user_id,
+            redis_client=redis_client or self.redis,
+        )
+        if not weak_nodes:
+            return user_context_payload
+        payload = dict(user_context_payload)
+        payload[AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY] = self._merge_unique(
+            self._coerce_weak_node_values(payload.get(AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY)),
+            weak_nodes,
+        )
+        return payload
+
+    async def _load_confirmed_weak_nodes_from_redis(
+        self,
+        *,
+        user_id: str,
+        redis_client=None,
+    ) -> list[str]:
+        redis = redis_client or self.redis
+        if redis is None:
+            return []
+        key = AURORA_CLAIM_KEY_TEMPLATE.format(user_id=str(user_id), domain="weak_node")
+        getter = getattr(redis, "get", None)
+        if getter is None:
+            return []
+        try:
+            raw = getter(key)
+            if inspect.isawaitable(raw):
+                raw = await raw
+        except Exception:
+            return []
+        return self._confirmed_weak_nodes_from_claim_payload(raw)
+
+    def _read_confirmed_weak_nodes_from_redis_sync(
+        self,
+        *,
+        user_id: str,
+        redis_client=None,
+    ) -> list[str]:
+        redis = redis_client or self.redis
+        if redis is None:
+            return []
+        key = AURORA_CLAIM_KEY_TEMPLATE.format(user_id=str(user_id), domain="weak_node")
+        raw = self._peek_redis_mapping(redis, key)
+        if raw is _MISSING:
+            getter = getattr(redis, "get", None)
+            if getter is None:
+                return []
+            if inspect.iscoroutinefunction(getter):
+                try:
+                    asyncio.get_running_loop()
+                    return []
+                except RuntimeError:
+                    try:
+                        raw = asyncio.run(getter(key))
+                    except Exception:
+                        return []
+            else:
+                try:
+                    raw = getter(key)
+                except Exception:
+                    return []
+                if inspect.isawaitable(raw):
+                    try:
+                        asyncio.get_running_loop()
+                        if inspect.iscoroutine(raw):
+                            raw.close()
+                        return []
+                    except RuntimeError:
+                        try:
+                            raw = asyncio.run(raw)
+                        except Exception:
+                            return []
+        return self._confirmed_weak_nodes_from_claim_payload(raw)
+
+    def _confirmed_weak_nodes_from_claim_payload(self, raw: Any) -> list[str]:
+        if not raw:
+            return []
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except json.JSONDecodeError:
+                return self._coerce_weak_node_values(raw)
+        if isinstance(raw, Mapping):
+            values = self._coerce_weak_node_values(raw.get("values"))
+            direct_value = self._coerce_weak_node_values(raw.get("value"))
+            claims = [
+                self._weak_node_value_from_claim(item)
+                for item in (raw.get("claims") or [])
+                if isinstance(item, Mapping)
+            ]
+            return self._merge_unique(values, direct_value, [item for item in claims if item])
+        if isinstance(raw, list):
+            values: list[str] = []
+            for item in raw:
+                if isinstance(item, Mapping):
+                    value = self._weak_node_value_from_claim(item)
+                    if value:
+                        values.append(value)
+                else:
+                    values.extend(self._coerce_weak_node_values(item))
+            return self._merge_unique(values)
+        return []
+
+    def _weak_node_value_from_claim(self, claim: Mapping[str, Any]) -> str | None:
+        metadata = claim.get("metadata") if isinstance(claim.get("metadata"), Mapping) else {}
+        domain = str(claim.get("domain") or claim.get("claim_type") or "").strip()
+        metadata_domain = str((metadata or {}).get("domain") or "").strip()
+        if domain and domain != "weak_node" and metadata_domain != "weak_node":
+            return None
+        if str(claim.get("status") or "confirmed").strip().lower() == "revoked":
+            return None
+        value = (
+            claim.get("value")
+            or claim.get("knowledge_node_id")
+            or claim.get("node_id")
+            or (metadata or {}).get("value")
+            or (metadata or {}).get("knowledge_node_id")
+            or (metadata or {}).get("node_id")
+        )
+        values = self._coerce_weak_node_values(value)
+        return values[0] if values else None
+
+    def _coerce_weak_node_values(self, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, (list, tuple, set)):
+            return self._merge_unique(
+                [
+                    normalized
+                    for item in value
+                    for normalized in self._coerce_weak_node_values(item)
+                ]
+            )
+        if isinstance(value, Mapping):
+            return self._coerce_weak_node_values(
+                value.get("value") or value.get("knowledge_node_id") or value.get("node_id")
+            )
+        normalized = str(value).strip()
+        return [normalized] if normalized else []
+
+    @staticmethod
+    def _merge_unique(*groups: list[str]) -> list[str]:
+        merged: list[str] = []
+        for group in groups:
+            for item in group:
+                normalized = str(item or "").strip()
+                if normalized and normalized not in merged:
+                    merged.append(normalized)
+        return merged
+
+    @staticmethod
+    def _peek_redis_mapping(redis: Any, key: str) -> Any:
+        for attr in ("store", "kv", "data", "_store"):
+            mapping = getattr(redis, attr, None)
+            if isinstance(mapping, Mapping) and key in mapping:
+                return mapping[key]
+        return _MISSING
 
     def _extract_achievement_signals(
         self,
@@ -442,18 +736,118 @@ class DashboardReadoutBuilder:
             request_extra_context.get("achievement_signals") or user_context_payload.get("achievement_signals")
         )
         if direct:
-            return direct
+            return self._normalize_achievement_signals(direct)
         cognitive = self._as_dict((user_context_payload.get("cognitive_context") or {}).get("achievement_summary"))
         if not cognitive:
             return {}
+        active_streaks = list(cognitive.get("active_streaks") or [])
+        recent_unlocks = list(cognitive.get("recent_unlocks") or [])
         in_progress = list(cognitive.get("in_progress_achievements") or [])
-        total_score = float(cognitive.get("total_achievement_score") or 0.0)
-        return {
-            "active_streaks": [],
-            "recent_unlocks": list(cognitive.get("recent_unlocks") or []),
-            "in_progress_count": len(in_progress),
-            "momentum": min(1.0, round(total_score / 50.0, 3)),
-        }
+        total_score = self._safe_float(cognitive.get("total_achievement_score"), default=0.0)
+        return self._normalize_achievement_signals(
+            {
+                "active_streaks": active_streaks,
+                "recent_unlocks": recent_unlocks,
+                "in_progress_count": len(in_progress),
+                "momentum": min(1.0, round(total_score / 50.0, 3)),
+            }
+        )
+
+    def _normalize_achievement_signals(self, signals: dict[str, Any]) -> dict[str, Any]:
+        normalized = dict(signals)
+        active_streaks = normalized.get("active_streaks")
+        if isinstance(active_streaks, tuple):
+            active_streaks = list(active_streaks)
+            normalized["active_streaks"] = active_streaks
+        elif not isinstance(active_streaks, list):
+            active_streaks = []
+
+        streak_active = self._coerce_bool(normalized.get("streak_active"))
+        if streak_active is None:
+            streak_active = bool(active_streaks)
+        normalized["streak_active"] = streak_active
+
+        recently_unlocked = self._coerce_bool(normalized.get("recently_unlocked"))
+        if recently_unlocked is None:
+            recently_unlocked = self._has_recent_unlock(
+                normalized.get("recent_unlocks")
+                or normalized.get("recent_unlocked")
+                or normalized.get("unlocked_achievements")
+            )
+        normalized["recently_unlocked"] = recently_unlocked
+
+        momentum = self._safe_float(normalized.get("momentum"), default=None)
+        if momentum is not None:
+            normalized["momentum"] = min(1.0, max(0.0, momentum))
+        return normalized
+
+    def _has_recent_unlock(self, value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, dict):
+            value = [value]
+        if not isinstance(value, list) or not value:
+            return False
+
+        now = datetime.now(UTC)
+        for item in value:
+            if not isinstance(item, dict):
+                return True
+            raw_timestamp = next(
+                (
+                    item.get(key)
+                    for key in ("unlocked_at", "created_at", "timestamp", "occurred_at", "time")
+                    if item.get(key)
+                ),
+                None,
+            )
+            if raw_timestamp is None:
+                return True
+            timestamp = self._coerce_datetime(raw_timestamp)
+            if timestamp is None:
+                return True
+            if now - timedelta(hours=24) <= timestamp <= now + timedelta(minutes=5):
+                return True
+        return False
+
+    def _coerce_datetime(self, value: Any) -> datetime | None:
+        if isinstance(value, datetime):
+            parsed = value
+        elif isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return None
+            if raw.endswith("Z"):
+                raw = f"{raw[:-1]}+00:00"
+            try:
+                parsed = datetime.fromisoformat(raw)
+            except ValueError:
+                return None
+        else:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
+
+    def _safe_float(self, value: Any, *, default: float | None) -> float | None:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _coerce_bool(self, value: Any) -> bool | None:
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return None
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "1", "yes", "y", "on"}:
+                return True
+            if normalized in {"false", "0", "no", "n", "off"}:
+                return False
+            return None
+        return bool(value)
 
     def _as_dict(self, value: Any) -> dict[str, Any]:
         return dict(value) if isinstance(value, dict) else {}
