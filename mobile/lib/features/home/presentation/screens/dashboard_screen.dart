@@ -22,6 +22,7 @@ import 'package:sparkle/features/home/presentation/widgets/dashboard_card_sectio
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/learning_heatmap_widget.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_action_prompt.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
@@ -392,6 +393,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           _staggeredSection(
             index: sectionIndex++,
             child: const AchievementProgressCard(),
+          ),
+          _staggeredSection(
+            index: sectionIndex++,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
+              child: LearningHeatmapWidget(),
+            ),
           ),
           _staggeredSection(
             index: sectionIndex++,

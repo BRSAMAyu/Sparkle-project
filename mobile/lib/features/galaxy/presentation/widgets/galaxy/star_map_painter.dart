@@ -39,6 +39,26 @@ double galaxyLodFade(double value, double start, double end) {
   return ((value - start) / (end - start)).clamp(0, 1);
 }
 
+double galaxyMasteryRatio(int masteryScore) =>
+    (masteryScore / 100).clamp(0.0, 1.0).toDouble();
+
+Color galaxyMasteryNodeColor({
+  required int masteryScore,
+  required bool isDarkMode,
+}) {
+  final mastery = galaxyMasteryRatio(masteryScore);
+  if (mastery < 0.25) {
+    return isDarkMode ? const Color(0xFF77808C) : const Color(0xFF9AA3AD);
+  }
+  if (mastery < 0.5) {
+    return isDarkMode ? const Color(0xFF73B7FF) : const Color(0xFF4F9FE8);
+  }
+  if (mastery < 0.75) {
+    return isDarkMode ? const Color(0xFF8FE6B0) : const Color(0xFF4BC77E);
+  }
+  return isDarkMode ? const Color(0xFF2EF28A) : const Color(0xFF16A85A);
+}
+
 class GalaxyLabelCache {
   GalaxyLabelCache({this.maxEntries = 600});
 
@@ -254,6 +274,7 @@ class StarMapPainter extends CustomPainter {
     this.tapFeedbackPhase = 0,
     this.ambientPhase = 0,
     this.isBuildAnimating = false,
+    this.examSprintActive = false,
   });
 
   final GalaxyCamera camera;
@@ -290,6 +311,7 @@ class StarMapPainter extends CustomPainter {
   final double tapFeedbackPhase;
   final double ambientPhase;
   final bool isBuildAnimating;
+  final bool examSprintActive;
 
   static const int _nodeBudget = 500;
   static const int _edgeBudget = 800;
@@ -403,7 +425,8 @@ class StarMapPainter extends CustomPainter {
       oldDelegate.performanceDegraded != performanceDegraded ||
       oldDelegate.predictionOverlay != predictionOverlay ||
       oldDelegate.ambientPhase != ambientPhase ||
-      oldDelegate.isBuildAnimating != isBuildAnimating;
+      oldDelegate.isBuildAnimating != isBuildAnimating ||
+      oldDelegate.examSprintActive != examSprintActive;
 
   void _drawPredictionOverlay(Canvas canvas) {
     final overlay = predictionOverlay;
@@ -1581,6 +1604,18 @@ class StarMapPainter extends CustomPainter {
         );
       }
 
+      if (examSprintActive &&
+          nodeAlpha > 0 &&
+          lod.index >= GalaxyLod.l1.index) {
+        _drawSprintMasteryDot(
+          canvas: canvas,
+          center: nodeCenter,
+          nodeRadius: radius,
+          masteryScore: node.masteryScore,
+          nodeAlpha: nodeAlpha,
+        );
+      }
+
       if (!node.isUnlocked) {
         _drawDashedCircle(
           canvas: canvas,
@@ -2456,13 +2491,51 @@ class StarMapPainter extends CustomPainter {
   }
 
   Color _nodeCanvasColor(GalaxyNodeModel node) {
-    final blended = blendedColors[node.id] ??
-        SectorConfig.resolveNodeBaseColor(node: node, isDarkMode: isDarkMode);
+    final blended = galaxyMasteryNodeColor(
+      masteryScore: node.masteryScore,
+      isDarkMode: isDarkMode,
+    );
     return SectorConfig.applyImportanceRamp(
       blended,
       importance: node.importance,
       isDarkMode: isDarkMode,
     );
+  }
+
+  void _drawSprintMasteryDot({
+    required Canvas canvas,
+    required Offset center,
+    required double nodeRadius,
+    required int masteryScore,
+    required double nodeAlpha,
+  }) {
+    final dotCenter = center.translate(nodeRadius * 0.72, -nodeRadius * 0.72);
+    final dotRadius = (nodeRadius * 0.25).clamp(2.4, 4.2);
+    canvas
+      ..drawCircle(
+        dotCenter,
+        dotRadius + 1.4,
+        Paint()
+          ..color = (isDarkMode ? const Color(0xFF060A12) : Colors.white)
+              .withValues(alpha: 0.92 * nodeAlpha),
+      )
+      ..drawCircle(
+        dotCenter,
+        dotRadius,
+        Paint()
+          ..color = galaxyMasteryNodeColor(
+            masteryScore: masteryScore,
+            isDarkMode: isDarkMode,
+          ).withValues(alpha: nodeAlpha),
+      )
+      ..drawCircle(
+        dotCenter,
+        dotRadius + 1.4,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.24 * nodeAlpha)
+          ..strokeWidth = 0.8
+          ..style = PaintingStyle.stroke,
+      );
   }
 
   double _buildRevealFor(String nodeId) {
@@ -2537,12 +2610,6 @@ class StarMapPainter extends CustomPainter {
   }
 
   Color _masteryTemperatureColor(Color color, {required int masteryScore}) {
-    if (masteryScore >= 85) {
-      return Color.lerp(color, const Color(0xFFFFD700), 0.05)!;
-    }
-    if (masteryScore < 30) {
-      return Color.lerp(color, const Color(0xFF88B4FF), 0.05)!;
-    }
     return color;
   }
 

@@ -8,6 +8,8 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
+import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
+import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -107,6 +109,39 @@ class EnhancedGalaxyRepository {
     }
   }
 
+  Future<NetworkResult<UserGalaxyContribution>> getContributionStats() async {
+    if (DemoDataService.isDemoMode) {
+      return NetworkResult.success(
+        const UserGalaxyContribution(
+          firstActivationCount: 12,
+          errorRepairedCount: 4,
+          conversationUpdatedCount: 6,
+        ),
+      );
+    }
+
+    try {
+      final payload =
+          await RetryStrategy.executeWithRetry<Map<String, dynamic>>(
+        () async {
+          final response = await _apiClient.get<Map<String, dynamic>>(
+            ApiEndpoints.galaxyContributionStats,
+          );
+          return ApiResponseParser.unwrapMap(
+            response.data,
+            action: 'getGalaxyContributionStats',
+          );
+        },
+        config: const RetryConfig(maxAttempts: 2),
+      );
+      return NetworkResult.success(UserGalaxyContribution.fromJson(payload));
+    } on DioException catch (e) {
+      return NetworkResult.failure(GalaxyError.network(e));
+    } catch (e) {
+      return NetworkResult.failure(GalaxyError.unknown(e.toString()));
+    }
+  }
+
   Future<NetworkResult<GalaxyGraphResponse>> getGraphForViewport({
     required Rect viewport,
   }) async {
@@ -199,7 +234,8 @@ class EnhancedGalaxyRepository {
     }
 
     try {
-      final response = await RetryStrategy.executeWithRetry<Map<String, dynamic>>(
+      final response =
+          await RetryStrategy.executeWithRetry<Map<String, dynamic>>(
         () async {
           final response = await _apiClient.post<Map<String, dynamic>>(
             ApiEndpoints.galaxyUpdateMastery(nodeId),
@@ -278,6 +314,53 @@ class EnhancedGalaxyRepository {
 
       // 缓存结果
       _detailCache.set(nodeId, response);
+
+      return NetworkResult.success(response);
+    } on DioException catch (e) {
+      return NetworkResult.failure(GalaxyError.network(e));
+    } catch (e) {
+      return NetworkResult.failure(GalaxyError.unknown(e.toString()));
+    }
+  }
+
+  Future<NetworkResult<GalaxyNodeHistory>> getNodeHistory(
+    String nodeId, {
+    String? packId,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final node = DemoDataService()
+          .demoGalaxy
+          .nodes
+          .where((candidate) => candidate.id == nodeId)
+          .firstOrNull;
+      return NetworkResult.success(
+        GalaxyNodeHistory(
+          nodeId: nodeId,
+          nodeLabel: node?.name ?? nodeId,
+          mastery: ((node?.masteryScore ?? 0) / 100).clamp(0.0, 1.0),
+          studyCount: node?.studyCount ?? 0,
+          lastStudiedAt: node?.masteryLastUpdatedAt,
+        ),
+      );
+    }
+
+    try {
+      final response = await RetryStrategy.executeWithRetry<GalaxyNodeHistory>(
+        () async {
+          final response = await _apiClient.get<Map<String, dynamic>>(
+            ApiEndpoints.galaxyNodeHistory(nodeId),
+            queryParameters: {
+              if (packId != null && packId.isNotEmpty) 'pack_id': packId,
+            },
+          );
+          final payload = ApiResponseParser.unwrapMap(
+            response.data,
+            action: 'getGalaxyNodeHistory',
+          );
+          return GalaxyNodeHistory.fromJson(payload);
+        },
+        config: const RetryConfig(maxAttempts: 2),
+      );
 
       return NetworkResult.success(response);
     } on DioException catch (e) {

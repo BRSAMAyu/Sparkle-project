@@ -17,6 +17,7 @@ import 'package:sparkle/features/galaxy/data/services/galaxy_accessibility_servi
 import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_contribution_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
@@ -29,6 +30,9 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_simul
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
+import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -72,10 +76,12 @@ class GalaxyScreen extends ConsumerStatefulWidget {
     super.key,
     this.initialFocusNodeId,
     this.initialMasteryDelta,
+    this.initialPackId,
   });
 
   final String? initialFocusNodeId;
   final double? initialMasteryDelta;
+  final String? initialPackId;
 
   @override
   ConsumerState<GalaxyScreen> createState() => _GalaxyScreenState();
@@ -372,6 +378,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     bool preserveCamera = false,
   }) async {
     _stopAllAutoMotion(commitPhysicsPosition: true);
+    if (forceRefresh || _graph == null) {
+      ref.invalidate(galaxyContributionProvider);
+    }
     if (!preserveCamera) {
       setState(() {
         _isLoading = true;
@@ -896,16 +905,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         return;
       }
 
-      if (tappedNode.shouldPulseForReview) {
-        unawaited(_accessibilityService.lightHaptic());
-        _showPreviewForNode(
-          tappedNode,
-          anchor: _camera.worldToScreen(command.hit!.worldPosition),
-          scheduleDismiss: true,
-        );
-        return;
-      }
-
       _startTapFeedback(command.hit!.nodeId);
       return;
     }
@@ -1026,7 +1025,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _tapFeedbackController.reset();
 
     if (nodeId != null) {
-      unawaited(_openKnowledgeDetail(nodeId));
+      unawaited(_openNodeDetailSheet(nodeId));
     }
   }
 
@@ -1316,6 +1315,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (previousNode != null && nextNode != null) {
       _triggerMasteryCelebrationIfNeeded(previousNode, nextNode);
     }
+  }
+
+  Future<void> _openNodeDetailSheet(String nodeId) async {
+    final node = _nodesById[nodeId];
+    if (node == null) {
+      return;
+    }
+    await NodeDetailSheet.show(
+      context: context,
+      nodeId: node.id,
+      nodeLabel: node.name,
+      packId: widget.initialPackId,
+    );
   }
 
   void _triggerMasteryCelebrationIfNeeded(
@@ -2430,7 +2442,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final currentSector = _currentSector();
     final blendedColors = isDarkMode ? _darkBlendedColors : _lightBlendedColors;
     final overviewStats = graph == null ? null : _buildOverviewStats(graph);
+    final contributionStats = ref.watch(galaxyContributionProvider);
     final theaterOverlay = ref.watch(theaterOverlayProvider);
+    final examSprintActive =
+        ref.watch(examSprintDashboardProvider).valueOrNull != null;
 
     final baseTheme = Theme.of(context);
     final galaxyTheme = baseTheme.copyWith(
@@ -2562,6 +2577,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                               .toSet(),
                           performanceDegraded: _performanceDegraded,
                           predictionOverlay: theaterOverlay,
+                          examSprintActive: examSprintActive,
                         ),
                         child: const SizedBox.expand(),
                       ),
@@ -2647,6 +2663,22 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                               isDarkMode: isDarkMode,
                             ),
                           ),
+                        Positioned(
+                          top: 56,
+                          left: 16,
+                          right: 16,
+                          child: contributionStats.when(
+                            data: (stats) => GalaxyContributionBanner(
+                              isDarkMode: isDarkMode,
+                              stats: stats,
+                            ),
+                            loading: () =>
+                                const GalaxyContributionBanner.loading(
+                              isDarkMode: isDarkMode,
+                            ),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+                        ),
                         Positioned(
                           left: 16,
                           bottom: 16,
