@@ -3,9 +3,9 @@
   "status": "running",
   "current_round": 12,
   "reviewer_a_next": 20,
-  "reviewer_b_next": 31,
+  "reviewer_b_next": 32,
   "reviewer_a_last_timestamp": "2026-04-26T13:30:00+08:00",
-  "reviewer_b_last_timestamp": "2026-04-26T11:35:00+08:00",
+  "reviewer_b_last_timestamp": "2026-04-26T15:20:00+08:00",
   "validator_last_timestamp": "2026-04-26T03:20:00+08:00",
   "steering_notes": "",
   "architect_override_a": null,
@@ -600,7 +600,7 @@
         "backend/app/orchestration/planning_workflow.py",
         "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "E19": {
       "name": "数据导出/可移植性——用户能取回自己的数据吗",

@@ -1,5 +1,5 @@
 # Reviewer B — E18: Plan health score计算准确性
-Timestamp: 2026-04-26T11:45:00+08:00
+Timestamp: 2026-04-26T15:20:00+08:00 (amended)
 Chain Index: 30 (Round 4 — E-chain audit)
 
 ## Chain Flow Summary
@@ -9,25 +9,49 @@ Chain Index: 30 (Round 4 — E-chain audit)
 None found.
 
 ## Major Issues 🟡
-**`mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart`**: 用户无法看到 plan health score 或 severity。`plan_detail_screen.dart` 无 health_score/plan_health/severity 相关 UI（grep 确认零匹配）。Expected: 用户知道当前计划是否健康，看到系统建议（如"进度滞后，建议精简"）。Actual: health 计算在后端正确执行，但用户完全不知道。系统可能已经自动调整或 replan 了计划，但用户不理解为什么任务变了。Evidence: `plan_detail_screen.dart` grep `health_score|plan_health|severity` = 零匹配。
+
+**1. Mobile端"计划健康度"显示的数据源与后端 PlanHealthReport 完全脱节**
+- **File**: `mobile/lib/features/home/presentation/widgets/today_growth_status_card.dart:71` + `home_growth_provider.dart:27-34`
+- **Expected**: Home 页"计划健康度 ●●●○○"反映后端 `PlanHealthReport.severity` 或 `PlanHealthReport.metrics`
+- **Actual**: `HomeActivePlanStatus.healthScore` 通过 fallback 链 `json['health_score'] → json['healthScore'] → planMap['health_score'] → planMap['healthScore'] → planMap['mastery_level'] → planMap['progress']` 读取。但后端 `_serialize_plan()` (plans.py:150) 只返回 `mastery_level` 和 `progress`，不返回 `health_score`。结果：UI 显示的"健康度"实际上是 `mastery_level`（掌握度），不是后端计算的 plan health severity
+- **Impact**: 用户在 Home 页看到的"计划健康度"与后端 PlanProgressService 的 health evaluation 无关——后端认为 critical 的计划在 Home 页可能显示 5 个满点（如果 mastery_level 高）
+
+**2. Plan detail 页完全无 health/severity 展示**
+- **File**: `mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart`
+- **Expected**: 用户知道当前计划是否健康，看到系统建议（如"进度滞后，建议精简"）
+- **Actual**: grep `health_score|plan_health|severity` = 零匹配。系统可能已经自动调整或 replan 了计划，但用户不理解为什么任务变了
+- **Impact**: 用户对计划健康状态完全不可见，health 评估完全是一个后端内部信号
 
 ## Minor Issues 🟢
-**`backend/app/services/plan_progress_service.py:46-47`**: 阈值常量硬编码——PROGRESS_LAG_WARN=0.25, PROGRESS_LAG_CRITICAL=0.4, OVERRUN_RATIO_WARN=1.3。不可配置但合理。非关键。
+
+**3. PlanHealthReport 缺少"压缩次数"维度**
+- **File**: `backend/app/services/plan_progress_service.py:42-48`
+- **Expected**: E18 链路描述提到"压缩次数"作为输入数据之一
+- **Actual**: `evaluate_progress` 仅使用 overrun_count、feedback_stats、progress_lag 三个维度，无压缩次数指标
+- **Impact**: 低——三维已足够覆盖主要场景
+
+**4. `_compute_time_progress` 在 plan 无 target_date 时返回 None**
+- **File**: `backend/app/services/plan_progress_service.py:215-222`
+- **Impact**: 低——无截止日计划不应有时序压力，跳过合理
 
 ## Working Well ✅
 - **`backend/app/services/plan_progress_service.py:63-154`**: `evaluate_progress` 输入完整——完成率、overrun ratio、difficulty 反馈、时间进度 vs 实际进度，四维评估。
 - **`backend/app/orchestration/adaptive_replanner.py:1313-1342`**: 基于 recommended_action 分流——critical→replan, warning→adjustment, healthy→none。有 cooldown 保护防频繁调整。
 - **`adaptive_replanner.py:1314-1318`**: struggle streak 机制允许在高频困难反馈时 bypass cooldown，确保及时干预。
-- **`backend/app/services/plan_health_signal_service.py:37`**: `maybe_publish` 有去重和频率控制，避免事件洪水。
-- **`backend/app/services/plan_health_event_consumer.py:74`**: 消费 `plan.health.alerted` 事件，创建 WebSocket 更新推送到前端。
-- **`backend/app/services/card_protocol/health_intervention_bridge.py`**: Health signal → InterventionRecord bridge，将健康问题转化为可追踪的干预记录。
+- **`backend/app/services/plan_health_signal_service.py:37`**: `maybe_publish` 有去重和频率控制，severity 升级时总是 re-emit（warning→critical 不受 cooldown 限制）。
+- **`backend/app/services/plan_health_event_consumer.py:74`**: 消费 `plan.health.alerted` 事件，创建 InterventionRecord 和系统更新。
+- **触发链路完整**: TaskEventConsumer → AdaptiveReplanner → evaluate_progress → _handle_report → PlanHealthSignalService.maybe_publish
+- **额外触发点**: `error_replan_bridge.py:393` 和 `error_book_mastery_sync_service.py:532` 也会调用 `evaluate_plan_health_now`
 
 ## Files Examined
-- `backend/app/services/plan_progress_service.py` (lines 22-154)
-- `backend/app/orchestration/adaptive_replanner.py` (lines 1011, 1310-1350)
-- `backend/app/services/plan_health_signal_service.py` (lines 37-90)
-- `backend/app/services/plan_health_event_consumer.py` (lines 33-123)
-- `backend/app/services/card_protocol/health_intervention_bridge.py` (lines 44-154)
-- `mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart` (grep — zero health references)
+- `backend/app/services/plan_progress_service.py`（全文 223 行）
+- `backend/app/services/plan_health_signal_service.py`（全文 245 行）
+- `backend/app/services/plan_health_event_consumer.py`（全文 173 行）
+- `backend/app/orchestration/adaptive_replanner.py`（lines 530-590, 1011-1031, 1272-1357）
+- `backend/app/services/task_event_consumer.py`（lines 105-174）
+- `backend/app/api/v1/plans.py`（lines 134-164）
+- `mobile/lib/features/home/presentation/providers/home_growth_provider.dart`（lines 4-51, 350-465）
+- `mobile/lib/features/home/presentation/widgets/today_growth_status_card.dart`（lines 68-73, 371-373）
+- `mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart`（grep health/severity — 零匹配）
 
-## Confidence: High — health 计算→action 分流→event 消费完整链路已确认；mobile UI 缺失已通过 grep 确认。
+## Confidence: High — 计算公式、触发链路、消费者逻辑全部通过源码直接确认。Mobile 端 healthScore 数据源通过 fallback 链追踪确认实际读取 mastery_level 而非后端 health evaluation。
