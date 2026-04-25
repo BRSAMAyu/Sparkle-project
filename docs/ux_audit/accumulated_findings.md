@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 23 / 30 chains audited (C04, C20, D01, D05, D07, D09, D10 pending)
+> **Status**: 25 / 30 chains audited (C04, C20, D01, D07, D09 pending)
 
 ---
 
@@ -438,8 +438,39 @@
 
 ---
 
+### D05: 多设备并发——两台设备同时使用数据冲突 (Reviewer A)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`task_service.py:480-486`**: 任务完成调用 `update_node_mastery` 不传 `revision` 参数，始终走 fallback UPSERT 路径（非 atomic）。`galaxy_service.py` 的 atomic path（line 1402-1486）需调用方传 revision，但 `task_service` 未传。两台设备同时完成关联同一 Galaxy 节点的任务时，mastery 更新可能互相覆盖（last-write-wins）。Expected: 高频写入路径使用 optimistic locking。Actual: 普通 UPSERT 无竞态保护。实际风险低（同用户同节点并发概率小），但 mastery 是 BKT 模型核心数据。
+
+**Minor Issues 🟢**
+- **`websocket_proxy.go:291-303`**: `WSMaxConnections` 配置值过低时可能阻止合法多设备使用（第二台设备收到 429）。取决于配置。
+
+**Working Well ✅**: Galaxy mastery 原子更新机制已实现（PostgreSQL CTE with SELECT FOR UPDATE + WHERE revision = expected）；per-user mutex 保护并发注册；JWT refresh token 轮换 + blacklist 支持多设备；EventBus Outbox 模式保证事件顺序。
+
+---
+
+### D10: 数据新鲜度全屏检查——切换屏幕后数据是否陈旧 (Reviewer B)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`task_provider.dart:412-421`**: `completeTask` 的 cross-provider invalidation 不完整。仅 invalidate galaxyRefreshTrigger + planDetail + weeklyGrowthNarrative，**不** invalidate `learningPortfolioProvider` 和 `achievementProvider`。Expected: 完成任务后切到档案页/成就页看到更新。Actual: 档案页显示旧数据直到 autoDispose 回收后重新加载；成就页依赖 SSE 事件——WebSocket 断开时不刷新。
+- **4 个关键页面中 3 个缺少 `RefreshIndicator`**: Galaxy、学习档案、成就页均无 `RefreshIndicator`（grep 确认零匹配）。仅任务列表有 pull-to-refresh。SSE/WebSocket 断连时用户无手动刷新手段。
+
+**Minor Issues 🟢**
+- **`galaxy_provider.dart`**: `AutomaticKeepAliveClientMixin` 导航回 Galaxy 时不重新加载。冷启动后首次进入显示缓存数据（非严重，SSE 会实时更新）。
+
+**Working Well ✅**: `galaxyRefreshTriggerProvider` 监听机制正确；Galaxy SSE 处理 4 种事件实时更新；achievement 监听 `achievement_unlock` SSE 事件自动刷新；任务完成乐观更新 UI 体验流畅；冲刺完成后正确 invalidate `learningPortfolioProvider`。
+
+---
+
 ### D01: 离线/弱网行为
 **Status**: ⚠️ 无 reviewer 文件 — audit_state 标记 "done" 但无审查产出。仍需审查。
 
 ### C04: 错题录入→修复任务插入→计划页橙色卡可见
-**Status**: ⚠️ 无 reviewer 文件 — 仍需审查。D02 Critical 间接覆盖了错题→mastery 链路。
+**Status**: ⚠️ audit_state 已标记 "done" 但无 reviewer 文件。D02 Critical 间接覆盖了错题→mastery 链路。

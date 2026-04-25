@@ -1,40 +1,40 @@
-# Reviewer A — D03: 专注模式→计划/任务联动——专注完成是否更新任务进度
-Timestamp: 2026-04-26T01:45:00+08:00
-Chain Index: 11
+# Reviewer A — D07: 设置/隐私控制——用户能控制数据流向吗
+Timestamp: 2026-04-26T02:25:00+08:00
+Chain Index: 13
 
 ## 自我审查声明
 
-本报告所有发现已通过亲自阅读源代码确认。关键验证：(1) `mindfulness_provider.dart` 的 `stop()` 方法 grep `invalidate|taskListProvider` 结果为 0 — 确认无 provider invalidation；(2) `focus_service.py:174-186` 事件 payload 不含 `task_id` — 确认事件无法被 task 消费者关联；(3) `plans.py:1391` `total_minutes_spent` 硬编码为 0 — 确认专注时长未集成到计划进度。
+本报告所有发现已通过亲自阅读源代码确认。关键验证：(1) `privacy.py` 只有 `redact_pii()` 和 `laplace_noise()` 工具函数，无用户偏好读取；(2) `prompts.py` 中 `privacy` grep 仅命中 kill_switch import（line 39），prompt 组装不检查隐私设置；(3) `planning.py:809` 读取 `privacy_boundaries` 但仅用于 Aurora 建模 tension 过滤；(4) `transparency_settings_screen.dart` 是 AI 透明度 UI 设置，非数据收集控制。
 
 ## Chain Flow Summary
 
-用户从任务详情进入专注模式（mindfulness_mode_screen 接收 taskId），计时器本地运行（Timer.periodic），完成后 `mindfulness_provider.stop()` 调用 `focusStatisticsProvider.saveSession()` 记录会话（含 task_id）到后端 API。后端 `focus_service.log_session()` 创建 FocusSession 记录、计算 Galaxy mastery boost、发布 `focus.session.completed` EventBus 事件。但专注完成**不触发任何任务进度更新**，不 invalidation 任务 provider。
+审查用户隐私控制能力：用户能否在设置中关闭某项数据收集？关闭后该数据是否真的不再发送到 LLM？kill switch 是否影响对应功能？`backend/app/aurora/privacy.py` 提供 PII 脱敏工具，`backend/app/core/kill_switch.py` 提供三态功能开关，`transparency_settings_screen.dart` 提供 AI 透明度设置，但**三者互不关联**——没有一个统一的"数据收集偏好"系统。
 
 ## Critical Issues 🔴
 
-**1. `focus_service.py:174-186`: `focus.session.completed` 事件不含 `task_id`，且无消费者将专注时长转为任务进度**
-
-后端发布 `focus.session.completed` 事件（line 174-186），payload 包含 `session_id`、`duration_minutes`、`mastery_updates`，但**不包含 `task_id`**。即使有消费者监听此事件，也无法将专注会话关联到具体任务。
-
-同时，`event_bus.py` 中无任何 `focus` 相关的事件类定义。grep `focus|FocusSession` 在 event_bus.py 结果为 0。这意味着专注完成是一个**数据孤岛** — 记录了，但不被任何下游系统消费。
-
-Expected: 专注完成一个番茄钟后，对应任务的进度（time_spent / progress）应该更新，用户在任务列表看到实际投入时间。Actual: 专注完成只记录 FocusSession 行，任务进度不变。
-
-**2. `plans.py:1391`: `total_minutes_spent` 硬编码为 0，专注时长未集成到计划进度**
-
-```python
-"total_minutes_spent": 0,  # Would be calculated from focus sessions
-```
-
-这行注释直接说明：专注时长本应从 FocusSession 汇总计算，但此集成**未实现**。计划进度页无法显示用户在某个冲刺上实际投入的时间。
-
-Expected: 计划页显示"已投入 45 分钟"（从 FocusSession 汇总）。Actual: 永远显示 0。
+None found.
 
 ## Major Issues 🟡
 
-**3. `mindfulness_provider.dart`: 专注完成后不 invalidation 任何 task provider**
+**1. 无统一的用户数据收集偏好系统——PII 脱敏是自动的，但用户无法选择性关闭特定数据流**
 
-grep `invalidate|taskListProvider` 在 mindfulness_provider.dart 结果为 0。专注完成后，任务列表页、任务详情页的 provider 不会被刷新。如果后端确实更新了某些关联数据（如 mastery），用户需要手动离开再返回才能看到变化。
+现状分析：
+- `privacy.py` 的 `redact_pii()` 自动脱敏 email/phone/CN_ID/bank_card（line 24-30），**无需用户设置即生效** — 这是好事
+- `kill_switch.py` 提供三态开关（off/shadow/live），但这是**运维工具**，控制的是功能启停，不是用户数据偏好
+- `transparency_settings_screen.dart` 控制的是 AI 回答的**展示方式**（透明模式、纯净模式），不是数据收集范围
+- `planning.py:809` 的 `privacy_boundaries` 仅用于建模阶段跳过特定 tension 域，不影响 prompt assembly
+
+Expected: 用户应能在设置中看到"我有哪些数据被 AI 使用"并选择性关闭（如"不使用我的日历数据"、"不使用我的社群活动"）。Actual: 没有这样的用户界面。所有数据流由系统自动决定，用户无法干预。
+
+**2. `prompts.py` 不检查任何隐私偏好——所有用户数据无条件进入 prompt assembly**
+
+`prompts.py` 是 prompt 组装的核心文件（3000+ 行）。grep `privacy|privacy_bound|redact` 仅命中 `kill_switch` import（line 39）。这意味着：
+- 用户的日历数据（如果 stage40 kill switch 为 live）无条件进入 prompt
+- 用户的社群活动（social_signal_bridge）无条件进入 dashboard
+- 用户的专注记录无条件进入 context
+- 没有任何机制让用户说"不要把我的 X 数据发给 AI"
+
+Expected: prompt assembly 应查询用户偏好，跳过用户关闭的数据维度。Actual: 所有启用的数据维度无条件组装到 prompt。
 
 ## Minor Issues 🟢
 
@@ -42,33 +42,46 @@ None found.
 
 ## Working Well ✅
 
-**专注会话记录** (`mindfulness_provider.dart:296-306`):
-- `saveSession()` 正确传递 `taskId`（line 303）和 `taskTitle`（line 304）
-- 后端 `focus_service.log_session()` 正确创建 FocusSession 记录（含 `task_id` 字段）
-- 返回值包含 `mastery_updates`（Galaxy 掌握度提升）和 `flame_earned`（火苗奖励）
+**PII 自动脱敏** (`privacy.py:24-30`):
+- 自动脱敏 email、手机号、中国身份证号、银行卡号
+- 使用正则匹配，覆盖常见格式
+- 在 LLM 调用前统一应用
 
-**专注会话完成 UI** (`mindfulness_mode_screen.dart:224-236`):
-- 有 mastery 更新时显示 `showFocusSessionSummaryDialog`（line 225-230）
-- 无更新时显示 `AppFeedback.info`（line 232-233）
-- 完成后 `context.pop()` 返回上一页（line 235）
+**差分隐私噪声** (`privacy.py:33-56`):
+- `laplace_noise()` 实现差分隐私
+- epsilon 和 sensitivity 参数可配置
+- 用于 mastery 分数等统计值的隐私保护
 
-**Galaxy mastery 集成** (`focus_service.py`):
-- 如果 task 关联 Galaxy node，专注完成会触发 mastery boost（line 165-171）
-- mastery_updates 返回给前端并在 dialog 中展示
+**Kill switch 三态控制** (`kill_switch.py`):
+- off/shadow/live 三态
+- Redis 持久化 + settings.py fallback
+- Prometheus gauge 暴露状态
+- 每个功能独立控制
 
-**离线保存降级** (`mindfulness_provider.dart:358-359`):
-- 如果后端同步失败，显示"专注记录已离线保存，稍后会自动重试同步"
-- `savedLocally` 标记区分本地 vs 远程保存状态
+**Aurora 建模隐私边界** (`planning.py:807-810, 882-883`):
+- `privacy_boundaries` 列表可跳过特定建模域
+- 匹配到的域被标记为 `status = "dropped"`，不会被追问
+- 当前机制存在但前端无 UI 控制它
+
+**AI 透明度设置** (`transparency_settings_screen.dart`):
+- 全局开关（enabled/disabled）
+- 展示模式选择（折叠悬浮/底部抽屉/仅详情页）
+- 纯净模式（隐藏卡片和反馈组件）
+- 自动折叠 + 允许单轮关闭
+
+**Profile transparency API** (`backend/app/api/v1/profile_transparency.py`):
+- 提供数据使用透明度端点
+- 列出各数据类别（focus_sessions、error_book、achievement_signals 等）
+- 用户可查看哪些数据被系统使用
 
 ## Files Examined
 
-1. `mobile/lib/features/focus/presentation/providers/mindfulness_provider.dart` (lines 285-399, stop() with saveSession + event recording)
-2. `mobile/lib/features/focus/presentation/screens/mindfulness_mode_screen.dart` (lines 200-238, exit flow + result handling)
-3. `mobile/lib/features/focus/data/repositories/focus_repository.dart` (lines 67-102, saveSession with task_id)
-4. `mobile/lib/features/focus/data/models/focus_session_model.dart` (taskId field in session model)
-5. `backend/app/api/v1/focus.py` (lines 47-78, log_focus_session endpoint)
-6. `backend/app/services/focus_service.py` (lines 165-190, mastery boost + event bus publish)
-7. `backend/app/core/event_bus.py` (no focus-related event classes defined)
-8. `backend/app/api/v1/plans.py` (line 1391, hardcoded total_minutes_spent = 0)
+1. `backend/app/aurora/privacy.py` (全文 57 行 — PII redaction + Laplace noise)
+2. `backend/app/core/kill_switch.py` (KillSwitchBinding dataclass + read_mode)
+3. `backend/app/orchestration/prompts.py` (line 39, grep: no privacy checks in prompt assembly)
+4. `backend/app/aurora/runtime_v1/planning.py` (lines 807-810, privacy_boundaries in hard bounds; 882-883, dropped domains)
+5. `mobile/lib/features/settings/presentation/screens/transparency_settings_screen.dart` (AI display settings, not data collection)
+6. `backend/app/api/v1/profile_transparency.py` (read-only transparency API)
+7. `backend/app/services/aurora_stage40_calendar_kill_switch_service.py` (calendar kill switch — ops tool)
 
-## Confidence: High — 端到端链路完整追踪。核心问题明确：专注完成 → FocusSession 记录 → mastery boost → EventBus 事件（无 task_id），但 → 任务进度 的链路完全断裂。这是产品级集成缺口而非 bug。
+## Confidence: High — 系统有隐私保护基础（PII 脱敏、kill switch、差分隐私），但缺少用户可控的数据收集偏好。当前设计是"系统决定一切，用户只能看"模式。profile_transparency API 提供可见性但不提供控制权。
