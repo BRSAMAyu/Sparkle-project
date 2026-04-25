@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aurora.common import AuroraSchemaBase
-from app.aurora.runtime_v1.models import AuroraScheduledWake, AuroraStateSnapshot
+from app.aurora.runtime_v1.models import AuroraDecisionTelemetry, AuroraScheduledWake, AuroraStateSnapshot
 from app.aurora.runtime_v1.state import (
     ActivityProfile,
     AuroraCognitiveSnapshot,
@@ -23,6 +23,7 @@ from app.config import settings
 
 AuroraStateSnapshotRecord = AuroraStateSnapshot
 AuroraScheduledWakeRecord = AuroraScheduledWake
+AuroraDecisionTelemetryRecord = AuroraDecisionTelemetry
 
 
 def _utcnow() -> datetime:

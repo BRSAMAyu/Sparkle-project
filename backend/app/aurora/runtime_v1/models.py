@@ -67,3 +67,33 @@ class AuroraScheduledWake(BaseModel):
         Index("idx_aurora_wake_scope", "user_id", "surface", "conversation_id"),
         Index("idx_aurora_wake_id", "wake_id"),
     )
+
+
+class AuroraDecisionTelemetry(BaseModel):
+    __tablename__ = "aurora_decision_telemetry"
+
+    decision_id = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(uuid4()))
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    surface = Column(String(64), nullable=False, index=True)
+    conversation_id = Column(String(128), nullable=False, index=True)
+    request_id = Column(String(128), nullable=True, index=True)
+    decided_at = Column(DateTime, nullable=False, index=True)
+    wake_score = Column(Float, nullable=False, default=0.0)
+    energy_level = Column(String(16), nullable=False, default="light", index=True)
+    strategy_payload = Column(JSONBCompat, nullable=False, default=dict)
+    expression_payload = Column(JSONBCompat, nullable=False, default=dict)
+    context_mask = Column(JSONBCompat, nullable=False, default=list)
+    action = Column(String(64), nullable=False, index=True)
+    chat_directive_core = Column(JSONBCompat, nullable=False, default=dict)
+    standard_layer_contract = Column(JSONBCompat, nullable=False, default=dict)
+    strategy_confidence = Column(Float, nullable=False, default=0.7)
+    outcome = Column(String(32), nullable=True, index=True)
+    outcome_filled_at = Column(DateTime, nullable=True, index=True)
+    outcome_reason = Column(Text, nullable=True)
+
+    user = relationship("User", backref="aurora_decision_telemetry")
+
+    __table_args__ = (
+        Index("idx_aurora_decision_telemetry_scope_ts", "user_id", "conversation_id", "decided_at"),
+        Index("idx_aurora_decision_telemetry_surface_ts", "surface", "decided_at"),
+    )

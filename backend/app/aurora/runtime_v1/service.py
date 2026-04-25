@@ -21,7 +21,15 @@ from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLo
 from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
 from app.aurora.runtime_v1.state import ActivityProfile, merge_activity_profile_payload
+from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
+from app.aurora.runtime_v1.wake_policy import AuroraWakePolicyService
 from app.models.user_preferences import UserPreferencesCenter
+from app.sprint_packs.last_24h_mode import (
+    apply_last_24h_policy_overrides,
+    calculate_days_left,
+    extract_exam_date,
+    is_last_24h_window,
+)
 
 GALAXY_BASELINE_TTL_SECONDS = 300  # 5-min stale-acceptable cache
 
@@ -86,6 +94,18 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _strip(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        parsed = int(float(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed
+
+
 @dataclass(slots=True)
 class AuroraRuntimeTurnPlan:
     surface: str
@@ -95,6 +115,7 @@ class AuroraRuntimeTurnPlan:
     activity_profile: dict[str, Any] = field(default_factory=dict)
     hard_boundaries: dict[str, Any] = field(default_factory=dict)
     informational_tensions: list[dict[str, Any]] = field(default_factory=list)
+    wake_policy: dict[str, Any] = field(default_factory=dict)
 
 
 class AuroraRuntimeV1Service:
@@ -107,6 +128,7 @@ class AuroraRuntimeV1Service:
         dashboard_builder: DashboardReadoutBuilder | None = None,
         self_model_service: SparkleSelfModelService | None = None,
         skill_registry: AuroraSkillRegistry | None = None,
+        wake_policy_service: AuroraWakePolicyService | None = None,
     ):
         self.redis = redis_client
         self.decision_loop = decision_loop or AuroraDecisionLoop()
@@ -114,6 +136,7 @@ class AuroraRuntimeV1Service:
         self.dashboard_builder = dashboard_builder or DashboardReadoutBuilder()
         self.self_model_service = self_model_service or SparkleSelfModelService(redis_client)
         self.skill_registry = skill_registry or AuroraSkillRegistry()
+        self.wake_policy_service = wake_policy_service or AuroraWakePolicyService(redis_client)
 
     async def plan_turn(
         self,
@@ -133,6 +156,10 @@ class AuroraRuntimeV1Service:
         user_context_payload = dict(user_context_payload or {})
         surface = AURORA_RUNTIME_MODE_SURFACES.get(surface, surface)
         request_extra_context = self._with_surface_state(surface=surface, request_extra_context=request_extra_context)
+        request_extra_context = self._with_last_24h_exam_policy(
+            request_extra_context=request_extra_context,
+            user_context_payload=user_context_payload,
+        )
 
         if not request_extra_context.get("galaxy_baseline") and active_db is not None:
             galaxy_baseline = await self._fetch_galaxy_baseline(active_db=active_db, user_id=user_id)
@@ -142,6 +169,33 @@ class AuroraRuntimeV1Service:
         control_surface_reading = await self._read_control_surface(active_db=active_db, user_id=user_id)
         activity_profile = self._build_activity_profile(surface=surface, request_extra_context=request_extra_context)
         activity_profile.update(self._activity_payload(control_surface_reading.adjustable))
+        if self._is_last_24h_policy(request_extra_context.get("exam_sprint_policy")):
+            activity_profile = merge_activity_profile_payload(
+                activity_profile,
+                {
+                    "strategy": {
+                        "worked_example_first": True,
+                        "retrieval_practice": True,
+                        "spaced_review": True,
+                        "error_analysis_required": True,
+                        "drop_low_roi_topics": True,
+                        "new_topic_allowed": False,
+                    }
+                },
+            )
+            if self._looks_like_new_topic_request(user_message):
+                return AuroraRuntimeTurnPlan(
+                    surface=surface,
+                    messages=[
+                        "明天就考试了，现在看新章节的收益很低。建议先把你最容易丢分的 TCP 状态变化再过一遍。"
+                    ],
+                    surface_complete=False,
+                    modeling_complete=False,
+                    activity_profile=activity_profile,
+                    hard_boundaries=control_surface_reading.hard_bounds.model_dump(mode="json"),
+                    informational_tensions=[],
+                    wake_policy={},
+                )
 
         candidate_affordances = self.skill_registry.load_candidate_affordances(surface)
         self_model = await self.self_model_service.get_readout_summary(
@@ -149,6 +203,15 @@ class AuroraRuntimeV1Service:
             request_extra_context=request_extra_context,
             user_context_payload=user_context_payload,
         )
+        wake_decision = await self.wake_policy_service.evaluate(
+            active_db=active_db,
+            user_id=user_id,
+            user_message=user_message,
+            request_extra_context=request_extra_context,
+            user_context_payload=user_context_payload,
+            self_model=self_model,
+        )
+        activity_profile = wake_decision.apply_activity_profile(activity_profile)
         readout = self.dashboard_builder.build(
             surface=surface,
             user_id=user_id,
@@ -162,6 +225,7 @@ class AuroraRuntimeV1Service:
             activity_profile=activity_profile,
             candidate_affordances=candidate_affordances,
             self_model=self_model,
+            wake_policy=wake_decision.to_payload(),
         )
 
         decision = await self.decision_loop.decide(readout)
@@ -191,7 +255,25 @@ class AuroraRuntimeV1Service:
             activity_profile=activity_profile,
             hard_boundaries=control_surface_reading.hard_bounds.model_dump(mode="json"),
             informational_tensions=informational_tensions,
+            wake_policy=wake_decision.to_payload(),
         )
+        if wake_decision.full_allowed and messages:
+            await self.wake_policy_service.record_full_wake(
+                user_id=user_id,
+                policy=wake_decision.cooldown_policy,
+            )
+        if active_db is not None:
+            await AuroraDecisionTelemetryService(active_db).record_turn(
+                user_id=user_id,
+                surface=surface,
+                conversation_id=conversation_id,
+                request_id=request_id,
+                user_message=user_message,
+                request_extra_context=request_extra_context,
+                readout=readout,
+                decision=decision,
+                plan=plan,
+            )
         await self._persist_runtime_state(
             user_id=user_id,
             surface=surface,
@@ -202,6 +284,7 @@ class AuroraRuntimeV1Service:
             user_context_payload=user_context_payload,
             plan=plan,
             decision=decision,
+            wake_policy=wake_decision.to_payload(),
         )
         return plan
 
@@ -277,7 +360,9 @@ class AuroraRuntimeV1Service:
             return request_extra_context
 
         enriched = dict(request_extra_context)
-        surface_state = dict(enriched.get("surface_state") or {}) if isinstance(enriched.get("surface_state"), dict) else {}
+        surface_state = (
+            dict(enriched.get("surface_state") or {}) if isinstance(enriched.get("surface_state"), dict) else {}
+        )
         scaffold = enriched.get("planning_detour_scaffold")
         if isinstance(scaffold, dict):
             scaffold_state = scaffold.get("surface_state")
@@ -288,6 +373,87 @@ class AuroraRuntimeV1Service:
         if surface_state:
             enriched["surface_state"] = surface_state
         return enriched
+
+    def _with_last_24h_exam_policy(
+        self,
+        *,
+        request_extra_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        profile_context = user_context_payload.get("profile_context")
+        if not isinstance(profile_context, dict):
+            profile_context = {}
+
+        policy = (
+            request_extra_context.get("exam_sprint_policy")
+            or user_context_payload.get("exam_sprint_policy")
+            or profile_context.get("exam_sprint_policy")
+        )
+        policy = dict(policy) if isinstance(policy, dict) else {}
+
+        cold_start = (
+            request_extra_context.get("cold_start_context")
+            or user_context_payload.get("cold_start_context")
+            or profile_context.get("cold_start_context")
+        )
+        cold_start = dict(cold_start) if isinstance(cold_start, dict) else {}
+
+        exam_date = extract_exam_date(request_extra_context, user_context_payload, policy, cold_start)
+        days_left = (
+            calculate_days_left(exam_date)
+            if exam_date is not None
+            else (
+                _safe_int(policy.get("days_left"))
+                or _safe_int(policy.get("time_constraint_days"))
+                or _safe_int(request_extra_context.get("days_left"))
+                or _safe_int(cold_start.get("time_constraint_days"))
+            )
+        )
+        if not is_last_24h_window(exam_date=exam_date, days_left=days_left):
+            return request_extra_context
+
+        subject = (
+            _strip(policy.get("subject"))
+            or _strip(request_extra_context.get("subject"))
+            or _strip(cold_start.get("subject"))
+            or _strip(cold_start.get("exam_scope"))
+            or "当前科目"
+        )
+        enriched = dict(request_extra_context)
+        enriched["exam_sprint_policy"] = apply_last_24h_policy_overrides(
+            policy,
+            subject=subject,
+            exam_date=exam_date,
+            days_left=days_left,
+        )
+        return enriched
+
+    def _is_last_24h_policy(self, policy: Any) -> bool:
+        return isinstance(policy, dict) and (
+            bool(policy.get("last_24h_mode"))
+            or _strip(policy.get("sprint_mode") or policy.get("mode")).lower() == "last_24h_cram"
+        )
+
+    def _looks_like_new_topic_request(self, user_message: str) -> bool:
+        text = _strip(user_message).lower()
+        if not text:
+            return False
+        return any(
+            token in text
+            for token in (
+                "新章节",
+                "新内容",
+                "全新",
+                "没学过",
+                "从头讲",
+                "低频",
+                "拓展",
+                "扩展",
+                "new chapter",
+                "new topic",
+                "fresh topic",
+            )
+        )
 
     def _activity_payload(self, profile: ActivityProfile) -> dict[str, Any]:
         default_payload = ActivityProfile().model_dump(mode="python")
@@ -329,7 +495,9 @@ class AuroraRuntimeV1Service:
         if decision.action in {"wait", "drop_thread"}:
             return []
 
-        domain = canonicalize_runtime_domain(updates.get("agenda_priority") or decision.harness_updates.get("agenda_priority"))
+        domain = canonicalize_runtime_domain(
+            updates.get("agenda_priority") or decision.harness_updates.get("agenda_priority")
+        )
         if not domain:
             return []
         return [
@@ -353,6 +521,7 @@ class AuroraRuntimeV1Service:
         user_context_payload: dict[str, Any],
         plan: AuroraRuntimeTurnPlan,
         decision: AuroraDecision,
+        wake_policy: dict[str, Any],
     ) -> None:
         if self.redis is None:
             return
@@ -387,6 +556,7 @@ class AuroraRuntimeV1Service:
             "messages": plan.messages,
             "hard_boundaries": plan.hard_boundaries,
             "decision": decision.to_payload(),
+            "wake_policy": wake_policy,
             "history_size": len(conversation_context.get("messages") or []),
         }
         try:

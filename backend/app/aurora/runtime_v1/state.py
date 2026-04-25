@@ -207,6 +207,8 @@ class AuroraTeachingStrategy(AuroraSchemaBase):
     interleaving: bool = False
     spaced_review: bool = False
     error_analysis_required: bool = False
+    drop_low_roi_topics: bool = False
+    new_topic_allowed: bool = True
 
 
 class ActivityProfile(AuroraSchemaBase):

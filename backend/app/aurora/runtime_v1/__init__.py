@@ -44,6 +44,27 @@ except ModuleNotFoundError:
     pass
 
 try:
+    from app.aurora.runtime_v1.write_pipeline import (
+        CANDIDATE_CONFIDENCE_THRESHOLD,
+        INFERENCE_PIPELINE_KEY,
+        TEMPORARY_STATE_TTL_SECONDS,
+        TRIAL_WINDOW_DAYS,
+        InferenceClaim,
+        InferenceWritePipeline,
+    )
+
+    _export(
+        "CANDIDATE_CONFIDENCE_THRESHOLD",
+        "INFERENCE_PIPELINE_KEY",
+        "TEMPORARY_STATE_TTL_SECONDS",
+        "TRIAL_WINDOW_DAYS",
+        "InferenceClaim",
+        "InferenceWritePipeline",
+    )
+except ModuleNotFoundError:
+    pass
+
+try:
     from app.aurora.runtime_v1.state import (
         ActivityProfile,
         AuroraCognitiveSnapshot,
@@ -81,6 +102,7 @@ except ModuleNotFoundError:
 
 try:
     from app.aurora.runtime_v1.persistence import (
+        AuroraDecisionTelemetryRecord,
         AuroraPersistenceStore,
         AuroraScheduledWakeRecord,
         AuroraStateSnapshotRecord,
@@ -88,6 +110,7 @@ try:
     )
 
     _export(
+        "AuroraDecisionTelemetryRecord",
         "AuroraPersistenceStore",
         "AuroraScheduledWakeRecord",
         "AuroraStateSnapshotRecord",
@@ -97,9 +120,37 @@ except ModuleNotFoundError:
     pass
 
 try:
+    from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
+
+    _export("AuroraDecisionTelemetryService")
+except ModuleNotFoundError:
+    pass
+
+try:
     from app.aurora.runtime_v1.wake_scheduler import AuroraWakeScheduler
 
     _export("AuroraWakeScheduler")
+except ModuleNotFoundError:
+    pass
+
+try:
+    from app.aurora.runtime_v1.wake_policy import (
+        AuroraWakePolicyService,
+        ModerateDiagnosticSignal,
+        WakeCooldownPolicy,
+        WakeCooldownStatus,
+        WakeDecision,
+        WakeScoreComponents,
+    )
+
+    _export(
+        "AuroraWakePolicyService",
+        "ModerateDiagnosticSignal",
+        "WakeCooldownPolicy",
+        "WakeCooldownStatus",
+        "WakeDecision",
+        "WakeScoreComponents",
+    )
 except ModuleNotFoundError:
     pass
 
@@ -139,14 +190,6 @@ try:
 except ModuleNotFoundError:
     pass
 
-from app.aurora.runtime_v1.service import (
-    AURORA_RUNTIME_MODE_SURFACES,
-    AURORA_RUNTIME_STATE_KEY_TEMPLATE,
-    AURORA_RUNTIME_STATE_TTL_SECONDS,
-    AURORA_SURFACE_MODELING,
-    AuroraRuntimeTurnPlan,
-    AuroraRuntimeV1Service,
-)
 from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
 from app.aurora.runtime_v1.dashboard import (
     CORE_MODELING_DOMAINS,
@@ -155,6 +198,14 @@ from app.aurora.runtime_v1.dashboard import (
     canonicalize_runtime_domain,
 )
 from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
+from app.aurora.runtime_v1.service import (
+    AURORA_RUNTIME_MODE_SURFACES,
+    AURORA_RUNTIME_STATE_KEY_TEMPLATE,
+    AURORA_RUNTIME_STATE_TTL_SECONDS,
+    AURORA_SURFACE_MODELING,
+    AuroraRuntimeTurnPlan,
+    AuroraRuntimeV1Service,
+)
 
 _export(
     "AURORA_RUNTIME_MODE_SURFACES",

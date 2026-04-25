@@ -223,6 +223,10 @@ async def test_strategy_and_task_prompt_consume_richer_aurora_runtime_state() ->
     assert guide_json["why_now"]
     assert "只剩 20 分钟" in guide_json["fail_safe_rule"]
     assert "有三栏清单" in guide_json["success_checklist"][0]
+    assert len(guide_json["steps"]) == 4
+    assert len(guide_json["done_criteria"]) >= 3
+    assert len(guide_json["mini_quiz"]["items"]) == 3
+    assert len(guide_json["fallback_if_stuck"]) >= 2
     assert any("闭卷" in step or "小测" in step or "复述" in step for step in guide_json["method_steps"])
     assert "周三下午有实验" in strategy["checkpoints"][0]["description"]
     assert "真题" in strategy["phases"][0]["method"]

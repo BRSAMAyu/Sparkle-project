@@ -8,7 +8,11 @@ from typing import Any, Awaitable, Callable
 from loguru import logger
 
 from app.aurora.runtime_v1.dashboard import DashboardReadout, canonicalize_runtime_domain
-from app.aurora.runtime_v1.decision_loop import AuroraDecision
+from app.aurora.runtime_v1.decision_loop import (
+    AuroraDecision,
+    build_standard_layer_contract,
+    describe_standard_layer_tokens,
+)
 from app.aurora.runtime_v1.state import merge_activity_profile_payload, merge_expression_settings
 from app.core.agent_profiles import AgentRole, TaskType
 from app.services.llm_service import get_configured_llm_service
@@ -57,18 +61,28 @@ class ChatLayerAdapter:
             return []
 
         prompt = self._build_render_prompt(decision, readout)
+        wake_policy = self._wake_policy(readout)
+        multimessage_setting = wake_policy.get("multimessage_allowed")
+        max_messages = 3 if multimessage_setting is None or bool(multimessage_setting) else 1
         try:
             llm = await self._resolve_llm()
-            raw = await llm.chat_json(prompt, temperature=self.temperature)
+            raw = await llm.chat_json(
+                prompt,
+                temperature=self.temperature,
+                max_tokens=self._max_tokens_for_wake(wake_policy),
+            )
             messages = self._extract_messages(raw)
         except Exception as exc:
             logger.warning("Aurora chat adapter fell back after LLM failure: {}", exc)
             messages = []
 
-        messages = self._sanitize_messages(messages)
+        messages = self._sanitize_messages(messages, max_messages=max_messages)
         if messages:
             return messages
-        return await self._fallback_messages(decision=decision, readout=readout, reason="empty_or_invalid_llm_output")
+        fallback = await self._fallback_messages(
+            decision=decision, readout=readout, reason="empty_or_invalid_llm_output"
+        )
+        return self._sanitize_messages(fallback, max_messages=max_messages)
 
     def _build_prompt(self, decision: AuroraDecision, readout: DashboardReadout) -> list[dict[str, str]]:
         return self._build_render_prompt(decision, readout)
@@ -76,9 +90,18 @@ class ChatLayerAdapter:
     def _build_render_prompt(self, decision: AuroraDecision, readout: DashboardReadout) -> list[dict[str, str]]:
         effective_profile = self._effective_activity_profile(decision, readout)
         expression_controls = merge_expression_settings(effective_profile.get("expression"))
+        standard_layer_contract = build_standard_layer_contract(decision, readout)
+        wake_policy = self._wake_policy(readout)
+        multimessage_setting = wake_policy.get("multimessage_allowed")
+        multimessage_allowed = True if multimessage_setting is None else bool(multimessage_setting)
+        message_count_instruction = (
+            "Write 1-3 short, natural, non-overlapping messages for the user. "
+            if multimessage_allowed
+            else "Write exactly 1 short, natural message for the user. "
+        )
         system = (
             "You are Sparkle's chat layer adapter. Aurora has already made the cognitive decision. "
-            "Write 1-3 short, natural, non-overlapping messages for the user. "
+            f"{message_count_instruction}"
             "Every message must stand on its own as a complete thought. Do not split one sentence across messages. "
             "Adjacent messages must add different value instead of paraphrasing each other. "
             "Do not expose internal decision fields. "
@@ -87,7 +110,11 @@ class ChatLayerAdapter:
             "before practice, problem_first means move directly into practice, worked_example_first means start with a "
             "solved example, retrieval_practice means use recall or mini-test language, interleaving means mix nearby "
             "types, spaced_review means briefly resurface earlier material, and error_analysis_required means explicitly "
-            "name the mistake-diagnosis step before more drills. "
+            "name the mistake-diagnosis step before more drills. drop_low_roi_topics means skip low-yield detours, "
+            "and new_topic_allowed=false means do not introduce fresh chapters or new topic walkthroughs. "
+            "The standard_layer_contract is a hard contract, not a suggestion. You MUST satisfy every item in "
+            "must_include, MUST avoid every item in must_not_include, and MUST stay within max_response_length. "
+            "If any other hint conflicts with standard_layer_contract, follow the contract. "
             "Stay task-level and avoid clinical, personality, or social-identity inference. "
             'Return JSON: {"messages": ["..."]}.'
         )
@@ -98,6 +125,13 @@ class ChatLayerAdapter:
             "teaching_strategy": self._teaching_strategy(effective_profile),
             "expression_controls": expression_controls,
             "expression_instruction": self._build_expression_instruction(expression_controls),
+            "standard_layer_contract": standard_layer_contract,
+            "standard_layer_contract_instruction": self._build_standard_layer_instruction(standard_layer_contract),
+            "standard_layer_contract_semantics": describe_standard_layer_tokens(
+                list(standard_layer_contract.get("must_include") or [])
+                + list(standard_layer_contract.get("must_not_include") or [])
+            ),
+            "wake_policy": wake_policy,
             "user_message": readout.user_message,
             "decision": decision.to_payload(),
             "dashboard_digest": {
@@ -161,11 +195,33 @@ class ChatLayerAdapter:
             guidance.append("Do not add extra encouragement or praise unless it materially helps.")
 
         if challenge_intensity >= 0.7:
-            guidance.append("Increase action pressure a bit: move the user toward a concrete next move or clear constraint.")
+            guidance.append(
+                "Increase action pressure a bit: move the user toward a concrete next move or clear constraint."
+            )
         elif challenge_intensity <= 0.35:
             guidance.append("Reduce pressure: support first, then invite the next step gently.")
 
         return " ".join(guidance)
+
+    def _build_standard_layer_instruction(self, contract: dict[str, Any]) -> str:
+        response_type = str(contract.get("response_type") or "general_chat")
+        max_response_length = str(contract.get("max_response_length") or "normal")
+        length_hint = {
+            "brief": "~100 Chinese characters total",
+            "normal": "~300 Chinese characters total",
+            "extended": "~600 Chinese characters total",
+        }.get(max_response_length, "~300 Chinese characters total")
+        must_include = list(contract.get("must_include") or [])
+        must_not_include = list(contract.get("must_not_include") or [])
+        semantics = describe_standard_layer_tokens(must_include + must_not_include)
+        include_text = "; ".join(f"{token}: {semantics.get(token, token)}" for token in must_include) or "none"
+        exclude_text = "; ".join(f"{token}: {semantics.get(token, token)}" for token in must_not_include) or "none"
+        return (
+            f"response_type={response_type}. "
+            f"max_response_length={max_response_length} ({length_hint}). "
+            f"MUST include: {include_text}. "
+            f"MUST NOT include: {exclude_text}."
+        )
 
     def _extract_messages(self, raw: Any) -> list[str]:
         if isinstance(raw, dict):
@@ -178,7 +234,7 @@ class ChatLayerAdapter:
             return [str(item) for item in raw]
         return []
 
-    def _sanitize_messages(self, messages: list[str]) -> list[str]:
+    def _sanitize_messages(self, messages: list[str], *, max_messages: int = 3) -> list[str]:
         merged = self._merge_split_messages(messages)
         cleaned: list[str] = []
         seen: set[str] = set()
@@ -190,7 +246,7 @@ class ChatLayerAdapter:
                 continue
             seen.add(text)
             cleaned.append(text[:260])
-            if len(cleaned) >= 3:
+            if len(cleaned) >= max(1, max_messages):
                 break
         return cleaned
 
@@ -252,6 +308,22 @@ class ChatLayerAdapter:
         *,
         reason: str | None = None,
     ) -> list[str]:
+        contract = build_standard_layer_contract(decision, readout)
+        response_type = str(contract.get("response_type") or "general_chat")
+        if response_type == "task_help":
+            return [
+                "我们先走 1 个短例子，把关键步骤顺下来。",
+                "然后做 3 个同型小练习，先自己答。",
+                "做完把答案或卡住的那一步发我，我来检查。",
+            ]
+        if response_type == "emotional_support":
+            return ["这几次卡住确实会很难受。我们先只做下一步：把刚才最卡的一题或一步发我，我陪你拆开。"]
+        if response_type == "diagnostic":
+            return ["我们先定位这次错在什么地方，再只修一个关键断点。把你刚才做错的那一步发我。"]
+        if response_type == "calibration":
+            return ["我先不假装自己已经判断准了。先帮我确认一个点：你现在更卡在时间不够，还是卡在方法没抓稳？"]
+        if response_type == "plan_discussion":
+            return ["这轮我先只收紧当前计划，不整周重排。眼下最需要调整的是哪一块：时间、顺序，还是难度？"]
         target_domain = self._target_domain(decision)
         if decision.action == "soft_return_topic":
             label = self._domain_label(target_domain)
@@ -310,6 +382,12 @@ class ChatLayerAdapter:
     def _teaching_strategy(self, activity_profile: dict[str, Any]) -> dict[str, bool]:
         strategy = activity_profile.get("strategy")
         return dict(strategy) if isinstance(strategy, dict) else {}
+
+    def _wake_policy(self, readout: DashboardReadout) -> dict[str, Any]:
+        return dict(readout.wake_policy or {})
+
+    def _max_tokens_for_wake(self, wake_policy: dict[str, Any]) -> int:
+        return 600 if wake_policy.get("context_budget") == "extended" else 320
 
     async def _resolve_llm(self) -> Any:
         service_or_awaitable = self.llm_factory()

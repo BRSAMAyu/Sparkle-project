@@ -41,6 +41,7 @@ def _readout(
     task_state: dict[str, Any] | None = None,
     checkpoint_state: dict[str, Any] | None = None,
     achievement_signals: dict[str, Any] | None = None,
+    self_model: dict[str, Any] | None = None,
 ) -> DashboardReadout:
     return DashboardReadout(
         surface=surface,
@@ -75,6 +76,7 @@ def _readout(
         checkpoint_state=dict(checkpoint_state or {"last_status": "stable"}),
         request_extra_context=dict(request_extra_context or {}),
         achievement_signals=dict(achievement_signals or {"plan_completion_rate": 0.48}),
+        self_model=dict(self_model or {}),
     )
 
 
@@ -105,6 +107,8 @@ async def test_decision_loop_prompt_uses_masked_dashboard_context_and_no_final_c
     assert "sprint_policy_summary" not in serialized_prompt
     assert "strategy_defaults" in serialized_prompt
     assert "concept_first" in serialized_prompt
+    assert "standard_layer_contract" in serialized_prompt
+    assert "response_type" in serialized_prompt
     assert "Teaching strategy is a first-class decision" in serialized_prompt
     assert "Do not generate final user-facing text" in serialized_prompt
     assert '"messages"' not in serialized_prompt
@@ -165,6 +169,93 @@ def test_decision_loop_defaults_planning_strategy_to_problem_first() -> None:
     strategy = validated.harness_updates["strategy"]
     assert strategy["problem_first"] is True
     assert strategy["concept_first"] is False
+
+
+def test_decision_loop_assigns_task_help_standard_layer_contract_for_active_task_card() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(
+        action="emit_message",
+        harness_updates={
+            "strategy": {
+                "worked_example_first": True,
+                "problem_first": True,
+            }
+        },
+        chat_directive={"intent": "teach_with_example"},
+    )
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            task_state={"stage": "task_card", "current_task_id": "tcp-congestion-1"},
+        ),
+    )
+
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert contract["response_type"] == "task_help"
+    assert contract["must_include"] == ["worked_example", "three_practice_questions", "completion_check"]
+    assert contract["must_not_include"] == ["full_week_replan", "long_motivational_speech"]
+    assert contract["max_response_length"] == "extended"
+
+
+def test_decision_loop_assigns_emotional_support_contract_after_repeated_failures() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(action="emit_message", chat_directive={"intent": "continue_current_task"})
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            checkpoint_state={"last_status": "failed", "recent_failures": 3},
+            self_model={"task_failure_streak": 3},
+        ),
+    )
+
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert contract["response_type"] == "emotional_support"
+    assert contract["must_include"] == ["emotional_acknowledgment", "one_concrete_next_step"]
+    assert "blame_or_shame" in contract["must_not_include"]
+
+
+def test_decision_loop_assigns_calibration_contract_when_self_model_needs_recalibration() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(action="emit_message", chat_directive={"intent": "safe_ack"})
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            surface="aurora_modeling",
+            self_model={
+                "needs_recalibration": True,
+                "strategy_confidence": 0.31,
+            },
+        ),
+    )
+
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert contract["response_type"] == "calibration"
+    assert contract["must_include"] == ["explicit_uncertainty", "calibration_question_or_assumption_check"]
+    assert contract["max_response_length"] == "brief"
+
+
+def test_decision_loop_assigns_plan_discussion_contract_for_planning_turn() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(action="emit_message", chat_directive={"intent": "tighten_plan"})
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            task_state={"stage": "planning"},
+            checkpoint_state={"last_status": "stable"},
+        ),
+    )
+
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert contract["response_type"] == "plan_discussion"
+    assert contract["must_include"] == ["plan_delta_or_tradeoff", "one_decision_or_question"]
+    assert "unsolicited_three_practice_questions" in contract["must_not_include"]
 
 
 @pytest.mark.asyncio
@@ -449,6 +540,43 @@ async def test_chat_adapter_prompt_includes_teaching_strategy() -> None:
     assert "strategy" in user_prompt["activity_profile"]
 
 
+@pytest.mark.asyncio
+async def test_chat_adapter_prompt_includes_standard_layer_contract_as_hard_constraint() -> None:
+    chat_llm = _FakeJsonLLM({"messages": ["我们先看一道完整例题。"]})
+    adapter = ChatLayerAdapter(llm_factory=lambda: chat_llm)
+    decision = AuroraDecision(
+        action="emit_message",
+        harness_updates={
+            "strategy": {
+                "worked_example_first": True,
+                "problem_first": True,
+            }
+        },
+        chat_directive={"intent": "teach_with_example"},
+    )
+
+    await adapter.render(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            task_state={"stage": "task_card", "current_task_id": "tcp-congestion-1"},
+            user_message="TCP 拥塞控制这题我不会。",
+        ),
+    )
+
+    system_prompt = chat_llm.calls[0][0]["content"]
+    user_prompt = json.loads(chat_llm.calls[0][1]["content"])
+    assert "standard_layer_contract is a hard contract" in system_prompt
+    assert user_prompt["standard_layer_contract"]["response_type"] == "task_help"
+    assert user_prompt["standard_layer_contract"]["must_include"] == [
+        "worked_example",
+        "three_practice_questions",
+        "completion_check",
+    ]
+    assert "MUST include" in user_prompt["standard_layer_contract_instruction"]
+    assert "MUST NOT include" in user_prompt["standard_layer_contract_instruction"]
+
+
 def test_service_surface_defaults_include_distinct_expression_profiles() -> None:
     service = AuroraRuntimeV1Service()
 
@@ -495,6 +623,40 @@ async def test_service_merges_expression_harness_updates_without_losing_surface_
     assert plan.activity_profile["expression"]["brevity"] == pytest.approx(0.87)
     assert plan.activity_profile["expression"]["tone_warmth"] == pytest.approx(0.34)
     assert plan.activity_profile["expression"]["friendliness"] == pytest.approx(0.42)
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_refuses_new_topic_in_last_24h_mode() -> None:
+    service = AuroraRuntimeV1Service(
+        decision_loop=AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({"action": "emit_message"})),
+        chat_adapter=ChatLayerAdapter(llm_factory=lambda: _FakeJsonLLM({"messages": ["不应该调用到这里"]})),
+    )
+
+    plan = await service.plan_turn(
+        active_db=None,
+        user_id="user-1",
+        surface="aurora_planning",
+        conversation_id="conv-last-24h",
+        request_id="req-last-24h",
+        user_message="帮我讲一个全新的低频章节吧",
+        request_extra_context={
+            "exam_sprint_policy": {
+                "days_left": 1,
+                "subject": "计算机网络",
+                "sprint_mode": "seven_day_survival",
+            }
+        },
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    assert plan.messages == [
+        "明天就考试了，现在看新章节的收益很低。建议先把你最容易丢分的 TCP 状态变化再过一遍。"
+    ]
+    strategy = plan.activity_profile["strategy"]
+    assert strategy["new_topic_allowed"] is False
+    assert strategy["drop_low_roi_topics"] is True
+    assert strategy["error_analysis_required"] is True
 
 
 def test_slim_readout_for_aurora_modeling_excludes_task_and_checkpoint_state() -> None:
@@ -759,3 +921,128 @@ def test_extract_achievement_signals_prefers_explicit_over_cognitive() -> None:
     signals = builder._extract_achievement_signals({"achievement_signals": explicit}, user_context_payload)
     assert signals["in_progress_count"] == 5
     assert signals["momentum"] == pytest.approx(0.9)
+
+
+# ---------------------------------------------------------------------------
+# Last-24h mode — Aurora conversation layer wiring
+# ---------------------------------------------------------------------------
+
+
+def test_dashboard_builder_synthesizes_last_24h_mode_from_sprint_mode_cram() -> None:
+    """DashboardReadout.last_24h_mode must be True when exam_sprint_policy.sprint_mode == 'last_24h_cram'."""
+    from app.aurora.runtime_v1.control_surface import ActivityProfile, ControlSurfaceReading
+
+    builder = DashboardReadoutBuilder()
+    reading = ControlSurfaceReading(
+        adjustable=ActivityProfile(),
+        hard_bounds=AuroraHardBounds(),
+        runtime_enabled=True,
+    )
+    readout = builder.build(
+        surface="aurora_planning",
+        user_id="u1",
+        conversation_id="c1",
+        request_id="r1",
+        user_message="帮我快速复习最重要的几个点",
+        request_extra_context={
+            "exam_sprint_policy": {
+                "sprint_mode": "last_24h_cram",
+                "days_left": 0,
+                "triage_level": "emergency",
+            }
+        },
+        conversation_context={},
+        user_context_payload={},
+        control_surface_reading=reading,
+        activity_profile={},
+        candidate_affordances=[],
+    )
+
+    assert readout.last_24h_mode is True
+
+
+def test_dashboard_builder_last_24h_mode_false_for_normal_sprint() -> None:
+    """last_24h_mode must be False for all non-cram sprint modes."""
+    from app.aurora.runtime_v1.control_surface import ActivityProfile, ControlSurfaceReading
+
+    builder = DashboardReadoutBuilder()
+    reading = ControlSurfaceReading(
+        adjustable=ActivityProfile(),
+        hard_bounds=AuroraHardBounds(),
+        runtime_enabled=True,
+    )
+    for sprint_mode in ("seven_day_survival", "fourteen_day_build_and_retrieve", "standard_exam_sprint", ""):
+        readout = builder.build(
+            surface="aurora_planning",
+            user_id="u1",
+            conversation_id="c1",
+            request_id="r1",
+            user_message="帮我规划",
+            request_extra_context={"exam_sprint_policy": {"sprint_mode": sprint_mode}},
+            conversation_context={},
+            user_context_payload={},
+            control_surface_reading=reading,
+            activity_profile={},
+            candidate_affordances=[],
+        )
+        assert readout.last_24h_mode is False, f"expected last_24h_mode=False for sprint_mode={sprint_mode!r}"
+
+
+def test_strategy_defaults_use_last_24h_overrides_for_cram_sprint_mode() -> None:
+    """_strategy_defaults_for_readout must apply last-24h overrides when sprint_mode == 'last_24h_cram'."""
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(
+        exam_sprint_policy={"sprint_mode": "last_24h_cram", "days_left": 0, "triage_level": "emergency"},
+    )
+    defaults = loop._strategy_defaults_for_readout(readout)
+
+    assert defaults["worked_example_first"] is True
+    assert defaults["retrieval_practice"] is True
+    assert defaults["spaced_review"] is True
+    assert defaults["error_analysis_required"] is True
+    assert defaults["drop_low_roi_topics"] is True
+    assert defaults["new_topic_allowed"] is False
+
+
+def test_decision_loop_prompt_includes_last_24h_rule_for_cram_mode() -> None:
+    """build_prompt() must inject the LAST-24H EXAM MODE rule when sprint_mode == 'last_24h_cram'."""
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(
+        exam_sprint_policy={"sprint_mode": "last_24h_cram", "days_left": 0, "triage_level": "emergency"},
+    )
+    messages = loop.build_prompt(readout)
+    prompt_payload = json.loads(messages[1]["content"])
+
+    last_24h_rules = [r for r in prompt_payload["rules"] if "LAST-24H" in r]
+    assert last_24h_rules, "Expected at least one LAST-24H EXAM MODE rule in prompt"
+    assert "Do NOT probe for new information" in last_24h_rules[0]
+    assert "calibration" in last_24h_rules[0].lower()
+
+
+def test_decision_loop_prompt_no_last_24h_rule_for_normal_sprint() -> None:
+    """build_prompt() must NOT inject the last-24h rule for non-cram sprint modes."""
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(
+        exam_sprint_policy={"sprint_mode": "seven_day_survival", "days_left": 5, "triage_level": "high"},
+    )
+    messages = loop.build_prompt(readout)
+    prompt_payload = json.loads(messages[1]["content"])
+
+    last_24h_rules = [r for r in prompt_payload["rules"] if "LAST-24H" in r]
+    assert not last_24h_rules, "LAST-24H rule must not appear for seven_day_survival"
+
+
+def test_last_24h_mode_exposed_in_planning_surface_llm_payload() -> None:
+    """last_24h_mode must appear in the LLM payload for aurora_planning surface."""
+    import dataclasses
+
+    readout = _readout(
+        surface="aurora_planning",
+        exam_sprint_policy={"sprint_mode": "last_24h_cram"},
+    )
+    # Rebuild with last_24h_mode=True using dataclasses.replace (avoids __dict__ on slotted class)
+    readout = dataclasses.replace(readout, last_24h_mode=True)
+    payload = readout.to_llm_payload()
+    # For aurora_planning surface, last_24h_mode is in surface additions so it should appear
+    assert "last_24h_mode" in payload
+    assert payload["last_24h_mode"] is True
