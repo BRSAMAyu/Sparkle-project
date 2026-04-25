@@ -195,6 +195,10 @@ class ExamSprintDashboardService:
                             is_completed=self._task_status(task) == TaskStatus.COMPLETED.value,
                             knowledge_node_id=str(task.knowledge_node_id) if task.knowledge_node_id else None,
                             due_date=task.due_date,
+                            compressed=bool(self._as_dict(task.guide_json).get("compressed")),
+                            compression_reason=self._nullable_string(
+                                self._as_dict(task.guide_json).get("compression_reason")
+                            ),
                         )
                         for task in day_tasks
                     ],

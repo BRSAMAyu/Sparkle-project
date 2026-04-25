@@ -698,6 +698,24 @@ class ErrorBookService:
             query = query.where(ErrorRecord.subject_code == params.subject.value)
         if params.chapter:
             query = query.where(ErrorRecord.chapter.ilike(f"%{params.chapter}%"))
+        if params.node_id:
+            node_id_text = params.node_id.strip()
+            node_uuid = self._coerce_uuid(node_id_text)
+            if node_uuid is not None:
+                query = query.where(
+                    or_(
+                        ErrorRecord.affected_node_id == node_uuid,
+                        ErrorRecord.linked_knowledge_node_ids.contains([node_uuid]),
+                    )
+                )
+            else:
+                query = query.where(
+                    or_(
+                        ErrorRecord.question_text.ilike(f"%{node_id_text}%"),
+                        ErrorRecord.ai_analysis_summary.ilike(f"%{node_id_text}%"),
+                        func.cast(ErrorRecord.latest_analysis, String).ilike(f"%{node_id_text}%"),
+                    )
+                )
         if params.error_type:
             query = query.where(ErrorRecord.latest_analysis["error_type"].astext == params.error_type.value)
         if params.mastery_min is not None:

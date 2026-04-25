@@ -6,6 +6,7 @@ Stage: <首次引入 Stage 号>
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
 from datetime import timezone, date, datetime
 from typing import Any
@@ -44,6 +45,9 @@ ALLOWED_EVIDENCE_TYPES = {
 INACTIVE_GOAL_STATUSES = {"completed", "archived", "cancelled"}
 CONFIDENCE_DECREMENT = 0.1
 SUMMARY_MAX_LEN = 48
+SESSION_MOOD_TTL_SECONDS = 7 * 24 * 60 * 60
+SESSION_MOOD_LAST_KEY_TEMPLATE = "memory:session_mood:{user_id}:last"
+SESSION_MOOD_SESSION_KEY_TEMPLATE = "memory:session_mood:{user_id}:{session_id}"
 
 
 def _utcnow() -> datetime:
@@ -59,8 +63,9 @@ def _truncate_summary(value: str) -> str:
 
 
 class MemoryService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession | None, redis_client=None):
         self.db = db
+        self.redis = redis_client
 
     @staticmethod
     def _is_vector_runtime_error(exc: Exception) -> bool:
@@ -185,9 +190,7 @@ class MemoryService:
                 category="memory" if adaptation_record is None else "evolution",
                 title=f"更新了偏好：{pref_key}",
                 description=(
-                    "已记录你的最新学习偏好"
-                    if adaptation_record is None
-                    else adaptation_record.user_facing_message
+                    "已记录你的最新学习偏好" if adaptation_record is None else adaptation_record.user_facing_message
                 ),
                 priority="low",
                 metadata={
@@ -205,6 +208,71 @@ class MemoryService:
             ),
         )
         return record
+
+    async def upsert_session_mood(
+        self,
+        user_id: UUID | str,
+        session_id: UUID | str,
+        mood_score: float,
+        mood_label: str,
+    ) -> dict[str, Any] | None:
+        redis = self._session_mood_redis()
+        if redis is None:
+            logger.debug("Skipping session mood write because Redis is unavailable")
+            return None
+
+        label = str(mood_label or "").strip().lower()
+        if not label:
+            raise ValueError("mood_label is required")
+        try:
+            score = float(mood_score)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("mood_score must be numeric") from exc
+        score = max(0.0, min(1.0, score))
+
+        recorded_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        payload = {
+            "user_id": str(user_id),
+            "session_id": str(session_id),
+            "mood_score": score,
+            "mood_label": label,
+            "recorded_at": recorded_at,
+        }
+        encoded = json.dumps(payload, ensure_ascii=False, default=str)
+        last_key = SESSION_MOOD_LAST_KEY_TEMPLATE.format(user_id=user_id)
+        session_key = SESSION_MOOD_SESSION_KEY_TEMPLATE.format(user_id=user_id, session_id=session_id)
+        await redis.setex(last_key, SESSION_MOOD_TTL_SECONDS, encoded)
+        await redis.setex(session_key, SESSION_MOOD_TTL_SECONDS, encoded)
+        return payload
+
+    async def get_last_session_mood(self, user_id: UUID | str) -> dict[str, Any] | None:
+        redis = self._session_mood_redis()
+        if redis is None:
+            return None
+        raw = await redis.get(SESSION_MOOD_LAST_KEY_TEMPLATE.format(user_id=user_id))
+        if raw is None:
+            return None
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="replace")
+        try:
+            payload = json.loads(raw) if isinstance(raw, str) else raw
+        except (TypeError, json.JSONDecodeError):
+            logger.debug("Ignoring malformed session mood payload for user {}", user_id)
+            return None
+        if not isinstance(payload, dict):
+            return None
+        return dict(payload)
+
+    def _session_mood_redis(self):
+        if self.redis is not None:
+            return self.redis
+        try:
+            from app.core.cache import cache_service
+
+            return cache_service.redis
+        except Exception as exc:
+            logger.debug("Unable to resolve Redis for session mood memory: {}", exc)
+            return None
 
     async def create_goal(
         self,
@@ -459,9 +527,11 @@ class MemoryService:
         if resolved_value is None:
             resolved_value = record.pref_value
 
-        refs = evidence_refs or record.evidence_refs or [
-            {"type": "user_state", "id": "batch_edit", "schema_version": "batch_edit.v1"}
-        ]
+        refs = (
+            evidence_refs
+            or record.evidence_refs
+            or [{"type": "user_state", "id": "batch_edit", "schema_version": "batch_edit.v1"}]
+        )
 
         return await self.upsert_preference(
             user_id=user_id,
@@ -532,9 +602,7 @@ class MemoryService:
         if status_filter:
             stmt = stmt.where(MemoryGoal.status == status_filter)
         if not include_expired:
-            stmt = stmt.where(
-                MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now)
-            )
+            stmt = stmt.where(MemoryGoal.expires_at.is_(None) | (MemoryGoal.expires_at > now))
         stmt = stmt.order_by(MemoryGoal.updated_at.desc()).limit(limit)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
@@ -563,6 +631,23 @@ class MemoryService:
         stmt = stmt.order_by(EpisodicMemory.occurred_at.desc()).limit(limit)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_recent_episodic(
+        self,
+        user_id: UUID,
+        limit: int = 10,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        subject_types: Iterable[str] | None = None,
+    ) -> list[EpisodicMemory]:
+        """Compatibility alias for callers that use the read-oriented name."""
+        return await self.list_recent_episodic(
+            user_id=user_id,
+            limit=limit,
+            start=start,
+            end=end,
+            subject_types=subject_types,
+        )
 
     async def create_episodic_memory(
         self,
@@ -759,7 +844,8 @@ class MemoryService:
     ) -> list[EpisodicMemory]:
         reference_time = now or _utcnow()
         result = await self.db.execute(
-            select(EpisodicMemory).where(
+            select(EpisodicMemory)
+            .where(
                 EpisodicMemory.user_id == user_id,
                 EpisodicMemory.subject_type == "commitment",
                 EpisodicMemory.due_at.is_not(None),

@@ -13,6 +13,7 @@ import time
 import uuid
 from datetime import timezone, datetime
 from uuid import UUID
+from typing import Any
 
 from google.protobuf import json_format
 from google.api import annotations_pb2  # noqa: F401
@@ -369,6 +370,12 @@ class TaskService:
             except Exception as exc:
                 logger.warning("Failed to spark node for task {}: {}", db_obj.id, exc)
 
+        task_id_for_log = str(db_obj.id)
+        try:
+            await TaskService._update_sprint_pack_mastery_for_completed_task(db, db_obj)
+        except Exception as exc:
+            logger.warning("Failed to update sprint mastery for completed task {}: {}", task_id_for_log, exc)
+
         # Publish task completion event for cognitive analysis
         from app.core.event_bus import TaskCompleted
         from app.models.community import GroupTaskClaim
@@ -425,6 +432,58 @@ class TaskService:
         )
 
         return db_obj
+
+    @staticmethod
+    def _as_dict(value: Any) -> dict[str, Any]:
+        return value if isinstance(value, dict) else {}
+
+    @staticmethod
+    def _extract_sprint_pack_node_ids(task: Task) -> list[str]:
+        guide_json = TaskService._as_dict(task.guide_json)
+        sprint_mode = str(guide_json.get("sprint_mode") or "").strip()
+
+        raw_nodes: list[Any] = []
+        for key in ("sprint_pack_nodes", "knowledge_node_ids", "focus_nodes"):
+            value = guide_json.get(key)
+            if isinstance(value, list):
+                raw_nodes.extend(value)
+
+        node_ids: list[str] = []
+        for raw in raw_nodes:
+            if isinstance(raw, dict):
+                candidate = raw.get("node_id") or raw.get("id")
+            else:
+                candidate = raw
+            node_id = str(candidate or "").strip()
+            if node_id and "." in node_id:
+                node_ids.append(node_id)
+
+        if not sprint_mode and not guide_json.get("path_mode") and not guide_json.get("last_24h_mode"):
+            return []
+        return list(dict.fromkeys(node_ids))
+
+    @staticmethod
+    async def _update_sprint_pack_mastery_for_completed_task(db: AsyncSession, task: Task) -> None:
+        node_ids = TaskService._extract_sprint_pack_node_ids(task)
+        if not node_ids:
+            return
+
+        from app.services.galaxy_service import GalaxyService
+
+        galaxy_service = GalaxyService(db)
+        current_summary = await galaxy_service.get_sprint_mastery_summary(task.user_id, node_ids)
+        for node_id in node_ids:
+            current_mastery = float(current_summary.get(node_id, 0.0) or 0.0)
+            new_mastery = min(1.0, current_mastery + 0.25)
+            if new_mastery <= current_mastery:
+                continue
+            await galaxy_service.update_node_mastery(
+                user_id=task.user_id,
+                node_id=node_id,
+                new_mastery=new_mastery,
+                reason="sprint_task_completed",
+                request_id=f"sprint_task_completed:{task.id}:{node_id}",
+            )
 
     @staticmethod
     def _difficulty_from_gradient(gradient: float) -> int:

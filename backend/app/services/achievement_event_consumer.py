@@ -5,19 +5,26 @@ Closes event-bus paths for achievement progression without blocking request hand
 
 import asyncio
 from datetime import timezone, datetime, timedelta
+from urllib.parse import urlencode
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import and_, func, select
 
 from app.core.event_bus import EventBus
 from app.core.event_types import EXECUTION_RESULT_INGESTED
 from app.db.session import AsyncSessionLocal
 from app.models.achievement import Achievement, AchievementRarity, UserAchievement
+from app.models.achievement import UserStreakStats
+from app.models.error_book import ErrorRecord
 from app.models.execution_intent import ExecutionIntent
 from app.models.execution_record import ExecutionRecord
+from app.models.galaxy import UserNodeStatus
+from app.models.plan import Plan, PlanType
 from app.models.task import Task
+from app.schemas.notification import NotificationCreate
 from app.services.achievement_engine import AchievementEngine, AchievementEvent
+from app.services.notification_service import NotificationService
 
 
 def _utcnow() -> datetime:
@@ -29,6 +36,11 @@ class AchievementEventConsumer:
     GROUP_NAME = "achievement_event_consumer"
     SIGNAL_WINDOW_DAYS = 30
     MIN_SIGNAL_SAMPLE = 3
+    MILESTONE_ACHIEVEMENT_IDS = {
+        "30_day_learner",
+        "knowledge_explorer_50",
+        "sprint_veteran",
+    }
 
     def __init__(self, event_bus: EventBus):
         self.event_bus = event_bus
@@ -207,12 +219,152 @@ class AchievementEventConsumer:
                     except Exception as broadcast_err:
                         logger.warning(f"Failed to broadcast achievement to community: {broadcast_err}")
 
+                await self._maybe_create_milestone_notification(
+                    db=db,
+                    user_id=user_uuid,
+                    event=event,
+                )
                 await self._refresh_achievement_profile_signals(db, user_uuid)
         except Exception as e:
             logger.warning(f"Failed to record cognitive fragment for achievement: {e}")
 
     def stop(self):
         self._running = False
+
+    async def _maybe_create_milestone_notification(self, *, db, user_id: UUID, event: dict):
+        achievement_id = str(event.get("achievement_id") or "").strip()
+        if achievement_id not in self.MILESTONE_ACHIEVEMENT_IDS:
+            return None
+
+        stats = await self._collect_milestone_stats(db, user_id)
+        title, content = self._build_milestone_copy(achievement_id, stats)
+        destination_route = self._build_milestone_route(achievement_id, stats)
+        share_hashtag = "#30天打卡" if achievement_id == "30_day_learner" else "#Sparkle里程碑"
+
+        notification = await NotificationService.create(
+            db,
+            user_id,
+            NotificationCreate(
+                title=title,
+                content=content,
+                type="milestone_notification",
+                data={
+                    "achievement_id": achievement_id,
+                    "achievement_name": event.get("achievement_name") or title,
+                    "milestone_type": achievement_id,
+                    "celebration_value": self._celebration_value_for(achievement_id, stats),
+                    "study_days": stats["study_days"],
+                    "mastered_nodes": stats["mastered_nodes"],
+                    "completed_sprints": stats["completed_sprints"],
+                    "error_count": stats["error_count"],
+                    "share_hashtag": share_hashtag,
+                    "destination_route": destination_route,
+                    "deep_link": self._build_milestone_deep_link(achievement_id, stats),
+                    "source_event": "achievement.unlocked",
+                },
+            ),
+            push_via_websocket=True,
+        )
+        logger.info(f"Created milestone notification for achievement {achievement_id} and user {user_id}")
+        return notification
+
+    async def _collect_milestone_stats(self, db, user_id: UUID) -> dict[str, int]:
+        streak_result = await db.execute(
+            select(UserStreakStats.total_checkin_days).where(UserStreakStats.user_id == user_id)
+        )
+        mastered_nodes_result = await db.execute(
+            select(func.count())
+            .select_from(UserNodeStatus)
+            .where(
+                and_(
+                    UserNodeStatus.user_id == user_id,
+                    UserNodeStatus.is_unlocked.is_(True),
+                    UserNodeStatus.mastery_score >= 30,
+                )
+            )
+        )
+        sprint_result = await db.execute(
+            select(func.count())
+            .select_from(Plan)
+            .where(
+                and_(
+                    Plan.user_id == user_id,
+                    Plan.type == PlanType.SPRINT,
+                    Plan.is_active.is_(False),
+                )
+            )
+        )
+        error_result = await db.execute(
+            select(func.count())
+            .select_from(ErrorRecord)
+            .where(
+                and_(
+                    ErrorRecord.user_id == user_id,
+                    ErrorRecord.is_deleted.is_(False),
+                )
+            )
+        )
+        return {
+            "study_days": int(streak_result.scalar_one_or_none() or 0),
+            "mastered_nodes": int(mastered_nodes_result.scalar_one() or 0),
+            "completed_sprints": int(sprint_result.scalar_one() or 0),
+            "error_count": int(error_result.scalar_one() or 0),
+        }
+
+    def _build_milestone_copy(self, achievement_id: str, stats: dict[str, int]) -> tuple[str, str]:
+        common_tail = (
+            f"这段时间你完成了 {stats['completed_sprints']} 次冲刺备考，"
+            f"掌握了 {stats['mastered_nodes']} 个知识节点，"
+            f"记录了 {stats['error_count']} 道错题。"
+        )
+        if achievement_id == "30_day_learner":
+            return (
+                "你已经坚持学习 30 天了",
+                f"{common_tail} 现在打开 App，就去领取你的 30 天庆祝时刻吧。",
+            )
+        if achievement_id == "knowledge_explorer_50":
+            return (
+                "你已经点亮 50 个知识节点了",
+                f"{common_tail} 你的知识星图正在变得越来越亮。",
+            )
+        return (
+            "你已经完成 2 次冲刺备考了",
+            f"{common_tail} 这一段冲刺节奏，已经被 Sparkle 认真记住。",
+        )
+
+    def _build_milestone_route(self, achievement_id: str, stats: dict[str, int]) -> str:
+        query = urlencode(
+            {
+                "study_days": str(stats["study_days"]),
+                "mastered_nodes": str(stats["mastered_nodes"]),
+                "completed_sprints": str(stats["completed_sprints"]),
+                "error_count": str(stats["error_count"]),
+                "share_hashtag": "#30天打卡" if achievement_id == "30_day_learner" else "#Sparkle里程碑",
+                "celebration_value": str(self._celebration_value_for(achievement_id, stats)),
+            }
+        )
+        return f"/achievements/milestone/{achievement_id}?{query}"
+
+    def _build_milestone_deep_link(self, achievement_id: str, stats: dict[str, int]) -> str:
+        query = urlencode(
+            {
+                "study_days": str(stats["study_days"]),
+                "mastered_nodes": str(stats["mastered_nodes"]),
+                "completed_sprints": str(stats["completed_sprints"]),
+                "error_count": str(stats["error_count"]),
+                "share_hashtag": "#30天打卡" if achievement_id == "30_day_learner" else "#Sparkle里程碑",
+                "celebration_value": str(self._celebration_value_for(achievement_id, stats)),
+            }
+        )
+        return f"sparkle://milestone/{achievement_id}?{query}"
+
+    @staticmethod
+    def _celebration_value_for(achievement_id: str, stats: dict[str, int]) -> int:
+        if achievement_id == "30_day_learner":
+            return 30
+        if achievement_id == "knowledge_explorer_50":
+            return max(50, int(stats["mastered_nodes"]))
+        return max(2, int(stats["completed_sprints"]))
 
     async def _refresh_achievement_profile_signals(self, db, user_id: UUID) -> None:
         from app.core.cache import cache_service

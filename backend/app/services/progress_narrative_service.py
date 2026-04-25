@@ -54,10 +54,32 @@ class WeeklyGrowthNarrative:
     week_end: str
     body: str
     sentences: list[str]
+    highlights: list[str]
+    biggest_improvement: dict[str, Any] | None
+    next_week_suggestion: str
     data_points: dict[str, Any]
     source_counts: dict[str, int]
     is_placeholder: bool
     generated_at: str
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> WeeklyGrowthNarrative:
+        return cls(
+            period=str(payload.get("period") or "本周成长故事"),
+            week_start=str(payload.get("week_start") or ""),
+            week_end=str(payload.get("week_end") or ""),
+            body=str(payload.get("body") or ""),
+            sentences=[str(item) for item in (payload.get("sentences") or []) if str(item).strip()],
+            highlights=[str(item) for item in (payload.get("highlights") or []) if str(item).strip()],
+            biggest_improvement=payload.get("biggest_improvement")
+            if isinstance(payload.get("biggest_improvement"), dict)
+            else None,
+            next_week_suggestion=str(payload.get("next_week_suggestion") or ""),
+            data_points=dict(payload.get("data_points") or {}),
+            source_counts={str(key): int(value or 0) for key, value in dict(payload.get("source_counts") or {}).items()},
+            is_placeholder=bool(payload.get("is_placeholder")),
+            generated_at=str(payload.get("generated_at") or ""),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -66,6 +88,9 @@ class WeeklyGrowthNarrative:
             "week_end": self.week_end,
             "body": self.body,
             "sentences": self.sentences,
+            "highlights": self.highlights,
+            "biggest_improvement": self.biggest_improvement,
+            "next_week_suggestion": self.next_week_suggestion,
             "data_points": self.data_points,
             "source_counts": self.source_counts,
             "is_placeholder": self.is_placeholder,
@@ -186,19 +211,22 @@ class ProgressNarrativeService:
     async def get_weekly_narrative(
         self,
         user_id: str | UUID,
+        week_start: datetime | None = None,
+        week_end: datetime | None = None,
         *,
         force: bool = False,
         now: datetime | None = None,
-    ) -> dict[str, Any]:
+    ) -> WeeklyGrowthNarrative:
         """Return the current Monday-based growth story, generating it once per week."""
         generated_at = now or _utcnow()
-        week_start, week_end = self._week_bounds(generated_at)
+        if week_start is None or week_end is None:
+            week_start, week_end = self._week_bounds(generated_at)
         cache_key = self._weekly_cache_key(user_id, week_start)
 
         if not force:
             cached = await self._cache_get(cache_key)
             if isinstance(cached, dict):
-                return cached
+                return WeeklyGrowthNarrative.from_dict(cached)
 
         narrative = await self.build_weekly_narrative(
             user_id,
@@ -206,9 +234,8 @@ class ProgressNarrativeService:
             week_end=week_end,
             generated_at=generated_at,
         )
-        payload = narrative.to_dict()
-        await self._cache_set(cache_key, payload, ttl=self._weekly_cache_ttl(generated_at, week_end))
-        return payload
+        await self._cache_set(cache_key, narrative.to_dict(), ttl=self._weekly_cache_ttl(generated_at, week_end))
+        return narrative
 
     async def build_weekly_narrative(
         self,
@@ -222,10 +249,26 @@ class ProgressNarrativeService:
         start, end = (week_start, week_end) if week_start and week_end else self._week_bounds(now)
 
         tasks = await self._completed_task_details(user_id, start, end)
-        errors = await self._error_record_summary(user_id, start, end)
+        errors = await self._error_fix_summary(user_id, start, end)
         reflections = await self._reflection_summary(user_id, start, end)
         mastery = await self._mastery_progress_summary(user_id, start, end)
+        biggest_improvement = await self._biggest_mastery_improvement(user_id, start, end)
         achievements = await self.recent_achievement_story_lines(str(user_id), start, end)
+        study_days = await self._study_days_count(user_id, start, end)
+        highlights = self._build_weekly_highlights(
+            tasks=tasks,
+            errors=errors,
+            reflections=reflections,
+            mastery=mastery,
+            study_days=study_days,
+        )
+        next_week_suggestion = self._build_next_week_suggestion(
+            tasks=tasks,
+            errors=errors,
+            mastery=mastery,
+            biggest_improvement=biggest_improvement,
+            study_days=study_days,
+        )
 
         data_points = {
             "tasks_completed": tasks["count"],
@@ -233,32 +276,60 @@ class ProgressNarrativeService:
             "task_minutes": tasks["minutes"],
             "achievement_stories": achievements,
             "achievement_count": len(achievements),
-            "error_records": errors["count"],
+            "error_records": errors["fixed_count"],
+            "errors_fixed": errors["fixed_count"],
+            "error_review_records": errors["reviewed_count"],
             "error_focus": errors["focus"],
             "error_causes": errors["causes"],
             "reflection_records": reflections["count"],
             "reflection_snippets": reflections["snippets"],
             "mastery_delta": round(float(mastery["delta"]), 2),
             "mastery_nodes": mastery["nodes"],
+            "study_days": study_days,
+            "study_days_count": study_days,
+            "highlights": highlights,
+            "biggest_improvement": biggest_improvement,
+            "next_week_suggestion": next_week_suggestion,
         }
         source_counts = {
             "task_completions": int(tasks["count"]),
-            "error_records": int(errors["count"]),
+            "error_records": int(errors["fixed_count"]),
+            "error_review_records": int(errors["reviewed_count"]),
             "reflection_records": int(reflections["count"]),
             "mastery_changes": int(mastery["record_count"]),
             "achievement_unlocks": len(achievements),
+            "study_days": study_days,
         }
 
         has_data = any(source_counts.values()) or float(mastery["delta"]) > 0
         if not has_data:
+            highlights = ["开始留下第一条成长线索。"]
+            next_week_suggestion = "先完成一个最小的学习动作，比如学 15 分钟或记录一道错题。"
             sentences = [
                 "这是你的第一周，先开始吧。",
                 "完成一次学习任务、记录一道错题，或者写下一句复盘后，这里就会开始把你的成长线索连起来。",
             ]
             is_placeholder = True
+        elif study_days == 0:
+            highlights = ["本周暂停学习，下周继续。"]
+            next_week_suggestion = "下周先从一个 15 分钟的小任务重新启动就好。"
+            sentences = [
+                "本周暂停学习，下周继续也完全来得及。",
+                "休息不是退步，回来时从一个 15 分钟的小任务开始就好。",
+            ]
+            is_placeholder = True
         else:
-            sentences = self._compose_weekly_story(tasks, errors, reflections, mastery, achievements)
+            sentences = self._compose_weekly_narrative_sentences(
+                highlights=highlights,
+                biggest_improvement=biggest_improvement,
+                next_week_suggestion=next_week_suggestion,
+                achievements=achievements,
+            )
             is_placeholder = False
+
+        data_points["highlights"] = highlights
+        data_points["biggest_improvement"] = biggest_improvement
+        data_points["next_week_suggestion"] = next_week_suggestion
 
         return WeeklyGrowthNarrative(
             period="本周成长故事",
@@ -266,6 +337,9 @@ class ProgressNarrativeService:
             week_end=(end - timedelta(days=1)).date().isoformat(),
             body="".join(sentences),
             sentences=sentences,
+            highlights=highlights,
+            biggest_improvement=biggest_improvement,
+            next_week_suggestion=next_week_suggestion,
             data_points=data_points,
             source_counts=source_counts,
             is_placeholder=is_placeholder,
@@ -422,7 +496,7 @@ class ProgressNarrativeService:
             "record_count": sum(int(record_count or 0) for _name, _delta, record_count in rows),
         }
 
-    async def _error_record_summary(
+    async def _error_fix_summary(
         self,
         user_id: str | UUID,
         start: datetime,
@@ -434,23 +508,28 @@ class ProgressNarrativeService:
                 ErrorRecord.chapter,
                 ErrorRecord.latest_analysis,
                 ErrorRecord.ai_analysis_summary,
+                ErrorRecord.mastery_level,
             )
             .where(
                 ErrorRecord.user_id == self._uuid_or_original(user_id),
-                ErrorRecord.created_at >= start,
-                ErrorRecord.created_at < end,
+                ErrorRecord.last_reviewed_at.is_not(None),
+                ErrorRecord.last_reviewed_at >= start,
+                ErrorRecord.last_reviewed_at < end,
                 ErrorRecord.is_deleted.is_(False),
             )
-            .order_by(desc(ErrorRecord.created_at))
+            .order_by(desc(ErrorRecord.last_reviewed_at))
             .limit(20)
         )
         rows = result.all()
         focus_counter: Counter[str] = Counter()
         causes: list[str] = []
-        for subject_code, chapter, latest_analysis, ai_analysis_summary in rows:
+        fixed_count = 0
+        for subject_code, chapter, latest_analysis, ai_analysis_summary, mastery_level in rows:
             focus = self._clean_text(chapter) or self._clean_text(subject_code)
             if focus:
                 focus_counter[focus] += 1
+            if float(mastery_level or 0.0) >= 0.8:
+                fixed_count += 1
             if isinstance(latest_analysis, dict):
                 cause = (
                     self._clean_text(latest_analysis.get("root_cause"))
@@ -463,10 +542,68 @@ class ProgressNarrativeService:
             if summary and summary not in causes:
                 causes.append(self._shorten(summary, 42))
         return {
-            "count": len(rows),
+            "fixed_count": fixed_count,
+            "reviewed_count": len(rows),
             "focus": [focus for focus, _count in focus_counter.most_common(3)],
             "causes": causes[:3],
         }
+
+    async def _biggest_mastery_improvement(
+        self,
+        user_id: str | UUID,
+        start: datetime,
+        end: datetime,
+    ) -> dict[str, Any] | None:
+        result = await self.db.execute(
+            select(
+                KnowledgeNode.name,
+                StudyRecord.initial_mastery,
+                StudyRecord.mastery_delta,
+            )
+            .join(KnowledgeNode, KnowledgeNode.id == StudyRecord.node_id)
+            .where(
+                StudyRecord.user_id == user_id,
+                StudyRecord.created_at >= start,
+                StudyRecord.created_at < end,
+                StudyRecord.mastery_delta > 0,
+            )
+            .order_by(StudyRecord.created_at.asc())
+        )
+        aggregates: dict[str, dict[str, Any]] = {}
+        for name, initial_mastery, mastery_delta in result.all():
+            node_name = self._clean_text(name)
+            delta = float(mastery_delta or 0.0)
+            if not node_name or delta <= 0:
+                continue
+            bucket = aggregates.setdefault(
+                node_name,
+                {
+                    "node_name": node_name,
+                    "_before_raw": None,
+                    "_delta_raw": 0.0,
+                },
+            )
+            if bucket["_before_raw"] is None and initial_mastery is not None:
+                bucket["_before_raw"] = float(initial_mastery)
+            bucket["_delta_raw"] += delta
+
+        best: dict[str, Any] | None = None
+        for bucket in aggregates.values():
+            before_raw = float(bucket["_before_raw"] or 0.0)
+            after_raw = before_raw + float(bucket["_delta_raw"] or 0.0)
+            before_mastery = self._normalize_mastery_percent(before_raw)
+            after_mastery = self._normalize_mastery_percent(after_raw)
+            candidate = {
+                "node_name": bucket["node_name"],
+                "before_mastery": before_mastery,
+                "after_mastery": after_mastery,
+                "delta": round(after_mastery - before_mastery, 1),
+            }
+            if candidate["delta"] <= 0:
+                continue
+            if best is None or candidate["delta"] > best["delta"]:
+                best = candidate
+        return best
 
     async def _reflection_summary(
         self,
@@ -618,6 +755,17 @@ class ProgressNarrativeService:
             "previous_contributions": int(prev_claims.scalar() or 0) + int(prev_shares.scalar() or 0),
         }
 
+    async def _study_days_count(self, user_id: str | UUID, start: datetime, end: datetime) -> int:
+        """Count distinct days with study activity in the given period."""
+        result = await self.db.execute(
+            select(func.count(func.distinct(func.date(StudyRecord.created_at)))).where(
+                StudyRecord.user_id == user_id,
+                StudyRecord.created_at >= start,
+                StudyRecord.created_at < end,
+            )
+        )
+        return int(result.scalar() or 0)
+
     async def _streak_info(self, user_id: str) -> dict[str, int]:
         result = await self.db.execute(select(UserStreakStats).where(UserStreakStats.user_id == user_id))
         stats = result.scalar_one_or_none()
@@ -715,6 +863,78 @@ class ProgressNarrativeService:
 
         return sentences[:4]
 
+    def _build_weekly_highlights(
+        self,
+        *,
+        tasks: dict[str, Any],
+        errors: dict[str, Any],
+        reflections: dict[str, Any],
+        mastery: dict[str, Any],
+        study_days: int,
+    ) -> list[str]:
+        highlights: list[str] = []
+
+        if study_days > 0:
+            highlights.append(f"这周你学习了 {study_days} 天。")
+        if mastery["nodes"]:
+            highlights.append(f"掌握了 {self._format_list(mastery['nodes'])} 等知识点。")
+        elif int(mastery["node_count"]) > 0:
+            highlights.append(f"有 {int(mastery['node_count'])} 个知识点的掌握度继续往前推。")
+        if int(errors["fixed_count"]) > 0:
+            highlights.append(f"还修复了 {int(errors['fixed_count'])} 个反复出现的错误。")
+        if len(highlights) < 3 and int(tasks["count"]) > 0:
+            highlights.append(f"完成了 {int(tasks['count'])} 个任务。")
+        if len(highlights) < 3 and float(mastery["delta"]) > 0:
+            highlights.append(f"累计掌握度提升了 {float(mastery['delta']):.1f}。")
+        if len(highlights) < 3 and int(reflections["count"]) > 0:
+            highlights.append(f"还做了 {int(reflections['count'])} 次复盘，把经验留了下来。")
+        if not highlights:
+            highlights.append("这周先把节奏慢下来，也是在给下次出发留空间。")
+        return highlights[:3]
+
+    def _build_next_week_suggestion(
+        self,
+        *,
+        tasks: dict[str, Any],
+        errors: dict[str, Any],
+        mastery: dict[str, Any],
+        biggest_improvement: dict[str, Any] | None,
+        study_days: int,
+    ) -> str:
+        if study_days == 0:
+            return "下周先从一个 15 分钟的小任务重新启动就好。"
+        if errors["focus"]:
+            return f"优先把 {self._format_list(errors['focus'])} 再过一轮，先清掉最容易反复的卡点。"
+        if biggest_improvement and biggest_improvement.get("node_name"):
+            return f"继续把 {biggest_improvement['node_name']} 相关的核心概念吃透。"
+        if mastery["nodes"]:
+            return f"把 {self._format_list(mastery['nodes'])} 这条线继续推进到相邻概念。"
+        if tasks["tags"]:
+            return f"围绕 {self._format_list(tasks['tags'])} 再完成一轮核心任务。"
+        return "用一次任务、一次复盘，把下周的学习节奏重新稳住。"
+
+    def _compose_weekly_narrative_sentences(
+        self,
+        *,
+        highlights: list[str],
+        biggest_improvement: dict[str, Any] | None,
+        next_week_suggestion: str,
+        achievements: list[str],
+    ) -> list[str]:
+        sentences = list(highlights[:3])
+        if biggest_improvement and biggest_improvement.get("node_name"):
+            sentences.append(
+                "最大的进步："
+                f"{biggest_improvement['node_name']} 的掌握度从 "
+                f"{self._format_percent(biggest_improvement['before_mastery'])} 提升到了 "
+                f"{self._format_percent(biggest_improvement['after_mastery'])}。"
+            )
+        elif achievements:
+            sentences.append(achievements[0])
+        if next_week_suggestion:
+            sentences.append(f"下周目标：{next_week_suggestion}")
+        return sentences[:5]
+
     def _primary_focus(
         self,
         tasks: dict[str, Any],
@@ -745,6 +965,15 @@ class ProgressNarrativeService:
     def _weekly_cache_ttl(self, now: datetime, week_end: datetime) -> int:
         expires_at = week_end + self.WEEKLY_CACHE_GRACE
         return max(int((expires_at - now).total_seconds()), 3600)
+
+    def _normalize_mastery_percent(self, value: float) -> float:
+        normalized = float(value or 0.0)
+        if normalized <= 1.0:
+            normalized *= 100.0
+        return round(max(normalized, 0.0), 1)
+
+    def _format_percent(self, value: float) -> str:
+        return f"{self._normalize_mastery_percent(value):.0f}%"
 
     async def _cache_get(self, key: str) -> Any | None:
         if self.cache is not None:

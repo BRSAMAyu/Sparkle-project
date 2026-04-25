@@ -93,6 +93,7 @@ class AchievementEvent:
 
     TASK_COMPLETED = "task_completed"
     DAILY_CHECKIN = "daily_checkin"
+    DAILY_STUDY = "daily_study"
     NODE_UNLOCKED = "node_unlocked"
     NODE_MASTERED = "node_mastered"
     STUDY_MINUTES_ACCUMULATED = "study_minutes_accumulated"
@@ -129,6 +130,7 @@ class AchievementEngine:
         "NODES_UNLOCKED",
         "PERFECTIONIST",
         "PLANS_TOTAL",
+        "REGISTRATION_STUDY_MILESTONE",
         "SECTOR_MASTERY",
         "SPEED_UNLOCK",
         "SPRINTS_STREAK",
@@ -408,7 +410,10 @@ class AchievementEngine:
                     if trigger_code in ["TASKS_TOTAL", "TASKS_COMPLETED", "WEEKEND_WARRIOR"]:
                         relevant.append(achievement)
                 case AchievementEvent.DAILY_CHECKIN:
-                    if trigger_code == "STREAK_DAYS":
+                    if trigger_code in ("STREAK_DAYS", "REGISTRATION_STUDY_MILESTONE"):
+                        relevant.append(achievement)
+                case AchievementEvent.DAILY_STUDY:
+                    if trigger_code in ("STREAK_DAYS", "REGISTRATION_STUDY_MILESTONE"):
                         relevant.append(achievement)
                 case AchievementEvent.NODE_UNLOCKED:
                     if trigger_code in [
@@ -549,6 +554,34 @@ class AchievementEngine:
                 current = stats.current_streak
                 return (min(current / target, 1.0), current, target)
 
+            # 注册后学习里程碑（30/60/90天）
+            case "REGISTRATION_STUDY_MILESTONE":
+                reg_days = config.get("registration_days", 30)
+                study_days_target = config.get("study_days", 20)
+                # 检查注册天数
+                from app.models.user import User
+
+                user = await self.db.get(User, user_id)
+                if user is None:
+                    return (0.0, 0, reg_days)
+                created_at = user.created_at
+                if created_at is None:
+                    return (0.0, 0, reg_days)
+                registration_day = self._coerce_activity_date(created_at)
+                current_day = self._coerce_activity_date(kwargs.get("activity_date")) or _utcnow().date()
+                if registration_day is None:
+                    return (0.0, 0, reg_days)
+                registration_day_index = max((current_day - registration_day).days + 1, 0)
+                if registration_day_index < reg_days:
+                    return (0.0, registration_day_index, reg_days)
+                # 检查学习天数
+                stats = await self._get_or_create_streak_stats(user_id)
+                study_days = int(stats.total_checkin_days or 0)
+                if study_days < study_days_target:
+                    progress = study_days / study_days_target
+                    return (min(progress, 1.0), study_days, study_days_target)
+                return (1.0, study_days, study_days_target)
+
             # 任务完成数量
             case "TASKS_TOTAL":
                 from app.models.task import Task, TaskStatus
@@ -611,7 +644,9 @@ class AchievementEngine:
             # 知识点掌握数量
             case "NODES_MASTERED":
                 target = config.get("count", 50)
-                mastery_threshold = config.get("mastery_threshold", 80)
+                mastery_threshold = float(config.get("mastery_threshold", 80) or 0)
+                if 0 < mastery_threshold <= 1:
+                    mastery_threshold *= 100
                 query = (
                     select(func.count())
                     .select_from(UserNodeStatus)
@@ -624,7 +659,9 @@ class AchievementEngine:
             # 领域精通
             case "SECTOR_MASTERY":
                 sector = config.get("sector")
-                mastery_threshold = config.get("percent", 80)
+                mastery_threshold = float(config.get("percent", 80) or 0)
+                if 0 < mastery_threshold <= 1:
+                    mastery_threshold *= 100
                 target = config.get("count", 20)
                 query = (
                     select(func.count())
@@ -1686,6 +1723,7 @@ class AchievementEngine:
         # 只有核心活动才更新连胜
         if event_type not in [
             AchievementEvent.DAILY_CHECKIN,
+            AchievementEvent.DAILY_STUDY,
             AchievementEvent.TASK_COMPLETED,
             AchievementEvent.NODE_MASTERED,
         ]:

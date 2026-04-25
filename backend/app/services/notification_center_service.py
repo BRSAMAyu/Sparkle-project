@@ -5,13 +5,15 @@ Provides unified access to system notifications and intervention requests.
 """
 
 from __future__ import annotations
-from datetime import timezone, datetime
+
 import re
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
 from loguru import logger
-from sqlalchemy import and_, desc, func, or_, select, update as sa_update
+from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.card_protocol import InterventionAcceptanceStatus, InterventionRecord
@@ -19,13 +21,15 @@ from app.models.intervention import InterventionRequest
 from app.models.notification import Notification
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
 from app.models.push_delivery_record import PushDeliveryRecord
-from app.services.push_delivery_service import PushDeliveryService
-from app.services.intervention_record_service import InterventionRecordService
+from app.schemas.notification import NotificationCreate
 from app.schemas.unified_notification import (
     NotificationHistoryFilters,
     NotificationPreferencesUpdate,
     UnifiedNotificationResponse,
 )
+from app.services.intervention_record_service import InterventionRecordService
+from app.services.notification_service import NotificationService
+from app.services.push_delivery_service import PushDeliveryService
 
 
 def _escape_like(value: str) -> str:
@@ -34,7 +38,13 @@ def _escape_like(value: str) -> str:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+SPACED_REPETITION_NOTIFICATION_TYPE = "spaced_repetition_reminder"
+SPACED_REPETITION_CATEGORY = "spaced_repetition"
+SPACED_REPETITION_MIN_COOLDOWN_DAYS = 1
+SPACED_REPETITION_ESTIMATED_MINUTES = 10
 
 
 class NotificationCenterService:
@@ -44,6 +54,92 @@ class NotificationCenterService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def send_spaced_repetition_reminder(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        node_name: str,
+        interval_days: int,
+        mastery: float,
+        estimated_minutes: int = SPACED_REPETITION_ESTIMATED_MINUTES,
+        now: datetime | None = None,
+    ) -> Notification | None:
+        """Create and push an Aurora spaced-repetition reminder for one Galaxy node."""
+        reference_time = now or _utcnow()
+        if await self.has_recent_spaced_repetition_reminder(
+            user_id=user_id,
+            node_id=node_id,
+            now=reference_time,
+        ):
+            return None
+
+        display_name = (node_name or "这个知识点").strip()
+        title = "Aurora 复习提醒"
+        content = (
+            f"{display_name}已经 {interval_days} 天没复习了，"
+            f"今天花 {estimated_minutes} 分钟巩固一下是最佳时机。"
+        )
+        route = f"/galaxy?nodeId={node_id}"
+
+        return await NotificationService.create(
+            self.db,
+            user_id,
+            NotificationCreate(
+                title=title,
+                content=content,
+                type=SPACED_REPETITION_NOTIFICATION_TYPE,
+                data={
+                    "source_type": "push",
+                    "category": SPACED_REPETITION_CATEGORY,
+                    "node_id": str(node_id),
+                    "node_name": display_name,
+                    "mastery": round(float(mastery), 4),
+                    "interval_days": interval_days,
+                    "estimated_minutes": estimated_minutes,
+                    "deep_link": route,
+                    "route": route,
+                    "primary_action": {
+                        "label": "开始复习",
+                        "route": route,
+                        "action_type": "galaxy_node_review",
+                        "payload": {
+                            "node_id": str(node_id),
+                            "review_mode": "spaced_repetition",
+                        },
+                    },
+                },
+            ),
+            push_via_websocket=True,
+        )
+
+    async def has_recent_spaced_repetition_reminder(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        now: datetime | None = None,
+        min_interval_days: int = SPACED_REPETITION_MIN_COOLDOWN_DAYS,
+    ) -> bool:
+        """Return True if this node already received a recent review reminder."""
+        reference_time = now or _utcnow()
+        since = reference_time - timedelta(days=max(1, min_interval_days))
+        result = await self.db.execute(
+            select(Notification)
+            .where(
+                Notification.user_id == user_id,
+                Notification.type == SPACED_REPETITION_NOTIFICATION_TYPE,
+                Notification.created_at >= since,
+                Notification.deleted_at.is_(None),
+            )
+            .order_by(desc(Notification.created_at))
+        )
+        target_node_id = str(node_id)
+        for notification in result.scalars().all():
+            if str((notification.data or {}).get("node_id") or "") == target_node_id:
+                return True
+        return False
 
     async def get_unified_notifications(
         self, user_id: UUID, skip: int = 0, limit: int = 50, unread_only: bool = False, source_type: str | None = None

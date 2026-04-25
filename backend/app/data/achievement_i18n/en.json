@@ -91,6 +91,18 @@
     "name": "Speed Learner",
     "description": "Unlock 20 new knowledge nodes within 24 hours"
   },
+  "30_day_learner": {
+    "name": "30-Day Learner",
+    "description": "Log at least 20 study days within your first 30 days"
+  },
+  "knowledge_explorer_50": {
+    "name": "Knowledge Explorer",
+    "description": "Reach 50 knowledge nodes with mastery above 0.3"
+  },
+  "sprint_veteran": {
+    "name": "Sprint Veteran",
+    "description": "Complete at least 2 sprint prep cycles"
+  },
   "weekend_warrior": {
     "name": "Weekend Warrior",
     "description": "Have study records on four consecutive weekends"

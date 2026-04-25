@@ -353,6 +353,7 @@ class ExamSprintIntakeService:
             "exam_sprint_intake": {
                 "selected_pack": selected_pack.model_dump(mode="json"),
                 "goal_model": goal_model.model_dump(mode="json"),
+                "sprint_mode": str(sprint_policy.get("sprint_mode") or "standard_exam_sprint"),
                 "study_time_minutes": request.daily_study_minutes,
                 "weak_chapters": list(request.baseline.weak_chapters),
             },
