@@ -15,6 +15,7 @@ import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
+import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_phase_provider.dart';
@@ -26,14 +27,23 @@ import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/widgets/card_picker_sheet.dart';
 
-class PlanDetailScreen extends ConsumerWidget {
+class PlanDetailScreen extends ConsumerStatefulWidget {
   const PlanDetailScreen({required this.planId, super.key});
   final String planId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlanDetailScreen> createState() => _PlanDetailScreenState();
+}
+
+class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
+  bool _completionCheckInFlight = false;
+  String? _lastCompletionProbeSignature;
+  final Set<String> _navigatedCompletionPlanIds = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final planAsync = ref.watch(planDetailProvider(planId));
+    final planAsync = ref.watch(planDetailProvider(widget.planId));
 
     return DefaultTabController(
       length: 2,
@@ -78,17 +88,25 @@ class PlanDetailScreen extends ConsumerWidget {
           ),
         ),
         child: planAsync.when(
-          data: (plan) => TabBarView(
-            children: [
-              _PlanOverviewTab(plan: plan),
-              _PlanProgressTab(plan: plan),
-            ],
-          ),
+          data: (plan) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              unawaited(
+                _maybeOpenSprintCompletion(plan, _mergedPlanTasks(plan)),
+              );
+            });
+            return TabBarView(
+              children: [
+                _PlanOverviewTab(plan: plan),
+                _PlanProgressTab(plan: plan),
+              ],
+            );
+          },
           loading: () => const Center(child: LoadingIndicator()),
           error: (err, _) => CustomErrorWidget.page(
             context: context,
             message: l10n.planLoadFailed(err.toString()),
-            onRetry: () => ref.refresh(planDetailProvider(planId)),
+            onRetry: () => ref.refresh(planDetailProvider(widget.planId)),
           ),
         ),
       ),
@@ -119,6 +137,91 @@ class PlanDetailScreen extends ConsumerWidget {
       onGenerateCard: (payload) =>
           SharePosterService().generatePoster(context, payload),
     );
+  }
+
+  Future<void> _maybeOpenSprintCompletion(
+    PlanModel plan,
+    List<TaskModel> tasks,
+  ) async {
+    if (!mounted ||
+        _completionCheckInFlight ||
+        _navigatedCompletionPlanIds.contains(plan.id) ||
+        !_isSevenDaySprintFullyComplete(plan, tasks)) {
+      return;
+    }
+
+    final signature = _completionSignature(plan, tasks);
+    if (_lastCompletionProbeSignature == signature) return;
+    _lastCompletionProbeSignature = signature;
+
+    _completionCheckInFlight = true;
+    try {
+      final result = await ref
+          .read(examSprintRepositoryProvider)
+          .checkSprintCompletion(plan.id);
+      if (!mounted || !result.completed || result.summary == null) {
+        return;
+      }
+
+      _navigatedCompletionPlanIds.add(plan.id);
+      final query = <String, String>{
+        'plan_id': plan.id,
+        if (plan.subject != null && plan.subject!.trim().isNotEmpty)
+          'subject': plan.subject!.trim(),
+      };
+      final uri = Uri(
+        path: '/exam-sprint/completion',
+        queryParameters: query,
+      );
+      unawaited(
+        context.push(
+          uri.toString(),
+          extra: {
+            'plan_id': plan.id,
+            'subject': plan.subject,
+            'summary': result.summary,
+          },
+        ),
+      );
+    } catch (e) {
+      debugPrint('Sprint completion check failed: $e');
+    } finally {
+      _completionCheckInFlight = false;
+    }
+  }
+
+  bool _isSevenDaySprintFullyComplete(
+    PlanModel plan,
+    List<TaskModel> tasks,
+  ) {
+    if (plan.type != PlanType.sprint || tasks.isEmpty) return false;
+    if (tasks.any((task) => task.syncStatus != TaskSyncStatus.synced)) {
+      return false;
+    }
+
+    final days = tasks.map(_taskDay).toSet();
+    if (Set<int>.from(List<int>.generate(7, (index) => index + 1))
+        .difference(days)
+        .isNotEmpty) {
+      return false;
+    }
+
+    return tasks.every((task) => task.status == TaskStatus.completed);
+  }
+
+  String _completionSignature(PlanModel plan, List<TaskModel> tasks) {
+    final sorted = [...tasks]..sort((a, b) => a.id.compareTo(b.id));
+    final taskPart = sorted
+        .map(
+          (task) => [
+            task.id,
+            task.status.name,
+            task.syncStatus.name,
+            task.updatedAt.toIso8601String(),
+          ].join(':'),
+        )
+        .join('|');
+    return '${plan.id}:$taskPart';
   }
 }
 
@@ -656,10 +759,15 @@ class _TodayTaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = _taskStatusColor(task.status);
     final isLast24hTask = _isLast24hTask(task);
+    final isTargetedRepair = _isTargetedRepairTask(task);
+    final accentColor = isTargetedRepair ? DS.warning : statusColor;
 
     return GraphiteCardSurface(
+      key: ValueKey('plan-task-card-${task.id}'),
       onTap: () => context.push('/tasks/${task.id}'),
-      borderColor: statusColor.withValues(alpha: 0.32),
+      borderColor: accentColor.withValues(alpha: 0.36),
+      backgroundColor:
+          isTargetedRepair ? DS.warning.withValues(alpha: 0.08) : null,
       surfaceRole: SparkleSurfaceRole.card,
       padding: const EdgeInsets.all(DS.spacing18),
       child: Column(
@@ -673,19 +781,29 @@ class _TodayTaskCard extends StatelessWidget {
                 height: 34,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
+                  color: accentColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(17),
                 ),
                 child: task.status == TaskStatus.completed
-                    ? Icon(Icons.check_rounded, color: statusColor, size: 20)
-                    : Text(
-                        '$sequence',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: statusColor,
+                    ? Icon(Icons.check_rounded, color: accentColor, size: 20)
+                    : isTargetedRepair
+                        ? Text(
+                            '⚠️',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(height: 1),
+                          )
+                        : Text(
+                            '$sequence',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  color: accentColor,
                                   fontWeight: FontWeight.w800,
                                 ),
-                      ),
+                          ),
               ),
               const SizedBox(width: DS.spacing12),
               Expanded(
@@ -728,6 +846,12 @@ class _TodayTaskCard extends StatelessWidget {
                 _TaskMetaPill(
                   icon: Icons.block_rounded,
                   label: '不学新内容',
+                  color: DS.warning,
+                ),
+              if (isTargetedRepair)
+                _TaskMetaPill(
+                  icon: Icons.warning_amber_rounded,
+                  label: '错题补强',
                   color: DS.warning,
                 ),
             ],
@@ -822,6 +946,8 @@ class _CompactPlanTaskTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = _taskStatusColor(task.status);
+    final isTargetedRepair = _isTargetedRepairTask(task);
+    final accentColor = isTargetedRepair ? DS.warning : statusColor;
 
     return InkWell(
       onTap: () => context.push('/tasks/${task.id}'),
@@ -834,17 +960,27 @@ class _CompactPlanTaskTile extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  _taskStatusIcon(task.status),
-                  size: 18,
-                  color: statusColor,
-                ),
+                if (isTargetedRepair)
+                  Text(
+                    '⚠️',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(height: 1.2),
+                  )
+                else
+                  Icon(
+                    _taskStatusIcon(task.status),
+                    size: 18,
+                    color: accentColor,
+                  ),
                 const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: Text(
                     task.title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: DS.fontWeightBold,
+                          color: isTargetedRepair ? DS.warning : null,
                           height: 1.35,
                         ),
                   ),
@@ -1123,6 +1259,19 @@ bool _isLast24hTask(TaskModel task) {
   return task.tags.any(
     (tag) => tag == 'last_24h_cram' || tag == 'exam_sprint:last_24h_cram',
   );
+}
+
+bool _isTargetedRepairTask(TaskModel task) {
+  final guide = task.guideJson ?? const <String, dynamic>{};
+  if ('${guide['task_kind'] ?? ''}'.trim() == 'targeted_repair') {
+    return true;
+  }
+  final dailySpec = guide['daily_spec'];
+  if (dailySpec is Map<String, dynamic> &&
+      '${dailySpec['task_kind'] ?? ''}'.trim() == 'targeted_repair') {
+    return true;
+  }
+  return task.tags.any((tag) => tag == 'targeted_repair');
 }
 
 List<_PlanDayGroup> _buildPlanDayGroups(List<TaskModel> tasks) {

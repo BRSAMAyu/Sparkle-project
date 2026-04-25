@@ -407,6 +407,9 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           // retryToken: updatedTask.retryToken, // Repo needs to return this or we assume updatedTask has it
         ),
       );
+      if (updatedTask.planId != null) {
+        _ref.invalidate(planDetailProvider(updatedTask.planId!));
+      }
 
       final linkedPrediction = await _ref
           .read(predictionAttributionServiceProvider)
@@ -494,6 +497,9 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           syncStatus: TaskSyncStatus.synced,
         ),
       );
+      if (updatedTask.planId != null) {
+        _ref.invalidate(planDetailProvider(updatedTask.planId!));
+      }
       final linkedPrediction = await _ref
           .read(predictionAttributionServiceProvider)
           .consumeForExecution(

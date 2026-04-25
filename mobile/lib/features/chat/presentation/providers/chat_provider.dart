@@ -723,6 +723,75 @@ class ChatNotifier extends StateNotifier<ChatState> {
     state = state.copyWith(messages: [welcome]);
   }
 
+  void showDailyStartupMessage(
+    String content, {
+    required String planId,
+    required String dateKey,
+  }) {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return;
+    if (state.messages.any((message) => message.role == MessageRole.user)) {
+      return;
+    }
+
+    final safePlanId = planId.replaceAll(RegExp('[^a-zA-Z0-9_-]'), '_');
+    final messageId = 'daily_startup_${safePlanId}_$dateKey';
+    if (state.messages.any((message) => message.id == messageId)) {
+      return;
+    }
+
+    final retainedMessages = state.messages
+        .where(
+          (message) =>
+              !message.id.startsWith('daily_startup_') &&
+              !message.id.startsWith('welcome_'),
+        )
+        .toList(growable: false);
+    final startup = ChatMessageModel(
+      id: messageId,
+      conversationId: state.conversationId ?? 'daily_startup',
+      role: MessageRole.assistant,
+      content: trimmed,
+      createdAt: DateTime.now(),
+    );
+    state = state.copyWith(messages: [...retainedMessages, startup]);
+  }
+
+  void showComebackMessage(
+    String content, {
+    required String planId,
+    required int daysAway,
+  }) {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return;
+    if (state.messages.any((message) => message.role == MessageRole.user)) {
+      return;
+    }
+
+    final safePlanId = planId.replaceAll(RegExp('[^a-zA-Z0-9_-]'), '_');
+    final messageId = 'comeback_${safePlanId}_$daysAway';
+    if (state.messages.any((message) => message.id == messageId)) {
+      return;
+    }
+
+    final retainedMessages = state.messages
+        .where(
+          (message) =>
+              !message.id.startsWith('comeback_') &&
+              !message.id.startsWith('daily_startup_') &&
+              !message.id.startsWith('welcome_'),
+        )
+        .toList(growable: false);
+    final comeback = ChatMessageModel(
+      id: messageId,
+      conversationId: state.conversationId ?? 'comeback',
+      role: MessageRole.assistant,
+      content: trimmed,
+      createdAt: DateTime.now(),
+    );
+    state = state.copyWith(messages: [...retainedMessages, comeback]);
+  }
+
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
   Future<void> sendMessage(
     String content, {

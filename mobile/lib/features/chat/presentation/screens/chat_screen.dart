@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
@@ -15,6 +16,8 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
+import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
+import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
 import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
@@ -40,6 +43,7 @@ import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
@@ -71,6 +75,7 @@ class ChatScreen extends ConsumerStatefulWidget {
     this.initialUserMessage,
     this.fromModelingComplete = false,
     this.modelingOutput,
+    this.initialExtraContext,
   });
 
   final String? initialPrompt;
@@ -87,6 +92,7 @@ class ChatScreen extends ConsumerStatefulWidget {
   final String? initialUserMessage;
   final bool fromModelingComplete;
   final Map<String, dynamic>? modelingOutput;
+  final Map<String, dynamic>? initialExtraContext;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -108,6 +114,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _dispatchedInitialUserMessage;
   String? _hydratedConversationId;
   String? _hydratedChatOpeningConversationId;
+  String? _hydratedComebackSignature;
+  String? _hydratedDailyStartupKey;
 
   @override
   void initState() {
@@ -242,7 +250,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialPrompt != widget.initialPrompt ||
         oldWidget.initialChatMode != widget.initialChatMode ||
-        oldWidget.initialConversationId != widget.initialConversationId) {
+        oldWidget.initialConversationId != widget.initialConversationId ||
+        oldWidget.initialExtraContext != widget.initialExtraContext) {
       unawaited(_hydrateInitialConversationAndPrompt());
     }
   }
@@ -262,7 +271,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _queueInitialPromptDispatch();
     _queueInitialUserMessageDispatch();
     _injectWelcomeMessageIfNeeded();
-    await _hydrateChatOpeningIfNeeded();
+    final hydratedComeback = await _hydrateComebackContextIfNeeded();
+    if (hydratedComeback) {
+      return;
+    }
+    final hydratedDailyStartup = await _hydrateDailyStartupIfNeeded();
+    if (!hydratedDailyStartup) {
+      await _hydrateChatOpeningIfNeeded();
+    }
   }
 
   void _queueInitialUserMessageDispatch() {
@@ -331,6 +347,162 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  Future<bool> _hydrateDailyStartupIfNeeded() async {
+    if (!mounted) {
+      return false;
+    }
+    if (widget.initialAiMessage?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (widget.initialPrompt?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (widget.initialUserMessage?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (!_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+      return false;
+    }
+
+    ExamSprintDashboardData? sprint;
+    try {
+      sprint = await ref
+          .read(examSprintDashboardProvider.future)
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      return false;
+    }
+    if (!mounted || sprint == null || sprint.planId.trim().isEmpty) {
+      return false;
+    }
+
+    final sprintPlanId = sprint.planId.trim();
+    final selectedPlanId = ref.read(activePlanProvider)?.trim();
+    if (selectedPlanId != null &&
+        selectedPlanId.isNotEmpty &&
+        selectedPlanId != sprintPlanId) {
+      return false;
+    }
+
+    if (selectedPlanId == null || selectedPlanId.isEmpty) {
+      await ref.read(chatProvider.notifier).switchPlanSession(sprintPlanId);
+      if (!mounted ||
+          !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+        return false;
+      }
+      ref.read(activePlanProvider.notifier).selectPlan(sprintPlanId);
+    }
+
+    final todayKey = _dateKey(DateTime.now());
+    final storageKey = 'aurora_daily_startup:$sprintPlanId:$todayKey';
+    if (_hydratedDailyStartupKey == storageKey) {
+      return true;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(storageKey) ?? false) {
+      return false;
+    }
+
+    try {
+      final startup = await ref
+          .read(auroraDailyStartupRepositoryProvider)
+          .getDailyStartup(planId: sprintPlanId);
+      if (!mounted ||
+          startup.message.trim().isEmpty ||
+          !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+        return false;
+      }
+      ref.read(chatProvider.notifier).showDailyStartupMessage(
+            startup.message,
+            planId: sprintPlanId,
+            dateKey: todayKey,
+          );
+      await prefs.setBool(storageKey, true);
+      _hydratedDailyStartupKey = storageKey;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _hydrateComebackContextIfNeeded() async {
+    if (!mounted) {
+      return false;
+    }
+    if (widget.initialAiMessage?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (widget.initialPrompt?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (widget.initialUserMessage?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (!_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+      return false;
+    }
+
+    AuroraComebackContext comeback;
+    try {
+      comeback = await ref
+          .read(auroraDailyStartupRepositoryProvider)
+          .getComebackContext()
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      return false;
+    }
+    if (!mounted || !comeback.hasContent) {
+      return false;
+    }
+
+    final signature =
+        '${comeback.planId}:${comeback.daysAway}:${comeback.daysRemaining}';
+    if (_hydratedComebackSignature == signature) {
+      return true;
+    }
+
+    final selectedPlanId = ref.read(activePlanProvider)?.trim();
+    final comebackPlanId = comeback.planId.trim();
+    if ((selectedPlanId == null || selectedPlanId.isEmpty) &&
+        comebackPlanId.isNotEmpty) {
+      await ref.read(chatProvider.notifier).switchPlanSession(comebackPlanId);
+      if (!mounted ||
+          !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+        return false;
+      }
+      ref.read(activePlanProvider.notifier).selectPlan(comebackPlanId);
+    }
+
+    if (!_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+      return false;
+    }
+
+    ref.read(chatProvider.notifier).showComebackMessage(
+          comeback.message,
+          planId: comebackPlanId,
+          daysAway: comeback.daysAway,
+        );
+    _hydratedComebackSignature = signature;
+    return true;
+  }
+
+  bool _canShowAuroraOpenerOver(List<ChatMessageModel> messages) {
+    if (messages.any((message) => message.role == MessageRole.user)) {
+      return false;
+    }
+    return messages.every(
+      (message) =>
+          message.id.startsWith('comeback_') ||
+          message.id.startsWith('daily_startup_') ||
+          message.id.startsWith('welcome_'),
+    );
+  }
+
+  String _dateKey(DateTime date) => '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
   void _queueInitialPromptDispatch() {
     final prompt = widget.initialPrompt?.trim();
     if (prompt == null ||
@@ -351,7 +523,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (initialMode != null && initialMode.isNotEmpty) {
         ref.read(chatModeProvider.notifier).setFromApiValue(initialMode);
       }
-      await ref.read(chatProvider.notifier).sendMessage(nextPrompt);
+      await ref.read(chatProvider.notifier).sendMessage(
+            nextPrompt,
+            extraContextOverrides: widget.initialExtraContext,
+          );
     });
   }
 
@@ -1030,7 +1205,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _showWorkingMemorySource(String evidenceToken) {
     final messages = ref.read(chatProvider).messages;
-    final matched = messages.where((message) => message.id == evidenceToken).toList();
+    final matched =
+        messages.where((message) => message.id == evidenceToken).toList();
     if (matched.isEmpty) {
       AppFeedback.info(context, '原始 turn 暂时不可见');
       return;
