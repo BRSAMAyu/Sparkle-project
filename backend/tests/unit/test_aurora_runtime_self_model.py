@@ -134,3 +134,162 @@ async def test_user_correction_increments_counter_and_degrades_context_hit_rate(
     assert summary["harness_effectiveness"]["user_corrections_count"] == 1
     assert summary["harness_effectiveness"]["context_hit_rate"] < DEFAULT_STRATEGY_CONFIDENCE
     assert summary["strategy_confidence"] < DEFAULT_STRATEGY_CONFIDENCE
+
+
+# ── F21: Sprint Self-Model Daily Recap ──────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_daily_recap_working_tier_resets_failure_streak() -> None:
+    """completion_rate >= 0.8 → task_shape='working', failure_streak reset to 0."""
+    redis = _FakeRedis()
+    service = SparkleSelfModelService(redis)
+
+    # Pre-set a failure streak so we can verify it resets.
+    await service.record_task_outcome(
+        user_id="user-recap-working",
+        signal_id="pre-fail-1",
+        completed=False,
+        timed_out=True,
+    )
+    await service.record_task_outcome(
+        user_id="user-recap-working",
+        signal_id="pre-fail-2",
+        completed=False,
+        timed_out=True,
+    )
+    before = await service.get_readout_summary(user_id="user-recap-working")
+    assert before["task_failure_streak"] >= 2
+
+    await service.update_daily_recap(
+        user_id="user-recap-working",
+        completion_rate=0.85,
+    )
+
+    summary = await service.get_readout_summary(user_id="user-recap-working")
+    assert summary["harness_effectiveness"]["task_shape"] == "working"
+    assert summary["task_failure_streak"] == 0
+
+
+@pytest.mark.asyncio
+async def test_daily_recap_partial_tier_leaves_streak_unchanged() -> None:
+    """0.4 <= completion_rate < 0.8 → task_shape='partial', streak unchanged."""
+    redis = _FakeRedis()
+    service = SparkleSelfModelService(redis)
+
+    await service.update_daily_recap(
+        user_id="user-recap-partial",
+        completion_rate=0.55,
+    )
+
+    summary = await service.get_readout_summary(user_id="user-recap-partial")
+    assert summary["harness_effectiveness"]["task_shape"] == "partial"
+    assert summary["task_failure_streak"] == 0
+
+
+@pytest.mark.asyncio
+async def test_daily_recap_struggling_tier_increments_failure_streak() -> None:
+    """completion_rate < 0.4 → task_shape='struggling', failure_streak += 1."""
+    redis = _FakeRedis()
+    service = SparkleSelfModelService(redis)
+
+    await service.update_daily_recap(
+        user_id="user-recap-struggling",
+        completion_rate=0.3,
+    )
+
+    summary = await service.get_readout_summary(user_id="user-recap-struggling")
+    assert summary["harness_effectiveness"]["task_shape"] == "struggling"
+    assert summary["task_failure_streak"] == 1
+
+    # Second struggling day increments again.
+    await service.update_daily_recap(
+        user_id="user-recap-struggling",
+        completion_rate=0.2,
+    )
+    summary2 = await service.get_readout_summary(user_id="user-recap-struggling")
+    assert summary2["task_failure_streak"] == 2
+
+
+@pytest.mark.asyncio
+async def test_daily_recap_not_triggered_when_day_completed_false() -> None:
+    """When day_completed is False/absent, plan_turn must not alter self_model."""
+    redis = _FakeRedis()
+    spy = _SpyDecisionLoop()
+    svc = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=spy,
+        chat_adapter=_SilentChatAdapter(),
+    )
+
+    await svc.plan_turn(
+        active_db=None,
+        user_id="user-no-recap",
+        surface="aurora_planning",
+        conversation_id="conv-1",
+        request_id="req-1",
+        user_message="继续复习",
+        request_extra_context={"task_state": {"day_completed": False, "completion_rate": 0.3}},
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    stored = json.loads(redis.kv["aurora:self_model:user-no-recap"])
+    assert stored["harness_effectiveness"]["task_shape"] == "partial"  # default, not "struggling"
+    assert stored["failure_streak"] == 0
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_applies_daily_recap_on_day_completed() -> None:
+    """plan_turn with day_completed=True updates self_model via daily recap."""
+    redis = _FakeRedis()
+    spy = _SpyDecisionLoop()
+    svc = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=spy,
+        chat_adapter=_SilentChatAdapter(),
+    )
+
+    await svc.plan_turn(
+        active_db=None,
+        user_id="user-day-done",
+        surface="aurora_planning",
+        conversation_id="conv-1",
+        request_id="req-1",
+        user_message="今天复习完了",
+        request_extra_context={"task_state": {"day_completed": True, "completion_rate": 0.85}},
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    stored = json.loads(redis.kv["aurora:self_model:user-day-done"])
+    assert stored["harness_effectiveness"]["task_shape"] == "working"
+    assert stored["failure_streak"] == 0
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_daily_recap_struggling_increments_streak() -> None:
+    """plan_turn with day_completed=True and low rate increments failure_streak."""
+    redis = _FakeRedis()
+    spy = _SpyDecisionLoop()
+    svc = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=spy,
+        chat_adapter=_SilentChatAdapter(),
+    )
+
+    await svc.plan_turn(
+        active_db=None,
+        user_id="user-day-struggle",
+        surface="aurora_planning",
+        conversation_id="conv-1",
+        request_id="req-1",
+        user_message="今天没做完",
+        request_extra_context={"task_state": {"day_completed": True, "completion_rate": 0.3}},
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    stored = json.loads(redis.kv["aurora:self_model:user-day-struggle"])
+    assert stored["harness_effectiveness"]["task_shape"] == "struggling"
+    assert stored["failure_streak"] == 1

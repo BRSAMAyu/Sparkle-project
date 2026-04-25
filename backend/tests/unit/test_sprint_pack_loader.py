@@ -30,6 +30,20 @@ def cn_pack() -> dict:
     return pack
 
 
+@pytest.fixture(scope="module")
+def ds_pack() -> dict:
+    pack = load_pack("数据结构", "v1")
+    assert pack is not None, "data_structures_algorithms_v1.json must be loadable"
+    return pack
+
+
+@pytest.fixture(scope="module")
+def mathematics_pack() -> dict:
+    pack = load_pack("高数", "v1")
+    assert pack is not None, "mathematics_v1.json must be loadable"
+    return pack
+
+
 # ---------------------------------------------------------------------------
 # load_pack
 # ---------------------------------------------------------------------------
@@ -42,6 +56,21 @@ class TestLoadPack:
     def test_load_by_alias(self):
         assert load_pack("计网") is not None
         assert load_pack("computer_networks") is not None
+
+    def test_load_data_structures_algorithm_aliases(self):
+        assert load_pack("数据结构") is not None
+        assert load_pack("数结") is not None
+        assert load_pack("ds") is not None
+        assert load_pack("算法") is not None
+        assert load_pack("algo") is not None
+
+    def test_load_mathematics_aliases(self):
+        assert load_pack("高数") is not None
+        assert load_pack("高等数学") is not None
+        assert load_pack("线代") is not None
+        assert load_pack("线性代数") is not None
+        assert load_pack("数学") is not None
+        assert load_pack("math") is not None
 
     def test_missing_subject_returns_none(self):
         assert load_pack("nonexistent_subject_xyz") is None
@@ -85,6 +114,11 @@ class TestJsonDataQuality:
 
     def test_minimum_mistake_count(self, cn_pack):
         assert len(cn_pack["mistake_types"]) >= 8
+
+    def test_mathematics_pack_acceptance_shape(self, mathematics_pack):
+        assert len(mathematics_pack["knowledge_nodes"]) >= 50
+        assert len(mathematics_pack["mistake_types"]) == 55
+        assert len(mathematics_pack["question_archetypes"]) == 20
 
     def test_node_weights_in_range(self, cn_pack):
         for node in cn_pack["knowledge_nodes"]:
@@ -135,6 +169,12 @@ class TestJsonDataQuality:
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data["id"] == "computer_networks@v1"
 
+    def test_data_structures_algorithms_pack_acceptance(self, ds_pack):
+        assert len(ds_pack["knowledge_nodes"]) >= 45
+        quicksort_mistakes = get_mistake_by_nodes(ds_pack, ["ds.quicksort"])
+        assert len(quicksort_mistakes) >= 2
+        assert "ds.quicksort" in ds_pack["paths"]["minimum_pass"]["ordered_nodes"]
+
 
 # ---------------------------------------------------------------------------
 # query_nodes_by_priority — sorting logic
@@ -145,6 +185,10 @@ class TestQueryNodesByPriority:
         result = query_nodes_by_priority(cn_pack)
         assert isinstance(result, list)
         assert len(result) > 0
+
+    def test_mathematics_last_day_first_node_is_minimum_pass(self, mathematics_pack):
+        result = query_nodes_by_priority(mathematics_pack, days_left=1)
+        assert result[0]["minimum_pass_required"] is True
 
     def test_fully_mastered_node_ranks_lower(self, cn_pack):
         """A node with gap=0 (mastery=1.0) should rank lower than same node with gap=1.0."""

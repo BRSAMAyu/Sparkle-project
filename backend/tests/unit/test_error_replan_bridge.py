@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 from uuid import UUID
@@ -5,6 +6,7 @@ from uuid import UUID
 import pytest
 from sqlalchemy import select
 
+from app.aurora.runtime_v1.write_pipeline import AURORA_CLAIM_KEY_TEMPLATE
 from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionRecord, InterventionTriggerType
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
@@ -16,6 +18,17 @@ from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.error_replan_bridge import ErrorReplanBridge
 from app.services.notification_center_service import NotificationCenterService
+
+
+class _FakeRedis:
+    def __init__(self) -> None:
+        self.store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self.store.get(key)
+
+    async def set(self, key: str, value: str) -> None:
+        self.store[key] = value
 
 
 @pytest.mark.asyncio
@@ -116,7 +129,8 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
     db_session.add_all(errors)
     await db_session.commit()
 
-    bridge = ErrorReplanBridge(db_session)
+    redis = _FakeRedis()
+    bridge = ErrorReplanBridge(db_session, redis=redis)
     with (
         patch(
             "app.services.error_replan_bridge.AdaptiveReplanner.evaluate_plan_health_now",
@@ -154,6 +168,11 @@ async def test_error_replan_bridge_triggers_plan_health_for_repeated_concept_err
     enqueue_args = mock_enqueue.await_args.args
     payload = enqueue_args[-1]
     assert payload["metadata"]["intervention_id"] == str(record.id)
+    claim_key = AURORA_CLAIM_KEY_TEMPLATE.format(user_id=str(user.id), domain="weak_node")
+    stored_claims = json.loads(redis.store[claim_key])
+    assert str(node.id) in stored_claims["values"]
+    assert stored_claims["claims"][0]["evidence_type"] == "error_replan_signal"
+    assert stored_claims["claims"][0]["planning_session_id"] == str(plan.id)
 
 
 @pytest.mark.asyncio

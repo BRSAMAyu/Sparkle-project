@@ -61,7 +61,7 @@ def test_generator_falls_back_to_existing_logic_when_pack_missing() -> None:
             "time_estimate_minutes": 24,
         },
         task_kind="concept_review",
-        subject="高等数学",
+        subject="思想政治理论",  # No Sprint Pack exists for this subject — verifies fallback path
         focus="极限与连续",
         knowledge_state={"weak_nodes": ["极限定义"]},
         aurora_control_signal={"strategy": {"concept_first": True}},

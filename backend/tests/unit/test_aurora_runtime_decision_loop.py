@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from typing import Any
+from uuid import uuid4
 
 import pytest
 
@@ -12,6 +13,8 @@ from app.aurora.runtime_v1.dashboard import DashboardReadout, DashboardReadoutBu
 from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
+from app.aurora.runtime_v1.write_pipeline import AURORA_CLAIM_KEY_TEMPLATE
+from app.orchestration.planning_workflow import PlanningSession, PlanningWorkflowManager
 
 
 class _FakeJsonLLM:
@@ -22,6 +25,34 @@ class _FakeJsonLLM:
     async def chat_json(self, messages, **kwargs):
         self.calls.append(messages)
         return self.payload
+
+
+class _CapturingDecisionLoop:
+    def __init__(self) -> None:
+        self.readouts: list[DashboardReadout] = []
+
+    async def decide(self, readout: DashboardReadout) -> AuroraDecision:
+        self.readouts.append(readout)
+        return AuroraDecision(action="wait")
+
+
+class _StubSelfModelService:
+    async def get_readout_summary(self, **kwargs) -> dict[str, Any]:
+        return {}
+
+
+class _FakeRedis:
+    def __init__(self) -> None:
+        self.store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self.store.get(key)
+
+    async def setex(self, key: str, _ttl: int, value: str) -> None:
+        self.store[key] = value
+
+    async def delete(self, key: str) -> None:
+        self.store.pop(key, None)
 
 
 def _readout(
@@ -218,6 +249,36 @@ def test_decision_loop_assigns_emotional_support_contract_after_repeated_failure
     assert "blame_or_shame" in contract["must_not_include"]
 
 
+def test_decision_loop_reduces_pressure_when_achievement_momentum_stalls() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(
+        surface="aurora_planning",
+        task_state={"stage": "task_card", "current_task_id": "tcp-congestion-1"},
+        achievement_signals={"momentum": 0.05, "streak_active": False},
+    )
+    messages = loop.build_prompt(readout)
+    prompt_payload = json.loads(messages[1]["content"])
+    prompt_rules = " ".join(prompt_payload["rules"])
+
+    assert "emotional_support" in prompt_rules
+    assert "three_practice_questions" in prompt_rules
+
+    validated = loop.validate_decision(
+        AuroraDecision(
+            action="emit_message",
+            chat_directive={
+                "intent": "continue_current_task",
+                "standard_layer_contract": {"must_include": ["three_practice_questions"]},
+            },
+        ),
+        readout,
+    )
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert contract["response_type"] == "emotional_support"
+    assert "three_practice_questions" in contract["must_not_include"]
+    assert "three_practice_questions" not in contract["must_include"]
+
+
 def test_decision_loop_assigns_calibration_contract_when_self_model_needs_recalibration() -> None:
     loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
     decision = AuroraDecision(action="emit_message", chat_directive={"intent": "safe_ack"})
@@ -256,6 +317,25 @@ def test_decision_loop_assigns_plan_discussion_contract_for_planning_turn() -> N
     assert contract["response_type"] == "plan_discussion"
     assert contract["must_include"] == ["plan_delta_or_tradeoff", "one_decision_or_question"]
     assert "unsolicited_three_practice_questions" in contract["must_not_include"]
+
+
+def test_decision_loop_acknowledges_recent_unlock_and_allows_streak_reminder() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    readout = _readout(
+        surface="aurora_planning",
+        task_state={"stage": "planning"},
+        achievement_signals={"momentum": 0.85, "recently_unlocked": True, "streak_active": True},
+    )
+    messages = loop.build_prompt(readout)
+    prompt_payload = json.loads(messages[1]["content"])
+    prompt_rules = " ".join(prompt_payload["rules"])
+
+    assert "direct_answer_or_acknowledgment" in prompt_rules
+    assert "连续打卡" in prompt_rules
+
+    validated = loop.validate_decision(AuroraDecision(action="emit_message"), readout)
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert "direct_answer_or_acknowledgment" in contract["must_include"]
 
 
 @pytest.mark.asyncio
@@ -336,6 +416,62 @@ async def test_modeling_complete_is_resolved_by_dashboard_coverage_not_llm_flag(
 
     assert plan.modeling_complete is True
     assert plan.surface_complete is True
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_sets_sleep_guard_for_late_china_timestamp() -> None:
+    decision_loop = _CapturingDecisionLoop()
+    service = AuroraRuntimeV1Service(
+        decision_loop=decision_loop,
+        self_model_service=_StubSelfModelService(),
+    )
+
+    await service.plan_turn(
+        active_db=None,
+        user_id="user-1",
+        surface="aurora_planning",
+        conversation_id="conv-sleep",
+        request_id="req-sleep-late",
+        user_message="我还想再聊一会儿计划。",
+        request_extra_context={
+            "timestamp": "2026-04-25T23:30:00 CST",
+            "sprint_policy": {"sleep_guard_hint": "保留睡眠和低负荷收尾窗口；晚间不追加新难点。"},
+        },
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    context = decision_loop.readouts[0].request_extra_context
+    assert context["sleep_guard_active"] is True
+    assert context["sleep_guard_hint"] == "保留睡眠和低负荷收尾窗口；晚间不追加新难点。"
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_does_not_set_sleep_guard_for_daytime_china_timestamp() -> None:
+    decision_loop = _CapturingDecisionLoop()
+    service = AuroraRuntimeV1Service(
+        decision_loop=decision_loop,
+        self_model_service=_StubSelfModelService(),
+    )
+
+    await service.plan_turn(
+        active_db=None,
+        user_id="user-1",
+        surface="aurora_planning",
+        conversation_id="conv-sleep",
+        request_id="req-sleep-day",
+        user_message="上午继续看看计划。",
+        request_extra_context={
+            "timestamp": "2026-04-25T10:00:00+08:00",
+            "sprint_policy": {"sleep_guard_hint": "晚间不追加新难点。"},
+        },
+        conversation_context={},
+        user_context_payload={},
+    )
+
+    context = decision_loop.readouts[0].request_extra_context
+    assert "sleep_guard_active" not in context
+    assert "sleep_guard_hint" not in context
 
 
 def test_decision_loop_retargets_repeated_or_resolved_domain() -> None:
@@ -650,9 +786,7 @@ async def test_plan_turn_refuses_new_topic_in_last_24h_mode() -> None:
         user_context_payload={},
     )
 
-    assert plan.messages == [
-        "明天就考试了，现在看新章节的收益很低。建议先把你最容易丢分的 TCP 状态变化再过一遍。"
-    ]
+    assert plan.messages == ["明天就考试了，现在看新章节的收益很低。建议先把你最容易丢分的 TCP 状态变化再过一遍。"]
     strategy = plan.activity_profile["strategy"]
     assert strategy["new_topic_allowed"] is False
     assert strategy["drop_low_roi_topics"] is True
@@ -674,6 +808,7 @@ def test_slim_readout_for_aurora_modeling_excludes_task_and_checkpoint_state() -
 
 def test_informational_tension_accepts_importance_reasoning() -> None:
     from app.aurora.runtime_v1.state import InformationalTension
+
     t = InformationalTension(
         tension_id="t1",
         domain="baseline",
@@ -731,6 +866,213 @@ def test_modeling_complete_requires_only_four_core_domains_not_motivation() -> N
     )
     assert validated.modeling_complete is True
     assert validated.surface_complete is True
+
+
+def test_motivation_guidance_is_in_decision_loop_system_prompt() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+
+    prompt = loop.build_prompt(
+        _readout(
+            covered_domains=["goal", "scope", "baseline", "time"],
+            missing_domains=["motivation"],
+        )
+    )
+
+    system_prompt = prompt[0]["content"]
+    assert "motivation domain is optional" in system_prompt
+    assert "value is '必须过'" in system_prompt
+    assert "response_type=emotional_support" in system_prompt
+    assert "safety margin" in system_prompt
+    assert "value is '想拿高分'" in system_prompt
+    assert "allow deep learn" in system_prompt
+
+
+def test_motivation_must_pass_prefers_emotional_support_with_safety_margin() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(action="emit_message", chat_directive={"intent": "motivation_adjusted_reply"})
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            user_message="这次必须过。",
+            covered_domains=["goal", "scope", "baseline", "time", "motivation"],
+            missing_domains=[],
+            request_extra_context={"motivation_context": "必须过"},
+        ),
+    )
+
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert contract["response_type"] == "emotional_support"
+    assert "safety_margin" in contract["must_include"]
+
+
+def test_motivation_high_score_prefers_task_help_and_deep_learn() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(action="emit_message", chat_directive={"intent": "motivation_adjusted_reply"})
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            user_message="我想拿高分。",
+            covered_domains=["goal", "scope", "baseline", "time", "motivation"],
+            missing_domains=[],
+            request_extra_context={"motivation_context": "想拿高分"},
+        ),
+    )
+
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert contract["response_type"] == "task_help"
+    assert "deep_learn_allowed" in contract["must_include"]
+
+
+@pytest.mark.asyncio
+async def test_motivation_fallback_question_uses_required_wording() -> None:
+    adapter = ChatLayerAdapter(llm_factory=lambda: _FakeJsonLLM({"messages": []}))
+    decision = AuroraDecision(
+        action="emit_message",
+        chat_directive={"intent": "ask_motivation", "target_domain": "motivation"},
+    )
+
+    messages = await adapter._fallback_messages(
+        decision,
+        _readout(
+            covered_domains=["goal", "scope", "baseline", "time"],
+            missing_domains=["motivation"],
+        ),
+    )
+
+    assert messages == ["最后一个问题：这次考试对你来说意味着什么？是一定要过还是想尽量考高分？"]
+
+
+def test_motivation_answer_marks_dashboard_domain_covered() -> None:
+    builder = DashboardReadoutBuilder()
+    reading = ControlSurfaceReading(
+        adjustable=ActivityProfile(),
+        hard_bounds=AuroraHardBounds(),
+        runtime_enabled=True,
+    )
+
+    readout = builder.build(
+        surface="aurora_modeling",
+        user_id="u1",
+        conversation_id="c1",
+        request_id="r1",
+        user_message="必须过",
+        request_extra_context={
+            "informational_tensions": [
+                {"domain": "goal", "status": "resolved"},
+                {"domain": "scope", "status": "resolved"},
+                {"domain": "baseline", "status": "resolved"},
+                {"domain": "time", "status": "resolved"},
+            ]
+        },
+        conversation_context={},
+        user_context_payload={},
+        control_surface_reading=reading,
+        activity_profile={},
+        candidate_affordances=[],
+    )
+
+    assert "motivation" in readout.covered_domains
+
+
+@pytest.mark.asyncio
+async def test_motivation_planning_session_asks_after_core_fields() -> None:
+    redis = _FakeRedis()
+    manager = PlanningWorkflowManager(redis_client=redis)
+    user_id = uuid4()
+    conversation_id = "aurora-planning-motivation"
+
+    await manager.process_planning_turn(
+        db=None,  # type: ignore[arg-type]
+        user_id=user_id,
+        chat_session_id=conversation_id,
+        message="7天后考计算机网络，从来没学过，帮我规划一下",
+        context={},
+    )
+
+    reply = await manager.process_planning_turn(
+        db=None,  # type: ignore[arg-type]
+        user_id=user_id,
+        chat_session_id=conversation_id,
+        message="每天2小时",
+        context={},
+    )
+
+    state = await manager.runtime_adapter.load_state(user_id=str(user_id), conversation_id=conversation_id)
+    assert reply is not None
+    assert "这次考试对你来说意味着什么" in reply["message"]
+    assert state is not None
+    assert state.activity_profile.agenda_priority == "motivation"
+    assert state.missing_domains == ["motivation"]
+
+
+@pytest.mark.asyncio
+async def test_motivation_planning_state_covers_must_pass_answer() -> None:
+    redis = _FakeRedis()
+    manager = PlanningWorkflowManager(redis_client=redis)
+    state = await manager.runtime_adapter.get_or_create_state(
+        user_id="user-motivation",
+        conversation_id="conv-motivation",
+        planning_session_id="plan-motivation",
+        goal_raw="7天后考计算机网络",
+        profile_context={},
+        collected={
+            "exam_scope": "传输层、网络层",
+            "knowledge_baseline": "完全没学过",
+            "time_available": "每天约 2 小时",
+        },
+    )
+
+    updated = await manager.runtime_adapter.absorb_user_turn(
+        state=state,
+        db=None,  # type: ignore[arg-type]
+        message="必须过",
+        extracted_fields={"motivation_context": "必须过"},
+        is_detour=False,
+    )
+
+    assert "motivation" in updated.covered_domains
+    assert "motivation" not in updated.missing_domains
+
+
+def test_motivation_context_adds_safety_margin_to_task_prompt() -> None:
+    manager = PlanningWorkflowManager(redis_client=_FakeRedis())
+    session = PlanningSession(
+        planning_session_id="planning-motivation-prompt",
+        chat_session_id="planning-motivation-prompt-chat",
+        user_id=str(uuid4()),
+        state="CLARIFYING",
+        goal_raw="7天后考计算机网络，帮我规划",
+        collected={
+            "time_constraint_days": 7,
+            "daily_available_hours": 2,
+            "subject": "计算机网络",
+            "exam_scope": "传输层、网络层",
+            "knowledge_baseline": "完全没学过",
+            "time_available": "每天约 2 小时",
+            "motivation_context": "必须过",
+        },
+    )
+
+    prompt = manager._build_task_ai_prompt(
+        session=session,
+        phase={"label": "保底冲刺", "focus": "先拿高频必得分", "sprint_mode": "seven_day_survival"},
+        guide_json={
+            "minimum_output": "闭卷复述",
+            "output_action": "先做 5 题探针",
+            "micro_contract": "只推进一个最小动作",
+            "fail_safe_rule": "只剩 20 分钟就回到错题",
+            "objective": "稳住过线能力",
+            "success_criteria": "能说清三栏清单",
+        },
+    )
+
+    assert "【核心驱动】必须过" in prompt
+    assert "保底规划" in prompt
+    assert "安全边际" in prompt
 
 
 def test_planning_detour_surface_state_is_visible_to_decision_loop() -> None:
@@ -908,6 +1250,8 @@ def test_extract_achievement_signals_falls_back_to_cognitive_context() -> None:
     assert signals["in_progress_count"] == 1
     assert len(signals["recent_unlocks"]) == 1
     assert signals["momentum"] == pytest.approx(0.5)
+    assert signals["recently_unlocked"] is True
+    assert signals["streak_active"] is False
 
 
 def test_extract_achievement_signals_prefers_explicit_over_cognitive() -> None:
@@ -921,6 +1265,94 @@ def test_extract_achievement_signals_prefers_explicit_over_cognitive() -> None:
     signals = builder._extract_achievement_signals({"achievement_signals": explicit}, user_context_payload)
     assert signals["in_progress_count"] == 5
     assert signals["momentum"] == pytest.approx(0.9)
+    assert signals["streak_active"] is True
+
+
+def test_extract_achievement_signals_derives_streak_and_recent_unlock_flags() -> None:
+    builder = DashboardReadoutBuilder()
+
+    signals = builder._extract_achievement_signals(
+        {
+            "achievement_signals": {
+                "momentum": 0.85,
+                "recently_unlocked": True,
+                "active_streaks": ["daily_study"],
+            }
+        },
+        {},
+    )
+
+    assert signals["streak_active"] is True
+    assert signals["recently_unlocked"] is True
+
+
+def test_extract_cold_start_context_injects_redis_weak_node_claim() -> None:
+    redis = _FakeRedis()
+    user_id = "dashboard-user"
+    node_id = "node-tcp-three-way"
+    key = AURORA_CLAIM_KEY_TEMPLATE.format(user_id=user_id, domain="weak_node")
+    redis.store[key] = json.dumps(
+        {
+            "user_id": user_id,
+            "domain": "weak_node",
+            "claims": [
+                {
+                    "domain": "weak_node",
+                    "value": node_id,
+                    "status": "confirmed",
+                    "evidence_type": "error_replan_signal",
+                }
+            ],
+        },
+        ensure_ascii=False,
+    )
+
+    context = DashboardReadoutBuilder()._extract_cold_start_context(
+        {"cold_start_context": {"goal_type": "exam"}},
+        {},
+        user_id=user_id,
+        redis_client=redis,
+    )
+
+    assert context["goal_type"] == "exam"
+    assert context["confirmed_weak_nodes"] == [node_id]
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_loads_redis_weak_node_claim_into_readout() -> None:
+    redis = _FakeRedis()
+    decision_loop = _CapturingDecisionLoop()
+    user_id = "runtime-user"
+    node_id = "node-congestion-control"
+    key = AURORA_CLAIM_KEY_TEMPLATE.format(user_id=user_id, domain="weak_node")
+    redis.store[key] = json.dumps(
+        {
+            "user_id": user_id,
+            "domain": "weak_node",
+            "values": [node_id],
+            "claims": [{"domain": "weak_node", "value": node_id, "status": "confirmed"}],
+        },
+        ensure_ascii=False,
+    )
+    service = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=decision_loop,
+        self_model_service=_StubSelfModelService(),
+    )
+
+    await service.plan_turn(
+        active_db=None,
+        user_id=user_id,
+        surface="aurora_modeling",
+        conversation_id="conv-weak-node",
+        request_id="req-weak-node",
+        user_message="继续帮我复习。",
+        request_extra_context={},
+        conversation_context={},
+        user_context_payload={"profile_context": {"cold_start_context": {"goal_type": "exam"}}},
+    )
+
+    assert decision_loop.readouts[0].cold_start_context["confirmed_weak_nodes"] == [node_id]
 
 
 # ---------------------------------------------------------------------------
@@ -1019,6 +1451,43 @@ def test_decision_loop_prompt_includes_last_24h_rule_for_cram_mode() -> None:
     assert "calibration" in last_24h_rules[0].lower()
 
 
+def test_decision_loop_prompt_includes_sleep_guard_rule_when_active() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    hint = "保留睡眠和低负荷收尾窗口；晚间不追加新难点。"
+    readout = _readout(request_extra_context={"sleep_guard_active": True, "sleep_guard_hint": hint})
+
+    messages = loop.build_prompt(readout)
+    prompt_payload = json.loads(messages[1]["content"])
+
+    sleep_guard_rules = [rule for rule in prompt_payload["rules"] if "睡眠守卫激活" in rule]
+    assert sleep_guard_rules
+    assert hint in sleep_guard_rules[0]
+    assert prompt_payload["chat_directive_constraints"]["must_not_include"] == [
+        "full_week_replan",
+        "three_practice_questions",
+    ]
+
+
+def test_sleep_guard_contract_blocks_full_replan_and_three_question_drill() -> None:
+    loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+    decision = AuroraDecision(action="emit_message", chat_directive={"intent": "teach_with_example"})
+
+    validated = loop.validate_decision(
+        decision,
+        _readout(
+            surface="aurora_planning",
+            task_state={"stage": "task_card", "current_task_id": "tcp-1"},
+            request_extra_context={"sleep_guard_active": True, "sleep_guard_hint": "晚间不追加新难点。"},
+        ),
+    )
+
+    contract = validated.chat_directive["standard_layer_contract"]
+    assert "full_week_replan" in contract["must_not_include"]
+    assert "three_practice_questions" in contract["must_not_include"]
+    assert "three_practice_questions" not in contract["must_include"]
+    assert contract["max_response_length"] == "brief"
+
+
 def test_decision_loop_prompt_no_last_24h_rule_for_normal_sprint() -> None:
     """build_prompt() must NOT inject the last-24h rule for non-cram sprint modes."""
     loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
@@ -1046,3 +1515,214 @@ def test_last_24h_mode_exposed_in_planning_surface_llm_payload() -> None:
     # For aurora_planning surface, last_24h_mode is in surface additions so it should appear
     assert "last_24h_mode" in payload
     assert payload["last_24h_mode"] is True
+
+
+# ---------------------------------------------------------------------------
+# F18: Sprint Pack auto-detection + injection tests
+# ---------------------------------------------------------------------------
+
+
+def _build_readout_via_builder(
+    *,
+    goal_type: str = "exam",
+    subject: str = "计算机网络",
+    surface: str = "aurora_modeling",
+    user_message: str = "我要备考计算机网络",
+) -> DashboardReadout:
+    """Build a DashboardReadout via DashboardReadoutBuilder with minimal stubs."""
+    from app.aurora.runtime_v1.control_surface import ControlSurfaceReading
+
+    builder = DashboardReadoutBuilder(redis_client=None)
+    profile_context: dict[str, Any] = {
+        "cold_start_context": {"goal_type": goal_type, "subject": subject},
+    }
+    return builder.build(
+        surface=surface,
+        user_id="user-f18",
+        conversation_id="conv-f18",
+        request_id="req-f18",
+        user_message=user_message,
+        request_extra_context={},
+        conversation_context={"messages": []},
+        user_context_payload={"profile_context": profile_context},
+        control_surface_reading=ControlSurfaceReading(
+            runtime_enabled=True,
+            hard_bounds=AuroraHardBounds(),
+            adjustable=ActivityProfile(),
+        ),
+        activity_profile={"conversation_style": "warm"},
+        candidate_affordances=[],
+    )
+
+
+class TestSprintPackAutoInjection:
+    """F18: Sprint Pack auto-detection and injection into cold_start_context."""
+
+    def test_pack_found_injects_minimum_output(self) -> None:
+        """When goal_type=exam and subject=计算机网络, sprint_pack_minimum_output is injected."""
+        readout = _build_readout_via_builder(subject="计算机网络")
+        csc = readout.cold_start_context
+        assert "sprint_pack_minimum_output" in csc, (
+            f"sprint_pack_minimum_output missing from cold_start_context, got keys: {sorted(csc.keys())}"
+        )
+        assert "闭卷输出" in csc["sprint_pack_minimum_output"]
+
+    def test_pack_found_injects_aurora_hint(self) -> None:
+        """sprint_pack_aurora_hint is injected from aurora_rules.medium_aurora."""
+        readout = _build_readout_via_builder(subject="计算机网络")
+        csc = readout.cold_start_context
+        assert "sprint_pack_aurora_hint" in csc, (
+            f"sprint_pack_aurora_hint missing, got keys: {sorted(csc.keys())}"
+        )
+        assert "触发条件" in csc["sprint_pack_aurora_hint"]
+        assert "介入动作" in csc["sprint_pack_aurora_hint"]
+
+    def test_no_pack_no_error(self) -> None:
+        """When subject has no matching pack, no fields are injected and no error occurs."""
+        readout = _build_readout_via_builder(subject="物理")
+        csc = readout.cold_start_context
+        assert "sprint_pack_minimum_output" not in csc
+        assert "sprint_pack_aurora_hint" not in csc
+
+    def test_non_exam_goal_type_skips_injection(self) -> None:
+        """When goal_type is not 'exam', sprint pack is not loaded."""
+        readout = _build_readout_via_builder(goal_type="skill_building", subject="计算机网络")
+        csc = readout.cold_start_context
+        assert "sprint_pack_minimum_output" not in csc
+        assert "sprint_pack_aurora_hint" not in csc
+
+    def test_empty_subject_skips_injection(self) -> None:
+        """When subject is empty, sprint pack is not loaded."""
+        readout = _build_readout_via_builder(subject="")
+        csc = readout.cold_start_context
+        assert "sprint_pack_minimum_output" not in csc
+
+    def test_prompt_contains_aurora_hint(self) -> None:
+        """build_prompt() system message includes sprint_pack_aurora_hint content."""
+        readout = _build_readout_via_builder(subject="计算机网络")
+        loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+        messages = loop.build_prompt(readout)
+        system_msg = messages[0]["content"]
+        assert "Sprint Pack自适应提示" in system_msg
+        assert "触发条件" in system_msg
+
+    def test_prompt_no_aurora_hint_without_pack(self) -> None:
+        """build_prompt() system message does not include hint when no pack is loaded."""
+        readout = _build_readout_via_builder(subject="物理")
+        loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+        messages = loop.build_prompt(readout)
+        system_msg = messages[0]["content"]
+        assert "Sprint Pack自适应提示" not in system_msg
+
+
+# ---------------------------------------------------------------------------
+# F20: Aurora checkpoint Sprint Pack mistake detection
+# ---------------------------------------------------------------------------
+
+
+class TestSprintPackMistakeInjection:
+    """F20: Sprint Pack mistake types are injected into checkpoint_state."""
+
+    def _build_checkpoint_readout(
+        self,
+        *,
+        sprint_pack_id: str = "computer_networks@v1",
+        today_nodes: list[str] | None = None,
+    ) -> DashboardReadout:
+        """Build a DashboardReadout via builder with checkpoint_state populated."""
+        from app.aurora.runtime_v1.control_surface import ControlSurfaceReading
+
+        builder = DashboardReadoutBuilder(redis_client=None)
+        checkpoint_state: dict[str, Any] = {}
+        if sprint_pack_id:
+            checkpoint_state["sprint_pack_id"] = sprint_pack_id
+        if today_nodes is not None:
+            checkpoint_state["today_nodes"] = today_nodes
+        return builder.build(
+            surface="aurora_checkpoint",
+            user_id="user-f20",
+            conversation_id="conv-f20",
+            request_id="req-f20",
+            user_message="我刚学了 TCP 流量控制",
+            request_extra_context={"checkpoint_state": checkpoint_state},
+            conversation_context={"messages": []},
+            user_context_payload={},
+            control_surface_reading=ControlSurfaceReading(
+                runtime_enabled=True,
+                hard_bounds=AuroraHardBounds(),
+                adjustable=ActivityProfile(),
+            ),
+            activity_profile={"conversation_style": "warm"},
+            candidate_affordances=[],
+        )
+
+    def test_mistakes_injected_for_matching_nodes(self) -> None:
+        """When sprint_pack_id and today_nodes match, sprint_pack_mistakes is populated."""
+        readout = self._build_checkpoint_readout(today_nodes=["cn.tcp_flow_control"])
+        mistakes = readout.checkpoint_state.get("sprint_pack_mistakes")
+        assert mistakes, "Expected sprint_pack_mistakes to be non-empty for cn.tcp_flow_control"
+        assert isinstance(mistakes, list)
+        # cn.tcp_flow_control has related mistakes: window_variable_confusion, flow_congestion_confusion
+        mistake_ids = [m.get("mistake_id") for m in mistakes]
+        assert "mistake.window_variable_confusion" in mistake_ids
+
+    def test_mistakes_limited_to_five(self) -> None:
+        """sprint_pack_mistakes is capped at 5 entries."""
+        readout = self._build_checkpoint_readout(
+            today_nodes=[
+                "cn.osi_model",
+                "cn.tcp_ip_model",
+                "cn.protocol_stack_concepts",
+                "cn.tcp_flow_control",
+                "cn.tcp_congestion_control",
+                "cn.subnetting",
+            ],
+        )
+        mistakes = readout.checkpoint_state.get("sprint_pack_mistakes", [])
+        assert len(mistakes) <= 5
+
+    def test_no_mistakes_without_sprint_pack_id(self) -> None:
+        """When sprint_pack_id is absent, sprint_pack_mistakes is not injected."""
+        readout = self._build_checkpoint_readout(sprint_pack_id="", today_nodes=["cn.tcp_flow_control"])
+        assert "sprint_pack_mistakes" not in readout.checkpoint_state
+
+    def test_no_mistakes_without_today_nodes(self) -> None:
+        """When today_nodes is absent, sprint_pack_mistakes is not injected."""
+        readout = self._build_checkpoint_readout(today_nodes=None)
+        assert "sprint_pack_mistakes" not in readout.checkpoint_state
+
+    def test_no_mistakes_for_unknown_pack(self) -> None:
+        """When sprint_pack_id has no matching pack, sprint_pack_mistakes is not injected."""
+        readout = self._build_checkpoint_readout(
+            sprint_pack_id="quantum_physics@v1",
+            today_nodes=["qp.superposition"],
+        )
+        assert "sprint_pack_mistakes" not in readout.checkpoint_state
+
+    def test_error_analysis_required_when_mistakes_present(self) -> None:
+        """_strategy_defaults_for_readout forces error_analysis_required=True when sprint_pack_mistakes is non-empty."""
+        loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+        readout = _readout(
+            surface="aurora_checkpoint",
+            checkpoint_state={
+                "sprint_pack_id": "computer_networks@v1",
+                "today_nodes": ["cn.tcp_flow_control"],
+                "sprint_pack_mistakes": [
+                    {"mistake_id": "mistake.window_variable_confusion", "label": "混淆 rwnd 与 cwnd"}
+                ],
+            },
+        )
+        defaults = loop._strategy_defaults_for_readout(readout)
+        assert defaults["error_analysis_required"] is True
+
+    def test_error_analysis_not_forced_without_mistakes(self) -> None:
+        """_strategy_defaults_for_readout does not force error_analysis_required when sprint_pack_mistakes is empty."""
+        loop = AuroraDecisionLoop(llm_factory=lambda: _FakeJsonLLM({}))
+        readout = _readout(
+            surface="aurora_modeling",
+            checkpoint_state={"last_status": "stable"},
+        )
+        defaults = loop._strategy_defaults_for_readout(readout)
+        # aurora_modeling defaults concept_first=True but error_analysis_required stays default (False)
+        assert defaults["concept_first"] is True
+        assert defaults["error_analysis_required"] is False

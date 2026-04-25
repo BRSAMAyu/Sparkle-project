@@ -7,11 +7,16 @@ import pytest
 
 import app.aurora.runtime_v1.write_pipeline as write_pipeline_module
 from app.aurora.runtime_v1.write_pipeline import (
+    AURORA_CLAIM_KEY_TEMPLATE,
+    AURORA_CLAIM_TTL_SECONDS,
     EXAM_SPRINT_KEY_TEMPLATE,
     INFERENCE_PIPELINE_KEY,
     TEMPORARY_STATE_KEY_TEMPLATE,
     TEMPORARY_STATE_TTL_SECONDS,
+    InferenceClaim,
     InferenceWritePipeline,
+    get_claim,
+    submit_claim,
 )
 from app.models.user import User
 from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
@@ -69,6 +74,41 @@ async def _create_user(db_session, *, user_id=None):
     )
     await db_session.commit()
     return user_id
+
+
+@pytest.mark.asyncio
+async def test_submit_claim_writes_and_reads_domain_claim_with_24h_ttl() -> None:
+    redis = _ClockedRedis()
+
+    await submit_claim(
+        InferenceClaim(
+            user_id="user-1",
+            domain="baseline",
+            value="零基础",
+            confidence=0.62,
+            evidence_type="modeling_turn",
+        ),
+        redis=redis,
+    )
+    await submit_claim(
+        InferenceClaim(
+            user_id="user-1",
+            domain="baseline",
+            value="零基础",
+            confidence=0.84,
+            evidence_type="modeling_turn",
+        ),
+        redis=redis,
+    )
+
+    key = AURORA_CLAIM_KEY_TEMPLATE.format(user_id="user-1", domain="baseline")
+    assert redis.ttl[key] == AURORA_CLAIM_TTL_SECONDS
+
+    stored = await get_claim("baseline", user_id="user-1", redis=redis)
+    assert stored is not None
+    assert stored.domain == "baseline"
+    assert stored.value == "零基础"
+    assert stored.confidence == 0.84
 
 
 @pytest.mark.asyncio
