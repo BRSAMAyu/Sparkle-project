@@ -14,18 +14,24 @@ You are the VALIDATOR in the Sparkle UX Audit Workflow. You run after Reviewer A
 
 ---
 
-## STEP 1 — Check for new findings
+## STEP 1 — Find unvalidated chain-specific files
 
-Read these four files:
-- `docs/ux_audit/reviewer_a_current.md`
-- `docs/ux_audit/reviewer_b_current.md`
-- `docs/ux_audit/audit_state.json`
-- `docs/ux_audit/accumulated_findings.md`
+Read `docs/ux_audit/audit_state.json` first.
 
-Determine what's new:
-- If a reviewer file starts with "SKIPPED", "awaiting", or "COMPLETE": it has no new findings this cycle.
-- Compare the `Timestamp:` in each reviewer file to `reviewer_a_last_timestamp` / `reviewer_b_last_timestamp` in `audit_state.json`. If the file's timestamp matches what's already recorded, it's already validated — skip it.
-- If both files are stale: append to `workflow_log.md`: `| [now] | validator | No new findings — both reviewers stale |` and stop.
+Then find ALL reviewer findings files that exist but haven't been validated yet:
+```bash
+cd /Users/brsama/code/GitHub/Sparkle-project
+ls docs/ux_audit/reviewer_a_C*.md docs/ux_audit/reviewer_b_C*.md 2>/dev/null
+```
+
+For each file `reviewer_X_CNN.md`:
+- Check if chain `CNN` in `audit_state.json` has `status == "done"`. If yes, it's already validated — skip.
+- If `status` is `"pending"` or `"re-audit"`: it needs validation.
+- Also check for the old `reviewer_X_current.md` files if they contain unvalidated chains.
+
+Read each unvalidated findings file, plus `docs/ux_audit/accumulated_findings.md`.
+
+If NO unvalidated files found: append to `workflow_log.md`: `| [now] | validator | No new findings |` and stop.
 
 ---
 

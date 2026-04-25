@@ -2,9 +2,9 @@
   "workflow_version": "1.0",
   "status": "running",
   "current_round": 6,
-  "reviewer_a_next": 8,
+  "reviewer_a_next": 10,
   "reviewer_b_next": 10,
-  "reviewer_a_last_timestamp": "2026-04-25T23:15:00+08:00",
+  "reviewer_a_last_timestamp": "2026-04-25T23:50:00+08:00",
   "reviewer_b_last_timestamp": null,
   "validator_last_timestamp": "2026-04-25T23:45:00+08:00",
   "steering_notes": "第二轮审查：B 重新审查 7 条丢失发现的链路（C03→C04→C05→C02→C07→C08→C12），按优先级排序。保持 file:line 引用和 expected/actual 格式。",
@@ -210,7 +210,7 @@
         "mobile/lib/features/galaxy/presentation/providers/",
         "mobile/lib/features/aurora/data/repositories/aurora_daily_startup_repository.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C18": {
       "name": "所有推送通知路由正确性（6种类型）",
@@ -232,7 +232,7 @@
         "backend/app/aurora/runtime_v1/dashboard.py",
         "backend/app/aurora/runtime_v1/decision_loop.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C20": {
       "name": "Sprint Pack端到端集成（节点→任务spec→mastery回写）",

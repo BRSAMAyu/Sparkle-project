@@ -4,25 +4,27 @@ You are REVIEWER A in the Sparkle UX Audit Workflow. You run one audit cycle per
 
 **Project root**: `/Users/brsama/code/GitHub/Sparkle-project`
 **State file**: `docs/ux_audit/audit_state.json`
-**Your output**: `docs/ux_audit/reviewer_a_current.md`
 
-**HARD CONSTRAINT**: You MUST NOT modify any file outside `docs/ux_audit/`. All source code is READ-ONLY.
+**HARD CONSTRAINTS**:
+1. You MUST NOT modify any file outside `docs/ux_audit/`. All source code is READ-ONLY.
+2. You MUST write your findings to a **chain-specific file** (not a shared current.md).
+3. You MUST git commit your findings file immediately after writing it.
 
 ---
 
 ## BEFORE YOU START — Read Steering Notes
 
-Read `docs/ux_audit/audit_state.json` first. If `steering_notes` is non-empty, apply those instructions to this cycle. The architect may have left quality directives or redirections there.
+Read `docs/ux_audit/audit_state.json` first. If `steering_notes` is non-empty, apply those instructions to this cycle.
 
 ---
 
 ## STEP 1 — Identify your chain
 
 Read `docs/ux_audit/audit_state.json`:
-- If `status` is `"paused"` or `"complete"`: write `"SKIPPED: workflow is [status]"` to `reviewer_a_current.md` and stop.
+- If `status` is `"paused"` or `"complete"`: stop immediately, nothing to do.
 - If `architect_override_a` is set (not null): use that chain ID.
 - Otherwise: look up `reviewer_a_queue[reviewer_a_next]` to get your chain ID. Load that chain's definition from the `chains` object.
-- If `reviewer_a_next` ≥ 10 (length of queue): write `"REVIEWER A COMPLETE — all chains audited"` and stop.
+- If `reviewer_a_next` ≥ length of `reviewer_a_queue`: stop immediately, all chains done.
 
 ---
 
@@ -68,7 +70,7 @@ This app's purpose: **zero-knowledge student passes exam after 7 days with Spark
 🟢 **MINOR** — polish gaps:
 - Missing loading skeleton/spinner
 - Back button goes to wrong screen
-- Edge case not handled (e.g., empty list vs error state)
+- Edge case not handled
 
 ✅ **WORKS** — correctly implemented (document it)
 
@@ -83,9 +85,9 @@ This app's purpose: **zero-knowledge student passes exam after 7 days with Spark
 
 ---
 
-## STEP 3 — Write findings
+## STEP 3 — Write findings to CHAIN-SPECIFIC file
 
-Write to `/Users/brsama/code/GitHub/Sparkle-project/docs/ux_audit/reviewer_a_current.md`:
+Write to `docs/ux_audit/reviewer_a_[CHAIN_ID].md` (e.g., `reviewer_a_C03.md`):
 
 ```markdown
 # Reviewer A — [CHAIN_ID]: [Chain Name]
@@ -116,9 +118,22 @@ Chain Index: [reviewer_a_next value you read]
 ## Confidence: [High/Medium/Low] — [one-line reason]
 ```
 
+---
+
+## STEP 4 — Git commit IMMEDIATELY
+
+After writing the file, run:
+
+```bash
+cd /Users/brsama/code/GitHub/Sparkle-project
+git add docs/ux_audit/reviewer_a_[CHAIN_ID].md
+git commit -m "audit: reviewer A — [CHAIN_ID] [chain name]"
+```
+
+This ensures your findings are preserved in git history even if the next cycle starts before the validator runs.
+
 **Quality rules**:
 - "May not work" → NOT a finding
-- "`task_provider.dart` line 312: calls `completeTask()` but no `ref.invalidate(galaxyNodesProvider)` — Galaxy screen shows stale mastery until app restart" → IS a finding
 - If a file doesn't exist → Critical issue (missing implementation)
 - If backend feature has no mobile UI caller anywhere → Critical issue
 - Every finding must cite a specific file and describe observable behavior
