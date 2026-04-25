@@ -59,7 +59,7 @@
         "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart",
         "mobile/lib/features/task/presentation/providers/task_provider.dart"
       ],
-      "status": "re-audit"
+      "status": "done"
     },
     "C05": {
       "name": "7天冲刺完成→庆祝页→学习档案状态变completed",
@@ -95,7 +95,7 @@
         "mobile/lib/core/services/push_navigation_service.dart",
         "mobile/lib/core/services/deep_link_service.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C08": {
       "name": "用户≥3天未活跃→comeback消息出现在chat首屏",
@@ -108,7 +108,7 @@
         "mobile/lib/features/chat/presentation/providers/chat_provider.dart",
         "mobile/lib/features/aurora/data/repositories/aurora_daily_startup_repository.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C09": {
       "name": "每日启动消息个性化（昨日完成率+今日任务）",
@@ -152,7 +152,7 @@
         "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
         "backend/app/api/v1/plans.py"
       ],
-      "status": "re-audit"
+      "status": "done"
     },
     "C13": {
       "name": "每周报告生成→推送→周报卡展示亮点",
