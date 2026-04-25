@@ -114,6 +114,7 @@ class ExamSprintDashboardService:
             streak_days=streak_days,
             high_yield_low_mastery_topics=coverage_stats["weak_topics"],
             task_groups=task_groups,
+            sleep_guard_hint=self._extract_sleep_guard_hint(metadata),
         )
 
     async def _get_active_exam_sprint_plan(self, user_id: UUID) -> Plan | None:
@@ -404,6 +405,13 @@ class ExamSprintDashboardService:
         metadata = self._as_dict(plan.source_metadata)
         exam_sprint = metadata.get("exam_sprint_intake")
         return exam_sprint if isinstance(exam_sprint, dict) else {}
+
+    def _extract_sleep_guard_hint(self, metadata: dict[str, Any]) -> str | None:
+        sprint_policy = self._as_dict(metadata.get("sprint_policy"))
+        if not sprint_policy:
+            return None
+        hint = self._nullable_string(sprint_policy.get("sleep_guard_hint"))
+        return hint
 
     @staticmethod
     def _as_dict(value: Any) -> dict[str, Any]:

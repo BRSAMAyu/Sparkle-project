@@ -138,6 +138,8 @@ celery_app.conf.update(
         "verify_intervention_outcomes_full": {"queue": "low_priority"},
         "app.core.celery_tasks.generate_weekly_growth_digests": {"queue": "default"},
         "app.core.celery_tasks.deliver_weekly_growth_digests": {"queue": "default"},
+        "app.core.celery_tasks.daily_sprint_reminder_task": {"queue": "default"},
+        "app.core.celery_tasks.scan_daily_sprint_reminders": {"queue": "default"},
     },
     # 监控
     worker_send_task_events=True,
@@ -1091,6 +1093,14 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.accountability.evaluate_achievements",
         "schedule": crontab(hour=23, minute=59),
         "options": {"queue": "low_priority"},
+    },
+    # ========== F17: 每日 Sprint 进度提醒 ==========
+    # UTC 12:00 = 北京时间 20:00
+    "daily-sprint-reminder-scan": {
+        "task": "app.core.celery_tasks.scan_daily_sprint_reminders",
+        "schedule": crontab(hour=12, minute=0),
+        "args": (500,),
+        "options": {"queue": "default"},
     },
 }
 

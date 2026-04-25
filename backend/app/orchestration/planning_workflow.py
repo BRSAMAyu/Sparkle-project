@@ -154,6 +154,24 @@ def _safe_int(value: Any) -> int | None:
     return parsed if parsed > 0 else None
 
 
+def _match_seed_nodes_to_focus(seed_nodes: list[str], focus: str) -> list[str]:
+    """Match seed library node IDs against focus text by token overlap.
+
+    E.g. node ID "cn.tcp_flow" yields tokens ["tcp", "flow"];
+    if focus contains "tcp", the node is considered a match.
+    """
+    if not focus:
+        return []
+    focus_lower = focus.lower()
+    matched: list[str] = []
+    for node_id in seed_nodes:
+        parts = node_id.split(".")
+        tokens = [t.lower() for part in parts for t in part.split("_") if len(t) > 1]
+        if any(token in focus_lower for token in tokens):
+            matched.append(node_id)
+    return matched
+
+
 def _subject_to_error_book_code(subject: str) -> str | None:
     text = _strip(subject).lower()
     if not text:
@@ -215,6 +233,8 @@ class PlanningSession:
 
 class PlanningWorkflowManager:
     REQUIRED_FIELDS = ("exam_scope", "knowledge_baseline", "time_available")
+    MOTIVATION_FIELD = "motivation_context"
+    CLARIFYING_FIELDS = (*REQUIRED_FIELDS, MOTIVATION_FIELD)
 
     def __init__(self, redis_client=None, runtime_adapter: AuroraRuntimePlanningAdapter | None = None) -> None:
         self.redis = redis_client or cache_service.redis
@@ -343,7 +363,17 @@ class PlanningWorkflowManager:
                     cold_start.get("subject") or user_model.get("subject") or cold_start.get("exam_scope")
                 ),
                 "motivation": _strip(
-                    cold_start.get("motivation") or user_model.get("motivation") or user_model.get("goal_motivation")
+                    cold_start.get("motivation")
+                    or cold_start.get("motivation_context")
+                    or user_model.get("motivation")
+                    or user_model.get("goal_motivation")
+                ),
+                "motivation_context": _strip(
+                    cold_start.get("motivation_context")
+                    or cold_start.get("motivation")
+                    or user_model.get("motivation_context")
+                    or user_model.get("motivation")
+                    or user_model.get("goal_motivation")
                 ),
             },
             "activity_profile": profile,
@@ -719,6 +749,7 @@ class PlanningWorkflowManager:
         )
 
         created_tasks: list[Task] = []
+        galaxy_weak_nodes = list(session.collected.get("galaxy_weak_nodes") or [])
         phases = list(strategy.get("phases") or [])
         for index, phase in enumerate(phases, start=1):
             for day_spec in self._daily_task_specs(
@@ -726,6 +757,7 @@ class PlanningWorkflowManager:
                 phase_index=index,
                 session=session,
                 error_clusters=last_24h_error_clusters,
+                galaxy_weak_nodes=galaxy_weak_nodes or None,
             ):
                 guide_json = self._build_task_guide_json(
                     session=session,
@@ -754,9 +786,9 @@ class PlanningWorkflowManager:
                             or (_safe_int(phase.get("daily_hours")) or daily_hours) * 60,
                             30,
                         ),
-                        difficulty=self._mastery_to_difficulty(
+                        difficulty=min(5, self._mastery_to_difficulty(
                             session.collected.get("avg_mastery_score"), index
-                        ),
+                        ) + (1 if day_spec.get("galaxy_weak") else 0)),
                         energy_cost=self._mastery_to_difficulty(
                             session.collected.get("avg_mastery_score"), index
                         ),
@@ -884,7 +916,7 @@ class PlanningWorkflowManager:
 
     def _is_ready_for_bottlenecks(self, session: PlanningSession, user_message: str) -> bool:
         if all(_strip(session.collected.get(field)) for field in self.REQUIRED_FIELDS):
-            return True
+            return bool(_strip(session.collected.get(self.MOTIVATION_FIELD) or session.collected.get("motivation")))
         lowered = _strip(user_message).lower()
         if any(token in lowered for token in PLANNING_ENOUGH_PATTERNS):
             return True
@@ -908,7 +940,7 @@ class PlanningWorkflowManager:
             if any(token in text for token in PLANNING_TASK_BYPASS_PATTERNS):
                 return False
             collected = dict(extracted_fields or self._extract_clarifying_fields(message))
-            return any(_strip(collected.get(field)) for field in self.REQUIRED_FIELDS)
+            return any(_strip(collected.get(field)) for field in self.CLARIFYING_FIELDS)
         if session.state in {"AWAITING_CONFIRM", "STRATEGY_REVISION"}:
             return any(token in text for token in PLANNING_ADJUST_PATTERNS)
         return True
@@ -929,7 +961,22 @@ class PlanningWorkflowManager:
             return "这次考试具体考哪些范围？如果你知道教材、章节或者老师给的考纲，直接告诉我就行。"
         if "knowledge_baseline" in missing:
             return "你现在对这门课的基础大概在哪个位置？比如完全没学过、上过课但没复习，或者已经学过一半。"
+        if not _strip(session.collected.get(self.MOTIVATION_FIELD) or session.collected.get("motivation")):
+            return "最后一个问题：这次考试对你来说意味着什么？是一定要过还是想尽量考高分？"
         return "你接下来这几天每天大概能拿出多少时间？有没有哪几天会特别忙或者完全学不了？"
+
+    @staticmethod
+    def _extract_motivation_context(text: str) -> str:
+        lowered = _strip(text).lower()
+        if not lowered:
+            return ""
+        if any(token in lowered for token in ("必须过", "一定要过", "不能挂", "不挂科", "不想挂", "保底", "过线")):
+            return "必须过"
+        if any(token in lowered for token in ("想拿高分", "尽量考高分", "考高分", "冲高分", "高分", "拿高分")):
+            return "想拿高分"
+        if any(token in lowered for token in ("探索兴趣", "探索", "兴趣", "想了解")):
+            return "探索兴趣"
+        return ""
 
     def _extract_clarifying_fields(self, user_message: str) -> dict[str, Any]:
         collected: dict[str, Any] = {}
@@ -976,6 +1023,10 @@ class PlanningWorkflowManager:
             subject_match = re.search(r"(计算机网络|计网|高数|线代|概率论|操作系统|数据库|英语)", text)
             if subject_match:
                 collected["subject"] = subject_match.group(1)
+        motivation = self._extract_motivation_context(text)
+        if motivation:
+            collected["motivation_context"] = motivation
+            collected["motivation"] = motivation
         return collected
 
     def _merge_clarifying_fields(self, collected: dict[str, Any], user_message: str) -> None:
@@ -1277,6 +1328,17 @@ class PlanningWorkflowManager:
         ]
         pack_why_now = _strip(subject_strategy.get("why_now"))
         output_action = _strip(subject_strategy.get("output_action")) or contract["output_action"]
+        # F19: Bridge seed library with sprint pack — recommend matching seeds as materials.
+        seed_library_nodes = [
+            nid for nid in
+            list(session.collected.get("seed_library_nodes") or [])
+            if _strip(nid)
+        ]
+        if seed_library_nodes and focus:
+            matched_seeds = _match_seed_nodes_to_focus(seed_library_nodes, focus)
+            if matched_seeds:
+                seed_names = "、".join(matched_seeds[:3])
+                output_action = f"{output_action}（可使用你的种子库中的 {seed_names}）"
         success_criteria = _strip(subject_strategy.get("success_criteria")) or contract["success_criteria"]
         if node_labels:
             node_summary = self._format_compact_list(node_labels)
@@ -1515,6 +1577,19 @@ class PlanningWorkflowManager:
             text = f"{text}。"
         return text
 
+    @staticmethod
+    def _build_motivation_tone_line(motivation: str) -> str:
+        text = _strip(motivation)
+        if not text:
+            return ""
+        if text == "必须过" or any(token in text for token in ("一定要过", "不能挂", "不挂科", "保底", "过线")):
+            return "【角色语气】这是过线优先的保底规划：先稳住压力，任务必须留安全边际，优先必拿分、高频题和可检查输出，不做高风险加码。\n"
+        if text == "想拿高分" or any(token in text for token in ("尽量考高分", "考高分", "冲高分", "高分")):
+            return "【角色语气】这是冲高分规划：语气可以更任务导向，核心稳定后允许 deep learn、拔高题和更细的错因追踪。\n"
+        if text == "探索兴趣" or any(token in text for token in ("探索", "兴趣", "想了解")):
+            return "【角色语气】这是兴趣探索型规划：保持好奇和解释感，难度递进要轻，允许用例子帮我判断是否值得深入。\n"
+        return "【角色语气】根据这个核心驱动调整语气和任务强度，先保证计划可执行，再决定是否加深。\n"
+
     def _build_task_ai_prompt(
         self,
         *,
@@ -1526,7 +1601,7 @@ class PlanningWorkflowManager:
         subject = _strip(session.collected.get("subject") or session.collected.get("exam_scope") or "当前科目")
         baseline = _strip(session.collected.get("knowledge_baseline") or "基础不稳")
         daily_hours = _safe_int(session.collected.get("daily_available_hours")) or 2
-        motivation = _strip(session.collected.get("motivation"))
+        motivation = _strip(session.collected.get("motivation_context") or session.collected.get("motivation"))
         phase_label = _strip(phase.get("label") or "当前阶段")
         sprint_policy = _as_dict(phase.get("sprint_policy"))
         sprint_mode = _strip(sprint_policy.get("sprint_mode") or phase.get("sprint_mode") or "exam_sprint")
@@ -1552,6 +1627,7 @@ class PlanningWorkflowManager:
         blocked_days_line = f"已知忙碌时段：{'；'.join(blocked_days[:2])}。\n" if blocked_days else ""
         latent_line = f"还需要顺手照顾的潜在线索：{latent_threads[0]['context_snapshot']}。\n" if latent_threads else ""
         motivation_line = f"【核心驱动】{motivation}。\n" if motivation else ""
+        motivation_tone_line = self._build_motivation_tone_line(motivation)
         output_action = _strip(guide_json.get("output_action"))
         micro_contract = _strip(guide_json.get("micro_contract"))
         fail_safe_rule = _strip(guide_json.get("fail_safe_rule"))
@@ -1564,7 +1640,7 @@ class PlanningWorkflowManager:
         must_not_line = f"【禁止引入】{'、'.join(must_not_include[:4])}。\n" if must_not_include else ""
         return (
             f"【背景】我是学生，目标是 {session.goal_raw or f'在限定时间内完成 {subject} 备考'}。\n"
-            f"{motivation_line}\n"
+            f"{motivation_line}{motivation_tone_line}\n"
             f"【我的情况】科目是 {subject}，当前基础是 {baseline}，每天大概能投入 {daily_hours} 小时。\n"
             f"{materials_line}{blocked_days_line}{latent_line}\n"
             f"{last_24h_line}{must_not_line}"
@@ -1607,12 +1683,24 @@ class PlanningWorkflowManager:
             "time_constraint_days": _safe_int(cold_start.get("time_constraint_days")),
             "avg_mastery_score": galaxy_avg,
             "weak_nodes": galaxy_baseline.get("weak_nodes") if galaxy_baseline else None,
+            "galaxy_weak_nodes": (
+                cold_start.get("galaxy_weak_nodes")
+                or (galaxy_baseline.get("weak_nodes") if galaxy_baseline else None)
+            ),
             "diagnostic_estimated_score": cold_start.get("diagnostic_estimated_score"),
             "recommended_path": _strip(cold_start.get("recommended_path")),
             "knowledge_gaps": knowledge_gaps if isinstance(knowledge_gaps, list) else [],
             "motivation": _strip(
-                cold_start.get("motivation") or cold_start.get("goal_motivation")
+                cold_start.get("motivation")
+                or cold_start.get("motivation_context")
+                or cold_start.get("goal_motivation")
             ),
+            "motivation_context": _strip(
+                cold_start.get("motivation_context")
+                or cold_start.get("motivation")
+                or cold_start.get("goal_motivation")
+            ),
+            "seed_library_nodes": cold_start.get("seed_library_nodes") or [],
         }
         return {key: value for key, value in merged.items() if value not in (None, "", [], {})}
 
@@ -2585,6 +2673,7 @@ class PlanningWorkflowManager:
         phase_index: int,
         session: PlanningSession | None = None,
         error_clusters: list[dict[str, Any]] | None = None,
+        galaxy_weak_nodes: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         specs = self._default_daily_task_specs(phase, phase_index=phase_index)
         if session is None or not specs:
@@ -2623,6 +2712,18 @@ class PlanningWorkflowManager:
             if subject_strategy:
                 merged_spec["subject_strategy"] = subject_strategy
             merged_specs.append(merged_spec)
+
+        # F16: Annotate specs whose focus matches Galaxy weak nodes for sprint priority.
+        if galaxy_weak_nodes:
+            weak_lower = [n.lower().strip() for n in galaxy_weak_nodes if isinstance(n, str) and n.strip()]
+            for spec in merged_specs:
+                focus_text = (spec.get("focus") or "").lower()
+                phase_focus = _strip(phase.get("focus") or "").lower()
+                if any(weak in focus_text or weak in phase_focus for weak in weak_lower):
+                    spec["galaxy_weak"] = True
+                    if "Galaxy 标记的弱点" not in spec.get("focus", ""):
+                        spec["focus"] = f"{spec['focus']}（Galaxy 标记的弱点）"
+
         return merged_specs
 
     def _estimated_minutes_for_task(
@@ -2695,6 +2796,8 @@ class PlanningWorkflowManager:
             "daily_available_hours": _safe_int(collected.get("daily_available_hours")) or 0,
             "blocked_days": collected.get("blocked_days") or [],
             "available_materials": collected.get("available_materials") or [],
+            "motivation_context": _strip(collected.get("motivation_context") or collected.get("motivation")),
+            "motivation": _strip(collected.get("motivation") or collected.get("motivation_context")),
             "collected_at": _utcnow().isoformat(),
             "completeness": completeness,
         }

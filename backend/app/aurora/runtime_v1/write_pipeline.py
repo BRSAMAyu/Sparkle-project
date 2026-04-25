@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
@@ -28,6 +29,10 @@ MAX_EVIDENCE_ITEMS = 5
 
 TEMPORARY_STATE_KEY_TEMPLATE = "aurora:write-pipeline:temporary:{user_id}:{claim_id}"
 EXAM_SPRINT_KEY_TEMPLATE = "aurora:write-pipeline:exam-sprint:{user_id}:{planning_session_id}"
+AURORA_CLAIM_KEY_TEMPLATE = "aurora:claims:{user_id}:{domain}"
+AURORA_CLAIM_TTL_SECONDS = 24 * 60 * 60
+INFERENCE_CLAIM_KEY_TEMPLATE = AURORA_CLAIM_KEY_TEMPLATE
+INFERENCE_CLAIM_TTL_SECONDS = AURORA_CLAIM_TTL_SECONDS
 
 
 def _utcnow() -> datetime:
@@ -176,14 +181,22 @@ def _coerce_uuid(value: UUID | str) -> UUID:
     return UUID(str(value))
 
 
+def _normalize_claim_domain(value: Any) -> str:
+    return _strip(value).lower().replace(" ", "_")
+
+
 @dataclass
 class InferenceClaim:
-    claim: str
-    scope: InferenceScope
-    status: InferenceStatus
-    confidence: float
-    evidence_count: int
-    needs_confirmation: bool
+    claim: str = ""
+    scope: InferenceScope = "long_term"
+    status: InferenceStatus = "observed"
+    confidence: float = 0.0
+    evidence_count: int = 0
+    needs_confirmation: bool = False
+    domain: str | None = None
+    value: Any = None
+    evidence_type: str | None = None
+    user_id: str | None = None
     expires_at: str | None = None
     id: str | None = None
     claim_type: str = "general"
@@ -209,10 +222,18 @@ class InferenceClaim:
 
     def __post_init__(self) -> None:
         now_iso = _utcnow_iso()
+        self.domain = _normalize_claim_domain(self.domain) or None
+        self.evidence_type = _strip(self.evidence_type) or None
+        self.user_id = _strip(self.user_id) or None
+        self.value = _json_safe(self.value)
         normalized_claim = _strip(self.claim)
+        if not normalized_claim and self.domain:
+            normalized_claim = f"{self.domain}={json.dumps(self.value, ensure_ascii=False, default=str)}"
         self.claim = normalized_claim
         self.scope = _normalize_scope(self.scope)
         self.claim_type = _strip(self.claim_type) or "general"
+        if self.domain and self.claim_type == "general":
+            self.claim_type = self.domain
         self.fingerprint = _strip(self.fingerprint) or _claim_fingerprint(
             claim=normalized_claim,
             scope=self.scope,
@@ -249,13 +270,25 @@ class InferenceClaim:
             if isinstance(item, Mapping)
         ][-10:]
         self.metadata = _as_dict(self.metadata)
+        if self.domain:
+            self.metadata.setdefault("domain", self.domain)
+        if self.value is not None:
+            self.metadata.setdefault("value", _json_safe(self.value))
+        if self.evidence_type:
+            self.metadata.setdefault("evidence_type", self.evidence_type)
+        if self.user_id:
+            self.metadata.setdefault("user_id", self.user_id)
 
     @classmethod
-    def from_dict(cls, payload: Any) -> "InferenceClaim":
+    def from_dict(cls, payload: Any) -> InferenceClaim:
         data = _as_dict(payload)
         evidence = _extract_evidence(data)
         needs_confirmation = _as_bool(data.get("needs_confirmation"))
+        domain = _normalize_claim_domain(data.get("domain") or _as_dict(data.get("metadata")).get("domain")) or None
+        value = _json_safe(data.get("value", _as_dict(data.get("metadata")).get("value")))
         claim = _strip(data.get("claim") or data.get("statement") or data.get("title"))
+        if not claim and domain:
+            claim = f"{domain}={json.dumps(value, ensure_ascii=False, default=str)}"
         claim_type = _strip(data.get("claim_type")) or "general"
         scope = _normalize_scope(data.get("scope"))
         fingerprint = _strip(data.get("fingerprint")) or _claim_fingerprint(
@@ -279,6 +312,11 @@ class InferenceClaim:
             confidence=_clamp_confidence(data.get("confidence")),
             evidence_count=max(_safe_int(data.get("evidence_count")), len(evidence)),
             needs_confirmation=needs_confirmation or status == "candidate",
+            domain=domain,
+            value=value,
+            evidence_type=_strip(data.get("evidence_type") or _as_dict(data.get("metadata")).get("evidence_type"))
+            or None,
+            user_id=_strip(data.get("user_id") or _as_dict(data.get("metadata")).get("user_id")) or None,
             expires_at=_coerce_iso(data.get("expires_at")),
             claim_type=claim_type,
             evidence=evidence,
@@ -312,7 +350,150 @@ class InferenceClaim:
         payload["needs_confirmation"] = bool(self.needs_confirmation)
         payload["metadata"] = _json_safe(self.metadata)
         payload["preference_value"] = _json_safe(self.preference_value)
+        payload["value"] = _json_safe(self.value)
         return payload
+
+
+async def _maybe_await(value: Any) -> Any:
+    if inspect.isawaitable(value):
+        return await value
+    return value
+
+
+class AuroraWritePipeline:
+    """Redis-backed signal lane for cross-runtime Aurora claims."""
+
+    def __init__(self, redis_client=None, *, ttl_seconds: int = AURORA_CLAIM_TTL_SECONDS) -> None:
+        self.redis = redis_client
+        self.ttl_seconds = max(1, int(ttl_seconds))
+
+    @staticmethod
+    def claim_key(*, user_id: UUID | str, domain: str) -> str:
+        normalized_domain = _normalize_claim_domain(domain)
+        if not _strip(user_id):
+            raise ValueError("user_id required for Aurora claim")
+        if not normalized_domain:
+            raise ValueError("domain required for Aurora claim")
+        return AURORA_CLAIM_KEY_TEMPLATE.format(user_id=str(user_id), domain=normalized_domain)
+
+    async def submit_claim(self, claim: InferenceClaim) -> InferenceClaim:
+        if self.redis is None:
+            raise RuntimeError("redis required for Aurora claim pipeline")
+        if not claim.domain:
+            raise ValueError("claim.domain required")
+        if not claim.user_id:
+            raise ValueError("claim.user_id required")
+
+        key = self.claim_key(user_id=claim.user_id, domain=claim.domain)
+        raw = await self._redis_get(key)
+        payload = self._load_payload(raw)
+        existing_claim = self._claim_from_payload(payload, domain=claim.domain)
+
+        stored_claim = InferenceClaim(
+            **{
+                **claim.to_dict(),
+                "user_id": claim.user_id,
+                "domain": claim.domain,
+                "updated_at": _utcnow_iso(),
+            }
+        )
+        if existing_claim is not None:
+            stored_claim = InferenceClaim(
+                **{
+                    **existing_claim.to_dict(),
+                    **stored_claim.to_dict(),
+                    "evidence": _merge_evidence(existing_claim.evidence, stored_claim.evidence),
+                    "evidence_count": max(existing_claim.evidence_count, stored_claim.evidence_count),
+                    "observed_at": existing_claim.observed_at,
+                    "last_observed_at": stored_claim.updated_at,
+                    "confidence": max(existing_claim.confidence, stored_claim.confidence),
+                    "metadata": {**existing_claim.metadata, **stored_claim.metadata},
+                }
+            )
+
+        updated_payload = {
+            "user_id": claim.user_id,
+            "domain": claim.domain,
+            "value": _json_safe(stored_claim.value),
+            "confidence": stored_claim.confidence,
+            "claim": stored_claim.to_dict(),
+            "values": [_json_safe(stored_claim.value)] if stored_claim.value is not None else [],
+            "claims": [stored_claim.to_dict()],
+            "updated_at": _utcnow_iso(),
+        }
+        await self._redis_set(key, json.dumps(updated_payload, ensure_ascii=False))
+        return stored_claim
+
+    async def get_claim(self, *, user_id: UUID | str, domain: str) -> InferenceClaim | None:
+        if self.redis is None:
+            return None
+        key = self.claim_key(user_id=user_id, domain=domain)
+        payload = self._load_payload(await self._redis_get(key))
+        return self._claim_from_payload(payload, domain=domain)
+
+    async def _redis_get(self, key: str) -> Any:
+        getter = getattr(self.redis, "get", None)
+        if getter is None:
+            return None
+        return await _maybe_await(getter(key))
+
+    async def _redis_set(self, key: str, value: str) -> None:
+        setex = getattr(self.redis, "setex", None)
+        if setex is not None:
+            await _maybe_await(setex(key, self.ttl_seconds, value))
+            return
+        setter = getattr(self.redis, "set", None)
+        if setter is None:
+            raise RuntimeError("redis client must support set or setex")
+        try:
+            await _maybe_await(setter(key, value, ex=self.ttl_seconds))
+        except TypeError:
+            await _maybe_await(setter(key, value))
+
+    @staticmethod
+    def _load_payload(raw: Any) -> dict[str, Any]:
+        if not raw:
+            return {}
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        if isinstance(raw, Mapping):
+            return _as_dict(raw)
+        try:
+            return _as_dict(json.loads(str(raw)))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return {}
+
+    @staticmethod
+    def _claim_from_payload(payload: Mapping[str, Any], *, domain: str) -> InferenceClaim | None:
+        claims = [item for item in _as_list(payload.get("claims")) if isinstance(item, Mapping)]
+        if claims:
+            return InferenceClaim.from_dict(claims[-1])
+        claim_payload = payload.get("claim")
+        if isinstance(claim_payload, Mapping):
+            return InferenceClaim.from_dict(claim_payload)
+        if payload.get("domain") or payload.get("value") is not None:
+            return InferenceClaim.from_dict({**dict(payload), "domain": payload.get("domain") or domain})
+        return None
+
+
+async def submit_claim(
+    claim: InferenceClaim,
+    redis,
+    *,
+    user_id: UUID | str | None = None,
+) -> InferenceClaim:
+    if user_id is not None and not claim.user_id:
+        claim = InferenceClaim(**{**claim.to_dict(), "user_id": str(user_id)})
+    return await AuroraWritePipeline(redis).submit_claim(claim)
+
+
+async def get_claim(
+    domain: str,
+    redis,
+    *,
+    user_id: UUID | str,
+) -> InferenceClaim | None:
+    return await AuroraWritePipeline(redis).get_claim(user_id=user_id, domain=domain)
 
 
 class InferenceWritePipeline:

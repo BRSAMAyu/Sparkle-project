@@ -9,8 +9,14 @@ from loguru import logger
 
 SPARKLE_SELF_MODEL_KEY_TEMPLATE = "aurora:self_model:{user_id}"
 SPARKLE_SELF_MODEL_TTL_SECONDS = 30 * 24 * 60 * 60
+SPARKLE_SELF_MODEL_DAILY_RECAP_TTL_SECONDS = 24 * 60 * 60
 DEFAULT_STRATEGY_CONFIDENCE = 0.7
 DEFAULT_EFFECTIVENESS_RATE = 0.7
+_DAILY_RECAP_WORKING_THRESHOLD = 0.8
+_DAILY_RECAP_STRUGGLING_THRESHOLD = 0.4
+_TASK_SHAPE_WORKING = "working"
+_TASK_SHAPE_PARTIAL = "partial"
+_TASK_SHAPE_STRUGGLING = "struggling"
 
 _DAILY_TIME_ASSUMPTION = "daily_available_time"
 _DURATION_ASSUMPTION = "task_duration_fit"
@@ -252,6 +258,40 @@ class SparkleSelfModelService:
         await self._persist(user_id=user_id, state=state)
         return state
 
+    async def update_daily_recap(
+        self,
+        *,
+        user_id: str,
+        completion_rate: float,
+    ) -> dict[str, Any]:
+        """Update self-model at end of Sprint day based on completion rate.
+
+        Tiers:
+            completion_rate >= 0.8  → "working",   failure_streak reset to 0
+            0.4 <= rate  < 0.8      → "partial",   failure_streak unchanged
+            completion_rate < 0.4   → "struggling", failure_streak += 1
+        """
+        state = await self._load_or_initialize(user_id)
+        rate = _clamp_unit(completion_rate, default=0.5)
+
+        if rate >= _DAILY_RECAP_WORKING_THRESHOLD:
+            task_shape = _TASK_SHAPE_WORKING
+            state["failure_streak"] = 0
+        elif rate < _DAILY_RECAP_STRUGGLING_THRESHOLD:
+            task_shape = _TASK_SHAPE_STRUGGLING
+            state["failure_streak"] = max(0, _safe_int(state.get("failure_streak"))) + 1
+        else:
+            task_shape = _TASK_SHAPE_PARTIAL
+
+        harness = _as_dict(state.get("harness_effectiveness"))
+        harness["task_shape"] = task_shape
+        harness["task_completion_rate"] = rate
+        state["harness_effectiveness"] = harness
+
+        self._recompute_recalibration(state)
+        await self._persist(user_id=user_id, state=state)
+        return state
+
     async def _load_or_initialize(self, user_id: str) -> dict[str, Any]:
         if self.redis is None:
             return self._default_state(user_id)
@@ -294,6 +334,7 @@ class SparkleSelfModelService:
                 "context_hit_rate": DEFAULT_EFFECTIVENESS_RATE,
                 "task_completion_rate": DEFAULT_EFFECTIVENESS_RATE,
                 "user_corrections_count": 0,
+                "task_shape": _TASK_SHAPE_PARTIAL,
             },
             "needs_recalibration": False,
             "recalibration_reasons": [],
@@ -332,6 +373,8 @@ class SparkleSelfModelService:
         ][-_MAX_SIGNAL_IDS:]
 
         harness = _as_dict(payload.get("harness_effectiveness"))
+        task_shape_raw = str(harness.get("task_shape") or "").strip()
+        task_shape = task_shape_raw if task_shape_raw in (_TASK_SHAPE_WORKING, _TASK_SHAPE_PARTIAL, _TASK_SHAPE_STRUGGLING) else _TASK_SHAPE_PARTIAL
         state["harness_effectiveness"] = {
             "context_hit_rate": _clamp_unit(
                 harness.get("context_hit_rate"),
@@ -342,6 +385,7 @@ class SparkleSelfModelService:
                 default=DEFAULT_EFFECTIVENESS_RATE,
             ),
             "user_corrections_count": max(0, _safe_int(harness.get("user_corrections_count"))),
+            "task_shape": task_shape,
         }
 
         assumptions_by_id = {
@@ -461,6 +505,9 @@ class SparkleSelfModelService:
         task_success_count = max(0, _safe_int(state.get("task_success_count")))
         harness = _as_dict(state.get("harness_effectiveness"))
         user_corrections_count = max(0, _safe_int(harness.get("user_corrections_count")))
+        task_shape = str(harness.get("task_shape") or "").strip()
+        if task_shape not in (_TASK_SHAPE_WORKING, _TASK_SHAPE_PARTIAL, _TASK_SHAPE_STRUGGLING):
+            task_shape = _TASK_SHAPE_PARTIAL
 
         if task_signal_count > 0:
             task_completion_rate = (
@@ -481,6 +528,7 @@ class SparkleSelfModelService:
             "context_hit_rate": round(context_hit_rate, 4),
             "task_completion_rate": round(task_completion_rate, 4),
             "user_corrections_count": user_corrections_count,
+            "task_shape": task_shape,
         }
 
     def _recompute_recalibration(self, state: dict[str, Any]) -> None:

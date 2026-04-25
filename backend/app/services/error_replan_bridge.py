@@ -270,6 +270,11 @@ class ErrorReplanBridge:
                     primary_plan_id,
                 )
                 ERROR_REPLAN_BRIDGE_TRIGGERED_TOTAL.labels(mode=mode).inc()
+                await self._submit_weak_node_claim(
+                    user_id=user_id,
+                    error_node_id=self._primary_error_node_id(error, normalized_node_ids),
+                    plan_id=primary_plan_id,
+                )
                 return {
                     "triggered": True,
                     "reason": "specialized_error_repair",
@@ -394,6 +399,11 @@ class ErrorReplanBridge:
                 effective_decision.threshold,
             )
             ERROR_REPLAN_BRIDGE_TRIGGERED_TOTAL.labels(mode=mode).inc()
+            await self._submit_weak_node_claim(
+                user_id=user_id,
+                error_node_id=self._primary_error_node_id(error, low_mastery_nodes or normalized_node_ids),
+                plan_id=triggered_plan_ids[0] if triggered_plan_ids else None,
+            )
             return {
                 "triggered": True,
                 "reason": "error_pressure_bridge",
@@ -1237,6 +1247,46 @@ class ErrorReplanBridge:
             error.mastery_delta = float(mastery_update["delta"])
 
         await self.db.flush()
+
+    def _primary_error_node_id(self, error: ErrorRecord, fallback_node_ids: list[UUID]) -> UUID | None:
+        affected_node_id = self._coerce_uuid(getattr(error, "affected_node_id", None))
+        if affected_node_id is not None:
+            return affected_node_id
+        for value in getattr(error, "linked_knowledge_node_ids", None) or []:
+            node_id = self._coerce_uuid(value)
+            if node_id is not None:
+                return node_id
+        return fallback_node_ids[0] if fallback_node_ids else None
+
+    async def _submit_weak_node_claim(
+        self,
+        *,
+        user_id: UUID,
+        error_node_id: UUID | None,
+        plan_id: UUID | str | None,
+    ) -> None:
+        if self.redis is None or error_node_id is None:
+            return
+        try:
+            from app.aurora.runtime_v1.write_pipeline import AuroraWritePipeline, InferenceClaim
+
+            claim = InferenceClaim(
+                domain="weak_node",
+                value=str(error_node_id),
+                evidence_type="error_replan_signal",
+                confidence=0.75,
+                source="error_replan_bridge",
+                user_id=str(user_id),
+                planning_session_id=str(plan_id) if plan_id else None,
+            )
+            await AuroraWritePipeline(redis_client=self.redis).submit_claim(claim)
+        except Exception as exc:
+            logger.warning(
+                "ErrorReplanBridge: failed to submit weak-node claim for user={} node={}: {}",
+                user_id,
+                error_node_id,
+                exc,
+            )
 
     async def _notify_plan_adjusted(
         self,

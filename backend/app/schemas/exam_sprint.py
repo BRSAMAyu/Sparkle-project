@@ -275,6 +275,7 @@ class ExamSprintDashboardResponse(BaseModel):
     streak_days: int = Field(default=0, ge=0)
     high_yield_low_mastery_topics: list[str] = Field(default_factory=list)
     task_groups: list[ExamSprintDashboardTaskGroup] = Field(default_factory=list)
+    sleep_guard_hint: str | None = None
 
 
 class DiagnoseConfidence(StrEnum):

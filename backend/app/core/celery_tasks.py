@@ -1019,6 +1019,157 @@ def retry_achievement_photon_reward(
         raise self.retry(exc=exc, countdown=30 * (2 ** int(self.request.retries or 0)))
 
 
+@celery_app.task(
+    bind=True,
+    max_retries=2,
+    name="app.core.celery_tasks.daily_sprint_reminder_task",
+)
+def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
+    """
+    F17: 如果用户今天的 Sprint 任务完成率低于预期（<60%），发送推送提醒。
+
+    条件:
+      - completion_rate < 0.6 → 触发推送
+      - days_left > 0 → 考试当天不催
+      - 推送内容包含科目、剩余天数、今日主任务
+    """
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.services.exam_sprint_dashboard_service import ExamSprintDashboardService
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationCreate
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            dashboard_service = ExamSprintDashboardService(session)
+            dashboard = await dashboard_service.get_dashboard(UUID(user_id))
+
+            if not dashboard.active or str(dashboard.plan_id) != plan_id:
+                logger.debug(
+                    "daily_sprint_reminder_task: no active sprint or plan mismatch for user %s",
+                    user_id,
+                )
+                return {"status": "skipped", "reason": "no_active_sprint"}
+
+            if dashboard.days_left <= 0:
+                logger.debug(
+                    "daily_sprint_reminder_task: exam day, skipping for user %s",
+                    user_id,
+                )
+                return {"status": "skipped", "reason": "exam_day"}
+
+            completion_rate = dashboard.today_progress.completion_rate
+            if completion_rate >= 0.6:
+                logger.debug(
+                    "daily_sprint_reminder_task: completion %.0f%% ok, skipping for user %s",
+                    completion_rate * 100,
+                    user_id,
+                )
+                return {"status": "skipped", "reason": "on_track", "completion_rate": completion_rate}
+
+            # Build primary task name from today's group
+            primary_task_title = ""
+            for group in dashboard.task_groups:
+                if group.is_today:
+                    for task_item in group.tasks:
+                        if task_item.status != "completed":
+                            primary_task_title = task_item.title
+                            break
+                    break
+
+            subject = dashboard.subject or dashboard.plan_name or "Sprint"
+            days_left = dashboard.days_left
+
+            title = "今日 Sprint 还差一步"
+            content = f"{subject} 还剩 {days_left} 天，今天的「{primary_task_title}」还没完成。现在还来得及 💪"
+
+            await NotificationService.create(
+                session,
+                UUID(user_id),
+                NotificationCreate(
+                    title=title,
+                    content=content,
+                    type="sprint_reminder",
+                    data={
+                        "plan_id": plan_id,
+                        "days_left": days_left,
+                        "completion_rate": completion_rate,
+                        "primary_task": primary_task_title,
+                        "deep_link": "/plan/detail",
+                    },
+                ),
+                push_via_websocket=True,
+            )
+
+            logger.info(
+                "✅ Sprint reminder sent to user %s (plan %s, completion=%.0f%%)",
+                user_id,
+                plan_id,
+                completion_rate * 100,
+            )
+            return {
+                "status": "sent",
+                "user_id": user_id,
+                "plan_id": plan_id,
+                "completion_rate": completion_rate,
+                "days_left": days_left,
+            }
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("❌ daily_sprint_reminder_task failed for user %s: %s", user_id, exc)
+        raise self.retry(exc=exc, countdown=60)
+
+
+@celery_app.task(
+    bind=True,
+    max_retries=2,
+    name="app.core.celery_tasks.scan_daily_sprint_reminders",
+)
+def scan_daily_sprint_reminders(self, limit: int = 500):
+    """
+    F17: 每日扫描所有活跃 sprint 用户，为每个用户派发 daily_sprint_reminder_task。
+    """
+    from uuid import UUID
+
+    from app.models.plan import Plan, PlanType
+    from sqlalchemy import and_, select
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            stmt = (
+                select(Plan.user_id, Plan.id)
+                .where(
+                    and_(
+                        Plan.is_active.is_(True),
+                        Plan.type == PlanType.SPRINT,
+                        Plan.not_deleted_filter(),
+                    )
+                )
+                .limit(limit)
+            )
+            rows = (await session.execute(stmt)).all()
+            dispatched = 0
+            for user_id, plan_id in rows:
+                celery_app.send_task(
+                    "app.core.celery_tasks.daily_sprint_reminder_task",
+                    args=(str(user_id), str(plan_id)),
+                    queue="default",
+                )
+                dispatched += 1
+
+            logger.info("✅ Dispatched %d sprint reminder tasks", dispatched)
+            return {"dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("❌ scan_daily_sprint_reminders failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.recompute_persdyn_attractors")
 def recompute_persdyn_attractors(self):
     """Recompute Stage 27 PersDyn attractors for all users."""

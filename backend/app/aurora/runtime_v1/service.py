@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +11,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import app.aurora.runtime_v1.write_pipeline as write_pipeline
 from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
 from app.aurora.runtime_v1.control_surface import (
     AuroraHardBounds,
@@ -23,6 +25,7 @@ from app.aurora.runtime_v1.skills import AuroraSkillRegistry
 from app.aurora.runtime_v1.state import ActivityProfile, merge_activity_profile_payload
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.aurora.runtime_v1.wake_policy import AuroraWakePolicyService
+from app.aurora.runtime_v1.write_pipeline import InferenceClaim
 from app.models.user_preferences import UserPreferencesCenter
 from app.sprint_packs.last_24h_mode import (
     apply_last_24h_policy_overrides,
@@ -32,6 +35,18 @@ from app.sprint_packs.last_24h_mode import (
 )
 
 GALAXY_BASELINE_TTL_SECONDS = 300  # 5-min stale-acceptable cache
+CHINA_TIMEZONE = timezone(timedelta(hours=8))
+SLEEP_GUARD_START_HOUR = 23
+SLEEP_GUARD_END_HOUR = 6
+REQUEST_TIMESTAMP_KEYS = (
+    "timestamp",
+    "request_timestamp",
+    "client_timestamp",
+    "message_timestamp",
+    "user_message_timestamp",
+    "created_at",
+    "event_time",
+)
 
 AURORA_SURFACE_MODELING = "aurora_modeling"
 AURORA_RUNTIME_MODE_SURFACES = {
@@ -133,7 +148,7 @@ class AuroraRuntimeV1Service:
         self.redis = redis_client
         self.decision_loop = decision_loop or AuroraDecisionLoop()
         self.chat_adapter = chat_adapter or ChatLayerAdapter()
-        self.dashboard_builder = dashboard_builder or DashboardReadoutBuilder()
+        self.dashboard_builder = dashboard_builder or DashboardReadoutBuilder(redis_client)
         self.self_model_service = self_model_service or SparkleSelfModelService(redis_client)
         self.skill_registry = skill_registry or AuroraSkillRegistry()
         self.wake_policy_service = wake_policy_service or AuroraWakePolicyService(redis_client)
@@ -160,11 +175,21 @@ class AuroraRuntimeV1Service:
             request_extra_context=request_extra_context,
             user_context_payload=user_context_payload,
         )
+        request_extra_context = self._with_sleep_guard_context(
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            user_context_payload=user_context_payload,
+        )
 
         if not request_extra_context.get("galaxy_baseline") and active_db is not None:
             galaxy_baseline = await self._fetch_galaxy_baseline(active_db=active_db, user_id=user_id)
             if galaxy_baseline:
                 request_extra_context = {**request_extra_context, "galaxy_baseline": galaxy_baseline}
+        user_context_payload = await self.dashboard_builder.with_confirmed_weak_nodes_from_redis(
+            user_id=user_id,
+            user_context_payload=user_context_payload,
+            redis_client=self.redis,
+        )
 
         control_surface_reading = await self._read_control_surface(active_db=active_db, user_id=user_id)
         activity_profile = self._build_activity_profile(surface=surface, request_extra_context=request_extra_context)
@@ -186,9 +211,7 @@ class AuroraRuntimeV1Service:
             if self._looks_like_new_topic_request(user_message):
                 return AuroraRuntimeTurnPlan(
                     surface=surface,
-                    messages=[
-                        "明天就考试了，现在看新章节的收益很低。建议先把你最容易丢分的 TCP 状态变化再过一遍。"
-                    ],
+                    messages=["明天就考试了，现在看新章节的收益很低。建议先把你最容易丢分的 TCP 状态变化再过一遍。"],
                     surface_complete=False,
                     modeling_complete=False,
                     activity_profile=activity_profile,
@@ -202,6 +225,12 @@ class AuroraRuntimeV1Service:
             user_id=user_id,
             request_extra_context=request_extra_context,
             user_context_payload=user_context_payload,
+        )
+        self_model = await self._maybe_apply_daily_recap(
+            user_id=user_id,
+            request_extra_context=request_extra_context,
+            user_context_payload=user_context_payload,
+            self_model=self_model,
         )
         wake_decision = await self.wake_policy_service.evaluate(
             active_db=active_db,
@@ -257,6 +286,18 @@ class AuroraRuntimeV1Service:
             informational_tensions=informational_tensions,
             wake_policy=wake_decision.to_payload(),
         )
+        if self.redis is not None:
+            claims = self._extract_inference_claims_from_decision(decision, readout)
+            for claim in claims:
+                try:
+                    await write_pipeline.submit_claim(claim, redis=self.redis)
+                except Exception as exc:
+                    logger.warning(
+                        "Aurora runtime v1 failed to submit inference claim {} for user {}: {}",
+                        claim.domain,
+                        user_id,
+                        exc,
+                    )
         if wake_decision.full_allowed and messages:
             await self.wake_policy_service.record_full_wake(
                 user_id=user_id,
@@ -428,6 +469,165 @@ class AuroraRuntimeV1Service:
         )
         return enriched
 
+    def _with_sleep_guard_context(
+        self,
+        *,
+        request_extra_context: dict[str, Any],
+        conversation_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        enriched = dict(request_extra_context)
+        enriched.pop("sleep_guard_active", None)
+        enriched.pop("sleep_guard_hint", None)
+
+        observed_at = self._request_timestamp_in_china_time(
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+        )
+        if not self._is_sleep_guard_window(observed_at):
+            return enriched
+
+        enriched["sleep_guard_active"] = True
+        hint = self._extract_sleep_guard_hint(enriched, user_context_payload)
+        if hint:
+            enriched["sleep_guard_hint"] = hint
+        return enriched
+
+    def _request_timestamp_in_china_time(
+        self,
+        *,
+        request_extra_context: dict[str, Any],
+        conversation_context: dict[str, Any],
+    ) -> datetime:
+        for value in self._request_timestamp_candidates(request_extra_context, conversation_context):
+            parsed = self._coerce_china_datetime(value)
+            if parsed is not None:
+                return parsed
+        return datetime.now(timezone(timedelta(hours=8)))
+
+    def _request_timestamp_candidates(
+        self,
+        request_extra_context: dict[str, Any],
+        conversation_context: dict[str, Any],
+    ) -> list[Any]:
+        candidates: list[Any] = []
+        for key in REQUEST_TIMESTAMP_KEYS:
+            if key in request_extra_context:
+                candidates.append(request_extra_context.get(key))
+
+        for key in ("user_message", "message", "request"):
+            nested = request_extra_context.get(key)
+            if isinstance(nested, dict):
+                for timestamp_key in REQUEST_TIMESTAMP_KEYS:
+                    if timestamp_key in nested:
+                        candidates.append(nested.get(timestamp_key))
+
+        messages = conversation_context.get("messages")
+        if isinstance(messages, list):
+            for message in reversed(messages):
+                if not isinstance(message, dict):
+                    continue
+                if str(message.get("role") or "").lower() not in {"user", "human"}:
+                    continue
+                for timestamp_key in REQUEST_TIMESTAMP_KEYS:
+                    if timestamp_key in message:
+                        candidates.append(message.get(timestamp_key))
+                break
+        return candidates
+
+    def _coerce_china_datetime(self, value: Any) -> datetime | None:
+        if value in (None, ""):
+            return None
+        if isinstance(value, datetime):
+            parsed = value
+        elif isinstance(value, (int, float)):
+            parsed = self._datetime_from_epoch(value)
+            if parsed is None:
+                return None
+        elif isinstance(value, dict):
+            seconds = value.get("seconds")
+            if seconds is None:
+                return None
+            nanos = value.get("nanos") or value.get("nanos_adjustment") or 0
+            try:
+                parsed = self._datetime_from_epoch(float(seconds) + float(nanos) / 1_000_000_000)
+            except (TypeError, ValueError):
+                return None
+            if parsed is None:
+                return None
+        else:
+            text = _strip(value)
+            if not text:
+                return None
+            parsed = self._parse_timestamp_text(text)
+            if parsed is None:
+                return None
+
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=CHINA_TIMEZONE)
+        return parsed.astimezone(CHINA_TIMEZONE)
+
+    def _datetime_from_epoch(self, value: Any) -> datetime | None:
+        try:
+            seconds = float(value)
+        except (TypeError, ValueError):
+            return None
+        if abs(seconds) > 10_000_000_000:
+            seconds /= 1000
+        try:
+            return datetime.fromtimestamp(seconds, tz=CHINA_TIMEZONE)
+        except (OverflowError, OSError, ValueError):
+            return None
+
+    def _parse_timestamp_text(self, text: str) -> datetime | None:
+        numeric = text.strip()
+        if numeric.replace(".", "", 1).isdigit():
+            return self._datetime_from_epoch(numeric)
+
+        normalized = text.replace("Z", "+00:00")
+        if normalized.endswith(" CST"):
+            normalized = f"{normalized[:-4]}+08:00"
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            pass
+
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+            try:
+                return datetime.strptime(text, fmt)
+            except ValueError:
+                continue
+        return None
+
+    def _is_sleep_guard_window(self, observed_at: datetime) -> bool:
+        local_time = (
+            observed_at.astimezone(CHINA_TIMEZONE) if observed_at.tzinfo else observed_at.replace(tzinfo=CHINA_TIMEZONE)
+        )
+        return local_time.hour >= SLEEP_GUARD_START_HOUR or local_time.hour < SLEEP_GUARD_END_HOUR
+
+    def _extract_sleep_guard_hint(
+        self,
+        request_extra_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+    ) -> str:
+        profile_context = user_context_payload.get("profile_context")
+        if not isinstance(profile_context, dict):
+            profile_context = {}
+
+        for candidate in (
+            request_extra_context.get("sprint_policy"),
+            request_extra_context.get("exam_sprint_policy"),
+            user_context_payload.get("sprint_policy"),
+            user_context_payload.get("exam_sprint_policy"),
+            profile_context.get("sprint_policy"),
+            profile_context.get("exam_sprint_policy"),
+        ):
+            if isinstance(candidate, dict):
+                hint = _strip(candidate.get("sleep_guard_hint"))
+                if hint:
+                    return hint
+        return ""
+
     def _is_last_24h_policy(self, policy: Any) -> bool:
         return isinstance(policy, dict) and (
             bool(policy.get("last_24h_mode"))
@@ -463,6 +663,43 @@ class AuroraRuntimeV1Service:
             for key, value in payload.items()
             if value not in (None, "") and value != default_payload.get(key)
         }
+
+    async def _maybe_apply_daily_recap(
+        self,
+        *,
+        user_id: str,
+        request_extra_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+        self_model: dict[str, Any],
+    ) -> dict[str, Any]:
+        task_state = dict(
+            request_extra_context.get("task_state")
+            or user_context_payload.get("task_state")
+            or {},
+        )
+        if not task_state.get("day_completed"):
+            return self_model
+
+        raw_rate = task_state.get("completion_rate")
+        try:
+            completion_rate = float(raw_rate)
+        except (TypeError, ValueError):
+            logger.warning("Aurora daily recap: invalid completion_rate={} for user {}", raw_rate, user_id)
+            return self_model
+
+        try:
+            await self.self_model_service.update_daily_recap(
+                user_id=user_id,
+                completion_rate=completion_rate,
+            )
+            return await self.self_model_service.get_readout_summary(
+                user_id=user_id,
+                request_extra_context=request_extra_context,
+                user_context_payload=user_context_payload,
+            )
+        except Exception as exc:
+            logger.warning("Aurora daily recap failed for user {}: {}", user_id, exc)
+            return self_model
 
     def _merge_harness_updates(self, activity_profile: dict[str, Any], decision: AuroraDecision) -> dict[str, Any]:
         return merge_activity_profile_payload(activity_profile, decision.harness_updates or {})
@@ -508,6 +745,136 @@ class AuroraRuntimeV1Service:
                 "priority": 0.7,
             }
         ]
+
+    def _extract_inference_claims_from_decision(
+        self,
+        decision: AuroraDecision,
+        readout: Any,
+    ) -> list[InferenceClaim]:
+        user_id = _strip(getattr(readout, "user_id", ""))
+        if not user_id:
+            return []
+
+        claims: list[InferenceClaim] = []
+        if decision.modeling_complete:
+            claims.append(
+                InferenceClaim(
+                    user_id=user_id,
+                    domain="modeling_complete",
+                    evidence_type="modeling_turn",
+                    value=True,
+                    confidence=0.9,
+                    status="confirmed",
+                    needs_confirmation=False,
+                    evidence=["Aurora decision marked modeling_complete=true."],
+                    source="aurora_runtime_v1",
+                )
+            )
+
+        tensions = (decision.state_updates or {}).get("informational_tensions")
+        if isinstance(tensions, list):
+            for item in tensions:
+                if not isinstance(item, Mapping):
+                    continue
+                if _strip(item.get("status")).lower() != "resolved":
+                    continue
+                domain = canonicalize_runtime_domain(item.get("domain"))
+                if not domain:
+                    continue
+                claims.append(
+                    InferenceClaim(
+                        user_id=user_id,
+                        domain=domain,
+                        evidence_type="resolved_tension",
+                        value=self._value_for_resolved_tension(domain=domain, tension=item, readout=readout),
+                        confidence=self._claim_confidence(item, default=0.85),
+                        status="confirmed",
+                        needs_confirmation=False,
+                        evidence=self._evidence_for_resolved_tension(item),
+                        source="aurora_runtime_v1",
+                    )
+                )
+
+        strategy = (decision.harness_updates or {}).get("strategy")
+        if isinstance(strategy, Mapping) and strategy.get("concept_first") is True:
+            claims.append(
+                InferenceClaim(
+                    user_id=user_id,
+                    domain="learning_style",
+                    evidence_type="harness_strategy",
+                    value="concept_first",
+                    confidence=0.7,
+                    evidence=["Aurora selected concept_first=true in the teaching strategy."],
+                    source="aurora_runtime_v1",
+                )
+            )
+        return claims
+
+    def _value_for_resolved_tension(
+        self,
+        *,
+        domain: str,
+        tension: Mapping[str, Any],
+        readout: Any,
+    ) -> Any:
+        for key in ("value", "resolved_value", "confirmed_value", "answer", "content"):
+            value = tension.get(key)
+            if value not in (None, "", [], {}):
+                return value
+
+        evidence = tension.get("evidence")
+        if isinstance(evidence, list):
+            for item in reversed(evidence):
+                if item not in (None, "", [], {}):
+                    return item
+
+        for source in (
+            getattr(readout, "request_extra_context", {}),
+            getattr(readout, "task_state", {}),
+            getattr(readout, "profile_context", {}),
+            getattr(readout, "cold_start_context", {}),
+            getattr(readout, "self_model", {}),
+            getattr(readout, "exam_sprint_policy", {}),
+        ):
+            value = self._find_domain_value(domain=domain, payload=source)
+            if value not in (None, "", [], {}):
+                return value
+        return True
+
+    def _find_domain_value(self, *, domain: str, payload: Any) -> Any:
+        if payload in (None, "", [], {}):
+            return None
+        if isinstance(payload, Mapping):
+            for key, value in payload.items():
+                if canonicalize_runtime_domain(key) == domain and value not in (None, "", [], {}):
+                    return value
+                nested = self._find_domain_value(domain=domain, payload=value)
+                if nested not in (None, "", [], {}):
+                    return nested
+        if isinstance(payload, list):
+            for item in payload:
+                nested = self._find_domain_value(domain=domain, payload=item)
+                if nested not in (None, "", [], {}):
+                    return nested
+        return None
+
+    def _evidence_for_resolved_tension(self, tension: Mapping[str, Any]) -> list[str]:
+        evidence: list[str] = []
+        raw_evidence = tension.get("evidence")
+        if isinstance(raw_evidence, list):
+            evidence.extend(_strip(item) for item in raw_evidence if _strip(item))
+        description = _strip(tension.get("description"))
+        if description:
+            evidence.append(description)
+        return evidence[-5:]
+
+    def _claim_confidence(self, payload: Mapping[str, Any], *, default: float) -> float:
+        for key in ("confidence", "priority"):
+            try:
+                return round(max(0.0, min(1.0, float(payload.get(key)))), 4)
+            except (TypeError, ValueError):
+                continue
+        return default
 
     async def _persist_runtime_state(
         self,
