@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_completion_screen.dart';
@@ -62,6 +63,45 @@ void main() {
 
     expect(shared, isTrue);
     expect(sharedText, contains('#Sparkle备考'));
+  });
+
+  testWidgets('close falls back to learning portfolio when opened directly',
+      (tester) async {
+    await _useTallSurface(tester);
+    final router = GoRouter(
+      initialLocation: '/completion',
+      routes: [
+        GoRoute(
+          path: '/exam-sprint/portfolio',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('PORTFOLIO'))),
+        ),
+        GoRoute(
+          path: '/completion',
+          builder: (context, state) => SprintCompletionScreen(
+            planId: 'plan-1',
+            subjectName: '计算机网络',
+            initialSummary: _summary(),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(
+          theme: AppThemes.lightTheme,
+          routerConfig: router,
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 950));
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('PORTFOLIO'), findsOneWidget);
   });
 }
 

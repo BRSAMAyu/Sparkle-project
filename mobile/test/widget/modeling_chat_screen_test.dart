@@ -145,15 +145,26 @@ class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
 Future<void> _pumpModelingScreen(
   WidgetTester tester, {
   required _QueuedChatRepository repository,
+  String initialLocation = '/',
 }) async {
   SharedPreferences.setMockInitialValues(<String, Object>{});
 
   final router = GoRouter(
-    initialLocation: '/',
+    initialLocation: initialLocation,
     routes: [
       GoRoute(
         path: '/',
         builder: (context, state) => const ModelingChatScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/modeling-chat',
+        builder: (context, state) => const ModelingChatScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/persona',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('PERSONA')),
+        ),
       ),
       GoRoute(
         path: '/home',
@@ -209,8 +220,11 @@ void main() {
     testWidgets('modeling_complete metadata replaces old turn-count heuristic',
         (tester) async {
       final onboardingController = StreamController<ChatStreamEvent>();
-      controllers.add(onboardingController);
-      repository.enqueueController(onboardingController);
+      final planningController = StreamController<ChatStreamEvent>();
+      controllers.addAll([onboardingController, planningController]);
+      repository
+        ..enqueueController(onboardingController)
+        ..enqueueController(planningController);
 
       await _pumpModelingScreen(tester, repository: repository);
 
@@ -240,8 +254,15 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text('开始规划'), findsOneWidget);
+      expect(find.text('正在生成你的第一份冲刺计划'), findsOneWidget);
       expect(find.text('我们先定个调。'), findsOneWidget);
+      expect(repository.sentRequests.last.message, '开始规划');
+
+      planningController
+        ..add(DoneEvent(finishReason: 'STOP'))
+        ..close();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
     });
 
     testWidgets('ignores modeling_complete metadata from non-modeling surfaces',

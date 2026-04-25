@@ -636,6 +636,32 @@ void main() {
       expect(service.reconnectAttempts, 1);
     });
 
+    test('Broadcasts retryable error event to active request streams',
+        () async {
+      final events = <ChatStreamEvent>[];
+      final stream = service.sendMessage(
+        message: 'retry me',
+        userId: 'user1',
+        requestId: 'retry-request',
+      );
+      final sub = stream.listen(events.add);
+
+      await Future<void>.delayed(Duration.zero);
+      mockChannel.simulateError('Connection reset by peer');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(
+        events.whereType<ErrorEvent>().map((event) => event.code),
+        contains('CONNECTION_ERROR'),
+      );
+      expect(
+        events.whereType<ErrorEvent>().every((event) => event.retryable),
+        isTrue,
+      );
+
+      await sub.cancel();
+    });
+
     test('Respects max reconnect attempts', () async {
       // Connect
       service.sendMessage(message: 'init', userId: 'user1');

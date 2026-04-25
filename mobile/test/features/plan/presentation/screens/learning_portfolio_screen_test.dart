@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
@@ -70,6 +72,84 @@ void main() {
 
     expect(find.text('你的学习档案还没有任何冲刺记录'), findsOneWidget);
     expect(find.text('去创建考试冲刺'), findsOneWidget);
+  });
+
+  testWidgets('learning portfolio shows retry state and reloads after retry',
+      (WidgetTester tester) async {
+    await _useTallSurface(tester);
+    var repositoryCalls = 0;
+    final repository = _FakeExamSprintRepository(
+      handler: () async {
+        repositoryCalls += 1;
+        if (repositoryCalls == 1) {
+          throw Exception('portfolio 500');
+        }
+        return _mockPortfolio();
+      },
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        repository: repository,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.textContaining('portfolio 500'), findsOneWidget);
+    expect(find.widgetWithText(SparkleButton, '重试'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(SparkleButton, '重试'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(repositoryCalls, equals(2));
+    expect(find.text('所有科目累计掌握节点'), findsOneWidget);
+    expect(find.text('操作系统'), findsOneWidget);
+  });
+
+  testWidgets('back falls back to profile when opened directly',
+      (WidgetTester tester) async {
+    await _useTallSurface(tester);
+    final router = GoRouter(
+      initialLocation: '/exam-sprint/portfolio',
+      routes: [
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('PROFILE'))),
+        ),
+        GoRoute(
+          path: '/exam-sprint/portfolio',
+          builder: (context, state) => const LearningPortfolioScreen(),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          examSprintRepositoryProvider.overrideWithValue(
+            _FakeExamSprintRepository(result: _mockPortfolio()),
+          ),
+          currentUserProvider.overrideWithValue(_mockUser()),
+        ],
+        child: MaterialApp.router(
+          theme: AppThemes.lightTheme,
+          routerConfig: router,
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    expect(find.text('PROFILE'), findsOneWidget);
   });
 }
 
@@ -167,15 +247,21 @@ UserModel _mockUser() {
 }
 
 class _FakeExamSprintRepository extends ExamSprintRepository {
-  _FakeExamSprintRepository({required this.result}) : super(_NoopApiClient());
+  _FakeExamSprintRepository({
+    LearningPortfolioResult? result,
+    Future<LearningPortfolioResult> Function()? handler,
+  })  : _result = result,
+        _handler = handler,
+        super(_NoopApiClient());
 
-  final LearningPortfolioResult result;
+  final LearningPortfolioResult? _result;
+  final Future<LearningPortfolioResult> Function()? _handler;
 
   @override
   Future<LearningPortfolioResult> fetchLearningPortfolio({
     String? userId,
   }) async {
-    return result;
+    return await _handler?.call() ?? _result!;
   }
 }
 

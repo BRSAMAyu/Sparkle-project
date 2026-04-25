@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/retry_strategy.dart';
+import 'package:sparkle/core/services/smart_cache.dart';
+import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
+import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 void main() {
   group('Galaxy Widget Tests', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await ViewStorageService.ensureInitialized();
+    });
+
     testWidgets('GalaxyState renders loading indicator when loading', (
       tester,
     ) async {
@@ -232,6 +245,41 @@ void main() {
 
       expect(lowDecoration.color, isNot(highDecoration.color));
     });
+
+    testWidgets('GalaxyScreen shows retry state and reloads after retry',
+        (tester) async {
+      final notifier = _RetryGalaxyScreenNotifier();
+      final container = ProviderContainer(
+        overrides: [
+          galaxyProvider.overrideWith((ref) => notifier),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const GalaxyScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1200));
+
+      expect(find.textContaining('galaxy 500'), findsOneWidget);
+      expect(find.byType(FilledButton), findsWidgets);
+
+      await tester.tap(find.byType(FilledButton).first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1200));
+
+      expect(notifier.loadCalls, equals(2));
+      expect(find.textContaining('galaxy 500'), findsNothing);
+    });
   });
 
   group('GalaxyState Tests', () {
@@ -302,6 +350,101 @@ void main() {
       expect(cluster.childNodeIds, hasLength(3));
     });
   });
+}
+
+class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
+  FakeEnhancedGalaxyRepository();
+
+  int getGraphCalls = 0;
+
+  @override
+  Future<NetworkResult<GalaxyGraphResponse>> getGraph({
+    double zoomLevel = 1.0,
+    bool forceRefresh = false,
+  }) async =>
+      NetworkResult.failure(GalaxyError.unknown('Not implemented'));
+
+  @override
+  Future<NetworkResult<GalaxyGraphResponse>> getGraphForViewport({
+    required Rect viewport,
+  }) async =>
+      NetworkResult.failure(GalaxyError.unknown('Not implemented'));
+
+  @override
+  Future<NetworkResult<UserGalaxyContribution>> getContributionStats() async =>
+      NetworkResult.failure(GalaxyError.unknown('Not implemented'));
+
+  @override
+  Future<NetworkResult<void>> updateNodePositions(
+    Map<String, Offset> positions,
+  ) async =>
+      NetworkResult.success(null);
+
+  @override
+  Future<NetworkResult<void>> updateNodePosition(
+    String nodeId,
+    Offset position,
+  ) async =>
+      updateNodePositions(<String, Offset>{nodeId: position});
+
+  @override
+  Future<NetworkResult<Map<String, dynamic>>> updateNodeMastery(
+    String nodeId, {
+    required int mastery,
+    String reason = 'manual_update',
+  }) async =>
+      NetworkResult.success(<String, dynamic>{});
+
+  @override
+  Stream<SSEEvent> getGalaxyEventsStream({String? lastEventId}) =>
+      const Stream<SSEEvent>.empty();
+
+  @override
+  Future<NetworkResult<void>> sparkNode(String id) async =>
+      NetworkResult.success(null);
+
+  @override
+  Future<NetworkResult<void>> toggleFavorite(String nodeId) async =>
+      NetworkResult.success(null);
+
+  @override
+  Future<NetworkResult<void>> pauseDecay(String nodeId, bool pause) async =>
+      NetworkResult.success(null);
+
+  @override
+  Future<NetworkResult<KnowledgeDetailResponse>> getNodeDetail(
+    String nodeId,
+  ) async =>
+      NetworkResult.failure(GalaxyError.unknown('Not implemented'));
+
+  @override
+  Future<NetworkResult<GalaxyNodeHistory>> getNodeHistory(
+    String nodeId, {
+    String? packId,
+  }) async =>
+      NetworkResult.failure(GalaxyError.unknown('Not implemented'));
+
+  @override
+  Future<NetworkResult<KnowledgeDetailResponse?>> predictNextNode() async =>
+      NetworkResult.success(null);
+
+  @override
+  Future<NetworkResult<List<GalaxySearchResult>>> searchNodes(
+    String query,
+  ) async =>
+      NetworkResult.success(const <GalaxySearchResult>[]);
+
+  @override
+  void clearCache() {}
+
+  @override
+  CircuitState get circuitBreakerState => CircuitState.closed;
+
+  @override
+  void resetCircuitBreaker() {}
+
+  @override
+  Map<String, CacheStats> get cacheStats => const <String, CacheStats>{};
 }
 
 // Test widgets
@@ -467,6 +610,11 @@ class _MockGalaxyNotifier extends StateNotifier<GalaxyState>
   Future<List<GalaxySearchResult>> searchNodes(String query) async => [];
 
   @override
+  Future<void> refreshForTaskCompletion({
+    Map<String, dynamic>? galaxyUpdate,
+  }) async {}
+
+  @override
   void beginNodeDrag(String nodeId) {
     state = state.copyWith(
       draggingNodeId: nodeId,
@@ -515,6 +663,45 @@ class _MockGalaxyNotifier extends StateNotifier<GalaxyState>
   @override
   void setFocusNode(String nodeId) {
     state = state.copyWith(focusNodeId: nodeId);
+  }
+}
+
+class _RetryGalaxyScreenNotifier extends _MockGalaxyNotifier {
+  _RetryGalaxyScreenNotifier() : super(GalaxyState());
+
+  int loadCalls = 0;
+
+  @override
+  Future<void> loadGalaxy({
+    bool forceRefresh = false,
+    bool showLoading = true,
+  }) async {
+    loadCalls += 1;
+    state = state.copyWith(isLoading: true, lastError: null);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    if (loadCalls == 1) {
+      state = state.copyWith(
+        isLoading: false,
+        lastError: GalaxyError.unknown('galaxy 500'),
+      );
+      return;
+    }
+
+    final nodes = _generateMockNodes(3);
+    final edges = _generateMockEdges(nodes);
+    final positions = <String, Offset>{
+      for (var i = 0; i < nodes.length; i++) nodes[i].id: Offset(i * 80, 0),
+    };
+    state = state.copyWith(
+      isLoading: false,
+      lastError: null,
+      nodes: nodes,
+      edges: edges,
+      nodePositions: positions,
+      visibleNodes: nodes,
+      visibleEdges: edges,
+      userFlameIntensity: 0.4,
+    );
   }
 }
 

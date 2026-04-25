@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/graphite_surfaces.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
@@ -66,6 +67,40 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('PlanDetailScreen error recovery', () {
+    testWidgets('shows retry state and recovers after retry', (tester) async {
+      var attempts = 0;
+      final plan = _planWithTargetedRepairTask();
+
+      await _pumpPlanDetail(
+        tester,
+        plan,
+        repository: _FakePlanRepository(
+          plan,
+          getPlanHandler: (id) async {
+            attempts += 1;
+            if (attempts == 1) {
+              throw Exception('plan detail 500');
+            }
+            return plan;
+          },
+        ),
+      );
+
+      expect(find.textContaining('plan detail 500'), findsWidgets);
+      expect(find.byType(CustomButton), findsWidgets);
+
+      await tester.tap(find.byType(CustomButton).first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+
+      expect(attempts, equals(2));
+      expect(find.text('⚠️ 常见误区'), findsNothing);
+      expect(find.text('错题补强'), findsOneWidget);
+    });
+  });
 }
 
 Finder _commonMistakeCards() => find.byWidgetPredicate((widget) {
@@ -74,7 +109,11 @@ Finder _commonMistakeCards() => find.byWidgetPredicate((widget) {
           key.value.startsWith('plan-common-mistake-card-');
     });
 
-Future<void> _pumpPlanDetail(WidgetTester tester, PlanModel plan) async {
+Future<void> _pumpPlanDetail(
+  WidgetTester tester,
+  PlanModel plan, {
+  _FakePlanRepository? repository,
+}) async {
   tester.view.physicalSize = const Size(390, 1200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -94,7 +133,9 @@ Future<void> _pumpPlanDetail(WidgetTester tester, PlanModel plan) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        planRepositoryProvider.overrideWithValue(_FakePlanRepository(plan)),
+        planRepositoryProvider.overrideWithValue(
+          repository ?? _FakePlanRepository(plan),
+        ),
       ],
       child: MaterialApp.router(
         theme: AppThemes.lightTheme,
@@ -106,7 +147,8 @@ Future<void> _pumpPlanDetail(WidgetTester tester, PlanModel plan) async {
     ),
   );
 
-  await tester.pumpAndSettle();
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 1200));
 }
 
 PlanModel _planWithMistakes(List<dynamic> commonMistakesToWatch) {
@@ -224,9 +266,13 @@ PlanModel _planWithTargetedRepairTask() {
 }
 
 class _FakePlanRepository extends PlanRepository {
-  _FakePlanRepository(this.plan) : super(_NoopApiClient());
+  _FakePlanRepository(
+    this.plan, {
+    this.getPlanHandler,
+  }) : super(_NoopApiClient());
 
   final PlanModel plan;
+  final Future<PlanModel> Function(String id)? getPlanHandler;
 
   @override
   Future<List<PlanModel>> getPlans({PlanType? type, bool? isActive}) async {
@@ -240,7 +286,8 @@ class _FakePlanRepository extends PlanRepository {
       plan.isActive ? [plan] : const [];
 
   @override
-  Future<PlanModel> getPlan(String id) async => plan;
+  Future<PlanModel> getPlan(String id) async =>
+      await getPlanHandler?.call(id) ?? plan;
 
   @override
   Future<PlanPhaseBundle> getPlanPhases(String planId) async => PlanPhaseBundle(

@@ -1,7 +1,7 @@
 {
   "status": "PASS",
   "scenario": "xiaolin_full_lifecycle_exam_sprint",
-  "generated_at": "2026-04-25T04:32:04.082247",
+  "generated_at": "2026-04-25T11:26:53.323028",
   "coverage": [
     "register_login_surrogate",
     "aurora_multiturn_modeling_with_detour",
@@ -18,7 +18,7 @@
   "trace": [
     {
       "event": "user_registered",
-      "user_id": "cd935215-008d-4aad-9e86-befcf6b5b629",
+      "user_id": "993ea341-a7ab-4de1-b2e5-e5ce4f2200d4",
       "login": "email",
       "galaxy_nodes": 5
     },
@@ -94,15 +94,17 @@
       "event": "aurora_decision_readout",
       "turn": 3,
       "surface": "aurora_modeling",
-      "covered_domains": [],
+      "covered_domains": [
+        "scope",
+        "baseline"
+      ],
       "missing_domains": [
         "goal",
-        "scope",
-        "baseline",
         "time",
         "motivation"
       ],
       "recently_asked_domains": [
+        "goal",
         "scope"
       ],
       "galaxy_baseline": {
@@ -129,13 +131,13 @@
       "turn": 4,
       "surface": "aurora_modeling",
       "covered_domains": [
+        "scope",
+        "baseline",
+        "time",
         "motivation"
       ],
       "missing_domains": [
-        "goal",
-        "scope",
-        "baseline",
-        "time"
+        "goal"
       ],
       "recently_asked_domains": [
         "scope",
@@ -175,7 +177,7 @@
     },
     {
       "event": "planning_generated",
-      "plan_id": "43be5bdc-9a22-46e6-befe-8712ed9aa6ad",
+      "plan_id": "036960d3-ea6f-4869-ad6f-c0fe07fe30cd",
       "plan_name": "7天计算机网络冲刺",
       "task_count": 7,
       "first_task": "Day 1 · 诊断分诊 - 诊断分诊",
@@ -183,7 +185,7 @@
     },
     {
       "event": "execution_adapted",
-      "feedback_id": "d2278b44-f87d-4a01-a5c2-df5d892c3909",
+      "feedback_id": "6cb4fedd-e40c-41ba-bc9c-bc7102ce632b",
       "knowledge_gap": "Day 1 · 诊断分诊 - 诊断分诊: TCP 三次握手还是搞不懂，题目一换就没思路",
       "remedial_title": "[补强] Day 1 · 诊断分诊 - 诊断分诊: TCP 三次握手还是搞不懂，题目一换就没思路",
       "checkpoint_remedial": "[复盘补强] Day 3 检查点回顾"
@@ -199,7 +201,9 @@
           }
         ],
         "in_progress_count": 1,
-        "momentum": 0.7
+        "momentum": 0.7,
+        "streak_active": false,
+        "recently_unlocked": true
       }
     },
     {

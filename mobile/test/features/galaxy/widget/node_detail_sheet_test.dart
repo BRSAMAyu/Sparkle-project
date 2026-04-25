@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
 
@@ -81,5 +82,78 @@ void main() {
 
     expect(find.text('尚未学习'), findsWidgets);
     expect(find.text('0%'), findsNothing);
+  });
+
+  testWidgets('start review can return to Galaxy after entering chat', (
+    tester,
+  ) async {
+    final history = GalaxyNodeHistory(
+      nodeId: 'cn.tcp_flow',
+      nodeLabel: 'TCP流量控制',
+      mastery: 0.65,
+      studyCount: 3,
+      lastStudiedAt: DateTime.now().subtract(const Duration(days: 2)),
+      relatedErrors: const [
+        GalaxyNodeErrorItem(
+          id: 'error-1',
+          questionText: 'rwnd 和 cwnd 的区别是什么？',
+          analysisSummary: '窗口变量混淆',
+        ),
+      ],
+    );
+
+    final router = GoRouter(
+      initialLocation: '/galaxy',
+      routes: [
+        GoRoute(
+          path: '/galaxy',
+          builder: (context, state) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    builder: (sheetContext) => NodeDetailSheet(
+                      nodeId: 'cn.tcp_flow',
+                      nodeLabel: 'TCP流量控制',
+                      initialHistory: history,
+                    ),
+                  );
+                },
+                child: const Text('OPEN_SHEET'),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/chat',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('CHAT'))),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('OPEN_SHEET'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('开始复习'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CHAT'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('OPEN_SHEET'), findsOneWidget);
   });
 }

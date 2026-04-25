@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/screens/milestone_celebration_screen.dart';
 
@@ -74,6 +75,81 @@ void main() {
     expect(shared, isTrue);
     expect(sharedText, contains('#30天打卡'));
     expect(sharedText, contains('67 个知识节点'));
+  });
+
+  testWidgets(
+      'milestone celebration payload from query parameters renders route data',
+      (tester) async {
+    await _useTallSurface(tester);
+    final payload = MilestoneCelebrationPayload.fromQueryParameters(
+      '30_day_learner',
+      const <String, String>{
+        'study_days': '30',
+        'mastered_nodes': '67',
+        'completed_sprints': '2',
+        'error_count': '23',
+        'share_hashtag': '#30天打卡',
+        'celebration_value': '30',
+      },
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        MilestoneCelebrationScreen(payload: payload),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 1500));
+
+    expect(find.text('你已经坚持学习 30 天了'), findsOneWidget);
+    expect(find.text('67'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('23'), findsOneWidget);
+  });
+
+  testWidgets('close falls back to achievements when opened directly',
+      (tester) async {
+    await _useTallSurface(tester);
+    final router = GoRouter(
+      initialLocation: '/milestone',
+      routes: [
+        GoRoute(
+          path: '/achievements',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('ACHIEVEMENTS'))),
+        ),
+        GoRoute(
+          path: '/milestone',
+          builder: (context, state) => const MilestoneCelebrationScreen(
+            payload: MilestoneCelebrationPayload(
+              milestoneId: '30_day_learner',
+              celebrationValue: 30,
+              studyDays: 30,
+              masteredNodes: 67,
+              completedSprints: 2,
+              errorCount: 23,
+              shareHashtag: '#30天打卡',
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(
+          theme: AppThemes.lightTheme,
+          routerConfig: router,
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 1500));
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ACHIEVEMENTS'), findsOneWidget);
   });
 }
 
