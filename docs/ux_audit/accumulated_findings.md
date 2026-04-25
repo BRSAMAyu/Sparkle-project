@@ -2,7 +2,7 @@
 
 > **Purpose**: All validated UX issues found across the full system audit.
 > **Updated by**: Validator agent after each review cycle.
-> **Status**: 9 / 20 chains audited
+> **Status**: 10 / 20 chains audited
 
 ---
 
@@ -192,3 +192,21 @@
 - **`notification_list_screen.dart:29-30`**: 空通知列表仅显示 "No new notifications" 纯文本，无解释或操作引导。对比 C15 全局空状态质量要求。
 
 **Working Well ✅**: 全部 5 种服务端通知路由正确且可被目标页解析；双通道投递（WebSocket+FCM/JPush）；Milestone payload 解析支持三种入口方式；所有类型 24h 去重保护；RouteResilience 回退路由完整（chat→home, plans→plan home）；间隔重复通知携带完整复习 context 对接 C06 路径；有 intervention action tracking。
+
+---
+
+## Round 6 — 2026-04-25
+*Reviewer A: C15 — 全局空状态质量（6个关键页面） | Reviewer B: (re-auditing, no current file)*
+
+### C15: 全局空状态质量（6个关键页面） (Reviewer A)
+
+**Critical Issues 🔴**
+- None
+
+**Major Issues 🟡**
+- **`memory_panel_screen.dart:430-438`**: 筛选后无结果时 `_buildEmptyState()` 仅显示裸文本"暂无符合条件的记忆"（`TextStyle(color: DS.textSecondary)`），无"清空筛选"按钮。对比同文件 `_buildGuidedEmptyState()`（line 440-448）有完整 `EmptyState` widget 含 icon/标题/描述/CTA"去开始对话"→`/chat`。
+
+**Minor Issues 🟢**
+- None — 其余 5 个页面（任务列表/错题本/Galaxy星图/成就页/学习洞察）全部达标，各有上下文感知的引导文案和 CTA。
+
+**Working Well ✅**: 任务列表有 `EmptyState.noResults()` 变体和 CTA"创建第一项任务"；错题本有双 tab 差异化空状态+CTA"添加第一道错题"；Galaxy 有自定义 orb 动画+action highlight chips+CTA"去创建学习任务"；成就页有筛选/非筛选双空状态+CTA"清空筛选"；学习洞察有多数据源联合检测+CTA"去创建学习任务"；记忆面板主空状态有标准 EmptyState widget。
