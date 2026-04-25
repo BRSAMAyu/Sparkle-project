@@ -129,7 +129,8 @@ void main() {
 
       test('should update execution decision in-flight state', () {
         final decisionSet = <String>{'task-1'};
-        final state = TaskListState().copyWith(executionDecisionInFlight: decisionSet);
+        final state =
+            TaskListState().copyWith(executionDecisionInFlight: decisionSet);
 
         expect(state.executionDecisionInFlight.contains('task-1'), isTrue);
       });
@@ -150,7 +151,8 @@ void main() {
         final state = TaskListState().copyWith(taskExecutions: executions);
 
         expect(state.taskExecutions['task-1']?.id, equals('intent-1'));
-        expect(state.taskExecutions['task-1']?.status, equals(ExecutionIntentStatus.running));
+        expect(state.taskExecutions['task-1']?.status,
+            equals(ExecutionIntentStatus.running));
       });
 
       test('should update task execution records', () {
@@ -185,10 +187,12 @@ void main() {
           ],
         };
 
-        final state = TaskListState().copyWith(taskExecutionTemplates: templates);
+        final state =
+            TaskListState().copyWith(taskExecutionTemplates: templates);
 
         expect(state.taskExecutionTemplates['task-1']?.length, equals(1));
-        expect(state.taskExecutionTemplates['task-1']?.first.templateId, equals('template-1'));
+        expect(state.taskExecutionTemplates['task-1']?.first.templateId,
+            equals('template-1'));
       });
 
       test('should update selected execution template IDs', () {
@@ -197,10 +201,13 @@ void main() {
           'task-2': 'template-2',
         };
 
-        final state = TaskListState().copyWith(selectedExecutionTemplateIds: selectedIds);
+        final state =
+            TaskListState().copyWith(selectedExecutionTemplateIds: selectedIds);
 
-        expect(state.selectedExecutionTemplateIds['task-1'], equals('template-1'));
-        expect(state.selectedExecutionTemplateIds['task-2'], equals('template-2'));
+        expect(
+            state.selectedExecutionTemplateIds['task-1'], equals('template-1'));
+        expect(
+            state.selectedExecutionTemplateIds['task-2'], equals('template-2'));
       });
     });
 
@@ -342,6 +349,22 @@ void main() {
         expect(result.feedback, equals('Great job!'));
         expect(result.nextActions.length, equals(1));
         expect(result.unlockedAchievements.length, equals(1));
+      });
+
+      test('should parse structured galaxy update payload', () {
+        final result = TaskCompletionResult.fromJson({
+          'task': {
+            'id': 'task-3',
+            'status': 'completed',
+          },
+          'galaxy_update': {
+            'node_id': 'cn.tcp_flow_control',
+            'new_mastery': 50,
+          },
+        });
+
+        expect(result.galaxyUpdate?['node_id'], equals('cn.tcp_flow_control'));
+        expect(result.galaxyUpdate?['new_mastery'], equals(50));
       });
     });
 

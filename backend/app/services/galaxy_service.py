@@ -278,7 +278,7 @@ class GalaxyService:
         except (TypeError, ValueError):
             return value
 
-    async def get_sprint_mastery_summary(
+    async def get_sprint_mastery_rollup(
         self,
         *,
         user_id: str | UUID,
@@ -1073,7 +1073,7 @@ class GalaxyService:
         await self.db.flush()
         return resolved_id
 
-    async def get_sprint_mastery_summary(self, user_id: UUID, node_ids: list[str]) -> dict[str, float]:
+    async def get_sprint_mastery_summary(self, user_id: UUID | str, node_ids: list[str]) -> dict[str, float]:
         """Return normalized 0-1 mastery for the requested Sprint Pack node IDs."""
         ordered_ids = [str(node_id or "").strip() for node_id in node_ids if str(node_id or "").strip()]
         if not ordered_ids:

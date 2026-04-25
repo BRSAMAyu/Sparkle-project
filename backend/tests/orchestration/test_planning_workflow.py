@@ -14,6 +14,7 @@ from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 from app.orchestration.planning_workflow import PlanningSession, PlanningWorkflowManager
+from app.services.galaxy_service import GalaxyService
 from app.sprint_packs.sprint_pack_loader import load_pack
 
 
@@ -449,6 +450,44 @@ def test_cross_sprint_absent_history_keeps_sprint_pack_output_unchanged() -> Non
     ] == [
         _as_node_ids(spec.get("subject_strategy")) for spec in baseline_specs
     ]
+
+
+@pytest.mark.asyncio
+async def test_enrich_cross_sprint_mastery_from_galaxy_rollup(db_session, test_user) -> None:
+    manager = PlanningWorkflowManager(redis_client=FakeRedis())
+    session = PlanningSession(
+        planning_session_id=str(uuid4()),
+        chat_session_id="chat-session-galaxy-rollup",
+        user_id=str(test_user.id),
+        state="CLARIFYING",
+        goal_raw="7天后考计算机网络，帮我规划",
+        collected={
+            "subject": "计算机网络",
+            "sprint_pack_id": "computer_networks@v1",
+            "cold_start_context": {
+                "sprint_pack_id": "computer_networks@v1",
+                "mastery_snapshot": {"cn.osi_model": 0.2},
+            },
+        },
+    )
+
+    await GalaxyService(db_session).update_node_mastery(
+        user_id=test_user.id,
+        node_id="cn.tcp_flow_control",
+        new_mastery=0.5,
+        reason="test_cross_sprint_rollup",
+    )
+
+    await manager._enrich_cross_sprint_mastery_from_galaxy(
+        db=db_session,
+        user_id=test_user.id,
+        session=session,
+        aurora_state=None,
+    )
+
+    summary = session.collected.get("galaxy_sprint_mastery_summary")
+    assert summary is not None
+    assert summary["mastery_snapshot"]["cn.tcp_flow_control"] == pytest.approx(0.5)
 
 
 def _as_dict_for_test(value: object) -> dict[str, object]:

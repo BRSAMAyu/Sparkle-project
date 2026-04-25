@@ -523,6 +523,23 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     _recalculateVisibility();
   }
 
+  Future<void> refreshForTaskCompletion({
+    Map<String, dynamic>? galaxyUpdate,
+  }) async {
+    _repository.clearCache();
+
+    if (galaxyUpdate != null) {
+      _handleNodeUpdated(galaxyUpdate);
+    }
+
+    final hasLoadedGraph = state.nodes.isNotEmpty || state.edges.isNotEmpty;
+    if (!hasLoadedGraph) {
+      return;
+    }
+
+    await loadGalaxy(forceRefresh: true, showLoading: false);
+  }
+
   void _handleEvidencePack(Map<String, dynamic>? data) {
     if (data == null) return;
     final nodes = data['nodes'] as List<dynamic>?;

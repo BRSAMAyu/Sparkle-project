@@ -11,6 +11,7 @@ import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 
 class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
@@ -40,6 +41,10 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
     required Rect viewport,
   }) async =>
       graphResult;
+
+  @override
+  Future<NetworkResult<UserGalaxyContribution>> getContributionStats() async =>
+      NetworkResult.failure(GalaxyError.unknown('Not implemented'));
 
   @override
   Future<NetworkResult<void>> updateNodePositions(
@@ -88,6 +93,13 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
   Future<NetworkResult<KnowledgeDetailResponse>> getNodeDetail(
     String nodeId,
   ) async =>
+      NetworkResult.failure(GalaxyError.unknown('Not implemented'));
+
+  @override
+  Future<NetworkResult<GalaxyNodeHistory>> getNodeHistory(
+    String nodeId, {
+    String? packId,
+  }) async =>
       NetworkResult.failure(GalaxyError.unknown('Not implemented'));
 
   @override
@@ -574,6 +586,51 @@ void main() {
         expect(mockRepository.getGraphCalls, 1); // No reload triggered
 
         eventsController.close();
+      });
+
+      test(
+          'refreshForTaskCompletion applies patch and triggers background refresh',
+          () async {
+        final testNodes = _generateMockNodes(4);
+        final targetNodeId = testNodes[0].id;
+        mockRepository.graphResult = NetworkResult.success(
+          GalaxyGraphResponse(
+            nodes: testNodes,
+            edges: const [],
+            userFlameIntensity: 0.5,
+          ),
+        );
+
+        final notifier = container.read(galaxyProvider.notifier);
+        await notifier.loadGalaxy();
+        final callsBeforeRefresh = mockRepository.getGraphCalls;
+        final refreshedNodes = testNodes
+            .map(
+              (node) => node.id == targetNodeId
+                  ? node.copyWith(masteryScore: 72)
+                  : node,
+            )
+            .toList();
+        mockRepository.graphResult = NetworkResult.success(
+          GalaxyGraphResponse(
+            nodes: refreshedNodes,
+            edges: const [],
+            userFlameIntensity: 0.5,
+          ),
+        );
+
+        await notifier.refreshForTaskCompletion(
+          galaxyUpdate: {
+            'node_id': targetNodeId,
+            'new_mastery': 72,
+          },
+        );
+
+        final state = container.read(galaxyProvider);
+        final updatedNode =
+            state.nodes.firstWhere((node) => node.id == targetNodeId);
+        expect(updatedNode.masteryScore, equals(72));
+        expect(mockRepository.getGraphCalls, greaterThan(callsBeforeRefresh));
       });
 
       test('handles nodes_expanded and triggers reload', () async {

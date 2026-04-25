@@ -5,6 +5,9 @@ class WeeklyGrowthNarrative {
     required this.weekEnd,
     required this.body,
     required this.sentences,
+    required this.highlights,
+    required this.biggestImprovement,
+    required this.nextWeekSuggestion,
     required this.dataPoints,
     required this.sourceCounts,
     required this.isPlaceholder,
@@ -18,6 +21,9 @@ class WeeklyGrowthNarrative {
         weekEnd: json['week_end']?.toString() ?? '',
         body: json['body']?.toString() ?? '这是你的第一周，先开始吧。',
         sentences: _stringList(json['sentences']),
+        highlights: _stringList(json['highlights']),
+        biggestImprovement: _stringMap(json['biggest_improvement']),
+        nextWeekSuggestion: json['next_week_suggestion']?.toString() ?? '',
         dataPoints: Map<String, dynamic>.from(
           json['data_points'] as Map? ?? const <String, dynamic>{},
         ),
@@ -35,6 +41,9 @@ class WeeklyGrowthNarrative {
           '这是你的第一周，先开始吧。',
           '完成一次学习任务、记录一道错题，或者写下一句复盘后，这里就会开始把你的成长线索连起来。',
         ],
+        highlights: <String>['开始留下第一条成长线索。'],
+        biggestImprovement: <String, dynamic>{},
+        nextWeekSuggestion: '先完成一个最小的学习动作，比如学 15 分钟或记录一道错题。',
         dataPoints: <String, dynamic>{},
         sourceCounts: <String, int>{},
         isPlaceholder: true,
@@ -46,6 +55,9 @@ class WeeklyGrowthNarrative {
   final String weekEnd;
   final String body;
   final List<String> sentences;
+  final List<String> highlights;
+  final Map<String, dynamic> biggestImprovement;
+  final String nextWeekSuggestion;
   final Map<String, dynamic> dataPoints;
   final Map<String, int> sourceCounts;
   final bool isPlaceholder;
@@ -53,10 +65,19 @@ class WeeklyGrowthNarrative {
 
   bool get hasData => !isPlaceholder;
 
+  int get studyDays => _intValue(dataPoints['study_days']);
   int get tasksCompleted => _intValue(dataPoints['tasks_completed']);
-  int get errorRecords => _intValue(dataPoints['error_records']);
+  int get errorsFixed =>
+      _intValue(dataPoints['errors_fixed'] ?? dataPoints['error_records']);
   int get reflectionRecords => _intValue(dataPoints['reflection_records']);
   double get masteryDelta => _doubleValue(dataPoints['mastery_delta']);
+  String get biggestImprovementNode =>
+      biggestImprovement['node_name']?.toString() ?? '';
+  double get biggestImprovementBefore =>
+      _doubleValue(biggestImprovement['before_mastery']);
+  double get biggestImprovementAfter =>
+      _doubleValue(biggestImprovement['after_mastery']);
+  bool get hasBiggestImprovement => biggestImprovementNode.isNotEmpty;
 
   String get dateRangeLabel {
     if (weekStart.isEmpty || weekEnd.isEmpty) {
@@ -73,6 +94,15 @@ class WeeklyGrowthNarrative {
         .map((item) => item?.toString().trim() ?? '')
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
+  }
+
+  static Map<String, dynamic> _stringMap(dynamic value) {
+    if (value is! Map) {
+      return const <String, dynamic>{};
+    }
+    return value.map(
+      (key, item) => MapEntry(key.toString(), item),
+    );
   }
 
   static Map<String, int> _intMap(dynamic value) {

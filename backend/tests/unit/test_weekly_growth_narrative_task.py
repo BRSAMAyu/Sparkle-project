@@ -105,7 +105,8 @@ def test_weekly_growth_narrative_scan_is_registered_in_beat_schedule():
     assert task_config["task"] == "app.core.celery_tasks.scan_weekly_growth_narratives"
     assert task_config["args"] == (500,)
     assert task_config["options"] == {"queue": "default"}
-    assert getattr(task_config["schedule"], "_orig_hour", None) == 10
+    assert celery_app.conf.timezone == "Asia/Shanghai"
+    assert getattr(task_config["schedule"], "_orig_hour", None) == 18
     assert getattr(task_config["schedule"], "_orig_minute", None) == 0
     assert getattr(task_config["schedule"], "_orig_day_of_week", None) == "sun"
     assert celery_app.conf.task_routes["app.core.celery_tasks.scan_weekly_growth_narratives"] == {"queue": "default"}

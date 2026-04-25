@@ -2462,15 +2462,15 @@ class PlanningWorkflowManager:
         try:
             from app.services.galaxy_service import GalaxyService
 
-            summary = await GalaxyService(db).get_sprint_mastery_summary(
-                user_id=str(user_id),
+            summary = await GalaxyService(db).get_sprint_mastery_rollup(
+                user_id=user_id,
                 pack_node_ids=pack_node_ids,
             )
         except Exception as exc:
             logger.warning("Failed to load cross-sprint mastery summary: {}", exc)
             return
 
-        if _as_dict(summary).get("mastery_snapshot"):
+        if summary.get("mastery_snapshot"):
             session.collected["galaxy_sprint_mastery_summary"] = summary
 
     async def _load_previous_exam_weak_nodes_for_session(

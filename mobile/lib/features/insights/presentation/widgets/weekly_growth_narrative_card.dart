@@ -48,6 +48,9 @@ class _NarrativeSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final metrics = _metrics(narrative);
     final accent = narrative.hasData ? DS.success : DS.info;
+    final highlights = narrative.highlights.isNotEmpty
+        ? narrative.highlights
+        : narrative.sentences.take(3).toList(growable: false);
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -116,6 +119,71 @@ class _NarrativeSurface extends StatelessWidget {
                   color: DS.textPrimary,
                 ),
           ),
+          if (expanded && highlights.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            ...highlights.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Icon(
+                        Icons.brightness_1_rounded,
+                        size: 8,
+                        color: accent,
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.45,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (expanded && narrative.hasBiggestImprovement) ...[
+            const SizedBox(height: DS.spacing4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(DS.spacing12),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.18),
+                ),
+              ),
+              child: Text(
+                '最大进步：${narrative.biggestImprovementNode} '
+                '${narrative.biggestImprovementBefore.toStringAsFixed(0)}% → '
+                '${narrative.biggestImprovementAfter.toStringAsFixed(0)}%',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+              ),
+            ),
+          ],
+          if (expanded && narrative.nextWeekSuggestion.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            Text(
+              '下周目标：${narrative.nextWeekSuggestion}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightBold,
+                    height: 1.45,
+                  ),
+            ),
+          ],
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
             secondChild: Padding(
@@ -137,6 +205,14 @@ class _NarrativeSurface extends StatelessWidget {
 
   List<Widget> _metrics(WeeklyGrowthNarrative narrative) {
     final items = <Widget>[];
+    if (narrative.studyDays > 0) {
+      items.add(
+        _MetricPill(
+          icon: Icons.calendar_today_rounded,
+          label: '${narrative.studyDays} 天学习',
+        ),
+      );
+    }
     if (narrative.tasksCompleted > 0) {
       items.add(
         _MetricPill(
@@ -145,11 +221,11 @@ class _NarrativeSurface extends StatelessWidget {
         ),
       );
     }
-    if (narrative.errorRecords > 0) {
+    if (narrative.errorsFixed > 0) {
       items.add(
         _MetricPill(
           icon: Icons.psychology_alt_rounded,
-          label: '${narrative.errorRecords} 条错题',
+          label: '修复 ${narrative.errorsFixed} 个错误',
         ),
       );
     }

@@ -15,6 +15,7 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
@@ -407,6 +408,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           // retryToken: updatedTask.retryToken, // Repo needs to return this or we assume updatedTask has it
         ),
       );
+      unawaited(
+        _ref.read(galaxyProvider.notifier).refreshForTaskCompletion(
+              galaxyUpdate: result.galaxyUpdate,
+            ),
+      );
       if (updatedTask.planId != null) {
         _ref.invalidate(planDetailProvider(updatedTask.planId!));
       }
@@ -496,6 +502,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         (task) => updatedTask.copyWith(
           syncStatus: TaskSyncStatus.synced,
         ),
+      );
+      unawaited(
+        _ref.read(galaxyProvider.notifier).refreshForTaskCompletion(
+              galaxyUpdate: result.galaxyUpdate,
+            ),
       );
       if (updatedTask.planId != null) {
         _ref.invalidate(planDetailProvider(updatedTask.planId!));

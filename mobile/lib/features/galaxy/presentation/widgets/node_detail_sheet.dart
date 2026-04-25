@@ -67,7 +67,9 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
         .read(enhancedGalaxyRepositoryProvider)
         .getNodeHistory(widget.nodeId, packId: widget.packId);
     if (result.isFailure) {
-      throw result.error ?? StateError('Failed to load node history');
+      throw StateError(
+        result.error?.toString() ?? 'Failed to load node history',
+      );
     }
     return result.value;
   }

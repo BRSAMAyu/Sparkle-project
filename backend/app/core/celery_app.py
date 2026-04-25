@@ -1101,7 +1101,9 @@ celery_app.conf.beat_schedule = {
     },
     "weekly-growth-narrative-scan": {
         "task": "app.core.celery_tasks.scan_weekly_growth_narratives",
-        "schedule": crontab(day_of_week="sun", hour=10, minute=0),
+        # Celery beat runs in Asia/Shanghai for this app, so 18:00 local
+        # is the runtime-equivalent of Sunday 10:00 UTC.
+        "schedule": crontab(day_of_week="sun", hour=18, minute=0),
         "args": (500,),
         "options": {"queue": "default"},
     },

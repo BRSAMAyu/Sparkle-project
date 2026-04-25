@@ -17,17 +17,18 @@ class TaskCompletionResult {
         feedback: json['feedback'] as String?,
         flameUpdate: json['flame_update'] as Map<String, dynamic>?,
         statsUpdate: json['stats_update'] as Map<String, dynamic>?,
-        galaxyUpdate: json['galaxy_update'] as String?,
+        galaxyUpdate: json['galaxy_update'] as Map<String, dynamic>?,
         nextActions: _parseNextActions(json['next_actions'] as List<dynamic>?),
-        unlockedAchievements: json['unlocked_achievements'] as List<dynamic>? ??
-            const [],
+        unlockedAchievements:
+            json['unlocked_achievements'] as List<dynamic>? ?? const [],
       );
 
   static List<NextAction> _parseNextActions(List<dynamic>? actionsJson) {
     if (actionsJson == null) return const [];
     return actionsJson
-        .map((json) =>
-            NextAction.fromJson(json as Map<String, dynamic>),)
+        .map(
+          (json) => NextAction.fromJson(json as Map<String, dynamic>),
+        )
         .toList();
   }
 
@@ -35,7 +36,7 @@ class TaskCompletionResult {
   final String? feedback;
   final Map<String, dynamic>? flameUpdate;
   final Map<String, dynamic>? statsUpdate;
-  final String? galaxyUpdate;
+  final Map<String, dynamic>? galaxyUpdate;
   final List<NextAction> nextActions;
   final List<dynamic> unlockedAchievements;
 }

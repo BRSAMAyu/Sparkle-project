@@ -60,16 +60,15 @@ class GalaxyNodeHistory {
           json['label']?.toString() ??
           json['node_id']?.toString() ??
           '',
-      mastery: normalizedMastery.clamp(0.0, 1.0).toDouble(),
+      mastery: normalizedMastery.clamp(0.0, 1.0),
       lastStudiedAt:
           DateTime.tryParse(json['last_studied_at']?.toString() ?? ''),
       studyCount: (json['study_count'] as num?)?.toInt() ?? 0,
-      relatedErrors: (json['related_errors'] as List<dynamic>? ?? const [])
-          .whereType<Map>()
-          .map((item) => GalaxyNodeErrorItem.fromJson(
-                Map<String, dynamic>.from(item),
-              ))
-          .toList(growable: false),
+      relatedErrors:
+          (json['related_errors'] as List<dynamic>? ?? const <dynamic>[])
+              .whereType<Map<String, dynamic>>()
+              .map(GalaxyNodeErrorItem.fromJson)
+              .toList(growable: false),
     );
   }
 

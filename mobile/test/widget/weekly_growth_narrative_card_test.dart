@@ -13,23 +13,37 @@ void main() {
       weekStart: '2026-04-20',
       weekEnd: '2026-04-26',
       body:
-          '这周你主要把力气放在热力学上，完成了 2 个任务。卡点也很具体：热力学留下了 1 条错题。好消息是，热力学第一定律的掌握度累计往前推了 18.5。',
+          '这周你学习了 5 天。掌握了 TCP 三次握手、子网划分 等知识点。还修复了 2 个反复出现的错误。最大的进步：路由算法 的掌握度从 30% 提升到了 65%。下周目标：继续把网络层相关的核心概念吃透。',
       sentences: <String>[
-        '这周你主要把力气放在热力学上，完成了 2 个任务。',
-        '卡点也很具体：热力学留下了 1 条错题。',
-        '好消息是，热力学第一定律的掌握度累计往前推了 18.5。',
+        '这周你学习了 5 天。',
+        '掌握了 TCP 三次握手、子网划分 等知识点。',
+        '还修复了 2 个反复出现的错误。',
       ],
+      highlights: <String>[
+        '这周你学习了 5 天。',
+        '掌握了 TCP 三次握手、子网划分 等知识点。',
+        '还修复了 2 个反复出现的错误。',
+      ],
+      biggestImprovement: <String, dynamic>{
+        'node_name': '路由算法',
+        'before_mastery': 30,
+        'after_mastery': 65,
+      },
+      nextWeekSuggestion: '继续把网络层相关的核心概念吃透。',
       dataPoints: <String, dynamic>{
         'tasks_completed': 2,
-        'error_records': 1,
+        'errors_fixed': 2,
         'reflection_records': 1,
         'mastery_delta': 18.5,
+        'study_days': 5,
       },
       sourceCounts: <String, int>{
         'task_completions': 2,
-        'error_records': 1,
+        'error_records': 2,
+        'error_review_records': 2,
         'reflection_records': 1,
         'mastery_changes': 1,
+        'study_days': 5,
       },
       isPlaceholder: false,
       generatedAt: '2026-04-25T10:00:00',
@@ -52,15 +66,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('本周成长故事'), findsOneWidget);
-    expect(find.textContaining('热力学'), findsOneWidget);
+    expect(find.textContaining('TCP 三次握手'), findsOneWidget);
 
     await tester.tap(find.byTooltip('展开'));
     await tester.pumpAndSettle();
 
+    expect(find.text('5 天学习'), findsOneWidget);
     expect(find.text('2 个任务'), findsOneWidget);
-    expect(find.text('1 条错题'), findsOneWidget);
+    expect(find.text('修复 2 个错误'), findsOneWidget);
     expect(find.text('1 次复盘'), findsOneWidget);
     expect(find.text('掌握 +18.5'), findsOneWidget);
+    expect(find.textContaining('最大进步：路由算法 30% → 65%'), findsOneWidget);
+    expect(
+      find.textContaining('下周目标：继续把网络层相关的核心概念吃透'),
+      findsWidgets,
+    );
   });
 
   testWidgets('weekly growth narrative card shows first week placeholder',
