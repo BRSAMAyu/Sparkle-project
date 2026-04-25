@@ -1,12 +1,12 @@
 {
   "workflow_version": "1.0",
   "status": "running",
-  "current_round": 2,
-  "reviewer_a_next": 5,
-  "reviewer_b_next": 5,
-  "reviewer_a_last_timestamp": "2026-04-25T19:55:00+08:00",
-  "reviewer_b_last_timestamp": "2026-04-25T19:10:00Z",
-  "validator_last_timestamp": "2026-04-25T20:00:00+08:00",
+  "current_round": 3,
+  "reviewer_a_next": 6,
+  "reviewer_b_next": 7,
+  "reviewer_a_last_timestamp": "2026-04-25T20:35:00+08:00",
+  "reviewer_b_last_timestamp": "2026-04-25T20:45:00Z",
+  "validator_last_timestamp": "2026-04-25T21:00:00+08:00",
   "steering_notes": "C01/C02 原始发现已被后续轮次覆盖丢失。所有当前 reviewer 文件中的发现（C03/C04/C06）质量很好，请保持。Validator 已因时间戳匹配逻辑跳过两轮，请立即重新运行 validator 处理所有未验证的发现。",
   "architect_override_a": null,
   "architect_override_b": null,
@@ -141,7 +141,7 @@
         "mobile/lib/core/services/push_navigation_service.dart",
         "mobile/lib/features/chat/presentation/screens/chat_screen.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C12": {
       "name": "低完成率+临近截止→自适应压缩→计划页显示精简",
@@ -152,7 +152,7 @@
         "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart",
         "backend/app/api/v1/plans.py"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C13": {
       "name": "每周报告生成→推送→周报卡展示亮点",
@@ -175,7 +175,7 @@
         "mobile/lib/features/plan/presentation/providers/learning_portfolio_provider.dart",
         "mobile/lib/features/user/presentation/screens/profile_screen.dart"
       ],
-      "status": "pending"
+      "status": "done"
     },
     "C15": {
       "name": "全局空状态质量（6个关键页面）",
