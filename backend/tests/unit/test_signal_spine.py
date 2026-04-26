@@ -907,3 +907,141 @@ def test_state_packet_serialization():
     assert d["user_id"] == "u1"
     assert len(d["top_states"]) == 1
     assert d["top_states"][0]["state_key"] == "test_key"
+
+
+# ── P1-3: PredictedReplyOption Engine Tests ────────────────────────
+
+from app.signals.predicted_reply_options import PredictedReplyOptionEngine
+
+
+def test_reply_options_for_task_granularity():
+    """任务颗粒度信号应生成假设确认选项。"""
+    engine = PredictedReplyOptionEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="task_service",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.72, scope="current_sprint", ttl_hours=72,
+        evidence_summary="连续 2 次超时", possible_effects=["cap_duration"],
+        priority="high",
+    )
+    question = engine.generate_options(signal)
+
+    assert question is not None
+    assert question.question_type == "hypothesis_confirm"
+    assert question.state_key == "task_granularity_fit"
+    assert len(question.options) >= 4  # 3 specific + 1 freeform
+
+
+def test_reply_options_always_has_freeform():
+    """每组选项必须包含自由输入选项。"""
+    engine = PredictedReplyOptionEngine()
+    for state_key in ["task_granularity_fit", "knowledge_transfer", "material_utilization", "goal_mode"]:
+        signal = ActionableSignal(
+            signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+            state_key=state_key, claim="test",
+            confidence=0.7, scope="test", ttl_hours=1,
+            evidence_summary="test", possible_effects=[], priority="high",
+        )
+        question = engine.generate_options(signal)
+        if question is None:
+            continue
+        freeform = [o for o in question.options if o.is_freeform]
+        assert len(freeform) == 1, f"state_key={state_key} missing freeform option"
+        assert "都不对" in freeform[0].label
+
+
+def test_reply_options_disconfirming_exists():
+    """每组至少有一个反驳选项。"""
+    engine = PredictedReplyOptionEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="test",
+        confidence=0.7, scope="test", ttl_hours=1,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    question = engine.generate_options(signal)
+    disconfirming = [o for o in question.options if o.is_disconfirming and not o.is_freeform]
+    assert len(disconfirming) >= 1
+
+
+def test_reply_options_no_template_returns_none():
+    """没有模板的 state_key 应返回 None。"""
+    engine = PredictedReplyOptionEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="unknown_state_key", claim="test",
+        confidence=0.7, scope="test", ttl_hours=1,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    assert engine.generate_options(signal) is None
+
+
+def test_reply_options_process_selection():
+    """用户选择后应返回正确的状态补丁。"""
+    engine = PredictedReplyOptionEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="test",
+        confidence=0.7, scope="test", ttl_hours=1,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    question = engine.generate_options(signal)
+
+    # Select the "确实排大了" option
+    confirm_opt = [o for o in question.options if o.semantic_value == "task_too_large"][0]
+    patch = engine.process_user_selection(question, confirm_opt.option_id)
+
+    assert patch["task_granularity_fit"] == "too_large"
+
+
+def test_reply_options_process_freeform():
+    """自由输入选项应包含用户文本。"""
+    engine = PredictedReplyOptionEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="test",
+        confidence=0.7, scope="test", ttl_hours=1,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    question = engine.generate_options(signal)
+
+    freeform = [o for o in question.options if o.is_freeform][0]
+    patch = engine.process_user_selection(
+        question, freeform.option_id,
+        freeform_text="其实是我最近心情不好，学不进去",
+    )
+
+    assert patch["open_free_input"] is True
+    assert patch["freeform_text"] == "其实是我最近心情不好，学不进去"
+
+
+def test_reply_options_process_invalid_selection():
+    """无效选项 ID 应返回空补丁。"""
+    engine = PredictedReplyOptionEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="test",
+        confidence=0.7, scope="test", ttl_hours=1,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    question = engine.generate_options(signal)
+    patch = engine.process_user_selection(question, "nonexistent_id")
+    assert patch == {}
+
+
+def test_reply_options_serialization():
+    """PredictedReplyQuestion to_dict 包含完整信息。"""
+    engine = PredictedReplyOptionEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"), source_event_ids=[], source_system="test",
+        state_key="knowledge_transfer", claim="transfer_failure",
+        confidence=0.8, scope="test", ttl_hours=1,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    question = engine.generate_options(signal)
+    d = question.to_dict()
+
+    assert d["question_type"] == "hypothesis_confirm"
+    assert d["state_key"] == "knowledge_transfer"
+    assert len(d["options"]) >= 4
+    assert all("label" in o for o in d["options"])
