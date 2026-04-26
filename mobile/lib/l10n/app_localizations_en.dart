@@ -11506,805 +11506,2093 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get theaterTitle => '知识推演剧场';
+  String get theaterTitle => 'Knowledge Deduction Theater';
 
   @override
   String get theaterContinuityBanner =>
-      '这次推演承接了你刚才的探索流程。你可以随时回到原对话，继续追问路径、风险和具体行动。';
+      'This deduction continues from your previous exploration. You can return to the original conversation anytime to explore paths, risks, and actions.';
 
   @override
   String theaterShareTopic(Object topic) {
-    return '推演主题：$topic';
+    return 'Deduction topic: $topic';
   }
 
   @override
   String theaterShareMessage(Object route, Object suggestion, Object topic) {
-    return '我刚在 Sparkle 推演了一条学习路径：$topic\n$route\n$suggestion';
+    return 'I just deduced a learning path in Sparkle: $topic\n$route\n$suggestion';
   }
 
   @override
-  String get theaterShareSuggestion => '先把关键节点和风险看清楚，再决定怎么学。';
+  String get theaterShareSuggestion =>
+      'First understand the key nodes and risks, then decide how to proceed.';
 
   @override
-  String get theaterRecordActualTitle => '记录 7 天后的真实表现';
+  String get theaterRecordActualTitle =>
+      'Record actual performance after 7 days';
 
   @override
-  String get theaterRecordActualDesc => '回填真实完成率和掌握度后，剧场会给你一份预测校准反馈。';
+  String get theaterRecordActualDesc =>
+      'After filling in actual completion rates and mastery, the theater will give you calibration feedback.';
 
   @override
-  String get theaterActualCompletionRate => '真实完成率';
+  String get theaterActualCompletionRate => 'Actual completion rate';
 
   @override
-  String get theaterActualMastery => '真实掌握度';
+  String get theaterActualMastery => 'Actual mastery';
 
   @override
-  String get theaterSubmitCalibration => '提交校准';
+  String get theaterSubmitCalibration => 'Submit calibration';
 
   @override
-  String get theaterNodeDescriptionFallback => '这个节点是当前推演中的关键知识点。';
+  String get theaterNodeDescriptionFallback =>
+      'This node is a key knowledge point in the current deduction.';
 
   @override
-  String get theaterNodeCurrentMastery => '当前掌握度';
+  String get theaterNodeCurrentMastery => 'Current mastery';
 
   @override
-  String get theaterNodePredictedMastery => '预测掌握度';
+  String get theaterNodePredictedMastery => 'Predicted mastery';
 
   @override
-  String get theaterNodeDelta => '变化';
+  String get theaterNodeDelta => 'Change';
 
   @override
-  String get theaterNodeRisk => '风险';
+  String get theaterNodeRisk => 'Risk';
 
   @override
-  String get theaterNodeRoleInPath => '它在当前路径里的作用';
+  String get theaterNodeRoleInPath => 'Role in current path';
 
   @override
   String theaterNodeStepLabel(Object dayLabel, Object index) {
-    return '$dayLabel · 第 $index 步';
+    return '$dayLabel · Step $index';
   }
 
   @override
   String theaterNodeNextAction(Object minutes) {
-    return '下一步动作：先用约 $minutes 分钟处理这个节点，再进入后续步骤。';
+    return 'Next action: Spend about $minutes minutes on this node first, then proceed to subsequent steps.';
   }
 
   @override
-  String get theaterWhatIfStart => '开始假设推演';
+  String get theaterWhatIfStart => 'Start what-if deduction';
 
   @override
-  String get theaterViewGalaxyRef => '查看星图参考';
+  String get theaterViewGalaxyRef => 'View galaxy reference';
 
   @override
-  String get theaterNodeNotInWhatIfPath => '这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做假设推演。';
+  String get theaterNodeNotInWhatIfPath =>
+      'This node is not in the current path\'s deductible steps, so what-if analysis cannot be performed directly.';
 
   @override
-  String get theaterNodeNoGalaxyRef => '这个节点目前是剧场里的自由节点，还没有可跳转的知识星图参考项。';
+  String get theaterNodeNoGalaxyRef =>
+      'This node is currently a free node in the theater with no navigable galaxy reference.';
 
   @override
-  String get theaterPromoteNodeFailed => '加入知识星图失败，请稍后再试。';
+  String get theaterPromoteNodeFailed =>
+      'Failed to add to knowledge galaxy. Please try again later.';
 
   @override
   String theaterPromoteNodeCreated(Object nodeName) {
-    return '已将「$nodeName」加入知识星图，可以继续完善节点内容。';
+    return 'Added 「$nodeName」to the knowledge galaxy. You can continue to refine the node content.';
   }
 
   @override
   String theaterPromoteNodeFound(Object nodeName) {
-    return '已定位到知识星图中的「$nodeName」，你可以继续完善节点内容。';
+    return 'Found 「$nodeName」in the knowledge galaxy. You can continue to refine the node content.';
   }
 
   @override
-  String get theaterGoImprove => '去完善';
+  String get theaterGoImprove => 'Go refine';
 
   @override
   String theaterEdgeStrength(Object strength) {
-    return '关系强度 $strength%';
+    return 'Relationship strength $strength%';
   }
 
   @override
-  String get theaterRiskHigh => '高风险';
+  String get theaterRiskHigh => 'High risk';
 
   @override
-  String get theaterRiskMedium => '中风险';
+  String get theaterRiskMedium => 'Medium risk';
 
   @override
-  String get theaterRiskLow => '低风险';
+  String get theaterRiskLow => 'Low risk';
 
   @override
-  String get theaterRelationPrerequisite => '前置依赖';
+  String get theaterRelationPrerequisite => 'Prerequisite';
 
   @override
-  String get theaterRelationExplains => '解释关系';
+  String get theaterRelationExplains => 'Explains';
 
   @override
-  String get theaterRelationSupports => '支持关系';
+  String get theaterRelationSupports => 'Supports';
 
   @override
-  String get theaterRelationContradicts => '矛盾关系';
+  String get theaterRelationContradicts => 'Contradicts';
 
   @override
   String theaterSelectedNode(Object nodeName) {
-    return '已选节点 · $nodeName';
+    return 'Selected node · $nodeName';
   }
 
   @override
-  String get theaterNodeTapHint => '点击节点可查看详细推演说明。';
+  String get theaterNodeTapHint =>
+      'Tap the node to view detailed deduction information.';
 
   @override
-  String get theaterNodeStatCurrent => '当前';
+  String get theaterNodeStatCurrent => 'Current';
 
   @override
-  String get theaterNodeStatPredicted => '预测';
+  String get theaterNodeStatPredicted => 'Predicted';
 
   @override
-  String get theaterNodeStatLift => '提升';
+  String get theaterNodeStatLift => 'Lift';
 
   @override
-  String get theaterNodeStatSource => '来源';
+  String get theaterNodeStatSource => 'Source';
 
   @override
-  String get theaterComposerEyebrow => '推演决策面板';
+  String get theaterComposerEyebrow => 'Deduction Control Panel';
 
   @override
-  String get theaterComposerTitle => '先定目标，再看清多条路径';
+  String get theaterComposerTitle =>
+      'Set a goal, then let AI show you multiple paths';
 
   @override
   String get theaterComposerSubtitle =>
-      '先确定想推进的目标，再比较切入方式、主要风险和每日投入，最后决定要不要采纳这条路径。';
+      'Define the goal first, compare approaches, risks, and daily effort, then decide whether to adopt a path.';
 
   @override
-  String get theaterComposerCurrentTarget => '当前目标';
+  String get theaterComposerCurrentTarget => 'Current target';
 
   @override
-  String get theaterComposerWaitingInput => '等待输入';
+  String get theaterComposerWaitingInput => 'Waiting for input';
 
   @override
-  String get theaterComposerRecommendedEntry => '推荐切入';
+  String get theaterComposerRecommendedEntry => 'Recommended entry';
 
   @override
-  String get theaterComposerInputPrompt => '输入后即可开始';
+  String get theaterComposerInputPrompt => 'Start after input';
 
   @override
-  String get theaterComposerOutput => '输出结果';
+  String get theaterComposerOutput => 'Output';
 
   @override
-  String get theaterComposerOutputDesc => '路径 + 风险 + 检查点';
+  String get theaterComposerOutputDesc => 'Paths + Risks + Checkpoints';
 
   @override
-  String get theaterComposerLoading => '推演中...';
+  String get theaterComposerLoading => 'Deducing...';
 
   @override
-  String get theaterComposerStart => '开始推演';
+  String get theaterComposerStart => 'Start deduction';
 
   @override
   String theaterComposerTrySuggestion(Object topic) {
-    return '试试 $topic';
+    return 'Try $topic';
   }
 
   @override
-  String get theaterComposerHint => '例如：两周内掌握线性代数的特征值部分';
+  String get theaterComposerHint =>
+      'e.g., Master eigenvalues in linear algebra within two weeks';
 
   @override
-  String get theaterComposerGenerating => '生成';
+  String get theaterComposerGenerating => 'Generate';
 
   @override
-  String get theaterTopBarAdjustTarget => '调整目标';
+  String get theaterTopBarAdjustTarget => 'Adjust target';
 
   @override
-  String get theaterTopBarShare => '分享推演';
+  String get theaterTopBarShare => 'Share deduction';
 
   @override
-  String get theaterTopBarNoGalaxyRef => '当前没有可打开的知识星图参考节点';
+  String get theaterTopBarNoGalaxyRef => 'No galaxy reference nodes available';
 
   @override
-  String get theaterTopBarViewGalaxy => '查看知识星图';
+  String get theaterTopBarViewGalaxy => 'View knowledge galaxy';
 
   @override
   String theaterTopBarTarget(Object name) {
-    return '目标 · $name';
+    return 'Target · $name';
   }
 
   @override
   String theaterTopBarPath(Object title) {
-    return '路径 · $title';
+    return 'Path · $title';
   }
 
   @override
   String theaterTopBarMode(Object mode) {
-    return '模式 · $mode';
+    return 'Mode · $mode';
   }
 
   @override
   String theaterTopBarRefMap(Object count) {
-    return '参考映射 $count';
+    return 'Reference map $count';
   }
 
   @override
-  String get theaterTopBarFreeForm => '纯自由推演';
+  String get theaterTopBarFreeForm => 'Free-form deduction';
 
   @override
   String theaterTopBarMastery(Object value) {
-    return '掌握度 $value%';
+    return 'Mastery $value%';
   }
 
   @override
-  String get theaterSettingsTitle => '调整推演目标';
+  String get theaterSettingsTitle => 'Adjust deduction target';
 
   @override
   String get theaterSettingsSubtitle =>
-      '这里可以重新设定目标和建议起点，收起后会把舞台空间完整还给关系图谱与讨论流。';
+      'Reset the target and starting point here. Collapse to return full stage space to the graph and discussion flow.';
 
   @override
-  String get theaterSettingsContinuity => '这次推演仍然承接你刚才的对话上下文。';
+  String get theaterSettingsContinuity =>
+      'This deduction still carries forward your previous conversation context.';
 
   @override
   String theaterSettingsCurrentTarget(Object name) {
-    return '当前目标：$name';
+    return 'Current target: $name';
   }
 
   @override
-  String get theaterSettingsLabel => '重新设定推演目标';
+  String get theaterSettingsLabel => 'Reset deduction target';
 
   @override
-  String get theaterSettingsHint => '例如：两周内掌握线性代数的特征值部分';
+  String get theaterSettingsHint =>
+      'e.g., Master eigenvalues in linear algebra within two weeks';
 
   @override
-  String get theaterSettingsGenerate => '生成新推演';
+  String get theaterSettingsGenerate => 'Generate new deduction';
 
   @override
-  String get theaterSettingsSuggestions => '建议起点';
+  String get theaterSettingsSuggestions => 'Suggested starting points';
 
   @override
-  String get theaterTabGraph => '图谱';
+  String get theaterTabGraph => 'Graph';
 
   @override
-  String get theaterTabPaths => '路径';
+  String get theaterTabPaths => 'Paths';
 
   @override
-  String get theaterTabDiscussion => '讨论';
+  String get theaterTabDiscussion => 'Discussion';
 
   @override
-  String get theaterTabCalibration => '校准';
+  String get theaterTabCalibration => 'Calibration';
 
   @override
-  String get theaterIntroChangeTarget => '换个目标';
+  String get theaterIntroChangeTarget => 'Change target';
 
   @override
-  String get theaterIntroTitle => '选一个目标，AI 帮你看清多条路径';
+  String get theaterIntroTitle =>
+      'Pick a goal, AI will show you multiple paths';
 
   @override
   String get theaterIntroSteps =>
-      '1. 选择一个目标\n2. AI 推演多条学习路径\n3. 采纳最适合你的方案并同步到 Sprint';
+      '1. Choose a goal\n2. AI deduces learning paths\n3. Adopt the best plan and sync to Sprint';
 
   @override
-  String get theaterIntroStartFirst => '开始第一次推演';
+  String get theaterIntroStartFirst => 'Start your first deduction';
 
   @override
-  String get theaterIntroLastSnapshot => '最近一次推演';
+  String get theaterIntroLastSnapshot => 'Last deduction';
 
   @override
-  String get theaterIntroSuggestions => '从这些主题开始更顺手';
+  String get theaterIntroSuggestions =>
+      'These topics are a good starting point';
 
   @override
-  String get theaterEmptyTitle => '这次还没生成可采纳路径';
+  String get theaterEmptyTitle => 'No adoptable paths generated yet';
 
   @override
   String get theaterEmptyMessage =>
-      '系统完成了主题解析，但暂时没能收束出可执行路线。你可以换个更具体的目标，或者稍后再试一次。';
+      'The system has analyzed the topic but couldn\'t converge on executable routes. Try a more specific goal or try again later.';
 
   @override
   String theaterGraphRecommended(Object title) {
-    return '推荐路径 · $title';
+    return 'Recommended path · $title';
   }
 
   @override
   String theaterGraphEstimatedMastery(Object value) {
-    return '预计掌握 $value%';
+    return 'Estimated mastery $value%';
   }
 
   @override
   String theaterGraphRisk(Object risk) {
-    return '风险 · $risk';
+    return 'Risk · $risk';
   }
 
   @override
   String theaterGraphMode(Object mode) {
-    return '模式 · $mode';
+    return 'Mode · $mode';
   }
 
   @override
   String theaterGraphRefCount(Object count) {
-    return '映射参考 $count';
+    return 'Reference count $count';
   }
 
   @override
-  String get theaterGraphPendingEntry => '候选待入图';
+  String get theaterGraphPendingEntry => 'Pending graph entry';
 
   @override
   String theaterGraphNodeCount(Object count) {
-    return '$count 个节点';
+    return '$count nodes';
   }
 
   @override
-  String get theaterGraphMainStage => '关系图谱主舞台';
+  String get theaterGraphMainStage => 'Relationship graph main stage';
 
   @override
-  String get theaterGraphWithGalaxy => '含星图参考';
+  String get theaterGraphWithGalaxy => 'With galaxy references';
 
   @override
-  String get theaterGraphStandalone => '独立自由图谱';
+  String get theaterGraphStandalone => 'Standalone graph';
 
   @override
-  String get theaterGraphInstructions => '单指拖动画布，双指缩放，双击可回正，点按节点可查看详情并加入知识星图。';
+  String get theaterGraphInstructions =>
+      'Drag with one finger to pan, pinch to zoom, double-tap to reset. Tap a node to view details and add to the knowledge galaxy.';
 
   @override
-  String get theaterCalibrationTitle => '校准与落地';
+  String get theaterCalibrationTitle => 'Calibration & Execution';
 
   @override
-  String get theaterCalibrationSubtitle => '把推演变成计划、快照和真实反馈，形成闭环。';
+  String get theaterCalibrationSubtitle =>
+      'Turn deductions into plans, snapshots, and real feedback to close the loop.';
 
   @override
-  String get theaterRetry => '重试';
+  String get theaterRetry => 'Retry';
 
   @override
-  String get theaterGotIt => '知道了';
+  String get theaterGotIt => 'Got it';
 
   @override
-  String get theaterSemanticMatchTitle => '自由节点与星图参考';
+  String get theaterSemanticMatchTitle => 'Free nodes and galaxy references';
 
   @override
   String theaterSemanticMatchItem(Object freeform, Object galaxy) {
-    return '$freeform 对应参考 $galaxy';
+    return '$freeform references $galaxy';
   }
 
   @override
-  String get theaterLoadingTitle => 'AI 正在搭建这场推演...';
+  String get theaterLoadingTitle => 'AI is building your deduction...';
 
   @override
-  String get theaterLoadingSubtitle => '图谱、路径和风险判断会按阶段依次完成，你可以先看它推进到哪一步了。';
+  String get theaterLoadingSubtitle =>
+      'The graph, paths, and risk assessment are completed in stages. You can track progress as it advances.';
 
   @override
-  String get theaterStageBuildGraph => '构建知识图谱';
+  String get theaterStageBuildGraph => 'Building knowledge graph';
 
   @override
-  String get theaterStageAnalyzePaths => '分析学习路径';
+  String get theaterStageAnalyzePaths => 'Analyzing learning paths';
 
   @override
-  String get theaterStageGenerateRisk => '生成风险预测';
+  String get theaterStageGenerateRisk => 'Generating risk predictions';
 
   @override
-  String get theaterStagePrepare => '准备推演完成';
+  String get theaterStagePrepare => 'Finalizing deduction';
 
   @override
-  String get theaterTimelineTitle => '推演时间轴';
+  String get theaterTimelineTitle => 'Deduction timeline';
 
   @override
-  String get theaterTimelineSubtitle => '现在可以按天拖动预测进度，直接对比基线路径和假设分支的差异。';
+  String get theaterTimelineSubtitle =>
+      'Drag to explore predicted progress by day and compare baseline vs. what-if branches.';
 
   @override
-  String get theaterTimelinePause => '暂停播放';
+  String get theaterTimelinePause => 'Pause playback';
 
   @override
-  String get theaterTimelineAutoPlay => '自动播放';
+  String get theaterTimelineAutoPlay => 'Auto-play';
 
   @override
-  String get theaterTimelineReset => '回到起点';
+  String get theaterTimelineReset => 'Go to start';
 
   @override
-  String get theaterTimelineCurrentPhase => '当前阶段';
+  String get theaterTimelineCurrentPhase => 'Current phase';
 
   @override
-  String get theaterTimelineWaitingPath => '等待路径生成';
+  String get theaterTimelineWaitingPath => 'Waiting for path generation';
 
   @override
-  String get theaterTimelineBaseline => '基线预测';
+  String get theaterTimelineBaseline => 'Baseline prediction';
 
   @override
-  String get theaterTimelineDiscussionHere => '讲到这里';
+  String get theaterTimelineDiscussionHere => 'Discussion at this point';
 
   @override
-  String get theaterTimelineMastery => '当前预测掌握度';
+  String get theaterTimelineMastery => 'Current predicted mastery';
 
   @override
-  String get theaterTimelineCompletion => '当前预测完成率';
+  String get theaterTimelineCompletion => 'Current predicted completion';
 
   @override
   String theaterTimelinePhaseWithSteps(
       Object compare, Object label, Object step) {
-    return '当前阶段：$label · $step · $compare';
+    return 'Current phase: $label · $step · $compare';
   }
 
   @override
-  String get theaterTimelineWaitingDeduction => '等待推演';
+  String get theaterTimelineWaitingDeduction => 'Waiting for deduction';
 
   @override
-  String get theaterRouteList => '列表';
+  String get theaterRouteList => 'List';
 
   @override
-  String get theaterRouteCompare => '对比';
+  String get theaterRouteCompare => 'Compare';
 
   @override
-  String get theaterRouteComparisonTitle => '路径对比';
+  String get theaterRouteComparisonTitle => 'Path comparison';
 
   @override
   String theaterRouteAdoptedPlan(Object planName) {
-    return '已创建计划：$planName';
+    return 'Plan created: $planName';
   }
 
   @override
   String theaterRouteFirstWeekTasks(Object tasks) {
-    return '首周任务：$tasks';
+    return 'First week tasks: $tasks';
   }
 
   @override
-  String get theaterRouteRiskControllable => '整体可控';
+  String get theaterRouteRiskControllable => 'Controllable overall';
 
   @override
-  String get theaterRouteRiskPacing => '需要留意节奏';
+  String get theaterRouteRiskPacing => 'Watch the pacing';
 
   @override
   String theaterRouteEstimatedRange(Object high, Object low) {
-    return '预估 $low-$high%';
+    return 'Estimated $low-$high%';
   }
 
   @override
-  String get theaterRouteDataQualityLow => '参考估算';
+  String get theaterRouteDataQualityLow => 'Rough estimate';
 
   @override
-  String get theaterRouteDataQualityMedium => '基于有限数据';
+  String get theaterRouteDataQualityMedium => 'Based on limited data';
 
   @override
   String theaterRouteDataQualityHigh(Object score) {
-    return '数据充分度 $score%';
+    return 'Data sufficiency $score%';
   }
 
   @override
-  String get theaterRouteDataQualityFallback => '数据参考';
+  String get theaterRouteDataQualityFallback => 'Data reference';
 
   @override
-  String get theaterRouteDataNoteLow => '当前缺少该主题的真实学习记录，建议把区间估算当作参考，而不是精确预测。';
+  String get theaterRouteDataNoteLow =>
+      'No real learning records for this topic yet. Treat range estimates as reference, not precise predictions.';
 
   @override
-  String get theaterRouteDataNoteMedium => '当前只覆盖到部分图谱与校准数据，百分比判断仍需要继续观察。';
+  String get theaterRouteDataNoteMedium =>
+      'Only partial graph and calibration data available. Percentages still need more observation.';
 
   @override
-  String get theaterRouteModeAnchored => '图谱锚定';
+  String get theaterRouteModeAnchored => 'Graph anchored';
 
   @override
-  String get theaterRouteModeHybrid => '智能混合';
+  String get theaterRouteModeHybrid => 'Smart hybrid';
 
   @override
-  String get theaterRouteModeFree => '自由推演';
+  String get theaterRouteModeFree => 'Free-form deduction';
 
   @override
-  String get theaterRouteModeDeducing => '推演中';
+  String get theaterRouteModeDeducing => 'Deducing';
 
   @override
-  String get theaterNodeGalaxySyncing => '同步中...';
+  String get theaterNodeGalaxySyncing => 'Syncing...';
 
   @override
-  String get theaterNodeOpenGalaxy => '打开知识星图';
+  String get theaterNodeOpenGalaxy => 'Open knowledge galaxy';
 
   @override
-  String get theaterNodeAddToGalaxy => '加入知识星图';
+  String get theaterNodeAddToGalaxy => 'Add to knowledge galaxy';
 
   @override
-  String get theaterNodeSourceExplicit => '星图节点';
+  String get theaterNodeSourceExplicit => 'Galaxy node';
 
   @override
-  String get theaterNodeSourceHybrid => '参考映射';
+  String get theaterNodeSourceHybrid => 'Reference mapping';
 
   @override
-  String get theaterNodeSourcePending => '候选节点';
+  String get theaterNodeSourcePending => 'Pending node';
 
   @override
-  String get theaterNodeSourceFree => '自由节点';
+  String get theaterNodeSourceFree => 'Free node';
 
   @override
-  String get theaterNodeBannerOpenGalaxy => '这个节点已经对应到知识星图里的正式节点，可以直接打开并继续拓展。';
+  String get theaterNodeBannerOpenGalaxy =>
+      'This node already corresponds to an official knowledge galaxy node. Open it directly to continue expanding.';
 
   @override
   String get theaterNodeBannerHasMapping =>
-      '这个自由节点已经找到星图参考，加入时会走统一创建链路，并补齐标准节点信息。';
+      'This free node already has a galaxy reference. Adding will use the unified creation flow.';
 
   @override
-  String get theaterNodeBannerFreeform => '这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。';
+  String get theaterNodeBannerFreeform =>
+      'This free node is not yet in the graph. Adding will auto-complete domain, position, relations, and unlock status.';
 
   @override
-  String get theaterRouteRecommended => '推荐';
+  String get theaterRouteRecommended => 'Recommended';
 
   @override
-  String get theaterRouteAdopting => '采纳中';
+  String get theaterRouteAdopting => 'Adopting';
 
   @override
-  String get theaterRouteAdopt => '采纳此路径';
+  String get theaterRouteAdopt => 'Adopt this path';
 
   @override
-  String get theaterRouteSimulate => '带去模拟';
+  String get theaterRouteSimulate => 'Take to simulation';
 
   @override
   String theaterRouteCompletion(Object value) {
-    return '完成率 $value';
+    return 'Completion $value';
   }
 
   @override
   String theaterRouteMasteryLabel(Object value) {
-    return '掌握度 $value';
+    return 'Mastery $value';
   }
 
   @override
   String theaterRouteDailyMinutes(Object minutes) {
-    return '日均 $minutes 分钟';
+    return '$minutes min/day';
   }
 
   @override
   String theaterRouteRiskCount(Object count) {
-    return '$count 个风险点';
+    return '$count risks';
   }
 
   @override
   String theaterRouteScore(Object score) {
-    return '综合 $score 分';
+    return 'Score $score';
   }
 
   @override
   String theaterRouteRangePrediction(Object completionHigh,
       Object completionLow, Object masteryHigh, Object masteryLow) {
-    return '区间预测：完成率 $completionLow%-$completionHigh%， 掌握度 $masteryLow%-$masteryHigh%';
+    return 'Range prediction: completion $completionLow%-$completionHigh%, mastery $masteryLow%-$masteryHigh%';
   }
 
   @override
-  String get theaterRouteRecommendedBaseline => '推荐基线';
+  String get theaterRouteRecommendedBaseline => 'Recommended baseline';
 
   @override
-  String get theaterRouteCompletionRate => '完成率';
+  String get theaterRouteCompletionRate => 'Completion rate';
 
   @override
-  String get theaterRouteMasteryRate => '掌握度';
+  String get theaterRouteMasteryRate => 'Mastery';
 
   @override
-  String get theaterRouteDailyTime => '日均时间';
+  String get theaterRouteDailyTime => 'Daily time';
 
   @override
-  String get theaterRouteRiskLevel => '风险数';
+  String get theaterRouteRiskLevel => 'Risk count';
 
   @override
-  String get theaterRouteOverallScore => '综合分';
+  String get theaterRouteOverallScore => 'Overall score';
 
   @override
-  String get theaterRouteDataNote => '数据说明';
+  String get theaterRouteDataNote => 'Data note';
 
   @override
   String theaterRouteCompletionRange(Object high, Object low) {
-    return '完成率区间 $low%-$high%';
+    return 'Completion range $low%-$high%';
   }
 
   @override
   String theaterRouteMasteryRange(Object high, Object low) {
-    return '掌握度区间 $low%-$high%';
+    return 'Mastery range $low%-$high%';
   }
 
   @override
-  String get theaterRouteSimulateFromCurrent => '带去模拟';
+  String get theaterRouteSimulateFromCurrent => 'Take to simulation';
 
   @override
-  String get theaterRouteSimulateAfterSwitch => '切换后模拟';
+  String get theaterRouteSimulateAfterSwitch => 'Switch then simulate';
 
   @override
-  String get theaterRouteSwitchToThis => '切换到此路径';
+  String get theaterRouteSwitchToThis => 'Switch to this path';
 
   @override
   String theaterRouteStepMinutes(Object dayLabel, Object minutes) {
-    return '$dayLabel · $minutes 分钟';
+    return '$dayLabel · $minutes min';
   }
 
   @override
-  String get theaterDismissTooltip => '关闭提示';
+  String get theaterDismissTooltip => 'Dismiss';
 
   @override
-  String get theaterCompactComparisonTitle => '路径对比';
+  String get theaterCompactComparisonTitle => 'Path comparison';
 
   @override
   String theaterCompactComparisonSummary(Object summary) {
-    return '对照路径：$summary';
+    return 'Comparison path: $summary';
   }
 
   @override
   String theaterCompactComparisonCurrent(Object title) {
-    return '当前 · $title';
+    return 'Current · $title';
   }
 
   @override
   String theaterCompactComparisonMastery(Object value) {
-    return '掌握 $value%';
+    return 'Mastery $value%';
   }
 
   @override
   String theaterCompactComparisonTime(Object minutes) {
-    return '时间 $minutes 分/天';
+    return 'Time $minutes min/day';
   }
 
   @override
   String theaterCompactComparisonAlt(Object title) {
-    return '对照 · $title';
+    return 'Compare · $title';
   }
 
   @override
-  String get theaterCompactOpenDetail => '进入路径页细比';
+  String get theaterCompactOpenDetail => 'Open path details';
 
   @override
   String theaterCompactFallbackSingle(Object name) {
-    return '先聚焦 $name。';
+    return 'Focus on $name first.';
   }
 
   @override
   String theaterCompactFallbackMulti(Object first, Object last) {
-    return '先补 $first，再推进 $last。';
+    return 'Start with $first, then move to $last.';
   }
 
   @override
-  String get theaterComparisonTitle => '路径对比';
+  String get theaterComparisonTitle => 'Path comparison';
 
   @override
   String get theaterComparisonSubtitle =>
-      '把当前方案和另一条代表性路径放在一起比较，更容易判断该走稳一点还是快一点。';
+      'Compare your current plan with a representative path to better decide whether to play it safe or go faster.';
 
   @override
-  String get theaterComparisonMetric => '指标';
+  String get theaterComparisonMetric => 'Metric';
 
   @override
-  String get theaterComparisonEstimatedMastery => '预计掌握度';
+  String get theaterComparisonEstimatedMastery => 'Estimated mastery';
 
   @override
-  String get theaterComparisonTimeInvestment => '时间投入';
+  String get theaterComparisonTimeInvestment => 'Time investment';
 
   @override
-  String get theaterComparisonRiskLevel => '风险等级';
+  String get theaterComparisonRiskLevel => 'Risk level';
 
   @override
-  String get theaterComparisonRiskLow => '低';
+  String get theaterComparisonRiskLow => 'Low';
 
   @override
-  String get theaterComparisonRiskMediumHigh => '中高';
+  String get theaterComparisonRiskMediumHigh => 'Medium-high';
 
   @override
-  String get theaterComparisonRiskMedium => '中';
+  String get theaterComparisonRiskMedium => 'Medium';
 
   @override
-  String get theaterBranchDeltaTitle => '假设分支对比';
+  String get theaterBranchDeltaTitle => 'What-if branch comparison';
 
   @override
-  String get theaterBranchDeltaPath => '分支路径';
+  String get theaterBranchDeltaPath => 'Branch path';
 
   @override
-  String get theaterBranchDeltaWhatIf => '假设推演';
+  String get theaterBranchDeltaWhatIf => 'What-if deduction';
 
   @override
-  String get theaterWhatIfTitle => 'What-if 沙盘';
+  String get theaterWhatIfTitle => 'What-if sandbox';
 
   @override
-  String get theaterWhatIfSubtitle => '点选想跳过的节点，先看预计影响，再生成完整推演结果。';
+  String get theaterWhatIfSubtitle =>
+      'Select nodes to skip, preview the impact, then generate the full what-if result.';
 
   @override
-  String get theaterWhatIfPreviewTitle => '预计影响预览';
+  String get theaterWhatIfPreviewTitle => 'Impact preview';
 
   @override
-  String get theaterWhatIfPreviewMastery => '掌握度';
+  String get theaterWhatIfPreviewMastery => 'Mastery';
 
   @override
-  String get theaterWhatIfPreviewCompletion => '完成率';
+  String get theaterWhatIfPreviewCompletion => 'Completion';
 
   @override
-  String get theaterWhatIfNoNodesSelected => '当前没有标记跳过节点，保持原始路径。';
+  String get theaterWhatIfNoNodesSelected =>
+      'No nodes marked to skip. Keeping the original path.';
 
   @override
   String theaterWhatIfNodesSkipped(Object nodes) {
-    return '你已标记跳过 $nodes。';
+    return 'You marked to skip $nodes.';
   }
 
   @override
-  String get theaterWhatIfSelectFirst => '先选择一个节点';
+  String get theaterWhatIfSelectFirst => 'Select a node first';
 
   @override
-  String get theaterWhatIfGenerateFull => '生成完整假设推演结果';
+  String get theaterWhatIfGenerateFull => 'Generate full what-if result';
 
   @override
   String theaterWhatIfOriginal(Object original) {
-    return '原始 $original';
+    return 'Original $original';
   }
 
   @override
   String theaterWhatIfAdjusted(Object adjusted) {
-    return '调整后 $adjusted';
+    return 'Adjusted $adjusted';
   }
 
   @override
   String theaterWhatIfRemainingPath(Object path) {
-    return '分支剩余路径：$path';
+    return 'Remaining branch path: $path';
   }
 
   @override
-  String get theaterDiscussionTitle => '专家圆桌';
+  String get theaterDiscussionTitle => 'Expert roundtable';
 
   @override
-  String get theaterSnapshotSaving => '保存中';
+  String get theaterSnapshotSaving => 'Saving';
 
   @override
-  String get theaterSnapshotSave => '保存当前快照';
+  String get theaterSnapshotSave => 'Save current snapshot';
 
   @override
-  String get theaterSnapshotTitle => '保存当前快照';
+  String get theaterSnapshotTitle => 'Save current snapshot';
 
   @override
-  String get theaterSnapshotNoSnapshot => '把当前推演保存下来，稍后可以继续回看。';
+  String get theaterSnapshotNoSnapshot =>
+      'Save the current deduction to review later.';
 
   @override
   String theaterSnapshotSaved(Object title) {
-    return '已保存：$title';
+    return 'Saved: $title';
   }
 
   @override
-  String get theaterAccuracyTitle => '预测校准';
+  String get theaterAccuracyTitle => 'Prediction calibration';
 
   @override
-  String get theaterAccuracyWithinRange => '这次真实结果落在预测区间内，当前模型区间覆盖命中。';
+  String get theaterAccuracyWithinRange =>
+      'The actual result fell within the prediction range. Current model coverage is on target.';
 
   @override
-  String get theaterAccuracyOutsideRange => '这次真实结果落在预测区间外，系统会用这次偏差继续校准后续预测。';
+  String get theaterAccuracyOutsideRange =>
+      'The actual result fell outside the prediction range. The system will use this deviation to calibrate future predictions.';
 
   @override
   String theaterAccuracyDueDate(Object date) {
-    return '建议回填日期：$date';
+    return 'Suggested fill date: $date';
   }
 
   @override
-  String get theaterAccuracyRecordActual => '记录实际表现';
+  String get theaterAccuracyRecordActual => 'Record actual performance';
 
   @override
   String theaterAccuracySampleCount(Object count) {
-    return '样本 $count';
+    return 'Samples $count';
   }
 
   @override
   String theaterAccuracyAvgScore(Object score) {
-    return '平均准确度 $score%';
+    return 'Average accuracy $score%';
   }
 
   @override
   String theaterAccuracyConfidenceScore(Object score) {
-    return '数据充分度 $score%';
+    return 'Data sufficiency $score%';
   }
 
   @override
   String theaterAccuracyCoverageRate(Object rate) {
-    return '区间命中 $rate%';
+    return 'Range coverage $rate%';
   }
 
   @override
-  String get theaterAccuracyScoreNote => '数据充分度反映当前预测所依据的数据量和校准次数，不是预测准确度。';
+  String get theaterAccuracyScoreNote =>
+      'Data sufficiency reflects the volume of data and calibration count, not prediction accuracy.';
 
   @override
-  String get theaterAccuracyNoSamples => '还没有历史回填样本，当前预测会优先展示区间而不是绝对值。';
+  String get theaterAccuracyNoSamples =>
+      'No historical fill samples yet. Current predictions prioritize ranges over absolute values.';
 
   @override
   String theaterAccuracyHistoryBias(Object completionBias, Object masteryBias) {
-    return '历史偏差：完成率 $completionBias%， 掌握度 $masteryBias%。';
+    return 'Historical bias: completion $completionBias%, mastery $masteryBias%.';
   }
 
   @override
-  String get theaterAdoptionSynced => '已同步到你的 Sprint';
+  String get theaterAdoptionSynced => 'Synced to your Sprint';
 
   @override
-  String get theaterAdoptionFirstWeekTasks => '首周任务';
+  String get theaterAdoptionFirstWeekTasks => 'First week tasks';
 
   @override
   String theaterAdoptionCheckpoints(Object dates) {
-    return '检查点：$dates';
+    return 'Checkpoints: $dates';
   }
 
   @override
-  String get theaterAdoptionViewPlan => '查看计划';
+  String get theaterAdoptionViewPlan => 'View plan';
 
   @override
-  String get theaterAdoptionContinueExploring => '继续探索';
+  String get theaterAdoptionContinueExploring => 'Continue exploring';
+
+  @override
+  String get planCreateEditingGrowth => 'Edit Growth Plan';
+
+  @override
+  String get planCreateEditingSprint => 'Edit Sprint Plan';
+
+  @override
+  String get planCreateSavePlan => 'Save Plan';
+
+  @override
+  String get planCreateStepPositioning => 'Plan Positioning';
+
+  @override
+  String get planCreateStepTimeStructure => 'Time Structure';
+
+  @override
+  String get planCreateStepTaskBlueprint => 'Task Blueprint';
+
+  @override
+  String get planCreateStepBoundariesGuide => 'Boundaries & Guide';
+
+  @override
+  String get planCreateStepReviewConfirm => 'Review & Confirm';
+
+  @override
+  String get planCreateBasicsSubtitle =>
+      'First, define this as a real plan card, not just a regular task.';
+
+  @override
+  String get planCreateNameHint =>
+      'e.g., 6-week speaking boost / Midterm sprint wrap-up';
+
+  @override
+  String get planCreateSubjectLabel => 'Subject';
+
+  @override
+  String get planCreateSubjectHint =>
+      'e.g., English, Flutter, Math, Research reading...';
+
+  @override
+  String get planCreateGrowthGoalLabel => 'Long-term Goal';
+
+  @override
+  String get planCreateSprintGoalLabel => 'Sprint Goal';
+
+  @override
+  String get planCreateGrowthGoalHint =>
+      'Describe what abilities, habits, or outcomes this growth plan aims to build.';
+
+  @override
+  String get planCreateSprintGoalHint =>
+      'Describe the sprint\'s target, acceptance criteria, and the main focus.';
+
+  @override
+  String get planCreateGoalRequired =>
+      'Please write the goal for this plan card';
+
+  @override
+  String get planCreateScheduleSubtitle =>
+      'Set duration, daily input, and reminder rhythm all at once.';
+
+  @override
+  String get planCreateDailyMinutesLabel => 'Daily available time';
+
+  @override
+  String planCreateTotalEstimatedHours(Object hours) {
+    return 'Total estimated $hours hours';
+  }
+
+  @override
+  String get planCreateDailyReminderTime => 'Daily reminder time';
+
+  @override
+  String get planCreatePlanStageLabel => 'Current stage';
+
+  @override
+  String get planCreateStageSprint => 'Sprint Push';
+
+  @override
+  String get planCreateStageDaily => 'Daily Execution';
+
+  @override
+  String get planCreateStageReview => 'Review & Tune';
+
+  @override
+  String get planCreateStagePaused => 'Temporarily Paused';
+
+  @override
+  String get planCreateScheduleChipWorkday => 'Weekday push, weekend review';
+
+  @override
+  String get planCreateScheduleChipMorning => 'Morning start, evening wrap';
+
+  @override
+  String get planCreateScheduleChipAfternoon =>
+      'Afternoon focus, light night review';
+
+  @override
+  String get planCreateScheduleLabel => 'Rhythm description';
+
+  @override
+  String get planCreateScheduleHint =>
+      'e.g., Mon-Fri push forward, Sat review, Sun fill gaps';
+
+  @override
+  String get planCreateTasksSubtitle =>
+      'This step determines what actions the plan will carry. Existing tasks are references; new tasks truly belong to the plan.';
+
+  @override
+  String get planCreateTaskBlueprintLabel => 'Task blueprint';
+
+  @override
+  String get planCreateTaskBlueprintHint =>
+      'e.g., Build the framework first, then push the main line daily, review and fill gaps at the end.';
+
+  @override
+  String get planCreateReferenceExistingTasks => 'Reference existing tasks';
+
+  @override
+  String get planCreateCopyToPlan => 'Copy to plan';
+
+  @override
+  String get planCreateNewTaskLabel => 'New plan task';
+
+  @override
+  String get planCreateNewTaskHint =>
+      'e.g., Complete one round of chapter review';
+
+  @override
+  String get planCreateDurationLabel => 'Duration';
+
+  @override
+  String get planCreateDifficultyLabel => 'Difficulty';
+
+  @override
+  String get planCreateAddTaskToPlan => 'Add to plan tasks';
+
+  @override
+  String get planCreateNoTasks => 'No plan tasks yet';
+
+  @override
+  String get planCreateScopeLabel => 'Plan boundaries & notes';
+
+  @override
+  String get planCreateScopeHint =>
+      'e.g., This plan does not handle ad-hoc tasks, only follows the exam mainline; push only one mainline action per day.';
+
+  @override
+  String get planCreateGuidePerspective => 'Task guide perspective';
+
+  @override
+  String get planCreateGuideForSelf => 'For myself';
+
+  @override
+  String get planCreateGuideForAi => 'For AI';
+
+  @override
+  String get planCreateGuideHumanDescription =>
+      'The human version is saved by default as the execution guide on the plan card to help you push forward directly.';
+
+  @override
+  String get planCreateGuideAiDescription =>
+      'The AI version is only generated when needed for Sparkle\'s internal task assistant, not persisted by default.';
+
+  @override
+  String get planCreateGuideHumanTitle => 'Human execution guide';
+
+  @override
+  String get planCreateGuideAiTitle => 'AI execution version';
+
+  @override
+  String get planCreateGenerateHumanGuide => 'Generate human version';
+
+  @override
+  String get planCreateGenerateAiGuide => 'Generate AI version';
+
+  @override
+  String get planCreateGuideHint =>
+      'After generation, you\'ll see the main push thread, daily rhythm, risk reminders, and today\'s starting action here.';
+
+  @override
+  String get planCreateAiGuideEmpty =>
+      'No AI version yet. Only generate when needed to avoid unnecessary token usage.';
+
+  @override
+  String get planCreateCopyAiGuide => 'Copy AI version';
+
+  @override
+  String get planCreateAiGuideCopied => 'AI version copied';
+
+  @override
+  String planCreateReviewSummary(
+      Object dailyMinutes, Object hours, Object type) {
+    return '$type · $dailyMinutes min/day · $hours hours';
+  }
+
+  @override
+  String get planCreateReviewEditDescription =>
+      'Saving will update the plan description and create new plan tasks for added drafts.';
+
+  @override
+  String get planCreateReviewCreateDescription =>
+      'Creating will generate a more complete plan card and sync create plan tasks.';
+
+  @override
+  String get planCreateFinalDescription => 'Final written plan description';
+
+  @override
+  String planCreateMinutes(Object value) {
+    return '$value min';
+  }
+
+  @override
+  String planCreateTaskSubtitle(Object difficulty, Object minutes) {
+    return '$minutes min · Difficulty $difficulty';
+  }
+
+  @override
+  String get predictedIntentTitle => 'System Prediction';
+
+  @override
+  String get predictedIntentCollapsedTitle => 'System Prediction Collapsed';
+
+  @override
+  String get predictedIntentCollapsedExpand =>
+      'Expand it again whenever you want to review the recommendation.';
+
+  @override
+  String get predictedIntentCollapsedUpdated => 'Last updated';
+
+  @override
+  String get predictedIntentSummary =>
+      'Based on your profile, the last 24 hours, and task rhythm';
+
+  @override
+  String get predictedIntentSuggestedCont => 'Suggested Continuation';
+
+  @override
+  String get predictedIntentWaiting =>
+      'The prediction is ready and waiting for a follow-up prompt.';
+
+  @override
+  String predictedIntentConfidence(int percent) {
+    return 'Confidence $percent%';
+  }
+
+  @override
+  String get predictedIntentWhy => 'Why the system predicts this';
+
+  @override
+  String get predictedIntentContinuing => 'Continuing...';
+
+  @override
+  String get predictedIntentContinue => 'Continue With This';
+
+  @override
+  String get predictedIntentError =>
+      'Something went wrong while continuing. Please try again.';
+
+  @override
+  String get predictedActionResumePriority => 'Resume Priority Task';
+
+  @override
+  String get predictedActionStudyPlan => 'Build Study Plan';
+
+  @override
+  String get predictedActionDiagnose => 'Diagnose Issue';
+
+  @override
+  String get predictedActionCreateTask => 'Turn Into Task';
+
+  @override
+  String get predictedActionInstantResult => 'Instant Result';
+
+  @override
+  String get predictedActionReviewProgress => 'Review Progress';
+
+  @override
+  String get predictedActionPlanNext => 'Plan Next Step';
+
+  @override
+  String get predictedActionReflection => 'Quick Reflection';
+
+  @override
+  String get predictedActionDefault => 'Predicted Intent';
+
+  @override
+  String get predictedWindowNow => 'Right Now';
+
+  @override
+  String get predictedWindow30m => 'Next 30 Minutes';
+
+  @override
+  String get predictedWindow1h => 'Next Hour';
+
+  @override
+  String get predictedWindow2h => 'Next 2 Hours';
+
+  @override
+  String get predictedWindow6h => 'Next 6 Hours';
+
+  @override
+  String get predictedWindowToday => 'Later Today';
+
+  @override
+  String get predictedSourceLongRange => 'Long-Range Forecast';
+
+  @override
+  String get predictedSourceRules => 'Rules Fallback';
+
+  @override
+  String get predictedFreshnessJustNow => 'just now';
+
+  @override
+  String predictedFreshnessMinutes(int count) {
+    return '$count min ago';
+  }
+
+  @override
+  String predictedFreshnessHours(int count) {
+    return '$count hr ago';
+  }
+
+  @override
+  String predictedFreshnessDays(int count) {
+    return '$count d ago';
+  }
+
+  @override
+  String get predictedCategoryPrefTitle => 'Recent same-category signal';
+
+  @override
+  String predictedCategoryPrefHint(String category, String tool) {
+    return 'Inside $category, recent results have more often favored \"$tool\" first.';
+  }
+
+  @override
+  String get predictedCategoryPrefCaveat =>
+      'Based only on recent results inside this request category. It does not mean Sparkle understands your whole workflow.';
+
+  @override
+  String get predictedCategoryPlan => 'planning requests';
+
+  @override
+  String get predictedCategoryTask => 'task requests';
+
+  @override
+  String get predictedCategoryFocus => 'focus-support requests';
+
+  @override
+  String get predictedCategoryGrowth => 'growth requests';
+
+  @override
+  String get predictedCategoryQuery => 'query requests';
+
+  @override
+  String get predictedCategoryKnowledge => 'knowledge requests';
+
+  @override
+  String get predictedCategoryReview => 'review requests';
+
+  @override
+  String get predictedCategoryResearch => 'research requests';
+
+  @override
+  String get predictedCategoryMemory => 'memory requests';
+
+  @override
+  String get predictedCategoryCognitive => 'cognitive requests';
+
+  @override
+  String get predictedCategoryDefault => 'similar requests';
+
+  @override
+  String get predictedToolCreatePlan => 'Create Plan';
+
+  @override
+  String get predictedToolGenerateTasks => 'Expand Plan Steps';
+
+  @override
+  String get predictedToolCreateTask => 'Create Task';
+
+  @override
+  String get predictedToolListTasks => 'List Tasks';
+
+  @override
+  String get predictedToolUpdateTask => 'Update Task';
+
+  @override
+  String get predictedToolQueryKnowledge => 'Query Knowledge';
+
+  @override
+  String get predictedToolExplainConcept => 'Explain Concept';
+
+  @override
+  String get predictedToolReviewProgress => 'Review Progress';
+
+  @override
+  String get predictedToolGenerateSummary => 'Generate Summary';
+
+  @override
+  String get predictedToolSuggestSchedule => 'Suggest Schedule';
+
+  @override
+  String get examSprintHighFreqCoverage => 'High-Freq Coverage';
+
+  @override
+  String get examSprintMistakeRepair => 'Mistake Repair';
+
+  @override
+  String get examSprintStudyStreak => 'Study Streak';
+
+  @override
+  String examSprintStreakDays(int days) {
+    return '$days d';
+  }
+
+  @override
+  String get examSprintKeepRhythm => 'Keep the rhythm';
+
+  @override
+  String examSprintHighYieldWeak(String topics) {
+    return 'High-yield weak spots: $topics';
+  }
+
+  @override
+  String get examSprintNoTasksToday => 'No sprint tasks scheduled today.';
+
+  @override
+  String get examSprintExamDayReady => 'Exam Day · You\'re Ready 🎓';
+
+  @override
+  String get examSprintExamTips => 'Exam Tips';
+
+  @override
+  String get examSprintRecordResult => 'Record Exam Result';
+
+  @override
+  String get examSprintDashboardTitle => 'Exam Sprint Dashboard';
+
+  @override
+  String get examSprintModeHighScore => 'High Score';
+
+  @override
+  String get examSprintModeHold => 'Hold';
+
+  @override
+  String get examSprintModePass => 'Pass';
+
+  @override
+  String get examSprintModeDefault => 'Sprint';
+
+  @override
+  String get examSprintExamDay => 'Exam day';
+
+  @override
+  String examSprintCountdown(int days) {
+    return '$days days until exam';
+  }
+
+  @override
+  String examSprintTodayTasks(int completed, int total) {
+    return 'Today: $completed/$total tasks';
+  }
+
+  @override
+  String examSprintDaysLeft(int days) {
+    return '$days days left';
+  }
+
+  @override
+  String examSprintTodayDone(int completed, int total) {
+    return 'Today $completed/$total done';
+  }
+
+  @override
+  String get examSprintTodaySprintTasks => 'Today Sprint Tasks';
+
+  @override
+  String get examSprintHideLater => 'Hide later days';
+
+  @override
+  String examSprintShowLater(int count) {
+    return 'Show next $count days';
+  }
+
+  @override
+  String examSprintDayIndex(int index) {
+    return 'Day $index';
+  }
+
+  @override
+  String examSprintDateFormat(int month, int day) {
+    return '$month/$day';
+  }
+
+  @override
+  String get examSprintNoSprintTasks => 'No sprint tasks yet';
+
+  @override
+  String examSprintMinLabel(int minutes, String status) {
+    return '$minutes min · $status';
+  }
+
+  @override
+  String get examSprintStatusDone => 'Done';
+
+  @override
+  String get examSprintStatusInProgress => 'In progress';
+
+  @override
+  String get examSprintStatusPending => 'Pending';
+
+  @override
+  String get insightHubTitle => 'Learning Insights';
+
+  @override
+  String insightHubRecommendedSeeds(int count) {
+    return '$count recommended scenarios ready to simulate.';
+  }
+
+  @override
+  String get insightHubFallbackSummary =>
+      'Simulations, what-ifs, and reports — now in one lighter learning flow.';
+
+  @override
+  String get insightHubSimulation => 'Learning Simulation';
+
+  @override
+  String get insightHubTheater => 'Deduction Theater';
+
+  @override
+  String get insightHubReport => 'Learning Report';
+
+  @override
+  String get insightHubEnterOverview => 'Enter Insight Overview';
+
+  @override
+  String get insightHubCompactSimulation => 'Simulation';
+
+  @override
+  String get insightHubCompactTheater => 'Theater';
+
+  @override
+  String get insightHubCompactReport => 'Report';
+
+  @override
+  String get insightHubRefreshWarning =>
+      'Some insight data hasn\'t refreshed yet. Existing content will be shown.';
+
+  @override
+  String insightHubSeedsToExplore(int count) {
+    return '$count scenarios to explore';
+  }
+
+  @override
+  String get insightHubCompactFallback =>
+      'Simulations, what-ifs, and reports now in one card';
+
+  @override
+  String get insightHubNoRecentTheater => 'No recent theater';
+
+  @override
+  String get insightHubContinueLastTheater => 'Continue last theater';
+
+  @override
+  String insightHubContinueTopic(String topic) {
+    return 'Continue $topic';
+  }
+
+  @override
+  String get insightHubContinueLastSimulation => 'Continue last simulation';
+
+  @override
+  String insightHubRecommendedSeedsCount(int count) {
+    return '$count scenarios';
+  }
+
+  @override
+  String insightHubContinueSession(String topic) {
+    return 'Continue $topic';
+  }
+
+  @override
+  String get insightHubStartSimulation => 'Start a new simulation';
+
+  @override
+  String get insightHubNoRecentReport => 'No recent report';
+
+  @override
+  String insightHubMasteryPercent(int percent) {
+    return 'Mastery $percent%';
+  }
+
+  @override
+  String get insightHubRefreshFailed =>
+      'Some insight content failed to refresh. Showing existing content.';
+
+  @override
+  String get insightHubRetry => 'Retry';
+
+  @override
+  String get memoryPanel => 'Memory Panel';
+
+  @override
+  String get memoryPanelAdjust => 'Adjust';
+
+  @override
+  String get memoryPanelAiAutoMemories => 'AI Auto Memories';
+
+  @override
+  String get memoryPanelAiInferredDescription =>
+      'AI inferred from chat, for display only, not used in downstream decisions.';
+
+  @override
+  String get memoryPanelClearFilter => 'Clear Filter';
+
+  @override
+  String get memoryPanelCommitmentDismissed => 'Commitment dismissed';
+
+  @override
+  String memoryPanelConfidenceValue(String value) {
+    return 'Confidence $value';
+  }
+
+  @override
+  String memoryPanelConflictFailed(String error) {
+    return 'Conflict resolution failed: $error';
+  }
+
+  @override
+  String get memoryPanelConflictResolvedA => 'Resolved with candidate A';
+
+  @override
+  String get memoryPanelConflictResolvedB => 'Resolved with candidate B';
+
+  @override
+  String get memoryPanelConflictResolvedNone => 'Conflict candidates revoked';
+
+  @override
+  String memoryPanelCorrectionCount(int count) {
+    return 'Corrections $count';
+  }
+
+  @override
+  String get memoryPanelDate => 'Date';
+
+  @override
+  String memoryPanelDeviationsDetected(int count) {
+    return '$count deviations detected';
+  }
+
+  @override
+  String get memoryPanelDimCompletionRate => 'Completion Rate';
+
+  @override
+  String get memoryPanelDimEngagement => 'Engagement';
+
+  @override
+  String get memoryPanelDimMood => 'Mood';
+
+  @override
+  String get memoryPanelDimPace => 'Pace';
+
+  @override
+  String get memoryPanelDimPlanAdherence => 'Plan Adherence';
+
+  @override
+  String memoryPanelDismissFailed(String error) {
+    return 'Dismiss failed: $error';
+  }
+
+  @override
+  String get memoryPanelEmptyDescription =>
+      'Start by chatting about your goals, preferences, or recent learning activities so the system can organize long-term memories here.';
+
+  @override
+  String get memoryPanelEmptyFilterDescription =>
+      'Try clearing filters to see all organized memories.';
+
+  @override
+  String get memoryPanelEmptyFilterTitle => 'No matching memories';
+
+  @override
+  String get memoryPanelEmptyTitle => 'Memory panel is empty';
+
+  @override
+  String get memoryPanelEvidenceAll => 'All Evidence';
+
+  @override
+  String get memoryPanelEvidenceMissing => 'Missing';
+
+  @override
+  String get memoryPanelEvidenceOk => 'OK';
+
+  @override
+  String get memoryPanelEvidenceRedacted => 'Redacted';
+
+  @override
+  String get memoryPanelForesightHint => 'Foresight Hint';
+
+  @override
+  String memoryPanelImportanceValue(String value) {
+    return 'Importance $value';
+  }
+
+  @override
+  String memoryPanelItemCount(int count) {
+    return '$count items';
+  }
+
+  @override
+  String memoryPanelLoadFailed(String error) {
+    return 'Memory panel load failed: $error';
+  }
+
+  @override
+  String memoryPanelMarkFailed(String error) {
+    return 'Mark failed: $error';
+  }
+
+  @override
+  String get memoryPanelMarkedComplete => 'Marked as complete';
+
+  @override
+  String get memoryPanelMetricsNone => 'Metrics: -';
+
+  @override
+  String get memoryPanelNotUpdated => 'Not updated';
+
+  @override
+  String get memoryPanelRecentScenes => 'Recent Scenes';
+
+  @override
+  String get memoryPanelRevoke => 'Revoke';
+
+  @override
+  String memoryPanelRevokeFailed(String error) {
+    return 'Revoke failed: $error';
+  }
+
+  @override
+  String get memoryPanelRevokeThis => 'Revoke This';
+
+  @override
+  String get memoryPanelRevokedAutoMemory => 'Auto memory revoked';
+
+  @override
+  String get memoryPanelRevoking => 'Revoking...';
+
+  @override
+  String memoryPanelSceneMemories(String time, int count) {
+    return '$time · $count memories';
+  }
+
+  @override
+  String get memoryPanelUnavailable => 'Memory panel unavailable';
+
+  @override
+  String memoryPanelValidUntil(String policy) {
+    return 'Valid until $policy';
+  }
+
+  @override
+  String get theaterComposerDeducing => 'Deducing';
+
+  @override
+  String theaterWhatIfCombinedResult(
+      String originalMastery,
+      String originalCompletion,
+      String predictedMastery,
+      String predictedCompletion) {
+    return 'Original $originalMastery% / $originalCompletion%  →  Adjusted $predictedMastery% / $predictedCompletion%';
+  }
+
+  @override
+  String theaterAccuracyPredictedActual(String predictedCompletion,
+      String predictedMastery, String actualCompletion, String actualMastery) {
+    return 'Predicted $predictedCompletion% / $predictedMastery%, Actual $actualCompletion% / $actualMastery%';
+  }
+
+  @override
+  String theaterPerDayUnit(String minutes) {
+    return '$minutes min/day';
+  }
+
+  @override
+  String get simulationTitle => 'Scenario Simulation';
+
+  @override
+  String get simulationCurrentSimulation => 'Current Simulation';
+
+  @override
+  String get simulationBackToTheater => 'Back to Theater';
+
+  @override
+  String get simulationRunning => 'Simulating...';
+
+  @override
+  String get simulationStartSimulation => 'Start This Simulation';
+
+  @override
+  String get simulationAwaitingInput => 'Awaiting Input';
+
+  @override
+  String get simulationClearTopic => 'Clear Topic';
+
+  @override
+  String get simulationRecommendedScenarios => 'Recommended Scenarios';
+
+  @override
+  String get simulationGenerate => 'Generate';
+
+  @override
+  String get simulationRefresh => 'Refresh';
+
+  @override
+  String get simulationStartSimButton => 'Start Simulation';
+
+  @override
+  String get simulationGoToTheater => 'Go to Theater';
+
+  @override
+  String get simulationContinueSim => 'Continue Simulation';
+
+  @override
+  String get simulationPauseSim => 'Pause Simulation';
+
+  @override
+  String get simulationCollapseInsight => 'Collapse Insight';
+
+  @override
+  String get simulationViewInsight => 'View Insight';
+
+  @override
+  String get simulationCollapseSettings => 'Collapse Settings';
+
+  @override
+  String get simulationSimSettings => 'Simulation Settings';
+
+  @override
+  String get simulationYourTurnTitle => 'Your Turn to Reply';
+
+  @override
+  String get simulationYourResponseArea => 'Your Response Area';
+
+  @override
+  String get simulationCollapse => 'Collapse';
+
+  @override
+  String get simulationJoinDiscussion => 'Join the Discussion';
+
+  @override
+  String get simulationOrInputJudgment => 'Or enter your judgment';
+
+  @override
+  String get simulationSubmitting => 'Submitting...';
+
+  @override
+  String get simulationSubmitJudgment => 'Submit My Judgment';
+
+  @override
+  String get simulationContinueInChat => 'Continue in Chat';
+
+  @override
+  String get simulationAdjustSimulation => 'Adjust This Simulation';
+
+  @override
+  String get simulationDiscussionRounds => 'Discussion Rounds';
+
+  @override
+  String get simulationFacilitationStyleTitle => 'Facilitation Style';
+
+  @override
+  String get simulationParticipantsTitle => 'Participants';
+
+  @override
+  String get simulationRestoreDefault => 'Restore Default';
+
+  @override
+  String get simulationCustomHistoricalRole => 'Custom Historical Figure';
+
+  @override
+  String get simulationAdd => 'Add';
+
+  @override
+  String get simulationRestartSim => 'Restart Simulation';
+
+  @override
+  String get simulationContinue => 'Continue';
+
+  @override
+  String get simulationPause => 'Pause';
+
+  @override
+  String get simulationAwaitingStart => 'Awaiting Start';
+
+  @override
+  String get simulationGatheringParticipants => 'Gathering Participants';
+
+  @override
+  String get simulationWaitingFirstRound => 'Waiting First Round';
+
+  @override
+  String get simulationRolesPending => 'Roles pending';
+
+  @override
+  String get simulationGeneratingInBackground =>
+      'Still Generating in Background';
+
+  @override
+  String get simulationPausedForeground => 'Paused in Foreground';
+
+  @override
+  String get simulationImmersiveDiscussion => 'Immersive Discussion';
+
+  @override
+  String get simulationCurrentDiscussion => 'Current Discussion';
+
+  @override
+  String get simulationWillAppearLive =>
+      'Rounds will appear live once started.';
+
+  @override
+  String get simulationNoInsightYet => 'No insight summary yet.';
+
+  @override
+  String get simulationInsightSummaryTitle => 'Insight Summary';
+
+  @override
+  String get simulationGeneratingReport => 'Generating...';
+
+  @override
+  String get simulationGenerateLearningReport => 'Generate Learning Report';
+
+  @override
+  String get simulationContinueToTheater => 'Continue to Theater';
+
+  @override
+  String get simulationShareInsight => 'Share Insight';
+
+  @override
+  String get simulationCoreArguments => 'Core Arguments';
+
+  @override
+  String get simulationUnresolvedDisagreements => 'Unresolved Disagreements';
+
+  @override
+  String get simulationYourContribution => 'Your Contribution';
+
+  @override
+  String get simulationExposedKnowledgeGaps => 'Exposed Knowledge Gaps';
+
+  @override
+  String get simulationSuggestedNextSteps => 'Suggested Next Steps';
+
+  @override
+  String get simulationStructuredInsightGenerated =>
+      'Structured insight summary generated.';
+
+  @override
+  String get simulationEmptyGenerating => 'Simulation is generating...';
+
+  @override
+  String get simulationEmptyStartPrompt =>
+      'Start a learning scenario simulation and let roles discuss the topic round by round.';
+
+  @override
+  String get simulationCurrentScene => 'Current Scene';
+
+  @override
+  String get simulationCurrentGoal => 'Current Goal';
+
+  @override
+  String get simulationInteractionStyle => 'Interaction Style';
+
+  @override
+  String get simulationRoleDiscussionUserJoin =>
+      'Role Discussion + You Respond';
+
+  @override
+  String get simulationTopicHint => 'Enter a topic or knowledge point';
+
+  @override
+  String get simulationTopicHintExample => 'e.g. Eigenvalues and eigenvectors';
+
+  @override
+  String get simulationStartSimulationTopicAction =>
+      'Start Simulation About This Topic';
+
+  @override
+  String get simulationUserInputTopicHint =>
+      'Enter a learning topic or question to discuss';
+
+  @override
+  String get simulationUserInputTopicHelper =>
+      'After completing more learning tasks, the system will recommend discussion topics based on your real learning data';
+
+  @override
+  String get simulationRecommendedEmptyHint =>
+      'No recommended seeds yet. You can manually enter a topic to start.';
+
+  @override
+  String get simulationRecommendedUserInputHint =>
+      'Start with the most specific question you want to discuss. After accumulating more real learning records, the system will recommend topics based on your data.';
+
+  @override
+  String get simulationRecommendedPickHint =>
+      'Pick a starting point. The recommendation cards will auto-collapse once the discussion begins.';
+
+  @override
+  String get simulationScenarioAdjustHint =>
+      'Adjusting the scenario will also change the character relationships and discussion dynamics.';
+
+  @override
+  String get simulationFacilitationFitHint =>
+      'Make the discussion fit the current topic better.';
+
+  @override
+  String get simulationDiscussionNote =>
+      'Fully adjust the topic, scenario, rounds, facilitation style, and participant roles. Once started, the discussion follows these settings.';
+
+  @override
+  String get simulationParticipantHint =>
+      'Specify who you want to invite. Keep at least 1 and at most 6 roles.';
+
+  @override
+  String get simulationRunningStatusHint =>
+      'Simulation in progress. New rounds will appear below in real time.';
+
+  @override
+  String get simulationScenarioEyebrow => 'Scenario Simulation';
+
+  @override
+  String get simulationScenarioTitle => 'Start This Scenario Simulation';
+
+  @override
+  String get simulationScenarioSubtitle =>
+      'Choose a discussion scenario, then enter a topic you want to explore. The interface will automatically switch to an immersive discussion view once started.';
+
+  @override
+  String get simulationRoleDiscussionValue => 'Role Discussion + You Respond';
+
+  @override
+  String get simulationJudgeExampleHint =>
+      'e.g. I\'ll strengthen my geometric intuition first, then verify with a problem';
+
+  @override
+  String get simulationInteractionExplain =>
+      'Give your judgment first, and the next round will truly build around your input.';
+
+  @override
+  String get simulationInteractionHint =>
+      'Try catching one round here first and let the roles respond to your judgment. You can also bring this step back to the main chat to continue.';
+
+  @override
+  String get simulationContinuitySubtitle =>
+      'This simulation continues from your previous exploration. You can bring the context back to the original conversation anytime to continue questioning and deciding.';
+
+  @override
+  String simulationBridgeCurrentlyVerifyingFormat(String routeTitle) {
+    return 'Currently verifying path \"$routeTitle\"';
+  }
+
+  @override
+  String get simulationBridgeVerifyingRoute =>
+      'Currently verifying a deduction path';
+
+  @override
+  String simulationBridgeVerificationDescWithTarget(String targetName) {
+    return 'This simulation comes from the Knowledge Theater, with a goal of $targetName. You can bring your current progress back to the theater at any time to continue adopting or calibrating.';
+  }
+
+  @override
+  String get simulationBridgeVerificationContext =>
+      'This simulation comes from the Knowledge Theater. The current context remains linked to the original deduction.';
+
+  @override
+  String simulationInteractionModeFormat(String mode) {
+    return 'Interaction mode: $mode';
+  }
+
+  @override
+  String get simulationInteractionOpenQuestion => 'Open Question';
+
+  @override
+  String get simulationInteractionViewpointChallenge => 'Viewpoint Challenge';
+
+  @override
+  String get simulationInteractionBinaryChoice => 'Binary Choice';
+
+  @override
+  String get simulationInteractionChoice => 'Choice';
+
+  @override
+  String simulationCurrentFocusFormat(String speaker) {
+    return 'Current focus: $speaker';
+  }
+
+  @override
+  String simulationTopicFormat(String topic) {
+    return 'Topic: $topic';
+  }
+
+  @override
+  String simulationTopicAndSpeakerFormat(String topic, String speaker) {
+    return 'Topic: $topic · Speaking: $speaker';
+  }
+
+  @override
+  String simulationRoundN(int round) {
+    return 'Round $round';
+  }
+
+  @override
+  String simulationRoleCountFormat(int count) {
+    return '$count roles';
+  }
+
+  @override
+  String simulationRunningRoundN(int round, int total) {
+    return 'Running round $round/$total';
+  }
+
+  @override
+  String simulationRoundViewpoints(int count) {
+    return '$count round viewpoints';
+  }
+
+  @override
+  String simulationRoleCountLong(int count) {
+    return '$count roles';
+  }
+
+  @override
+  String simulationRoundFormatLabel(int current, int max) {
+    return '$current / $max rds';
+  }
+
+  @override
+  String simulationRoundSliderLabel(int count) {
+    return '$count rds';
+  }
+
+  @override
+  String get simulationParticipantDefaultStatus =>
+      'Currently running with default system roles.';
+
+  @override
+  String simulationParticipantCurrentStatus(String names) {
+    return 'Current participants: $names';
+  }
+
+  @override
+  String simulationBulletParticipants(String names) {
+    return 'Participants: $names';
+  }
+
+  @override
+  String simulationBulletRounds(int count) {
+    return 'Total rounds: $count. Suitable as a basis for further deduction or review report.';
+  }
+
+  @override
+  String simulationBulletOpening(String message) {
+    return 'Opening highlight: $message';
+  }
+
+  @override
+  String simulationRoundFormatShort(int current, int total) {
+    return '$current/$total rds';
+  }
+
+  @override
+  String get simulationContinueInChatContext =>
+      'Continue the simulation in chat.';
+
+  @override
+  String simulationContinueTopicLabel(String topic) {
+    return 'Topic: $topic';
+  }
+
+  @override
+  String simulationContinueScenarioLabel(String label) {
+    return 'Scenario: $label';
+  }
+
+  @override
+  String simulationContinueCurrentQuestion(String question) {
+    return 'Current question: $question';
+  }
+
+  @override
+  String simulationContinueMyResponse(String reply) {
+    return 'My response: $reply';
+  }
+
+  @override
+  String get simulationBalancedPush => 'Balanced';
+
+  @override
+  String get simulationDebateClash => 'Debate Clash';
+
+  @override
+  String get simulationGuidedBreakdown => 'Guided Breakdown';
+
+  @override
+  String get simulationPracticalApply => 'Practical Application';
+
+  @override
+  String get simulationReportReturnException =>
+      'Learning report returned invalid format';
+
+  @override
+  String simulationReportGenerationFailed(String error) {
+    return 'Failed to generate learning report: $error';
+  }
+
+  @override
+  String get simulationReportTitle =>
+      'This report captures issues exposed in this simulation';
+
+  @override
+  String get simulationReportSummary =>
+      'Disagreements and knowledge gaps revealed during the simulation have been brought into this formal report.';
+
+  @override
+  String simulationShareCreated(String topic, String scenario, String insight) {
+    return 'I just ran a learning simulation on Sparkle: $topic\nScenario: $scenario\nInsight: $insight';
+  }
+
+  @override
+  String simulationShareTitle(String topic) {
+    return 'Scenario Simulation · $topic';
+  }
+
+  @override
+  String simulationShareRawText(String topic, String scenario, String insight) {
+    return 'Scenario Simulation\nTopic: $topic\nScenario: $scenario\nInsight: $insight';
+  }
+
+  @override
+  String get simulationCustomFigureHint => 'e.g. Churchill / Bismarck';
+
+  @override
+  String simulationTopicCurrentFocusFormat(String topic, String speaker) {
+    return 'Topic: $topic · Speaking: $speaker';
+  }
+
+  @override
+  String simulationCurrentFocusLabel(String speaker) {
+    return 'Current focus: $speaker';
+  }
+
+  @override
+  String simulationImmersiveTopicAndFocus(String topic, String speaker) {
+    return 'Topic: $topic · Speaking: $speaker';
+  }
 }

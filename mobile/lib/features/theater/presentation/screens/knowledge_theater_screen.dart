@@ -641,14 +641,14 @@ class _KnowledgeTheaterScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '记录 7 天后的真实表现',
+                sheetContext.l10n.theaterRecordActualTitle,
                 style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
               ),
               const SizedBox(height: 8),
               Text(
-                '回填真实完成率和掌握度后，剧场会给你一份预测校准反馈。',
+                sheetContext.l10n.theaterRecordActualDesc,
                 style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -658,7 +658,7 @@ class _KnowledgeTheaterScreenState
               ValueListenableBuilder<double>(
                 valueListenable: completionController,
                 builder: (context, value, _) => _ActualMetricSlider(
-                  label: '真实完成率',
+                  label: sheetContext.l10n.theaterActualCompletionRate,
                   value: value,
                   onChanged: (next) => completionController.value = next,
                 ),
@@ -667,7 +667,7 @@ class _KnowledgeTheaterScreenState
               ValueListenableBuilder<double>(
                 valueListenable: masteryController,
                 builder: (context, value, _) => _ActualMetricSlider(
-                  label: '真实掌握度',
+                  label: sheetContext.l10n.theaterActualMastery,
                   value: value,
                   onChanged: (next) => masteryController.value = next,
                 ),
@@ -689,7 +689,7 @@ class _KnowledgeTheaterScreenState
                               ),
                         );
                       },
-                      child: const Text('提交校准'),
+                      child: Text(sheetContext.l10n.theaterSubmitCalibration),
                     ),
                   ),
                 ],
@@ -787,7 +787,7 @@ class _KnowledgeTheaterScreenState
                   const SizedBox(height: 8),
                   Text(
                     node.description.isEmpty
-                        ? '这个节点是当前推演中的关键知识点。'
+                        ? sheetContext.l10n.theaterNodeDescriptionFallback
                         : node.description,
                     style:
                         Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
@@ -801,21 +801,21 @@ class _KnowledgeTheaterScreenState
                     runSpacing: 10,
                     children: [
                       _NodeStatChip(
-                        label: '当前掌握度',
+                        label: sheetContext.l10n.theaterNodeCurrentMastery,
                         value: '${node.currentMastery.round()}%',
                       ),
                       _NodeStatChip(
-                        label: '预测掌握度',
+                        label: sheetContext.l10n.theaterNodePredictedMastery,
                         value: '${node.predictedMastery.round()}%',
                       ),
                       _NodeStatChip(
-                        label: '变化',
+                        label: sheetContext.l10n.theaterNodeDelta,
                         value: '${delta >= 0 ? '+' : ''}${delta.round()}%',
                         accent: delta >= 0 ? DS.success : scheme.error,
                       ),
-                      _NodeStatChip(
-                        label: '风险',
-                        value: _riskLabel(node.riskLevel),
+                       _NodeStatChip(
+                        label: sheetContext.l10n.theaterNodeRisk,
+                        value: _riskLabel(sheetContext, node.riskLevel),
                         accent: _riskColor(node.riskLevel, scheme),
                       ),
                     ],
@@ -823,7 +823,7 @@ class _KnowledgeTheaterScreenState
                   if (matchedStep != null) ...[
                     const SizedBox(height: 18),
                     Text(
-                      '它在当前路径里的作用',
+                      sheetContext.l10n.theaterNodeRoleInPath,
                       style:
                           Theme.of(sheetContext).textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w800,
@@ -842,7 +842,7 @@ class _KnowledgeTheaterScreenState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${matchedStep.dayLabel} · 第 ${matchedStep.index} 步',
+                            sheetContext.l10n.theaterNodeStepLabel(matchedStep.dayLabel, matchedStep.index.toString()),
                             style: Theme.of(sheetContext)
                                 .textTheme
                                 .labelLarge
@@ -864,7 +864,7 @@ class _KnowledgeTheaterScreenState
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            '下一步动作：先用约 ${matchedStep.estimatedMinutes} 分钟处理这个节点，再进入后续步骤。',
+                            sheetContext.l10n.theaterNodeNextAction(matchedStep.estimatedMinutes.toString()),
                             style: Theme.of(sheetContext)
                                 .textTheme
                                 .bodySmall
@@ -889,7 +889,7 @@ class _KnowledgeTheaterScreenState
                                 onRunWhatIf(node.id);
                               }
                             : null,
-                        child: const Text('开始假设推演'),
+                        child: Text(sheetContext.l10n.theaterWhatIfStart),
                       ),
                       FilledButton(
                         onPressed: isPromotingNode
@@ -899,7 +899,7 @@ class _KnowledgeTheaterScreenState
                                 unawaited(onPromoteNode(node));
                               },
                         child: Text(
-                          _nodePrimaryGalaxyActionLabel(node, isPromotingNode),
+                          _nodePrimaryGalaxyActionLabel(sheetContext, node, isPromotingNode),
                         ),
                       ),
                       OutlinedButton(
@@ -916,14 +916,14 @@ class _KnowledgeTheaterScreenState
                                   ),
                                 );
                               },
-                        child: const Text('查看星图参考'),
+                         child: Text(sheetContext.l10n.theaterViewGalaxyRef),
                       ),
                     ],
                   ),
                   if (!canRunWhatIf) ...[
                     const SizedBox(height: 12),
                     Text(
-                      '这个节点当前不在已选路径的可推演步骤里，所以暂时不能直接做假设推演。',
+                      sheetContext.l10n.theaterNodeNotInWhatIfPath,
                       style:
                           Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
                                 color: DS.textSecondary,
@@ -933,7 +933,7 @@ class _KnowledgeTheaterScreenState
                   if ((node.mappedGalaxyNodeId ?? '').isEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '这个节点目前是剧场里的自由节点，还没有可跳转的知识星图参考项。',
+                      sheetContext.l10n.theaterNodeNoGalaxyRef,
                       style:
                           Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
                                 color: DS.textSecondary,
@@ -987,7 +987,7 @@ class _KnowledgeTheaterScreenState
       return;
     }
     if (result == null) {
-      final errorMessage = ref.read(theaterProvider).error ?? '加入知识星图失败，请稍后再试。';
+      final errorMessage = ref.read(theaterProvider).error ?? context.l10n.theaterPromoteNodeFailed;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -1001,11 +1001,11 @@ class _KnowledgeTheaterScreenState
         SnackBar(
           content: Text(
             result.created
-                ? '已将「${result.nodeName}」加入知识星图，可以继续完善节点内容。'
-                : '已定位到知识星图中的「${result.nodeName}」，你可以继续完善节点内容。',
+                ? context.l10n.theaterPromoteNodeCreated(result.nodeName)
+                : context.l10n.theaterPromoteNodeFound(result.nodeName),
           ),
           action: SnackBarAction(
-            label: '去完善',
+            label: context.l10n.theaterGoImprove,
             onPressed: () {
               unawaited(
                 context.push(
@@ -1047,14 +1047,14 @@ class _KnowledgeTheaterScreenState
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _relationLabel(edge.relationType),
+                    _relationLabel(context, edge.relationType),
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '关系强度 ${(edge.strength * 100).round()}%',
+                  '${context.l10n.theaterEdgeStrength((edge.strength * 100).round().toString())}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -1067,14 +1067,14 @@ class _KnowledgeTheaterScreenState
     );
   }
 
-  String _riskLabel(String level) {
+  String _riskLabel(BuildContext context, String level) {
     switch (level) {
       case 'high':
-        return '高风险';
+        return context.l10n.theaterRiskHigh;
       case 'medium':
-        return '中风险';
+        return context.l10n.theaterRiskMedium;
       default:
-        return '低风险';
+        return context.l10n.theaterRiskLow;
     }
   }
 
@@ -1089,11 +1089,11 @@ class _KnowledgeTheaterScreenState
     }
   }
 
-  String _relationLabel(String relationType) => switch (relationType) {
-        'prerequisite' => '前置依赖',
-        'explains' => '解释关系',
-        'supports' => '支持关系',
-        'contradicts' => '矛盾关系',
+  String _relationLabel(BuildContext context, String relationType) => switch (relationType) {
+        'prerequisite' => context.l10n.theaterRelationPrerequisite,
+        'explains' => context.l10n.theaterRelationExplains,
+        'supports' => context.l10n.theaterRelationSupports,
+        'contradicts' => context.l10n.theaterRelationContradicts,
         _ => relationType,
       };
 }
@@ -1181,7 +1181,7 @@ class _SelectedNodeBanner extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '已选节点 · ${node.name}',
+            context.l10n.theaterSelectedNode(node.name),
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: accent,
@@ -1189,7 +1189,7 @@ class _SelectedNodeBanner extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            node.description.isEmpty ? '点击节点可查看详细推演说明。' : node.description,
+            node.description.isEmpty ? context.l10n.theaterNodeTapHint : node.description,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                   height: 1.4,
@@ -1201,24 +1201,24 @@ class _SelectedNodeBanner extends StatelessWidget {
             runSpacing: 8,
             children: [
               _NodeStatChip(
-                label: '当前',
+                label: context.l10n.theaterNodeStatCurrent,
                 value: '${node.currentMastery.round()}%',
                 accent: accent,
               ),
               _NodeStatChip(
-                label: '预测',
+                label: context.l10n.theaterNodeStatPredicted,
                 value: '${node.predictedMastery.round()}%',
                 accent: accent,
               ),
               _NodeStatChip(
-                label: '提升',
+                label: context.l10n.theaterNodeStatLift,
                 value:
                     '${masteryDelta >= 0 ? '+' : ''}${masteryDelta.round()}%',
                 accent: masteryDelta >= 0 ? DS.success : DS.error,
               ),
               _NodeStatChip(
-                label: '来源',
-                value: _nodeSourceLabel(node),
+                label: context.l10n.theaterNodeStatSource,
+                value: _nodeSourceLabel(context, node),
                 accent: accent,
               ),
             ],
@@ -1237,13 +1237,13 @@ class _SelectedNodeBanner extends StatelessWidget {
                       : Icons.add_circle_outline_rounded,
                 ),
                 label: Text(
-                  _nodePrimaryGalaxyActionLabel(node, isPromotingNode),
+                  _nodePrimaryGalaxyActionLabel(context, node, isPromotingNode),
                 ),
               ),
               ConstrainedBox(
                 constraints: const BoxConstraints(minWidth: 180, maxWidth: 420),
                 child: Text(
-                  _nodeBannerHint(node),
+                  _nodeBannerHint(context, node),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                         height: 1.35,
@@ -1282,35 +1282,35 @@ class _ComposerCard extends StatelessWidget {
         .toList();
     return MirofishStageHeader(
       icon: Icons.travel_explore_rounded,
-      eyebrow: '推演决策面板',
-      title: '先定目标，再看清多条路径',
-      subtitle: '先确定想推进的目标，再比较切入方式、主要风险和每日投入，最后决定要不要采纳这条路径。',
+      eyebrow: context.l10n.theaterComposerEyebrow,
+      title: context.l10n.theaterComposerTitle,
+      subtitle: context.l10n.theaterComposerSubtitle,
       metrics: <MirofishStageMetric>[
         MirofishStageMetric(
-          label: '当前目标',
+          label: context.l10n.theaterComposerCurrentTarget,
           value:
-              controller.text.trim().isEmpty ? '等待输入' : controller.text.trim(),
+              controller.text.trim().isEmpty ? context.l10n.theaterComposerWaitingInput : controller.text.trim(),
           accent: DS.info,
           icon: Icons.flag_rounded,
         ),
         MirofishStageMetric(
-          label: '推荐切入',
+          label: context.l10n.theaterComposerRecommendedEntry,
           value:
-              topSuggestions.isEmpty ? '输入后即可开始' : topSuggestions.first.topic,
+              topSuggestions.isEmpty ? context.l10n.theaterComposerInputPrompt : topSuggestions.first.topic,
           accent: DS.warning,
           icon: Icons.lightbulb_rounded,
         ),
         MirofishStageMetric(
-          label: '输出结果',
-          value: '路径 + 风险 + 检查点',
+          label: context.l10n.theaterComposerOutput,
+          value: context.l10n.theaterComposerOutputDesc,
           accent: DS.success,
           icon: Icons.route_rounded,
         ),
       ],
-      primaryLabel: isLoading ? '推演中...' : '开始推演',
+      primaryLabel: isLoading ? context.l10n.theaterComposerLoading : context.l10n.theaterComposerStart,
       onPrimaryTap: isLoading ? null : onSubmit,
       secondaryLabel:
-          topSuggestions.length > 1 ? '试试 ${topSuggestions[1].topic}' : null,
+          topSuggestions.length > 1 ? context.l10n.theaterComposerTrySuggestion(topSuggestions[1].topic) : null,
       onSecondaryTap: topSuggestions.length > 1
           ? () => onSuggestionTap(topSuggestions[1].topic)
           : null,
@@ -1326,7 +1326,7 @@ class _ComposerCard extends StatelessWidget {
                 textInputAction: TextInputAction.go,
                 onSubmitted: (_) => onSubmit(),
                 decoration: InputDecoration(
-                  hintText: '例如：两周内掌握线性代数的特征值部分',
+                  hintText: context.l10n.theaterComposerHint,
                   prefixIcon: Icon(
                     Icons.search_rounded,
                     color: scheme.primary,
@@ -1343,7 +1343,7 @@ class _ComposerCard extends StatelessWidget {
               final submitButton = FilledButton.icon(
                 onPressed: isLoading ? null : onSubmit,
                 icon: const Icon(Icons.auto_awesome),
-                label: Text(isLoading ? '推演中' : '生成'),
+                label: Text(isLoading ? context.l10n.theaterComposerDeducing : context.l10n.theaterComposerGenerating),
               );
               if (compact) {
                 return Column(
@@ -1427,17 +1427,17 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               IconButton.filledTonal(
-                tooltip: '调整目标',
+                tooltip: context.l10n.theaterTopBarAdjustTarget,
                 onPressed: onOpenSettings,
                 icon: const Icon(Icons.tune_rounded),
               ),
               IconButton.filledTonal(
-                tooltip: '分享推演',
+                tooltip: context.l10n.theaterTopBarShare,
                 onPressed: onShare,
                 icon: const Icon(Icons.share_outlined),
               ),
               IconButton.filledTonal(
-                tooltip: onOpenGalaxy == null ? '当前没有可打开的知识星图参考节点' : '查看知识星图',
+                tooltip: onOpenGalaxy == null ? context.l10n.theaterTopBarNoGalaxyRef : context.l10n.theaterTopBarViewGalaxy,
                 onPressed: onOpenGalaxy,
                 icon: const Icon(Icons.auto_graph_rounded),
               ),
@@ -1448,25 +1448,24 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _MetricPill(label: '目标 · $targetName'),
+                _MetricPill(label: context.l10n.theaterTopBarTarget(targetName)),
                 const SizedBox(width: 8),
                 if (selectedRoute != null) ...[
-                  _MetricPill(label: '路径 · ${selectedRoute!.title}'),
+                  _MetricPill(label: context.l10n.theaterTopBarPath(selectedRoute!.title)),
                   const SizedBox(width: 8),
                 ],
                 _MetricPill(
-                  label: '模式 · ${_targetModeLabel(targetResolutionMode)}',
+                  label: context.l10n.theaterTopBarMode(_targetModeLabel(context, targetResolutionMode)),
                 ),
                 const SizedBox(width: 8),
                 _MetricPill(
                   label: semanticMatchCount > 0
-                      ? '参考映射 $semanticMatchCount'
-                      : '纯自由推演',
+                      ? context.l10n.theaterTopBarRefMap(semanticMatchCount.toString())
+                      : context.l10n.theaterTopBarFreeForm,
                 ),
                 const SizedBox(width: 8),
                 _MetricPill(
-                  label:
-                      '掌握度 ${selectedRoute?.estimatedMastery.round() ?? '--'}%',
+                  label: context.l10n.theaterTopBarMastery(selectedRoute?.estimatedMastery.round().toString() ?? '--'),
                 ),
               ],
             ),
@@ -1509,7 +1508,7 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '调整推演目标',
+                        context.l10n.theaterSettingsTitle,
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w800,
@@ -1517,7 +1516,7 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '这里可以重新设定目标和建议起点，收起后会把舞台空间完整还给关系图谱与讨论流。',
+                        context.l10n.theaterSettingsSubtitle,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.textSecondary,
                               height: 1.4,
@@ -1542,12 +1541,12 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                   ChatContinuityBanner(
                     sourceChatSessionId: sourceChatSessionId!.trim(),
                     kind: ChatContinuityKind.journey,
-                    subtitle: '这次推演仍然承接你刚才的对话上下文。',
+                    subtitle: context.l10n.theaterSettingsContinuity,
                   ),
                   const SizedBox(height: 12),
                 ],
                 Text(
-                  '当前目标：$currentTargetName',
+                  context.l10n.theaterSettingsCurrentTarget(currentTargetName),
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: DS.info,
                         fontWeight: DS.fontWeightBold,
@@ -1562,9 +1561,9 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                       onSubmit();
                     }
                   },
-                  decoration: const InputDecoration(
-                    labelText: '重新设定推演目标',
-                    hintText: '例如：两周内掌握线性代数的特征值部分',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.theaterSettingsLabel,
+                  hintText: context.l10n.theaterComposerHint,
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -1572,12 +1571,12 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: isLoading ? null : onSubmit,
                   icon: const Icon(Icons.auto_awesome_rounded),
-                  label: Text(isLoading ? '推演中...' : '生成新推演'),
+                  label: Text(isLoading ? context.l10n.theaterComposerLoading : context.l10n.theaterSettingsGenerate),
                 ),
                 if (suggestions.isNotEmpty) ...[
                   const SizedBox(height: 18),
                   Text(
-                    '建议起点',
+                    context.l10n.theaterSettingsSuggestions,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -1622,29 +1621,29 @@ class _TheaterWorkbenchTabs extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 420) {
-            const items = <({
+            final items = <({
               _TheaterWorkbenchTab value,
               String label,
               IconData icon,
             })>[
               (
                 value: _TheaterWorkbenchTab.graph,
-                label: '图谱',
+                label: context.l10n.theaterTabGraph,
                 icon: Icons.hub_rounded,
               ),
               (
                 value: _TheaterWorkbenchTab.paths,
-                label: '路径',
+                label: context.l10n.theaterTabPaths,
                 icon: Icons.route_rounded,
               ),
               (
                 value: _TheaterWorkbenchTab.discussion,
-                label: '讨论',
+                label: context.l10n.theaterTabDiscussion,
                 icon: Icons.forum_rounded,
               ),
               (
                 value: _TheaterWorkbenchTab.calibration,
-                label: '校准',
+                label: context.l10n.theaterTabCalibration,
                 icon: Icons.tune_rounded,
               ),
             ];
@@ -1665,26 +1664,26 @@ class _TheaterWorkbenchTabs extends StatelessWidget {
             );
           }
           return SegmentedButton<_TheaterWorkbenchTab>(
-            segments: const [
+            segments: [
               ButtonSegment<_TheaterWorkbenchTab>(
                 value: _TheaterWorkbenchTab.graph,
-                label: Text('图谱'),
-                icon: Icon(Icons.hub_rounded),
+                label: Text(context.l10n.theaterTabGraph),
+                icon: const Icon(Icons.hub_rounded),
               ),
               ButtonSegment<_TheaterWorkbenchTab>(
                 value: _TheaterWorkbenchTab.paths,
-                label: Text('路径'),
-                icon: Icon(Icons.route_rounded),
+                label: Text(context.l10n.theaterTabPaths),
+                icon: const Icon(Icons.route_rounded),
               ),
               ButtonSegment<_TheaterWorkbenchTab>(
                 value: _TheaterWorkbenchTab.discussion,
-                label: Text('讨论'),
-                icon: Icon(Icons.forum_rounded),
+                label: Text(context.l10n.theaterTabDiscussion),
+                icon: const Icon(Icons.forum_rounded),
               ),
               ButtonSegment<_TheaterWorkbenchTab>(
                 value: _TheaterWorkbenchTab.calibration,
-                label: Text('校准'),
-                icon: Icon(Icons.tune_rounded),
+                label: Text(context.l10n.theaterTabCalibration),
+                icon: const Icon(Icons.tune_rounded),
               ),
             ],
             selected: <_TheaterWorkbenchTab>{activeTab},
@@ -1732,7 +1731,7 @@ class _TheaterIntroState extends StatelessWidget {
             message: error!,
             onRetry: onRetry,
             onSecondary: onChangeTarget,
-            secondaryLabel: '换个目标',
+             secondaryLabel: context.l10n.theaterIntroChangeTarget,
           ),
           const SizedBox(height: 14),
         ],
@@ -1761,14 +1760,14 @@ class _TheaterIntroState extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                '选一个目标，AI 帮你看清多条路径',
+                context.l10n.theaterIntroTitle,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
               ),
               const SizedBox(height: 10),
               Text(
-                '1. 选择一个目标\n2. AI 推演多条学习路径\n3. 采纳最适合你的方案并同步到 Sprint',
+                context.l10n.theaterIntroSteps,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                       height: 1.55,
@@ -1778,7 +1777,7 @@ class _TheaterIntroState extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onStartFirstPrediction,
                 icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('开始第一次推演'),
+                label: Text(context.l10n.theaterIntroStartFirst),
               ),
             ],
           ),
@@ -1791,7 +1790,7 @@ class _TheaterIntroState extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '最近一次推演',
+                  context.l10n.theaterIntroLastSnapshot,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -1822,7 +1821,7 @@ class _TheaterIntroState extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '从这些主题开始更顺手',
+                  context.l10n.theaterIntroSuggestions,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -1937,9 +1936,9 @@ class _PredictionView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (prediction.paths.isEmpty) {
-      return const _TheaterEmptyState(
-        title: '这次还没生成可采纳路径',
-        message: '系统完成了主题解析，但暂时没能收束出可执行路线。你可以换个更具体的目标，或者稍后再试一次。',
+      return _TheaterEmptyState(
+        title: context.l10n.theaterEmptyTitle,
+        message: context.l10n.theaterEmptyMessage,
       );
     }
     final route = selectedRoute;
@@ -1970,21 +1969,20 @@ class _PredictionView extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _MetricPill(label: '推荐路径 · ${activeRoute.title}'),
+              _MetricPill(label: context.l10n.theaterGraphRecommended(activeRoute.title)),
               _MetricPill(
-                label: '预计掌握 ${activeRoute.estimatedMastery.round()}%',
+                label: context.l10n.theaterGraphEstimatedMastery(activeRoute.estimatedMastery.round().toString()),
               ),
-              _MetricPill(label: '风险 · ${_headlineRisk(activeRoute)}'),
+              _MetricPill(label: context.l10n.theaterGraphRisk(_headlineRisk(context, activeRoute))),
               _MetricPill(
-                label:
-                    '模式 · ${_targetModeLabel(prediction.targetResolutionMode)}',
+                label: context.l10n.theaterGraphMode(_targetModeLabel(context, prediction.targetResolutionMode)),
               ),
               _MetricPill(
                 label: prediction.semanticMatches.isNotEmpty
-                    ? '映射参考 ${prediction.semanticMatches.length}'
-                    : '候选待入图',
+                    ? context.l10n.theaterGraphRefCount(prediction.semanticMatches.length.toString())
+                    : context.l10n.theaterGraphPendingEntry,
               ),
-              _MetricPill(label: '${prediction.graphNodes.length} 个节点'),
+              _MetricPill(label: context.l10n.theaterGraphNodeCount(prediction.graphNodes.length.toString())),
             ],
           ),
         ),
@@ -2001,15 +1999,15 @@ class _PredictionView extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
-                    '关系图谱主舞台',
+                    context.l10n.theaterGraphMainStage,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
                   ),
                   _MetricPill(
                     label: prediction.hasMappedGalaxyReferences
-                        ? '含星图参考'
-                        : '独立自由图谱',
+                        ? context.l10n.theaterGraphWithGalaxy
+                        : context.l10n.theaterGraphStandalone,
                   ),
                   if (routeTimeline.isNotEmpty)
                     _MetricPill(
@@ -2019,7 +2017,7 @@ class _PredictionView extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                '单指拖动画布，双指缩放，双击可回正，点按节点可查看详情并加入知识星图。',
+                context.l10n.theaterGraphInstructions,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -2133,14 +2131,14 @@ class _PredictionView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '校准与落地',
+                context.l10n.theaterCalibrationTitle,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: 8),
               Text(
-                '把推演变成计划、快照和真实反馈，形成闭环。',
+                context.l10n.theaterCalibrationSubtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -2260,12 +2258,12 @@ class _TheaterErrorCard extends StatelessWidget {
                   FilledButton.tonalIcon(
                     onPressed: onRetry,
                     icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('重试'),
+                    label: Text(context.l10n.theaterRetry),
                   ),
                 if (onSecondary != null)
                   OutlinedButton(
                     onPressed: onSecondary,
-                    child: Text(secondaryLabel ?? '知道了'),
+                    child: Text(secondaryLabel ?? context.l10n.theaterGotIt),
                   ),
               ],
             ),
@@ -2345,7 +2343,7 @@ class _SemanticMatchSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '自由节点与星图参考',
+            context.l10n.theaterSemanticMatchTitle,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -2355,7 +2353,7 @@ class _SemanticMatchSummary extends StatelessWidget {
             preview
                 .map(
                   (item) =>
-                      '${item.freeformNodeName} 对应参考 ${item.galaxyNodeName}',
+                      context.l10n.theaterSemanticMatchItem(item.freeformNodeName, item.galaxyNodeName),
                 )
                 .join('；'),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -2385,58 +2383,39 @@ class _PredictionLoadingStateState extends State<_PredictionLoadingState>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
-  static const List<
-      ({
-        String key,
-        String title,
-        IconData icon,
-      })> _stages = [
+  static List<({String key, String title, IconData icon})> _buildStages(BuildContext context) => [
     (
       key: 'graph',
-      title: '构建知识图谱',
+      title: context.l10n.theaterStageBuildGraph,
       icon: Icons.hub_rounded,
     ),
     (
       key: 'paths',
-      title: '分析学习路径',
+      title: context.l10n.theaterStageAnalyzePaths,
       icon: Icons.route_rounded,
     ),
     (
       key: 'prediction',
-      title: '生成风险预测',
+      title: context.l10n.theaterStageGenerateRisk,
       icon: Icons.analytics_rounded,
     ),
     (
       key: 'done',
-      title: '准备推演完成',
+      title: context.l10n.theaterStagePrepare,
       icon: Icons.check_circle_rounded,
     ),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    );
-    unawaited(_controller.repeat(reverse: true));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  int _stageIndex(String stage) {
-    final index = _stages.indexWhere((item) => item.key == stage);
+  int _stageIndex(BuildContext context, String stage) {
+    final stages = _buildStages(context);
+    final index = stages.indexWhere((item) => item.key == stage);
     return index >= 0 ? index : 0;
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentStageIndex = _stageIndex(widget.loadingStage);
+    final stages = _buildStages(context);
+    final currentStageIndex = _stageIndex(context, widget.loadingStage);
     final scheme = Theme.of(context).colorScheme;
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -2444,21 +2423,21 @@ class _PredictionLoadingStateState extends State<_PredictionLoadingState>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'AI 正在搭建这场推演...',
+            context.l10n.theaterLoadingTitle,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
           ),
           const SizedBox(height: 10),
           Text(
-            '图谱、路径和风险判断会按阶段依次完成，你可以先看它推进到哪一步了。',
+            context.l10n.theaterLoadingSubtitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.textSecondary,
                 ),
           ),
           const SizedBox(height: 18),
-          ...List.generate(_stages.length, (index) {
-            final item = _stages[index];
+          ...List.generate(stages.length, (index) {
+            final item = stages[index];
             final isCompleted = index < currentStageIndex;
             final isCurrent = index == currentStageIndex;
             final accent = isCompleted
@@ -2468,7 +2447,7 @@ class _PredictionLoadingStateState extends State<_PredictionLoadingState>
                     : scheme.outline.withValues(alpha: 0.65));
             return Padding(
               padding: EdgeInsets.only(
-                bottom: index == _stages.length - 1 ? 0 : 12,
+                bottom: index == stages.length - 1 ? 0 : 12,
               ),
               child: AnimatedBuilder(
                 animation: _controller,
@@ -2691,14 +2670,14 @@ class _TimelineSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '推演时间轴',
+                context.l10n.theaterTimelineTitle,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: 4),
               Text(
-                '现在可以按天拖动预测进度，直接对比基线路径和假设分支的差异。',
+                context.l10n.theaterTimelineSubtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -2716,12 +2695,12 @@ class _TimelineSection extends StatelessWidget {
                           ? Icons.pause_circle_outline_rounded
                           : Icons.play_circle_outline_rounded,
                     ),
-                    label: Text(isPlaying ? '暂停播放' : '自动播放'),
+                    label: Text(isPlaying ? context.l10n.theaterTimelinePause : context.l10n.theaterTimelineAutoPlay),
                   ),
                   OutlinedButton.icon(
                     onPressed: onReset,
                     icon: const Icon(Icons.restart_alt_rounded),
-                    label: const Text('回到起点'),
+                    label: Text(context.l10n.theaterTimelineReset),
                   ),
                 ],
               ),
@@ -2743,7 +2722,7 @@ class _TimelineSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    currentFrame?.label ?? '当前阶段',
+                    currentFrame?.label ?? context.l10n.theaterTimelineCurrentPhase,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: DS.brandPrimary,
                           fontWeight: FontWeight.w800,
@@ -2751,14 +2730,14 @@ class _TimelineSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    currentFrame?.activeStepTitle ?? '等待路径生成',
+                    currentFrame?.activeStepTitle ?? context.l10n.theaterTimelineWaitingPath,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    currentFrame?.compareLabel ?? '基线预测',
+                    currentFrame?.compareLabel ?? context.l10n.theaterTimelineBaseline,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                         ),
@@ -2766,7 +2745,7 @@ class _TimelineSection extends StatelessWidget {
                   if (summaryTurn != null) ...[
                     const SizedBox(height: 10),
                     Text(
-                      '讲到这里',
+                      context.l10n.theaterTimelineDiscussionHere,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: DS.textSecondary,
                             fontWeight: DS.fontWeightBold,
@@ -2803,7 +2782,7 @@ class _TimelineSection extends StatelessWidget {
               children: [
                 Expanded(
                   child: _TimelineMetricTile(
-                    label: '当前预测掌握度',
+                    label: context.l10n.theaterTimelineMastery,
                     value:
                         '${timeline[selectedIndex].projectedMastery.round()}%',
                     accent: DS.success,
@@ -2812,7 +2791,7 @@ class _TimelineSection extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _TimelineMetricTile(
-                    label: '当前预测完成率',
+                    label: context.l10n.theaterTimelineCompletion,
                     value:
                         '${(timeline[selectedIndex].projectedCompletionRate * 100).round()}%',
                     accent: DS.info,
@@ -2831,7 +2810,7 @@ class _TimelineSection extends StatelessWidget {
           if (summaryTurn != null) ...[
             const SizedBox(height: 8),
             Text(
-              '当前阶段：${currentFrame?.label ?? ''} · ${currentFrame?.activeStepTitle ?? '等待推演'} · ${currentFrame?.compareLabel ?? ''}',
+              context.l10n.theaterTimelinePhaseWithSteps(currentFrame?.label ?? '', currentFrame?.activeStepTitle ?? context.l10n.theaterTimelineWaitingDeduction, currentFrame?.compareLabel ?? ''),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -2919,14 +2898,14 @@ class _RouteSectionState extends State<_RouteSection> {
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 420;
                 final segmentControl = SegmentedButton<bool>(
-                  segments: const [
+                  segments: [
                     ButtonSegment<bool>(
                       value: false,
-                      label: Text('列表'),
+                      label: Text(context.l10n.theaterRouteList),
                     ),
                     ButtonSegment<bool>(
                       value: true,
-                      label: Text('对比'),
+                      label: Text(context.l10n.theaterRouteCompare),
                     ),
                   ],
                   selected: <bool>{_compareMode},
@@ -2944,7 +2923,7 @@ class _RouteSectionState extends State<_RouteSection> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '路径对比',
+                        context.l10n.theaterRouteComparisonTitle,
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: DS.fontWeightBold,
@@ -2961,7 +2940,7 @@ class _RouteSectionState extends State<_RouteSection> {
                 return Row(
                   children: [
                     Text(
-                      '路径对比',
+                      context.l10n.theaterRouteComparisonTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: DS.fontWeightBold,
                           ),
@@ -3010,7 +2989,7 @@ class _RouteSectionState extends State<_RouteSection> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '已创建计划：${widget.adoptionResult!.planName}',
+                      context.l10n.theaterRouteAdoptedPlan(widget.adoptionResult!.planName),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.success,
                             fontWeight: DS.fontWeightBold,
@@ -3019,7 +2998,7 @@ class _RouteSectionState extends State<_RouteSection> {
                     if (widget.adoptionResult!.createdTasks.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
-                        '首周任务：${widget.adoptionResult!.createdTasks.take(3).map((item) => item.title).join('、')}',
+                        context.l10n.theaterRouteFirstWeekTasks(widget.adoptionResult!.createdTasks.take(3).map((item) => item.title).join('、')),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.textSecondary,
                               height: 1.4,
@@ -3035,55 +3014,55 @@ class _RouteSectionState extends State<_RouteSection> {
       );
 }
 
-String _headlineRisk(TheaterPathOption route) {
+String _headlineRisk(BuildContext context, TheaterPathOption route) {
   if (route.risks.isEmpty) {
-    return '整体可控';
+    return context.l10n.theaterRouteRiskControllable;
   }
   final firstRisk = route.risks.first.trim();
   if (firstRisk.isEmpty) {
-    return '需要留意节奏';
+    return context.l10n.theaterRouteRiskPacing;
   }
   return firstRisk;
 }
 
-String _routeCompletionDisplay(TheaterPathOption route,
+String _routeCompletionDisplay(BuildContext context, TheaterPathOption route,
     {bool compact = false}) {
   if (route.dataQuality == 'low') {
     final low = (route.completionRangeLow * 100).round();
     final high = (route.completionRangeHigh * 100).round();
-    return compact ? '预估 $low-$high%' : '预估 $low-$high%';
+    return context.l10n.theaterRouteEstimatedRange(low.toString(), high.toString());
   }
   return '${(route.estimatedCompletionRate * 100).round()}%';
 }
 
-String _routeMasteryDisplay(TheaterPathOption route, {bool compact = false}) {
+String _routeMasteryDisplay(BuildContext context, TheaterPathOption route, {bool compact = false}) {
   if (route.dataQuality == 'low') {
     final low = route.masteryRangeLow.round();
     final high = route.masteryRangeHigh.round();
-    return compact ? '预估 $low-$high%' : '预估 $low-$high%';
+    return context.l10n.theaterRouteEstimatedRange(low.toString(), high.toString());
   }
   return '${route.estimatedMastery.round()}%';
 }
 
-String _routeDataBadgeLabel(TheaterPathOption route) {
+String _routeDataBadgeLabel(BuildContext context, TheaterPathOption route) {
   switch (route.dataQuality) {
     case 'low':
-      return '参考估算';
+      return context.l10n.theaterRouteDataQualityLow;
     case 'medium':
-      return '基于有限数据';
+      return context.l10n.theaterRouteDataQualityMedium;
     case 'high':
-      return '数据充分度 ${(route.dataSufficiencyScore * 100).round()}%';
+      return context.l10n.theaterRouteDataQualityHigh((route.dataSufficiencyScore * 100).round().toString());
     default:
-      return '数据参考';
+      return context.l10n.theaterRouteDataQualityFallback;
   }
 }
 
-String _routeDataNote(TheaterPathOption route) {
+String _routeDataNote(BuildContext context, TheaterPathOption route) {
   switch (route.dataQuality) {
     case 'low':
-      return '当前缺少该主题的真实学习记录，建议把区间估算当作参考，而不是精确预测。';
+      return context.l10n.theaterRouteDataNoteLow;
     case 'medium':
-      return '当前只覆盖到部分图谱与校准数据，百分比判断仍需要继续观察。';
+      return context.l10n.theaterRouteDataNoteMedium;
     default:
       return '';
   }
@@ -3110,16 +3089,16 @@ Color _routeMetricLabelColor(BuildContext context, TheaterPathOption route) {
   return Theme.of(context).textTheme.labelMedium?.color ?? DS.textPrimary;
 }
 
-String _targetModeLabel(String mode) {
+String _targetModeLabel(BuildContext context, String mode) {
   switch (mode) {
     case 'graph_explicit':
-      return '图谱锚定';
+      return context.l10n.theaterRouteModeAnchored;
     case 'hybrid_semantic':
-      return '智能混合';
+      return context.l10n.theaterRouteModeHybrid;
     case 'freeform_only':
-      return '自由推演';
+      return context.l10n.theaterRouteModeFree;
     default:
-      return '推演中';
+      return context.l10n.theaterRouteModeDeducing;
   }
 }
 
@@ -3129,34 +3108,35 @@ bool _nodeCanOpenGalaxy(TheaterGraphNode node) =>
         node.sourceType == 'hybrid_reference');
 
 String _nodePrimaryGalaxyActionLabel(
+  BuildContext context,
   TheaterGraphNode node,
   bool isPromotingNode,
 ) {
   if (isPromotingNode) {
-    return '同步中...';
+    return context.l10n.theaterNodeGalaxySyncing;
   }
-  return _nodeCanOpenGalaxy(node) ? '打开知识星图' : '加入知识星图';
+  return _nodeCanOpenGalaxy(node) ? context.l10n.theaterNodeOpenGalaxy : context.l10n.theaterNodeAddToGalaxy;
 }
 
-String _nodeSourceLabel(TheaterGraphNode node) {
+String _nodeSourceLabel(BuildContext context, TheaterGraphNode node) {
   switch (node.sourceType) {
     case 'graph_explicit':
-      return '星图节点';
+      return context.l10n.theaterNodeSourceExplicit;
     case 'hybrid_reference':
-      return '参考映射';
+      return context.l10n.theaterNodeSourceHybrid;
     default:
-      return node.candidateStatus == 'pending_review' ? '候选节点' : '自由节点';
+      return node.candidateStatus == 'pending_review' ? context.l10n.theaterNodeSourcePending : context.l10n.theaterNodeSourceFree;
   }
 }
 
-String _nodeBannerHint(TheaterGraphNode node) {
+String _nodeBannerHint(BuildContext context, TheaterGraphNode node) {
   if (_nodeCanOpenGalaxy(node)) {
-    return '这个节点已经对应到知识星图里的正式节点，可以直接打开并继续拓展。';
+    return context.l10n.theaterNodeBannerOpenGalaxy;
   }
   if ((node.mappedGalaxyNodeId ?? '').trim().isNotEmpty) {
-    return '这个自由节点已经找到星图参考，加入时会走统一创建链路，并补齐标准节点信息。';
+    return context.l10n.theaterNodeBannerHasMapping;
   }
-  return '这个自由节点还未正式入图，加入后会自动补齐星域、位置、关系和解锁状态。';
+  return context.l10n.theaterNodeBannerFreeform;
 }
 
 class _RouteListView extends StatelessWidget {
@@ -3228,17 +3208,17 @@ class _RouteListView extends StatelessWidget {
                                 .titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
-                          if (isRecommended) const _MetricPill(label: '推荐'),
+                          if (isRecommended) _MetricPill(label: context.l10n.theaterRouteRecommended),
                         ],
                       );
                       final adoptButton = FilledButton(
                         onPressed: isAdopting ? null : onAdopt,
-                        child: Text(isAdopting ? '采纳中' : '采纳此路径'),
+                        child: Text(isAdopting ? context.l10n.theaterRouteAdopting : context.l10n.theaterRouteAdopt),
                       );
                       final simulateButton = FilledButton.tonalIcon(
                         onPressed: onOpenSimulation,
                         icon: const Icon(Icons.forum_outlined),
-                        label: const Text('带去模拟'),
+                        label: Text(context.l10n.theaterRouteSimulate),
                       );
                       if (compact) {
                         return Column(
@@ -3286,24 +3266,22 @@ class _RouteListView extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       _MetricPill(
-                        label:
-                            '完成率 ${_routeCompletionDisplay(route, compact: true)}',
+                        label: context.l10n.theaterRouteCompletion(_routeCompletionDisplay(context, route, compact: true)),
                         backgroundColor:
                             _routeMetricBackgroundColor(context, route),
                         labelColor: _routeMetricLabelColor(context, route),
                       ),
                       _MetricPill(
-                        label:
-                            '掌握度 ${_routeMasteryDisplay(route, compact: true)}',
+                        label: context.l10n.theaterRouteMasteryLabel(_routeMasteryDisplay(context, route, compact: true)),
                         backgroundColor:
                             _routeMetricBackgroundColor(context, route),
                         labelColor: _routeMetricLabelColor(context, route),
                       ),
-                      _MetricPill(label: '日均 ${route.dailyMinutes} 分钟'),
-                      _MetricPill(label: '${route.risks.length} 个风险点'),
-                      _MetricPill(label: '综合 ${route.routeScore.round()} 分'),
+                      _MetricPill(label: context.l10n.theaterRouteDailyMinutes(route.dailyMinutes.toString())),
+                      _MetricPill(label: context.l10n.theaterRouteRiskCount(route.risks.length.toString())),
+                      _MetricPill(label: context.l10n.theaterRouteScore(route.routeScore.round().toString())),
                       _MetricPill(
-                        label: _routeDataBadgeLabel(route),
+                        label: _routeDataBadgeLabel(context, route),
                         backgroundColor:
                             _routeMetricBackgroundColor(context, route),
                         labelColor: _routeMetricLabelColor(context, route),
@@ -3312,16 +3290,20 @@ class _RouteListView extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '区间预测：完成率 ${(route.completionRangeLow * 100).round()}%-${(route.completionRangeHigh * 100).round()}%，'
-                    ' 掌握度 ${route.masteryRangeLow.round()}%-${route.masteryRangeHigh.round()}%',
+                    context.l10n.theaterRouteRangePrediction(
+                      (route.completionRangeLow * 100).round().toString(),
+                      (route.completionRangeHigh * 100).round().toString(),
+                      route.masteryRangeLow.round().toString(),
+                      route.masteryRangeHigh.round().toString(),
+                    ),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                         ),
                   ),
-                  if (_routeDataNote(route).isNotEmpty) ...[
+                  if (_routeDataNote(context, route).isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
-                      _routeDataNote(route),
+                      _routeDataNote(context, route),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: route.dataQuality == 'low'
                                 ? DS.textTertiary
@@ -3405,7 +3387,7 @@ class _RouteComparePager extends StatelessWidget {
                             ),
                             if (isRecommended) ...[
                               const SizedBox(height: 6),
-                              const _MetricPill(label: '推荐基线'),
+                              _MetricPill(label: context.l10n.theaterRouteRecommendedBaseline),
                             ],
                             const SizedBox(height: 12),
                             Expanded(
@@ -3416,44 +3398,48 @@ class _RouteComparePager extends StatelessWidget {
                               spacing: 12,
                               children: [
                                 _RouteMetricRow(
-                                  label: '完成率',
-                                  value: _routeCompletionDisplay(route),
+                                  label: context.l10n.theaterRouteCompletionRate,
+                                  value: _routeCompletionDisplay(context, route),
                                 ),
                                 _RouteMetricRow(
-                                  label: '掌握度',
-                                  value: _routeMasteryDisplay(route),
+                                  label: context.l10n.theaterRouteMasteryRate,
+                                  value: _routeMasteryDisplay(context, route),
                                 ),
                                 _RouteMetricRow(
-                                  label: '日均时间',
-                                  value: '${route.dailyMinutes} 分钟',
+                                  label: context.l10n.theaterRouteDailyTime,
+                                  value: context.l10n.theaterRouteDailyMinutes(route.dailyMinutes.toString()),
                                 ),
                                 _RouteMetricRow(
-                                  label: '风险数',
+                                  label: context.l10n.theaterRouteRiskLevel,
                                   value: '${route.risks.length}',
                                 ),
                                 _RouteMetricRow(
-                                  label: '综合分',
+                                  label: context.l10n.theaterRouteOverallScore,
                                   value: '${route.routeScore.round()}',
                                 ),
                                 _RouteMetricRow(
-                                  label: '数据说明',
-                                  value: _routeDataBadgeLabel(route),
+                                  label: context.l10n.theaterRouteDataNote,
+                                  value: _routeDataBadgeLabel(context, route),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              '完成率区间 ${(route.completionRangeLow * 100).round()}%-${(route.completionRangeHigh * 100).round()}%'
-                              ' · 掌握度区间 ${route.masteryRangeLow.round()}%-${route.masteryRangeHigh.round()}%',
+                              context.l10n.theaterRouteRangePrediction(
+                                (route.completionRangeLow * 100).round().toString(),
+                                (route.completionRangeHigh * 100).round().toString(),
+                                route.masteryRangeLow.round().toString(),
+                                route.masteryRangeHigh.round().toString(),
+                              ),
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(color: DS.textSecondary),
                             ),
-                            if (_routeDataNote(route).isNotEmpty) ...[
+                            if (_routeDataNote(context, route).isNotEmpty) ...[
                               const SizedBox(height: 6),
                               Text(
-                                _routeDataNote(route),
+                                _routeDataNote(context, route),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -3471,7 +3457,7 @@ class _RouteComparePager extends StatelessWidget {
                                       : () => onSelect(route.id),
                                   icon: const Icon(Icons.forum_outlined),
                                   label: Text(
-                                    safeIndex == index ? '带去模拟' : '切换后模拟',
+                                    safeIndex == index ? context.l10n.theaterRouteSimulateFromCurrent : context.l10n.theaterRouteSimulateAfterSwitch,
                                   ),
                                 ),
                                 FilledButton(
@@ -3480,8 +3466,8 @@ class _RouteComparePager extends StatelessWidget {
                                       : () => onSelect(route.id),
                                   child: Text(
                                     safeIndex == index
-                                        ? (isAdopting ? '采纳中' : '采纳此路径')
-                                        : '切换到此路径',
+                                        ? (isAdopting ? context.l10n.theaterRouteAdopting : context.l10n.theaterRouteAdopt)
+                                        : context.l10n.theaterRouteSwitchToThis,
                                   ),
                                 ),
                               ],
@@ -3510,46 +3496,50 @@ class _RouteComparePager extends StatelessWidget {
                                   ),
                                   if (isRecommended) ...[
                                     const SizedBox(height: 6),
-                                    const _MetricPill(label: '推荐基线'),
+                                    _MetricPill(label: context.l10n.theaterRouteRecommendedBaseline),
                                   ],
                                   const SizedBox(height: 10),
                                   _RouteMetricRow(
-                                    label: '完成率',
-                                    value: _routeCompletionDisplay(route),
+                                    label: context.l10n.theaterRouteCompletionRate,
+                                    value: _routeCompletionDisplay(context, route),
                                   ),
                                   _RouteMetricRow(
-                                    label: '掌握度',
-                                    value: _routeMasteryDisplay(route),
+                                    label: context.l10n.theaterRouteMasteryRate,
+                                    value: _routeMasteryDisplay(context, route),
                                   ),
                                   _RouteMetricRow(
-                                    label: '日均时间',
-                                    value: '${route.dailyMinutes} 分钟',
+                                    label: context.l10n.theaterRouteDailyTime,
+                                    value: context.l10n.theaterRouteDailyMinutes(route.dailyMinutes.toString()),
                                   ),
                                   _RouteMetricRow(
-                                    label: '风险数',
+                                    label: context.l10n.theaterRouteRiskLevel,
                                     value: '${route.risks.length}',
                                   ),
                                   _RouteMetricRow(
-                                    label: '综合分',
+                                    label: context.l10n.theaterRouteOverallScore,
                                     value: '${route.routeScore.round()}',
                                   ),
                                   _RouteMetricRow(
-                                    label: '数据说明',
-                                    value: _routeDataBadgeLabel(route),
+                                    label: context.l10n.theaterRouteDataNote,
+                                    value: _routeDataBadgeLabel(context, route),
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    '完成率区间 ${(route.completionRangeLow * 100).round()}%-${(route.completionRangeHigh * 100).round()}%'
-                                    ' · 掌握度区间 ${route.masteryRangeLow.round()}%-${route.masteryRangeHigh.round()}%',
+                                    context.l10n.theaterRouteRangePrediction(
+                                      (route.completionRangeLow * 100).round().toString(),
+                                      (route.completionRangeHigh * 100).round().toString(),
+                                      route.masteryRangeLow.round().toString(),
+                                      route.masteryRangeHigh.round().toString(),
+                                    ),
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall
                                         ?.copyWith(color: DS.textSecondary),
                                   ),
-                                  if (_routeDataNote(route).isNotEmpty) ...[
+                                  if (_routeDataNote(context, route).isNotEmpty) ...[
                                     const SizedBox(height: 6),
                                     Text(
-                                      _routeDataNote(route),
+                                      _routeDataNote(context, route),
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
@@ -3563,7 +3553,7 @@ class _RouteComparePager extends StatelessWidget {
                                         : () => onSelect(route.id),
                                     icon: const Icon(Icons.forum_outlined),
                                     label: Text(
-                                      safeIndex == index ? '带去模拟' : '切换后模拟',
+                                      safeIndex == index ? context.l10n.theaterRouteSimulateFromCurrent : context.l10n.theaterRouteSimulateAfterSwitch,
                                     ),
                                   ),
                                   const SizedBox(height: 10),
@@ -3573,8 +3563,8 @@ class _RouteComparePager extends StatelessWidget {
                                         : () => onSelect(route.id),
                                     child: Text(
                                       safeIndex == index
-                                          ? (isAdopting ? '采纳中' : '采纳此路径')
-                                          : '切换到此路径',
+                                          ? (isAdopting ? context.l10n.theaterRouteAdopting : context.l10n.theaterRouteAdopt)
+                                          : context.l10n.theaterRouteSwitchToThis,
                                     ),
                                   ),
                                 ],
@@ -3668,7 +3658,7 @@ class _RouteFlowChain extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${step.dayLabel} · ${step.estimatedMinutes} 分钟',
+                        context.l10n.theaterRouteStepMinutes(step.dayLabel, step.estimatedMinutes.toString()),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.textSecondary,
                             ),
@@ -3811,7 +3801,7 @@ class _TheaterDisclaimerBanner extends StatelessWidget {
             IconButton(
               onPressed: onDismiss,
               icon: const Icon(Icons.close_rounded),
-              tooltip: '关闭提示',
+              tooltip: context.l10n.theaterDismissTooltip,
               visualDensity: VisualDensity.compact,
             ),
           ],
@@ -3840,19 +3830,19 @@ class _CompactRoutePreviewCard extends StatelessWidget {
     );
     final focusSummary = selectedRoute.summary.trim().isNotEmpty
         ? selectedRoute.summary.trim()
-        : _buildFallbackSummary(selectedRoute);
+        : _buildFallbackSummary(context, selectedRoute);
     final compareSummary = compareRoute.id == selectedRoute.id
         ? null
         : (compareRoute.summary.trim().isNotEmpty
             ? compareRoute.summary.trim()
-            : _buildFallbackSummary(compareRoute));
+            : _buildFallbackSummary(context, compareRoute));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '路径对比',
+            context.l10n.theaterCompactComparisonTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -3868,7 +3858,7 @@ class _CompactRoutePreviewCard extends StatelessWidget {
           if (compareSummary != null) ...[
             const SizedBox(height: 8),
             Text(
-              '对照路径：$compareSummary',
+              context.l10n.theaterCompactComparisonSummary(compareSummary),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                     height: 1.45,
@@ -3880,36 +3870,36 @@ class _CompactRoutePreviewCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _MetricPill(label: '当前 · ${selectedRoute.title}'),
+              _MetricPill(label: context.l10n.theaterCompactComparisonCurrent(selectedRoute.title)),
               _MetricPill(
-                label: '掌握 ${selectedRoute.estimatedMastery.round()}%',
+                label: context.l10n.theaterCompactComparisonMastery(selectedRoute.estimatedMastery.round().toString()),
               ),
-              _MetricPill(label: '时间 ${selectedRoute.dailyMinutes} 分/天'),
+              _MetricPill(label: context.l10n.theaterCompactComparisonTime(selectedRoute.dailyMinutes.toString())),
               if (compareRoute.id != selectedRoute.id)
-                _MetricPill(label: '对照 · ${compareRoute.title}'),
+                _MetricPill(label: context.l10n.theaterCompactComparisonAlt(compareRoute.title)),
             ],
           ),
           const SizedBox(height: 12),
           FilledButton.tonalIcon(
             onPressed: onOpenPathWorkbench,
             icon: const Icon(Icons.route_rounded),
-            label: const Text('进入路径页细比'),
+            label: Text(context.l10n.theaterCompactOpenDetail),
           ),
         ],
       ),
     );
   }
 
-  String _buildFallbackSummary(TheaterPathOption route) {
+  String _buildFallbackSummary(BuildContext context, TheaterPathOption route) {
     if (route.steps.isEmpty) {
       return route.title;
     }
     final first = route.steps.first.nodeName;
     final last = route.steps.last.nodeName;
     if (route.steps.length == 1) {
-      return '先聚焦 $first。';
+      return context.l10n.theaterCompactFallbackSingle(first);
     }
-    return '先补 $first，再推进 $last。';
+    return context.l10n.theaterCompactFallbackMulti(first, last);
   }
 }
 
@@ -3976,14 +3966,14 @@ class _RouteComparisonCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '路径对比',
+            context.l10n.theaterComparisonTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
           ),
           const SizedBox(height: 6),
           Text(
-            '把当前方案和另一条代表性路径放在一起比较，更容易判断该走稳一点还是快一点。',
+            context.l10n.theaterComparisonSubtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                   height: 1.4,
@@ -4006,28 +3996,28 @@ class _RouteComparisonCard extends StatelessWidget {
                 children: [
                   _comparisonRow(
                     context,
-                    '指标',
+                    context.l10n.theaterComparisonMetric,
                     selectedRoute.title,
                     compareRoute.title,
                     header: true,
                   ),
                   _comparisonRow(
                     context,
-                    '预计掌握度',
+                    context.l10n.theaterComparisonEstimatedMastery,
                     '${selectedRoute.estimatedMastery.round()}%',
                     '${compareRoute.estimatedMastery.round()}%',
                   ),
                   _comparisonRow(
                     context,
-                    '时间投入',
-                    '${selectedRoute.dailyMinutes} 分/天',
-                    '${compareRoute.dailyMinutes} 分/天',
+                    context.l10n.theaterComparisonTimeInvestment,
+                    context.l10n.theaterPerDayUnit(selectedRoute.dailyMinutes.toString()),
+                    context.l10n.theaterPerDayUnit(compareRoute.dailyMinutes.toString()),
                   ),
                   _comparisonRow(
                     context,
-                    '风险等级',
-                    _routeRiskLabel(selectedRoute),
-                    _routeRiskLabel(compareRoute),
+                    context.l10n.theaterComparisonRiskLevel,
+                    _routeRiskLabel(context, selectedRoute),
+                    _routeRiskLabel(context, compareRoute),
                   ),
                 ],
               ),
@@ -4075,14 +4065,14 @@ class _RouteComparisonCard extends StatelessWidget {
         ),
       );
 
-  String _routeRiskLabel(TheaterPathOption route) {
+  String _routeRiskLabel(BuildContext context, TheaterPathOption route) {
     if (route.risks.isEmpty) {
-      return '低';
+      return context.l10n.theaterComparisonRiskLow;
     }
     if (route.risks.length >= 2) {
-      return '中高';
+      return context.l10n.theaterComparisonRiskMediumHigh;
     }
-    return '中';
+    return context.l10n.theaterComparisonRiskMedium;
   }
 }
 
@@ -4110,14 +4100,14 @@ class _BranchDeltaCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '假设分支对比',
+            context.l10n.theaterBranchDeltaTitle,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
-            '掌握度 ${masteryDelta >= 0 ? '+' : ''}${masteryDelta.round()}% · 完成率 ${(completionDelta * 100).round()}%',
+            '${context.l10n.theaterRouteMasteryRate} ${masteryDelta >= 0 ? '+' : ''}${masteryDelta.round()}% · ${context.l10n.theaterRouteCompletionRate} ${(completionDelta * 100).round()}%',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: masteryDelta >= 0 ? DS.success : DS.warning,
                   fontWeight: DS.fontWeightBold,
@@ -4125,7 +4115,7 @@ class _BranchDeltaCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${branch.activeStepTitle ?? '分支路径'} · ${branch.compareLabel ?? '假设推演'}',
+            '${branch.activeStepTitle ?? context.l10n.theaterBranchDeltaPath} · ${branch.compareLabel ?? context.l10n.theaterBranchDeltaWhatIf}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -4196,14 +4186,14 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'What-if 沙盘',
+            context.l10n.theaterWhatIfTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
-            '点选想跳过的节点，先看预计影响，再生成完整推演结果。',
+            context.l10n.theaterWhatIfSubtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                   height: 1.4,
@@ -4255,28 +4245,28 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '预计影响预览',
+                  context.l10n.theaterWhatIfPreviewTitle,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                 ),
                 const SizedBox(height: 10),
                 _PreviewMetricBar(
-                  label: '掌握度',
+                  label: context.l10n.theaterWhatIfPreviewMastery,
                   originalValue: widget.route.estimatedMastery / 100,
                   newValue: previewMastery / 100,
                 ),
                 const SizedBox(height: 10),
                 _PreviewMetricBar(
-                  label: '完成率',
+                  label: context.l10n.theaterWhatIfPreviewCompletion,
                   originalValue: widget.route.estimatedCompletionRate,
                   newValue: previewCompletion,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   _selectedNodeIds.isEmpty
-                      ? '当前没有标记跳过节点，保持原始路径。'
-                      : '你已标记跳过 ${selectedSteps.map((step) => step.nodeName).join('、')}。',
+                      ? context.l10n.theaterWhatIfNoNodesSelected
+                      : context.l10n.theaterWhatIfNodesSkipped(selectedSteps.map((step) => step.nodeName).join('、')),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                         height: 1.4,
@@ -4296,7 +4286,7 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                     ),
             icon: const Icon(Icons.alt_route),
             label: Text(
-              _selectedNodeIds.isEmpty ? '先选择一个节点' : '生成完整假设推演结果',
+              _selectedNodeIds.isEmpty ? context.l10n.theaterWhatIfSelectFirst : context.l10n.theaterWhatIfGenerateFull,
             ),
           ),
           if (widget.result != null) ...[
@@ -4311,8 +4301,12 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '原始 ${widget.result!.originalMastery.round()}% / ${(widget.result!.originalCompletionRate * 100).round()}%'
-                    '  →  调整后 ${widget.result!.predictedMastery.round()}% / ${(widget.result!.predictedCompletionRate * 100).round()}%',
+                    context.l10n.theaterWhatIfCombinedResult(
+                      widget.result!.originalMastery.round().toString(),
+                      (widget.result!.originalCompletionRate * 100).round().toString(),
+                      widget.result!.predictedMastery.round().toString(),
+                      (widget.result!.predictedCompletionRate * 100).round().toString(),
+                    ),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -4343,8 +4337,8 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                   ),
                   if (widget.result!.remainingPath.isNotEmpty) ...[
                     const SizedBox(height: 10),
-                    Text(
-                      '分支剩余路径：${widget.result!.remainingPath.map((item) => item.nodeName).join(' → ')}',
+                  Text(
+                    context.l10n.theaterWhatIfRemainingPath(widget.result!.remainingPath.map((item) => item.nodeName).join(' → ')),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.textSecondary,
                             height: 1.4,
@@ -4440,7 +4434,7 @@ class _DiscussionSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '专家圆桌',
+              context.l10n.theaterDiscussionTitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -4550,13 +4544,13 @@ class _SnapshotSection extends StatelessWidget {
             final compact = constraints.maxWidth < 420;
             final button = FilledButton.tonal(
               onPressed: isSaving ? null : onSave,
-              child: Text(isSaving ? '保存中' : '保存当前快照'),
+              child: Text(isSaving ? context.l10n.theaterSnapshotSaving : context.l10n.theaterSnapshotSave),
             );
             final content = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '保存当前快照',
+                  context.l10n.theaterSnapshotTitle,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -4564,8 +4558,8 @@ class _SnapshotSection extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   snapshot == null
-                      ? '把当前推演保存下来，稍后可以继续回看。'
-                      : '已保存：${snapshot!.title}',
+                      ? context.l10n.theaterSnapshotNoSnapshot
+                      : context.l10n.theaterSnapshotSaved(snapshot!.title),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -4619,7 +4613,7 @@ class _AccuracyCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '预测校准',
+              context.l10n.theaterAccuracyTitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -4627,16 +4621,20 @@ class _AccuracyCard extends StatelessWidget {
             const SizedBox(height: 8),
             if (summary != null) ...[
               Text(
-                '预测 ${(summary!.predictedCompletionRate * 100).round()}% / ${summary!.predictedMastery.round()}%，'
-                ' 实际 ${(summary!.actualCompletionRate * 100).round()}% / ${summary!.actualMastery.round()}%',
+                context.l10n.theaterAccuracyPredictedActual(
+                  (summary!.predictedCompletionRate * 100).round().toString(),
+                  summary!.predictedMastery.round().toString(),
+                  (summary!.actualCompletionRate * 100).round().toString(),
+                  summary!.actualMastery.round().toString(),
+                ),
               ),
               const SizedBox(height: 6),
-              Text('准确度 ${(summary!.accuracyScore * 100).round()}%'),
+              Text(context.l10n.theaterAccuracyAvgScore((summary!.accuracyScore * 100).round().toString())),
               const SizedBox(height: 8),
               Text(
                 summary!.withinPredictedRange
-                    ? '这次真实结果落在预测区间内，当前模型区间覆盖命中。'
-                    : '这次真实结果落在预测区间外，系统会用这次偏差继续校准后续预测。',
+                    ? context.l10n.theaterAccuracyWithinRange
+                    : context.l10n.theaterAccuracyOutsideRange,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -4652,7 +4650,7 @@ class _AccuracyCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '建议回填日期：${tracking!.dueOn}',
+                context.l10n.theaterAccuracyDueDate(tracking!.dueOn),
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -4661,7 +4659,7 @@ class _AccuracyCard extends StatelessWidget {
               FilledButton.tonalIcon(
                 onPressed: onRecordActual,
                 icon: const Icon(Icons.fact_check_outlined),
-                label: const Text('记录实际表现'),
+                label: Text(context.l10n.theaterAccuracyRecordActual),
               ),
             ],
             if (overview != null) ...[
@@ -4671,25 +4669,23 @@ class _AccuracyCard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   _MetricPill(
-                    label: '样本 ${overview!.sampleCount}',
+                    label: context.l10n.theaterAccuracySampleCount(overview!.sampleCount.toString()),
                   ),
                   _MetricPill(
-                    label:
-                        '平均准确度 ${(overview!.avgAccuracyScore * 100).round()}%',
+                    label: context.l10n.theaterAccuracyAvgScore((overview!.avgAccuracyScore * 100).round().toString()),
                   ),
                   _MetricPill(
-                    label:
-                        '数据充分度 ${(overview!.confidenceScore * 100).round()}%',
+                    label: context.l10n.theaterAccuracyConfidenceScore((overview!.confidenceScore * 100).round().toString()),
                   ),
                   if (overview!.coverageRate != null)
                     _MetricPill(
-                      label: '区间命中 ${(overview!.coverageRate! * 100).round()}%',
+                      label: context.l10n.theaterAccuracyCoverageRate((overview!.coverageRate! * 100).round().toString()),
                     ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                '数据充分度反映当前预测所依据的数据量和校准次数，不是预测准确度。',
+                context.l10n.theaterAccuracyScoreNote,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -4698,9 +4694,11 @@ class _AccuracyCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 overview!.sampleCount == 0
-                    ? '还没有历史回填样本，当前预测会优先展示区间而不是绝对值。'
-                    : '历史偏差：完成率 ${overview!.completionBiasMean >= 0 ? '+' : ''}${(overview!.completionBiasMean * 100).round()}%，'
-                        ' 掌握度 ${overview!.masteryBiasMean >= 0 ? '+' : ''}${overview!.masteryBiasMean.round()}%。',
+                    ? context.l10n.theaterAccuracyNoSamples
+                    : context.l10n.theaterAccuracyHistoryBias(
+                        '${overview!.completionBiasMean >= 0 ? '+' : ''}${(overview!.completionBiasMean * 100).round()}%',
+                        '${overview!.masteryBiasMean >= 0 ? '+' : ''}${overview!.masteryBiasMean.round()}%',
+                      ),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.4,
@@ -4758,7 +4756,7 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '已同步到你的 Sprint',
+                    context.l10n.theaterAdoptionSynced,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -4787,7 +4785,7 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '首周任务',
+                            context.l10n.theaterAdoptionFirstWeekTasks,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
@@ -4807,7 +4805,7 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
                           if (checkpointDates.isNotEmpty) ...[
                             const SizedBox(height: 8),
                             Text(
-                              '检查点：${checkpointDates.map((item) => item['date']).join('、')}',
+                              context.l10n.theaterAdoptionCheckpoints(checkpointDates.map((item) => item['date']).join('、')),
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -4827,11 +4825,11 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
                         onPressed: () => context.push(
                           PlanRoutes.planDetail.replaceFirst(':id', planId),
                         ),
-                        child: const Text('查看计划'),
+                        child: Text(context.l10n.theaterAdoptionViewPlan),
                       ),
                       OutlinedButton(
                         onPressed: onDismiss,
-                        child: const Text('继续探索'),
+                        child: Text(context.l10n.theaterAdoptionContinueExploring),
                       ),
                     ],
                   ),

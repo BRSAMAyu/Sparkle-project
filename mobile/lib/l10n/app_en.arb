@@ -4736,10 +4736,7 @@
   "theaterAdoptionFirstWeekTasks": "First week tasks",
   "theaterAdoptionCheckpoints": "Checkpoints: {dates}",
   "theaterAdoptionViewPlan": "View plan",
-  "theaterAdoptionContinueExploring": "Continue exploring"
-}
-    }
-  },
+  "theaterAdoptionContinueExploring": "Continue exploring",
   "planCreateEditingGrowth": "Edit Growth Plan",
   "planCreateEditingSprint": "Edit Sprint Plan",
   "planCreateSavePlan": "Save Plan",
@@ -4802,5 +4799,745 @@
   "planCreateReviewCreateDescription": "Creating will generate a more complete plan card and sync create plan tasks.",
   "planCreateFinalDescription": "Final written plan description",
   "planCreateMinutes": "{value} min",
-  "planCreateTaskSubtitle": "{minutes} min · Difficulty {difficulty}"
+  "planCreateTaskSubtitle": "{minutes} min · Difficulty {difficulty}",
+  "predictedIntentTitle": "System Prediction",
+  "predictedIntentCollapsedTitle": "System Prediction Collapsed",
+  "predictedIntentCollapsedExpand": "Expand it again whenever you want to review the recommendation.",
+  "predictedIntentCollapsedUpdated": "Last updated",
+  "predictedIntentSummary": "Based on your profile, the last 24 hours, and task rhythm",
+  "predictedIntentSuggestedCont": "Suggested Continuation",
+  "predictedIntentWaiting": "The prediction is ready and waiting for a follow-up prompt.",
+  "predictedIntentConfidence": "Confidence {percent}%",
+  "@predictedIntentConfidence": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "predictedIntentWhy": "Why the system predicts this",
+  "predictedIntentContinuing": "Continuing...",
+  "predictedIntentContinue": "Continue With This",
+  "predictedIntentError": "Something went wrong while continuing. Please try again.",
+  "predictedActionResumePriority": "Resume Priority Task",
+  "predictedActionStudyPlan": "Build Study Plan",
+  "predictedActionDiagnose": "Diagnose Issue",
+  "predictedActionCreateTask": "Turn Into Task",
+  "predictedActionInstantResult": "Instant Result",
+  "predictedActionReviewProgress": "Review Progress",
+  "predictedActionPlanNext": "Plan Next Step",
+  "predictedActionReflection": "Quick Reflection",
+  "predictedActionDefault": "Predicted Intent",
+  "predictedWindowNow": "Right Now",
+  "predictedWindow30m": "Next 30 Minutes",
+  "predictedWindow1h": "Next Hour",
+  "predictedWindow2h": "Next 2 Hours",
+  "predictedWindow6h": "Next 6 Hours",
+  "predictedWindowToday": "Later Today",
+  "predictedSourceLongRange": "Long-Range Forecast",
+  "predictedSourceRules": "Rules Fallback",
+  "predictedFreshnessJustNow": "just now",
+  "predictedFreshnessMinutes": "{count} min ago",
+  "@predictedFreshnessMinutes": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "predictedFreshnessHours": "{count} hr ago",
+  "@predictedFreshnessHours": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "predictedFreshnessDays": "{count} d ago",
+  "@predictedFreshnessDays": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "predictedCategoryPrefTitle": "Recent same-category signal",
+  "predictedCategoryPrefHint": "Inside {category}, recent results have more often favored \"{tool}\" first.",
+  "@predictedCategoryPrefHint": {
+    "placeholders": {
+      "category": { "type": "String" },
+      "tool": { "type": "String" }
+    }
+  },
+  "predictedCategoryPrefCaveat": "Based only on recent results inside this request category. It does not mean Sparkle understands your whole workflow.",
+  "predictedCategoryPlan": "planning requests",
+  "predictedCategoryTask": "task requests",
+  "predictedCategoryFocus": "focus-support requests",
+  "predictedCategoryGrowth": "growth requests",
+  "predictedCategoryQuery": "query requests",
+  "predictedCategoryKnowledge": "knowledge requests",
+  "predictedCategoryReview": "review requests",
+  "predictedCategoryResearch": "research requests",
+  "predictedCategoryMemory": "memory requests",
+  "predictedCategoryCognitive": "cognitive requests",
+  "predictedCategoryDefault": "similar requests",
+  "predictedToolCreatePlan": "Create Plan",
+  "predictedToolGenerateTasks": "Expand Plan Steps",
+  "predictedToolCreateTask": "Create Task",
+  "predictedToolListTasks": "List Tasks",
+  "predictedToolUpdateTask": "Update Task",
+  "predictedToolQueryKnowledge": "Query Knowledge",
+  "predictedToolExplainConcept": "Explain Concept",
+  "predictedToolReviewProgress": "Review Progress",
+  "predictedToolGenerateSummary": "Generate Summary",
+  "predictedToolSuggestSchedule": "Suggest Schedule",
+  "examSprintHighFreqCoverage": "High-Freq Coverage",
+  "examSprintMistakeRepair": "Mistake Repair",
+  "examSprintStudyStreak": "Study Streak",
+  "examSprintStreakDays": "{days} d",
+  "@examSprintStreakDays": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "examSprintKeepRhythm": "Keep the rhythm",
+  "examSprintHighYieldWeak": "High-yield weak spots: {topics}",
+  "@examSprintHighYieldWeak": {
+    "placeholders": {
+      "topics": { "type": "String" }
+    }
+  },
+  "examSprintNoTasksToday": "No sprint tasks scheduled today.",
+  "examSprintExamDayReady": "Exam Day · You're Ready 🎓",
+  "examSprintExamTips": "Exam Tips",
+  "examSprintRecordResult": "Record Exam Result",
+  "examSprintDashboardTitle": "Exam Sprint Dashboard",
+  "examSprintModeHighScore": "High Score",
+  "examSprintModeHold": "Hold",
+  "examSprintModePass": "Pass",
+  "examSprintModeDefault": "Sprint",
+  "examSprintExamDay": "Exam day",
+  "examSprintCountdown": "{days} days until exam",
+  "@examSprintCountdown": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "examSprintTodayTasks": "Today: {completed}/{total} tasks",
+  "@examSprintTodayTasks": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "examSprintDaysLeft": "{days} days left",
+  "@examSprintDaysLeft": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "examSprintTodayDone": "Today {completed}/{total} done",
+  "@examSprintTodayDone": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "examSprintTodaySprintTasks": "Today Sprint Tasks",
+  "examSprintHideLater": "Hide later days",
+  "examSprintShowLater": "Show next {count} days",
+  "@examSprintShowLater": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "examSprintDayIndex": "Day {index}",
+  "@examSprintDayIndex": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "examSprintDateFormat": "{month}/{day}",
+  "@examSprintDateFormat": {
+    "placeholders": {
+      "month": { "type": "int" },
+      "day": { "type": "int" }
+    }
+  },
+  "examSprintNoSprintTasks": "No sprint tasks yet",
+  "examSprintMinLabel": "{minutes} min · {status}",
+  "@examSprintMinLabel": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "status": { "type": "String" }
+    }
+  },
+  "examSprintStatusDone": "Done",
+  "examSprintStatusInProgress": "In progress",
+  "examSprintStatusPending": "Pending",
+  "insightHubTitle": "Learning Insights",
+  "insightHubRecommendedSeeds": "{count} recommended scenarios ready to simulate.",
+  "@insightHubRecommendedSeeds": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "insightHubFallbackSummary": "Simulations, what-ifs, and reports — now in one lighter learning flow.",
+  "insightHubSimulation": "Learning Simulation",
+  "insightHubTheater": "Deduction Theater",
+  "insightHubReport": "Learning Report",
+  "insightHubEnterOverview": "Enter Insight Overview",
+  "insightHubCompactSimulation": "Simulation",
+  "insightHubCompactTheater": "Theater",
+  "insightHubCompactReport": "Report",
+  "insightHubRefreshWarning": "Some insight data hasn't refreshed yet. Existing content will be shown.",
+  "insightHubSeedsToExplore": "{count} scenarios to explore",
+  "@insightHubSeedsToExplore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "insightHubCompactFallback": "Simulations, what-ifs, and reports now in one card",
+  "insightHubNoRecentTheater": "No recent theater",
+  "insightHubContinueLastTheater": "Continue last theater",
+  "insightHubContinueTopic": "Continue {topic}",
+  "@insightHubContinueTopic": {
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "insightHubContinueLastSimulation": "Continue last simulation",
+  "insightHubRecommendedSeedsCount": "{count} scenarios",
+  "@insightHubRecommendedSeedsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "insightHubContinueSession": "Continue {topic}",
+  "@insightHubContinueSession": {
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "insightHubStartSimulation": "Start a new simulation",
+  "insightHubNoRecentReport": "No recent report",
+  "insightHubMasteryPercent": "Mastery {percent}%",
+  "@insightHubMasteryPercent": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "insightHubRefreshFailed": "Some insight content failed to refresh. Showing existing content.",
+  "insightHubRetry": "Retry",
+  "memoryPanel": "Memory Panel",
+  "memoryPanelAdjust": "Adjust",
+  "memoryPanelAiAutoMemories": "AI Auto Memories",
+  "memoryPanelAiInferredDescription": "AI inferred from chat, for display only, not used in downstream decisions.",
+  "memoryPanelClearFilter": "Clear Filter",
+  "memoryPanelCommitmentDismissed": "Commitment dismissed",
+  "memoryPanelConfidenceValue": "Confidence {value}",
+  "@memoryPanelConfidenceValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelConflictFailed": "Conflict resolution failed: {error}",
+  "@memoryPanelConflictFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelConflictResolvedA": "Resolved with candidate A",
+  "memoryPanelConflictResolvedB": "Resolved with candidate B",
+  "memoryPanelConflictResolvedNone": "Conflict candidates revoked",
+  "memoryPanelCorrectionCount": "Corrections {count}",
+  "@memoryPanelCorrectionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryPanelDate": "Date",
+  "memoryPanelDeviationsDetected": "{count} deviations detected",
+  "@memoryPanelDeviationsDetected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryPanelDimCompletionRate": "Completion Rate",
+  "memoryPanelDimEngagement": "Engagement",
+  "memoryPanelDimMood": "Mood",
+  "memoryPanelDimPace": "Pace",
+  "memoryPanelDimPlanAdherence": "Plan Adherence",
+  "memoryPanelDismissFailed": "Dismiss failed: {error}",
+  "@memoryPanelDismissFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelEmptyDescription": "Start by chatting about your goals, preferences, or recent learning activities so the system can organize long-term memories here.",
+  "memoryPanelEmptyFilterDescription": "Try clearing filters to see all organized memories.",
+  "memoryPanelEmptyFilterTitle": "No matching memories",
+  "memoryPanelEmptyTitle": "Memory panel is empty",
+  "memoryPanelEvidenceAll": "All Evidence",
+  "memoryPanelEvidenceMissing": "Missing",
+  "memoryPanelEvidenceOk": "OK",
+  "memoryPanelEvidenceRedacted": "Redacted",
+  "memoryPanelForesightHint": "Foresight Hint",
+  "memoryPanelImportanceValue": "Importance {value}",
+  "@memoryPanelImportanceValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelItemCount": "{count} items",
+  "@memoryPanelItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryPanelLoadFailed": "Memory panel load failed: {error}",
+  "@memoryPanelLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelMarkFailed": "Mark failed: {error}",
+  "@memoryPanelMarkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelMarkedComplete": "Marked as complete",
+  "memoryPanelMetricsNone": "Metrics: -",
+  "memoryPanelNotUpdated": "Not updated",
+  "memoryPanelRecentScenes": "Recent Scenes",
+  "memoryPanelRevoke": "Revoke",
+  "memoryPanelRevokeFailed": "Revoke failed: {error}",
+  "@memoryPanelRevokeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelRevokeThis": "Revoke This",
+  "memoryPanelRevokedAutoMemory": "Auto memory revoked",
+  "memoryPanelRevoking": "Revoking...",
+  "memoryPanelSceneMemories": "{time} · {count} memories",
+  "@memoryPanelSceneMemories": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryPanelUnavailable": "Memory panel unavailable",
+  "memoryPanelValidUntil": "Valid until {policy}",
+  "@memoryPanelValidUntil": {
+    "placeholders": {
+      "policy": {
+        "type": "String"
+      }
+    }
+  },
+  "theaterComposerDeducing": "Deducing",
+  "theaterWhatIfCombinedResult": "Original {originalMastery}% / {originalCompletion}%  →  Adjusted {predictedMastery}% / {predictedCompletion}%",
+  "@theaterWhatIfCombinedResult": {
+    "placeholders": {
+      "originalMastery": { "type": "String" },
+      "originalCompletion": { "type": "String" },
+      "predictedMastery": { "type": "String" },
+      "predictedCompletion": { "type": "String" }
+    }
+  },
+  "theaterAccuracyPredictedActual": "Predicted {predictedCompletion}% / {predictedMastery}%, Actual {actualCompletion}% / {actualMastery}%",
+  "@theaterAccuracyPredictedActual": {
+    "placeholders": {
+      "predictedCompletion": { "type": "String" },
+      "predictedMastery": { "type": "String" },
+      "actualCompletion": { "type": "String" },
+      "actualMastery": { "type": "String" }
+    }
+  },
+  "theaterPerDayUnit": "{minutes} min/day",
+  "@theaterPerDayUnit": {
+    "placeholders": {
+      "minutes": { "type": "String" }
+    }
+  },
+  "simulationTitle": "Scenario Simulation",
+  "simulationCurrentSimulation": "Current Simulation",
+  "simulationBackToTheater": "Back to Theater",
+  "simulationRunning": "Simulating...",
+  "simulationStartSimulation": "Start This Simulation",
+  "simulationAwaitingInput": "Awaiting Input",
+  "simulationClearTopic": "Clear Topic",
+  "simulationRecommendedScenarios": "Recommended Scenarios",
+  "simulationGenerate": "Generate",
+  "simulationRefresh": "Refresh",
+  "simulationStartSimButton": "Start Simulation",
+  "simulationGoToTheater": "Go to Theater",
+  "simulationContinueSim": "Continue Simulation",
+  "simulationPauseSim": "Pause Simulation",
+  "simulationCollapseInsight": "Collapse Insight",
+  "simulationViewInsight": "View Insight",
+  "simulationCollapseSettings": "Collapse Settings",
+  "simulationSimSettings": "Simulation Settings",
+  "simulationYourTurnTitle": "Your Turn to Reply",
+  "simulationYourResponseArea": "Your Response Area",
+  "simulationCollapse": "Collapse",
+  "simulationJoinDiscussion": "Join the Discussion",
+  "simulationOrInputJudgment": "Or enter your judgment",
+  "simulationSubmitting": "Submitting...",
+  "simulationSubmitJudgment": "Submit My Judgment",
+  "simulationContinueInChat": "Continue in Chat",
+  "simulationAdjustSimulation": "Adjust This Simulation",
+  "simulationDiscussionRounds": "Discussion Rounds",
+  "simulationFacilitationStyleTitle": "Facilitation Style",
+  "simulationParticipantsTitle": "Participants",
+  "simulationRestoreDefault": "Restore Default",
+  "simulationCustomHistoricalRole": "Custom Historical Figure",
+  "simulationAdd": "Add",
+  "simulationRestartSim": "Restart Simulation",
+  "simulationContinue": "Continue",
+  "simulationPause": "Pause",
+  "simulationAwaitingStart": "Awaiting Start",
+  "simulationGatheringParticipants": "Gathering Participants",
+  "simulationWaitingFirstRound": "Waiting First Round",
+  "simulationRolesPending": "Roles pending",
+  "simulationGeneratingInBackground": "Still Generating in Background",
+  "simulationPausedForeground": "Paused in Foreground",
+  "simulationImmersiveDiscussion": "Immersive Discussion",
+  "simulationCurrentDiscussion": "Current Discussion",
+  "simulationWillAppearLive": "Rounds will appear live once started.",
+  "simulationNoInsightYet": "No insight summary yet.",
+  "simulationInsightSummaryTitle": "Insight Summary",
+  "simulationGeneratingReport": "Generating...",
+  "simulationGenerateLearningReport": "Generate Learning Report",
+  "simulationContinueToTheater": "Continue to Theater",
+  "simulationShareInsight": "Share Insight",
+  "simulationCoreArguments": "Core Arguments",
+  "simulationUnresolvedDisagreements": "Unresolved Disagreements",
+  "simulationYourContribution": "Your Contribution",
+  "simulationExposedKnowledgeGaps": "Exposed Knowledge Gaps",
+  "simulationSuggestedNextSteps": "Suggested Next Steps",
+  "simulationStructuredInsightGenerated": "Structured insight summary generated.",
+  "simulationEmptyGenerating": "Simulation is generating...",
+  "simulationEmptyStartPrompt": "Start a learning scenario simulation and let roles discuss the topic round by round.",
+  "simulationCurrentScene": "Current Scene",
+  "simulationCurrentGoal": "Current Goal",
+  "simulationInteractionStyle": "Interaction Style",
+  "simulationRoleDiscussionUserJoin": "Role Discussion + You Respond",
+  "simulationTopicHint": "Enter a topic or knowledge point",
+  "simulationTopicHintExample": "e.g. Eigenvalues and eigenvectors",
+  "simulationStartSimulationTopicAction": "Start Simulation About This Topic",
+  "simulationUserInputTopicHint": "Enter a learning topic or question to discuss",
+  "simulationUserInputTopicHelper": "After completing more learning tasks, the system will recommend discussion topics based on your real learning data",
+  "simulationRecommendedEmptyHint": "No recommended seeds yet. You can manually enter a topic to start.",
+  "simulationRecommendedUserInputHint": "Start with the most specific question you want to discuss. After accumulating more real learning records, the system will recommend topics based on your data.",
+  "simulationRecommendedPickHint": "Pick a starting point. The recommendation cards will auto-collapse once the discussion begins.",
+  "simulationScenarioAdjustHint": "Adjusting the scenario will also change the character relationships and discussion dynamics.",
+  "simulationFacilitationFitHint": "Make the discussion fit the current topic better.",
+  "simulationDiscussionNote": "Fully adjust the topic, scenario, rounds, facilitation style, and participant roles. Once started, the discussion follows these settings.",
+  "simulationParticipantHint": "Specify who you want to invite. Keep at least 1 and at most 6 roles.",
+  "simulationRunningStatusHint": "Simulation in progress. New rounds will appear below in real time.",
+  "simulationScenarioEyebrow": "Scenario Simulation",
+  "simulationScenarioTitle": "Start This Scenario Simulation",
+  "simulationScenarioSubtitle": "Choose a discussion scenario, then enter a topic you want to explore. The interface will automatically switch to an immersive discussion view once started.",
+  "simulationRoleDiscussionValue": "Role Discussion + You Respond",
+  "simulationJudgeExampleHint": "e.g. I'll strengthen my geometric intuition first, then verify with a problem",
+  "simulationInteractionExplain": "Give your judgment first, and the next round will truly build around your input.",
+  "simulationInteractionHint": "Try catching one round here first and let the roles respond to your judgment. You can also bring this step back to the main chat to continue.",
+  "simulationContinuitySubtitle": "This simulation continues from your previous exploration. You can bring the context back to the original conversation anytime to continue questioning and deciding.",
+  "simulationBridgeCurrentlyVerifyingFormat": "Currently verifying path \"{routeTitle}\"",
+  "@simulationBridgeCurrentlyVerifyingFormat": {
+    "placeholders": {
+      "routeTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBridgeVerifyingRoute": "Currently verifying a deduction path",
+  "simulationBridgeVerificationDescWithTarget": "This simulation comes from the Knowledge Theater, with a goal of {targetName}. You can bring your current progress back to the theater at any time to continue adopting or calibrating.",
+  "@simulationBridgeVerificationDescWithTarget": {
+    "placeholders": {
+      "targetName": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBridgeVerificationContext": "This simulation comes from the Knowledge Theater. The current context remains linked to the original deduction.",
+  "simulationInteractionModeFormat": "Interaction mode: {mode}",
+  "@simulationInteractionModeFormat": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationInteractionOpenQuestion": "Open Question",
+  "simulationInteractionViewpointChallenge": "Viewpoint Challenge",
+  "simulationInteractionBinaryChoice": "Binary Choice",
+  "simulationInteractionChoice": "Choice",
+  "simulationCurrentFocusFormat": "Current focus: {speaker}",
+  "@simulationCurrentFocusFormat": {
+    "placeholders": {
+      "speaker": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationTopicFormat": "Topic: {topic}",
+  "@simulationTopicFormat": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationTopicAndSpeakerFormat": "Topic: {topic} · Speaking: {speaker}",
+  "@simulationTopicAndSpeakerFormat": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "speaker": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationRoundN": "Round {round}",
+  "@simulationRoundN": {
+    "placeholders": {
+      "round": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoleCountFormat": "{count} roles",
+  "@simulationRoleCountFormat": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRunningRoundN": "Running round {round}/{total}",
+  "@simulationRunningRoundN": {
+    "placeholders": {
+      "round": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoundViewpoints": "{count} round viewpoints",
+  "@simulationRoundViewpoints": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoleCountLong": "{count} roles",
+  "@simulationRoleCountLong": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoundFormatLabel": "{current} / {max} rds",
+  "@simulationRoundFormatLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoundSliderLabel": "{count} rds",
+  "@simulationRoundSliderLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationParticipantDefaultStatus": "Currently running with default system roles.",
+  "simulationParticipantCurrentStatus": "Current participants: {names}",
+  "@simulationParticipantCurrentStatus": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBulletParticipants": "Participants: {names}",
+  "@simulationBulletParticipants": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBulletRounds": "Total rounds: {count}. Suitable as a basis for further deduction or review report.",
+  "@simulationBulletRounds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationBulletOpening": "Opening highlight: {message}",
+  "@simulationBulletOpening": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationRoundFormatShort": "{current}/{total} rds",
+  "@simulationRoundFormatShort": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationContinueInChatContext": "Continue the simulation in chat.",
+  "simulationContinueTopicLabel": "Topic: {topic}",
+  "@simulationContinueTopicLabel": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationContinueScenarioLabel": "Scenario: {label}",
+  "@simulationContinueScenarioLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationContinueCurrentQuestion": "Current question: {question}",
+  "@simulationContinueCurrentQuestion": {
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationContinueMyResponse": "My response: {reply}",
+  "@simulationContinueMyResponse": {
+    "placeholders": {
+      "reply": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBalancedPush": "Balanced",
+  "simulationDebateClash": "Debate Clash",
+  "simulationGuidedBreakdown": "Guided Breakdown",
+  "simulationPracticalApply": "Practical Application",
+  "simulationReportReturnException": "Learning report returned invalid format",
+  "simulationReportGenerationFailed": "Failed to generate learning report: {error}",
+  "@simulationReportGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationReportTitle": "This report captures issues exposed in this simulation",
+  "simulationReportSummary": "Disagreements and knowledge gaps revealed during the simulation have been brought into this formal report.",
+  "simulationShareCreated": "I just ran a learning simulation on Sparkle: {topic}\nScenario: {scenario}\nInsight: {insight}",
+  "@simulationShareCreated": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "scenario": {
+        "type": "String"
+      },
+      "insight": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationShareTitle": "Scenario Simulation · {topic}",
+  "@simulationShareTitle": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationShareRawText": "Scenario Simulation\nTopic: {topic}\nScenario: {scenario}\nInsight: {insight}",
+  "@simulationShareRawText": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "scenario": {
+        "type": "String"
+      },
+      "insight": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationCustomFigureHint": "e.g. Churchill / Bismarck",
+  "simulationTopicCurrentFocusFormat": "Topic: {topic} · Speaking: {speaker}",
+  "@simulationTopicCurrentFocusFormat": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "speaker": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationCurrentFocusLabel": "Current focus: {speaker}",
+  "@simulationCurrentFocusLabel": {
+    "placeholders": {
+      "speaker": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationImmersiveTopicAndFocus": "Topic: {topic} · Speaking: {speaker}",
+  "@simulationImmersiveTopicAndFocus": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "speaker": {
+        "type": "String"
+      }
+    }
+  }
 }

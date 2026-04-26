@@ -11820,4 +11820,1216 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get theaterAdoptionContinueExploring => '继续探索';
+
+  @override
+  String get planCreateEditingGrowth => '编辑成长计划';
+
+  @override
+  String get planCreateEditingSprint => '编辑冲刺计划';
+
+  @override
+  String get planCreateSavePlan => '保存计划';
+
+  @override
+  String get planCreateStepPositioning => '计划定位';
+
+  @override
+  String get planCreateStepTimeStructure => '时间结构';
+
+  @override
+  String get planCreateStepTaskBlueprint => '任务编排';
+
+  @override
+  String get planCreateStepBoundariesGuide => '计划边界与指南';
+
+  @override
+  String get planCreateStepReviewConfirm => '确认预览';
+
+  @override
+  String get planCreateBasicsSubtitle => '先定义这是一张真正的计划卡，而不是普通任务。';
+
+  @override
+  String get planCreateNameHint => '例如：6 周英语口语提升 / 期中冲刺收束';
+
+  @override
+  String get planCreateSubjectLabel => '主题方向';
+
+  @override
+  String get planCreateSubjectHint => '英语、Flutter、考研数学、论文阅读...';
+
+  @override
+  String get planCreateGrowthGoalLabel => '长期目标';
+
+  @override
+  String get planCreateSprintGoalLabel => '冲刺目标';
+
+  @override
+  String get planCreateGrowthGoalHint => '写清楚这个成长计划最终想形成什么能力、习惯或成果。';
+
+  @override
+  String get planCreateSprintGoalHint => '写清楚这次冲刺的结果、验收标准和不能偏离的主线。';
+
+  @override
+  String get planCreateGoalRequired => '请写出这张计划卡的目标';
+
+  @override
+  String get planCreateScheduleSubtitle => '把持续时间、每日投入和提醒节奏一次性定清楚。';
+
+  @override
+  String get planCreateDailyMinutesLabel => '每日可投入时长';
+
+  @override
+  String planCreateTotalEstimatedHours(Object hours) {
+    return '总预估工时 $hours 小时';
+  }
+
+  @override
+  String get planCreateDailyReminderTime => '每日提醒时间';
+
+  @override
+  String get planCreatePlanStageLabel => '当前计划阶段';
+
+  @override
+  String get planCreateStageSprint => '冲刺推进';
+
+  @override
+  String get planCreateStageDaily => '日常执行';
+
+  @override
+  String get planCreateStageReview => '复盘调优';
+
+  @override
+  String get planCreateStagePaused => '暂时暂停';
+
+  @override
+  String get planCreateScheduleChipWorkday => '工作日推进，周末复盘';
+
+  @override
+  String get planCreateScheduleChipMorning => '早晨启动，晚上收束';
+
+  @override
+  String get planCreateScheduleChipAfternoon => '午后主攻，夜间轻复盘';
+
+  @override
+  String get planCreateScheduleLabel => '节奏说明';
+
+  @override
+  String get planCreateScheduleHint => '例如：周一到周五推进，周六复盘，周日补缺';
+
+  @override
+  String get planCreateTasksSubtitle =>
+      '这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。';
+
+  @override
+  String get planCreateTaskBlueprintLabel => '任务编排说明';
+
+  @override
+  String get planCreateTaskBlueprintHint => '例如：先搭框架，再每天推进主线，最后统一复盘补漏。';
+
+  @override
+  String get planCreateReferenceExistingTasks => '参考已有任务';
+
+  @override
+  String get planCreateCopyToPlan => '复制进计划';
+
+  @override
+  String get planCreateNewTaskLabel => '新增计划任务';
+
+  @override
+  String get planCreateNewTaskHint => '例如：完成一轮章节梳理';
+
+  @override
+  String get planCreateDurationLabel => '时长';
+
+  @override
+  String get planCreateDifficultyLabel => '难度';
+
+  @override
+  String get planCreateAddTaskToPlan => '加入计划任务';
+
+  @override
+  String get planCreateNoTasks => '当前还没有计划任务';
+
+  @override
+  String get planCreateScopeLabel => '计划边界与注意事项';
+
+  @override
+  String get planCreateScopeHint => '例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。';
+
+  @override
+  String get planCreateGuidePerspective => '任务指南视角';
+
+  @override
+  String get planCreateGuideForSelf => '给自己看';
+
+  @override
+  String get planCreateGuideForAi => '给 AI 用';
+
+  @override
+  String get planCreateGuideHumanDescription =>
+      '用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。';
+
+  @override
+  String get planCreateGuideAiDescription =>
+      'AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。';
+
+  @override
+  String get planCreateGuideHumanTitle => '用户版执行指南';
+
+  @override
+  String get planCreateGuideAiTitle => '给 AI 的执行版本';
+
+  @override
+  String get planCreateGenerateHumanGuide => '生成用户版';
+
+  @override
+  String get planCreateGenerateAiGuide => '生成 AI 版';
+
+  @override
+  String get planCreateGuideHint => '生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。';
+
+  @override
+  String get planCreateAiGuideEmpty => '还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。';
+
+  @override
+  String get planCreateCopyAiGuide => '复制 AI 版';
+
+  @override
+  String get planCreateAiGuideCopied => 'AI 版本已复制';
+
+  @override
+  String planCreateReviewSummary(
+      Object dailyMinutes, Object hours, Object type) {
+    return '$type · $dailyMinutes 分钟/天 · $hours 小时';
+  }
+
+  @override
+  String get planCreateReviewEditDescription => '保存后会更新计划描述，并为新增草案创建新的计划任务。';
+
+  @override
+  String get planCreateReviewCreateDescription => '创建后会生成一张更完整的计划卡，并同步创建计划任务。';
+
+  @override
+  String get planCreateFinalDescription => '最终写入的计划描述';
+
+  @override
+  String planCreateMinutes(Object value) {
+    return '$value 分钟';
+  }
+
+  @override
+  String planCreateTaskSubtitle(Object difficulty, Object minutes) {
+    return '$minutes 分钟 · 难度 $difficulty';
+  }
+
+  @override
+  String get predictedIntentTitle => '系统预测';
+
+  @override
+  String get predictedIntentCollapsedTitle => '系统预测已收起';
+
+  @override
+  String get predictedIntentCollapsedExpand => '需要时再展开查看建议';
+
+  @override
+  String get predictedIntentCollapsedUpdated => '上次更新于';
+
+  @override
+  String get predictedIntentSummary => '基于画像、最近 24 小时行为与任务节奏';
+
+  @override
+  String get predictedIntentSuggestedCont => '建议接续';
+
+  @override
+  String get predictedIntentWaiting => '预测结果已生成，等待可继续指令';
+
+  @override
+  String predictedIntentConfidence(int percent) {
+    return '可信度 $percent%';
+  }
+
+  @override
+  String get predictedIntentWhy => '为什么这样预测';
+
+  @override
+  String get predictedIntentContinuing => '正在衔接…';
+
+  @override
+  String get predictedIntentContinue => '按这个继续';
+
+  @override
+  String get predictedIntentError => '继续对话时出现问题，请稍后重试';
+
+  @override
+  String get predictedActionResumePriority => '继续重点任务';
+
+  @override
+  String get predictedActionStudyPlan => '生成学习计划';
+
+  @override
+  String get predictedActionDiagnose => '问题诊断';
+
+  @override
+  String get predictedActionCreateTask => '落成任务';
+
+  @override
+  String get predictedActionInstantResult => '即时结果';
+
+  @override
+  String get predictedActionReviewProgress => '复盘进展';
+
+  @override
+  String get predictedActionPlanNext => '规划下一步';
+
+  @override
+  String get predictedActionReflection => '快速反思';
+
+  @override
+  String get predictedActionDefault => '预测意图';
+
+  @override
+  String get predictedWindowNow => '就是现在';
+
+  @override
+  String get predictedWindow30m => '未来 30 分钟';
+
+  @override
+  String get predictedWindow1h => '未来 1 小时';
+
+  @override
+  String get predictedWindow2h => '未来 2 小时';
+
+  @override
+  String get predictedWindow6h => '未来 6 小时';
+
+  @override
+  String get predictedWindowToday => '今天内';
+
+  @override
+  String get predictedSourceLongRange => '长期预测';
+
+  @override
+  String get predictedSourceRules => '规则兜底';
+
+  @override
+  String get predictedFreshnessJustNow => '刚刚更新';
+
+  @override
+  String predictedFreshnessMinutes(int count) {
+    return '$count 分钟前';
+  }
+
+  @override
+  String predictedFreshnessHours(int count) {
+    return '$count 小时前';
+  }
+
+  @override
+  String predictedFreshnessDays(int count) {
+    return '$count 天前';
+  }
+
+  @override
+  String get predictedCategoryPrefTitle => '同类请求里的近期偏好';
+
+  @override
+  String predictedCategoryPrefHint(String category, String tool) {
+    return '在$category里，近期结果更常把「$tool」推到前面。';
+  }
+
+  @override
+  String get predictedCategoryPrefCaveat =>
+      '仅基于同类请求里的近期结果，不代表 Sparkle 理解了你的完整工作流。';
+
+  @override
+  String get predictedCategoryPlan => '规划类请求';
+
+  @override
+  String get predictedCategoryTask => '任务类请求';
+
+  @override
+  String get predictedCategoryFocus => '专注支持类请求';
+
+  @override
+  String get predictedCategoryGrowth => '成长推进类请求';
+
+  @override
+  String get predictedCategoryQuery => '查询类请求';
+
+  @override
+  String get predictedCategoryKnowledge => '知识类请求';
+
+  @override
+  String get predictedCategoryReview => '复盘类请求';
+
+  @override
+  String get predictedCategoryResearch => '研究类请求';
+
+  @override
+  String get predictedCategoryMemory => '记忆整理类请求';
+
+  @override
+  String get predictedCategoryCognitive => '认知整理类请求';
+
+  @override
+  String get predictedCategoryDefault => '同类请求';
+
+  @override
+  String get predictedToolCreatePlan => '生成计划';
+
+  @override
+  String get predictedToolGenerateTasks => '展开计划步骤';
+
+  @override
+  String get predictedToolCreateTask => '落成任务';
+
+  @override
+  String get predictedToolListTasks => '查看任务列表';
+
+  @override
+  String get predictedToolUpdateTask => '更新任务';
+
+  @override
+  String get predictedToolQueryKnowledge => '查询知识';
+
+  @override
+  String get predictedToolExplainConcept => '解释概念';
+
+  @override
+  String get predictedToolReviewProgress => '复盘进度';
+
+  @override
+  String get predictedToolGenerateSummary => '生成总结';
+
+  @override
+  String get predictedToolSuggestSchedule => '建议排期';
+
+  @override
+  String get examSprintHighFreqCoverage => '高频考点覆盖率';
+
+  @override
+  String get examSprintMistakeRepair => '错题修复率';
+
+  @override
+  String get examSprintStudyStreak => '连续学习天数';
+
+  @override
+  String examSprintStreakDays(int days) {
+    return '$days 天';
+  }
+
+  @override
+  String get examSprintKeepRhythm => '保持节奏';
+
+  @override
+  String examSprintHighYieldWeak(String topics) {
+    return '高收益低掌握：$topics';
+  }
+
+  @override
+  String get examSprintNoTasksToday => '今天还没有排入冲刺任务。';
+
+  @override
+  String get examSprintExamDayReady => '今天考试 · 你已经准备好了 🎓';
+
+  @override
+  String get examSprintExamTips => '考场建议';
+
+  @override
+  String get examSprintRecordResult => '记录考试结果';
+
+  @override
+  String get examSprintDashboardTitle => '考试冲刺仪表盘';
+
+  @override
+  String get examSprintModeHighScore => '冲高模式';
+
+  @override
+  String get examSprintModeHold => '稳分模式';
+
+  @override
+  String get examSprintModePass => '保过模式';
+
+  @override
+  String get examSprintModeDefault => '冲刺模式';
+
+  @override
+  String get examSprintExamDay => '今天考试';
+
+  @override
+  String examSprintCountdown(int days) {
+    return '距考试还有 $days 天';
+  }
+
+  @override
+  String examSprintTodayTasks(int completed, int total) {
+    return '今天已完成 $completed/$total 项任务';
+  }
+
+  @override
+  String examSprintDaysLeft(int days) {
+    return '还有 $days 天';
+  }
+
+  @override
+  String examSprintTodayDone(int completed, int total) {
+    return '今日 $completed/$total 完成';
+  }
+
+  @override
+  String get examSprintTodaySprintTasks => '今日冲刺任务';
+
+  @override
+  String get examSprintHideLater => '收起后续天';
+
+  @override
+  String examSprintShowLater(int count) {
+    return '展开后续 $count 天';
+  }
+
+  @override
+  String examSprintDayIndex(int index) {
+    return '第 $index 天';
+  }
+
+  @override
+  String examSprintDateFormat(int month, int day) {
+    return '$month月$day日';
+  }
+
+  @override
+  String get examSprintNoSprintTasks => '今天还没有排入任务';
+
+  @override
+  String examSprintMinLabel(int minutes, String status) {
+    return '$minutes 分钟 · $status';
+  }
+
+  @override
+  String get examSprintStatusDone => '已完成';
+
+  @override
+  String get examSprintStatusInProgress => '进行中';
+
+  @override
+  String get examSprintStatusPending => '待开始';
+
+  @override
+  String get insightHubTitle => '学习洞察';
+
+  @override
+  String insightHubRecommendedSeeds(int count) {
+    return '现在有 $count 个推荐场景可以直接开始模拟。';
+  }
+
+  @override
+  String get insightHubFallbackSummary => '把推演、仿真和报告收进一条更轻量的学习动线。';
+
+  @override
+  String get insightHubSimulation => '学习仿真';
+
+  @override
+  String get insightHubTheater => '推演剧场';
+
+  @override
+  String get insightHubReport => '学习报告';
+
+  @override
+  String get insightHubEnterOverview => '进入洞察总览';
+
+  @override
+  String get insightHubCompactSimulation => '仿真';
+
+  @override
+  String get insightHubCompactTheater => '推演';
+
+  @override
+  String get insightHubCompactReport => '报告';
+
+  @override
+  String get insightHubRefreshWarning => '部分洞察数据尚未刷新，点击后会继续显示已有内容。';
+
+  @override
+  String insightHubSeedsToExplore(int count) {
+    return '$count 个推荐场景待探索';
+  }
+
+  @override
+  String get insightHubCompactFallback => '仿真、推演和报告现在收在同一张卡里';
+
+  @override
+  String get insightHubNoRecentTheater => '最近暂无推演';
+
+  @override
+  String get insightHubContinueLastTheater => '继续上次推演';
+
+  @override
+  String insightHubContinueTopic(String topic) {
+    return '继续 $topic';
+  }
+
+  @override
+  String get insightHubContinueLastSimulation => '继续上次仿真';
+
+  @override
+  String insightHubRecommendedSeedsCount(int count) {
+    return '$count 个推荐场景';
+  }
+
+  @override
+  String insightHubContinueSession(String topic) {
+    return '继续 $topic';
+  }
+
+  @override
+  String get insightHubStartSimulation => '开始一轮新模拟';
+
+  @override
+  String get insightHubNoRecentReport => '最近暂无报告';
+
+  @override
+  String insightHubMasteryPercent(int percent) {
+    return '掌握度 $percent%';
+  }
+
+  @override
+  String get insightHubRefreshFailed => '洞察内容暂时没有刷新成功，当前先显示已有内容。';
+
+  @override
+  String get insightHubRetry => '重试';
+
+  @override
+  String get memoryPanel => '记忆面板';
+
+  @override
+  String get memoryPanelAdjust => '调整';
+
+  @override
+  String get memoryPanelAiAutoMemories => 'AI 自动记忆';
+
+  @override
+  String get memoryPanelAiInferredDescription => 'AI 推断自聊天，默认仅作记忆展示，不参与下游决策。';
+
+  @override
+  String get memoryPanelClearFilter => '清空筛选';
+
+  @override
+  String get memoryPanelCommitmentDismissed => '已忽略该承诺';
+
+  @override
+  String memoryPanelConfidenceValue(String value) {
+    return '置信度 $value';
+  }
+
+  @override
+  String memoryPanelConflictFailed(String error) {
+    return '处理冲突失败: $error';
+  }
+
+  @override
+  String get memoryPanelConflictResolvedA => '已按候选 A 处理';
+
+  @override
+  String get memoryPanelConflictResolvedB => '已按候选 B 处理';
+
+  @override
+  String get memoryPanelConflictResolvedNone => '已撤销这组冲突候选';
+
+  @override
+  String memoryPanelCorrectionCount(int count) {
+    return '纠错 $count';
+  }
+
+  @override
+  String get memoryPanelDate => '日期';
+
+  @override
+  String memoryPanelDeviationsDetected(int count) {
+    return '检测到 $count 个偏离';
+  }
+
+  @override
+  String get memoryPanelDimCompletionRate => '完成率';
+
+  @override
+  String get memoryPanelDimEngagement => '投入度';
+
+  @override
+  String get memoryPanelDimMood => '情绪';
+
+  @override
+  String get memoryPanelDimPace => '节奏';
+
+  @override
+  String get memoryPanelDimPlanAdherence => '计划跟随';
+
+  @override
+  String memoryPanelDismissFailed(String error) {
+    return '忽略失败: $error';
+  }
+
+  @override
+  String get memoryPanelEmptyDescription =>
+      '先聊一聊你的目标、偏好或刚完成的学习动作，系统才会开始在这里整理长期记忆。';
+
+  @override
+  String get memoryPanelEmptyFilterDescription => '试试清空筛选条件，重新查看所有已整理的记忆。';
+
+  @override
+  String get memoryPanelEmptyFilterTitle => '暂无符合条件的记忆';
+
+  @override
+  String get memoryPanelEmptyTitle => '记忆面板还没有内容';
+
+  @override
+  String get memoryPanelEvidenceAll => '证据全部';
+
+  @override
+  String get memoryPanelEvidenceMissing => '缺失';
+
+  @override
+  String get memoryPanelEvidenceOk => 'OK';
+
+  @override
+  String get memoryPanelEvidenceRedacted => '已隐藏';
+
+  @override
+  String get memoryPanelForesightHint => '前瞻提示';
+
+  @override
+  String memoryPanelImportanceValue(String value) {
+    return '重要度 $value';
+  }
+
+  @override
+  String memoryPanelItemCount(int count) {
+    return '$count 条';
+  }
+
+  @override
+  String memoryPanelLoadFailed(String error) {
+    return '记忆面板加载失败: $error';
+  }
+
+  @override
+  String memoryPanelMarkFailed(String error) {
+    return '标记失败: $error';
+  }
+
+  @override
+  String get memoryPanelMarkedComplete => '已标记为完成';
+
+  @override
+  String get memoryPanelMetricsNone => '指标: -';
+
+  @override
+  String get memoryPanelNotUpdated => '未更新';
+
+  @override
+  String get memoryPanelRecentScenes => '最近场景';
+
+  @override
+  String get memoryPanelRevoke => '撤销';
+
+  @override
+  String memoryPanelRevokeFailed(String error) {
+    return '撤销失败: $error';
+  }
+
+  @override
+  String get memoryPanelRevokeThis => '撤销此条';
+
+  @override
+  String get memoryPanelRevokedAutoMemory => '已撤销 AI 自动记忆';
+
+  @override
+  String get memoryPanelRevoking => '撤销中';
+
+  @override
+  String memoryPanelSceneMemories(String time, int count) {
+    return '$time · $count 条记忆';
+  }
+
+  @override
+  String get memoryPanelUnavailable => '记忆面板不可用';
+
+  @override
+  String memoryPanelValidUntil(String policy) {
+    return '有效期 $policy';
+  }
+
+  @override
+  String get theaterComposerDeducing => '推演中';
+
+  @override
+  String theaterWhatIfCombinedResult(
+      String originalMastery,
+      String originalCompletion,
+      String predictedMastery,
+      String predictedCompletion) {
+    return '原始 $originalMastery% / $originalCompletion%  →  调整后 $predictedMastery% / $predictedCompletion%';
+  }
+
+  @override
+  String theaterAccuracyPredictedActual(String predictedCompletion,
+      String predictedMastery, String actualCompletion, String actualMastery) {
+    return '预测 $predictedCompletion% / $predictedMastery%， 实际 $actualCompletion% / $actualMastery%';
+  }
+
+  @override
+  String theaterPerDayUnit(String minutes) {
+    return '$minutes 分/天';
+  }
+
+  @override
+  String get simulationTitle => '学习场景模拟';
+
+  @override
+  String get simulationCurrentSimulation => '当前模拟';
+
+  @override
+  String get simulationBackToTheater => '回到剧场';
+
+  @override
+  String get simulationRunning => '模拟进行中...';
+
+  @override
+  String get simulationStartSimulation => '开始这场模拟';
+
+  @override
+  String get simulationAwaitingInput => '等待输入';
+
+  @override
+  String get simulationClearTopic => '清空主题';
+
+  @override
+  String get simulationRecommendedScenarios => '推荐场景';
+
+  @override
+  String get simulationGenerate => '生成';
+
+  @override
+  String get simulationRefresh => '刷新';
+
+  @override
+  String get simulationStartSimButton => '开始模拟';
+
+  @override
+  String get simulationGoToTheater => '去推演';
+
+  @override
+  String get simulationContinueSim => '继续模拟';
+
+  @override
+  String get simulationPauseSim => '暂停模拟';
+
+  @override
+  String get simulationCollapseInsight => '收起洞察';
+
+  @override
+  String get simulationViewInsight => '查看洞察';
+
+  @override
+  String get simulationCollapseSettings => '收起设置';
+
+  @override
+  String get simulationSimSettings => '模拟设置';
+
+  @override
+  String get simulationYourTurnTitle => '轮到你回应';
+
+  @override
+  String get simulationYourResponseArea => '你的回应区';
+
+  @override
+  String get simulationCollapse => '收起';
+
+  @override
+  String get simulationJoinDiscussion => '轮到你加入这场讨论';
+
+  @override
+  String get simulationOrInputJudgment => '或者输入你的判断';
+
+  @override
+  String get simulationSubmitting => '提交中...';
+
+  @override
+  String get simulationSubmitJudgment => '提交我的判断';
+
+  @override
+  String get simulationContinueInChat => '带回聊天继续';
+
+  @override
+  String get simulationAdjustSimulation => '调整这场模拟';
+
+  @override
+  String get simulationDiscussionRounds => '讨论轮数';
+
+  @override
+  String get simulationFacilitationStyleTitle => '展开方式';
+
+  @override
+  String get simulationParticipantsTitle => '参与角色';
+
+  @override
+  String get simulationRestoreDefault => '恢复推荐';
+
+  @override
+  String get simulationCustomHistoricalRole => '自定义历史人物';
+
+  @override
+  String get simulationAdd => '添加';
+
+  @override
+  String get simulationRestartSim => '重新开始这场模拟';
+
+  @override
+  String get simulationContinue => '继续';
+
+  @override
+  String get simulationPause => '暂停';
+
+  @override
+  String get simulationAwaitingStart => '等待开始';
+
+  @override
+  String get simulationGatheringParticipants => '正在召集参与者';
+
+  @override
+  String get simulationWaitingFirstRound => '等待首轮';
+
+  @override
+  String get simulationRolesPending => '角色待加入';
+
+  @override
+  String get simulationGeneratingInBackground => '后台仍在继续生成';
+
+  @override
+  String get simulationPausedForeground => '前台已暂停播放';
+
+  @override
+  String get simulationImmersiveDiscussion => '沉浸讨论流';
+
+  @override
+  String get simulationCurrentDiscussion => '当前讨论流';
+
+  @override
+  String get simulationWillAppearLive => '开始后会实时出现每一轮讨论。';
+
+  @override
+  String get simulationNoInsightYet => '暂未生成洞察总结。';
+
+  @override
+  String get simulationInsightSummaryTitle => '洞察总结';
+
+  @override
+  String get simulationGeneratingReport => '生成中...';
+
+  @override
+  String get simulationGenerateLearningReport => '生成学习报告';
+
+  @override
+  String get simulationContinueToTheater => '以此推演';
+
+  @override
+  String get simulationShareInsight => '分享洞察';
+
+  @override
+  String get simulationCoreArguments => '核心论点';
+
+  @override
+  String get simulationUnresolvedDisagreements => '未解决的分歧';
+
+  @override
+  String get simulationYourContribution => '你的贡献';
+
+  @override
+  String get simulationExposedKnowledgeGaps => '暴露的知识盲区';
+
+  @override
+  String get simulationSuggestedNextSteps => '建议下一步';
+
+  @override
+  String get simulationStructuredInsightGenerated => '已生成结构化洞察总结。';
+
+  @override
+  String get simulationEmptyGenerating => '模拟正在生成中...';
+
+  @override
+  String get simulationEmptyStartPrompt => '开始一次学习场景模拟，让角色逐轮讨论这个主题。';
+
+  @override
+  String get simulationCurrentScene => '当前场景';
+
+  @override
+  String get simulationCurrentGoal => '当前目标';
+
+  @override
+  String get simulationInteractionStyle => '互动方式';
+
+  @override
+  String get simulationRoleDiscussionUserJoin => '角色讨论 + 你来接话';
+
+  @override
+  String get simulationTopicHint => '输入一个知识点或主题';
+
+  @override
+  String get simulationTopicHintExample => '例如：特征值与特征向量';
+
+  @override
+  String get simulationStartSimulationTopicAction => '开始围绕这个问题模拟';
+
+  @override
+  String get simulationUserInputTopicHint => '输入你想要讨论的学习主题或问题';
+
+  @override
+  String get simulationUserInputTopicHelper => '完成更多学习任务后，系统将基于你的真实学习数据推荐讨论主题';
+
+  @override
+  String get simulationRecommendedEmptyHint => '还没有推荐种子，你可以先手动输入主题开始。';
+
+  @override
+  String get simulationRecommendedUserInputHint =>
+      '现在先从你最想讨论的具体问题开始。等积累更多真实学习记录后，系统会再给出基于数据的推荐主题。';
+
+  @override
+  String get simulationRecommendedPickHint => '先挑一个最顺手的起点，开始后推荐卡会自动收起，不打断正式讨论。';
+
+  @override
+  String get simulationScenarioAdjustHint => '调整场景后，讨论的角色关系与推进方式也会一起变化。';
+
+  @override
+  String get simulationFacilitationFitHint => '让讨论更贴合当前主题。';
+
+  @override
+  String get simulationDiscussionNote =>
+      '这里可以完整调整主题、场景、轮数、展开方式和参与角色，开始后讨论会按这套设置运行。';
+
+  @override
+  String get simulationParticipantHint =>
+      '你可以明确指定想邀请谁参与这场讨论。至少保留 1 位，最多 6 位角色。';
+
+  @override
+  String get simulationRunningStatusHint => '模拟进行中，新的轮次会实时出现在下方。';
+
+  @override
+  String get simulationScenarioEyebrow => '学习场景模拟';
+
+  @override
+  String get simulationScenarioTitle => '开始这场学习模拟';
+
+  @override
+  String get simulationScenarioSubtitle =>
+      '先选讨论场景，再输入一个你想推开的主题。开始后会自动收束成沉浸式讨论界面。';
+
+  @override
+  String get simulationRoleDiscussionValue => '角色讨论 + 你来接话';
+
+  @override
+  String get simulationJudgeExampleHint => '例如：我会先补几何直觉，再回来刷一道题验证';
+
+  @override
+  String get simulationInteractionExplain => '先给出你的判断，下一轮才会真正围绕你的想法继续展开。';
+
+  @override
+  String get simulationInteractionHint =>
+      '建议先在这里接住一轮，让角色回应你的判断；如果你想回到主对话，也可以把这一步带回聊天继续。';
+
+  @override
+  String get simulationContinuitySubtitle =>
+      '这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。';
+
+  @override
+  String simulationBridgeCurrentlyVerifyingFormat(String routeTitle) {
+    return '正在验证路径「$routeTitle」';
+  }
+
+  @override
+  String get simulationBridgeVerifyingRoute => '正在验证一条推演路径';
+
+  @override
+  String simulationBridgeVerificationDescWithTarget(String targetName) {
+    return '这轮模拟来自知识剧场，目标是 $targetName。你可以随时带着当前进度回到剧场继续采纳或校准。';
+  }
+
+  @override
+  String get simulationBridgeVerificationContext =>
+      '这轮模拟来自知识剧场，当前上下文会和原推演保持关联。';
+
+  @override
+  String simulationInteractionModeFormat(String mode) {
+    return '互动模式：$mode';
+  }
+
+  @override
+  String get simulationInteractionOpenQuestion => '开放追问';
+
+  @override
+  String get simulationInteractionViewpointChallenge => '观点挑战';
+
+  @override
+  String get simulationInteractionBinaryChoice => '二选一判断';
+
+  @override
+  String get simulationInteractionChoice => '选择判断';
+
+  @override
+  String simulationCurrentFocusFormat(String speaker) {
+    return '当前焦点：$speaker';
+  }
+
+  @override
+  String simulationTopicFormat(String topic) {
+    return '主题：$topic';
+  }
+
+  @override
+  String simulationTopicAndSpeakerFormat(String topic, String speaker) {
+    return '主题：$topic · 当前发言 $speaker';
+  }
+
+  @override
+  String simulationRoundN(int round) {
+    return '第 $round 轮';
+  }
+
+  @override
+  String simulationRoleCountFormat(int count) {
+    return '$count 角色';
+  }
+
+  @override
+  String simulationRunningRoundN(int round, int total) {
+    return '正在第 $round/$total 轮';
+  }
+
+  @override
+  String simulationRoundViewpoints(int count) {
+    return '$count 轮观点';
+  }
+
+  @override
+  String simulationRoleCountLong(int count) {
+    return '$count 位角色';
+  }
+
+  @override
+  String simulationRoundFormatLabel(int current, int max) {
+    return '$current / $max 轮';
+  }
+
+  @override
+  String simulationRoundSliderLabel(int count) {
+    return '$count 轮';
+  }
+
+  @override
+  String get simulationParticipantDefaultStatus => '当前将按系统默认角色运行。';
+
+  @override
+  String simulationParticipantCurrentStatus(String names) {
+    return '当前参与：$names';
+  }
+
+  @override
+  String simulationBulletParticipants(String names) {
+    return '参与者：$names';
+  }
+
+  @override
+  String simulationBulletRounds(int count) {
+    return '总轮次：$count 轮，适合沉淀为下一步推演或复盘报告。';
+  }
+
+  @override
+  String simulationBulletOpening(String message) {
+    return '开场重点：$message';
+  }
+
+  @override
+  String simulationRoundFormatShort(int current, int total) {
+    return '$current/$total 轮';
+  }
+
+  @override
+  String get simulationContinueInChatContext => '继续刚才的学习模拟。';
+
+  @override
+  String simulationContinueTopicLabel(String topic) {
+    return '主题：$topic';
+  }
+
+  @override
+  String simulationContinueScenarioLabel(String label) {
+    return '场景：$label';
+  }
+
+  @override
+  String simulationContinueCurrentQuestion(String question) {
+    return '当前问题：$question';
+  }
+
+  @override
+  String simulationContinueMyResponse(String reply) {
+    return '我的回应：$reply';
+  }
+
+  @override
+  String get simulationBalancedPush => '平衡推进';
+
+  @override
+  String get simulationDebateClash => '分歧碰撞';
+
+  @override
+  String get simulationGuidedBreakdown => '引导拆解';
+
+  @override
+  String get simulationPracticalApply => '应用落地';
+
+  @override
+  String get simulationReportReturnException => '学习报告返回格式异常';
+
+  @override
+  String simulationReportGenerationFailed(String error) {
+    return '生成学习报告失败：$error';
+  }
+
+  @override
+  String get simulationReportTitle => '这份报告已接收本次模拟中暴露的问题';
+
+  @override
+  String get simulationReportSummary => '你在模拟里暴露出的分歧和知识盲区，已经被带入这份正式报告。';
+
+  @override
+  String simulationShareCreated(String topic, String scenario, String insight) {
+    return '我刚在 Sparkle 跑了一场学习仿真：$topic\n场景：$scenario\n洞察：$insight';
+  }
+
+  @override
+  String simulationShareTitle(String topic) {
+    return '学习场景模拟 · $topic';
+  }
+
+  @override
+  String simulationShareRawText(String topic, String scenario, String insight) {
+    return '学习场景模拟\n主题：$topic\n场景：$scenario\n洞察：$insight';
+  }
+
+  @override
+  String get simulationCustomFigureHint => '例如：张居正 / 俾斯麦';
+
+  @override
+  String simulationTopicCurrentFocusFormat(String topic, String speaker) {
+    return '主题：$topic · 当前发言 $speaker';
+  }
+
+  @override
+  String simulationCurrentFocusLabel(String speaker) {
+    return '当前焦点：$speaker';
+  }
+
+  @override
+  String simulationImmersiveTopicAndFocus(String topic, String speaker) {
+    return '主题：$topic · 当前发言 $speaker';
+  }
 }

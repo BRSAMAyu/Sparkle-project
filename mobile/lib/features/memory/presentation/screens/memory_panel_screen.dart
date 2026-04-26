@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -115,7 +116,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         return;
       }
       setState(() {
-        _error = '记忆面板加载失败: $e';
+        _error = context.l10n.memoryPanelLoadFailed('$e');
         _loading = false;
       });
     }
@@ -131,7 +132,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             variant: ButtonVariant.ghost,
           ),
           title: Text(
-            '记忆面板',
+            context.l10n.memoryPanel,
             style: DS.titleLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
@@ -175,13 +176,13 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _error ?? '记忆面板不可用',
+                _error ?? context.l10n.memoryPanelUnavailable,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: '重试',
+                label: context.l10n.retry,
                 onPressed: _loadAll,
               ),
             ],
@@ -199,27 +200,27 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               _buildGuidedEmptyState(context)
             else ...[
               if (_foresightHint?.hintText?.isNotEmpty ?? false) ...[
-                const _SectionHeader(title: '前瞻提示'),
+                _SectionHeader(title: context.l10n.memoryPanelForesightHint),
                 const SizedBox(height: DS.sm),
                 _buildForesightHintSection(),
                 const SizedBox(height: DS.xl),
               ],
               if (_recentScenes.isNotEmpty) ...[
-                const _SectionHeader(title: '最近场景'),
+                _SectionHeader(title: context.l10n.memoryPanelRecentScenes),
                 const SizedBox(height: DS.sm),
                 _buildRecentScenesSection(),
                 const SizedBox(height: DS.xl),
               ],
-              const _SectionHeader(title: '偏好'),
+              _SectionHeader(title: context.l10n.memoryTypePreference),
               const SizedBox(height: DS.sm),
               ..._preferences.map(_buildPreferenceCard),
               const SizedBox(height: DS.xl),
-              const _SectionHeader(title: '目标'),
+              _SectionHeader(title: context.l10n.memoryTypeGoal),
               const SizedBox(height: DS.sm),
               ..._goals.map(_buildGoalCard),
               if (_autoMemoryEntries.isNotEmpty) ...[
                 const SizedBox(height: DS.xl),
-                const _SectionHeader(title: 'AI 自动记忆'),
+                _SectionHeader(title: context.l10n.memoryPanelAiAutoMemories),
                 const SizedBox(height: DS.sm),
                 ..._autoMemoryEntries.map((item) => _buildEpisodicCard(item)),
               ],
@@ -243,7 +244,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 ),
               ],
               const SizedBox(height: DS.xl),
-              const _SectionHeader(title: '经历'),
+              _SectionHeader(title: context.l10n.memoryTypeEpisodic),
               const SizedBox(height: DS.sm),
               ..._episodic
                   .where((item) => !_isInferredAutoMemory(item))
@@ -319,22 +320,22 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             runSpacing: DS.sm,
             children: [
               _buildFilterChip(
-                label: '全部',
+                label: context.l10n.taskFilterAll,
                 selected: _filterType == null,
                 onSelected: (_) => _setTypeFilter(null),
               ),
               _buildFilterChip(
-                label: '偏好',
+                label: context.l10n.memoryTypePreference,
                 selected: _filterType == MemoryEntryType.preference,
                 onSelected: (_) => _setTypeFilter(MemoryEntryType.preference),
               ),
               _buildFilterChip(
-                label: '目标',
+                label: context.l10n.memoryTypeGoal,
                 selected: _filterType == MemoryEntryType.goal,
                 onSelected: (_) => _setTypeFilter(MemoryEntryType.goal),
               ),
               _buildFilterChip(
-                label: '经历',
+                label: context.l10n.memoryTypeEpisodic,
                 selected: _filterType == MemoryEntryType.episodic,
                 onSelected: (_) => _setTypeFilter(MemoryEntryType.episodic),
               ),
@@ -346,23 +347,23 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             runSpacing: DS.sm,
             children: [
               _buildFilterChip(
-                label: '证据全部',
+                label: context.l10n.memoryPanelEvidenceAll,
                 selected: _filterEvidence == null,
                 onSelected: (_) => _setEvidenceFilter(null),
               ),
               _buildFilterChip(
-                label: 'OK',
+                label: context.l10n.memoryPanelEvidenceOk,
                 selected: _filterEvidence == MemoryEvidenceStatus.ok,
                 onSelected: (_) => _setEvidenceFilter(MemoryEvidenceStatus.ok),
               ),
               _buildFilterChip(
-                label: '缺失',
+                label: context.l10n.memoryPanelEvidenceMissing,
                 selected: _filterEvidence == MemoryEvidenceStatus.missing,
                 onSelected: (_) =>
                     _setEvidenceFilter(MemoryEvidenceStatus.missing),
               ),
               _buildFilterChip(
-                label: '已隐藏',
+                label: context.l10n.memoryPanelEvidenceRedacted,
                 selected: _filterEvidence == MemoryEvidenceStatus.redacted,
                 onSelected: (_) =>
                     _setEvidenceFilter(MemoryEvidenceStatus.redacted),
@@ -380,29 +381,29 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                   }
                   setState(() => _sort = value);
                 },
-                items: const [
+                items: [
                   DropdownMenuItem(
                     value: MemorySort.newest,
-                    child: Text('最新'),
+                    child: Text(context.l10n.memorySortNewest),
                   ),
                   DropdownMenuItem(
                     value: MemorySort.oldest,
-                    child: Text('最旧'),
+                    child: Text(context.l10n.memorySortOldest),
                   ),
                   DropdownMenuItem(
                     value: MemorySort.importance,
-                    child: Text('重要度'),
+                    child: Text(context.l10n.memorySortImportance),
                   ),
                   DropdownMenuItem(
                     value: MemorySort.confidence,
-                    child: Text('置信度'),
+                    child: Text(context.l10n.memoryConfidence),
                   ),
                 ],
               ),
               const Spacer(),
               SparkleButton.ghost(
                 label: _dateRange == null
-                    ? '日期'
+                    ? context.l10n.memoryPanelDate
                     : '${_dateRange!.start.month}/${_dateRange!.start.day}'
                         ' - ${_dateRange!.end.month}/${_dateRange!.end.day}',
                 onPressed: _pickDateRange,
@@ -439,9 +440,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         padding: const EdgeInsets.symmetric(vertical: DS.xl),
         child: EmptyState(
           type: EmptyStateType.noResults,
-          title: '暂无符合条件的记忆',
-          description: '试试清空筛选条件，重新查看所有已整理的记忆。',
-          actionText: '清空筛选',
+          title: context.l10n.memoryPanelEmptyFilterTitle,
+          description: context.l10n.memoryPanelEmptyFilterDescription,
+          actionText: context.l10n.memoryPanelClearFilter,
           onAction: _clearFilters,
         ),
       );
@@ -450,9 +451,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         padding: const EdgeInsets.symmetric(vertical: DS.xl),
         child: EmptyState(
           icon: Icons.psychology_alt_outlined,
-          title: '记忆面板还没有内容',
-          description: '先聊一聊你的目标、偏好或刚完成的学习动作，系统才会开始在这里整理长期记忆。',
-          actionText: '去开始对话',
+          title: context.l10n.memoryPanelEmptyTitle,
+          description: context.l10n.memoryPanelEmptyDescription,
+          actionText: context.l10n.emptyStateStartChatAction,
           onAction: () => context.go('/chat'),
         ),
       );
@@ -463,7 +464,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       return const SizedBox.shrink();
     }
     final subtitleParts = [
-      if (item.deviationCount > 0) '检测到 ${item.deviationCount} 个偏离',
+      if (item.deviationCount > 0) context.l10n.memoryPanelDeviationsDetected(item.deviationCount),
       if (item.generatedAt != null) _formatUpdated(item.generatedAt),
     ];
     return Card(
@@ -478,7 +479,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 const Icon(Icons.visibility_outlined),
                 const SizedBox(width: DS.sm),
                 Text(
-                  '前瞻提示',
+                  context.l10n.memoryPanelForesightHint,
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
@@ -531,7 +532,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               Row(
                 children: [
                   Text(
-                    '最近场景',
+                    context.l10n.memoryPanelRecentScenes,
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
@@ -539,7 +540,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                   ),
                   const Spacer(),
                   Text(
-                    '${_recentScenes.length} 条',
+                    context.l10n.memoryPanelItemCount(_recentScenes.length),
                     style: TextStyle(color: DS.textSecondary),
                   ),
                 ],
@@ -575,7 +576,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${_formatSceneTime(item.timeStart, item.timeEnd)} · ${item.memberCount} 条记忆',
+                        context.l10n.memoryPanelSceneMemories(_formatSceneTime(item.timeStart, item.timeEnd), item.memberCount),
                         style: TextStyle(color: DS.textSecondary),
                       ),
                     ],
@@ -642,7 +643,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     final showUndo = episodic != null && _isInferredAutoMemory(episodic);
     final subtitle = [
       _entryTypeLabel(entry.type),
-      if (episodic != null && _isInferredAutoMemory(episodic)) 'AI 自动记忆',
+      if (episodic != null && _isInferredAutoMemory(episodic)) context.l10n.memoryPanelAiAutoMemories,
       _formatUpdated(entry.updatedAt),
     ].where((value) => value.isNotEmpty).join(' · ');
     return Card(
@@ -667,19 +668,19 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               MemoryEvidenceBadge(status: entry.evidenceStatus),
               if (entry.correctionCount > 0) ...[
                 const SizedBox(width: 6),
-                _CorrectionBadge(count: entry.correctionCount),
+                _CorrectionBadge(label: context.l10n.memoryPanelCorrectionCount(entry.correctionCount)),
               ],
               if (showAdjust) ...[
                 const SizedBox(width: 6),
                 SparkleButton.ghost(
                   onPressed: () => _openPersonaAdjust(preference!),
-                  label: '调整',
+                  label: context.l10n.memoryPanelAdjust,
                 ),
               ],
               if (showUndo) ...[
                 const SizedBox(width: 6),
                 SparkleButton(
-                  label: _revokingIds.contains(entry.id) ? '撤销中' : '撤销',
+                  label: _revokingIds.contains(entry.id) ? context.l10n.memoryPanelRevoking : context.l10n.memoryPanelRevoke,
                   onPressed: _revokingIds.contains(entry.id)
                       ? () {}
                       : () => _revokeAutoMemory(episodic!),
@@ -726,7 +727,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
 
   String _formatUpdated(DateTime? value) {
     if (value == null) {
-      return '未更新';
+      return context.l10n.memoryPanelNotUpdated;
     }
     return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
   }
@@ -742,24 +743,24 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   String _labelForForesightDim(String dim) {
     switch (dim) {
       case 'study_pace':
-        return '节奏';
+        return context.l10n.memoryPanelDimPace;
       case 'completion_rate':
-        return '完成率';
+        return context.l10n.memoryPanelDimCompletionRate;
       case 'engagement_level':
-        return '投入度';
+        return context.l10n.memoryPanelDimEngagement;
       case 'mood_valence':
-        return '情绪';
+        return context.l10n.memoryPanelDimMood;
       case 'plan_adherence':
-        return '计划跟随';
+        return context.l10n.memoryPanelDimPlanAdherence;
       default:
         return dim;
     }
   }
 
   String _entryTypeLabel(MemoryEntryType type) => switch (type) {
-        MemoryEntryType.preference => '偏好',
-        MemoryEntryType.goal => '目标',
-        MemoryEntryType.episodic => '经历',
+        MemoryEntryType.preference => context.l10n.memoryTypePreference,
+        MemoryEntryType.goal => context.l10n.memoryTypeGoal,
+        MemoryEntryType.episodic => context.l10n.memoryTypeEpisodic,
       };
 
   List<EpisodicMemoryItem> get _autoMemoryEntries => _episodic
@@ -771,12 +772,12 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     final confidence = entry.confidence;
     final parts = <String>[];
     if (importance != null) {
-      parts.add('重要度 ${importance.toStringAsFixed(2)}');
+      parts.add(context.l10n.memoryPanelImportanceValue(importance.toStringAsFixed(2)));
     }
     if (confidence != null) {
-      parts.add('置信度 ${confidence.toStringAsFixed(2)}');
+      parts.add(context.l10n.memoryPanelConfidenceValue(confidence.toStringAsFixed(2)));
     }
-    return parts.isEmpty ? '指标: -' : parts.join(' · ');
+    return parts.isEmpty ? context.l10n.memoryPanelMetricsNone : parts.join(' · ');
   }
 
   void _setTypeFilter(MemoryEntryType? type) {
@@ -938,7 +939,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
 
   String _formatEpisodicSubtitle(EpisodicMemoryItem item) {
     final parts = <String>[
-      if (_isInferredAutoMemory(item)) item.declarationLabel ?? 'AI 自动记忆',
+      if (_isInferredAutoMemory(item)) item.declarationLabel ?? context.l10n.memoryPanelAiAutoMemories,
       if ((item.subjectType ?? '').isNotEmpty) item.subjectType!,
       _formatUpdated(item.occurredAt),
     ];
@@ -964,7 +965,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           alignment: Alignment.centerLeft,
           child: SparkleButton.ghost(
             onPressed: () => _openPersonaAdjust(item),
-            label: '调整',
+            label: context.l10n.memoryPanelAdjust,
           ),
         ),
       );
@@ -984,7 +985,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     }
     final parts = <Widget>[
       Text(
-        'AI 推断自聊天，默认仅作记忆展示，不参与下游决策。',
+        context.l10n.memoryPanelAiInferredDescription,
         style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
       ),
     ];
@@ -993,7 +994,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         Padding(
           padding: const EdgeInsets.only(top: DS.xs),
           child: Text(
-            '有效期 ${item.decayPolicy}',
+            context.l10n.memoryPanelValidUntil(item.decayPolicy!),
             style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
           ),
         ),
@@ -1007,7 +1008,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           runSpacing: DS.sm,
           children: [
             SparkleButton(
-              label: _revokingIds.contains(item.id) ? '撤销中' : '撤销此条',
+              label: _revokingIds.contains(item.id) ? context.l10n.memoryPanelRevoking : context.l10n.memoryPanelRevokeThis,
               onPressed: _revokingIds.contains(item.id)
                   ? () {}
                   : () => _revokeAutoMemory(item),
@@ -1021,7 +1022,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                   refs: item.evidenceRefs,
                   evidenceMissing: item.evidenceMissing,
                 ),
-                label: '查看依据',
+                label: context.l10n.memoryViewEvidence,
               ),
           ],
         ),
@@ -1054,7 +1055,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         _episodic = _episodic.where((entry) => entry.id != item.id).toList();
         _revokingIds.remove(item.id);
       });
-      AppFeedback.success(context, '已撤销 AI 自动记忆');
+      AppFeedback.success(context, context.l10n.memoryPanelRevokedAutoMemory);
     } catch (e) {
       if (!mounted) {
         return;
@@ -1062,7 +1063,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       setState(() {
         _revokingIds.remove(item.id);
       });
-      AppFeedback.error(context, '撤销失败: $e');
+      AppFeedback.error(context, context.l10n.memoryPanelRevokeFailed('$e'));
     }
   }
 
@@ -1079,13 +1080,13 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             _pendingCommitments.where((entry) => entry.id != item.id).toList();
         _processingCommitmentIds.remove(item.id);
       });
-      AppFeedback.success(context, '已标记为完成');
+      AppFeedback.success(context, context.l10n.memoryPanelMarkedComplete);
     } catch (e) {
       if (!mounted) {
         return;
       }
       setState(() => _processingCommitmentIds.remove(item.id));
-      AppFeedback.error(context, '标记失败: $e');
+      AppFeedback.error(context, context.l10n.memoryPanelMarkFailed('$e'));
     }
   }
 
@@ -1106,29 +1107,29 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             _pendingCommitments.where((entry) => entry.id != item.id).toList();
         _processingCommitmentIds.remove(item.id);
       });
-      AppFeedback.success(context, '已忽略该承诺');
+      AppFeedback.success(context, context.l10n.memoryPanelCommitmentDismissed);
     } catch (e) {
       if (!mounted) {
         return;
       }
       setState(() => _processingCommitmentIds.remove(item.id));
-      AppFeedback.error(context, '忽略失败: $e');
+      AppFeedback.error(context, context.l10n.memoryPanelDismissFailed('$e'));
     }
   }
 
   Future<void> _selectConflictLeft(UnresolvedConflictItem item) async {
     await _arbitrateConflict(item,
-        selection: 'left', successMessage: '已按候选 A 处理');
+        selection: 'left', successMessage: context.l10n.memoryPanelConflictResolvedA);
   }
 
   Future<void> _selectConflictRight(UnresolvedConflictItem item) async {
     await _arbitrateConflict(item,
-        selection: 'right', successMessage: '已按候选 B 处理');
+        selection: 'right', successMessage: context.l10n.memoryPanelConflictResolvedB);
   }
 
   Future<void> _selectConflictNone(UnresolvedConflictItem item) async {
     await _arbitrateConflict(item,
-        selection: 'none', successMessage: '已撤销这组冲突候选');
+        selection: 'none', successMessage: context.l10n.memoryPanelConflictResolvedNone);
   }
 
   Future<void> _arbitrateConflict(
@@ -1157,7 +1158,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         return;
       }
       setState(() => _processingConflictIds.remove(item.id));
-      AppFeedback.error(context, '处理冲突失败: $e');
+      AppFeedback.error(context, context.l10n.memoryPanelConflictFailed('$e'));
     }
   }
 
@@ -1236,7 +1237,7 @@ class _MemoryCard extends StatelessWidget {
                         badge,
                         if (correctionCount > 0) ...[
                           const SizedBox(width: 6),
-                          _CorrectionBadge(count: correctionCount),
+                          _CorrectionBadge(label: context.l10n.memoryPanelCorrectionCount(correctionCount)),
                         ],
                       ],
                     ),
@@ -1254,13 +1255,13 @@ class _MemoryCard extends StatelessWidget {
 }
 
 class _CorrectionBadge extends StatelessWidget {
-  const _CorrectionBadge({required this.count});
+  const _CorrectionBadge({required this.label});
 
-  final int count;
+  final String label;
 
   @override
   Widget build(BuildContext context) => Chip(
-        label: Text('纠错 $count', style: TextStyle(color: DS.textPrimary)),
+        label: Text(label, style: TextStyle(color: DS.textPrimary)),
         backgroundColor: DS.semanticWarning.withValues(alpha: 0.12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),

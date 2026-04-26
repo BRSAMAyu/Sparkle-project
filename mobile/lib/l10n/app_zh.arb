@@ -4792,5 +4792,745 @@
   "planCreateReviewCreateDescription": "创建后会生成一张更完整的计划卡，并同步创建计划任务。",
   "planCreateFinalDescription": "最终写入的计划描述",
   "planCreateMinutes": "{value} 分钟",
-  "planCreateTaskSubtitle": "{minutes} 分钟 · 难度 {difficulty}"
+  "planCreateTaskSubtitle": "{minutes} 分钟 · 难度 {difficulty}",
+  "predictedIntentTitle": "系统预测",
+  "predictedIntentCollapsedTitle": "系统预测已收起",
+  "predictedIntentCollapsedExpand": "需要时再展开查看建议",
+  "predictedIntentCollapsedUpdated": "上次更新于",
+  "predictedIntentSummary": "基于画像、最近 24 小时行为与任务节奏",
+  "predictedIntentSuggestedCont": "建议接续",
+  "predictedIntentWaiting": "预测结果已生成，等待可继续指令",
+  "predictedIntentConfidence": "可信度 {percent}%",
+  "@predictedIntentConfidence": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "predictedIntentWhy": "为什么这样预测",
+  "predictedIntentContinuing": "正在衔接…",
+  "predictedIntentContinue": "按这个继续",
+  "predictedIntentError": "继续对话时出现问题，请稍后重试",
+  "predictedActionResumePriority": "继续重点任务",
+  "predictedActionStudyPlan": "生成学习计划",
+  "predictedActionDiagnose": "问题诊断",
+  "predictedActionCreateTask": "落成任务",
+  "predictedActionInstantResult": "即时结果",
+  "predictedActionReviewProgress": "复盘进展",
+  "predictedActionPlanNext": "规划下一步",
+  "predictedActionReflection": "快速反思",
+  "predictedActionDefault": "预测意图",
+  "predictedWindowNow": "就是现在",
+  "predictedWindow30m": "未来 30 分钟",
+  "predictedWindow1h": "未来 1 小时",
+  "predictedWindow2h": "未来 2 小时",
+  "predictedWindow6h": "未来 6 小时",
+  "predictedWindowToday": "今天内",
+  "predictedSourceLongRange": "长期预测",
+  "predictedSourceRules": "规则兜底",
+  "predictedFreshnessJustNow": "刚刚更新",
+  "predictedFreshnessMinutes": "{count} 分钟前",
+  "@predictedFreshnessMinutes": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "predictedFreshnessHours": "{count} 小时前",
+  "@predictedFreshnessHours": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "predictedFreshnessDays": "{count} 天前",
+  "@predictedFreshnessDays": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "predictedCategoryPrefTitle": "同类请求里的近期偏好",
+  "predictedCategoryPrefHint": "在{category}里，近期结果更常把「{tool}」推到前面。",
+  "@predictedCategoryPrefHint": {
+    "placeholders": {
+      "category": { "type": "String" },
+      "tool": { "type": "String" }
+    }
+  },
+  "predictedCategoryPrefCaveat": "仅基于同类请求里的近期结果，不代表 Sparkle 理解了你的完整工作流。",
+  "predictedCategoryPlan": "规划类请求",
+  "predictedCategoryTask": "任务类请求",
+  "predictedCategoryFocus": "专注支持类请求",
+  "predictedCategoryGrowth": "成长推进类请求",
+  "predictedCategoryQuery": "查询类请求",
+  "predictedCategoryKnowledge": "知识类请求",
+  "predictedCategoryReview": "复盘类请求",
+  "predictedCategoryResearch": "研究类请求",
+  "predictedCategoryMemory": "记忆整理类请求",
+  "predictedCategoryCognitive": "认知整理类请求",
+  "predictedCategoryDefault": "同类请求",
+  "predictedToolCreatePlan": "生成计划",
+  "predictedToolGenerateTasks": "展开计划步骤",
+  "predictedToolCreateTask": "落成任务",
+  "predictedToolListTasks": "查看任务列表",
+  "predictedToolUpdateTask": "更新任务",
+  "predictedToolQueryKnowledge": "查询知识",
+  "predictedToolExplainConcept": "解释概念",
+  "predictedToolReviewProgress": "复盘进度",
+  "predictedToolGenerateSummary": "生成总结",
+  "predictedToolSuggestSchedule": "建议排期",
+  "examSprintHighFreqCoverage": "高频考点覆盖率",
+  "examSprintMistakeRepair": "错题修复率",
+  "examSprintStudyStreak": "连续学习天数",
+  "examSprintStreakDays": "{days} 天",
+  "@examSprintStreakDays": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "examSprintKeepRhythm": "保持节奏",
+  "examSprintHighYieldWeak": "高收益低掌握：{topics}",
+  "@examSprintHighYieldWeak": {
+    "placeholders": {
+      "topics": { "type": "String" }
+    }
+  },
+  "examSprintNoTasksToday": "今天还没有排入冲刺任务。",
+  "examSprintExamDayReady": "今天考试 · 你已经准备好了 🎓",
+  "examSprintExamTips": "考场建议",
+  "examSprintRecordResult": "记录考试结果",
+  "examSprintDashboardTitle": "考试冲刺仪表盘",
+  "examSprintModeHighScore": "冲高模式",
+  "examSprintModeHold": "稳分模式",
+  "examSprintModePass": "保过模式",
+  "examSprintModeDefault": "冲刺模式",
+  "examSprintExamDay": "今天考试",
+  "examSprintCountdown": "距考试还有 {days} 天",
+  "@examSprintCountdown": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "examSprintTodayTasks": "今天已完成 {completed}/{total} 项任务",
+  "@examSprintTodayTasks": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "examSprintDaysLeft": "还有 {days} 天",
+  "@examSprintDaysLeft": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "examSprintTodayDone": "今日 {completed}/{total} 完成",
+  "@examSprintTodayDone": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "examSprintTodaySprintTasks": "今日冲刺任务",
+  "examSprintHideLater": "收起后续天",
+  "examSprintShowLater": "展开后续 {count} 天",
+  "@examSprintShowLater": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "examSprintDayIndex": "第 {index} 天",
+  "@examSprintDayIndex": {
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "examSprintDateFormat": "{month}月{day}日",
+  "@examSprintDateFormat": {
+    "placeholders": {
+      "month": { "type": "int" },
+      "day": { "type": "int" }
+    }
+  },
+  "examSprintNoSprintTasks": "今天还没有排入任务",
+  "examSprintMinLabel": "{minutes} 分钟 · {status}",
+  "@examSprintMinLabel": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "status": { "type": "String" }
+    }
+  },
+  "examSprintStatusDone": "已完成",
+  "examSprintStatusInProgress": "进行中",
+  "examSprintStatusPending": "待开始",
+  "insightHubTitle": "学习洞察",
+  "insightHubRecommendedSeeds": "现在有 {count} 个推荐场景可以直接开始模拟。",
+  "@insightHubRecommendedSeeds": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "insightHubFallbackSummary": "把推演、仿真和报告收进一条更轻量的学习动线。",
+  "insightHubSimulation": "学习仿真",
+  "insightHubTheater": "推演剧场",
+  "insightHubReport": "学习报告",
+  "insightHubEnterOverview": "进入洞察总览",
+  "insightHubCompactSimulation": "仿真",
+  "insightHubCompactTheater": "推演",
+  "insightHubCompactReport": "报告",
+  "insightHubRefreshWarning": "部分洞察数据尚未刷新，点击后会继续显示已有内容。",
+  "insightHubSeedsToExplore": "{count} 个推荐场景待探索",
+  "@insightHubSeedsToExplore": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "insightHubCompactFallback": "仿真、推演和报告现在收在同一张卡里",
+  "insightHubNoRecentTheater": "最近暂无推演",
+  "insightHubContinueLastTheater": "继续上次推演",
+  "insightHubContinueTopic": "继续 {topic}",
+  "@insightHubContinueTopic": {
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "insightHubContinueLastSimulation": "继续上次仿真",
+  "insightHubRecommendedSeedsCount": "{count} 个推荐场景",
+  "@insightHubRecommendedSeedsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "insightHubContinueSession": "继续 {topic}",
+  "@insightHubContinueSession": {
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "insightHubStartSimulation": "开始一轮新模拟",
+  "insightHubNoRecentReport": "最近暂无报告",
+  "insightHubMasteryPercent": "掌握度 {percent}%",
+  "@insightHubMasteryPercent": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "insightHubRefreshFailed": "洞察内容暂时没有刷新成功，当前先显示已有内容。",
+  "insightHubRetry": "重试",
+  "memoryPanel": "记忆面板",
+  "memoryPanelAdjust": "调整",
+  "memoryPanelAiAutoMemories": "AI 自动记忆",
+  "memoryPanelAiInferredDescription": "AI 推断自聊天，默认仅作记忆展示，不参与下游决策。",
+  "memoryPanelClearFilter": "清空筛选",
+  "memoryPanelCommitmentDismissed": "已忽略该承诺",
+  "memoryPanelConfidenceValue": "置信度 {value}",
+  "@memoryPanelConfidenceValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelConflictFailed": "处理冲突失败: {error}",
+  "@memoryPanelConflictFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelConflictResolvedA": "已按候选 A 处理",
+  "memoryPanelConflictResolvedB": "已按候选 B 处理",
+  "memoryPanelConflictResolvedNone": "已撤销这组冲突候选",
+  "memoryPanelCorrectionCount": "纠错 {count}",
+  "@memoryPanelCorrectionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryPanelDate": "日期",
+  "memoryPanelDeviationsDetected": "检测到 {count} 个偏离",
+  "@memoryPanelDeviationsDetected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryPanelDimCompletionRate": "完成率",
+  "memoryPanelDimEngagement": "投入度",
+  "memoryPanelDimMood": "情绪",
+  "memoryPanelDimPace": "节奏",
+  "memoryPanelDimPlanAdherence": "计划跟随",
+  "memoryPanelDismissFailed": "忽略失败: {error}",
+  "@memoryPanelDismissFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelEmptyDescription": "先聊一聊你的目标、偏好或刚完成的学习动作，系统才会开始在这里整理长期记忆。",
+  "memoryPanelEmptyFilterDescription": "试试清空筛选条件，重新查看所有已整理的记忆。",
+  "memoryPanelEmptyFilterTitle": "暂无符合条件的记忆",
+  "memoryPanelEmptyTitle": "记忆面板还没有内容",
+  "memoryPanelEvidenceAll": "证据全部",
+  "memoryPanelEvidenceMissing": "缺失",
+  "memoryPanelEvidenceOk": "OK",
+  "memoryPanelEvidenceRedacted": "已隐藏",
+  "memoryPanelForesightHint": "前瞻提示",
+  "memoryPanelImportanceValue": "重要度 {value}",
+  "@memoryPanelImportanceValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelItemCount": "{count} 条",
+  "@memoryPanelItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryPanelLoadFailed": "记忆面板加载失败: {error}",
+  "@memoryPanelLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelMarkFailed": "标记失败: {error}",
+  "@memoryPanelMarkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelMarkedComplete": "已标记为完成",
+  "memoryPanelMetricsNone": "指标: -",
+  "memoryPanelNotUpdated": "未更新",
+  "memoryPanelRecentScenes": "最近场景",
+  "memoryPanelRevoke": "撤销",
+  "memoryPanelRevokeFailed": "撤销失败: {error}",
+  "@memoryPanelRevokeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryPanelRevokeThis": "撤销此条",
+  "memoryPanelRevokedAutoMemory": "已撤销 AI 自动记忆",
+  "memoryPanelRevoking": "撤销中",
+  "memoryPanelSceneMemories": "{time} · {count} 条记忆",
+  "@memoryPanelSceneMemories": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryPanelUnavailable": "记忆面板不可用",
+  "memoryPanelValidUntil": "有效期 {policy}",
+  "@memoryPanelValidUntil": {
+    "placeholders": {
+      "policy": {
+        "type": "String"
+      }
+    }
+  },
+  "theaterComposerDeducing": "推演中",
+  "theaterWhatIfCombinedResult": "原始 {originalMastery}% / {originalCompletion}%  →  调整后 {predictedMastery}% / {predictedCompletion}%",
+  "@theaterWhatIfCombinedResult": {
+    "placeholders": {
+      "originalMastery": { "type": "String" },
+      "originalCompletion": { "type": "String" },
+      "predictedMastery": { "type": "String" },
+      "predictedCompletion": { "type": "String" }
+    }
+  },
+  "theaterAccuracyPredictedActual": "预测 {predictedCompletion}% / {predictedMastery}%， 实际 {actualCompletion}% / {actualMastery}%",
+  "@theaterAccuracyPredictedActual": {
+    "placeholders": {
+      "predictedCompletion": { "type": "String" },
+      "predictedMastery": { "type": "String" },
+      "actualCompletion": { "type": "String" },
+      "actualMastery": { "type": "String" }
+    }
+  },
+  "theaterPerDayUnit": "{minutes} 分/天",
+  "@theaterPerDayUnit": {
+    "placeholders": {
+      "minutes": { "type": "String" }
+    }
+  },
+  "simulationTitle": "学习场景模拟",
+  "simulationCurrentSimulation": "当前模拟",
+  "simulationBackToTheater": "回到剧场",
+  "simulationRunning": "模拟进行中...",
+  "simulationStartSimulation": "开始这场模拟",
+  "simulationAwaitingInput": "等待输入",
+  "simulationClearTopic": "清空主题",
+  "simulationRecommendedScenarios": "推荐场景",
+  "simulationGenerate": "生成",
+  "simulationRefresh": "刷新",
+  "simulationStartSimButton": "开始模拟",
+  "simulationGoToTheater": "去推演",
+  "simulationContinueSim": "继续模拟",
+  "simulationPauseSim": "暂停模拟",
+  "simulationCollapseInsight": "收起洞察",
+  "simulationViewInsight": "查看洞察",
+  "simulationCollapseSettings": "收起设置",
+  "simulationSimSettings": "模拟设置",
+  "simulationYourTurnTitle": "轮到你回应",
+  "simulationYourResponseArea": "你的回应区",
+  "simulationCollapse": "收起",
+  "simulationJoinDiscussion": "轮到你加入这场讨论",
+  "simulationOrInputJudgment": "或者输入你的判断",
+  "simulationSubmitting": "提交中...",
+  "simulationSubmitJudgment": "提交我的判断",
+  "simulationContinueInChat": "带回聊天继续",
+  "simulationAdjustSimulation": "调整这场模拟",
+  "simulationDiscussionRounds": "讨论轮数",
+  "simulationFacilitationStyleTitle": "展开方式",
+  "simulationParticipantsTitle": "参与角色",
+  "simulationRestoreDefault": "恢复推荐",
+  "simulationCustomHistoricalRole": "自定义历史人物",
+  "simulationAdd": "添加",
+  "simulationRestartSim": "重新开始这场模拟",
+  "simulationContinue": "继续",
+  "simulationPause": "暂停",
+  "simulationAwaitingStart": "等待开始",
+  "simulationGatheringParticipants": "正在召集参与者",
+  "simulationWaitingFirstRound": "等待首轮",
+  "simulationRolesPending": "角色待加入",
+  "simulationGeneratingInBackground": "后台仍在继续生成",
+  "simulationPausedForeground": "前台已暂停播放",
+  "simulationImmersiveDiscussion": "沉浸讨论流",
+  "simulationCurrentDiscussion": "当前讨论流",
+  "simulationWillAppearLive": "开始后会实时出现每一轮讨论。",
+  "simulationNoInsightYet": "暂未生成洞察总结。",
+  "simulationInsightSummaryTitle": "洞察总结",
+  "simulationGeneratingReport": "生成中...",
+  "simulationGenerateLearningReport": "生成学习报告",
+  "simulationContinueToTheater": "以此推演",
+  "simulationShareInsight": "分享洞察",
+  "simulationCoreArguments": "核心论点",
+  "simulationUnresolvedDisagreements": "未解决的分歧",
+  "simulationYourContribution": "你的贡献",
+  "simulationExposedKnowledgeGaps": "暴露的知识盲区",
+  "simulationSuggestedNextSteps": "建议下一步",
+  "simulationStructuredInsightGenerated": "已生成结构化洞察总结。",
+  "simulationEmptyGenerating": "模拟正在生成中...",
+  "simulationEmptyStartPrompt": "开始一次学习场景模拟，让角色逐轮讨论这个主题。",
+  "simulationCurrentScene": "当前场景",
+  "simulationCurrentGoal": "当前目标",
+  "simulationInteractionStyle": "互动方式",
+  "simulationRoleDiscussionUserJoin": "角色讨论 + 你来接话",
+  "simulationTopicHint": "输入一个知识点或主题",
+  "simulationTopicHintExample": "例如：特征值与特征向量",
+  "simulationStartSimulationTopicAction": "开始围绕这个问题模拟",
+  "simulationUserInputTopicHint": "输入你想要讨论的学习主题或问题",
+  "simulationUserInputTopicHelper": "完成更多学习任务后，系统将基于你的真实学习数据推荐讨论主题",
+  "simulationRecommendedEmptyHint": "还没有推荐种子，你可以先手动输入主题开始。",
+  "simulationRecommendedUserInputHint": "现在先从你最想讨论的具体问题开始。等积累更多真实学习记录后，系统会再给出基于数据的推荐主题。",
+  "simulationRecommendedPickHint": "先挑一个最顺手的起点，开始后推荐卡会自动收起，不打断正式讨论。",
+  "simulationScenarioAdjustHint": "调整场景后，讨论的角色关系与推进方式也会一起变化。",
+  "simulationFacilitationFitHint": "让讨论更贴合当前主题。",
+  "simulationDiscussionNote": "这里可以完整调整主题、场景、轮数、展开方式和参与角色，开始后讨论会按这套设置运行。",
+  "simulationParticipantHint": "你可以明确指定想邀请谁参与这场讨论。至少保留 1 位，最多 6 位角色。",
+  "simulationRunningStatusHint": "模拟进行中，新的轮次会实时出现在下方。",
+  "simulationScenarioEyebrow": "学习场景模拟",
+  "simulationScenarioTitle": "开始这场学习模拟",
+  "simulationScenarioSubtitle": "先选讨论场景，再输入一个你想推开的主题。开始后会自动收束成沉浸式讨论界面。",
+  "simulationRoleDiscussionValue": "角色讨论 + 你来接话",
+  "simulationJudgeExampleHint": "例如：我会先补几何直觉，再回来刷一道题验证",
+  "simulationInteractionExplain": "先给出你的判断，下一轮才会真正围绕你的想法继续展开。",
+  "simulationInteractionHint": "建议先在这里接住一轮，让角色回应你的判断；如果你想回到主对话，也可以把这一步带回聊天继续。",
+  "simulationContinuitySubtitle": "这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。",
+  "simulationBridgeCurrentlyVerifyingFormat": "正在验证路径「{routeTitle}」",
+  "@simulationBridgeCurrentlyVerifyingFormat": {
+    "placeholders": {
+      "routeTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBridgeVerifyingRoute": "正在验证一条推演路径",
+  "simulationBridgeVerificationDescWithTarget": "这轮模拟来自知识剧场，目标是 {targetName}。你可以随时带着当前进度回到剧场继续采纳或校准。",
+  "@simulationBridgeVerificationDescWithTarget": {
+    "placeholders": {
+      "targetName": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBridgeVerificationContext": "这轮模拟来自知识剧场，当前上下文会和原推演保持关联。",
+  "simulationInteractionModeFormat": "互动模式：{mode}",
+  "@simulationInteractionModeFormat": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationInteractionOpenQuestion": "开放追问",
+  "simulationInteractionViewpointChallenge": "观点挑战",
+  "simulationInteractionBinaryChoice": "二选一判断",
+  "simulationInteractionChoice": "选择判断",
+  "simulationCurrentFocusFormat": "当前焦点：{speaker}",
+  "@simulationCurrentFocusFormat": {
+    "placeholders": {
+      "speaker": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationTopicFormat": "主题：{topic}",
+  "@simulationTopicFormat": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationTopicAndSpeakerFormat": "主题：{topic} · 当前发言 {speaker}",
+  "@simulationTopicAndSpeakerFormat": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "speaker": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationRoundN": "第 {round} 轮",
+  "@simulationRoundN": {
+    "placeholders": {
+      "round": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoleCountFormat": "{count} 角色",
+  "@simulationRoleCountFormat": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRunningRoundN": "正在第 {round}/{total} 轮",
+  "@simulationRunningRoundN": {
+    "placeholders": {
+      "round": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoundViewpoints": "{count} 轮观点",
+  "@simulationRoundViewpoints": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoleCountLong": "{count} 位角色",
+  "@simulationRoleCountLong": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoundFormatLabel": "{current} / {max} 轮",
+  "@simulationRoundFormatLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationRoundSliderLabel": "{count} 轮",
+  "@simulationRoundSliderLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationParticipantDefaultStatus": "当前将按系统默认角色运行。",
+  "simulationParticipantCurrentStatus": "当前参与：{names}",
+  "@simulationParticipantCurrentStatus": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBulletParticipants": "参与者：{names}",
+  "@simulationBulletParticipants": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBulletRounds": "总轮次：{count} 轮，适合沉淀为下一步推演或复盘报告。",
+  "@simulationBulletRounds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationBulletOpening": "开场重点：{message}",
+  "@simulationBulletOpening": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationRoundFormatShort": "{current}/{total} 轮",
+  "@simulationRoundFormatShort": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "simulationContinueInChatContext": "继续刚才的学习模拟。",
+  "simulationContinueTopicLabel": "主题：{topic}",
+  "@simulationContinueTopicLabel": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationContinueScenarioLabel": "场景：{label}",
+  "@simulationContinueScenarioLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationContinueCurrentQuestion": "当前问题：{question}",
+  "@simulationContinueCurrentQuestion": {
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationContinueMyResponse": "我的回应：{reply}",
+  "@simulationContinueMyResponse": {
+    "placeholders": {
+      "reply": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationBalancedPush": "平衡推进",
+  "simulationDebateClash": "分歧碰撞",
+  "simulationGuidedBreakdown": "引导拆解",
+  "simulationPracticalApply": "应用落地",
+  "simulationReportReturnException": "学习报告返回格式异常",
+  "simulationReportGenerationFailed": "生成学习报告失败：{error}",
+  "@simulationReportGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationReportTitle": "这份报告已接收本次模拟中暴露的问题",
+  "simulationReportSummary": "你在模拟里暴露出的分歧和知识盲区，已经被带入这份正式报告。",
+  "simulationShareCreated": "我刚在 Sparkle 跑了一场学习仿真：{topic}\n场景：{scenario}\n洞察：{insight}",
+  "@simulationShareCreated": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "scenario": {
+        "type": "String"
+      },
+      "insight": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationShareTitle": "学习场景模拟 · {topic}",
+  "@simulationShareTitle": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationShareRawText": "学习场景模拟\n主题：{topic}\n场景：{scenario}\n洞察：{insight}",
+  "@simulationShareRawText": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "scenario": {
+        "type": "String"
+      },
+      "insight": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationCustomFigureHint": "例如：张居正 / 俾斯麦",
+  "simulationTopicCurrentFocusFormat": "主题：{topic} · 当前发言 {speaker}",
+  "@simulationTopicCurrentFocusFormat": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "speaker": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationCurrentFocusLabel": "当前焦点：{speaker}",
+  "@simulationCurrentFocusLabel": {
+    "placeholders": {
+      "speaker": {
+        "type": "String"
+      }
+    }
+  },
+  "simulationImmersiveTopicAndFocus": "主题：{topic} · 当前发言 {speaker}",
+  "@simulationImmersiveTopicAndFocus": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      },
+      "speaker": {
+        "type": "String"
+      }
+    }
+  }
 }

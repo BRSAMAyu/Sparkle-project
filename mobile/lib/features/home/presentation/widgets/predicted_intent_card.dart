@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
@@ -74,27 +75,12 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     }
     _recordImpressionIfNeeded(forecast);
 
-    final isChinese = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .startsWith('zh');
+    final l10n = context.l10n;
     final confidencePercent = (forecast.confidence * 100).round();
-    final sourceLabel = _sourceLabel(
-      forecast.predictionSource,
-      isChinese: isChinese,
-    );
-    final windowLabel = _windowLabel(
-      forecast.predictedWindow,
-      isChinese: isChinese,
-    );
-    final actionLabel = _actionLabel(
-      forecast.predictedActionType,
-      isChinese: isChinese,
-    );
-    final freshnessLabel = _freshnessLabel(
-      forecast.generatedAt,
-      isChinese: isChinese,
-    );
+    final sourceLabel = _sourceLabel(forecast.predictionSource);
+    final windowLabel = _windowLabel(forecast.predictedWindow);
+    final actionLabel = _actionLabel(forecast.predictedActionType);
+    final freshnessLabel = _freshnessLabel(forecast.generatedAt);
     final primaryAction = forecast.recommendedActions.isNotEmpty
         ? forecast.recommendedActions.first
         : null;
@@ -119,14 +105,10 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
             child: DashboardSectionHeader(
               icon: Icons.psychology_alt_rounded,
               accentColor: DS.info,
-              title: isChinese ? '系统预测已收起' : 'System Prediction Collapsed',
+              title: l10n.predictedIntentCollapsedTitle,
               summary: freshnessLabel == null
-                  ? (isChinese
-                      ? '需要时再展开查看建议'
-                      : 'Expand it again whenever you want to review the recommendation.')
-                  : (isChinese
-                      ? '上次更新于$freshnessLabel'
-                      : 'Last updated $freshnessLabel'),
+                  ? l10n.predictedIntentCollapsedExpand
+                  : '${l10n.predictedIntentCollapsedUpdated} $freshnessLabel',
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -166,10 +148,8 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                 icon: Icons.psychology_alt_rounded,
                 iconSize: 40,
                 accentColor: DS.info,
-                title: isChinese ? '系统预测' : 'System Prediction',
-                summary: isChinese
-                    ? '基于画像、最近 24 小时行为与任务节奏'
-                    : 'Based on your profile, the last 24 hours, and task rhythm',
+                title: l10n.predictedIntentTitle,
+                summary: l10n.predictedIntentSummary,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

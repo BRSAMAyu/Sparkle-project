@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
@@ -195,7 +196,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('学习分析报告'),
+        title: Text(context.l10n.reportLearningAnalysisReport),
         actions: [
           IconButton(
             onPressed: () => unawaited(_showReportShareSheet(report)),
@@ -226,7 +227,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
               ChatContinuityBanner(
                 sourceChatSessionId: widget.initialSourceChatSessionId!.trim(),
                 kind: ChatContinuityKind.journey,
-                subtitle: '这份报告承接了你刚才的探索流程。你可以带着这份判断回到原会话，继续追问策略、任务和下一步安排。',
+                subtitle: context.l10n.reportContinuationSubtitle,
               ),
               const SizedBox(height: 14),
             ],
@@ -243,8 +244,8 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
               _AnimatedReportSection(
                 delay: 20,
                 child: _ReportDataStatusBanner(
-                  label: '部分数据，仅供参考',
-                  message: '当前报告只覆盖到部分真实学习记录，请先以方向判断为主，再继续补充学习样本。',
+                  label: context.l10n.reportPartialDataDisclaimer,
+                  message: context.l10n.reportPartialDataMessage,
                 ),
               ),
               const SizedBox(height: 14),

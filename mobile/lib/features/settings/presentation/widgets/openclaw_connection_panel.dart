@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -30,13 +31,31 @@ class _OpenClawConnectionPreset {
 const _openClawGuestPresets = <_OpenClawConnectionPreset>[
   _OpenClawConnectionPreset(
     id: 'guest_local_main',
-    label: '访客模式默认引擎',
-    description: '为本机演示环境准备好的默认地址与协议；任务委派会优先复用 Sparkle 后端链路，如需直连再补充可执行令牌或设备配对。',
+    label: '',
+    description: '',
     config: OpenClawConnectionConfig(
       gatewayUrl: 'http://127.0.0.1:18789',
     ),
   ),
 ];
+
+String _presetLabel(String id, BuildContext context) {
+  switch (id) {
+    case 'guest_local_main':
+      return context.l10n.openclawGuestMainLabel;
+    default:
+      return context.l10n.openclawCustomConfig;
+  }
+}
+
+String _presetDescription(String id, BuildContext context) {
+  switch (id) {
+    case 'guest_local_main':
+      return context.l10n.openclawGuestMainDesc;
+    default:
+      return context.l10n.openclawCustomConfigDesc;
+  }
+}
 
 class OpenClawConnectionPanel extends ConsumerStatefulWidget {
   const OpenClawConnectionPanel({
@@ -761,7 +780,7 @@ class _OpenClawConnectionPanelState
               ),
               ..._openClawGuestPresets.map(
                 (preset) => ChoiceChip(
-                  label: Text(preset.label),
+                  label: Text(_presetLabel(preset.id, context)),
                   selected: _selectedPresetId == preset.id,
                   onSelected: (_) => _applyPreset(preset),
                 ),
@@ -770,7 +789,9 @@ class _OpenClawConnectionPanelState
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            selectedPreset?.description ?? '适合你已经有现成的网关地址和认证方式，想自己掌控连接细节时使用。',
+            selectedPreset != null
+                ? _presetDescription(selectedPreset.id, context)
+                : context.l10n.openclawCustomConfigDesc,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.45,

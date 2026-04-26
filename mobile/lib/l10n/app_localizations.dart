@@ -21725,6 +21725,2124 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'继续探索'**
   String get theaterAdoptionContinueExploring;
+
+  /// No description provided for @planCreateEditingGrowth.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑成长计划'**
+  String get planCreateEditingGrowth;
+
+  /// No description provided for @planCreateEditingSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑冲刺计划'**
+  String get planCreateEditingSprint;
+
+  /// No description provided for @planCreateSavePlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存计划'**
+  String get planCreateSavePlan;
+
+  /// No description provided for @planCreateStepPositioning.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划定位'**
+  String get planCreateStepPositioning;
+
+  /// No description provided for @planCreateStepTimeStructure.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间结构'**
+  String get planCreateStepTimeStructure;
+
+  /// No description provided for @planCreateStepTaskBlueprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务编排'**
+  String get planCreateStepTaskBlueprint;
+
+  /// No description provided for @planCreateStepBoundariesGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划边界与指南'**
+  String get planCreateStepBoundariesGuide;
+
+  /// No description provided for @planCreateStepReviewConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认预览'**
+  String get planCreateStepReviewConfirm;
+
+  /// No description provided for @planCreateBasicsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'先定义这是一张真正的计划卡，而不是普通任务。'**
+  String get planCreateBasicsSubtitle;
+
+  /// No description provided for @planCreateNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：6 周英语口语提升 / 期中冲刺收束'**
+  String get planCreateNameHint;
+
+  /// No description provided for @planCreateSubjectLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题方向'**
+  String get planCreateSubjectLabel;
+
+  /// No description provided for @planCreateSubjectHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'英语、Flutter、考研数学、论文阅读...'**
+  String get planCreateSubjectHint;
+
+  /// No description provided for @planCreateGrowthGoalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'长期目标'**
+  String get planCreateGrowthGoalLabel;
+
+  /// No description provided for @planCreateSprintGoalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺目标'**
+  String get planCreateSprintGoalLabel;
+
+  /// No description provided for @planCreateGrowthGoalHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'写清楚这个成长计划最终想形成什么能力、习惯或成果。'**
+  String get planCreateGrowthGoalHint;
+
+  /// No description provided for @planCreateSprintGoalHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'写清楚这次冲刺的结果、验收标准和不能偏离的主线。'**
+  String get planCreateSprintGoalHint;
+
+  /// No description provided for @planCreateGoalRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请写出这张计划卡的目标'**
+  String get planCreateGoalRequired;
+
+  /// No description provided for @planCreateScheduleSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'把持续时间、每日投入和提醒节奏一次性定清楚。'**
+  String get planCreateScheduleSubtitle;
+
+  /// No description provided for @planCreateDailyMinutesLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日可投入时长'**
+  String get planCreateDailyMinutesLabel;
+
+  /// No description provided for @planCreateTotalEstimatedHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'总预估工时 {hours} 小时'**
+  String planCreateTotalEstimatedHours(Object hours);
+
+  /// No description provided for @planCreateDailyReminderTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日提醒时间'**
+  String get planCreateDailyReminderTime;
+
+  /// No description provided for @planCreatePlanStageLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前计划阶段'**
+  String get planCreatePlanStageLabel;
+
+  /// No description provided for @planCreateStageSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺推进'**
+  String get planCreateStageSprint;
+
+  /// No description provided for @planCreateStageDaily.
+  ///
+  /// In zh, this message translates to:
+  /// **'日常执行'**
+  String get planCreateStageDaily;
+
+  /// No description provided for @planCreateStageReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘调优'**
+  String get planCreateStageReview;
+
+  /// No description provided for @planCreateStagePaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时暂停'**
+  String get planCreateStagePaused;
+
+  /// No description provided for @planCreateScheduleChipWorkday.
+  ///
+  /// In zh, this message translates to:
+  /// **'工作日推进，周末复盘'**
+  String get planCreateScheduleChipWorkday;
+
+  /// No description provided for @planCreateScheduleChipMorning.
+  ///
+  /// In zh, this message translates to:
+  /// **'早晨启动，晚上收束'**
+  String get planCreateScheduleChipMorning;
+
+  /// No description provided for @planCreateScheduleChipAfternoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'午后主攻，夜间轻复盘'**
+  String get planCreateScheduleChipAfternoon;
+
+  /// No description provided for @planCreateScheduleLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'节奏说明'**
+  String get planCreateScheduleLabel;
+
+  /// No description provided for @planCreateScheduleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：周一到周五推进，周六复盘，周日补缺'**
+  String get planCreateScheduleHint;
+
+  /// No description provided for @planCreateTasksSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。'**
+  String get planCreateTasksSubtitle;
+
+  /// No description provided for @planCreateTaskBlueprintLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务编排说明'**
+  String get planCreateTaskBlueprintLabel;
+
+  /// No description provided for @planCreateTaskBlueprintHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：先搭框架，再每天推进主线，最后统一复盘补漏。'**
+  String get planCreateTaskBlueprintHint;
+
+  /// No description provided for @planCreateReferenceExistingTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'参考已有任务'**
+  String get planCreateReferenceExistingTasks;
+
+  /// No description provided for @planCreateCopyToPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制进计划'**
+  String get planCreateCopyToPlan;
+
+  /// No description provided for @planCreateNewTaskLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增计划任务'**
+  String get planCreateNewTaskLabel;
+
+  /// No description provided for @planCreateNewTaskHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：完成一轮章节梳理'**
+  String get planCreateNewTaskHint;
+
+  /// No description provided for @planCreateDurationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'时长'**
+  String get planCreateDurationLabel;
+
+  /// No description provided for @planCreateDifficultyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'难度'**
+  String get planCreateDifficultyLabel;
+
+  /// No description provided for @planCreateAddTaskToPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入计划任务'**
+  String get planCreateAddTaskToPlan;
+
+  /// No description provided for @planCreateNoTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前还没有计划任务'**
+  String get planCreateNoTasks;
+
+  /// No description provided for @planCreateScopeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划边界与注意事项'**
+  String get planCreateScopeLabel;
+
+  /// No description provided for @planCreateScopeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。'**
+  String get planCreateScopeHint;
+
+  /// No description provided for @planCreateGuidePerspective.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务指南视角'**
+  String get planCreateGuidePerspective;
+
+  /// No description provided for @planCreateGuideForSelf.
+  ///
+  /// In zh, this message translates to:
+  /// **'给自己看'**
+  String get planCreateGuideForSelf;
+
+  /// No description provided for @planCreateGuideForAi.
+  ///
+  /// In zh, this message translates to:
+  /// **'给 AI 用'**
+  String get planCreateGuideForAi;
+
+  /// No description provided for @planCreateGuideHumanDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。'**
+  String get planCreateGuideHumanDescription;
+
+  /// No description provided for @planCreateGuideAiDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。'**
+  String get planCreateGuideAiDescription;
+
+  /// No description provided for @planCreateGuideHumanTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户版执行指南'**
+  String get planCreateGuideHumanTitle;
+
+  /// No description provided for @planCreateGuideAiTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'给 AI 的执行版本'**
+  String get planCreateGuideAiTitle;
+
+  /// No description provided for @planCreateGenerateHumanGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成用户版'**
+  String get planCreateGenerateHumanGuide;
+
+  /// No description provided for @planCreateGenerateAiGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成 AI 版'**
+  String get planCreateGenerateAiGuide;
+
+  /// No description provided for @planCreateGuideHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。'**
+  String get planCreateGuideHint;
+
+  /// No description provided for @planCreateAiGuideEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。'**
+  String get planCreateAiGuideEmpty;
+
+  /// No description provided for @planCreateCopyAiGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制 AI 版'**
+  String get planCreateCopyAiGuide;
+
+  /// No description provided for @planCreateAiGuideCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 版本已复制'**
+  String get planCreateAiGuideCopied;
+
+  /// No description provided for @planCreateReviewSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{type} · {dailyMinutes} 分钟/天 · {hours} 小时'**
+  String planCreateReviewSummary(
+      Object dailyMinutes, Object hours, Object type);
+
+  /// No description provided for @planCreateReviewEditDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存后会更新计划描述，并为新增草案创建新的计划任务。'**
+  String get planCreateReviewEditDescription;
+
+  /// No description provided for @planCreateReviewCreateDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建后会生成一张更完整的计划卡，并同步创建计划任务。'**
+  String get planCreateReviewCreateDescription;
+
+  /// No description provided for @planCreateFinalDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'最终写入的计划描述'**
+  String get planCreateFinalDescription;
+
+  /// No description provided for @planCreateMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{value} 分钟'**
+  String planCreateMinutes(Object value);
+
+  /// No description provided for @planCreateTaskSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟 · 难度 {difficulty}'**
+  String planCreateTaskSubtitle(Object difficulty, Object minutes);
+
+  /// No description provided for @predictedIntentTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统预测'**
+  String get predictedIntentTitle;
+
+  /// No description provided for @predictedIntentCollapsedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统预测已收起'**
+  String get predictedIntentCollapsedTitle;
+
+  /// No description provided for @predictedIntentCollapsedExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要时再展开查看建议'**
+  String get predictedIntentCollapsedExpand;
+
+  /// No description provided for @predictedIntentCollapsedUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次更新于'**
+  String get predictedIntentCollapsedUpdated;
+
+  /// No description provided for @predictedIntentSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于画像、最近 24 小时行为与任务节奏'**
+  String get predictedIntentSummary;
+
+  /// No description provided for @predictedIntentSuggestedCont.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议接续'**
+  String get predictedIntentSuggestedCont;
+
+  /// No description provided for @predictedIntentWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'预测结果已生成，等待可继续指令'**
+  String get predictedIntentWaiting;
+
+  /// No description provided for @predictedIntentConfidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'可信度 {percent}%'**
+  String predictedIntentConfidence(int percent);
+
+  /// No description provided for @predictedIntentWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么这样预测'**
+  String get predictedIntentWhy;
+
+  /// No description provided for @predictedIntentContinuing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在衔接…'**
+  String get predictedIntentContinuing;
+
+  /// No description provided for @predictedIntentContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'按这个继续'**
+  String get predictedIntentContinue;
+
+  /// No description provided for @predictedIntentError.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续对话时出现问题，请稍后重试'**
+  String get predictedIntentError;
+
+  /// No description provided for @predictedActionResumePriority.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续重点任务'**
+  String get predictedActionResumePriority;
+
+  /// No description provided for @predictedActionStudyPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成学习计划'**
+  String get predictedActionStudyPlan;
+
+  /// No description provided for @predictedActionDiagnose.
+  ///
+  /// In zh, this message translates to:
+  /// **'问题诊断'**
+  String get predictedActionDiagnose;
+
+  /// No description provided for @predictedActionCreateTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'落成任务'**
+  String get predictedActionCreateTask;
+
+  /// No description provided for @predictedActionInstantResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'即时结果'**
+  String get predictedActionInstantResult;
+
+  /// No description provided for @predictedActionReviewProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘进展'**
+  String get predictedActionReviewProgress;
+
+  /// No description provided for @predictedActionPlanNext.
+  ///
+  /// In zh, this message translates to:
+  /// **'规划下一步'**
+  String get predictedActionPlanNext;
+
+  /// No description provided for @predictedActionReflection.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速反思'**
+  String get predictedActionReflection;
+
+  /// No description provided for @predictedActionDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'预测意图'**
+  String get predictedActionDefault;
+
+  /// No description provided for @predictedWindowNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'就是现在'**
+  String get predictedWindowNow;
+
+  /// No description provided for @predictedWindow30m.
+  ///
+  /// In zh, this message translates to:
+  /// **'未来 30 分钟'**
+  String get predictedWindow30m;
+
+  /// No description provided for @predictedWindow1h.
+  ///
+  /// In zh, this message translates to:
+  /// **'未来 1 小时'**
+  String get predictedWindow1h;
+
+  /// No description provided for @predictedWindow2h.
+  ///
+  /// In zh, this message translates to:
+  /// **'未来 2 小时'**
+  String get predictedWindow2h;
+
+  /// No description provided for @predictedWindow6h.
+  ///
+  /// In zh, this message translates to:
+  /// **'未来 6 小时'**
+  String get predictedWindow6h;
+
+  /// No description provided for @predictedWindowToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天内'**
+  String get predictedWindowToday;
+
+  /// No description provided for @predictedSourceLongRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'长期预测'**
+  String get predictedSourceLongRange;
+
+  /// No description provided for @predictedSourceRules.
+  ///
+  /// In zh, this message translates to:
+  /// **'规则兜底'**
+  String get predictedSourceRules;
+
+  /// No description provided for @predictedFreshnessJustNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'刚刚更新'**
+  String get predictedFreshnessJustNow;
+
+  /// No description provided for @predictedFreshnessMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 分钟前'**
+  String predictedFreshnessMinutes(int count);
+
+  /// No description provided for @predictedFreshnessHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 小时前'**
+  String predictedFreshnessHours(int count);
+
+  /// No description provided for @predictedFreshnessDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 天前'**
+  String predictedFreshnessDays(int count);
+
+  /// No description provided for @predictedCategoryPrefTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'同类请求里的近期偏好'**
+  String get predictedCategoryPrefTitle;
+
+  /// No description provided for @predictedCategoryPrefHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'在{category}里，近期结果更常把「{tool}」推到前面。'**
+  String predictedCategoryPrefHint(String category, String tool);
+
+  /// No description provided for @predictedCategoryPrefCaveat.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅基于同类请求里的近期结果，不代表 Sparkle 理解了你的完整工作流。'**
+  String get predictedCategoryPrefCaveat;
+
+  /// No description provided for @predictedCategoryPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'规划类请求'**
+  String get predictedCategoryPlan;
+
+  /// No description provided for @predictedCategoryTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务类请求'**
+  String get predictedCategoryTask;
+
+  /// No description provided for @predictedCategoryFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注支持类请求'**
+  String get predictedCategoryFocus;
+
+  /// No description provided for @predictedCategoryGrowth.
+  ///
+  /// In zh, this message translates to:
+  /// **'成长推进类请求'**
+  String get predictedCategoryGrowth;
+
+  /// No description provided for @predictedCategoryQuery.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询类请求'**
+  String get predictedCategoryQuery;
+
+  /// No description provided for @predictedCategoryKnowledge.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识类请求'**
+  String get predictedCategoryKnowledge;
+
+  /// No description provided for @predictedCategoryReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘类请求'**
+  String get predictedCategoryReview;
+
+  /// No description provided for @predictedCategoryResearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'研究类请求'**
+  String get predictedCategoryResearch;
+
+  /// No description provided for @predictedCategoryMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆整理类请求'**
+  String get predictedCategoryMemory;
+
+  /// No description provided for @predictedCategoryCognitive.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知整理类请求'**
+  String get predictedCategoryCognitive;
+
+  /// No description provided for @predictedCategoryDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'同类请求'**
+  String get predictedCategoryDefault;
+
+  /// No description provided for @predictedToolCreatePlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成计划'**
+  String get predictedToolCreatePlan;
+
+  /// No description provided for @predictedToolGenerateTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开计划步骤'**
+  String get predictedToolGenerateTasks;
+
+  /// No description provided for @predictedToolCreateTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'落成任务'**
+  String get predictedToolCreateTask;
+
+  /// No description provided for @predictedToolListTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看任务列表'**
+  String get predictedToolListTasks;
+
+  /// No description provided for @predictedToolUpdateTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新任务'**
+  String get predictedToolUpdateTask;
+
+  /// No description provided for @predictedToolQueryKnowledge.
+  ///
+  /// In zh, this message translates to:
+  /// **'查询知识'**
+  String get predictedToolQueryKnowledge;
+
+  /// No description provided for @predictedToolExplainConcept.
+  ///
+  /// In zh, this message translates to:
+  /// **'解释概念'**
+  String get predictedToolExplainConcept;
+
+  /// No description provided for @predictedToolReviewProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘进度'**
+  String get predictedToolReviewProgress;
+
+  /// No description provided for @predictedToolGenerateSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成总结'**
+  String get predictedToolGenerateSummary;
+
+  /// No description provided for @predictedToolSuggestSchedule.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议排期'**
+  String get predictedToolSuggestSchedule;
+
+  /// No description provided for @examSprintHighFreqCoverage.
+  ///
+  /// In zh, this message translates to:
+  /// **'高频考点覆盖率'**
+  String get examSprintHighFreqCoverage;
+
+  /// No description provided for @examSprintMistakeRepair.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题修复率'**
+  String get examSprintMistakeRepair;
+
+  /// No description provided for @examSprintStudyStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'连续学习天数'**
+  String get examSprintStudyStreak;
+
+  /// No description provided for @examSprintStreakDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days} 天'**
+  String examSprintStreakDays(int days);
+
+  /// No description provided for @examSprintKeepRhythm.
+  ///
+  /// In zh, this message translates to:
+  /// **'保持节奏'**
+  String get examSprintKeepRhythm;
+
+  /// No description provided for @examSprintHighYieldWeak.
+  ///
+  /// In zh, this message translates to:
+  /// **'高收益低掌握：{topics}'**
+  String examSprintHighYieldWeak(String topics);
+
+  /// No description provided for @examSprintNoTasksToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天还没有排入冲刺任务。'**
+  String get examSprintNoTasksToday;
+
+  /// No description provided for @examSprintExamDayReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天考试 · 你已经准备好了 🎓'**
+  String get examSprintExamDayReady;
+
+  /// No description provided for @examSprintExamTips.
+  ///
+  /// In zh, this message translates to:
+  /// **'考场建议'**
+  String get examSprintExamTips;
+
+  /// No description provided for @examSprintRecordResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录考试结果'**
+  String get examSprintRecordResult;
+
+  /// No description provided for @examSprintDashboardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'考试冲刺仪表盘'**
+  String get examSprintDashboardTitle;
+
+  /// No description provided for @examSprintModeHighScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲高模式'**
+  String get examSprintModeHighScore;
+
+  /// No description provided for @examSprintModeHold.
+  ///
+  /// In zh, this message translates to:
+  /// **'稳分模式'**
+  String get examSprintModeHold;
+
+  /// No description provided for @examSprintModePass.
+  ///
+  /// In zh, this message translates to:
+  /// **'保过模式'**
+  String get examSprintModePass;
+
+  /// No description provided for @examSprintModeDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺模式'**
+  String get examSprintModeDefault;
+
+  /// No description provided for @examSprintExamDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天考试'**
+  String get examSprintExamDay;
+
+  /// No description provided for @examSprintCountdown.
+  ///
+  /// In zh, this message translates to:
+  /// **'距考试还有 {days} 天'**
+  String examSprintCountdown(int days);
+
+  /// No description provided for @examSprintTodayTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天已完成 {completed}/{total} 项任务'**
+  String examSprintTodayTasks(int completed, int total);
+
+  /// No description provided for @examSprintDaysLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'还有 {days} 天'**
+  String examSprintDaysLeft(int days);
+
+  /// No description provided for @examSprintTodayDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日 {completed}/{total} 完成'**
+  String examSprintTodayDone(int completed, int total);
+
+  /// No description provided for @examSprintTodaySprintTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日冲刺任务'**
+  String get examSprintTodaySprintTasks;
+
+  /// No description provided for @examSprintHideLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起后续天'**
+  String get examSprintHideLater;
+
+  /// No description provided for @examSprintShowLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开后续 {count} 天'**
+  String examSprintShowLater(int count);
+
+  /// No description provided for @examSprintDayIndex.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 天'**
+  String examSprintDayIndex(int index);
+
+  /// No description provided for @examSprintDateFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'{month}月{day}日'**
+  String examSprintDateFormat(int month, int day);
+
+  /// No description provided for @examSprintNoSprintTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天还没有排入任务'**
+  String get examSprintNoSprintTasks;
+
+  /// No description provided for @examSprintMinLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟 · {status}'**
+  String examSprintMinLabel(int minutes, String status);
+
+  /// No description provided for @examSprintStatusDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get examSprintStatusDone;
+
+  /// No description provided for @examSprintStatusInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get examSprintStatusInProgress;
+
+  /// No description provided for @examSprintStatusPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'待开始'**
+  String get examSprintStatusPending;
+
+  /// No description provided for @insightHubTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习洞察'**
+  String get insightHubTitle;
+
+  /// No description provided for @insightHubRecommendedSeeds.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在有 {count} 个推荐场景可以直接开始模拟。'**
+  String insightHubRecommendedSeeds(int count);
+
+  /// No description provided for @insightHubFallbackSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'把推演、仿真和报告收进一条更轻量的学习动线。'**
+  String get insightHubFallbackSummary;
+
+  /// No description provided for @insightHubSimulation.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习仿真'**
+  String get insightHubSimulation;
+
+  /// No description provided for @insightHubTheater.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演剧场'**
+  String get insightHubTheater;
+
+  /// No description provided for @insightHubReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习报告'**
+  String get insightHubReport;
+
+  /// No description provided for @insightHubEnterOverview.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入洞察总览'**
+  String get insightHubEnterOverview;
+
+  /// No description provided for @insightHubCompactSimulation.
+  ///
+  /// In zh, this message translates to:
+  /// **'仿真'**
+  String get insightHubCompactSimulation;
+
+  /// No description provided for @insightHubCompactTheater.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演'**
+  String get insightHubCompactTheater;
+
+  /// No description provided for @insightHubCompactReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'报告'**
+  String get insightHubCompactReport;
+
+  /// No description provided for @insightHubRefreshWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分洞察数据尚未刷新，点击后会继续显示已有内容。'**
+  String get insightHubRefreshWarning;
+
+  /// No description provided for @insightHubSeedsToExplore.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个推荐场景待探索'**
+  String insightHubSeedsToExplore(int count);
+
+  /// No description provided for @insightHubCompactFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'仿真、推演和报告现在收在同一张卡里'**
+  String get insightHubCompactFallback;
+
+  /// No description provided for @insightHubNoRecentTheater.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近暂无推演'**
+  String get insightHubNoRecentTheater;
+
+  /// No description provided for @insightHubContinueLastTheater.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续上次推演'**
+  String get insightHubContinueLastTheater;
+
+  /// No description provided for @insightHubContinueTopic.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续 {topic}'**
+  String insightHubContinueTopic(String topic);
+
+  /// No description provided for @insightHubContinueLastSimulation.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续上次仿真'**
+  String get insightHubContinueLastSimulation;
+
+  /// No description provided for @insightHubRecommendedSeedsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个推荐场景'**
+  String insightHubRecommendedSeedsCount(int count);
+
+  /// No description provided for @insightHubContinueSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续 {topic}'**
+  String insightHubContinueSession(String topic);
+
+  /// No description provided for @insightHubStartSimulation.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始一轮新模拟'**
+  String get insightHubStartSimulation;
+
+  /// No description provided for @insightHubNoRecentReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近暂无报告'**
+  String get insightHubNoRecentReport;
+
+  /// No description provided for @insightHubMasteryPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度 {percent}%'**
+  String insightHubMasteryPercent(int percent);
+
+  /// No description provided for @insightHubRefreshFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'洞察内容暂时没有刷新成功，当前先显示已有内容。'**
+  String get insightHubRefreshFailed;
+
+  /// No description provided for @insightHubRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get insightHubRetry;
+
+  /// No description provided for @memoryPanel.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆面板'**
+  String get memoryPanel;
+
+  /// No description provided for @memoryPanelAdjust.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整'**
+  String get memoryPanelAdjust;
+
+  /// No description provided for @memoryPanelAiAutoMemories.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 自动记忆'**
+  String get memoryPanelAiAutoMemories;
+
+  /// No description provided for @memoryPanelAiInferredDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 推断自聊天，默认仅作记忆展示，不参与下游决策。'**
+  String get memoryPanelAiInferredDescription;
+
+  /// No description provided for @memoryPanelClearFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空筛选'**
+  String get memoryPanelClearFilter;
+
+  /// No description provided for @memoryPanelCommitmentDismissed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已忽略该承诺'**
+  String get memoryPanelCommitmentDismissed;
+
+  /// No description provided for @memoryPanelConfidenceValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'置信度 {value}'**
+  String memoryPanelConfidenceValue(String value);
+
+  /// No description provided for @memoryPanelConflictFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理冲突失败: {error}'**
+  String memoryPanelConflictFailed(String error);
+
+  /// No description provided for @memoryPanelConflictResolvedA.
+  ///
+  /// In zh, this message translates to:
+  /// **'已按候选 A 处理'**
+  String get memoryPanelConflictResolvedA;
+
+  /// No description provided for @memoryPanelConflictResolvedB.
+  ///
+  /// In zh, this message translates to:
+  /// **'已按候选 B 处理'**
+  String get memoryPanelConflictResolvedB;
+
+  /// No description provided for @memoryPanelConflictResolvedNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤销这组冲突候选'**
+  String get memoryPanelConflictResolvedNone;
+
+  /// No description provided for @memoryPanelCorrectionCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'纠错 {count}'**
+  String memoryPanelCorrectionCount(int count);
+
+  /// No description provided for @memoryPanelDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'日期'**
+  String get memoryPanelDate;
+
+  /// No description provided for @memoryPanelDeviationsDetected.
+  ///
+  /// In zh, this message translates to:
+  /// **'检测到 {count} 个偏离'**
+  String memoryPanelDeviationsDetected(int count);
+
+  /// No description provided for @memoryPanelDimCompletionRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成率'**
+  String get memoryPanelDimCompletionRate;
+
+  /// No description provided for @memoryPanelDimEngagement.
+  ///
+  /// In zh, this message translates to:
+  /// **'投入度'**
+  String get memoryPanelDimEngagement;
+
+  /// No description provided for @memoryPanelDimMood.
+  ///
+  /// In zh, this message translates to:
+  /// **'情绪'**
+  String get memoryPanelDimMood;
+
+  /// No description provided for @memoryPanelDimPace.
+  ///
+  /// In zh, this message translates to:
+  /// **'节奏'**
+  String get memoryPanelDimPace;
+
+  /// No description provided for @memoryPanelDimPlanAdherence.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划跟随'**
+  String get memoryPanelDimPlanAdherence;
+
+  /// No description provided for @memoryPanelDismissFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'忽略失败: {error}'**
+  String memoryPanelDismissFailed(String error);
+
+  /// No description provided for @memoryPanelEmptyDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'先聊一聊你的目标、偏好或刚完成的学习动作，系统才会开始在这里整理长期记忆。'**
+  String get memoryPanelEmptyDescription;
+
+  /// No description provided for @memoryPanelEmptyFilterDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试清空筛选条件，重新查看所有已整理的记忆。'**
+  String get memoryPanelEmptyFilterDescription;
+
+  /// No description provided for @memoryPanelEmptyFilterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无符合条件的记忆'**
+  String get memoryPanelEmptyFilterTitle;
+
+  /// No description provided for @memoryPanelEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆面板还没有内容'**
+  String get memoryPanelEmptyTitle;
+
+  /// No description provided for @memoryPanelEvidenceAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据全部'**
+  String get memoryPanelEvidenceAll;
+
+  /// No description provided for @memoryPanelEvidenceMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺失'**
+  String get memoryPanelEvidenceMissing;
+
+  /// No description provided for @memoryPanelEvidenceOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'OK'**
+  String get memoryPanelEvidenceOk;
+
+  /// No description provided for @memoryPanelEvidenceRedacted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已隐藏'**
+  String get memoryPanelEvidenceRedacted;
+
+  /// No description provided for @memoryPanelForesightHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'前瞻提示'**
+  String get memoryPanelForesightHint;
+
+  /// No description provided for @memoryPanelImportanceValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'重要度 {value}'**
+  String memoryPanelImportanceValue(String value);
+
+  /// No description provided for @memoryPanelItemCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条'**
+  String memoryPanelItemCount(int count);
+
+  /// No description provided for @memoryPanelLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆面板加载失败: {error}'**
+  String memoryPanelLoadFailed(String error);
+
+  /// No description provided for @memoryPanelMarkFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记失败: {error}'**
+  String memoryPanelMarkFailed(String error);
+
+  /// No description provided for @memoryPanelMarkedComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'已标记为完成'**
+  String get memoryPanelMarkedComplete;
+
+  /// No description provided for @memoryPanelMetricsNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'指标: -'**
+  String get memoryPanelMetricsNone;
+
+  /// No description provided for @memoryPanelNotUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'未更新'**
+  String get memoryPanelNotUpdated;
+
+  /// No description provided for @memoryPanelRecentScenes.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近场景'**
+  String get memoryPanelRecentScenes;
+
+  /// No description provided for @memoryPanelRevoke.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get memoryPanelRevoke;
+
+  /// No description provided for @memoryPanelRevokeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销失败: {error}'**
+  String memoryPanelRevokeFailed(String error);
+
+  /// No description provided for @memoryPanelRevokeThis.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销此条'**
+  String get memoryPanelRevokeThis;
+
+  /// No description provided for @memoryPanelRevokedAutoMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤销 AI 自动记忆'**
+  String get memoryPanelRevokedAutoMemory;
+
+  /// No description provided for @memoryPanelRevoking.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销中'**
+  String get memoryPanelRevoking;
+
+  /// No description provided for @memoryPanelSceneMemories.
+  ///
+  /// In zh, this message translates to:
+  /// **'{time} · {count} 条记忆'**
+  String memoryPanelSceneMemories(String time, int count);
+
+  /// No description provided for @memoryPanelUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆面板不可用'**
+  String get memoryPanelUnavailable;
+
+  /// No description provided for @memoryPanelValidUntil.
+  ///
+  /// In zh, this message translates to:
+  /// **'有效期 {policy}'**
+  String memoryPanelValidUntil(String policy);
+
+  /// No description provided for @theaterComposerDeducing.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演中'**
+  String get theaterComposerDeducing;
+
+  /// No description provided for @theaterWhatIfCombinedResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'原始 {originalMastery}% / {originalCompletion}%  →  调整后 {predictedMastery}% / {predictedCompletion}%'**
+  String theaterWhatIfCombinedResult(
+      String originalMastery,
+      String originalCompletion,
+      String predictedMastery,
+      String predictedCompletion);
+
+  /// No description provided for @theaterAccuracyPredictedActual.
+  ///
+  /// In zh, this message translates to:
+  /// **'预测 {predictedCompletion}% / {predictedMastery}%， 实际 {actualCompletion}% / {actualMastery}%'**
+  String theaterAccuracyPredictedActual(String predictedCompletion,
+      String predictedMastery, String actualCompletion, String actualMastery);
+
+  /// No description provided for @theaterPerDayUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分/天'**
+  String theaterPerDayUnit(String minutes);
+
+  /// No description provided for @simulationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习场景模拟'**
+  String get simulationTitle;
+
+  /// No description provided for @simulationCurrentSimulation.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前模拟'**
+  String get simulationCurrentSimulation;
+
+  /// No description provided for @simulationBackToTheater.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到剧场'**
+  String get simulationBackToTheater;
+
+  /// No description provided for @simulationRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'模拟进行中...'**
+  String get simulationRunning;
+
+  /// No description provided for @simulationStartSimulation.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始这场模拟'**
+  String get simulationStartSimulation;
+
+  /// No description provided for @simulationAwaitingInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待输入'**
+  String get simulationAwaitingInput;
+
+  /// No description provided for @simulationClearTopic.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空主题'**
+  String get simulationClearTopic;
+
+  /// No description provided for @simulationRecommendedScenarios.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐场景'**
+  String get simulationRecommendedScenarios;
+
+  /// No description provided for @simulationGenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成'**
+  String get simulationGenerate;
+
+  /// No description provided for @simulationRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get simulationRefresh;
+
+  /// No description provided for @simulationStartSimButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始模拟'**
+  String get simulationStartSimButton;
+
+  /// No description provided for @simulationGoToTheater.
+  ///
+  /// In zh, this message translates to:
+  /// **'去推演'**
+  String get simulationGoToTheater;
+
+  /// No description provided for @simulationContinueSim.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续模拟'**
+  String get simulationContinueSim;
+
+  /// No description provided for @simulationPauseSim.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停模拟'**
+  String get simulationPauseSim;
+
+  /// No description provided for @simulationCollapseInsight.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起洞察'**
+  String get simulationCollapseInsight;
+
+  /// No description provided for @simulationViewInsight.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看洞察'**
+  String get simulationViewInsight;
+
+  /// No description provided for @simulationCollapseSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起设置'**
+  String get simulationCollapseSettings;
+
+  /// No description provided for @simulationSimSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'模拟设置'**
+  String get simulationSimSettings;
+
+  /// No description provided for @simulationYourTurnTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'轮到你回应'**
+  String get simulationYourTurnTitle;
+
+  /// No description provided for @simulationYourResponseArea.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的回应区'**
+  String get simulationYourResponseArea;
+
+  /// No description provided for @simulationCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起'**
+  String get simulationCollapse;
+
+  /// No description provided for @simulationJoinDiscussion.
+  ///
+  /// In zh, this message translates to:
+  /// **'轮到你加入这场讨论'**
+  String get simulationJoinDiscussion;
+
+  /// No description provided for @simulationOrInputJudgment.
+  ///
+  /// In zh, this message translates to:
+  /// **'或者输入你的判断'**
+  String get simulationOrInputJudgment;
+
+  /// No description provided for @simulationSubmitting.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交中...'**
+  String get simulationSubmitting;
+
+  /// No description provided for @simulationSubmitJudgment.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交我的判断'**
+  String get simulationSubmitJudgment;
+
+  /// No description provided for @simulationContinueInChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'带回聊天继续'**
+  String get simulationContinueInChat;
+
+  /// No description provided for @simulationAdjustSimulation.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整这场模拟'**
+  String get simulationAdjustSimulation;
+
+  /// No description provided for @simulationDiscussionRounds.
+  ///
+  /// In zh, this message translates to:
+  /// **'讨论轮数'**
+  String get simulationDiscussionRounds;
+
+  /// No description provided for @simulationFacilitationStyleTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开方式'**
+  String get simulationFacilitationStyleTitle;
+
+  /// No description provided for @simulationParticipantsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'参与角色'**
+  String get simulationParticipantsTitle;
+
+  /// No description provided for @simulationRestoreDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复推荐'**
+  String get simulationRestoreDefault;
+
+  /// No description provided for @simulationCustomHistoricalRole.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义历史人物'**
+  String get simulationCustomHistoricalRole;
+
+  /// No description provided for @simulationAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加'**
+  String get simulationAdd;
+
+  /// No description provided for @simulationRestartSim.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新开始这场模拟'**
+  String get simulationRestartSim;
+
+  /// No description provided for @simulationContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续'**
+  String get simulationContinue;
+
+  /// No description provided for @simulationPause.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停'**
+  String get simulationPause;
+
+  /// No description provided for @simulationAwaitingStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待开始'**
+  String get simulationAwaitingStart;
+
+  /// No description provided for @simulationGatheringParticipants.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在召集参与者'**
+  String get simulationGatheringParticipants;
+
+  /// No description provided for @simulationWaitingFirstRound.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待首轮'**
+  String get simulationWaitingFirstRound;
+
+  /// No description provided for @simulationRolesPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'角色待加入'**
+  String get simulationRolesPending;
+
+  /// No description provided for @simulationGeneratingInBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'后台仍在继续生成'**
+  String get simulationGeneratingInBackground;
+
+  /// No description provided for @simulationPausedForeground.
+  ///
+  /// In zh, this message translates to:
+  /// **'前台已暂停播放'**
+  String get simulationPausedForeground;
+
+  /// No description provided for @simulationImmersiveDiscussion.
+  ///
+  /// In zh, this message translates to:
+  /// **'沉浸讨论流'**
+  String get simulationImmersiveDiscussion;
+
+  /// No description provided for @simulationCurrentDiscussion.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前讨论流'**
+  String get simulationCurrentDiscussion;
+
+  /// No description provided for @simulationWillAppearLive.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始后会实时出现每一轮讨论。'**
+  String get simulationWillAppearLive;
+
+  /// No description provided for @simulationNoInsightYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未生成洞察总结。'**
+  String get simulationNoInsightYet;
+
+  /// No description provided for @simulationInsightSummaryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'洞察总结'**
+  String get simulationInsightSummaryTitle;
+
+  /// No description provided for @simulationGeneratingReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成中...'**
+  String get simulationGeneratingReport;
+
+  /// No description provided for @simulationGenerateLearningReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成学习报告'**
+  String get simulationGenerateLearningReport;
+
+  /// No description provided for @simulationContinueToTheater.
+  ///
+  /// In zh, this message translates to:
+  /// **'以此推演'**
+  String get simulationContinueToTheater;
+
+  /// No description provided for @simulationShareInsight.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享洞察'**
+  String get simulationShareInsight;
+
+  /// No description provided for @simulationCoreArguments.
+  ///
+  /// In zh, this message translates to:
+  /// **'核心论点'**
+  String get simulationCoreArguments;
+
+  /// No description provided for @simulationUnresolvedDisagreements.
+  ///
+  /// In zh, this message translates to:
+  /// **'未解决的分歧'**
+  String get simulationUnresolvedDisagreements;
+
+  /// No description provided for @simulationYourContribution.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的贡献'**
+  String get simulationYourContribution;
+
+  /// No description provided for @simulationExposedKnowledgeGaps.
+  ///
+  /// In zh, this message translates to:
+  /// **'暴露的知识盲区'**
+  String get simulationExposedKnowledgeGaps;
+
+  /// No description provided for @simulationSuggestedNextSteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议下一步'**
+  String get simulationSuggestedNextSteps;
+
+  /// No description provided for @simulationStructuredInsightGenerated.
+  ///
+  /// In zh, this message translates to:
+  /// **'已生成结构化洞察总结。'**
+  String get simulationStructuredInsightGenerated;
+
+  /// No description provided for @simulationEmptyGenerating.
+  ///
+  /// In zh, this message translates to:
+  /// **'模拟正在生成中...'**
+  String get simulationEmptyGenerating;
+
+  /// No description provided for @simulationEmptyStartPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始一次学习场景模拟，让角色逐轮讨论这个主题。'**
+  String get simulationEmptyStartPrompt;
+
+  /// No description provided for @simulationCurrentScene.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前场景'**
+  String get simulationCurrentScene;
+
+  /// No description provided for @simulationCurrentGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前目标'**
+  String get simulationCurrentGoal;
+
+  /// No description provided for @simulationInteractionStyle.
+  ///
+  /// In zh, this message translates to:
+  /// **'互动方式'**
+  String get simulationInteractionStyle;
+
+  /// No description provided for @simulationRoleDiscussionUserJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'角色讨论 + 你来接话'**
+  String get simulationRoleDiscussionUserJoin;
+
+  /// No description provided for @simulationTopicHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入一个知识点或主题'**
+  String get simulationTopicHint;
+
+  /// No description provided for @simulationTopicHintExample.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：特征值与特征向量'**
+  String get simulationTopicHintExample;
+
+  /// No description provided for @simulationStartSimulationTopicAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始围绕这个问题模拟'**
+  String get simulationStartSimulationTopicAction;
+
+  /// No description provided for @simulationUserInputTopicHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入你想要讨论的学习主题或问题'**
+  String get simulationUserInputTopicHint;
+
+  /// No description provided for @simulationUserInputTopicHelper.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成更多学习任务后，系统将基于你的真实学习数据推荐讨论主题'**
+  String get simulationUserInputTopicHelper;
+
+  /// No description provided for @simulationRecommendedEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有推荐种子，你可以先手动输入主题开始。'**
+  String get simulationRecommendedEmptyHint;
+
+  /// No description provided for @simulationRecommendedUserInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在先从你最想讨论的具体问题开始。等积累更多真实学习记录后，系统会再给出基于数据的推荐主题。'**
+  String get simulationRecommendedUserInputHint;
+
+  /// No description provided for @simulationRecommendedPickHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'先挑一个最顺手的起点，开始后推荐卡会自动收起，不打断正式讨论。'**
+  String get simulationRecommendedPickHint;
+
+  /// No description provided for @simulationScenarioAdjustHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整场景后，讨论的角色关系与推进方式也会一起变化。'**
+  String get simulationScenarioAdjustHint;
+
+  /// No description provided for @simulationFacilitationFitHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'让讨论更贴合当前主题。'**
+  String get simulationFacilitationFitHint;
+
+  /// No description provided for @simulationDiscussionNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里可以完整调整主题、场景、轮数、展开方式和参与角色，开始后讨论会按这套设置运行。'**
+  String get simulationDiscussionNote;
+
+  /// No description provided for @simulationParticipantHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'你可以明确指定想邀请谁参与这场讨论。至少保留 1 位，最多 6 位角色。'**
+  String get simulationParticipantHint;
+
+  /// No description provided for @simulationRunningStatusHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'模拟进行中，新的轮次会实时出现在下方。'**
+  String get simulationRunningStatusHint;
+
+  /// No description provided for @simulationScenarioEyebrow.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习场景模拟'**
+  String get simulationScenarioEyebrow;
+
+  /// No description provided for @simulationScenarioTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始这场学习模拟'**
+  String get simulationScenarioTitle;
+
+  /// No description provided for @simulationScenarioSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'先选讨论场景，再输入一个你想推开的主题。开始后会自动收束成沉浸式讨论界面。'**
+  String get simulationScenarioSubtitle;
+
+  /// No description provided for @simulationRoleDiscussionValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'角色讨论 + 你来接话'**
+  String get simulationRoleDiscussionValue;
+
+  /// No description provided for @simulationJudgeExampleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：我会先补几何直觉，再回来刷一道题验证'**
+  String get simulationJudgeExampleHint;
+
+  /// No description provided for @simulationInteractionExplain.
+  ///
+  /// In zh, this message translates to:
+  /// **'先给出你的判断，下一轮才会真正围绕你的想法继续展开。'**
+  String get simulationInteractionExplain;
+
+  /// No description provided for @simulationInteractionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议先在这里接住一轮，让角色回应你的判断；如果你想回到主对话，也可以把这一步带回聊天继续。'**
+  String get simulationInteractionHint;
+
+  /// No description provided for @simulationContinuitySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。'**
+  String get simulationContinuitySubtitle;
+
+  /// No description provided for @simulationBridgeCurrentlyVerifyingFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在验证路径「{routeTitle}」'**
+  String simulationBridgeCurrentlyVerifyingFormat(String routeTitle);
+
+  /// No description provided for @simulationBridgeVerifyingRoute.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在验证一条推演路径'**
+  String get simulationBridgeVerifyingRoute;
+
+  /// No description provided for @simulationBridgeVerificationDescWithTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'这轮模拟来自知识剧场，目标是 {targetName}。你可以随时带着当前进度回到剧场继续采纳或校准。'**
+  String simulationBridgeVerificationDescWithTarget(String targetName);
+
+  /// No description provided for @simulationBridgeVerificationContext.
+  ///
+  /// In zh, this message translates to:
+  /// **'这轮模拟来自知识剧场，当前上下文会和原推演保持关联。'**
+  String get simulationBridgeVerificationContext;
+
+  /// No description provided for @simulationInteractionModeFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'互动模式：{mode}'**
+  String simulationInteractionModeFormat(String mode);
+
+  /// No description provided for @simulationInteractionOpenQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'开放追问'**
+  String get simulationInteractionOpenQuestion;
+
+  /// No description provided for @simulationInteractionViewpointChallenge.
+  ///
+  /// In zh, this message translates to:
+  /// **'观点挑战'**
+  String get simulationInteractionViewpointChallenge;
+
+  /// No description provided for @simulationInteractionBinaryChoice.
+  ///
+  /// In zh, this message translates to:
+  /// **'二选一判断'**
+  String get simulationInteractionBinaryChoice;
+
+  /// No description provided for @simulationInteractionChoice.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择判断'**
+  String get simulationInteractionChoice;
+
+  /// No description provided for @simulationCurrentFocusFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前焦点：{speaker}'**
+  String simulationCurrentFocusFormat(String speaker);
+
+  /// No description provided for @simulationTopicFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题：{topic}'**
+  String simulationTopicFormat(String topic);
+
+  /// No description provided for @simulationTopicAndSpeakerFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题：{topic} · 当前发言 {speaker}'**
+  String simulationTopicAndSpeakerFormat(String topic, String speaker);
+
+  /// No description provided for @simulationRoundN.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {round} 轮'**
+  String simulationRoundN(int round);
+
+  /// No description provided for @simulationRoleCountFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 角色'**
+  String simulationRoleCountFormat(int count);
+
+  /// No description provided for @simulationRunningRoundN.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在第 {round}/{total} 轮'**
+  String simulationRunningRoundN(int round, int total);
+
+  /// No description provided for @simulationRoundViewpoints.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 轮观点'**
+  String simulationRoundViewpoints(int count);
+
+  /// No description provided for @simulationRoleCountLong.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位角色'**
+  String simulationRoleCountLong(int count);
+
+  /// No description provided for @simulationRoundFormatLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{current} / {max} 轮'**
+  String simulationRoundFormatLabel(int current, int max);
+
+  /// No description provided for @simulationRoundSliderLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 轮'**
+  String simulationRoundSliderLabel(int count);
+
+  /// No description provided for @simulationParticipantDefaultStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前将按系统默认角色运行。'**
+  String get simulationParticipantDefaultStatus;
+
+  /// No description provided for @simulationParticipantCurrentStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前参与：{names}'**
+  String simulationParticipantCurrentStatus(String names);
+
+  /// No description provided for @simulationBulletParticipants.
+  ///
+  /// In zh, this message translates to:
+  /// **'参与者：{names}'**
+  String simulationBulletParticipants(String names);
+
+  /// No description provided for @simulationBulletRounds.
+  ///
+  /// In zh, this message translates to:
+  /// **'总轮次：{count} 轮，适合沉淀为下一步推演或复盘报告。'**
+  String simulationBulletRounds(int count);
+
+  /// No description provided for @simulationBulletOpening.
+  ///
+  /// In zh, this message translates to:
+  /// **'开场重点：{message}'**
+  String simulationBulletOpening(String message);
+
+  /// No description provided for @simulationRoundFormatShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'{current}/{total} 轮'**
+  String simulationRoundFormatShort(int current, int total);
+
+  /// No description provided for @simulationContinueInChatContext.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续刚才的学习模拟。'**
+  String get simulationContinueInChatContext;
+
+  /// No description provided for @simulationContinueTopicLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题：{topic}'**
+  String simulationContinueTopicLabel(String topic);
+
+  /// No description provided for @simulationContinueScenarioLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'场景：{label}'**
+  String simulationContinueScenarioLabel(String label);
+
+  /// No description provided for @simulationContinueCurrentQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前问题：{question}'**
+  String simulationContinueCurrentQuestion(String question);
+
+  /// No description provided for @simulationContinueMyResponse.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的回应：{reply}'**
+  String simulationContinueMyResponse(String reply);
+
+  /// No description provided for @simulationBalancedPush.
+  ///
+  /// In zh, this message translates to:
+  /// **'平衡推进'**
+  String get simulationBalancedPush;
+
+  /// No description provided for @simulationDebateClash.
+  ///
+  /// In zh, this message translates to:
+  /// **'分歧碰撞'**
+  String get simulationDebateClash;
+
+  /// No description provided for @simulationGuidedBreakdown.
+  ///
+  /// In zh, this message translates to:
+  /// **'引导拆解'**
+  String get simulationGuidedBreakdown;
+
+  /// No description provided for @simulationPracticalApply.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用落地'**
+  String get simulationPracticalApply;
+
+  /// No description provided for @simulationReportReturnException.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习报告返回格式异常'**
+  String get simulationReportReturnException;
+
+  /// No description provided for @simulationReportGenerationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成学习报告失败：{error}'**
+  String simulationReportGenerationFailed(String error);
+
+  /// No description provided for @simulationReportTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份报告已接收本次模拟中暴露的问题'**
+  String get simulationReportTitle;
+
+  /// No description provided for @simulationReportSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'你在模拟里暴露出的分歧和知识盲区，已经被带入这份正式报告。'**
+  String get simulationReportSummary;
+
+  /// No description provided for @simulationShareCreated.
+  ///
+  /// In zh, this message translates to:
+  /// **'我刚在 Sparkle 跑了一场学习仿真：{topic}\n场景：{scenario}\n洞察：{insight}'**
+  String simulationShareCreated(String topic, String scenario, String insight);
+
+  /// No description provided for @simulationShareTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习场景模拟 · {topic}'**
+  String simulationShareTitle(String topic);
+
+  /// No description provided for @simulationShareRawText.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习场景模拟\n主题：{topic}\n场景：{scenario}\n洞察：{insight}'**
+  String simulationShareRawText(String topic, String scenario, String insight);
+
+  /// No description provided for @simulationCustomFigureHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：张居正 / 俾斯麦'**
+  String get simulationCustomFigureHint;
+
+  /// No description provided for @simulationTopicCurrentFocusFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题：{topic} · 当前发言 {speaker}'**
+  String simulationTopicCurrentFocusFormat(String topic, String speaker);
+
+  /// No description provided for @simulationCurrentFocusLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前焦点：{speaker}'**
+  String simulationCurrentFocusLabel(String speaker);
+
+  /// No description provided for @simulationImmersiveTopicAndFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题：{topic} · 当前发言 {speaker}'**
+  String simulationImmersiveTopicAndFocus(String topic, String speaker);
 }
 
 class _AppLocalizationsDelegate

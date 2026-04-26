@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -233,7 +234,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     final liveRounds = session?.rounds ?? state.liveRounds;
     final liveInsightSummary = session?.insightSummary ??
         state.liveInsightSummary ??
-        (state.isLoading ? '模拟进行中，新的轮次会实时出现在下方。' : null);
+        (state.isLoading ? context.l10n.simulationRunningStatusHint : null);
     final participants = _isPlaybackPaused
         ? (_pausedParticipants ?? liveParticipants)
         : liveParticipants;
@@ -268,7 +269,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('学习场景模拟'),
+        title: Text(context.l10n.simulationTitle),
         actions: [
           if (session != null)
             IconButton(
@@ -528,7 +529,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  routeTitle.isNotEmpty ? '正在验证路径「$routeTitle」' : '正在验证一条推演路径',
+                  routeTitle.isNotEmpty ? context.l10n.simulationBridgeCurrentlyVerifyingFormat(routeTitle) : context.l10n.simulationBridgeVerifyingRoute,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -536,8 +537,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 const SizedBox(height: 6),
                 Text(
                   targetName.isNotEmpty
-                      ? '这轮模拟来自知识剧场，目标是 $targetName。你可以随时带着当前进度回到剧场继续采纳或校准。'
-                      : '这轮模拟来自知识剧场，当前上下文会和原推演保持关联。',
+                      ? context.l10n.simulationBridgeVerificationDescWithTarget(targetName)
+                      : context.l10n.simulationBridgeVerificationContext,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                         height: 1.4,
@@ -550,7 +551,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
           FilledButton.tonal(
             onPressed: () => context.push(
               _buildTheaterRoute(
-                topic: topic.isEmpty ? (widget.initialTopic ?? '当前模拟') : topic,
+                topic: topic.isEmpty ? (widget.initialTopic ?? context.l10n.simulationCurrentSimulation) : topic,
                 simulationSessionId: session?.id,
               ),
             ),
