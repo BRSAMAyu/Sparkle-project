@@ -41,7 +41,7 @@ class SparkRequest(BaseModel):
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=200)
     limit: int = Field(10, ge=1, le=50)
-    threshold: float = Field(0.3, ge=0.0, le=1.0)
+    threshold: float = Field(0.6, ge=0.0, le=1.0)  # cosine distance threshold; 0.6 ≈ similarity>0.4, suitable for Chinese embeddings
 
 
 class CreateGalaxyNodeRequest(BaseModel):

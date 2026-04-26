@@ -134,7 +134,7 @@ class KnowledgeRetrievalService:
         vector_query: str | None = None,
         subject_id: int | None = None,
         limit: int = 5,
-        threshold: float = 0.3,
+        threshold: float = 0.6,
         use_reranker: bool = True
     ) -> list[SearchResultItem]:
         """
@@ -169,7 +169,7 @@ class KnowledgeRetrievalService:
         vector_query: str | None = None,
         subject_id: int | None = None,
         limit: int = 5,
-        threshold: float = 0.3,
+        threshold: float = 0.6,
         use_reranker: bool = True
     ) -> list[SearchResultItem]:
         """
@@ -398,7 +398,7 @@ class KnowledgeRetrievalService:
         file_ids: list[UUID],
         vector_query: str | None = None,
         limit: int = 5,
-        threshold: float = 0.3,
+        threshold: float = 0.6,
         include_group_documents: bool = False,
         group_ids: list[UUID | str] | None = None,
     ) -> list["DocumentChunkResult"]:
@@ -510,9 +510,12 @@ class KnowledgeRetrievalService:
         query: str,
         subject_id: int | None = None,
         limit: int = 10,
-        threshold: float = 0.3,
+        threshold: float = 0.6,
     ) -> list[tuple[KnowledgeNode, float]]:
-        """Internal semantic search that returns nodes with normalized scores."""
+        """Internal semantic search that returns nodes with normalized scores.
+        threshold is cosine DISTANCE (0=identical, 1=opposite).
+        Default 0.6 ≈ similarity>0.4, suitable for Chinese DashScope embeddings.
+        """
         if not await self._vector_runtime_available():
             return []
 
