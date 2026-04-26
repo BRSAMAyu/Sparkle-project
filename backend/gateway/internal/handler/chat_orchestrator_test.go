@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -69,7 +70,7 @@ func TestConvertResponseToJSONCitations(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	citationsAny, ok := result["citations"].([]map[string]interface{})
 	assert.True(t, ok)
 	assert.Len(t, citationsAny, 1)
@@ -118,7 +119,7 @@ func TestConvertResponseToJSONIntervention(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	assert.Equal(t, "intervention", result["type"])
 	intervention, ok := result["intervention"].(map[string]interface{})
 	assert.True(t, ok)
@@ -142,7 +143,7 @@ func TestConvertResponseToJSONIncludesTraceMetadata(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	assert.Equal(t, "trace-123", result["trace_id"])
 	assert.Equal(t, "standard_chat", result["workflow_id"])
 	assert.Equal(t, "v1", result["prompt_version"])
@@ -165,7 +166,7 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	meta, ok := result["metadata"].(map[string]interface{})
 	assert.True(t, ok)
 	selected, ok := meta["selected_experts"].([]interface{})
@@ -185,12 +186,12 @@ func TestConvertResponseToJSONAddsUXProgressFromStatus(t *testing.T) {
 		Content: &agentv1.ChatResponse_StatusUpdate{
 			StatusUpdate: &agentv1.AgentStatus{
 				State:   agentv1.AgentStatus_EXECUTING_TOOL,
-				Details: "正在执行 2 个任务...",
+				Details: "Executing 2 tasks...",
 			},
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	meta, ok := result["metadata"].(map[string]interface{})
 	assert.True(t, ok)
 	uxProgress, ok := meta["ux_progress"].(map[string]interface{})
@@ -204,25 +205,25 @@ func TestConvertResponseToJSONDecodesExecutionProgressMetadata(t *testing.T) {
 		ResponseId: "resp-openclaw-progress",
 		RequestId:  "req-openclaw-progress",
 		Metadata: map[string]string{
-			"execution_progress": `{"current_step":"正在访问目标网页","recent_output":["页面标题：Example Domain"],"progress_hint":0.55}`,
+			"execution_progress": `{"current_step":"Accessing target webpage","recent_output":["Page title: Example Domain"],"progress_hint":0.55}`,
 		},
 		Content: &agentv1.ChatResponse_StatusUpdate{
 			StatusUpdate: &agentv1.AgentStatus{
 				State:   agentv1.AgentStatus_EXECUTING_TOOL,
-				Details: "正在访问目标网页",
+				Details: "Accessing target webpage",
 			},
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	meta, ok := result["metadata"].(map[string]interface{})
 	assert.True(t, ok)
 	progress, ok := meta["execution_progress"].(map[string]interface{})
 	assert.True(t, ok)
-	assert.Equal(t, "正在访问目标网页", progress["current_step"])
+	assert.Equal(t, "Accessing target webpage", progress["current_step"])
 	recentOutput, ok := progress["recent_output"].([]interface{})
 	assert.True(t, ok)
-	assert.Equal(t, []interface{}{"页面标题：Example Domain"}, recentOutput)
+	assert.Equal(t, []interface{}{"Page title: Example Domain"}, recentOutput)
 	assert.Equal(t, 0.55, progress["progress_hint"])
 }
 
@@ -233,7 +234,7 @@ func TestConvertResponseToJSONMarksDoneOnFinishOnlyResponse(t *testing.T) {
 		FinishReason: agentv1.FinishReason_STOP,
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	assert.Equal(t, "done", result["type"])
 	assert.Equal(t, "STOP", result["finish_reason"])
 	meta, ok := result["metadata"].(map[string]interface{})
@@ -253,11 +254,11 @@ func TestConvertResponseToJSONKeepsContinuePayloadOpen(t *testing.T) {
 			"modeling_complete":      "false",
 		},
 		Content: &agentv1.ChatResponse_FullText{
-			FullText: "我先接住这部分，我们继续往下走。",
+			FullText: "Let me handle this part first, we will continue.",
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	assert.Equal(t, "full_text", result["type"])
 	assert.Equal(t, "CONTINUE", result["finish_reason"])
 	meta, ok := result["metadata"].(map[string]interface{})
@@ -278,7 +279,7 @@ func TestConvertResponseToJSONDoesNotTreatContinueOnlyMarkerAsDone(t *testing.T)
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	assert.Equal(t, "metadata", result["type"])
 	assert.Equal(t, "CONTINUE", result["finish_reason"])
 	meta, ok := result["metadata"].(map[string]interface{})
@@ -312,20 +313,20 @@ func TestConvertResponseToJSONBuildsExecutionSummaryWidget(t *testing.T) {
 				ToolCallId:   "tool-1",
 				WidgetType:   "",
 				WidgetData:   nil,
-				Suggestion:   "继续查看最终回答",
+				Suggestion:   "Continue viewing final response",
 				ErrorMessage: "",
 			},
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	toolResult, ok := result["tool_result"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "execution_summary", toolResult["widget_type"])
 	widgetData, ok := toolResult["widget_data"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "success", widgetData["status"])
-	assert.Equal(t, "继续查看最终回答", widgetData["next_action"])
+	assert.Equal(t, "Continue viewing final response", widgetData["next_action"])
 }
 
 func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {
@@ -339,7 +340,7 @@ func TestConvertResponseToJSONIncludesEventTimeFallback(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	assert.Equal(t, now.UnixMilli(), result["event_time"])
 }
 
@@ -356,7 +357,7 @@ func TestConvertResponseToJSONErrorIncludesEnumOnly(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	errObj, ok := result["error"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "rate_limited", errObj["error_code"])
@@ -377,7 +378,7 @@ func TestConvertResponseToJSONOmitsLegacyFields(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(resp)
+	result := convertResponseToJSON(context.Background(), resp)
 	errObj, ok := result["error"].(map[string]interface{})
 	assert.True(t, ok)
 	if _, ok := errObj["code"]; ok {

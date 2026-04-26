@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/i18n"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -190,7 +191,7 @@ func (s legacyPlanReviewStatusSender) SendPlanReviewStatus(reviewID, status stri
 	}
 }
 
-func (h *ChatOrchestrator) handleActionFeedbackWithResponder(sender actionStatusSender, msgMap map[string]interface{}, userID, authToken string) {
+func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context, sender actionStatusSender, msgMap map[string]interface{}, userID, authToken string) {
 	action, ok := msgMap["action"].(string)
 	if !ok {
 		log.Printf("Invalid action feedback: missing action field")
@@ -234,14 +235,14 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(sender actionStatus
 			if err != nil {
 				log.Printf("❌ Failed to confirm tasks for user %s: %v", userID, err)
 				sender.SendActionStatus(toolResultID, "failed", map[string]interface{}{
-					"message": "确认失败，请重试",
+					"message": i18n.T(ctx, "feedback.action_confirm_failed"),
 				})
 				return
 			}
 
 			// Send confirmation status back to client
 			sender.SendActionStatus(toolResultID, "confirmed", map[string]interface{}{
-				"message":     "任务已确认",
+				"message":     i18n.T(ctx, "feedback.task_confirmed"),
 				"widget_type": widgetType,
 			})
 		} else if action == "dismiss" {
@@ -251,25 +252,25 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(sender actionStatus
 			// TRACKED(TD-009): In future, could mark tasks as rejected in DB
 			// For now, just send status update
 			sender.SendActionStatus(toolResultID, "dismissed", map[string]interface{}{
-				"message":     "任务已忽略",
+				"message":     i18n.T(ctx, "feedback.task_dismissed"),
 				"widget_type": widgetType,
 			})
 		}
 
-	case "plan_card", "create_plan":
+		case "plan_card", "create_plan":
 		if action == "confirm" {
 			// Handle plan confirmation
 			log.Printf("Plan creation confirmed for user %s", userID)
 
 			sender.SendActionStatus(toolResultID, "confirmed", map[string]interface{}{
-				"message":     "计划已确认",
+				"message":     i18n.T(ctx, "feedback.plan_confirmed"),
 				"widget_type": widgetType,
 			})
 		} else if action == "dismiss" {
 			log.Printf("Plan creation dismissed by user %s", userID)
 
 			sender.SendActionStatus(toolResultID, "dismissed", map[string]interface{}{
-				"message":     "计划已忽略",
+				"message":     i18n.T(ctx, "feedback.plan_dismissed"),
 				"widget_type": widgetType,
 			})
 		}
@@ -280,20 +281,20 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(sender actionStatus
 			log.Printf("Focus session start confirmed for user %s", userID)
 
 			sender.SendActionStatus(toolResultID, "confirmed", map[string]interface{}{
-				"message":     "专注已开始",
+				"message":     i18n.T(ctx, "feedback.focus_started"),
 				"widget_type": widgetType,
 			})
 		} else if action == "dismiss" {
 			log.Printf("Focus session dismissed by user %s", userID)
 
 			sender.SendActionStatus(toolResultID, "dismissed", map[string]interface{}{
-				"message":     "专注已取消",
+				"message":     i18n.T(ctx, "feedback.focus_cancelled"),
 				"widget_type": widgetType,
 			})
 		}
 
 	case "execution_summary":
-		h.handleExecutionSummaryActionWithResponder(sender, toolResultID, action, widgetType, authToken)
+		h.handleExecutionSummaryActionWithResponder(ctx, sender, toolResultID, action, widgetType, authToken)
 
 	default:
 		log.Printf("Unknown widget type in action feedback: %s", widgetType)
@@ -328,6 +329,7 @@ func normalizeActionType(widgetType string) string {
 }
 
 func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
+	ctx context.Context,
 	sender actionStatusSender,
 	recordID string,
 	action string,
@@ -336,7 +338,7 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 ) {
 	if h.backendURL == "" || authToken == "" || recordID == "" {
 		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
-			"message":     "缺少执行结果回传所需的连接信息",
+			"message":     i18n.T(ctx, "feedback.execution.missing_connection"),
 			"widget_type": widgetType,
 		})
 		return
@@ -351,7 +353,7 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 		})
 		if err != nil {
 			sender.SendActionStatus(recordID, "failed", map[string]interface{}{
-				"message":     "无法构造拒绝请求",
+				"message":     i18n.T(ctx, "feedback.execution.cannot_build_rejection"),
 				"widget_type": widgetType,
 			})
 			return
@@ -363,7 +365,7 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
-			"message":     "无法创建执行回传请求",
+			"message":     i18n.T(ctx, "feedback.execution.cannot_create_request"),
 			"widget_type": widgetType,
 		})
 		return
@@ -374,7 +376,7 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
 		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
-			"message":     fmt.Sprintf("执行回传失败: %v", err),
+			"message":     i18n.T(ctx, "feedback.execution.callback_failed", map[string]string{"error": err.Error()}),
 			"widget_type": widgetType,
 		})
 		return
@@ -384,7 +386,7 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 	var payload map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
-			"message":     "无法解析执行回传结果",
+			"message":     i18n.T(ctx, "feedback.execution.cannot_parse_result"),
 			"widget_type": widgetType,
 		})
 		return
@@ -392,7 +394,7 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 	if resp.StatusCode >= 300 {
 		message := extractErrorMessage(payload)
 		if message == "" {
-			message = fmt.Sprintf("执行回传失败，status=%d", resp.StatusCode)
+			message = i18n.T(ctx, "feedback.execution.callback_failed_status", map[string]string{"status": fmt.Sprintf("%d", resp.StatusCode)})
 		}
 		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
 			"message":     message,
@@ -402,19 +404,19 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 	}
 
 	status := "confirmed"
-	message := "执行结果已更新"
+	message := i18n.T(ctx, "feedback.execution.result_updated")
 	if strings.EqualFold(action, "dismiss") {
 		status = "dismissed"
-		message = "已拒绝这次执行"
+		message = i18n.T(ctx, "feedback.execution.execution_rejected")
 	}
 	sender.SendActionStatus(recordID, status, map[string]interface{}{
 		"message":     message,
 		"widget_type": widgetType,
 	})
-	sender.SendToolResult(buildExecutionSummaryToolResultPayload(payload))
+	sender.SendToolResult(buildExecutionSummaryToolResultPayload(ctx, payload))
 }
 
-func buildExecutionSummaryToolResultPayload(record map[string]interface{}) map[string]interface{} {
+func buildExecutionSummaryToolResultPayload(ctx context.Context, record map[string]interface{}) map[string]interface{} {
 	recordID, _ := record["id"].(string)
 	executionID, _ := record["execution_intent_id"].(string)
 	executionStatus, _ := record["execution_status"].(string)
@@ -423,15 +425,15 @@ func buildExecutionSummaryToolResultPayload(record map[string]interface{}) map[s
 	resultPreview, _ := record["result_preview"].(map[string]interface{})
 	parsedOutput, _ := record["parsed_output"].(map[string]interface{})
 
-	summary := extractExecutionSummaryText(resultPreview, errorMessage)
-	title := "OpenClaw 执行结果"
-	nextAction := "继续查看结果，或直接发送下一条控制指令"
+	summary := extractExecutionSummaryText(ctx, resultPreview, errorMessage)
+	title := i18n.T(ctx, "feedback.execution.title_default")
+	nextAction := i18n.T(ctx, "feedback.execution.next_action_default")
 	if requiresConfirmation {
-		title = "OpenClaw 仍在等待确认"
-		nextAction = "继续确认以完成执行"
+		title = i18n.T(ctx, "feedback.execution.title_waiting")
+		nextAction = i18n.T(ctx, "feedback.execution.next_action_confirm")
 	} else if executionStatus == "failed" || executionStatus == "timed_out" || errorMessage != "" {
-		title = "OpenClaw 执行未完成"
-		nextAction = "补充更明确的指令，或稍后重试"
+		title = i18n.T(ctx, "feedback.execution.title_failed")
+		nextAction = i18n.T(ctx, "feedback.execution.next_action_failed")
 	}
 
 	return map[string]interface{}{
@@ -461,13 +463,13 @@ func buildExecutionSummaryToolResultPayload(record map[string]interface{}) map[s
 			"error_message":         errorMessage,
 			"requires_confirmation": requiresConfirmation,
 			"result_preview":        resultPreview,
-			"impact_summary":        "这次结果来自用户自己的 OpenClaw 远程执行链路。",
+			"impact_summary":        i18n.T(ctx, "feedback.execution.impact_summary"),
 		},
 		"tool_call_id": recordID,
 	}
 }
 
-func extractExecutionSummaryText(resultPreview map[string]interface{}, errorMessage string) string {
+func extractExecutionSummaryText(ctx context.Context, resultPreview map[string]interface{}, errorMessage string) string {
 	if errorMessage != "" {
 		return errorMessage
 	}
@@ -482,7 +484,7 @@ func extractExecutionSummaryText(resultPreview map[string]interface{}, errorMess
 			return command
 		}
 	}
-	return "OpenClaw 已返回最新执行状态。"
+	return i18n.T(ctx, "feedback.execution.fallback_summary")
 }
 
 func extractErrorMessage(payload map[string]interface{}) string {
@@ -781,8 +783,8 @@ func (h *ChatOrchestrator) handleResponseFeedbackWithResponder(ctx context.Conte
 }
 
 // handleActionFeedback processes action confirmation/dismissal feedback from user
-func (h *ChatOrchestrator) handleActionFeedback(writer *wsSafeWriter, msgMap map[string]interface{}, userID, authToken string) {
-	h.handleActionFeedbackWithResponder(legacyActionStatusSender{writer: writer}, msgMap, userID, authToken)
+func (h *ChatOrchestrator) handleActionFeedback(ctx context.Context, writer *wsSafeWriter, msgMap map[string]interface{}, userID, authToken string) {
+	h.handleActionFeedbackWithResponder(ctx, legacyActionStatusSender{writer: writer}, msgMap, userID, authToken)
 }
 
 // sendActionStatus sends action confirmation/dismissal status back to the client via WebSocket
@@ -865,19 +867,19 @@ func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(ctx context.Con
 	case "approve":
 		decision = agentv1.PlanReviewDecision_APPROVE
 		status = "approved"
-		message = "计划已批准，正在执行..."
+		message = i18n.T(ctx, "feedback.plan_review.approved")
 	case "reject":
 		decision = agentv1.PlanReviewDecision_REJECT
 		status = "rejected"
-		message = "计划已取消"
+		message = i18n.T(ctx, "feedback.plan_review.rejected")
 	case "modify":
 		decision = agentv1.PlanReviewDecision_MODIFY
 		status = "modify_requested"
-		message = "请提供修改要求..."
+		message = i18n.T(ctx, "feedback.plan_review.modify_requested")
 	default:
 		decision = agentv1.PlanReviewDecision_ACKNOWLEDGE
 		status = "acknowledged"
-		message = "已确认"
+		message = i18n.T(ctx, "feedback.plan_review.acknowledged")
 	}
 
 	// Extract optional meta fields

@@ -16,14 +16,14 @@ func TestChatHistoryServiceStoresSessionMetadataAndHistory(t *testing.T) {
 	svc := NewChatHistoryService(rdb)
 	ctx := context.Background()
 
-	require.NoError(t, svc.SaveMessage(ctx, "agent_test", []byte(`{"session_id":"agent_test","user_id":"u1","role":"user","content":"帮我制定高数复习计划","timestamp":"1710000000"}`)))
-	require.NoError(t, svc.SaveMessage(ctx, "agent_test", []byte(`{"session_id":"agent_test","user_id":"u1","role":"assistant","content":"先确认考试时间","timestamp":"1710000001"}`)))
+	require.NoError(t, svc.SaveMessage(ctx, "agent_test", []byte(`{"session_id":"agent_test","user_id":"u1","role":"user","content":"Calculus review","timestamp":"1710000000"}`)))
+	require.NoError(t, svc.SaveMessage(ctx, "agent_test", []byte(`{"session_id":"agent_test","user_id":"u1","role":"assistant","content":"First confirm exam date","timestamp":"1710000001"}`)))
 
 	sessions, err := svc.GetRecentSessions(ctx, "u1", 10)
 	require.NoError(t, err)
 	require.Len(t, sessions, 1)
 	require.Equal(t, "agent_test", sessions[0].ID)
-	require.Equal(t, "帮我制定高数复习计划", sessions[0].Title)
+	require.Equal(t, "Calculus review", sessions[0].Title)
 
 	messages, err := svc.GetMessages(ctx, "u1", "agent_test", 20, 0)
 	require.NoError(t, err)
@@ -64,4 +64,29 @@ func TestChatHistoryServiceReportsRetryBufferOverflow(t *testing.T) {
 	require.NoError(t, historyErr)
 	require.Len(t, history, 1)
 	require.Equal(t, "overflow", history[0].Content)
+}
+
+func TestChatHistoryServiceStoresConversationSettings(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	svc := NewChatHistoryService(rdb)
+	ctx := context.Background()
+
+	updated, err := svc.UpdateConversationSettings(ctx, "u1", "session-settings", ConversationSettings{
+		UseDocumentContext: false,
+		DocumentFilter:     []string{"file-1", "file-1", " file-2 "},
+	})
+	require.NoError(t, err)
+	require.False(t, updated.UseDocumentContext)
+	require.Equal(t, []string{"file-1", "file-2"}, updated.DocumentFilter)
+
+	stored, ok, err := svc.GetConversationSettings(ctx, "u1", "session-settings")
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.False(t, stored.UseDocumentContext)
+	require.Equal(t, []string{"file-1", "file-2"}, stored.DocumentFilter)
+
+	_, _, err = svc.GetConversationSettings(ctx, "other", "session-settings")
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrChatHistoryForbidden()))
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/galaxy"
+	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
@@ -42,15 +43,17 @@ var chatInputPool = sync.Pool{
 
 // chatInput represents a WebSocket chat message input
 type chatInput struct {
-	Message           string                 `json:"message"`
-	SessionID         string                 `json:"session_id"`
-	RequestID         string                 `json:"request_id,omitempty"`
-	Nickname          string                 `json:"nickname,omitempty"`
-	FileIds           []string               `json:"file_ids,omitempty"`
-	IncludeReferences bool                   `json:"include_references,omitempty"`
-	ActiveTools       []string               `json:"active_tools,omitempty"`
-	ExtraContext      map[string]interface{} `json:"extra_context,omitempty"`
-	ChatMode          string                 `json:"chat_mode,omitempty"`
+	Message            string                 `json:"message"`
+	SessionID          string                 `json:"session_id"`
+	RequestID          string                 `json:"request_id,omitempty"`
+	Nickname           string                 `json:"nickname,omitempty"`
+	FileIds            []string               `json:"file_ids,omitempty"`
+	IncludeReferences  bool                   `json:"include_references,omitempty"`
+	ActiveTools        []string               `json:"active_tools,omitempty"`
+	ExtraContext       map[string]interface{} `json:"extra_context,omitempty"`
+	ChatMode           string                 `json:"chat_mode,omitempty"`
+	UseDocumentContext *bool                  `json:"use_document_context,omitempty"`
+	DocumentFilter     []string               `json:"document_filter,omitempty"`
 	// Tool result fields — populated when the client sends back a tool execution result.
 	ToolCallID     string `json:"tool_call_id,omitempty"`
 	ToolName       string `json:"tool_name,omitempty"`
@@ -101,6 +104,8 @@ func (c *chatInput) Reset() {
 	c.ActiveTools = nil
 	c.ExtraContext = nil
 	c.ChatMode = ""
+	c.UseDocumentContext = nil
+	c.DocumentFilter = nil
 	c.ToolCallID = ""
 	c.ToolName = ""
 	c.ToolResultJSON = ""
@@ -365,7 +370,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					_ = writer.WriteJSON(gin.H{"type": "pong"})
 					return false
 				case "action_feedback":
-					h.handleActionFeedback(writer, msgMap, userID, authToken)
+					h.handleActionFeedback(c.Request.Context(), writer, msgMap, userID, authToken)
 					return false
 				case "intervention_feedback":
 					h.handleInterventionFeedback(writer, msgMap, userID, authToken)
@@ -444,7 +449,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				if len(input.Message) > maxMessageLength {
 					_ = writer.WriteJSON(gin.H{
 						"type":    "error",
-						"message": fmt.Sprintf("消息长度超过 %d 字符限制", maxMessageLength),
+						"message": i18n.T(c.Request.Context(), "chat.message_length_exceeded", map[string]string{"max_length": fmt.Sprintf("%d", maxMessageLength)}),
 					})
 					return false
 				}
@@ -505,7 +510,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// 🔧 P1-2: 消息长度检查
 				if len(input.Message) > maxMessageLength {
 					responder.SendError("invalid_argument",
-						fmt.Sprintf("消息长度超过 %d 字符限制", maxMessageLength), false)
+						i18n.T(msgCtx, "chat.message_length_exceeded", map[string]string{"max_length": fmt.Sprintf("%d", maxMessageLength)}), false)
 					return false
 				}
 
@@ -544,7 +549,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid action_feedback payload", false)
 					return false
 				}
-				h.handleActionFeedbackWithResponder(responder, msgMap, userID, authToken)
+				h.handleActionFeedbackWithResponder(msgCtx, responder, msgMap, userID, authToken)
 				return false
 			case "focus_completed":
 				msgMap, err := decodePayloadMap(envelope.Payload["focus_completed"])

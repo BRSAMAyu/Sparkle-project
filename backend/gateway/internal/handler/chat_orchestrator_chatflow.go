@@ -35,6 +35,17 @@ const (
 	teamModePref    = "team::"
 )
 
+func defaultUseDocumentContextForMode(chatMode string) bool {
+	return normalizeChatMode(chatMode) == "study_plan"
+}
+
+func ensureChatExtraContext(input *chatInput) map[string]interface{} {
+	if input.ExtraContext == nil {
+		input.ExtraContext = map[string]interface{}{}
+	}
+	return input.ExtraContext
+}
+
 func shortHash(parts ...string) string {
 	h := sha256.New()
 	for _, part := range parts {
@@ -317,6 +328,49 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	// P0: Semantic Cache Check (scoped by user + mode, after context resolution)
 	normalizedChatMode := normalizeChatMode(input.ChatMode)
+	useDocumentContext := defaultUseDocumentContextForMode(normalizedChatMode)
+	documentFilter := append([]string(nil), input.DocumentFilter...)
+	if h.chatHistory != nil && input.SessionID != "" {
+		if stored, ok, err := h.chatHistory.GetConversationSettings(ctx, userID, input.SessionID); err != nil {
+			log.Printf("Failed to load conversation settings for session=%s: %v", input.SessionID, err)
+		} else if ok && stored != nil {
+			useDocumentContext = stored.UseDocumentContext
+			if len(input.DocumentFilter) == 0 {
+				documentFilter = append([]string(nil), stored.DocumentFilter...)
+			}
+		}
+		if input.UseDocumentContext != nil {
+			useDocumentContext = *input.UseDocumentContext
+		}
+		if input.UseDocumentContext != nil || len(input.DocumentFilter) > 0 {
+			updated, err := h.chatHistory.UpdateConversationSettings(ctx, userID, input.SessionID, service.ConversationSettings{
+				UseDocumentContext: useDocumentContext,
+				DocumentFilter:     documentFilter,
+			})
+			if err != nil {
+				log.Printf("Failed to update conversation settings for session=%s: %v", input.SessionID, err)
+			} else if updated != nil {
+				useDocumentContext = updated.UseDocumentContext
+				documentFilter = append([]string(nil), updated.DocumentFilter...)
+			}
+		}
+	} else if input.UseDocumentContext != nil {
+		useDocumentContext = *input.UseDocumentContext
+	}
+	if input.UseDocumentContext != nil && (h.chatHistory == nil || input.SessionID == "") {
+		useDocumentContext = *input.UseDocumentContext
+	}
+	extraContext := ensureChatExtraContext(input)
+	extraContext["use_document_context"] = useDocumentContext
+	extraContext["document_filter"] = documentFilter
+	extraContext["conversation_settings"] = map[string]interface{}{
+		"use_document_context": useDocumentContext,
+		"document_filter":      documentFilter,
+	}
+	if len(documentFilter) > 0 {
+		extraContext["selected_document_ids"] = documentFilter
+	}
+
 	cacheScope := semanticCacheScope(
 		userID,
 		normalizedChatMode,
@@ -368,7 +422,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					"is_cache_hit": true,
 				})
 			case *wsSafeWriter:
-				_ = writeLegacyJSON(r, convertResponseToJSON(resp))
+				_ = writeLegacyJSON(r, convertResponseToJSON(ctx, resp))
 				_ = writeLegacyJSON(r, gin.H{
 					"type": "meta",
 					"meta": map[string]interface{}{
@@ -401,11 +455,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		UserId:            userID,
 		SessionId:         input.SessionID,
 		FileIds:           input.FileIds,
+		DocumentFilter:    documentFilter,
 		IncludeReferences: input.IncludeReferences,
 		ActiveTools:       input.ActiveTools,
 		ChatMode:          normalizedChatMode,
 		UserProfile:       buildAgentUserProfile(input.Nickname, userContextJSON, profileSnapshot, resolvedUser),
 	}
+	req.UseDocumentContext = &useDocumentContext
 
 	// Set input based on whether this is a tool result or a regular message
 	if input.IsToolResult {
@@ -568,7 +624,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			}
 		case *wsSafeWriter:
 			// Convert protobuf response to JSON-friendly map
-			jsonResp := convertResponseToJSON(resp)
+			jsonResp := convertResponseToJSON(ctx, resp)
 			// Forward to WebSocket client
 			if err := writeLegacyJSON(r, jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
@@ -677,7 +733,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *protobufResponder:
 			_ = r.SendChatResponse(doneResp)
 		case *wsSafeWriter:
-			_ = writeLegacyJSON(r, convertResponseToJSON(doneResp))
+			_ = writeLegacyJSON(r, convertResponseToJSON(ctx, doneResp))
 		}
 	}
 

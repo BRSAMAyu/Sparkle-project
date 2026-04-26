@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/service"
 )
 
@@ -44,14 +45,14 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	}
 
 	if req.Provider != "apple" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "不支持的身份提供商"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(c.Request.Context(), "auth.unsupported_provider")})
 		return
 	}
 
 	// 1. Verify Apple Token
 	claims, err := h.appleAuthService.VerifyToken(req.Token)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("Apple验证失败：%v", err)})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": i18n.T(c.Request.Context(), "auth.apple_verify_failed", map[string]string{"error": err.Error()})})
 		return
 	}
 
@@ -93,7 +94,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 				AppleID:            pgtype.Text{String: claims.Subject, Valid: true},
 			})
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(c.Request.Context(), "auth.create_user_failed")})
 				return
 			}
 		}
@@ -105,7 +106,7 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 			AppleID: pgtype.Text{String: claims.Subject, Valid: true},
 		})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新苹果登录信息失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(c.Request.Context(), "auth.link_apple_failed")})
 			return
 		}
 	}
@@ -119,12 +120,12 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	sessionID := uuid.New().String()
 	accessToken, err := h.createAccessToken(user.ID, sessionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发令牌失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(c.Request.Context(), "auth.create_token_failed")})
 		return
 	}
 	refreshToken, refreshJTI, err := h.createRefreshToken(user.ID, sessionID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "签发刷新令牌失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(c.Request.Context(), "auth.create_refresh_token_failed")})
 		return
 	}
 

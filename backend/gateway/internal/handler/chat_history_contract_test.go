@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
@@ -28,7 +29,7 @@ func TestGetConversationHistoryIncludesMobileContractFields(t *testing.T) {
 		"role":"assistant",
 		"content":"hello",
 		"timestamp":"1710000001",
-		"widgets":[{"type":"cta","data":{"label":"继续"}}],
+		"widgets":[{"type":"cta","data":{"label":"continue"}}],
 		"tool_results":[{"success":true,"tool_name":"planner","data":{"ok":true}}],
 		"has_errors":true,
 		"errors":[{"tool":"planner","message":"warn"}],
@@ -108,6 +109,42 @@ func TestGetConversationHistoryKeepsNullShapeForOptionalFields(t *testing.T) {
 	require.Contains(t, msg, "widgets")
 	require.Contains(t, msg, "tool_results")
 	require.Contains(t, msg, "agentCollaboration")
+}
+
+func TestPatchConversationSettingsPersistsToggle(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	svc := service.NewChatHistoryService(rdb)
+	handler := NewChatHistoryHandler(svc)
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set("user_id", "user-3")
+		c.Next()
+	})
+	router.PATCH("/conversations/:conversation_id/settings", handler.PatchConversationSettings)
+
+	req := httptest.NewRequest(
+		http.MethodPatch,
+		"/conversations/session-3/settings",
+		strings.NewReader(`{"use_document_context":false,"document_filter":["file-a","file-b"]}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	require.Equal(t, http.StatusOK, resp.Code)
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	require.Equal(t, false, body["use_document_context"])
+	require.Equal(t, []interface{}{"file-a", "file-b"}, body["document_filter"])
+
+	stored, ok, err := svc.GetConversationSettings(createGinContext().Request.Context(), "user-3", "session-3")
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.False(t, stored.UseDocumentContext)
+	require.Equal(t, []string{"file-a", "file-b"}, stored.DocumentFilter)
 }
 
 func createGinContext() *gin.Context {

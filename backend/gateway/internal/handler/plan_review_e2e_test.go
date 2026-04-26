@@ -41,7 +41,7 @@ func TestPlanReviewE2E(t *testing.T) {
 		// Step 2: Send message requesting plan creation
 		planRequest := map[string]interface{}{
 			"type":      "message",
-			"content":   "帮我制定一个学习Python的四周计划",
+			"content":   "Help me make a 4-week Python study plan",
 			"sessionId": "test-plan-review-session",
 			"userId":    "test-user-123",
 		}
@@ -70,7 +70,7 @@ func TestPlanReviewE2E(t *testing.T) {
 		// Step 4: Send message requesting plan review
 		reviewRequest := map[string]interface{}{
 			"type":      "message",
-			"content":   "请评审这个学习计划",
+			"content":   "Please review this study plan",
 			"sessionId": "test-plan-review-session",
 			"userId":    "test-user-123",
 			"metadata": map[string]interface{}{
@@ -137,7 +137,7 @@ func TestPlanReviewE2E(t *testing.T) {
 		// Create a problematic plan
 		problematicRequest := map[string]interface{}{
 			"type":      "message",
-			"content":   "制定一个一天学会所有编程语言的计划",
+			"content":   "Make a plan to learn all programming languages in one day",
 			"sessionId": "test-problematic-plan",
 			"userId":    "test-user-456",
 		}
@@ -171,7 +171,7 @@ func TestPlanReviewE2E(t *testing.T) {
 		// Create plan
 		planRequest := map[string]interface{}{
 			"type":      "message",
-			"content":   "制定一个学习Go的计划",
+			"content":   "Make a plan to learn Go",
 			"sessionId": "test-modification-flow",
 			"userId":    "test-user-789",
 		}
@@ -184,7 +184,7 @@ func TestPlanReviewE2E(t *testing.T) {
 		// Request review
 		reviewRequest := map[string]interface{}{
 			"type":      "message",
-			"content":   "评审这个计划",
+			"content":   "Review this plan",
 			"sessionId": "test-modification-flow",
 			"userId":    "test-user-789",
 		}
@@ -209,7 +209,7 @@ func TestPlanReviewE2E(t *testing.T) {
 			// Submit modification request
 			modificationRequest := map[string]interface{}{
 				"type":       "message",
-				"content":    "请把学习周期延长到8周",
+				"content":    "Please extend the study period to 8 weeks",
 				"sessionId":  "test-modification-flow",
 				"userId":     "test-user-789",
 				"reviewId":   reviewID,
@@ -239,7 +239,7 @@ func TestPlanReviewRejectionFlow(t *testing.T) {
 		// Create and review plan
 		planRequest := map[string]interface{}{
 			"type":      "message",
-			"content":   "制定一个学习Rust的计划",
+			"content":   "Make a plan to learn Rust",
 			"sessionId": "test-rejection-flow",
 			"userId":    "test-user-reject",
 		}
@@ -252,7 +252,7 @@ func TestPlanReviewRejectionFlow(t *testing.T) {
 		// Request review
 		reviewRequest := map[string]interface{}{
 			"type":      "message",
-			"content":   "评审这个计划",
+			"content":   "Review this plan",
 			"sessionId": "test-rejection-flow",
 			"userId":    "test-user-reject",
 		}
@@ -278,7 +278,7 @@ func TestPlanReviewRejectionFlow(t *testing.T) {
 				"type":       "plan_review_feedback",
 				"reviewId":   reviewID,
 				"decision":   "reject",
-				"reason":     "计划不符合我的需求",
+				"reason":     "The plan does not meet my needs",
 				"sessionId":  "test-rejection-flow",
 				"userId":     "test-user-reject",
 			}
@@ -413,7 +413,7 @@ func BenchmarkPlanReviewWorkflow(b *testing.B) {
 		// Create plan
 		planRequest := map[string]interface{}{
 			"type":      "message",
-			"content":   "制定一个学习计划",
+			"content":   "Make a study plan",
 			"sessionId": "bench-session",
 			"userId":    "bench-user",
 		}
