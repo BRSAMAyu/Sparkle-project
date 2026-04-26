@@ -794,7 +794,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              l10n.loadingFailed,
+              l10n.loadingFailed(error),
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 color: DS.textSecondary,

@@ -940,7 +940,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               ),
               const SizedBox(height: DS.spacing16),
               Text(
-                l10n.loadingFailed,
+                l10n.loadingFailed(error),
                 style: TextStyle(
                   fontSize: DS.fontSizeBase,
                   color: DS.textSecondary,

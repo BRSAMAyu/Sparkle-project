@@ -105,7 +105,7 @@ class SprintHistoryScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing12),
             Text(
-              l10n.loadingFailed,
+              l10n.loadingFailed(error),
               style: context.sparkleTypography.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),

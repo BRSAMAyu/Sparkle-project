@@ -603,7 +603,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         .take(5)
         .join('；')
         .trim();
-    final fallback = StuckHelpSheet.genericSuggestions.join('；');
+    final fallback = StuckHelpSheet.genericSuggestions(context).join('；');
     final parts = <String>[
       context.l10n.taskExecutionStuckPromptIntro,
       context.l10n.taskExecutionStuckTaskLabel(task.title),

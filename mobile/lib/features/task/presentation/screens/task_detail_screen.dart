@@ -964,7 +964,7 @@ class _StructuredGuideSection extends StatelessWidget {
         .map((item) => item.toString())
         .where((item) => item.trim().isNotEmpty)
         .toList();
-    final keyPoints = (guide['key_points'] as List<dynamic>? ?? const [])
+    final keyPoints = (guide['key_points'] as List<dynamic>? ?? [])
         .map((item) => item.toString())
         .where((item) => item.trim().isNotEmpty)
         .toList();
@@ -1080,17 +1080,18 @@ class _StructuredGuideSection extends StatelessWidget {
                       context.push('/tasks/${task.id}/execute'),
                     ),
                   ),
-                  const SizedBox(width: DS.spacing8),
+                ),
+                const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: SparkleButton(
                       label: context.l10n.taskOpenAiAssistant,
-                    variant: ButtonVariant.secondary,
-                    icon: const Icon(Icons.smart_toy_outlined, size: 16),
-                    onPressed: () => unawaited(
-                      context.push('/tasks/${task.id}/execute?panel=assistant'),
+                      variant: ButtonVariant.secondary,
+                      icon: const Icon(Icons.smart_toy_outlined, size: 16),
+                      onPressed: () => unawaited(
+                        context.push('/tasks/${task.id}/execute?panel=assistant'),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ],

@@ -311,7 +311,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     );
   }
 
-  Widget _buildQuickAccessCard(BuildContext context) => GraphiteCardSurface(
+  Widget _buildQuickAccessCard(BuildContext context) {
+    final l10n = context.l10n;
+    return GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.panel,
         padding: const EdgeInsets.all(DS.spacing12),
         child: Wrap(
@@ -330,6 +332,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           ],
         ),
       );
+  }
 
   Widget _buildProfileLoadWarning(
       AppLocalizations l10n, String message, WidgetRef ref) =>

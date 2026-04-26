@@ -245,7 +245,7 @@ class _NotificationCenterScreenState
             Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
             const SizedBox(height: DS.spacing16),
             Text(
-              context.l10n.loadingFailed,
+              context.l10n.loadingFailed(error),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: DS.spacing8),

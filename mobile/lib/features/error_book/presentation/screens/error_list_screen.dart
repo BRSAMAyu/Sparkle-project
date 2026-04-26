@@ -463,7 +463,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               ),
               const SizedBox(height: DS.spacing16),
               Text(
-                context.l10n.loadingFailed,
+                context.l10n.loadingFailed(error),
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: DS.fontWeightMedium,

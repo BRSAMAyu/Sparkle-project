@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/graphite_surfaces.dart';
+import 'package:sparkle/core/design/widgets/sparkle_motion_primitives.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -52,6 +55,7 @@ class _TaskGuidePanelState extends State<TaskGuidePanel> {
       fallbackSteps: methodSteps,
       estimatedMinutes: estimatedMinutes,
       minimumOutput: minimumOutput,
+      context: context,
     );
     final keyPoints = _readList(guide['key_points']).take(3).toList();
     final doneCriteria = _readList(
@@ -707,7 +711,7 @@ class _StructuredStepCard extends StatelessWidget {
                               ),
                               if (isCurrent) ...[
                                 const SizedBox(width: DS.spacing8),
-                                const _StepStatusChip(label: context.l10n.taskGuidePanelStepInProgress),
+                                _StepStatusChip(label: context.l10n.taskGuidePanelStepInProgress),
                               ],
                             ],
                           ),
@@ -941,6 +945,7 @@ List<_GuideStepData> _readStructuredSteps(
   required List<String> fallbackSteps,
   required int estimatedMinutes,
   required String minimumOutput,
+  required BuildContext context,
 }) {
   final parsed = <_GuideStepData>[];
   if (value is Iterable) {
@@ -971,7 +976,7 @@ List<_GuideStepData> _readStructuredSteps(
   if (parsed.isNotEmpty) return parsed.take(4).toList(growable: false);
 
   final stepNames = <String>[...fallbackSteps];
-  if (stepNames.isEmpty) return const [];
+  if (stepNames.isEmpty) return [];
   while (stepNames.length < 4) {
     if (stepNames.length == 3) {
       stepNames.add(

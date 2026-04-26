@@ -130,11 +130,11 @@ class AnalysisCard extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
+            ],
           ],
         ),
-      );
-    }
+      ),
+    );
   }
 
   Widget _buildSection(

@@ -201,7 +201,7 @@ class StatisticsPeriodDropdown extends StatelessWidget {
                 onPeriodChanged(period);
               }
             },
-            items: _buildItems(),
+            items: _buildItems(context),
             icon: Icon(
               Icons.keyboard_arrow_down,
               color: DS.neutral500,
@@ -218,7 +218,7 @@ class StatisticsPeriodDropdown extends StatelessWidget {
         ),
       );
 
-  List<DropdownMenuItem<StatisticsPeriod>> _buildItems() {
+  List<DropdownMenuItem<StatisticsPeriod>> _buildItems(BuildContext context) {
     final periods = showCustomOption
         ? StatisticsPeriod.values
         : [

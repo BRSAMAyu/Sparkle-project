@@ -58,7 +58,16 @@ enum _SimulationBottomTrayMode { hidden, peek, expanded }
 
 class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   static const double _immersiveAutoScrollFollowThreshold = 160;
-  static const Map<String, String> _scenarioLabels = simulationScenarioLabels;
+  static const Map<String, String> _scenarioLabels = {
+    'study_group': '学习小组',
+    'knowledge_debate': '知识辩论',
+    'historical_roleplay': '历史角色扮演',
+    'socratic_dialogue': '苏格拉底对话',
+    'case_analysis': '案例分析',
+    'what_if_path': '如果路径',
+    'concept_map_build': '概念图构建',
+    'error_diagnosis': '错误诊断',
+  };
   static const Map<String, List<String>> _scenarioParticipantOptions = {
     'study_group': ['优等生', '中等生', '提问者', '总结者', '练习教练'],
     'knowledge_debate': ['正方专家', '反方专家', '主持人', '证据审查员', '追问者'],

@@ -67,7 +67,7 @@ class ReviewPlanHubScreen extends ConsumerWidget {
                 actionLabel: context.l10n.reviewPlanHubStartToday,
                 onAction: () => context.push('/review?mode=today'),
               ),
-              loading: () => const _LoadingCard(title: context.l10n.reviewPlanHubTodayList),
+              loading: () => _LoadingCard(title: context.l10n.reviewPlanHubTodayList),
               error: (error, _) => _SummaryCard(
                 icon: Icons.auto_stories_rounded,
                 title: context.l10n.reviewPlanHubTodayList,
@@ -93,7 +93,7 @@ class ReviewPlanHubScreen extends ConsumerWidget {
                   onAction: () => context.push('/review?mode=today'),
                 );
               },
-              loading: () => const _LoadingCard(title: context.l10n.reviewPlanHubNightlyReview),
+              loading: () => _LoadingCard(title: context.l10n.reviewPlanHubNightlyReview),
               error: (_, __) => _SummaryCard(
                 icon: Icons.nights_stay_outlined,
                 title: context.l10n.reviewPlanHubNightlyReview,

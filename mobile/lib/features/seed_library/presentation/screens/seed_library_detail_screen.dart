@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
@@ -291,7 +292,8 @@ class _SeedLibraryDetailScreenState
                               ),
                               const SizedBox(height: DS.spacing8),
                               Text(
-                                context.l10n.seedLibraryDetailQualityBreakdownDesc,
+                                context
+                                    .l10n.seedLibraryDetailQualityBreakdownDesc,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -308,21 +310,24 @@ class _SeedLibraryDetailScreenState
                                   if (library.qualityScore != null)
                                     _buildQualityBadge(
                                       context,
-                                      label: context.l10n.seedLibraryDetailQualityComprehensive,
+                                      label: context.l10n
+                                          .seedLibraryDetailQualityComprehensive,
                                       value: library.qualityScore!,
                                       icon: Icons.auto_awesome_outlined,
                                     ),
                                   if (library.systemQualityScore != null)
                                     _buildQualityBadge(
                                       context,
-                                      label: context.l10n.seedLibraryDetailQualitySystem,
+                                      label: context
+                                          .l10n.seedLibraryDetailQualitySystem,
                                       value: library.systemQualityScore!,
                                       icon: Icons.settings_suggest_outlined,
                                     ),
                                   if (library.userRatingAvg != null)
                                     _buildQualityBadge(
                                       context,
-                                      label: context.l10n.seedLibraryDetailQualityUser,
+                                      label: context
+                                          .l10n.seedLibraryDetailQualityUser,
                                       value: library.userRatingAvg!,
                                       icon: Icons.people_outline,
                                     ),
@@ -381,23 +386,29 @@ class _SeedLibraryDetailScreenState
                                       AppFeedback.success(
                                         context,
                                         isNowEnabled && !wasEnabled
-                                            ? context.l10n.seedLibraryDetailAppliedSuccess
+                                            ? context.l10n
+                                                .seedLibraryDetailAppliedSuccess
                                             : !isNowEnabled && wasEnabled
-                                                ? context.l10n.seedLibraryDetailPausedSuccess
-                                                : context.l10n.seedLibraryDetailStatusUpdated,
+                                                ? context.l10n
+                                                    .seedLibraryDetailPausedSuccess
+                                                : context.l10n
+                                                    .seedLibraryDetailStatusUpdated,
                                       );
                                     } catch (e) {
                                       if (!context.mounted) return;
                                       AppFeedback.error(
                                         context,
-                                        context.l10n.seedLibraryDetailApplyFailed(_friendlyActionError(e)),
+                                        context.l10n
+                                            .seedLibraryDetailApplyFailed(
+                                                _friendlyActionError(e)),
                                       );
                                     }
                                   },
-                                  label:
-                                  (state.subscription?.isEnabled ?? false)
+                                  label: (state.subscription?.isEnabled ??
+                                          false)
                                       ? context.l10n.seedLibraryDetailPauseUse
-                                      : context.l10n.seedLibraryDetailApplyLibrary,
+                                      : context
+                                          .l10n.seedLibraryDetailApplyLibrary,
                                   icon: Icon(
                                     (state.subscription?.isEnabled ?? false)
                                         ? Icons.pause_circle_outline
@@ -413,13 +424,21 @@ class _SeedLibraryDetailScreenState
                                               .notifier)
                                           .setAsPrimaryLibrary();
                                       if (!context.mounted) return;
-                                      AppFeedback.success(context, context.l10n.seedLibraryDetailSetPrimarySuccess);
+                                      AppFeedback.success(
+                                          context,
+                                          context.l10n
+                                              .seedLibraryDetailSetPrimarySuccess);
                                     } catch (e) {
                                       if (!context.mounted) return;
-                                      AppFeedback.error(context, context.l10n.seedLibraryDetailSetPrimaryFailed(e.toString()));
+                                      AppFeedback.error(
+                                          context,
+                                          context.l10n
+                                              .seedLibraryDetailSetPrimaryFailed(
+                                                  e.toString()));
                                     }
                                   },
-                                  label: context.l10n.seedLibraryDetailSetPrimary,
+                                  label:
+                                      context.l10n.seedLibraryDetailSetPrimary,
                                   icon: const Icon(Icons.vertical_align_top),
                                 ),
                                 SparkleButton.ghost(
@@ -433,25 +452,31 @@ class _SeedLibraryDetailScreenState
                                       if (!context.mounted) return;
                                       AppFeedback.success(
                                         context,
-                                        context.l10n.seedLibraryDetailMarkedNotSuitableSuccess,
+                                        context.l10n
+                                            .seedLibraryDetailMarkedNotSuitableSuccess,
                                       );
                                     } catch (e) {
                                       if (!context.mounted) return;
                                       AppFeedback.error(
                                         context,
-                                        context.l10n.seedLibraryDetailMarkNotSuitableFailed(_friendlyActionError(e)),
+                                        context.l10n
+                                            .seedLibraryDetailMarkNotSuitableFailed(
+                                                _friendlyActionError(e)),
                                       );
                                     }
                                   },
-                                  label: context.l10n.seedLibraryDetailMarkNotSuitable,
-                                  icon: const Icon(Icons.thumb_down_alt_outlined),
+                                  label: context
+                                      .l10n.seedLibraryDetailMarkNotSuitable,
+                                  icon:
+                                      const Icon(Icons.thumb_down_alt_outlined),
                                 ),
                                 SparkleButton.ghost(
                                   onPressed: () =>
                                       _showRatingSheet(context, state),
                                   label: library.currentUserRating != null
                                       ? context.l10n.seedLibraryDetailEditRating
-                                      : context.l10n.seedLibraryDetailGiveRating,
+                                      : context
+                                          .l10n.seedLibraryDetailGiveRating,
                                   icon: const Icon(Icons.star_outline),
                                 ),
                               ],
@@ -460,11 +485,13 @@ class _SeedLibraryDetailScreenState
                               const SizedBox(height: DS.spacing10),
                               Text(
                                 context.l10n.seedLibraryDetailCurrentStatus(
-                                    state.subscription!.isEnabled
-                                        ? context.l10n.seedLibraryDetailSubscriptionStatusEnabled
-                                        : context.l10n.seedLibraryDetailSubscriptionStatusDisabled,
-                                    state.subscription!.priority,
-                                  ),
+                                  state.subscription!.isEnabled
+                                      ? context.l10n
+                                          .seedLibraryDetailSubscriptionStatusEnabled
+                                      : context.l10n
+                                          .seedLibraryDetailSubscriptionStatusDisabled,
+                                  state.subscription!.priority,
+                                ),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -486,12 +513,14 @@ class _SeedLibraryDetailScreenState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                context.l10n.seedLibraryDetailActiveSubscriptions,
+                                context
+                                    .l10n.seedLibraryDetailActiveSubscriptions,
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const SizedBox(height: DS.spacing8),
                               Text(
-                                context.l10n.seedLibraryDetailActiveSubscriptionsDesc,
+                                context.l10n
+                                    .seedLibraryDetailActiveSubscriptionsDesc,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -609,7 +638,8 @@ class _SeedLibraryDetailScreenState
                           Text(
                             state.items.isEmpty
                                 ? context.l10n.seedLibraryNoContent
-                                : context.l10n.seedLibraryDetailNoResultsUnderFilter,
+                                : context
+                                    .l10n.seedLibraryDetailNoResultsUnderFilter,
                             style:
                                 Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: DS.textSecondary,
@@ -738,15 +768,18 @@ class _SeedLibraryDetailScreenState
   ) {
     final categoryHint = switch (library.category) {
       LibraryCategory.fewShot => context.l10n.seedLibraryDetailUsageFewShot,
-      LibraryCategory.teachingContent => context.l10n.seedLibraryDetailUsageTeachingContent,
-      LibraryCategory.replyTemplate => context.l10n.seedLibraryDetailUsageReplyTemplate,
+      LibraryCategory.teachingContent =>
+        context.l10n.seedLibraryDetailUsageTeachingContent,
+      LibraryCategory.replyTemplate =>
+        context.l10n.seedLibraryDetailUsageReplyTemplate,
       LibraryCategory.custom => context.l10n.seedLibraryDetailUsageCustom,
     };
     if (state.subscription?.isEnabled ?? false) {
       return context.l10n.seedLibraryDetailUsageAppliedEnabled(categoryHint);
     }
     if (state.isSubscribed) {
-      return context.l10n.seedLibraryDetailUsageSubscribedNotEnabled(categoryHint);
+      return context.l10n
+          .seedLibraryDetailUsageSubscribedNotEnabled(categoryHint);
     }
     return context.l10n.seedLibraryDetailUsageNotApplied(categoryHint);
   }
@@ -773,7 +806,8 @@ class _SeedLibraryDetailScreenState
                     ),
               ),
               const SizedBox(height: DS.spacing16),
-              Text(context.l10n.seedLibraryDetailFilterContentType, style: Theme.of(sheetContext).textTheme.titleSmall),
+              Text(context.l10n.seedLibraryDetailFilterContentType,
+                  style: Theme.of(sheetContext).textTheme.titleSmall),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,
@@ -803,7 +837,8 @@ class _SeedLibraryDetailScreenState
                 ],
               ),
               const SizedBox(height: DS.spacing16),
-              Text(context.l10n.seedLibraryDetailFilterDifficulty, style: Theme.of(sheetContext).textTheme.titleSmall),
+              Text(context.l10n.seedLibraryDetailFilterDifficulty,
+                  style: Theme.of(sheetContext).textTheme.titleSmall),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,
@@ -839,7 +874,8 @@ class _SeedLibraryDetailScreenState
                 value: _showInactiveItems,
                 contentPadding: EdgeInsets.zero,
                 title: Text(context.l10n.seedLibraryDetailFilterShowInactive),
-                subtitle: Text(context.l10n.seedLibraryDetailFilterShowInactiveDesc),
+                subtitle:
+                    Text(context.l10n.seedLibraryDetailFilterShowInactiveDesc),
                 onChanged: (value) {
                   setSheetState(() {
                     _showInactiveItems = value;
@@ -903,7 +939,8 @@ class _SeedLibraryDetailScreenState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(context.l10n.seedLibraryDetailRatingTitle, style: Theme.of(context).textTheme.titleLarge),
+              Text(context.l10n.seedLibraryDetailRatingTitle,
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: DS.spacing8),
               Text(
                 context.l10n.seedLibraryDetailRatingDescription,
@@ -912,7 +949,8 @@ class _SeedLibraryDetailScreenState
                     ),
               ),
               const SizedBox(height: DS.spacing12),
-              Text(context.l10n.seedLibraryDetailCurrentRating(score.toStringAsFixed(1))),
+              Text(context.l10n
+                  .seedLibraryDetailCurrentRating(score.toStringAsFixed(1))),
               Slider(
                 value: score,
                 max: 10,
@@ -954,10 +992,14 @@ class _SeedLibraryDetailScreenState
                               );
                           if (!context.mounted) return;
                           Navigator.pop(context);
-                          AppFeedback.success(context, context.l10n.seedLibraryDetailRatingSubmitted);
+                          AppFeedback.success(context,
+                              context.l10n.seedLibraryDetailRatingSubmitted);
                         } catch (e) {
                           if (!context.mounted) return;
-                          AppFeedback.error(context, context.l10n.seedLibraryDetailRatingFailed(e.toString()));
+                          AppFeedback.error(
+                              context,
+                              context.l10n
+                                  .seedLibraryDetailRatingFailed(e.toString()));
                         }
                       },
                       label: context.l10n.seedLibraryDetailSubmitRating,
@@ -1003,7 +1045,8 @@ class _SeedLibraryDetailScreenState
                 if (item.content != null &&
                     item.content!.trim().isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
-                  Text(context.l10n.seedLibraryDetailContentBody, style: Theme.of(context).textTheme.titleMedium),
+                  Text(context.l10n.seedLibraryDetailContentBody,
+                      style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: DS.spacing8),
                   GraphiteCardSurface(
                     surfaceRole: SparkleSurfaceRole.panel,
@@ -1021,7 +1064,8 @@ class _SeedLibraryDetailScreenState
                 if (item.contentData != null &&
                     item.contentData!.isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
-                  Text(context.l10n.seedLibraryDetailStructuredContent, style: Theme.of(context).textTheme.titleMedium),
+                  Text(context.l10n.seedLibraryDetailStructuredContent,
+                      style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: DS.spacing8),
                   GraphiteCardSurface(
                     surfaceRole: SparkleSurfaceRole.panel,
@@ -1031,6 +1075,7 @@ class _SeedLibraryDetailScreenState
                           .convert(item.contentData),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontFamily: 'monospace',
+                            fontFamilyFallback: sparkleFontFallback,
                           ),
                     ),
                   ),
@@ -1061,14 +1106,18 @@ class _SeedLibraryDetailScreenState
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: InputDecoration(labelText: context.l10n.seedLibraryDetailEditName),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? context.l10n.seedLibraryDetailEditNameEmpty : null,
+                  decoration: InputDecoration(
+                      labelText: context.l10n.seedLibraryDetailEditName),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? context.l10n.seedLibraryDetailEditNameEmpty
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: descController,
-                  decoration: InputDecoration(labelText: context.l10n.seedLibraryDetailEditDescriptionOptional),
+                  decoration: InputDecoration(
+                      labelText: context
+                          .l10n.seedLibraryDetailEditDescriptionOptional),
                   maxLines: 3,
                 ),
               ],
@@ -1094,7 +1143,8 @@ class _SeedLibraryDetailScreenState
                             : descController.text.trim(),
                       );
                   if (!context.mounted) return;
-                  AppFeedback.success(context, context.l10n.seedLibraryDetailLibraryUpdated);
+                  AppFeedback.success(
+                      context, context.l10n.seedLibraryDetailLibraryUpdated);
                 } catch (e) {
                   if (!context.mounted) return;
                   AppFeedback.error(
@@ -1235,11 +1285,12 @@ class _SeedLibraryDetailScreenState
                   DropdownButtonFormField<DifficultyLevel?>(
                     initialValue: difficultyLevel,
                     decoration: InputDecoration(
-                      labelText: context.l10n.seedLibraryDetailAddItemDifficulty,
+                      labelText:
+                          context.l10n.seedLibraryDetailAddItemDifficulty,
                       border: OutlineInputBorder(),
                     ),
                     items: [
-                      const DropdownMenuItem<DifficultyLevel?>(
+                      DropdownMenuItem<DifficultyLevel?>(
                         child: Text(context.l10n.seedLibraryDetailAddItemUnset),
                       ),
                       ...DifficultyLevel.values.map(
@@ -1292,10 +1343,14 @@ class _SeedLibraryDetailScreenState
                               );
                           if (!context.mounted) return;
                           Navigator.pop(context);
-                          AppFeedback.success(context, context.l10n.seedLibraryDetailAddItemSuccess);
+                          AppFeedback.success(context,
+                              context.l10n.seedLibraryDetailAddItemSuccess);
                         } catch (e) {
                           if (!context.mounted) return;
-                          AppFeedback.error(context, context.l10n.seedLibraryDetailAddItemFailed(e.toString()));
+                          AppFeedback.error(
+                              context,
+                              context.l10n.seedLibraryDetailAddItemFailed(
+                                  e.toString()));
                         }
                       },
                       expand: true,
@@ -1314,7 +1369,7 @@ class _SeedLibraryDetailScreenState
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: const ['json'],
+        allowedExtensions: ['json'],
         withData: true,
       );
       if (result == null || result.files.isEmpty) {
@@ -1326,7 +1381,8 @@ class _SeedLibraryDetailScreenState
       final file = result.files.single;
       final bytes = file.bytes;
       if (bytes == null) {
-        AppFeedback.error(context, context.l10n.seedLibraryDetailImportCannotRead);
+        AppFeedback.error(
+            context, context.l10n.seedLibraryDetailImportCannotRead);
         return;
       }
       final decoded = jsonDecode(utf8.decode(bytes));
@@ -1336,7 +1392,8 @@ class _SeedLibraryDetailScreenState
         return;
       }
       if (rawItems is! List) {
-        AppFeedback.error(context, context.l10n.seedLibraryDetailImportInvalidJson);
+        AppFeedback.error(
+            context, context.l10n.seedLibraryDetailImportInvalidJson);
         return;
       }
 
@@ -1361,7 +1418,8 @@ class _SeedLibraryDetailScreenState
       );
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, context.l10n.seedLibraryDetailImportFailed(e.toString()));
+      AppFeedback.error(
+          context, context.l10n.seedLibraryDetailImportFailed(e.toString()));
     }
   }
 }

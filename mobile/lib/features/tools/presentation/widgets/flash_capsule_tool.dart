@@ -182,14 +182,14 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   ),
                   const SizedBox(height: DS.spacing16),
                   Text(
-                    l10n.flashCapsuleHistory,
+                    context.l10n.flashCapsuleHistory,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    history.isEmpty ? l10n.flashCapsuleHistoryEmpty : l10n.flashCapsuleHistoryDesc,
+                    history.isEmpty ? context.l10n.flashCapsuleHistoryEmpty : context.l10n.flashCapsuleHistoryDesc,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                       height: 1.5,
@@ -200,8 +200,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                     child: history.isEmpty
                         ? ToolEmptyState(
                             icon: Icons.history_rounded,
-                            title: l10n.flashCapsuleNoHistory,
-                            description: l10n.flashCapsuleNoHistoryDesc,
+                            title: context.l10n.flashCapsuleNoHistory,
+                            description: context.l10n.flashCapsuleNoHistoryDesc,
                             accentColor: DS.warning,
                           )
                         : ListView.separated(
@@ -216,10 +216,10 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                                   .where((line) => line.isNotEmpty)
                                   .toList(growable: false);
                               final title =
-                                  lines.isEmpty ? l10n.flashCapsuleUnnamed : lines.first;
+                                  lines.isEmpty ? context.l10n.flashCapsuleUnnamed : lines.first;
                               final detail = lines.length > 1
                                   ? lines.skip(1).join('\n')
-                                  : l10n.flashCapsuleNoDesc;
+                                  : context.l10n.flashCapsuleNoDesc;
                               final pending = (item.tags ?? const <String>[])
                                   .contains('pending_sync');
 
@@ -249,12 +249,12 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                                           _HistoryChip(
                                             label: item.sourceType ==
                                                     'flash_capsule'
-                                                ? l10n.flashCapsuleTagFlash
-                                                : l10n.flashCapsuleTagThink,
+                                                ? context.l10n.flashCapsuleTagFlash
+                                                : context.l10n.flashCapsuleTagThink,
                                           ),
                                           if (pending) ...[
                                             const SizedBox(width: DS.spacing8),
-                                            const _HistoryChip(label: l10n.flashCapsuleSyncPending),
+                                            _HistoryChip(label: context.l10n.flashCapsuleSyncPending),
                                           ],
                                         ],
                                       ),
@@ -374,7 +374,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           icon: Icons.label_rounded,
         ),
         ToolHeroChip(
-          label: historyCount == 0 ? l10n.flashCapsuleNoHistory : '$historyCount 条历史胶囊',
+          label: historyCount == 0 ? context.l10n.flashCapsuleNoHistory : '$historyCount 条历史胶囊',
           accentColor: accent,
           icon: Icons.history_rounded,
         ),

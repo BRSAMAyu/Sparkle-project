@@ -15,7 +15,7 @@ class StuckHelpSheet extends StatelessWidget {
   final VoidCallback? onChatPressed;
   final VoidCallback? onContinuePressed;
 
-  static const List<String> genericSuggestions = [
+  static List<String> genericSuggestions(BuildContext context) => [
     context.l10n.stuckHelpSuggestion1,
     context.l10n.stuckHelpSuggestion2,
     context.l10n.stuckHelpSuggestion3,
@@ -30,7 +30,7 @@ class StuckHelpSheet extends StatelessWidget {
       task.guideJson?['fallback_if_stuck'],
     );
     final ifStuck = _readList(task.guideJson?['if_stuck']);
-    final suggestions = ifStuck.isNotEmpty ? ifStuck : genericSuggestions;
+    final suggestions = ifStuck.isNotEmpty ? ifStuck : genericSuggestions(context);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.68,
