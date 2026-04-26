@@ -79,15 +79,15 @@ class MistakeSignalDetector:
 
         # 检查连续错误次数
         entries = await self.redis.lrange(key, 0, _CONSECUTIVE_MISTAKES_TRIGGER + 5)
-        consecutive = 0
+        recent_error_count = 0
         for raw in entries:
             try:
-                e = json.loads(raw)
-                consecutive += 1
+                json.loads(raw)
+                recent_error_count += 1
             except (json.JSONDecodeError, TypeError):
                 continue
 
-        if consecutive < _CONSECUTIVE_MISTAKES_TRIGGER:
+        if recent_error_count < _CONSECUTIVE_MISTAKES_TRIGGER:
             return None
 
         # 达到阈值 → 检查是否已经有活跃信号（避免重复生成）
@@ -102,11 +102,11 @@ class MistakeSignalDetector:
             source_system="error_book",
             state_key="knowledge_transfer",
             claim="transfer_failure",
-            confidence=min(0.5 + consecutive * 0.12, 0.92),
+            confidence=min(0.5 + recent_error_count * 0.12, 0.92),
             scope="current_sprint",
             ttl_hours=_SIGNAL_TTL_HOURS,
             evidence_summary=(
-                f"知识节点 {node_id} 连续 {consecutive} 次出错"
+                f"知识节点 {node_id} 连续 {recent_error_count} 次出错"
                 f"（最近一次错因类型：{error_type or '未知'}），"
                 f"判断为知识迁移失败，需要 worked_example 修复。"
             ),
@@ -122,7 +122,7 @@ class MistakeSignalDetector:
         await self.redis.set(signal_key, signal.signal_id, ex=_SIGNAL_TTL_HOURS * 3600)
 
         logger.info(
-            "MistakeSignal: node={} consecutive={} signal={}",
-            node_id, consecutive, signal.signal_id,
+            "MistakeSignal: node={} recent_errors={} signal={}",
+            node_id, recent_error_count, signal.signal_id,
         )
         return signal

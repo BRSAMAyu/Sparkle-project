@@ -404,11 +404,13 @@ async def test_material_signal_resets_when_used():
 
 # ── M2: Retrieval Override Test ──────────────────────────────────────
 
-def test_retrieval_intent_respects_spine_override():
+def test_retrieval_intent_respects_spine_override_when_upgrading():
     from app.orchestration.retrieval_intent import build_retrieval_decision
 
+    # Test with a simple greeting where normal classifier returns graph_only or no_retrieval
+    # Spine override should upgrade to targeted_source_rag
     decision = build_retrieval_decision(
-        message="TCP 拥塞控制是什么？",
+        message="你好",
         context={
             "spine_retrieval_override": {
                 "retrieval_mode": "targeted_source_rag",

@@ -434,17 +434,33 @@ def build_retrieval_decision(
             override_mode = spine_override.get("retrieval_mode")
             override_scope = spine_override.get("source_scope")
             if override_mode:
-                return ContextPlan(
-                    retrieval_mode=override_mode,
-                    should_retrieve=True,
-                    budget_tokens=budgets.aggressive if budgets else 2200,
-                    reason="spine_material_directive",
-                    source_scope=override_scope or "user_selected",
-                    pollution_guard="moderate",
-                    citation_required=True,
-                    user_visible_receipt=True,
-                    reason_for_user="Aurora · 按你的课件回答",
+                # Run normal classifier first, then upgrade if spine wants more aggressive retrieval
+                normal = default_retrieval_intent_classifier.classify(
+                    message,
+                    route_intent=route_intent,
+                    context=context,
+                    use_document_context=extract_use_document_context(context),
+                    aurora_doc_context_mode=aurora_doc_context_mode,
+                    document_context_scope=document_context_scope,
+                    budgets=budgets,
                 )
+                # Only override if normal result is less aggressive than spine's directive
+                _aggression_order = {"no_retrieval": 0, "graph_only": 1, "task_bound_rag": 2, "targeted_source_rag": 3, "user_pinned_sources": 3, "deep_source_synthesis": 4}
+                normal_level = _aggression_order.get(normal.retrieval_mode, 1)
+                override_level = _aggression_order.get(override_mode, 3)
+                if override_level > normal_level:
+                    return ContextPlan(
+                        retrieval_mode=override_mode,
+                        should_retrieve=True,
+                        budget_tokens=normal.budget_tokens,
+                        reason="spine_material_directive",
+                        source_scope=override_scope or "user_selected",
+                        pollution_guard="moderate",
+                        citation_required=True,
+                        user_visible_receipt=True,
+                        reason_for_user="Aurora · 按你的课件回答",
+                    )
+                return normal
 
     return default_retrieval_intent_classifier.classify(
         message,

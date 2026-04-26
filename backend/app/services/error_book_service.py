@@ -383,6 +383,7 @@ class ErrorBookService:
                         user_id=str(user_id),
                         error_id=str(error.id),
                         linked_node_ids=[str(i) for i in linked_ids],
+                        error_type=str(error.latest_analysis.get("error_type", "")) if isinstance(error.latest_analysis, dict) else None,
                     )
                     for sig in mistake_signals:
                         await spine.trace_store.store_signal(sig)
