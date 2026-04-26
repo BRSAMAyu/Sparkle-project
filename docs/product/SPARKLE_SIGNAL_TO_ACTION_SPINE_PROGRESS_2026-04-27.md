@@ -788,4 +788,45 @@
 
 ---
 
+## P5: Causal Audit Timeline API
+
+**目标**: REST API 端点暴露 spine 运行状态给前端和开发者
+
+### API 端点
+
+| Endpoint | 方法 | 说明 |
+|----------|------|------|
+| `/spine/timeline` | GET | 获取用户因果审计时间线 |
+| `/spine/state` | GET | 获取当前 ActionableStatePacket |
+| `/spine/metrics` | GET | 获取 Decision Realization Score 快照 |
+
+### 验收标准
+
+- [x] Timeline API 返回用户所有 trace（含 signal → policy → directive → audit → receipt 完整链路）
+- [x] State API 返回当前 top_states + risk_flags + bottleneck + next_best_action
+- [x] Metrics API 返回 10 个 DRS 指标
+- [x] 空状态正确处理
+
+---
+
+## P6: E2E 7-Day Exam Sprint Acceptance Tests
+
+**目标**: 从 Final Spec Section H 的 6 个神性场景中验证完整因果链
+
+### 测试场景
+
+| Test | 场景 | Iron Laws | 状态 |
+|------|------|-----------|------|
+| test_e2e_exam_sprint_full_causal_trace | 完整 Signal→Trace→Audit→Receipt→Outcome | 1-8 全覆盖 | ✅ PASS |
+| test_e2e_exam_sprint_user_correction_flow | 用户纠正错误判断 | Iron Law 8, 用户主权 | ✅ PASS |
+| test_e2e_exam_sprint_momentum_stalled_and_recovery | 成就停滞→策略调整 | growth_momentum→PlanDirective | ✅ PASS |
+
+---
+
+## 最终状态: P0-P6 COMPLETE
+
+**248/248 tests passing** | **8 layers implemented** | **9 directive types (7 active)**
+
+---
+
 *（每次 stage 完成后更新此文档）*
