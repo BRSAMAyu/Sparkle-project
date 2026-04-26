@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-125/125 tests passing:
+133/133 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -180,8 +180,9 @@
 - P1-5 SparkleSelfModel: 9 tests
 - P1-6 CommunitySignal: 9 tests
 - PolicyEngine rules: 6 tests
-- P2 Spine integration: 17 tests (6 original + 11 full wiring)
+- P2 Spine integration: 17 tests
 - P3 Production wiring: 5 tests
+- Layer 3 SignalRanker: 8 tests
 
 ---
 
@@ -202,6 +203,51 @@
 | AuroraWakeJudge | `check_aurora_wake()` | ✅ WIRED |
 | AchievementReinforcementConsumer | `on_achievement_event()` | ✅ WIRED (prior) |
 | RecallOpportunityDetector | `on_recall_check()` | ✅ WIRED (prior) |
+
+---
+
+## Layer 3: SignalRanker
+
+**目标**: 8 层架构第 3 层 — 信号排序与冲突解决
+
+### 排序维度
+
+| 维度 | 权重 | 说明 |
+|------|------|------|
+| confidence | 0.4 | 信号可信度 |
+| urgency (priority) | 0.3 | high=1.0 / medium=0.5 / low=0.2 |
+| tier_inverse | 0.3 | 优先级层级越低分越高 |
+
+### 9 层仲裁优先级
+
+| Tier | 内容 | state_key |
+|------|------|-----------|
+| 1 | 安全 / 隐私 / 用户硬边界 | safety_boundary, user_correction |
+| 2 | deadline 生存策略 | deadline_pressure, exam_rescue, recall_needed |
+| 3 | 用户显式目标 | goal_mode |
+| 4 | 直接行为证据 | task_granularity_fit, material_utilization |
+| 5 | 学习结果与错因 | knowledge_transfer, community_cohort_pattern |
+| 6 | 资料与知识星图 | retrieval_context, community_resource_recommendation |
+| 7 | 成就 / 动机 | growth_momentum |
+| 9 | 默认 | (其他) |
+
+### 冲突规则
+
+| 高优先级 | 低优先级 | 结果 |
+|---------|---------|------|
+| task_granularity_fit | growth_momentum | task_granularity_fit wins |
+| knowledge_transfer | growth_momentum | knowledge_transfer wins |
+| recall_needed | growth_momentum | recall wins |
+
+### 验收标准
+
+- [x] 空信号列表 → 空 result
+- [x] 单信号 → 直接 ranked
+- [x] exam_rescue (tier 2) 排在 growth_momentum (tier 7) 之前
+- [x] max_signals 限制生效
+- [x] 冲突检测 + 抑制正确
+- [x] 综合评分排序正确
+- [x] SpineOrchestrator.rank_signals() 委托到 SignalRanker
 
 ---
 
