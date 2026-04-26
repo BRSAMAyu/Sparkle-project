@@ -1395,6 +1395,9 @@ class ChatOrchestrator(
                 modeling_complete=plan.modeling_complete if is_terminal else False,
                 modeling_snapshot=modeling_snapshot if is_terminal else None,
             )
+            if total_messages > 1:
+                metadata["aurora_message_index"] = str(index)
+                metadata["aurora_message_count"] = str(total_messages)
             yield agent_service_pb2.ChatResponse(
                 response_id=response_id,
                 created_at=int(datetime.now().timestamp()),

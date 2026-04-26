@@ -11,6 +11,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
@@ -1843,6 +1845,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   )
                 : const SizedBox.shrink(),
           ),
+          Consumer(builder: (context, ref, _) {
+            final aurora = ref.watch(auroraStatusProvider);
+            if (aurora == null || !aurora.auroraActive) return const SizedBox.shrink();
+            return _AuroraQuickTrigger(
+              snapshot: aurora,
+              onTap: () {
+                final wake = aurora.wakeEligibility;
+                if (wake.canUserWake &&
+                    (aurora.overallStatus == 'risk_found' ||
+                        aurora.overallStatus == 'calibration_available' ||
+                        aurora.overallStatus == 'needs_confirm')) {
+                  unawaited(showAuroraCoreSession(
+                    context: context,
+                    bandStatus: aurora.overallStatus,
+                    wakeReasons: wake.wakeReasons,
+                    conversationId: chatState.conversationId,
+                  ));
+                } else {
+                  showAuroraCalibration(
+                    context: context,
+                    observation: aurora.summary,
+                    judgment: aurora.summary,
+                    confirmQuestion: context.l10n.auroraCalibrationConfirm,
+                    confirmOptions: const ['30 分钟', '45 分钟', '60 分钟'],
+                    onConfirm: (option) {
+                      ref.read(chatProvider.notifier).sendMessage(
+                            '${context.l10n.auroraCorrectRecalibrate}: $option',
+                          );
+                    },
+                  );
+                }
+              },
+            );
+          }),
           ChatInput(
             enabled: !chatState.hasActiveRun,
             studyMaterialsEnabled: chatState.documentRetrievalEnabled,
@@ -3006,6 +3042,81 @@ class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
           ),
         );
       },
+    );
+  }
+}
+
+class _AuroraQuickTrigger extends StatelessWidget {
+  const _AuroraQuickTrigger({
+    required this.snapshot,
+    required this.onTap,
+  });
+
+  final AuroraControlSurfaceSnapshot snapshot;
+  final VoidCallback onTap;
+
+  Color _statusColor() {
+    return switch (snapshot.overallStatus) {
+      'calibrated' => DS.success,
+      'risk_found' => DS.warning,
+      'needs_confirm' => DS.info,
+      'calibration_available' => DS.brandPrimary,
+      'cooling_down' => DS.textSecondary,
+      _ => DS.textSecondary,
+    };
+  }
+
+  String _statusLabel(AppLocalizations l10n) {
+    return switch (snapshot.overallStatus) {
+      'calibrated' => l10n.auroraBandCalibrated,
+      'risk_found' => l10n.auroraBandRiskFound,
+      'needs_confirm' => l10n.auroraBandNeedsConfirm,
+      'calibration_available' => l10n.auroraBandCalibrationAvailable,
+      'cooling_down' => l10n.auroraBandCoolingDown,
+      _ => l10n.auroraBandSensing,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _statusColor();
+    final l10n = context.l10n;
+    final wake = snapshot.wakeEligibility;
+    final canWake = wake.canUserWake &&
+        (snapshot.overallStatus == 'risk_found' ||
+            snapshot.overallStatus == 'calibration_available' ||
+            snapshot.overallStatus == 'needs_confirm');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing4),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: DS.spacing10, vertical: DS.spacing6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.auto_awesome_rounded, size: 14, color: color),
+              const SizedBox(width: DS.spacing6),
+              Text(
+                canWake
+                    ? '${_statusLabel(l10n)} · ${l10n.auroraWakeAvailable(wake.userQuotaRemaining)}'
+                    : _statusLabel(l10n),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

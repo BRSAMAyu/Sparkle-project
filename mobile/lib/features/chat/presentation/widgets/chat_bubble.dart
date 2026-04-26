@@ -21,6 +21,7 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
+import 'package:sparkle/features/chat/presentation/widgets/aurora_message_group.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_citation_strip.dart';
 import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
@@ -1036,6 +1037,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                     if (_isShareMessage())
                                       _buildPrivateShareCard() ??
                                           const SizedBox.shrink()
+                                    else if (_isAuroraMultiMessage())
+                                      _buildAuroraMultiMessage()
                                     else
                                       // Use constrained height for long messages
                                       LayoutBuilder(
@@ -2494,6 +2497,25 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (widget.message is! PrivateMessageInfo) return false;
     final msg = widget.message as PrivateMessageInfo;
     return msg.messageType != MessageType.text && msg.contentData != null;
+  }
+
+  bool _isAuroraMultiMessage() {
+    final msg = widget.message;
+    if (msg is! ChatMessageModel) return false;
+    if (msg.role != MessageRole.assistant) return false;
+    return AuroraMessageGroup.tryParse(
+      content: msg.content,
+      rawMetadata: msg.rawMetadata,
+    ) != null;
+  }
+
+  Widget _buildAuroraMultiMessage() {
+    final msg = widget.message as ChatMessageModel;
+    final segments = AuroraMessageGroup.tryParse(
+      content: msg.content,
+      rawMetadata: msg.rawMetadata,
+    )!;
+    return AuroraMessageGroup(segments: segments);
   }
 
   /// Get shareable content type from message type

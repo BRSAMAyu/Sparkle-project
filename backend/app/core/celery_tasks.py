@@ -1999,3 +1999,109 @@ def purge_deleted_account(self, user_id: str) -> dict:
     except Exception as exc:
         logger.error(f"❌ purge_deleted_account failed for {user_id}: {exc}")
         raise self.retry(exc=exc, countdown=3600)
+
+
+# ── Aurora Scheduled Wake Executor ────────────────────────────────────────────
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.aurora_wake_deliver_task")
+def aurora_wake_deliver_task(self, wake_id: str, user_id: str):
+    """Deliver a single Aurora scheduled wake as a notification to the user."""
+    from uuid import UUID
+
+    from app.db.session import AsyncSessionLocal
+    from app.aurora.runtime_v1.wake_scheduler import AuroraWakeScheduler
+    from app.services.notification_service import NotificationService
+    from app.schemas.notification import NotificationCreate
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            scheduler = AuroraWakeScheduler(db=session)
+            due_wakes = await scheduler.list_due_wakes(user_id=user_id, limit=50)
+            target = None
+            for w in due_wakes:
+                if w.wake.wake_id == wake_id:
+                    target = w
+                    break
+            if target is None:
+                return {"status": "skipped", "reason": "wake_not_found_or_not_due"}
+
+            surface = target.surface or "aurora_modeling"
+            conversation_id = target.conversation_id or ""
+            message = str(target.wake.message or target.metadata.get("message") or "Aurora 有新的发现想和你分享。")
+            title = str(target.metadata.get("title") or "Aurora 想和你聊聊")
+
+            if await _has_recent_notification(
+                session,
+                user_id=UUID(user_id),
+                notification_type="aurora_wake",
+                match_data={"wake_id": wake_id},
+                within_hours=2,
+            ):
+                await scheduler.mark_executed(wake_id, metadata={"status": "duplicate_suppressed"})
+                return {"status": "skipped", "reason": "duplicate_recent"}
+
+            destination_route = f"/chat?aurora_surface={surface}"
+            if conversation_id:
+                destination_route += f"&conversation_id={conversation_id}"
+
+            await NotificationService.create(
+                session,
+                UUID(user_id),
+                NotificationCreate(
+                    title=title,
+                    content=message,
+                    type="aurora_wake",
+                    data={
+                        "wake_id": wake_id,
+                        "surface": surface,
+                        "conversation_id": conversation_id,
+                        "destination_route": destination_route,
+                        "deep_link": destination_route,
+                    },
+                ),
+                push_via_websocket=True,
+            )
+
+            await scheduler.mark_executed(wake_id)
+
+            logger.info(
+                "Aurora wake delivered: user=%s wake=%s surface=%s",
+                user_id, wake_id, surface,
+            )
+            return {"status": "delivered", "wake_id": wake_id, "user_id": user_id}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("aurora_wake_deliver_task failed for wake %s: %s", wake_id, exc)
+        raise self.retry(exc=exc, countdown=60)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_aurora_scheduled_wakes")
+def scan_aurora_scheduled_wakes(self, limit: int = 200):
+    """Scan for due Aurora scheduled wakes and dispatch delivery tasks."""
+    from app.db.session import AsyncSessionLocal
+    from app.aurora.runtime_v1.wake_scheduler import AuroraWakeScheduler
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            scheduler = AuroraWakeScheduler(db=session)
+            due = await scheduler.list_due_wakes(limit=limit)
+            dispatched = 0
+            for wake_record in due:
+                user_id = str(wake_record.user_id)
+                wake_id = wake_record.wake.wake_id
+                aurora_wake_deliver_task.delay(wake_id, user_id)
+                dispatched += 1
+            logger.info(
+                "Aurora wake scan: %d due wakes found, %d dispatched",
+                len(due), dispatched,
+            )
+            return {"scanned": len(due), "dispatched": dispatched}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("scan_aurora_scheduled_wakes failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
