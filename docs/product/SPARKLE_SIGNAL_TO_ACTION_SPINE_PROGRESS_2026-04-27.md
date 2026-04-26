@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-109/109 tests passing:
+120/120 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -180,7 +180,27 @@
 - P1-5 SparkleSelfModel: 9 tests
 - P1-6 CommunitySignal: 9 tests
 - PolicyEngine rules: 6 tests
-- P2 Spine integration: 6 tests
+- P2 Spine integration: 17 tests (6 original + 11 full wiring)
+
+---
+
+## P2: SpineOrchestrator Full Wiring
+
+**目标**: 所有 P0+P1 模块通过 SpineOrchestrator 统一入口接入 Signal → PolicyEngine → Directive → Trace 管线
+
+### Integration Points
+
+| Module | SpineOrchestrator 方法 | 状态 |
+|--------|----------------------|------|
+| ExamRescueDetector | `on_first_message()` | ✅ WIRED |
+| StaleStateGuard | `on_user_return()` | ✅ WIRED |
+| ActionableStatePacketBuilder | `build_state_packet()` | ✅ WIRED |
+| SpineReplyOptionEngine | `generate_reply_options()` / `process_reply_selection()` | ✅ WIRED |
+| SparkleSelfModelService | `record_strategy_outcome()` | ✅ WIRED |
+| CommunitySignalDetector | `on_community_cohort_data()` / `on_community_resource_data()` | ✅ WIRED |
+| AuroraWakeJudge | `check_aurora_wake()` | ✅ WIRED |
+| AchievementReinforcementConsumer | `on_achievement_event()` | ✅ WIRED (prior) |
+| RecallOpportunityDetector | `on_recall_check()` | ✅ WIRED (prior) |
 
 ---
 
