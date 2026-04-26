@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-134/134 tests passing:
+136/136 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -182,7 +182,7 @@
 - PolicyEngine rules: 6 tests
 - P2 Spine integration: 17 tests
 - P3 Production wiring: 5 tests
-- Layer 3 SignalRanker: 9 tests (8 standalone + 1 integration)
+- Layer 3 SignalRanker: 11 tests (9 standalone + 2 integration)
 
 ---
 

@@ -2151,3 +2151,27 @@ async def test_build_state_packet_ranks_signals(spine):
     # and conflict rule suppresses growth_momentum when task_granularity_fit present
     state_keys = [s.state_key for s in packet.top_states]
     assert "task_granularity_fit" in state_keys or len(state_keys) >= 1
+
+
+def test_rank_duplicate_state_keys(ranker):
+    """同 state_key 的多个信号都被保留，各自独立评分。"""
+    s1 = _make_signal("task_granularity_fit", "too_large", 0.9, "high")
+    s2 = _make_signal("task_granularity_fit", "too_small", 0.6, "medium")
+    result = ranker.rank([s1, s2])
+    assert len(result.ranked) == 2
+    # higher confidence should rank first
+    assert result.ranked[0].signal.confidence == 0.9
+
+
+def test_rank_conflict_rules_explicit(ranker):
+    """冲突规则显式指定 winner/loser，不依赖排序顺序。"""
+    # Pass in "wrong" order — growth_momentum first, task_granularity_fit second
+    momentum = _make_signal("growth_momentum", "momentum_high", 0.9, "low")
+    task = _make_signal("task_granularity_fit", "too_large", 0.7, "high")
+    result = ranker.rank([momentum, task])
+    ranked_keys = [r.signal.state_key for r in result.ranked]
+    assert "task_granularity_fit" in ranked_keys
+    assert "growth_momentum" not in ranked_keys
+    assert len(result.conflicts_resolved) == 1
+    assert result.conflicts_resolved[0]["winner"] == "task_granularity_fit"
+    assert result.conflicts_resolved[0]["loser"] == "growth_momentum"

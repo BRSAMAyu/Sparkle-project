@@ -43,7 +43,6 @@ _PRIORITY_TIER: dict[str, int] = {
     "knowledge_transfer": 5,
     "community_cohort_pattern": 5,
     # Tier 6: 资料与知识星图
-    "retrieval_context": 6,
     "community_resource_recommendation": 6,
     # Tier 7: 成就 / 动机
     "growth_momentum": 7,
@@ -85,12 +84,12 @@ class RankingResult:
         }
 
 
-# 冲突规则：当两个 state_key 同时存在时的处理
+# 冲突规则：当两个 state_key 同时存在时，低优先级（loser）被抑制。
+# Key: (loser_state_key, winner_state_key) — loser 被 suppress
 _CONFLICT_RULES: dict[tuple[str, str], str] = {
-    # (higher_priority_key, lower_priority_key): resolution_strategy
     ("growth_momentum", "task_granularity_fit"): "task_granularity_fit_wins",
     ("growth_momentum", "knowledge_transfer"): "knowledge_transfer_wins",
-    ("recall_needed", "growth_momentum"): "recall_wins",
+    ("growth_momentum", "recall_needed"): "recall_wins",
 }
 
 
@@ -136,27 +135,30 @@ class SignalRanker:
         # Step 2: 按 tier + score 排序
         ranked_signals.sort(key=lambda r: (r.tier, -r.composite_score))
 
-        # Step 3: 检测冲突
+        # Step 3: 检测冲突 — 规则显式指定 winner/loser
         conflicts_resolved: list[dict[str, Any]] = []
         suppressed_ids: set[str] = set()
 
-        for i, rs in enumerate(ranked_signals):
-            for j in range(i + 1, len(ranked_signals)):
-                other = ranked_signals[j]
-                pair = (rs.signal.state_key, other.signal.state_key)
-                reverse_pair = (other.signal.state_key, rs.signal.state_key)
+        # Build state_key → RankedSignal index for O(1) lookup
+        by_key: dict[str, list[RankedSignal]] = {}
+        for rs in ranked_signals:
+            by_key.setdefault(rs.signal.state_key, []).append(rs)
 
-                rule = _CONFLICT_RULES.get(pair) or _CONFLICT_RULES.get(reverse_pair)
-                if rule:
-                    # rs 排在 other 前面（tier 更低=优先级更高）
-                    # rs 是赢家，other 是输家
-                    suppressed_ids.add(other.signal.signal_id)
-                    rs.conflicts_with.append(other.signal.signal_id)
-                    other.conflicts_with.append(rs.signal.signal_id)
-
+        for (loser_key, winner_key), rule in _CONFLICT_RULES.items():
+            losers = by_key.get(loser_key, [])
+            winners = by_key.get(winner_key, [])
+            if not losers or not winners:
+                continue
+            for loser_rs in losers:
+                for winner_rs in winners:
+                    if loser_rs.signal.signal_id in suppressed_ids:
+                        continue
+                    suppressed_ids.add(loser_rs.signal.signal_id)
+                    winner_rs.conflicts_with.append(loser_rs.signal.signal_id)
+                    loser_rs.conflicts_with.append(winner_rs.signal.signal_id)
                     conflicts_resolved.append({
-                        "winner": rs.signal.state_key,
-                        "loser": other.signal.state_key,
+                        "winner": winner_key,
+                        "loser": loser_key,
                         "rule": rule,
                     })
 
