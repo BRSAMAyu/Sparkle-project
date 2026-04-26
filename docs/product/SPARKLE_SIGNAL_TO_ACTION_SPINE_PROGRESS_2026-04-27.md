@@ -823,7 +823,31 @@
 
 ---
 
-## 最终状态: P0-P6 COMPLETE
+## P7: Soft Difficulty Adjustment + Enhanced Stagnation Handling
+
+**目标**: 为 stagnation 场景提供更细粒度的任务难度控制
+
+### 新增功能
+
+| 功能 | 文件 | 说明 |
+|------|------|------|
+| `DirectiveApplier.apply_soft_difficulty()` | `directive_applier.py` | 从 soft_biases.difficulty 微调任务难度（low→max 2, medium_low→max 3, slight_increase→+1） |
+| `prefer_easy_wins` constraint | `directive_applier.py` | momentum_stalled 时 difficulty 强制 ≤ 2 |
+| `momentum_stalled` 硬约束增强 | `policy_engine.py` | max_task_duration_min=20, prefer_easy_wins=true, difficulty=low |
+| `soft_biases` 参数 | `spine_orchestrator.py` | apply_directive_to_task_spec 支持无 directive 时也应用难度微调 |
+
+### 验收标准
+
+- [x] difficulty=low → 任务难度上限 2
+- [x] difficulty=medium_low → 任务难度上限 3
+- [x] challenge=slight_increase → 难度 +1（上限 5）
+- [x] momentum_stalled → max_task_duration_min=20 + prefer_easy_wins
+- [x] 无 directive 但有 soft_biases 时也应用难度调整
+- [x] 248/248 tests passing
+
+---
+
+## 最终状态: P0-P7 COMPLETE
 
 **248/248 tests passing** | **8 layers implemented** | **9 directive types (7 active)**
 
