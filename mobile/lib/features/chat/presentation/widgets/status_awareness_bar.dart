@@ -8,6 +8,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/context_decision_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/aurora_calibration_panel.dart';
 
 /// Aurora status awareness bar — 6-state model.
@@ -139,6 +140,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
   Widget _buildActive(AuroraControlSurfaceSnapshot snapshot) {
     final tone = _bandColor(snapshot.overallStatus);
     final collapsedLabel = _bandLabel(snapshot);
+    final contextLabel = ref.watch(lastContextDecisionProvider);
 
     return _BarContainer(
       onTap: () {
@@ -183,6 +185,16 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
               ),
             ],
           ),
+          if (contextLabel != null)
+            Padding(
+              padding: const EdgeInsets.only(top: DS.spacing4, left: DS.spacing20),
+              child: Text(
+                contextLabel,
+                style: TextStyle(color: DS.textSecondary, fontSize: 11),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
 
           // Layer 2/3: Expandable
           SizeTransition(
