@@ -19,9 +19,13 @@ from loguru import logger
 from app.signals.types import (
     ActionableSignal,
     ExecutionDirective,
+    ModelWriteDirective,
+    ModelWriteEntry,
     NotificationDirective,
+    PlanDirective,
     PolicyDecision,
     ResponseDirective,
+    UXDirective,
     _uid,
 )
 
@@ -376,4 +380,218 @@ class PolicyEngine:
             message_strategy=params["message_strategy"],
             max_frequency=params["max_frequency"],
             scope="today",
+        )
+
+    # Signal → plan action mapping
+    _PLAN_ACTION_MAP: dict[str, dict[str, Any]] = {
+        "recent_task_too_large": {
+            "plan_action": "local_replan",
+            "scope": "next_48h",
+            "constraints": {
+                "do_not_rebuild_entire_plan": True,
+                "preserve_deadline_strategy": True,
+                "insert_recovery_task": True,
+            },
+        },
+        "transfer_failure": {
+            "plan_action": "local_replan",
+            "scope": "current_sprint",
+            "constraints": {
+                "do_not_rebuild_entire_plan": True,
+                "avoid_new_chapter": True,
+                "insert_practice_task": True,
+            },
+        },
+        "exam_rescue_detected": {
+            "plan_action": "full_replan",
+            "scope": "current_sprint",
+            "constraints": {
+                "preserve_deadline_strategy": True,
+                "prefer_high_yield": True,
+                "max_task_duration_min": 30,
+            },
+        },
+        "momentum_stalled": {
+            "plan_action": "local_replan",
+            "scope": "next_48h",
+            "constraints": {
+                "do_not_rebuild_entire_plan": True,
+                "insert_easy_win": True,
+            },
+        },
+        "task_missed": {
+            "plan_action": "insert_task",
+            "scope": "next_48h",
+            "constraints": {
+                "recovery_task": True,
+                "adjust_subsequent_deadlines": True,
+            },
+        },
+    }
+
+    def build_plan_directive(
+        self,
+        decision: PolicyDecision,
+        signal: ActionableSignal,
+    ) -> PlanDirective | None:
+        """从 PolicyDecision 构建 PlanDirective — 控制计划和重规划。"""
+        params = self._PLAN_ACTION_MAP.get(signal.claim)
+        if not params:
+            return None
+
+        return PlanDirective(
+            directive_id=_uid("pld"),
+            policy_decision_id=decision.policy_decision_id,
+            plan_action=params["plan_action"],
+            scope=params["scope"],
+            constraints=dict(params["constraints"]),
+        )
+
+    # Signal → model write mapping
+    _MODEL_WRITE_MAP: dict[str, list[dict[str, Any]]] = {
+        "recent_task_too_large": [
+            {
+                "target_model": "user_state",
+                "claim_template": "当前冲刺下任务颗粒度可能偏大",
+                "scope": "current_sprint",
+                "confidence_source": "signal",
+                "needs_user_confirmation": False,
+                "ttl": "72h",
+            },
+            {
+                "target_model": "sparkle_self_model",
+                "claim_template": "长任务对该用户可能不适配",
+                "scope": "strategy",
+                "confidence_source": "signal_degraded",
+                "needs_user_confirmation": False,
+                "ttl": "168h",
+            },
+        ],
+        "transfer_failure": [
+            {
+                "target_model": "user_state",
+                "claim_template": "该知识点连续出错，需要巩固",
+                "scope": "current_sprint",
+                "confidence_source": "signal",
+                "needs_user_confirmation": False,
+                "ttl": "72h",
+            },
+        ],
+        "exam_rescue_detected": [
+            {
+                "target_model": "user_state",
+                "claim_template": "进入考试抢救模式",
+                "scope": "current_sprint",
+                "confidence_source": "signal",
+                "needs_user_confirmation": True,
+                "ttl": "168h",
+            },
+        ],
+        "momentum_high": [
+            {
+                "target_model": "sparkle_self_model",
+                "claim_template": "鼓励策略有效，用户节奏良好",
+                "scope": "strategy",
+                "confidence_source": "signal",
+                "needs_user_confirmation": False,
+                "ttl": "72h",
+            },
+        ],
+    }
+
+    def build_model_write_directive(
+        self,
+        decision: PolicyDecision,
+        signal: ActionableSignal,
+    ) -> ModelWriteDirective | None:
+        """从 PolicyDecision 构建 ModelWriteDirective — 控制写入哪个模型、写入多深。"""
+        entries_config = self._MODEL_WRITE_MAP.get(signal.claim)
+        if not entries_config:
+            return None
+
+        writes: list[ModelWriteEntry] = []
+        for cfg in entries_config:
+            confidence = signal.confidence
+            if cfg.get("confidence_source") == "signal_degraded":
+                confidence = round(confidence * 0.9, 2)
+            writes.append(ModelWriteEntry(
+                target_model=cfg["target_model"],
+                claim=cfg["claim_template"],
+                scope=cfg["scope"],
+                confidence=confidence,
+                needs_user_confirmation=cfg.get("needs_user_confirmation", False),
+                ttl=cfg.get("ttl", "72h"),
+            ))
+
+        return ModelWriteDirective(
+            directive_id=_uid("mwd"),
+            policy_decision_id=decision.policy_decision_id,
+            writes=writes,
+        )
+
+    # Signal → UX state mapping
+    _UX_STATE_MAP: dict[str, dict[str, Any]] = {
+        "recent_task_too_large": {
+            "status_band_state": "risk_detected",
+            "show_strategy_receipt": True,
+            "allow_full_aurora_wake": False,
+        },
+        "transfer_failure": {
+            "status_band_state": "risk_detected",
+            "show_strategy_receipt": True,
+            "allow_full_aurora_wake": False,
+        },
+        "exam_rescue_detected": {
+            "status_band_state": "strategy_active",
+            "show_strategy_receipt": True,
+            "allow_full_aurora_wake": True,
+        },
+        "momentum_high": {
+            "status_band_state": "milestone",
+            "show_strategy_receipt": False,
+            "allow_full_aurora_wake": False,
+        },
+        "momentum_stalled": {
+            "status_band_state": "risk_detected",
+            "show_strategy_receipt": False,
+            "allow_full_aurora_wake": False,
+        },
+        "undigested_material": {
+            "status_band_state": "normal",
+            "show_context_receipt": True,
+            "allow_full_aurora_wake": False,
+        },
+        "task_missed": {
+            "status_band_state": "risk_detected",
+            "show_strategy_receipt": True,
+            "allow_full_aurora_wake": False,
+        },
+    }
+
+    def build_ux_directive(
+        self,
+        decision: PolicyDecision,
+        signal: ActionableSignal,
+    ) -> UXDirective | None:
+        """从 PolicyDecision 构建 UXDirective — 控制状态带、回执、Aurora 可见性。"""
+        params = self._UX_STATE_MAP.get(signal.claim)
+        if not params:
+            # Default UX for unmatched signals
+            if decision.visibility == "status_band":
+                return UXDirective(
+                    directive_id=_uid("uxd"),
+                    policy_decision_id=decision.policy_decision_id,
+                    status_band_state="normal",
+                    show_context_receipt=True,
+                    show_strategy_receipt=False,
+                )
+            return None
+
+        return UXDirective(
+            directive_id=_uid("uxd"),
+            policy_decision_id=decision.policy_decision_id,
+            status_band_state=params.get("status_band_state", "normal"),
+            show_context_receipt=params.get("show_context_receipt", True),
+            show_strategy_receipt=params.get("show_strategy_receipt", False),
+            allow_full_aurora_wake=params.get("allow_full_aurora_wake", False),
         )

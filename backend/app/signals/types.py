@@ -252,6 +252,120 @@ class NotificationDirective:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
+# ── 4d. PlanDirective ────────────────────────────────────────────────────
+# 控制计划和重规划。
+# 用户可见变化：计划不被无故推倒重来，错过的任务有恢复路径。
+
+@dataclass
+class PlanDirective:
+    directive_id: str
+    policy_decision_id: str
+    target_module: str = "planning_service"
+    plan_action: str = "local_replan"              # local_replan / full_replan / insert_task / remove_task
+    scope: str = "next_48h"                        # next_48h / current_sprint / goal
+    constraints: dict[str, Any] = field(default_factory=dict)  # e.g. {"do_not_rebuild_entire_plan": True}
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "directive_id": self.directive_id,
+            "policy_decision_id": self.policy_decision_id,
+            "target_module": self.target_module,
+            "plan_action": self.plan_action,
+            "scope": self.scope,
+            "constraints": self.constraints,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> PlanDirective:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+# ── 4e. ModelWriteDirective ──────────────────────────────────────────────
+# 控制写入哪个模型、写入多深。
+# 用户可见变化：系统状态更新有审计记录，高影响写入需用户确认。
+
+@dataclass
+class ModelWriteEntry:
+    target_model: str              # user_state / sparkle_self_model / cognitive_profile
+    claim: str
+    scope: str                     # turn / current_sprint / strategy / long_term
+    confidence: float
+    needs_user_confirmation: bool = False
+    ttl: str = "72h"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "target_model": self.target_model,
+            "claim": self.claim,
+            "scope": self.scope,
+            "confidence": self.confidence,
+            "needs_user_confirmation": self.needs_user_confirmation,
+            "ttl": self.ttl,
+        }
+
+
+@dataclass
+class ModelWriteDirective:
+    directive_id: str
+    policy_decision_id: str
+    target_module: str = "state_aggregator"
+    writes: list[ModelWriteEntry] = field(default_factory=list)
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "directive_id": self.directive_id,
+            "policy_decision_id": self.policy_decision_id,
+            "target_module": self.target_module,
+            "writes": [w.to_dict() for w in self.writes],
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> ModelWriteDirective:
+        writes_data = d.get("writes", [])
+        writes = [ModelWriteEntry(**{k: v for k, v in w.items() if k in ModelWriteEntry.__dataclass_fields__}) for w in writes_data]
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__ and k != "writes"}, writes=writes)
+
+
+# ── 4f. UXDirective ─────────────────────────────────────────────────────
+# 控制状态带、回执、预测选项、Aurora 是否显性出现。
+# 用户可见变化：UI 状态带显示当前风险，回执可点击纠正。
+
+@dataclass
+class UXDirective:
+    directive_id: str
+    policy_decision_id: str
+    target_module: str = "ux_layer"
+    status_band_state: str = "normal"              # normal / risk_detected / strategy_active / milestone
+    show_context_receipt: bool = True
+    show_strategy_receipt: bool = False
+    predicted_reply_options: list[str] = field(default_factory=list)
+    allow_full_aurora_wake: bool = False
+    scope: str = "turn"
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "directive_id": self.directive_id,
+            "policy_decision_id": self.policy_decision_id,
+            "target_module": self.target_module,
+            "status_band_state": self.status_band_state,
+            "show_context_receipt": self.show_context_receipt,
+            "show_strategy_receipt": self.show_strategy_receipt,
+            "predicted_reply_options": self.predicted_reply_options,
+            "allow_full_aurora_wake": self.allow_full_aurora_wake,
+            "scope": self.scope,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> UXDirective:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
 # ── 5. DirectiveApplicationAudit ───────────────────────────────────────
 # 不是日志装饰。验证输出是否满足 directive。
 # 用户可见变化：团队/开发者能审计为什么变了。
