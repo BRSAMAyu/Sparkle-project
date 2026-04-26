@@ -4,6 +4,129 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 
+// ── Predicted Reply Option models ─────────────────────────────────────────────
+
+class AuroraModelWriteEffect {
+  const AuroraModelWriteEffect({
+    required this.target,
+    required this.fieldKey,
+    required this.fieldValue,
+    required this.operation,
+    required this.requiresPersistence,
+  });
+
+  factory AuroraModelWriteEffect.fromJson(Map<String, dynamic> json) {
+    return AuroraModelWriteEffect(
+      target: json['target'] as String? ?? 'none',
+      fieldKey: json['field_key'] as String? ?? '',
+      fieldValue: json['field_value'],
+      operation: json['operation'] as String? ?? 'set',
+      requiresPersistence: json['requires_persistence'] as bool? ?? true,
+    );
+  }
+
+  final String target;
+  final String fieldKey;
+  final dynamic fieldValue;
+  final String operation;
+  final bool requiresPersistence;
+
+  Map<String, dynamic> toJson() => {
+        'target': target,
+        'field_key': fieldKey,
+        'field_value': fieldValue,
+        'operation': operation,
+        'requires_persistence': requiresPersistence,
+      };
+}
+
+class AuroraPredictedReplyOption {
+  const AuroraPredictedReplyOption({
+    required this.id,
+    required this.label,
+    required this.semanticValue,
+    required this.replyType,
+    required this.confidence,
+    required this.modelWriteEffect,
+    required this.isDisconfirming,
+    required this.isFreeform,
+    required this.contextSource,
+    required this.telemetryId,
+  });
+
+  factory AuroraPredictedReplyOption.fromJson(Map<String, dynamic> json) {
+    final rawEffect = json['model_write_effect'];
+    return AuroraPredictedReplyOption(
+      id: json['id'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      semanticValue: json['semantic_value'] as String? ?? '',
+      replyType: json['reply_type'] as String? ?? 'assumption_check',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      modelWriteEffect: rawEffect is Map<String, dynamic>
+          ? AuroraModelWriteEffect.fromJson(rawEffect)
+          : rawEffect is Map
+              ? AuroraModelWriteEffect.fromJson(Map<String, dynamic>.from(rawEffect))
+              : null,
+      isDisconfirming: json['is_disconfirming'] as bool? ?? false,
+      isFreeform: json['is_freeform'] as bool? ?? false,
+      contextSource: json['context_source'] as String? ?? '',
+      telemetryId: json['telemetry_id'] as String? ?? '',
+    );
+  }
+
+  final String id;
+  final String label;
+  final String semanticValue;
+  final String replyType; // fact_confirm | assumption_check | strategy_choice | relational_signal | freeform
+  final double confidence;
+  final AuroraModelWriteEffect? modelWriteEffect;
+  final bool isDisconfirming;
+  final bool isFreeform;
+  final String contextSource;
+  final String telemetryId;
+}
+
+class AuroraPredictedReplyGroup {
+  const AuroraPredictedReplyGroup({
+    required this.groupId,
+    required this.question,
+    required this.questionType,
+    required this.contextNote,
+    required this.options,
+  });
+
+  factory AuroraPredictedReplyGroup.fromJson(Map<String, dynamic> json) {
+    final rawOptions = json['options'] as List<dynamic>? ?? const [];
+    return AuroraPredictedReplyGroup(
+      groupId: json['group_id'] as String? ?? '',
+      question: json['question'] as String? ?? '',
+      questionType: json['question_type'] as String? ?? 'assumption_check',
+      contextNote: json['context_note'] as String? ?? '',
+      options: rawOptions
+          .whereType<Map<String, dynamic>>()
+          .map(AuroraPredictedReplyOption.fromJson)
+          .toList(),
+    );
+  }
+
+  final String groupId;
+  final String question;
+  final String questionType;
+  final String contextNote;
+  final List<AuroraPredictedReplyOption> options;
+
+  /// Primary options (non-freeform), sorted by confidence descending.
+  List<AuroraPredictedReplyOption> get primaryOptions =>
+      options.where((o) => !o.isFreeform).toList()
+        ..sort((a, b) => b.confidence.compareTo(a.confidence));
+
+  /// The freeform correction option (always last).
+  AuroraPredictedReplyOption? get freeformOption =>
+      options.where((o) => o.isFreeform).firstOrNull;
+}
+
+// ── Existing models ───────────────────────────────────────────────────────────
+
 class AuroraFacetSnapshot {
   const AuroraFacetSnapshot({
     required this.key,
@@ -72,6 +195,7 @@ class AuroraControlSurfaceSnapshot {
     required this.updatedAt,
     required this.facets,
     required this.wakeEligibility,
+    required this.predictedReplyOptions,
     required this.fetchedAt,
   });
 
@@ -87,6 +211,7 @@ class AuroraControlSurfaceSnapshot {
         : json['wake_eligibility'] is Map
             ? Map<String, dynamic>.from(json['wake_eligibility'] as Map)
             : const <String, dynamic>{};
+    final rawOptions = json['predicted_reply_options'] as List<dynamic>? ?? const [];
     return AuroraControlSurfaceSnapshot(
       auroraActive: json['aurora_active'] as bool? ?? false,
       runtimeEnabled: json['runtime_enabled'] as bool? ?? false,
@@ -106,6 +231,10 @@ class AuroraControlSurfaceSnapshot {
           .map(AuroraFacetSnapshot.fromJson)
           .toList(),
       wakeEligibility: AuroraWakeEligibility.fromJson(rawWake),
+      predictedReplyOptions: rawOptions
+          .whereType<Map<String, dynamic>>()
+          .map(AuroraPredictedReplyGroup.fromJson)
+          .toList(),
       fetchedAt: DateTime.now(),
     );
   }
@@ -125,6 +254,7 @@ class AuroraControlSurfaceSnapshot {
   final DateTime? updatedAt;
   final List<AuroraFacetSnapshot> facets;
   final AuroraWakeEligibility wakeEligibility;
+  final List<AuroraPredictedReplyGroup> predictedReplyOptions;
   final DateTime fetchedAt;
 
   bool get isRecalibrating => overallStatus == 'risk_found';
@@ -132,6 +262,10 @@ class AuroraControlSurfaceSnapshot {
   bool get isCoolingDown => overallStatus == 'cooling_down';
   bool get needsConfirm => overallStatus == 'needs_confirm';
   bool get canCalibrate => overallStatus == 'calibration_available';
+
+  /// Returns the top predicted reply group for quick access, or null.
+  AuroraPredictedReplyGroup? get topPredictedGroup =>
+      predictedReplyOptions.isNotEmpty ? predictedReplyOptions.first : null;
 }
 
 class AuroraWakeEligibility {

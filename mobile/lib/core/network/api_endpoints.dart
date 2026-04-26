@@ -198,6 +198,13 @@ class ApiEndpoints {
       '/aurora/calibration-cards/$id/respond';
   static const String auroraControlSurface = '/aurora/control-surface';
   static const String auroraModelingStatus = '/aurora/modeling-status';
+  static const String auroraPredictedOptions = '/aurora/predicted-options';
+  static const String auroraCoreSessionStart = '/aurora/core-session/start';
+  static const String auroraCoreSessionRespond = '/aurora/core-session/respond';
+  static const String auroraCoreSessionCurrent = '/aurora/core-session/current';
+  static String auroraCoreSessionClose(String id) =>
+      '/aurora/core-session/$id/close';
+  static const String auroraChipTelemetry = '/aurora/telemetry/chip-selected';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';

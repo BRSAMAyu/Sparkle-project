@@ -106,15 +106,14 @@ class GalaxyErrorDialog extends StatelessWidget {
           ],
         ),
         actions: [
-          if (onDismiss != null)
-            SparkleButton(
-              label: l10n.close,
-              variant: ButtonVariant.ghost,
-              onPressed: () {
-                Navigator.of(context).pop();
-                onDismiss?.call();
-              },
-            ),
+          SparkleButton(
+            label: l10n.close,
+            variant: ButtonVariant.ghost,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onDismiss?.call();
+            },
+          ),
           if (onRetry != null && error.isRetryable)
             SparkleButton(
               label: l10n.retry,

@@ -24,6 +24,7 @@ import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.da
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
+import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/aurora_calibration_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
@@ -1113,6 +1114,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 ),
                                     if (showCorrectionBar)
                                       ContextualCorrectionBar(
+                                        predictedReplyGroups: ref
+                                            .watch(auroraStatusProvider)
+                                            ?.predictedReplyOptions,
+                                        onSendCorrection: (text) => ref
+                                            .read(chatProvider.notifier)
+                                            .sendMessage(text),
                                         onNotRightDirection: () => ref
                                             .read(chatProvider.notifier)
                                             .sendMessage(
@@ -1128,28 +1135,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                             .sendMessage(
                                               context.l10n.auroraCorrectDirect,
                                             ),
-                                        onRecalibrate: () =>
-                                            showAuroraCalibration(
-                                              context: context,
-                                              observation: context.l10n
-                                                  .auroraCalibrationObserved,
-                                              judgment: context.l10n
-                                                  .auroraCalibrationJudgment,
-                                              confirmQuestion: context.l10n
-                                                  .auroraCalibrationConfirm,
-                                              confirmOptions: const [
-                                                '30 分钟',
-                                                '45 分钟',
-                                                '60 分钟',
-                                              ],
-                                              onConfirm: (option) {
-                                                ref
-                                                    .read(chatProvider.notifier)
-                                                    .sendMessage(
-                                                      '${context.l10n.auroraCorrectRecalibrate}: $option',
-                                                    );
-                                              },
-                                            ),
+                                        onRecalibrate: () {
+                                          final snapshot = ref.read(
+                                            auroraStatusProvider,
+                                          );
+                                          showAuroraCalibration(
+                                            context: context,
+                                            observation: snapshot?.summary ??
+                                                context.l10n
+                                                    .auroraCalibrationObserved,
+                                            judgment: snapshot?.summary ??
+                                                context.l10n
+                                                    .auroraCalibrationJudgment,
+                                            confirmQuestion: context.l10n
+                                                .auroraCalibrationConfirm,
+                                            confirmOptions: const [
+                                              '30 分钟',
+                                              '45 分钟',
+                                              '60 分钟',
+                                            ],
+                                            onConfirm: (option) {
+                                              ref
+                                                  .read(chatProvider.notifier)
+                                                  .sendMessage(
+                                                    '${context.l10n.auroraCorrectRecalibrate}: $option',
+                                                  );
+                                            },
+                                          );
+                                        },
                                       ),
                                   ],
                                 );

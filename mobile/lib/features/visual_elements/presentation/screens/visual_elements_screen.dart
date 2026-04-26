@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/visual_elements/domain/services/visual_recommendation_service.dart';
@@ -824,19 +825,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.visualElementEquipSuccess),
-            backgroundColor: DS.success,
-          ),
-        );
+        AppFeedback.success(context, context.l10n.visualElementEquipSuccess);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.visualElementEquipFailed),
-            backgroundColor: DS.error,
-          ),
-        );
+        AppFeedback.error(context, context.l10n.visualElementEquipFailed);
       }
     }
   }
@@ -847,19 +838,9 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.visualElementUnequipSuccess),
-            backgroundColor: DS.info,
-          ),
-        );
+        AppFeedback.info(context, context.l10n.visualElementUnequipSuccess);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.visualElementUnequipFailed),
-            backgroundColor: DS.error,
-          ),
-        );
+        AppFeedback.error(context, context.l10n.visualElementUnequipFailed);
       }
     }
   }
@@ -874,12 +855,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     if (pieces.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('还没有集齐这套荣耀装扮的部件'),
-            backgroundColor: DS.warning,
-          ),
-        );
+        AppFeedback.warning(context, '还没有集齐这套荣耀装扮的部件');
       }
       return;
     }
@@ -891,12 +867,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     final success = results.isNotEmpty && results.every((result) => result);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? '已装备荣耀套装' : '装备套装时出现问题'),
-          backgroundColor: success ? DS.success : DS.error,
-        ),
-      );
+      if (success) {
+        AppFeedback.success(context, '已装备荣耀套装');
+      } else {
+        AppFeedback.error(context, '装备套装时出现问题');
+      }
     }
   }
 
@@ -918,12 +893,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     final success = results.every((result) => result);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? '已卸下整套荣耀装扮' : '卸下套装时出现问题'),
-          backgroundColor: success ? DS.info : DS.error,
-        ),
-      );
+      if (success) {
+        AppFeedback.info(context, '已卸下整套荣耀装扮');
+      } else {
+        AppFeedback.error(context, '卸下套装时出现问题');
+      }
     }
   }
 

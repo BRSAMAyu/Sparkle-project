@@ -1,35 +1,97 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 
 /// Contextual correction buttons shown after AI responses.
 ///
-/// Instead of a mode selector, these lightweight buttons let users
-/// correct the system's direction after each response:
-/// - "不是这个方向" (Not the right direction)
-/// - "更短一点" (Make it shorter)
-/// - "直接出题" (Give me practice)
-/// - "重新校准" (Recalibrate — triggers Aurora calibration panel)
+/// When [predictedReplyGroups] are available from the Aurora backend, shows
+/// the top group's primary options (sorted by confidence) plus the freeform
+/// fallback. Otherwise falls back to the static hardcoded chips.
 class ContextualCorrectionBar extends StatelessWidget {
   const ContextualCorrectionBar({
-    required this.onNotRightDirection,
-    required this.onMakeShorter,
-    required this.onGivePractice,
     required this.onRecalibrate,
+    this.onSendCorrection,
+    this.onNotRightDirection,
+    this.onMakeShorter,
+    this.onGivePractice,
+    this.predictedReplyGroups,
     this.visible = true,
     super.key,
   });
 
-  final VoidCallback onNotRightDirection;
-  final VoidCallback onMakeShorter;
-  final VoidCallback onGivePractice;
+  final VoidCallback? onNotRightDirection;
+  final VoidCallback? onMakeShorter;
+  final VoidCallback? onGivePractice;
   final VoidCallback onRecalibrate;
+
+  /// Called with the user's semantic reply text (from predicted options or freeform).
+  final ValueChanged<String>? onSendCorrection;
+
+  /// Predicted reply groups from Aurora backend. If non-empty, used instead
+  /// of the static fallback chips.
+  final List<AuroraPredictedReplyGroup>? predictedReplyGroups;
+
   final bool visible;
 
   @override
   Widget build(BuildContext context) {
     if (!visible) return const SizedBox.shrink();
 
+    final groups = predictedReplyGroups;
+    final topGroup = (groups != null && groups.isNotEmpty) ? groups.first : null;
+
+    if (topGroup != null && topGroup.options.isNotEmpty) {
+      return _buildPredictedOptions(context, topGroup);
+    }
+    return _buildFallback(context);
+  }
+
+  Widget _buildPredictedOptions(BuildContext context, AuroraPredictedReplyGroup group) {
+    final primaryOptions = group.primaryOptions.take(3).toList();
+    final freeform = group.freeformOption;
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: DS.spacing40,
+        top: DS.spacing4,
+        bottom: DS.spacing8,
+      ),
+      child: Wrap(
+        spacing: DS.spacing6,
+        runSpacing: DS.spacing4,
+        children: [
+          ...primaryOptions.map((opt) => _CorrectionChip(
+                label: opt.label,
+                onTap: () => _handleOptionTap(opt),
+              )),
+          if (freeform != null)
+            _CorrectionChip(
+              label: freeform.label,
+              onTap: () => _handleOptionTap(freeform),
+              isAccent: true,
+            )
+          else
+            _CorrectionChip(
+              label: context.l10n.auroraCorrectRecalibrate,
+              onTap: onRecalibrate,
+              isAccent: true,
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _handleOptionTap(AuroraPredictedReplyOption option) {
+    if (option.isFreeform) {
+      onRecalibrate();
+      return;
+    }
+    final text = option.semanticValue.isNotEmpty ? option.semanticValue : option.label;
+    onSendCorrection?.call(text);
+  }
+
+  Widget _buildFallback(BuildContext context) {
     final l10n = context.l10n;
 
     return Padding(
@@ -42,18 +104,21 @@ class ContextualCorrectionBar extends StatelessWidget {
         spacing: DS.spacing6,
         runSpacing: DS.spacing4,
         children: [
-          _CorrectionChip(
-            label: l10n.auroraCorrectNotRight,
-            onTap: onNotRightDirection,
-          ),
-          _CorrectionChip(
-            label: l10n.auroraCorrectShorter,
-            onTap: onMakeShorter,
-          ),
-          _CorrectionChip(
-            label: l10n.auroraCorrectDirect,
-            onTap: onGivePractice,
-          ),
+          if (onNotRightDirection != null)
+            _CorrectionChip(
+              label: l10n.auroraCorrectNotRight,
+              onTap: onNotRightDirection!,
+            ),
+          if (onMakeShorter != null)
+            _CorrectionChip(
+              label: l10n.auroraCorrectShorter,
+              onTap: onMakeShorter!,
+            ),
+          if (onGivePractice != null)
+            _CorrectionChip(
+              label: l10n.auroraCorrectDirect,
+              onTap: onGivePractice!,
+            ),
           _CorrectionChip(
             label: l10n.auroraCorrectRecalibrate,
             onTap: onRecalibrate,

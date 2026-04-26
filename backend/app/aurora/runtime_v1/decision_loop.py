@@ -1443,7 +1443,8 @@ class AuroraDecisionLoop:
     def _slim_readout_for_surface(self, readout: DashboardReadout) -> dict[str, Any]:
         wake_policy = self._wake_policy_from_readout(readout)
         context_budget = str(wake_policy.get("context_budget") or "").strip().lower() or None
-        payload = readout.to_llm_payload(context_budget=context_budget)
+        action_hint = self._infer_action_hint(readout)
+        payload = readout.to_llm_payload(action=action_hint, context_budget=context_budget)
         surface_state = self._surface_state_from_readout(readout)
         if surface_state:
             payload["surface_state"] = surface_state
@@ -1467,6 +1468,15 @@ class AuroraDecisionLoop:
             if readout.conversation_summary:
                 payload["conversation_summary"] = readout.conversation_summary
         return payload
+
+    def _infer_action_hint(self, readout: DashboardReadout) -> str | None:
+        if readout.surface == "aurora_planning":
+            return "update_harness"
+        if readout.missing_domains:
+            return "emit_message"
+        if not readout.informational_tensions:
+            return "wait"
+        return None
 
     def _surface_state_from_readout(self, readout: DashboardReadout) -> dict[str, Any]:
         request_context = readout.request_extra_context if isinstance(readout.request_extra_context, Mapping) else {}
