@@ -228,18 +228,39 @@ class SpineOrchestrator:
         self,
         user_id: str,
         task_spec: dict[str, Any],
+        soft_biases: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], DirectiveApplicationAudit | None]:
         """
         供 planning_workflow 调用——将 directive 约束应用到任务 spec，并审计。
+        soft_biases 来自 PolicyDecision，用于难度微调。
         """
         directive = await self.get_active_directive(user_id)
         if not directive:
+            # No directive — still apply soft difficulty if available
+            if soft_biases:
+                current_diff = task_spec.get("difficulty", 3)
+                adjusted_diff, changed = DirectiveApplier.apply_soft_difficulty(
+                    soft_biases=soft_biases,
+                    current_difficulty=current_diff,
+                )
+                if changed:
+                    task_spec["difficulty"] = adjusted_diff
             return task_spec, None
 
         modified_spec = DirectiveApplier.apply_to_task_spec(
             directive=directive,
             task_spec=task_spec,
         )
+
+        # Apply soft difficulty from PolicyDecision.soft_biases
+        if soft_biases:
+            current_diff = modified_spec.get("difficulty", 3)
+            adjusted_diff, _ = DirectiveApplier.apply_soft_difficulty(
+                soft_biases=soft_biases,
+                current_difficulty=current_diff,
+            )
+            modified_spec["difficulty"] = adjusted_diff
+
         audit = DirectiveAuditor.audit(
             directive=directive,
             generated_task=modified_spec,

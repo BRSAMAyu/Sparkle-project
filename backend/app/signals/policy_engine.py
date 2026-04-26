@@ -120,15 +120,19 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
         },
         "momentum_stalled": {
             "primary_strategy": "rekindle_engagement",
-            "secondary_strategy": None,
-            "hard_constraints": {},
+            "secondary_strategy": "insert_easy_win",
+            "hard_constraints": {
+                "max_task_duration_min": 20,
+                "prefer_easy_wins": True,
+            },
             "soft_biases": {
                 "tone": "encouraging_low_pressure",
                 "nudge_style": "gentle",
+                "difficulty": "low",
             },
             "visibility": "status_band",
             "requires_user_confirmation": False,
-            "reasoning_template": "最近进度变慢了，但不急，先找一个轻松的切入点。",
+            "reasoning_template": "最近进度变慢了，不急，先找一个轻松的切入点。",
         },
     },
     "recall_needed": {

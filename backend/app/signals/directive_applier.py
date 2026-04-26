@@ -22,6 +22,42 @@ class DirectiveApplier:
     """将 ExecutionDirective 的 hard_constraints 应用到任务生成参数。"""
 
     @staticmethod
+    def apply_soft_difficulty(
+        *,
+        soft_biases: dict[str, Any] | None,
+        current_difficulty: int,
+    ) -> tuple[int, bool]:
+        """
+        Apply soft difficulty adjustments from PolicyDecision.soft_biases.
+
+        Returns:
+            (adjusted_difficulty, was_adjusted)
+        """
+        if not soft_biases:
+            return current_difficulty, False
+
+        difficulty_hint = soft_biases.get("difficulty")
+        challenge = soft_biases.get("challenge")
+
+        adjusted = current_difficulty
+        if difficulty_hint == "low":
+            adjusted = max(1, min(adjusted, 2))
+        elif difficulty_hint == "medium_low":
+            adjusted = max(1, min(adjusted, 3))
+        elif difficulty_hint == "low_medium":
+            adjusted = max(1, min(adjusted, 3))
+
+        if challenge == "slight_increase":
+            adjusted = min(5, adjusted + 1)
+
+        if adjusted != current_difficulty:
+            logger.info(
+                "Soft difficulty adjustment: {} → {} (hint={}, challenge={})",
+                current_difficulty, adjusted, difficulty_hint, challenge,
+            )
+        return adjusted, adjusted != current_difficulty
+
+    @staticmethod
     def apply_duration_cap(
         *,
         directive: ExecutionDirective | None,
@@ -92,7 +128,12 @@ class DirectiveApplier:
         if required_type:
             task_spec["task_kind"] = required_type
 
-        # 3. Mark directive application
+        # 3. Prefer easy wins (from momentum_stalled)
+        if directive.hard_constraints.get("prefer_easy_wins"):
+            task_spec["difficulty"] = min(task_spec.get("difficulty", 3), 2)
+            task_spec["_easy_win_mode"] = True
+
+        # 4. Mark directive application
         task_spec["_directive_id"] = directive.directive_id
         task_spec["_directive_reason"] = directive.user_visible_reason
 
