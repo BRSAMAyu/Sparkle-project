@@ -47,7 +47,7 @@ from app.models.accountability import (
 )
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.models.documents import StoredFile
+from app.models.file_storage import StoredFile
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.seed_content import SeedItem, SeedLibrary
