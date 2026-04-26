@@ -5,6 +5,13 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(documentRetrievalEnabled: enabled);
   }
 
+  void setDocumentContextMode(DocumentContextMode mode) {
+    state = state.copyWith(
+      documentContextMode: mode,
+      documentRetrievalEnabled: mode != DocumentContextMode.off,
+    );
+  }
+
   void setTransparencyExpanded(bool expanded) {
     state = state.copyWith(
       transparencyPresentationState:

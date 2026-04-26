@@ -18,6 +18,12 @@ enum ChatRunPhase {
   failed,
 }
 
+enum DocumentContextMode {
+  auto,
+  userSelected,
+  off,
+}
+
 extension ChatRunPhaseX on ChatRunPhase {
   bool get isActive =>
       this == ChatRunPhase.sending ||
@@ -139,6 +145,7 @@ class ChatState {
     this.currentStepIndex,
     this.dagExecutionSignal,
     this.documentRetrievalEnabled = true,
+    this.documentContextMode = DocumentContextMode.auto,
     this.activeRunId,
     this.runPhase = ChatRunPhase.idle,
     this.activeRunSummary,
@@ -189,6 +196,7 @@ class ChatState {
   final int? currentStepIndex;
   final DagExecutionSignal? dagExecutionSignal;
   final bool documentRetrievalEnabled;
+  final DocumentContextMode documentContextMode;
   final String? activeRunId;
   final ChatRunPhase runPhase;
   final ActiveRunSummary? activeRunSummary;
@@ -270,6 +278,7 @@ class ChatState {
     DagExecutionSignal? dagExecutionSignal,
     bool clearDagExecution = false,
     bool? documentRetrievalEnabled,
+    DocumentContextMode? documentContextMode,
     String? activeRunId,
     bool clearActiveRunId = false,
     ChatRunPhase? runPhase,
@@ -353,6 +362,8 @@ class ChatState {
             : dagExecutionSignal ?? this.dagExecutionSignal,
         documentRetrievalEnabled:
             documentRetrievalEnabled ?? this.documentRetrievalEnabled,
+        documentContextMode:
+            documentContextMode ?? this.documentContextMode,
         activeRunId: clearActiveRunId ? null : activeRunId ?? this.activeRunId,
         runPhase: runPhase ?? this.runPhase,
         activeRunSummary: clearActiveRunSummary

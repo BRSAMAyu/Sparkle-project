@@ -1846,11 +1846,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ChatInput(
             enabled: !chatState.hasActiveRun,
             studyMaterialsEnabled: chatState.documentRetrievalEnabled,
+            documentContextMode: chatState.documentContextMode,
             availableStudyMaterialsCount: readyStudyMaterialsCount,
             onToggleStudyMaterials: () {
               ref.read(chatProvider.notifier).setDocumentRetrievalEnabled(
                     !chatState.documentRetrievalEnabled,
                   );
+            },
+            onSetDocumentContextMode: (mode) {
+              ref.read(chatProvider.notifier).setDocumentContextMode(mode);
             },
             onOpenStudyMaterials: () => _showStudyMaterialsSheet(
               chatState.documentRetrievalEnabled,

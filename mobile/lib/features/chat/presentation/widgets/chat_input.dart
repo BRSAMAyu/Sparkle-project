@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
@@ -30,8 +31,10 @@ class ChatInput extends ConsumerStatefulWidget {
     this.onTextChanged,
     this.studyMaterialsEnabled = true,
     this.availableStudyMaterialsCount = 0,
+    this.documentContextMode = DocumentContextMode.auto,
     this.onToggleStudyMaterials,
     this.onOpenStudyMaterials,
+    this.onSetDocumentContextMode,
   });
   final bool enabled;
   final String? hintText;
@@ -43,8 +46,10 @@ class ChatInput extends ConsumerStatefulWidget {
   final void Function(String text)? onTextChanged;
   final bool studyMaterialsEnabled;
   final int availableStudyMaterialsCount;
+  final DocumentContextMode documentContextMode;
   final VoidCallback? onToggleStudyMaterials;
   final VoidCallback? onOpenStudyMaterials;
+  final ValueChanged<DocumentContextMode>? onSetDocumentContextMode;
 
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
@@ -240,19 +245,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   spacing: DS.spacing8,
                   runSpacing: DS.spacing8,
                   children: [
-                    ChatAccessoryPill(
-                      icon: widget.studyMaterialsEnabled
-                          ? Icons.menu_book_rounded
-                          : Icons.menu_book_outlined,
-                      label: widget.studyMaterialsEnabled
-                          ? context.l10n.chatStudyMaterialsLabel
-                          : context.l10n.chatStudyMaterialsPaused,
-                      selected: widget.studyMaterialsEnabled,
-                      onTap:
-                          widget.enabled ? widget.onToggleStudyMaterials : null,
-                      accentColor: DS.primaryBase,
+                    _SourceTrayPill(
+                      mode: widget.documentContextMode,
+                      enabled: widget.enabled,
+                      onModeChanged: widget.onSetDocumentContextMode,
                     ),
-                    if (widget.studyMaterialsEnabled &&
+                    if (widget.documentContextMode != DocumentContextMode.off &&
                         widget.availableStudyMaterialsCount > 0)
                       ChatAccessoryPill(
                         icon: Icons.description_outlined,
@@ -267,8 +265,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         onTap:
                             widget.enabled ? widget.onOpenStudyMaterials : null,
                         emphasize: true,
-                      )
-                    else if (!widget.studyMaterialsEnabled)
+                      ),
+                    if (widget.documentContextMode == DocumentContextMode.off)
                       ChatAccessoryPill(
                         icon: Icons.pause_circle_outline_rounded,
                         label: context.l10n.chatStudyMaterialsPausedDescription,
@@ -516,4 +514,50 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           ],
         ),
       );
+}
+
+class _SourceTrayPill extends StatelessWidget {
+  const _SourceTrayPill({
+    required this.mode,
+    required this.enabled,
+    this.onModeChanged,
+  });
+
+  final DocumentContextMode mode;
+  final bool enabled;
+  final ValueChanged<DocumentContextMode>? onModeChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, label) = switch (mode) {
+      DocumentContextMode.auto => (
+          Icons.auto_awesome_rounded,
+          context.l10n.chatStudyMaterialsLabel,
+        ),
+      DocumentContextMode.userSelected => (
+          Icons.playlist_add_check_rounded,
+          'My Sources',
+        ),
+      DocumentContextMode.off => (
+          Icons.menu_book_outlined,
+          context.l10n.chatStudyMaterialsPaused,
+        ),
+    };
+    return ChatAccessoryPill(
+      icon: icon,
+      label: label,
+      selected: mode != DocumentContextMode.off,
+      onTap: enabled
+          ? () {
+              final next = switch (mode) {
+                DocumentContextMode.auto => DocumentContextMode.userSelected,
+                DocumentContextMode.userSelected => DocumentContextMode.off,
+                DocumentContextMode.off => DocumentContextMode.auto,
+              };
+              onModeChanged?.call(next);
+            }
+          : null,
+      accentColor: DS.primaryBase,
+    );
+  }
 }
