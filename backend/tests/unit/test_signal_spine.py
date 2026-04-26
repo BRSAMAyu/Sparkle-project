@@ -678,3 +678,100 @@ async def test_first_minute_to_policy_pipeline():
     decision, directive = result
     assert decision.primary_strategy == "exam_rescue_sprint"
     assert "seven_day_survival" in str(directive.hard_constraints)
+
+
+# ── P0-2: TimeContext + StaleStateGuard Tests ─────────────────────────
+
+from app.signals.stale_state_guard import StaleStateGuard, TimeContext, TimeDeltaPacket
+
+
+def test_stale_guard_triggers_after_2_hours():
+    """E5: 用户离开 2 小时 → TimeDeltaPacket."""
+    guard = StaleStateGuard()
+    ctx = TimeContext(
+        now="2026-04-26T22:00:00+08:00",
+        last_user_interaction_at="2026-04-26T20:00:00+08:00",
+        elapsed_since_last_interaction_min=120,
+        active_task_id="task_tcp_001",
+        active_task_status="no_completion",
+    )
+    packet = guard.check(ctx, user_id="u1")
+
+    assert packet is not None
+    assert packet.elapsed_since_last_seen_min == 120
+    assert packet.pending_task_status == "expected_finished_but_no_feedback"
+    assert len(packet.resume_options) == 4
+    assert packet.message_template != ""
+
+
+def test_stale_guard_no_trigger_under_threshold():
+    """用户只离开 30 分钟，不触发。"""
+    guard = StaleStateGuard()
+    ctx = TimeContext(
+        now="2026-04-26T20:30:00+08:00",
+        elapsed_since_last_interaction_min=30,
+    )
+    packet = guard.check(ctx)
+    assert packet is None
+
+
+def test_stale_guard_no_active_task():
+    """离开时间长但没有活跃任务。"""
+    guard = StaleStateGuard()
+    ctx = TimeContext(
+        now="2026-04-26T22:00:00+08:00",
+        elapsed_since_last_interaction_min=120,
+    )
+    packet = guard.check(ctx)
+
+    assert packet is not None
+    assert packet.pending_task_status == "no_active_task"
+    assert packet.resume_options[0]["value"] == "continue"
+
+
+def test_stale_guard_resume_options_format():
+    """恢复选项必须包含 4 个标准选项。"""
+    guard = StaleStateGuard()
+    ctx = TimeContext(
+        now="2026-04-26T22:00:00+08:00",
+        elapsed_since_last_interaction_min=130,
+        active_task_id="task_001",
+        active_task_status="started",
+    )
+    packet = guard.check(ctx)
+
+    assert packet is not None
+    labels = [opt["label"] for opt in packet.resume_options]
+    assert "做完了，补记录" in labels
+    assert "做了一半，卡住了" in labels
+    assert "没开始" in labels
+    assert "换个小任务" in labels
+
+
+def test_stale_guard_message_contains_time():
+    """返回消息必须包含时间信息。"""
+    guard = StaleStateGuard()
+    ctx = TimeContext(
+        now="2026-04-26T22:00:00+08:00",
+        elapsed_since_last_interaction_min=130,
+        active_task_id="task_001",
+        active_task_status="no_completion",
+    )
+    packet = guard.check(ctx)
+
+    assert packet is not None
+    assert "2 小时" in packet.message_template
+    assert "任务" in packet.message_template
+
+
+def test_stale_guard_time_context_serialization():
+    """TimeContext to_dict round-trip."""
+    ctx = TimeContext(
+        now="2026-04-26T22:00:00+08:00",
+        elapsed_since_last_interaction_min=120,
+        active_task_id="task_001",
+        deadline_phase="high_pressure",
+    )
+    d = ctx.to_dict()
+    assert d["deadline_phase"] == "high_pressure"
+    assert d["active_task_id"] == "task_001"
