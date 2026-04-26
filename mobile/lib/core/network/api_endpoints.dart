@@ -220,6 +220,19 @@ class ApiEndpoints {
       '/galaxy/node/$id/expansion/apply';
   static String galaxyNodeDecayPause(String id) =>
       '/galaxy/node/$id/decay/pause';
+  static String galaxyDocumentSuggestedNodes(String fileId) =>
+      '/galaxy/documents/$fileId/suggested-nodes';
+  static String galaxyDocumentReviewNodes(String fileId) =>
+      '/galaxy/documents/$fileId/review-nodes';
+  static String galaxyDocumentApproveAll(String fileId) =>
+      '/galaxy/documents/$fileId/approve-all';
+  static String galaxyNodeAttachDocument(String nodeId) =>
+      '/galaxy/node/$nodeId/documents';
+  static String galaxyNodeDetachDocument(String nodeId, String fileId) =>
+      '/galaxy/node/$nodeId/documents/$fileId';
+  static String galaxyDocumentMove(String fileId) =>
+      '/galaxy/documents/$fileId/move';
+  static const String citationFeedback = '/documents/feedback/citation';
 
   // Learning Paths
   static String learningPath(String targetNodeId) =>

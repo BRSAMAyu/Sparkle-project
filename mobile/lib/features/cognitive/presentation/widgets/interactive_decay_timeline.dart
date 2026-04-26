@@ -83,7 +83,6 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
       ScaffoldMessenger.of(context).showSnackBar(
         SparkleSnackBar.warning(
           context.l10n.cognitiveSelectGalaxyNodes,
-          duration: const Duration(seconds: 2),
         ),
       );
       return;
