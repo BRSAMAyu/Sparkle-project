@@ -628,3 +628,53 @@ def test_exam_rescue_deadline_extraction():
     assert snapshot is not None
     assert snapshot.deadline_days == 3
     assert snapshot.subject == "linear_algebra"
+
+
+def test_exam_rescue_relative_date_houtian():
+    """Chinese relative date '后天' should give deadline_days=2."""
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("我后天考高数，什么都不会")
+    assert snapshot is not None
+    assert snapshot.deadline_days == 2
+    assert snapshot.confidence >= 0.5
+
+
+def test_exam_rescue_relative_date_xiazhou():
+    """Chinese relative date '下周' should give deadline_days=7."""
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("我下周考数据结构，零基础")
+    assert snapshot is not None
+    assert snapshot.deadline_days == 7
+
+
+def test_exam_rescue_no_false_positive_no_exam():
+    """弱基础没有考试意图不触发 exam_rescue (C2 fix)."""
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("我零基础，想学一下计网")
+    assert snapshot is None
+
+
+def test_exam_rescue_english_subject():
+    """English subject names should be detected (C3 fix)."""
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("I have a calculus exam in 5 days, I know nothing")
+    assert snapshot is not None
+    assert snapshot.subject == "calculus"
+    assert snapshot.deadline_days == 5
+
+
+@pytest.mark.asyncio
+async def test_first_minute_to_policy_pipeline():
+    """E2E: Detector → Signal → PolicyEngine must produce result (W2 fix)."""
+    detector = ExamRescueDetector()
+    snapshot = detector.analyze_first_message("我 7 天后计网考试，零基础，想先别挂")
+    signal = detector.to_actionable_signal(snapshot, user_id="u1")
+    assert signal is not None
+    assert signal.confidence >= 0.5, f"Confidence {signal.confidence} below policy threshold 0.5"
+
+    engine = PolicyEngine()
+    result = await engine.evaluate(signal)
+    assert result is not None, "Signal was rejected by PolicyEngine (below threshold?)"
+    decision, directive = result
+    assert decision.primary_strategy == "exam_rescue_sprint"
+    assert "seven_day_survival" in str(directive.hard_constraints)

@@ -28,6 +28,23 @@ _DEADLINE_PATTERNS = (
     r"\b(exam|test|final)\s*(in|after|within)\s*(\d+)\s*(days?|d)\b",
 )
 
+# Chinese relative date expressions
+_RELATIVE_DATE_MAP = {
+    "明天": 1,
+    "明天早上": 1,
+    "后天": 2,
+    "大后天": 3,
+    "下周": 7,
+    "下周初": 7,
+    "下周末": 9,
+    "这周末": 3,
+    "这周": 2,
+}
+
+_EXAM_INTENT_PATTERNS = (
+    r"(考试|考|测验|期末|期中|quiz|exam|test|final|midterm)",
+)
+
 _BASELINE_PATTERNS = (
     r"(零基础|没学|没怎么学|基本不会|完全不懂|什么都不会|白板|没上过课)",
     r"(零|0)\s*(基础|掌握)",
@@ -41,7 +58,7 @@ _SUBJECT_PATTERNS = (
     r"(线代|线性代数|linear\s*algebra)",
     r"(概率|概率论|probability)",
     r"(数据结构|data\s*structure)",
-    r"(操作系统|os|operating\s*system)",
+    r"(操作系统|\bos\b|operating\s*system)",
     r"(编译原理|compiler)",
     r"(离散|离散数学|discrete)",
     r"(数据库|database)",
@@ -56,26 +73,40 @@ _SUBJECT_MAP: dict[str, str] = {
     "计网": "computer_networks",
     "计算机网络": "computer_networks",
     "computer net": "computer_networks",
+    "computer networks": "computer_networks",
     "高数": "advanced_mathematics",
     "高等数学": "advanced_mathematics",
     "微积分": "calculus",
+    "calculus": "calculus",
     "线代": "linear_algebra",
     "线性代数": "linear_algebra",
+    "linear algebra": "linear_algebra",
     "概率": "probability",
     "概率论": "probability",
+    "probability": "probability",
     "数据结构": "data_structures",
+    "data structure": "data_structures",
     "操作系统": "operating_systems",
+    "operating system": "operating_systems",
+    "os": "operating_systems",
     "编译原理": "compilers",
+    "compiler": "compilers",
     "离散": "discrete_mathematics",
+    "discrete": "discrete_mathematics",
     "数据库": "databases",
+    "database": "databases",
     "算法": "algorithms",
+    "algorithm": "algorithms",
     "物理": "physics",
+    "physics": "physics",
     "化学": "chemistry",
+    "chemistry": "chemistry",
     "政治": "politics",
     "毛概": "politics",
     "马原": "politics",
     "四六级": "english_cet",
     "英语": "english",
+    "english": "english",
 }
 
 _ENEMY_OF_GOOD_ENOUGH = (
@@ -111,15 +142,24 @@ class FirstMinuteSnapshot:
 
 
 def _extract_deadline_days(text: str) -> int | None:
-    """从文本中提取 deadline 天数。"""
+    """从文本中提取 deadline 天数。优先数字模式，再查相对日期。"""
     for pattern in _DEADLINE_PATTERNS:
         m = re.search(pattern, text, flags=re.IGNORECASE)
         if m:
-            # Try each group to find the digit group
             for group in m.groups():
                 if group and group.isdigit():
                     return int(group)
+    # Check Chinese relative date expressions
+    text_lower = text.lower()
+    for expr, days in sorted(_RELATIVE_DATE_MAP.items(), key=lambda x: -len(x[0])):
+        if expr in text_lower:
+            return days
     return None
+
+
+def _has_exam_intent(text: str) -> bool:
+    """检查文本中是否有明确的考试意图。"""
+    return bool(re.search("|".join(_EXAM_INTENT_PATTERNS), text, flags=re.IGNORECASE))
 
 
 def _detect_subject(text: str) -> str | None:
@@ -182,6 +222,12 @@ class ExamRescueDetector:
         # Also check for X天 + 考试 in same sentence (e.g. "7天后考试")
         if not has_deadline:
             has_deadline = bool(re.search(r"\d+\s*天.*(?:考试|考|测验|期末)", text, flags=re.IGNORECASE))
+        # Also check relative dates
+        if not has_deadline:
+            for expr in _RELATIVE_DATE_MAP:
+                if expr in text:
+                    has_deadline = True
+                    break
         deadline_days = _extract_deadline_days(text)
 
         # 检查基础薄弱信号
@@ -190,8 +236,15 @@ class ExamRescueDetector:
             for p in _BASELINE_PATTERNS
         )
 
+        # 检查考试意图
+        has_exam_intent = _has_exam_intent(text)
+
         # 如果既没有 deadline 也没有基础薄弱，不是 exam_rescue
         if not has_deadline and not has_weak_baseline:
+            return None
+
+        # C2: 仅凭基础薄弱不够，还需要考试意图
+        if has_weak_baseline and not has_deadline and not has_exam_intent:
             return None
 
         # 检查学科
