@@ -6150,12 +6150,232 @@
         }
     }
   },
-  "seedLibraryDetailImportFailed": "Import failed: {error}",
-  "@seedLibraryDetailImportFailed": {
-    "placeholders": {
-        "error": {
-          "type": "String"
-        }
-    }
-  }
+   "seedLibraryDetailImportFailed": "Import failed: {error}",
+   "@seedLibraryDetailImportFailed": {
+     "placeholders": {
+         "error": {
+           "type": "String"
+         }
+     }
+   },
+   "reportLearningAnalysisReport": "Learning Analysis Report",
+   "reportContinuationSubtitle": "Continue viewing the analysis report for this learning journey",
+   "reportPartialDataDisclaimer": "Partial data, for reference only",
+   "reportPartialDataMessage": "Generated from partial learning records. Results may not be comprehensive.",
+   "reportDiagnosisPanelEyebrow": "Learning Diagnosis Panel",
+   "reportOpenGalaxy": "Open Knowledge Galaxy",
+   "reportPrioritizeNode": "Prioritize {nodeName}",
+   "@reportPrioritizeNode": {
+     "placeholders": {
+       "nodeName": {
+         "type": "String"
+       }
+     }
+   },
+   "reportRangeWeek": "This Week",
+   "reportRangeMonth": "This Month",
+   "reportRangeAll": "All",
+   "reportCurrentLearningTopic": "Current learning topic",
+   "reportMasteryTrendTitle": "Mastery Trend",
+   "reportPartialDataPill": "Partial data, for reference only",
+   "reportTrendEmptyTitle": "Trend analysis will appear after more learning",
+   "reportTrendEmptyMessage": "Not enough real learning records to generate a trend yet. Complete learning tasks, exercises, or reviews first.",
+   "reportTrendChartHint": "Drag or tap a data point to see the trend line alongside study effort at that time.",
+   "reportRadarChartTitle": "Mastery Radar Chart",
+   "reportRadarSubtitleInsufficient": "Mastery analysis will appear after more learning",
+   "reportRadarSubtitleNoComparison": "Tap any dimension for detailed mastery info",
+   "reportRadarSubtitleWithComparison": "Previous outline overlaid. Tap dimensions for details.",
+   "reportRadarEmptyMessage": "The radar chart needs real learning records. Start a learning session first.",
+   "reportKeyMetricsTitle": "Key Metrics",
+   "reportMetricTotalMastery": "Total Mastery",
+   "reportMetricKnowledgeCount": "Knowledge Points",
+   "reportMetricStrengths": "Strengths",
+   "reportMetricWeaknesses": "Weaknesses",
+   "reportExecutionProfileLoadFailed": "Execution profile couldn't load. You can still read the learning report.",
+   "reportKeyDimensionsTitle": "Key Knowledge Dimensions",
+   "reportAiAnalysisTitle": "AI Analysis Report",
+   "reportBackToGalaxy": "Back to Galaxy",
+   "reportViewSprintHistory": "View Sprint History",
+   "reportShareTitle": "Learning Report · Avg Mastery {mastery}%",
+   "@reportShareTitle": {
+     "placeholders": {
+       "mastery": {
+         "type": "int"
+       }
+     }
+   },
+   "reportShareSubtitleSummary": "Learning analysis summary",
+   "reportShareSubtitlePriority": "Priority: Strengthen {nodeName}",
+   "@reportShareSubtitlePriority": {
+     "placeholders": {
+       "nodeName": {
+         "type": "String"
+       }
+     }
+   },
+   "reportShareMetadataDimensions": "{count} dimensions",
+   "@reportShareMetadataDimensions": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       }
+     }
+   },
+   "reportShareMessageWithMastery": "I just generated a learning analysis report on Sparkle. Average mastery: {mastery}%.",
+   "@reportShareMessageWithMastery": {
+     "placeholders": {
+       "mastery": {
+         "type": "int"
+       }
+     }
+   },
+   "reportShareMessageWithNode": "I just generated a learning analysis report on Sparkle. Current priority: strengthen {nodeName}.",
+   "@reportShareMessageWithNode": {
+     "placeholders": {
+       "nodeName": {
+         "type": "String"
+       }
+     }
+   },
+   "reportHeroTitlePriority": "The first thing to close out is {nodeName}",
+   "@reportHeroTitlePriority": {
+     "placeholders": {
+       "nodeName": {
+         "type": "String"
+       }
+     }
+   },
+   "reportHeroTitleStable": "Your stable zone is taking shape",
+   "reportHeroTitleBuild": "Build a foundation with real learning records first",
+   "reportHeroSubtitleDeltaUp": "Mastery is still rising, but {nodeName} remains the biggest drag on progress. Prioritize it for the best return.",
+   "@reportHeroSubtitleDeltaUp": {
+     "placeholders": {
+       "nodeName": {
+         "type": "String"
+       }
+     }
+   },
+   "reportHeroSubtitleDeltaDown": "There's been a slight dip. Don't expand scope — stabilize {nodeName} first.",
+   "@reportHeroSubtitleDeltaDown": {
+     "placeholders": {
+       "nodeName": {
+         "type": "String"
+       }
+     }
+   },
+   "reportHeroSubtitleStrong": "This report puts your strengths, weaknesses, and trends on one panel. Focus on what matters, then decide your next step.",
+   "reportHeroSubtitleDefault": "Use this report to confirm your direction. As more records come in, trends will get clearer.",
+   "reportMetricAvgMastery": "Avg Mastery",
+   "reportMetricPriority": "Priority",
+   "reportMetricCurrentStrength": "Current Strength",
+   "reportMetricTrendChange": "Trend Change",
+   "reportPlaceholderEmpty": "No learning report data yet.",
+   "reportContinueReading": "Continue Reading Report",
+   "reportEvidenceAndAdvice": "Evidence & Suggestions",
+   "reportGotIt": "Got it",
+   "reportMasteryStable": "Stable",
+   "reportMasteryConsolidate": "Can Consolidate",
+   "reportMasteryNeedFocus": "Needs Focus",
+   "reportGuidanceStable": "This topic is fairly solid. Keep it sharp with application and transfer exercises.",
+   "reportGuidanceConsolidate": "The basics are in place, but performance may waver in multi-step problems. Another round of deliberate practice would help.",
+   "reportGuidanceNeedFocus": "This is a clear weak spot. Go back to definitions, examples, and prerequisites before reattempting exercises.",
+   "reportChartFirstReport": "Your first report is ready. Come back next time and a trend line will appear here.",
+   "reportChartMasteryLabel": "Mastery {mastery}%",
+   "@reportChartMasteryLabel": {
+     "placeholders": {
+       "mastery": {
+         "type": "int"
+       }
+     }
+   },
+   "reportChartStudyMinutes": "Study time {minutes} min",
+   "@reportChartStudyMinutes": {
+     "placeholders": {
+       "minutes": {
+         "type": "int"
+       }
+     }
+   },
+   "reportChartMinutesShort": "{count} min",
+   "@reportChartMinutesShort": {
+     "placeholders": {
+       "count": {
+         "type": "int"
+       }
+     }
+   },
+   "reportChartZeroMinutes": "0 min",
+   "reportLegendMastery": "Mastery",
+   "reportLegendStudyDuration": "Study Duration",
+   "reportDiagnosisSummaryTitle": "Diagnosis Summary",
+   "reportDiagnosisSummaryDesc": "Three key questions: where are you strongest, where should you focus, and are you trending up or stalling?",
+   "reportDiagnosisTitleStrength": "Current Strength",
+   "reportDiagnosisTitleWeakness": "Main Weakness",
+   "reportDiagnosisTitleTrend": "Overall Trend",
+   "reportDiagnosisHeadlinePending": "Pending",
+   "reportDiagnosisStrengthBodyPending": "Once more learning records are generated, your strongest knowledge point will appear here.",
+   "reportDiagnosisStrengthBodyData": "Use it as leverage for transfer practice to shore up related topics.",
+   "reportDiagnosisWeaknessBodyPending": "Not enough data to pinpoint a weakness yet.",
+   "reportDiagnosisWeaknessBodyData": "This is the best place to start. Go back to definitions, examples, and prerequisites.",
+   "reportDiagnosisWeaknessFallback": "Weakness",
+   "reportDiagnosisTrendWaitingComparison": "Awaiting comparison",
+   "reportDiagnosisTrendBodyPending": "After one or two more reports, your trend will appear here.",
+   "reportDiagnosisTrendBodyUp": "Mastery is rising. Focus on consolidation and transfer.",
+   "reportDiagnosisTrendBodyDown": "Slight dip recently. Narrow your scope and close current gaps first.",
+   "reportTagConsolidate": "Keep consolidating",
+   "reportTagProcessFirst": "Process first",
+   "reportTagProcessSoon": "Process soon",
+   "reportTagKeepRhythm": "Keep current rhythm",
+   "reportTagCloseGap": "Close the gap",
+   "reportTagAwaitMore": "Awaiting more data",
+   "reportTagObserve": "Keep observing",
+   "reportActionTitle": "Next Steps",
+   "reportActionDescNoWeakness": "Visit Knowledge Galaxy to confirm your current structure, then generate more practice data for sharper suggestions.",
+   "reportActionDescWithWeakness": "Close out {weakNode} first, then use {strongNode} for transfer practice to raise overall mastery faster.",
+   "@reportActionDescWithWeakness": {
+     "placeholders": {
+       "weakNode": {
+         "type": "String"
+       },
+       "strongNode": {
+         "type": "String"
+       }
+     }
+   },
+   "reportActionExploreNode": "Explore {nodeName}",
+   "@reportActionExploreNode": {
+     "placeholders": {
+       "nodeName": {
+         "type": "String"
+       }
+     }
+   },
+   "reportActionWeaknessFallback": "Weakness",
+   "reportActionStrengthFallback": "Current Strength",
+   "reportActionEnterSimulation": "Enter Simulation",
+   "reportTrendAutoFillTitle": "Trends will fill in as more reports are generated",
+   "reportTrendFirstReportMessage": "Your first report is ready. Focus on weak spots based on this diagnosis. Next time, a trend line will start to form.",
+   "reportTrendLoadingHistory": "Loading your learning report history. Mastery trends will appear here shortly.",
+   "reportAiExecutionAssistant": "AI Execution Assistant",
+   "reportAiExecutionDesc": "Sparkle remembers which tasks are better handled by AI and how much time those delegations actually saved you.",
+   "reportStatTotalExecutions": "Total Executions",
+   "reportStatUnitTimes": "times",
+   "reportStatSuccessRate": "Success Rate",
+   "reportStatTimeSaved": "Time Saved",
+   "reportStatUnitHours": "hrs",
+   "reportStatUnitMinutes": "min",
+   "reportStatByTypeFormat": "{key}: {count} times · {rate}%",
+   "@reportStatByTypeFormat": {
+     "placeholders": {
+       "key": {
+         "type": "String"
+       },
+       "count": {
+         "type": "int"
+       },
+       "rate": {
+         "type": "int"
+       }
+     }
+   }
 }

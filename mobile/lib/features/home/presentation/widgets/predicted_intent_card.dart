@@ -226,7 +226,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                 const SizedBox(height: DS.spacing12),
                 _WithinCategoryPreferencePanel(
                   preference: forecast.withinCategoryPreference!,
-                  l10n: l10n,
+                  isChinese: isChinese,
                   isDark: isDark,
                 ),
               ],
@@ -485,40 +485,40 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     switch (actionType) {
       case 'resume_priority_task':
       case 'resume_task':
-        return l10n.predictedActionResumePriority;
+        return isChinese ? '继续重点任务' : 'Resume Priority Task';
       case 'study_plan':
-        return l10n.predictedActionStudyPlan;
+        return isChinese ? '生成学习计划' : 'Build Study Plan';
       case 'error_diagnosis':
-        return l10n.predictedActionDiagnose;
+        return isChinese ? '问题诊断' : 'Diagnose Issue';
       case 'create_task':
-        return l10n.predictedActionCreateTask;
+        return isChinese ? '落成任务' : 'Turn Into Task';
       case 'translate':
-        return l10n.predictedActionInstantResult;
+        return isChinese ? '即时结果' : 'Instant Result';
       case 'review_progress':
-        return l10n.predictedActionReviewProgress;
+        return isChinese ? '复盘进展' : 'Review Progress';
       case 'plan_next_step':
-        return l10n.predictedActionPlanNext;
+        return isChinese ? '规划下一步' : 'Plan Next Step';
       case 'reflection':
-        return l10n.predictedActionReflection;
+        return isChinese ? '快速反思' : 'Quick Reflection';
       default:
-        return l10n.predictedActionDefault;
+        return isChinese ? '预测意图' : 'Predicted Intent';
     }
   }
 
   String _windowLabel(String window, {required bool isChinese}) {
     switch (window) {
       case 'now':
-        return l10n is not available, keep isChineseNow;
+        return isChinese ? '就是现在' : 'Right Now';
       case 'next_30m':
-        return l10n is not available, keep isChinese30m;
+        return isChinese ? '未来 30 分钟' : 'Next 30 Minutes';
       case 'next_1h':
-        return l10n is not available, keep isChinese1h;
+        return isChinese ? '未来 1 小时' : 'Next Hour';
       case 'next_2h':
-        return l10n is not available, keep isChinese2h;
+        return isChinese ? '未来 2 小时' : 'Next 2 Hours';
       case 'next_6h':
-        return l10n is not available, keep isChinese6h;
+        return isChinese ? '未来 6 小时' : 'Next 6 Hours';
       case 'today':
-        return l10n is not available, keep isChineseToday;
+        return isChinese ? '今天内' : 'Later Today';
       default:
         return window.replaceAll('_', ' ');
     }
@@ -527,9 +527,9 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
   String _sourceLabel(String source, {required bool isChinese}) {
     switch (source) {
       case 'glm_batch':
-        return l10n is not availableLongRange;
+        return isChinese ? '长期预测' : 'Long-Range Forecast';
       case 'rules':
-        return l10n is not availableFallback;
+        return isChinese ? '规则兜底' : 'Rules Fallback';
       default:
         return source;
     }
@@ -539,15 +539,15 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
     if (generatedAt == null) return null;
     final diff = DateTime.now().difference(generatedAt);
     if (diff.inMinutes < 1) {
-      return l10n is not availableJustNow;
+      return isChinese ? '刚刚更新' : 'just now';
     }
     if (diff.inHours < 1) {
-      return l10n is not availableMinutesAgo('${diff.inMinutes}');
+      return isChinese ? '${diff.inMinutes} 分钟前' : '${diff.inMinutes} min ago';
     }
     if (diff.inDays < 1) {
-      return l10n is not availableHoursAgo('${diff.inHours}');
+      return isChinese ? '${diff.inHours} 小时前' : '${diff.inHours} hr ago';
     }
-    return l10n is not availableDaysAgo('${diff.inDays}');
+    return isChinese ? '${diff.inDays} 天前' : '${diff.inDays} d ago';
   }
 }
 
@@ -608,11 +608,11 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
   String _hintText() {
     final categoryLabel = _categoryLabel(
       preference.requestCategory,
-      l10n: l10n,
+      isChinese: isChinese,
     );
     final toolLabel = _toolLabel(
       preference.preferredTool,
-      l10n: l10n,
+      isChinese: isChinese,
     );
     if (isChinese) {
       return '在$categoryLabel里，近期结果更常把「$toolLabel」推到前面。';

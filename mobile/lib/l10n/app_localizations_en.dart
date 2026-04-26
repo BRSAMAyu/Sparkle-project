@@ -15113,4 +15113,359 @@ class AppLocalizationsEn extends AppLocalizations {
   String seedLibraryDetailImportFailed(String error) {
     return 'Import failed: $error';
   }
+
+  @override
+  String get reportLearningAnalysisReport => '学习分析报告';
+
+  @override
+  String get reportContinuationSubtitle => '继续查看本次学习旅程的分析报告';
+
+  @override
+  String get reportPartialDataDisclaimer => '部分数据，仅供参考';
+
+  @override
+  String get reportPartialDataMessage => '当前基于部分学习记录生成，结果可能不够全面。';
+
+  @override
+  String get reportDiagnosisPanelEyebrow => '学习诊断面板';
+
+  @override
+  String get reportOpenGalaxy => '打开知识星图';
+
+  @override
+  String reportPrioritizeNode(String nodeName) {
+    return '优先处理 $nodeName';
+  }
+
+  @override
+  String get reportRangeWeek => '本周';
+
+  @override
+  String get reportRangeMonth => '本月';
+
+  @override
+  String get reportRangeAll => '全部';
+
+  @override
+  String get reportCurrentLearningTopic => '当前学习主题';
+
+  @override
+  String get reportMasteryTrendTitle => '掌握度趋势';
+
+  @override
+  String get reportPartialDataPill => '部分数据，仅供参考';
+
+  @override
+  String get reportTrendEmptyTitle => '完成更多学习后将在此展示趋势分析';
+
+  @override
+  String get reportTrendEmptyMessage => '当前还没有足够的真实学习记录来生成趋势，请先完成学习任务、练习或复盘。';
+
+  @override
+  String get reportTrendChartHint => '拖动或点按时间点，就能把这条线和当时的学习投入一起看清楚。';
+
+  @override
+  String get reportRadarChartTitle => '掌握度雷达图';
+
+  @override
+  String get reportRadarSubtitleInsufficient => '完成更多学习后将在此展示掌握度分析';
+
+  @override
+  String get reportRadarSubtitleNoComparison => '点击任一维度查看更细的掌握情况';
+
+  @override
+  String get reportRadarSubtitleWithComparison => '当前报告已叠加上次轮廓，可点击维度查看详情';
+
+  @override
+  String get reportRadarEmptyMessage => '掌握度雷达图需要真实学习记录支撑，先开始一次学习并留下结果。';
+
+  @override
+  String get reportKeyMetricsTitle => '关键指标';
+
+  @override
+  String get reportMetricTotalMastery => '总掌握度';
+
+  @override
+  String get reportMetricKnowledgeCount => '知识点数';
+
+  @override
+  String get reportMetricStrengths => '强项';
+
+  @override
+  String get reportMetricWeaknesses => '薄弱点';
+
+  @override
+  String get reportExecutionProfileLoadFailed => '执行画像暂时没有加载出来，不影响你先阅读本次学习报告。';
+
+  @override
+  String get reportKeyDimensionsTitle => '重点知识维度';
+
+  @override
+  String get reportAiAnalysisTitle => 'AI 分析报告';
+
+  @override
+  String get reportBackToGalaxy => '回到 Galaxy';
+
+  @override
+  String get reportViewSprintHistory => '查看 Sprint 历史';
+
+  @override
+  String reportShareTitle(int mastery) {
+    return '学习报告 · 平均掌握度 $mastery%';
+  }
+
+  @override
+  String get reportShareSubtitleSummary => '本轮学习分析摘要';
+
+  @override
+  String reportShareSubtitlePriority(String nodeName) {
+    return '优先补强 $nodeName';
+  }
+
+  @override
+  String reportShareMetadataDimensions(int count) {
+    return '$count 个维度';
+  }
+
+  @override
+  String reportShareMessageWithMastery(int mastery) {
+    return '我刚在 Sparkle 生成了一份学习分析报告，平均掌握度 $mastery%。';
+  }
+
+  @override
+  String reportShareMessageWithNode(String nodeName) {
+    return '我刚在 Sparkle 生成了一份学习分析报告，当前优先补强的是 $nodeName。';
+  }
+
+  @override
+  String reportHeroTitlePriority(String nodeName) {
+    return '当前最该先收口的是 $nodeName';
+  }
+
+  @override
+  String get reportHeroTitleStable => '你的稳定区已经开始成形';
+
+  @override
+  String get reportHeroTitleBuild => '先用真实学习记录建立分析基础';
+
+  @override
+  String reportHeroSubtitleDeltaUp(String nodeName) {
+    return '整体掌握度还在抬升，但 $nodeName 依然是最容易拖慢进度的环节，优先补它最划算。';
+  }
+
+  @override
+  String reportHeroSubtitleDeltaDown(String nodeName) {
+    return '最近节奏有一点回落，先别继续铺开范围，优先把 $nodeName 重新拉稳。';
+  }
+
+  @override
+  String get reportHeroSubtitleStrong =>
+      '这份报告已经把当前强项、薄弱点和趋势放到同一个面板里，先看重点，再决定下一步。';
+
+  @override
+  String get reportHeroSubtitleDefault => '先用这份报告确认方向，后续随着更多记录补齐，趋势会越来越清楚。';
+
+  @override
+  String get reportMetricAvgMastery => '平均掌握度';
+
+  @override
+  String get reportMetricPriority => '优先补强';
+
+  @override
+  String get reportMetricCurrentStrength => '当前强项';
+
+  @override
+  String get reportMetricTrendChange => '变化趋势';
+
+  @override
+  String get reportPlaceholderEmpty => '暂无学习报告数据。';
+
+  @override
+  String get reportContinueReading => '继续阅读报告';
+
+  @override
+  String get reportEvidenceAndAdvice => '证据与建议';
+
+  @override
+  String get reportGotIt => '知道了';
+
+  @override
+  String get reportMasteryStable => '掌握稳定';
+
+  @override
+  String get reportMasteryConsolidate => '仍可巩固';
+
+  @override
+  String get reportMasteryNeedFocus => '需要重点补强';
+
+  @override
+  String get reportGuidanceStable => '这个知识点已经比较稳，可以更多地通过应用题和迁移练习来保持熟练度。';
+
+  @override
+  String get reportGuidanceConsolidate =>
+      '这个知识点理解基本建立，但在连续推理或综合题里可能还会波动，适合再补一轮刻意练习。';
+
+  @override
+  String get reportGuidanceNeedFocus =>
+      '这个知识点当前是明显薄弱环节，建议先回到定义、例题和前置概念，再重新做相关练习。';
+
+  @override
+  String get reportChartFirstReport => '第一份报告已经准备好了。下次再来看，这里就会出现你的趋势变化线。';
+
+  @override
+  String reportChartMasteryLabel(int mastery) {
+    return '掌握度 $mastery%';
+  }
+
+  @override
+  String reportChartStudyMinutes(int minutes) {
+    return '学习时长 $minutes 分钟';
+  }
+
+  @override
+  String reportChartMinutesShort(int count) {
+    return '$count分';
+  }
+
+  @override
+  String get reportChartZeroMinutes => '0分';
+
+  @override
+  String get reportLegendMastery => '掌握度';
+
+  @override
+  String get reportLegendStudyDuration => '学习时长';
+
+  @override
+  String get reportDiagnosisSummaryTitle => '诊断摘要';
+
+  @override
+  String get reportDiagnosisSummaryDesc =>
+      '先回答三个最关键的问题：你现在最稳的地方在哪里、最该补的地方在哪里、整体是在上升还是停滞。';
+
+  @override
+  String get reportDiagnosisTitleStrength => '当前强项';
+
+  @override
+  String get reportDiagnosisTitleWeakness => '主要短板';
+
+  @override
+  String get reportDiagnosisTitleTrend => '整体趋势';
+
+  @override
+  String get reportDiagnosisHeadlinePending => '待生成';
+
+  @override
+  String get reportDiagnosisStrengthBodyPending => '生成更多学习记录后，这里会出现最稳的知识点。';
+
+  @override
+  String get reportDiagnosisStrengthBodyData => '建议把它作为迁移练习的发力点，带动相关知识点一起稳住。';
+
+  @override
+  String get reportDiagnosisWeaknessBodyPending => '当前还没有足够数据定位短板。';
+
+  @override
+  String get reportDiagnosisWeaknessBodyData => '这是最值得先补的切入口，优先回到定义、例题和前置关系。';
+
+  @override
+  String get reportDiagnosisWeaknessFallback => '薄弱项';
+
+  @override
+  String get reportDiagnosisTrendWaitingComparison => '等待历史对比';
+
+  @override
+  String get reportDiagnosisTrendBodyPending => '再积累一到两份报告后，这里会显示你的连续变化趋势。';
+
+  @override
+  String get reportDiagnosisTrendBodyUp => '掌握度在继续抬升，接下来更适合做巩固和迁移。';
+
+  @override
+  String get reportDiagnosisTrendBodyDown => '最近有回落迹象，建议减少铺开面，先收口当前薄弱点。';
+
+  @override
+  String get reportTagConsolidate => '可继续巩固';
+
+  @override
+  String get reportTagProcessFirst => '建议先处理';
+
+  @override
+  String get reportTagProcessSoon => '建议尽快处理';
+
+  @override
+  String get reportTagKeepRhythm => '保持当前节奏';
+
+  @override
+  String get reportTagCloseGap => '建议尽快收口';
+
+  @override
+  String get reportTagAwaitMore => '等待更多记录';
+
+  @override
+  String get reportTagObserve => '建议继续观察';
+
+  @override
+  String get reportActionTitle => '下一步行动';
+
+  @override
+  String get reportActionDescNoWeakness =>
+      '先去知识星图确认当前结构，再生成更多练习数据，报告会自动给出更尖锐的下一步建议。';
+
+  @override
+  String reportActionDescWithWeakness(String weakNode, String strongNode) {
+    return '优先围绕 $weakNode 收口，再用 $strongNode 做迁移练习，能更快把整体掌握度拉起来。';
+  }
+
+  @override
+  String reportActionExploreNode(String nodeName) {
+    return '推演 $nodeName';
+  }
+
+  @override
+  String get reportActionWeaknessFallback => '薄弱项';
+
+  @override
+  String get reportActionStrengthFallback => '当前强项';
+
+  @override
+  String get reportActionEnterSimulation => '进入学习仿真';
+
+  @override
+  String get reportTrendAutoFillTitle => '趋势会随着更多报告自动补全';
+
+  @override
+  String get reportTrendFirstReportMessage =>
+      '第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。';
+
+  @override
+  String get reportTrendLoadingHistory => '正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。';
+
+  @override
+  String get reportAiExecutionAssistant => 'AI执行助手';
+
+  @override
+  String get reportAiExecutionDesc =>
+      'Sparkle 会记住哪些任务更适合交给 AI，以及这些委派实际帮你节省了多少时间。';
+
+  @override
+  String get reportStatTotalExecutions => '总执行';
+
+  @override
+  String get reportStatUnitTimes => '次';
+
+  @override
+  String get reportStatSuccessRate => '成功率';
+
+  @override
+  String get reportStatTimeSaved => '节省时间';
+
+  @override
+  String get reportStatUnitHours => '小时';
+
+  @override
+  String get reportStatUnitMinutes => '分钟';
+
+  @override
+  String reportStatByTypeFormat(String key, int count, int rate) {
+    return '$key: $count次 · $rate%';
+  }
 }

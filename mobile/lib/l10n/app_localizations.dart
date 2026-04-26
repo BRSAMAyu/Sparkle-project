@@ -26405,6 +26405,642 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'导入失败：{error}'**
   String seedLibraryDetailImportFailed(String error);
+
+  /// No description provided for @reportLearningAnalysisReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习分析报告'**
+  String get reportLearningAnalysisReport;
+
+  /// No description provided for @reportContinuationSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续查看本次学习旅程的分析报告'**
+  String get reportContinuationSubtitle;
+
+  /// No description provided for @reportPartialDataDisclaimer.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分数据，仅供参考'**
+  String get reportPartialDataDisclaimer;
+
+  /// No description provided for @reportPartialDataMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前基于部分学习记录生成，结果可能不够全面。'**
+  String get reportPartialDataMessage;
+
+  /// No description provided for @reportDiagnosisPanelEyebrow.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习诊断面板'**
+  String get reportDiagnosisPanelEyebrow;
+
+  /// No description provided for @reportOpenGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开知识星图'**
+  String get reportOpenGalaxy;
+
+  /// No description provided for @reportPrioritizeNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先处理 {nodeName}'**
+  String reportPrioritizeNode(String nodeName);
+
+  /// No description provided for @reportRangeWeek.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周'**
+  String get reportRangeWeek;
+
+  /// No description provided for @reportRangeMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月'**
+  String get reportRangeMonth;
+
+  /// No description provided for @reportRangeAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get reportRangeAll;
+
+  /// No description provided for @reportCurrentLearningTopic.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前学习主题'**
+  String get reportCurrentLearningTopic;
+
+  /// No description provided for @reportMasteryTrendTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度趋势'**
+  String get reportMasteryTrendTitle;
+
+  /// No description provided for @reportPartialDataPill.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分数据，仅供参考'**
+  String get reportPartialDataPill;
+
+  /// No description provided for @reportTrendEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成更多学习后将在此展示趋势分析'**
+  String get reportTrendEmptyTitle;
+
+  /// No description provided for @reportTrendEmptyMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前还没有足够的真实学习记录来生成趋势，请先完成学习任务、练习或复盘。'**
+  String get reportTrendEmptyMessage;
+
+  /// No description provided for @reportTrendChartHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'拖动或点按时间点，就能把这条线和当时的学习投入一起看清楚。'**
+  String get reportTrendChartHint;
+
+  /// No description provided for @reportRadarChartTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度雷达图'**
+  String get reportRadarChartTitle;
+
+  /// No description provided for @reportRadarSubtitleInsufficient.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成更多学习后将在此展示掌握度分析'**
+  String get reportRadarSubtitleInsufficient;
+
+  /// No description provided for @reportRadarSubtitleNoComparison.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击任一维度查看更细的掌握情况'**
+  String get reportRadarSubtitleNoComparison;
+
+  /// No description provided for @reportRadarSubtitleWithComparison.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前报告已叠加上次轮廓，可点击维度查看详情'**
+  String get reportRadarSubtitleWithComparison;
+
+  /// No description provided for @reportRadarEmptyMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度雷达图需要真实学习记录支撑，先开始一次学习并留下结果。'**
+  String get reportRadarEmptyMessage;
+
+  /// No description provided for @reportKeyMetricsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键指标'**
+  String get reportKeyMetricsTitle;
+
+  /// No description provided for @reportMetricTotalMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'总掌握度'**
+  String get reportMetricTotalMastery;
+
+  /// No description provided for @reportMetricKnowledgeCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识点数'**
+  String get reportMetricKnowledgeCount;
+
+  /// No description provided for @reportMetricStrengths.
+  ///
+  /// In zh, this message translates to:
+  /// **'强项'**
+  String get reportMetricStrengths;
+
+  /// No description provided for @reportMetricWeaknesses.
+  ///
+  /// In zh, this message translates to:
+  /// **'薄弱点'**
+  String get reportMetricWeaknesses;
+
+  /// No description provided for @reportExecutionProfileLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行画像暂时没有加载出来，不影响你先阅读本次学习报告。'**
+  String get reportExecutionProfileLoadFailed;
+
+  /// No description provided for @reportKeyDimensionsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'重点知识维度'**
+  String get reportKeyDimensionsTitle;
+
+  /// No description provided for @reportAiAnalysisTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 分析报告'**
+  String get reportAiAnalysisTitle;
+
+  /// No description provided for @reportBackToGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到 Galaxy'**
+  String get reportBackToGalaxy;
+
+  /// No description provided for @reportViewSprintHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看 Sprint 历史'**
+  String get reportViewSprintHistory;
+
+  /// No description provided for @reportShareTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习报告 · 平均掌握度 {mastery}%'**
+  String reportShareTitle(int mastery);
+
+  /// No description provided for @reportShareSubtitleSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'本轮学习分析摘要'**
+  String get reportShareSubtitleSummary;
+
+  /// No description provided for @reportShareSubtitlePriority.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先补强 {nodeName}'**
+  String reportShareSubtitlePriority(String nodeName);
+
+  /// No description provided for @reportShareMetadataDimensions.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个维度'**
+  String reportShareMetadataDimensions(int count);
+
+  /// No description provided for @reportShareMessageWithMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'我刚在 Sparkle 生成了一份学习分析报告，平均掌握度 {mastery}%。'**
+  String reportShareMessageWithMastery(int mastery);
+
+  /// No description provided for @reportShareMessageWithNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'我刚在 Sparkle 生成了一份学习分析报告，当前优先补强的是 {nodeName}。'**
+  String reportShareMessageWithNode(String nodeName);
+
+  /// No description provided for @reportHeroTitlePriority.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前最该先收口的是 {nodeName}'**
+  String reportHeroTitlePriority(String nodeName);
+
+  /// No description provided for @reportHeroTitleStable.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的稳定区已经开始成形'**
+  String get reportHeroTitleStable;
+
+  /// No description provided for @reportHeroTitleBuild.
+  ///
+  /// In zh, this message translates to:
+  /// **'先用真实学习记录建立分析基础'**
+  String get reportHeroTitleBuild;
+
+  /// No description provided for @reportHeroSubtitleDeltaUp.
+  ///
+  /// In zh, this message translates to:
+  /// **'整体掌握度还在抬升，但 {nodeName} 依然是最容易拖慢进度的环节，优先补它最划算。'**
+  String reportHeroSubtitleDeltaUp(String nodeName);
+
+  /// No description provided for @reportHeroSubtitleDeltaDown.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近节奏有一点回落，先别继续铺开范围，优先把 {nodeName} 重新拉稳。'**
+  String reportHeroSubtitleDeltaDown(String nodeName);
+
+  /// No description provided for @reportHeroSubtitleStrong.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份报告已经把当前强项、薄弱点和趋势放到同一个面板里，先看重点，再决定下一步。'**
+  String get reportHeroSubtitleStrong;
+
+  /// No description provided for @reportHeroSubtitleDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'先用这份报告确认方向，后续随着更多记录补齐，趋势会越来越清楚。'**
+  String get reportHeroSubtitleDefault;
+
+  /// No description provided for @reportMetricAvgMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'平均掌握度'**
+  String get reportMetricAvgMastery;
+
+  /// No description provided for @reportMetricPriority.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先补强'**
+  String get reportMetricPriority;
+
+  /// No description provided for @reportMetricCurrentStrength.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前强项'**
+  String get reportMetricCurrentStrength;
+
+  /// No description provided for @reportMetricTrendChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'变化趋势'**
+  String get reportMetricTrendChange;
+
+  /// No description provided for @reportPlaceholderEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无学习报告数据。'**
+  String get reportPlaceholderEmpty;
+
+  /// No description provided for @reportContinueReading.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续阅读报告'**
+  String get reportContinueReading;
+
+  /// No description provided for @reportEvidenceAndAdvice.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据与建议'**
+  String get reportEvidenceAndAdvice;
+
+  /// No description provided for @reportGotIt.
+  ///
+  /// In zh, this message translates to:
+  /// **'知道了'**
+  String get reportGotIt;
+
+  /// No description provided for @reportMasteryStable.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握稳定'**
+  String get reportMasteryStable;
+
+  /// No description provided for @reportMasteryConsolidate.
+  ///
+  /// In zh, this message translates to:
+  /// **'仍可巩固'**
+  String get reportMasteryConsolidate;
+
+  /// No description provided for @reportMasteryNeedFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要重点补强'**
+  String get reportMasteryNeedFocus;
+
+  /// No description provided for @reportGuidanceStable.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个知识点已经比较稳，可以更多地通过应用题和迁移练习来保持熟练度。'**
+  String get reportGuidanceStable;
+
+  /// No description provided for @reportGuidanceConsolidate.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个知识点理解基本建立，但在连续推理或综合题里可能还会波动，适合再补一轮刻意练习。'**
+  String get reportGuidanceConsolidate;
+
+  /// No description provided for @reportGuidanceNeedFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个知识点当前是明显薄弱环节，建议先回到定义、例题和前置概念，再重新做相关练习。'**
+  String get reportGuidanceNeedFocus;
+
+  /// No description provided for @reportChartFirstReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一份报告已经准备好了。下次再来看，这里就会出现你的趋势变化线。'**
+  String get reportChartFirstReport;
+
+  /// No description provided for @reportChartMasteryLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度 {mastery}%'**
+  String reportChartMasteryLabel(int mastery);
+
+  /// No description provided for @reportChartStudyMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习时长 {minutes} 分钟'**
+  String reportChartStudyMinutes(int minutes);
+
+  /// No description provided for @reportChartMinutesShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}分'**
+  String reportChartMinutesShort(int count);
+
+  /// No description provided for @reportChartZeroMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'0分'**
+  String get reportChartZeroMinutes;
+
+  /// No description provided for @reportLegendMastery.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度'**
+  String get reportLegendMastery;
+
+  /// No description provided for @reportLegendStudyDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习时长'**
+  String get reportLegendStudyDuration;
+
+  /// No description provided for @reportDiagnosisSummaryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'诊断摘要'**
+  String get reportDiagnosisSummaryTitle;
+
+  /// No description provided for @reportDiagnosisSummaryDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'先回答三个最关键的问题：你现在最稳的地方在哪里、最该补的地方在哪里、整体是在上升还是停滞。'**
+  String get reportDiagnosisSummaryDesc;
+
+  /// No description provided for @reportDiagnosisTitleStrength.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前强项'**
+  String get reportDiagnosisTitleStrength;
+
+  /// No description provided for @reportDiagnosisTitleWeakness.
+  ///
+  /// In zh, this message translates to:
+  /// **'主要短板'**
+  String get reportDiagnosisTitleWeakness;
+
+  /// No description provided for @reportDiagnosisTitleTrend.
+  ///
+  /// In zh, this message translates to:
+  /// **'整体趋势'**
+  String get reportDiagnosisTitleTrend;
+
+  /// No description provided for @reportDiagnosisHeadlinePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'待生成'**
+  String get reportDiagnosisHeadlinePending;
+
+  /// No description provided for @reportDiagnosisStrengthBodyPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成更多学习记录后，这里会出现最稳的知识点。'**
+  String get reportDiagnosisStrengthBodyPending;
+
+  /// No description provided for @reportDiagnosisStrengthBodyData.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议把它作为迁移练习的发力点，带动相关知识点一起稳住。'**
+  String get reportDiagnosisStrengthBodyData;
+
+  /// No description provided for @reportDiagnosisWeaknessBodyPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前还没有足够数据定位短板。'**
+  String get reportDiagnosisWeaknessBodyPending;
+
+  /// No description provided for @reportDiagnosisWeaknessBodyData.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是最值得先补的切入口，优先回到定义、例题和前置关系。'**
+  String get reportDiagnosisWeaknessBodyData;
+
+  /// No description provided for @reportDiagnosisWeaknessFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'薄弱项'**
+  String get reportDiagnosisWeaknessFallback;
+
+  /// No description provided for @reportDiagnosisTrendWaitingComparison.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待历史对比'**
+  String get reportDiagnosisTrendWaitingComparison;
+
+  /// No description provided for @reportDiagnosisTrendBodyPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'再积累一到两份报告后，这里会显示你的连续变化趋势。'**
+  String get reportDiagnosisTrendBodyPending;
+
+  /// No description provided for @reportDiagnosisTrendBodyUp.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度在继续抬升，接下来更适合做巩固和迁移。'**
+  String get reportDiagnosisTrendBodyUp;
+
+  /// No description provided for @reportDiagnosisTrendBodyDown.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近有回落迹象，建议减少铺开面，先收口当前薄弱点。'**
+  String get reportDiagnosisTrendBodyDown;
+
+  /// No description provided for @reportTagConsolidate.
+  ///
+  /// In zh, this message translates to:
+  /// **'可继续巩固'**
+  String get reportTagConsolidate;
+
+  /// No description provided for @reportTagProcessFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议先处理'**
+  String get reportTagProcessFirst;
+
+  /// No description provided for @reportTagProcessSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议尽快处理'**
+  String get reportTagProcessSoon;
+
+  /// No description provided for @reportTagKeepRhythm.
+  ///
+  /// In zh, this message translates to:
+  /// **'保持当前节奏'**
+  String get reportTagKeepRhythm;
+
+  /// No description provided for @reportTagCloseGap.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议尽快收口'**
+  String get reportTagCloseGap;
+
+  /// No description provided for @reportTagAwaitMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待更多记录'**
+  String get reportTagAwaitMore;
+
+  /// No description provided for @reportTagObserve.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议继续观察'**
+  String get reportTagObserve;
+
+  /// No description provided for @reportActionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步行动'**
+  String get reportActionTitle;
+
+  /// No description provided for @reportActionDescNoWeakness.
+  ///
+  /// In zh, this message translates to:
+  /// **'先去知识星图确认当前结构，再生成更多练习数据，报告会自动给出更尖锐的下一步建议。'**
+  String get reportActionDescNoWeakness;
+
+  /// No description provided for @reportActionDescWithWeakness.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先围绕 {weakNode} 收口，再用 {strongNode} 做迁移练习，能更快把整体掌握度拉起来。'**
+  String reportActionDescWithWeakness(String weakNode, String strongNode);
+
+  /// No description provided for @reportActionExploreNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'推演 {nodeName}'**
+  String reportActionExploreNode(String nodeName);
+
+  /// No description provided for @reportActionWeaknessFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'薄弱项'**
+  String get reportActionWeaknessFallback;
+
+  /// No description provided for @reportActionStrengthFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前强项'**
+  String get reportActionStrengthFallback;
+
+  /// No description provided for @reportActionEnterSimulation.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入学习仿真'**
+  String get reportActionEnterSimulation;
+
+  /// No description provided for @reportTrendAutoFillTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'趋势会随着更多报告自动补全'**
+  String get reportTrendAutoFillTitle;
+
+  /// No description provided for @reportTrendFirstReportMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。'**
+  String get reportTrendFirstReportMessage;
+
+  /// No description provided for @reportTrendLoadingHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。'**
+  String get reportTrendLoadingHistory;
+
+  /// No description provided for @reportAiExecutionAssistant.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI执行助手'**
+  String get reportAiExecutionAssistant;
+
+  /// No description provided for @reportAiExecutionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 会记住哪些任务更适合交给 AI，以及这些委派实际帮你节省了多少时间。'**
+  String get reportAiExecutionDesc;
+
+  /// No description provided for @reportStatTotalExecutions.
+  ///
+  /// In zh, this message translates to:
+  /// **'总执行'**
+  String get reportStatTotalExecutions;
+
+  /// No description provided for @reportStatUnitTimes.
+  ///
+  /// In zh, this message translates to:
+  /// **'次'**
+  String get reportStatUnitTimes;
+
+  /// No description provided for @reportStatSuccessRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'成功率'**
+  String get reportStatSuccessRate;
+
+  /// No description provided for @reportStatTimeSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'节省时间'**
+  String get reportStatTimeSaved;
+
+  /// No description provided for @reportStatUnitHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'小时'**
+  String get reportStatUnitHours;
+
+  /// No description provided for @reportStatUnitMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'分钟'**
+  String get reportStatUnitMinutes;
+
+  /// No description provided for @reportStatByTypeFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'{key}: {count}次 · {rate}%'**
+  String reportStatByTypeFormat(String key, int count, int rate);
 }
 
 class _AppLocalizationsDelegate
