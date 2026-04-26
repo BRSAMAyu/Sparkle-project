@@ -18222,4 +18222,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auroraBackground => 'Aurora 已退回后台';
+
+  @override
+  String get auroraCalibrationTitle => 'Aurora 正在校准';
+
+  @override
+  String get auroraCalibrationObserved => '我观察到';
+
+  @override
+  String get auroraCalibrationJudgment => '我的判断';
+
+  @override
+  String get auroraCalibrationUncertainty => '我可能判断错的地方';
+
+  @override
+  String get auroraCalibrationSuggestion => '我的建议';
+
+  @override
+  String get auroraCalibrationConfirm => '需要你确认';
+
+  @override
+  String get auroraCalibrationComplete => '校准完成，回到标准层。';
+
+  @override
+  String get auroraCalibrationExit => 'Aurora 已退回后台';
+
+  @override
+  String get auroraCorrectNotRight => '不是这个方向';
+
+  @override
+  String get auroraCorrectShorter => '更短一点';
+
+  @override
+  String get auroraCorrectDirect => '直接出题';
+
+  @override
+  String get auroraCorrectRecalibrate => '重新校准';
+
+  @override
+  String auroraSourceBadge(Object source) {
+    return '基于：$source';
+  }
+
+  @override
+  String get auroraJudgmentTag => 'Aurora 判断';
+
+  @override
+  String get auroraPhaseDiagnosis => '诊断';
+
+  @override
+  String get auroraPhaseStrategy => '策略';
+
+  @override
+  String get auroraPhaseExecution => '执行';
+
+  @override
+  String get auroraPhaseCheckpoint => '检查点';
+
+  @override
+  String get auroraInputHint => '告诉 Sparkle 任何想法...';
 }

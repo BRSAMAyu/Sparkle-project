@@ -19026,4 +19026,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auroraBackground => 'Aurora in background';
+
+  @override
+  String get auroraCalibrationTitle => 'Aurora recalibrating';
+
+  @override
+  String get auroraCalibrationObserved => 'What I observed';
+
+  @override
+  String get auroraCalibrationJudgment => 'My current judgment';
+
+  @override
+  String get auroraCalibrationUncertainty => 'Where I might be wrong';
+
+  @override
+  String get auroraCalibrationSuggestion => 'My suggestion';
+
+  @override
+  String get auroraCalibrationConfirm => 'Need your confirmation';
+
+  @override
+  String get auroraCalibrationComplete =>
+      'Calibration complete. Returning to standard layer.';
+
+  @override
+  String get auroraCalibrationExit => 'Aurora returning to background';
+
+  @override
+  String get auroraCorrectNotRight => 'Not the right direction';
+
+  @override
+  String get auroraCorrectShorter => 'Make it shorter';
+
+  @override
+  String get auroraCorrectDirect => 'Give me practice';
+
+  @override
+  String get auroraCorrectRecalibrate => 'Recalibrate';
+
+  @override
+  String auroraSourceBadge(Object source) {
+    return 'Based on: $source';
+  }
+
+  @override
+  String get auroraJudgmentTag => 'Aurora judgment';
+
+  @override
+  String get auroraPhaseDiagnosis => 'Diagnosis';
+
+  @override
+  String get auroraPhaseStrategy => 'Strategy';
+
+  @override
+  String get auroraPhaseExecution => 'Execution';
+
+  @override
+  String get auroraPhaseCheckpoint => 'Checkpoint';
+
+  @override
+  String get auroraInputHint => 'Tell Sparkle anything...';
 }

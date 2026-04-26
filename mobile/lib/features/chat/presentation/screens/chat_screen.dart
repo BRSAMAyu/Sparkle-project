@@ -24,11 +24,13 @@ import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.da
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
+import 'package:sparkle/features/chat/presentation/widgets/aurora_calibration_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
+import 'package:sparkle/features/chat/presentation/widgets/contextual_correction_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_transition_banner.dart';
@@ -1058,10 +1060,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 }
 
                                 final message = messages[adjustedIndex];
-                                return ChatBubble(
+                                final isLatestAssistant =
+                                    message.id == latestAssistantMessageId;
+                                final showCorrectionBar = isLatestAssistant &&
+                                    message.role == MessageRole.assistant &&
+                                    !chatState.hasActiveRun;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ChatBubble(
                                   message: message,
-                                  isLatestAssistantMessage:
-                                      message.id == latestAssistantMessageId,
+                                  isLatestAssistantMessage: isLatestAssistant,
                                   onActionConfirm: (action) {
                                     ref
                                         .read(chatProvider.notifier)
@@ -1101,6 +1110,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           payload,
                                         );
                                   },
+                                ),
+                                    if (showCorrectionBar)
+                                      ContextualCorrectionBar(
+                                        onNotRightDirection: () => ref
+                                            .read(chatProvider.notifier)
+                                            .sendMessage(
+                                              context.l10n.auroraCorrectNotRight,
+                                            ),
+                                        onMakeShorter: () => ref
+                                            .read(chatProvider.notifier)
+                                            .sendMessage(
+                                              context.l10n.auroraCorrectShorter,
+                                            ),
+                                        onGivePractice: () => ref
+                                            .read(chatProvider.notifier)
+                                            .sendMessage(
+                                              context.l10n.auroraCorrectDirect,
+                                            ),
+                                        onRecalibrate: () =>
+                                            showAuroraCalibration(
+                                              context: context,
+                                              observation: context.l10n
+                                                  .auroraCalibrationObserved,
+                                              judgment: context.l10n
+                                                  .auroraCalibrationJudgment,
+                                              confirmQuestion: context.l10n
+                                                  .auroraCalibrationConfirm,
+                                              confirmOptions: const [
+                                                '30 分钟',
+                                                '45 分钟',
+                                                '60 分钟',
+                                              ],
+                                              onConfirm: (option) {
+                                                ref
+                                                    .read(chatProvider.notifier)
+                                                    .sendMessage(
+                                                      '${context.l10n.auroraCorrectRecalibrate}: $option',
+                                                    );
+                                              },
+                                            ),
+                                      ),
+                                  ],
                                 );
                               },
                             ),

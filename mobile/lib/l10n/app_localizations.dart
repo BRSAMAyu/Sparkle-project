@@ -33228,6 +33228,120 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'Aurora 已退回后台'**
   String get auroraBackground;
+
+  /// No description provided for @auroraCalibrationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 正在校准'**
+  String get auroraCalibrationTitle;
+
+  /// No description provided for @auroraCalibrationObserved.
+  ///
+  /// In zh, this message translates to:
+  /// **'我观察到'**
+  String get auroraCalibrationObserved;
+
+  /// No description provided for @auroraCalibrationJudgment.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的判断'**
+  String get auroraCalibrationJudgment;
+
+  /// No description provided for @auroraCalibrationUncertainty.
+  ///
+  /// In zh, this message translates to:
+  /// **'我可能判断错的地方'**
+  String get auroraCalibrationUncertainty;
+
+  /// No description provided for @auroraCalibrationSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的建议'**
+  String get auroraCalibrationSuggestion;
+
+  /// No description provided for @auroraCalibrationConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要你确认'**
+  String get auroraCalibrationConfirm;
+
+  /// No description provided for @auroraCalibrationComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'校准完成，回到标准层。'**
+  String get auroraCalibrationComplete;
+
+  /// No description provided for @auroraCalibrationExit.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 已退回后台'**
+  String get auroraCalibrationExit;
+
+  /// No description provided for @auroraCorrectNotRight.
+  ///
+  /// In zh, this message translates to:
+  /// **'不是这个方向'**
+  String get auroraCorrectNotRight;
+
+  /// No description provided for @auroraCorrectShorter.
+  ///
+  /// In zh, this message translates to:
+  /// **'更短一点'**
+  String get auroraCorrectShorter;
+
+  /// No description provided for @auroraCorrectDirect.
+  ///
+  /// In zh, this message translates to:
+  /// **'直接出题'**
+  String get auroraCorrectDirect;
+
+  /// No description provided for @auroraCorrectRecalibrate.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新校准'**
+  String get auroraCorrectRecalibrate;
+
+  /// No description provided for @auroraSourceBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于：{source}'**
+  String auroraSourceBadge(Object source);
+
+  /// No description provided for @auroraJudgmentTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 判断'**
+  String get auroraJudgmentTag;
+
+  /// No description provided for @auroraPhaseDiagnosis.
+  ///
+  /// In zh, this message translates to:
+  /// **'诊断'**
+  String get auroraPhaseDiagnosis;
+
+  /// No description provided for @auroraPhaseStrategy.
+  ///
+  /// In zh, this message translates to:
+  /// **'策略'**
+  String get auroraPhaseStrategy;
+
+  /// No description provided for @auroraPhaseExecution.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行'**
+  String get auroraPhaseExecution;
+
+  /// No description provided for @auroraPhaseCheckpoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查点'**
+  String get auroraPhaseCheckpoint;
+
+  /// No description provided for @auroraInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'告诉 Sparkle 任何想法...'**
+  String get auroraInputHint;
 }
 
 class _AppLocalizationsDelegate
