@@ -238,3 +238,129 @@ class SpineOrchestrator:
             json.dumps({"action": action, "user_id": user_id}),
             ex=72 * 3600,
         )
+
+    # ── P1 Integration: Achievement Reinforcement ─────────────────────
+
+    async def on_achievement_event(
+        self,
+        *,
+        user_id: str,
+        achievement_type: str,
+        achievement_id: str,
+        recent_unlocks: int = 0,
+        active_streaks: int = 0,
+        in_progress_count: int = 0,
+    ) -> CausalTrace | None:
+        """成就事件 → AchievementReinforcementConsumer → PolicyEngine → trace。"""
+        signal = self.achievement_consumer.process_achievement_event(
+            user_id=user_id,
+            event_type="achievement.unlocked",
+            recent_unlocks=recent_unlocks,
+            active_streaks=active_streaks,
+            in_progress_count=in_progress_count,
+        )
+        if signal is None:
+            return None
+
+        return await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=[f"achievement_{achievement_id}"],
+        )
+
+    # ── P1 Integration: Recall Opportunity ─────────────────────────────
+
+    async def on_recall_check(
+        self,
+        *,
+        user_id: str,
+        trigger_type: str,
+        **kwargs,
+    ) -> CausalTrace | None:
+        """检查召回机会 → RecallOpportunityDetector → PolicyEngine → trace。"""
+        trigger = None
+
+        if trigger_type == "undigested_material":
+            trigger = self.recall_detector.check_undigested_material(
+                user_id=user_id, **kwargs,
+            )
+        elif trigger_type == "task_not_started":
+            trigger = self.recall_detector.check_task_not_started(
+                user_id=user_id, **kwargs,
+            )
+        elif trigger_type == "task_missed":
+            trigger = self.recall_detector.check_task_missed(
+                user_id=user_id, **kwargs,
+            )
+        elif trigger_type == "pre_exam_silence":
+            trigger = self.recall_detector.check_pre_exam_silence(
+                user_id=user_id, **kwargs,
+            )
+
+        if trigger is None:
+            return None
+
+        signal = self.recall_detector.to_actionable_signal(trigger)
+        return await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=[f"recall_{trigger_type}"],
+        )
+
+    # ── Generic signal pipeline (shared by all P1 sources) ─────────────
+
+    async def _run_signal_pipeline(
+        self,
+        *,
+        user_id: str,
+        signal: ActionableSignal,
+        event_ids: list[str] | None = None,
+    ) -> CausalTrace | None:
+        """通用 Signal → PolicyEngine → Directive → Trace 链路。"""
+        import json
+
+        trace = await self.trace_store.create_trace()
+        if event_ids:
+            trace.raw_event_ids.extend(event_ids)
+        await self.trace_store.link_to_user(user_id, trace.trace_id)
+
+        await self.trace_store.store_signal(signal)
+        await self.trace_store.append_signal(trace.trace_id, signal)
+
+        result = await self.policy_engine.evaluate(signal)
+        if result is None:
+            trace.outcome_to_measure = ["signal_no_rule_match"]
+            await self.trace_store._save_trace(trace)
+            return trace
+
+        decision, directive = result
+        await self.trace_store.append_policy(trace.trace_id, decision)
+        await self.trace_store.append_directive(trace.trace_id, directive)
+
+        if decision.visibility == "receipt":
+            receipt = UserVisibleReceipt(
+                receipt_id=_uid("rcpt"),
+                receipt_type="strategy_adjustment",
+                message=directive.user_visible_reason,
+                actions=["confirm", "correct", "dismiss"],
+                related_state_keys=[signal.state_key],
+            )
+            await self.trace_store.append_receipt(trace.trace_id, receipt)
+            await self.redis.set(
+                f"spine:receipt:{user_id}:latest",
+                json.dumps(receipt.to_dict()),
+                ex=72 * 3600,
+            )
+
+        trace.outcome_to_measure = [
+            "user_response",
+            "behavioral_change",
+        ]
+        await self.trace_store._save_trace(trace)
+
+        logger.info(
+            "Spine P1 pipeline: trace={} signal={} policy={}",
+            trace.trace_id, signal.signal_id,
+            decision.policy_decision_id,
+        )
+        return trace

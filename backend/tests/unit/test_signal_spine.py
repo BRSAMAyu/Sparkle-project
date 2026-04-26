@@ -1721,3 +1721,108 @@ async def test_policy_growth_momentum_no_rule_for_other_claims(policy_engine):
     )
     result = await policy_engine.evaluate(signal)
     assert result is None
+
+
+# ── P2 Integration: SpineOrchestrator P1 wiring ─────────────────────
+
+from unittest.mock import AsyncMock, MagicMock
+
+from app.signals.spine_orchestrator import SpineOrchestrator
+
+
+def _make_redis_mock():
+    redis = AsyncMock()
+    redis.set = AsyncMock()
+    redis.get = AsyncMock(return_value=None)
+    redis.delete = AsyncMock()
+    redis.lpush = AsyncMock()
+    redis.lrange = AsyncMock(return_value=[])
+    redis.ltrim = AsyncMock()
+    return redis
+
+
+@pytest.fixture
+def spine():
+    return SpineOrchestrator(_make_redis_mock())
+
+
+@pytest.mark.asyncio
+async def test_spine_achievement_high_momentum_pipeline(spine):
+    """on_achievement_event → high momentum → trace with policy。"""
+    trace = await spine.on_achievement_event(
+        user_id="u1",
+        achievement_type="streak",
+        achievement_id="seven_day_streak",
+        recent_unlocks=3,
+        active_streaks=2,
+        in_progress_count=4,
+    )
+    assert trace is not None
+    assert "achievement_seven_day_streak" in trace.raw_event_ids
+    assert "user_response" in trace.outcome_to_measure
+
+
+@pytest.mark.asyncio
+async def test_spine_achievement_moderate_no_trace(spine):
+    """on_achievement_event → moderate momentum → no signal → None。"""
+    trace = await spine.on_achievement_event(
+        user_id="u1",
+        achievement_type="task_complete",
+        achievement_id="first_task",
+        recent_unlocks=1,
+        active_streaks=1,
+        in_progress_count=2,
+    )
+    assert trace is None
+
+
+@pytest.mark.asyncio
+async def test_spine_recall_undigested_pipeline(spine):
+    """on_recall_check(undigested_material) → trace with policy。"""
+    trace = await spine.on_recall_check(
+        user_id="u1",
+        trigger_type="undigested_material",
+        uploaded_files_count=3,
+        diagnosed_files_count=1,
+        hours_since_upload=2.0,
+    )
+    assert trace is not None
+    assert "recall_undigested_material" in trace.raw_event_ids
+
+
+@pytest.mark.asyncio
+async def test_spine_recall_task_missed_pipeline(spine):
+    """on_recall_check(task_missed) → trace with high urgency policy。"""
+    trace = await spine.on_recall_check(
+        user_id="u1",
+        trigger_type="task_missed",
+        task_id="t1",
+        deadline_hours=-3.0,
+        is_completed=False,
+    )
+    assert trace is not None
+
+
+@pytest.mark.asyncio
+async def test_spine_recall_pre_exam_pipeline(spine):
+    """on_recall_check(pre_exam_silence) → trace with hard constraints。"""
+    trace = await spine.on_recall_check(
+        user_id="u1",
+        trigger_type="pre_exam_silence",
+        exam_deadline_days=1.0,
+        hours_since_last_activity=6.0,
+    )
+    assert trace is not None
+
+
+@pytest.mark.asyncio
+async def test_spine_recall_no_trigger(spine):
+    """on_recall_check with no trigger condition met → None。"""
+    trace = await spine.on_recall_check(
+        user_id="u1",
+        trigger_type="task_not_started",
+        task_id="t1",
+        hours_since_assignment=0.5,
+        has_started=False,
+    )
+    assert trace is None
