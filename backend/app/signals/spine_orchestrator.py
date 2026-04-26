@@ -439,9 +439,16 @@ class SpineOrchestrator:
     ) -> ActionableStatePacket:
         """构建当前用户的 ActionableStatePacket 供下游消费。"""
         directive = await self.get_active_directive(user_id)
+        signals = active_signals or []
+
+        # Layer 3: rank signals before building state packet
+        if signals:
+            ranking = self.signal_ranker.rank(signals)
+            signals = [rs.signal for rs in ranking.ranked]
+
         return self.state_packet_builder.build(
             user_id=user_id,
-            active_signals=active_signals or [],
+            active_signals=signals,
             active_directive=directive,
             goal_frame=goal_frame,
         )

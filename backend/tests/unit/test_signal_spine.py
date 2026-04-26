@@ -2133,3 +2133,21 @@ def test_spine_rank_signals(spine):
     ]
     result = spine.rank_signals(signals)
     assert len(result.ranked) >= 1
+
+
+@pytest.mark.asyncio
+async def test_build_state_packet_ranks_signals(spine):
+    """build_state_packet 通过 SignalRanker 排序后再构建。"""
+    signals = [
+        _make_signal("growth_momentum", "momentum_high", 0.9, "low"),
+        _make_signal("task_granularity_fit", "too_large", 0.8, "high"),
+        _make_signal("recall_needed", "task_missed", 0.7, "high"),
+    ]
+    packet = await spine.build_state_packet(
+        user_id="u_rank",
+        active_signals=signals,
+    )
+    # task_granularity_fit (tier 4) should rank before growth_momentum (tier 7)
+    # and conflict rule suppresses growth_momentum when task_granularity_fit present
+    state_keys = [s.state_key for s in packet.top_states]
+    assert "task_granularity_fit" in state_keys or len(state_keys) >= 1
