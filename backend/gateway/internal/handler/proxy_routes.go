@@ -835,6 +835,17 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered inventory proxy routes")
 
+	// ==================== Aurora Routes ====================
+	aurora := api.Group("/aurora")
+	aurora.Use(authMiddleware)
+	{
+		aurora.GET("/control-surface", h.proxyWithHeaders)
+		aurora.GET("/modeling-status", h.proxyWithHeaders)
+		aurora.GET("/calibration-cards", h.proxyWithHeaders)
+		aurora.POST("/calibration-cards/:id/respond", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered aurora proxy routes")
+
 	// Health routes are handled locally by the gateway (setup.go) — do not proxy
 }
 

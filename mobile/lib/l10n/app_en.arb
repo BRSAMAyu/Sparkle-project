@@ -8382,5 +8382,30 @@
         "type": "Object"
       }
     }
-  }
+  },
+  "auroraStatusReady": "Aurora aligned",
+  "auroraStatusRecalibrating": "Aurora recalibrating",
+  "auroraStatusPartial": "Aurora building understanding",
+  "auroraStatusMissing": "Aurora initializing",
+  "auroraStatusInactive": "Aurora standby",
+  "auroraFacetAboutYou": "About you",
+  "auroraFacetAboutGoal": "About this goal",
+  "auroraFacetAboutNow": "About now",
+  "auroraFacetAboutJudgment": "About my judgment",
+  "auroraFacetReady": "Connected",
+  "auroraFacetRecalibrating": "Recalibrating",
+  "auroraFacetPartial": "Building",
+  "auroraFacetMissing": "Not yet formed",
+  "auroraConfidenceLabel": "Confidence {percent}%",
+  "auroraFreshnessLabel": "Updated {age}",
+  "auroraActionConfirm": "Looks right",
+  "auroraActionDisagree": "Not quite",
+  "auroraActionRecalibrate": "Recalibrate",
+  "auroraActionViewDetails": "View Aurora details",
+  "auroraActionCloseDetails": "Close",
+  "auroraLoading": "Aurora loading",
+  "auroraEvidence": "Based on",
+  "auroraNeedsConfirm": "Aurora needs confirmation",
+  "auroraStrategyRisk": "Aurora strategy risk elevated",
+  "auroraBackground": "Aurora in background"
 }

@@ -33078,6 +33078,156 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'数据为空'**
   String get emptyStateTitleNone;
+
+  /// No description provided for @auroraStatusReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 已校准'**
+  String get auroraStatusReady;
+
+  /// No description provided for @auroraStatusRecalibrating.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 正在校准'**
+  String get auroraStatusRecalibrating;
+
+  /// No description provided for @auroraStatusPartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 正在理解'**
+  String get auroraStatusPartial;
+
+  /// No description provided for @auroraStatusMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 初始化中'**
+  String get auroraStatusMissing;
+
+  /// No description provided for @auroraStatusInactive.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 待激活'**
+  String get auroraStatusInactive;
+
+  /// No description provided for @auroraFacetAboutYou.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于你'**
+  String get auroraFacetAboutYou;
+
+  /// No description provided for @auroraFacetAboutGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于目标'**
+  String get auroraFacetAboutGoal;
+
+  /// No description provided for @auroraFacetAboutNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于现在'**
+  String get auroraFacetAboutNow;
+
+  /// No description provided for @auroraFacetAboutJudgment.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于我的判断'**
+  String get auroraFacetAboutJudgment;
+
+  /// No description provided for @auroraFacetReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'已连通'**
+  String get auroraFacetReady;
+
+  /// No description provided for @auroraFacetRecalibrating.
+  ///
+  /// In zh, this message translates to:
+  /// **'重校准中'**
+  String get auroraFacetRecalibrating;
+
+  /// No description provided for @auroraFacetPartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'补全中'**
+  String get auroraFacetPartial;
+
+  /// No description provided for @auroraFacetMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'未形成'**
+  String get auroraFacetMissing;
+
+  /// No description provided for @auroraConfidenceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'把握 {percent}%'**
+  String auroraConfidenceLabel(Object percent);
+
+  /// No description provided for @auroraFreshnessLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{age}前更新'**
+  String auroraFreshnessLabel(Object age);
+
+  /// No description provided for @auroraActionConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'看起来对'**
+  String get auroraActionConfirm;
+
+  /// No description provided for @auroraActionDisagree.
+  ///
+  /// In zh, this message translates to:
+  /// **'不太对'**
+  String get auroraActionDisagree;
+
+  /// No description provided for @auroraActionRecalibrate.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新校准'**
+  String get auroraActionRecalibrate;
+
+  /// No description provided for @auroraActionViewDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看 Aurora 详情'**
+  String get auroraActionViewDetails;
+
+  /// No description provided for @auroraActionCloseDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get auroraActionCloseDetails;
+
+  /// No description provided for @auroraLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 加载中'**
+  String get auroraLoading;
+
+  /// No description provided for @auroraEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于'**
+  String get auroraEvidence;
+
+  /// No description provided for @auroraNeedsConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 需要确认'**
+  String get auroraNeedsConfirm;
+
+  /// No description provided for @auroraStrategyRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 策略风险升高'**
+  String get auroraStrategyRisk;
+
+  /// No description provided for @auroraBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 已退回后台'**
+  String get auroraBackground;
 }
 
 class _AppLocalizationsDelegate

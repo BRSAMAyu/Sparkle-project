@@ -3,8 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 
+/// Aurora status awareness bar with three-layer design:
+/// 1. Collapsed: one-line summary (e.g. "Aurora · 已校准")
+/// 2. Light expansion: correctable judgment card
+/// 3. Deep expansion: four modeling facet cards
 class StatusAwarenessBar extends ConsumerStatefulWidget {
   const StatusAwarenessBar({
     this.conversationId,
@@ -21,7 +26,7 @@ class StatusAwarenessBar extends ConsumerStatefulWidget {
 
 class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     with SingleTickerProviderStateMixin {
-  bool _expanded = false;
+  _AuroraExpansion _expansion = _AuroraExpansion.collapsed;
   late final AnimationController _controller;
   late final Animation<double> _expandAnimation;
 
@@ -70,58 +75,45 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     super.dispose();
   }
 
-  void _toggle() {
-    setState(() {
-      _expanded = !_expanded;
-      if (_expanded) {
-        unawaited(_controller.forward());
-      } else {
-        unawaited(_controller.reverse());
-      }
-    });
+  void _setExpansion(_AuroraExpansion next) {
+    setState(() => _expansion = next);
+    if (next == _AuroraExpansion.collapsed) {
+      unawaited(_controller.reverse());
+    } else {
+      unawaited(_controller.forward());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final snapshot = ref.watch(auroraStatusProvider);
 
-    return AnimatedBuilder(
-      animation: _expandAnimation,
-      builder: (context, _) {
-        if (snapshot == null) {
-          return _buildLoadingBar();
-        }
-        if (!snapshot.auroraActive) {
-          return _buildInactiveBar();
-        }
-        return _buildBar(snapshot);
-      },
-    );
+    if (snapshot == null) {
+      return _buildLoadingBar();
+    }
+    if (!snapshot.auroraActive) {
+      return _buildInactiveBar();
+    }
+    return _buildActiveBar(snapshot);
   }
+
+  // ── Layer 0: Loading ──────────────────────────────────────────
 
   Widget _buildLoadingBar() => _BarContainer(
         onTap: () {},
         child: Row(
           children: [
             _StatusTonePill(
-              label: 'Aurora 感知加载中',
+              label: context.l10n.auroraLoading,
               color: DS.info,
             ),
             const SizedBox(width: DS.spacing8),
-            Expanded(
-              child: Row(
-                children: List.generate(
-                  4,
-                  (_) => const Padding(
-                    padding: EdgeInsets.only(right: DS.spacing6),
-                    child: _ShimmerDot(),
-                  ),
-                ),
-              ),
-            ),
+            const Expanded(child: _ShimmerRow()),
           ],
         ),
       );
+
+  // ── Layer 0: Inactive ─────────────────────────────────────────
 
   Widget _buildInactiveBar() => _BarContainer(
         onTap: () {},
@@ -135,7 +127,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
             const SizedBox(width: DS.spacing8),
             Expanded(
               child: Text(
-                'Aurora 还没有形成可用的认知读数',
+                context.l10n.auroraStatusInactive,
                 style: TextStyle(
                   color: DS.textSecondary,
                   fontSize: DS.fontSizeXs,
@@ -146,95 +138,181 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         ),
       );
 
-  Widget _buildBar(AuroraControlSurfaceSnapshot snapshot) {
-    final tone = _toneColor(snapshot.overallStatus);
-    final label = _overallLabel(snapshot);
-    final facets = snapshot.facets;
+  // ── Layer 1-3: Active Aurora ──────────────────────────────────
 
-    final collapsedRow = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _StatusTonePill(label: label, color: tone),
-                  const SizedBox(width: DS.spacing8),
-                  Text(
-                    '${snapshot.readyCount}/${snapshot.totalCount}',
-                    style: TextStyle(
-                      color: DS.textSecondary,
-                      fontSize: DS.fontSizeXs,
-                      fontWeight: DS.fontWeightSemibold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: DS.spacing6),
-              Text(
-                snapshot.summary,
-                maxLines: _expanded ? 3 : 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: DS.textPrimary,
-                  fontSize: DS.fontSizeXs,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              Wrap(
-                spacing: DS.spacing6,
-                runSpacing: DS.spacing6,
-                children: facets
-                    .map(
-                      (facet) => _FacetChip(
-                        facet: facet,
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: DS.spacing8),
-        Icon(
-          _expanded
-              ? Icons.keyboard_arrow_up_rounded
-              : Icons.keyboard_arrow_down_rounded,
-          size: 18,
-          color: DS.textSecondary,
-        ),
-      ],
-    );
+  Widget _buildActiveBar(AuroraControlSurfaceSnapshot snapshot) {
+    final tone = _toneColor(snapshot.overallStatus);
+    final collapsedLabel = _collapsedLabel(snapshot);
 
     return _BarContainer(
-      onTap: _toggle,
+      onTap: () {
+        if (_expansion == _AuroraExpansion.collapsed) {
+          _setExpansion(_AuroraExpansion.light);
+        } else {
+          _setExpansion(_AuroraExpansion.collapsed);
+        }
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          collapsedRow,
+          // ── Layer 1: Collapsed one-liner ──
+          Row(
+            children: [
+              _StatusTonePill(label: 'Aurora', color: tone),
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: Text(
+                  collapsedLabel,
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: DS.spacing6),
+              Text(
+                '${snapshot.readyCount}/${snapshot.totalCount}',
+                style: TextStyle(
+                  color: DS.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(width: DS.spacing4),
+              Icon(
+                _expansion != _AuroraExpansion.collapsed
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+                size: 16,
+                color: DS.textSecondary,
+              ),
+            ],
+          ),
+
+          // ── Layer 2: Light expansion (correctable judgment) ──
           SizeTransition(
             sizeFactor: _expandAnimation,
             axisAlignment: -1,
-            child: Padding(
-              padding: const EdgeInsets.only(top: DS.spacing10),
-              child: Column(
-                children: facets
-                    .map(
-                      (facet) => Padding(
-                        padding: const EdgeInsets.only(bottom: DS.spacing8),
-                        child: _FacetCard(facet: facet),
-                      ),
-                    )
-                    .toList(),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: DS.spacing10),
+                _buildLightExpansion(snapshot),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildLightExpansion(AuroraControlSurfaceSnapshot snapshot) {
+    final tone = _toneColor(snapshot.overallStatus);
+    final primaryFacet = _mostActionableFacet(snapshot.facets);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Summary judgment
+        Text(
+          snapshot.summary,
+          style: TextStyle(
+            color: DS.textPrimary,
+            fontSize: DS.fontSizeXs,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: DS.spacing8),
+
+        // Evidence from primary facet
+        if (primaryFacet != null) ...[
+          Wrap(
+            spacing: DS.spacing6,
+            runSpacing: DS.spacing4,
+            children: [
+              Text(
+                context.l10n.auroraEvidence,
+                style: TextStyle(
+                  color: DS.textSecondary,
+                  fontSize: DS.fontSizeXs,
+                ),
+              ),
+              ...primaryFacet.signals.take(2).map(
+                    (s) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing6,
+                        vertical: DS.spacing2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tone.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        s,
+                        style: TextStyle(
+                          color: tone,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing10),
+        ],
+
+        // Action buttons
+        Row(
+          children: [
+            _ActionButton(
+              label: context.l10n.auroraActionConfirm,
+              onTap: () => _setExpansion(_AuroraExpansion.collapsed),
+              isPrimary: true,
+            ),
+            const SizedBox(width: DS.spacing8),
+            _ActionButton(
+              label: context.l10n.auroraActionDisagree,
+              onTap: () => _setExpansion(_AuroraExpansion.deep),
+              isPrimary: false,
+            ),
+            const SizedBox(width: DS.spacing8),
+            _ActionButton(
+              label: context.l10n.auroraActionRecalibrate,
+              onTap: () => _setExpansion(_AuroraExpansion.collapsed),
+              isPrimary: false,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────
+
+  String _collapsedLabel(AuroraControlSurfaceSnapshot snapshot) {
+    final l10n = context.l10n;
+    return switch (snapshot.overallStatus) {
+      'ready' => l10n.auroraStatusReady,
+      'recalibrating' => l10n.auroraStatusRecalibrating,
+      'partial' => l10n.auroraStatusPartial,
+      _ => l10n.auroraStatusMissing,
+    };
+  }
+
+  AuroraFacetSnapshot? _mostActionableFacet(List<AuroraFacetSnapshot> facets) {
+    // Prefer recalibrating facets, then partial, then first non-missing
+    for (final f in facets) {
+      if (f.isRecalibrating) return f;
+    }
+    for (final f in facets) {
+      if (f.status == 'partial') return f;
+    }
+    for (final f in facets) {
+      if (f.isActive) return f;
+    }
+    return facets.isNotEmpty ? facets.first : null;
   }
 
   Color _toneColor(String status) {
@@ -249,20 +327,13 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         return DS.textSecondary;
     }
   }
-
-  String _overallLabel(AuroraControlSurfaceSnapshot snapshot) {
-    switch (snapshot.overallStatus) {
-      case 'ready':
-        return 'Aurora 感知已收束';
-      case 'recalibrating':
-        return 'Aurora 正在自校准';
-      case 'partial':
-        return 'Aurora 正在补全建模';
-      default:
-        return 'Aurora 感知待建立';
-    }
-  }
 }
+
+// ── Expansion state ─────────────────────────────────────────────
+
+enum _AuroraExpansion { collapsed, light, deep }
+
+// ── Shared widgets ──────────────────────────────────────────────
 
 class _BarContainer extends StatelessWidget {
   const _BarContainer({required this.onTap, required this.child});
@@ -333,169 +404,78 @@ class _StatusTonePill extends StatelessWidget {
       );
 }
 
-class _FacetChip extends StatelessWidget {
-  const _FacetChip({
-    required this.facet,
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.onTap,
+    required this.isPrimary,
   });
 
-  final AuroraFacetSnapshot facet;
+  final String label;
+  final VoidCallback onTap;
+  final bool isPrimary;
 
   @override
   Widget build(BuildContext context) {
-    final color = _statusColor(facet.status);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing8,
-        vertical: DS.spacing4,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
+    if (isPrimary) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing10,
+            vertical: DS.spacing4,
+          ),
+          decoration: BoxDecoration(
+            color: DS.brandPrimary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: DS.brandPrimary.withValues(alpha: 0.3),
             ),
           ),
-          const SizedBox(width: DS.spacing6),
-          Text(
-            facet.label,
+          child: Text(
+            label,
             style: TextStyle(
-              color: color,
-              fontSize: DS.fontSizeXs,
+              color: DS.brandPrimary,
+              fontSize: 11,
               fontWeight: DS.fontWeightMedium,
             ),
           ),
-        ],
+        ),
+      );
+    }
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing6,
+          vertical: DS.spacing4,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: DS.textSecondary,
+            fontSize: 11,
+            fontWeight: DS.fontWeightMedium,
+          ),
+        ),
       ),
     );
   }
 }
 
-class _FacetCard extends StatelessWidget {
-  const _FacetCard({
-    required this.facet,
-  });
-
-  final AuroraFacetSnapshot facet;
+class _ShimmerRow extends StatelessWidget {
+  const _ShimmerRow();
 
   @override
-  Widget build(BuildContext context) {
-    final color = _statusColor(facet.status);
-    final confidenceText = facet.confidence == null
-        ? null
-        : '把握度 ${(facet.confidence! * 100).round()}%';
-    final freshnessText = facet.freshnessSeconds == null
-        ? null
-        : '新鲜度 ${_freshnessLabel(facet.freshnessSeconds!)}';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(DS.spacing10),
-      decoration: BoxDecoration(
-        color: DS.surfacePrimary.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(DS.radius12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.28),
+  Widget build(BuildContext context) => Row(
+        children: List.generate(
+          4,
+          (_) => const Padding(
+            padding: EdgeInsets.only(right: DS.spacing6),
+            child: _ShimmerDot(),
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  facet.label,
-                  style: TextStyle(
-                    color: DS.textPrimary,
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightSemibold,
-                  ),
-                ),
-              ),
-              Text(
-                _statusLabel(facet.status),
-                style: TextStyle(
-                  color: color,
-                  fontSize: DS.fontSizeXs,
-                  fontWeight: DS.fontWeightSemibold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing6),
-          Text(
-            facet.summary,
-            style: TextStyle(
-              color: DS.textPrimary,
-              fontSize: DS.fontSizeXs,
-              height: 1.35,
-            ),
-          ),
-          if (confidenceText != null || freshnessText != null) ...[
-            const SizedBox(height: DS.spacing6),
-            Wrap(
-              spacing: DS.spacing8,
-              runSpacing: DS.spacing4,
-              children: [
-                if (confidenceText != null)
-                  Text(
-                    confidenceText,
-                    style: TextStyle(
-                      color: DS.textSecondary,
-                      fontSize: DS.fontSizeXs,
-                    ),
-                  ),
-                if (freshnessText != null)
-                  Text(
-                    freshnessText,
-                    style: TextStyle(
-                      color: DS.textSecondary,
-                      fontSize: DS.fontSizeXs,
-                    ),
-                  ),
-              ],
-            ),
-          ],
-          if (facet.signals.isNotEmpty) ...[
-            const SizedBox(height: DS.spacing8),
-            Wrap(
-              spacing: DS.spacing6,
-              runSpacing: DS.spacing6,
-              children: facet.signals
-                  .map(
-                    (signal) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing8,
-                        vertical: DS.spacing4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        signal,
-                        style: TextStyle(
-                          color: DS.textSecondary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+      );
 }
 
 class _ShimmerDot extends StatefulWidget {
@@ -540,40 +520,4 @@ class _ShimmerDotState extends State<_ShimmerDot>
           );
         },
       );
-}
-
-Color _statusColor(String status) {
-  switch (status) {
-    case 'ready':
-      return DS.success;
-    case 'recalibrating':
-      return DS.warning;
-    case 'partial':
-      return DS.info;
-    default:
-      return DS.textSecondary;
-  }
-}
-
-String _statusLabel(String status) {
-  switch (status) {
-    case 'ready':
-      return '已连通';
-    case 'recalibrating':
-      return '重校准中';
-    case 'partial':
-      return '补全中';
-    default:
-      return '未形成';
-  }
-}
-
-String _freshnessLabel(int seconds) {
-  if (seconds < 60) {
-    return '${seconds}s';
-  }
-  if (seconds < 3600) {
-    return '${(seconds / 60).round()}m';
-  }
-  return '${(seconds / 3600).round()}h';
 }

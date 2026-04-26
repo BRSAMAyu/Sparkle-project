@@ -18947,4 +18947,83 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emptyStateTitleNone => 'Empty';
+
+  @override
+  String get auroraStatusReady => 'Aurora aligned';
+
+  @override
+  String get auroraStatusRecalibrating => 'Aurora recalibrating';
+
+  @override
+  String get auroraStatusPartial => 'Aurora building understanding';
+
+  @override
+  String get auroraStatusMissing => 'Aurora initializing';
+
+  @override
+  String get auroraStatusInactive => 'Aurora standby';
+
+  @override
+  String get auroraFacetAboutYou => 'About you';
+
+  @override
+  String get auroraFacetAboutGoal => 'About this goal';
+
+  @override
+  String get auroraFacetAboutNow => 'About now';
+
+  @override
+  String get auroraFacetAboutJudgment => 'About my judgment';
+
+  @override
+  String get auroraFacetReady => 'Connected';
+
+  @override
+  String get auroraFacetRecalibrating => 'Recalibrating';
+
+  @override
+  String get auroraFacetPartial => 'Building';
+
+  @override
+  String get auroraFacetMissing => 'Not yet formed';
+
+  @override
+  String auroraConfidenceLabel(Object percent) {
+    return 'Confidence $percent%';
+  }
+
+  @override
+  String auroraFreshnessLabel(Object age) {
+    return 'Updated $age';
+  }
+
+  @override
+  String get auroraActionConfirm => 'Looks right';
+
+  @override
+  String get auroraActionDisagree => 'Not quite';
+
+  @override
+  String get auroraActionRecalibrate => 'Recalibrate';
+
+  @override
+  String get auroraActionViewDetails => 'View Aurora details';
+
+  @override
+  String get auroraActionCloseDetails => 'Close';
+
+  @override
+  String get auroraLoading => 'Aurora loading';
+
+  @override
+  String get auroraEvidence => 'Based on';
+
+  @override
+  String get auroraNeedsConfirm => 'Aurora needs confirmation';
+
+  @override
+  String get auroraStrategyRisk => 'Aurora strategy risk elevated';
+
+  @override
+  String get auroraBackground => 'Aurora in background';
 }

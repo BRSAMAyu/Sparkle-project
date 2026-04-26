@@ -18143,4 +18143,83 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get emptyStateTitleNone => '数据为空';
+
+  @override
+  String get auroraStatusReady => 'Aurora 已校准';
+
+  @override
+  String get auroraStatusRecalibrating => 'Aurora 正在校准';
+
+  @override
+  String get auroraStatusPartial => 'Aurora 正在理解';
+
+  @override
+  String get auroraStatusMissing => 'Aurora 初始化中';
+
+  @override
+  String get auroraStatusInactive => 'Aurora 待激活';
+
+  @override
+  String get auroraFacetAboutYou => '关于你';
+
+  @override
+  String get auroraFacetAboutGoal => '关于目标';
+
+  @override
+  String get auroraFacetAboutNow => '关于现在';
+
+  @override
+  String get auroraFacetAboutJudgment => '关于我的判断';
+
+  @override
+  String get auroraFacetReady => '已连通';
+
+  @override
+  String get auroraFacetRecalibrating => '重校准中';
+
+  @override
+  String get auroraFacetPartial => '补全中';
+
+  @override
+  String get auroraFacetMissing => '未形成';
+
+  @override
+  String auroraConfidenceLabel(Object percent) {
+    return '把握 $percent%';
+  }
+
+  @override
+  String auroraFreshnessLabel(Object age) {
+    return '$age前更新';
+  }
+
+  @override
+  String get auroraActionConfirm => '看起来对';
+
+  @override
+  String get auroraActionDisagree => '不太对';
+
+  @override
+  String get auroraActionRecalibrate => '重新校准';
+
+  @override
+  String get auroraActionViewDetails => '查看 Aurora 详情';
+
+  @override
+  String get auroraActionCloseDetails => '关闭';
+
+  @override
+  String get auroraLoading => 'Aurora 加载中';
+
+  @override
+  String get auroraEvidence => '基于';
+
+  @override
+  String get auroraNeedsConfirm => 'Aurora 需要确认';
+
+  @override
+  String get auroraStrategyRisk => 'Aurora 策略风险升高';
+
+  @override
+  String get auroraBackground => 'Aurora 已退回后台';
 }
