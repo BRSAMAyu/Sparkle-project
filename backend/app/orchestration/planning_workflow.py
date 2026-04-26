@@ -979,14 +979,10 @@ class PlanningWorkflowManager:
 
         # Signal-to-Action Spine: fetch active directives for this user
         spine = None
-        spine_directive = None
         plan_directive = None
         try:
             from app.signals.spine_orchestrator import SpineOrchestrator
             spine = SpineOrchestrator(cache_service.redis)
-            spine_directive = await spine.get_active_directive(str(user_id))
-            if spine_directive:
-                logger.info("Spine directive active for user {}: {}", user_id, list(spine_directive.hard_constraints.keys()))
             plan_directive = await spine.get_plan_directive(str(user_id))
             if plan_directive:
                 logger.info("Spine plan_directive active for user {}: action={} constraints={}", user_id, plan_directive.plan_action, list(plan_directive.constraints.keys()))
@@ -1008,7 +1004,7 @@ class PlanningWorkflowManager:
                     "estimated_minutes": 25,
                     "difficulty": 2,
                 }
-                phases[0]["tasks"] = [recovery_task] + list(phases[0].get("tasks", []))
+                phases[0]["tasks"] = [recovery_task] + list(phases[0].get("tasks") or [])
                 logger.info("PlanDirective: inserted recovery task at day 1")
             if constraints.get("insert_practice_task") and phases:
                 practice_task = {
@@ -1018,7 +1014,7 @@ class PlanningWorkflowManager:
                     "estimated_minutes": 25,
                     "difficulty": 2,
                 }
-                phases[0]["tasks"] = [practice_task] + list(phases[0].get("tasks", []))
+                phases[0]["tasks"] = [practice_task] + list(phases[0].get("tasks") or [])
                 logger.info("PlanDirective: inserted practice task at day 1")
             if constraints.get("insert_easy_win") and phases:
                 easy_task = {
@@ -1028,7 +1024,7 @@ class PlanningWorkflowManager:
                     "estimated_minutes": 15,
                     "difficulty": 1,
                 }
-                phases[0]["tasks"] = [easy_task] + list(phases[0].get("tasks", []))
+                phases[0]["tasks"] = [easy_task] + list(phases[0].get("tasks") or [])
                 logger.info("PlanDirective: inserted easy-win task at day 1")
             if constraints.get("recovery_task") and phases:
                 rec_task = {
@@ -1038,7 +1034,7 @@ class PlanningWorkflowManager:
                     "estimated_minutes": 20,
                     "difficulty": 2,
                 }
-                phases[0]["tasks"] = [rec_task] + list(phases[0].get("tasks", []))
+                phases[0]["tasks"] = [rec_task] + list(phases[0].get("tasks") or [])
                 logger.info("PlanDirective: inserted missed-task recovery")
 
         for index, phase in enumerate(phases, start=1):

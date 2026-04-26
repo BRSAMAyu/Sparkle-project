@@ -3426,3 +3426,204 @@ async def test_spine_pipeline_records_metrics():
     snap = await spine.get_metrics_snapshot()
     assert snap["signal_to_state_rate"]["value"] == 1.0
     assert snap["policy_to_directive_rate"]["value"] == 1.0
+
+
+# ═══════════════════════════════════════════════════════════════════
+# P3: Production Wiring Integration Tests
+# ═══════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_response_directive_injected_into_prompt():
+    """prompts.build_system_prompt injects spine response directive."""
+    from app.orchestration.prompts import build_system_prompt
+
+    # Without directive — baseline prompt
+    prompt_base = build_system_prompt(
+        user_context={"user_id": "u1", "name": "Test"},
+        conversation_history={},
+    )
+
+    # With directive
+    directive = {
+        "tone": "encouraging_diagnostic",
+        "length": "short",
+        "avoid": ["空洞鼓励"],
+        "must_acknowledge": ["最近的失败"],
+        "include_user_options": True,
+    }
+    prompt_spine = build_system_prompt(
+        user_context={"user_id": "u1", "name": "Test"},
+        conversation_history={},
+        spine_response_directive=directive,
+    )
+
+    assert "策略调整指令" in prompt_spine
+    assert "鼓励性诊断" in prompt_spine
+    assert "简短" in prompt_spine
+    assert "空洞鼓励" in prompt_spine
+    assert "最近的失败" in prompt_spine
+    assert "可操作选项" in prompt_spine
+    assert "策略调整指令" not in prompt_base
+
+
+@pytest.mark.asyncio
+async def test_response_directive_avoid_and_acknowledge_optional():
+    """Directive with empty avoid/must_acknowledge omits those lines."""
+    from app.orchestration.prompts import build_system_prompt
+
+    directive = {
+        "tone": "calm_direct",
+        "length": "medium",
+        "avoid": [],
+        "must_acknowledge": [],
+        "include_user_options": False,
+    }
+    prompt = build_system_prompt(
+        user_context={"user_id": "u1", "name": "Test"},
+        conversation_history={},
+        spine_response_directive=directive,
+    )
+
+    assert "策略调整指令" in prompt
+    assert "稳定、直接" in prompt
+    assert "适中" in prompt
+    assert "避免" not in prompt
+    assert "必须承认" not in prompt
+    assert "可操作选项" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_response_directive_null_is_noop():
+    """spine_response_directive=None produces unchanged prompt."""
+    from app.orchestration.prompts import build_system_prompt
+
+    prompt_none = build_system_prompt(
+        user_context={"user_id": "u1", "name": "Test"},
+        conversation_history={},
+        spine_response_directive=None,
+    )
+    prompt_omitted = build_system_prompt(
+        user_context={"user_id": "u1", "name": "Test"},
+        conversation_history={},
+    )
+
+    assert prompt_none == prompt_omitted
+    assert "策略调整指令" not in prompt_none
+
+
+@pytest.mark.asyncio
+async def test_plan_directive_recovery_task_injection():
+    """PlanDirective insert_recovery_task prepends a recovery task."""
+    from app.signals.types import PlanDirective
+    import json
+
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(redis_client=redis)
+
+    # Store a plan_directive with insert_recovery_task
+    pd = PlanDirective(
+        directive_id="pd_test",
+        policy_decision_id="pol_test",
+        plan_action="local_replan",
+        constraints={"insert_recovery_task": True},
+    )
+    await redis.set(
+        f"spine:plan_directive:u_plan_test:latest",
+        json.dumps(pd.to_dict()),
+        ex=72 * 3600,
+    )
+
+    # Retrieve it
+    fetched = await spine.get_plan_directive("u_plan_test")
+    assert fetched is not None
+    assert fetched.constraints.get("insert_recovery_task") is True
+    assert fetched.plan_action == "local_replan"
+
+
+@pytest.mark.asyncio
+async def test_plan_directive_easy_win_injection():
+    """PlanDirective insert_easy_win prepends a light_review task."""
+    from app.signals.types import PlanDirective
+    import json
+
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(redis_client=redis)
+
+    pd = PlanDirective(
+        directive_id="pd_easy",
+        policy_decision_id="pol_easy",
+        plan_action="insert_task",
+        constraints={"insert_easy_win": True},
+    )
+    await redis.set(
+        f"spine:plan_directive:u_easy:latest",
+        json.dumps(pd.to_dict()),
+        ex=72 * 3600,
+    )
+
+    fetched = await spine.get_plan_directive("u_easy")
+    assert fetched is not None
+    assert fetched.constraints.get("insert_easy_win") is True
+
+
+@pytest.mark.asyncio
+async def test_plan_directive_practice_task_injection():
+    """PlanDirective insert_practice_task prepends a practice task."""
+    from app.signals.types import PlanDirective
+    import json
+
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(redis_client=redis)
+
+    pd = PlanDirective(
+        directive_id="pd_prac",
+        policy_decision_id="pol_prac",
+        plan_action="insert_task",
+        constraints={"insert_practice_task": True, "insert_easy_win": True},
+    )
+    await redis.set(
+        f"spine:plan_directive:u_prac:latest",
+        json.dumps(pd.to_dict()),
+        ex=72 * 3600,
+    )
+
+    fetched = await spine.get_plan_directive("u_prac")
+    assert fetched is not None
+    assert len(fetched.constraints) == 2
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_production_fetches_response_directive():
+    """orchestrator_production.py fetches ResponseDirective from spine and passes to prompt."""
+    from app.signals.types import ResponseDirective
+    import json
+
+    redis = FakeRedis()
+    rd = ResponseDirective(
+        directive_id="rd_prod",
+        policy_decision_id="pol_prod",
+        tone="calm_urgent",
+        length="short",
+        avoid=["复杂解释"],
+        must_acknowledge=["时间紧迫"],
+        include_user_options=True,
+    )
+    await redis.set(
+        f"spine:response_directive:u_prod:latest",
+        json.dumps(rd.to_dict()),
+        ex=72 * 3600,
+    )
+
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(redis)
+    fetched = await spine.get_response_directive("u_prod")
+
+    assert fetched is not None
+    assert fetched.tone == "calm_urgent"
+    assert fetched.length == "short"
+    assert "复杂解释" in fetched.avoid
+    assert "时间紧迫" in fetched.must_acknowledge

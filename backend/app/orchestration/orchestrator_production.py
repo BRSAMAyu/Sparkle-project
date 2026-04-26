@@ -1014,8 +1014,8 @@ class ProductionChatOrchestrator:
                         "must_acknowledge": list(_resp_dir.must_acknowledge or []),
                         "include_user_options": _resp_dir.include_user_options,
                     }
-            except Exception:
-                pass
+            except Exception as _spine_exc:
+                logger.debug("Spine response directive fetch skipped: {}", _spine_exc)
 
             base_system_prompt = build_system_prompt(
                 user_context_data,
