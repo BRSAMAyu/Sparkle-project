@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-171/171 tests passing:
+198/198 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -186,6 +186,41 @@
 - Layer 4 StateRegister: 21 tests (16 standalone + 5 integration/edge)
 - Layer 6 ResponseDirective: 7 tests (5 standalone + 2 integration)
 - Layer 6 NotificationDirective: 8 tests (6 standalone + 2 integration)
+- Layer 6 RetrievalDirective: 4 tests
+- Layer 6 PlanDirective: tests (via PolicyEngine integration)
+- Layer 6 ModelWriteDirective: tests (via PolicyEngine integration)
+- Layer 6 UXDirective: tests (via SpineOrchestrator integration)
+
+---
+
+## Layer 6: RetrievalDirective
+
+**目标**: 控制资料、RAG、知识星图如何进入上下文
+
+### 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| `RetrievalDirective` 数据结构 | retrieval_mode / source_scope / must_load / may_load / do_not_load / token_budget / pollution_guard |
+| `PolicyEngine.build_retrieval_directive()` | 从 PolicyDecision + signal 构建资料指令 |
+
+### 触发映射
+
+| 信号 | retrieval_mode | source_scope | pollution_guard |
+|------|---------------|-------------|----------------|
+| material_utilization/material_underutilized | targeted_source_rag | user_selected | strict |
+| goal_mode/exam_rescue | task_bound_graph_rag | task_bound | strict |
+| knowledge_transfer/transfer_failure | task_bound_graph_rag | task_bound | strict |
+| recall_needed/pre_exam_silence | task_bound_graph_rag | task_bound | permissive |
+
+### 验收标准
+
+- [x] RetrievalDirective 包含 retrieval_mode / source_scope / pollution_guard / reason_for_user
+- [x] material_underutilized → targeted_source_rag
+- [x] exam_rescue → task_bound_graph_rag
+- [x] transfer_failure → task_bound_graph_rag
+- [x] 非 retrieval 相关信号 → 不生成 RetrievalDirective
+- [x] 序列化正确
 
 ---
 
