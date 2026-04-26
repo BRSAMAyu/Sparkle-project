@@ -118,10 +118,10 @@ class _QuietAuroraStatusNotifier extends AuroraStatusNotifier {
   _QuietAuroraStatusNotifier() : super(_NoopApiClient());
 
   @override
-  Future<void> refresh() async {}
+  Future<void> refresh({String? conversationId}) async {}
 
   @override
-  void startPeriodicRefresh() {}
+  void startPeriodicRefresh({String? conversationId}) {}
 
   @override
   void stopPeriodicRefresh() {}

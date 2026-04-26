@@ -90,6 +90,7 @@ class _FakeChatRepository extends ChatRepository {
     List<String>? fileIds,
     bool includeReferences = false,
     String? chatMode,
+    bool? useDocumentContext,
   }) {
     return _streamFactory(
       message,

@@ -48,6 +48,7 @@ class _QueuedChatRepository extends ChatRepository {
     List<String>? fileIds,
     bool includeReferences = false,
     String? chatMode,
+    bool? useDocumentContext,
   }) {
     if (_streams.isEmpty) {
       fail('No queued stream controller for message: $message');
