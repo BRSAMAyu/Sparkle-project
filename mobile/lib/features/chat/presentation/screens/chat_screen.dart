@@ -911,6 +911,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       conversationId: chatState.conversationId,
                       hasActiveRun: chatState.hasActiveRun,
                     ),
+                    if (chatState.dualCoreMode != null)
+                      _DualCoreModeChip(mode: chatState.dualCoreMode!),
                     if (_reviewNodeLabel != null)
                       _ReviewNodeBanner(
                         nodeLabel: _reviewNodeLabel!,
@@ -3042,6 +3044,64 @@ class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
           ),
         );
       },
+    );
+  }
+}
+
+/// Lightweight chip that shows the current dual-core routing mode sent by
+/// the backend in the `ux_turn.dual_core_mode` field of every agent_turn event.
+///
+/// Modes: "execution" → 执行模式 (amber), "cognitive" → 认知模式 (indigo),
+///        "balanced" → 均衡模式 (teal / primary)
+class _DualCoreModeChip extends StatelessWidget {
+  const _DualCoreModeChip({required this.mode});
+
+  final String mode;
+
+  (String label, Color color, IconData icon) _resolve(BuildContext context) {
+    return switch (mode) {
+      'execution' => ('执行模式', const Color(0xFFD97706), Icons.bolt_rounded),
+      'cognitive' => ('认知模式', const Color(0xFF6366F1), Icons.psychology_rounded),
+      _ => ('均衡模式', DS.primaryBase, Icons.balance_rounded),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color, icon) = _resolve(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withValues(alpha: 0.3), width: 0.8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 12, color: color),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: DS.fontWeightMedium,
+                    color: color,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

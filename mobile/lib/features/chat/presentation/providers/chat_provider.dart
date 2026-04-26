@@ -1408,6 +1408,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
               ...uxEnvelope,
             };
           }
+          // Extract dual_core_mode from ux_turn (lives in full_text event metadata)
+          final uxTurnMap =
+              accumulatedUxEnvelope?['ux_turn'] as Map<String, dynamic>?;
+          final newDualCoreMode =
+              uxTurnMap?['dual_core_mode'] as String?;
+          if (newDualCoreMode != null) {
+            state = state.copyWith(dualCoreMode: newDualCoreMode);
+          }
           if (metadata != null) {
             final selectedExpertsRaw = metadata['selected_experts'];
             final answerExpertsRaw = metadata['answer_experts'];

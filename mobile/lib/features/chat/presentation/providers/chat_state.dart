@@ -152,6 +152,7 @@ class ChatState {
     this.runPhase = ChatRunPhase.idle,
     this.activeRunSummary,
     this.transparencyPresentationState = const TransparencyPresentationState(),
+    this.dualCoreMode,
   });
 
   static const int maxRetainedMessages = 500;
@@ -203,6 +204,10 @@ class ChatState {
   final ChatRunPhase runPhase;
   final ActiveRunSummary? activeRunSummary;
   final TransparencyPresentationState transparencyPresentationState;
+
+  /// Current dual-core routing mode: "execution" | "cognitive" | "balanced"
+  /// Set from backend ux_turn.dual_core_mode on each AgentTurnEvent.
+  final String? dualCoreMode;
 
   static List<ChatMessageModel> _boundedMessages(
     List<ChatMessageModel> messages,
@@ -288,6 +293,8 @@ class ChatState {
     bool clearActiveRunSummary = false,
     TransparencyPresentationState? transparencyPresentationState,
     bool clearRoundtable = false,
+    String? dualCoreMode,
+    bool clearDualCoreMode = false,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -373,5 +380,7 @@ class ChatState {
             : activeRunSummary ?? this.activeRunSummary,
         transparencyPresentationState:
             transparencyPresentationState ?? this.transparencyPresentationState,
+        dualCoreMode:
+            clearDualCoreMode ? null : dualCoreMode ?? this.dualCoreMode,
       );
 }
