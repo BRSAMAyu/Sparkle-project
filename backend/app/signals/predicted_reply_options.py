@@ -31,7 +31,7 @@ class PredictedReplyOption:
     confidence: float                # 系统预估这个答案的概率
     is_disconfirming: bool           # 是否反驳系统假设
     is_freeform: bool                # 是否是自由输入
-    state_patch: dict[str, str]      # 选择后的状态补丁
+    state_patch: dict[str, Any]      # 选择后的状态补丁
     telemetry_id: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -189,9 +189,12 @@ _FREEFORM_OPTION = {
 }
 
 
-class PredictedReplyOptionEngine:
+class SpineReplyOptionEngine:
     """
-    P1-3: 为 Aurora 确认问题生成预测回答选项。
+    P1-3: Spine 管线专用的预测回答选项引擎。
+
+    与 aurora/predicted_reply_engine.py 的 PredictedReplyOptionEngine 不同，
+    本引擎面向 Signal-to-Action Spine 的 ActionableSignal 生成语义快捷回答。
 
     核心原则：
     - 每组选项必须包含"都不对，我解释一下"

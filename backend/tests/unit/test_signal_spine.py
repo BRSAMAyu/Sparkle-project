@@ -911,12 +911,12 @@ def test_state_packet_serialization():
 
 # ── P1-3: PredictedReplyOption Engine Tests ────────────────────────
 
-from app.signals.predicted_reply_options import PredictedReplyOptionEngine
+from app.signals.predicted_reply_options import SpineReplyOptionEngine
 
 
 def test_reply_options_for_task_granularity():
     """任务颗粒度信号应生成假设确认选项。"""
-    engine = PredictedReplyOptionEngine()
+    engine = SpineReplyOptionEngine()
     signal = ActionableSignal(
         signal_id=_uid("sig"), source_event_ids=[], source_system="task_service",
         state_key="task_granularity_fit", claim="recent_task_too_large",
@@ -934,7 +934,7 @@ def test_reply_options_for_task_granularity():
 
 def test_reply_options_always_has_freeform():
     """每组选项必须包含自由输入选项。"""
-    engine = PredictedReplyOptionEngine()
+    engine = SpineReplyOptionEngine()
     for state_key in ["task_granularity_fit", "knowledge_transfer", "material_utilization", "goal_mode"]:
         signal = ActionableSignal(
             signal_id=_uid("sig"), source_event_ids=[], source_system="test",
@@ -952,7 +952,7 @@ def test_reply_options_always_has_freeform():
 
 def test_reply_options_disconfirming_exists():
     """每组至少有一个反驳选项。"""
-    engine = PredictedReplyOptionEngine()
+    engine = SpineReplyOptionEngine()
     signal = ActionableSignal(
         signal_id=_uid("sig"), source_event_ids=[], source_system="test",
         state_key="task_granularity_fit", claim="test",
@@ -966,7 +966,7 @@ def test_reply_options_disconfirming_exists():
 
 def test_reply_options_no_template_returns_none():
     """没有模板的 state_key 应返回 None。"""
-    engine = PredictedReplyOptionEngine()
+    engine = SpineReplyOptionEngine()
     signal = ActionableSignal(
         signal_id=_uid("sig"), source_event_ids=[], source_system="test",
         state_key="unknown_state_key", claim="test",
@@ -978,7 +978,7 @@ def test_reply_options_no_template_returns_none():
 
 def test_reply_options_process_selection():
     """用户选择后应返回正确的状态补丁。"""
-    engine = PredictedReplyOptionEngine()
+    engine = SpineReplyOptionEngine()
     signal = ActionableSignal(
         signal_id=_uid("sig"), source_event_ids=[], source_system="test",
         state_key="task_granularity_fit", claim="test",
@@ -996,7 +996,7 @@ def test_reply_options_process_selection():
 
 def test_reply_options_process_freeform():
     """自由输入选项应包含用户文本。"""
-    engine = PredictedReplyOptionEngine()
+    engine = SpineReplyOptionEngine()
     signal = ActionableSignal(
         signal_id=_uid("sig"), source_event_ids=[], source_system="test",
         state_key="task_granularity_fit", claim="test",
@@ -1017,7 +1017,7 @@ def test_reply_options_process_freeform():
 
 def test_reply_options_process_invalid_selection():
     """无效选项 ID 应返回空补丁。"""
-    engine = PredictedReplyOptionEngine()
+    engine = SpineReplyOptionEngine()
     signal = ActionableSignal(
         signal_id=_uid("sig"), source_event_ids=[], source_system="test",
         state_key="task_granularity_fit", claim="test",
@@ -1031,7 +1031,7 @@ def test_reply_options_process_invalid_selection():
 
 def test_reply_options_serialization():
     """PredictedReplyQuestion to_dict 包含完整信息。"""
-    engine = PredictedReplyOptionEngine()
+    engine = SpineReplyOptionEngine()
     signal = ActionableSignal(
         signal_id=_uid("sig"), source_event_ids=[], source_system="test",
         state_key="knowledge_transfer", claim="transfer_failure",
@@ -1045,3 +1045,177 @@ def test_reply_options_serialization():
     assert d["state_key"] == "knowledge_transfer"
     assert len(d["options"]) >= 4
     assert all("label" in o for o in d["options"])
+
+
+# ── P1-5: SparkleSelfModel Tests ──────────────────────────────────
+
+from app.signals.self_model import SparkleSelfModelService, SelfModelClaim, StrategyOutcome
+import pytest
+
+
+@pytest.fixture
+def fake_redis():
+    return FakeRedis()
+
+
+@pytest.fixture
+def self_model_svc(fake_redis):
+    return SparkleSelfModelService(redis_client=fake_redis)
+
+
+@pytest.mark.asyncio
+async def test_self_model_record_claim(self_model_svc):
+    """记录一个自我模型判断。"""
+    claim = await self_model_svc.record_claim(
+        user_id="u1",
+        claim="任务拆小策略在 deadline<7 天时有效",
+        confidence=0.65,
+        scope="strategy",
+        evidence=["task_timeout → reduce_duration → completion_rate_up"],
+        policy_effects=["recover_execution_rhythm"],
+    )
+    assert claim.claim_id.startswith("smc_")
+    assert claim.confidence == 0.65
+    assert claim.scope == "strategy"
+    assert claim.outcome is None
+
+
+@pytest.mark.asyncio
+async def test_self_model_record_outcome(self_model_svc):
+    """记录策略执行结果并更新 claim。"""
+    claim = await self_model_svc.record_claim(
+        user_id="u1",
+        claim="exam_rescue 策略有效",
+        confidence=0.70,
+        scope="current_sprint",
+    )
+    outcome = await self_model_svc.record_outcome(
+        user_id="u1",
+        directive_id="dir_001",
+        claim_id=claim.claim_id,
+        expected_outcome="用户完成抢救任务",
+        actual_outcome={"completed": True, "user_feedback": ""},
+    )
+    assert outcome.outcome_id.startswith("smo_")
+    assert outcome.attribution["effect"] == "effective"
+    assert outcome.next_policy_suggestion == "maintain_current_strategy"
+
+
+@pytest.mark.asyncio
+async def test_self_model_outcome_negative_feedback(self_model_svc):
+    """用户完成了但反馈负面 → completed_but_resented。"""
+    claim = await self_model_svc.record_claim(
+        user_id="u1",
+        claim="pushy 策略",
+        confidence=0.60,
+        scope="current_sprint",
+    )
+    outcome = await self_model_svc.record_outcome(
+        user_id="u1",
+        directive_id="dir_002",
+        claim_id=claim.claim_id,
+        expected_outcome="用户完成任务",
+        actual_outcome={"completed": True, "user_feedback": "negative"},
+    )
+    assert outcome.attribution["effect"] == "completed_but_resented"
+    assert outcome.next_policy_suggestion == "adjust_tone"
+
+
+@pytest.mark.asyncio
+async def test_self_model_outcome_insufficient(self_model_svc):
+    """用户不会做 → insufficient。"""
+    claim = await self_model_svc.record_claim(
+        user_id="u1",
+        claim="任务难度合理",
+        confidence=0.50,
+        scope="current_sprint",
+    )
+    outcome = await self_model_svc.record_outcome(
+        user_id="u1",
+        directive_id="dir_003",
+        claim_id=claim.claim_id,
+        expected_outcome="用户完成练习",
+        actual_outcome={"completed": False, "user_feedback": "不会做"},
+    )
+    assert outcome.attribution["effect"] == "insufficient"
+    assert "switch_strategy:" in (outcome.next_policy_suggestion or "")
+
+
+@pytest.mark.asyncio
+async def test_self_model_confidence_adjustment(self_model_svc):
+    """策略有效时置信度上升，无效时下降。"""
+    claim = await self_model_svc.record_claim(
+        user_id="u1",
+        claim="初始策略",
+        confidence=0.50,
+        scope="current_sprint",
+    )
+    # 有效结果 → 置信度上升
+    await self_model_svc.record_outcome(
+        user_id="u1",
+        directive_id="dir_010",
+        claim_id=claim.claim_id,
+        expected_outcome="ok",
+        actual_outcome={"completed": True, "user_feedback": ""},
+    )
+    claims = await self_model_svc.get_active_claims("u1")
+    updated = [c for c in claims if c.claim_id == claim.claim_id][0]
+    assert updated.confidence > 0.50
+    assert updated.outcome == "effective"
+
+
+@pytest.mark.asyncio
+async def test_self_model_get_active_claims(self_model_svc):
+    """获取用户活跃 claims。"""
+    await self_model_svc.record_claim(
+        user_id="u2", claim="c1", confidence=0.5, scope="strategy",
+    )
+    await self_model_svc.record_claim(
+        user_id="u2", claim="c2", confidence=0.6, scope="current_sprint",
+    )
+    claims = await self_model_svc.get_active_claims("u2")
+    assert len(claims) == 2
+
+
+@pytest.mark.asyncio
+async def test_self_model_user_correction(self_model_svc):
+    """用户纠正记录为高置信度 claim。"""
+    claim = await self_model_svc.record_user_correction(
+        user_id="u1",
+        signal_id="sig_001",
+        reason="不是任务太大，是我不知道前置知识",
+    )
+    assert claim.confidence == 0.90
+    assert "retract_related_directive" in claim.policy_effects
+
+
+@pytest.mark.asyncio
+async def test_self_model_max_claims_cap(self_model_svc):
+    """claims 列表不超过 _MAX_CLAIMS。"""
+    for i in range(55):
+        await self_model_svc.record_claim(
+            user_id="u3", claim=f"claim_{i}", confidence=0.5, scope="strategy",
+        )
+    claims = await self_model_svc.get_active_claims("u3", limit=100)
+    assert len(claims) <= 50
+
+
+@pytest.mark.asyncio
+async def test_self_model_serialization():
+    """SelfModelClaim 和 StrategyOutcome to_dict 完整。"""
+    claim = SelfModelClaim(
+        claim_id="smc_test", claim="test", confidence=0.8, scope="strategy",
+        evidence=["e1"], counter_evidence=["ce1"], policy_effects=["p1"],
+    )
+    d = claim.to_dict()
+    assert d["claim_id"] == "smc_test"
+    assert d["confidence"] == 0.8
+
+    outcome = StrategyOutcome(
+        outcome_id="smo_test", directive_id="dir", claim_id="smc_test",
+        expected_outcome="ok", actual_outcome={"completed": True},
+        attribution={"effect": "effective"},
+    )
+    d2 = outcome.to_dict()
+    assert d2["outcome_id"] == "smo_test"
+    assert d2["attribution"]["effect"] == "effective"
