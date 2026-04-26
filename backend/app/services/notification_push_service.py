@@ -7,7 +7,8 @@ Notification Push Service
 3. 通知中心数据同步
 """
 from __future__ import annotations
-from datetime import timezone, datetime
+
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -16,11 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.websocket import get_ws_manager
 from app.models.notification import Notification
-from app.schemas.notification import NotificationCreate
+from app.services.notification_service import NotificationService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NotificationPushService:
@@ -70,7 +71,18 @@ class NotificationPushService:
         )
 
         # 2. 通过 WebSocket 推送
-        await self._push_via_websocket(user_id, notification, priority)
+        should_push, suppression_reason = await NotificationService._should_push_notification(
+            self.db,
+            user_id=user_id,
+            notification_type=notification_type,
+            category=(data or {}).get("category") if isinstance(data, dict) else None,
+        )
+        if should_push:
+            await self._push_via_websocket(user_id, notification, priority)
+        elif suppression_reason:
+            logger.info(
+                f"Skipped websocket push for notification {notification.id} to user {user_id}: {suppression_reason}"
+            )
 
         return notification
 
@@ -118,7 +130,15 @@ class NotificationPushService:
     ) -> None:
         """
         推送干预通知（不创建数据库记录，InterventionRequest 已存在）
+        Respects user notification preferences.
         """
+        # Check notification preferences before pushing
+        should_push, reason = await NotificationService._should_push_notification(
+            self.db, user_id, "intervention"
+        )
+        if not should_push:
+            logger.debug(f"Intervention notification skipped for user {user_id}: {reason}")
+            return
         message = {
             "type": "notification",
             "notification_type": "intervention",

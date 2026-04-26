@@ -105,7 +105,10 @@ class ProgressNarrativeService:
     ACHIEVEMENT_SIGNAL_KEY = "progress_snapshot:achievement_unlocks:"
     AUTO_INJECT_INTERVAL = timedelta(days=3)
     WEEKLY_NARRATIVE_KEY = "progress_narrative:weekly:"
+    WEEKLY_NARRATIVE_RECENT_KEY = "progress_narrative:weekly:recent:"
     WEEKLY_CACHE_GRACE = timedelta(days=2)
+    WEEKLY_RECENT_LIMIT = 8
+    WEEKLY_RECENT_TTL_SECONDS = 86400 * 120
 
     def __init__(self, db: AsyncSession, redis=None, cache=None):
         self.db = db
@@ -235,6 +238,7 @@ class ProgressNarrativeService:
             generated_at=generated_at,
         )
         await self._cache_set(cache_key, narrative.to_dict(), ttl=self._weekly_cache_ttl(generated_at, week_end))
+        await self._remember_weekly_narrative(user_id, narrative)
         return narrative
 
     async def build_weekly_narrative(
@@ -255,6 +259,7 @@ class ProgressNarrativeService:
         biggest_improvement = await self._biggest_mastery_improvement(user_id, start, end)
         achievements = await self.recent_achievement_story_lines(str(user_id), start, end)
         study_days = await self._study_days_count(user_id, start, end)
+        recent_narratives = await self._recent_weekly_narratives(user_id, before=start)
         highlights = self._build_weekly_highlights(
             tasks=tasks,
             errors=errors,
@@ -290,6 +295,7 @@ class ProgressNarrativeService:
             "highlights": highlights,
             "biggest_improvement": biggest_improvement,
             "next_week_suggestion": next_week_suggestion,
+            "recent_narrative_count": len(recent_narratives),
         }
         source_counts = {
             "task_completions": int(tasks["count"]),
@@ -324,12 +330,15 @@ class ProgressNarrativeService:
                 biggest_improvement=biggest_improvement,
                 next_week_suggestion=next_week_suggestion,
                 achievements=achievements,
+                week_start=start,
+                recent_narratives=recent_narratives,
             )
             is_placeholder = False
 
         data_points["highlights"] = highlights
         data_points["biggest_improvement"] = biggest_improvement
         data_points["next_week_suggestion"] = next_week_suggestion
+        data_points["style_variant"] = self._weekly_style_variant(start, recent_narratives)
 
         return WeeklyGrowthNarrative(
             period="本周成长故事",
@@ -920,20 +929,139 @@ class ProgressNarrativeService:
         biggest_improvement: dict[str, Any] | None,
         next_week_suggestion: str,
         achievements: list[str],
+        week_start: datetime,
+        recent_narratives: list[dict[str, Any]],
     ) -> list[str]:
-        sentences = list(highlights[:3])
+        style_variant = self._weekly_style_variant(week_start, recent_narratives)
+        sentences: list[str] = []
+        if style_variant == 0:
+            sentences.extend(highlights[:3])
+        elif style_variant == 1:
+            if highlights:
+                sentences.append(f"这周最值得保留的是：{self._without_final_punctuation(highlights[0])}。")
+            if len(highlights) > 1:
+                sentences.extend(highlights[1:3])
+        else:
+            if highlights:
+                sentences.append(f"从结果看，{self._without_final_punctuation(highlights[0])}。")
+            if len(highlights) > 1:
+                sentences.append(f"另一条线索也很清楚：{self._without_final_punctuation(highlights[1])}。")
+            if len(highlights) > 2:
+                sentences.append(highlights[2])
+
         if biggest_improvement and biggest_improvement.get("node_name"):
-            sentences.append(
-                "最大的进步："
+            improvement_sentence = (
                 f"{biggest_improvement['node_name']} 的掌握度从 "
                 f"{self._format_percent(biggest_improvement['before_mastery'])} 提升到了 "
                 f"{self._format_percent(biggest_improvement['after_mastery'])}。"
             )
+            if style_variant == 1:
+                sentences.append(f"进步最明显的是：{improvement_sentence}")
+            elif style_variant == 2:
+                sentences.append(f"尤其是{improvement_sentence}")
+            else:
+                sentences.append(f"最大的进步：{improvement_sentence}")
         elif achievements:
             sentences.append(achievements[0])
         if next_week_suggestion:
-            sentences.append(f"下周目标：{next_week_suggestion}")
-        return sentences[:5]
+            if style_variant == 1:
+                sentences.append(f"下周可以这样接：{next_week_suggestion}")
+            elif style_variant == 2:
+                sentences.append(f"下一步先不铺太开，{next_week_suggestion}")
+            else:
+                sentences.append(f"下周目标：{next_week_suggestion}")
+        return self._dedupe_weekly_sentences(sentences, recent_narratives)[:5]
+
+    def _weekly_style_variant(self, week_start: datetime, recent_narratives: list[dict[str, Any]]) -> int:
+        variant = week_start.isocalendar().week % 3
+        latest_variant = None
+        if recent_narratives:
+            latest_points = recent_narratives[0].get("data_points")
+            if isinstance(latest_points, dict):
+                try:
+                    latest_variant = int(latest_points.get("style_variant"))
+                except (TypeError, ValueError):
+                    latest_variant = None
+        if latest_variant is not None and latest_variant == variant:
+            variant = (variant + 1) % 3
+        return variant
+
+    def _dedupe_weekly_sentences(
+        self,
+        sentences: list[str],
+        recent_narratives: list[dict[str, Any]],
+    ) -> list[str]:
+        recent_sentences = self._recent_weekly_sentences(recent_narratives)
+        accepted: list[str] = []
+        for sentence in sentences:
+            cleaned = self._clean_text(sentence)
+            if not cleaned:
+                continue
+            if self._is_weekly_sentence_duplicate(cleaned, [*recent_sentences, *accepted]):
+                rewritten = self._rewrite_weekly_sentence(cleaned)
+                if rewritten and not self._is_weekly_sentence_duplicate(rewritten, [*recent_sentences, *accepted]):
+                    accepted.append(rewritten)
+                continue
+            accepted.append(cleaned)
+        return accepted
+
+    def _recent_weekly_sentences(self, recent_narratives: list[dict[str, Any]]) -> list[str]:
+        sentences: list[str] = []
+        for item in recent_narratives:
+            raw_sentences = item.get("sentences")
+            if isinstance(raw_sentences, list):
+                sentences.extend(str(sentence) for sentence in raw_sentences if str(sentence).strip())
+            body = str(item.get("body") or "").strip()
+            if body:
+                sentences.append(body)
+        return sentences
+
+    def _is_weekly_sentence_duplicate(self, sentence: str, candidates: list[str]) -> bool:
+        normalized = self._normalize_narrative_sentence(sentence)
+        if not normalized:
+            return False
+        sentence_tokens = self._sentence_token_set(normalized)
+        for candidate in candidates:
+            candidate_normalized = self._normalize_narrative_sentence(candidate)
+            if not candidate_normalized:
+                continue
+            if candidate_normalized == normalized:
+                return True
+            candidate_tokens = self._sentence_token_set(candidate_normalized)
+            if sentence_tokens and candidate_tokens:
+                overlap = len(sentence_tokens & candidate_tokens) / max(len(sentence_tokens), len(candidate_tokens))
+                if overlap >= 0.82:
+                    return True
+        return False
+
+    def _rewrite_weekly_sentence(self, sentence: str) -> str:
+        stripped = self._without_final_punctuation(sentence)
+        if stripped.startswith("这周"):
+            stripped = stripped.replace("这周", "本周回看，", 1)
+        elif stripped.startswith("下周"):
+            stripped = stripped.replace("下周", "下一周", 1)
+        elif stripped.startswith("最大的进步："):
+            stripped = stripped.replace("最大的进步：", "变化最清楚的一点是：", 1)
+        else:
+            stripped = f"换个角度看，{stripped}"
+        return f"{stripped}。"
+
+    @staticmethod
+    def _sentence_token_set(normalized: str) -> set[str]:
+        if len(normalized) <= 2:
+            return {normalized}
+        return {normalized[index : index + 2] for index in range(len(normalized) - 1)}
+
+    @staticmethod
+    def _normalize_narrative_sentence(text: str) -> str:
+        compact = str(text or "").lower()
+        for char in "，。！？!?,.；;：「」\"'“”‘’、 \n\t":
+            compact = compact.replace(char, "")
+        return compact
+
+    @staticmethod
+    def _without_final_punctuation(text: str) -> str:
+        return str(text or "").strip().rstrip("。！？!?.")
 
     def _primary_focus(
         self,
@@ -962,9 +1090,52 @@ class ProgressNarrativeService:
     def _weekly_cache_key(self, user_id: str | UUID, week_start: datetime) -> str:
         return f"{self.WEEKLY_NARRATIVE_KEY}{user_id}:{week_start.date().isoformat()}"
 
+    def _weekly_recent_key(self, user_id: str | UUID) -> str:
+        return f"{self.WEEKLY_NARRATIVE_RECENT_KEY}{user_id}"
+
     def _weekly_cache_ttl(self, now: datetime, week_end: datetime) -> int:
         expires_at = week_end + self.WEEKLY_CACHE_GRACE
         return max(int((expires_at - now).total_seconds()), 3600)
+
+    async def _recent_weekly_narratives(
+        self,
+        user_id: str | UUID,
+        *,
+        before: datetime,
+    ) -> list[dict[str, Any]]:
+        cached = await self._cache_get(self._weekly_recent_key(user_id))
+        if not isinstance(cached, list):
+            return []
+        before_key = before.date().isoformat()
+        narratives: list[dict[str, Any]] = []
+        for item in cached:
+            if not isinstance(item, dict):
+                continue
+            week_start = str(item.get("week_start") or "")
+            if week_start and week_start >= before_key:
+                continue
+            narratives.append(item)
+        return narratives[: self.WEEKLY_RECENT_LIMIT]
+
+    async def _remember_weekly_narrative(
+        self,
+        user_id: str | UUID,
+        narrative: WeeklyGrowthNarrative,
+    ) -> None:
+        recent = await self._cache_get(self._weekly_recent_key(user_id))
+        items = recent if isinstance(recent, list) else []
+        payload = narrative.to_dict()
+        next_items = [
+            item
+            for item in items
+            if isinstance(item, dict) and str(item.get("week_start") or "") != narrative.week_start
+        ]
+        next_items.insert(0, payload)
+        await self._cache_set(
+            self._weekly_recent_key(user_id),
+            next_items[: self.WEEKLY_RECENT_LIMIT],
+            ttl=self.WEEKLY_RECENT_TTL_SECONDS,
+        )
 
     def _normalize_mastery_percent(self, value: float) -> float:
         normalized = float(value or 0.0)
@@ -994,7 +1165,7 @@ class ProgressNarrativeService:
             logger.warning(f"Failed to read weekly progress narrative redis key: {exc}")
             return None
 
-    async def _cache_set(self, key: str, value: dict[str, Any], *, ttl: int) -> None:
+    async def _cache_set(self, key: str, value: Any, *, ttl: int) -> None:
         if self.cache is not None:
             try:
                 await self.cache.set(key, value, ttl=ttl)

@@ -7,7 +7,6 @@ Stage: <首次引入 Stage 号>
 Task Model - 学习任务卡片系统
 """
 
-
 import enum
 
 from sqlalchemy import (
@@ -47,6 +46,7 @@ class TaskType(str, enum.Enum):
 class TaskStatus(str, enum.Enum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
+    STUCK = "STUCK"
     COMPLETED = "COMPLETED"
     ABANDONED = "ABANDONED"
 

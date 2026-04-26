@@ -5,6 +5,9 @@ import math
 import random
 import re
 
+from app.config import settings
+from app.core.kill_switch import is_live_mode, normalize_mode
+
 _EMAIL_RE = re.compile(
     r"(?<![A-Z0-9._%+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}(?![A-Z0-9._%+-])",
     flags=re.IGNORECASE,
@@ -21,12 +24,29 @@ def sha256_token(value: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
-def redact_pii(text: str) -> str:
+def pii_redaction_mode() -> str:
+    return normalize_mode(
+        getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live"),
+        fallback="live",
+    )
+
+
+def _redact_pii_text(text: str) -> str:
     redacted = str(text or "")
     redacted = _EMAIL_RE.sub("[REDACTED_EMAIL]", redacted)
     redacted = _PHONE_RE.sub("[REDACTED_PHONE]", redacted)
     redacted = _CN_ID_RE.sub("[REDACTED_CN_ID]", redacted)
     redacted = _BANK_CARD_RE.sub("[REDACTED_BANK_CARD]", redacted)
+    return redacted
+
+
+def redact_pii(text: str) -> str:
+    mode = pii_redaction_mode()
+    if mode == "off":
+        return str(text or "")
+    redacted = _redact_pii_text(text)
+    if not is_live_mode(mode):
+        return str(text or "")
     return redacted
 
 

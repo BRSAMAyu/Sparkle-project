@@ -129,6 +129,14 @@ class ErrorRecordUpdate(BaseModel):
 # ============================================
 
 
+class ErrorLinkingHint(BaseModel):
+    """错题无法关联知识点时的引导信息"""
+
+    code: str
+    message: str
+    action: str | None = None
+
+
 class ErrorAnalysisResult(BaseModel):
     """AI 分析结果"""
 
@@ -140,6 +148,7 @@ class ErrorAnalysisResult(BaseModel):
     recommended_knowledge: list[str] = Field(default_factory=list, description="推荐复习的知识点")
     study_suggestion: str = Field(..., description="学习建议")
     ocr_text: str | None = Field(None, description="OCR识别的文本（如果是图片题）")
+    linking_hint: ErrorLinkingHint | None = Field(None, description="无法关联知识节点时给前端的引导")
 
     @field_validator(
         "error_type_label", "root_cause", "correct_approach", "study_suggestion", "ocr_text", mode="before"

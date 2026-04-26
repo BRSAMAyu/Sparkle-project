@@ -20,7 +20,7 @@ import app.models.base
 revision: str = "ps003_phase3_strategy_outcomes"
 down_revision: Union[str, None] = "z1a2b3c4d5e6"
 branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = "cp001a2b3c4d5"
 
 
 def _table_exists(inspector: sa.Inspector, table_name: str) -> bool:

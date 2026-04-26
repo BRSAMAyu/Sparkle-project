@@ -3,6 +3,8 @@ Plan Service
 Handle plan business logic
 """
 from __future__ import annotations
+
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -10,10 +12,16 @@ from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.event_bus import PlanCreatedEvent, event_bus
-from app.models.plan import Plan, PlanPriority, PlanStage
+from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
+from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
 from app.schemas.plan import PlanCreate, PlanUpdate
 from app.services.stage33_journey_event_service import Stage33JourneyEventService
+
+
+def _utcnow() -> datetime:
+    """Return naive UTC datetime for compatibility with DB TIMESTAMP columns."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 async def _sync_plan_card_projection(db: AsyncSession, plan: Plan) -> None:
@@ -178,6 +186,7 @@ class PlanService:
             if weighted_progress is not None:
                 await db.commit()
                 await db.refresh(plan)
+                await PlanService._auto_archive_completed_sprint(db, plan)
                 await _sync_plan_card_projection(db, plan)
                 return weighted_progress
         except Exception as exc:
@@ -203,9 +212,77 @@ class PlanService:
         db.add(plan)
         await db.commit()
         await db.refresh(plan)
+        await PlanService._auto_archive_completed_sprint(
+            db,
+            plan,
+            total_tasks=total_tasks,
+            completed_tasks=completed_tasks,
+        )
         await _sync_plan_card_projection(db, plan)
 
         return new_progress
+
+    @staticmethod
+    async def _auto_archive_completed_sprint(
+        db: AsyncSession,
+        plan: Plan,
+        *,
+        total_tasks: int | None = None,
+        completed_tasks: int | None = None,
+    ) -> bool:
+        """Archive sprint plans as soon as every task is complete."""
+        if plan.type != PlanType.SPRINT or not plan.is_active:
+            return False
+
+        if total_tasks is None or completed_tasks is None:
+            total_result = await db.execute(select(func.count(Task.id)).where(Task.plan_id == plan.id))
+            total_tasks = total_result.scalar_one()
+            completed_result = await db.execute(
+                select(func.count(Task.id)).where(
+                    and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
+                )
+            )
+            completed_tasks = completed_result.scalar_one()
+
+        if total_tasks <= 0 or completed_tasks < total_tasks:
+            return False
+
+        now = _utcnow()
+        metadata = dict(plan.source_metadata or {})
+        completion_state = metadata.get("exam_sprint_completion")
+        if not isinstance(completion_state, dict):
+            completion_state = {}
+        completion_state.setdefault("completed_at", now.isoformat())
+        completion_state["trigger"] = "all_tasks_completed"
+        metadata["exam_sprint_completion"] = completion_state
+
+        plan.source_metadata = metadata
+        plan.progress = 1.0
+        db.add(plan)
+        await db.flush()
+
+        archived_plan = await PlanService.archive(db=db, plan_id=plan.id, user_id=plan.user_id)
+        if archived_plan is None:
+            return False
+
+        try:
+            from app.services.plan_state_service import PlanStateService
+
+            await PlanStateService(db).upsert_plan_state(
+                user_id=plan.user_id,
+                plan_id=plan.id,
+                patch={
+                    "status": PlanStateStatus.ARCHIVED.value,
+                    "archived_at": now,
+                },
+                bump_version=False,
+            )
+        except Exception as exc:
+            logger.warning("Failed to archive completed sprint plan state {}: {}", plan.id, exc)
+
+        await db.refresh(plan)
+        logger.info("Auto-archived completed sprint plan: {}", plan.id)
+        return True
 
     @staticmethod
     async def archive(

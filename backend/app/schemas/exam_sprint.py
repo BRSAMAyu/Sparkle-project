@@ -436,7 +436,7 @@ class PortfolioSprintEntry(BaseModel):
     subject: str | None = None
     sprint_mode: str | None = None
     status: str = Field(description="active | completed | planned")
-    mastered_nodes_count: int = Field(default=0, ge=0)
+    mastered_nodes_count: int = Field(default=0, ge=0, le=100, description="Mastery percentage, 0-100.")
     started_at: str | None = None
     completed_at: str | None = None
     target_date: date_type | None = None
@@ -456,10 +456,14 @@ class LearningPortfolioResponse(BaseModel):
     """Aggregated learning portfolio across all exam sprints."""
 
     entries: list[PortfolioSprintEntry] = Field(default_factory=list)
-    total_mastered_nodes: int = Field(default=0, ge=0)
+    total_mastered_nodes: int = Field(default=0, ge=0, description="Sum of entry mastery counts across all pages.")
     active_count: int = Field(default=0, ge=0)
     completed_count: int = Field(default=0, ge=0)
     planned_count: int = Field(default=0, ge=0)
+    total_entries: int = Field(default=0, ge=0, description="Total number of portfolio entries across all pages.")
+    current_page: int = Field(default=1, ge=1, description="Current page number (1-indexed).")
+    page_size: int = Field(default=20, ge=1, le=100, description="Number of entries per page.")
+    has_more: bool = Field(default=False, description="Whether more pages exist beyond the current one.")
 
 
 class DiagnosticGradeResponse(BaseModel):

@@ -24,6 +24,19 @@ class KnowledgeNode(BaseModel):
     recommended_action: str = ""
 
 
+class TaskCardTemplate(BaseModel):
+    """Reusable task card template used by Sprint Pack plan generation."""
+
+    model_config = ConfigDict(extra="allow")
+
+    template_id: str
+    label: str
+    description: str
+    steps: list[str] = Field(min_length=1)
+    done_criteria: str
+    duration_minutes: int = Field(ge=1)
+
+
 class SprintPackV1(BaseModel):
     """Top-level Sprint Pack v1 schema."""
 
@@ -40,5 +53,5 @@ class SprintPackV1(BaseModel):
     strategy_presets: dict[str, Any]
     last_24h_strategy: dict[str, Any]
     aurora_rules: dict[str, Any]
-    task_card_templates: list[dict[str, Any]] = Field(default_factory=list)
-    checkpoint_rules: dict[str, Any] = Field(default_factory=dict)
+    task_card_templates: list[TaskCardTemplate] = Field(default_factory=list)
+    checkpoint_rules: dict[str, Any]

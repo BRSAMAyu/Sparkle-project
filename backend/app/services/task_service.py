@@ -8,15 +8,16 @@ Handle task business logic
 """
 
 from __future__ import annotations
+
 import json
 import time
 import uuid
-from datetime import timezone, datetime
-from uuid import UUID
+from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
-from google.protobuf import json_format
 from google.api import annotations_pb2  # noqa: F401
+from google.protobuf import json_format
 from loguru import logger
 from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -35,7 +36,7 @@ from app.services.personalization import get_personalization_engine
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with DB TIMESTAMP columns."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 async def _sync_task_card_projection(db: AsyncSession, task: Task) -> None:
@@ -60,20 +61,14 @@ async def _sync_task_card_projection(db: AsyncSession, task: Task) -> None:
 
 class TaskService:
     @staticmethod
-    async def get_by_id(
-        db: AsyncSession, task_id: UUID, user_id: UUID
-    ) -> Task | None:
+    async def get_by_id(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task | None:
         """Get task by ID and verify user ownership"""
-        query = select(Task).where(
-            and_(Task.id == task_id, Task.user_id == user_id)
-        )
+        query = select(Task).where(and_(Task.id == task_id, Task.user_id == user_id))
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def create(
-        db: AsyncSession, obj_in: TaskCreate, user_id: UUID
-    ) -> Task:
+    async def create(db: AsyncSession, obj_in: TaskCreate, user_id: UUID) -> Task:
         """Create new task"""
         estimated_minutes = obj_in.estimated_minutes
         difficulty = obj_in.difficulty
@@ -123,6 +118,7 @@ class TaskService:
         if db_obj.plan_id:
             try:
                 from app.services.task_state_sync import TaskStateSyncService
+
                 sync_service = TaskStateSyncService(db)
                 await sync_service.on_task_created(db_obj)
             except Exception as e:
@@ -185,9 +181,7 @@ class TaskService:
         return refreshed.scalars().all()
 
     @staticmethod
-    async def update(
-        db: AsyncSession, db_obj: Task, obj_in: TaskUpdate
-    ) -> Task:
+    async def update(db: AsyncSession, db_obj: Task, obj_in: TaskUpdate) -> Task:
         """Update task"""
         update_data = obj_in.model_dump(exclude_unset=True)
 
@@ -207,6 +201,7 @@ class TaskService:
         if db_obj.plan_id and status_changed:
             try:
                 from app.services.task_state_sync import TaskStateSyncService
+
                 sync_service = TaskStateSyncService(db)
                 await sync_service.on_task_updated(db_obj, old_status=old_status)
             except Exception as e:
@@ -230,6 +225,7 @@ class TaskService:
         if db_obj.plan_id:
             try:
                 from app.services.task_state_sync import TaskStateSyncService
+
                 sync_service = TaskStateSyncService(db)
                 await sync_service.on_task_updated(db_obj, old_status=old_status)
             except Exception as e:
@@ -253,9 +249,7 @@ class TaskService:
         return db_obj
 
     @staticmethod
-    async def start_task(
-        db: AsyncSession, task_id: UUID, user_id: UUID
-    ) -> Task:
+    async def start_task(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task:
         """
         Start task by ID - syncs with plan state
 
@@ -273,14 +267,14 @@ class TaskService:
         task = await TaskService.get_by_id(db, task_id, user_id)
         if not task:
             from app.core.exceptions import NotFoundError
+
             raise NotFoundError(message="Task not found")
 
         return await TaskService.start(db, task)
 
     @staticmethod
     async def complete_task(
-        db: AsyncSession, task_id: UUID, user_id: UUID,
-        actual_minutes: int, note: str | None = None
+        db: AsyncSession, task_id: UUID, user_id: UUID, actual_minutes: int, note: str | None = None
     ) -> Task:
         """
         Complete task by ID - publishes task.completed event
@@ -307,14 +301,53 @@ class TaskService:
         task = await TaskService.get_by_id(db, task_id, user_id)
         if not task:
             from app.core.exceptions import NotFoundError
+
             raise NotFoundError(message="Task not found")
 
         return await TaskService.complete(db, task, actual_minutes, note)
 
     @staticmethod
-    async def complete(
-        db: AsyncSession, db_obj: Task, actual_minutes: int, note: str | None = None
-    ) -> Task:
+    async def apply_focus_progress(
+        db: AsyncSession,
+        *,
+        task_id: UUID,
+        user_id: UUID,
+        duration_minutes: int,
+        started_at: datetime,
+    ) -> Task | None:
+        """Apply completed focus minutes to a task and finish it when the estimate is reached."""
+        if duration_minutes <= 0:
+            return await TaskService.get_by_id(db, task_id, user_id)
+
+        task = await TaskService.get_by_id(db, task_id, user_id)
+        if not task:
+            return None
+        if task.status in (TaskStatus.COMPLETED, TaskStatus.ABANDONED):
+            return task
+
+        total_minutes = int(task.actual_minutes or 0) + int(duration_minutes)
+        estimated_minutes = int(task.estimated_minutes or 0)
+
+        if task.status == TaskStatus.PENDING:
+            task.status = TaskStatus.IN_PROGRESS
+            task.started_at = task.started_at or started_at
+
+        if estimated_minutes > 0 and total_minutes >= estimated_minutes:
+            return await TaskService.complete(
+                db,
+                task,
+                total_minutes,
+                note=None,
+            )
+
+        task.actual_minutes = total_minutes
+        db.add(task)
+        await db.flush()
+        await _sync_task_card_projection(db, task)
+        return task
+
+    @staticmethod
+    async def complete(db: AsyncSession, db_obj: Task, actual_minutes: int, note: str | None = None) -> Task:
         """Complete task and update plan progress if task belongs to a plan"""
         db_obj.status = TaskStatus.COMPLETED
         db_obj.completed_at = _utcnow()
@@ -330,11 +363,13 @@ class TaskService:
         # P0.2: Auto-update plan progress when task is completed
         if db_obj.plan_id:
             from app.services.plan_service import PlanService
+
             await PlanService.update_progress(db, db_obj.plan_id, db_obj.user_id)
 
             # Sync with PlanState
             try:
                 from app.services.task_state_sync import TaskStateSyncService
+
                 sync_service = TaskStateSyncService(db)
                 await sync_service.on_task_completed(db_obj, actual_minutes)
             except Exception as e:
@@ -343,6 +378,7 @@ class TaskService:
             # Append task summary for plan context
             try:
                 from app.services.plan_state_service import PlanStateService
+
                 plan_state_service = PlanStateService(db, cache_service.redis)
                 summary = TaskService._build_task_summary(db_obj, actual_minutes, note)
                 await plan_state_service.append_task_summary(
@@ -382,9 +418,7 @@ class TaskService:
 
         estimated = db_obj.estimated_minutes or 0
         completion_rate = actual_minutes / estimated if estimated > 0 else 1.0
-        claim_result = await db.execute(
-            select(GroupTaskClaim).where(GroupTaskClaim.personal_task_id == db_obj.id)
-        )
+        claim_result = await db.execute(select(GroupTaskClaim).where(GroupTaskClaim.personal_task_id == db_obj.id))
         linked_claim = claim_result.scalar_one_or_none()
         source = "group" if linked_claim else "personal"
         source_metadata = {}
@@ -431,6 +465,19 @@ class TaskService:
             metadata={"plan_id": str(db_obj.plan_id) if db_obj.plan_id else None},
         )
 
+        # Lane N: Auto-archive sprint when all tasks are completed
+        if db_obj.plan_id:
+            try:
+                from app.services.exam_sprint_review_service import ExamSprintReviewService
+
+                review_service = ExamSprintReviewService(db=db, redis_client=cache_service.redis)
+                await review_service.auto_archive_if_complete(
+                    plan_id=db_obj.plan_id,
+                    user_id=db_obj.user_id,
+                )
+            except Exception as exc:
+                logger.debug("Sprint auto-archive check skipped for plan {}: {}", db_obj.plan_id, exc)
+
         return db_obj
 
     @staticmethod
@@ -471,18 +518,21 @@ class TaskService:
         from app.services.galaxy_service import GalaxyService
 
         galaxy_service = GalaxyService(db)
-        current_summary = await galaxy_service.get_sprint_mastery_summary(task.user_id, node_ids)
+        current_states = await galaxy_service.get_sprint_mastery_states(task.user_id, node_ids)
         for node_id in node_ids:
-            current_mastery = float(current_summary.get(node_id, 0.0) or 0.0)
-            new_mastery = min(1.0, current_mastery + 0.25)
+            current_state = current_states.get(node_id, {})
+            current_mastery = float(current_state.get("mastery_score", 0.0) or 0.0)
+            new_mastery = min(100.0, current_mastery + 25.0)
             if new_mastery <= current_mastery:
                 continue
+            revision = current_state.get("revision")
             await galaxy_service.update_node_mastery(
                 user_id=task.user_id,
                 node_id=node_id,
                 new_mastery=new_mastery,
                 reason="sprint_task_completed",
                 request_id=f"sprint_task_completed:{task.id}:{node_id}",
+                revision=int(revision) if revision is not None else None,
             )
 
     @staticmethod
@@ -526,9 +576,190 @@ class TaskService:
         return "neutral"
 
     @staticmethod
-    async def abandon(
-        db: AsyncSession, db_obj: Task, reason: str | None = None
-    ) -> Task:
+    async def mark_stuck(
+        db: AsyncSession,
+        db_obj: Task,
+        *,
+        stuck_point: str | None = None,
+        recent_steps: list[str] | None = None,
+        current_step_index: int | None = None,
+        elapsed_seconds: int | None = None,
+        trigger: str | None = None,
+    ) -> tuple[Task, dict[str, Any]]:
+        """Mark an active task as stuck and ask Aurora for current-state help."""
+        if db_obj.status in {TaskStatus.COMPLETED, TaskStatus.ABANDONED}:
+            raise ValueError("Completed or abandoned tasks cannot be marked stuck")
+
+        old_status = db_obj.status
+        db_obj.status = TaskStatus.STUCK
+        if db_obj.started_at is None:
+            db_obj.started_at = _utcnow()
+
+        diagnosis = await TaskService._build_stuck_diagnosis(
+            db,
+            db_obj,
+            stuck_point=stuck_point,
+            recent_steps=recent_steps or [],
+            current_step_index=current_step_index,
+            elapsed_seconds=elapsed_seconds,
+            trigger=trigger,
+        )
+
+        guide_json = dict(TaskService._as_dict(db_obj.guide_json))
+        guide_json["stuck_help"] = diagnosis
+        guide_json["stuck_runtime"] = {
+            "stage": "stuck",
+            "stuck_point": stuck_point,
+            "recent_steps": recent_steps or [],
+            "current_step_index": current_step_index,
+            "elapsed_seconds": elapsed_seconds,
+            "updated_at": _utcnow().isoformat(),
+        }
+        db_obj.guide_json = guide_json
+
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
+
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=old_status)
+            except Exception as e:
+                logger.warning(f"Failed to sync task stuck state: {e}")
+
+        from app.core.event_bus import TaskStuckEvent
+
+        event = TaskStuckEvent(
+            user_id=str(db_obj.user_id),
+            task_id=str(db_obj.id),
+            plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
+            stuck_point=stuck_point,
+            recent_steps=recent_steps or [],
+            elapsed_seconds=elapsed_seconds,
+            diagnosis=diagnosis,
+        )
+        await event_bus_reliable.publish("task.stuck", event.to_dict())
+        await publish_srl_event(
+            user_id=db_obj.user_id,
+            trigger_event_type="task.stuck",
+            evidence_id=str(db_obj.id),
+            metadata={
+                "plan_id": str(db_obj.plan_id) if db_obj.plan_id else None,
+                "stuck_point": stuck_point,
+                "trigger": trigger,
+            },
+        )
+
+        return db_obj, diagnosis
+
+    @staticmethod
+    async def _build_stuck_diagnosis(
+        db: AsyncSession,
+        task: Task,
+        *,
+        stuck_point: str | None,
+        recent_steps: list[str],
+        current_step_index: int | None,
+        elapsed_seconds: int | None,
+        trigger: str | None,
+    ) -> dict[str, Any]:
+        guide_json = TaskService._as_dict(task.guide_json)
+        topic = stuck_point or guide_json.get("focus_cue") or task.title
+        task_state = TaskService.build_stuck_task_state(
+            task,
+            stuck_point=stuck_point,
+            recent_steps=recent_steps,
+            current_step_index=current_step_index,
+            elapsed_seconds=elapsed_seconds,
+            stuck_topic=str(topic),
+        )
+        user_message = (
+            stuck_point
+            or trigger
+            or f"我在任务「{task.title}」里卡住了，请先诊断卡点，再给我一个5分钟内能开始的小修复。"
+        )
+
+        try:
+            from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
+
+            runtime = AuroraRuntimeV1Service()
+            plan = await runtime.plan_turn(
+                active_db=db,
+                user_id=str(task.user_id),
+                surface="aurora_planning",
+                conversation_id=f"task-stuck:{task.id}",
+                request_id=f"task-stuck:{task.id}:{int(time.time())}",
+                user_message=user_message,
+                request_extra_context={
+                    "task_state": task_state,
+                    "task_stage": "stuck",
+                    "stuck_event": {
+                        "task_id": str(task.id),
+                        "task_title": task.title,
+                        "trigger": trigger,
+                        "recent_steps": recent_steps[:10],
+                    },
+                },
+                conversation_context={},
+                user_context_payload={},
+            )
+            message = next((item.strip() for item in plan.messages if str(item).strip()), "")
+        except Exception as exc:
+            logger.warning("Failed to build Aurora stuck diagnosis for task {}: {}", task.id, exc)
+            message = ""
+
+        diagnosis_question = f"你现在最像卡在「{topic}」的哪一处？"
+        mistake_diagnosis = message or f"你可能不是整题不会，而是卡在「{topic}」这个断点还没有被定位。"
+        targeted_fix = message or "先把卡住的位置写成一句话，再只做下一步最小动作。"
+        return {
+            "mistake_diagnosis": mistake_diagnosis,
+            "one_targeted_fix": targeted_fix,
+            "diagnosis_question": diagnosis_question,
+            "diagnosis_options": ["概念没想清", "步骤顺序乱了", "题目条件不会用"],
+            "targeted_fix": targeted_fix,
+            "check_question": "现在只回答：下一步 5 分钟内你能先做哪一个小动作？",
+            "source": "aurora_runtime_v1",
+            "task_state": task_state,
+        }
+
+    @staticmethod
+    def build_stuck_task_state(
+        task: Task,
+        *,
+        stuck_point: str | None = None,
+        recent_steps: list[str] | None = None,
+        current_step_index: int | None = None,
+        elapsed_seconds: int | None = None,
+        stuck_topic: str | None = None,
+    ) -> dict[str, Any]:
+        """Build the runtime task_state payload Aurora's stuck rules inspect."""
+        guide_json = TaskService._as_dict(task.guide_json)
+        runtime = TaskService._as_dict(guide_json.get("stuck_runtime"))
+        topic = stuck_topic or stuck_point or runtime.get("stuck_point") or guide_json.get("focus_cue") or task.title
+        return {
+            "stage": "stuck",
+            "status": TaskStatus.STUCK.value,
+            "task_id": str(task.id),
+            "current_task_id": str(task.id),
+            "task_title": task.title,
+            "title": task.title,
+            "stuck_topic": str(topic),
+            "stuck_point": stuck_point or runtime.get("stuck_point"),
+            "recent_steps": (recent_steps if recent_steps is not None else runtime.get("recent_steps") or [])[:10],
+            "current_step_index": (
+                current_step_index if current_step_index is not None else runtime.get("current_step_index")
+            ),
+            "elapsed_seconds": elapsed_seconds if elapsed_seconds is not None else runtime.get("elapsed_seconds"),
+            "estimated_minutes": task.estimated_minutes,
+            "success_criteria": task.success_criteria,
+        }
+
+    @staticmethod
+    async def abandon(db: AsyncSession, db_obj: Task, reason: str | None = None) -> Task:
         """Abandon task"""
         db_obj.status = TaskStatus.ABANDONED
         db_obj.completed_at = _utcnow()  # using completed_at for end time
@@ -544,6 +775,7 @@ class TaskService:
         if db_obj.plan_id:
             try:
                 from app.services.task_state_sync import TaskStateSyncService
+
                 sync_service = TaskStateSyncService(db)
                 await sync_service.on_task_updated(db_obj, old_status=TaskStatus(db_obj.status) if reason else None)
             except Exception as e:
@@ -595,10 +827,7 @@ class TaskService:
         return db_obj
 
     @staticmethod
-    async def abandon_task(
-        db: AsyncSession, task_id: UUID, user_id: UUID,
-        reason: str | None = None
-    ) -> Task:
+    async def abandon_task(db: AsyncSession, task_id: UUID, user_id: UUID, reason: str | None = None) -> Task:
         """
         Abandon task by ID - publishes task.abandoned event
 
@@ -622,6 +851,7 @@ class TaskService:
         task = await TaskService.get_by_id(db, task_id, user_id)
         if not task:
             from app.core.exceptions import NotFoundError
+
             raise NotFoundError(message="Task not found")
 
         return await TaskService.abandon(db, task, reason)
@@ -643,9 +873,7 @@ class TaskService:
                 logger.warning(f"Failed to update plan progress after task deletion: {e}")
 
     @staticmethod
-    async def confirm_tasks_by_tool_result(
-        db: AsyncSession, tool_result_id: str, user_id: UUID
-    ) -> list[Task]:
+    async def confirm_tasks_by_tool_result(db: AsyncSession, tool_result_id: str, user_id: UUID) -> list[Task]:
         """
         Confirm all tasks associated with a specific tool_result_id.
         Changes status from PENDING to IN_PROGRESS.
@@ -653,11 +881,7 @@ class TaskService:
         Note: Uses TaskService.start() to ensure plan state synchronization.
         """
         query = select(Task).where(
-            and_(
-                Task.tool_result_id == tool_result_id,
-                Task.user_id == user_id,
-                Task.status == TaskStatus.PENDING
-            )
+            and_(Task.tool_result_id == tool_result_id, Task.user_id == user_id, Task.status == TaskStatus.PENDING)
         )
         result = await db.execute(query)
         tasks = result.scalars().all()
@@ -728,11 +952,7 @@ class TaskService:
         return confirmed_tasks
 
     @staticmethod
-    async def get_multi(
-        db: AsyncSession,
-        user_id: UUID,
-        query_params: TaskListQuery
-    ) -> tuple[list[Task], int]:
+    async def get_multi(db: AsyncSession, user_id: UUID, query_params: TaskListQuery) -> tuple[list[Task], int]:
         """Get tasks with filtering and pagination"""
         query = select(Task).where(Task.user_id == user_id)
 
@@ -758,7 +978,7 @@ class TaskService:
         result = await db.execute(query)
         tasks = result.scalars().all()
 
-        return tasks, len(tasks) # This count is wrong for total pages, but for now simple return
+        return tasks, len(tasks)  # This count is wrong for total pages, but for now simple return
 
     @staticmethod
     async def _trigger_next_actions(db_obj: Task) -> None:
@@ -797,9 +1017,7 @@ class TaskService:
                             "title": db_obj.title,
                             "type": db_obj.type,
                             "actual_minutes": db_obj.actual_minutes,
-                            "completed_at": db_obj.completed_at.isoformat()
-                            if db_obj.completed_at
-                            else None,
+                            "completed_at": db_obj.completed_at.isoformat() if db_obj.completed_at else None,
                         },
                         ensure_ascii=True,
                     ),

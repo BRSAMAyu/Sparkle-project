@@ -43,6 +43,18 @@ class AchievementEventConsumer:
         "sprint_veteran",
     }
 
+    @staticmethod
+    def _parse_event_datetime(value) -> datetime | None:
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None) if value.tzinfo else value
+        if isinstance(value, str) and value.strip():
+            try:
+                parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                return parsed.astimezone(timezone.utc).replace(tzinfo=None) if parsed.tzinfo else parsed
+            except ValueError:
+                return None
+        return None
+
     def __init__(self, event_bus: EventBus):
         self.event_bus = event_bus
         self._running = False
@@ -77,6 +89,8 @@ class AchievementEventConsumer:
             await self._handle_execution_result(event)
         elif event_type == "achievement.unlocked":
             await self._handle_achievement_unlocked(event)
+        elif event_type == "achievement.progress":
+            await self._handle_achievement_progress(event)
 
     async def _handle_task_completed(self, event: dict):
         if str(event.get("source") or "personal") == "group":
@@ -99,14 +113,31 @@ class AchievementEventConsumer:
         duration_minutes = int(float(event.get("duration_minutes") or 0))
         if duration_minutes <= 0:
             return
+        session_start_time = self._parse_event_datetime(
+            event.get("session_start_time")
+            or event.get("start_time")
+            or event.get("started_at")
+            or event.get("timestamp")
+        )
         async with AsyncSessionLocal() as db:
             engine = AchievementEngine(db)
             await engine.process_event(
                 user_id=str(user_id),
                 event_type=AchievementEvent.STUDY_MINUTES_ACCUMULATED,
                 actual_minutes=duration_minutes,
+                study_minutes=duration_minutes,
                 session_id=str(event.get("session_id") or ""),
+                session_start_time=session_start_time,
             )
+            if (session_start_time or _utcnow()).weekday() >= 5:
+                await engine.process_event(
+                    user_id=str(user_id),
+                    event_type=AchievementEvent.WEEKEND_WARRIOR,
+                    actual_minutes=duration_minutes,
+                    study_minutes=duration_minutes,
+                    session_id=str(event.get("session_id") or ""),
+                    session_start_time=session_start_time,
+                )
 
     async def _handle_group_task_completed(self, event: dict):
         async with AsyncSessionLocal() as db:
@@ -176,6 +207,13 @@ class AchievementEventConsumer:
                     event_type=AchievementEvent.NODE_MASTERED,
                     node_id=str(event.get("node_id") or ""),
                 )
+            if old_mastery < 100 <= new_mastery:
+                await engine.process_event(
+                    user_id=user_id,
+                    event_type=AchievementEvent.HIDDEN_TRIGGER,
+                    hidden_trigger_code="PERFECTIONIST",
+                    node_id=str(event.get("node_id") or ""),
+                )
 
     async def _handle_achievement_unlocked(self, event: dict):
         """处理成就解锁事件，触发认知系统碎片记录及可能的广播"""
@@ -232,6 +270,72 @@ class AchievementEventConsumer:
     def stop(self):
         self._running = False
 
+    async def _handle_achievement_progress(self, event: dict):
+        user_id = event.get("user_id")
+        achievement_id = str(event.get("achievement_id") or "").strip()
+        achievement_name = str(event.get("achievement_name") or "").strip()
+        try:
+            progress_percent = int(float(event.get("progress_percent") or 0))
+        except (TypeError, ValueError):
+            logger.warning(f"Invalid achievement progress percent: {event.get('progress_percent')}")
+            return None
+        if not user_id or not achievement_id or progress_percent <= 0:
+            return None
+
+        try:
+            user_uuid = UUID(str(user_id))
+        except Exception:
+            logger.warning(f"Invalid achievement progress user_id: {user_id}")
+            return None
+
+        try:
+            from app.core.cache import cache_service
+            from app.core.context_manager import ContextOrchestrator
+
+            await ContextOrchestrator.record_achievement_progress_event(cache_service.redis, event)
+        except Exception as exc:
+            logger.warning(f"Failed to record achievement progress for AI context: {exc}")
+
+        async with AsyncSessionLocal() as db:
+            return await self._create_achievement_progress_notification(
+                db=db,
+                user_id=user_uuid,
+                achievement_id=achievement_id,
+                achievement_name=achievement_name,
+                progress_percent=progress_percent,
+            )
+
+    async def _create_achievement_progress_notification(
+        self,
+        *,
+        db,
+        user_id: UUID,
+        achievement_id: str,
+        achievement_name: str,
+        progress_percent: int,
+    ):
+        if await self._has_recent_progress_notification(db, user_id, achievement_id, progress_percent):
+            return None
+
+        title = f"{achievement_name or '成就'} 进度达到 {progress_percent}%"
+        content = "这个成就已经接近解锁，通知中心会保留这条进度提醒。"
+        return await NotificationService.create(
+            db,
+            user_id,
+            NotificationCreate(
+                title=title,
+                content=content,
+                type="achievement_progress",
+                data={
+                    "achievement_id": achievement_id,
+                    "achievement_name": achievement_name or achievement_id,
+                    "progress_percent": progress_percent,
+                    "source_event": "achievement.progress",
+                },
+            ),
+            push_via_websocket=True,
+        )
+
     async def _maybe_create_milestone_notification(self, *, db, user_id: UUID, event: dict):
         achievement_id = str(event.get("achievement_id") or "").strip()
         if achievement_id not in self.MILESTONE_ACHIEVEMENT_IDS:
@@ -271,6 +375,30 @@ class AchievementEventConsumer:
         )
         logger.info(f"Created milestone notification for achievement {achievement_id} and user {user_id}")
         return notification
+
+    async def _has_recent_progress_notification(
+        self,
+        db,
+        user_id: UUID,
+        achievement_id: str,
+        progress_percent: int,
+    ) -> bool:
+        result = await db.execute(
+            select(Notification).where(
+                Notification.user_id == user_id,
+                Notification.type == "achievement_progress",
+                Notification.created_at >= (_utcnow() - timedelta(hours=24)),
+                Notification.deleted_at.is_(None),
+            )
+        )
+        for notification in result.scalars().all():
+            payload = notification.data if isinstance(notification.data, dict) else {}
+            if (
+                str(payload.get("achievement_id") or "") == achievement_id
+                and int(float(payload.get("progress_percent") or 0)) == progress_percent
+            ):
+                return True
+        return False
 
     async def _has_recent_milestone_notification(self, db, user_id: UUID, achievement_id: str) -> bool:
         result = await db.execute(
@@ -414,7 +542,9 @@ class AchievementEventConsumer:
         total_weight = 0.0
 
         for user_achievement, achievement in rows:
-            unlocked_at = user_achievement.unlocked_at or user_achievement.updated_at or user_achievement.created_at or _utcnow()
+            unlocked_at = (
+                user_achievement.unlocked_at or user_achievement.updated_at or user_achievement.created_at or _utcnow()
+            )
             recency_days = max(0.0, (_utcnow() - unlocked_at).total_seconds() / 86400.0)
             recency_weight = max(0.35, 1.0 - (recency_days / self.SIGNAL_WINDOW_DAYS))
             rarity_weight = self._rarity_weight(achievement.rarity)
@@ -436,7 +566,9 @@ class AchievementEventConsumer:
                 pace_scores["mixed"] += weight
                 motivation_scores["milestone_celebration"] += weight * 0.8
 
-            reward_score += (rarity_weight * 0.7 + min(float(user_achievement.share_count or 0), 2.0) * 0.15) * recency_weight
+            reward_score += (
+                rarity_weight * 0.7 + min(float(user_achievement.share_count or 0), 2.0) * 0.15
+            ) * recency_weight
 
         if total_weight <= 0:
             return

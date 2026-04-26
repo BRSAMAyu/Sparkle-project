@@ -223,7 +223,7 @@ class Settings(BaseSettings):
     TOOL_EXECUTION_TIMEOUT_SECONDS: float = 120.0
 
     # Aurora Stage 18
-    AURORA_STAGE18_AGGREGATOR_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE18_AGGREGATOR_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE18_PUSH_POLICY_MODE: str = "off"  # off | shadow | live
     AURORA_STAGE18_PUSH_DELIVERY_MODE: str = "off"  # off | shadow | live
 
@@ -317,7 +317,7 @@ class Settings(BaseSettings):
 
     # Aurora Stage 33
     AURORA_STAGE33_MODE: str = "shadow"  # off | shadow | live
-    AURORA_STAGE33_SOCIAL_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE33_SOCIAL_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE33_SRL_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE33_WM_PROMPT_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE33_EVENTS_MODE: str = "shadow"  # off | shadow | live
@@ -593,7 +593,7 @@ class Settings(BaseSettings):
     MEMORY_RANK_DEFAULT_FRESHNESS: float = 0.3
     MEMORY_RANK_DEFAULT_CORRECTION: float = 0.1
     ENABLE_USER_MEMORY_CONTROLS: bool = True
-    SPARKLE_MEMORY_INFERRED_WRITE_ENABLED: bool = False
+    SPARKLE_MEMORY_INFERRED_WRITE_ENABLED: bool = True
     SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED: bool = False
     SPARKLE_AGGREGATOR_ENABLED: bool = False
     # This data is prompt context only, not a routing decision signal.
@@ -645,6 +645,7 @@ class Settings(BaseSettings):
     GRAPHRAG_TRACE_MAX_BYTES: int = 20000
     GRAPHRAG_TRACE_QUERY_MAX_CHARS: int = 256
     ENABLE_GRAPHRAG_TRACE_PII: bool = False
+    AURORA_PRIVACY_PII_REDACTION_MODE: str = "live"  # off | shadow | live
     REDIS_HYBRID_TIMEOUT_SECONDS: float = 2.0
     RERANK_TIMEOUT_SECONDS: float = 2.5
     ENABLE_REDIS_HYBRID_FALLBACK: bool = False
@@ -674,6 +675,8 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 52428800  # 50MB
 
     # MDX Dictionary Configuration
+    # Default is True but the mdx_dictionary_service module will gracefully
+    # degrade to MDX_AVAILABLE=False when readmdict/python-lzo are missing.
     MDX_DICTIONARY_ENABLED: bool = True
     MDX_DICTIONARY_PATH: str = ""
     MDD_RESOURCES_PATH: Optional[str] = None

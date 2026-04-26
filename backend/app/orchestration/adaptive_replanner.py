@@ -66,6 +66,23 @@ def _safe_int(value: Any) -> int | None:
     return parsed if parsed > 0 else None
 
 
+def _parse_hhmm(value: Any) -> int | None:
+    text = _strip(value)
+    match = re.search(r"(?:T|\s|^)(\d{1,2}):(\d{2})", text)
+    if not match:
+        return None
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None
+    return hour * 60 + minute
+
+
+def _format_hhmm(minutes: int) -> str:
+    minutes = max(0, min(minutes, 24 * 60))
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
 def _task_status_value(task: Task) -> str:
     return str(getattr(task.status, "value", task.status) or "")
 
@@ -322,7 +339,14 @@ class AdaptiveReplanner:
         self._card_bridge: ReplannerCardBridge | None = None
 
     @classmethod
-    def should_compress(cls, *, completion_rate: float | None, days_left: int | None) -> bool:
+    def should_compress(
+        cls,
+        *,
+        completion_rate: float | None,
+        days_left: int | None,
+        calendar_context: dict[str, Any] | None = None,
+        source_daily_spec: dict[str, Any] | None = None,
+    ) -> bool:
         """Trigger sprint compression only when the user is behind and time is short."""
         try:
             rate = float(completion_rate)
@@ -331,7 +355,14 @@ class AdaptiveReplanner:
             return False
         if days < 0:
             return False
-        return rate < 0.5 and days <= 5
+        if rate < 0.5 and days <= 5:
+            return True
+        if days <= 5 and rate < 0.85:
+            return cls._has_calendar_compression_pressure(
+                calendar_context=calendar_context,
+                source_daily_spec=source_daily_spec,
+            )
+        return False
 
     @classmethod
     def build_compressed_sprint_day_spec(
@@ -341,6 +372,7 @@ class AdaptiveReplanner:
         completion_rate: float,
         sprint_policy: dict[str, Any],
         source_daily_spec: dict[str, Any] | None = None,
+        calendar_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         policy = _as_dict(sprint_policy)
         retrieval_policy = _as_dict(policy.get("retrieval_policy"))
@@ -377,7 +409,12 @@ class AdaptiveReplanner:
         objective = f"Day {day_number} 保底恢复：只拿下「{primary_target}」，并留下 1 个最小输出。"
         output_action = f"围绕「{primary_target}」完成 {minimum_output}。"
         success_criteria = f"只要完成「{primary_target}」的 {minimum_output}，今天就算把主线接回来了。"
-        return {
+        calendar_slot = cls._select_calendar_safe_slot(
+            calendar_context=calendar_context,
+            source_daily_spec=source_spec,
+            estimated_minutes=35,
+        )
+        spec = {
             "day": day_number,
             "focus": objective,
             "title_focus": "压缩保底",
@@ -409,6 +446,220 @@ class AdaptiveReplanner:
                 "compression_reason": compression_reason,
             },
         }
+        if calendar_slot:
+            avoidance_note = (
+                f"避开日历冲突，建议安排在 {calendar_slot['start']}-{calendar_slot['end']}。"
+            )
+            spec.update(
+                {
+                    "scheduled_start_time": calendar_slot["start"],
+                    "scheduled_end_time": calendar_slot["end"],
+                    "calendar_avoidance": {
+                        "applied": True,
+                        "reason": avoidance_note,
+                        "conflicts": calendar_slot.get("conflicts", []),
+                    },
+                }
+            )
+            spec["method_steps"].append(avoidance_note)
+            spec["daily_spec"].update(
+                {
+                    "scheduled_start_time": calendar_slot["start"],
+                    "scheduled_end_time": calendar_slot["end"],
+                    "calendar_avoidance": spec["calendar_avoidance"],
+                }
+            )
+        return spec
+
+    @classmethod
+    def _select_calendar_safe_slot(
+        cls,
+        *,
+        calendar_context: dict[str, Any] | None,
+        source_daily_spec: dict[str, Any],
+        estimated_minutes: int,
+    ) -> dict[str, Any] | None:
+        context = _as_dict(calendar_context)
+        if not context:
+            return None
+
+        day_key = _strip(source_daily_spec.get("date") or source_daily_spec.get("target_date"))
+        available_blocks = cls._calendar_available_blocks(context, day_key=day_key)
+        conflicts = cls._calendar_conflicts(context, day_key=day_key)
+        if not available_blocks and conflicts:
+            available_blocks = cls._free_blocks_from_conflicts(conflicts)
+        if not available_blocks:
+            return None
+
+        required_minutes = max(30, min(60, _safe_int(estimated_minutes) or 35))
+        source_start = (
+            _parse_hhmm(source_daily_spec.get("scheduled_start_time"))
+            or _parse_hhmm(source_daily_spec.get("start_time"))
+            or _parse_hhmm(source_daily_spec.get("preferred_start_time"))
+        )
+        source_end = (
+            _parse_hhmm(source_daily_spec.get("scheduled_end_time"))
+            or _parse_hhmm(source_daily_spec.get("end_time"))
+            or (source_start + required_minutes if source_start is not None else None)
+        )
+
+        if source_start is not None and source_end is not None:
+            for block in available_blocks:
+                if block[0] <= source_start and source_end <= block[1]:
+                    return None
+        elif (
+            not conflicts
+            and len(available_blocks) == 1
+            and available_blocks[0][0] <= 7 * 60
+            and available_blocks[0][1] >= 22 * 60
+        ):
+            return None
+
+        for start, end in available_blocks:
+            slot_start = max(start, 9 * 60)
+            if end - slot_start < required_minutes:
+                continue
+            slot_end = min(end, slot_start + max(60, required_minutes))
+            return {
+                "start": _format_hhmm(slot_start),
+                "end": _format_hhmm(slot_end),
+                "conflicts": conflicts[:3],
+            }
+        return None
+
+    @classmethod
+    def _calendar_available_blocks(cls, context: dict[str, Any], *, day_key: str = "") -> list[tuple[int, int]]:
+        raw_blocks: Any = None
+        by_date = _as_dict(context.get("time_blocks_by_date") or context.get("available_blocks_by_date"))
+        if day_key and by_date:
+            raw_blocks = by_date.get(day_key)
+        if raw_blocks is None:
+            today_key = _strip(context.get("today") or context.get("reference_date"))
+            if not day_key or not today_key or day_key == today_key:
+                raw_blocks = context.get("time_blocks_today") or context.get("available_time_blocks") or []
+            else:
+                raw_blocks = []
+        blocks: list[tuple[int, int]] = []
+        for item in list(raw_blocks or []):
+            block = _as_dict(item)
+            start = _parse_hhmm(block.get("start") or block.get("start_time"))
+            end = _parse_hhmm(block.get("end") or block.get("end_time"))
+            if start is None or end is None or end <= start:
+                continue
+            blocks.append((start, end))
+        return sorted(blocks)
+
+    @classmethod
+    def _calendar_conflicts(cls, context: dict[str, Any], *, day_key: str = "") -> list[dict[str, str]]:
+        raw_events: list[Any] = []
+        by_date = _as_dict(context.get("busy_events_by_date") or context.get("events_by_date"))
+        if day_key and by_date:
+            raw_events.extend(list(by_date.get(day_key) or []))
+        today_key = _strip(context.get("today") or context.get("reference_date"))
+        if not day_key or not today_key or day_key == today_key:
+            for key in ("busy_events", "calendar_events", "conflicts", "events"):
+                raw_events.extend(list(context.get(key) or []))
+
+        conflicts: list[dict[str, str]] = []
+        for raw in raw_events:
+            event = _as_dict(raw)
+            start_text = _strip(event.get("start_time") or event.get("start"))
+            end_text = _strip(event.get("end_time") or event.get("end"))
+            start = _parse_hhmm(start_text)
+            end = _parse_hhmm(end_text)
+            if start is None or end is None or end <= start:
+                continue
+            conflicts.append(
+                {
+                    "title": _strip(event.get("title") or event.get("name") or "日历事件"),
+                    "start": _format_hhmm(start),
+                    "end": _format_hhmm(end),
+                    "kind": _strip(event.get("kind") or event.get("type") or event.get("event_type") or "busy"),
+                }
+            )
+        return sorted(conflicts, key=lambda item: item["start"])
+
+    @classmethod
+    def _has_calendar_compression_pressure(
+        cls,
+        *,
+        calendar_context: dict[str, Any] | None,
+        source_daily_spec: dict[str, Any] | None,
+    ) -> bool:
+        context = _as_dict(calendar_context)
+        source_spec = _as_dict(source_daily_spec)
+        if not context or not source_spec:
+            return False
+
+        day_key = _strip(source_spec.get("date") or source_spec.get("target_date"))
+        conflicts = cls._calendar_conflicts(context, day_key=day_key)
+        available_blocks = cls._calendar_available_blocks(context, day_key=day_key)
+        estimated_minutes = _safe_int(source_spec.get("estimated_minutes")) or 60
+        required_minutes = max(30, min(90, estimated_minutes))
+
+        source_start = (
+            _parse_hhmm(source_spec.get("scheduled_start_time"))
+            or _parse_hhmm(source_spec.get("start_time"))
+            or _parse_hhmm(source_spec.get("preferred_start_time"))
+        )
+        source_end = (
+            _parse_hhmm(source_spec.get("scheduled_end_time"))
+            or _parse_hhmm(source_spec.get("end_time"))
+            or (source_start + required_minutes if source_start is not None else None)
+        )
+        if source_start is not None and source_end is not None:
+            for event in conflicts:
+                if not cls._is_high_pressure_calendar_event(event):
+                    continue
+                event_start = _parse_hhmm(event.get("start"))
+                event_end = _parse_hhmm(event.get("end"))
+                if event_start is not None and event_end is not None and source_start < event_end and event_start < source_end:
+                    return True
+
+        if available_blocks:
+            longest_block = max((end - start for start, end in available_blocks), default=0)
+            return longest_block < required_minutes and any(cls._is_high_pressure_calendar_event(event) for event in conflicts)
+        return any(cls._is_high_pressure_calendar_event(event) for event in conflicts)
+
+    @staticmethod
+    def _is_high_pressure_calendar_event(event: dict[str, Any]) -> bool:
+        kind = _strip(event.get("kind") or event.get("type") or event.get("event_type")).lower()
+        title = _strip(event.get("title") or event.get("name")).lower()
+        return kind in {"exam", "quiz", "test", "class", "course", "lecture"} or any(
+            token in title
+            for token in (
+                "考试",
+                "期末",
+                "测验",
+                "上课",
+                "课程",
+                "课堂",
+                "exam",
+                "quiz",
+                "test",
+                "class",
+                "lecture",
+                "course",
+            )
+        )
+
+    @staticmethod
+    def _free_blocks_from_conflicts(conflicts: list[dict[str, str]]) -> list[tuple[int, int]]:
+        blocks: list[tuple[int, int]] = []
+        busy: list[tuple[int, int]] = []
+        for event in conflicts:
+            start = _parse_hhmm(event.get("start"))
+            end = _parse_hhmm(event.get("end"))
+            if start is not None and end is not None and end > start:
+                busy.append((max(7 * 60, start), min(22 * 60, end)))
+        cursor = 9 * 60
+        for start, end in sorted(busy):
+            if start > cursor:
+                blocks.append((cursor, start))
+            cursor = max(cursor, end)
+        if cursor < 22 * 60:
+            blocks.append((cursor, 22 * 60))
+        return blocks
 
     async def compress_sprint_day(
         self,
@@ -418,6 +669,7 @@ class AdaptiveReplanner:
         completion_rate: float,
         sprint_policy: dict[str, Any],
         source_daily_spec: dict[str, Any] | None = None,
+        calendar_context: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Compress one sprint day to a single recovery task and persist it when possible."""
         compressed_spec = self.build_compressed_sprint_day_spec(
@@ -425,6 +677,7 @@ class AdaptiveReplanner:
             completion_rate=completion_rate,
             sprint_policy=sprint_policy,
             source_daily_spec=source_daily_spec,
+            calendar_context=calendar_context,
         )
         if plan_id is not None and getattr(self, "db", None) is not None:
             await self._write_compressed_sprint_day(

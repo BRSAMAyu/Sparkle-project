@@ -51,7 +51,9 @@ class InferredEpisodicCandidate:
 
 
 def _build_inferred_write_session_factory():
-    db_url, sslmode, sslrootcert = _sanitize_asyncpg_url(AsyncSessionLocal.kw["bind"].url.render_as_string(hide_password=False))
+    db_url, sslmode, sslrootcert = _sanitize_asyncpg_url(
+        AsyncSessionLocal.kw["bind"].url.render_as_string(hide_password=False)
+    )
     if db_url.startswith("sqlite"):
         return AsyncSessionLocal
 
@@ -90,10 +92,7 @@ class MemoryInferredWriteLaneService:
         user_message_id: str | None,
         assistant_message_id: str | None,
     ) -> None:
-        if not (
-            settings.SPARKLE_MEMORY_INFERRED_WRITE_ENABLED
-            or settings.SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED
-        ):
+        if not (settings.SPARKLE_MEMORY_INFERRED_WRITE_ENABLED or settings.SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED):
             return
         try:
             loop = asyncio.get_running_loop()
@@ -118,10 +117,7 @@ class MemoryInferredWriteLaneService:
         assistant_message_id: str,
         assistant_message: str,
     ) -> None:
-        if not (
-            settings.SPARKLE_MEMORY_INFERRED_WRITE_ENABLED
-            or settings.SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED
-        ):
+        if not (settings.SPARKLE_MEMORY_INFERRED_WRITE_ENABLED or settings.SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED):
             return
         try:
             loop = asyncio.get_running_loop()
@@ -259,7 +255,10 @@ class MemoryInferredWriteLaneService:
             confidence += 0.01
         if temporal_kind in {"tomorrow", "this_week", "weekend", "tonight"}:
             confidence += 0.03
-        if actionish and any(token in sentence for token in ("今天", "明天", "今晚", "周末", "下周", "这周", "本周", "下午", "晚上", "早上")):
+        if actionish and any(
+            token in sentence
+            for token in ("今天", "明天", "今晚", "周末", "下周", "这周", "本周", "下午", "晚上", "早上")
+        ):
             confidence += 0.03
         confidence = min(confidence, 0.9)
         if subject_type == "commitment" and due_at is not None:
@@ -276,9 +275,7 @@ class MemoryInferredWriteLaneService:
             mentioned_entity_owner_user_id = user_id
             semantic_key_source = f"{subject_type}:{mentioned_entity_hash}"
             candidate_text = (
-                "你提到过一位学习相关人物"
-                if subject_type == "person_mention"
-                else "你提到过一段与他人的关系动态"
+                "你提到过一位学习相关人物" if subject_type == "person_mention" else "你提到过一段与他人的关系动态"
             )
         semantic_key = hashlib.sha1(semantic_key_source.encode("utf-8")).hexdigest()
         return InferredEpisodicCandidate(
@@ -600,7 +597,9 @@ class MemoryInferredWriteLaneService:
             sentence = raw.strip(" ，,；;")
             if not sentence:
                 continue
-            if len(sentence) < 8 or len(sentence) > 180:
+            if (len(sentence) < 8 and not MemoryInferredWriteLaneService._looks_like_learning_context(sentence)) or len(
+                sentence
+            ) > 180:
                 continue
             if not MemoryInferredWriteLaneService._looks_like_safe_context(sentence):
                 continue
@@ -611,6 +610,10 @@ class MemoryInferredWriteLaneService:
                 score += 2.0
             if MemoryInferredWriteLaneService._has_action_signal(sentence):
                 score += 1.5
+            if MemoryInferredWriteLaneService._has_learning_difficulty_signal(sentence):
+                score += 1.8
+            if MemoryInferredWriteLaneService._looks_like_learning_context(sentence):
+                score += 1.0
             if any(token in sentence for token in ("明天", "今晚", "周末", "下周", "这周", "今天")):
                 score += 1.0
             score += min(len(sentence), 80) / 80.0
@@ -634,12 +637,18 @@ class MemoryInferredWriteLaneService:
         )
         if any(token in sentence for token in banned):
             return False
-        if "我" not in sentence and "最近" not in sentence and not MemoryInferredWriteLaneService._looks_like_social_context(sentence):
+        if (
+            "我" not in sentence
+            and "最近" not in sentence
+            and not MemoryInferredWriteLaneService._looks_like_social_context(sentence)
+            and not MemoryInferredWriteLaneService._looks_like_learning_context(sentence)
+        ):
             return False
         return (
             MemoryInferredWriteLaneService._has_temporal_anchor(sentence)
             or MemoryInferredWriteLaneService._has_action_signal(sentence)
             or MemoryInferredWriteLaneService._looks_like_social_context(sentence)
+            or MemoryInferredWriteLaneService._has_learning_difficulty_signal(sentence)
         )
 
     @staticmethod
@@ -661,17 +670,109 @@ class MemoryInferredWriteLaneService:
             "下午",
             "晚上",
         )
-        return any(token in sentence for token in temporal_tokens) or bool(re.search(r"\d{1,2}月\d{1,2}[日号]?", sentence))
+        return any(token in sentence for token in temporal_tokens) or bool(
+            re.search(r"\d{1,2}月\d{1,2}[日号]?", sentence)
+        )
 
     @staticmethod
     def _has_action_signal(sentence: str) -> bool:
-        action_tokens = ("准备", "打算", "要", "需要", "复习", "整理", "练", "学", "赶", "考试", "ddl", "任务", "完成", "补完")
+        action_tokens = (
+            "准备",
+            "打算",
+            "要",
+            "需要",
+            "复习",
+            "整理",
+            "练",
+            "学",
+            "赶",
+            "考",
+            "考试",
+            "ddl",
+            "任务",
+            "完成",
+            "补完",
+            "刷题",
+            "背",
+            "预习",
+        )
         return any(token in sentence for token in action_tokens)
 
     @staticmethod
     def _looks_like_social_context(sentence: str) -> bool:
         social_tokens = ("他", "她", "朋友", "同学", "老师", "妈妈", "爸爸", "老张", "小李", "关系", "相处")
         return any(token in sentence for token in social_tokens)
+
+    @staticmethod
+    def _looks_like_learning_context(sentence: str) -> bool:
+        learning_tokens = (
+            "高数",
+            "数学",
+            "线代",
+            "概率论",
+            "英语",
+            "TCP",
+            "计网",
+            "计算机网络",
+            "操作系统",
+            "OS",
+            "数据结构",
+            "算法",
+            "图论",
+            "物理",
+            "化学",
+            "考研",
+            "教资",
+            "论文",
+            "实验",
+            "错题",
+            "真题",
+            "笔记",
+            "复习",
+            "背单词",
+        )
+        if not any(token in sentence for token in learning_tokens):
+            return False
+        return (
+            MemoryInferredWriteLaneService._has_temporal_anchor(sentence)
+            or MemoryInferredWriteLaneService._has_action_signal(sentence)
+            or MemoryInferredWriteLaneService._has_learning_difficulty_signal(sentence)
+        )
+
+    @staticmethod
+    def _has_learning_difficulty_signal(sentence: str) -> bool:
+        learning_tokens = (
+            "高数",
+            "数学",
+            "线代",
+            "概率论",
+            "英语",
+            "TCP",
+            "计网",
+            "计算机网络",
+            "操作系统",
+            "数据结构",
+            "算法",
+            "图论",
+            "物理",
+            "化学",
+        )
+        difficulty_tokens = (
+            "很难",
+            "太难",
+            "有点难",
+            "不会",
+            "不懂",
+            "卡住",
+            "薄弱",
+            "搞不懂",
+            "看不懂",
+            "学不会",
+            "吃力",
+        )
+        return any(token in sentence for token in learning_tokens) and any(
+            token in sentence for token in difficulty_tokens
+        )
 
     @classmethod
     def _classify_subject_type(cls, sentence: str) -> tuple[str | None, str | None]:
@@ -683,7 +784,7 @@ class MemoryInferredWriteLaneService:
         mention_name = cls._extract_mentioned_person_name(sentence)
         if mention_name is not None:
             return "person_mention", mention_name
-        if "我" in sentence and cls._looks_like_safe_context(sentence):
+        if cls._looks_like_safe_context(sentence):
             return "self", None
         return None, None
 
@@ -706,7 +807,21 @@ class MemoryInferredWriteLaneService:
         match = re.search(r"(?:和|跟)([^，。！？\s]{1,6})(?:一起|约好|说|在|要)", sentence)
         if match:
             return match.group(1)
-        kinship_tokens = ("我妈", "我爸", "妈妈", "爸爸", "老师", "同学", "朋友", "室友", "同事", "老张", "小李", "她", "他")
+        kinship_tokens = (
+            "我妈",
+            "我爸",
+            "妈妈",
+            "爸爸",
+            "老师",
+            "同学",
+            "朋友",
+            "室友",
+            "同事",
+            "老张",
+            "小李",
+            "她",
+            "他",
+        )
         for token in kinship_tokens:
             if token in sentence:
                 return token

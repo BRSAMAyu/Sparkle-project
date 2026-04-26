@@ -274,6 +274,19 @@ async def capacity_overview(
     current_user: User = Depends(get_current_active_superuser),
 ) -> dict[str, Any]:
     del current_user
+    return await _build_capacity_response(db)
+
+
+@router.get("/user-capacity", response_model=dict[str, Any])
+async def user_capacity_overview(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """User-facing capacity overview with anonymized operational data."""
+    return await _build_capacity_response(db)
+
+
+async def _build_capacity_response(db: AsyncSession) -> dict[str, Any]:
     now = _utcnow()
     disk = shutil.disk_usage("/")
     disk_used_ratio = disk.used / disk.total if disk.total else 0.0
@@ -353,12 +366,23 @@ async def prometheus_alerts(
 
     返回当前触发的告警
     """
+    return await _build_alerts_response()
+
+
+@router.get("/user-alerts")
+async def user_alerts(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """User-facing alerts view with anonymized operational data."""
+    return await _build_alerts_response()
+
+
+async def _build_alerts_response() -> dict[str, Any]:
     alerts = []
 
     try:
         redis_client = cache_service.redis
         if redis_client:
-            # 检查队列积压
             queue_length = await redis_client.llen("queue:summarization")
             if queue_length > 500:
                 alerts.append({
@@ -368,15 +392,11 @@ async def prometheus_alerts(
                     "value": queue_length
                 })
 
-            # 检查并发会话（如果使用 state manager）
-            # 这里需要从 orchestrator 获取，暂时跳过
-
-        # 检查内存使用（简单估算）
         import psutil
         process = psutil.Process()
         memory_mb = process.memory_info().rss / 1024 / 1024
 
-        if memory_mb > 1024:  # 1GB 阈值
+        if memory_mb > 1024:
             alerts.append({
                 "severity": "critical",
                 "name": "HighMemoryUsage",

@@ -139,7 +139,8 @@ class GalaxyService:
 
     async def handle_error_created(self, event_data: dict):
         """
-        Handle error.created event: reduce mastery for related nodes.
+        [DEPRECATED] Do NOT call — mastery is owned by ErrorBookMasterySyncService.
+        Calling this will cause double mastery deductions.
         """
         try:
             user_id = UUID(event_data["user_id"])
@@ -191,16 +192,8 @@ class GalaxyService:
         error_count: int,
     ) -> dict | None:
         """
-        根据错题分析更新知识节点掌握度。
-
-        掌握度更新公式：
-        - 轻度错误（careless）：mastery -= 3
-        - 中度错误（comprehension_failure）：mastery -= 8
-        - 重度错误（repeated >= 3次）：mastery -= 15
-        - 最低下限：10（不设为0，避免过度惩罚）
-
-        返回：{"node_id": ..., "old_mastery": ..., "new_mastery": ..., "delta": ...}
-        如果节点不存在：返回 None（不报错）
+        [DEPRECATED] Do NOT call — mastery is owned by ErrorBookMasterySyncService.
+        Calling this will cause double mastery deductions.
         """
         active_db = db or self.db
         coerced_user_id = self._coerce_uuid(user_id)
@@ -1075,6 +1068,18 @@ class GalaxyService:
 
     async def get_sprint_mastery_summary(self, user_id: UUID | str, node_ids: list[str]) -> dict[str, float]:
         """Return normalized 0-1 mastery for the requested Sprint Pack node IDs."""
+        states = await self.get_sprint_mastery_states(user_id, node_ids)
+        return {
+            external_id: self._mastery_ratio(state.get("mastery_score", 0.0))
+            for external_id, state in states.items()
+        }
+
+    async def get_sprint_mastery_states(
+        self,
+        user_id: UUID | str,
+        node_ids: list[str],
+    ) -> dict[str, dict[str, float | int | None]]:
+        """Return 0-100 mastery and revision for requested Sprint Pack node IDs."""
         ordered_ids = [str(node_id or "").strip() for node_id in node_ids if str(node_id or "").strip()]
         if not ordered_ids:
             return {}
@@ -1084,20 +1089,39 @@ class GalaxyService:
             external_id: await self._resolve_mastery_node_id(external_id, create_missing=False)
             for external_id in unique_ids
         }
-        result = {external_id: 0.0 for external_id in unique_ids}
+        result: dict[str, dict[str, float | int | None]] = {
+            external_id: {"mastery_score": 0.0, "revision": None}
+            for external_id in unique_ids
+        }
 
         rows = (
             await self.db.execute(
-                select(UserNodeStatus.node_id, UserNodeStatus.mastery_score).where(
+                select(UserNodeStatus.node_id, UserNodeStatus.mastery_score, UserNodeStatus.revision).where(
                     UserNodeStatus.user_id == user_id,
                     UserNodeStatus.node_id.in_(list(internal_by_external.values())),
                 )
             )
         ).all()
-        mastery_by_node_id = {node_uuid: self._mastery_ratio(mastery_score) for node_uuid, mastery_score in rows}
+        state_by_node_id = {
+            node_uuid: {
+                "mastery_score": self._mastery_score_percent(mastery_score),
+                "revision": int(revision or 0),
+            }
+            for node_uuid, mastery_score, revision in rows
+        }
         for external_id, internal_id in internal_by_external.items():
-            result[external_id] = mastery_by_node_id.get(internal_id, 0.0)
+            result[external_id] = state_by_node_id.get(internal_id, result[external_id])
         return result
+
+    @staticmethod
+    def _mastery_score_percent(value: object) -> float:
+        try:
+            mastery = float(value or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+        if 0.0 < mastery <= 1.0:
+            mastery *= 100.0
+        return max(0.0, min(mastery, 100.0))
 
     @staticmethod
     def _latest_datetime(*values: datetime | None) -> datetime | None:

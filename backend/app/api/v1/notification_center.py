@@ -7,9 +7,11 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core.cache import cache_service
 from app.models.user import User
 from app.schemas.unified_notification import (
     InterventionNotificationActionRequest,
@@ -357,6 +359,7 @@ async def get_notification_preferences(
         user_id=prefs.user_id,
         enable_system=prefs.enable_system,
         enable_interventions=prefs.enable_interventions,
+        disabled_types=prefs.disabled_types or [],
         notification_level=prefs.notification_level,
         quiet_hours_enabled=prefs.quiet_hours_enabled,
         quiet_hours_start=prefs.quiet_hours_start,
@@ -386,10 +389,30 @@ async def update_notification_preferences(
 
     prefs = await service.update_preferences(current_user.id, update)
 
+    # Sync to UserPreferencesCenter for PreferenceConsumptionService
+    try:
+        from app.services.personalization.preference_service import PreferenceService
+        pref_service = PreferenceService(db, cache_service.redis)
+        notif_prefs = {
+            "notification_level": prefs.notification_level or "standard",
+            "enable_system": prefs.enable_system,
+            "enable_interventions": prefs.enable_interventions,
+            "disabled_types": list(prefs.disabled_types or []),
+            "quiet_hours_enabled": prefs.quiet_hours_enabled or False,
+            "quiet_hours_start": prefs.quiet_hours_start or "22:00",
+            "quiet_hours_end": prefs.quiet_hours_end or "08:00",
+        }
+        await pref_service.update_explicit(current_user.id, {
+            "notification_preferences": notif_prefs,
+        })
+    except Exception as e:
+        logger.warning(f"Failed to sync notification preferences to UserPreferencesCenter: {e}")
+
     return NotificationPreferencesResponse(
         user_id=prefs.user_id,
         enable_system=prefs.enable_system,
         enable_interventions=prefs.enable_interventions,
+        disabled_types=prefs.disabled_types or [],
         notification_level=prefs.notification_level,
         quiet_hours_enabled=prefs.quiet_hours_enabled,
         quiet_hours_start=prefs.quiet_hours_start,

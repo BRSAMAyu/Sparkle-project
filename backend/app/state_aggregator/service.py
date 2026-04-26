@@ -9,36 +9,38 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.user_insight_state import BigFiveTraits
 from app.models.achievement import (
     Achievement,
     AchievementRarity,
     UserAchievement,
     UserStreakStats,
 )
-from app.models.chat import ChatSession
 from app.models.calendar_event import CalendarEvent
+from app.models.chat import ChatSession
 from app.models.focus import FocusSession, FocusStatus
 from app.models.memory import EpisodicMemory
 from app.models.srl_phase_state import SRLPhaseStateRecord
 from app.models.user_preferences import UserPreferencesCenter
-from app.core.user_insight_state import BigFiveTraits
+from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
+from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
+from app.services.idiographic_association_service import IdiographicAssociationService
 from app.services.memory_service import MemoryService
-from app.services.scene_consolidation_service import SceneConsolidationService
+from app.services.metacognition_service import MetacognitionService
 from app.services.policy_scheduler_service import PolicySchedulerService
 from app.services.predictive_service import PredictiveService
-from app.services.idiographic_association_service import IdiographicAssociationService
+from app.services.scene_consolidation_service import SceneConsolidationService
 from app.services.skill_schema import SkillSelectionContext
 from app.services.skill_selection_service import SkillSelectionService
+from app.services.social_signal_bridge import SocialSignalBridge
 from app.services.sufficiency_judge_schema import CurrentTurnParseResult
 from app.services.sufficiency_judge_service import SufficiencyJudgeService
-from app.services.metacognition_service import MetacognitionService
-from app.services.social_signal_bridge import SocialSignalBridge
 from app.state_aggregator.schema import (
-    ActiveSkillSummaryItemValue,
-    ActiveSkillsSummaryValue,
     AchievementProgressSummaryItemValue,
     AchievementSummaryValue,
     AchievementUnlockSummaryItemValue,
+    ActiveSkillsSummaryValue,
+    ActiveSkillSummaryItemValue,
     CalendarContextValue,
     CalendarDeadlineItemValue,
     CalendarTimeBlockItemValue,
@@ -50,15 +52,15 @@ from app.state_aggregator.schema import (
     LearningStateValue,
     MetacognitionProfileSummaryValue,
     PendingPoliciesSummaryValue,
+    RecentPersonMentionsValue,
     RecentReflectionsSummaryValue,
     RecentSceneItemValue,
     RecentScenesSummaryValue,
-    RecentPersonMentionsValue,
-    SRLPhaseSummaryValue,
-    SocialSignalsSummaryValue,
     SocialMentionValue,
-    SufficiencySummaryValue,
+    SocialSignalsSummaryValue,
+    SRLPhaseSummaryValue,
     StateFieldEnvelope,
+    SufficiencySummaryValue,
     TraitPriorDimensionValue,
     TraitsPriorSummaryValue,
     UserStateFieldName,
@@ -104,6 +106,7 @@ class StateAggregatorService:
         self.predictive_service = PredictiveService(db)
         self.working_memory_service = WorkingMemoryService()
         self.sufficiency_judge = SufficiencyJudgeService()
+        self.kill_switches = AuroraStage18KillSwitchService()
         self._cache: dict[
             tuple[UUID, UserStateFieldName, str],
             tuple[StateFieldEnvelope[Any] | None, datetime],
@@ -117,6 +120,7 @@ class StateAggregatorService:
         now: datetime | None = None,
         current_turn_parse: CurrentTurnParseResult | None = None,
         skill_selection_context: SkillSelectionContext | None = None,
+        expose_shadow: bool = False,
     ) -> UserStateV1:
         reference_time = now or _utcnow()
         state = UserStateV1(user_id=user_id)
@@ -127,6 +131,7 @@ class StateAggregatorService:
                 now=reference_time,
                 current_turn_parse=current_turn_parse,
                 skill_selection_context=skill_selection_context,
+                expose_shadow=expose_shadow,
             )
             state = replace(state, **{field_name: envelope})
         return state
@@ -139,6 +144,7 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None,
         skill_selection_context: SkillSelectionContext | None,
+        expose_shadow: bool,
     ) -> StateFieldEnvelope[Any] | None:
         cache_key = (
             user_id,
@@ -147,8 +153,17 @@ class StateAggregatorService:
                 field_name, current_turn_parse, skill_selection_context
             ),
         )
+        aggregator_mode = await self.kill_switches.get_feature_mode("aggregator_enabled")
+        if aggregator_mode == "off":
+            return None
+        stage33_social_mode: str | None = None
+        if field_name in {"recent_person_mentions", "social_signals_summary"}:
+            stage33_social_mode = await AuroraStage33KillSwitchService().get_feature_mode("social")
+            if stage33_social_mode == "off":
+                return None
+
         cached = self._cache.get(cache_key)
-        if cached is not None:
+        if aggregator_mode == "live" and stage33_social_mode != "shadow" and cached is not None:
             envelope, expires_at = cached
             if expires_at > now:
                 if envelope is None:
@@ -196,6 +211,13 @@ class StateAggregatorService:
                 else skill_selection_context
             ),
         )
+        if aggregator_mode == "shadow":
+            return None
+        if stage33_social_mode == "shadow" and not expose_shadow:
+            return None
+        if stage33_social_mode == "shadow":
+            return envelope
+
         ttl_seconds = self.FIELD_TTLS_SECONDS[field_name]
         expires_at = now + timedelta(seconds=ttl_seconds)
         if envelope is not None:
@@ -863,7 +885,7 @@ class StateAggregatorService:
             confidence=float(getattr(row, "confidence", 0.0) or 0.0),
             source=str(getattr(row, "source", "default") or "default"),
         )
-        snapshot_ids = tuple()
+        snapshot_ids = ()
         if row is not None:
             snapshot_ids = (f"srl_phase:{row.user_id}",)
         return StateFieldEnvelope(

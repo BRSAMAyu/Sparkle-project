@@ -1006,7 +1006,7 @@ class GroupService:
         await GroupMessageService.send_system_message(
             db,
             group_id,
-            f"成员已被移出群组：{target.user_id}",
+            f"成员已被移出群组：{target.nickname or target.username}",
         )
         return True
 

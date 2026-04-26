@@ -9,6 +9,7 @@ from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -401,6 +402,22 @@ async def cancel_contract(
     contract.status = ContractStatus.FAILED
     contract.failed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     contract.failure_reason = "User cancelled"
+
+    try:
+        from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+        await AchievementEngine(db).process_event(
+            user_id=str(current_user.id),
+            event_type=AchievementEvent.CONTRACT_FAILED,
+            contract_id=str(contract.id),
+            target_days=int(contract.target_days or 0),
+            current_days=int(contract.current_days or 0),
+            target_study_minutes=int(contract.target_study_minutes or 0),
+            photon_stake=int(contract.photon_stake or 0),
+            source="contract_cancelled",
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to publish contract failed achievement event for contract {contract.id}: {exc}")
 
     await db.commit()
 

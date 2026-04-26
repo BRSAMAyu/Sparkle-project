@@ -34,6 +34,7 @@ from app.orchestration.prompts import build_system_prompt
 from app.services.analytics_service import AnalyticsService
 from app.services.llm_service import LLMResponse, llm_service
 from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
+from app.services.task_service import TaskService
 from app.tools.registry import tool_registry
 
 router = APIRouter()
@@ -46,6 +47,7 @@ TASK_CHAT_ALLOWED_TOOLS = [
     "suggest_quick_task",
     "get_task_detail",
 ]
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
@@ -80,16 +82,18 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = None
     context: dict[str, Any] | None = None  # 前端传递的额外上下文
 
+
 class ChatResponse(BaseModel):
     message: str
     conversation_id: str
-    widgets: list[dict[str, Any]] = []        # 需要渲染的组件列表
-    tool_results: list[dict[str, Any]] = []   # 工具执行结果
+    widgets: list[dict[str, Any]] = []  # 需要渲染的组件列表
+    tool_results: list[dict[str, Any]] = []  # 工具执行结果
     has_errors: bool = False
     errors: list[dict[str, str]] | None = None
     requires_confirmation: bool = False
     confirmation_data: dict | None = None
-    dormant_injection: dict | None = None     # WS-D: dormant metadata for mobile
+    dormant_injection: dict | None = None  # WS-D: dormant metadata for mobile
+
 
 @router.post("/task/{task_id}", response_model=ChatResponse)
 async def chat_with_task_context(
@@ -97,13 +101,14 @@ async def chat_with_task_context(
     request: ChatRequest,
     req_raw: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """
     Task-specific Chat Endpoint
     Binds conversation to a task and injects task context.
     """
     from app.models.task import Task
+
     logger.info(f"Chat request headers: {req_raw.headers}")
 
     # 1. Verify Task Ownership
@@ -114,12 +119,31 @@ async def chat_with_task_context(
     tool_executor = ToolExecutor()
     response_composer = ResponseComposer()
     AgentErrorHandler()
+    request_context = dict(request.context or {})
+    request_task_state = request_context.get("task_state")
+    task_state: dict[str, Any] = {}
+    if getattr(task.status, "value", task.status) == "STUCK":
+        task_state = TaskService.build_stuck_task_state(task)
+    if isinstance(request_task_state, dict):
+        task_state = {**task_state, **request_task_state}
+    if task_state:
+        request_context["task_state"] = task_state
+        if task_state.get("stage") == "stuck":
+            request_context.setdefault("task_stage", "stuck")
+            request_context.setdefault(
+                "stuck_event",
+                {
+                    "task_id": str(task.id),
+                    "task_title": task.title,
+                    "source": "task_chat",
+                },
+            )
 
     # 2. Build Context
     user_context = await get_user_context(
         db,
         current_user.id,
-        payload={"context": request.context, "message": request.message},
+        payload={"context": request_context, "message": request.message},
     )
 
     # Inject Task Context specifically
@@ -134,45 +158,67 @@ async def chat_with_task_context(
         "phase_index": task.phase_index,
         "success_criteria": task.success_criteria,
         "estimated_minutes": task.estimated_minutes,
-        "current_focus": "The user is currently working on this task."
+        "current_focus": "The user is currently working on this task.",
     }
+    if task_state:
+        task_context["task_state"] = task_state
     user_context["current_task"] = task_context
+    if task_state:
+        user_context["task_state"] = task_state
 
-    # --- WS-D: Dormant injection (behind its own flag, sidecar semantics) ---
+    # --- WS-D: Dormant injection (always-on, with Aurora state enrichment) ---
     dormant_injection_block = ""
     dormant_injection_meta: dict | None = None
     try:
-        from app.config.aurora import aurora_flags
-        if aurora_flags.TASK_ASSISTANT_DORMANT_MODE:
-            from app.task_assistant.dormant_injector import DormantInjector
-            injector = DormantInjector()
-            injection = await injector.inject(task.id, current_user.id)
-            # Build injection context block only from available items
-            available = [it for it in injection.items if it.available]
-            if available:
-                lines = ["\nAurora dormant injection (read-only context):"]
-                for item in available:
-                    if item.payload:
-                        lines.append(f"- [{item.kind.value}] {item.payload}")
-                lines.append(
-                    f"- ux_intent={injection.ux_intent}, "
-                    f"presence={injection.aurora_presence}"
-                )
-                dormant_injection_block = "\n".join(lines)
-            # Store injection data for outcome capture + mobile metadata
-            injection_data = injection.model_dump(mode="json")
-            user_context["_dormant_injection"] = injection_data
-            dormant_injection_meta = injection_data
+        from app.task_assistant.dormant_injector import DormantInjector
+
+        # Build prior_outputs from Aurora user state
+        prior_outputs: dict[str, Any] = {}
+        try:
+            from app.state_aggregator.service import StateAggregator
+            from app.state_aggregator.schema import UserStateFieldName
+
+            aggregator = StateAggregator(db)
+            state = await aggregator.get_user_state(
+                current_user.id,
+                required_fields=(
+                    UserStateFieldName.ENGAGEMENT_STATE,
+                    UserStateFieldName.LEARNING_STATE,
+                    UserStateFieldName.ACTIVE_SKILLS,
+                ),
+            )
+            if state and hasattr(state, "engagement_state") and state.engagement_state:
+                es = state.engagement_state
+                prior_outputs["cognitive_load"] = getattr(es, "cognitive_load", None)
+                prior_outputs["interruptibility"] = getattr(es, "interruptibility", None)
+                prior_outputs["strain_index"] = getattr(es, "strain_index", None)
+            if state and hasattr(state, "learning_state") and state.learning_state:
+                ls = state.learning_state
+                prior_outputs["recent_mastery_changes"] = getattr(ls, "recent_mastery_changes", None)
+        except Exception as agg_exc:
+            logger.debug(f"Aurora state aggregation skipped for task chat: {agg_exc}")
+
+        injector = DormantInjector()
+        injection = await injector.inject(task.id, current_user.id, prior_outputs=prior_outputs)
+        # Build injection context block only from available items
+        available = [it for it in injection.items if it.available]
+        if available:
+            lines = ["\nAurora dormant injection (read-only context):"]
+            for item in available:
+                if item.payload:
+                    lines.append(f"- [{item.kind.value}] {item.payload}")
+            lines.append(f"- ux_intent={injection.ux_intent}, " f"presence={injection.aurora_presence}")
+            dormant_injection_block = "\n".join(lines)
+        # Store injection data for outcome capture + mobile metadata
+        injection_data = injection.model_dump(mode="json")
+        user_context["_dormant_injection"] = injection_data
+        dormant_injection_meta = injection_data
     except Exception as exc:
         logger.debug(f"WS-D: dormant injection skipped: {exc}")
 
-    conversation_history_raw = await get_conversation_history(
-        db, current_user.id, request.conversation_id
-    )
+    conversation_history_raw = await get_conversation_history(db, current_user.id, request.conversation_id)
 
-    llm_conversation_history = [
-        {"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw
-    ]
+    llm_conversation_history = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw]
 
     # 3. System Prompt with Task Focus
     system_prompt = build_system_prompt(user_context, "History injected.")
@@ -190,6 +236,15 @@ async def chat_with_task_context(
     )
     if dormant_injection_block:
         system_prompt += dormant_injection_block
+    if task_state.get("stage") == "stuck":
+        system_prompt += (
+            "\n\nSTUCK TASK DIAGNOSTIC MODE:\n"
+            f"task_state={json.dumps(task_state, ensure_ascii=False)}\n"
+            "Treat the next user message as a stuck-task diagnostic turn. "
+            "Respond with two clearly labeled parts: mistake_diagnosis and "
+            "one_targeted_fix. Keep the fix to one concrete action the user "
+            "can start within five minutes."
+        )
     # 4. LLM Call (Standard Flow)
     # This duplicates the logic of the main chat endpoint but simplifies for this phase
     # Ideally, refactor common logic into a service method. For now, we inline for safety.
@@ -198,7 +253,7 @@ async def chat_with_task_context(
         system_prompt=system_prompt,
         user_message=request.message,
         tools=_build_task_chat_tools_schema(),
-        conversation_history=llm_conversation_history
+        conversation_history=llm_conversation_history,
     )
 
     # ... (Simplified tool handling same as main chat, omitting complex confirm/retry for brevity unless needed)
@@ -214,29 +269,26 @@ async def chat_with_task_context(
     # Copying critical parts for tool execution support:
     if llm_response.tool_calls:
         tool_results = await tool_executor.execute_tool_calls(
-            tool_calls=llm_response.tool_calls,
-            user_id=str(current_user.id),
-            db_session=db
+            tool_calls=llm_response.tool_calls, user_id=str(current_user.id), db_session=db
         )
         # We skip the complex confirmation/retry loop for this specific endpoint for now
         # to keep it simple, or we can copy it.
         # Let's do a simple follow-up if tools were called.
 
         if tool_results:
-             # Append LLM's initial response
+            # Append LLM's initial response
             llm_response_for_history = {
                 "role": "assistant",
                 "content": llm_response.content,
-                "tool_calls": llm_response.tool_calls
+                "tool_calls": llm_response.tool_calls,
             }
 
-            updated_history = llm_conversation_history + [
-                {"role": "user", "content": request.message}
-            ] + [llm_response_for_history]
+            updated_history = (
+                llm_conversation_history + [{"role": "user", "content": request.message}] + [llm_response_for_history]
+            )
 
             final_llm_response = await llm_service.continue_with_tool_results(
-                conversation_history=updated_history,
-                tool_results=[tr.model_dump() for tr in tool_results]
+                conversation_history=updated_history, tool_results=[tr.model_dump() for tr in tool_results]
             )
             llm_text = final_llm_response.content
 
@@ -254,10 +306,7 @@ async def chat_with_task_context(
     )
 
     response_data = response_composer.compose_response(
-        llm_text=llm_text,
-        tool_results=tool_results,
-        requires_confirmation=False,
-        confirmation_data=None
+        llm_text=llm_text, tool_results=tool_results, requires_confirmation=False, confirmation_data=None
     )
 
     # Save standard chat message
@@ -275,6 +324,7 @@ async def chat_with_task_context(
     try:
         if user_context.get("_dormant_injection"):
             from app.task_assistant.outcome_capture import OutcomeCapture
+
             cap = OutcomeCapture()
             await cap.record(
                 task_id=task.id,
@@ -288,12 +338,13 @@ async def chat_with_task_context(
 
     return ChatResponse(**response_data, conversation_id=session_id_str, dormant_injection=dormant_injection_meta)
 
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
     req_raw: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """
     Agent 模式的聊天接口
@@ -314,17 +365,19 @@ async def chat(
         current_user.id,
         payload={"context": request.context, "message": request.message},
     )
-    conversation_history_raw = await get_conversation_history(
-        db, current_user.id, request.conversation_id
-    )
+    conversation_history_raw = await get_conversation_history(db, current_user.id, request.conversation_id)
 
     # Pre-format for LLM
-    llm_conversation_history = [
-        {"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw
-    ]
+    llm_conversation_history = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw]
 
     planning_context = dict(request_context)
     planning_context["profile_context"] = user_context.get("profile_context", {})
+    if isinstance(user_context.get("calendar_context"), dict):
+        planning_context["calendar_context"] = user_context["calendar_context"]
+    elif isinstance(user_context.get("cognitive_context"), dict) and isinstance(
+        user_context["cognitive_context"].get("calendar_context"), dict
+    ):
+        planning_context["calendar_context"] = user_context["cognitive_context"]["calendar_context"]
 
     if request_context.get("mode") == "onboarding_modeling":
         if bool(request_context.get("skip")):
@@ -398,10 +451,12 @@ async def chat(
             conversation_id=session_id_str,
         )
         if planning_runtime_state is not None:
-            planning_detour_prompt = planning_workflow_manager.runtime_adapter.build_detour_prompt(planning_runtime_state)
+            planning_detour_prompt = planning_workflow_manager.runtime_adapter.build_detour_prompt(
+                planning_runtime_state
+            )
 
     # 2. 构建 System Prompt
-    system_prompt = build_system_prompt(user_context, "暂无对话历史") # History passed directly to LLM
+    system_prompt = build_system_prompt(user_context, "暂无对话历史")  # History passed directly to LLM
     if planning_detour_prompt:
         system_prompt += f"\n\nAURORA PLANNING SIDECAR:\n{planning_detour_prompt}"
 
@@ -410,7 +465,7 @@ async def chat(
         system_prompt=system_prompt,
         user_message=request.message,
         tools=tool_registry.get_openai_tools_schema(),
-        conversation_history=llm_conversation_history
+        conversation_history=llm_conversation_history,
     )
 
     # 4. 处理工具调用
@@ -435,7 +490,7 @@ async def chat(
                     arguments=arguments,
                     user_id=str(current_user.id),
                     description=f"执行 {tool.description}",
-                    preview_data={"tool_call": tool_call}
+                    preview_data={"tool_call": tool_call},
                 )
 
                 requires_confirmation = True
@@ -443,16 +498,14 @@ async def chat(
                     "action_id": action_id,
                     "tool_name": tool_name,
                     "description": f"即将执行: {tool.description}",
-                    "preview": arguments
+                    "preview": arguments,
                 }
                 break  # 只处理第一个需要确认的工具
 
         # 4.2 如果不需要确认，执行工具调用
         if not requires_confirmation:
             tool_results = await tool_executor.execute_tool_calls(
-                tool_calls=llm_response.tool_calls,
-                user_id=str(current_user.id),
-                db_session=db
+                tool_calls=llm_response.tool_calls, user_id=str(current_user.id), db_session=db
             )
 
             # 4.3 错误处理与自我修正
@@ -462,7 +515,7 @@ async def chat(
                 tool_results=tool_results,
                 original_requests=llm_response.tool_calls,
                 user_id=str(current_user.id),
-                db_session=db
+                db_session=db,
             )
             tool_results = corrected_results
 
@@ -475,16 +528,17 @@ async def chat(
             llm_response_for_history = {
                 "role": "assistant",
                 "content": llm_response.content,
-                "tool_calls": llm_response.tool_calls # Store raw tool calls if needed
+                "tool_calls": llm_response.tool_calls,  # Store raw tool calls if needed
             }
 
-            updated_conversation_history = llm_conversation_history + [
-                {"role": "user", "content": request.message} # User message
-            ] + [llm_response_for_history]
+            updated_conversation_history = (
+                llm_conversation_history
+                + [{"role": "user", "content": request.message}]  # User message
+                + [llm_response_for_history]
+            )
 
             final_llm_response = await llm_service.continue_with_tool_results(
-                conversation_history=updated_conversation_history,
-                tool_results=[tr.model_dump() for tr in tool_results]
+                conversation_history=updated_conversation_history, tool_results=[tr.model_dump() for tr in tool_results]
             )
             llm_text = final_llm_response.content
         else:
@@ -497,7 +551,7 @@ async def chat(
         llm_text=llm_text,
         tool_results=tool_results,
         requires_confirmation=requires_confirmation,
-        confirmation_data=confirmation_data
+        confirmation_data=confirmation_data,
     )
 
     # 7. 保存消息到数据库
@@ -507,21 +561,21 @@ async def chat(
         session_id=session_id_uuid,
         user_message=request.message,
         assistant_message=llm_text,
-        tool_results=[tr.model_dump() for tr in tool_results] # save tool results in message
+        tool_results=[tr.model_dump() for tr in tool_results],  # save tool results in message
     )
 
     return ChatResponse(**response_data, conversation_id=session_id_str)
 
+
 @router.post("/chat/stream")
 async def chat_stream(
-    request: ChatRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    request: ChatRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     """
     流式聊天接口（SSE）
     适合长回复场景，实时展示 LLM 生成内容
     """
+
     async def event_generator():
         tool_executor = ToolExecutor()
         error_handler = AgentErrorHandler()
@@ -534,21 +588,19 @@ async def chat_stream(
             user_id_uuid,
             payload={"context": request.context, "message": request.message},
         )
-        conversation_history_raw = await get_conversation_history(
-            db, user_id_uuid, request.conversation_id
-        )
+        conversation_history_raw = await get_conversation_history(db, user_id_uuid, request.conversation_id)
         llm_conversation_history = [
             {"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw
         ]
 
-        system_prompt = build_system_prompt(user_context, "暂无对话历史") # History passed directly to LLM
+        system_prompt = build_system_prompt(user_context, "暂无对话历史")  # History passed directly to LLM
 
         collected_text_content = ""
-        collected_tool_calls_raw = [] # Raw tool calls from LLM (function_call format)
+        collected_tool_calls_raw = []  # Raw tool calls from LLM (function_call format)
 
         # Keep track of messages for history
         message_history_for_llm_callback = llm_conversation_history + [
-            {"role": "user", "content": request.message} # Add user message to history
+            {"role": "user", "content": request.message}  # Add user message to history
         ]
 
         async for chunk in llm_service.chat_stream_with_tools(
@@ -565,22 +617,26 @@ async def chat_stream(
             elif chunk.type == "tool_call_chunk":
                 # For now, we only care about the tool_call_end for execution
                 # We can send tool_start event when tool_name is first received
-                if chunk.tool_name and collected_tool_calls_raw and \
-                   collected_tool_calls_raw[-1].get("function", {}).get("name") != chunk.tool_name:
+                if (
+                    chunk.tool_name
+                    and collected_tool_calls_raw
+                    and collected_tool_calls_raw[-1].get("function", {}).get("name") != chunk.tool_name
+                ):
                     yield f"data: {json.dumps({'type': 'tool_start', 'tool': chunk.tool_name})}\\n\n"
 
                 # Append raw chunks to reconstruct full tool call later
                 if not collected_tool_calls_raw or collected_tool_calls_raw[-1]["id"] != chunk.tool_call_id:
-                    collected_tool_calls_raw.append({
-                        "id": chunk.tool_call_id,
-                        "function": {"name": chunk.tool_name or "", "arguments": chunk.arguments or ""}
-                    })
+                    collected_tool_calls_raw.append(
+                        {
+                            "id": chunk.tool_call_id,
+                            "function": {"name": chunk.tool_name or "", "arguments": chunk.arguments or ""},
+                        }
+                    )
                 else:
                     if chunk.tool_name:
                         collected_tool_calls_raw[-1]["function"]["name"] = chunk.tool_name
                     if chunk.arguments:
                         collected_tool_calls_raw[-1]["function"]["arguments"] += chunk.arguments
-
 
             elif chunk.type == "tool_call_end":
                 # Execute tool once full arguments are received
@@ -590,17 +646,14 @@ async def chat_stream(
                     tool_name=chunk.tool_name,
                     arguments=chunk.full_arguments,
                     user_id=str(current_user.id),
-                    db_session=db
+                    db_session=db,
                 )
 
                 # 错误处理与自我修正
                 if not result.success and error_handler.should_retry(result):
                     original_request = {
                         "id": chunk.tool_call_id,
-                        "function": {
-                            "name": chunk.tool_name,
-                            "arguments": json.dumps(chunk.full_arguments)
-                        }
+                        "function": {"name": chunk.tool_name, "arguments": json.dumps(chunk.full_arguments)},
                     }
                     result = await error_handler.handle_tool_error(
                         llm_service=llm_service,
@@ -608,7 +661,7 @@ async def chat_stream(
                         original_request=original_request,
                         retry_count=0,
                         user_id=str(current_user.id),
-                        db_session=db
+                        db_session=db,
                     )
 
                 yield f"data: {json.dumps({'type': 'tool_result', 'result': result.model_dump()})}\\n\n"
@@ -620,25 +673,23 @@ async def chat_stream(
                 # If tool was successfully executed, send tool result back to LLM to continue conversation
                 # This requires an extra turn to LLM
                 # Add LLM's initial response (which contained tool calls) to history
-                message_history_for_llm_callback.append({
-                    "role": "assistant",
-                    "content": "", # no text content with tool call initially
-                    "tool_calls": [
-                        {
-                            "id": chunk.tool_call_id,
-                            "type": "function",
-                            "function": {
-                                "name": chunk.tool_name,
-                                "arguments": json.dumps(chunk.full_arguments)
+                message_history_for_llm_callback.append(
+                    {
+                        "role": "assistant",
+                        "content": "",  # no text content with tool call initially
+                        "tool_calls": [
+                            {
+                                "id": chunk.tool_call_id,
+                                "type": "function",
+                                "function": {"name": chunk.tool_name, "arguments": json.dumps(chunk.full_arguments)},
                             }
-                        }
-                    ]
-                })
+                        ],
+                    }
+                )
 
                 # Call LLM again to get final text
                 final_llm_response = await llm_service.continue_with_tool_results(
-                    conversation_history=message_history_for_llm_callback,
-                    tool_results=[result.model_dump()]
+                    conversation_history=message_history_for_llm_callback, tool_results=[result.model_dump()]
                 )
                 final_text = final_llm_response.content
                 yield f"data: {json.dumps({'type': 'text', 'content': final_text})}\\n\n"
@@ -646,8 +697,8 @@ async def chat_stream(
 
         # If no tool calls were made, just final text from first LLM call
         if not collected_tool_calls_raw and collected_text_content:
-             # Already yielded content above, but ensuring consistency
-             pass
+            # Already yielded content above, but ensuring consistency
+            pass
 
         # Save message to database after all is done
         await save_chat_message(
@@ -657,22 +708,17 @@ async def chat_stream(
             user_message=request.message,
             assistant_message=collected_text_content,
             # tool_results should be collected during the stream, but simplified here
-            tool_results=[]
+            tool_results=[],
         )
 
         yield f"data: {json.dumps({'type': 'done'})}\\n\n"
 
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream"
-    )
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 
 @router.post("/chat/confirm")
 async def confirm_action(
-    action_id: str,
-    confirmed: bool,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    action_id: str, confirmed: bool, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     """
     确认高风险操作
@@ -714,24 +760,19 @@ async def confirm_action(
                     arguments=arguments,
                     user_id=str(current_user.id),
                     db_session=db,
-                    compensation_call=compensation_call
+                    compensation_call=compensation_call,
                 )
 
                 # 错误处理与自我修正
                 if not result.success and error_handler.should_retry(result):
-                    original_request = {
-                        "function": {
-                            "name": tool_name,
-                            "arguments": json.dumps(arguments)
-                        }
-                    }
+                    original_request = {"function": {"name": tool_name, "arguments": json.dumps(arguments)}}
                     result = await error_handler.handle_tool_error(
                         llm_service=llm_service,
                         tool_result=result,
                         original_request=original_request,
                         retry_count=0,
                         user_id=str(current_user.id),
-                        db_session=db
+                        db_session=db,
                     )
 
                 results.append(result.model_dump())
@@ -748,16 +789,13 @@ async def confirm_action(
             tool_name=pending_action["tool_name"],
             arguments=pending_action["arguments"],
             user_id=str(current_user.id),
-            db_session=db
+            db_session=db,
         )
 
         # 错误处理与自我修正
         if not result.success and error_handler.should_retry(result):
             original_request = {
-                "function": {
-                    "name": pending_action["tool_name"],
-                    "arguments": json.dumps(pending_action["arguments"])
-                }
+                "function": {"name": pending_action["tool_name"], "arguments": json.dumps(pending_action["arguments"])}
             }
             result = await error_handler.handle_tool_error(
                 llm_service=llm_service,
@@ -765,7 +803,7 @@ async def confirm_action(
                 original_request=original_request,
                 retry_count=0,
                 user_id=str(current_user.id),
-                db_session=db
+                db_session=db,
             )
 
         reason = pending_action.get("preview_data", {}).get("reason", "unknown")
@@ -781,7 +819,9 @@ async def confirm_action(
         await pending_actions_store.delete(action_id, str(current_user.id))
         raise HTTPException(status_code=500, detail="Action execution failed")
 
+
 # ============辅助函数 ============
+
 
 async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, Any] | None = None) -> dict:
     """
@@ -800,7 +840,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
         "flame_level": 1,
         "flame_brightness": 0,
         "knowledge_stats": {},
-        "analytics_summary": ""
+        "analytics_summary": "",
     }
 
     try:
@@ -849,6 +889,19 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
                 prompt_context["profile_context"] = profile_context.to_prompt_context()
             except Exception as exc:
                 logger.warning(f"Failed to attach profile context: {exc}")
+            try:
+                from app.core.context_manager import ContextOrchestrator
+
+                cognitive_context = await ContextOrchestrator(db, cache_service.redis).get_user_context(str(user_id))
+                if cognitive_context.calendar_context:
+                    prompt_context["calendar_context"] = cognitive_context.calendar_context
+                    cognitive_payload = prompt_context.get("cognitive_context")
+                    if not isinstance(cognitive_payload, dict):
+                        cognitive_payload = {}
+                        prompt_context["cognitive_context"] = cognitive_payload
+                    cognitive_payload["calendar_context"] = cognitive_context.calendar_context
+            except Exception as exc:
+                logger.warning(f"Failed to attach calendar context: {exc}")
             return prompt_context
 
         # 0. 获取 Analytics Summary
@@ -896,12 +949,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
         seven_days_ago = _utcnow() - timedelta(days=7)
         tasks_stmt = (
             select(Task)
-            .where(
-                and_(
-                    Task.user_id == user_id,
-                    Task.created_at >= seven_days_ago
-                )
-            )
+            .where(and_(Task.user_id == user_id, Task.created_at >= seven_days_ago))
             .order_by(Task.created_at.desc())
             .limit(10)  # 最多返回10个任务
         )
@@ -915,7 +963,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
                 "type": task.task_type,
                 "status": task.status,
                 "estimated_minutes": task.estimated_minutes,
-                "actual_minutes": task.actual_minutes
+                "actual_minutes": task.actual_minutes,
             }
             for task in tasks
         ]
@@ -923,12 +971,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
         # 3. 获取活跃计划（未完成的计划）
         plans_stmt = (
             select(Plan)
-            .where(
-                and_(
-                    Plan.user_id == user_id,
-                    not Plan.is_completed
-                )
-            )
+            .where(and_(Plan.user_id == user_id, not Plan.is_completed))
             .order_by(Plan.created_at.desc())
             .limit(5)  # 最多返回5个计划
         )
@@ -941,16 +984,13 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
                 "title": plan.title,
                 "type": plan.plan_type,
                 "target_date": plan.target_date.isoformat() if plan.target_date else None,
-                "progress": plan.progress or 0
+                "progress": plan.progress or 0,
             }
             for plan in plans
         ]
 
         # 4. 获取知识星图统计
-        nodes_stmt = (
-            select(UserNodeStatus)
-            .where(UserNodeStatus.user_id == user_id)
-        )
+        nodes_stmt = select(UserNodeStatus).where(UserNodeStatus.user_id == user_id)
         nodes_result = await db.execute(nodes_stmt)
         nodes = nodes_result.scalars().all()
 
@@ -961,7 +1001,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
         context["knowledge_stats"] = {
             "total_nodes": total_nodes,
             "mastered_nodes": mastered_nodes,
-            "learning_nodes": learning_nodes
+            "learning_nodes": learning_nodes,
         }
 
     except Exception as e:
@@ -970,10 +1010,9 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
 
     return context
 
+
 async def get_conversation_history(
-    db: AsyncSession,
-    user_id: UUID,
-    conversation_id: str | None
+    db: AsyncSession, user_id: UUID, conversation_id: str | None
 ) -> list[dict[str, str]]:
     """获取对话历史"""
     if not conversation_id:
@@ -982,18 +1021,13 @@ async def get_conversation_history(
     try:
         session_id = UUID(conversation_id)
     except ValueError:
-        return [] # Invalid conversation_id format
+        return []  # Invalid conversation_id format
 
     stmt = (
         select(ChatMessage)
-        .where(
-            and_(
-                ChatMessage.user_id == user_id,
-                ChatMessage.session_id == session_id
-            )
-        )
+        .where(and_(ChatMessage.user_id == user_id, ChatMessage.session_id == session_id))
         .order_by(ChatMessage.created_at.desc())
-        .limit(10) # Limit history to last 10 messages for simplicity
+        .limit(10)  # Limit history to last 10 messages for simplicity
     )
     result = await db.execute(stmt)
     messages = result.scalars().all()
@@ -1002,11 +1036,9 @@ async def get_conversation_history(
     # Messages are fetched in descending order, reverse to chronological for LLM
     for msg in reversed(messages):
         role = msg.role.value if isinstance(msg.role, MessageRole) else msg.role
-        history_for_llm.append({
-            "role": role,
-            "content": msg.content
-        })
+        history_for_llm.append({"role": role, "content": msg.content})
     return history_for_llm
+
 
 async def save_chat_message(
     db: AsyncSession,
@@ -1051,7 +1083,7 @@ async def save_chat_message(
         role=MessageRole.ASSISTANT,
         content=assistant_message,
         task_id=task_id,
-        actions=tool_results if tool_results else None, # Store tool results as actions
+        actions=tool_results if tool_results else None,  # Store tool results as actions
     )
     db.add(assistant_msg_db)
 
@@ -1074,10 +1106,7 @@ from app.schemas.chat import ChatMessageDetail, ChatSession
 
 @router.get("/sessions", response_model=list[ChatSession])
 async def get_chat_sessions(
-    limit: int = 20,
-    offset: int = 0,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    limit: int = 20, offset: int = 0, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     """
     获取用户的聊天会话列表
@@ -1090,10 +1119,10 @@ async def get_chat_sessions(
             ChatMessage.task_id,
             func.count(ChatMessage.id).label("message_count"),
             func.max(ChatMessage.created_at).label("last_message_at"),
-            func.min(ChatMessage.created_at).label("created_at")
+            func.min(ChatMessage.created_at).label("created_at"),
         )
         .where(ChatMessage.user_id == current_user.id)
-        .where(ChatMessage.session_id != UUID('00000000-0000-0000-0000-000000000000'))
+        .where(ChatMessage.session_id != UUID("00000000-0000-0000-0000-000000000000"))
         .group_by(ChatMessage.session_id, ChatMessage.user_id, ChatMessage.task_id)
         .order_by(func.max(ChatMessage.created_at).desc())
         .offset(offset)
@@ -1104,14 +1133,16 @@ async def get_chat_sessions(
 
     sessions = []
     for row in rows:
-        sessions.append(ChatSession(
-            session_id=row.session_id,
-            user_id=row.user_id,
-            task_id=row.task_id,
-            message_count=row.message_count,
-            created_at=row.created_at,
-            last_message_at=row.last_message_at,
-        ))
+        sessions.append(
+            ChatSession(
+                session_id=row.session_id,
+                user_id=row.user_id,
+                task_id=row.task_id,
+                message_count=row.message_count,
+                created_at=row.created_at,
+                last_message_at=row.last_message_at,
+            )
+        )
 
     return sessions
 
@@ -1122,7 +1153,7 @@ async def get_chat_history(
     limit: int = 50,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """
     获取特定会话的聊天历史
@@ -1159,12 +1190,7 @@ async def get_chat_history(
 
     stmt = (
         select(ChatMessage)
-        .where(
-            and_(
-                ChatMessage.user_id == current_user.id,
-                ChatMessage.session_id == session_id
-            )
-        )
+        .where(and_(ChatMessage.user_id == current_user.id, ChatMessage.session_id == session_id))
         .order_by(ChatMessage.created_at.asc())
         .offset(offset)
         .limit(limit)

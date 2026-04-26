@@ -185,10 +185,7 @@ DEFAULT_SEMANTIC_GATING_RULES: dict[str, dict[str, float | int]] = {
 
 
 def _get_semantic_gating_rules() -> dict[str, dict[str, float | int]]:
-    rules = {
-        section: dict(config)
-        for section, config in DEFAULT_SEMANTIC_GATING_RULES.items()
-    }
+    rules = {section: dict(config) for section, config in DEFAULT_SEMANTIC_GATING_RULES.items()}
     overrides = settings.CONTEXT_SEMANTIC_GATING_RULES
     if not isinstance(overrides, dict):
         return rules
@@ -370,6 +367,7 @@ class ContextPack:
             "preferences": self.preferences,
             "active_goals": self.goals,
             "episodic_memories": self.episodic_memories,
+            "past_session_memory": self.episodic_memories,
             "context_pack": {
                 "intent": self.intent,
                 "budgets": self.budgets,
@@ -529,15 +527,18 @@ class ContextPackBuilder:
 
         ranked_preferences = (
             rank_items(resolved_pref_records, kind="preferences", weights=weights)
-            if ranking_enabled else _normalized_ranked(resolved_pref_records)
+            if ranking_enabled
+            else _normalized_ranked(resolved_pref_records)
         )
         ranked_goals = (
             rank_items(resolved_goals, kind="goals", weights=weights)
-            if ranking_enabled else _normalized_ranked(resolved_goals)
+            if ranking_enabled
+            else _normalized_ranked(resolved_goals)
         )
         ranked_episodic = (
             rank_items(resolved_episodic, kind="episodic", weights=weights)
-            if ranking_enabled else _normalized_ranked(resolved_episodic)
+            if ranking_enabled
+            else _normalized_ranked(resolved_episodic)
         )
 
         semantic_metadata: dict[str, Any] = {}
@@ -558,10 +559,7 @@ class ContextPackBuilder:
                 section="episodic",
             )
 
-        preferences = {
-            entry.item.pref_key: entry.item.pref_value
-            for entry in ranked_preferences
-        }
+        preferences = {entry.item.pref_key: entry.item.pref_value for entry in ranked_preferences}
         goal_payloads = [
             {
                 "id": str(entry.item.id),
@@ -575,6 +573,9 @@ class ContextPackBuilder:
             {
                 "id": str(entry.item.id),
                 "summary": entry.item.summary,
+                "subject_type": str(getattr(entry.item, "subject_type", "") or "").strip(),
+                "source_type": str(getattr(entry.item, "source_type", "") or "").strip(),
+                "source_lane": str(getattr(entry.item, "source_lane", "") or "").strip(),
                 "occurred_at": entry.item.occurred_at,
                 "importance_score": entry.item.importance_score,
                 "tags": getattr(entry.item, "tags", None) or [],
@@ -594,20 +595,9 @@ class ContextPackBuilder:
             if key not in PreferenceService.DEFAULT_EXPLICIT or value != default_value:
                 profile_keys.add(key)
         if profile_keys:
-            ranked_preferences = [
-                entry for entry in ranked_preferences
-                if entry.item.pref_key not in profile_keys
-            ]
-            preferences = {
-                key: value
-                for key, value in preferences.items()
-                if key not in profile_keys
-            }
-            pref_scores = {
-                key: score
-                for key, score in pref_scores.items()
-                if key not in profile_keys
-            }
+            ranked_preferences = [entry for entry in ranked_preferences if entry.item.pref_key not in profile_keys]
+            preferences = {key: value for key, value in preferences.items() if key not in profile_keys}
+            pref_scores = {key: score for key, score in pref_scores.items() if key not in profile_keys}
 
         pref_budget = budgets.get("preferences", 0)
         goals_budget = budgets.get("goals", 0)
@@ -744,19 +734,11 @@ class ContextPackBuilder:
             trimmed_goal_ids = {payload.get("id") for payload in trimmed_goals}
             trimmed_episodic_ids = {payload.get("id") for payload in trimmed_episodic}
             pref_scores = [
-                item.evidence_score
-                for item in preference_source_records
-                if item.pref_key in trimmed_preferences
+                item.evidence_score for item in preference_source_records if item.pref_key in trimmed_preferences
             ]
-            goal_scores = [
-                item.evidence_score
-                for item in goal_source_records
-                if str(item.id) in trimmed_goal_ids
-            ]
+            goal_scores = [item.evidence_score for item in goal_source_records if str(item.id) in trimmed_goal_ids]
             episodic_scores = [
-                item.evidence_score
-                for item in episodic_source_records
-                if str(item.id) in trimmed_episodic_ids
+                item.evidence_score for item in episodic_source_records if str(item.id) in trimmed_episodic_ids
             ]
             scores = [score for score in pref_scores + goal_scores + episodic_scores if score is not None]
             evidence_avg = (sum(scores) / len(scores)) if scores else None
@@ -848,9 +830,7 @@ class ContextPackBuilder:
             from app.models.memory import MemoryGoal
 
             await self.db.execute(
-                update(MemoryGoal)
-                .where(MemoryGoal.id.in_(goal_ids))
-                .values(last_consumed_at=consumed_at)
+                update(MemoryGoal).where(MemoryGoal.id.in_(goal_ids)).values(last_consumed_at=consumed_at)
             )
             touched = True
 
@@ -867,9 +847,7 @@ class ContextPackBuilder:
             from app.models.memory import EpisodicMemory
 
             await self.db.execute(
-                update(EpisodicMemory)
-                .where(EpisodicMemory.id.in_(episodic_ids))
-                .values(last_consumed_at=consumed_at)
+                update(EpisodicMemory).where(EpisodicMemory.id.in_(episodic_ids)).values(last_consumed_at=consumed_at)
             )
             touched = True
 

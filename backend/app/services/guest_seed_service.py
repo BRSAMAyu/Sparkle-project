@@ -5,7 +5,7 @@ the full app with realistic pre-populated content.
 """
 import math
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from loguru import logger
 from sqlalchemy import and_, func, select
@@ -24,12 +24,14 @@ from app.models import (
     AchievementRarity,
     AchievementType,
     BehaviorPattern,
+    CalendarEvent,
     CapsuleFeedback,
     CapsuleFavorite,
     CapsuleGenerationJob,
     CognitiveFragment,
     CuriosityCapsule,
     DepthLevel,
+    EventSource,
     Friendship,
     FriendshipStatus,
     FocusSession,
@@ -3506,6 +3508,158 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
         action_time=now - timedelta(hours=4, minutes=48),
         time_to_action=max(int((now - timedelta(hours=4, minutes=48) - approved_intervention.created_at).total_seconds()), 0),
     )
+
+    # Calendar Events — seed realistic study/reminder events so the F20 calendar
+    # context feature has data to work with.  Events span the past week and upcoming
+    # week to give both retrospective and prospective context.
+    existing_calendar_count = await session.scalar(
+        select(func.count(CalendarEvent.id)).where(CalendarEvent.user_id == user.id)
+    )
+    if not existing_calendar_count:
+        today = now.date()
+        cal_events = [
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="数据结构复习 — 二叉树专题",
+                description="复习二叉树遍历（前序/中序/后序），完成 3 道课后习题",
+                start_time=datetime(now.year, now.month, now.day, 9, 0, tzinfo=timezone.utc) + timedelta(days=1),
+                end_time=datetime(now.year, now.month, now.day, 11, 0, tzinfo=timezone.utc) + timedelta(days=1),
+                is_all_day=False,
+                color="#4A90D9",
+                reminder_minutes=[15, 60],
+                source=EventSource.MANUAL,
+            ),
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="算法刷题打卡",
+                description="LeetCode 每日一题 + 算法小组讨论",
+                start_time=datetime(now.year, now.month, now.day, 14, 0, tzinfo=timezone.utc) + timedelta(days=1),
+                end_time=datetime(now.year, now.month, now.day, 16, 0, tzinfo=timezone.utc) + timedelta(days=1),
+                is_all_day=False,
+                color="#7B68EE",
+                reminder_minutes=[15],
+                source=EventSource.MANUAL,
+            ),
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="英语听力训练",
+                description="精听 BBC 6-minute English 一篇 + 跟读练习",
+                start_time=datetime(now.year, now.month, now.day, 20, 0, tzinfo=timezone.utc) + timedelta(days=2),
+                end_time=datetime(now.year, now.month, now.day, 21, 0, tzinfo=timezone.utc) + timedelta(days=2),
+                is_all_day=False,
+                color="#50C878",
+                reminder_minutes=[15, 30],
+                source=EventSource.MANUAL,
+            ),
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="操作系统期中复习",
+                description="进程管理 + 内存管理章节回顾，做思维导图",
+                start_time=datetime(now.year, now.month, now.day, 10, 0, tzinfo=timezone.utc) + timedelta(days=3),
+                end_time=datetime(now.year, now.month, now.day, 12, 30, tzinfo=timezone.utc) + timedelta(days=3),
+                is_all_day=False,
+                color="#FF6B6B",
+                reminder_minutes=[15, 60, 1440],
+                source=EventSource.AI,
+                source_metadata={"plan_id": str(sprint_plan.id), "suggested": True},
+            ),
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="算法小组会议",
+                description="讨论本周 DP 专题，阿泽主讲",
+                start_time=datetime(now.year, now.month, now.day, 19, 30, tzinfo=timezone.utc) + timedelta(days=4),
+                end_time=datetime(now.year, now.month, now.day, 21, 0, tzinfo=timezone.utc) + timedelta(days=4),
+                is_all_day=False,
+                location="图书馆 3F 研讨室",
+                color="#FFD700",
+                reminder_minutes=[15, 60],
+                source=EventSource.MANUAL,
+            ),
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="数学建模练习",
+                description="完成建模作业第一部分，线性规划建模",
+                start_time=datetime(now.year, now.month, now.day, 15, 0, tzinfo=timezone.utc) + timedelta(days=5),
+                end_time=datetime(now.year, now.month, now.day, 17, 0, tzinfo=timezone.utc) + timedelta(days=5),
+                is_all_day=False,
+                color="#4A90D9",
+                reminder_minutes=[15],
+                source=EventSource.AI,
+                source_metadata={"task_id": str(sprint_plan.id), "note": "linked_to_plan"},
+            ),
+            # Past events (already completed)
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="数据结构实验课",
+                description="AVL 树插入与旋转操作实验",
+                start_time=datetime(now.year, now.month, now.day, 10, 0, tzinfo=timezone.utc) - timedelta(days=1),
+                end_time=datetime(now.year, now.month, now.day, 12, 0, tzinfo=timezone.utc) - timedelta(days=1),
+                is_all_day=False,
+                color="#4A90D9",
+                reminder_minutes=[15, 60],
+                source=EventSource.MANUAL,
+            ),
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="离散数学复习",
+                description="图论章节复习，重点看最短路径算法",
+                start_time=datetime(now.year, now.month, now.day, 14, 0, tzinfo=timezone.utc) - timedelta(days=2),
+                end_time=datetime(now.year, now.month, now.day, 16, 30, tzinfo=timezone.utc) - timedelta(days=2),
+                is_all_day=False,
+                color="#7B68EE",
+                reminder_minutes=[15],
+                source=EventSource.MANUAL,
+            ),
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="英语角活动",
+                description="本周话题：AI 在教育中的应用",
+                start_time=datetime(now.year, now.month, now.day, 18, 0, tzinfo=timezone.utc) - timedelta(days=3),
+                end_time=datetime(now.year, now.month, now.day, 19, 30, tzinfo=timezone.utc) - timedelta(days=3),
+                is_all_day=False,
+                location="外语学院 B201",
+                color="#50C878",
+                reminder_minutes=[30],
+                source=EventSource.MANUAL,
+            ),
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="期中考试倒计时 — 全天复习",
+                description="数据结构 + 操作系统综合复习日",
+                start_time=datetime(now.year, now.month, now.day, 8, 0, tzinfo=timezone.utc) - timedelta(days=5),
+                end_time=datetime(now.year, now.month, now.day, 22, 0, tzinfo=timezone.utc) - timedelta(days=5),
+                is_all_day=False,
+                color="#FF6B6B",
+                reminder_minutes=[0],
+                source=EventSource.AI,
+                source_metadata={"plan_id": str(sprint_plan.id), "suggested": True},
+            ),
+            # Recurring study block
+            CalendarEvent(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                title="每日晨读",
+                description="30 分钟英语晨读 + 单词复习",
+                start_time=datetime(now.year, now.month, now.day, 7, 30, tzinfo=timezone.utc),
+                end_time=datetime(now.year, now.month, now.day, 8, 0, tzinfo=timezone.utc),
+                is_all_day=False,
+                color="#50C878",
+                recurrence_rule="FREQ=DAILY;COUNT=14",
+                reminder_minutes=[5],
+                source=EventSource.MANUAL,
+            ),
+        ]
+        session.add_all(cal_events)
 
     await session.flush()
 

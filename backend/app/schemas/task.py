@@ -6,7 +6,6 @@ Stage: <首次引入 Stage 号>
 Task Schemas - Task creation, update, query, etc.
 """
 
-
 from __future__ import annotations
 from datetime import date, datetime
 from enum import Enum
@@ -166,6 +165,16 @@ class TaskQuickActionRequest(BaseModel):
     """Lightweight task-card action request."""
 
     reason: str | None = Field(default=None, max_length=500, description="Optional user-facing reason")
+
+
+class TaskStuckRequest(BaseModel):
+    """Current task execution context when the user asks for stuck help."""
+
+    stuck_point: str | None = Field(default=None, max_length=500, description="Where the user feels blocked")
+    recent_steps: list[str] = Field(default_factory=list, max_length=10, description="Recent execution steps")
+    current_step_index: int | None = Field(default=None, ge=0, description="Current client-side step index")
+    elapsed_seconds: int | None = Field(default=None, ge=0, description="Elapsed timer seconds")
+    trigger: str | None = Field(default=None, max_length=100, description="Client trigger label")
 
 
 class TaskSnoozeRequest(TaskQuickActionRequest):

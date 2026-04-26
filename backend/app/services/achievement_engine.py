@@ -133,15 +133,22 @@ class AchievementEngine:
         "REGISTRATION_STUDY_MILESTONE",
         "SECTOR_MASTERY",
         "SPEED_UNLOCK",
+        "SPRINTS_ABANDONED",
+        "SPRINTS_STARTED",
         "SPRINTS_STREAK",
         "SPRINTS_TOTAL",
+        "SPRINT_ABANDONED",
         "SPRINT_AHEAD",
         "SPRINT_PERFECT",
+        "SPRINT_STARTED",
         "STREAK_DAYS",
         "STUDY_MINUTES_SINGLE",
         "STUDY_MINUTES_TOTAL",
         "TASKS_TOTAL",
         "WEEKEND_WARRIOR",
+        "MUTUAL_STUDY",
+        "MUTUAL_STUDY_DAYS",
+        "HIDDEN_TRIGGER",
     }
     SUPPORTED_REWARD_TYPES = {"freeze_charge", "galaxy_skin", "photon", "title", "visual_element"}
     PRESTIGE_LANES = {
@@ -435,12 +442,33 @@ class AchievementEngine:
                 case AchievementEvent.EARLY_BIRD:
                     if trigger_code == "EARLY_BIRD":
                         relevant.append(achievement)
+                case AchievementEvent.WEEKEND_WARRIOR:
+                    if trigger_code == "WEEKEND_WARRIOR":
+                        relevant.append(achievement)
+                case AchievementEvent.MUTUAL_STUDY:
+                    if trigger_code in ["MUTUAL_STUDY", "MUTUAL_STUDY_DAYS"]:
+                        relevant.append(achievement)
+                case AchievementEvent.HIDDEN_TRIGGER:
+                    hidden_trigger_code = str(kwargs.get("hidden_trigger_code") or "").strip()
+                    hidden_trigger_codes = {str(item).strip() for item in kwargs.get("hidden_trigger_codes") or []}
+                    if (
+                        trigger_code == "HIDDEN_TRIGGER"
+                        or trigger_code == hidden_trigger_code
+                        or trigger_code in hidden_trigger_codes
+                    ):
+                        relevant.append(achievement)
                 case AchievementEvent.STREAK_MILESTONE:
                     if trigger_code == "STREAK_DAYS":
                         relevant.append(achievement)
                 # Sprint event matching
+                case AchievementEvent.SPRINT_STARTED:
+                    if trigger_code in ["SPRINT_STARTED", "SPRINTS_STARTED"]:
+                        relevant.append(achievement)
                 case AchievementEvent.SPRINT_COMPLETED:
                     if trigger_code in ["SPRINTS_TOTAL", "SPRINTS_COMPLETED"]:
+                        relevant.append(achievement)
+                case AchievementEvent.SPRINT_ABANDONED:
+                    if trigger_code in ["SPRINT_ABANDONED", "SPRINTS_ABANDONED"]:
                         relevant.append(achievement)
                 case AchievementEvent.SPRINT_PERFECT:
                     if trigger_code in ["SPRINTS_TOTAL", "SPRINTS_COMPLETED", "SPRINT_PERFECT"]:
@@ -453,6 +481,12 @@ class AchievementEngine:
                         relevant.append(achievement)
                 case AchievementEvent.PLAN_CREATED:
                     if trigger_code == "PLANS_TOTAL":
+                        relevant.append(achievement)
+                case AchievementEvent.CONTRACT_COMPLETED:
+                    if trigger_code in ["CONTRACT_COMPLETED", "CONTRACTS_COMPLETED"]:
+                        relevant.append(achievement)
+                case AchievementEvent.CONTRACT_FAILED:
+                    if trigger_code in ["CONTRACT_FAILED", "CONTRACTS_FAILED"]:
                         relevant.append(achievement)
         return relevant
 
@@ -802,6 +836,28 @@ class AchievementEngine:
                 current = self._calculate_weekend_streak(timestamps)
                 return (min(current / target, 1.0), current, target)
 
+            case "MUTUAL_STUDY" | "MUTUAL_STUDY_DAYS":
+                from app.models.achievement import StudyBuddy
+
+                target = int(config.get("days") or config.get("count") or 1)
+                current = int(kwargs.get("mutual_study_days") or 0)
+                if current <= 0:
+                    partner_id = kwargs.get("partner_id")
+                    conditions = [StudyBuddy.status == "active"]
+                    if partner_id:
+                        conditions.append(
+                            ((StudyBuddy.user1_id == user_id) & (StudyBuddy.user2_id == partner_id))
+                            | ((StudyBuddy.user1_id == partner_id) & (StudyBuddy.user2_id == user_id))
+                        )
+                    else:
+                        conditions.append((StudyBuddy.user1_id == user_id) | (StudyBuddy.user2_id == user_id))
+                    buddy_result = await self.db.execute(
+                        select(func.max(StudyBuddy.mutual_study_days)).where(and_(*conditions))
+                    )
+                    current = int(buddy_result.scalar_one_or_none() or 0)
+                current = max(current, 1)
+                return (min(current / max(target, 1), 1.0), current, max(target, 1))
+
             # 完美主义者（单节点100%掌握度）
             case "PERFECTIONIST":
                 node_id = kwargs.get("node_id")
@@ -812,6 +868,40 @@ class AchievementEngine:
                 return (0.0, 0, 100)
 
             # ========== Sprint Achievement Triggers ==========
+            case "SPRINT_STARTED" | "SPRINTS_STARTED":
+                from app.models.plan import Plan, PlanType
+
+                target = int(config.get("count", 1))
+                query = (
+                    select(func.count())
+                    .select_from(Plan)
+                    .where(and_(Plan.user_id == user_id, Plan.type == PlanType.SPRINT))
+                )
+                result = await self.db.execute(query)
+                current = int(result.scalar_one() or 0)
+                current = max(current, int(kwargs.get("abandoned_count") or 0))
+                return (min(current / max(target, 1), 1.0), current, max(target, 1))
+
+            case "SPRINT_ABANDONED" | "SPRINTS_ABANDONED":
+                from app.models.plan import Plan, PlanType
+
+                target = int(config.get("count", 1))
+                query = (
+                    select(func.count())
+                    .select_from(Plan)
+                    .where(
+                        and_(
+                            Plan.user_id == user_id,
+                            Plan.type == PlanType.SPRINT,
+                            Plan.is_active.is_(False),
+                            Plan.progress < 0.8,
+                        )
+                    )
+                )
+                result = await self.db.execute(query)
+                current = int(result.scalar_one() or 0)
+                return (min(current / max(target, 1), 1.0), current, max(target, 1))
+
             # 冲刺完成总数
             case "SPRINTS_TOTAL":
                 from app.models.plan import Plan, PlanType
@@ -914,6 +1004,16 @@ class AchievementEngine:
                 target = config.get("count", 1)
                 progress = min(total / target, 1.0) if total > 0 else 0.0
                 return (progress, total, target)
+
+            case "CONTRACT_COMPLETED" | "CONTRACTS_COMPLETED":
+                current = int(kwargs.get("current_days") or kwargs.get("target_days") or 1)
+                target = int((achievement.trigger_config or {}).get("count", 1))
+                return (1.0, max(current, 1), max(target, 1))
+
+            case "CONTRACT_FAILED" | "CONTRACTS_FAILED":
+                current = 1
+                target = int((achievement.trigger_config or {}).get("count", 1))
+                return (1.0, current, max(target, 1))
 
             case _:
                 logger.warning(f"Unknown trigger code: {trigger_code}")
@@ -2526,6 +2626,11 @@ class ContractService:
                 contract.status = ContractStatus.COMPLETED
                 contract.completed_at = today
                 await self._grant_rewards(contract)
+                await self._trigger_contract_achievement(
+                    user_id=user_id,
+                    event_type=AchievementEvent.CONTRACT_COMPLETED,
+                    contract=contract,
+                )
                 await self.db.commit()
                 return {"status": "completed", "reward": contract.photon_stake * contract.reward_multiplier}
             else:
@@ -2534,6 +2639,11 @@ class ContractService:
                 contract.failed_at = today
                 contract.failure_reason = "Time expired"
                 await self._deduct_photons(contract)
+                await self._trigger_contract_achievement(
+                    user_id=user_id,
+                    event_type=AchievementEvent.CONTRACT_FAILED,
+                    contract=contract,
+                )
                 await self.db.commit()
                 return {"status": "failed", "lost": contract.photon_stake}
 
@@ -2542,6 +2652,24 @@ class ContractService:
             "progress": f"{contract.current_days}/{contract.target_days}",
             "minutes": f"{contract.current_minutes}/{contract.target_study_minutes}",
         }
+
+    async def _trigger_contract_achievement(
+        self,
+        *,
+        user_id: str,
+        event_type: str,
+        contract: SparkContract,
+    ) -> None:
+        engine = AchievementEngine(self.db)
+        await engine.process_event(
+            user_id=str(user_id),
+            event_type=event_type,
+            contract_id=str(contract.user_id),
+            target_days=int(contract.target_days or 0),
+            current_days=int(contract.current_days or 0),
+            target_study_minutes=int(contract.target_study_minutes or 0),
+            photon_stake=int(contract.photon_stake or 0),
+        )
 
     async def _grant_rewards(self, contract: SparkContract):
         """发放契约奖励"""

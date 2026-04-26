@@ -3,8 +3,8 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
 from app.routing.social_context_provider import FrozenSocialMention, FrozenSocialSnapshot, SocialContextProvider
+from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
 from app.state_aggregator.service import StateAggregatorService
 
 
@@ -25,6 +25,7 @@ class AggregatorBackedSocialContextProvider(SocialContextProvider):
         state = await self.aggregator.get_user_state(
             user_id=user_id,
             required_fields=("recent_person_mentions", "commitment_summary"),
+            expose_shadow=True,
         )
         mentions_value = state.recent_person_mentions.value if state.recent_person_mentions else None
         commitment_value = state.commitment_summary.value if state.commitment_summary else None

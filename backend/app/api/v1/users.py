@@ -555,7 +555,19 @@ async def delete_account(
         ttl_seconds=SESSION_TTL_SECONDS,
     )
     await db.commit()
-    return {"detail": "账号已注销，相关会话已失效"}
+
+    # Schedule hard-delete 30 days from now (GDPR compliance)
+    _THIRTY_DAYS = 30 * 24 * 60 * 60
+    try:
+        from app.core.celery_tasks import purge_deleted_account
+        purge_deleted_account.apply_async(
+            args=[str(current_user.id)],
+            countdown=_THIRTY_DAYS,
+        )
+    except Exception:
+        pass  # Purge will be retried; anonymisation already completed
+
+    return {"detail": "账号已注销，个人数据已匿名化。30天后将永久删除全部数据，期间如需恢复请联系客服。"}
 
 
 @router.put("/me/preferences", response_model=UserProfile)

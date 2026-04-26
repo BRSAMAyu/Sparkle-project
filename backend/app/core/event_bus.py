@@ -163,6 +163,43 @@ class TaskCompleted(Event):
         }
 
 
+class FocusSessionCompletedEvent(Event):
+    def __init__(
+        self,
+        user_id: str,
+        session_id: str,
+        duration_minutes: int,
+        task_id: str | None = None,
+        plan_id: str | None = None,
+        mastery_updates: list[dict[str, Any]] | None = None,
+        started_at: str | None = None,
+        completed: bool = True,
+    ):
+        self.user_id = user_id
+        self.session_id = session_id
+        self.duration_minutes = duration_minutes
+        self.task_id = task_id
+        self.plan_id = plan_id
+        self.mastery_updates = mastery_updates or []
+        self.started_at = started_at
+        self.completed = completed
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "focus.session.completed",
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "task_id": self.task_id,
+            "plan_id": self.plan_id,
+            "duration_minutes": self.duration_minutes,
+            "mastery_updates": self.mastery_updates,
+            "started_at": self.started_at,
+            "completed": self.completed,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class TaskAbandoned(Event):
     def __init__(
         self,
@@ -215,6 +252,40 @@ class TaskStartedEvent(Event):
             "task_id": self.task_id,
             "plan_id": self.plan_id,
             "source": self.source,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class TaskStuckEvent(Event):
+    def __init__(
+        self,
+        user_id: str,
+        task_id: str,
+        plan_id: str | None = None,
+        stuck_point: str | None = None,
+        recent_steps: list[str] | None = None,
+        elapsed_seconds: int | None = None,
+        diagnosis: dict[str, Any] | None = None,
+    ):
+        self.user_id = user_id
+        self.task_id = task_id
+        self.plan_id = plan_id
+        self.stuck_point = stuck_point
+        self.recent_steps = recent_steps or []
+        self.elapsed_seconds = elapsed_seconds
+        self.diagnosis = diagnosis or {}
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "task.stuck",
+            "user_id": self.user_id,
+            "task_id": self.task_id,
+            "plan_id": self.plan_id,
+            "stuck_point": self.stuck_point,
+            "recent_steps": self.recent_steps,
+            "elapsed_seconds": self.elapsed_seconds,
+            "diagnosis": self.diagnosis,
             "timestamp": self.timestamp.isoformat(),
         }
 
@@ -739,6 +810,16 @@ class EventBus:
         self.max_retries = getattr(settings, "EVENT_BUS_MAX_RETRIES", 3)
         self.publish_base_delay_ms = getattr(settings, "EVENT_BUS_PUBLISH_BASE_DELAY_MS", 200)
         self.publish_max_delay_ms = getattr(settings, "EVENT_BUS_PUBLISH_MAX_DELAY_MS", 2000)
+        self.consumer_retry_base_delay_ms = getattr(
+            settings,
+            "EVENT_BUS_CONSUMER_RETRY_BASE_DELAY_MS",
+            self.publish_base_delay_ms,
+        )
+        self.consumer_retry_max_delay_ms = getattr(
+            settings,
+            "EVENT_BUS_CONSUMER_RETRY_MAX_DELAY_MS",
+            self.publish_max_delay_ms,
+        )
         self.dlq_suffix = getattr(settings, "EVENT_BUS_DLQ_SUFFIX", ":dlq")
         self.dlq_maxlen = getattr(settings, "EVENT_BUS_DLQ_MAXLEN", 10000)
         self.dlq_enabled = bool(getattr(settings, "EVENT_BUS_DLQ_ENABLED", True))
@@ -858,6 +939,9 @@ class EventBus:
             failure_stage="consume",
         )
         EVENT_BUS_DLQ_TOTAL.labels(event_type=str(parsed_data.get("event_type") or "unknown")).inc()
+        # Ack AFTER DLQ write succeeds — safe because DLQ has captured the event.
+        if self.redis:
+            await self.redis.xack(stream, group_name, message_id)
         logger.error(
             "Moved event to DLQ: stream={} group={} consumer={} message_id={} retry_count={} error={}",
             stream,
@@ -883,6 +967,10 @@ class EventBus:
             return
 
         next_retry = retry_count + 1
+        delay_ms = min(self.consumer_retry_base_delay_ms * (2**retry_count), self.consumer_retry_max_delay_ms)
+        if delay_ms > 0:
+            await asyncio.sleep(delay_ms / 1000)
+
         retry_payload = dict(parsed_data)
         retry_payload["_retry_count"] = next_retry
         retry_payload["_last_error"] = str(error)
@@ -891,20 +979,23 @@ class EventBus:
         retry_payload["_failed_at"] = datetime.now(timezone.utc).isoformat()
         retry_payload["_original_message_id"] = parsed_data.get("_original_message_id", message_id)
 
+        # Ack original BEFORE requeue to prevent duplicate processing
+        # if xadd succeeds but xack fails.
+        await self.redis.xack(stream, group_name, message_id)
         await self.redis.xadd(
             stream,
             self._serialize_stream_body(retry_payload),
             maxlen=self.retry_stream_maxlen,
         )
-        await self.redis.xack(stream, group_name, message_id)
         logger.warning(
-            "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} error={}",
+            "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} delay_ms={} error={}",
             stream,
             group_name,
             consumer_name,
             message_id,
             next_retry,
             self.max_retries,
+            delay_ms,
             error,
         )
 
@@ -941,6 +1032,12 @@ class EventBus:
                     retry_count=retry_count,
                 )
         except Exception as dlq_error:
+            # Best-effort ack to prevent permanent pending messages
+            try:
+                if self.redis:
+                    await self.redis.xack(stream, group_name, message_id)
+            except Exception as ack_err:
+                logger.error("Failed to ack after DLQ failure: {}", ack_err)
             logger.error(
                 "Failed to requeue/DLQ event: stream={} group={} message_id={} original_error={} dlq_error={}",
                 stream,
@@ -1162,14 +1259,13 @@ class EventBus:
             label = self._consumer_label(callback, consumer_name)
             EVENT_BUS_CONSUMER_FAILURE_TOTAL.labels(consumer=label).inc()
             logger.error(f"Error processing message {message_id}: {exc}")
-            await self._move_to_dlq(
+            await self._handle_failed_message(
                 stream=stream,
                 group_name=group_name,
                 consumer_name=label,
                 message_id=message_id,
                 parsed_data=parsed_data,
                 error=exc,
-                retry_count=self._extract_retry_count(parsed_data),
             )
 
     async def _consume_loop(self, stream: str, group_name: str, consumer_name: str, callback: Callable):

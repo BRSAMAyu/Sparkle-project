@@ -379,6 +379,14 @@ class PlanningWorkflowManager:
             or cold_start.get("sprint_pack_id")
         )
 
+    @staticmethod
+    def is_modeling_complete_bridge_session(session: PlanningSession | None) -> bool:
+        if session is None:
+            return False
+        collected = _as_dict(session.collected)
+        cold_start = _as_dict(collected.get("cold_start_context"))
+        return bool(collected.get("from_modeling_complete") or cold_start.get("from_modeling_complete"))
+
     def detect_planning_intent(self, message: str, context: dict[str, Any] | None = None) -> bool:
         text = _strip(message).lower()
         if not text:
@@ -479,6 +487,7 @@ class PlanningWorkflowManager:
             "from_modeling_complete": True,
             "goal_raw": goal_raw,
             "collected": {
+                "from_modeling_complete": True,
                 "exam_scope": _strip(
                     cold_start.get("exam_scope")
                     or cold_start.get("scope")
@@ -514,6 +523,11 @@ class PlanningWorkflowManager:
                     or user_model.get("motivation")
                     or user_model.get("goal_motivation")
                 ),
+                "calendar_context": _as_dict(
+                    modeling_output.get("calendar_context")
+                    or cold_start.get("calendar_context")
+                    or user_model.get("calendar_context")
+                ),
             },
             "activity_profile": profile,
             "galaxy_baseline": modeling_output.get("galaxy_baseline"),
@@ -536,6 +550,7 @@ class PlanningWorkflowManager:
                 fast_track_context = detected_fast_track
                 context["exam_sprint_fast_track"] = fast_track_context
         profile_context = _as_dict(context.get("profile_context"))
+        calendar_context = self._extract_calendar_context(context)
         session = await self.get_active_session(chat_session_id)
         if session is None:
             if not self.detect_planning_intent(message, context):
@@ -564,6 +579,11 @@ class PlanningWorkflowManager:
                 for key, value in _as_dict(bridge["collected"]).items():
                     if value and not session.collected.get(key):
                         session.collected[key] = value
+        if calendar_context:
+            session.collected["calendar_context"] = calendar_context
+            cold_start = _as_dict(session.collected.get("cold_start_context")).copy()
+            cold_start["calendar_context"] = calendar_context
+            session.collected["cold_start_context"] = cold_start
 
         if not session.collected.get("previous_exam_weak_nodes"):
             previous_weak_nodes = await self._load_previous_exam_weak_nodes_for_session(
@@ -767,13 +787,26 @@ class PlanningWorkflowManager:
             session.bottlenecks = await self._build_bottlenecks(session, aurora_state=runtime_state)
             strategy = self._build_strategy(session, aurora_state=runtime_state)
             session.confirmed_strategy = strategy
-            session.state = "PLANNING" if self.is_fast_track_exam_sprint_session(session) else "AWAITING_CONFIRM"
+            auto_generate_from_modeling = self.is_modeling_complete_bridge_session(session)
+            session.state = (
+                "PLANNING"
+                if self.is_fast_track_exam_sprint_session(session) or auto_generate_from_modeling
+                else "AWAITING_CONFIRM"
+            )
             if db is not None:
                 await self._persist_profile_payload(
                     db=db,
                     user_id=user_id,
                     key=PLANNING_PROFILE_KEYS["cold_start_context"],
                     value=self._build_cold_start_context(session.collected),
+                )
+            if auto_generate_from_modeling:
+                return await self._handle_generating(
+                    db=db,
+                    user_id=user_id,
+                    session=session,
+                    runtime_state=runtime_state,
+                    profile_context=profile_context,
                 )
             await self.save_session(session)
             return {
@@ -2049,9 +2082,18 @@ class PlanningWorkflowManager:
                     "optional_tasks",
                     "compressed",
                     "compression_reason",
+                    "scheduled_start_time",
+                    "scheduled_end_time",
+                    "calendar_avoidance",
+                    "target_date",
+                    "date",
                 }
             },
         }
+        if (day_spec or {}).get("calendar_avoidance"):
+            guide_json["calendar_avoidance"] = _as_dict((day_spec or {}).get("calendar_avoidance"))
+            guide_json["scheduled_start_time"] = _strip((day_spec or {}).get("scheduled_start_time"))
+            guide_json["scheduled_end_time"] = _strip((day_spec or {}).get("scheduled_end_time"))
         if (day_spec or {}).get("compressed"):
             guide_json["compressed"] = True
             guide_json["compression_reason"] = _strip((day_spec or {}).get("compression_reason"))
@@ -2364,6 +2406,13 @@ class PlanningWorkflowManager:
         profile_context = _as_dict(context.get("profile_context"))
         prefs = _as_dict(profile_context.get("preferences"))
         cold_start = _as_dict(prefs.get(PLANNING_PROFILE_KEYS["cold_start_context"]))
+        seed_library_context = _as_dict(context.get("seed_library"))
+        seed_library_nodes = _listish(
+            seed_library_context.get("seed_library_nodes")
+            or context.get("seed_library_nodes")
+            or cold_start.get("seed_library_nodes")
+            or []
+        )
         knowledge_gaps = prefs.get(PLANNING_PROFILE_KEYS["knowledge_gaps"])
         galaxy_baseline = _as_dict(
             context.get("galaxy_baseline") or context.get("request_extra_context", {}).get("galaxy_baseline")
@@ -2408,7 +2457,7 @@ class PlanningWorkflowManager:
                 or cold_start.get("motivation")
                 or cold_start.get("goal_motivation")
             ),
-            "seed_library_nodes": cold_start.get("seed_library_nodes") or [],
+            "seed_library_nodes": seed_library_nodes,
             "previous_exam_weak_nodes": cold_start.get("previous_exam_weak_nodes") or archive_weak_nodes,
             "cold_start_context": cold_start,
             "strongest_nodes": cold_start.get("strongest_nodes") or [],
@@ -3978,17 +4027,24 @@ class PlanningWorkflowManager:
         day_spec: dict[str, Any],
         sprint_policy: dict[str, Any],
         completion_rate: float | None,
+        calendar_context: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         days_left = sprint_policy.get("days_left")
         if days_left is None:
             days_left = sprint_policy.get("actual_days_left")
-        if AdaptiveReplanner.should_compress(completion_rate=completion_rate, days_left=days_left):
+        if AdaptiveReplanner.should_compress(
+            completion_rate=completion_rate,
+            days_left=days_left,
+            calendar_context=calendar_context,
+            source_daily_spec=day_spec,
+        ):
             return [
                 AdaptiveReplanner.build_compressed_sprint_day_spec(
                     day_number=_safe_int(day_spec.get("day")) or 1,
                     completion_rate=float(completion_rate or 0.0),
                     sprint_policy=sprint_policy,
                     source_daily_spec=day_spec,
+                    calendar_context=calendar_context,
                 )
             ]
         return [day_spec]
@@ -4013,6 +4069,7 @@ class PlanningWorkflowManager:
         sprint_policy = _as_dict(phase.get("sprint_policy"))
         if not sprint_policy:
             return specs
+        calendar_context = self._adaptive_calendar_context(session=session, phase=phase, context=context)
 
         generated: list[dict[str, Any]] = []
         for spec in specs:
@@ -4022,11 +4079,88 @@ class PlanningWorkflowManager:
                         day_spec=spec,
                         sprint_policy=sprint_policy,
                         completion_rate=completion_rate,
+                        calendar_context=calendar_context,
                     )
                 )
             else:
                 generated.append(spec)
         return generated
+
+    def _adaptive_calendar_context(
+        self,
+        *,
+        session: PlanningSession,
+        phase: dict[str, Any],
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
+        for raw in (
+            context.get("calendar_context"),
+            session.collected.get("calendar_context"),
+            _as_dict(session.collected.get("cold_start_context")).get("calendar_context"),
+            phase.get("calendar_context"),
+        ):
+            payload = _as_dict(raw)
+            if payload:
+                return payload
+        return {}
+
+    @staticmethod
+    def _extract_calendar_context(context: dict[str, Any] | None) -> dict[str, Any]:
+        ctx = _as_dict(context)
+        for raw in (
+            ctx.get("calendar_context"),
+            _as_dict(ctx.get("cognitive_context")).get("calendar_context"),
+            _as_dict(ctx.get("user_context")).get("calendar_context"),
+        ):
+            payload = _as_dict(raw)
+            if payload:
+                return payload
+        return {}
+
+    def _apply_calendar_schedule_to_specs(
+        self,
+        *,
+        phase: dict[str, Any],
+        session: PlanningSession,
+        specs: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        calendar_context = self._adaptive_calendar_context(session=session, phase=phase, context={})
+        if not calendar_context:
+            return specs
+
+        today = _utcnow().date()
+        scheduled_specs: list[dict[str, Any]] = []
+        for raw_spec in specs:
+            spec = dict(raw_spec)
+            day_number = _safe_int(spec.get("day")) or 1
+            target_date = _strip(spec.get("target_date") or spec.get("date"))
+            if not target_date:
+                target_date = (today + timedelta(days=max(day_number - 1, 0))).isoformat()
+                spec["target_date"] = target_date
+            if spec.get("scheduled_start_time") and spec.get("scheduled_end_time"):
+                scheduled_specs.append(spec)
+                continue
+            slot = AdaptiveReplanner._select_calendar_safe_slot(
+                calendar_context=calendar_context,
+                source_daily_spec=spec,
+                estimated_minutes=_safe_int(spec.get("estimated_minutes")) or 60,
+            )
+            if slot:
+                note = f"参考日程：避开当日考试/上课等日历占用，建议安排在 {slot['start']}-{slot['end']}。"
+                spec["scheduled_start_time"] = slot["start"]
+                spec["scheduled_end_time"] = slot["end"]
+                spec["calendar_avoidance"] = {
+                    "applied": True,
+                    "reason": note,
+                    "conflicts": slot.get("conflicts", []),
+                }
+                method_steps = [_strip(item) for item in list(spec.get("method_steps") or []) if _strip(item)]
+                if note not in method_steps:
+                    method_steps.append(note)
+                if method_steps:
+                    spec["method_steps"] = method_steps
+            scheduled_specs.append(spec)
+        return scheduled_specs
 
     def _weak_node_match_keys(self, raw_nodes: Any) -> list[str]:
         keys: list[str] = []
@@ -4148,7 +4282,8 @@ class PlanningWorkflowManager:
                 if "上次考后复盘标记的弱点" not in spec.get("focus", ""):
                     spec["focus"] = f"{spec['focus']}（上次考后复盘标记的弱点）"
 
-        return self._apply_next_day_adaptive_generation(phase=phase, session=session, specs=merged_specs)
+        adapted_specs = self._apply_next_day_adaptive_generation(phase=phase, session=session, specs=merged_specs)
+        return self._apply_calendar_schedule_to_specs(phase=phase, session=session, specs=adapted_specs)
 
     def _estimated_minutes_for_task(
         self,

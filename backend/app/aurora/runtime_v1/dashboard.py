@@ -118,7 +118,21 @@ _DOMAIN_ALIASES: dict[str, set[str]] = {
 }
 
 _DOMAIN_TEXT_HINTS: dict[str, tuple[str, ...]] = {
-    "goal": ("目标", "想达到", "想要", "想考", "备考", "考试", "期末", "希望", "打算", "通过", "goal", "target", "objective"),
+    "goal": (
+        "目标",
+        "想达到",
+        "想要",
+        "想考",
+        "备考",
+        "考试",
+        "期末",
+        "希望",
+        "打算",
+        "通过",
+        "goal",
+        "target",
+        "objective",
+    ),
     "scope": (
         "范围",
         "章节",
@@ -195,6 +209,7 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "missing_domains",
             "cold_start_context",
             "informational_tensions",
+            "social_signals",
             "wake_policy",
         }
     ),
@@ -219,6 +234,7 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "missing_domains",
             "cold_start_context",
             "informational_tensions",
+            "social_signals",
             "wake_policy",
         }
     ),
@@ -229,6 +245,7 @@ _ACTION_CONTEXT_MASK: dict[str, frozenset[str]] = {
             "missing_domains",
             "cold_start_context",
             "informational_tensions",
+            "social_signals",
             "latent_thread_recovery_candidates",
             "wake_policy",
         }
@@ -251,7 +268,7 @@ _SURFACE_CONTEXT_ADDITIONS: dict[str, frozenset[str]] = {
 }
 
 _SURFACE_CONTEXT_EXCLUSIONS: dict[str, frozenset[str]] = {
-    "aurora_checkpoint": frozenset({"cold_start_context"}),
+    "aurora_checkpoint": frozenset(),
     "aurora_modeling": frozenset({"task_state", "checkpoint_state", "exam_sprint_policy", "sprint_policy_summary"}),
     "aurora_planning": frozenset(
         {"cold_start_context", "achievement_signals", "checkpoint_state", "exam_sprint_policy"}
@@ -309,6 +326,7 @@ class DashboardReadout:
     request_extra_context: dict[str, Any] = field(default_factory=dict)
     achievement_signals: dict[str, Any] = field(default_factory=dict)
     self_model: dict[str, Any] = field(default_factory=dict)
+    social_signals: dict[str, Any] = field(default_factory=dict)
     wake_policy: dict[str, Any] = field(default_factory=dict)
     # Synthesised convenience flag: True when sprint_mode == "last_24h_cram" or exam_sprint_policy.last_24h_mode.
     # Exposed to the decision loop even for surfaces where exam_sprint_policy is excluded from the LLM payload.
@@ -339,6 +357,7 @@ class DashboardReadout:
             "request_extra_context": self.request_extra_context,
             "achievement_signals": self.achievement_signals,
             "self_model": self.self_model,
+            "social_signals": self.social_signals,
             "wake_policy": self.wake_policy,
             "last_24h_mode": self.last_24h_mode,
         }
@@ -444,9 +463,9 @@ class DashboardReadoutBuilder:
         )
 
         achievement_signals = self._extract_achievement_signals(request_extra_context, user_context_payload)
+        social_signals = self._extract_social_signals(request_extra_context, user_context_payload)
         last_24h_mode = bool(
-            exam_sprint_policy.get("sprint_mode") == "last_24h_cram"
-            or exam_sprint_policy.get("last_24h_mode") is True
+            exam_sprint_policy.get("sprint_mode") == "last_24h_cram" or exam_sprint_policy.get("last_24h_mode") is True
         )
 
         # F18: Auto-load Sprint Pack when goal_type == "exam" and subject is known.
@@ -488,6 +507,7 @@ class DashboardReadoutBuilder:
             request_extra_context=dict(request_extra_context),
             achievement_signals=achievement_signals,
             self_model=dict(self_model or {}),
+            social_signals=social_signals,
             wake_policy=dict(wake_policy or {}),
             last_24h_mode=last_24h_mode,
         )
@@ -515,9 +535,7 @@ class DashboardReadoutBuilder:
                 cold_start_context = dict(candidate)
                 break
 
-        weak_nodes = self._coerce_weak_node_values(
-            user_context_payload.get(AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY)
-        )
+        weak_nodes = self._coerce_weak_node_values(user_context_payload.get(AURORA_CONFIRMED_WEAK_NODES_CONTEXT_KEY))
         if user_id:
             weak_nodes = self._merge_unique(
                 weak_nodes,
@@ -550,9 +568,7 @@ class DashboardReadoutBuilder:
         previous_sprint_summary = user_context_payload.get("previous_sprint_summary")
         if isinstance(previous_sprint_summary, Mapping):
             strongest_nodes = self._coerce_weak_node_values(previous_sprint_summary.get("strongest_nodes"))
-            persistent_weak_nodes = self._coerce_weak_node_values(
-                previous_sprint_summary.get("persistent_weak_nodes")
-            )
+            persistent_weak_nodes = self._coerce_weak_node_values(previous_sprint_summary.get("persistent_weak_nodes"))
             mastery_snapshot = self._coerce_mastery_snapshot(previous_sprint_summary.get("mastery_snapshot"))
             sanitized_summary: dict[str, Any] = {}
             if strongest_nodes:
@@ -578,7 +594,8 @@ class DashboardReadoutBuilder:
         galaxy_mastery = user_context_payload.get("galaxy_mastery")
         if isinstance(galaxy_mastery, dict):
             galaxy_weak = [
-                node_id for node_id, mastery in galaxy_mastery.items()
+                node_id
+                for node_id, mastery in galaxy_mastery.items()
                 if isinstance(mastery, (int, float)) and float(mastery) < 0.4
             ]
             if galaxy_weak:
@@ -589,9 +606,7 @@ class DashboardReadoutBuilder:
         if isinstance(seed_library_summary, dict):
             node_ids = seed_library_summary.get("node_ids")
             if isinstance(node_ids, list) and node_ids:
-                cold_start_context["seed_library_nodes"] = [
-                    str(nid) for nid in node_ids if str(nid).strip()
-                ]
+                cold_start_context["seed_library_nodes"] = [str(nid) for nid in node_ids if str(nid).strip()]
 
         # G13: Inject confirmed strategy preference from Redis claims.
         effective_redis = redis_client or self.redis
@@ -669,6 +684,7 @@ class DashboardReadoutBuilder:
         if not isinstance(today_nodes, list) or not today_nodes:
             return
         from app.sprint_packs.sprint_pack_loader import get_mistake_by_nodes
+
         mistakes = get_mistake_by_nodes(pack, today_nodes)
         if mistakes:
             checkpoint_state["sprint_pack_mistakes"] = mistakes[:5]
@@ -973,11 +989,7 @@ class DashboardReadoutBuilder:
             return []
         if isinstance(value, (list, tuple, set)):
             return self._merge_unique(
-                [
-                    normalized
-                    for item in value
-                    for normalized in self._coerce_weak_node_values(item)
-                ]
+                [normalized for item in value for normalized in self._coerce_weak_node_values(item)]
             )
         if isinstance(value, Mapping):
             return self._coerce_weak_node_values(
@@ -1116,6 +1128,83 @@ class DashboardReadoutBuilder:
                 **streak_info,
             }
         )
+
+    def _extract_social_signals(
+        self,
+        request_extra_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        cognitive_context = self._as_mapping_dict(user_context_payload.get("cognitive_context"))
+        for candidate in (
+            request_extra_context.get("social_signals"),
+            request_extra_context.get("social_signals_summary"),
+            user_context_payload.get("social_signals"),
+            user_context_payload.get("social_signals_summary"),
+            user_context_payload.get("social_context_v1"),
+            cognitive_context.get("social_signals_summary"),
+            cognitive_context.get("social_context_v1"),
+        ):
+            payload = self._as_mapping_dict(candidate)
+            if not payload:
+                continue
+            nested_value = self._as_mapping_dict(payload.get("value"))
+            return self._normalize_social_signals(nested_value or payload)
+
+        legacy_social = self._as_mapping_dict(user_context_payload.get("social_context"))
+        if not legacy_social:
+            return {}
+        return self._normalize_social_signals(
+            {
+                "mention_count": len(legacy_social.get("recent_person_mentions") or []),
+                "relationship_count": legacy_social.get("relationship_count"),
+                "pending_commitments_count": legacy_social.get("pending_commitments_count"),
+            }
+        )
+
+    def _normalize_social_signals(self, signals: dict[str, Any]) -> dict[str, Any]:
+        mention_count = self._first_nonnegative_int(signals.get("mention_count")) or 0
+        relationship_count = self._first_nonnegative_int(signals.get("relationship_count")) or 0
+        pending_commitments_count = self._first_nonnegative_int(signals.get("pending_commitments_count")) or 0
+        summary_lines = [str(item).strip() for item in (signals.get("summary_lines") or []) if str(item).strip()]
+        if not summary_lines and str(signals.get("summary_text") or "").strip():
+            summary_lines = [
+                part.strip() for part in str(signals.get("summary_text") or "").split("；") if part.strip()
+            ]
+        if not summary_lines:
+            if mention_count > 0:
+                summary_lines.append(f"最近 7 天提到过 {mention_count} 位学习相关人物。")
+            if relationship_count > 0:
+                summary_lines.append(f"当前有 {relationship_count} 条关系型背景需要在建议里保持边界感。")
+            if pending_commitments_count > 0:
+                summary_lines.append(f"目前有 {pending_commitments_count} 条到期承诺待跟进。")
+
+        normalized = {
+            "mention_count": mention_count,
+            "relationship_count": relationship_count,
+            "pending_commitments_count": pending_commitments_count,
+            "summary_lines": summary_lines[:3],
+            "summary_text": "；".join(summary_lines[:3])[:400],
+            "rule_z_boundary": (
+                "Rule Z: use only as aggregate collaboration context; do not infer social identity, "
+                "name third parties, or push social/accountability actions without explicit user intent."
+            ),
+        }
+        for key in ("community_engagement_level", "social_learning_preference", "content_contribution_rate"):
+            if signals.get(key) is not None:
+                normalized[key] = signals[key]
+        if not any(
+            (
+                normalized["mention_count"],
+                normalized["relationship_count"],
+                normalized["pending_commitments_count"],
+                normalized["summary_lines"],
+                normalized.get("community_engagement_level"),
+                normalized.get("social_learning_preference") is not None,
+                normalized.get("content_contribution_rate") is not None,
+            )
+        ):
+            return {}
+        return normalized
 
     def _normalize_achievement_signals(self, signals: dict[str, Any]) -> dict[str, Any]:
         normalized = dict(signals)
@@ -1441,11 +1530,7 @@ class DashboardReadoutBuilder:
                 if isinstance(item, dict) and str(item.get("role") or "").lower() == "user"
             ],
         ]
-        user_supplied_domains = {
-            domain
-            for text in user_texts
-            for domain in self._infer_domains_from_text(text)
-        }
+        user_supplied_domains = {domain for text in user_texts for domain in self._infer_domains_from_text(text)}
         for domain in CORE_MODELING_DOMAINS:
             if domain in missing and domain in user_supplied_domains:
                 covered.add(domain)

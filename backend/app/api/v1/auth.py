@@ -848,19 +848,28 @@ async def guest_login(
             is_new_guest = False
 
         # 为新游客播种演示数据，确保完整体验
-        # 整个 user 创建 + seed 在同一个事务中，失败全部回滚
+        # 先 commit 用户保证用户存在，再 seed 演示数据
         try:
             from app.services.guest_seed_service import seed_guest_user_data
             await seed_guest_user_data(db, user)
             await db.commit()
             await db.refresh(user)
         except Exception as e:
-            logger.error(f"Guest seed failed, rolling back: {e}")
+            logger.warning(f"Guest seed failed on first attempt, committing user and retrying: {e}")
+            # Rollback everything (including failed seed data), then save user alone
             await db.rollback()
-            raise HTTPException(
-                status_code=500,
-                detail="访客账号初始化失败，请稍后重试",
-            )
+            # Re-merge user into clean session and commit just the user
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            # Retry seed in a fresh transaction
+            try:
+                await seed_guest_user_data(db, user)
+                await db.commit()
+                await db.refresh(user)
+            except Exception as retry_err:
+                logger.error(f"Guest seed retry also failed (non-fatal, user exists): {retry_err}")
+                # Don't raise — user can still use the app without demo data
     else:
         # 已有访客账户 — 检查数据是否完整（seed 可能之前失败过）
         from app.services.guest_seed_service import seed_guest_user_data
@@ -869,9 +878,12 @@ async def guest_login(
             await db.commit()
             await db.refresh(user)
         except Exception as e:
-            logger.warning(f"Guest re-seed failed (non-fatal): {e}")
-            await db.rollback()
-            # rollback 后需要重新加载 user 对象（session 状态已重置）
+            logger.warning(f"Guest re-seed failed (non-fatal, user can still proceed): {e}")
+            try:
+                await db.rollback()
+            except Exception:
+                pass
+            # Reload user after rollback
             result = await db.execute(select(User).where(User.username == guest_id))
             user = result.scalars().first()
             if not user:

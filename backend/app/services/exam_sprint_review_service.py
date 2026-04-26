@@ -58,7 +58,6 @@ class ExamSprintReviewService:
     PACK_QUALITY_REPORT_TTL_SECONDS = 45 * 24 * 3600
     MASTERY_COVERAGE_THRESHOLD = 60.0
     ERROR_REPAIR_THRESHOLD = 0.8
-    MAX_ARCHIVE_ENTRIES = 10
     MASTERY_PENALTY_RATIO = 0.2
     PACK_QUALITY_MIN_EVIDENCE_COUNT = 50
     PACK_QUALITY_EXPECTED_MASTERY_BY_DIFFICULTY: dict[int, float] = {
@@ -302,8 +301,14 @@ class ExamSprintReviewService:
             summary=self._build_completion_summary(plan=plan, summary=summary),
         )
 
-    async def get_portfolio(self, *, user_id: UUID) -> LearningPortfolioResponse:
-        """Return all sprint entries for the user's learning portfolio."""
+    async def get_portfolio(
+        self,
+        *,
+        user_id: UUID,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> LearningPortfolioResponse:
+        """Return sprint entries for the user's learning portfolio, paginated."""
         explicit = await self._get_explicit_preferences(user_id)
         archive_payload = self._as_dict(explicit.get(self.REVIEW_ARCHIVE_KEY))
         archived_entries = list(archive_payload.get("entries") or [])
@@ -331,21 +336,33 @@ class ExamSprintReviewService:
         for plan in plans:
             if str(plan.id) in completed_plan_ids:
                 continue
-            entries.append(self._portfolio_entry_from_plan(plan))
+            entries.append(await self._portfolio_entry_from_plan(plan))
 
         entries.sort(key=self._portfolio_sort_key, reverse=True)
 
+        total_entries_count = len(entries)
         total_mastered = sum(e.mastered_nodes_count for e in entries)
         active_count = sum(1 for e in entries if e.status == "active")
         completed_count = sum(1 for e in entries if e.status == "completed")
         planned_count = sum(1 for e in entries if e.status == "planned")
 
+        # Apply pagination
+        safe_page = max(1, page)
+        safe_page_size = max(1, min(page_size, 100))
+        offset = (safe_page - 1) * safe_page_size
+        has_more = (offset + safe_page_size) < total_entries_count
+        page_entries = entries[offset : offset + safe_page_size]
+
         return LearningPortfolioResponse(
-            entries=entries,
+            entries=page_entries,
             total_mastered_nodes=total_mastered,
             active_count=active_count,
             completed_count=completed_count,
             planned_count=planned_count,
+            total_entries=total_entries_count,
+            current_page=safe_page,
+            page_size=safe_page_size,
+            has_more=has_more,
         )
 
     def _portfolio_entry_from_archive(self, entry: dict[str, Any]) -> PortfolioSprintEntry | None:
@@ -371,7 +388,7 @@ class ExamSprintReviewService:
             subject=self._first_non_empty(entry.get("subject"), summary.get("subject")),
             sprint_mode=self._archive_sprint_mode(entry=entry, summary=summary),
             status="completed",
-            mastered_nodes_count=self._safe_int(coverage.get("covered_topics_after")),
+            mastered_nodes_count=self._archive_mastery_percent(coverage),
             started_at=self._first_non_empty(summary.get("started_at"), entry.get("started_at")),
             completed_at=self._first_non_empty(
                 entry.get("reviewed_at"),
@@ -390,13 +407,19 @@ class ExamSprintReviewService:
             proud_nodes=proud_nodes,
         )
 
-    def _portfolio_entry_from_plan(self, plan: Plan) -> PortfolioSprintEntry:
+    async def _portfolio_entry_from_plan(self, plan: Plan) -> PortfolioSprintEntry:
         metadata = self._as_dict(plan.source_metadata)
         review_state = self._as_dict(metadata.get("post_exam_review"))
-        status = "active" if plan.is_active else "planned"
-        mastered = int(round(max(float(plan.mastery_level or 0.0), 0.0) * 100))
-        days_total = self._plan_days_total(plan)
+        completion_state = self._as_dict(metadata.get("exam_sprint_completion"))
         progress = self._portfolio_progress(plan.progress, fallback=0.0)
+        if progress >= 1.0 or completion_state.get("completed_at") or review_state.get("completed_at"):
+            status = "completed"
+        elif plan.is_active:
+            status = "active"
+        else:
+            status = "planned"
+        mastered = await self._count_mastered_nodes_for_active_plan(plan.user_id)
+        days_total = self._plan_days_total(plan)
         proud_nodes = []
         weakest_points = []
         weak_chapters = metadata.get("exam_sprint_intake")
@@ -414,7 +437,7 @@ class ExamSprintReviewService:
             status=status,
             mastered_nodes_count=mastered,
             started_at=plan.created_at.isoformat() if plan.created_at else None,
-            completed_at=self._strip(review_state.get("completed_at")),
+            completed_at=self._first_non_empty(review_state.get("completed_at"), completion_state.get("completed_at")),
             target_date=plan.target_date,
             progress=progress,
             strongest_area=None,
@@ -428,6 +451,90 @@ class ExamSprintReviewService:
             proud_nodes=proud_nodes,
         )
 
+    async def _count_mastered_nodes_for_active_plan(self, user_id: UUID) -> int:
+        """Count user nodes with mastery >= threshold (60)."""
+        result = await self.db.execute(
+            select(func.count()).select_from(UserNodeStatus).where(
+                UserNodeStatus.user_id == user_id,
+                UserNodeStatus.mastery_score >= self.MASTERY_COVERAGE_THRESHOLD,
+            )
+        )
+        count = result.scalar_one_or_none()
+        return int(count or 0)
+
+    async def auto_archive_if_complete(self, *, plan_id: UUID, user_id: UUID) -> bool:
+        """Auto-archive sprint when all tasks are completed, even without post-exam review.
+
+        Returns True if the sprint was archived by this call.
+        """
+        plan = await PlanService.get_by_id(self.db, plan_id, user_id)
+        if plan is None or plan.type != PlanType.SPRINT:
+            return False
+        if not plan.is_active:
+            return False
+
+        # Check if all tasks are completed
+        tasks = await self._load_plan_tasks(plan.id)
+        if not tasks:
+            return False
+        all_completed = all(task.status == TaskStatus.COMPLETED for task in tasks)
+        if not all_completed:
+            return False
+
+        # Check if already archived via review or completion metadata
+        metadata = self._as_dict(plan.source_metadata)
+        completion_state = self._as_dict(metadata.get("exam_sprint_completion"))
+        review_state = self._as_dict(metadata.get("post_exam_review"))
+        if completion_state.get("completed_at") or review_state.get("completed_at"):
+            return False
+
+        now = _utcnow()
+
+        # Archive the plan
+        archived_plan = await PlanService.archive(
+            db=self.db,
+            plan_id=plan_id,
+            user_id=user_id,
+            redis_client=self.redis,
+        )
+        if archived_plan is None:
+            return False
+
+        # Mark completion in metadata
+        metadata.setdefault("exam_sprint_completion", {})
+        metadata["exam_sprint_completion"]["completed_at"] = now.isoformat()
+        metadata["exam_sprint_completion"]["auto_archived"] = True
+        archived_plan.source_metadata = metadata
+        self.db.add(archived_plan)
+        await self.db.commit()
+        await self.db.refresh(archived_plan)
+
+        # Update plan state
+        await PlanStateService(self.db, self.redis).upsert_plan_state(
+            user_id=user_id,
+            plan_id=plan_id,
+            patch={
+                "status": PlanStateStatus.ARCHIVED.value,
+                "archived_at": now,
+            },
+            bump_version=False,
+        )
+
+        # Trigger achievements based on task completion rate
+        task_stats = self._build_task_stats(tasks)
+        completion_rate = task_stats.completion_rate
+        await self._trigger_sprint_achievements(
+            user_id=user_id,
+            plan=archived_plan,
+            completion_rate=completion_rate,
+        )
+
+        logger.info(
+            "Sprint auto-archived: plan_id={} user_id={} tasks={}/{}",
+            plan_id, user_id, task_stats.completed, task_stats.total,
+        )
+        return True
+
     def _portfolio_sort_key(self, entry: PortfolioSprintEntry) -> tuple[int, str]:
         priority = {
             "active": 3,
@@ -440,6 +547,18 @@ class ExamSprintReviewService:
             entry.target_date.isoformat() if entry.target_date else None,
         )
         return priority, timestamp or ""
+
+    def _archive_mastery_percent(self, coverage: dict[str, Any]) -> int:
+        current_rate = coverage.get("current_rate")
+        if current_rate is not None:
+            return int(round(self._mastery_ratio(current_rate) * 100))
+
+        covered_after = self._safe_int(coverage.get("covered_topics_after"))
+        total_topics = self._safe_int(coverage.get("total_topics"))
+        if total_topics > 0:
+            return int(round(self._mastery_ratio(covered_after / total_topics) * 100))
+
+        return 0
 
     def _portfolio_progress(self, value: Any, *, fallback: float) -> float:
         numeric = self._safe_float_or_none(value)
@@ -490,6 +609,9 @@ class ExamSprintReviewService:
         return "standard_exam_sprint"
 
     def _portfolio_headline_for_plan(self, *, plan: Plan, status: str, days_total: int | None) -> str:
+        if status == "completed":
+            return "冲刺任务已全部完成，考后复盘可稍后补充。"
+
         if status == "planned":
             if days_total is not None and days_total > 0:
                 return f"计划已创建，预计用 {days_total} 天完成这次冲刺。"
@@ -1041,7 +1163,6 @@ class ExamSprintReviewService:
             "summary": summary.model_dump(mode="json"),
         }
         entries.append(archive_entry)
-        entries = entries[-self.MAX_ARCHIVE_ENTRIES :]
 
         latest_review = {
             "review_id": review_id,

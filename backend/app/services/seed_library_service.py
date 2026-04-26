@@ -1434,6 +1434,7 @@ class SeedLibraryService:
         tags: list[str] | None = None,
         match_all_tags: bool = False,
         count: int = 3,
+        include_metadata: bool = False,
     ) -> list[dict[str, Any]]:
         """
         获取 Few-shot 示例用于 LLM prompt 增强
@@ -1447,6 +1448,7 @@ class SeedLibraryService:
             tags: 标签筛选（优先用于 workflow/mode/role/stage）
             match_all_tags: 是否要求命中全部 tags
             count: 需要的示例数量
+            include_metadata: 是否返回 tags/node_ids 等内部编排元数据
 
         Returns:
             示例列表 [{"input": ..., "output": ..., "explanation": ...}, ...]
@@ -1496,7 +1498,7 @@ class SeedLibraryService:
             *public_library_conditions,
         )
 
-        # 查询示例，并按“当前启用订阅优先级 -> 官方/精选 -> 内容顺序”排序
+        # 查询示例，并按“当前启用订阅优先级 -> 质量评分 -> 官方/精选 -> 内容顺序”排序
         result = await db.execute(
             select(SeedItem)
             .join(SeedLibrary, SeedLibrary.id == SeedItem.library_id)
@@ -1514,6 +1516,7 @@ class SeedLibraryService:
             .order_by(
                 desc(func.coalesce(sub_alias.is_enabled, False)),
                 desc(func.coalesce(sub_alias.priority, 0)),
+                desc(func.coalesce(SeedLibrary.quality_score, 0.0)),
                 desc(SeedLibrary.is_featured),
                 desc(SeedLibrary.is_official),
                 asc(SeedItem.order_index),
@@ -1556,10 +1559,47 @@ class SeedLibraryService:
             else:
                 example["output"] = item.content or ""
 
+            if include_metadata:
+                item_tags = [
+                    str(tag).strip()
+                    for tag in list(item.tags or [])
+                    if str(tag).strip()
+                ]
+                example["tags"] = item_tags
+                example["seed_library_nodes"] = self._extract_example_node_ids(item.content_data, item_tags)
+
             examples.append(example)
 
         logger.info(f"Retrieved {len(examples)} few-shot examples for user {user_id}")
         return examples
+
+    @staticmethod
+    def _extract_example_node_ids(content_data: dict[str, Any] | None, tags: list[str]) -> list[str]:
+        candidates: list[Any] = []
+        data = content_data if isinstance(content_data, dict) else {}
+        for key in (
+            "knowledge_node_ids",
+            "sprint_pack_nodes",
+            "seed_library_nodes",
+            "node_ids",
+            "related_nodes",
+        ):
+            value = data.get(key)
+            if isinstance(value, list):
+                candidates.extend(value)
+            elif value:
+                candidates.append(value)
+        candidates.extend(tags)
+
+        seen: set[str] = set()
+        node_ids: list[str] = []
+        for raw in candidates:
+            node_id = str(raw or "").strip()
+            if not node_id or "." not in node_id or node_id in seen:
+                continue
+            seen.add(node_id)
+            node_ids.append(node_id)
+        return node_ids
 
     async def get_reply_template(
         self,

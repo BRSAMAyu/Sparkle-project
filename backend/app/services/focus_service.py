@@ -15,12 +15,12 @@ from loguru import logger
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.event_bus import event_bus
+from app.core.event_bus import FocusSessionCompletedEvent, event_bus
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.plan import Plan
 from app.models.subject import Subject
-from app.models.task import Task, TaskStatus
+from app.models.task import Task
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
 from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
@@ -102,12 +102,15 @@ class FocusService:
 
             # Update Task Stats
             if task_id:
-                task = await db.get(Task, task_id)
-                if task:
-                    task.actual_minutes = (task.actual_minutes or 0) + duration_minutes
-                    if task.status == TaskStatus.PENDING:
-                        task.status = TaskStatus.IN_PROGRESS
-                        task.started_at = start_time
+                from app.services.task_service import TaskService
+
+                task = await TaskService.apply_focus_progress(
+                    db,
+                    task_id=task_id,
+                    user_id=user_id,
+                    duration_minutes=duration_minutes,
+                    started_at=start_time,
+                )
 
         # ========== Achievement Integration ==========
         unlocked_achievements = []
@@ -171,18 +174,19 @@ class FocusService:
                 logger.warning(f"Focus mastery boost failed for session {session_id}: {e}")
 
         try:
+            event = FocusSessionCompletedEvent(
+                user_id=str(user_id),
+                session_id=session_id,
+                task_id=str(task_id) if task_id else None,
+                plan_id=str(task.plan_id) if task and task.plan_id else None,
+                duration_minutes=duration_minutes,
+                mastery_updates=mastery_updates,
+                started_at=start_time.isoformat(),
+                completed=status == FocusStatus.COMPLETED,
+            )
             await event_bus.publish(
                 "focus.session.completed",
-                {
-                    "event_type": "focus.session.completed",
-                    "user_id": str(user_id),
-                    "session_id": session_id,
-                    "duration_minutes": duration_minutes,
-                    "mastery_updates": mastery_updates,
-                    "started_at": start_time.isoformat(),
-                    "completed": status == FocusStatus.COMPLETED,
-                    "timestamp": _utcnow().isoformat(),
-                },
+                event.to_dict(),
             )
         except Exception as e:
             import logging

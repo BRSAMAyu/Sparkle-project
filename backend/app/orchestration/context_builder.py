@@ -66,6 +66,19 @@ class ContextBuilderMixin:
     """Mixin providing context building methods for ChatOrchestrator."""
 
     @staticmethod
+    def _extract_seed_library_nodes(examples: list[dict[str, Any]]) -> list[str]:
+        seen: set[str] = set()
+        node_ids: list[str] = []
+        for example in examples:
+            for raw in list(example.get("seed_library_nodes") or []):
+                node_id = str(raw or "").strip()
+                if not node_id or node_id in seen:
+                    continue
+                seen.add(node_id)
+                node_ids.append(node_id)
+        return node_ids
+
+    @staticmethod
     def _serialize_stage34_active_goal(plan: Plan) -> dict[str, Any]:
         return {
             "id": str(plan.id),
@@ -428,12 +441,15 @@ class ContextBuilderMixin:
                 user_id=uuid.UUID(user_id),
                 subject=subject,
                 count=3,
+                include_metadata=True,
             )
             if examples:
+                seed_library_nodes = self._extract_seed_library_nodes(examples)
                 return {
                     "has_seed_library": True,
                     "few_shot_examples": examples,
                     "example_count": len(examples),
+                    "seed_library_nodes": seed_library_nodes,
                 }
         except Exception as e:
             logger.warning(f"Failed to get seed library context for {user_id}: {e}")
@@ -740,6 +756,7 @@ class ContextBuilderMixin:
                     "understanding_depth": understanding_depth,
                     "profile": profile_payload,
                     "profile_context": profile_context_payload,
+                    "calendar_context": cognitive_context.calendar_context,
                     "working_memory_snapshot": working_memory_snapshot,
                     "past_session_memory": cognitive_context.past_session_memory,
                     # New field for full context injection

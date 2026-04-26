@@ -9,11 +9,11 @@ Plans API Endpoints - Full CRUD operations
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Response, status
 from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, case, desc, func, select
@@ -25,6 +25,7 @@ from app.core.event_bus import event_bus
 from app.core.exceptions import QuotaExceededError
 from app.db.session import get_db
 from app.models.card_protocol import ArtifactType
+from app.models.focus import FocusSession, FocusStatus
 from app.models.plan import Plan, PlanType
 from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
@@ -51,6 +52,7 @@ from app.services.card_protocol.global_compass_manager import GlobalCompassManag
 from app.services.card_protocol.phase_design_service import PhaseDesignService
 from app.services.card_protocol.phase_service import PhaseService
 from app.services.card_protocol.planning_memory_service import PlanningMemoryService
+from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_quota_service import PlanQuotaService
 from app.services.plan_service import PlanService, _sync_plan_card_projection
 from app.services.plan_state_service import PlanStateService
@@ -128,7 +130,7 @@ class FeedbackGateAnswerRequest(BaseModel):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _serialize_plan(
@@ -138,6 +140,7 @@ def _serialize_plan(
     completed_task_count: int,
     tasks: list[Task] | None = None,
     user_display_name: str | None = None,
+    health: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "id": plan.id,
@@ -147,6 +150,8 @@ def _serialize_plan(
         "subject": plan.subject,
         "target_date": plan.target_date,
         "progress": plan.progress,
+        "health_score": None,
+        "health_status": None,
         "mastery_level": plan.mastery_level,
         "daily_available_minutes": plan.daily_available_minutes,
         "total_estimated_hours": plan.total_estimated_hours,
@@ -162,6 +167,8 @@ def _serialize_plan(
         "source": plan.source,
         "source_metadata": plan.source_metadata,
     }
+    if health:
+        payload.update(health)
     if tasks is not None:
         task_payloads = [_serialize_task_for_plan_detail(task, subject=plan.subject) for task in tasks]
         payload["tasks"] = task_payloads
@@ -171,6 +178,40 @@ def _serialize_plan(
             user_display_name=user_display_name,
         )
     return payload
+
+
+def _serialize_plan_health(report: PlanHealthReport | None) -> dict[str, Any]:
+    if report is None:
+        return {}
+    score = report.health_score
+    if score is None and isinstance(report.metrics, dict):
+        raw_score = report.metrics.get("health_score")
+        try:
+            score = float(raw_score) if raw_score is not None else None
+        except (TypeError, ValueError):
+            score = None
+    return {
+        "health_score": score,
+        "health_status": report.severity,
+        "health_reasons": list(report.reasons or []),
+        "health_metrics": dict(report.metrics or {}),
+        "requires_adjustment": bool(report.requires_adjustment),
+        "recommended_action": report.recommended_action,
+    }
+
+
+async def _evaluate_plan_health(
+    service: PlanProgressService,
+    *,
+    user_id: UUID,
+    plan_id: UUID,
+) -> dict[str, Any]:
+    try:
+        report = await service.evaluate_progress(user_id, plan_id)
+    except Exception as exc:
+        logger.warning("Failed to evaluate plan health for plan {}: {}", plan_id, exc)
+        return {}
+    return _serialize_plan_health(report)
 
 
 def _strip(value: Any) -> str:
@@ -455,12 +496,18 @@ async def list_plans(
 
     # Enrich with task counts
     plans_data = []
+    progress_service = PlanProgressService(db, cache_service.redis)
     for plan in plans:
         plans_data.append(
             _serialize_plan(
                 plan,
                 task_count=task_counts.get(plan.id, 0),
                 completed_task_count=completed_counts.get(plan.id, 0),
+                health=await _evaluate_plan_health(
+                    progress_service,
+                    user_id=current_user.id,
+                    plan_id=plan.id,
+                ),
             )
         )
 
@@ -553,10 +600,16 @@ async def create_plan(
     task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
     task_count = (await db.execute(task_query)).scalar() or 0
 
+    progress_service = PlanProgressService(db, cache_service.redis)
     return _serialize_plan(
         plan,
         task_count=task_count,
         completed_task_count=0,
+        health=await _evaluate_plan_health(
+            progress_service,
+            user_id=current_user.id,
+            plan_id=plan.id,
+        ),
     )
 
 
@@ -850,6 +903,45 @@ async def get_plan_today(
     }
 
 
+@router.get("/active", response_model=PlanDetail | None)
+async def get_active_plan(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await PlanService.get_primary(db, current_user.id)
+    if not plan:
+        result = await db.execute(
+            select(Plan)
+            .where(
+                Plan.user_id == current_user.id,
+                Plan.is_active.is_(True),
+            )
+            .order_by(desc(Plan.created_at))
+            .limit(1)
+        )
+        plan = result.scalar_one_or_none()
+    if not plan:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
+    task_count = (await db.execute(task_query)).scalar() or 0
+    completed_query = select(func.count(Task.id)).where(
+        and_(Task.plan_id == plan.id, Task.status == TaskStatus.COMPLETED)
+    )
+    completed_count = (await db.execute(completed_query)).scalar() or 0
+    progress_service = PlanProgressService(db, cache_service.redis)
+    return _serialize_plan(
+        plan,
+        task_count=task_count,
+        completed_task_count=completed_count,
+        health=await _evaluate_plan_health(
+            progress_service,
+            user_id=current_user.id,
+            plan_id=plan.id,
+        ),
+    )
+
+
 @router.get("/{plan_id:uuid}", response_model=PlanDetail)
 async def get_plan(
     plan_id: UUID = Path(..., description="Plan ID"),
@@ -879,12 +971,18 @@ async def get_plan(
     )
     tasks = tasks_result.scalars().all()
 
+    progress_service = PlanProgressService(db, cache_service.redis)
     return _serialize_plan(
         plan,
         task_count=task_count,
         completed_task_count=completed_count,
         tasks=list(tasks),
         user_display_name=current_user.nickname or current_user.full_name or current_user.username,
+        health=await _evaluate_plan_health(
+            progress_service,
+            user_id=current_user.id,
+            plan_id=plan.id,
+        ),
     )
 
 
@@ -1127,9 +1225,7 @@ async def generate_tasks_for_plan(
             task_ids.append(task["id"])
 
     created_tasks_result = await db.execute(
-        select(Task)
-        .where(Task.user_id == current_user.id, Task.id.in_(task_ids))
-        .order_by(desc(Task.created_at))
+        select(Task).where(Task.user_id == current_user.id, Task.id.in_(task_ids)).order_by(desc(Task.created_at))
     )
     created_tasks = created_tasks_result.scalars().all()
     return [TaskDetail.model_validate(task) for task in created_tasks]
@@ -1152,6 +1248,20 @@ async def delete_plan(
     # Archive instead of hard delete
     plan.is_active = False
     db.add(plan)
+    if plan.type == PlanType.SPRINT and float(plan.progress or 0.0) < 0.8:
+        try:
+            from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+            await AchievementEngine(db).process_event(
+                str(current_user.id),
+                AchievementEvent.SPRINT_ABANDONED,
+                plan_id=str(plan.id),
+                completion_rate=float(plan.progress or 0.0),
+                abandoned_count=1,
+                source="plan_deleted",
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to publish sprint abandoned achievement for plan {plan.id}: {exc}")
     await db.commit()
 
     # Get task count for notification
@@ -1248,6 +1358,15 @@ async def archive_plan_state(
             # SPRINT_STREAK: Always check streak for any completion >=80%
             await engine.process_event(
                 str(current_user.id), AchievementEvent.SPRINT_STREAK, completion_rate=completion_rate
+            )
+        else:
+            await engine.process_event(
+                str(current_user.id),
+                AchievementEvent.SPRINT_ABANDONED,
+                plan_id=str(plan.id),
+                completion_rate=completion_rate,
+                abandoned_count=1,
+                source="plan_archived",
             )
 
     # Get new primary plan info
@@ -1382,13 +1501,29 @@ async def get_plan_progress(
     )
     completed_tasks = (await db.execute(completed_query)).scalar() or 0
 
+    minutes_query = (
+        select(func.coalesce(func.sum(FocusSession.duration_minutes), 0))
+        .join(Task, FocusSession.task_id == Task.id)
+        .where(
+            Task.plan_id == plan.id,
+            FocusSession.user_id == current_user.id,
+            FocusSession.status == FocusStatus.COMPLETED,
+        )
+    )
+    total_minutes_spent = int((await db.execute(minutes_query)).scalar() or 0)
+    progress_service = PlanProgressService(db, cache_service.redis)
+    health = await _evaluate_plan_health(progress_service, user_id=current_user.id, plan_id=plan.id)
+
     return {
         "plan_id": plan.id,
         "progress": plan.progress,
         "mastery_level": plan.mastery_level,
+        "health_score": health.get("health_score"),
+        "health_status": health.get("health_status"),
+        "health_reasons": health.get("health_reasons", []),
         "total_tasks": total_tasks,
         "completed_tasks": completed_tasks,
-        "total_minutes_spent": 0,  # Would be calculated from focus sessions
+        "total_minutes_spent": total_minutes_spent,
         "estimated_remaining_hours": plan.total_estimated_hours or 0,
     }
 
@@ -1463,11 +1598,17 @@ async def get_primary_plan(current_user: User = Depends(get_current_user), db: A
     )
     completed_count = (await db.execute(completed_query)).scalar() or 0
 
+    progress_service = PlanProgressService(db, cache_service.redis)
     return {
         "plan": _serialize_plan(
             plan,
             task_count=task_count,
             completed_task_count=completed_count,
+            health=await _evaluate_plan_health(
+                progress_service,
+                user_id=current_user.id,
+                plan_id=plan.id,
+            ),
         )
     }
 

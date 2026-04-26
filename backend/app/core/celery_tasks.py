@@ -1102,7 +1102,15 @@ def retry_achievement_photon_reward(
             raise
         raise self.retry(exc=exc, countdown=30 * (2 ** int(self.request.retries or 0)))
 
+
 SPACED_REPETITION_INTERVAL_DAYS = (1, 3, 7, 14, 30)
+SPACED_REPETITION_INTERVALS_BY_MASTERY = (
+    (0.30, 0.50, (1, 3, 7)),
+    (0.50, 0.65, (3, 7, 14)),
+    (0.65, 0.75, (7, 14, 30)),
+    (0.75, 0.80, (14, 30)),
+)
+SPACED_REPETITION_GRACE_DAYS = 2
 SPACED_REPETITION_MASTERY_MIN = 0.3
 SPACED_REPETITION_MASTERY_MAX = 0.8
 
@@ -1138,7 +1146,19 @@ def _spaced_repetition_last_updated_at(status):
     return None
 
 
-def _spaced_repetition_due_interval_days(last_updated_at, now) -> int | None:
+def _spaced_repetition_interval_days_for_mastery(mastery: float | None) -> tuple[int, ...]:
+    if mastery is None:
+        return SPACED_REPETITION_INTERVAL_DAYS
+    mastery_ratio = max(0.0, min(float(mastery), 1.0))
+    for lower, upper, intervals in SPACED_REPETITION_INTERVALS_BY_MASTERY:
+        if lower <= mastery_ratio < upper:
+            return intervals
+    if mastery_ratio == SPACED_REPETITION_MASTERY_MAX:
+        return SPACED_REPETITION_INTERVALS_BY_MASTERY[-1][2]
+    return SPACED_REPETITION_INTERVAL_DAYS
+
+
+def _spaced_repetition_due_interval_days(last_updated_at, now, mastery: float | None = None) -> int | None:
     last_updated = _spaced_repetition_as_utc_naive(last_updated_at)
     reference_time = _spaced_repetition_as_utc_naive(now)
     if last_updated is None or reference_time is None:
@@ -1147,7 +1167,11 @@ def _spaced_repetition_due_interval_days(last_updated_at, now) -> int | None:
     if elapsed_seconds < 0:
         return None
     elapsed_days = int(elapsed_seconds // 86400)
-    return elapsed_days if elapsed_days in SPACED_REPETITION_INTERVAL_DAYS else None
+    interval_days_for_mastery = _spaced_repetition_interval_days_for_mastery(mastery)
+    for interval_days in reversed(interval_days_for_mastery):
+        if interval_days <= elapsed_days < interval_days + SPACED_REPETITION_GRACE_DAYS:
+            return interval_days
+    return None
 
 
 async def _run_spaced_repetition_reminders_for_user(session, user_id: str, now=None) -> dict:
@@ -1197,7 +1221,7 @@ async def _run_spaced_repetition_reminders_for_user(session, user_id: str, now=N
             continue
 
         last_updated_at = _spaced_repetition_last_updated_at(status)
-        due_interval_days = _spaced_repetition_due_interval_days(last_updated_at, reference_time)
+        due_interval_days = _spaced_repetition_due_interval_days(last_updated_at, reference_time, mastery=mastery)
         if due_interval_days is None:
             summary["skipped_window"] += 1
             continue
@@ -1257,24 +1281,38 @@ def scan_spaced_repetition_reminders(self, limit: int = 500):
 
     async def _run():
         async with AsyncSessionLocal() as session:
-            stmt = (
-                select(UserNodeStatus.user_id)
-                .join(User, User.id == UserNodeStatus.user_id)
-                .where(User.is_active.is_(True))
-                .distinct()
-                .limit(limit)
-            )
-            result = await session.execute(stmt)
-            user_ids = [row[0] for row in result.all()]
-            for user_uuid in user_ids:
-                celery_app.send_task(
-                    "app.core.celery_tasks.spaced_repetition_reminder_task",
-                    args=(str(user_uuid),),
-                    queue="default",
+            batch_size = max(1, min(int(limit or 500), 1000))
+            dispatched = 0
+            offset = 0
+            while True:
+                stmt = (
+                    select(UserNodeStatus.user_id)
+                    .join(User, User.id == UserNodeStatus.user_id)
+                    .where(User.is_active.is_(True))
+                    .distinct()
+                    .order_by(UserNodeStatus.user_id)
+                    .offset(offset)
+                    .limit(batch_size)
                 )
+                result = await session.execute(stmt)
+                user_ids = [row[0] for row in result.all()]
+                if not user_ids:
+                    break
 
-            logger.info("✅ Dispatched %d spaced repetition reminder tasks", len(user_ids))
-            return {"dispatched": len(user_ids)}
+                for user_uuid in user_ids:
+                    celery_app.send_task(
+                        "app.core.celery_tasks.spaced_repetition_reminder_task",
+                        args=(str(user_uuid),),
+                        queue="default",
+                    )
+                    dispatched += 1
+
+                if len(user_ids) < batch_size:
+                    break
+                offset += batch_size
+
+            logger.info("✅ Dispatched %d spaced repetition reminder tasks", dispatched)
+            return {"dispatched": dispatched}
 
     try:
         return _run_async(_run())
@@ -1775,27 +1813,44 @@ def scan_weekly_growth_narratives(self, limit: int = 500):
 
     async def _run():
         async with AsyncSessionLocal() as session:
+            batch_size = max(1, min(int(limit or 500), 1000))
             cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=14)
-            task_rows = await session.execute(
-                select(distinct(Task.user_id))
-                .where(
-                    Task.completed_at >= cutoff,
-                    Task.deleted_at.is_(None),
+            user_ids = set()
+
+            offset = 0
+            while True:
+                task_rows = await session.execute(
+                    select(distinct(Task.user_id))
+                    .where(
+                        Task.completed_at >= cutoff,
+                        Task.deleted_at.is_(None),
+                    )
+                    .order_by(Task.user_id)
+                    .offset(offset)
+                    .limit(batch_size)
                 )
-                .limit(limit)
-            )
-            study_rows = await session.execute(
-                select(distinct(StudyRecord.user_id))
-                .where(
-                    StudyRecord.created_at >= cutoff,
+                batch = [uid for (uid,) in task_rows.all() if uid is not None]
+                user_ids.update(batch)
+                if len(batch) < batch_size:
+                    break
+                offset += batch_size
+
+            offset = 0
+            while True:
+                study_rows = await session.execute(
+                    select(distinct(StudyRecord.user_id))
+                    .where(
+                        StudyRecord.created_at >= cutoff,
+                    )
+                    .order_by(StudyRecord.user_id)
+                    .offset(offset)
+                    .limit(batch_size)
                 )
-                .limit(limit)
-            )
-            user_ids = {
-                uid
-                for (uid,) in task_rows.all() + study_rows.all()
-                if uid is not None
-            }
+                batch = [uid for (uid,) in study_rows.all() if uid is not None]
+                user_ids.update(batch)
+                if len(batch) < batch_size:
+                    break
+                offset += batch_size
 
             dispatched = 0
             for user_id in sorted(user_ids, key=str):
@@ -1814,3 +1869,69 @@ def scan_weekly_growth_narratives(self, limit: int = 500):
     except Exception as exc:
         logger.error("❌ scan_weekly_growth_narratives failed: %s", exc)
         raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.purge_deleted_account")
+def purge_deleted_account(self, user_id: str) -> dict:
+    """Hard-delete all data for a soft-deleted account (runs 30 days after deletion)."""
+    from uuid import UUID
+
+    from sqlalchemy import delete as sql_delete
+
+    from app.db.session import AsyncSessionLocal
+    from app.models.achievement import UserAchievement, UserStreakStats, UserStreakDays
+    from app.models.calendar_event import CalendarEvent
+    from app.models.chat import ChatSession, ChatMessage
+    from app.models.error_book import ErrorRecord
+    from app.models.focus import FocusSession
+    from app.models.galaxy import UserNodeStatus
+    from app.models.notification import Notification
+    from app.models.notification_interaction import NotificationInteraction
+    from app.models.plan import Plan
+    from app.models.task import Task
+    from app.models.user import User
+    from app.models.user_settings import UserSettings
+
+    uid = UUID(user_id)
+
+    async def _purge() -> dict:
+        async with AsyncSessionLocal() as session:
+            user = await session.get(User, uid)
+            if user is None:
+                return {"status": "not_found", "user_id": user_id}
+            if user.is_active:
+                return {"status": "skipped_active", "user_id": user_id}
+
+            tables: list[tuple[type, str]] = [
+                (ChatMessage, "user_id"),
+                (ChatSession, "user_id"),
+                (Task, "user_id"),
+                (Plan, "user_id"),
+                (ErrorRecord, "user_id"),
+                (FocusSession, "user_id"),
+                (CalendarEvent, "user_id"),
+                (UserAchievement, "user_id"),
+                (UserStreakStats, "user_id"),
+                (UserStreakDays, "user_id"),
+                (Notification, "user_id"),
+                (NotificationInteraction, "user_id"),
+                (UserNodeStatus, "user_id"),
+                (UserSettings, "user_id"),
+            ]
+            counts: dict[str, int] = {}
+            for model, field in tables:
+                result = await session.execute(
+                    sql_delete(model).where(getattr(model, field) == uid)
+                )
+                counts[model.__tablename__] = result.rowcount
+
+            await session.delete(user)
+            await session.commit()
+            logger.info(f"✅ Purged deleted account {user_id}: {counts}")
+            return {"status": "purged", "user_id": user_id, "counts": counts}
+
+    try:
+        return _run_async(_purge())
+    except Exception as exc:
+        logger.error(f"❌ purge_deleted_account failed for {user_id}: {exc}")
+        raise self.retry(exc=exc, countdown=3600)

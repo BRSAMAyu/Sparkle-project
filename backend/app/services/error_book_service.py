@@ -263,8 +263,8 @@ class ErrorBookService:
             ocr_text = None
             final_text = error.question_text or ""
 
-            if error.question_image_url and (not error.question_text or len(error.question_text) < 10):
-                # Trigger OCR
+            if error.question_image_url:
+                # Always OCR image-backed errors; user text is treated as context, not a replacement.
                 logger.info(f"Running OCR for error {error.id}")
                 ocr_text = await self._run_ocr(error.question_image_url)
                 if ocr_text:
@@ -584,20 +584,63 @@ class ErrorBookService:
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
             return self._build_fallback_analysis(
+                subject=subject,
                 question=question,
                 user_ans=user_ans,
                 correct_ans=correct_ans,
                 linked_nodes=linked_nodes,
             )
 
-    def _build_fallback_analysis(self, question, user_ans, correct_ans, linked_nodes) -> dict:
+    def _build_fallback_analysis(
+        self, question, user_ans, correct_ans, linked_nodes, subject: str | None = None
+    ) -> dict:
         question_text = (question or "").strip()
         user_text = (user_ans or "").strip()
         correct_text = (correct_ans or "").strip()
         related_concepts = [node.name for node in linked_nodes[:3] if getattr(node, "name", None)]
 
         combined_text = f"{question_text}\n{user_text}\n{correct_text}".lower()
-        if any(keyword in combined_text for keyword in ["指针", "pointer", "*p", "地址", "内存"]):
+        subject_code = (subject or "").strip().lower()
+        english_keywords = [
+            "grammar",
+            "tense",
+            "verb",
+            "preposition",
+            "article",
+            "clause",
+            "sentence",
+            "vocabulary",
+            "spelling",
+            "pronunciation",
+            "reading",
+            "inference",
+            "main idea",
+            "完形",
+            "语法",
+            "时态",
+            "介词",
+            "从句",
+            "词汇",
+            "拼写",
+            "阅读理解",
+        ]
+        if subject_code == "english" or any(keyword in combined_text for keyword in english_keywords):
+            if any(
+                keyword in combined_text
+                for keyword in ["vocabulary", "spelling", "pronunciation", "词汇", "拼写"]
+            ):
+                error_type = "memory_lapse"
+                error_type_label = "记忆提取失败"
+            elif any(
+                keyword in combined_text
+                for keyword in ["reading", "inference", "main idea", "tone", "阅读理解", "推断"]
+            ):
+                error_type = "reading_careless"
+                error_type_label = "审题/阅读偏差"
+            else:
+                error_type = "concept_confusion"
+                error_type_label = "语法规则混淆"
+        elif any(keyword in combined_text for keyword in ["指针", "pointer", "*p", "地址", "内存"]):
             error_type = "concept_confusion"
             error_type_label = "概念混淆"
         elif any(keyword in combined_text for keyword in ["计算", "算错", "结果", "公式"]):

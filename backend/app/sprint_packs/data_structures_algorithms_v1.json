@@ -189,11 +189,105 @@
     }
   },
   "task_card_templates": [
-    {"template_id": "ds.trace_card", "label": "过程追踪卡", "instruction": "手算一道题的完整状态变化，保留每一轮中间结果。"},
-    {"template_id": "ds.comparison_table", "label": "算法对比表", "instruction": "对比同类算法的复杂度、稳定性、适用条件和常见陷阱。"},
-    {"template_id": "ds.error_fix", "label": "错因修复卡", "instruction": "复盘一个错题，写出错误触发点和下次检查顺序。"},
-    {"template_id": "ds.closed_book", "label": "闭卷默写卡", "instruction": "闭卷写出定义、核心步骤、复杂度和易错边界。"}
+    {
+      "template_id": "ds.trace_card",
+      "label": "过程追踪卡",
+      "description": "手算树、图、查找、排序或队列栈题的完整状态变化，保留每一轮中间结果",
+      "steps": [
+        "写出初始结构、指针、队列/栈、数组或 dist 表",
+        "逐轮记录关键状态变化，不跳步",
+        "圈出边界条件、入队出队、比较交换或松弛动作",
+        "对照答案检查第一次分歧点并重算"
+      ],
+      "done_criteria": "中间状态表完整，最终结果正确，并能指出至少一个易错边界",
+      "duration_minutes": 30
+    },
+    {
+      "template_id": "ds.comparison_table",
+      "label": "算法对比表",
+      "description": "对比同类算法的数据结构、复杂度、稳定性、适用条件和常见陷阱",
+      "steps": [
+        "选择一组易混算法或结构",
+        "闭卷填写时间复杂度、空间复杂度、稳定性和适用场景",
+        "补充典型题型和常见错误",
+        "用一句话写出区分它们的判断规则"
+      ],
+      "done_criteria": "对比表至少覆盖 5 个维度，复杂度和适用条件无关键错误",
+      "duration_minutes": 20
+    },
+    {
+      "template_id": "ds.error_fix",
+      "label": "错因修复卡",
+      "description": "围绕一个数据结构或算法错题做最小闭环修复",
+      "steps": [
+        "选择一个 mistake_id 或最近错题",
+        "写出错误触发点和遗漏的检查动作",
+        "不看答案重做原题",
+        "再做一道同型题验证修复是否生效"
+      ],
+      "done_criteria": "原题和同型题都能独立正确完成，并写出下次检查顺序",
+      "duration_minutes": 25
+    },
+    {
+      "template_id": "ds.closed_book",
+      "label": "闭卷默写卡",
+      "description": "闭卷写出定义、核心步骤、复杂度和易错边界，用输出倒逼记忆",
+      "steps": [
+        "只看知识点标题，不展开笔记",
+        "闭卷写出定义、核心操作、复杂度和边界条件",
+        "对照教材或笔记标记遗漏",
+        "补齐后立刻再闭卷默写一次"
+      ],
+      "done_criteria": "核心定义、步骤和复杂度覆盖 90% 以上，边界条件无混淆",
+      "duration_minutes": 20
+    },
+    {
+      "template_id": "ds.mixed_mock",
+      "label": "混合短模拟卡",
+      "description": "用少量高频题覆盖线性表、树、图、查找、排序和复杂度核心得分点",
+      "steps": [
+        "限时完成 5-7 道混合题",
+        "标注每题所属知识节点和 mistake_id",
+        "统计错因最高频的 1-2 类问题",
+        "只重做这些错因对应的题目"
+      ],
+      "done_criteria": "完成订正并能说明每类错因的下次防错动作",
+      "duration_minutes": 45
+    }
   ],
+  "checkpoint_rules": {
+    "pass_threshold": 60,
+    "high_score_threshold": 80,
+    "mastery_minimum": {
+      "minimum_pass_nodes": 65,
+      "score_max_nodes": 75
+    },
+    "checkpoint_intervals": {
+      "7d": [
+        3,
+        5,
+        7
+      ],
+      "14d": [
+        4,
+        7,
+        10,
+        14
+      ]
+    },
+    "upgrade_criteria": {
+      "minimum_pass_to_score_max": {
+        "condition": "minimum_pass 节点掌握度 >= 70% 且树、图、排序查找过程题正确率 >= 70%",
+        "action": "加入 AVL、关键路径、Floyd、动态规划和算法证明节点"
+      }
+    },
+    "downgrade_criteria": {
+      "score_max_to_minimum_pass": {
+        "condition": "连续 2 次检查点基础过程追踪题正确率低于 55%",
+        "action": "回退到 minimum_pass 路线，暂停低频算法设计和证明题"
+      }
+    }
+  },
   "aurora_rules": {
     "last_day_compact": {
       "trigger_conditions": [

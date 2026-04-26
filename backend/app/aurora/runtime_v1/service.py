@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, date as date_type, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
+from datetime import date as date_type
 from typing import Any
 from uuid import UUID
 
@@ -20,13 +22,24 @@ from app.aurora.runtime_v1.control_surface import (
     ControlSurfaceService,
 )
 from app.aurora.runtime_v1.dashboard import DashboardReadoutBuilder, canonicalize_runtime_domain
-from app.aurora.runtime_v1.decision_loop import AuroraDecision, AuroraDecisionLoop, STRATEGY_FIELDS
+from app.aurora.runtime_v1.decision_loop import STRATEGY_FIELDS, AuroraDecision, AuroraDecisionLoop
 from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 from app.aurora.runtime_v1.skills import AuroraSkillRegistry
-from app.aurora.runtime_v1.state import ActivityProfile, AuroraTeachingStrategy, merge_activity_profile_payload
+from app.aurora.runtime_v1.state import (
+    ActivityProfile,
+    AuroraIntent,
+    AuroraRuntimeStore,
+    AuroraState,
+    AuroraTeachingStrategy,
+    InformationalTension,
+    LatentThread,
+    ScheduledWake,
+    merge_activity_profile_payload,
+)
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.aurora.runtime_v1.wake_policy import AuroraWakePolicyService
 from app.aurora.runtime_v1.write_pipeline import InferenceClaim
+from app.models.calendar_event import CalendarEvent
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
 from app.models.user import User
@@ -233,9 +246,8 @@ class AuroraRuntimeV1Service:
             or "今天的核心任务"
         )
         estimated_minutes = self._estimated_minutes(today_tasks, fallback=plan.daily_available_minutes)
-        day_recommendation = (
-            _strip(plan_context.get("day_recommendation"))
-            or self._stored_day_recommendation(plan=plan, day_index=current_day_index)
+        day_recommendation = _strip(plan_context.get("day_recommendation")) or self._stored_day_recommendation(
+            plan=plan, day_index=current_day_index
         )
 
         wake_decision_payload: dict[str, Any] = {}
@@ -262,6 +274,13 @@ class AuroraRuntimeV1Service:
             completion_rate=yesterday_rate,
             wake_energy=_strip(wake_decision_payload.get("energy")),
         )
+        calendar_note = await self._daily_startup_calendar_note(
+            active_db=active_db,
+            user_id=user_uuid,
+            session_day=session_day,
+            today_focus=today_focus,
+            estimated_minutes=estimated_minutes,
+        )
         message = self._daily_startup_message(
             plan=plan,
             day_index=current_day_index,
@@ -271,12 +290,14 @@ class AuroraRuntimeV1Service:
             adjustment_reason=adjustment_reason,
             day_recommendation=day_recommendation,
             display_name=display_name,
+            calendar_note=calendar_note,
         )
         return {
             "message": message,
             "today_focus": today_focus,
             "estimated_minutes": estimated_minutes,
             "adjustment_reason": adjustment_reason,
+            "calendar_note": calendar_note,
         }
 
     async def get_comeback_context(
@@ -296,18 +317,19 @@ class AuroraRuntimeV1Service:
         from app.models.plan import Plan
         from app.models.task import Task
         from app.models.user import User
+        from app.services.user_activity_service import UserActivityService
 
         user_uuid = UUID(str(user_id))
         user = await active_db.get(User, user_uuid)
         if user is None or not user.is_active:
             return None
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        last_activity_at = _as_utc_naive(user.last_login_at)
+        now = datetime.now(UTC).replace(tzinfo=None)
+        last_activity_at = await UserActivityService(active_db).get_last_real_activity_at(user_uuid)
         if last_activity_at is None:
             return None
         days_away = max(0, (now - last_activity_at).days)
-        if days_away <= inactive_threshold_days:
+        if days_away < inactive_threshold_days:
             return None
 
         # Most recent active plan with a target date
@@ -392,6 +414,15 @@ class AuroraRuntimeV1Service:
         conversation_context = dict(conversation_context or {})
         user_context_payload = dict(user_context_payload or {})
         surface = AURORA_RUNTIME_MODE_SURFACES.get(surface, surface)
+        prior_runtime_state = await self._load_prior_runtime_state(
+            user_id=user_id,
+            surface=surface,
+            conversation_id=conversation_id,
+        )
+        request_extra_context = self._with_prior_runtime_context(
+            request_extra_context=request_extra_context,
+            prior_state=prior_runtime_state,
+        )
         request_extra_context = await self._with_strategy_recalibration_context(
             active_db=active_db,
             user_id=user_id,
@@ -439,6 +470,10 @@ class AuroraRuntimeV1Service:
 
         control_surface_reading = await self._read_control_surface(active_db=active_db, user_id=user_id)
         activity_profile = self._build_activity_profile(surface=surface, request_extra_context=request_extra_context)
+        if prior_runtime_state is not None:
+            prior_profile = prior_runtime_state.activity_profile.model_dump(mode="python")
+            prior_profile.pop("next_wake_at", None)
+            activity_profile = merge_activity_profile_payload(activity_profile, prior_profile)
         activity_profile.update(self._activity_payload(control_surface_reading.adjustable))
         review_focus = self._review_focus_from_context(request_extra_context)
         if review_focus is not None:
@@ -591,6 +626,7 @@ class AuroraRuntimeV1Service:
             conversation_id=conversation_id,
             request_id=request_id,
             user_message=user_message,
+            request_extra_context=request_extra_context,
             conversation_context=conversation_context,
             user_context_payload=user_context_payload,
             plan=plan,
@@ -598,6 +634,84 @@ class AuroraRuntimeV1Service:
             wake_policy=wake_decision.to_payload(),
         )
         return plan
+
+    async def _load_prior_runtime_state(
+        self,
+        *,
+        user_id: str,
+        surface: str,
+        conversation_id: str,
+    ) -> AuroraState | None:
+        if self.redis is None:
+            return None
+        store = AuroraRuntimeStore(self.redis, enabled=True)
+        try:
+            state = await store.load_runtime_state(
+                user_id=user_id,
+                surface=surface,
+                conversation_id=conversation_id,
+            )
+            if state is not None:
+                return state
+            if surface == "aurora_checkpoint":
+                return await store.load_latest_surface_state(user_id=user_id, surface=surface)
+        except Exception as exc:
+            logger.warning("Aurora runtime v1 failed to load prior runtime state: {}", exc)
+        return None
+
+    def _with_prior_runtime_context(
+        self,
+        *,
+        request_extra_context: dict[str, Any],
+        prior_state: AuroraState | None,
+    ) -> dict[str, Any]:
+        if prior_state is None:
+            return request_extra_context
+
+        enriched = dict(request_extra_context)
+        prior_tensions = [item.model_dump(mode="json") for item in prior_state.informational_tensions]
+        prior_threads = [item.model_dump(mode="json") for item in prior_state.latent_threads]
+        enriched["previous_runtime_state"] = {
+            "surface": prior_state.surface,
+            "conversation_id": prior_state.conversation_id,
+            "runtime_session_id": prior_state.runtime_session_id,
+            "updated_at": prior_state.updated_at.isoformat(),
+            "last_decision_at": prior_state.last_decision_at.isoformat() if prior_state.last_decision_at else None,
+            "informational_tensions": prior_tensions,
+            "latent_threads": prior_threads,
+            "activity_profile": prior_state.activity_profile.model_dump(mode="json"),
+        }
+        enriched["informational_tensions"] = self._merge_context_items(
+            prior_tensions,
+            enriched.get("informational_tensions"),
+            key_field="tension_id",
+        )
+        enriched["latent_threads"] = self._merge_context_items(
+            prior_threads,
+            enriched.get("latent_threads"),
+            key_field="thread_id",
+        )
+        return enriched
+
+    def _merge_context_items(
+        self, prior_items: list[dict[str, Any]], current_value: Any, *, key_field: str
+    ) -> list[dict[str, Any]]:
+        if not isinstance(prior_items, list):
+            prior_items = []
+        current_items = (
+            [dict(item) for item in current_value if isinstance(item, Mapping)]
+            if isinstance(current_value, list)
+            else []
+        )
+        merged: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for item in [*prior_items, *current_items]:
+            key = _strip(item.get(key_field)) or json.dumps(item, ensure_ascii=False, sort_keys=True, default=str)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(item)
+        return merged
 
     async def _with_strategy_recalibration_context(
         self,
@@ -762,7 +876,7 @@ class AuroraRuntimeV1Service:
             profile = merge_activity_profile_payload(profile, {"expression": request_extra_context["expression"]})
         return profile
 
-    def _review_focus_from_context(self, request_extra_context: Mapping[str, Any]) -> dict[str, str] | None:
+    def _review_focus_from_context(self, request_extra_context: Mapping[str, Any]) -> dict[str, Any] | None:
         review_node = _strip(request_extra_context.get("review_node"))
         if not review_node:
             return None
@@ -771,10 +885,43 @@ class AuroraRuntimeV1Service:
         if not node_label:
             node_label = self._REVIEW_NODE_LABEL_ALIASES.get(review_node, self._humanize_review_node_id(review_node))
 
-        return {
+        result: dict[str, Any] = {
             "review_node": review_node,
             "node_label": node_label or "这个知识点",
         }
+
+        mastery_raw = request_extra_context.get("mastery")
+        if isinstance(mastery_raw, (int, float)):
+            result["mastery"] = float(mastery_raw)
+
+        study_count_raw = request_extra_context.get("study_count")
+        if isinstance(study_count_raw, int):
+            result["study_count"] = study_count_raw
+
+        error_count_raw = request_extra_context.get("related_error_count")
+        if isinstance(error_count_raw, int):
+            result["related_error_count"] = error_count_raw
+
+        related_errors_raw = request_extra_context.get("related_errors")
+        if isinstance(related_errors_raw, list):
+            related_errors: list[dict[str, Any]] = []
+            for item in related_errors_raw[:3]:
+                if not isinstance(item, Mapping):
+                    continue
+                question_text = _strip(item.get("question_text"))
+                analysis_summary = _strip(item.get("analysis_summary"))
+                if not question_text and not analysis_summary:
+                    continue
+                related_errors.append(
+                    {
+                        **({"question_text": question_text} if question_text else {}),
+                        **({"analysis_summary": analysis_summary} if analysis_summary else {}),
+                    }
+                )
+            if related_errors:
+                result["related_errors"] = related_errors
+
+        return result
 
     @staticmethod
     def _humanize_review_node_id(review_node: str) -> str:
@@ -784,13 +931,51 @@ class AuroraRuntimeV1Service:
         return compact.upper() if compact.isascii() else compact
 
     @staticmethod
-    def _build_review_node_first_turn_message(review_focus: Mapping[str, str]) -> str:
+    def _build_review_node_first_turn_message(review_focus: Mapping[str, Any]) -> str:
         node_label = _strip(review_focus.get("node_label")) or "这个知识点"
-        return (
-            f"收到，我们先围绕「{node_label}」做一轮 15 分钟的定点复习任务。"
-            "先用你自己的话说清它要解决什么问题，再对比一个最容易混淆的相邻概念，"
-            "最后我会给你 2 个短检查点，专门盯住这个节点最容易丢分的薄弱处。"
-        )
+        mastery = review_focus.get("mastery")
+        study_count = review_focus.get("study_count", 0)
+        error_count = review_focus.get("related_error_count", 0)
+        related_errors = review_focus.get("related_errors")
+
+        mastery_pct: int | None = None
+        if isinstance(mastery, (int, float)):
+            mastery_pct = int(mastery * 100) if mastery <= 1 else int(mastery)
+            mastery_pct = max(0, min(100, mastery_pct))
+
+        if mastery_pct is not None and mastery_pct <= 0 and study_count == 0:
+            return (
+                f"好的，我们开始学习「{node_label}」。用户当前对该节点掌握 {mastery_pct}%。"
+                "先从最基础的概念入手，弄清它要解决什么问题，"
+                "再用基础题逐步深入到核心原理和常见考法。"
+            )
+
+        parts = [f"收到，我们先围绕「{node_label}」做一轮定点复习。"]
+
+        if mastery_pct is not None:
+            parts.append(f"用户当前对该节点掌握 {mastery_pct}%。")
+            if mastery_pct >= 70:
+                parts.append("你的掌握度已经不错了，这次会直接上挑战题来查漏补缺。")
+            elif mastery_pct >= 40:
+                parts.append("你有一些基础但还有薄弱环节，我们用进阶题趁热打铁。")
+            else:
+                parts.append("这个知识点你还比较生疏，我们先从基础题和关键概念梳理开始。")
+
+        if error_count and error_count > 0:
+            parts.append(f"注意到你有 {error_count} 道相关错题，复习时会特别针对易错点。")
+
+        if isinstance(related_errors, list) and related_errors:
+            summaries = [
+                _strip(item.get("analysis_summary")) or _strip(item.get("question_text"))
+                for item in related_errors
+                if isinstance(item, Mapping)
+            ]
+            summaries = [summary for summary in summaries if summary]
+            if summaries:
+                parts.append(f"先点名处理这些线索：{'；'.join(summaries[:3])}。")
+
+        parts.append("先用你自己的话说清它要解决什么问题，再对比一个最容易混淆的相邻概念。")
+        return "".join(parts)
 
     def _with_surface_state(self, *, surface: str, request_extra_context: dict[str, Any]) -> dict[str, Any]:
         if surface != "aurora_planning":
@@ -1686,10 +1871,12 @@ class AuroraRuntimeV1Service:
         adjustment_reason: str,
         day_recommendation: str = "",
         display_name: str = "",
+        calendar_note: str = "",
     ) -> str:
         subject = _strip(plan.subject) or _strip(plan.name) or "这场考试"
         greeting = self._daily_greeting()
         recommendation_tail = self._daily_recommendation_tail(day_recommendation, today_focus=today_focus)
+        calendar_tail = self._daily_calendar_tail(calendar_note)
         name_prefix = f"{display_name}，" if display_name and len(display_name) <= 12 else ""
         greeting_prefix = f"{greeting}，{name_prefix}" if name_prefix else f"{greeting}，"
         opening = (
@@ -1697,25 +1884,107 @@ class AuroraRuntimeV1Service:
             f"今天的核心任务是 {today_focus}，预计 {estimated_minutes} 分钟。"
         )
         if completion_rate is None:
-            return f"{opening}{adjustment_reason}{recommendation_tail}准备好了吗？"
+            return f"{opening}{adjustment_reason}{recommendation_tail}{calendar_tail}准备好了吗？"
         percent = int(round(completion_rate * 100))
         if completion_rate >= 0.8:
             return (
                 f"{opening}昨天完成率 {percent}%，做得很好，推进很顺利，"
-                f"今天我们保持这个手感。{recommendation_tail}准备好了吗？"
+                f"今天我们保持这个手感。{recommendation_tail}{calendar_tail}准备好了吗？"
             )
         if completion_rate < 0.5:
             return (
                 f"{opening}昨天完成率 {percent}%，完成得偏少，"
-                f"今天我们轻一点，先缩小到最核心的一步。{recommendation_tail}准备好了吗？"
+                f"今天我们轻一点，先缩小到最核心的一步。{recommendation_tail}{calendar_tail}准备好了吗？"
             )
-        return f"{opening}{adjustment_reason}{recommendation_tail}准备好了吗？"
+        return f"{opening}{adjustment_reason}{recommendation_tail}{calendar_tail}准备好了吗？"
+
+    async def _daily_startup_calendar_note(
+        self,
+        *,
+        active_db: AsyncSession,
+        user_id: UUID,
+        session_day: date_type,
+        today_focus: str,
+        estimated_minutes: int,
+    ) -> str:
+        day_start = datetime.combine(session_day, datetime.min.time())
+        day_end = day_start + timedelta(days=1)
+        result = await active_db.execute(
+            select(CalendarEvent)
+            .where(
+                CalendarEvent.user_id == user_id,
+                CalendarEvent.deleted_at.is_(None),
+                CalendarEvent.start_time < day_end,
+                CalendarEvent.end_time > day_start,
+            )
+            .order_by(CalendarEvent.start_time)
+            .limit(6)
+        )
+        events = list(result.scalars().all())
+        if not events:
+            return ""
+
+        event = events[0]
+        start_label = self._format_event_time(event.start_time)
+        end_label = self._format_event_time(event.end_time)
+        slot = self._first_free_calendar_slot(
+            events=events,
+            session_day=session_day,
+            estimated_minutes=estimated_minutes,
+        )
+        title = _strip(event.title) or "日程"
+        if slot:
+            return (
+                f"今天 {start_label}-{end_label} 你有「{title}」，"
+                f"建议把「{today_focus}」放在 {slot[0]}-{slot[1]} 的空档里。"
+            )
+        return f"今天 {start_label}-{end_label} 你有「{title}」，这段时间先不要安排冲刺任务。"
+
+    @staticmethod
+    def _format_event_time(value: datetime) -> str:
+        value = value.astimezone(CHINA_TIMEZONE) if value.tzinfo else value
+        return value.strftime("%H:%M")
+
+    @staticmethod
+    def _first_free_calendar_slot(
+        *,
+        events: list[CalendarEvent],
+        session_day: date_type,
+        estimated_minutes: int,
+    ) -> tuple[str, str] | None:
+        required_minutes = max(30, min(60, int(estimated_minutes or 60)))
+        day_start = datetime.combine(session_day, datetime.min.time()).replace(hour=9)
+        day_end = datetime.combine(session_day, datetime.min.time()).replace(hour=22)
+        cursor = day_start
+        for event in sorted(events, key=lambda item: item.start_time):
+            event_start = event.start_time.replace(tzinfo=None) if event.start_time.tzinfo else event.start_time
+            event_end = event.end_time.replace(tzinfo=None) if event.end_time.tzinfo else event.end_time
+            event_start = max(day_start, event_start)
+            event_end = min(day_end, event_end)
+            if event_start > cursor and (event_start - cursor).total_seconds() >= required_minutes * 60:
+                slot_end = min(event_start, cursor + timedelta(minutes=max(60, required_minutes)))
+                return cursor.strftime("%H:%M"), slot_end.strftime("%H:%M")
+            if event_end > cursor:
+                cursor = event_end
+        if day_end > cursor and (day_end - cursor).total_seconds() >= required_minutes * 60:
+            slot_end = min(day_end, cursor + timedelta(minutes=max(60, required_minutes)))
+            return cursor.strftime("%H:%M"), slot_end.strftime("%H:%M")
+        return None
 
     def _daily_recommendation_tail(self, recommendation: str, *, today_focus: str) -> str:
         text = self._compact_focus_text(recommendation)
         if not text:
             return ""
         if text == today_focus:
+            return ""
+        if not text.endswith(("。", "！", "？")):
+            text = f"{text}。"
+        return text
+
+    @staticmethod
+    def _daily_calendar_tail(calendar_note: str) -> str:
+        text = " ".join(_strip(calendar_note).split())
+        if not text:
             return ""
         if not text.endswith(("。", "！", "？")):
             text = f"{text}。"
@@ -1785,6 +2054,7 @@ class AuroraRuntimeV1Service:
         conversation_id: str,
         request_id: str,
         user_message: str,
+        request_extra_context: dict[str, Any],
         conversation_context: dict[str, Any],
         user_context_payload: dict[str, Any],
         plan: AuroraRuntimeTurnPlan,
@@ -1793,48 +2063,172 @@ class AuroraRuntimeV1Service:
     ) -> None:
         if self.redis is None:
             return
-        runtime_key = AURORA_RUNTIME_STATE_KEY_TEMPLATE.format(
-            user_id=user_id,
-            surface=surface,
-            conversation_id=conversation_id,
-        )
         profile_context = user_context_payload.get("profile_context")
         if not isinstance(profile_context, dict):
             profile_context = {}
-
-        runtime_state = {
-            "user_id": user_id,
-            "surface": surface,
-            "conversation_id": conversation_id,
-            "runtime_session_id": request_id,
-            "user_model_snapshot": profile_context,
-            "informational_tensions": plan.informational_tensions,
-            "current_intent": {
-                "intent_type": self._intent_type_from_decision(decision, plan),
-                "target_tension_id": plan.activity_profile.get("agenda_priority"),
-                "payload": decision.chat_directive,
-            },
-            "latent_threads": decision.state_updates.get("latent_threads", []),
-            "activity_profile": plan.activity_profile,
-            "self_scheduled_wakes": [decision.wake_schedule] if decision.wake_schedule else [],
-            "streaming_status": "waiting_user",
-            "ingress_events": [{"type": "user_message", "content": str(user_message or "")}],
-            "last_decision_at": _utcnow().isoformat(),
-            "updated_at": _utcnow().isoformat(),
-            "messages": plan.messages,
-            "hard_boundaries": plan.hard_boundaries,
-            "decision": decision.to_payload(),
-            "wake_policy": wake_policy,
-            "history_size": len(conversation_context.get("messages") or []),
-        }
+        now = _utcnow()
+        current_intent = AuroraIntent(
+            intent_type=self._intent_type_from_decision(decision, plan),
+            target_tension_id=_strip(plan.activity_profile.get("agenda_priority")) or None,
+            payload=decision.chat_directive,
+        )
+        tensions = self._runtime_tensions(
+            raw_items=self._merge_context_items(
+                request_extra_context.get("informational_tensions") if isinstance(request_extra_context, dict) else [],
+                plan.informational_tensions,
+                key_field="tension_id",
+            ),
+            conversation_id=conversation_id,
+            now=now,
+        )
+        threads = self._runtime_threads(
+            raw_items=self._merge_context_items(
+                request_extra_context.get("latent_threads") if isinstance(request_extra_context, dict) else [],
+                decision.state_updates.get("latent_threads"),
+                key_field="thread_id",
+            ),
+            conversation_id=conversation_id,
+            current_intent=current_intent,
+            fallback_tensions=tensions,
+            now=now,
+        )
+        runtime_state = AuroraState(
+            user_id=user_id,
+            surface=surface,
+            conversation_id=conversation_id,
+            runtime_session_id=request_id,
+            user_model_snapshot=profile_context,
+            informational_tensions=tensions,
+            current_intent=current_intent,
+            latent_threads=threads,
+            activity_profile=ActivityProfile.model_validate(plan.activity_profile),
+            self_scheduled_wakes=self._runtime_wakes(decision.wake_schedule),
+            streaming_status="waiting_user",
+            ingress_events=[
+                {
+                    "type": "user_message",
+                    "content": str(user_message or ""),
+                    "messages": plan.messages,
+                    "hard_boundaries": plan.hard_boundaries,
+                    "decision": decision.to_payload(),
+                    "wake_policy": wake_policy,
+                    "history_size": len(conversation_context.get("messages") or []),
+                }
+            ],
+            last_decision_at=now,
+            updated_at=now,
+        )
         try:
-            await self.redis.setex(
-                runtime_key,
-                AURORA_RUNTIME_STATE_TTL_SECONDS,
-                json.dumps(runtime_state, ensure_ascii=False, default=str),
-            )
+            await AuroraRuntimeStore(
+                self.redis, ttl_seconds=AURORA_RUNTIME_STATE_TTL_SECONDS, enabled=True
+            ).save_runtime_state(runtime_state)
         except Exception as exc:
             logger.warning("Aurora runtime v1 failed to persist Redis runtime state: {}", exc)
+
+    def _runtime_tensions(
+        self,
+        *,
+        raw_items: Any,
+        conversation_id: str,
+        now: datetime,
+    ) -> list[InformationalTension]:
+        normalized: list[InformationalTension] = []
+        seen: set[str] = set()
+        items = raw_items if isinstance(raw_items, list) else []
+        for index, item in enumerate(items):
+            if not isinstance(item, Mapping):
+                continue
+            domain = canonicalize_runtime_domain(item.get("domain")) or _strip(item.get("domain")) or "checkpoint_gap"
+            status = str(item.get("status") or "open")
+            if status in {"resolved", "dropped"}:
+                continue
+            key = _strip(item.get("tension_id")) or f"{conversation_id}:tension:{domain}:{index}"
+            if key in seen:
+                continue
+            seen.add(key)
+            description = _strip(item.get("description")) or f"需要继续补齐 {domain} 相关线索"
+            try:
+                priority = float(item.get("priority") or 0.7)
+            except (TypeError, ValueError):
+                priority = 0.7
+            normalized.append(
+                InformationalTension(
+                    tension_id=key,
+                    domain=domain,
+                    description=description,
+                    priority=max(0.0, min(1.0, priority)),
+                    status=status,
+                    evidence=[str(value) for value in item.get("evidence") or [] if str(value).strip()],
+                    importance_reasoning=_strip(item.get("importance_reasoning")) or None,
+                    created_at=_as_utc_naive(item.get("created_at")) or now,
+                    last_attempted_at=_as_utc_naive(item.get("last_attempted_at")),
+                )
+            )
+        return normalized
+
+    def _runtime_threads(
+        self,
+        *,
+        raw_items: Any,
+        conversation_id: str,
+        current_intent: AuroraIntent,
+        fallback_tensions: list[InformationalTension],
+        now: datetime,
+    ) -> list[LatentThread]:
+        normalized: list[LatentThread] = []
+        items = raw_items if isinstance(raw_items, list) else []
+        for index, item in enumerate(items):
+            if not isinstance(item, Mapping):
+                continue
+            snapshot = (
+                _strip(item.get("context_snapshot")) or _strip(item.get("summary")) or _strip(item.get("description"))
+            )
+            if not snapshot:
+                continue
+            source_intent = (
+                AuroraIntent.model_validate(item.get("source_intent"))
+                if isinstance(item.get("source_intent"), Mapping)
+                else current_intent
+            )
+            try:
+                salience = float(item.get("salience") or 0.6)
+            except (TypeError, ValueError):
+                salience = 0.6
+            normalized.append(
+                LatentThread(
+                    thread_id=_strip(item.get("thread_id")) or f"{conversation_id}:thread:{index}",
+                    source_intent=source_intent,
+                    tension_links=[
+                        str(value)
+                        for value in item.get("tension_links")
+                        or [tension.tension_id for tension in fallback_tensions[:1]]
+                        if str(value).strip()
+                    ],
+                    salience=max(0.0, min(1.0, salience)),
+                    context_snapshot=snapshot,
+                    created_at=_as_utc_naive(item.get("created_at")) or now,
+                )
+            )
+        return normalized
+
+    def _runtime_wakes(self, wake_schedule: dict[str, Any] | None) -> list[ScheduledWake]:
+        if not isinstance(wake_schedule, Mapping) or not wake_schedule.get("scheduled_at"):
+            return []
+        reason = _strip(wake_schedule.get("reason")) or _strip(wake_schedule.get("planned_action")) or "scheduled wake"
+        try:
+            return [
+                ScheduledWake(
+                    wake_id=_strip(wake_schedule.get("wake_id"))
+                    or _strip(wake_schedule.get("id"))
+                    or str(uuid.uuid4()),
+                    scheduled_at=_as_utc_naive(wake_schedule.get("scheduled_at")) or _utcnow(),
+                    reason=reason,
+                    planned_action=_strip(wake_schedule.get("planned_action")) or "emit_message",
+                    status=str(wake_schedule.get("status") or "pending"),
+                )
+            ]
+        except Exception:
+            return []
 
     async def _fetch_galaxy_baseline(
         self,

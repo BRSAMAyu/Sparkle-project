@@ -641,7 +641,12 @@ def _is_task_help_scene(decision: AuroraDecision, readout: DashboardReadout) -> 
 def _is_stuck_task_scene(readout: DashboardReadout) -> bool:
     task_state = readout.task_state if isinstance(readout.task_state, Mapping) else {}
     stage = _normalize_marker(task_state.get("stage"))
-    return stage in STUCK_TASK_STAGE_TOKENS
+    if stage in STUCK_TASK_STAGE_TOKENS:
+        return True
+    request_context = readout.request_extra_context if isinstance(readout.request_extra_context, Mapping) else {}
+    if isinstance(request_context.get("stuck_event"), Mapping):
+        return True
+    return _normalize_marker(request_context.get("task_stage")) in STUCK_TASK_STAGE_TOKENS
 
 
 def _infer_standard_layer_response_type(
@@ -942,6 +947,12 @@ class AuroraDecisionLoop:
                 "Never request or infer forbidden psychological or social-identity domains.",
             ],
         }
+        if readout.social_signals:
+            user["rules"].append(
+                "Rule Z social boundary: social_signals are aggregate collaboration hints only. "
+                "Do not infer social identity, name or contact third parties, or push social/accountability actions "
+                "unless the user explicitly asks for that direction."
+            )
         user["rules"].extend(_achievement_signal_rules(readout))
         deep_pattern_alerts = _deep_pattern_alerts(readout)
         if deep_pattern_alerts:
@@ -1444,9 +1455,7 @@ class AuroraDecisionLoop:
         if context_budget == "compact":
             # G28: compact mode keeps only the highest-signal task/error context.
             compact_payload = {
-                key: payload[key]
-                for key in ("user_message", "task_state", "wake_policy")
-                if key in payload
+                key: payload[key] for key in ("user_message", "task_state", "wake_policy") if key in payload
             }
             tensions = readout.informational_tensions
             if isinstance(tensions, list) and tensions:

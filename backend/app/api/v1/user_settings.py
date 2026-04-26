@@ -1,8 +1,12 @@
+import json
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core.cache import cache_service
 from app.models.user import User
 from app.schemas.user_settings import (
     AiOpsDashboardResponse,
@@ -25,12 +29,30 @@ async def get_user_settings(
 ) -> UserSettingsResponse:
     service = UserSettingsService(db)
     record = await service.get_or_create(current_user.id)
+
+    # Include notification preferences from UserPreferencesCenter
+    notification_prefs: dict[str, Any] = {}
+    try:
+        from app.services.personalization.preference_service import PreferenceService
+        pref_service = PreferenceService(db, cache_service.redis)
+        prefs_center = await pref_service.get_preferences(current_user.id)
+        explicit = prefs_center.explicit or {}
+        notif_raw = explicit.get("notification_preferences", {})
+        if isinstance(notif_raw, dict):
+            notification_prefs = notif_raw
+        elif isinstance(notif_raw, str):
+            import json
+            notification_prefs = json.loads(notif_raw)
+    except Exception:
+        pass
+
     return UserSettingsResponse(
         transparency_level=record.transparency_level,
         system_update_level=record.system_update_level,
         ai_reasoning_mode=record.ai_reasoning_mode,
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
+        notification_preferences=notification_prefs,
         created_at=record.created_at,
         updated_at=record.updated_at,
     )

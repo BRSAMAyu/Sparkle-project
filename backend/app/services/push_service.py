@@ -105,6 +105,10 @@ class PushService:
             logger.debug(f"User {user.id} reached frequency cap.")
             return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
 
+        if await self._check_schedule_and_quiet_hours(user.id):
+            logger.info(f"User {user.id} is in schedule DND or quiet hours, skipping push")
+            return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
+
         strategies = [
             SprintStrategy(self.db),
             MemoryStrategy(self.db),
@@ -114,17 +118,22 @@ class PushService:
         ]
 
         trigger_strategy = None
+        trigger_type = ""
         for strategy in strategies:
             if await strategy.should_trigger(user, policy):
                 trigger_strategy = strategy
+                trigger_type = strategy.trigger_type
                 break
 
         if not trigger_strategy:
             return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": ""}
 
+        if await self._check_notification_type_disabled(user.id, trigger_type):
+            logger.info(f"User {user.id} disabled notification type {trigger_type}, skipping push")
+            return {"triggered": False, "sent": False, "shadowed": False, "trigger_type": trigger_type}
+
         # 4. Generate Content
         # For curiosity, we might generate capsule inside get_context_data or separate
-        trigger_type = trigger_strategy.trigger_type
 
         if trigger_type == "curiosity":
             # Generate capsule first
@@ -224,6 +233,50 @@ class PushService:
             logger.warning("Failed to read Aurora control surface for struggle nudge: {}", exc)
             return False
 
+    async def _check_schedule_and_quiet_hours(self, user_id: UUID) -> bool:
+        """Check if push should be suppressed due to schedule or quiet hours.
+        Returns True if push should be BLOCKED."""
+        try:
+            from app.services.preference_consumption_service import PreferenceConsumptionService
+
+            consumption = PreferenceConsumptionService(self.db, self.redis)
+            return await consumption.should_suppress_push(user_id)
+        except Exception as exc:
+            logger.warning(f"Failed to check schedule/quiet hours for {user_id}: {exc}")
+            return False
+
+    async def _check_notification_type_disabled(self, user_id: UUID, trigger_type: str) -> bool:
+        """Check if the specific notification type is disabled by user preference.
+        Returns True if BLOCKED."""
+        try:
+            from app.services.preference_consumption_service import PreferenceConsumptionService
+
+            consumption = PreferenceConsumptionService(self.db, self.redis)
+            notif_config = await consumption.get_notification_config(user_id)
+            disabled_types = set(notif_config.get("disabled_types", []))
+            notification_level = notif_config.get("notification_level", "standard")
+
+            if notification_level == "minimal":
+                return True
+
+            if trigger_type in disabled_types:
+                return True
+
+            if not notif_config.get("enable_system", True) and trigger_type in (
+                "memory", "sprint", "inactivity"
+            ):
+                return True
+
+            if not notif_config.get("enable_interventions", True) and trigger_type in (
+                "curiosity", "empty_capsule", "struggle_detected"
+            ):
+                return True
+
+            return False
+        except Exception as exc:
+            logger.warning(f"Failed to check notification type disabled for {user_id}: {exc}")
+            return False
+
     async def _recent_struggle_nudge_sent(self, user_id: UUID) -> bool:
         since = _utcnow() - timedelta(hours=8)
         result = await self.db.execute(
@@ -282,6 +335,7 @@ class PushService:
     def _is_active_time(self, policy: PushPolicyProfile) -> bool:
         """
         Check if current time is within user's active slots.
+        Respects weekly schedule preferences for busy/relax/fragmented slots.
         """
         try:
             tz = ZoneInfo(policy.timezone or "Asia/Shanghai")

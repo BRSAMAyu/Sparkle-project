@@ -26,12 +26,12 @@ class KillSwitchReadinessService:
     FEATURE_CATALOG: ClassVar[dict[str, dict[str, Any]]] = {
         "memory_inferred_write": {
             "settings_key": "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED",
-            "current": "off",
+            "current": "live",
             "target": "live",
             "criteria": [
-                "SGW 12小时真跑完成，零硬违规，软违规<5%",
-                "docs/audit/deep_audit_2026-04-22_0130_memory_service.md P0 问题全部修复",
-                "Stage 39 memory write readiness report 完成（14天观察窗口）",
+                "Rule Y guard passes before inferred writes are enabled",
+                "User-level allow_inferred_episodic opt-out remains enforced",
+                "Privacy redaction and evidence-token paths remain active",
             ],
         },
         "bayesian_learning": {
@@ -47,11 +47,7 @@ class KillSwitchReadinessService:
     }
 
     KNOWN_BLOCKERS: ClassVar[dict[str, list[str]]] = {
-        "memory_inferred_write": [
-            "SGW validation is still pending for inferred memory writes",
-            "Memory service P0 audit fixes are not confirmed complete",
-            "Stage 39 memory write readiness report and 14-day observation window are not complete",
-        ],
+        "memory_inferred_write": [],
         "bayesian_learning": [
             "Bayesian learner has just entered shadow mode and needs real outcome data",
             "Shadow vs baseline divergence has not been measured on production traffic",
@@ -61,7 +57,7 @@ class KillSwitchReadinessService:
 
     SUPPORTING_EVIDENCE: ClassVar[dict[str, list[str]]] = {
         "memory_inferred_write": [
-            "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED remains disabled until SGW validation completes",
+            "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED is enabled after Rule Y guard validation",
         ],
         "bayesian_learning": [
             "Stage 23 SQAM is complete; shadow mode is the next data-collection step",

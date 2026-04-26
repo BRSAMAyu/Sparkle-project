@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -15,12 +15,13 @@ from app.core.event_types import ACCOUNTABILITY_STRUGGLE_DETECTED
 from app.models.accountability import AccountabilityPartnership, AccountabilityStatus
 from app.models.notification import Notification
 from app.models.user import User
+from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.social_signal_types import SocialSignalsV1
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _user_display_name(user: User | None, default: str = "好友") -> str:
@@ -61,6 +62,10 @@ class SocialSignalBridge:
         )
 
         self.provider = AggregatorBackedSocialContextProvider(db)
+        self.kill_switch = AuroraStage33KillSwitchService()
+
+    async def _social_mode(self) -> str:
+        return await self.kill_switch.get_feature_mode("social")
 
     async def _fetch_for_user(self, user_id: UUID) -> dict[str, Any]:
         snapshot = await self.provider.fetch_social_snapshot(user_id)
@@ -72,6 +77,10 @@ class SocialSignalBridge:
         }
 
     async def build_social_signals_v1(self, user_id: UUID) -> SocialSignalsV1 | None:
+        mode = await self._social_mode()
+        if mode == "off":
+            return None
+
         payload = await self._fetch_for_user(user_id)
         snapshot = payload.get("snapshot")
         if snapshot is None:
@@ -115,6 +124,8 @@ class SocialSignalBridge:
         )
         if not signals.summary_lines and mention_count <= 0 and relationship_count <= 0:
             return None
+        if mode != "live":
+            return None
         return signals
 
     async def maybe_publish_accountability_struggle_signal(
@@ -125,6 +136,10 @@ class SocialSignalBridge:
         struggle_context: dict[str, Any],
     ) -> dict[str, Any]:
         """Publish a social accountability event when a plan stall becomes visible."""
+        mode = await self._social_mode()
+        if mode == "off":
+            return {"published": False, "reason": "kill_switch_off"}
+
         try:
             score = float(struggle_context.get("struggle_score", 0.0) or 0.0)
         except (TypeError, ValueError):
@@ -144,6 +159,13 @@ class SocialSignalBridge:
         partnerships = await self._active_partnerships_for_user(user_uuid)
         if not partnerships:
             return {"published": False, "reason": "no_active_accountability_partner", "struggle_score": score}
+        if mode != "live":
+            return {
+                "published": False,
+                "reason": "kill_switch_shadow",
+                "struggle_score": score,
+                "partner_count": len(partnerships),
+            }
 
         dedupe_key = f"accountability:struggle:{user_uuid}:{plan_uuid}:{no_completion_days // 2}"
         if not await self._claim_dedupe_key(dedupe_key):
@@ -169,7 +191,7 @@ class SocialSignalBridge:
             "event_type": ACCOUNTABILITY_STRUGGLE_DETECTED,
             "user_id": str(user_uuid),
             "plan_id": str(plan_uuid),
-            "target_name": target_name,
+            "target_name": target_name,  # Only used by accountability partner consumer
             "struggle_score": score,
             "primary_signal": struggle_context.get("primary_signal"),
             "no_completion_days": no_completion_days,
@@ -196,6 +218,9 @@ class SocialSignalBridge:
 
     async def handle_accountability_struggle_detected(self, event: dict[str, Any]) -> dict[str, Any]:
         """Consume a struggle event and create actionable partner notifications."""
+        if await self._social_mode() != "live":
+            return {"handled": False, "reason": "kill_switch_not_live"}
+
         if event.get("event_type") != ACCOUNTABILITY_STRUGGLE_DETECTED:
             return {"handled": False, "reason": "ignored_event_type"}
 

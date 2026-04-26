@@ -834,6 +834,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		inventory.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered inventory proxy routes")
+
+	// ==================== Health Routes ====================
+	health := api.Group("/health")
+	health.Use(authMiddleware)
+	{
+		health.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered health proxy routes")
 }
 
 // proxyWithHeaders proxies request to Python Backend with user context headers

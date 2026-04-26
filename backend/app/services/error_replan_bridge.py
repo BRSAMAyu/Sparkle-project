@@ -214,14 +214,7 @@ class ErrorReplanBridge:
                     node_ids=normalized_node_ids,
                     days=self.ERROR_PRESSURE_LOOKBACK_DAYS,
                 )
-                error_concept = await self._resolve_error_concept(error, normalized_node_ids)
-                mastery_update = await self._update_mastery_from_error(
-                    user_id=user_id,
-                    knowledge_node_id=normalized_node_ids[0],
-                    knowledge_node_name=error_concept,
-                    error_type=error_type,
-                    error_count=recent_error_count,
-                )
+                mastery_update = None
                 await self._record_error_mastery_echo(
                     error=error,
                     mastery_update=mastery_update,
@@ -356,19 +349,8 @@ class ErrorReplanBridge:
             else:
                 effective_decision = legacy_decision
 
-            mastery_floor_decision = (
-                mastery_update is not None
-                and float(mastery_update["new_mastery"]) < self.REPLAN_MASTERY_THRESHOLD
-                and recent_error_count >= self.ERROR_PRESSURE_TRIGGER_COUNT
-            )
             if high_severity_decision.triggered:
                 effective_decision = high_severity_decision
-            if mastery_floor_decision and not effective_decision.triggered:
-                effective_decision = ErrorPressureDecision(
-                    triggered=True,
-                    threshold=self.ERROR_PRESSURE_TRIGGER_COUNT,
-                    recent_error_count=recent_error_count,
-                )
 
             if not effective_decision.triggered:
                 gate = (
@@ -1701,26 +1683,6 @@ class ErrorReplanBridge:
                 return value
 
         return await self._resolve_node_name(node_ids)
-
-    async def _update_mastery_from_error(
-        self,
-        *,
-        user_id: UUID,
-        knowledge_node_id: UUID | None,
-        knowledge_node_name: str | None,
-        error_type: str,
-        error_count: int,
-    ) -> dict | None:
-        from app.services.galaxy_service import GalaxyService
-
-        return await GalaxyService(self.db).update_mastery_from_error(
-            self.db,
-            user_id=str(user_id),
-            knowledge_node_id=str(knowledge_node_id) if knowledge_node_id else None,
-            knowledge_node_name=knowledge_node_name,
-            error_type=error_type,
-            error_count=error_count,
-        )
 
     async def _get_node_mastery_scores(self, *, user_id: UUID, node_ids: list[UUID]) -> dict[UUID, float]:
         if not node_ids:

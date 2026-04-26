@@ -4,7 +4,7 @@ PlanProgressService - Plan health evaluation and progress diagnostics.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -24,6 +24,7 @@ class PlanHealthReport:
     user_id: UUID
     status: str
     severity: str
+    health_score: float | None = None
     reasons: list[str] = field(default_factory=list)
     metrics: dict[str, Any] = field(default_factory=dict)
     requires_adjustment: bool = False
@@ -31,7 +32,7 @@ class PlanHealthReport:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanProgressService:
@@ -68,6 +69,7 @@ class PlanProgressService:
                 user_id=user_id,
                 status="unknown",
                 severity="unknown",
+                health_score=None,
                 reasons=["missing_plan_state"],
                 metrics={},
                 requires_adjustment=False,
@@ -142,6 +144,15 @@ class PlanProgressService:
             "time_progress": time_progress,
             "progress_lag": lag,
         }
+        health_score = self._compute_health_score(
+            severity=severity,
+            lag=lag,
+            avg_overrun=avg_overrun,
+            overrun_count=overrun_count,
+            severe_overrun_count=severe_overrun_count,
+            feedback_stats=feedback_stats,
+        )
+        metrics["health_score"] = health_score
 
         if reasons:
             logger.info(
@@ -156,11 +167,44 @@ class PlanProgressService:
             user_id=user_id,
             status="active",
             severity=severity,
+            health_score=health_score,
             reasons=reasons,
             metrics=metrics,
             requires_adjustment=bool(reasons),
             recommended_action=recommended_action,
         )
+
+    def _compute_health_score(
+        self,
+        *,
+        severity: str,
+        lag: float | None,
+        avg_overrun: float | None,
+        overrun_count: int,
+        severe_overrun_count: int,
+        feedback_stats: dict[str, int],
+    ) -> float:
+        score = 1.0
+        if lag is not None and lag > 0:
+            score -= min(0.45, (lag / self.PROGRESS_LAG_CRITICAL) * 0.45)
+        if avg_overrun is not None and avg_overrun > 1.0:
+            overrun_span = self.OVERRUN_RATIO_CRITICAL - 1.0
+            score -= min(0.25, ((avg_overrun - 1.0) / overrun_span) * 0.25)
+        if overrun_count > 0:
+            score -= min(0.15, (overrun_count / self.OVERRUN_COUNT_CRITICAL) * 0.15)
+        if severe_overrun_count > 0:
+            score -= min(0.10, (severe_overrun_count / self.OVERRUN_COUNT_CRITICAL) * 0.10)
+
+        friction_count = sum(int(value or 0) for value in feedback_stats.values())
+        if friction_count > 0:
+            score -= min(0.25, (friction_count / (self.FEEDBACK_COUNT_THRESHOLD + 1)) * 0.25)
+
+        if severity == "critical":
+            score = min(score, 0.49)
+        elif severity == "warning":
+            score = min(score, 0.79)
+
+        return round(min(1.0, max(0.0, score)), 2)
 
     def _compute_completion_ratios(self, summaries: list[dict[str, Any]]) -> list[float]:
         ratios = []

@@ -17,9 +17,11 @@ from app.api.v1 import (
     assets,
     audit,
     aurora,
+    aurora_status,
     auth,
     background_tasks,
     calendar,
+    data_export,
     capsules,
     cards,
     chat,
@@ -84,6 +86,7 @@ from app.api.v1 import (
     suggestions,  # Vision Item 3
     tasks,
     theater,
+    tool_history,
     translation,
     user_persona_batch,
     user_settings,
@@ -96,6 +99,7 @@ from app.config import settings
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(data_export.router, prefix="/users", tags=["users"])
 api_router.include_router(suggestions.router, tags=["suggestions"])  # Route already carries /suggestions
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
 api_router.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
@@ -140,6 +144,7 @@ api_router.include_router(agent_stats.router)
 api_router.include_router(assets.router)
 api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
 api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
+api_router.include_router(tool_history.router)
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])
 api_router.include_router(translation.router, prefix="/translation", tags=["translation"])
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
@@ -179,6 +184,7 @@ api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 # Calendar Events
 api_router.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 api_router.include_router(accountability.router, prefix="/accountability", tags=["accountability"])
+api_router.include_router(aurora_status.router)
 
 
 @api_router.get("/")

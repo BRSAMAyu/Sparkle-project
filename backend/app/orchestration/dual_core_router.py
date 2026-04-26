@@ -63,6 +63,7 @@ class DualCoreRoutingInput:
     srl_phase_hint: SRLPhaseHint | None = None
     metacognition_hint: MetacognitionHintV1 | None = None
     cognitive_load: float | None = None
+    capsule_preferences: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -173,6 +174,8 @@ class DualCoreRouter:
         cognitive_load_value = float(routing_input.cognitive_load or 0.0)
         high_cognitive_load = routing_input.cognitive_load is not None and cognitive_load_value >= 0.55
         very_high_cognitive_load = routing_input.cognitive_load is not None and cognitive_load_value >= 0.78
+        capsule_preferences = self._normalized_capsule_preferences(routing_input)
+        capsule_method_preferences = capsule_preferences.get("method_preferences", [])
 
         cognitive_adjustments: list[str] = []
         execution_constraints: list[str] = []
@@ -338,8 +341,21 @@ class DualCoreRouter:
             execution_constraints.append("近期连续反馈“太难”，当前回复避免再加码任务强度。")
         if routing_input.recent_task_feedback_distribution.get("too_long", 0) >= 2:
             execution_constraints.append("近期连续反馈“太长”，优先拆成更短、更容易启动的步骤。")
+        if capsule_method_preferences:
+            top_method = capsule_method_preferences[0]
+            method_label = str(top_method.get("label") or "").strip()
+            method_key = str(top_method.get("key") or "").strip()
+            if method_label:
+                execution_constraints.append(
+                    f"用户偏好{method_label}；当本轮适合安排学习或执行节奏时，优先用该方法组织下一步，但不要强行套用。"
+                )
+                recommend_strategy(
+                    "execution_method",
+                    method_key or method_label,
+                    reason="Favorite capsule history indicates this execution method is personally salient for the user.",
+                )
         execution_constraints.extend(pattern_guidance["execution"])
-        
+
         # Translate numeric adaptive adjustments from ParameterCompiler
         if routing_input.adaptive_adjustments:
             diff_shift = routing_input.adaptive_adjustments.get("difficulty_shift", 0.0)
@@ -347,7 +363,7 @@ class DualCoreRouter:
                 cognitive_adjustments.append("建议降低子任务的难度，提供更简单、容易上手的步骤。")
             elif diff_shift > 0:
                 cognitive_adjustments.append("建议适当提高挑战性，给出更进阶的内容或任务。")
-                
+
             time_mult = routing_input.adaptive_adjustments.get("time_multiplier", 1.0)
             if time_mult > 1.0:
                 extra_pct = int((time_mult - 1.0) * 100)
@@ -355,10 +371,10 @@ class DualCoreRouter:
             elif time_mult < 1.0:
                 less_pct = int((1.0 - time_mult) * 100)
                 execution_constraints.append(f"执行时间预估可减少 {less_pct}%，建议更紧凑的节奏。")
-                
+
             if routing_input.adaptive_adjustments.get("insert_prerequisite_review"):
                 execution_constraints.append("必须插入前置知识的复习步骤。")
-                
+
             max_tasks = routing_input.adaptive_adjustments.get("max_concurrent_tasks")
             if max_tasks is not None and max_tasks < 3:
                 execution_constraints.append(f"控制并发任务数量，单次推进不要超过 {max_tasks} 个任务。")
@@ -389,6 +405,9 @@ class DualCoreRouter:
                 if metacognition_hint is not None
                 else None
             ),
+            "explicit_capsule_signal": bool(capsule_preferences),
+            "capsule_preferences": capsule_preferences or None,
+            "capsule_method_preferences": capsule_method_preferences,
         }
         if social_signals is not None:
             routing_debug["social_relationship_count"] = social_signals.relationship_count
@@ -557,6 +576,53 @@ class DualCoreRouter:
             "cognitive": cognitive,
             "execution": execution,
         }
+
+    @staticmethod
+    def _normalized_capsule_preferences(routing_input: DualCoreRoutingInput) -> dict[str, Any]:
+        raw = routing_input.capsule_preferences if isinstance(routing_input.capsule_preferences, dict) else {}
+        if not raw:
+            return {}
+
+        methods: list[dict[str, Any]] = []
+        for method in list(raw.get("method_preferences") or raw.get("capsule_method_preferences") or []):
+            if not isinstance(method, dict):
+                continue
+            label = str(method.get("label") or method.get("name") or "").strip()
+            if not label:
+                continue
+            methods.append(
+                {
+                    "key": str(method.get("key") or label).strip(),
+                    "label": label,
+                    "count": int(method.get("count") or 1),
+                    "confidence": float(method.get("confidence") or 0.6),
+                }
+            )
+
+        summaries = [
+            str(item).strip()
+            for item in list(raw.get("method_preference_summary") or [])
+            if str(item).strip()
+        ]
+        if not methods:
+            for summary in summaries:
+                label = summary.replace("用户偏好", "", 1).strip()
+                if label:
+                    methods.append({"key": label, "label": label, "count": 1, "confidence": 0.6})
+
+        normalized = {
+            "favorite_count": int(raw.get("favorite_count") or 0),
+            "content_depth_preference": str(raw.get("content_depth_preference") or "").strip() or None,
+            "subject_affinity": [
+                str(subject).strip()
+                for subject in list(raw.get("subject_affinity") or raw.get("content_subject_affinities") or [])
+                if str(subject).strip()
+            ][:3],
+            "method_preferences": methods[:3],
+            "method_preference_summary": summaries[:3]
+            or [f"用户偏好{method['label']}" for method in methods[:3]],
+        }
+        return normalized if any(normalized.values()) else {}
 
     def _normalized_pattern_names(self, routing_input: DualCoreRoutingInput) -> list[str]:
         names = [

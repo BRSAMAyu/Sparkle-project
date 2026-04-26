@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.db.session import AsyncSessionLocal
-from app.models.plan import Plan
+from app.models.plan import Plan, PlanType
 from app.services.achievement_engine import AchievementEngine, AchievementEvent
 
 from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
@@ -29,3 +29,10 @@ class AchievementPlanConsumer(JourneyEventConsumerBase):
                 plan_id=str(plan.id),
                 plan_type=str(getattr(plan.type, "value", plan.type) or ""),
             )
+            if plan.type == PlanType.SPRINT:
+                await engine.process_event(
+                    user_id=str(user_id),
+                    event_type=AchievementEvent.SPRINT_STARTED,
+                    plan_id=str(plan.id),
+                    plan_type=str(getattr(plan.type, "value", plan.type) or ""),
+                )

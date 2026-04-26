@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import datetime, time, timezone
+
+from datetime import UTC, datetime, time
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -14,7 +15,63 @@ from app.schemas.notification import NotificationCreate
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+PER_TYPE_NOTIFICATION_ALIASES: dict[str, set[str]] = {
+    "reminder": {
+        "reminder",
+        "task_reminder",
+        "sprint_reminder",
+        "daily_sprint_reminder",
+        "comeback_nudge",
+        "fragmented_time",
+    },
+    "task_reminder": {"reminder", "task_reminder"},
+    "spaced_repetition": {"spaced_repetition", "spaced_repetition_reminder"},
+    "spaced_repetition_reminder": {"spaced_repetition", "spaced_repetition_reminder"},
+    "sprint_reminder": {"reminder", "sprint_reminder", "daily_sprint_reminder"},
+    "daily_sprint_reminder": {"reminder", "sprint_reminder", "daily_sprint_reminder"},
+    "weekly_report": {"weekly_report", "weekly_digest", "weekly_growth_narrative", "weekly_learning_report"},
+    "weekly_digest": {"weekly_report", "weekly_digest"},
+    "weekly_growth_narrative": {"weekly_report", "weekly_growth_narrative"},
+    "milestone": {"milestone", "milestone_notification", "achievement", "achievement_progress"},
+    "milestone_notification": {"milestone", "milestone_notification"},
+    "achievement": {"milestone", "achievement"},
+    "achievement_progress": {"milestone", "achievement_progress"},
+}
+
+
+def _normalize_disabled_type(value: object) -> str:
+    return str(value or "").strip().lower()
+
+
+def notification_type_disabled(
+    disabled_types: list[str] | tuple[str, ...] | set[str] | None,
+    *,
+    notification_type: str | None = None,
+    category: str | None = None,
+) -> bool:
+    disabled = {_normalize_disabled_type(item) for item in (disabled_types or [])}
+    disabled.discard("")
+    if not disabled:
+        return False
+
+    candidates = {
+        _normalize_disabled_type(notification_type),
+        _normalize_disabled_type(category),
+    }
+    expanded_candidates: set[str] = set()
+    for candidate in candidates:
+        expanded_candidates.add(candidate)
+        expanded_candidates.update(PER_TYPE_NOTIFICATION_ALIASES.get(candidate, set()))
+    expanded_candidates.discard("")
+
+    for disabled_type in disabled:
+        aliases = PER_TYPE_NOTIFICATION_ALIASES.get(disabled_type, {disabled_type})
+        if expanded_candidates.intersection(aliases):
+            return True
+    return False
 
 
 class NotificationService:
@@ -68,6 +125,8 @@ class NotificationService:
         db: AsyncSession,
         *,
         user_id: UUID,
+        notification_type: str | None = None,
+        category: str | None = None,
     ) -> tuple[bool, str | None]:
         prefs_result = await db.execute(
             select(NotificationPreferences).where(NotificationPreferences.user_id == user_id)
@@ -75,6 +134,18 @@ class NotificationService:
         prefs = prefs_result.scalar_one_or_none()
         if prefs and not prefs.enable_system:
             return False, "system_notifications_disabled"
+        if (
+            prefs
+            and cls.source_type_for_notification(notification_type) == "intervention"
+            and not prefs.enable_interventions
+        ):
+            return False, "intervention_notifications_disabled"
+        if prefs and notification_type_disabled(
+            prefs.disabled_types,
+            notification_type=notification_type,
+            category=category,
+        ):
+            return False, "notification_type_disabled"
 
         if not prefs or not prefs.quiet_hours_enabled:
             return True, None
@@ -122,6 +193,8 @@ class NotificationService:
             should_push, suppression_reason = await NotificationService._should_push_notification(
                 db,
                 user_id=user_id,
+                notification_type=obj_in.type,
+                category=(obj_in.data or {}).get("category") if isinstance(obj_in.data, dict) else None,
             )
 
         db_obj = Notification(

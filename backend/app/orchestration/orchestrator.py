@@ -112,7 +112,7 @@ from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
 from app.orchestration.agent_activity import emit_agent_activity, emit_routing_preview
 from app.orchestration.orchestration_trace import OrchestrationTrace
 from app.orchestration.persona_aware_planner import PersonaAwarePlanner  # noqa: F401
-from app.orchestration.planning_workflow import PlanningWorkflowManager
+from app.orchestration.planning_workflow import EXAM_SPRINT_FAST_TRACK_FLAG, PlanningWorkflowManager
 from app.orchestration.observability_logger import observability_logger
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service  # noqa: F401
 from app.orchestration.run_ledger import RunLedgerRecorder
@@ -452,6 +452,12 @@ class ChatOrchestrator(
                 profile_context = raw_profile_context
             planning_context = dict(request_extra_context or {})
             planning_context["profile_context"] = profile_context
+            if isinstance(user_context_payload.get("calendar_context"), dict):
+                planning_context["calendar_context"] = user_context_payload["calendar_context"]
+            elif isinstance(user_context_payload.get("cognitive_context"), dict) and isinstance(
+                user_context_payload["cognitive_context"].get("calendar_context"), dict
+            ):
+                planning_context["calendar_context"] = user_context_payload["cognitive_context"]["calendar_context"]
 
             planning_response = await manager.process_planning_turn(
                 db=active_db,  # type: ignore[arg-type]
@@ -626,6 +632,68 @@ class ChatOrchestrator(
             launch_metadata["recommended_task_route"] = f"/tasks/{recommended_task_id}"
         return launch_metadata
 
+    @staticmethod
+    def _as_plain_dict(value: Any) -> dict[str, Any]:
+        return value if isinstance(value, dict) else {}
+
+    def _build_modeling_complete_fast_track_context(
+        self,
+        *,
+        user_message: str,
+        request_extra_context: dict[str, Any] | None,
+        profile_context: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        """Recover deterministic planning prefill when Aurora modeling just closed."""
+        manager = self.planning_workflow_manager
+        modeling_output = self._as_plain_dict((request_extra_context or {}).get("modeling_output"))
+        if not modeling_output:
+            profile = self._as_plain_dict(profile_context)
+            preferences = self._as_plain_dict(profile.get("preferences"))
+            cold_start = self._as_plain_dict(preferences.get("cold_start_context"))
+            if cold_start:
+                modeling_output = {
+                    "activity_profile": self._as_plain_dict(profile.get("activity_profile")),
+                    "user_model_snapshot": profile,
+                    "cold_start_context": cold_start,
+                    "galaxy_baseline": (request_extra_context or {}).get("galaxy_baseline"),
+                }
+        if not modeling_output:
+            return None
+
+        bridge = manager.build_plan_from_modeling_output(modeling_output)
+        collected = self._as_plain_dict(bridge.get("collected"))
+        if not collected:
+            return None
+
+        goal_raw = str(bridge.get("goal_raw") or user_message or "").strip()
+        subject = str(collected.get("subject") or collected.get("exam_scope") or goal_raw or "考试科目").strip()
+        fast_track_context = manager.build_exam_sprint_fast_track_context(goal_raw or subject) or {
+            "intent": "exam_sprint",
+            "subject": subject,
+            "pack": None,
+            "sprint_pack_id": "",
+            "pre_filled_scope": str(collected.get("exam_scope") or "").strip(),
+            "pre_filled_domain_hints": [],
+            "collected": {},
+        }
+
+        fast_track_collected = self._as_plain_dict(fast_track_context.get("collected"))
+        cold_start = self._as_plain_dict(fast_track_collected.get("cold_start_context"))
+        for key, value in collected.items():
+            if value in (None, "", [], {}):
+                continue
+            fast_track_collected[key] = value
+            cold_start[key] = value
+        fast_track_collected[EXAM_SPRINT_FAST_TRACK_FLAG] = True
+        fast_track_collected["from_modeling_complete"] = True
+        cold_start[EXAM_SPRINT_FAST_TRACK_FLAG] = True
+        cold_start["from_modeling_complete"] = True
+        fast_track_collected["cold_start_context"] = cold_start
+        fast_track_context["collected"] = fast_track_collected
+        if subject:
+            fast_track_context["subject"] = subject
+        return fast_track_context
+
     async def _fast_track_exam_sprint(
         self,
         *,
@@ -651,6 +719,17 @@ class ChatOrchestrator(
             if active_session is None or not manager.is_fast_track_exam_sprint_session(active_session):
                 if not from_modeling_complete:
                     fast_track_context = manager.build_exam_sprint_fast_track_context(user_message)
+                else:
+                    profile_context = {}
+                    if isinstance(user_context_payload, dict) and isinstance(
+                        user_context_payload.get("profile_context"), dict
+                    ):
+                        profile_context = user_context_payload["profile_context"]
+                    fast_track_context = self._build_modeling_complete_fast_track_context(
+                        user_message=user_message,
+                        request_extra_context=request_extra_context,
+                        profile_context=profile_context,
+                    )
                 if not fast_track_context and not from_modeling_complete:
                     return False
 
@@ -666,6 +745,12 @@ class ChatOrchestrator(
 
             planning_context = dict(request_extra_context or {})
             planning_context["profile_context"] = profile_context
+            if isinstance(user_context_payload, dict) and isinstance(user_context_payload.get("calendar_context"), dict):
+                planning_context["calendar_context"] = user_context_payload["calendar_context"]
+            elif isinstance(user_context_payload, dict) and isinstance(
+                user_context_payload.get("cognitive_context"), dict
+            ) and isinstance(user_context_payload["cognitive_context"].get("calendar_context"), dict):
+                planning_context["calendar_context"] = user_context_payload["cognitive_context"]["calendar_context"]
             if fast_track_context:
                 planning_context["exam_sprint_fast_track"] = fast_track_context
 

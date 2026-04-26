@@ -129,6 +129,8 @@ async def check_exam_sprint_completion(
 @router.get("/portfolio", response_model=LearningPortfolioResponse)
 async def get_learning_portfolio(
     user_id: UUID | None = Query(default=None),
+    page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Number of entries per page"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -136,4 +138,4 @@ async def get_learning_portfolio(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权查看其他用户的学习档案")
 
     service = ExamSprintReviewService(db=db, redis_client=cache_service.redis)
-    return await service.get_portfolio(user_id=user_id or current_user.id)
+    return await service.get_portfolio(user_id=user_id or current_user.id, page=page, page_size=page_size)

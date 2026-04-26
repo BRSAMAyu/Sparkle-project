@@ -17,6 +17,7 @@ from app.models.plan import Plan, PlanPriority
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.services.llm_fallback_utils import safe_llm_json_call
+from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.progress_narrative_service import ProgressNarrativeService
 
 
@@ -83,7 +84,8 @@ class GrowthDashboardService:
             most_important_task=most_important_task,
             weakest_area=weakest_area,
         )
-        active_plan_progress = self._serialize_active_plan(active_plan)
+        active_plan_health = await self._get_plan_health(user_id, active_plan)
+        active_plan_progress = self._serialize_active_plan(active_plan, health=active_plan_health)
         what_changed_card = self._build_what_changed_card(
             growth_signal=growth_signal,
             growth_status=growth_status,
@@ -844,15 +846,32 @@ class GrowthDashboardService:
             return "它属于你当前的主计划，先推进它最容易带来整体进度。"
         return "这是今天风险和收益最平衡的一步，先做它最划算。"
 
-    def _serialize_active_plan(self, plan: Plan | None) -> dict[str, Any] | None:
+    async def _get_plan_health(self, user_id: UUID, plan: Plan | None) -> PlanHealthReport | None:
         if plan is None:
             return None
+        try:
+            return await PlanProgressService(self.db).evaluate_progress(user_id, plan.id)
+        except Exception:
+            return None
+
+    def _serialize_active_plan(
+        self,
+        plan: Plan | None,
+        *,
+        health: PlanHealthReport | None = None,
+    ) -> dict[str, Any] | None:
+        if plan is None:
+            return None
+        health_score = health.health_score if health else None
         return {
             "id": str(plan.id),
             "name": plan.name,
             "type": getattr(plan.type, "value", str(plan.type or "")),
             "phase": getattr(plan.plan_stage, "value", str(plan.plan_stage or "")),
             "progress": float(plan.progress or 0.0),
+            "health_score": health_score,
+            "health_status": health.severity if health else None,
+            "health_reasons": list(health.reasons or []) if health else [],
             "mastery_level": float(plan.mastery_level or 0.0),
             "target_date": plan.target_date.isoformat() if plan.target_date else None,
             "days_to_deadline": self._days_until(plan.target_date) if plan.target_date else None,

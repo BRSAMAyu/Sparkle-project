@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal, Mapping
 from uuid import UUID
 
@@ -51,7 +51,7 @@ CORE_MODELING_DOMAINS: tuple[str, ...] = ("goal", "scope", "baseline", "time", "
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_text(value: Any) -> str:
@@ -77,7 +77,7 @@ def normalize_expression_update(value: Any) -> dict[str, float]:
     if not isinstance(value, Mapping):
         raise ValueError("expression must be a mapping")
 
-    unknown = sorted(str(key) for key in value.keys() if str(key) not in EXPRESSION_DIMENSIONS)
+    unknown = sorted(str(key) for key in value if str(key) not in EXPRESSION_DIMENSIONS)
     if unknown:
         raise ValueError(f"unsupported expression field: {unknown[0]}")
 
@@ -123,7 +123,9 @@ def merge_activity_profile_payload(
             continue
         if key == "strategy":
             if isinstance(value, Mapping):
-                base_strategy = dict(merged.get("strategy") or {}) if isinstance(merged.get("strategy"), Mapping) else {}
+                base_strategy = (
+                    dict(merged.get("strategy") or {}) if isinstance(merged.get("strategy"), Mapping) else {}
+                )
                 base_strategy.update(dict(value))
                 merged["strategy"] = base_strategy
             continue
@@ -406,7 +408,31 @@ class AuroraRuntimeStore:
             return None
         if isinstance(raw, bytes):
             raw = raw.decode("utf-8")
-        return AuroraState.model_validate_json(raw)
+        try:
+            return AuroraState.model_validate_json(raw)
+        except Exception:
+            data = json.loads(raw) if isinstance(raw, str) else raw
+            if not isinstance(data, dict):
+                return None
+            return AuroraState.model_validate(self._coerce_legacy_state_payload(data))
+
+    async def load_latest_surface_state(
+        self,
+        *,
+        user_id: UUID | str,
+        surface: str,
+    ) -> AuroraState | None:
+        if not self.enabled or self.redis is None:
+            return None
+        index = await self.load_surface_index(user_id)
+        entry = index.get(_normalize_text(surface))
+        if not isinstance(entry, dict) or not entry.get("conversation_id"):
+            return None
+        return await self.load_runtime_state(
+            user_id=user_id,
+            surface=surface,
+            conversation_id=str(entry["conversation_id"]),
+        )
 
     async def delete_runtime_state(
         self,
@@ -479,3 +505,88 @@ class AuroraRuntimeStore:
         if inspect.isawaitable(result):
             return await result
         return result
+
+    def _coerce_legacy_state_payload(self, data: dict[str, Any]) -> dict[str, Any]:
+        coerced = dict(data)
+        surface = _normalize_text(coerced.get("surface")) or "aurora_modeling"
+        conversation_id = _normalize_text(coerced.get("conversation_id")) or "unknown"
+        runtime_session_id = _normalize_text(coerced.get("runtime_session_id")) or conversation_id
+        coerced["surface"] = surface
+        coerced["conversation_id"] = conversation_id
+        coerced["runtime_session_id"] = runtime_session_id
+        coerced["user_id"] = _normalize_user_id(coerced.get("user_id") or "unknown")
+
+        normalized_tensions: list[dict[str, Any]] = []
+        for index, item in enumerate(coerced.get("informational_tensions") or []):
+            if not isinstance(item, Mapping):
+                continue
+            domain = _normalize_text(item.get("domain")) or "checkpoint_gap"
+            description = _normalize_text(item.get("description")) or domain
+            try:
+                priority = float(item.get("priority") or 0.5)
+            except (TypeError, ValueError):
+                priority = 0.5
+            normalized_tensions.append(
+                {
+                    **dict(item),
+                    "tension_id": _normalize_text(item.get("tension_id"))
+                    or f"{conversation_id}:tension:{domain}:{index}",
+                    "domain": domain,
+                    "description": description,
+                    "priority": max(0.0, min(1.0, priority)),
+                    "status": item.get("status") or "open",
+                }
+            )
+        coerced["informational_tensions"] = normalized_tensions
+
+        default_intent = coerced.get("current_intent")
+        if not isinstance(default_intent, Mapping):
+            default_intent = {"intent_type": "wait", "payload": {}}
+        coerced["current_intent"] = dict(default_intent)
+
+        normalized_threads: list[dict[str, Any]] = []
+        for index, item in enumerate(coerced.get("latent_threads") or []):
+            if not isinstance(item, Mapping):
+                continue
+            context_snapshot = _normalize_text(item.get("context_snapshot")) or _normalize_text(item.get("summary"))
+            if not context_snapshot:
+                continue
+            try:
+                salience = float(item.get("salience") or 0.5)
+            except (TypeError, ValueError):
+                salience = 0.5
+            normalized_threads.append(
+                {
+                    **dict(item),
+                    "thread_id": _normalize_text(item.get("thread_id")) or f"{conversation_id}:thread:{index}",
+                    "source_intent": (
+                        dict(item.get("source_intent"))
+                        if isinstance(item.get("source_intent"), Mapping)
+                        else default_intent
+                    ),
+                    "salience": max(0.0, min(1.0, salience)),
+                    "context_snapshot": context_snapshot,
+                }
+            )
+        coerced["latent_threads"] = normalized_threads
+
+        wakes: list[dict[str, Any]] = []
+        for index, item in enumerate(coerced.get("self_scheduled_wakes") or []):
+            if not isinstance(item, Mapping) or not item.get("scheduled_at"):
+                continue
+            reason = (
+                _normalize_text(item.get("reason")) or _normalize_text(item.get("planned_action")) or "scheduled wake"
+            )
+            wakes.append(
+                {
+                    **dict(item),
+                    "wake_id": _normalize_text(item.get("wake_id"))
+                    or _normalize_text(item.get("id"))
+                    or f"{conversation_id}:wake:{index}",
+                    "reason": reason,
+                    "planned_action": _normalize_text(item.get("planned_action")) or "emit_message",
+                    "status": item.get("status") or "pending",
+                }
+            )
+        coerced["self_scheduled_wakes"] = wakes
+        return coerced

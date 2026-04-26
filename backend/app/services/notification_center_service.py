@@ -29,7 +29,7 @@ from app.schemas.unified_notification import (
     UnifiedNotificationResponse,
 )
 from app.services.intervention_record_service import InterventionRecordService
-from app.services.notification_service import NotificationService
+from app.services.notification_service import NotificationService, notification_type_disabled
 from app.services.push_delivery_service import PushDeliveryService
 
 
@@ -69,6 +69,14 @@ class NotificationCenterService:
     ) -> Notification | None:
         """Create and push an Aurora spaced-repetition reminder for one Galaxy node."""
         reference_time = now or _utcnow()
+        prefs = await self.get_or_create_preferences(user_id)
+        if notification_type_disabled(
+            prefs.disabled_types,
+            notification_type=SPACED_REPETITION_NOTIFICATION_TYPE,
+            category=SPACED_REPETITION_CATEGORY,
+        ):
+            logger.info("Skipped spaced repetition reminder for user %s: disabled by preferences", user_id)
+            return None
         if await self.has_recent_spaced_repetition_reminder(
             user_id=user_id,
             node_id=node_id,
@@ -931,6 +939,7 @@ class NotificationCenterService:
                 user_id=user_id,
                 enable_system=True,
                 enable_interventions=True,
+                disabled_types=[],
                 notification_level="standard",
                 quiet_hours_enabled=False,
                 updated_at=_utcnow(),
@@ -949,6 +958,10 @@ class NotificationCenterService:
             prefs.enable_system = update.enable_system
         if update.enable_interventions is not None:
             prefs.enable_interventions = update.enable_interventions
+        if update.disabled_types is not None:
+            prefs.disabled_types = sorted(
+                {str(item).strip().lower() for item in update.disabled_types if str(item).strip()}
+            )
         if update.notification_level is not None:
             prefs.notification_level = update.notification_level
         if update.quiet_hours_enabled is not None:

@@ -34,6 +34,16 @@ from app.services.budget_tuning_service import BudgetTuningService
 from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
+from app.services.aurora_stage23_kill_switch_service import AuroraStage23KillSwitchService
+from app.services.aurora_stage24_policy_kill_switch_service import AuroraStage24PolicyKillSwitchService
+from app.services.aurora_stage25_reflection_kill_switch_service import AuroraStage25ReflectionKillSwitchService
+from app.services.aurora_stage26_scene_kill_switch_service import AuroraStage26SceneKillSwitchService
+from app.services.aurora_stage27_foresight_kill_switch_service import AuroraStage27ForesightKillSwitchService
+from app.services.aurora_stage28_traits_kill_switch_service import AuroraStage28TraitsKillSwitchService
+from app.services.aurora_stage29_srl_kill_switch_service import AuroraStage29SRLKillSwitchService
+from app.services.aurora_stage30_metacognition_kill_switch_service import AuroraStage30MetacognitionKillSwitchService
+from app.services.aurora_stage31_idiographic_kill_switch_service import AuroraStage31IdiographicKillSwitchService
+from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.ltm_health_snapshot import LtmHealthSnapshotService
 from app.services.ltm_release_gate import LtmReleaseGate
@@ -335,6 +345,198 @@ async def update_stage21_kill_switches(payload: dict = Body(default={})):
         }
     )
     return {"status": "ok", "flags": flags}
+
+
+# route-tier: internal
+@router.get("/stage23/killswitch")
+async def get_stage23_kill_switches():
+    return {"flags": await AuroraStage23KillSwitchService().get_all()}
+
+
+# route-tier: internal
+@router.put("/stage23/killswitch")
+async def update_stage23_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage23KillSwitchService()
+    mode = payload.get("bayesian_mode", payload.get("mode"))
+    if mode is not None:
+        await service.set_mode(mode)
+    return {"status": "ok", "flags": await service.get_all()}
+
+
+# route-tier: internal
+@router.get("/stage24/killswitch")
+async def get_stage24_kill_switches():
+    return {"flags": await AuroraStage24PolicyKillSwitchService().get_all()}
+
+
+# route-tier: internal
+@router.put("/stage24/killswitch")
+async def update_stage24_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage24PolicyKillSwitchService()
+    mode = payload.get("policy_compiler_mode", payload.get("mode"))
+    if mode is not None:
+        await service.set_mode(mode)
+    return {"status": "ok", "flags": await service.get_all()}
+
+
+# route-tier: internal
+@router.get("/stage25/killswitch")
+async def get_stage25_kill_switches():
+    return {"flags": await AuroraStage25ReflectionKillSwitchService().get_all()}
+
+
+# route-tier: internal
+@router.put("/stage25/killswitch")
+async def update_stage25_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage25ReflectionKillSwitchService()
+    mode = payload.get("reflection_wire_mode", payload.get("mode"))
+    if mode is not None:
+        await service.set_mode(mode)
+    for category, enabled in dict(payload.get("trigger_toggles") or {}).items():
+        await service.set_trigger_enabled(category, bool(enabled))
+    return {"status": "ok", "flags": await service.get_all()}
+
+
+# route-tier: internal
+@router.get("/stage26/killswitch")
+async def get_stage26_kill_switches():
+    service = AuroraStage26SceneKillSwitchService()
+    return {"flags": {"mode": await service.get_mode()}}
+
+
+# route-tier: internal
+@router.put("/stage26/killswitch")
+async def update_stage26_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage26SceneKillSwitchService()
+    if payload.get("mode") is not None:
+        await service.set_mode(payload.get("mode"))
+    return {"status": "ok", "flags": {"mode": await service.get_mode()}}
+
+
+# route-tier: internal
+@router.get("/stage27/killswitch")
+async def get_stage27_kill_switches():
+    return {"flags": await AuroraStage27ForesightKillSwitchService().get_all()}
+
+
+# route-tier: internal
+@router.put("/stage27/killswitch")
+async def update_stage27_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage27ForesightKillSwitchService()
+    if payload.get("mode") is not None:
+        await service.set_mode(payload.get("mode"))
+    for feature in service.FEATURE_BINDINGS:
+        if payload.get(feature) is not None:
+            await service.set_feature_mode(feature, payload.get(feature))
+    return {"status": "ok", "flags": await service.get_all()}
+
+
+# route-tier: internal
+@router.get("/stage28/killswitch")
+async def get_stage28_kill_switches():
+    service = AuroraStage28TraitsKillSwitchService()
+    return {
+        "flags": {
+            "mode": await service.get_mode(),
+            "nlp_mode": await service.get_nlp_mode(),
+            "coldstart_mode": await service.get_coldstart_mode(),
+        }
+    }
+
+
+# route-tier: internal
+@router.put("/stage28/killswitch")
+async def update_stage28_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage28TraitsKillSwitchService()
+    if payload.get("mode") is not None:
+        await service.set_mode(payload.get("mode"))
+    if payload.get("nlp_mode") is not None:
+        await service.set_nlp_mode(payload.get("nlp_mode"))
+    if payload.get("coldstart_mode") is not None:
+        await service.set_coldstart_mode(payload.get("coldstart_mode"))
+    return await get_stage28_kill_switches()
+
+
+# route-tier: internal
+@router.get("/stage29/killswitch")
+async def get_stage29_kill_switches():
+    return {"flags": await AuroraStage29SRLKillSwitchService().summary()}
+
+
+# route-tier: internal
+@router.put("/stage29/killswitch")
+async def update_stage29_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage29SRLKillSwitchService()
+    if payload.get("mode") is not None:
+        await service.set_mode(payload.get("mode"))
+    if payload.get("tracker_mode") is not None:
+        await service.set_tracker_mode(payload.get("tracker_mode"))
+    if payload.get("bridge_mode") is not None:
+        await service.set_bridge_mode(payload.get("bridge_mode"))
+    if payload.get("scaffolding_consume_mode") is not None:
+        await service.set_scaffolding_consume_mode(payload.get("scaffolding_consume_mode"))
+    return {"status": "ok", "flags": await service.summary()}
+
+
+# route-tier: internal
+@router.get("/stage30/killswitch")
+async def get_stage30_kill_switches():
+    service = AuroraStage30MetacognitionKillSwitchService()
+    return {
+        "flags": {
+            "mode": await service.get_mode(),
+            **{
+                feature: await service.get_feature_mode(feature)
+                for feature in service.FEATURE_BINDINGS
+            },
+        }
+    }
+
+
+# route-tier: internal
+@router.put("/stage30/killswitch")
+async def update_stage30_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage30MetacognitionKillSwitchService()
+    if payload.get("mode") is not None:
+        await service.set_mode(payload.get("mode"))
+    for feature in service.FEATURE_BINDINGS:
+        if payload.get(feature) is not None:
+            await service.set_feature_mode(feature, payload.get(feature))
+    return await get_stage30_kill_switches()
+
+
+# route-tier: internal
+@router.get("/stage31/killswitch")
+async def get_stage31_kill_switches():
+    service = AuroraStage31IdiographicKillSwitchService()
+    return {"flags": {"mode": await service.get_mode()}}
+
+
+# route-tier: internal
+@router.put("/stage31/killswitch")
+async def update_stage31_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage31IdiographicKillSwitchService()
+    if payload.get("mode") is not None:
+        await service.set_mode(payload.get("mode"))
+    return {"status": "ok", "flags": {"mode": await service.get_mode()}}
+
+
+# route-tier: internal
+@router.get("/stage33/killswitch")
+async def get_stage33_kill_switches():
+    return {"flags": await AuroraStage33KillSwitchService().summary()}
+
+
+# route-tier: internal
+@router.put("/stage33/killswitch")
+async def update_stage33_kill_switches(payload: dict = Body(default={})):
+    service = AuroraStage33KillSwitchService()
+    if payload.get("mode") is not None:
+        await service.set_mode(payload.get("mode"))
+    for feature in service.FEATURE_BINDINGS:
+        if payload.get(feature) is not None:
+            await service.set_feature_mode(feature, payload.get(feature))
+    return {"status": "ok", "flags": await service.summary()}
 
 
 @router.get("/context-pack/stats")

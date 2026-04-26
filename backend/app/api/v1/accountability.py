@@ -475,9 +475,7 @@ async def _build_partnership_stats_payload(
         )
     )
     total_result = await db.execute(
-        select(func.count(AccountabilityCheckin.id)).where(
-            AccountabilityCheckin.partnership_id == partnership.id
-        )
+        select(func.count(AccountabilityCheckin.id)).where(AccountabilityCheckin.partnership_id == partnership.id)
     )
 
     return PartnershipStatsOut(
@@ -567,9 +565,7 @@ async def _build_partnership_achievements_payload(
                 )
             )
         )
-        unlocked_by_user[str(user_id)] = {
-            ua.achievement_id for ua in result.scalars().all()
-        }
+        unlocked_by_user[str(user_id)] = {ua.achievement_id for ua in result.scalars().all()}
 
     achievement_list = []
     my_unlocked = unlocked_by_user.get(str(current_user.id), set())
@@ -1046,7 +1042,8 @@ async def get_my_partnerships(
 ):
     """获取我的责任伙伴列表"""
     result = await db.execute(
-        select(AccountabilityPartnership).where(
+        select(AccountabilityPartnership)
+        .where(
             and_(
                 AccountabilityPartnership.slot_type == AccountabilitySlotType.CORE,
                 AccountabilityPartnership.status.in_([AccountabilityStatus.PENDING, AccountabilityStatus.ACTIVE]),
@@ -1055,7 +1052,8 @@ async def get_my_partnerships(
                     AccountabilityPartnership.partner_id == current_user.id,
                 ),
             )
-        ).order_by(
+        )
+        .order_by(
             case(
                 (AccountabilityPartnership.slot_type == AccountabilitySlotType.CORE, 0),
                 else_=1,
@@ -1081,24 +1079,13 @@ async def get_accountability_overview(
     """获取责任伙伴概览，用于好友页主入口。"""
     partnerships = await _fetch_partnerships_for_users(db, [current_user.id])
     active = next(
-        (
-            partnership
-            for partnership in partnerships
-            if partnership.status == AccountabilityStatus.ACTIVE
-        ),
+        (partnership for partnership in partnerships if partnership.status == AccountabilityStatus.ACTIVE),
         None,
     )
-    pending = [
-        partnership
-        for partnership in partnerships
-        if partnership.status == AccountabilityStatus.PENDING
-    ]
+    pending = [partnership for partnership in partnerships if partnership.status == AccountabilityStatus.PENDING]
 
     active_payload = await _build_partnership_out(db, active, current_user) if active else None
-    pending_payload = [
-        await _build_partnership_out(db, partnership, current_user)
-        for partnership in pending
-    ]
+    pending_payload = [await _build_partnership_out(db, partnership, current_user) for partnership in pending]
     partner_id = _other_user_id(active, current_user.id) if active else None
 
     achievements_summary = {"total_unlocked": 0, "partner_total_unlocked": 0}
@@ -1209,9 +1196,7 @@ async def nudge_partner(
         "cooldown_seconds": cooldown_seconds,
         "delivery_summary": "已通过站内提醒发送；如果对方当前在线，会实时看到这次提醒。",
         "message": (
-            f"{sender_name} 提醒你看看今天的目标，别让节奏断掉。"
-            if not message
-            else f"{sender_name} 提醒你：{message}"
+            f"{sender_name} 提醒你看看今天的目标，别让节奏断掉。" if not message else f"{sender_name} 提醒你：{message}"
         ),
     }
 
@@ -1434,13 +1419,58 @@ async def daily_checkin(
     await checkin.save(db)
     await db.refresh(checkin)
 
+    partner_id = (
+        partnership.partner_id if str(partnership.initiator_id) == str(current_user.id) else partnership.initiator_id
+    )
+
+    partner_checkin_result = await db.execute(
+        select(AccountabilityCheckin.id).where(
+            and_(
+                AccountabilityCheckin.partnership_id == partnership_id,
+                AccountabilityCheckin.user_id == partner_id,
+                AccountabilityCheckin.created_at >= today_start,
+                AccountabilityCheckin.created_at <= today_end,
+            )
+        )
+    )
+    partner_checked_in_today = partner_checkin_result.scalar_one_or_none() is not None
+
+    try:
+        from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+        engine = AchievementEngine(db)
+        await engine.process_event(
+            user_id=str(current_user.id),
+            event_type=AchievementEvent.DAILY_CHECKIN,
+            checkin_id=str(checkin.id),
+            minutes=int(body.minutes or 0),
+            activity_date=today_start.date(),
+            source="accountability_checkin",
+        )
+        if partner_checked_in_today:
+            await engine.process_event(
+                user_id=str(current_user.id),
+                event_type=AchievementEvent.MUTUAL_STUDY,
+                checkin_id=str(checkin.id),
+                partner_id=str(partner_id),
+                mutual_study_days=1,
+                source="accountability_checkin",
+            )
+            await engine.process_event(
+                user_id=str(partner_id),
+                event_type=AchievementEvent.MUTUAL_STUDY,
+                checkin_id=str(checkin.id),
+                partner_id=str(current_user.id),
+                mutual_study_days=1,
+                source="accountability_checkin",
+            )
+    except Exception as exc:
+        logger.warning(f"Failed to publish accountability achievement events for checkin {checkin.id}: {exc}")
+
     from app.services.accountability_notification_service import (
         accountability_notification_service,
     )
 
-    partner_id = (
-        partnership.partner_id if str(partnership.initiator_id) == str(current_user.id) else partnership.initiator_id
-    )
     await accountability_notification_service.send_partner_checked_in(
         db, partner_id, partnership_id, current_user.full_name or current_user.username
     )

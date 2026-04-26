@@ -6,6 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
+from app.sprint_packs.sprint_pack_schema import SprintPackV1
+
 try:
     from loguru import logger
 except ModuleNotFoundError:
@@ -98,6 +102,13 @@ def _load_pack_file(normalized: str, version: str) -> dict[str, Any] | None:
         logger.warning("Failed to load Sprint Pack {}: {}", path, exc)
         return None
 
+    try:
+        pack = SprintPackV1.model_validate(data)
+    except ValidationError as exc:
+        logger.warning("Invalid Sprint Pack {}: {}", path, exc.errors()[0] if exc.errors() else exc)
+        return None
+
+    data = pack.model_dump()
     logger.debug("Loaded Sprint Pack: {} ({} nodes)", filename, len(data.get("knowledge_nodes", [])))
     return data
 
