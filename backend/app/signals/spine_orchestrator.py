@@ -27,6 +27,7 @@ from app.signals.self_model import SparkleSelfModelService
 from app.signals.community_signal import CommunitySignalDetector
 from app.signals.predicted_reply_options import SpineReplyOptionEngine
 from app.signals.aurora_wake import AuroraWakeJudge
+from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -71,6 +72,7 @@ class SpineOrchestrator:
         self.wake_judge = AuroraWakeJudge()
         self.signal_ranker = SignalRanker()
         self.state_register = StateRegister(redis_client)
+        self.outcome_recorder = OutcomeRecorder(redis_client)
         self.policy_engine = PolicyEngine(reply_engine=self.reply_engine)
 
     async def on_task_completed(
@@ -728,3 +730,27 @@ class SpineOrchestrator:
         if not raw:
             return None
         return UXDirective.from_dict(json.loads(raw))
+
+    # ── Layer 8: Outcome Recording ────────────────────────────────────
+
+    async def record_outcome(
+        self,
+        *,
+        trace: CausalTrace,
+        intervention: str,
+        reason: str,
+        expected_outcome: str,
+        actual_outcome: dict[str, Any],
+    ):
+        """记录干预结果并执行因果归因。"""
+        return await self.outcome_recorder.record_outcome(
+            trace=trace,
+            intervention=intervention,
+            reason=reason,
+            expected_outcome=expected_outcome,
+            actual_outcome=actual_outcome,
+        )
+
+    async def get_outcome_for_trace(self, trace_id: str):
+        """获取 CausalTrace 对应的 OutcomeRecord。"""
+        return await self.outcome_recorder.get_outcome_for_trace(trace_id)

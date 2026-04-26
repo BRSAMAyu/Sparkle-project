@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-204/204 tests passing:
+214/214 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -191,6 +191,7 @@
 - Layer 6 ModelWriteDirective: 8 tests (7 standalone + 1 integration)
 - Layer 6 UXDirective: 14 tests (11 standalone + 1 integration + 2 edge)
 - Opus review regression tests: 3 tests (trace IDs, material_underutilized, ModelWriteEntry.from_dict)
+- Layer 8 OutcomeRecorder: 10 tests (7 standalone + 2 integration + 1 serialization)
 
 ---
 
@@ -510,6 +511,41 @@
 
 ---
 
+## Layer 8: Outcome & Causal Attribution
+
+**目标**: 8 层架构第 8 层 — 记录干预结果，执行最小因果归因
+
+### 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| `OutcomeRecord` 数据结构 | intervention / expected_outcome / actual_outcome / attribution / attribution_confidence / new_hypothesis / next_policy_suggestion |
+| `OutcomeRecorder` | 记录干预结果，执行固定规则归因 |
+| `SpineOrchestrator.record_outcome()` | 供外部调用记录干预结果 |
+
+### 归因规则
+
+| expected_outcome | effective 条件 | insufficient 条件 | 下一策略建议 |
+|-----------------|---------------|------------------|------------|
+| task_started_and_completed | completed=True | started=True, completed=False | evaluate_knowledge_barrier |
+| user_response | user_responded=True | user_responded=False | reduce_frequency |
+| behavioral_change | behavior_changed=True | behavior_changed=False | escalate_or_try_different |
+
+### 验收标准
+
+- [x] OutcomeRecord 包含完整归因字段
+- [x] task completed → effective attribution (confidence ≥ 0.7)
+- [x] task started but not completed → insufficient + hypothesis
+- [x] user responded → effective
+- [x] user not responded → insufficient + reduce_frequency
+- [x] behavior changed → effective
+- [x] unknown expected_outcome → inconclusive
+- [x] unexpected outcome pattern → inconclusive with low confidence
+- [x] OutcomeRecorder Redis 存储和检索
+- [x] SpineOrchestrator 委托正确
+
+---
+
 ## P3: Production Event Handler Wiring
 
 **目标**: SpineOrchestrator 方法接入生产代码的事件处理器
@@ -674,6 +710,7 @@
 | PlanDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
 | ModelWriteDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
 | UXDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
+| OutcomeRecord | ✅ 完成 | `signals/types.py`, `signals/outcome_recorder.py` |
 
 ### 架构原则检查清单
 

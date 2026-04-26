@@ -21,6 +21,7 @@ from app.signals.types import (
     CausalTrace,
     DirectiveApplicationAudit,
     ExecutionDirective,
+    OutcomeRecord,
     PolicyDecision,
     StateEntry,
     UserVisibleReceipt,
@@ -29,6 +30,7 @@ from app.signals.types import (
 from app.signals.task_timeout_detector import TaskTimeoutDetector
 from app.signals.policy_engine import PolicyEngine
 from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
+from app.signals.outcome_recorder import OutcomeRecorder
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────
@@ -3127,3 +3129,155 @@ async def test_build_retrieval_directive_no_match():
     rd = engine.build_retrieval_directive(decision, signal)
     assert rd is None
 
+
+# ── Layer 8: Outcome & Causal Attribution Tests ──────────────────────
+
+def test_outcome_record_serialization():
+    """OutcomeRecord round-trips through to_dict/from_dict."""
+    record = OutcomeRecord(
+        outcome_id="or_test",
+        causal_trace_id="ct_test",
+        intervention="max_task_duration_25min",
+        reason="recent_task_overrun",
+        expected_outcome="task_started_and_completed",
+        actual_outcome={"started": True, "completed": True, "time_spent_min": 12},
+        attribution="effective",
+        attribution_confidence=0.8,
+    )
+    d = record.to_dict()
+    record2 = OutcomeRecord.from_dict(d)
+    assert record2.outcome_id == "or_test"
+    assert record2.attribution == "effective"
+    assert record2.actual_outcome["time_spent_min"] == 12
+
+
+def test_outcome_attribution_effective():
+    """Task completed → effective attribution."""
+    recorder = OutcomeRecorder(redis_client=None)
+    attribution, confidence, hypothesis, next_policy = recorder._attribute(
+        "task_started_and_completed",
+        {"started": True, "completed": True, "time_spent_min": 20},
+    )
+    assert attribution == "effective"
+    assert confidence >= 0.7
+    assert hypothesis is None
+
+
+def test_outcome_attribution_insufficient():
+    """Task started but not completed → insufficient attribution."""
+    recorder = OutcomeRecorder(redis_client=None)
+    attribution, confidence, hypothesis, next_policy = recorder._attribute(
+        "task_started_and_completed",
+        {"started": True, "completed": False, "time_spent_min": 12},
+    )
+    assert attribution == "insufficient"
+    assert confidence >= 0.5
+    assert next_policy is not None
+
+
+def test_outcome_attribution_user_response_effective():
+    """User responded → effective attribution."""
+    recorder = OutcomeRecorder(redis_client=None)
+    attribution, confidence, _, _ = recorder._attribute(
+        "user_response",
+        {"user_responded": True},
+    )
+    assert attribution == "effective"
+
+
+def test_outcome_attribution_user_response_insufficient():
+    """User did not respond → insufficient attribution."""
+    recorder = OutcomeRecorder(redis_client=None)
+    attribution, confidence, hypothesis, next_policy = recorder._attribute(
+        "user_response",
+        {"user_responded": False},
+    )
+    assert attribution == "insufficient"
+    assert next_policy == "reduce_frequency"
+
+
+def test_outcome_attribution_behavioral_change():
+    """Behavior changed → effective attribution."""
+    recorder = OutcomeRecorder(redis_client=None)
+    attribution, confidence, _, _ = recorder._attribute(
+        "behavioral_change",
+        {"behavior_changed": True},
+    )
+    assert attribution == "effective"
+
+
+def test_outcome_attribution_inconclusive():
+    """Unknown expected_outcome → inconclusive."""
+    recorder = OutcomeRecorder(redis_client=None)
+    attribution, confidence, _, _ = recorder._attribute(
+        "unknown_outcome_type",
+        {"some_data": True},
+    )
+    assert attribution == "inconclusive"
+    assert confidence == 0.0
+
+
+def test_outcome_attribution_unexpected_pattern():
+    """Conditions not matching any rule → inconclusive with low confidence."""
+    recorder = OutcomeRecorder(redis_client=None)
+    attribution, confidence, hypothesis, _ = recorder._attribute(
+        "task_started_and_completed",
+        {"started": False, "completed": False},
+    )
+    assert attribution == "inconclusive"
+    assert hypothesis == "unexpected_outcome_pattern"
+
+
+@pytest.mark.asyncio
+async def test_outcome_recorder_stores_and_retrieves():
+    """OutcomeRecorder stores and retrieves outcome records."""
+    redis = FakeRedis()
+    recorder = OutcomeRecorder(redis_client=redis)
+    trace = CausalTrace(trace_id="ct_outcome_test")
+
+    record = await recorder.record_outcome(
+        trace=trace,
+        intervention="max_task_duration_25min",
+        reason="recent_task_overrun",
+        expected_outcome="task_started_and_completed",
+        actual_outcome={"started": True, "completed": True, "time_spent_min": 18},
+    )
+
+    assert record.outcome_id.startswith("or_")
+    assert record.attribution == "effective"
+    assert record.attribution_confidence >= 0.7
+
+    # Retrieve
+    retrieved = await recorder.get_outcome(record.outcome_id)
+    assert retrieved is not None
+    assert retrieved.outcome_id == record.outcome_id
+    assert retrieved.attribution == "effective"
+
+
+@pytest.mark.asyncio
+async def test_spine_record_outcome():
+    """SpineOrchestrator.record_outcome delegates correctly."""
+    signal = ActionableSignal(
+        signal_id="sig_outcome", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    trace = await spine_fixture()._run_signal_pipeline(user_id="u_outcome", signal=signal)
+    assert trace is not None
+
+    record = await spine_fixture().record_outcome(
+        trace=trace,
+        intervention="max_task_duration_25min",
+        reason="recent_task_overrun",
+        expected_outcome="task_started_and_completed",
+        actual_outcome={"started": True, "completed": True, "time_spent_min": 20},
+    )
+    assert record.attribution == "effective"
+
+
+def spine_fixture():
+    """Create a SpineOrchestrator for Layer 8 tests."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    return SpineOrchestrator(redis_client=redis)

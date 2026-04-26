@@ -498,3 +498,41 @@ class CausalTrace:
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> CausalTrace:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+# ── 8. OutcomeRecord ────────────────────────────────────────────────────
+# 记录干预的实际结果，用于因果归因。
+# 用户可见变化：系统知道自己的干预有没有用。
+
+@dataclass
+class OutcomeRecord:
+    outcome_id: str
+    causal_trace_id: str
+    intervention: str                   # e.g. "max_task_duration_25min"
+    reason: str                         # e.g. "recent_task_overrun"
+    expected_outcome: str               # e.g. "task_started_and_completed"
+    actual_outcome: dict[str, Any]      # e.g. {"started": true, "completed": false, "time_spent_min": 12}
+    attribution: str = "inconclusive"   # effective / insufficient / inconclusive
+    attribution_confidence: float = 0.0
+    new_hypothesis: str | None = None
+    next_policy_suggestion: str | None = None
+    created_at: str = field(default_factory=_utcnow)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "outcome_id": self.outcome_id,
+            "causal_trace_id": self.causal_trace_id,
+            "intervention": self.intervention,
+            "reason": self.reason,
+            "expected_outcome": self.expected_outcome,
+            "actual_outcome": self.actual_outcome,
+            "attribution": self.attribution,
+            "attribution_confidence": self.attribution_confidence,
+            "new_hypothesis": self.new_hypothesis,
+            "next_policy_suggestion": self.next_policy_suggestion,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> OutcomeRecord:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
