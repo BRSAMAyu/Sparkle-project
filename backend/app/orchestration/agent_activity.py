@@ -83,16 +83,6 @@ AGENT_DISPLAY_I18N_KEYS: dict[str, dict[str, str]] = {
     },
 }
 
-AGENT_DISPLAY_CONFIG: dict[str, dict[str, str]] = {}
-for _agent_id, _keys in AGENT_DISPLAY_I18N_KEYS.items():
-    AGENT_DISPLAY_CONFIG[_agent_id] = {
-        "display_name": I18n.t(_keys["display_name"], locale="zh"),
-        "icon": _get_default_icon(_agent_id),
-        "color": _get_default_color(_agent_id),
-        "description": I18n.t(_keys["description"], locale="zh"),
-    }
-
-
 def _get_default_icon(agent_id: str) -> str:
     icons = {
         "orchestrator": "layers", "synthesis": "layers", "galaxy_guide": "constellation",
@@ -115,6 +105,16 @@ def _get_default_color(agent_id: str) -> str:
         "science_agent": "#00B894", "search_expert": "#636E72", "search_agent": "#636E72",
     }
     return colors.get(agent_id, "#636E72")
+
+
+AGENT_DISPLAY_CONFIG: dict[str, dict[str, str]] = {}
+for _agent_id, _keys in AGENT_DISPLAY_I18N_KEYS.items():
+    AGENT_DISPLAY_CONFIG[_agent_id] = {
+        "display_name": I18n.t(_keys["display_name"], locale="zh"),
+        "icon": _get_default_icon(_agent_id),
+        "color": _get_default_color(_agent_id),
+        "description": I18n.t(_keys["description"], locale="zh"),
+    }
 
 
 @dataclass

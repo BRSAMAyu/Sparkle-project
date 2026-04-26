@@ -835,13 +835,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered inventory proxy routes")
 
-	// ==================== Health Routes ====================
-	health := api.Group("/health")
-	health.Use(authMiddleware)
-	{
-		health.Any("/*path", h.proxyWithHeaders)
-	}
-	h.logger.Info("Registered health proxy routes")
+	// Health routes are handled locally by the gateway (setup.go) — do not proxy
 }
 
 // proxyWithHeaders proxies request to Python Backend with user context headers
