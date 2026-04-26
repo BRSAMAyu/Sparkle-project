@@ -97,6 +97,83 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
             "reasoning_template": "这个知识点你连续出错了，我先帮你巩固，不急着推进新内容。",
         },
     },
+    "growth_momentum": {
+        "momentum_high": {
+            "primary_strategy": "sustain_momentum",
+            "secondary_strategy": "gradual_challenge_increase",
+            "hard_constraints": {},
+            "soft_biases": {
+                "tone": "recognition_not_praise",
+                "nudge_style": "lighter",
+                "challenge": "slight_increase",
+            },
+            "visibility": "status_band",
+            "requires_user_confirmation": False,
+            "reasoning_template": "你最近节奏不错，我会适当减少催促，试试稍有点挑战的内容。",
+        },
+        "momentum_stalled": {
+            "primary_strategy": "rekindle_engagement",
+            "secondary_strategy": None,
+            "hard_constraints": {},
+            "soft_biases": {
+                "tone": "encouraging_low_pressure",
+                "nudge_style": "gentle",
+            },
+            "visibility": "status_band",
+            "requires_user_confirmation": False,
+            "reasoning_template": "最近进度变慢了，但不急，先找一个轻松的切入点。",
+        },
+    },
+    "recall_needed": {
+        "undigested_material": {
+            "primary_strategy": "prompt_diagnostic",
+            "secondary_strategy": None,
+            "hard_constraints": {},
+            "soft_biases": {
+                "message_strategy": "low_effort_next_step",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": False,
+            "reasoning_template": "你上传了资料但还没看，我帮你花几分钟诊断一下？",
+        },
+        "task_not_started": {
+            "primary_strategy": "nudge_task_start",
+            "secondary_strategy": None,
+            "hard_constraints": {},
+            "soft_biases": {
+                "message_strategy": "low_effort_next_step",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": False,
+            "reasoning_template": "你的任务在等你，先看 5 分钟也行。",
+        },
+        "task_missed": {
+            "primary_strategy": "recover_from_missed_task",
+            "secondary_strategy": "adjust_plan",
+            "hard_constraints": {},
+            "soft_biases": {
+                "message_strategy": "recovery_offer",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": True,
+            "reasoning_template": "这张任务错过了，要调整计划还是跳过？",
+        },
+        "pre_exam_silence": {
+            "primary_strategy": "urgent_exam_prep",
+            "secondary_strategy": "high_yield_review",
+            "hard_constraints": {
+                "prefer_high_yield_review": True,
+                "avoid_new_chapter": True,
+            },
+            "soft_biases": {
+                "tone": "calm_urgent",
+                "message_strategy": "quick_review_offer",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": False,
+            "reasoning_template": "快考试了，我帮你快速过一遍最可能考的要点。",
+        },
+    },
 }
 
 _DIRECTIVE_TARGET_MODULE = "task_generator"
@@ -129,7 +206,10 @@ class PolicyEngine:
             return None
 
         consecutive = context.get("consecutive", 2) if context else 2
-        reasoning = rule["reasoning_template"].format(consecutive=consecutive)
+        try:
+            reasoning = rule["reasoning_template"].format(consecutive=consecutive)
+        except KeyError:
+            reasoning = rule["reasoning_template"]
 
         decision = PolicyDecision(
             policy_decision_id=_uid("pd"),

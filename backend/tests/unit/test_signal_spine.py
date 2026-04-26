@@ -1617,3 +1617,107 @@ def test_community_no_high_priority(community_detector):
     )
     signal = community_detector.to_actionable_signal(pattern)
     assert signal.priority in ("low", "medium")
+
+
+# ── PolicyEngine gap coverage: growth_momentum + recall_needed rules ──
+
+from app.signals.policy_engine import PolicyEngine
+
+
+@pytest.fixture
+def policy_engine():
+    return PolicyEngine()
+
+
+@pytest.mark.asyncio
+async def test_policy_growth_momentum_high(policy_engine):
+    """growth_momentum/momentum_high → sustain_momentum strategy。"""
+    from app.signals.types import ActionableSignal
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="growth_momentum", claim="momentum_high",
+        confidence=0.80, scope="current_sprint", ttl_hours=48,
+        evidence_summary="test", possible_effects=[], priority="low",
+    )
+    result = await policy_engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+    assert decision.primary_strategy == "sustain_momentum"
+    assert "tone" in decision.soft_biases
+    assert decision.visibility == "status_band"
+
+
+@pytest.mark.asyncio
+async def test_policy_growth_momentum_stalled(policy_engine):
+    """growth_momentum/momentum_stalled → rekindle_engagement。"""
+    from app.signals.types import ActionableSignal
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="growth_momentum", claim="momentum_stalled",
+        confidence=0.70, scope="current_sprint", ttl_hours=24,
+        evidence_summary="test", possible_effects=[], priority="medium",
+    )
+    result = await policy_engine.evaluate(signal)
+    assert result is not None
+    assert result[0].primary_strategy == "rekindle_engagement"
+
+
+@pytest.mark.asyncio
+async def test_policy_recall_pre_exam(policy_engine):
+    """recall_needed/pre_exam_silence → urgent_exam_prep + hard constraints。"""
+    from app.signals.types import ActionableSignal
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="recall_needed", claim="pre_exam_silence",
+        confidence=0.80, scope="current_sprint", ttl_hours=6,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    result = await policy_engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+    assert decision.primary_strategy == "urgent_exam_prep"
+    assert directive.hard_constraints.get("prefer_high_yield_review") is True
+
+
+@pytest.mark.asyncio
+async def test_policy_recall_task_missed(policy_engine):
+    """recall_needed/task_missed → requires_user_confirmation。"""
+    from app.signals.types import ActionableSignal
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="recall_needed", claim="task_missed",
+        confidence=0.80, scope="current_sprint", ttl_hours=6,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    result = await policy_engine.evaluate(signal)
+    assert result is not None
+    assert result[0].requires_user_confirmation is True
+
+
+@pytest.mark.asyncio
+async def test_policy_recall_undigested_material(policy_engine):
+    """recall_needed/undigested_material → prompt_diagnostic。"""
+    from app.signals.types import ActionableSignal
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="recall_needed", claim="undigested_material",
+        confidence=0.80, scope="current_sprint", ttl_hours=6,
+        evidence_summary="test", possible_effects=[], priority="medium",
+    )
+    result = await policy_engine.evaluate(signal)
+    assert result is not None
+    assert result[0].primary_strategy == "prompt_diagnostic"
+
+
+@pytest.mark.asyncio
+async def test_policy_growth_momentum_no_rule_for_other_claims(policy_engine):
+    """growth_momentum/unknown_claim → no match。"""
+    from app.signals.types import ActionableSignal
+    signal = ActionableSignal(
+        signal_id="sig_test", source_event_ids=[], source_system="test",
+        state_key="growth_momentum", claim="some_other_claim",
+        confidence=0.80, scope="current_sprint", ttl_hours=48,
+        evidence_summary="test", possible_effects=[], priority="low",
+    )
+    result = await policy_engine.evaluate(signal)
+    assert result is None
