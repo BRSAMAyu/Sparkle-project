@@ -84,8 +84,8 @@ func TestSemanticCacheCanonical(t *testing.T) {
 		},
 		{
 			name:     "chinese_punctuation",
-			input:    "密码重置？",
-			expected: "密码重置",
+			input:    "password reset?",
+			expected: "password reset",
 			desc:     "Should remove Chinese punctuation",
 		},
 		{

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/intervention.dart';
 
 class ToastIntervention extends StatelessWidget {
@@ -17,9 +18,9 @@ class ToastIntervention extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final actions = intervention.actions.isEmpty
-        ? const [
-            InterventionAction(id: 'start_now', label: '开始', type: 'primary'),
-            InterventionAction(id: 'dismiss', label: '稍后', type: 'secondary'),
+        ? [
+            InterventionAction(id: 'start_now', label: context.l10n.interventionStartNow, type: 'primary'),
+            InterventionAction(id: 'dismiss', label: context.l10n.interventionLater, type: 'secondary'),
           ]
         : intervention.actions;
     return Positioned(
@@ -51,7 +52,7 @@ class ToastIntervention extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     SparkleButton.outline(
-                      label: actions.length > 1 ? actions[1].label : '稍后',
+                      label: actions.length > 1 ? actions[1].label : context.l10n.interventionLater,
                       onPressed: actions.length > 1
                           ? () => onAction(actions[1].id)
                           : onDismiss,

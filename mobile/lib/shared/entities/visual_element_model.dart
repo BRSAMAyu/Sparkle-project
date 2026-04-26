@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 part 'visual_element_model.g.dart';
 
@@ -148,32 +149,34 @@ class VisualElementModel {
   String get displaySlot =>
       config['display_slot']?.toString() ?? elementType.name;
 
-  String get displaySlotLabel {
+  String get displaySlotLabel => localizedDisplaySlotLabel(null);
+
+  String localizedDisplaySlotLabel(AppLocalizations? l10n) {
     switch (displaySlot) {
       case 'avatar_border':
-        return '头像边框';
+        return l10n?.visualSlotAvatarBorder ?? '头像边框';
       case 'title_bar':
-        return '称号条';
+        return l10n?.visualSlotTitleBar ?? '称号条';
       case 'profile_banner':
-        return '主页横幅';
+        return l10n?.visualSlotProfileBanner ?? '主页横幅';
       case 'achievement_frame':
-        return '成就主题框';
+        return l10n?.visualSlotAchievementFrame ?? '成就主题框';
       case 'home_ambience':
-        return '首页氛围';
+        return l10n?.visualSlotHomeAmbience ?? '首页氛围';
       case 'star_map_effect':
-        return '星图征服特效';
+        return l10n?.visualSlotStarMapEffect ?? '星图征服特效';
       case 'streak_flame':
-        return '连胜火焰';
+        return l10n?.visualSlotStreakFlame ?? '连胜火焰';
       case 'display_pedestal':
-        return '陈列台座';
+        return l10n?.visualSlotDisplayPedestal ?? '陈列台座';
       case 'background':
-        return '背景';
+        return l10n?.visualSlotBackground ?? '背景';
       case 'particle':
-        return '粒子';
+        return l10n?.visualSlotParticle ?? '粒子';
       case 'effect':
-        return '特效';
+        return l10n?.visualSlotEffect ?? '特效';
       case 'bundle':
-        return '套装';
+        return l10n?.visualSlotBundle ?? '套装';
       default:
         return displaySlot;
     }
@@ -190,18 +193,20 @@ class VisualElementModel {
       unlockRequirement?['achievement_id']?.toString() ??
       config['source_achievement_id']?.toString();
 
-  String get unlockSourceLabel {
+  String get unlockSourceLabel => localizedUnlockSourceLabel(null);
+
+  String localizedUnlockSourceLabel(AppLocalizations? l10n) {
     switch (unlockSource) {
       case VisualElementUnlockSource.system:
-        return '系统提供';
+        return l10n?.visualUnlockSystem ?? '系统提供';
       case VisualElementUnlockSource.achievement:
-        return '成就解锁';
+        return l10n?.visualUnlockAchievement ?? '成就解锁';
       case VisualElementUnlockSource.shop:
-        return '商店获取';
+        return l10n?.visualUnlockShop ?? '商店获取';
       case VisualElementUnlockSource.event:
-        return '活动限定';
+        return l10n?.visualUnlockEvent ?? '活动限定';
       case VisualElementUnlockSource.season:
-        return '赛季奖励';
+        return l10n?.visualUnlockSeason ?? '赛季奖励';
     }
   }
 
@@ -227,38 +232,44 @@ class VisualElementModel {
 
   bool get isPrestigeHighlight => visibilityWeight >= 85;
 
-  List<String> get affectedSurfaceLabels {
+  List<String> get affectedSurfaceLabels => localizedAffectedSurfaceLabels(null);
+
+  List<String> localizedAffectedSurfaceLabels(AppLocalizations? l10n) {
     if (isBundle) {
       return [
-        if (bundleBackgroundId != null) '首页氛围',
-        if (bundleParticleId != null) '粒子轨迹',
-        if (bundleEffectId != null) '荣耀特效',
+        if (bundleBackgroundId != null) l10n?.visualSlotHomeAmbience ?? '首页氛围',
+        if (bundleParticleId != null) l10n?.visualSlotParticleTrail ?? '粒子轨迹',
+        if (bundleEffectId != null) l10n?.visualSlotGloryEffect ?? '荣耀特效',
       ];
     }
 
+    final home = l10n?.visualSlotHomeAmbience ?? '首页氛围';
+    final profile = l10n?.visualSlotProfile ?? '个人主页';
+    final empty = displaySlot;
+
     switch (displaySlot) {
       case 'profile_banner':
-        return ['个人主页', '成就页头图'];
+        return [profile, l10n?.visualSlotAchievementHeader ?? '成就页头图'];
       case 'home_ambience':
-        return ['首页氛围', '个人主页'];
+        return [home, profile];
       case 'achievement_frame':
-        return ['成就页', '详情弹窗'];
+        return [l10n?.visualSlotAchievementPage ?? '成就页', l10n?.visualSlotDetailModal ?? '详情弹窗'];
       case 'avatar_frame':
       case 'avatar_border':
-        return ['头像身份区', '个人主页'];
+        return [l10n?.visualSlotAvatarArea ?? '头像身份区', profile];
       case 'title_bar':
-        return ['昵称称号条', '个人主页'];
+        return [l10n?.visualSlotNicknameBar ?? '昵称称号条', profile];
       case 'display_pedestal':
-        return ['陈列区', '荣耀柜台'];
+        return [l10n?.visualSlotDisplayArea ?? '陈列区', l10n?.visualSlotGloryShowcase ?? '荣耀柜台'];
       case 'star_map_effect':
-        return ['星图页', '首页氛围'];
+        return [l10n?.visualSlotStarMapPage ?? '星图页', home];
       case 'streak_flame':
-        return ['连胜展示', '首页氛围'];
+        return [l10n?.visualSlotStreakDisplay ?? '连胜展示', home];
       case 'conquest_trail':
       case 'home_particle':
-        return ['首页氛围', '个人主页'];
+        return [home, profile];
       default:
-        return [displaySlotLabel];
+        return [localizedDisplaySlotLabel(l10n)];
     }
   }
 

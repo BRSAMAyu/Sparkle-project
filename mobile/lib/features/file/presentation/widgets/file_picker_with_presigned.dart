@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/file/file.dart';
 
 class FilePickerWithPresignedUpload extends ConsumerStatefulWidget {
@@ -98,15 +99,16 @@ class _FilePickerWithPresignedUploadState
       _resumeSession = null;
       widget.onUploaded?.call(file);
     } on UploadInterruptedException catch (e) {
+      final l10n = context.l10n;
       if (mounted) {
         setState(() {
           _resumeSession = e.session;
-          _error = '网络中断，可点击继续上传';
+          _error = l10n.fileUploadNetworkError;
         });
       }
-      widget.onError?.call('网络中断，可点击继续上传');
+      widget.onError?.call(l10n.fileUploadNetworkError);
     } catch (e) {
-      final message = '上传失败: $e';
+      final message = context.l10n.fileUploadFailed(e.toString());
       widget.onError?.call(message);
       if (mounted) {
         setState(() {
@@ -177,7 +179,7 @@ class _FilePickerWithPresignedUploadState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '上传文件',
+                          context.l10n.fileUploadTitle,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: DS.fontWeightBold,
@@ -186,7 +188,7 @@ class _FilePickerWithPresignedUploadState
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '支持文档与图片，上传到对话后可继续分享或引用。',
+                          context.l10n.fileUploadDesc,
                           style: TextStyle(
                             color: DS.textSecondary,
                             height: 1.45,
@@ -203,12 +205,12 @@ class _FilePickerWithPresignedUploadState
                 runSpacing: DS.spacing12,
                 children: [
                   _UploadMetric(
-                    label: '文件',
+                    label: context.l10n.fileUploadType,
                     value: fileType ?? '--',
                     icon: Icons.insert_drive_file_outlined,
                   ),
                   _UploadMetric(
-                    label: '大小',
+                    label: context.l10n.fileUploadSize,
                     value: fileSize ?? '--',
                     icon: Icons.sd_storage_outlined,
                   ),
@@ -241,14 +243,14 @@ class _FilePickerWithPresignedUploadState
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  '点击选择文件',
+                                  context.l10n.fileUploadClickToSelect,
                                   style: TextStyle(
                                     color: DS.textSecondary,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'PDF、DOCX、PPTX、TXT 和常见图片都支持',
+                                  context.l10n.fileUploadSupportedFormats,
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 12,
@@ -279,8 +281,8 @@ class _FilePickerWithPresignedUploadState
                                 const SizedBox(height: 8),
                                 Text(
                                   fileSize == null
-                                      ? '已选择文件'
-                                      : '${fileType ?? '文件'} · $fileSize',
+                                      ? context.l10n.fileUploadSelected
+                                      : context.l10n.fileUploadFormat(fileType ?? context.l10n.fileUploadType, fileSize),
                                   style: TextStyle(
                                     color: DS.textSecondary,
                                   ),
@@ -288,7 +290,7 @@ class _FilePickerWithPresignedUploadState
                                 if (_isUploading) ...[
                                   const SizedBox(height: 8),
                                   Text(
-                                    '上传中 ${(_progress * 100).toStringAsFixed(0)}%',
+                                    context.l10n.fileUploadProgress('${(_progress * 100).toStringAsFixed(0)}'),
                                     style: TextStyle(
                                       color: DS.textSecondary,
                                     ),
@@ -312,15 +314,16 @@ class _FilePickerWithPresignedUploadState
               LayoutBuilder(
                 builder: (context, constraints) {
                   final compact = constraints.maxWidth < 460;
+                  final l10n = context.l10n;
                   final pickButton = SparkleButton(
                     expand: true,
-                    label: _selectedFile == null ? '选择文件' : '重新选择',
+                    label: _selectedFile == null ? l10n.fileUploadSelect : l10n.fileUploadReselect,
                     variant: ButtonVariant.ghost,
                     onPressed: _isUploading ? null : _pickFile,
                   );
                   final uploadButton = SparkleButton(
                     expand: true,
-                    label: _resumeSession == null ? '开始上传' : '继续上传',
+                    label: _resumeSession == null ? l10n.fileUploadStart : l10n.fileUploadResume,
                     onPressed: _selectedFile == null || _isUploading
                         ? null
                         : _startUpload,

@@ -37,6 +37,7 @@ from loguru import logger
 from app.core.agent_persona import build_agent_persona_prompt_section
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
+from app.core.i18n import I18n
 from app.core.kill_switch import normalize_mode
 from app.core.metrics import SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO
 from app.core.plan_context import merge_plan_context
@@ -233,47 +234,47 @@ def _format_aurora_planning_sidecar_section(
 
 def _describe_warmth_level(value: float) -> str:
     if value <= 0.2:
-        return "保持克制而不过度外露"
+        return I18n.t("prompts.companion.warmth_restrained", locale="zh")
     if value <= 0.45:
-        return "带着稳定的温度感"
+        return I18n.t("prompts.companion.warmth_stable", locale="zh")
     if value <= 0.7:
-        return "明显温暖但不黏腻"
-    return "温暖感更主动一些"
+        return I18n.t("prompts.companion.warmth_warm", locale="zh")
+    return I18n.t("prompts.companion.warmth_proactive", locale="zh")
 
 
 def _describe_candor_level(value: float) -> str:
     if value <= 0.2:
-        return "先轻放判断，给用户留出缓冲"
+        return I18n.t("prompts.companion.candor_gentle", locale="zh")
     if value <= 0.45:
-        return "保持柔和但不回避关键事实"
+        return I18n.t("prompts.companion.candor_soft", locale="zh")
     if value <= 0.75:
-        return "直说重点，同时注意落点"
-    return "会更直接地点明判断与代价"
+        return I18n.t("prompts.companion.candor_direct", locale="zh")
+    return I18n.t("prompts.companion.candor_blunt", locale="zh")
 
 
 def _describe_relationship_stage(stage: str) -> str:
     return {
-        "early": "关系还在建立早期，要轻一点、少预设",
-        "building": "关系正在建立，靠稳定承接和连续性来积累信任",
-        "trusted": "关系已有一定信任基础，可以更直接一些",
-        "deepening": "关系连续性更深了，但仍然要守住边界和节制",
-    }.get(stage, "关系连续性主要靠稳定、诚实和记忆感来体现")
+        "early": I18n.t("prompts.companion.relationship_early", locale="zh"),
+        "building": I18n.t("prompts.companion.relationship_building", locale="zh"),
+        "trusted": I18n.t("prompts.companion.relationship_trusted", locale="zh"),
+        "deepening": I18n.t("prompts.companion.relationship_deepening", locale="zh"),
+    }.get(stage, I18n.t("prompts.companion.relationship_default", locale="zh"))
 
 
 def _describe_challenge_style(style: str) -> str:
     return {
-        "gentle": "推进时用更轻的力度，不把压力堆到用户身上",
-        "balanced": "推进时保持温度和力度都不过头",
-        "firm": "必要时稳稳顶住关键判断，不用软化核心现实",
-    }.get(style, "推进时保持温度和力度都不过头")
+        "gentle": I18n.t("prompts.companion.challenge_gentle", locale="zh"),
+        "balanced": I18n.t("prompts.companion.challenge_balanced", locale="zh"),
+        "firm": I18n.t("prompts.companion.challenge_firm", locale="zh"),
+    }.get(style, I18n.t("prompts.companion.challenge_default", locale="zh"))
 
 
 def _describe_truth_style(style: str) -> str:
     return {
-        "honest_warm": "表达真实判断时保留温度",
-        "direct_structured": "表达上更强调清晰、结构和结论先行",
-        "gentle_reflective": "表达上更偏向陪着想清楚，再慢慢落到结论",
-    }.get(style, "表达上保持真实、清晰和有分寸")
+        "honest_warm": I18n.t("prompts.companion.truth_honest_warm", locale="zh"),
+        "direct_structured": I18n.t("prompts.companion.truth_direct_structured", locale="zh"),
+        "gentle_reflective": I18n.t("prompts.companion.truth_gentle_reflective", locale="zh"),
+    }.get(style, I18n.t("prompts.companion.truth_default", locale="zh"))
 
 
 def _format_intervention_language_contract_section(

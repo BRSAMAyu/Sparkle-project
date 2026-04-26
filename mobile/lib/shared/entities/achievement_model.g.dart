@@ -367,7 +367,7 @@ AchievementMapNode _$AchievementMapNodeFromJson(Map<String, dynamic> json) =>
       rarity: $enumDecode(_$AchievementRarityEnumMap, json['rarity']),
       category: json['category'] as String,
       lane: json['lane'] as String? ?? 'prestige_lane',
-      laneLabel: json['lane_label'] as String? ?? '声望进阶线',
+      laneLabel: json['lane_label'] as String? ?? 'Prestige Lane',
       position: (json['position'] as Map<String, dynamic>).map(
         (k, e) => MapEntry(k, (e as num).toDouble()),
       ),

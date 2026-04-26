@@ -468,8 +468,8 @@ class _InteractiveOnboardingScreenState
             const SizedBox(height: DS.lg),
             _buildPermissionOption(
               icon: Icons.mic_none_rounded,
-              title: context.l10n.isChinese ? context.l10n.onboardingVoiceInput : context.l10n.onboardingVoiceInputEn,
-              description: context.l10n.isChinese ? context.l10n.onboardingVoiceInputDesc : context.l10n.onboardingVoiceInputDescEn,
+              title: context.l10n.onboardingVoiceInput,
+              description: context.l10n.onboardingVoiceInputDesc,
               enabled: _microphoneEnabled,
               isLoading: _requestingMicrophone,
               onTap: _microphoneEnabled ? null : _requestMicrophonePermission,
@@ -578,8 +578,6 @@ class _InteractiveOnboardingScreenState
           ),
         ),
       );
-
-  bool get _isChinese => Localizations.localeOf(context).languageCode == 'zh';
 
   String get _permissionEnableLabel => context.l10n.onboardingPermissionEnable;
 

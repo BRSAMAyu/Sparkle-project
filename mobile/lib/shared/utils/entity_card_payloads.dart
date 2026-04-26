@@ -18,7 +18,7 @@ class EntityCardActionPayload {
     return EntityCardActionPayload(
       id: _asString(raw['id']) ?? 'unknown_action',
       type: _asString(raw['type']) ?? 'custom',
-      label: _asString(raw['label']) ?? '执行',
+      label: _asString(raw['label']) ?? 'Execute',
       route: _asString(raw['route']),
       style: _asString(raw['style']),
       payload: normalizedPayload,
@@ -42,11 +42,11 @@ class EntityCardSharePayload {
     this.meta = const <String, dynamic>{},
   });
 
-  factory EntityCardSharePayload.fromMap(Map<String, dynamic> raw) =>
+  factory EntityCardSharePayload.fromMap(Map<String, dynamic> raw, [AppLocalizations? l10n]) =>
       EntityCardSharePayload(
       resourceType: _asString(raw['resource_type']) ?? 'unknown',
       resourceId: _asString(raw['resource_id']) ?? '',
-      title: _asString(raw['title']) ?? '未命名卡片',
+      title: _asString(raw['title']) ?? 'Unnamed Card',
       subtitle: _asString(raw['subtitle']),
       meta: raw['meta'] is Map<String, dynamic>
           ? Map<String, dynamic>.from(raw['meta'] as Map<String, dynamic>)
@@ -120,7 +120,7 @@ class EntityCardPayload {
       schemaVersion: _asString(raw['schema_version']),
       entityType: _asString(raw['entity_type']) ?? 'unknown',
       entityId: _asString(raw['entity_id']),
-      title: _asString(raw['title']) ?? '未命名实体',
+      title: _asString(raw['title']) ?? 'Unnamed Entity',
       summary: _asString(raw['summary']),
       status: _asString(raw['status']),
       executionState: _asString(raw['execution_state']),
@@ -328,7 +328,7 @@ Map<String, dynamic> _buildLegacyEntityMap(
     return <String, dynamic>{
       'entity_type': 'task',
       'entity_id': taskId,
-      'title': _asString(raw['title']) ?? '未命名任务',
+      'title': _asString(raw['title']) ?? 'Unnamed Task',
       'summary': _asString(raw['guide_content']) ?? _asString(raw['description']),
       'status': _normalizeTaskStatus(raw['status']),
       'execution_state':
@@ -348,7 +348,7 @@ Map<String, dynamic> _buildLegacyEntityMap(
           : {
               'resource_type': 'task',
               'resource_id': taskId,
-              'title': _asString(raw['title']) ?? '未命名任务',
+              'title': _asString(raw['title']) ?? 'Unnamed Task',
               'subtitle':
                   _asString(raw['guide_content']) ?? _asString(raw['description']),
             },
@@ -373,8 +373,8 @@ Map<String, dynamic> _buildLegacyEntityMap(
       'entity_type': 'task_list',
       'entity_id': _asString(raw['tool_result_id'] ?? raw['id']),
       'title': _asString(raw['plan_title'] ?? raw['plan_name']) ??
-          '${taskChildren.length} 个可执行任务',
-      'summary': _asString(raw['message']) ?? 'AI 已整理任务列表',
+          '${taskChildren.length} executable tasks',
+      'summary': _asString(raw['message']) ?? 'AI organized task list',
       'status': 'batch',
       'execution_state': 'draft',
       'linked_entities': {
@@ -401,7 +401,7 @@ Map<String, dynamic> _buildLegacyEntityMap(
     return <String, dynamic>{
       'entity_type': 'plan',
       'entity_id': planId,
-      'title': _asString(raw['title'] ?? raw['name']) ?? '未命名计划',
+      'title': _asString(raw['title'] ?? raw['name']) ?? 'Unnamed Plan',
       'summary': _asString(raw['description']),
       'status': _normalizePlanType(raw['type'] ?? raw['plan_type']),
       'execution_state': (_asBool(raw['is_active']) ?? true) ? 'active' : 'draft',
@@ -420,7 +420,7 @@ Map<String, dynamic> _buildLegacyEntityMap(
           : {
               'resource_type': 'plan',
               'resource_id': planId,
-              'title': _asString(raw['title'] ?? raw['name']) ?? '学习计划',
+              'title': _asString(raw['title'] ?? raw['name']) ?? 'Study Plan',
               'subtitle': _asString(raw['description']),
             },
       'feedback': {
@@ -434,7 +434,7 @@ Map<String, dynamic> _buildLegacyEntityMap(
     return <String, dynamic>{
       'entity_type': 'knowledge_node',
       'entity_id': nodeId,
-      'title': _asString(raw['title']) ?? '未命名知识点',
+      'title': _asString(raw['title']) ?? 'Unnamed Knowledge Node',
       'summary': _asString(raw['summary']) ?? _asString(raw['description']),
       'status': 'mastery',
       'execution_state': 'active',
@@ -450,7 +450,7 @@ Map<String, dynamic> _buildLegacyEntityMap(
           : {
               'resource_type': 'knowledge_node',
               'resource_id': nodeId,
-              'title': _asString(raw['title']) ?? '知识节点',
+              'title': _asString(raw['title']) ?? 'Knowledge Node',
               'subtitle': _asString(raw['summary']) ?? _asString(raw['description']),
             },
       'raw': raw,

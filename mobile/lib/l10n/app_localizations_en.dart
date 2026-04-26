@@ -574,7 +574,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noSprintHistory => 'No sprint history yet';
 
   @override
-  String get loadingFailed => 'Loading Failed';
+  String loadingFailed(Object error) {
+    return 'Load failed: $error';
+  }
 
   @override
   String get completionProgress => 'Completion Progress';
@@ -1309,17 +1311,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementEventStatusEnded => 'Ended';
 
   @override
-  String achievementEventStartsAt(String time) {
+  String achievementEventStartsAt(Object time) {
     return 'Starts $time';
   }
 
   @override
-  String achievementEventEndsAt(String time) {
+  String achievementEventEndsAt(Object time) {
     return 'Ends $time';
   }
 
   @override
-  String achievementEventEndsIn(String time) {
+  String achievementEventEndsIn(Object time) {
     return 'Ends $time';
   }
 
@@ -1378,7 +1380,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contractActiveTitle => 'Active Contract';
 
   @override
-  String contractProgressLabel(int current, int target) {
+  String contractProgressLabel(Object current, Object target) {
     return '$current/$target days completed';
   }
 
@@ -1386,7 +1388,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contractDailyTarget => 'Daily target';
 
   @override
-  String contractMinutesTarget(int current, int target) {
+  String contractMinutesTarget(Object current, Object target) {
     return '$current/$target min';
   }
 
@@ -1415,7 +1417,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contractCountdown => 'Countdown';
 
   @override
-  String contractDaysRemaining(int days) {
+  String contractDaysRemaining(Object days) {
     return '$days days remaining';
   }
 
@@ -1444,7 +1446,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get streakCalendarTitle => 'Streak Calendar';
 
   @override
-  String streakCalendarRange(int days) {
+  String streakCalendarRange(Object days) {
     return 'Last $days days';
   }
 
@@ -4262,12 +4264,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardStreak => 'Streak';
 
   @override
-  String leaderboardMyRank(int rank) {
+  String leaderboardMyRank(Object rank) {
     return 'My rank: $rank';
   }
 
   @override
-  String leaderboardPoints(int value) {
+  String leaderboardPoints(Object value) {
     return '$value pts';
   }
 
@@ -4407,7 +4409,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskFeedbackStreak => 'Streak';
 
   @override
-  String taskFeedbackStreakDays(int count) {
+  String taskFeedbackStreakDays(Object count) {
     return '$count days';
   }
 
@@ -4477,7 +4479,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityMemberFallback => 'Member';
 
   @override
-  String communityReadByCount(int count) {
+  String communityReadByCount(Object count) {
     return '$count read';
   }
 
@@ -4521,7 +4523,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareResourceNoGroups => 'No groups yet';
 
   @override
-  String shareResourceGroupMembers(int count) {
+  String shareResourceGroupMembers(Object count) {
     return '$count members';
   }
 
@@ -4608,17 +4610,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarReminderAtStart => 'At start time';
 
   @override
-  String calendarReminderMinutes(int count) {
+  String calendarReminderMinutes(Object count) {
     return '$count min before';
   }
 
   @override
-  String calendarReminderHours(int count) {
+  String calendarReminderHours(Object count) {
     return '$count hour before';
   }
 
   @override
-  String calendarReminderDays(int count) {
+  String calendarReminderDays(Object count) {
     return '$count day before';
   }
 
@@ -4942,12 +4944,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get capsulePersonalizationTitle => 'Why this was recommended';
 
   @override
-  String capsulePersonalizationBadge(String pattern) {
+  String capsulePersonalizationBadge(Object pattern) {
     return 'Based on your $pattern pattern';
   }
 
   @override
-  String capsulePersonalizationExplanation(String patterns) {
+  String capsulePersonalizationExplanation(Object patterns) {
     return 'Based on your recent $patterns behavior patterns, AI picked this for you.';
   }
 
@@ -4968,12 +4970,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cognitiveTimeMachine => 'Knowledge Time Machine';
 
   @override
-  String cognitiveFutureDays(int count) {
+  String cognitiveFutureDays(Object count) {
     return 'Next $count days';
   }
 
   @override
-  String cognitiveDaysLater(int count) {
+  String cognitiveDaysLater(Object count) {
     return 'In $count days';
   }
 
@@ -4981,7 +4983,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cognitiveToday => 'Today';
 
   @override
-  String cognitiveDayTick(int count) {
+  String cognitiveDayTick(Object count) {
     return '${count}d';
   }
 
@@ -4998,7 +5000,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cognitiveSimulating => 'Simulating...';
 
   @override
-  String cognitiveReviewNow(int count) {
+  String cognitiveReviewNow(Object count) {
     return 'Review now? ($count nodes)';
   }
 
@@ -5022,7 +5024,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep learning and reflecting. The prism will build a clearer picture of your study patterns over time.';
 
   @override
-  String prismTotalPatterns(int count) {
+  String prismTotalPatterns(Object count) {
     return '$count patterns';
   }
 
@@ -5030,12 +5032,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get capsuleScreenTitle => 'Curiosity Capsules';
 
   @override
-  String capsuleCurrentTab(int count) {
+  String capsuleCurrentTab(Object count) {
     return 'Current $count';
   }
 
   @override
-  String capsuleArchiveTab(int count) {
+  String capsuleArchiveTab(Object count) {
     return 'Archive $count';
   }
 
@@ -5056,7 +5058,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get capsuleGenerationPreviewCountLabel => 'Estimated output';
 
   @override
-  String capsuleGenerationPreviewCount(int count) {
+  String capsuleGenerationPreviewCount(Object count) {
     return '$count capsules';
   }
 
@@ -5070,7 +5072,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get patternCardSolutionLabel => 'Breakout idea';
 
   @override
-  String patternCardCreatedAt(String date) {
+  String patternCardCreatedAt(Object date) {
     return 'Created on $date';
   }
 
@@ -5081,22 +5083,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get capsuleMissing => 'Capsule not found';
 
   @override
-  String capsuleLoadFailed(String error) {
+  String capsuleLoadFailed(Object error) {
     return 'Failed to load: $error';
   }
 
   @override
-  String capsuleQualityLabel(String rating) {
+  String capsuleQualityLabel(Object rating) {
     return 'Quality: $rating';
   }
 
   @override
-  String capsuleFeedbackCount(int count) {
+  String capsuleFeedbackCount(Object count) {
     return '$count feedback';
   }
 
   @override
-  String capsuleShareCount(int count) {
+  String capsuleShareCount(Object count) {
     return '$count shares';
   }
 
@@ -5119,7 +5121,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get capsuleFeedbackThanks => 'Thanks for the feedback';
 
   @override
-  String capsuleSubmitFailed(String error) {
+  String capsuleSubmitFailed(Object error) {
     return 'Submit failed: $error';
   }
 
@@ -5143,32 +5145,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'Adjust your preferences in Settings and generate capsules there.';
 
   @override
-  String capsuleGeneratingProgress(int progress) {
+  String capsuleGeneratingProgress(Object progress) {
     return 'Generating... $progress%';
   }
 
   @override
-  String capsuleDepthPercent(int percent) {
+  String capsuleDepthPercent(Object percent) {
     return 'Depth: $percent%';
   }
 
   @override
-  String capsuleCuriosityPercent(int percent) {
+  String capsuleCuriosityPercent(Object percent) {
     return 'Curiosity: $percent%';
   }
 
   @override
-  String capsuleRequestedCount(int count) {
+  String capsuleRequestedCount(Object count) {
     return 'Requested: $count';
   }
 
   @override
-  String capsuleActualCount(int count) {
+  String capsuleActualCount(Object count) {
     return 'Generated: $count';
   }
 
   @override
-  String capsuleChipLabel(String id) {
+  String capsuleChipLabel(Object id) {
     return 'Capsule $id';
   }
 
@@ -5211,7 +5213,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get patternTakeAction => 'Act on it';
 
   @override
-  String patternDiscoveredOn(String date) {
+  String patternDiscoveredOn(Object date) {
     return 'Discovered on $date';
   }
 
@@ -5240,12 +5242,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatNewConversation => 'New chat';
 
   @override
-  String chatHistoryLoadFailed(String error) {
+  String chatHistoryLoadFailed(Object error) {
     return 'Failed to load: $error';
   }
 
   @override
-  String chatHistoryLoadMoreFailed(String error) {
+  String chatHistoryLoadMoreFailed(Object error) {
     return 'Failed to load more: $error';
   }
 
@@ -5441,7 +5443,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatTeamSheetCollaborationMode => 'Collaboration mode';
 
   @override
-  String chatTeamSheetSelectedExperts(int count) {
+  String chatTeamSheetSelectedExperts(Object count) {
     return 'Selected $count experts';
   }
 
@@ -5499,7 +5501,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatTransparencyTitle => 'Transparency';
 
   @override
-  String chatActiveToolsCount(int count) {
+  String chatActiveToolsCount(Object count) {
     return '$count tools';
   }
 
@@ -5525,7 +5527,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatExecutionSteps => 'Execution steps';
 
   @override
-  String chatExecutionStepsCount(int count) {
+  String chatExecutionStepsCount(Object count) {
     return '$count steps';
   }
 
@@ -5533,7 +5535,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatModeSelect => 'Choose mode';
 
   @override
-  String chatModeTeamSummary(int count, String mode) {
+  String chatModeTeamSummary(Object count, Object mode) {
     return '$count experts · $mode';
   }
 
@@ -5659,12 +5661,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookDelete => 'Delete';
 
   @override
-  String errorBookCreatedAt(String date) {
+  String errorBookCreatedAt(Object date) {
     return 'Created at $date';
   }
 
   @override
-  String errorBookMasteryPercent(int percent) {
+  String errorBookMasteryPercent(Object percent) {
     return '$percent% Mastery';
   }
 
@@ -5708,7 +5710,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookKnowledgeLinkTooltip => 'View Learning Path';
 
   @override
-  String errorBookKnowledgeLinkSnack(String nodeName) {
+  String errorBookKnowledgeLinkSnack(Object nodeName) {
     return 'Navigating to $nodeName knowledge point';
   }
 
@@ -5737,17 +5739,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookReviewInProgress => 'Review feature coming soon';
 
   @override
-  String errorBookDeleteFailedMessage(String error) {
+  String errorBookDeleteFailedMessage(Object error) {
     return 'Delete failed: $error';
   }
 
   @override
-  String errorBookCognitiveFilter(String dimension) {
+  String errorBookCognitiveFilter(Object dimension) {
     return 'Reviewing specifically for \"$dimension\" dimension';
   }
 
   @override
-  String errorBookReviewCount(int count) {
+  String errorBookReviewCount(Object count) {
     return 'Reviewed $count times';
   }
 
@@ -5755,17 +5757,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookAIAnalyzed => 'AI Analyzed';
 
   @override
-  String errorBookTimeAgoMinutes(int count) {
+  String errorBookTimeAgoMinutes(Object count) {
     return '$count min ago';
   }
 
   @override
-  String errorBookTimeAgoHours(int count) {
+  String errorBookTimeAgoHours(Object count) {
     return '$count hr ago';
   }
 
   @override
-  String errorBookTimeAgoDays(int count) {
+  String errorBookTimeAgoDays(Object count) {
     return '$count days ago';
   }
 
@@ -5794,7 +5796,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewModeRandomDesc => 'Randomly select errors to review';
 
   @override
-  String reviewProgress(int current, int total) {
+  String reviewProgress(Object current, Object total) {
     return 'Progress: $current/$total';
   }
 
@@ -5824,7 +5826,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Think about the answer first, then reveal';
 
   @override
-  String reviewSubmitFailed(String error) {
+  String reviewSubmitFailed(Object error) {
     return 'Submit failed: $error';
   }
 
@@ -5838,7 +5840,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewComplete => 'Review Complete!';
 
   @override
-  String reviewTotalReviewed(int count) {
+  String reviewTotalReviewed(Object count) {
     return 'Reviewed $count questions this session';
   }
 
@@ -5950,7 +5952,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityAddFriend => 'Add Friend';
 
   @override
-  String communityMembers(int count) {
+  String communityMembers(Object count) {
     return '$count members';
   }
 
@@ -5967,7 +5969,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get friendsDeleteFriend => 'Delete Friend';
 
   @override
-  String friendsConfirmDeleteFriend(String name) {
+  String friendsConfirmDeleteFriend(Object name) {
     return 'Are you sure you want to remove $name from your friends?';
   }
 
@@ -5978,12 +5980,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get friendsDelete => 'Delete';
 
   @override
-  String friendsFriendDeleted(String name) {
+  String friendsFriendDeleted(Object name) {
     return '$name has been removed from your friends';
   }
 
   @override
-  String friendsDeleteFailed(String error) {
+  String friendsDeleteFailed(Object error) {
     return 'Failed to delete friend: $error';
   }
 
@@ -5991,7 +5993,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get friendsBlockUser => 'Block User';
 
   @override
-  String friendsAfterBlockingHint(String name) {
+  String friendsAfterBlockingHint(Object name) {
     return 'After blocking $name:';
   }
 
@@ -6009,12 +6011,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get friendsBlock => 'Block';
 
   @override
-  String friendsBlockedSuccess(String name) {
+  String friendsBlockedSuccess(Object name) {
     return '$name has been blocked';
   }
 
   @override
-  String friendsBlockFailed(String error) {
+  String friendsBlockFailed(Object error) {
     return 'Failed to block user: $error';
   }
 
@@ -6073,7 +6075,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planTypeGrowth => 'Growth Plan';
 
   @override
-  String planProgressPercent(String percent) {
+  String planProgressPercent(Object percent) {
     return '$percent% Complete';
   }
 
@@ -6198,7 +6200,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get knowledgeSourceMaterialsTitle => 'Source Materials';
 
   @override
-  String knowledgeSourceMaterialsSummary(int documents, int chunks) {
+  String knowledgeSourceMaterialsSummary(Object documents, Object chunks) {
     return '$documents documents · $chunks knowledge chunks';
   }
 
@@ -6248,7 +6250,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String knowledgeSourceMaterialsPage(int page) {
+  String knowledgeSourceMaterialsPage(Object page) {
     return 'Page $page';
   }
 
@@ -6258,7 +6260,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String knowledgeSourceMaterialsChunk(int index) {
+  String knowledgeSourceMaterialsChunk(Object index) {
     return 'Excerpt $index';
   }
 
@@ -6305,12 +6307,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get knowledgeTomorrow => 'Tomorrow';
 
   @override
-  String knowledgeDaysLater(int days) {
+  String knowledgeDaysLater(Object days) {
     return '$days days later';
   }
 
   @override
-  String knowledgeWeeksLater(int weeks) {
+  String knowledgeWeeksLater(Object weeks) {
     return '$weeks weeks later';
   }
 
@@ -6338,12 +6340,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Create a new seed library to get started';
 
   @override
-  String seedLibraryItemCount(int count) {
+  String seedLibraryItemCount(Object count) {
     return '$count items';
   }
 
   @override
-  String seedLibraryLastUpdated(String date) {
+  String seedLibraryLastUpdated(Object date) {
     return 'Last updated: $date';
   }
 
@@ -6393,7 +6395,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get seedLibraryDeleteTitle => 'Delete Seed Library';
 
   @override
-  String seedLibraryDeleteFailed(String error) {
+  String seedLibraryDeleteFailed(Object error) {
     return 'Delete failed: $error';
   }
 
@@ -6497,12 +6499,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get translationJustNow => 'Just now';
 
   @override
-  String translationMinutesAgo(int minutes) {
+  String translationMinutesAgo(Object minutes) {
     return '${minutes}m ago';
   }
 
   @override
-  String translationHoursAgo(int hours) {
+  String translationHoursAgo(Object hours) {
     return '${hours}h ago';
   }
 
@@ -6513,7 +6515,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get translationYesterday => 'Yesterday';
 
   @override
-  String translationDaysAgo(int days) {
+  String translationDaysAgo(Object days) {
     return '${days}d ago';
   }
 
@@ -7763,12 +7765,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Upload notes, slides, or PDFs to make them available in chat.';
 
   @override
-  String chatStudyMaterialsAvailable(int count) {
+  String chatStudyMaterialsAvailable(Object count) {
     return '$count documents available';
   }
 
   @override
-  String chatStudyMaterialsKnowledgeNodes(int count) {
+  String chatStudyMaterialsKnowledgeNodes(Object count) {
     return '$count knowledge nodes';
   }
 
@@ -8023,7 +8025,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareFile => 'Share File';
 
   @override
-  String groupFilesCount(int count) {
+  String groupFilesCount(Object count) {
     return '$count files';
   }
 
@@ -8586,7 +8588,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planDetailAiGuide => 'AI Execution Guide';
 
   @override
-  String planDetailCompressionDesc(int taskCount, int totalMinutes) {
+  String planDetailCompressionDesc(Object taskCount, Object totalMinutes) {
     return 'Only $taskCount tasks / $totalMinutes min kept today. Focus on getting the main thread back on track.';
   }
 
@@ -8600,7 +8602,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planDetailDailyRhythm => 'Daily Rhythm';
 
   @override
-  String planDetailDayGroupSubtitle(int count, int minutes) {
+  String planDetailDayGroupSubtitle(Object count, Object minutes) {
     return '$count items · $minutes min';
   }
 
@@ -8640,7 +8642,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Recent feedback suggests it\'s too hard. Try breaking it down or covering a prerequisite.';
 
   @override
-  String planDetailHealthScore(int score, String label) {
+  String planDetailHealthScore(Object score, Object label) {
     return 'Plan Health $score% · $label';
   }
 
@@ -8648,7 +8650,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planDetailHealthStable => 'Stable';
 
   @override
-  String planDetailLearningPathLoadError(String error) {
+  String planDetailLearningPathLoadError(Object error) {
     return 'Learning path progress failed to load: $error';
   }
 
@@ -8664,7 +8666,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Plan details couldn\'t load. Please try again.';
 
   @override
-  String planDetailLoadErrorGeneric(String error) {
+  String planDetailLoadErrorGeneric(Object error) {
     return 'Plan details couldn\'t load: $error';
   }
 
@@ -8673,7 +8675,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Plan loading timed out. Please check your network and try again.';
 
   @override
-  String planDetailMinutes(int minutes) {
+  String planDetailMinutes(Object minutes) {
     return '$minutes min';
   }
 
@@ -8682,7 +8684,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'No phases yet. Create the first phase to break your long-term plan into actionable segments.';
 
   @override
-  String planDetailPhasesLoadError(String error) {
+  String planDetailPhasesLoadError(Object error) {
     return 'Phase loading failed: $error';
   }
 
@@ -8693,12 +8695,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planDetailPlanScope => 'Plan Scope';
 
   @override
-  String planDetailRecommendationDay1(String thingLabel) {
+  String planDetailRecommendationDay1(Object thingLabel) {
     return 'Focus on $thingLabel today. You\'re already on the right track.';
   }
 
   @override
-  String planDetailRecommendationDayN(int day, String thingLabel) {
+  String planDetailRecommendationDayN(Object day, Object thingLabel) {
     return 'Start with Day $day\'s $thingLabel to keep your rhythm steady.';
   }
 
@@ -8741,12 +8743,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planDetailTaskBlueprint => 'Task Blueprint';
 
   @override
-  String planDetailTaskCount(int completed, int total) {
+  String planDetailTaskCount(Object completed, Object total) {
     return '$completed/$total tasks';
   }
 
   @override
-  String planDetailTaskDifficulty(String difficulty) {
+  String planDetailTaskDifficulty(Object difficulty) {
     return 'Difficulty $difficulty';
   }
 
@@ -8760,7 +8762,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planDetailThingCount1 => 'this 1 task';
 
   @override
-  String planDetailThingCountN(int count) {
+  String planDetailThingCountN(Object count) {
     return 'these $count tasks';
   }
 
@@ -9583,12 +9585,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskConfirmCompleteTitle => 'Confirm completion?';
 
   @override
-  String taskConfirmCompleteBody(String title) {
+  String taskConfirmCompleteBody(Object title) {
     return 'Mark \"$title\" as completed.';
   }
 
   @override
-  String taskEstimatedMinutesValue(int minutes) {
+  String taskEstimatedMinutesValue(Object minutes) {
     return '$minutes min';
   }
 
@@ -10000,7 +10002,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get learningPreferenceSaved => 'Learning mode preference saved';
 
   @override
-  String learningPreferenceSaveFailed(String error) {
+  String learningPreferenceSaveFailed(Object error) {
     return 'Save failed: $error';
   }
 
@@ -10014,7 +10016,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bgmScenePreference => 'Scene Preference';
 
   @override
-  String bgmPreviewTooltip(String palette) {
+  String bgmPreviewTooltip(Object palette) {
     return 'Preview $palette';
   }
 
@@ -10096,7 +10098,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationLevel => 'Notification Level';
 
   @override
-  String notificationLevelSwitched(String level) {
+  String notificationLevelSwitched(Object level) {
     return 'Notification level switched to $level';
   }
 
@@ -10134,7 +10136,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Includes more context, such as why you\'re being reminded, next-step suggestions, and supplementary notes.';
 
   @override
-  String notificationLevelPreviewTitle(String level) {
+  String notificationLevelPreviewTitle(Object level) {
     return '$level Notifications';
   }
 
@@ -10167,7 +10169,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationQuietHoursEndUpdated => 'Quiet hours end time updated';
 
   @override
-  String notificationUpdateFailed(String error) {
+  String notificationUpdateFailed(Object error) {
     return 'Failed to update notification settings: $error';
   }
 
@@ -10196,7 +10198,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Current scene preview failed, please check audio files';
 
   @override
-  String aiReasoningModeSwitched(String mode) {
+  String aiReasoningModeSwitched(Object mode) {
     return 'AI reasoning mode switched to $mode';
   }
 
@@ -10227,22 +10229,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskReminderEnabledWithTimes => 'Enabled';
 
   @override
-  String taskReminderDaysAgo(int days) {
+  String taskReminderDaysAgo(Object days) {
     return '${days}d ago';
   }
 
   @override
-  String taskReminderHoursAgo(int hours) {
+  String taskReminderHoursAgo(Object hours) {
     return '${hours}h ago';
   }
 
   @override
-  String taskReminderMinutesAgo(int minutes) {
+  String taskReminderMinutesAgo(Object minutes) {
     return '${minutes}min ago';
   }
 
   @override
-  String notificationPermissionDeniedTitle(String error) {
+  String notificationPermissionDeniedTitle(Object error) {
     return 'Not authorized: $error';
   }
 
@@ -10397,12 +10399,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Manage background music by page and player mode';
 
   @override
-  String bgmSectionSubtitleWithCount(int count) {
+  String bgmSectionSubtitleWithCount(Object count) {
     return 'Currently $count tracks, freely switch between page strategy and player mode';
   }
 
   @override
-  String bgmLibraryUpdated(int count) {
+  String bgmLibraryUpdated(Object count) {
     return 'Library updated to $count tracks';
   }
 
@@ -10456,12 +10458,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bgmPreviewCurrentScene => 'Preview Current Scene';
 
   @override
-  String bgmTrackLabel(String name) {
+  String bgmTrackLabel(Object name) {
     return 'Track: $name';
   }
 
   @override
-  String bgmSourceLabel(String label) {
+  String bgmSourceLabel(Object label) {
     return 'Source: $label';
   }
 
@@ -10515,12 +10517,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiUsageTodayTitle => 'Today\'s AI Quota & Usage';
 
   @override
-  String aiUsageRequests(int used, int limit) {
+  String aiUsageRequests(Object used, Object limit) {
     return '$used/$limit times';
   }
 
   @override
-  String aiUsageLatency(String firstToken, String totalMs) {
+  String aiUsageLatency(Object firstToken, Object totalMs) {
     return 'Avg first token ${firstToken}ms · Avg total ${totalMs}ms';
   }
 
@@ -10566,7 +10568,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiOpsPredictedAcceptExec => 'Predicted Accept-to-Exec';
 
   @override
-  String aiOpsTopModeSummary(String topMode) {
+  String aiOpsTopModeSummary(Object topMode) {
     return 'The most recently used chain is \"$topMode\", indicating it\'s already the main workflow in daily experience.';
   }
 
@@ -10597,7 +10599,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String aiOpsPredictionSummary(
-      int days, String topAction, String promptUtil, String inferenceUtil) {
+      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
     return 'In the past $days days, the prediction action worth watching most is \"$topAction\"; prompt/inference hit rates are $promptUtil%/$inferenceUtil%.';
   }
 
@@ -10617,17 +10619,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryDecayPolicy => 'Decay Policy';
 
   @override
-  String memoryUpdateValue(String date) {
+  String memoryUpdateValue(Object date) {
     return 'Updated: $date';
   }
 
   @override
-  String memoryConfidenceValue(String value) {
+  String memoryConfidenceValue(Object value) {
     return 'Confidence: $value';
   }
 
   @override
-  String memoryAllowedCaptureSummary(String types, String level) {
+  String memoryAllowedCaptureSummary(Object types, Object level) {
     return 'Allowed capture: $types\nCapture level: $level';
   }
 
@@ -10640,17 +10642,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'This experience was inferred by AI from chat, with evidence tokens, confidence, and retraction path preserved.';
 
   @override
-  String memoryCorrectionSubmittedWithAction(String action) {
+  String memoryCorrectionSubmittedWithAction(Object action) {
     return 'Correction submitted: $action';
   }
 
   @override
-  String memoryCorrectionFailedWithDetail(String error) {
+  String memoryCorrectionFailedWithDetail(Object error) {
     return 'Correction failed: $error';
   }
 
   @override
-  String tracksCount(int count) {
+  String tracksCount(Object count) {
     return '$count tracks';
   }
 
@@ -10751,7 +10753,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileExportShareSubject => 'Sparkle Data Export';
 
   @override
-  String profileExportFailed(String error) {
+  String profileExportFailed(Object error) {
     return 'Export failed: $error';
   }
 
@@ -11071,7 +11073,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Based on this learning report, give me a review outline I can use tonight.';
 
   @override
-  String dashboardBottleneckPrompt(String topic) {
+  String dashboardBottleneckPrompt(Object topic) {
     return 'I want to understand $topic differently. Help me adjust my learning path based on this bottleneck.';
   }
 
@@ -11092,12 +11094,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardDueToday => 'Due today';
 
   @override
-  String dashboardOverdueDays(int days) {
+  String dashboardOverdueDays(Object days) {
     return '$days days overdue';
   }
 
   @override
-  String dashboardDaysLeft(int days) {
+  String dashboardDaysLeft(Object days) {
     return '$days days left';
   }
 
@@ -11105,12 +11107,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardMainMove => '1 main move';
 
   @override
-  String dashboardMoreQueued(int count) {
+  String dashboardMoreQueued(Object count) {
     return '$count more queued';
   }
 
   @override
-  String dashboardProgress(int percent) {
+  String dashboardProgress(Object percent) {
     return '$percent% progress';
   }
 
@@ -11130,7 +11132,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardGrowthSignal => 'Growth Signal';
 
   @override
-  String dashboardMoreTasksQueued(int count) {
+  String dashboardMoreTasksQueued(Object count) {
     return '$count more tasks are still queued after this one.';
   }
 
@@ -11150,7 +11152,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardActivePlan => 'Active Plan';
 
   @override
-  String dashboardPhaseLabel(String phase) {
+  String dashboardPhaseLabel(Object phase) {
     return 'Phase: $phase';
   }
 
@@ -11158,7 +11160,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardPhaseInProgress => 'in progress';
 
   @override
-  String dashboardDaysToDeadline(int days) {
+  String dashboardDaysToDeadline(Object days) {
     return '$days days to deadline';
   }
 
@@ -11166,17 +11168,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardPrediction => 'prediction';
 
   @override
-  String dashboardMessagesCount(int count) {
+  String dashboardMessagesCount(Object count) {
     return '$count messages';
   }
 
   @override
-  String dashboardAlertsCount(int count) {
+  String dashboardAlertsCount(Object count) {
     return '$count alerts';
   }
 
   @override
-  String dashboardInsightsCount(int count) {
+  String dashboardInsightsCount(Object count) {
     return '$count insights';
   }
 
@@ -11187,7 +11189,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardUpdatesInsights => 'Updates & Insights';
 
   @override
-  String planEditTypeTitle(String type) {
+  String planEditTypeTitle(Object type) {
     return 'Edit $type';
   }
 
@@ -11205,7 +11207,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planGuideGeneratedAi => 'AI execution version generated';
 
   @override
-  String planGuideGenerationFailed(String error) {
+  String planGuideGenerationFailed(Object error) {
     return 'Failed to generate plan guide: $error';
   }
 
@@ -11296,12 +11298,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planScheduleDailyMinutesLabel => 'Daily available time';
 
   @override
-  String planScheduleMinutesUnit(int minutes) {
+  String planScheduleMinutesUnit(Object minutes) {
     return '$minutes min';
   }
 
   @override
-  String planScheduleTotalHours(String hours) {
+  String planScheduleTotalHours(Object hours) {
     return 'Total estimated: ${hours}h';
   }
 
@@ -11358,7 +11360,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planTasksRefExisting => 'Reference existing tasks';
 
   @override
-  String planTasksMinutesDifficulty(int minutes, int difficulty) {
+  String planTasksMinutesDifficulty(Object minutes, Object difficulty) {
     return '$minutes min · difficulty $difficulty';
   }
 
@@ -11431,7 +11433,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planGuideCopyAi => 'Copy AI version';
 
   @override
-  String planReviewSummary(String planType, int minutes, String hours) {
+  String planReviewSummary(Object planType, Object minutes, Object hours) {
     return '$planType · $minutes min/day · ${hours}h';
   }
 
@@ -11458,32 +11460,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'I\'m stuck on this task and would like to break down the specific blockers with you.';
 
   @override
-  String taskExecutionStuckTaskLabel(String title) {
+  String taskExecutionStuckTaskLabel(Object title) {
     return 'Task: $title';
   }
 
   @override
-  String taskExecutionStuckEstimatedTime(int minutes) {
+  String taskExecutionStuckEstimatedTime(Object minutes) {
     return 'Estimated: $minutes min';
   }
 
   @override
-  String taskExecutionStuckFocusCue(String cue) {
+  String taskExecutionStuckFocusCue(Object cue) {
     return 'Focus cue: $cue';
   }
 
   @override
-  String taskExecutionStuckSteps(String steps) {
+  String taskExecutionStuckSteps(Object steps) {
     return 'Task steps: $steps';
   }
 
   @override
-  String taskExecutionStuckCriteria(String criteria) {
+  String taskExecutionStuckCriteria(Object criteria) {
     return 'Success criteria: $criteria';
   }
 
   @override
-  String taskExecutionStuckSuggestion(String suggestion) {
+  String taskExecutionStuckSuggestion(Object suggestion) {
     return 'Stuck suggestion: $suggestion';
   }
 
@@ -11498,7 +11500,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionStuckLabel => 'Stuck?';
 
   @override
-  String taskExecutionAuroraDiagnosticUnavailable(String error) {
+  String taskExecutionAuroraDiagnosticUnavailable(Object error) {
     return 'Aurora diagnostic is temporarily unavailable: $error';
   }
 
@@ -11523,7 +11525,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'AI is waiting for your confirmation';
 
   @override
-  String taskExecutionAiHandedOff(String status) {
+  String taskExecutionAiHandedOff(Object status) {
     return 'Task handed to AI. Status: $status';
   }
 
@@ -11552,7 +11554,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionAiNotStarted => 'AI execution has not started';
 
   @override
-  String taskExecutionAiStatusLabel(String status) {
+  String taskExecutionAiStatusLabel(Object status) {
     return 'AI status: $status';
   }
 
@@ -11565,42 +11567,42 @@ class AppLocalizationsEn extends AppLocalizations {
       'Digitally executable tasks can be handed off with one tap.';
 
   @override
-  String taskExecutionValidationLabel(int passed, int total) {
+  String taskExecutionValidationLabel(Object passed, Object total) {
     return 'Verified $passed/$total';
   }
 
   @override
-  String taskExecutionResultLabel(String text) {
+  String taskExecutionResultLabel(Object text) {
     return 'Result: $text';
   }
 
   @override
-  String taskExecutionApprovalRequestLabel(int count) {
+  String taskExecutionApprovalRequestLabel(Object count) {
     return ' · Approval request $count';
   }
 
   @override
-  String taskExecutionGoalWithTrust(String goal, String trust) {
+  String taskExecutionGoalWithTrust(Object goal, Object trust) {
     return 'Goal: $goal · $trust';
   }
 
   @override
-  String taskExecutionResultTrust(String trust) {
+  String taskExecutionResultTrust(Object trust) {
     return 'Result trust: $trust';
   }
 
   @override
-  String taskExecutionTemplateLabel(String name) {
+  String taskExecutionTemplateLabel(Object name) {
     return 'Template: $name';
   }
 
   @override
-  String taskExecutionStrategyLabel(String variant) {
+  String taskExecutionStrategyLabel(Object variant) {
     return 'Strategy: $variant';
   }
 
   @override
-  String taskExecutionNodeLabel(String label) {
+  String taskExecutionNodeLabel(Object label) {
     return 'Node: $label';
   }
 
@@ -11668,7 +11670,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionMetricNotConfigured => 'Not configured';
 
   @override
-  String taskExecutionMetricQueuedTasks(int count) {
+  String taskExecutionMetricQueuedTasks(Object count) {
     return '$count tasks queued';
   }
 
@@ -11811,12 +11813,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String planDetailDayLabel(int day) {
+  String planDetailDayLabel(Object day) {
     return 'Day $day';
   }
 
   @override
-  String planDetailWeightedProgress(int percent) {
+  String planDetailWeightedProgress(Object percent) {
     return 'Weighted progress $percent%';
   }
 
@@ -11905,7 +11907,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String planDetailPhaseStats(
-      int progress, int completed, int occurrences, int tasks) {
+      Object progress, Object completed, Object occurrences, Object tasks) {
     return '$progress% · $completed/$occurrences occurrences · $tasks tasks';
   }
 
@@ -12983,7 +12985,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'The prediction is ready and waiting for a follow-up prompt.';
 
   @override
-  String predictedIntentConfidence(int percent) {
+  String predictedIntentConfidence(Object percent) {
     return 'Confidence $percent%';
   }
 
@@ -13055,17 +13057,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get predictedFreshnessJustNow => 'just now';
 
   @override
-  String predictedFreshnessMinutes(int count) {
+  String predictedFreshnessMinutes(Object count) {
     return '$count min ago';
   }
 
   @override
-  String predictedFreshnessHours(int count) {
+  String predictedFreshnessHours(Object count) {
     return '$count hr ago';
   }
 
   @override
-  String predictedFreshnessDays(int count) {
+  String predictedFreshnessDays(Object count) {
     return '$count d ago';
   }
 
@@ -13073,7 +13075,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get predictedCategoryPrefTitle => 'Recent same-category signal';
 
   @override
-  String predictedCategoryPrefHint(String category, String tool) {
+  String predictedCategoryPrefHint(Object category, Object tool) {
     return 'Inside $category, recent results have more often favored \"$tool\" first.';
   }
 
@@ -13154,7 +13156,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examSprintStudyStreak => 'Study Streak';
 
   @override
-  String examSprintStreakDays(int days) {
+  String examSprintStreakDays(Object days) {
     return '$days d';
   }
 
@@ -13162,7 +13164,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examSprintKeepRhythm => 'Keep the rhythm';
 
   @override
-  String examSprintHighYieldWeak(String topics) {
+  String examSprintHighYieldWeak(Object topics) {
     return 'High-yield weak spots: $topics';
   }
 
@@ -13197,22 +13199,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examSprintExamDay => 'Exam day';
 
   @override
-  String examSprintCountdown(int days) {
+  String examSprintCountdown(Object days) {
     return '$days days until exam';
   }
 
   @override
-  String examSprintTodayTasks(int completed, int total) {
+  String examSprintTodayTasks(Object completed, Object total) {
     return 'Today: $completed/$total tasks';
   }
 
   @override
-  String examSprintDaysLeft(String days) {
+  String examSprintDaysLeft(Object days) {
     return '$days left until the exam';
   }
 
   @override
-  String examSprintTodayDone(int completed, int total) {
+  String examSprintTodayDone(Object completed, Object total) {
     return 'Today $completed/$total done';
   }
 
@@ -13223,17 +13225,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examSprintHideLater => 'Hide later days';
 
   @override
-  String examSprintShowLater(int count) {
+  String examSprintShowLater(Object count) {
     return 'Show next $count days';
   }
 
   @override
-  String examSprintDayIndex(int index) {
+  String examSprintDayIndex(Object index) {
     return 'Day $index';
   }
 
   @override
-  String examSprintDateFormat(int month, int day) {
+  String examSprintDateFormat(Object month, Object day) {
     return '$month/$day';
   }
 
@@ -13241,7 +13243,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examSprintNoSprintTasks => 'No sprint tasks yet';
 
   @override
-  String examSprintMinLabel(int minutes, String status) {
+  String examSprintMinLabel(Object minutes, Object status) {
     return '$minutes min · $status';
   }
 
@@ -13258,7 +13260,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightHubTitle => 'Learning Insights';
 
   @override
-  String insightHubRecommendedSeeds(int count) {
+  String insightHubRecommendedSeeds(Object count) {
     return '$count recommended scenarios ready to simulate.';
   }
 
@@ -13292,7 +13294,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Some insight data hasn\'t refreshed yet. Existing content will be shown.';
 
   @override
-  String insightHubSeedsToExplore(int count) {
+  String insightHubSeedsToExplore(Object count) {
     return '$count scenarios to explore';
   }
 
@@ -13307,7 +13309,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightHubContinueLastTheater => 'Continue last theater';
 
   @override
-  String insightHubContinueTopic(String topic) {
+  String insightHubContinueTopic(Object topic) {
     return 'Continue $topic';
   }
 
@@ -13315,12 +13317,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightHubContinueLastSimulation => 'Continue last simulation';
 
   @override
-  String insightHubRecommendedSeedsCount(int count) {
+  String insightHubRecommendedSeedsCount(Object count) {
     return '$count scenarios';
   }
 
   @override
-  String insightHubContinueSession(String topic) {
+  String insightHubContinueSession(Object topic) {
     return 'Continue $topic';
   }
 
@@ -13331,7 +13333,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightHubNoRecentReport => 'No recent report';
 
   @override
-  String insightHubMasteryPercent(int percent) {
+  String insightHubMasteryPercent(Object percent) {
     return 'Mastery $percent%';
   }
 
@@ -13362,12 +13364,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelCommitmentDismissed => 'Commitment dismissed';
 
   @override
-  String memoryPanelConfidenceValue(String value) {
+  String memoryPanelConfidenceValue(Object value) {
     return 'Confidence $value';
   }
 
   @override
-  String memoryPanelConflictFailed(String error) {
+  String memoryPanelConflictFailed(Object error) {
     return 'Conflict resolution failed: $error';
   }
 
@@ -13381,7 +13383,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelConflictResolvedNone => 'Conflict candidates revoked';
 
   @override
-  String memoryPanelCorrectionCount(int count) {
+  String memoryPanelCorrectionCount(Object count) {
     return 'Corrections $count';
   }
 
@@ -13389,7 +13391,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelDate => 'Date';
 
   @override
-  String memoryPanelDeviationsDetected(int count) {
+  String memoryPanelDeviationsDetected(Object count) {
     return '$count deviations detected';
   }
 
@@ -13409,7 +13411,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelDimPlanAdherence => 'Plan Adherence';
 
   @override
-  String memoryPanelDismissFailed(String error) {
+  String memoryPanelDismissFailed(Object error) {
     return 'Dismiss failed: $error';
   }
 
@@ -13443,22 +13445,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelForesightHint => 'Foresight Hint';
 
   @override
-  String memoryPanelImportanceValue(String value) {
+  String memoryPanelImportanceValue(Object value) {
     return 'Importance $value';
   }
 
   @override
-  String memoryPanelItemCount(int count) {
+  String memoryPanelItemCount(Object count) {
     return '$count items';
   }
 
   @override
-  String memoryPanelLoadFailed(String error) {
+  String memoryPanelLoadFailed(Object error) {
     return 'Memory panel load failed: $error';
   }
 
   @override
-  String memoryPanelMarkFailed(String error) {
+  String memoryPanelMarkFailed(Object error) {
     return 'Mark failed: $error';
   }
 
@@ -13478,7 +13480,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelRevoke => 'Revoke';
 
   @override
-  String memoryPanelRevokeFailed(String error) {
+  String memoryPanelRevokeFailed(Object error) {
     return 'Revoke failed: $error';
   }
 
@@ -13492,7 +13494,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelRevoking => 'Revoking...';
 
   @override
-  String memoryPanelSceneMemories(String time, int count) {
+  String memoryPanelSceneMemories(Object time, Object count) {
     return '$time · $count memories';
   }
 
@@ -13500,7 +13502,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryPanelUnavailable => 'Memory panel unavailable';
 
   @override
-  String memoryPanelValidUntil(String policy) {
+  String memoryPanelValidUntil(Object policy) {
     return 'Valid until $policy';
   }
 
@@ -13509,21 +13511,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String theaterWhatIfCombinedResult(
-      String originalMastery,
-      String originalCompletion,
-      String predictedMastery,
-      String predictedCompletion) {
+      Object originalMastery,
+      Object originalCompletion,
+      Object predictedMastery,
+      Object predictedCompletion) {
     return 'Original $originalMastery% / $originalCompletion%  →  Adjusted $predictedMastery% / $predictedCompletion%';
   }
 
   @override
-  String theaterAccuracyPredictedActual(String predictedCompletion,
-      String predictedMastery, String actualCompletion, String actualMastery) {
+  String theaterAccuracyPredictedActual(Object predictedCompletion,
+      Object predictedMastery, Object actualCompletion, Object actualMastery) {
     return 'Predicted $predictedCompletion% / $predictedMastery%, Actual $actualCompletion% / $actualMastery%';
   }
 
   @override
-  String theaterPerDayUnit(String minutes) {
+  String theaterPerDayUnit(Object minutes) {
     return '$minutes min/day';
   }
 
@@ -13801,7 +13803,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'This simulation continues from your previous exploration. You can bring the context back to the original conversation anytime to continue questioning and deciding.';
 
   @override
-  String simulationBridgeCurrentlyVerifyingFormat(String routeTitle) {
+  String simulationBridgeCurrentlyVerifyingFormat(Object routeTitle) {
     return 'Currently verifying path \"$routeTitle\"';
   }
 
@@ -13810,7 +13812,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Currently verifying a deduction path';
 
   @override
-  String simulationBridgeVerificationDescWithTarget(String targetName) {
+  String simulationBridgeVerificationDescWithTarget(Object targetName) {
     return 'This simulation comes from the Knowledge Theater, with a goal of $targetName. You can bring your current progress back to the theater at any time to continue adopting or calibrating.';
   }
 
@@ -13819,7 +13821,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'This simulation comes from the Knowledge Theater. The current context remains linked to the original deduction.';
 
   @override
-  String simulationInteractionModeFormat(String mode) {
+  String simulationInteractionModeFormat(Object mode) {
     return 'Interaction mode: $mode';
   }
 
@@ -13836,52 +13838,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simulationInteractionChoice => 'Choice';
 
   @override
-  String simulationCurrentFocusFormat(String speaker) {
+  String simulationCurrentFocusFormat(Object speaker) {
     return 'Current focus: $speaker';
   }
 
   @override
-  String simulationTopicFormat(String topic) {
+  String simulationTopicFormat(Object topic) {
     return 'Topic: $topic';
   }
 
   @override
-  String simulationTopicAndSpeakerFormat(String topic, String speaker) {
+  String simulationTopicAndSpeakerFormat(Object topic, Object speaker) {
     return 'Topic: $topic · Speaking: $speaker';
   }
 
   @override
-  String simulationRoundN(int round) {
+  String simulationRoundN(Object round) {
     return 'Round $round';
   }
 
   @override
-  String simulationRoleCountFormat(int count) {
+  String simulationRoleCountFormat(Object count) {
     return '$count roles';
   }
 
   @override
-  String simulationRunningRoundN(int round, int total) {
+  String simulationRunningRoundN(Object round, Object total) {
     return 'Running round $round/$total';
   }
 
   @override
-  String simulationRoundViewpoints(int count) {
+  String simulationRoundViewpoints(Object count) {
     return '$count round viewpoints';
   }
 
   @override
-  String simulationRoleCountLong(int count) {
+  String simulationRoleCountLong(Object count) {
     return '$count roles';
   }
 
   @override
-  String simulationRoundFormatLabel(int current, int max) {
+  String simulationRoundFormatLabel(Object current, Object max) {
     return '$current / $max rds';
   }
 
   @override
-  String simulationRoundSliderLabel(int count) {
+  String simulationRoundSliderLabel(Object count) {
     return '$count rds';
   }
 
@@ -13890,27 +13892,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Currently running with default system roles.';
 
   @override
-  String simulationParticipantCurrentStatus(String names) {
+  String simulationParticipantCurrentStatus(Object names) {
     return 'Current participants: $names';
   }
 
   @override
-  String simulationBulletParticipants(String names) {
+  String simulationBulletParticipants(Object names) {
     return 'Participants: $names';
   }
 
   @override
-  String simulationBulletRounds(int count) {
+  String simulationBulletRounds(Object count) {
     return 'Total rounds: $count. Suitable as a basis for further deduction or review report.';
   }
 
   @override
-  String simulationBulletOpening(String message) {
+  String simulationBulletOpening(Object message) {
     return 'Opening highlight: $message';
   }
 
   @override
-  String simulationRoundFormatShort(int current, int total) {
+  String simulationRoundFormatShort(Object current, Object total) {
     return '$current/$total rds';
   }
 
@@ -13919,22 +13921,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'Continue the simulation in chat.';
 
   @override
-  String simulationContinueTopicLabel(String topic) {
+  String simulationContinueTopicLabel(Object topic) {
     return 'Topic: $topic';
   }
 
   @override
-  String simulationContinueScenarioLabel(String label) {
+  String simulationContinueScenarioLabel(Object label) {
     return 'Scenario: $label';
   }
 
   @override
-  String simulationContinueCurrentQuestion(String question) {
+  String simulationContinueCurrentQuestion(Object question) {
     return 'Current question: $question';
   }
 
   @override
-  String simulationContinueMyResponse(String reply) {
+  String simulationContinueMyResponse(Object reply) {
     return 'My response: $reply';
   }
 
@@ -13955,7 +13957,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Learning report returned invalid format';
 
   @override
-  String simulationReportGenerationFailed(String error) {
+  String simulationReportGenerationFailed(Object error) {
     return 'Failed to generate learning report: $error';
   }
 
@@ -13968,17 +13970,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Disagreements and knowledge gaps revealed during the simulation have been brought into this formal report.';
 
   @override
-  String simulationShareCreated(String topic, String scenario, String insight) {
+  String simulationShareCreated(Object topic, Object scenario, Object insight) {
     return 'I just ran a learning simulation on Sparkle: $topic\nScenario: $scenario\nInsight: $insight';
   }
 
   @override
-  String simulationShareTitle(String topic) {
+  String simulationShareTitle(Object topic) {
     return 'Scenario Simulation · $topic';
   }
 
   @override
-  String simulationShareRawText(String topic, String scenario, String insight) {
+  String simulationShareRawText(Object topic, Object scenario, Object insight) {
     return 'Scenario Simulation\nTopic: $topic\nScenario: $scenario\nInsight: $insight';
   }
 
@@ -13986,17 +13988,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simulationCustomFigureHint => 'e.g. Churchill / Bismarck';
 
   @override
-  String simulationTopicCurrentFocusFormat(String topic, String speaker) {
+  String simulationTopicCurrentFocusFormat(Object topic, Object speaker) {
     return 'Topic: $topic · Speaking: $speaker';
   }
 
   @override
-  String simulationCurrentFocusLabel(String speaker) {
+  String simulationCurrentFocusLabel(Object speaker) {
     return 'Current focus: $speaker';
   }
 
   @override
-  String simulationImmersiveTopicAndFocus(String topic, String speaker) {
+  String simulationImmersiveTopicAndFocus(Object topic, Object speaker) {
     return 'Topic: $topic · Speaking: $speaker';
   }
 
@@ -14169,7 +14171,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simulationRoleCurrentDiscussionTitle => 'Current Discussion';
 
   @override
-  String simulationBulletOpeningFormat(String message) {
+  String simulationBulletOpeningFormat(Object message) {
     return 'Opening focus: $message';
   }
 
@@ -15183,67 +15185,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openclawHubStatusRecorded => 'Recorded';
 
   @override
-  String openclawHubRetryQueuedSuccess(int count) {
+  String openclawHubRetryQueuedSuccess(Object count) {
     return '$count queued tasks resubmitted';
   }
 
   @override
-  String openclawHubLastExecutionStatus(String status) {
+  String openclawHubLastExecutionStatus(Object status) {
     return 'Last execution status is \"$status\". Continue reviewing connection, queue, and activity from here.';
   }
 
   @override
-  String openclawHubPendingDelegationsDesc(int count) {
+  String openclawHubPendingDelegationsDesc(Object count) {
     return 'You have $count delegations waiting for the connection to come back. Reconnecting the engine first will be most effective.';
   }
 
   @override
-  String openclawHubQueuedTasksCount(int count) {
+  String openclawHubQueuedTasksCount(Object count) {
     return '$count queued tasks';
   }
 
   @override
-  String openclawHubNodeCount(int count) {
+  String openclawHubNodeCount(Object count) {
     return '$count nodes';
   }
 
   @override
-  String openclawHubAutomationCount(int count) {
+  String openclawHubAutomationCount(Object count) {
     return '$count automations';
   }
 
   @override
-  String openclawHubLatestBatch(int completed, int total) {
+  String openclawHubLatestBatch(Object completed, Object total) {
     return 'Latest batch $completed/$total';
   }
 
   @override
-  String openclawHubLastTrustLabel(String label) {
+  String openclawHubLastTrustLabel(Object label) {
     return 'Last trust assessment: $label';
   }
 
   @override
-  String openclawHubDevicesSummaryActiveWithCount(int count) {
+  String openclawHubDevicesSummaryActiveWithCount(Object count) {
     return 'Currently discovered $count nodes. You can assign preferred devices for browser, terminal, document, and API tasks here. When offline, Sparkle will automatically find fallback nodes.';
   }
 
   @override
-  String openclawHubAutomationSummaryActiveWithCount(int count) {
+  String openclawHubAutomationSummaryActiveWithCount(Object count) {
     return '$count automations are currently running. Batch delegation summaries and scheduled task statuses will continuously aggregate here.';
   }
 
   @override
-  String openclawHubTaskLabel(String taskId) {
+  String openclawHubTaskLabel(Object taskId) {
     return 'Task $taskId';
   }
 
   @override
-  String openclawHubTaskLabelTemplate(String templateId) {
+  String openclawHubTaskLabelTemplate(Object templateId) {
     return 'Template $templateId';
   }
 
   @override
-  String openclawHubTaskLabelSource(String source) {
+  String openclawHubTaskLabelSource(Object source) {
     return 'Source $source';
   }
 
@@ -15459,62 +15461,62 @@ class AppLocalizationsEn extends AppLocalizations {
       'No importable items found in file';
 
   @override
-  String seedLibraryDetailApplyFailed(String error) {
+  String seedLibraryDetailApplyFailed(Object error) {
     return 'Apply failed: $error';
   }
 
   @override
-  String seedLibraryDetailSetPrimaryFailed(String error) {
+  String seedLibraryDetailSetPrimaryFailed(Object error) {
     return 'Set primary failed: $error';
   }
 
   @override
-  String seedLibraryDetailMarkNotSuitableFailed(String error) {
+  String seedLibraryDetailMarkNotSuitableFailed(Object error) {
     return 'Record failed: $error';
   }
 
   @override
-  String seedLibraryDetailCurrentStatus(String status, int priority) {
+  String seedLibraryDetailCurrentStatus(Object status, Object priority) {
     return 'Current status: $status · Priority $priority';
   }
 
   @override
-  String seedLibraryDetailUsageAppliedEnabled(String hint) {
+  String seedLibraryDetailUsageAppliedEnabled(Object hint) {
     return 'Now in effect. $hint The system will use it alongside other active seed libraries by priority.';
   }
 
   @override
-  String seedLibraryDetailUsageSubscribedNotEnabled(String hint) {
+  String seedLibraryDetailUsageSubscribedNotEnabled(Object hint) {
     return 'Subscribed but not enabled. Once enabled, $hint.';
   }
 
   @override
-  String seedLibraryDetailUsageNotApplied(String hint) {
+  String seedLibraryDetailUsageNotApplied(Object hint) {
     return 'Not yet applied. Once applied, $hint.';
   }
 
   @override
-  String seedLibraryDetailCurrentRating(String score) {
+  String seedLibraryDetailCurrentRating(Object score) {
     return 'Current rating: $score / 10';
   }
 
   @override
-  String seedLibraryDetailRatingFailed(String error) {
+  String seedLibraryDetailRatingFailed(Object error) {
     return 'Rating failed: $error';
   }
 
   @override
-  String seedLibraryDetailAddItemFailed(String error) {
+  String seedLibraryDetailAddItemFailed(Object error) {
     return 'Add failed: $error';
   }
 
   @override
-  String seedLibraryDetailImportResult(int imported, int failed) {
+  String seedLibraryDetailImportResult(Object imported, Object failed) {
     return 'Import complete: $imported succeeded, $failed failed';
   }
 
   @override
-  String seedLibraryDetailImportFailed(String error) {
+  String seedLibraryDetailImportFailed(Object error) {
     return 'Import failed: $error';
   }
 
@@ -15525,7 +15527,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recommendationThisItem => 'This recommendation';
 
   @override
-  String recommendationFeedbackAbout(String target, String stage) {
+  String recommendationFeedbackAbout(Object target, Object stage) {
     return '$stage feedback about $target';
   }
 
@@ -15544,7 +15546,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recommendationGroupPreferenceTitle => 'Your Community Preferences';
 
   @override
-  String recommendationRecentCount(int count) {
+  String recommendationRecentCount(Object count) {
     return 'Last $count times';
   }
 
@@ -15557,12 +15559,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'The system is learning whether you prefer interest matching, active atmosphere, or fresh discoveries.';
 
   @override
-  String recommendationSystemAvoiding(String signals) {
+  String recommendationSystemAvoiding(Object signals) {
     return 'System is avoiding: $signals';
   }
 
   @override
-  String recommendationCurrentlyBiasing(String metrics) {
+  String recommendationCurrentlyBiasing(Object metrics) {
     return 'Currently leaning toward: $metrics';
   }
 
@@ -15574,7 +15576,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Help us calibrate recommendations';
 
   @override
-  String recommendationFeedbackSubtitle(String subject) {
+  String recommendationFeedbackSubtitle(Object subject) {
     return 'Your rating of $subject will directly influence the recommendation algorithm.';
   }
 
@@ -15637,12 +15639,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recommendationSubmitFeedback => 'Submit feedback';
 
   @override
-  String recommendationMatchingStrategy(String name) {
+  String recommendationMatchingStrategy(Object name) {
     return 'Matching strategy: $name';
   }
 
   @override
-  String recommendationGroupSubtitle(String count, String tags) {
+  String recommendationGroupSubtitle(Object count, Object tags) {
     return '$count members · $tags';
   }
 
@@ -15801,7 +15803,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Core profile temporarily unavailable';
 
   @override
-  String personaDegradedMode(String message) {
+  String personaDegradedMode(Object message) {
     return 'Switched to degraded display. You can still browse and refresh other sections.\n$message';
   }
 
@@ -15809,22 +15811,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaRetryFullProfile => 'Retry full profile';
 
   @override
-  String personaActiveGoal(String goalTitle) {
+  String personaActiveGoal(Object goalTitle) {
     return 'Your most active goal right now: $goalTitle.';
   }
 
   @override
-  String personaLearningPreference(String learningStyle, String responseDepth) {
+  String personaLearningPreference(Object learningStyle, Object responseDepth) {
     return 'Your learning style is closer to $learningStyle, response depth tends toward $responseDepth.';
   }
 
   @override
-  String personaObservedPattern(String pattern) {
+  String personaObservedPattern(Object pattern) {
     return 'The most recent pattern observed by the system: $pattern.';
   }
 
   @override
-  String personaCognitiveClueCount(int count) {
+  String personaCognitiveClueCount(Object count) {
     return '$count cognitive clues accumulated for personalized recommendations.';
   }
 
@@ -15843,7 +15845,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaSectionLoading => 'Loading…';
 
   @override
-  String personaLoadFailedError(String error) {
+  String personaLoadFailedError(Object error) {
     return 'Load failed: $error';
   }
 
@@ -15883,7 +15885,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaPolicy => 'Policy';
 
   @override
-  String personaSourcePattern(String pattern) {
+  String personaSourcePattern(Object pattern) {
     return 'Source pattern: $pattern';
   }
 
@@ -15891,7 +15893,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaActivePolicyReason => 'Currently active system policy.';
 
   @override
-  String personaCorrectionSubmitFailed(String error) {
+  String personaCorrectionSubmitFailed(Object error) {
     return 'Correction submission failed: $error';
   }
 
@@ -15899,7 +15901,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaPreferenceUpdated => 'Preference updated';
 
   @override
-  String personaPreferenceUpdateFailed(String error) {
+  String personaPreferenceUpdateFailed(Object error) {
     return 'Preference update failed: $error';
   }
 
@@ -15907,7 +15909,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaRolledBack => 'Rolled back to previous version';
 
   @override
-  String personaRollbackFailed(String error) {
+  String personaRollbackFailed(Object error) {
     return 'Rollback failed: $error';
   }
 
@@ -15915,7 +15917,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaGoalUpdated => 'Goal updated';
 
   @override
-  String personaGoalUpdateFailed(String error) {
+  String personaGoalUpdateFailed(Object error) {
     return 'Goal update failed: $error';
   }
 
@@ -15923,7 +15925,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaInferredAdjusted => 'Inferred preference adjusted';
 
   @override
-  String personaAdjustFailed(String error) {
+  String personaAdjustFailed(Object error) {
     return 'Adjustment failed: $error';
   }
 
@@ -15931,7 +15933,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaInferredReset => 'Restored to system inferred value';
 
   @override
-  String personaRestoreFailed(String error) {
+  String personaRestoreFailed(Object error) {
     return 'Restore failed: $error';
   }
 
@@ -15954,7 +15956,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examSprintTitle => 'Exam Sprint Setup';
 
   @override
-  String examSprintMinutesPerDay(int minutes) {
+  String examSprintMinutesPerDay(Object minutes) {
     return '$minutes min/day';
   }
 
@@ -16000,7 +16002,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examSprintNoUpload => 'No materials uploaded yet';
 
   @override
-  String examSprintUploadedCount(int count) {
+  String examSprintUploadedCount(Object count) {
     return '$count materials uploaded';
   }
 
@@ -16016,12 +16018,12 @@ class AppLocalizationsEn extends AppLocalizations {
       '6. How long can you realistically study each day?';
 
   @override
-  String examSprintMinutesPerDayLabel(int minutes) {
+  String examSprintMinutesPerDayLabel(Object minutes) {
     return '$minutes min / day';
   }
 
   @override
-  String examSprintMinutesLabel(int minutes) {
+  String examSprintMinutesLabel(Object minutes) {
     return '$minutes min';
   }
 
@@ -16054,12 +16056,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examSprintAssessmentComplete => 'Initial assessment complete';
 
   @override
-  String examSprintPassProbability(int percent) {
+  String examSprintPassProbability(Object percent) {
     return 'Pass probability $percent%';
   }
 
   @override
-  String examSprintRecommendedMode(String mode) {
+  String examSprintRecommendedMode(Object mode) {
     return 'Recommended mode $mode';
   }
 
@@ -16091,7 +16093,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Solid foundation, focus on score optimization';
 
   @override
-  String examSprintDayCount(int count) {
+  String examSprintDayCount(Object count) {
     return '$count days';
   }
 
@@ -16114,12 +16116,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memorySettingsDisabled => 'Memory controls are not enabled';
 
   @override
-  String memorySettingsLoadError(String error) {
+  String memorySettingsLoadError(Object error) {
     return 'Failed to load memory settings: $error';
   }
 
   @override
-  String memorySettingsSaveError(String error) {
+  String memorySettingsSaveError(Object error) {
     return 'Save failed: $error';
   }
 
@@ -16210,7 +16212,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memorySettingsEndTime => 'End time';
 
   @override
-  String memorySettingsCurrentTimezone(String timezone) {
+  String memorySettingsCurrentTimezone(Object timezone) {
     return 'Current timezone: $timezone';
   }
 
@@ -16309,7 +16311,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportOpenGalaxy => 'Open Knowledge Galaxy';
 
   @override
-  String reportPrioritizeNode(String nodeName) {
+  String reportPrioritizeNode(Object nodeName) {
     return 'Prioritize $nodeName';
   }
 
@@ -16394,7 +16396,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportViewSprintHistory => 'View Sprint History';
 
   @override
-  String reportShareTitle(int mastery) {
+  String reportShareTitle(Object mastery) {
     return 'Learning Report · Avg Mastery $mastery%';
   }
 
@@ -16402,27 +16404,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportShareSubtitleSummary => 'Learning analysis summary';
 
   @override
-  String reportShareSubtitlePriority(String nodeName) {
+  String reportShareSubtitlePriority(Object nodeName) {
     return 'Priority: Strengthen $nodeName';
   }
 
   @override
-  String reportShareMetadataDimensions(int count) {
+  String reportShareMetadataDimensions(Object count) {
     return '$count dimensions';
   }
 
   @override
-  String reportShareMessageWithMastery(int mastery) {
+  String reportShareMessageWithMastery(Object mastery) {
     return 'I just generated a learning analysis report on Sparkle. Average mastery: $mastery%.';
   }
 
   @override
-  String reportShareMessageWithNode(String nodeName) {
+  String reportShareMessageWithNode(Object nodeName) {
     return 'I just generated a learning analysis report on Sparkle. Current priority: strengthen $nodeName.';
   }
 
   @override
-  String reportHeroTitlePriority(String nodeName) {
+  String reportHeroTitlePriority(Object nodeName) {
     return 'The first thing to close out is $nodeName';
   }
 
@@ -16434,12 +16436,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Build a foundation with real learning records first';
 
   @override
-  String reportHeroSubtitleDeltaUp(String nodeName) {
+  String reportHeroSubtitleDeltaUp(Object nodeName) {
     return 'Mastery is still rising, but $nodeName remains the biggest drag on progress. Prioritize it for the best return.';
   }
 
   @override
-  String reportHeroSubtitleDeltaDown(String nodeName) {
+  String reportHeroSubtitleDeltaDown(Object nodeName) {
     return 'There\'s been a slight dip. Don\'t expand scope — stabilize $nodeName first.';
   }
 
@@ -16501,17 +16503,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your first report is ready. Come back next time and a trend line will appear here.';
 
   @override
-  String reportChartMasteryLabel(int mastery) {
+  String reportChartMasteryLabel(Object mastery) {
     return 'Mastery $mastery%';
   }
 
   @override
-  String reportChartStudyMinutes(int minutes) {
+  String reportChartStudyMinutes(Object minutes) {
     return 'Study time $minutes min';
   }
 
   @override
-  String reportChartMinutesShort(int count) {
+  String reportChartMinutesShort(Object count) {
     return '$count min';
   }
 
@@ -16606,12 +16608,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Visit Knowledge Galaxy to confirm your current structure, then generate more practice data for sharper suggestions.';
 
   @override
-  String reportActionDescWithWeakness(String weakNode, String strongNode) {
+  String reportActionDescWithWeakness(Object weakNode, Object strongNode) {
     return 'Close out $weakNode first, then use $strongNode for transfer practice to raise overall mastery faster.';
   }
 
   @override
-  String reportActionExploreNode(String nodeName) {
+  String reportActionExploreNode(Object nodeName) {
     return 'Explore $nodeName';
   }
 
@@ -16662,7 +16664,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportStatUnitMinutes => 'min';
 
   @override
-  String reportStatByTypeFormat(String key, int count, int rate) {
+  String reportStatByTypeFormat(Object key, Object count, Object rate) {
     return '$key: $count times · $rate%';
   }
 
@@ -16676,17 +16678,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bgmLibraryNoImport => 'No new tracks imported';
 
   @override
-  String bgmLibraryImportedCount(int count) {
+  String bgmLibraryImportedCount(Object count) {
     return 'Imported $count local tracks';
   }
 
   @override
-  String bgmLibraryPlayingSwitched(String title) {
+  String bgmLibraryPlayingSwitched(Object title) {
     return 'Playing $title, switched to player mode';
   }
 
   @override
-  String bgmLibraryRemoved(String title) {
+  String bgmLibraryRemoved(Object title) {
     return 'Removed $title';
   }
 
@@ -16753,12 +16755,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bgmLibraryBundled => 'System Fallback';
 
   @override
-  String bgmLibraryImportDir(String path) {
+  String bgmLibraryImportDir(Object path) {
     return 'Local import directory: $path';
   }
 
   @override
-  String bgmLibraryCacheDir(String path) {
+  String bgmLibraryCacheDir(Object path) {
     return 'Download cache directory: $path';
   }
 
@@ -16861,7 +16863,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyDraftReviewScreenTitle => 'Review knowledge stars';
 
   @override
-  String galaxyDraftReviewPromptTitle(int count, String documentName) {
+  String galaxyDraftReviewPromptTitle(Object count, Object documentName) {
     return 'We found $count knowledge stars in your $documentName! Review them?';
   }
 
@@ -16876,12 +16878,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyDraftReviewLater => 'Later';
 
   @override
-  String galaxyDraftPendingIndicator(int batchCount, int draftCount) {
+  String galaxyDraftPendingIndicator(Object batchCount, Object draftCount) {
     return '$batchCount pending review · $draftCount stars';
   }
 
   @override
-  String galaxyDraftReviewProgress(int current, int total) {
+  String galaxyDraftReviewProgress(Object current, Object total) {
     return 'Star $current of $total';
   }
 
@@ -16909,7 +16911,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyDraftExcerpts => 'What this star contains';
 
   @override
-  String galaxyDraftSimilarityLabel(String nodeName, int percent) {
+  String galaxyDraftSimilarityLabel(Object nodeName, Object percent) {
     return 'Similar to existing node: $nodeName ($percent%)';
   }
 
@@ -16936,12 +16938,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyDraftBackToGalaxy => 'Back to galaxy';
 
   @override
-  String galaxyDraftCompletionTitle(int accepted, int total) {
+  String galaxyDraftCompletionTitle(Object accepted, Object total) {
     return '$accepted of $total knowledge stars added';
   }
 
   @override
-  String galaxyDraftCompletionBody(String documentName) {
+  String galaxyDraftCompletionBody(Object documentName) {
     return 'The stars you kept from $documentName are ready to fly into your map.';
   }
 
@@ -16950,7 +16952,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'You skipped these drafts for now. They can always come back later.';
 
   @override
-  String galaxyDraftCompletionSummary(int accepted, int total) {
+  String galaxyDraftCompletionSummary(Object accepted, Object total) {
     return '$accepted of $total knowledge stars added to your galaxy!';
   }
 
@@ -16992,12 +16994,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyUploadSuccessTitle => 'Processing complete!';
 
   @override
-  String galaxyUploadSuccessBody(int count) {
+  String galaxyUploadSuccessBody(Object count) {
     return 'Processing complete! $count knowledge concepts found.';
   }
 
   @override
-  String galaxyUploadSuccessChip(int count) {
+  String galaxyUploadSuccessChip(Object count) {
     return '$count concepts found';
   }
 
@@ -17012,7 +17014,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyUploadRetry => 'Retry upload';
 
   @override
-  String galaxyUploadHeadingTo(String target) {
+  String galaxyUploadHeadingTo(Object target) {
     return 'Heading toward $target';
   }
 
@@ -17284,15 +17286,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingVoiceInput => 'Voice Input';
 
   @override
-  String get onboardingVoiceInputEn => 'Voice Input';
+  String get onboardingVoiceInputEn => 'Voice Input (English)';
 
   @override
   String get onboardingVoiceInputDesc =>
-      'Enable the microphone so you can speak goals and questions naturally.';
+      'Enable microphone for voice commands and dictation';
 
   @override
   String get onboardingVoiceInputDescEn =>
-      'Enable the microphone so you can speak goals and questions naturally.';
+      'Enable English voice input for voice commands and dictation';
 
   @override
   String get onboardingPermissionEnable => 'Enable';
@@ -17301,23 +17303,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingPermissionEnabled => 'Enabled';
 
   @override
-  String get onboardingPermissionReady =>
-      'Ready to go, and you can change this later in Settings';
+  String get onboardingPermissionReady => 'Ready - you\'re all set';
 
   @override
   String get onboardingPermissionPending =>
-      'You can turn this on later in Settings';
+      'Not yet enabled. This lets you use voice features.';
 
   @override
   String get onboardingPermissionWorking => 'Working...';
 
   @override
-  String homeNotificationUnreadMessages(int count) {
+  String homeNotificationUnreadMessages(Object count) {
     return '$count unread messages';
   }
 
   @override
-  String homeNotificationUnreadNotifications(int count) {
+  String homeNotificationUnreadNotifications(Object count) {
     return '$count unread notifications';
   }
 
@@ -17336,7 +17337,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Estimated time: at your own pace';
 
   @override
-  String taskGuidePanelEstimatedTimeMinutes(int minutes) {
+  String taskGuidePanelEstimatedTimeMinutes(Object minutes) {
     return 'Estimated time: $minutes min';
   }
 
@@ -17366,7 +17367,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskGuidePanelFailSafeRule => 'Fail-Safe Rule';
 
   @override
-  String taskGuidePanelFailSafeRuleContent(String rule) {
+  String taskGuidePanelFailSafeRuleContent(Object rule) {
     return 'Fail-safe: $rule';
   }
 
@@ -17377,22 +17378,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskGuidePanelStepInProgress => 'In Progress';
 
   @override
-  String taskGuidePanelCompletedSteps(int completed, int total) {
+  String taskGuidePanelCompletedSteps(Object completed, Object total) {
     return '$completed/$total completed';
   }
 
   @override
-  String taskGuidePanelCompletedCriteria(int completed, int total) {
+  String taskGuidePanelCompletedCriteria(Object completed, Object total) {
     return '$completed/$total';
   }
 
   @override
-  String taskGuidePanelExpectedOutput(String output) {
+  String taskGuidePanelExpectedOutput(Object output) {
     return 'Expected output: $output';
   }
 
   @override
-  String taskGuidePanelFallbackLastStep(String output) {
+  String taskGuidePanelFallbackLastStep(Object output) {
     return 'Finally do a minimal check with $output.';
   }
 
@@ -17417,7 +17418,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Mark the key gaps and add a reminder.';
 
   @override
-  String taskGuidePanelFallbackOutputCheck(String check) {
+  String taskGuidePanelFallbackOutputCheck(Object check) {
     return 'Complete minimal check: $check.';
   }
 
@@ -17474,7 +17475,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'No errors due today. You can still check plan tasks and nightly review.';
 
   @override
-  String reviewPlanHubHasErrors(int count) {
+  String reviewPlanHubHasErrors(Object count) {
     return '$count errors due for review today. Prioritize high-urgency reviews.';
   }
 
@@ -17491,7 +17492,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Nightly review unavailable. Continue with today\'s review.';
 
   @override
-  String reviewPlanHubLoadFailed(String error) {
+  String reviewPlanHubLoadFailed(Object error) {
     return 'Review list temporarily failed to load: $error';
   }
 
@@ -17504,12 +17505,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'No plan-linked tasks for today. Review errors or add tasks to your plan.';
 
   @override
-  String reviewPlanHubSprintProgress(int percent, int days) {
+  String reviewPlanHubSprintProgress(Object percent, Object days) {
     return 'Sprint $percent% · $days days left';
   }
 
   @override
-  String reviewPlanHubGrowthProgress(int percent, int mastery) {
+  String reviewPlanHubGrowthProgress(Object percent, Object mastery) {
     return 'Growth $percent% · Mastery $mastery%';
   }
 
@@ -17517,7 +17518,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewPlanHubPlanTask => 'Plan Task';
 
   @override
-  String reviewPlanHubTaskSubtitle(String plan, int minutes) {
+  String reviewPlanHubTaskSubtitle(Object plan, Object minutes) {
     return '$plan · $minutes min';
   }
 
@@ -17532,4 +17533,1071 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskQuickActionHelp => 'Ask for help';
+
+  @override
+  String get statisticsExportTitle => 'Export Statistics';
+
+  @override
+  String get statisticsExportFormat => 'Select Export Format';
+
+  @override
+  String get statisticsExportIncludeCharts => 'Include Chart Data';
+
+  @override
+  String get statisticsExportAs => 'Export as';
+
+  @override
+  String get statisticsExportStructured => 'Structured Data';
+
+  @override
+  String get statisticsExportSpreadsheet => 'Spreadsheet';
+
+  @override
+  String get statisticsExportHDImage => 'HD Image';
+
+  @override
+  String get statisticsExportPDF => 'PDF Document';
+
+  @override
+  String statisticsExportFailed(Object error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String get statisticsShareTitle => 'Share Statistics';
+
+  @override
+  String get statisticsShareWechat => 'WeChat';
+
+  @override
+  String get statisticsShareMoments => 'Moments';
+
+  @override
+  String get statisticsShareSaveImage => 'Save Image';
+
+  @override
+  String get statisticsShareCopyLink => 'Copy Link';
+
+  @override
+  String get statisticsShareMore => 'More';
+
+  @override
+  String get statisticsWatermark => 'Sparkle AI';
+
+  @override
+  String statisticsDateFormat(Object day, Object month, Object year) {
+    return '$year/$month/$day';
+  }
+
+  @override
+  String get statisticsTypeFocus => 'Focus';
+
+  @override
+  String get statisticsTypeAgent => 'Agent';
+
+  @override
+  String get statisticsTypeCapsule => 'Capsule';
+
+  @override
+  String get statisticsTypeLearning => 'Learning';
+
+  @override
+  String get statisticsPeriodToday => 'Today';
+
+  @override
+  String get statisticsPeriodWeek => 'This Week';
+
+  @override
+  String get statisticsPeriodMonth => 'This Month';
+
+  @override
+  String get statisticsPeriodYear => 'This Year';
+
+  @override
+  String get statisticsPeriodCustom => 'Custom';
+
+  @override
+  String get statisticsNoData => 'No Data';
+
+  @override
+  String get statisticsLegendLow => 'Low';
+
+  @override
+  String get statisticsLegendMedium => 'Medium';
+
+  @override
+  String get statisticsLegendHigh => 'High';
+
+  @override
+  String get statisticsChartMon => 'Mon';
+
+  @override
+  String get statisticsChartWed => 'Wed';
+
+  @override
+  String get statisticsChartFri => 'Fri';
+
+  @override
+  String get statisticsChartMonth1 => 'Jan';
+
+  @override
+  String get statisticsChartMonth2 => 'Feb';
+
+  @override
+  String get statisticsChartMonth3 => 'Mar';
+
+  @override
+  String get statisticsChartMonth4 => 'Apr';
+
+  @override
+  String get statisticsChartMonth5 => 'May';
+
+  @override
+  String get statisticsChartMonth6 => 'Jun';
+
+  @override
+  String get statisticsChartMonth7 => 'Jul';
+
+  @override
+  String get statisticsChartMonth8 => 'Aug';
+
+  @override
+  String get statisticsChartMonth9 => 'Sep';
+
+  @override
+  String get statisticsChartMonth10 => 'Oct';
+
+  @override
+  String get statisticsChartMonth11 => 'Nov';
+
+  @override
+  String get statisticsChartMonth12 => 'Dec';
+
+  @override
+  String get statisticsExportImageReport => 'Image Report';
+
+  @override
+  String get statisticsExportPDFReport => 'PDF Report';
+
+  @override
+  String get interventionStartNow => 'Start Now';
+
+  @override
+  String get interventionLater => 'Later';
+
+  @override
+  String get fileUploadTitle => 'Upload File';
+
+  @override
+  String get fileUploadDesc =>
+      'Supports documents and images. After uploading to the chat, you can share or reference them.';
+
+  @override
+  String get fileUploadType => 'Type';
+
+  @override
+  String get fileUploadSize => 'Size';
+
+  @override
+  String get fileUploadClickToSelect => 'Click to Select File';
+
+  @override
+  String get fileUploadSupportedFormats =>
+      'PDF, DOCX, PPTX, TXT and common images are supported.';
+
+  @override
+  String get fileUploadSelected => 'File selected';
+
+  @override
+  String fileUploadFormat(Object size, Object type) {
+    return '$type · $size';
+  }
+
+  @override
+  String fileUploadProgress(Object percent) {
+    return 'Uploading $percent%';
+  }
+
+  @override
+  String get fileUploadSelect => 'Select File';
+
+  @override
+  String get fileUploadReselect => 'Reselect';
+
+  @override
+  String get fileUploadStart => 'Start Upload';
+
+  @override
+  String get fileUploadResume => 'Resume Upload';
+
+  @override
+  String get fileUploadNetworkError => 'Network interrupted, click to resume';
+
+  @override
+  String fileUploadFailed(Object error) {
+    return 'Upload failed: $error';
+  }
+
+  @override
+  String get errorBookCorrectApproach => 'Correct Approach';
+
+  @override
+  String get errorBookSimilarTraps => 'Similar Traps';
+
+  @override
+  String get errorBookStudySuggestion => 'Study Suggestion';
+
+  @override
+  String get errorBookKnowledgeRelated => 'Related Knowledge Points';
+
+  @override
+  String get errorBookAnalyzing => 'AI is analyzing...';
+
+  @override
+  String get errorBookAnalyzingDesc =>
+      'Analyzing error causes, generating study suggestions and linking knowledge points. Estimated 3-5 seconds.';
+
+  @override
+  String get simulationSceneStudyGroup => 'Study Group';
+
+  @override
+  String get simulationSceneKnowledgeDebate => 'Knowledge Debate';
+
+  @override
+  String get simulationSceneHistoricalRoleplay => 'Historical Roleplay';
+
+  @override
+  String get simulationSceneSocraticDialogue => 'Socratic Dialogue';
+
+  @override
+  String get simulationSceneCaseAnalysis => 'Case Analysis';
+
+  @override
+  String get simulationSceneWhatIfPath => 'What-If Path';
+
+  @override
+  String get simulationSceneConceptMapBuild => 'Concept Map Build';
+
+  @override
+  String get simulationSceneErrorDiagnosis => 'Error Diagnosis';
+
+  @override
+  String get simulationStateWaiting => 'Awaiting Your Judgment';
+
+  @override
+  String get simulationStateCompleted => 'Discussion Concluded';
+
+  @override
+  String get simulationStateRunning => 'Discussion in Progress';
+
+  @override
+  String get simulationStatePending => 'Preparing';
+
+  @override
+  String get simulationStateReady => 'Ready';
+
+  @override
+  String get simulationStanceSupporting => 'Supporting';
+
+  @override
+  String get simulationStanceSupportive => 'Supportive';
+
+  @override
+  String get simulationStanceOpposing => 'Opposing';
+
+  @override
+  String get simulationStanceModerating => 'Moderating';
+
+  @override
+  String get simulationStanceProbing => 'Probing';
+
+  @override
+  String get simulationStanceChallenging => 'Challenging';
+
+  @override
+  String get simulationStanceImmersive => 'Immersive';
+
+  @override
+  String get simulationStanceContextual => 'Contextual';
+
+  @override
+  String get simulationStanceReflective => 'Reflective';
+
+  @override
+  String get simulationActionChallenge => 'Challenge';
+
+  @override
+  String get simulationActionSynthesize => 'Synthesize';
+
+  @override
+  String get simulationActionOpen => 'Open Topic';
+
+  @override
+  String get simulationActionGuideUser => 'Invite You to Answer';
+
+  @override
+  String get simulationActionProbe => 'Probe Further';
+
+  @override
+  String get simulationActionExtend => 'Elaborate';
+
+  @override
+  String get simulationActionUserResponse => 'Your Response';
+
+  @override
+  String get simulationSourceGalaxy => 'Knowledge Galaxy';
+
+  @override
+  String get simulationSourceTasks => 'Task Records';
+
+  @override
+  String get simulationSourcePlan => 'Study Plan';
+
+  @override
+  String get simulationSourceStarterGraph => 'Starter Graph';
+
+  @override
+  String get simulationSourceKnowledgeGraph => 'Knowledge Graph';
+
+  @override
+  String get simulationSourceTemplate => 'Default Role Template';
+
+  @override
+  String get simulationSourceErrorBook => 'Error Records';
+
+  @override
+  String get simulationSourceOnboardingProfile => 'Learning Profile';
+
+  @override
+  String get simulationRoleAnalyst => 'Analyst';
+
+  @override
+  String get simulationRoleExpert => 'Expert';
+
+  @override
+  String get simulationRoleCoach => 'Coach';
+
+  @override
+  String get simulationRoleNavigator => 'Navigator';
+
+  @override
+  String get simulationRoleChallenger => 'Challenger';
+
+  @override
+  String get simulationRoleSupporter => 'Supporter';
+
+  @override
+  String get simulationRoleObserver => 'Observer';
+
+  @override
+  String get simulationRoleMentor => 'Mentor';
+
+  @override
+  String get simulationRoleBuilder => 'Builder';
+
+  @override
+  String get simulationBubbleSpotlight => 'Current Spotlight';
+
+  @override
+  String simulationBubbleReplyTo(Object speaker) {
+    return 'Picking up from $speaker';
+  }
+
+  @override
+  String simulationBubbleStance(Object stance) {
+    return 'Stance $stance';
+  }
+
+  @override
+  String simulationBubbleReply(Object speaker) {
+    return 'Replying to $speaker';
+  }
+
+  @override
+  String simulationBubbleRound(Object round) {
+    return 'Round $round';
+  }
+
+  @override
+  String get achievementPrestigeLane => 'Prestige Lane';
+
+  @override
+  String get weatherTitleSunny => 'Clear Skies';
+
+  @override
+  String get weatherTitleCloudy => 'Misty';
+
+  @override
+  String get weatherTitleRainy => 'Stormy';
+
+  @override
+  String get weatherTitleMeteor => 'Starry Dreams';
+
+  @override
+  String get weatherSubtitleSunny =>
+      'The light lifts gently. A good day for steady progress.';
+
+  @override
+  String get weatherSubtitleCloudy =>
+      'Soft edges, good for sorting thoughts and leaving space.';
+
+  @override
+  String get weatherSubtitleRainy =>
+      'The environment closes in, suitable for immersion, focus, and reducing noise.';
+
+  @override
+  String get weatherSubtitleMeteor =>
+      'Inspiration shines bright, great for sprints, breakthroughs, and leaving your mark.';
+
+  @override
+  String get weatherCompactSunny => 'Bright Progress';
+
+  @override
+  String get weatherCompactCloudy => 'Gentle Reset';
+
+  @override
+  String get weatherCompactRainy => 'Deep Focus';
+
+  @override
+  String get weatherCompactMeteor => 'Peak Sprint';
+
+  @override
+  String get weatherAmbientSunny =>
+      'The air feels clearer. Momentum builds more naturally.';
+
+  @override
+  String get weatherAmbientCloudy =>
+      'The mist softens the edges. The scene gets quieter.';
+
+  @override
+  String get weatherAmbientRainy =>
+      'The rain dampens the outside world. Focus comes easier.';
+
+  @override
+  String get weatherAmbientMeteor =>
+      'Star trails are stretching. The inspiration window is opening.';
+
+  @override
+  String get weatherGuideTitle => 'Weather Guide';
+
+  @override
+  String get weatherGuidePreview => 'Weather Preview';
+
+  @override
+  String get weatherGuidePreviewSubtitle =>
+      'Preview all weather types in the system. Preview does not change actual weather.';
+
+  @override
+  String get weatherGuideCriteria => 'Criteria';
+
+  @override
+  String get weatherGuideCriteriaSubtitle =>
+      'Actual weather is determined by your recent data. Here are the main rules.';
+
+  @override
+  String get weatherGuideRule1Title => 'Clear Skies is the Default';
+
+  @override
+  String get weatherGuideRule1Body =>
+      'When the system detects no significant pressure, delay, or strong sprint signals, it stays clear.';
+
+  @override
+  String get weatherGuideRule2Title => 'Misty Means Slowing Down';
+
+  @override
+  String get weatherGuideRule2Body =>
+      'When a sprint has 7+ days left but progress is below 20%, or no tasks completed for 2 consecutive days.';
+
+  @override
+  String get weatherGuideRule3Title => 'Stormy Means Higher Pressure';
+
+  @override
+  String get weatherGuideRule3Body =>
+      'When a sprint has fewer than 3 days left and progress is below 50%, the system shifts to stormy.';
+
+  @override
+  String get weatherGuideRule4Title => 'Anxiety Overrides Base Judgment';
+
+  @override
+  String get weatherGuideRule4Body =>
+      'If the recent anxiety index exceeds 50%, the system prioritizes stormy weather.';
+
+  @override
+  String get weatherGuideRule5Title => 'Meteor Means High Momentum';
+
+  @override
+  String get weatherGuideRule5Body =>
+      'When current sprint progress exceeds 80%, meteor weather becomes more likely.';
+
+  @override
+  String get weatherGuideCurrent => 'Current';
+
+  @override
+  String get weatherGuideCurrentWeather => 'Current Weather';
+
+  @override
+  String get weatherGuideConditionFallback =>
+      'Current weather updates automatically based on your real data.';
+
+  @override
+  String weatherGuideConditionPrefix(Object condition) {
+    return 'Current condition: $condition';
+  }
+
+  @override
+  String get weatherGuideDisclaimer =>
+      'This page helps you understand the weather system\'s visuals and logic. Real weather still follows your actual tasks, sprints, and state.';
+
+  @override
+  String weatherGuideTriggerPrefix(Object trigger) {
+    return 'Real trigger: $trigger';
+  }
+
+  @override
+  String get intentPredictionSprintSprint => 'Sprint!';
+
+  @override
+  String intentPredictionContinue(Object title) {
+    return 'Continue \"$title\"';
+  }
+
+  @override
+  String get intentPredictionCreateTask => 'Create Task';
+
+  @override
+  String get intentPredictionStartFocus => 'Start Focus';
+
+  @override
+  String get intentPredictionViewCalendar => 'View Calendar';
+
+  @override
+  String get intentPredictionCuriosityCapsule => 'Curiosity Capsule';
+
+  @override
+  String get intentPredictionSendToAI => 'Send to AI';
+
+  @override
+  String get intentPredictionNoteIdea => 'Note Idea';
+
+  @override
+  String get intentPredictionSetReminder => 'Set Reminder';
+
+  @override
+  String get intentPredictionCognitivePrism => 'Cognitive Prism';
+
+  @override
+  String get intentPredictionTranslate => 'Translate';
+
+  @override
+  String get intentPredictionLearnLanguage => 'Learn Language';
+
+  @override
+  String get intentPredictionViewPrism => 'View Cognitive Prism';
+
+  @override
+  String get intentPredictionBehaviorAnalysis => 'Behavior Analysis';
+
+  @override
+  String get intentPredictionStartSprint => 'Start Sprint';
+
+  @override
+  String get intentPredictionFocusMode => 'Focus Mode';
+
+  @override
+  String get intentPredictionStartLearning => 'Start Learning';
+
+  @override
+  String get intentPredictionCreateStudyPlan => 'Create Study Plan';
+
+  @override
+  String get intentPredictionStartReview => 'Start Review';
+
+  @override
+  String get intentPredictionViewErrorBook => 'View Error Book';
+
+  @override
+  String get intentPredictionContinuePriority => 'Continue Priority Task';
+
+  @override
+  String get intentPrediction25Min => '25 min Focus';
+
+  @override
+  String get flashCapsuleTitle => 'Flash Capsule';
+
+  @override
+  String get flashCapsuleSubtitle =>
+      'Capture fleeting doubts as error clues, reducing the loss of knowing something is wrong but not remembering it.';
+
+  @override
+  String get flashCapsuleHistory => 'History Capsules';
+
+  @override
+  String get flashCapsuleHistoryEmpty => 'No flash capsules saved yet.';
+
+  @override
+  String get flashCapsuleHistoryDesc =>
+      'Here are the flash capsules and thinking capsules you\'ve saved.';
+
+  @override
+  String get flashCapsuleNoHistory => 'No History Capsules';
+
+  @override
+  String get flashCapsuleNoHistoryDesc =>
+      'Save a flash capsule to review it here.';
+
+  @override
+  String get flashCapsuleUnnamed => 'Unnamed Capsule';
+
+  @override
+  String get flashCapsuleNoDesc => 'No additional description';
+
+  @override
+  String get flashCapsuleSyncPending => 'Pending Sync';
+
+  @override
+  String get flashCapsuleContent => 'Record Content';
+
+  @override
+  String get flashCapsuleContentSubtitle =>
+      'Select subject, error type, then add knowledge point and description.';
+
+  @override
+  String get flashCapsuleSubject => 'Subject';
+
+  @override
+  String get flashCapsuleSelectSubject => 'Select Subject';
+
+  @override
+  String get flashCapsuleKnowledgePoint => 'Knowledge Point';
+
+  @override
+  String get flashCapsuleKnowledgeHint =>
+      'e.g. Trigonometric derivatives, Newton\'s second law...';
+
+  @override
+  String get flashCapsuleErrorDesc => 'Error Description';
+
+  @override
+  String get flashCapsuleErrorHint =>
+      'Record how you got it wrong, where you got stuck, and how to avoid it next time.';
+
+  @override
+  String get flashCapsuleKpLength => 'Knowledge Point Length';
+
+  @override
+  String get flashCapsuleDescLength => 'Description Length';
+
+  @override
+  String get flashCapsuleCognitiveDim => 'Cognitive Dimension';
+
+  @override
+  String get flashCapsuleHistoryView => 'View History';
+
+  @override
+  String get flashCapsuleSaving => 'Saving...';
+
+  @override
+  String get flashCapsuleSave => 'Save Capsule';
+
+  @override
+  String flashCapsuleSubjectCount(Object count) {
+    return '$count subjects';
+  }
+
+  @override
+  String flashCapsuleHistoryCount(Object count) {
+    return '$count history capsules';
+  }
+
+  @override
+  String get flashCapsuleSaved => 'Capsule saved and synced to error book';
+
+  @override
+  String get flashCapsuleSavedNoSync =>
+      'Capsule saved, error book sync will retry later';
+
+  @override
+  String flashCapsuleSaveFailed(Object error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get flashCapsuleSyncFailed =>
+      'Fill in the knowledge point and error description';
+
+  @override
+  String get flashCapsuleSaveError => 'Capsule save failed, please retry later';
+
+  @override
+  String flashCapsuleLoadError(Object error) {
+    return 'Failed to load history capsules: $error';
+  }
+
+  @override
+  String get flashCapsuleErrorConcept => 'Concept Confusion';
+
+  @override
+  String get flashCapsuleErrorCalc => 'Calculation Error';
+
+  @override
+  String get flashCapsuleErrorReading => 'Reading Careless';
+
+  @override
+  String get flashCapsuleErrorMemory => 'Knowledge Forgetfulness';
+
+  @override
+  String get flashCapsuleErrorMethod => 'Wrong Method';
+
+  @override
+  String get flashCapsuleErrorOther => 'Other';
+
+  @override
+  String get flashCapsuleSubjectMath => 'Math';
+
+  @override
+  String get flashCapsuleSubjectPhysics => 'Physics';
+
+  @override
+  String get flashCapsuleSubjectChemistry => 'Chemistry';
+
+  @override
+  String get flashCapsuleSubjectBiology => 'Biology';
+
+  @override
+  String get flashCapsuleSubjectEnglish => 'English';
+
+  @override
+  String get flashCapsuleSubjectChinese => 'Chinese';
+
+  @override
+  String get flashCapsuleSubjectComputer => 'Computer Science';
+
+  @override
+  String get flashCapsuleSubjectOther => 'Other';
+
+  @override
+  String get flashCapsuleTagFlash => 'Flash';
+
+  @override
+  String get flashCapsuleTagThink => 'Think';
+
+  @override
+  String get vocabularyLookupTitle => 'Word Lookup';
+
+  @override
+  String get vocabularyLookupSubtitle =>
+      'Quick word meaning confirmation, example generation, and related word expansion. Results can be saved to your wordbook.';
+
+  @override
+  String get vocabularyLookupInput => 'Search Input';
+
+  @override
+  String get vocabularyLookupInputSubtitle =>
+      'Enter an English word and press Enter or tap Search. Oxford dictionary preferred, local offline packages take priority.';
+
+  @override
+  String get vocabularyLookupSearch => 'Search';
+
+  @override
+  String get vocabularyLookupInputHint => 'Enter an English word...';
+
+  @override
+  String get vocabularyLookupResults => 'Results';
+
+  @override
+  String get vocabularyLookupResultsSubtitle =>
+      'Meanings, examples, related words, and model-generated sentences.';
+
+  @override
+  String get vocabularyLookupStartTyping => 'Enter a word to start searching';
+
+  @override
+  String get vocabularyLookupTemporarilyFailed => 'Search temporarily failed';
+
+  @override
+  String get vocabularyLookupErrorDesc =>
+      'After searching, you can save to your wordbook and generate example sentences.';
+
+  @override
+  String get vocabularyLookupDefinitions => 'Definitions';
+
+  @override
+  String get vocabularyLookupDictExamples => 'Dictionary Examples';
+
+  @override
+  String get vocabularyLookupGeneratedExample => 'AI-Generated Example';
+
+  @override
+  String get vocabularyLookupRelatedWords => 'Related Words';
+
+  @override
+  String get vocabularyLookupInWordbook => 'In Wordbook';
+
+  @override
+  String get vocabularyLookupCanAdd => 'Addable to Wordbook';
+
+  @override
+  String get vocabularyLookupWaitingAssoc => 'Awaiting Related Words';
+
+  @override
+  String vocabularyLookupAssocCount(Object count) {
+    return '$count related words';
+  }
+
+  @override
+  String vocabularyLookupOfflineCount(Object count) {
+    return '$count offline dictionaries';
+  }
+
+  @override
+  String get vocabularyLookupNoOffline => 'No Offline Dictionary';
+
+  @override
+  String get vocabularyLookupManageOffline => 'Manage Offline Dictionary';
+
+  @override
+  String get vocabularyLookupDownloadOffline => 'Download Offline Dictionary';
+
+  @override
+  String get vocabularyLookupOfflinePackages => 'Offline Dictionary Packages';
+
+  @override
+  String get vocabularyLookupOfflineDesc =>
+      'Prefer local Oxford dictionary to reduce network dependency and cloud server load.';
+
+  @override
+  String get vocabularyLookupInstalled => 'Installed';
+
+  @override
+  String get vocabularyLookupPackageDesc =>
+      'Oxford preferred offline dictionary package';
+
+  @override
+  String vocabularyLookupEntryCount(Object count) {
+    return '$count entries';
+  }
+
+  @override
+  String vocabularyLookupSizeBytes(Object size) {
+    return '$size';
+  }
+
+  @override
+  String vocabularyLookupInstalledAt(Object date) {
+    return 'Installed $date';
+  }
+
+  @override
+  String get vocabularyLookupReDownload => 'Re-download';
+
+  @override
+  String get vocabularyLookupDownloadLocal => 'Download to Local';
+
+  @override
+  String get vocabularyLookupRemove => 'Remove';
+
+  @override
+  String get vocabularyLookupGenerateSentence => 'Generate Sentence';
+
+  @override
+  String get vocabularyLookupRemoveFromWordbook => 'Remove from Wordbook';
+
+  @override
+  String get vocabularyLookupAddToWordbook => 'Add to Wordbook';
+
+  @override
+  String vocabularyLookupPos(Object pos) {
+    return 'Part of Speech · $pos';
+  }
+
+  @override
+  String vocabularyLookupAddedToWordbook(Object word) {
+    return 'Added \"$word\" to wordbook';
+  }
+
+  @override
+  String vocabularyLookupRemovedFromWordbook(Object word) {
+    return 'Removed \"$word\" from wordbook';
+  }
+
+  @override
+  String get vocabularyLookupEnterWord => 'Please enter a word to search';
+
+  @override
+  String get vocabularyLookupOfflineDownloaded =>
+      'Offline dictionary downloaded, prioritize local lookup';
+
+  @override
+  String vocabularyLookupOfflineDownloadFailed(Object error) {
+    return 'Failed to download offline dictionary: $error';
+  }
+
+  @override
+  String get vocabularyLookupOfflineRemoved =>
+      'Offline dictionary package removed';
+
+  @override
+  String vocabularyLookupOfflineRemoveFailed(Object error) {
+    return 'Failed to remove offline dictionary package: $error';
+  }
+
+  @override
+  String get vocabularyLookupNoPackage =>
+      'No downloadable offline dictionary packages available';
+
+  @override
+  String get vocabularyLookupDownloading => 'Downloading...';
+
+  @override
+  String vocabularyLookupPackageScope(Object scope) {
+    return '$scope';
+  }
+
+  @override
+  String vocabularyLookupPackageInstallDate(Object date) {
+    return 'Installed $date';
+  }
+
+  @override
+  String get entityCardActionLabel => 'Execute';
+
+  @override
+  String get entityCardTitleFallback => 'Unnamed Card';
+
+  @override
+  String get entityCardEntityFallback => 'Unnamed Entity';
+
+  @override
+  String get entityCardTaskFallback => 'Unnamed Task';
+
+  @override
+  String get entityCardPlanFallback => 'Study Plan';
+
+  @override
+  String get entityCardKnowledgeFallback => 'Knowledge Node';
+
+  @override
+  String entityCardTaskListFallback(Object count) {
+    return '$count executable tasks';
+  }
+
+  @override
+  String get entityCardTaskListSummary => 'AI has organized the task list';
+
+  @override
+  String get visualSlotAvatarBorder => 'Avatar Border';
+
+  @override
+  String get visualSlotTitleBar => 'Title Bar';
+
+  @override
+  String get visualSlotProfileBanner => 'Profile Banner';
+
+  @override
+  String get visualSlotAchievementFrame => 'Achievement Frame';
+
+  @override
+  String get visualSlotHomeAmbience => 'Home Ambience';
+
+  @override
+  String get visualSlotStarMapEffect => 'Star Map Effect';
+
+  @override
+  String get visualSlotStreakFlame => 'Streak Flame';
+
+  @override
+  String get visualSlotDisplayPedestal => 'Display Pedestal';
+
+  @override
+  String get visualSlotBackground => 'Background';
+
+  @override
+  String get visualSlotParticle => 'Particle';
+
+  @override
+  String get visualSlotEffect => 'Effect';
+
+  @override
+  String get visualSlotBundle => 'Bundle';
+
+  @override
+  String get visualSlotHomeAtmo => 'Home Atmosphere';
+
+  @override
+  String get visualSlotParticleTrail => 'Particle Trail';
+
+  @override
+  String get visualSlotGloryEffect => 'Glory Effect';
+
+  @override
+  String get visualSlotProfile => 'Profile';
+
+  @override
+  String get visualSlotAchievementHeader => 'Achievement Header';
+
+  @override
+  String get visualSlotAchievementPage => 'Achievement Page';
+
+  @override
+  String get visualSlotDetailModal => 'Detail Modal';
+
+  @override
+  String get visualSlotAvatarArea => 'Avatar Area';
+
+  @override
+  String get visualSlotNicknameBar => 'Nickname Title Bar';
+
+  @override
+  String get visualSlotDisplayArea => 'Display Area';
+
+  @override
+  String get visualSlotGloryShowcase => 'Glory Showcase';
+
+  @override
+  String get visualSlotStarMapPage => 'Star Map Page';
+
+  @override
+  String get visualSlotStreakDisplay => 'Streak Display';
+
+  @override
+  String get visualSlotConquestTrail => 'Conquest Trail';
+
+  @override
+  String get visualSlotHomePage => 'Home Page';
+
+  @override
+  String get visualSlotHomeParticle => 'Home Particle';
+
+  @override
+  String get visualUnlockSystem => 'System Provided';
+
+  @override
+  String get visualUnlockAchievement => 'Achievement Unlock';
+
+  @override
+  String get visualUnlockShop => 'Shop Purchase';
+
+  @override
+  String get visualUnlockEvent => 'Event Exclusive';
+
+  @override
+  String get visualUnlockSeason => 'Season Reward';
+
+  @override
+  String get errorDefaultTitle => 'Oops, something went wrong';
+
+  @override
+  String get warningDefaultTitle => 'Friendly Reminder';
+
+  @override
+  String get infoDefaultTitle => 'Quick Tip';
+
+  @override
+  String get retryLabel => 'Retry';
+
+  @override
+  String get emptyStateTitle => 'No Data';
+
+  @override
+  String get emptyStateTitleNone => 'Empty';
 }

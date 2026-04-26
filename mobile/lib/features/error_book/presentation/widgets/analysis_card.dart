@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 
 /// AI 分析结果卡片
@@ -42,7 +43,7 @@ class AnalysisCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'AI 分析',
+                  context.l10n.errorBookAiAnalysis,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightSemibold,
                   ),
@@ -71,7 +72,7 @@ class AnalysisCard extends StatelessWidget {
               context,
               icon: Icons.error_outline,
               iconColor: DS.error,
-              title: '错误原因',
+              title: context.l10n.errorBookRootCause,
               content: analysis.rootCause,
             ),
             const SizedBox(height: DS.spacing16),
@@ -81,7 +82,7 @@ class AnalysisCard extends StatelessWidget {
               context,
               icon: Icons.lightbulb_outline,
               iconColor: DS.warning,
-              title: '正确思路',
+              title: context.l10n.errorBookCorrectApproach,
               content: analysis.correctApproach,
             ),
 
@@ -92,7 +93,7 @@ class AnalysisCard extends StatelessWidget {
                 context,
                 icon: Icons.warning_amber_rounded,
                 iconColor: DS.warningLight,
-                title: '类似易错点',
+                title: context.l10n.errorBookSimilarTraps,
                 items: analysis.similarTraps,
               ),
             ],
@@ -104,7 +105,7 @@ class AnalysisCard extends StatelessWidget {
               context,
               icon: Icons.school_outlined,
               iconColor: DS.info,
-              title: '学习建议',
+              title: context.l10n.errorBookStudySuggestion,
               content: analysis.studySuggestion,
             ),
 
@@ -122,41 +123,18 @@ class AnalysisCard extends StatelessWidget {
                   ),
                   const SizedBox(width: DS.spacing6),
                   Text(
-                    '关联知识点',
+                    context.l10n.errorBookKnowledgeRelated,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: DS.spacing12),
-              Wrap(
-                spacing: DS.spacing8,
-                runSpacing: DS.spacing8,
-                children: knowledgeLinks
-                    .map(
-                      (link) => ActionChip(
-                        avatar: link.isPrimary
-                            ? Icon(
-                                Icons.star,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              )
-                            : null,
-                        label: Text(link.nodeName),
-                        onPressed: onKnowledgeTap,
-                        backgroundColor: link.isPrimary
-                            ? theme.colorScheme.primaryContainer
-                            : theme.colorScheme.surfaceContainerHighest,
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
+            ),
           ],
         ),
-      ),
-    );
+      );
+    }
   }
 
   Widget _buildSection(
@@ -364,7 +342,7 @@ class AnalysisLoadingPlaceholder extends StatelessWidget {
                 ),
                 const SizedBox(width: DS.spacing12),
                 Text(
-                  'AI 正在分析中...',
+                  context.l10n.errorBookAnalyzing,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightSemibold,
                   ),
@@ -373,7 +351,7 @@ class AnalysisLoadingPlaceholder extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              '正在分析错题原因、生成学习建议并关联知识点，预计需要 3-5 秒',
+              context.l10n.errorBookAnalyzingDesc,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

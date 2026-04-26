@@ -189,5 +189,5 @@ class FallbackToolResult:
                 "fallback_type": "degraded_response"
             },
             "error_message": None,
-            "suggestion": "如需完整功能，请稍后再试"
+            "suggestion": I18n.t("tool_fallback.retry_suggestion", locale="zh")
         }

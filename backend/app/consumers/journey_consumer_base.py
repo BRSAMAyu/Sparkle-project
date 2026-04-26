@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.core.cache import cache_service
 from app.core.event_bus import EventBus, reliable_consumer
+from app.core.i18n import I18n
 from app.core.metrics import JOURNEY_EVENT_CONSUMER_ERROR_TOTAL
 from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -91,8 +92,8 @@ class JourneyEventConsumerBase:
             build_system_update(
                 update_type="journey_consumer_error",
                 category="system",
-                title="系统正在补齐你的旅程数据",
-                description=("有一条初始化/规划事件暂时没有处理成功，系统会保留你的进度并自动重试。"),
+                title=I18n.t("journey_consumer.failure_title", locale="zh"),
+                description=I18n.t("journey_consumer.failure_desc", locale="zh"),
                 priority="medium",
                 metadata={
                     "consumer": self.CONSUMER_LABEL,

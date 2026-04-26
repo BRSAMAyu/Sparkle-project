@@ -340,7 +340,8 @@
     "focus_session_unavailable": "Sorry, focus session suggestions are temporarily unavailable.\n\nGeneral advice:\n- 🎯 Pomodoro Technique: 25 min focus + 5 min break\n- ⏰ Study during your peak energy hours\n- 📱 Put your phone on Do Not Disturb\n- 💧 Keep water nearby to avoid interruptions\n\nYou can request personalized focus suggestions again later.",
     "task_creation_unavailable": "Sorry, auto-create task is temporarily unavailable.\n\nYou can create tasks manually:\n1. Open the task list\n2. Click \"Add Task\"\n3. Fill in task details\n\nOr try auto-create again later.",
     "plan_creation_unavailable": "Sorry, auto-create plan is temporarily unavailable.\n\nYou can create plans manually:\n1. Open the plan page\n2. Click \"Create Plan\"\n3. Set learning goals and schedule\n\nOr try auto-create again later.",
-    "default_fallback": "Sorry, {tool} is temporarily unavailable.\n\nError details: {error}\n\nSuggestions:\n- Try again later\n- Check network connection\n- Contact support if the issue persists\n\nWe're working to restore service."
+    "default_fallback": "Sorry, {tool} is temporarily unavailable.\n\nError details: {error}\n\nSuggestions:\n- Try again later\n- Check network connection\n- Contact support if the issue persists\n\nWe're working to restore service.",
+    "retry_suggestion": "Please try again later for full functionality"
   },
   "agent_activity": {
     "orchestrator_name": "Orchestrator",
@@ -378,6 +379,57 @@
     "win_progress": "{node} has shown significant improvement recently",
     "win_mastery": "{node} mastery improved from {old}% to {new}%",
     "cold_start": "No stable error or mastery change signals yet. Treating as cold start."
+  },
+  "simulation": {
+    "scenario_key_desc": "Learning simulation scenario key",
+    "seed_topic_desc": "Simulation topic",
+    "source_chat_session_desc": "Source chat session ID",
+    "tool_desc": "Quickly run a learning simulation preview, suitable for study groups, knowledge debates, and role-playing",
+    "current_topic": "Current learning topic",
+    "launch_failed": "Failed to launch learning simulation: {exc}"
+  },
+  "error_tools": {
+    "record_success_suggestion": "Error recorded. Targeted training can be arranged.",
+    "record_fail_suggestion": "Failed to record error. Please check your input and try again.",
+    "query_fail_suggestion": "Failed to query error history. Please try again later."
+  },
+  "journey_consumer": {
+    "failure_title": "System is backfilling your journey data",
+    "failure_desc": "An initialization/planning event was not processed successfully. The system will retain your progress and retry automatically."
+  },
+  "welcome_onboarding": {
+    "default_nickname": "Student",
+    "title": "Welcome to Sparkle",
+    "desc": "{nickname}, your learning journey has started. I will continuously help complete your profile starting from the first plan and first progress."
+  },
+  "working_memory": {
+    "commitment_summary": "There is a commitment to consolidate in the current session",
+    "relationship_summary": "An interpersonal context was mentioned in the current session"
+  },
+  "prompts": {
+    "companion": {
+      "warmth_restrained": "Keep restrained and not overly exposed",
+      "warmth_stable": "With stable warmth",
+      "warmth_warm": "Noticeably warm but not clingy",
+      "warmth_proactive": "More proactively warm",
+      "candor_gentle": "Gently present judgments, leave the user room to process",
+      "candor_soft": "Stay gentle but do not avoid key facts",
+      "candor_direct": "Be direct about the point while being mindful of delivery",
+      "candor_blunt": "Be more direct in pointing out judgments and trade-offs",
+      "relationship_early": "Relationship is still early, go light and avoid assumptions",
+      "relationship_building": "Relationship is building, accumulate trust through consistent support and continuity",
+      "relationship_trusted": "Trust has been established, can be more direct",
+      "relationship_deepening": "Deeper relationship continuity, but still maintain boundaries and restraint",
+      "relationship_default": "Relationship continuity主要通过stability, honesty and memory",
+      "challenge_gentle": "Push with a lighter touch, do not pile pressure on the user",
+      "challenge_balanced": "Keep warmth and push balanced",
+      "challenge_firm": "Stand firm on key judgments when necessary, do not soften core reality",
+      "challenge_default": "Keep warmth and push balanced",
+      "truth_honest_warm": "Keep warmth when expressing honest judgments",
+      "truth_direct_structured": "Emphasize clarity, structure, and conclusions first",
+      "truth_gentle_reflective": "Tend to think through together, then gradually reach a conclusion",
+      "truth_default": "Stay honest, clear, and measured"
+    }
   },
   "session_feedback": {
     "visible_prefix_simplify": "Let me give you a simpler version: ",

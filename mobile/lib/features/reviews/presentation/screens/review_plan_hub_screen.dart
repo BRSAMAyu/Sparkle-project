@@ -89,7 +89,7 @@ class ReviewPlanHubScreen extends ConsumerWidget {
                       : (payload == null
                           ? context.l10n.reviewPlanHubNoNightlyReview
                           : context.l10n.reviewPlanHubHasNightlyReview),
-                  actionLabel: payload == null ? '查看复习页' : '查看今晚回顾',
+                  actionLabel: payload == null ? context.l10n.reviewPlanHubViewReview : context.l10n.reviewPlanHubViewTonight,
                   onAction: () => context.push('/review?mode=today'),
                 );
               },
@@ -161,7 +161,7 @@ class ReviewPlanHubScreen extends ConsumerWidget {
                     leading: const Icon(Icons.task_alt_rounded),
                     title: Text(task.title),
                     subtitle: Text(
-                      '${planNameMap[task.planId] ?? '计划任务'} · ${task.estimatedMinutes} 分钟',
+                      context.l10n.reviewPlanHubTaskSubtitle(planNameMap[task.planId] ?? context.l10n.reviewPlanHubPlanTask, task.estimatedMinutes),
                     ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => context.push('/tasks/${task.id}'),

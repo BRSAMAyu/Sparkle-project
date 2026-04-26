@@ -7,6 +7,7 @@ import (
 	"time"
 
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -191,13 +192,14 @@ func TestConvertResponseToJSONAddsUXProgressFromStatus(t *testing.T) {
 		},
 	}
 
-	result := convertResponseToJSON(context.Background(), resp)
+	ctx := i18n.WithLocale(context.Background(), "en")
+	result := convertResponseToJSON(ctx, resp)
 	meta, ok := result["metadata"].(map[string]interface{})
 	assert.True(t, ok)
 	uxProgress, ok := meta["ux_progress"].(map[string]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, "executing", uxProgress["stage"])
-	assert.Equal(t, "我在替你执行需要的步骤", uxProgress["headline"])
+	assert.Equal(t, "I am executing the necessary steps for you", uxProgress["headline"])
 }
 
 func TestConvertResponseToJSONDecodesExecutionProgressMetadata(t *testing.T) {

@@ -593,7 +593,7 @@ class AchievementMapNode {
     required this.rarity,
     required this.category,
     this.lane = 'prestige_lane',
-    this.laneLabel = '声望进阶线',
+    this.laneLabel = 'Prestige Lane',
     required this.position,
     required this.isUnlocked,
     this.isHidden = false,

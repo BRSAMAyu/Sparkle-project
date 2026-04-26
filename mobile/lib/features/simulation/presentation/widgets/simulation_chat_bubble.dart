@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/presentation/support/simulation_copy.dart';
 
@@ -89,16 +90,17 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
     final accent = _accentForSpeaker(widget.speaker);
     final isLeftAligned = widget.speaker.hashCode.isEven;
     final participant = widget.participant;
-    final localizedMessage = localizeSimulationText(widget.message);
+    final l10n = context.l10n;
+    final localizedMessage = localizeSimulationText(widget.message, l10n);
     final localizedRoleHint = localizeSimulationRoleHint(
-      participant?.roleHint ?? '',
+      participant?.roleHint ?? '', l10n,
     );
-    final localizedStance = localizeSimulationStance(participant?.stance);
+    final localizedStance = localizeSimulationStance(participant?.stance, l10n);
     final localizedAnchor = localizeSimulationText(
-      participant?.contextAnchor ?? '',
+      participant?.contextAnchor ?? '', l10n,
     );
     final localizedReplyTarget = localizeSimulationText(
-      widget.replyToSpeaker ?? '',
+      widget.replyToSpeaker ?? '', l10n,
     );
     final revealed = localizedMessage.substring(
       0,
@@ -177,7 +179,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '当前焦点发言',
+                            context.l10n.simulationBubbleSpotlight,
                             style: Theme.of(context)
                                 .textTheme
                                 .labelMedium
@@ -211,8 +213,8 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                           ),
                           const SizedBox(width: 6),
                           Flexible(
-                            child: Text(
-                              '承接 $localizedReplyTarget 的观点',
+                              child: Text(
+                                context.l10n.simulationBubbleReplyTo(localizedReplyTarget),
                               style: Theme.of(context)
                                   .textTheme
                                   .labelMedium
@@ -281,7 +283,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                                     ),
                                   if (localizedStance.isNotEmpty)
                                     _MetaPill(
-                                      label: '立场 $localizedStance',
+                                      label: context.l10n.simulationBubbleStance(localizedStance),
                                       foreground: DS.textSecondary,
                                       background:
                                           scheme.surface.withValues(alpha: 0.9),
@@ -371,18 +373,18 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                       runSpacing: 6,
                       children: [
                         if (widget.replyToSpeaker?.isNotEmpty ?? false)
-                          _MetaPill(label: '回应 $localizedReplyTarget'),
+                          _MetaPill(label: context.l10n.simulationBubbleReply(localizedReplyTarget)),
                         if (widget.turnGoal?.isNotEmpty ?? false)
                           _MetaPill(
                             icon: Icons.flag_rounded,
-                            label: localizeSimulationTurnGoal(widget.turnGoal!),
+                            label: localizeSimulationTurnGoal(widget.turnGoal!, context.l10n),
                           ),
                       ],
                     ),
                   ],
                   const SizedBox(height: 8),
                   Text(
-                    '第 ${widget.round} 轮',
+                    context.l10n.simulationBubbleRound(widget.round),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: DS.textSecondary,
                         ),
@@ -407,7 +409,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
     return palette[speaker.hashCode.abs() % palette.length];
   }
 
-  String _sourceLabel(String source) => localizeSimulationSource(source);
+  String _sourceLabel(String source) => localizeSimulationSource(source, context.l10n);
 
   IconData _speakerIcon(SimulationParticipantModel? participant) {
     final role = localizeSimulationRoleHint(participant?.roleHint ?? '')

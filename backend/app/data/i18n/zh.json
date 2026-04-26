@@ -340,7 +340,8 @@
     "focus_session_unavailable": "抱歉，专注时段建议服务暂时不可用。\n\n通用建议：\n- 🎯 番茄工作法：25分钟专注 + 5分钟休息\n- ⏰ 选择精力最好的时间段学习\n- 📱 将手机调至勿扰模式\n- 💧 准备水杯，避免中断\n\n稍后可再次请求个性化的专注时段建议。",
     "task_creation_unavailable": "抱歉，自动创建任务功能暂时不可用。\n\n你可以手动创建任务：\n1. 打开任务列表\n2. 点击“添加任务“\n3. 填写任务详情\n\n或者稍后再试自动创建功能。",
     "plan_creation_unavailable": "抱歉，自动创建计划功能暂时不可用。\n\n你可以手动创建计划：\n1. 打开计划页面\n2. 点击“创建计划“\n3. 设置学习目标和时间安排\n\n或者稍后再试自动创建功能。",
-    "default_fallback": "抱歉，{tool} 功能暂时不可用。\n\n错误详情：{error}\n\n建议：\n- 稍后再试\n- 检查网络连接\n- 如问题持续，请联系客服\n\n我们正在努力恢复服务。"
+    "default_fallback": "抱歉，{tool} 功能暂时不可用。\n\n错误详情：{error}\n\n建议：\n- 稍后再试\n- 检查网络连接\n- 如问题持续，请联系客服\n\n我们正在努力恢复服务。",
+    "retry_suggestion": "如需完整功能，请稍后再试"
   },
   "agent_activity": {
     "orchestrator_name": "协调器",
@@ -378,6 +379,57 @@
     "win_progress": "{node} 最近有明显进步",
     "win_mastery": "{node} 掌握度从 {old}% 提升到 {new}%",
     "cold_start": "当前没有足够稳定的错题或掌握度变化信号，按冷启动处理。"
+  },
+  "simulation": {
+    "scenario_key_desc": "学习模拟场景 key",
+    "seed_topic_desc": "模拟主题",
+    "source_chat_session_desc": "来源聊天会话 ID",
+    "tool_desc": "快速运行一个学习模拟预览，适合学习小组、知识辩论和角色扮演",
+    "current_topic": "当前学习主题",
+    "launch_failed": "启动学习模拟失败: {exc}"
+  },
+  "error_tools": {
+    "record_success_suggestion": "错题已记录，可继续安排针对性训练。",
+    "record_fail_suggestion": "记录错题失败，请检查输入内容后重试。",
+    "query_fail_suggestion": "历史错题查询失败，请稍后重试。"
+  },
+  "journey_consumer": {
+    "failure_title": "系统正在补齐你的旅程数据",
+    "failure_desc": "有一条初始化/规划事件暂时没有处理成功，系统会保留你的进度并自动重试。"
+  },
+  "welcome_onboarding": {
+    "default_nickname": "同学",
+    "title": "欢迎来到 Sparkle",
+    "desc": "{nickname}，你的学习旅程已经启动。我会从第一条计划和第一段进展开始持续帮你补齐画像。"
+  },
+  "working_memory": {
+    "commitment_summary": "当前会话里有一条待巩固承诺",
+    "relationship_summary": "当前会话里提到了一段人际语境"
+  },
+  "prompts": {
+    "companion": {
+      "warmth_restrained": "保持克制而不过度外露",
+      "warmth_stable": "带着稳定的温度感",
+      "warmth_warm": "明显温暖但不黏腻",
+      "warmth_proactive": "温暖感更主动一些",
+      "candor_gentle": "先轻放判断，给用户留出缓冲",
+      "candor_soft": "保持柔和但不回避关键事实",
+      "candor_direct": "直说重点，同时注意落点",
+      "candor_blunt": "会更直接地点明判断与代价",
+      "relationship_early": "关系还在建立早期，要轻一点、少预设",
+      "relationship_building": "关系正在建立，靠稳定承接和连续性来积累信任",
+      "relationship_trusted": "关系已有一定信任基础，可以更直接一些",
+      "relationship_deepening": "关系连续性更深了，但仍然要守住边界和节制",
+      "relationship_default": "关系连续性主要靠稳定、诚实和记忆感来体现",
+      "challenge_gentle": "推进时用更轻的力度，不把压力堆到用户身上",
+      "challenge_balanced": "推进时保持温度和力度都不过头",
+      "challenge_firm": "必要时稳稳顶住关键判断，不用软化核心现实",
+      "challenge_default": "推进时保持温度和力度都不过头",
+      "truth_honest_warm": "表达真实判断时保留温度",
+      "truth_direct_structured": "表达上更强调清晰、结构和结论先行",
+      "truth_gentle_reflective": "表达上更偏向陪着想清楚，再慢慢落到结论",
+      "truth_default": "表达上保持真实、清晰和有分寸"
+    }
   },
   "session_feedback": {
     "visible_prefix_simplify": "我换成更简洁的版本：",

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from app.core.i18n import I18n
 from app.schemas.error_book import ErrorQueryParams, ErrorRecordCreate, ErrorTypeEnum, SubjectEnum
 from app.services.error_book_service import ErrorBookService
 from app.tools.base import BaseTool, ToolCategory, ToolResult
@@ -57,7 +58,7 @@ class RecordErrorTool(BaseTool):
                 tool_name=self.name,
                 tool_call_id=tool_call_id,
                 data={"error_id": str(record.id)},
-                suggestion="错题已记录，可继续安排针对性训练。",
+                suggestion=I18n.t("error_tools.record_success_suggestion", locale="zh"),
             )
         except Exception as e:
             return ToolResult(
@@ -65,7 +66,7 @@ class RecordErrorTool(BaseTool):
                 tool_name=self.name,
                 tool_call_id=tool_call_id,
                 error_message=str(e),
-                suggestion="记录错题失败，请检查输入内容后重试。",
+                suggestion=I18n.t("error_tools.record_fail_suggestion", locale="zh"),
             )
 
 
@@ -117,6 +118,6 @@ class QueryErrorHistoryTool(BaseTool):
                 tool_name=self.name,
                 tool_call_id=tool_call_id,
                 error_message=str(e),
-                suggestion="历史错题查询失败，请稍后重试。",
+                suggestion=I18n.t("error_tools.query_fail_suggestion", locale="zh"),
             )
 

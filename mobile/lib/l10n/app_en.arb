@@ -179,7 +179,7 @@
   "featureInDevelopment": "Coming soon...",
   "sprintHistory": "Sprint History",
   "noSprintHistory": "No sprint history yet",
-  "loadingFailed": "Loading Failed",
+  "loadingFailed": "Load failed: {error}",
   "completionProgress": "Completion Progress",
   "tasksCompleted": "{completed}/{total} tasks",
   "sprintCompleted": "✅ Sprint completed and archived",
@@ -415,7 +415,7 @@
   "@achievementEventStartsAt": {
     "placeholders": {
       "time": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -423,7 +423,7 @@
   "@achievementEventEndsAt": {
     "placeholders": {
       "time": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -431,7 +431,7 @@
   "@achievementEventEndsIn": {
     "placeholders": {
       "time": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -457,10 +457,10 @@
   "@contractProgressLabel": {
     "placeholders": {
       "current": {
-        "type": "int"
+        "type": "Object"
       },
       "target": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -469,10 +469,10 @@
   "@contractMinutesTarget": {
     "placeholders": {
       "current": {
-        "type": "int"
+        "type": "Object"
       },
       "target": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -488,7 +488,7 @@
   "@contractDaysRemaining": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -504,7 +504,7 @@
   "@streakCalendarRange": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1328,7 +1328,7 @@
   "@leaderboardMyRank": {
     "placeholders": {
       "rank": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1336,7 +1336,7 @@
   "@leaderboardPoints": {
     "placeholders": {
       "value": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1417,7 +1417,7 @@
   "@taskFeedbackStreakDays": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1455,7 +1455,7 @@
   "@communityReadByCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1476,7 +1476,7 @@
   "@shareResourceGroupMembers": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1525,7 +1525,7 @@
   "@calendarReminderMinutes": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1533,7 +1533,7 @@
   "@calendarReminderHours": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1541,7 +1541,7 @@
   "@calendarReminderDays": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1646,7 +1646,7 @@
   "@capsulePersonalizationBadge": {
     "placeholders": {
       "pattern": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1654,7 +1654,7 @@
   "@capsulePersonalizationExplanation": {
     "placeholders": {
       "patterns": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1667,7 +1667,7 @@
   "@cognitiveFutureDays": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1675,7 +1675,7 @@
   "@cognitiveDaysLater": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1684,7 +1684,7 @@
   "@cognitiveDayTick": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1696,7 +1696,7 @@
   "@cognitiveReviewNow": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1710,7 +1710,7 @@
   "@prismTotalPatterns": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1719,7 +1719,7 @@
   "@capsuleCurrentTab": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1727,7 +1727,7 @@
   "@capsuleArchiveTab": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1740,7 +1740,7 @@
   "@capsuleGenerationPreviewCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1751,7 +1751,7 @@
   "@patternCardCreatedAt": {
     "placeholders": {
       "date": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1761,7 +1761,7 @@
   "@capsuleLoadFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1769,7 +1769,7 @@
   "@capsuleQualityLabel": {
     "placeholders": {
       "rating": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1777,7 +1777,7 @@
   "@capsuleFeedbackCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1785,7 +1785,7 @@
   "@capsuleShareCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1799,7 +1799,7 @@
   "@capsuleSubmitFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1813,7 +1813,7 @@
   "@capsuleGeneratingProgress": {
     "placeholders": {
       "progress": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1821,7 +1821,7 @@
   "@capsuleDepthPercent": {
     "placeholders": {
       "percent": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1829,7 +1829,7 @@
   "@capsuleCuriosityPercent": {
     "placeholders": {
       "percent": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1837,7 +1837,7 @@
   "@capsuleRequestedCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1845,7 +1845,7 @@
   "@capsuleActualCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1853,7 +1853,7 @@
   "@capsuleChipLabel": {
     "placeholders": {
       "id": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1873,7 +1873,7 @@
   "@patternDiscoveredOn": {
     "placeholders": {
       "date": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1889,7 +1889,7 @@
   "@chatHistoryLoadFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1897,7 +1897,7 @@
   "@chatHistoryLoadMoreFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -1966,7 +1966,7 @@
   "@chatTeamSheetSelectedExperts": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -1990,7 +1990,7 @@
   "@chatActiveToolsCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2005,7 +2005,7 @@
   "@chatExecutionStepsCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2014,10 +2014,10 @@
   "@chatModeTeamSummary": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       },
       "mode": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2088,28 +2088,28 @@
   "@errorBookCreatedAt": {
     "placeholders": {
       "date": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
   "@errorBookMasteryPercent": {
     "placeholders": {
       "percent": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
   "@errorBookKnowledgeLinkSnack": {
     "placeholders": {
       "nodeName": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
   "@errorBookDeleteFailedMessage": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2117,7 +2117,7 @@
   "@errorBookCognitiveFilter": {
     "placeholders": {
       "dimension": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2125,7 +2125,7 @@
   "@errorBookReviewCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2134,7 +2134,7 @@
   "@errorBookTimeAgoMinutes": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2142,7 +2142,7 @@
   "@errorBookTimeAgoHours": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2150,7 +2150,7 @@
   "@errorBookTimeAgoDays": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2166,10 +2166,10 @@
   "@reviewProgress": {
     "placeholders": {
       "current": {
-        "type": "int"
+        "type": "Object"
       },
       "total": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2185,7 +2185,7 @@
   "@reviewSubmitFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2196,7 +2196,7 @@
   "@reviewTotalReviewed": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2239,7 +2239,7 @@
   "@communityMembers": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2251,7 +2251,7 @@
   "@friendsConfirmDeleteFriend": {
     "placeholders": {
       "name": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2261,7 +2261,7 @@
   "@friendsFriendDeleted": {
     "placeholders": {
       "name": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2269,7 +2269,7 @@
   "@friendsDeleteFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2278,7 +2278,7 @@
   "@friendsAfterBlockingHint": {
     "placeholders": {
       "name": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2290,7 +2290,7 @@
   "@friendsBlockedSuccess": {
     "placeholders": {
       "name": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2298,7 +2298,7 @@
   "@friendsBlockFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2324,7 +2324,7 @@
   "@planProgressPercent": {
     "placeholders": {
       "percent": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2371,10 +2371,10 @@
   "@knowledgeSourceMaterialsSummary": {
     "placeholders": {
       "documents": {
-        "type": "int"
+        "type": "Object"
       },
       "chunks": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2413,7 +2413,7 @@
   "@knowledgeSourceMaterialsPage": {
     "placeholders": {
       "page": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2427,7 +2427,7 @@
   "@knowledgeSourceMaterialsChunk": {
     "placeholders": {
       "index": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2450,14 +2450,14 @@
   "@knowledgeDaysLater": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
   "@knowledgeWeeksLater": {
     "placeholders": {
       "weeks": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2489,7 +2489,7 @@
   "@seedLibraryDeleteFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -2532,21 +2532,21 @@
   "@translationMinutesAgo": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
   "@translationHoursAgo": {
     "placeholders": {
       "hours": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
   "@translationDaysAgo": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2650,8 +2650,8 @@
   "shareRegenerateCard": "Regenerate",
   "notificationPermissionStatus": "Notification Permission",
   "notificationPermissionGranted": "Granted",
-  "notificationPermissionDenied": "Denied",
-  "notificationPermissionPartial": "Partial",
+  "notificationPermissionDenied": "Notification permission denied, please enable in system settings",
+  "notificationPermissionPartial": "Some notification features are restricted, recommend enabling full permissions",
   "notificationPermissionRequest": "Request Permission",
   "notificationPermissionOpenSettings": "Open Settings",
   "notificationPermissionDeniedHint": "Notification permission denied. Please enable in system settings.",
@@ -2942,7 +2942,7 @@
   "@chatStudyMaterialsAvailable": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -2950,7 +2950,7 @@
   "@chatStudyMaterialsKnowledgeNodes": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -3030,7 +3030,7 @@
   "@groupFilesCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -3204,8 +3204,12 @@
   "planDetailCompressionDesc": "Only {taskCount} tasks / {totalMinutes} min kept today. Focus on getting the main thread back on track.",
   "@planDetailCompressionDesc": {
     "placeholders": {
-      "taskCount": {"type": "int"},
-      "totalMinutes": {"type": "int"}
+      "taskCount": {
+        "type": "Object"
+      },
+      "totalMinutes": {
+        "type": "Object"
+      }
     }
   },
   "planDetailCompressionTitle": "Today's plan has been streamlined",
@@ -3214,8 +3218,12 @@
   "planDetailDayGroupSubtitle": "{count} items · {minutes} min",
   "@planDetailDayGroupSubtitle": {
     "placeholders": {
-      "count": {"type": "int"},
-      "minutes": {"type": "int"}
+      "count": {
+        "type": "Object"
+      },
+      "minutes": {
+        "type": "Object"
+      }
     }
   },
   "planDetailDefaultRecommendation": "No new content today. Just review high-frequency topics, revisit past mistakes, and do a 30-min mini simulation.",
@@ -3231,15 +3239,21 @@
   "planDetailHealthScore": "Plan Health {score}% · {label}",
   "@planDetailHealthScore": {
     "placeholders": {
-      "score": {"type": "int"},
-      "label": {"type": "String"}
+      "score": {
+        "type": "Object"
+      },
+      "label": {
+        "type": "Object"
+      }
     }
   },
   "planDetailHealthStable": "Stable",
   "planDetailLearningPathLoadError": "Learning path progress failed to load: {error}",
   "@planDetailLearningPathLoadError": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "Object"
+      }
     }
   },
   "planDetailLoadError": "Plan Load Failed",
@@ -3248,21 +3262,27 @@
   "planDetailLoadErrorGeneric": "Plan details couldn't load: {error}",
   "@planDetailLoadErrorGeneric": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "Object"
+      }
     }
   },
   "planDetailLoadErrorTimeout": "Plan loading timed out. Please check your network and try again.",
   "planDetailMinutes": "{minutes} min",
   "@planDetailMinutes": {
     "placeholders": {
-      "minutes": {"type": "int"}
+      "minutes": {
+        "type": "Object"
+      }
     }
   },
   "planDetailNoPhasesYet": "No phases yet. Create the first phase to break your long-term plan into actionable segments.",
   "planDetailPhasesLoadError": "Phase loading failed: {error}",
   "@planDetailPhasesLoadError": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "Object"
+      }
     }
   },
   "planDetailPhasesTitle": "Plan Phases",
@@ -3270,14 +3290,20 @@
   "planDetailRecommendationDay1": "Focus on {thingLabel} today. You're already on the right track.",
   "@planDetailRecommendationDay1": {
     "placeholders": {
-      "thingLabel": {"type": "String"}
+      "thingLabel": {
+        "type": "Object"
+      }
     }
   },
   "planDetailRecommendationDayN": "Start with Day {day}'s {thingLabel} to keep your rhythm steady.",
   "@planDetailRecommendationDayN": {
     "placeholders": {
-      "day": {"type": "int"},
-      "thingLabel": {"type": "String"}
+      "day": {
+        "type": "Object"
+      },
+      "thingLabel": {
+        "type": "Object"
+      }
     }
   },
   "planDetailSprintMode7Day": "7-Day Sprint Mode",
@@ -3295,14 +3321,20 @@
   "planDetailTaskCount": "{completed}/{total} tasks",
   "@planDetailTaskCount": {
     "placeholders": {
-      "completed": {"type": "int"},
-      "total": {"type": "int"}
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
     }
   },
   "planDetailTaskDifficulty": "Difficulty {difficulty}",
   "@planDetailTaskDifficulty": {
     "placeholders": {
-      "difficulty": {"type": "String"}
+      "difficulty": {
+        "type": "Object"
+      }
     }
   },
   "planDetailTagErrorRepair": "Error Repair",
@@ -3311,7 +3343,9 @@
   "planDetailThingCountN": "these {count} tasks",
   "@planDetailThingCountN": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "planDetailTodayFocus": "Today's Focus",
@@ -3564,7 +3598,7 @@
   "@taskConfirmCompleteBody": {
     "placeholders": {
       "title": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3572,7 +3606,7 @@
   "@taskEstimatedMinutesValue": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -3697,7 +3731,7 @@
   "@learningPreferenceSaveFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3708,7 +3742,7 @@
   "@bgmPreviewTooltip": {
     "placeholders": {
       "palette": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3738,7 +3772,7 @@
   "@notificationLevelSwitched": {
     "placeholders": {
       "level": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3755,7 +3789,7 @@
   "@notificationLevelPreviewTitle": {
     "placeholders": {
       "level": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3771,7 +3805,7 @@
   "@notificationUpdateFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3786,7 +3820,7 @@
   "@aiReasoningModeSwitched": {
     "placeholders": {
       "mode": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3797,7 +3831,7 @@
   "@memoryUpdateValue": {
     "placeholders": {
       "date": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3805,7 +3839,7 @@
   "@memoryConfidenceValue": {
     "placeholders": {
       "value": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3813,10 +3847,10 @@
   "@memoryAllowedCaptureSummary": {
     "placeholders": {
       "types": {
-        "type": "String"
+        "type": "Object"
       },
       "level": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3826,7 +3860,7 @@
   "@memoryCorrectionSubmittedWithAction": {
     "placeholders": {
       "action": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3834,7 +3868,7 @@
   "@memoryCorrectionFailedWithDetail": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3849,7 +3883,7 @@
   "@taskReminderDaysAgo": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -3857,7 +3891,7 @@
   "@taskReminderHoursAgo": {
     "placeholders": {
       "hours": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -3865,18 +3899,15 @@
   "@taskReminderMinutesAgo": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
-  "notificationPermissionStatus": "Notification Permission",
-  "notificationPermissionDenied": "Notification permission denied, please enable in system settings",
-  "notificationPermissionPartial": "Some notification features are restricted, recommend enabling full permissions",
   "notificationPermissionDeniedTitle": "Not authorized: {error}",
   "@notificationPermissionDeniedTitle": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3927,7 +3958,7 @@
   "@bgmSectionSubtitleWithCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -3935,7 +3966,7 @@
   "@bgmLibraryUpdated": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -3959,7 +3990,7 @@
   "@bgmTrackLabel": {
     "placeholders": {
       "name": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3967,7 +3998,7 @@
   "@bgmSourceLabel": {
     "placeholders": {
       "label": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -3990,10 +4021,10 @@
   "@aiUsageRequests": {
     "placeholders": {
       "used": {
-        "type": "int"
+        "type": "Object"
       },
       "limit": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4001,10 +4032,10 @@
   "@aiUsageLatency": {
     "placeholders": {
       "firstToken": {
-        "type": "String"
+        "type": "Object"
       },
       "totalMs": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4025,7 +4056,7 @@
   "@aiOpsTopModeSummary": {
     "placeholders": {
       "topMode": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4041,16 +4072,16 @@
   "@aiOpsPredictionSummary": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       },
       "topAction": {
-        "type": "String"
+        "type": "Object"
       },
       "promptUtil": {
-        "type": "String"
+        "type": "Object"
       },
       "inferenceUtil": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4060,7 +4091,7 @@
   "@tracksCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4173,7 +4204,7 @@
   "@profileExportFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4192,7 +4223,7 @@
   "@dashboardBottleneckPrompt": {
     "placeholders": {
       "topic": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4205,7 +4236,7 @@
   "@dashboardOverdueDays": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4213,7 +4244,7 @@
   "@dashboardDaysLeft": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4222,7 +4253,7 @@
   "@dashboardMoreQueued": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4230,7 +4261,7 @@
   "@dashboardProgress": {
     "placeholders": {
       "percent": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4243,7 +4274,7 @@
   "@dashboardMoreTasksQueued": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4256,7 +4287,7 @@
   "@dashboardPhaseLabel": {
     "placeholders": {
       "phase": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4265,7 +4296,7 @@
   "@dashboardDaysToDeadline": {
     "placeholders": {
       "days": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4274,7 +4305,7 @@
   "@dashboardMessagesCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4282,7 +4313,7 @@
   "@dashboardAlertsCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4290,7 +4321,7 @@
   "@dashboardInsightsCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4300,7 +4331,7 @@
   "@planEditTypeTitle": {
     "placeholders": {
       "type": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4312,7 +4343,7 @@
   "@planGuideGenerationFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4346,7 +4377,7 @@
   "@planScheduleMinutesUnit": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4354,7 +4385,7 @@
   "@planScheduleTotalHours": {
     "placeholders": {
       "hours": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4378,10 +4409,10 @@
   "@planTasksMinutesDifficulty": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       },
       "difficulty": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4410,13 +4441,13 @@
   "@planReviewSummary": {
     "placeholders": {
       "planType": {
-        "type": "String"
+        "type": "Object"
       },
       "minutes": {
-        "type": "int"
+        "type": "Object"
       },
       "hours": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4430,7 +4461,7 @@
   "@taskExecutionStuckTaskLabel": {
     "placeholders": {
       "title": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4438,7 +4469,7 @@
   "@taskExecutionStuckEstimatedTime": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4446,7 +4477,7 @@
   "@taskExecutionStuckFocusCue": {
     "placeholders": {
       "cue": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4454,7 +4485,7 @@
   "@taskExecutionStuckSteps": {
     "placeholders": {
       "steps": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4462,7 +4493,7 @@
   "@taskExecutionStuckCriteria": {
     "placeholders": {
       "criteria": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4470,7 +4501,7 @@
   "@taskExecutionStuckSuggestion": {
     "placeholders": {
       "suggestion": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4481,7 +4512,7 @@
   "@taskExecutionAuroraDiagnosticUnavailable": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4495,7 +4526,7 @@
   "@taskExecutionAiHandedOff": {
     "placeholders": {
       "status": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4510,7 +4541,7 @@
   "@taskExecutionAiStatusLabel": {
     "placeholders": {
       "status": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4520,10 +4551,10 @@
   "@taskExecutionValidationLabel": {
     "placeholders": {
       "passed": {
-        "type": "int"
+        "type": "Object"
       },
       "total": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4531,7 +4562,7 @@
   "@taskExecutionResultLabel": {
     "placeholders": {
       "text": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4539,7 +4570,7 @@
   "@taskExecutionApprovalRequestLabel": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4547,10 +4578,10 @@
   "@taskExecutionGoalWithTrust": {
     "placeholders": {
       "goal": {
-        "type": "String"
+        "type": "Object"
       },
       "trust": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4558,7 +4589,7 @@
   "@taskExecutionResultTrust": {
     "placeholders": {
       "trust": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4566,7 +4597,7 @@
   "@taskExecutionTemplateLabel": {
     "placeholders": {
       "name": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4574,7 +4605,7 @@
   "@taskExecutionStrategyLabel": {
     "placeholders": {
       "variant": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4582,7 +4613,7 @@
   "@taskExecutionNodeLabel": {
     "placeholders": {
       "label": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -4609,7 +4640,7 @@
   "@taskExecutionMetricQueuedTasks": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4667,7 +4698,7 @@
   "@planDetailDayLabel": {
     "placeholders": {
       "day": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4675,7 +4706,7 @@
   "@planDetailWeightedProgress": {
     "placeholders": {
       "percent": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -4731,16 +4762,16 @@
   "@planDetailPhaseStats": {
     "placeholders": {
       "progress": {
-        "type": "int"
+        "type": "Object"
       },
       "completed": {
-        "type": "int"
+        "type": "Object"
       },
       "occurrences": {
-        "type": "int"
+        "type": "Object"
       },
       "tasks": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5045,7 +5076,9 @@
   "predictedIntentConfidence": "Confidence {percent}%",
   "@predictedIntentConfidence": {
     "placeholders": {
-      "percent": { "type": "int" }
+      "percent": {
+        "type": "Object"
+      }
     }
   },
   "predictedIntentWhy": "Why the system predicts this",
@@ -5073,27 +5106,37 @@
   "predictedFreshnessMinutes": "{count} min ago",
   "@predictedFreshnessMinutes": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "predictedFreshnessHours": "{count} hr ago",
   "@predictedFreshnessHours": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "predictedFreshnessDays": "{count} d ago",
   "@predictedFreshnessDays": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "predictedCategoryPrefTitle": "Recent same-category signal",
   "predictedCategoryPrefHint": "Inside {category}, recent results have more often favored \"{tool}\" first.",
   "@predictedCategoryPrefHint": {
     "placeholders": {
-      "category": { "type": "String" },
-      "tool": { "type": "String" }
+      "category": {
+        "type": "Object"
+      },
+      "tool": {
+        "type": "Object"
+      }
     }
   },
   "predictedCategoryPrefCaveat": "Based only on recent results inside this request category. It does not mean Sparkle understands your whole workflow.",
@@ -5124,14 +5167,18 @@
   "examSprintStreakDays": "{days} d",
   "@examSprintStreakDays": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "Object"
+      }
     }
   },
   "examSprintKeepRhythm": "Keep the rhythm",
   "examSprintHighYieldWeak": "High-yield weak spots: {topics}",
   "@examSprintHighYieldWeak": {
     "placeholders": {
-      "topics": { "type": "String" }
+      "topics": {
+        "type": "Object"
+      }
     }
   },
   "examSprintNoTasksToday": "No sprint tasks scheduled today.",
@@ -5147,27 +5194,39 @@
   "examSprintCountdown": "{days} days until exam",
   "@examSprintCountdown": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "Object"
+      }
     }
   },
   "examSprintTodayTasks": "Today: {completed}/{total} tasks",
   "@examSprintTodayTasks": {
     "placeholders": {
-      "completed": { "type": "int" },
-      "total": { "type": "int" }
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
     }
   },
-  "examSprintDaysLeft": "{days} days left",
+  "examSprintDaysLeft": "{days} left until the exam",
   "@examSprintDaysLeft": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "Object"
+      }
     }
   },
   "examSprintTodayDone": "Today {completed}/{total} done",
   "@examSprintTodayDone": {
     "placeholders": {
-      "completed": { "type": "int" },
-      "total": { "type": "int" }
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
     }
   },
   "examSprintTodaySprintTasks": "Today Sprint Tasks",
@@ -5175,28 +5234,40 @@
   "examSprintShowLater": "Show next {count} days",
   "@examSprintShowLater": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "examSprintDayIndex": "Day {index}",
   "@examSprintDayIndex": {
     "placeholders": {
-      "index": { "type": "int" }
+      "index": {
+        "type": "Object"
+      }
     }
   },
   "examSprintDateFormat": "{month}/{day}",
   "@examSprintDateFormat": {
     "placeholders": {
-      "month": { "type": "int" },
-      "day": { "type": "int" }
+      "month": {
+        "type": "Object"
+      },
+      "day": {
+        "type": "Object"
+      }
     }
   },
   "examSprintNoSprintTasks": "No sprint tasks yet",
   "examSprintMinLabel": "{minutes} min · {status}",
   "@examSprintMinLabel": {
     "placeholders": {
-      "minutes": { "type": "int" },
-      "status": { "type": "String" }
+      "minutes": {
+        "type": "Object"
+      },
+      "status": {
+        "type": "Object"
+      }
     }
   },
   "examSprintStatusDone": "Done",
@@ -5206,7 +5277,9 @@
   "insightHubRecommendedSeeds": "{count} recommended scenarios ready to simulate.",
   "@insightHubRecommendedSeeds": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "insightHubFallbackSummary": "Simulations, what-ifs, and reports — now in one lighter learning flow.",
@@ -5221,7 +5294,9 @@
   "insightHubSeedsToExplore": "{count} scenarios to explore",
   "@insightHubSeedsToExplore": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "insightHubCompactFallback": "Simulations, what-ifs, and reports now in one card",
@@ -5230,20 +5305,26 @@
   "insightHubContinueTopic": "Continue {topic}",
   "@insightHubContinueTopic": {
     "placeholders": {
-      "topic": { "type": "String" }
+      "topic": {
+        "type": "Object"
+      }
     }
   },
   "insightHubContinueLastSimulation": "Continue last simulation",
   "insightHubRecommendedSeedsCount": "{count} scenarios",
   "@insightHubRecommendedSeedsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "insightHubContinueSession": "Continue {topic}",
   "@insightHubContinueSession": {
     "placeholders": {
-      "topic": { "type": "String" }
+      "topic": {
+        "type": "Object"
+      }
     }
   },
   "insightHubStartSimulation": "Start a new simulation",
@@ -5251,7 +5332,9 @@
   "insightHubMasteryPercent": "Mastery {percent}%",
   "@insightHubMasteryPercent": {
     "placeholders": {
-      "percent": { "type": "int" }
+      "percent": {
+        "type": "Object"
+      }
     }
   },
   "insightHubRefreshFailed": "Some insight content failed to refresh. Showing existing content.",
@@ -5266,7 +5349,7 @@
   "@memoryPanelConfidenceValue": {
     "placeholders": {
       "value": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5274,7 +5357,7 @@
   "@memoryPanelConflictFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5285,7 +5368,7 @@
   "@memoryPanelCorrectionCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5294,7 +5377,7 @@
   "@memoryPanelDeviationsDetected": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5307,7 +5390,7 @@
   "@memoryPanelDismissFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5324,7 +5407,7 @@
   "@memoryPanelImportanceValue": {
     "placeholders": {
       "value": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5332,7 +5415,7 @@
   "@memoryPanelItemCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5340,7 +5423,7 @@
   "@memoryPanelLoadFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5348,7 +5431,7 @@
   "@memoryPanelMarkFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5361,7 +5444,7 @@
   "@memoryPanelRevokeFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5372,10 +5455,10 @@
   "@memoryPanelSceneMemories": {
     "placeholders": {
       "time": {
-        "type": "String"
+        "type": "Object"
       },
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5384,7 +5467,7 @@
   "@memoryPanelValidUntil": {
     "placeholders": {
       "policy": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5392,25 +5475,43 @@
   "theaterWhatIfCombinedResult": "Original {originalMastery}% / {originalCompletion}%  →  Adjusted {predictedMastery}% / {predictedCompletion}%",
   "@theaterWhatIfCombinedResult": {
     "placeholders": {
-      "originalMastery": { "type": "String" },
-      "originalCompletion": { "type": "String" },
-      "predictedMastery": { "type": "String" },
-      "predictedCompletion": { "type": "String" }
+      "originalMastery": {
+        "type": "Object"
+      },
+      "originalCompletion": {
+        "type": "Object"
+      },
+      "predictedMastery": {
+        "type": "Object"
+      },
+      "predictedCompletion": {
+        "type": "Object"
+      }
     }
   },
   "theaterAccuracyPredictedActual": "Predicted {predictedCompletion}% / {predictedMastery}%, Actual {actualCompletion}% / {actualMastery}%",
   "@theaterAccuracyPredictedActual": {
     "placeholders": {
-      "predictedCompletion": { "type": "String" },
-      "predictedMastery": { "type": "String" },
-      "actualCompletion": { "type": "String" },
-      "actualMastery": { "type": "String" }
+      "predictedCompletion": {
+        "type": "Object"
+      },
+      "predictedMastery": {
+        "type": "Object"
+      },
+      "actualCompletion": {
+        "type": "Object"
+      },
+      "actualMastery": {
+        "type": "Object"
+      }
     }
   },
   "theaterPerDayUnit": "{minutes} min/day",
   "@theaterPerDayUnit": {
     "placeholders": {
-      "minutes": { "type": "String" }
+      "minutes": {
+        "type": "Object"
+      }
     }
   },
   "simulationTitle": "Scenario Simulation",
@@ -5501,7 +5602,7 @@
   "@simulationBridgeCurrentlyVerifyingFormat": {
     "placeholders": {
       "routeTitle": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5510,7 +5611,7 @@
   "@simulationBridgeVerificationDescWithTarget": {
     "placeholders": {
       "targetName": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5519,7 +5620,7 @@
   "@simulationInteractionModeFormat": {
     "placeholders": {
       "mode": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5531,7 +5632,7 @@
   "@simulationCurrentFocusFormat": {
     "placeholders": {
       "speaker": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5539,7 +5640,7 @@
   "@simulationTopicFormat": {
     "placeholders": {
       "topic": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5547,10 +5648,10 @@
   "@simulationTopicAndSpeakerFormat": {
     "placeholders": {
       "topic": {
-        "type": "String"
+        "type": "Object"
       },
       "speaker": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5558,7 +5659,7 @@
   "@simulationRoundN": {
     "placeholders": {
       "round": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5566,7 +5667,7 @@
   "@simulationRoleCountFormat": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5574,10 +5675,10 @@
   "@simulationRunningRoundN": {
     "placeholders": {
       "round": {
-        "type": "int"
+        "type": "Object"
       },
       "total": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5585,7 +5686,7 @@
   "@simulationRoundViewpoints": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5593,7 +5694,7 @@
   "@simulationRoleCountLong": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5601,10 +5702,10 @@
   "@simulationRoundFormatLabel": {
     "placeholders": {
       "current": {
-        "type": "int"
+        "type": "Object"
       },
       "max": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5612,7 +5713,7 @@
   "@simulationRoundSliderLabel": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5621,7 +5722,7 @@
   "@simulationParticipantCurrentStatus": {
     "placeholders": {
       "names": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5629,7 +5730,7 @@
   "@simulationBulletParticipants": {
     "placeholders": {
       "names": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5637,7 +5738,7 @@
   "@simulationBulletRounds": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5645,7 +5746,7 @@
   "@simulationBulletOpening": {
     "placeholders": {
       "message": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5653,10 +5754,10 @@
   "@simulationRoundFormatShort": {
     "placeholders": {
       "current": {
-        "type": "int"
+        "type": "Object"
       },
       "total": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -5665,7 +5766,7 @@
   "@simulationContinueTopicLabel": {
     "placeholders": {
       "topic": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5673,7 +5774,7 @@
   "@simulationContinueScenarioLabel": {
     "placeholders": {
       "label": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5681,7 +5782,7 @@
   "@simulationContinueCurrentQuestion": {
     "placeholders": {
       "question": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5689,7 +5790,7 @@
   "@simulationContinueMyResponse": {
     "placeholders": {
       "reply": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5702,7 +5803,7 @@
   "@simulationReportGenerationFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5712,13 +5813,13 @@
   "@simulationShareCreated": {
     "placeholders": {
       "topic": {
-        "type": "String"
+        "type": "Object"
       },
       "scenario": {
-        "type": "String"
+        "type": "Object"
       },
       "insight": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5726,7 +5827,7 @@
   "@simulationShareTitle": {
     "placeholders": {
       "topic": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5734,13 +5835,13 @@
   "@simulationShareRawText": {
     "placeholders": {
       "topic": {
-        "type": "String"
+        "type": "Object"
       },
       "scenario": {
-        "type": "String"
+        "type": "Object"
       },
       "insight": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5749,10 +5850,10 @@
   "@simulationTopicCurrentFocusFormat": {
     "placeholders": {
       "topic": {
-        "type": "String"
+        "type": "Object"
       },
       "speaker": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5760,7 +5861,7 @@
   "@simulationCurrentFocusLabel": {
     "placeholders": {
       "speaker": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5768,10 +5869,10 @@
   "@simulationImmersiveTopicAndFocus": {
     "placeholders": {
       "topic": {
-        "type": "String"
+        "type": "Object"
       },
       "speaker": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -5831,7 +5932,7 @@
   "@simulationBulletOpeningFormat": {
     "placeholders": {
       "message": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6122,108 +6223,108 @@
   "openclawHubRetryQueuedSuccess": "{count} queued tasks resubmitted",
   "@openclawHubRetryQueuedSuccess": {
     "placeholders": {
-        "count": {
-          "type": "int"
-        }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubLastExecutionStatus": "Last execution status is \"{status}\". Continue reviewing connection, queue, and activity from here.",
   "@openclawHubLastExecutionStatus": {
     "placeholders": {
-        "status": {
-          "type": "String"
-        }
+      "status": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubPendingDelegationsDesc": "You have {count} delegations waiting for the connection to come back. Reconnecting the engine first will be most effective.",
   "@openclawHubPendingDelegationsDesc": {
     "placeholders": {
-        "count": {
-          "type": "int"
-        }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubQueuedTasksCount": "{count} queued tasks",
   "@openclawHubQueuedTasksCount": {
     "placeholders": {
-        "count": {
-          "type": "int"
-        }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubNodeCount": "{count} nodes",
   "@openclawHubNodeCount": {
     "placeholders": {
-        "count": {
-          "type": "int"
-        }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubAutomationCount": "{count} automations",
   "@openclawHubAutomationCount": {
     "placeholders": {
-        "count": {
-          "type": "int"
-        }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubLatestBatch": "Latest batch {completed}/{total}",
   "@openclawHubLatestBatch": {
     "placeholders": {
-        "completed": {
-          "type": "int"
-        },
-        "total": {
-          "type": "int"
-        }
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubLastTrustLabel": "Last trust assessment: {label}",
   "@openclawHubLastTrustLabel": {
     "placeholders": {
-        "label": {
-          "type": "String"
-        }
+      "label": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubDevicesSummaryActiveWithCount": "Currently discovered {count} nodes. You can assign preferred devices for browser, terminal, document, and API tasks here. When offline, Sparkle will automatically find fallback nodes.",
   "@openclawHubDevicesSummaryActiveWithCount": {
     "placeholders": {
-        "count": {
-          "type": "int"
-        }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubAutomationSummaryActiveWithCount": "{count} automations are currently running. Batch delegation summaries and scheduled task statuses will continuously aggregate here.",
   "@openclawHubAutomationSummaryActiveWithCount": {
     "placeholders": {
-        "count": {
-          "type": "int"
-        }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubTaskLabel": "Task {taskId}",
   "@openclawHubTaskLabel": {
     "placeholders": {
-        "taskId": {
-          "type": "String"
-        }
+      "taskId": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubTaskLabelTemplate": "Template {templateId}",
   "@openclawHubTaskLabelTemplate": {
     "placeholders": {
-        "templateId": {
-          "type": "String"
-        }
+      "templateId": {
+        "type": "Object"
+      }
     }
   },
   "openclawHubTaskLabelSource": "Source {source}",
   "@openclawHubTaskLabelSource": {
     "placeholders": {
-        "source": {
-          "type": "String"
-        }
+      "source": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailFriendlyError": "The system couldn't complete this operation right now. Please try again later.",
@@ -6294,103 +6395,103 @@
   "seedLibraryDetailApplyFailed": "Apply failed: {error}",
   "@seedLibraryDetailApplyFailed": {
     "placeholders": {
-        "error": {
-          "type": "String"
-        }
+      "error": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailSetPrimaryFailed": "Set primary failed: {error}",
   "@seedLibraryDetailSetPrimaryFailed": {
     "placeholders": {
-        "error": {
-          "type": "String"
-        }
+      "error": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailMarkNotSuitableFailed": "Record failed: {error}",
   "@seedLibraryDetailMarkNotSuitableFailed": {
     "placeholders": {
-        "error": {
-          "type": "String"
-        }
+      "error": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailCurrentStatus": "Current status: {status} · Priority {priority}",
   "@seedLibraryDetailCurrentStatus": {
     "placeholders": {
-        "status": {
-          "type": "String"
-        },
-        "priority": {
-          "type": "int"
-        }
+      "status": {
+        "type": "Object"
+      },
+      "priority": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailUsageAppliedEnabled": "Now in effect. {hint} The system will use it alongside other active seed libraries by priority.",
   "@seedLibraryDetailUsageAppliedEnabled": {
     "placeholders": {
-        "hint": {
-          "type": "String"
-        }
+      "hint": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailUsageSubscribedNotEnabled": "Subscribed but not enabled. Once enabled, {hint}.",
   "@seedLibraryDetailUsageSubscribedNotEnabled": {
     "placeholders": {
-        "hint": {
-          "type": "String"
-        }
+      "hint": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailUsageNotApplied": "Not yet applied. Once applied, {hint}.",
   "@seedLibraryDetailUsageNotApplied": {
     "placeholders": {
-        "hint": {
-          "type": "String"
-        }
+      "hint": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailCurrentRating": "Current rating: {score} / 10",
   "@seedLibraryDetailCurrentRating": {
     "placeholders": {
-        "score": {
-          "type": "String"
-        }
+      "score": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailRatingFailed": "Rating failed: {error}",
   "@seedLibraryDetailRatingFailed": {
     "placeholders": {
-        "error": {
-          "type": "String"
-        }
+      "error": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailAddItemFailed": "Add failed: {error}",
   "@seedLibraryDetailAddItemFailed": {
     "placeholders": {
-        "error": {
-          "type": "String"
-        }
+      "error": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailImportResult": "Import complete: {imported} succeeded, {failed} failed",
   "@seedLibraryDetailImportResult": {
     "placeholders": {
-        "imported": {
-          "type": "int"
-        },
-        "failed": {
-          "type": "int"
-        }
+      "imported": {
+        "type": "Object"
+      },
+      "failed": {
+        "type": "Object"
+      }
     }
   },
   "seedLibraryDetailImportFailed": "Import failed: {error}",
   "@seedLibraryDetailImportFailed": {
     "placeholders": {
-        "error": {
-          "type": "String"
-        }
+      "error": {
+        "type": "Object"
+      }
     }
   },
   "recommendationTargetFallback": "Recommended",
@@ -6398,8 +6499,12 @@
   "recommendationFeedbackAbout": "{stage} feedback about {target}",
   "@recommendationFeedbackAbout": {
     "placeholders": {
-      "target": { "type": "String" },
-      "stage": { "type": "String" }
+      "target": {
+        "type": "Object"
+      },
+      "stage": {
+        "type": "Object"
+      }
     }
   },
   "recommendationFeedbackHint": "Your feedback will directly update the next round of recommendation weights",
@@ -6409,7 +6514,9 @@
   "recommendationRecentCount": "Last {count} times",
   "@recommendationRecentCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "Object"
+      }
     }
   },
   "recommendationFriendLearningHint": "The system is learning whether you value similarity, complementarity, or collaboration comfort more.",
@@ -6417,13 +6524,17 @@
   "recommendationSystemAvoiding": "System is avoiding: {signals}",
   "@recommendationSystemAvoiding": {
     "placeholders": {
-      "signals": { "type": "String" }
+      "signals": {
+        "type": "Object"
+      }
     }
   },
   "recommendationCurrentlyBiasing": "Currently leaning toward: {metrics}",
   "@recommendationCurrentlyBiasing": {
     "placeholders": {
-      "metrics": { "type": "String" }
+      "metrics": {
+        "type": "Object"
+      }
     }
   },
   "recommendationListSeparator": ", ",
@@ -6431,7 +6542,9 @@
   "recommendationFeedbackSubtitle": "Your rating of {subject} will directly influence the recommendation algorithm.",
   "@recommendationFeedbackSubtitle": {
     "placeholders": {
-      "subject": { "type": "String" }
+      "subject": {
+        "type": "Object"
+      }
     }
   },
   "recommendationScoreOverall": "Overall impression",
@@ -6455,14 +6568,20 @@
   "recommendationMatchingStrategy": "Matching strategy: {name}",
   "@recommendationMatchingStrategy": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "Object"
+      }
     }
   },
   "recommendationGroupSubtitle": "{count} members · {tags}",
   "@recommendationGroupSubtitle": {
     "placeholders": {
-      "count": { "type": "String" },
-      "tags": { "type": "String" }
+      "count": {
+        "type": "Object"
+      },
+      "tags": {
+        "type": "Object"
+      }
     }
   },
   "recommendationPublicGroup": "Public community",
@@ -6518,7 +6637,7 @@
   "@personaDegradedMode": {
     "placeholders": {
       "message": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6527,7 +6646,7 @@
   "@personaActiveGoal": {
     "placeholders": {
       "goalTitle": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6535,10 +6654,10 @@
   "@personaLearningPreference": {
     "placeholders": {
       "learningStyle": {
-        "type": "String"
+        "type": "Object"
       },
       "responseDepth": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6546,7 +6665,7 @@
   "@personaObservedPattern": {
     "placeholders": {
       "pattern": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6554,7 +6673,7 @@
   "@personaCognitiveClueCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -6566,7 +6685,7 @@
   "@personaLoadFailedError": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6584,7 +6703,7 @@
   "@personaSourcePattern": {
     "placeholders": {
       "pattern": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6593,7 +6712,7 @@
   "@personaCorrectionSubmitFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6602,7 +6721,7 @@
   "@personaPreferenceUpdateFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6611,7 +6730,7 @@
   "@personaRollbackFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6620,7 +6739,7 @@
   "@personaGoalUpdateFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6629,7 +6748,7 @@
   "@personaAdjustFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6638,7 +6757,7 @@
   "@personaRestoreFailed": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6652,7 +6771,7 @@
   "@examSprintMinutesPerDay": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -6662,14 +6781,6 @@
   "examSprintStep2Date": "2. When is the exam?",
   "examSprintSelectDate": "Select exam date",
   "examSprintDateHint": "The date determines sprint duration and pace",
-  "examSprintDaysLeft": "{days} left until the exam",
-  "@examSprintDaysLeft": {
-    "placeholders": {
-      "days": {
-        "type": "String"
-      }
-    }
-  },
   "examSprintStep3Target": "3. Pass, maintain, or aim high?",
   "examSprintStep4Scope": "4. Any exam scope or teacher highlights?",
   "examSprintStep4Subtitle": "Paste key points or upload PDF / DOCX / PPT / TXT.",
@@ -6680,7 +6791,7 @@
   "@examSprintUploadedCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -6691,7 +6802,7 @@
   "@examSprintMinutesPerDayLabel": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -6699,7 +6810,7 @@
   "@examSprintMinutesLabel": {
     "placeholders": {
       "minutes": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -6715,7 +6826,7 @@
   "@examSprintPassProbability": {
     "placeholders": {
       "percent": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -6723,7 +6834,7 @@
   "@examSprintRecommendedMode": {
     "placeholders": {
       "mode": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6739,7 +6850,7 @@
   "@examSprintDayCount": {
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -6753,7 +6864,7 @@
   "@memorySettingsLoadError": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6761,7 +6872,7 @@
   "@memorySettingsSaveError": {
     "placeholders": {
       "error": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6795,7 +6906,7 @@
   "@memorySettingsCurrentTimezone": {
     "placeholders": {
       "timezone": {
-        "type": "String"
+        "type": "Object"
       }
     }
   },
@@ -6821,647 +6932,1256 @@
   "memorySettingsBlockSourceDesc": "Restrict which entry points won't write to long-term memory.",
   "memorySettingsSaveButton": "Save settings",
   "memorySettingsSaving": "Saving...",
-   "reportLearningAnalysisReport": "Learning Analysis Report",
-   "reportContinuationSubtitle": "Continue viewing the analysis report for this learning journey",
-   "reportPartialDataDisclaimer": "Partial data, for reference only",
-   "reportPartialDataMessage": "Generated from partial learning records. Results may not be comprehensive.",
-   "reportDiagnosisPanelEyebrow": "Learning Diagnosis Panel",
-   "reportOpenGalaxy": "Open Knowledge Galaxy",
-   "reportPrioritizeNode": "Prioritize {nodeName}",
-   "@reportPrioritizeNode": {
-     "placeholders": {
-       "nodeName": {
-         "type": "String"
-       }
-     }
-   },
-   "reportRangeWeek": "This Week",
-   "reportRangeMonth": "This Month",
-   "reportRangeAll": "All",
-   "reportCurrentLearningTopic": "Current learning topic",
-   "reportMasteryTrendTitle": "Mastery Trend",
-   "reportPartialDataPill": "Partial data, for reference only",
-   "reportTrendEmptyTitle": "Trend analysis will appear after more learning",
-   "reportTrendEmptyMessage": "Not enough real learning records to generate a trend yet. Complete learning tasks, exercises, or reviews first.",
-   "reportTrendChartHint": "Drag or tap a data point to see the trend line alongside study effort at that time.",
-   "reportRadarChartTitle": "Mastery Radar Chart",
-   "reportRadarSubtitleInsufficient": "Mastery analysis will appear after more learning",
-   "reportRadarSubtitleNoComparison": "Tap any dimension for detailed mastery info",
-   "reportRadarSubtitleWithComparison": "Previous outline overlaid. Tap dimensions for details.",
-   "reportRadarEmptyMessage": "The radar chart needs real learning records. Start a learning session first.",
-   "reportKeyMetricsTitle": "Key Metrics",
-   "reportMetricTotalMastery": "Total Mastery",
-   "reportMetricKnowledgeCount": "Knowledge Points",
-   "reportMetricStrengths": "Strengths",
-   "reportMetricWeaknesses": "Weaknesses",
-   "reportExecutionProfileLoadFailed": "Execution profile couldn't load. You can still read the learning report.",
-   "reportKeyDimensionsTitle": "Key Knowledge Dimensions",
-   "reportAiAnalysisTitle": "AI Analysis Report",
-   "reportBackToGalaxy": "Back to Galaxy",
-   "reportViewSprintHistory": "View Sprint History",
-   "reportShareTitle": "Learning Report · Avg Mastery {mastery}%",
-   "@reportShareTitle": {
-     "placeholders": {
-       "mastery": {
-         "type": "int"
-       }
-     }
-   },
-   "reportShareSubtitleSummary": "Learning analysis summary",
-   "reportShareSubtitlePriority": "Priority: Strengthen {nodeName}",
-   "@reportShareSubtitlePriority": {
-     "placeholders": {
-       "nodeName": {
-         "type": "String"
-       }
-     }
-   },
-   "reportShareMetadataDimensions": "{count} dimensions",
-   "@reportShareMetadataDimensions": {
-     "placeholders": {
-       "count": {
-         "type": "int"
-       }
-     }
-   },
-   "reportShareMessageWithMastery": "I just generated a learning analysis report on Sparkle. Average mastery: {mastery}%.",
-   "@reportShareMessageWithMastery": {
-     "placeholders": {
-       "mastery": {
-         "type": "int"
-       }
-     }
-   },
-   "reportShareMessageWithNode": "I just generated a learning analysis report on Sparkle. Current priority: strengthen {nodeName}.",
-   "@reportShareMessageWithNode": {
-     "placeholders": {
-       "nodeName": {
-         "type": "String"
-       }
-     }
-   },
-   "reportHeroTitlePriority": "The first thing to close out is {nodeName}",
-   "@reportHeroTitlePriority": {
-     "placeholders": {
-       "nodeName": {
-         "type": "String"
-       }
-     }
-   },
-   "reportHeroTitleStable": "Your stable zone is taking shape",
-   "reportHeroTitleBuild": "Build a foundation with real learning records first",
-   "reportHeroSubtitleDeltaUp": "Mastery is still rising, but {nodeName} remains the biggest drag on progress. Prioritize it for the best return.",
-   "@reportHeroSubtitleDeltaUp": {
-     "placeholders": {
-       "nodeName": {
-         "type": "String"
-       }
-     }
-   },
-   "reportHeroSubtitleDeltaDown": "There's been a slight dip. Don't expand scope — stabilize {nodeName} first.",
-   "@reportHeroSubtitleDeltaDown": {
-     "placeholders": {
-       "nodeName": {
-         "type": "String"
-       }
-     }
-   },
-   "reportHeroSubtitleStrong": "This report puts your strengths, weaknesses, and trends on one panel. Focus on what matters, then decide your next step.",
-   "reportHeroSubtitleDefault": "Use this report to confirm your direction. As more records come in, trends will get clearer.",
-   "reportMetricAvgMastery": "Avg Mastery",
-   "reportMetricPriority": "Priority",
-   "reportMetricCurrentStrength": "Current Strength",
-   "reportMetricTrendChange": "Trend Change",
-   "reportPlaceholderEmpty": "No learning report data yet.",
-   "reportContinueReading": "Continue Reading Report",
-   "reportEvidenceAndAdvice": "Evidence & Suggestions",
-   "reportGotIt": "Got it",
-   "reportMasteryStable": "Stable",
-   "reportMasteryConsolidate": "Can Consolidate",
-   "reportMasteryNeedFocus": "Needs Focus",
-   "reportGuidanceStable": "This topic is fairly solid. Keep it sharp with application and transfer exercises.",
-   "reportGuidanceConsolidate": "The basics are in place, but performance may waver in multi-step problems. Another round of deliberate practice would help.",
-   "reportGuidanceNeedFocus": "This is a clear weak spot. Go back to definitions, examples, and prerequisites before reattempting exercises.",
-   "reportChartFirstReport": "Your first report is ready. Come back next time and a trend line will appear here.",
-   "reportChartMasteryLabel": "Mastery {mastery}%",
-   "@reportChartMasteryLabel": {
-     "placeholders": {
-       "mastery": {
-         "type": "int"
-       }
-     }
-   },
-   "reportChartStudyMinutes": "Study time {minutes} min",
-   "@reportChartStudyMinutes": {
-     "placeholders": {
-       "minutes": {
-         "type": "int"
-       }
-     }
-   },
-   "reportChartMinutesShort": "{count} min",
-   "@reportChartMinutesShort": {
-     "placeholders": {
-       "count": {
-         "type": "int"
-       }
-     }
-   },
-   "reportChartZeroMinutes": "0 min",
-   "reportLegendMastery": "Mastery",
-   "reportLegendStudyDuration": "Study Duration",
-   "reportDiagnosisSummaryTitle": "Diagnosis Summary",
-   "reportDiagnosisSummaryDesc": "Three key questions: where are you strongest, where should you focus, and are you trending up or stalling?",
-   "reportDiagnosisTitleStrength": "Current Strength",
-   "reportDiagnosisTitleWeakness": "Main Weakness",
-   "reportDiagnosisTitleTrend": "Overall Trend",
-   "reportDiagnosisHeadlinePending": "Pending",
-   "reportDiagnosisStrengthBodyPending": "Once more learning records are generated, your strongest knowledge point will appear here.",
-   "reportDiagnosisStrengthBodyData": "Use it as leverage for transfer practice to shore up related topics.",
-   "reportDiagnosisWeaknessBodyPending": "Not enough data to pinpoint a weakness yet.",
-   "reportDiagnosisWeaknessBodyData": "This is the best place to start. Go back to definitions, examples, and prerequisites.",
-   "reportDiagnosisWeaknessFallback": "Weakness",
-   "reportDiagnosisTrendWaitingComparison": "Awaiting comparison",
-   "reportDiagnosisTrendBodyPending": "After one or two more reports, your trend will appear here.",
-   "reportDiagnosisTrendBodyUp": "Mastery is rising. Focus on consolidation and transfer.",
-   "reportDiagnosisTrendBodyDown": "Slight dip recently. Narrow your scope and close current gaps first.",
-   "reportTagConsolidate": "Keep consolidating",
-   "reportTagProcessFirst": "Process first",
-   "reportTagProcessSoon": "Process soon",
-   "reportTagKeepRhythm": "Keep current rhythm",
-   "reportTagCloseGap": "Close the gap",
-   "reportTagAwaitMore": "Awaiting more data",
-   "reportTagObserve": "Keep observing",
-   "reportActionTitle": "Next Steps",
-   "reportActionDescNoWeakness": "Visit Knowledge Galaxy to confirm your current structure, then generate more practice data for sharper suggestions.",
-   "reportActionDescWithWeakness": "Close out {weakNode} first, then use {strongNode} for transfer practice to raise overall mastery faster.",
-   "@reportActionDescWithWeakness": {
-     "placeholders": {
-       "weakNode": {
-         "type": "String"
-       },
-       "strongNode": {
-         "type": "String"
-       }
-     }
-   },
-   "reportActionExploreNode": "Explore {nodeName}",
-   "@reportActionExploreNode": {
-     "placeholders": {
-       "nodeName": {
-         "type": "String"
-       }
-     }
-   },
-   "reportActionWeaknessFallback": "Weakness",
-   "reportActionStrengthFallback": "Current Strength",
-   "reportActionEnterSimulation": "Enter Simulation",
-   "reportTrendAutoFillTitle": "Trends will fill in as more reports are generated",
-   "reportTrendFirstReportMessage": "Your first report is ready. Focus on weak spots based on this diagnosis. Next time, a trend line will start to form.",
-   "reportTrendLoadingHistory": "Loading your learning report history. Mastery trends will appear here shortly.",
-   "reportAiExecutionAssistant": "AI Execution Assistant",
-   "reportAiExecutionDesc": "Sparkle remembers which tasks are better handled by AI and how much time those delegations actually saved you.",
-   "reportStatTotalExecutions": "Total Executions",
-   "reportStatUnitTimes": "times",
-   "reportStatSuccessRate": "Success Rate",
-   "reportStatTimeSaved": "Time Saved",
-   "reportStatUnitHours": "hrs",
-   "reportStatUnitMinutes": "min",
-   "reportStatByTypeFormat": "{key}: {count} times · {rate}%",
-   "@reportStatByTypeFormat": {
-     "placeholders": {
-       "key": {
-         "type": "String"
-       },
-       "count": {
-         "type": "int"
-       },
-       "rate": {
-         "type": "int"
-       }
-     }
-   },
-   "bgmLibraryTitle": "BGM Library & Player",
-   "bgmLibraryRefresh": "Refresh",
-   "bgmLibraryNoImport": "No new tracks imported",
-   "bgmLibraryImportedCount": "Imported {count} local tracks",
-   "@bgmLibraryImportedCount": {
-     "placeholders": {
-       "count": {
-         "type": "int"
-       }
-     }
-   },
-   "bgmLibraryPlayingSwitched": "Playing {title}, switched to player mode",
-   "@bgmLibraryPlayingSwitched": {
-     "placeholders": {
-       "title": {
-         "type": "String"
-       }
-     }
-   },
-   "bgmLibraryRemoved": "Removed {title}",
-   "@bgmLibraryRemoved": {
-     "placeholders": {
-       "title": {
-         "type": "String"
-       }
-     }
-   },
-   "bgmLibraryEmptyFilter": "No tracks match the current filter. Try changing the filter or importing local music.",
-   "bgmLibraryNotPlaying": "Not playing",
-   "bgmLibraryWaitingPlay": "Waiting to play",
-   "bgmLibraryBrowseHint": "You can play any track from the library directly here",
-   "bgmLibraryNowPlaying": "Now Playing",
-   "bgmLibraryPlayerMode": "Player Mode",
-   "bgmLibraryPlayerModeDesc": "In player mode, music won't be interrupted by page navigation. Great for using Sparkle as an ambient music player.",
-   "bgmLibraryEnableBgm": "Enable Background Music",
-   "bgmLibraryDisableHint": "When off, the player page won't play background music either",
-   "bgmLibraryQuickStrategy": "Quick Strategy",
-   "bgmLibraryQuickStrategyDesc": "The most common adjustments are here. Full settings are still available in the Settings page.",
-   "bgmLibraryStyleOrientation": "Style Orientation",
-   "bgmLibraryIntensityLabel": "Ambience Intensity",
-   "bgmLibraryVarietyLabel": "Rotation Rhythm",
-   "bgmLibraryStats": "Library Status",
-   "bgmLibraryTotalTracks": "Total Tracks",
-   "bgmLibraryCurated": "Curated",
-   "bgmLibraryImportedLabel": "Local Import",
-   "bgmLibraryBundled": "System Fallback",
-   "bgmLibraryImportDir": "Local import directory: {path}",
-   "@bgmLibraryImportDir": {
-     "placeholders": {
-       "path": {
-         "type": "String"
-       }
-     }
-   },
-   "bgmLibraryCacheDir": "Download cache directory: {path}",
-   "@bgmLibraryCacheDir": {
-     "placeholders": {
-       "path": {
-         "type": "String"
-       }
-     }
-   },
-   "bgmLibraryDirReadyNote": "Both directories are ready. This supports a lightweight approach where only a few tracks are bundled, and the rest are downloaded from the server.",
-   "bgmLibraryImportManage": "Import & Manage",
-   "bgmLibraryImportManageDesc": "Import your own ambient music. Playing any track will automatically switch to player mode, and navigation won't interrupt playback.",
-   "bgmLibraryImportLocal": "Import Local Songs",
-   "bgmLibrarySearchHint": "Search tracks, albums, or scene tags",
-   "bgmLibraryFilterAll": "All",
-   "bgmLibraryPlaying": "Playing",
-   "bgmLibraryPlay": "Play",
-   "bgmLibraryRemove": "Remove",
-   "bgmLibraryTags": "Tags",
-   "bgmLibraryStyle": "Style",
-   "bgmLibraryEnergy": "Energy",
-   "bgmLibraryDensity": "Density",
-   "bgmLibraryModeAdaptive": "Follow Page",
-   "bgmLibraryModeContinuous": "Player Mode",
-   "bgmLibraryModeFocusOnly": "Focus Only",
-   "bgmLibraryModeSilent": "Silent",
-   "bgmLibraryPaletteAdaptive": "Adaptive",
-   "bgmLibraryPaletteClassical": "Classical",
-   "bgmLibraryPalettePiano": "Piano",
-   "bgmLibraryPaletteAiry": "Airy",
-   "bgmLibraryPaletteWarm": "Warm",
-   "bgmLibraryIntensityGentle": "Gentle",
-   "bgmLibraryIntensityBalanced": "Balanced",
-   "bgmLibraryIntensityLush": "Lush",
-   "bgmLibraryVarietySteady": "Steady",
-   "bgmLibraryVarietyBalanced": "Balanced",
-   "bgmLibraryVarietyDynamic": "Dynamic",
-   "bgmLibrarySourceCurated": "Curated",
-   "bgmLibrarySourceImported": "Local Import",
-   "bgmLibrarySourceBundled": "System Fallback",
-   "galaxyDraftReviewScreenTitle": "Review knowledge stars",
-   "galaxyDraftReviewPromptTitle": "We found {count} knowledge stars in your {documentName}! Review them?",
-   "@galaxyDraftReviewPromptTitle": {
-     "placeholders": {
-       "count": {
-         "type": "int"
-       },
-       "documentName": {
-         "type": "String"
-       }
-     }
-   },
-   "galaxyDraftReviewPromptBody": "You decide what belongs in your galaxy. Approve, skip, merge, or rename each draft before it becomes part of your map.",
-   "galaxyDraftReviewNow": "Review now",
-   "galaxyDraftReviewLater": "Later",
-   "galaxyDraftPendingIndicator": "{batchCount} pending review · {draftCount} stars",
-   "@galaxyDraftPendingIndicator": {
-     "placeholders": {
-       "batchCount": {
-         "type": "int"
-       },
-       "draftCount": {
-         "type": "int"
-       }
-     }
-   },
-   "galaxyDraftReviewProgress": "Star {current} of {total}",
-   "@galaxyDraftReviewProgress": {
-     "placeholders": {
-       "current": {
-         "type": "int"
-       },
-       "total": {
-         "type": "int"
-       }
-     }
-   },
-   "galaxyDraftCompletionReady": "Ready to send them into your galaxy",
-   "galaxyDraftLongPressHint": "Swipe right to approve, swipe left to skip, or long-press to rename the draft before you keep it.",
-   "galaxyDraftLongPressShort": "Long-press to edit",
-   "galaxyDraftApprove": "Approve",
-   "galaxyDraftSkip": "Skip",
-   "galaxyDraftMerge": "Merge",
-   "galaxyDraftExcerpts": "What this star contains",
-   "galaxyDraftSimilarityLabel": "Similar to existing node: {nodeName} ({percent}%)",
-   "@galaxyDraftSimilarityLabel": {
-     "placeholders": {
-       "nodeName": {
-         "type": "String"
-       },
-       "percent": {
-         "type": "int"
-       }
-     }
-   },
-   "galaxyDraftEditTitle": "Tune this knowledge star",
-   "galaxyDraftNameLabel": "Node name",
-   "galaxyDraftDescriptionLabel": "Description",
-   "galaxyDraftEditSave": "Save changes",
-   "galaxyDraftReviewEmptyTitle": "No pending stars right now",
-   "galaxyDraftReviewEmptyBody": "When document processing finishes, draft knowledge stars will land here for your approval.",
-   "galaxyDraftBackToGalaxy": "Back to galaxy",
-   "galaxyDraftCompletionTitle": "{accepted} of {total} knowledge stars added",
-   "@galaxyDraftCompletionTitle": {
-     "placeholders": {
-       "accepted": {
-         "type": "int"
-       },
-       "total": {
-         "type": "int"
-       }
-     }
-   },
-   "galaxyDraftCompletionBody": "The stars you kept from {documentName} are ready to fly into your map.",
-   "@galaxyDraftCompletionBody": {
-     "placeholders": {
-       "documentName": {
-         "type": "String"
-       }
-     }
-   },
-   "galaxyDraftCompletionNothingAdded": "You skipped these drafts for now. They can always come back later.",
-   "galaxyDraftCompletionSummary": "{accepted} of {total} knowledge stars added to your galaxy!",
-   "@galaxyDraftCompletionSummary": {
-     "placeholders": {
-       "accepted": {
-         "type": "int"
-       },
-       "total": {
-         "type": "int"
-       }
-     }
-   },
-   "galaxyUploadFabLabel": "Add study material",
-   "galaxyUploadDocumentHere": "Upload document here",
-   "galaxyNodeAddMaterial": "Add material to this node",
-   "galaxyUploadTargetGalaxyCore": "Galaxy core",
-   "galaxyUploadTargetSelectedConstellation": "this constellation",
-   "galaxyUploadAlreadyInProgress": "A study material is already joining your constellation.",
-   "galaxyUploadStatusUploading": "Uploading...",
-   "galaxyUploadStatusQueued": "Upload complete. Holding orbit...",
-   "galaxyUploadStatusExtracting": "Extracting content...",
-   "galaxyUploadStatusFindingKnowledge": "Finding knowledge...",
-   "galaxyUploadStatusBuildingNodes": "Weaving new stars...",
-   "galaxyUploadSuccessTitle": "Processing complete!",
-   "galaxyUploadSuccessBody": "Processing complete! {count} knowledge concepts found.",
-   "@galaxyUploadSuccessBody": {
-     "placeholders": {
-       "count": {
-         "type": "int"
-       }
-     }
-   },
-   "galaxyUploadSuccessChip": "{count} concepts found",
-   "@galaxyUploadSuccessChip": {
-     "placeholders": {
-       "count": {
-         "type": "int"
-       }
-     }
-   },
-   "galaxyUploadFailedTitle": "That star didn't quite land",
-   "galaxyUploadFailedBody": "The document slipped out of the constellation before it could settle. Try again when you're ready.",
-   "galaxyUploadRetry": "Retry upload",
-   "galaxyUploadHeadingTo": "Heading toward {target}",
-   "@galaxyUploadHeadingTo": {
-     "placeholders": {
-       "target": {
-         "type": "String"
-       }
-     }
-   },
-    "galaxyUploadStepUpload": "Upload",
-    "galaxyUploadStepExtract": "Extract",
-    "galaxyUploadStepFind": "Find",
-    "galaxyUploadStepComplete": "Complete",
-    "executionEngineTitle": "AI Execution Engine",
-    "executionConnectionSuccess": "Connection successful",
-    "executionConnectionFailure": "Connection failed",
-    "executionConfigSavedConnected": "Configuration saved and connected",
-    "executionConfigSavedUnavailable": "Configuration saved, but the engine is currently unreachable",
-    "executionResultPreview": "Result Preview",
-    "executionReplay": "Execution Replay",
-    "executionSelfVerification": "Self-Verification",
-    "executionSelfVerificationHint": "Validation Hint",
-    "executionResultComparison": "Result Comparison",
-    "executionAdoptResult": "Adopt Result",
-    "executionRejectResult": "Request Changes",
-    "executionViewDetails": "View Details",
-    "executionCollapseDetails": "Collapse",
-    "executionQueueAction": "Queue for Later",
-    "executionConnectEngine": "Connect the AI Execution Engine First",
-    "executionEngineOffline": "AI execution engine is offline",
-    "executionEngineNotConnected": "AI execution engine is not connected",
-    "executionOfflineQueueTitle": "Offline Waiting Queue",
-    "executionAboutEngineTitle": "What is the AI Execution Engine?",
-    "executionAboutEngineBody": "The AI execution engine (OpenClaw) can automate web research, document digestion, and similar tasks. Run OpenClaw on your computer and connect it here.",
-    "taskCopyAiPrompt": "Copy AI prompt",
-    "taskObjective": "Objective",
-    "taskEstimatedTime": "Estimated Time",
-    "taskCompletionCriteria": "Completion Criteria",
-    "taskSteps": "Steps",
-    "taskKeyPoints": "Key Points",
-    "taskStartFocus": "Start Focus",
-    "taskOpenAiAssistant": "Open AI Assistant",
-    "taskAiGenerate": "AI Generate",
-    "knowledgeMasteryLevelMastered": "Mastered",
-    "knowledgeMasteryLevelPracticing": "Practicing",
-    "knowledgeMasteryLevelBeginner": "Beginner",
-    "knowledgeMasteryLevelUntouched": "Not Started",
-    "executionStatusDraft": "Draft",
-    "executionStatusReady": "Ready",
-    "executionStatusQueued": "Queued",
-    "executionStatusDispatched": "Dispatched",
-    "executionStatusRunning": "Running",
-    "executionStatusWaitingApproval": "Waiting Approval",
-    "executionStatusSucceeded": "Succeeded",
-    "executionStatusPartial": "Partial",
-    "executionStatusFailed": "Failed",
-    "executionStatusCanceled": "Canceled",
-    "executionStatusTimedOut": "Timed Out",
-    "executionStatusHandedBack": "Handed Back",
-    "executionStatusUnknown": "Unknown",
-    "stuckHelpTitle": "Don't worry, let's see where you're stuck",
-    "stuckHelpAskAi": "Want to ask AI for help?",
-    "stuckHelpChatWithSparkle": "Chat with Sparkle about this",
-    "stuckHelpContinue": "OK, continue",
-    "stuckHelpSuggestion1": "Write down exactly where you're stuck",
-    "stuckHelpSuggestion2": "Try a smaller sub-problem",
-    "stuckHelpSuggestion3": "Complete what you do know first",
-    "stuckHelpSuggestion4": "Give yourself a 5-minute timer",
-    "stuckHelpSuggestion5": "Mark this point and continue with other parts",
-    "stuckHelpAuroraSteps": "Aurora Two-Step Help",
-    "stuckHelpFallbackOrder": "Fallback order when stuck",
-    "stuckHelpWhatToDo": "What to do",
-    "stuckHelpDiagnose": "Diagnose",
-    "stuckHelpFix": "Precise Fix",
-    "taskQuickActionSnoozed": "Snoozed until tomorrow. Lighter day ahead.",
-    "taskQuickActionTooHard": "Broken down. Start with the first small step.",
-    "taskQuickActionSkipped": "Skipped. This card won't bother you for now.",
-    "taskQuickActionAdjusted": "All set.",
-    "taskQuickActionSnoozing": "Moving it to tomorrow...",
-    "taskQuickActionSimplifying": "Breaking this card into smaller pieces...",
-    "taskQuickActionSkipping": "Got it, removing it from today...",
-    "executionResultNoText": "No text result available.",
-    "executionResultNoStructured": "No structured result fields.",
-    "executionResultNoCode": "No code result available.",
-    "executionResultNoLinks": "No links available.",
-    "executionResultArtifacts": "Artifacts",
-    "executionResultMoreFields": "{count} more fields",
-    "executionResultNoPreview": "Current artifact type is {type}. No detailed preview available yet.",
-    "executionResultLinkCopied": "Link copied",
-    "executionResultCopyLink": "Copy Link",
-    "executionResultArtifactType": "Type: {type}",
-    "executionResultArtifactFallback": "Attachment",
-    "commonDone": "Done",
-    "onboardingVoiceInput": "Voice Input",
-    "onboardingVoiceInputEn": "Voice Input",
-    "onboardingVoiceInputDesc": "Enable the microphone so you can speak goals and questions naturally.",
-    "onboardingVoiceInputDescEn": "Enable the microphone so you can speak goals and questions naturally.",
-    "onboardingPermissionEnable": "Enable",
-    "onboardingPermissionEnabled": "Enabled",
-    "onboardingPermissionReady": "Ready to go, and you can change this later in Settings",
-    "onboardingPermissionPending": "You can turn this on later in Settings",
-    "onboardingPermissionWorking": "Working...",
-    "homeNotificationUnreadMessages": "{count} unread messages",
-    "homeNotificationUnreadNotifications": "{count} unread notifications",
-    "splashSubtitle": "From the first second, step into a learning journey that's smarter and warmer.",
-    "@homeNotificationUnreadMessages": {
-      "placeholders": {
-        "count": { "type": "int" }
+  "reportLearningAnalysisReport": "Learning Analysis Report",
+  "reportContinuationSubtitle": "Continue viewing the analysis report for this learning journey",
+  "reportPartialDataDisclaimer": "Partial data, for reference only",
+  "reportPartialDataMessage": "Generated from partial learning records. Results may not be comprehensive.",
+  "reportDiagnosisPanelEyebrow": "Learning Diagnosis Panel",
+  "reportOpenGalaxy": "Open Knowledge Galaxy",
+  "reportPrioritizeNode": "Prioritize {nodeName}",
+  "@reportPrioritizeNode": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
       }
-    },
-    "@homeNotificationUnreadNotifications": {
-      "placeholders": {
-        "count": { "type": "int" }
-      }
-    },
-    "taskGuidePanelCollapse": "Collapse Guide",
-    "taskGuidePanelExpand": "Expand Guide",
-    "taskGuidePanelEstimatedTimeCustom": "Estimated time: at your own pace",
-    "taskGuidePanelEstimatedTimeMinutes": "Estimated time: {minutes} min",
-    "taskGuidePanelTodayFocus": "Today's Focus",
-    "taskGuidePanelSteps": "Steps",
-    "taskGuidePanelKeyHints": "Key Hints",
-    "taskGuidePanelCompletionCriteria": "Completion Criteria",
-    "taskGuidePanelTapToMark": "Tap to mark completed criteria.",
-    "taskGuidePanelCommonMistakes": "Common Traps",
-    "taskGuidePanelNoDetailedGuide": "No detailed guide yet. Start with one small step you can determine.",
-    "taskGuidePanelFailSafeRule": "Fail-Safe Rule",
-    "taskGuidePanelFailSafeRuleContent": "Fail-safe: {rule}",
-    "taskGuidePanelAskAiTriggers": "Ask AI when these happen",
-    "taskGuidePanelStepInProgress": "In Progress",
-    "taskGuidePanelCompletedSteps": "{completed}/{total} completed",
-    "taskGuidePanelCompletedCriteria": "{completed}/{total}",
-    "taskGuidePanelExpectedOutput": "Expected output: {output}",
-    "taskGuidePanelFallbackLastStep": "Finally do a minimal check with {output}.",
-    "taskGuidePanelFallbackLastStepDefault": "Finally do a minimal check to confirm you really got it.",
-    "taskGuidePanelFallbackSplitStep": "Break this step into something you can start right now.",
-    "taskGuidePanelFallbackOutput1": "Leave the starting framework or keywords for this step.",
-    "taskGuidePanelFallbackOutput2": "Complete one independent output without looking at the answer.",
-    "taskGuidePanelFallbackOutput3": "Mark the key gaps and add a reminder.",
-    "taskGuidePanelFallbackOutputCheck": "Complete minimal check: {check}.",
-    "taskGuidePanelFallbackOutputCheckDefault": "Complete the minimal check. Make sure it's not just comprehension.",
-    "reviewPlanHubTitle": "Review Plan Hub",
-    "reviewPlanHubTodayList": "Today's Review List",
-    "reviewPlanHubNightlyReview": "Nightly Review",
-    "reviewPlanHubNoActivePlan": "No Active Plan Yet",
-    "reviewPlanHubStartToday": "Start Today's Review",
-    "reviewPlanHubOpenReview": "Open Review Page",
-    "reviewPlanHubViewReview": "View Review Page",
-    "reviewPlanHubViewTonight": "View Tonight's Review",
-    "reviewPlanHubCreatePlan": "Create a Plan",
-    "reviewPlanHubStartTodayReview": "Start Today's Review",
-    "reviewPlanHubHeroDescription": "Combine error reviews, nightly review, and plan tasks in one place.",
-    "reviewPlanHubHeroSubtitle": "This doesn't replace the review page. It prioritizes what's worth revisiting today.",
-    "reviewPlanHubPlanIntegration": "Plan Integration",
-    "reviewPlanHubTodayPlanTasks": "Today's Priority Plan Tasks",
-    "reviewPlanHubNoDueErrors": "No errors due today. You can still check plan tasks and nightly review.",
-    "reviewPlanHubHasErrors": "{count} errors due for review today. Prioritize high-urgency reviews.",
-    "reviewPlanHubNoNightlyReview": "No nightly review generated yet. Main review is fine for now.",
-    "reviewPlanHubHasNightlyReview": "The system has generated a nightly review. Good for wrapping up.",
-    "reviewPlanHubNightlyUnavailable": "Nightly review unavailable. Continue with today's review.",
-    "@taskGuidePanelEstimatedTimeMinutes": {
-      "placeholders": { "minutes": { "type": "int" } }
-    },
-    "@taskGuidePanelFailSafeRuleContent": {
-      "placeholders": { "rule": { "type": "String" } }
-    },
-    "@taskGuidePanelCompletedSteps": {
-      "placeholders": { "completed": { "type": "int" }, "total": { "type": "int" } }
-    },
-    "@taskGuidePanelCompletedCriteria": {
-      "placeholders": { "completed": { "type": "int" }, "total": { "type": "int" } }
-    },
-    "@taskGuidePanelExpectedOutput": {
-      "placeholders": { "output": { "type": "String" } }
-    },
-    "@taskGuidePanelFallbackLastStep": {
-      "placeholders": { "output": { "type": "String" } }
-    },
-    "@taskGuidePanelFallbackOutputCheck": {
-      "placeholders": { "check": { "type": "String" } }
-    },
-    "@reviewPlanHubHasErrors": {
-      "placeholders": { "count": { "type": "int" } }
-    },
-    "reviewPlanHubLoadFailed": "Review list temporarily failed to load: {error}",
-    "reviewPlanHubCreatePlanFirst": "Create a growth or sprint plan first. The review hub will then connect plan tasks with your review rhythm.",
-    "reviewPlanHubNoPlanTasks": "No plan-linked tasks for today. Review errors or add tasks to your plan.",
-    "reviewPlanHubSprintProgress": "Sprint {percent}% · {days} days left",
-    "reviewPlanHubGrowthProgress": "Growth {percent}% · Mastery {mastery}%",
-    "reviewPlanHubPlanTask": "Plan Task",
-    "reviewPlanHubTaskSubtitle": "{plan} · {minutes} min",
-    "taskQuickActionSnooze": "Snooze until tomorrow",
-    "taskQuickActionTooHardLabel": "Mark as too hard",
-    "taskQuickActionSkip": "Skip",
-    "taskQuickActionHelp": "Ask for help",
-    "@reviewPlanHubLoadFailed": {
-      "placeholders": { "error": { "type": "String" } }
-    },
-    "@reviewPlanHubSprintProgress": {
-      "placeholders": { "percent": { "type": "int" }, "days": { "type": "int" } }
-    },
-    "@reviewPlanHubGrowthProgress": {
-      "placeholders": { "percent": { "type": "int" }, "mastery": { "type": "int" } }
-    },
-    "@reviewPlanHubTaskSubtitle": {
-      "placeholders": { "plan": { "type": "String" }, "minutes": { "type": "int" } }
     }
+  },
+  "reportRangeWeek": "This Week",
+  "reportRangeMonth": "This Month",
+  "reportRangeAll": "All",
+  "reportCurrentLearningTopic": "Current learning topic",
+  "reportMasteryTrendTitle": "Mastery Trend",
+  "reportPartialDataPill": "Partial data, for reference only",
+  "reportTrendEmptyTitle": "Trend analysis will appear after more learning",
+  "reportTrendEmptyMessage": "Not enough real learning records to generate a trend yet. Complete learning tasks, exercises, or reviews first.",
+  "reportTrendChartHint": "Drag or tap a data point to see the trend line alongside study effort at that time.",
+  "reportRadarChartTitle": "Mastery Radar Chart",
+  "reportRadarSubtitleInsufficient": "Mastery analysis will appear after more learning",
+  "reportRadarSubtitleNoComparison": "Tap any dimension for detailed mastery info",
+  "reportRadarSubtitleWithComparison": "Previous outline overlaid. Tap dimensions for details.",
+  "reportRadarEmptyMessage": "The radar chart needs real learning records. Start a learning session first.",
+  "reportKeyMetricsTitle": "Key Metrics",
+  "reportMetricTotalMastery": "Total Mastery",
+  "reportMetricKnowledgeCount": "Knowledge Points",
+  "reportMetricStrengths": "Strengths",
+  "reportMetricWeaknesses": "Weaknesses",
+  "reportExecutionProfileLoadFailed": "Execution profile couldn't load. You can still read the learning report.",
+  "reportKeyDimensionsTitle": "Key Knowledge Dimensions",
+  "reportAiAnalysisTitle": "AI Analysis Report",
+  "reportBackToGalaxy": "Back to Galaxy",
+  "reportViewSprintHistory": "View Sprint History",
+  "reportShareTitle": "Learning Report · Avg Mastery {mastery}%",
+  "@reportShareTitle": {
+    "placeholders": {
+      "mastery": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportShareSubtitleSummary": "Learning analysis summary",
+  "reportShareSubtitlePriority": "Priority: Strengthen {nodeName}",
+  "@reportShareSubtitlePriority": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportShareMetadataDimensions": "{count} dimensions",
+  "@reportShareMetadataDimensions": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportShareMessageWithMastery": "I just generated a learning analysis report on Sparkle. Average mastery: {mastery}%.",
+  "@reportShareMessageWithMastery": {
+    "placeholders": {
+      "mastery": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportShareMessageWithNode": "I just generated a learning analysis report on Sparkle. Current priority: strengthen {nodeName}.",
+  "@reportShareMessageWithNode": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportHeroTitlePriority": "The first thing to close out is {nodeName}",
+  "@reportHeroTitlePriority": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportHeroTitleStable": "Your stable zone is taking shape",
+  "reportHeroTitleBuild": "Build a foundation with real learning records first",
+  "reportHeroSubtitleDeltaUp": "Mastery is still rising, but {nodeName} remains the biggest drag on progress. Prioritize it for the best return.",
+  "@reportHeroSubtitleDeltaUp": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportHeroSubtitleDeltaDown": "There's been a slight dip. Don't expand scope — stabilize {nodeName} first.",
+  "@reportHeroSubtitleDeltaDown": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportHeroSubtitleStrong": "This report puts your strengths, weaknesses, and trends on one panel. Focus on what matters, then decide your next step.",
+  "reportHeroSubtitleDefault": "Use this report to confirm your direction. As more records come in, trends will get clearer.",
+  "reportMetricAvgMastery": "Avg Mastery",
+  "reportMetricPriority": "Priority",
+  "reportMetricCurrentStrength": "Current Strength",
+  "reportMetricTrendChange": "Trend Change",
+  "reportPlaceholderEmpty": "No learning report data yet.",
+  "reportContinueReading": "Continue Reading Report",
+  "reportEvidenceAndAdvice": "Evidence & Suggestions",
+  "reportGotIt": "Got it",
+  "reportMasteryStable": "Stable",
+  "reportMasteryConsolidate": "Can Consolidate",
+  "reportMasteryNeedFocus": "Needs Focus",
+  "reportGuidanceStable": "This topic is fairly solid. Keep it sharp with application and transfer exercises.",
+  "reportGuidanceConsolidate": "The basics are in place, but performance may waver in multi-step problems. Another round of deliberate practice would help.",
+  "reportGuidanceNeedFocus": "This is a clear weak spot. Go back to definitions, examples, and prerequisites before reattempting exercises.",
+  "reportChartFirstReport": "Your first report is ready. Come back next time and a trend line will appear here.",
+  "reportChartMasteryLabel": "Mastery {mastery}%",
+  "@reportChartMasteryLabel": {
+    "placeholders": {
+      "mastery": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportChartStudyMinutes": "Study time {minutes} min",
+  "@reportChartStudyMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportChartMinutesShort": "{count} min",
+  "@reportChartMinutesShort": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportChartZeroMinutes": "0 min",
+  "reportLegendMastery": "Mastery",
+  "reportLegendStudyDuration": "Study Duration",
+  "reportDiagnosisSummaryTitle": "Diagnosis Summary",
+  "reportDiagnosisSummaryDesc": "Three key questions: where are you strongest, where should you focus, and are you trending up or stalling?",
+  "reportDiagnosisTitleStrength": "Current Strength",
+  "reportDiagnosisTitleWeakness": "Main Weakness",
+  "reportDiagnosisTitleTrend": "Overall Trend",
+  "reportDiagnosisHeadlinePending": "Pending",
+  "reportDiagnosisStrengthBodyPending": "Once more learning records are generated, your strongest knowledge point will appear here.",
+  "reportDiagnosisStrengthBodyData": "Use it as leverage for transfer practice to shore up related topics.",
+  "reportDiagnosisWeaknessBodyPending": "Not enough data to pinpoint a weakness yet.",
+  "reportDiagnosisWeaknessBodyData": "This is the best place to start. Go back to definitions, examples, and prerequisites.",
+  "reportDiagnosisWeaknessFallback": "Weakness",
+  "reportDiagnosisTrendWaitingComparison": "Awaiting comparison",
+  "reportDiagnosisTrendBodyPending": "After one or two more reports, your trend will appear here.",
+  "reportDiagnosisTrendBodyUp": "Mastery is rising. Focus on consolidation and transfer.",
+  "reportDiagnosisTrendBodyDown": "Slight dip recently. Narrow your scope and close current gaps first.",
+  "reportTagConsolidate": "Keep consolidating",
+  "reportTagProcessFirst": "Process first",
+  "reportTagProcessSoon": "Process soon",
+  "reportTagKeepRhythm": "Keep current rhythm",
+  "reportTagCloseGap": "Close the gap",
+  "reportTagAwaitMore": "Awaiting more data",
+  "reportTagObserve": "Keep observing",
+  "reportActionTitle": "Next Steps",
+  "reportActionDescNoWeakness": "Visit Knowledge Galaxy to confirm your current structure, then generate more practice data for sharper suggestions.",
+  "reportActionDescWithWeakness": "Close out {weakNode} first, then use {strongNode} for transfer practice to raise overall mastery faster.",
+  "@reportActionDescWithWeakness": {
+    "placeholders": {
+      "weakNode": {
+        "type": "Object"
+      },
+      "strongNode": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportActionExploreNode": "Explore {nodeName}",
+  "@reportActionExploreNode": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportActionWeaknessFallback": "Weakness",
+  "reportActionStrengthFallback": "Current Strength",
+  "reportActionEnterSimulation": "Enter Simulation",
+  "reportTrendAutoFillTitle": "Trends will fill in as more reports are generated",
+  "reportTrendFirstReportMessage": "Your first report is ready. Focus on weak spots based on this diagnosis. Next time, a trend line will start to form.",
+  "reportTrendLoadingHistory": "Loading your learning report history. Mastery trends will appear here shortly.",
+  "reportAiExecutionAssistant": "AI Execution Assistant",
+  "reportAiExecutionDesc": "Sparkle remembers which tasks are better handled by AI and how much time those delegations actually saved you.",
+  "reportStatTotalExecutions": "Total Executions",
+  "reportStatUnitTimes": "times",
+  "reportStatSuccessRate": "Success Rate",
+  "reportStatTimeSaved": "Time Saved",
+  "reportStatUnitHours": "hrs",
+  "reportStatUnitMinutes": "min",
+  "reportStatByTypeFormat": "{key}: {count} times · {rate}%",
+  "@reportStatByTypeFormat": {
+    "placeholders": {
+      "key": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      },
+      "rate": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryTitle": "BGM Library & Player",
+  "bgmLibraryRefresh": "Refresh",
+  "bgmLibraryNoImport": "No new tracks imported",
+  "bgmLibraryImportedCount": "Imported {count} local tracks",
+  "@bgmLibraryImportedCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryPlayingSwitched": "Playing {title}, switched to player mode",
+  "@bgmLibraryPlayingSwitched": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryRemoved": "Removed {title}",
+  "@bgmLibraryRemoved": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryEmptyFilter": "No tracks match the current filter. Try changing the filter or importing local music.",
+  "bgmLibraryNotPlaying": "Not playing",
+  "bgmLibraryWaitingPlay": "Waiting to play",
+  "bgmLibraryBrowseHint": "You can play any track from the library directly here",
+  "bgmLibraryNowPlaying": "Now Playing",
+  "bgmLibraryPlayerMode": "Player Mode",
+  "bgmLibraryPlayerModeDesc": "In player mode, music won't be interrupted by page navigation. Great for using Sparkle as an ambient music player.",
+  "bgmLibraryEnableBgm": "Enable Background Music",
+  "bgmLibraryDisableHint": "When off, the player page won't play background music either",
+  "bgmLibraryQuickStrategy": "Quick Strategy",
+  "bgmLibraryQuickStrategyDesc": "The most common adjustments are here. Full settings are still available in the Settings page.",
+  "bgmLibraryStyleOrientation": "Style Orientation",
+  "bgmLibraryIntensityLabel": "Ambience Intensity",
+  "bgmLibraryVarietyLabel": "Rotation Rhythm",
+  "bgmLibraryStats": "Library Status",
+  "bgmLibraryTotalTracks": "Total Tracks",
+  "bgmLibraryCurated": "Curated",
+  "bgmLibraryImportedLabel": "Local Import",
+  "bgmLibraryBundled": "System Fallback",
+  "bgmLibraryImportDir": "Local import directory: {path}",
+  "@bgmLibraryImportDir": {
+    "placeholders": {
+      "path": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryCacheDir": "Download cache directory: {path}",
+  "@bgmLibraryCacheDir": {
+    "placeholders": {
+      "path": {
+        "type": "Object"
+      }
+    }
+  },
+  "bgmLibraryDirReadyNote": "Both directories are ready. This supports a lightweight approach where only a few tracks are bundled, and the rest are downloaded from the server.",
+  "bgmLibraryImportManage": "Import & Manage",
+  "bgmLibraryImportManageDesc": "Import your own ambient music. Playing any track will automatically switch to player mode, and navigation won't interrupt playback.",
+  "bgmLibraryImportLocal": "Import Local Songs",
+  "bgmLibrarySearchHint": "Search tracks, albums, or scene tags",
+  "bgmLibraryFilterAll": "All",
+  "bgmLibraryPlaying": "Playing",
+  "bgmLibraryPlay": "Play",
+  "bgmLibraryRemove": "Remove",
+  "bgmLibraryTags": "Tags",
+  "bgmLibraryStyle": "Style",
+  "bgmLibraryEnergy": "Energy",
+  "bgmLibraryDensity": "Density",
+  "bgmLibraryModeAdaptive": "Follow Page",
+  "bgmLibraryModeContinuous": "Player Mode",
+  "bgmLibraryModeFocusOnly": "Focus Only",
+  "bgmLibraryModeSilent": "Silent",
+  "bgmLibraryPaletteAdaptive": "Adaptive",
+  "bgmLibraryPaletteClassical": "Classical",
+  "bgmLibraryPalettePiano": "Piano",
+  "bgmLibraryPaletteAiry": "Airy",
+  "bgmLibraryPaletteWarm": "Warm",
+  "bgmLibraryIntensityGentle": "Gentle",
+  "bgmLibraryIntensityBalanced": "Balanced",
+  "bgmLibraryIntensityLush": "Lush",
+  "bgmLibraryVarietySteady": "Steady",
+  "bgmLibraryVarietyBalanced": "Balanced",
+  "bgmLibraryVarietyDynamic": "Dynamic",
+  "bgmLibrarySourceCurated": "Curated",
+  "bgmLibrarySourceImported": "Local Import",
+  "bgmLibrarySourceBundled": "System Fallback",
+  "galaxyDraftReviewScreenTitle": "Review knowledge stars",
+  "galaxyDraftReviewPromptTitle": "We found {count} knowledge stars in your {documentName}! Review them?",
+  "@galaxyDraftReviewPromptTitle": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "documentName": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftReviewPromptBody": "You decide what belongs in your galaxy. Approve, skip, merge, or rename each draft before it becomes part of your map.",
+  "galaxyDraftReviewNow": "Review now",
+  "galaxyDraftReviewLater": "Later",
+  "galaxyDraftPendingIndicator": "{batchCount} pending review · {draftCount} stars",
+  "@galaxyDraftPendingIndicator": {
+    "placeholders": {
+      "batchCount": {
+        "type": "Object"
+      },
+      "draftCount": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftReviewProgress": "Star {current} of {total}",
+  "@galaxyDraftReviewProgress": {
+    "placeholders": {
+      "current": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftCompletionReady": "Ready to send them into your galaxy",
+  "galaxyDraftLongPressHint": "Swipe right to approve, swipe left to skip, or long-press to rename the draft before you keep it.",
+  "galaxyDraftLongPressShort": "Long-press to edit",
+  "galaxyDraftApprove": "Approve",
+  "galaxyDraftSkip": "Skip",
+  "galaxyDraftMerge": "Merge",
+  "galaxyDraftExcerpts": "What this star contains",
+  "galaxyDraftSimilarityLabel": "Similar to existing node: {nodeName} ({percent}%)",
+  "@galaxyDraftSimilarityLabel": {
+    "placeholders": {
+      "nodeName": {
+        "type": "Object"
+      },
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftEditTitle": "Tune this knowledge star",
+  "galaxyDraftNameLabel": "Node name",
+  "galaxyDraftDescriptionLabel": "Description",
+  "galaxyDraftEditSave": "Save changes",
+  "galaxyDraftReviewEmptyTitle": "No pending stars right now",
+  "galaxyDraftReviewEmptyBody": "When document processing finishes, draft knowledge stars will land here for your approval.",
+  "galaxyDraftBackToGalaxy": "Back to galaxy",
+  "galaxyDraftCompletionTitle": "{accepted} of {total} knowledge stars added",
+  "@galaxyDraftCompletionTitle": {
+    "placeholders": {
+      "accepted": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftCompletionBody": "The stars you kept from {documentName} are ready to fly into your map.",
+  "@galaxyDraftCompletionBody": {
+    "placeholders": {
+      "documentName": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyDraftCompletionNothingAdded": "You skipped these drafts for now. They can always come back later.",
+  "galaxyDraftCompletionSummary": "{accepted} of {total} knowledge stars added to your galaxy!",
+  "@galaxyDraftCompletionSummary": {
+    "placeholders": {
+      "accepted": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyUploadFabLabel": "Add study material",
+  "galaxyUploadDocumentHere": "Upload document here",
+  "galaxyNodeAddMaterial": "Add material to this node",
+  "galaxyUploadTargetGalaxyCore": "Galaxy core",
+  "galaxyUploadTargetSelectedConstellation": "this constellation",
+  "galaxyUploadAlreadyInProgress": "A study material is already joining your constellation.",
+  "galaxyUploadStatusUploading": "Uploading...",
+  "galaxyUploadStatusQueued": "Upload complete. Holding orbit...",
+  "galaxyUploadStatusExtracting": "Extracting content...",
+  "galaxyUploadStatusFindingKnowledge": "Finding knowledge...",
+  "galaxyUploadStatusBuildingNodes": "Weaving new stars...",
+  "galaxyUploadSuccessTitle": "Processing complete!",
+  "galaxyUploadSuccessBody": "Processing complete! {count} knowledge concepts found.",
+  "@galaxyUploadSuccessBody": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyUploadSuccessChip": "{count} concepts found",
+  "@galaxyUploadSuccessChip": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyUploadFailedTitle": "That star didn't quite land",
+  "galaxyUploadFailedBody": "The document slipped out of the constellation before it could settle. Try again when you're ready.",
+  "galaxyUploadRetry": "Retry upload",
+  "galaxyUploadHeadingTo": "Heading toward {target}",
+  "@galaxyUploadHeadingTo": {
+    "placeholders": {
+      "target": {
+        "type": "Object"
+      }
+    }
+  },
+  "galaxyUploadStepUpload": "Upload",
+  "galaxyUploadStepExtract": "Extract",
+  "galaxyUploadStepFind": "Find",
+  "galaxyUploadStepComplete": "Complete",
+  "executionEngineTitle": "AI Execution Engine",
+  "executionConnectionSuccess": "Connection successful",
+  "executionConnectionFailure": "Connection failed",
+  "executionConfigSavedConnected": "Configuration saved and connected",
+  "executionConfigSavedUnavailable": "Configuration saved, but the engine is currently unreachable",
+  "executionResultPreview": "Result Preview",
+  "executionReplay": "Execution Replay",
+  "executionSelfVerification": "Self-Verification",
+  "executionSelfVerificationHint": "Validation Hint",
+  "executionResultComparison": "Result Comparison",
+  "executionAdoptResult": "Adopt Result",
+  "executionRejectResult": "Request Changes",
+  "executionViewDetails": "View Details",
+  "executionCollapseDetails": "Collapse",
+  "executionQueueAction": "Queue for Later",
+  "executionConnectEngine": "Connect the AI Execution Engine First",
+  "executionEngineOffline": "AI execution engine is offline",
+  "executionEngineNotConnected": "AI execution engine is not connected",
+  "executionOfflineQueueTitle": "Offline Waiting Queue",
+  "executionAboutEngineTitle": "What is the AI Execution Engine?",
+  "executionAboutEngineBody": "The AI execution engine (OpenClaw) can automate web research, document digestion, and similar tasks. Run OpenClaw on your computer and connect it here.",
+  "taskCopyAiPrompt": "Copy AI prompt",
+  "taskObjective": "Objective",
+  "taskEstimatedTime": "Estimated Time",
+  "taskCompletionCriteria": "Completion Criteria",
+  "taskSteps": "Steps",
+  "taskKeyPoints": "Key Points",
+  "taskStartFocus": "Start Focus",
+  "taskOpenAiAssistant": "Open AI Assistant",
+  "taskAiGenerate": "AI Generate",
+  "knowledgeMasteryLevelMastered": "Mastered",
+  "knowledgeMasteryLevelPracticing": "Practicing",
+  "knowledgeMasteryLevelBeginner": "Beginner",
+  "knowledgeMasteryLevelUntouched": "Not Started",
+  "executionStatusDraft": "Draft",
+  "executionStatusReady": "Ready",
+  "executionStatusQueued": "Queued",
+  "executionStatusDispatched": "Dispatched",
+  "executionStatusRunning": "Running",
+  "executionStatusWaitingApproval": "Waiting Approval",
+  "executionStatusSucceeded": "Succeeded",
+  "executionStatusPartial": "Partial",
+  "executionStatusFailed": "Failed",
+  "executionStatusCanceled": "Canceled",
+  "executionStatusTimedOut": "Timed Out",
+  "executionStatusHandedBack": "Handed Back",
+  "executionStatusUnknown": "Unknown",
+  "stuckHelpTitle": "Don't worry, let's see where you're stuck",
+  "stuckHelpAskAi": "Want to ask AI for help?",
+  "stuckHelpChatWithSparkle": "Chat with Sparkle about this",
+  "stuckHelpContinue": "OK, continue",
+  "stuckHelpSuggestion1": "Write down exactly where you're stuck",
+  "stuckHelpSuggestion2": "Try a smaller sub-problem",
+  "stuckHelpSuggestion3": "Complete what you do know first",
+  "stuckHelpSuggestion4": "Give yourself a 5-minute timer",
+  "stuckHelpSuggestion5": "Mark this point and continue with other parts",
+  "stuckHelpAuroraSteps": "Aurora Two-Step Help",
+  "stuckHelpFallbackOrder": "Fallback order when stuck",
+  "stuckHelpWhatToDo": "What to do",
+  "stuckHelpDiagnose": "Diagnose",
+  "stuckHelpFix": "Precise Fix",
+  "taskQuickActionSnoozed": "Snoozed until tomorrow. Lighter day ahead.",
+  "taskQuickActionTooHard": "Broken down. Start with the first small step.",
+  "taskQuickActionSkipped": "Skipped. This card won't bother you for now.",
+  "taskQuickActionAdjusted": "All set.",
+  "taskQuickActionSnoozing": "Moving it to tomorrow...",
+  "taskQuickActionSimplifying": "Breaking this card into smaller pieces...",
+  "taskQuickActionSkipping": "Got it, removing it from today...",
+  "executionResultNoText": "No text result available.",
+  "executionResultNoStructured": "No structured result fields.",
+  "executionResultNoCode": "No code result available.",
+  "executionResultNoLinks": "No links available.",
+  "executionResultArtifacts": "Artifacts",
+  "executionResultMoreFields": "{count} more fields",
+  "executionResultNoPreview": "Current artifact type is {type}. No detailed preview available yet.",
+  "executionResultLinkCopied": "Link copied",
+  "executionResultCopyLink": "Copy Link",
+  "executionResultArtifactType": "Type: {type}",
+  "executionResultArtifactFallback": "Attachment",
+  "onboardingVoiceInput": "Voice Input",
+  "onboardingVoiceInputEn": "Voice Input (English)",
+  "onboardingVoiceInputDesc": "Enable microphone for voice commands and dictation",
+  "onboardingVoiceInputDescEn": "Enable English voice input for voice commands and dictation",
+  "onboardingPermissionEnable": "Enable",
+  "onboardingPermissionEnabled": "Enabled",
+  "onboardingPermissionReady": "Ready - you're all set",
+  "onboardingPermissionPending": "Not yet enabled. This lets you use voice features.",
+  "onboardingPermissionWorking": "Working...",
+  "homeNotificationUnreadMessages": "{count} unread messages",
+  "homeNotificationUnreadNotifications": "{count} unread notifications",
+  "splashSubtitle": "From the first second, step into a learning journey that's smarter and warmer.",
+  "@homeNotificationUnreadMessages": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@homeNotificationUnreadNotifications": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "taskGuidePanelCollapse": "Collapse Guide",
+  "taskGuidePanelExpand": "Expand Guide",
+  "taskGuidePanelEstimatedTimeCustom": "Estimated time: at your own pace",
+  "taskGuidePanelEstimatedTimeMinutes": "Estimated time: {minutes} min",
+  "taskGuidePanelTodayFocus": "Today's Focus",
+  "taskGuidePanelSteps": "Steps",
+  "taskGuidePanelKeyHints": "Key Hints",
+  "taskGuidePanelCompletionCriteria": "Completion Criteria",
+  "taskGuidePanelTapToMark": "Tap to mark completed criteria.",
+  "taskGuidePanelCommonMistakes": "Common Traps",
+  "taskGuidePanelNoDetailedGuide": "No detailed guide yet. Start with one small step you can determine.",
+  "taskGuidePanelFailSafeRule": "Fail-Safe Rule",
+  "taskGuidePanelFailSafeRuleContent": "Fail-safe: {rule}",
+  "taskGuidePanelAskAiTriggers": "Ask AI when these happen",
+  "taskGuidePanelStepInProgress": "In Progress",
+  "taskGuidePanelCompletedSteps": "{completed}/{total} completed",
+  "taskGuidePanelCompletedCriteria": "{completed}/{total}",
+  "taskGuidePanelExpectedOutput": "Expected output: {output}",
+  "taskGuidePanelFallbackLastStep": "Finally do a minimal check with {output}.",
+  "taskGuidePanelFallbackLastStepDefault": "Finally do a minimal check to confirm you really got it.",
+  "taskGuidePanelFallbackSplitStep": "Break this step into something you can start right now.",
+  "taskGuidePanelFallbackOutput1": "Leave the starting framework or keywords for this step.",
+  "taskGuidePanelFallbackOutput2": "Complete one independent output without looking at the answer.",
+  "taskGuidePanelFallbackOutput3": "Mark the key gaps and add a reminder.",
+  "taskGuidePanelFallbackOutputCheck": "Complete minimal check: {check}.",
+  "taskGuidePanelFallbackOutputCheckDefault": "Complete the minimal check. Make sure it's not just comprehension.",
+  "reviewPlanHubTitle": "Review Plan Hub",
+  "reviewPlanHubTodayList": "Today's Review List",
+  "reviewPlanHubNightlyReview": "Nightly Review",
+  "reviewPlanHubNoActivePlan": "No Active Plan Yet",
+  "reviewPlanHubStartToday": "Start Today's Review",
+  "reviewPlanHubOpenReview": "Open Review Page",
+  "reviewPlanHubViewReview": "View Review Page",
+  "reviewPlanHubViewTonight": "View Tonight's Review",
+  "reviewPlanHubCreatePlan": "Create a Plan",
+  "reviewPlanHubStartTodayReview": "Start Today's Review",
+  "reviewPlanHubHeroDescription": "Combine error reviews, nightly review, and plan tasks in one place.",
+  "reviewPlanHubHeroSubtitle": "This doesn't replace the review page. It prioritizes what's worth revisiting today.",
+  "reviewPlanHubPlanIntegration": "Plan Integration",
+  "reviewPlanHubTodayPlanTasks": "Today's Priority Plan Tasks",
+  "reviewPlanHubNoDueErrors": "No errors due today. You can still check plan tasks and nightly review.",
+  "reviewPlanHubHasErrors": "{count} errors due for review today. Prioritize high-urgency reviews.",
+  "reviewPlanHubNoNightlyReview": "No nightly review generated yet. Main review is fine for now.",
+  "reviewPlanHubHasNightlyReview": "The system has generated a nightly review. Good for wrapping up.",
+  "reviewPlanHubNightlyUnavailable": "Nightly review unavailable. Continue with today's review.",
+  "@taskGuidePanelEstimatedTimeMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelFailSafeRuleContent": {
+    "placeholders": {
+      "rule": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelCompletedSteps": {
+    "placeholders": {
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelCompletedCriteria": {
+    "placeholders": {
+      "completed": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelExpectedOutput": {
+    "placeholders": {
+      "output": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelFallbackLastStep": {
+    "placeholders": {
+      "output": {
+        "type": "Object"
+      }
+    }
+  },
+  "@taskGuidePanelFallbackOutputCheck": {
+    "placeholders": {
+      "check": {
+        "type": "Object"
+      }
+    }
+  },
+  "@reviewPlanHubHasErrors": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reviewPlanHubLoadFailed": "Review list temporarily failed to load: {error}",
+  "reviewPlanHubCreatePlanFirst": "Create a growth or sprint plan first. The review hub will then connect plan tasks with your review rhythm.",
+  "reviewPlanHubNoPlanTasks": "No plan-linked tasks for today. Review errors or add tasks to your plan.",
+  "reviewPlanHubSprintProgress": "Sprint {percent}% · {days} days left",
+  "reviewPlanHubGrowthProgress": "Growth {percent}% · Mastery {mastery}%",
+  "reviewPlanHubPlanTask": "Plan Task",
+  "reviewPlanHubTaskSubtitle": "{plan} · {minutes} min",
+  "taskQuickActionSnooze": "Snooze until tomorrow",
+  "taskQuickActionTooHardLabel": "Mark as too hard",
+  "taskQuickActionSkip": "Skip",
+  "taskQuickActionHelp": "Ask for help",
+  "@reviewPlanHubLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@reviewPlanHubSprintProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      },
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "@reviewPlanHubGrowthProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      },
+      "mastery": {
+        "type": "Object"
+      }
+    }
+  },
+  "@reviewPlanHubTaskSubtitle": {
+    "placeholders": {
+      "plan": {
+        "type": "Object"
+      },
+      "minutes": {
+        "type": "Object"
+      }
+    }
+  },
+  "statisticsExportTitle": "Export Statistics",
+  "statisticsExportFormat": "Select Export Format",
+  "statisticsExportIncludeCharts": "Include Chart Data",
+  "statisticsExportAs": "Export as",
+  "statisticsExportStructured": "Structured Data",
+  "statisticsExportSpreadsheet": "Spreadsheet",
+  "statisticsExportHDImage": "HD Image",
+  "statisticsExportPDF": "PDF Document",
+  "statisticsExportFailed": "Export failed: {error}",
+  "statisticsShareTitle": "Share Statistics",
+  "statisticsShareWechat": "WeChat",
+  "statisticsShareMoments": "Moments",
+  "statisticsShareSaveImage": "Save Image",
+  "statisticsShareCopyLink": "Copy Link",
+  "statisticsShareMore": "More",
+  "statisticsWatermark": "Sparkle AI",
+  "statisticsDateFormat": "{year}/{month}/{day}",
+  "statisticsTypeFocus": "Focus",
+  "statisticsTypeAgent": "Agent",
+  "statisticsTypeCapsule": "Capsule",
+  "statisticsTypeLearning": "Learning",
+  "statisticsPeriodToday": "Today",
+  "statisticsPeriodWeek": "This Week",
+  "statisticsPeriodMonth": "This Month",
+  "statisticsPeriodYear": "This Year",
+  "statisticsPeriodCustom": "Custom",
+  "statisticsNoData": "No Data",
+  "statisticsLegendLow": "Low",
+  "statisticsLegendMedium": "Medium",
+  "statisticsLegendHigh": "High",
+  "statisticsChartMon": "Mon",
+  "statisticsChartWed": "Wed",
+  "statisticsChartFri": "Fri",
+  "statisticsChartMonth1": "Jan",
+  "statisticsChartMonth2": "Feb",
+  "statisticsChartMonth3": "Mar",
+  "statisticsChartMonth4": "Apr",
+  "statisticsChartMonth5": "May",
+  "statisticsChartMonth6": "Jun",
+  "statisticsChartMonth7": "Jul",
+  "statisticsChartMonth8": "Aug",
+  "statisticsChartMonth9": "Sep",
+  "statisticsChartMonth10": "Oct",
+  "statisticsChartMonth11": "Nov",
+  "statisticsChartMonth12": "Dec",
+  "statisticsExportImageReport": "Image Report",
+  "statisticsExportPDFReport": "PDF Report",
+  "interventionStartNow": "Start Now",
+  "interventionLater": "Later",
+  "fileUploadTitle": "Upload File",
+  "fileUploadDesc": "Supports documents and images. After uploading to the chat, you can share or reference them.",
+  "fileUploadType": "Type",
+  "fileUploadSize": "Size",
+  "fileUploadClickToSelect": "Click to Select File",
+  "fileUploadSupportedFormats": "PDF, DOCX, PPTX, TXT and common images are supported.",
+  "fileUploadSelected": "File selected",
+  "fileUploadFormat": "{type} · {size}",
+  "fileUploadProgress": "Uploading {percent}%",
+  "fileUploadSelect": "Select File",
+  "fileUploadReselect": "Reselect",
+  "fileUploadStart": "Start Upload",
+  "fileUploadResume": "Resume Upload",
+  "fileUploadNetworkError": "Network interrupted, click to resume",
+  "fileUploadFailed": "Upload failed: {error}",
+  "errorBookCorrectApproach": "Correct Approach",
+  "errorBookSimilarTraps": "Similar Traps",
+  "errorBookStudySuggestion": "Study Suggestion",
+  "errorBookKnowledgeRelated": "Related Knowledge Points",
+  "errorBookAnalyzing": "AI is analyzing...",
+  "errorBookAnalyzingDesc": "Analyzing error causes, generating study suggestions and linking knowledge points. Estimated 3-5 seconds.",
+  "simulationSceneStudyGroup": "Study Group",
+  "simulationSceneKnowledgeDebate": "Knowledge Debate",
+  "simulationSceneHistoricalRoleplay": "Historical Roleplay",
+  "simulationSceneSocraticDialogue": "Socratic Dialogue",
+  "simulationSceneCaseAnalysis": "Case Analysis",
+  "simulationSceneWhatIfPath": "What-If Path",
+  "simulationSceneConceptMapBuild": "Concept Map Build",
+  "simulationSceneErrorDiagnosis": "Error Diagnosis",
+  "simulationStateWaiting": "Awaiting Your Judgment",
+  "simulationStateCompleted": "Discussion Concluded",
+  "simulationStateRunning": "Discussion in Progress",
+  "simulationStatePending": "Preparing",
+  "simulationStateReady": "Ready",
+  "simulationStanceSupporting": "Supporting",
+  "simulationStanceSupportive": "Supportive",
+  "simulationStanceOpposing": "Opposing",
+  "simulationStanceModerating": "Moderating",
+  "simulationStanceProbing": "Probing",
+  "simulationStanceChallenging": "Challenging",
+  "simulationStanceImmersive": "Immersive",
+  "simulationStanceContextual": "Contextual",
+  "simulationStanceReflective": "Reflective",
+  "simulationActionChallenge": "Challenge",
+  "simulationActionSynthesize": "Synthesize",
+  "simulationActionOpen": "Open Topic",
+  "simulationActionGuideUser": "Invite You to Answer",
+  "simulationActionProbe": "Probe Further",
+  "simulationActionExtend": "Elaborate",
+  "simulationActionUserResponse": "Your Response",
+  "simulationSourceGalaxy": "Knowledge Galaxy",
+  "simulationSourceTasks": "Task Records",
+  "simulationSourcePlan": "Study Plan",
+  "simulationSourceStarterGraph": "Starter Graph",
+  "simulationSourceKnowledgeGraph": "Knowledge Graph",
+  "simulationSourceTemplate": "Default Role Template",
+  "simulationSourceErrorBook": "Error Records",
+  "simulationSourceOnboardingProfile": "Learning Profile",
+  "simulationRoleAnalyst": "Analyst",
+  "simulationRoleExpert": "Expert",
+  "simulationRoleCoach": "Coach",
+  "simulationRoleNavigator": "Navigator",
+  "simulationRoleChallenger": "Challenger",
+  "simulationRoleSupporter": "Supporter",
+  "simulationRoleObserver": "Observer",
+  "simulationRoleMentor": "Mentor",
+  "simulationRoleBuilder": "Builder",
+  "simulationBubbleSpotlight": "Current Spotlight",
+  "simulationBubbleReplyTo": "Picking up from {speaker}",
+  "simulationBubbleStance": "Stance {stance}",
+  "simulationBubbleReply": "Replying to {speaker}",
+  "simulationBubbleRound": "Round {round}",
+  "achievementPrestigeLane": "Prestige Lane",
+  "weatherTitleSunny": "Clear Skies",
+  "weatherTitleCloudy": "Misty",
+  "weatherTitleRainy": "Stormy",
+  "weatherTitleMeteor": "Starry Dreams",
+  "weatherSubtitleSunny": "The light lifts gently. A good day for steady progress.",
+  "weatherSubtitleCloudy": "Soft edges, good for sorting thoughts and leaving space.",
+  "weatherSubtitleRainy": "The environment closes in, suitable for immersion, focus, and reducing noise.",
+  "weatherSubtitleMeteor": "Inspiration shines bright, great for sprints, breakthroughs, and leaving your mark.",
+  "weatherCompactSunny": "Bright Progress",
+  "weatherCompactCloudy": "Gentle Reset",
+  "weatherCompactRainy": "Deep Focus",
+  "weatherCompactMeteor": "Peak Sprint",
+  "weatherAmbientSunny": "The air feels clearer. Momentum builds more naturally.",
+  "weatherAmbientCloudy": "The mist softens the edges. The scene gets quieter.",
+  "weatherAmbientRainy": "The rain dampens the outside world. Focus comes easier.",
+  "weatherAmbientMeteor": "Star trails are stretching. The inspiration window is opening.",
+  "weatherGuideTitle": "Weather Guide",
+  "weatherGuidePreview": "Weather Preview",
+  "weatherGuidePreviewSubtitle": "Preview all weather types in the system. Preview does not change actual weather.",
+  "weatherGuideCriteria": "Criteria",
+  "weatherGuideCriteriaSubtitle": "Actual weather is determined by your recent data. Here are the main rules.",
+  "weatherGuideRule1Title": "Clear Skies is the Default",
+  "weatherGuideRule1Body": "When the system detects no significant pressure, delay, or strong sprint signals, it stays clear.",
+  "weatherGuideRule2Title": "Misty Means Slowing Down",
+  "weatherGuideRule2Body": "When a sprint has 7+ days left but progress is below 20%, or no tasks completed for 2 consecutive days.",
+  "weatherGuideRule3Title": "Stormy Means Higher Pressure",
+  "weatherGuideRule3Body": "When a sprint has fewer than 3 days left and progress is below 50%, the system shifts to stormy.",
+  "weatherGuideRule4Title": "Anxiety Overrides Base Judgment",
+  "weatherGuideRule4Body": "If the recent anxiety index exceeds 50%, the system prioritizes stormy weather.",
+  "weatherGuideRule5Title": "Meteor Means High Momentum",
+  "weatherGuideRule5Body": "When current sprint progress exceeds 80%, meteor weather becomes more likely.",
+  "weatherGuideCurrent": "Current",
+  "weatherGuideCurrentWeather": "Current Weather",
+  "weatherGuideConditionFallback": "Current weather updates automatically based on your real data.",
+  "weatherGuideConditionPrefix": "Current condition: {condition}",
+  "weatherGuideDisclaimer": "This page helps you understand the weather system's visuals and logic. Real weather still follows your actual tasks, sprints, and state.",
+  "weatherGuideTriggerPrefix": "Real trigger: {trigger}",
+  "intentPredictionSprintSprint": "Sprint!",
+  "intentPredictionContinue": "Continue \"{title}\"",
+  "intentPredictionCreateTask": "Create Task",
+  "intentPredictionStartFocus": "Start Focus",
+  "intentPredictionViewCalendar": "View Calendar",
+  "intentPredictionCuriosityCapsule": "Curiosity Capsule",
+  "intentPredictionSendToAI": "Send to AI",
+  "intentPredictionNoteIdea": "Note Idea",
+  "intentPredictionSetReminder": "Set Reminder",
+  "intentPredictionCognitivePrism": "Cognitive Prism",
+  "intentPredictionTranslate": "Translate",
+  "intentPredictionLearnLanguage": "Learn Language",
+  "intentPredictionViewPrism": "View Cognitive Prism",
+  "intentPredictionBehaviorAnalysis": "Behavior Analysis",
+  "intentPredictionStartSprint": "Start Sprint",
+  "intentPredictionFocusMode": "Focus Mode",
+  "intentPredictionStartLearning": "Start Learning",
+  "intentPredictionCreateStudyPlan": "Create Study Plan",
+  "intentPredictionStartReview": "Start Review",
+  "intentPredictionViewErrorBook": "View Error Book",
+  "intentPredictionContinuePriority": "Continue Priority Task",
+  "intentPrediction25Min": "25 min Focus",
+  "flashCapsuleTitle": "Flash Capsule",
+  "flashCapsuleSubtitle": "Capture fleeting doubts as error clues, reducing the loss of knowing something is wrong but not remembering it.",
+  "flashCapsuleHistory": "History Capsules",
+  "flashCapsuleHistoryEmpty": "No flash capsules saved yet.",
+  "flashCapsuleHistoryDesc": "Here are the flash capsules and thinking capsules you've saved.",
+  "flashCapsuleNoHistory": "No History Capsules",
+  "flashCapsuleNoHistoryDesc": "Save a flash capsule to review it here.",
+  "flashCapsuleUnnamed": "Unnamed Capsule",
+  "flashCapsuleNoDesc": "No additional description",
+  "flashCapsuleSyncPending": "Pending Sync",
+  "flashCapsuleContent": "Record Content",
+  "flashCapsuleContentSubtitle": "Select subject, error type, then add knowledge point and description.",
+  "flashCapsuleSubject": "Subject",
+  "flashCapsuleSelectSubject": "Select Subject",
+  "flashCapsuleKnowledgePoint": "Knowledge Point",
+  "flashCapsuleKnowledgeHint": "e.g. Trigonometric derivatives, Newton's second law...",
+  "flashCapsuleErrorDesc": "Error Description",
+  "flashCapsuleErrorHint": "Record how you got it wrong, where you got stuck, and how to avoid it next time.",
+  "flashCapsuleKpLength": "Knowledge Point Length",
+  "flashCapsuleDescLength": "Description Length",
+  "flashCapsuleCognitiveDim": "Cognitive Dimension",
+  "flashCapsuleHistoryView": "View History",
+  "flashCapsuleSaving": "Saving...",
+  "flashCapsuleSave": "Save Capsule",
+  "flashCapsuleSubjectCount": "{count} subjects",
+  "flashCapsuleHistoryCount": "{count} history capsules",
+  "flashCapsuleSaved": "Capsule saved and synced to error book",
+  "flashCapsuleSavedNoSync": "Capsule saved, error book sync will retry later",
+  "flashCapsuleSaveFailed": "Save failed: {error}",
+  "flashCapsuleSyncFailed": "Fill in the knowledge point and error description",
+  "flashCapsuleSaveError": "Capsule save failed, please retry later",
+  "flashCapsuleLoadError": "Failed to load history capsules: {error}",
+  "flashCapsuleErrorConcept": "Concept Confusion",
+  "flashCapsuleErrorCalc": "Calculation Error",
+  "flashCapsuleErrorReading": "Reading Careless",
+  "flashCapsuleErrorMemory": "Knowledge Forgetfulness",
+  "flashCapsuleErrorMethod": "Wrong Method",
+  "flashCapsuleErrorOther": "Other",
+  "flashCapsuleSubjectMath": "Math",
+  "flashCapsuleSubjectPhysics": "Physics",
+  "flashCapsuleSubjectChemistry": "Chemistry",
+  "flashCapsuleSubjectBiology": "Biology",
+  "flashCapsuleSubjectEnglish": "English",
+  "flashCapsuleSubjectChinese": "Chinese",
+  "flashCapsuleSubjectComputer": "Computer Science",
+  "flashCapsuleSubjectOther": "Other",
+  "flashCapsuleTagFlash": "Flash",
+  "flashCapsuleTagThink": "Think",
+  "vocabularyLookupTitle": "Word Lookup",
+  "vocabularyLookupSubtitle": "Quick word meaning confirmation, example generation, and related word expansion. Results can be saved to your wordbook.",
+  "vocabularyLookupInput": "Search Input",
+  "vocabularyLookupInputSubtitle": "Enter an English word and press Enter or tap Search. Oxford dictionary preferred, local offline packages take priority.",
+  "vocabularyLookupSearch": "Search",
+  "vocabularyLookupInputHint": "Enter an English word...",
+  "vocabularyLookupResults": "Results",
+  "vocabularyLookupResultsSubtitle": "Meanings, examples, related words, and model-generated sentences.",
+  "vocabularyLookupStartTyping": "Enter a word to start searching",
+  "vocabularyLookupTemporarilyFailed": "Search temporarily failed",
+  "vocabularyLookupErrorDesc": "After searching, you can save to your wordbook and generate example sentences.",
+  "vocabularyLookupDefinitions": "Definitions",
+  "vocabularyLookupDictExamples": "Dictionary Examples",
+  "vocabularyLookupGeneratedExample": "AI-Generated Example",
+  "vocabularyLookupRelatedWords": "Related Words",
+  "vocabularyLookupInWordbook": "In Wordbook",
+  "vocabularyLookupCanAdd": "Addable to Wordbook",
+  "vocabularyLookupWaitingAssoc": "Awaiting Related Words",
+  "vocabularyLookupAssocCount": "{count} related words",
+  "vocabularyLookupOfflineCount": "{count} offline dictionaries",
+  "vocabularyLookupNoOffline": "No Offline Dictionary",
+  "vocabularyLookupManageOffline": "Manage Offline Dictionary",
+  "vocabularyLookupDownloadOffline": "Download Offline Dictionary",
+  "vocabularyLookupOfflinePackages": "Offline Dictionary Packages",
+  "vocabularyLookupOfflineDesc": "Prefer local Oxford dictionary to reduce network dependency and cloud server load.",
+  "vocabularyLookupInstalled": "Installed",
+  "vocabularyLookupPackageDesc": "Oxford preferred offline dictionary package",
+  "vocabularyLookupEntryCount": "{count} entries",
+  "vocabularyLookupSizeBytes": "{size}",
+  "vocabularyLookupInstalledAt": "Installed {date}",
+  "vocabularyLookupReDownload": "Re-download",
+  "vocabularyLookupDownloadLocal": "Download to Local",
+  "vocabularyLookupRemove": "Remove",
+  "vocabularyLookupGenerateSentence": "Generate Sentence",
+  "vocabularyLookupRemoveFromWordbook": "Remove from Wordbook",
+  "vocabularyLookupAddToWordbook": "Add to Wordbook",
+  "vocabularyLookupPos": "Part of Speech · {pos}",
+  "vocabularyLookupAddedToWordbook": "Added \"{word}\" to wordbook",
+  "vocabularyLookupRemovedFromWordbook": "Removed \"{word}\" from wordbook",
+  "vocabularyLookupEnterWord": "Please enter a word to search",
+  "vocabularyLookupOfflineDownloaded": "Offline dictionary downloaded, prioritize local lookup",
+  "vocabularyLookupOfflineDownloadFailed": "Failed to download offline dictionary: {error}",
+  "vocabularyLookupOfflineRemoved": "Offline dictionary package removed",
+  "vocabularyLookupOfflineRemoveFailed": "Failed to remove offline dictionary package: {error}",
+  "vocabularyLookupNoPackage": "No downloadable offline dictionary packages available",
+  "vocabularyLookupDownloading": "Downloading...",
+  "vocabularyLookupPackageScope": "{scope}",
+  "vocabularyLookupPackageInstallDate": "Installed {date}",
+  "entityCardActionLabel": "Execute",
+  "entityCardTitleFallback": "Unnamed Card",
+  "entityCardEntityFallback": "Unnamed Entity",
+  "entityCardTaskFallback": "Unnamed Task",
+  "entityCardPlanFallback": "Study Plan",
+  "entityCardKnowledgeFallback": "Knowledge Node",
+  "entityCardTaskListFallback": "{count} executable tasks",
+  "entityCardTaskListSummary": "AI has organized the task list",
+  "visualSlotAvatarBorder": "Avatar Border",
+  "visualSlotTitleBar": "Title Bar",
+  "visualSlotProfileBanner": "Profile Banner",
+  "visualSlotAchievementFrame": "Achievement Frame",
+  "visualSlotHomeAmbience": "Home Ambience",
+  "visualSlotStarMapEffect": "Star Map Effect",
+  "visualSlotStreakFlame": "Streak Flame",
+  "visualSlotDisplayPedestal": "Display Pedestal",
+  "visualSlotBackground": "Background",
+  "visualSlotParticle": "Particle",
+  "visualSlotEffect": "Effect",
+  "visualSlotBundle": "Bundle",
+  "visualSlotHomeAtmo": "Home Atmosphere",
+  "visualSlotParticleTrail": "Particle Trail",
+  "visualSlotGloryEffect": "Glory Effect",
+  "visualSlotProfile": "Profile",
+  "visualSlotAchievementHeader": "Achievement Header",
+  "visualSlotAchievementPage": "Achievement Page",
+  "visualSlotDetailModal": "Detail Modal",
+  "visualSlotAvatarArea": "Avatar Area",
+  "visualSlotNicknameBar": "Nickname Title Bar",
+  "visualSlotDisplayArea": "Display Area",
+  "visualSlotGloryShowcase": "Glory Showcase",
+  "visualSlotStarMapPage": "Star Map Page",
+  "visualSlotStreakDisplay": "Streak Display",
+  "visualSlotConquestTrail": "Conquest Trail",
+  "visualSlotHomePage": "Home Page",
+  "visualSlotHomeParticle": "Home Particle",
+  "visualUnlockSystem": "System Provided",
+  "visualUnlockAchievement": "Achievement Unlock",
+  "visualUnlockShop": "Shop Purchase",
+  "visualUnlockEvent": "Event Exclusive",
+  "visualUnlockSeason": "Season Reward",
+  "errorDefaultTitle": "Oops, something went wrong",
+  "warningDefaultTitle": "Friendly Reminder",
+  "infoDefaultTitle": "Quick Tip",
+  "retryLabel": "Retry",
+  "emptyStateTitle": "No Data",
+  "emptyStateTitleNone": "Empty",
+  "@loadingFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@statisticsExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@statisticsDateFormat": {
+    "placeholders": {
+      "year": {
+        "type": "Object"
+      },
+      "month": {
+        "type": "Object"
+      },
+      "day": {
+        "type": "Object"
+      }
+    }
+  },
+  "@fileUploadFormat": {
+    "placeholders": {
+      "type": {
+        "type": "Object"
+      },
+      "size": {
+        "type": "Object"
+      }
+    }
+  },
+  "@fileUploadProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "@fileUploadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@simulationBubbleReplyTo": {
+    "placeholders": {
+      "speaker": {
+        "type": "Object"
+      }
+    }
+  },
+  "@simulationBubbleStance": {
+    "placeholders": {
+      "stance": {
+        "type": "Object"
+      }
+    }
+  },
+  "@simulationBubbleReply": {
+    "placeholders": {
+      "speaker": {
+        "type": "Object"
+      }
+    }
+  },
+  "@intentPredictionContinue": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupSizeBytes": {
+    "placeholders": {
+      "size": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupInstalledAt": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupPos": {
+    "placeholders": {
+      "pos": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupAddedToWordbook": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupRemovedFromWordbook": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  },
+  "@flashCapsuleSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@flashCapsuleLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "@weatherGuideConditionPrefix": {
+    "placeholders": {
+      "condition": {
+        "type": "Object"
+      }
+    }
+  },
+  "@weatherGuideTriggerPrefix": {
+    "placeholders": {
+      "trigger": {
+        "type": "Object"
+      }
+    }
+  },
+  "@simulationBubbleRound": {
+    "placeholders": {
+      "round": {
+        "type": "Object"
+      }
+    }
+  },
+  "@flashCapsuleHint": {
+    "placeholders": {
+      "hint": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupLoadFailed": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupAddFailed": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupRemoveFailed": {
+    "placeholders": {
+      "word": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupAssocCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupOfflineCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@vocabularyLookupEntryCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@flashCapsuleSubjectCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@flashCapsuleHistoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "@entityCardTaskListFallback": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  }
 }
