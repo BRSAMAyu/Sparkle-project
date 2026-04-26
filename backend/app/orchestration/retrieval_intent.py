@@ -6,15 +6,46 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Literal
 
-RetrievalMode = Literal["aggressive", "selective", "skip"]
+RetrievalMode = Literal[
+    "no_retrieval",
+    "graph_only",
+    "targeted_source_rag",
+    "task_bound_rag",
+    "user_pinned_sources",
+    "deep_source_synthesis",
+    "community_aggregate_context",
+    "aurora_core_case_file",
+]
+
+_LEGACY_MODE_MAP: dict[str, RetrievalMode] = {
+    "aggressive": "targeted_source_rag",
+    "selective": "graph_only",
+    "skip": "no_retrieval",
+}
 
 
 @dataclass(frozen=True)
-class RetrievalDecision:
-    should_retrieve: bool
+class ContextPlan:
+    """Aurora's per-turn context decision plan."""
     retrieval_mode: RetrievalMode
+    should_retrieve: bool
     budget_tokens: int
     reason: str
+    source_scope: Literal["auto", "user_selected", "task_bound", "goal_bound"] = "auto"
+    must_load: tuple[str, ...] = ()
+    may_load: tuple[str, ...] = ()
+    do_not_load: tuple[str, ...] = ()
+    pollution_guard: Literal["strict", "moderate", "off"] = "strict"
+    citation_required: bool = False
+    user_visible_receipt: bool = True
+    reason_for_user: str = ""
+
+    @property
+    def legacy_mode(self) -> str:
+        for legacy, mode in _LEGACY_MODE_MAP.items():
+            if mode == self.retrieval_mode:
+                return legacy
+        return "selective" if self.should_retrieve else "skip"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -22,7 +53,19 @@ class RetrievalDecision:
             "retrieval_mode": self.retrieval_mode,
             "budget_tokens": self.budget_tokens,
             "reason": self.reason,
+            "source_scope": self.source_scope,
+            "must_load": list(self.must_load),
+            "may_load": list(self.may_load),
+            "do_not_load": list(self.do_not_load),
+            "pollution_guard": self.pollution_guard,
+            "citation_required": self.citation_required,
+            "user_visible_receipt": self.user_visible_receipt,
+            "reason_for_user": self.reason_for_user,
         }
+
+
+# Backward-compatible alias
+RetrievalDecision = ContextPlan
 
 
 @dataclass(frozen=True)
@@ -206,31 +249,57 @@ class RetrievalIntentClassifier:
         mode_override = _normalize_text(aurora_doc_context_mode) or "auto"
 
         if mode_override in {"off", "skip", "disabled", "false", "0"}:
-            return RetrievalDecision(False, "skip", 0, "aurora_doc_context_mode_skip")
+            return ContextPlan(
+                retrieval_mode="no_retrieval",
+                should_retrieve=False,
+                budget_tokens=0,
+                reason="aurora_doc_context_mode_skip",
+                reason_for_user="Aurora · 本轮未调用课件",
+            )
         if use_document_context is False:
-            return RetrievalDecision(False, "skip", 0, "session_use_document_context_false")
+            return ContextPlan(
+                retrieval_mode="no_retrieval",
+                should_retrieve=False,
+                budget_tokens=0,
+                reason="session_use_document_context_false",
+                reason_for_user="Aurora · 资料检索已关闭",
+            )
         if not text:
-            return RetrievalDecision(False, "skip", 0, "empty_message")
-
-        base_decision = self._classify_without_overrides(text, route_intent=route_intent, context=context, budgets=budgets)
-        if not base_decision.should_retrieve:
-            return base_decision
-
-        if mode_override in {"selective", "conservative"} and base_decision.retrieval_mode == "aggressive":
-            return RetrievalDecision(
-                True,
-                "selective",
-                budgets.selective,
-                f"{base_decision.reason}; aurora_doc_context_mode_selective_cap",
+            return ContextPlan(
+                retrieval_mode="no_retrieval",
+                should_retrieve=False,
+                budget_tokens=0,
+                reason="empty_message",
             )
-        if mode_override == "aggressive" and base_decision.retrieval_mode == "selective":
-            return RetrievalDecision(
-                True,
-                "aggressive",
-                budgets.aggressive,
-                f"{base_decision.reason}; aurora_doc_context_mode_aggressive_cap",
+
+        base = self._classify_without_overrides(text, route_intent=route_intent, context=context, budgets=budgets)
+        if not base.should_retrieve:
+            return base
+
+        # Aurora mode caps
+        if mode_override in {"selective", "conservative"} and base.retrieval_mode == "targeted_source_rag":
+            return ContextPlan(
+                retrieval_mode="graph_only",
+                should_retrieve=True,
+                budget_tokens=budgets.selective,
+                reason=f"{base.reason}; aurora_doc_context_mode_selective_cap",
+                pollution_guard=base.pollution_guard,
+                citation_required=base.citation_required,
+                user_visible_receipt=base.user_visible_receipt,
+                reason_for_user=base.reason_for_user or "Aurora · 已参考知识星图摘要",
             )
-        return base_decision
+        if mode_override == "aggressive" and base.retrieval_mode == "graph_only":
+            return ContextPlan(
+                retrieval_mode="targeted_source_rag",
+                should_retrieve=True,
+                budget_tokens=budgets.aggressive,
+                reason=f"{base.reason}; aurora_doc_context_mode_aggressive_cap",
+                pollution_guard="moderate",
+                citation_required=True,
+                user_visible_receipt=True,
+                reason_for_user=base.reason_for_user or "Aurora · 已参考相关资料",
+            )
+        return base
 
     def _classify_without_overrides(
         self,
@@ -239,16 +308,30 @@ class RetrievalIntentClassifier:
         route_intent: str | None,
         context: dict[str, Any] | None,
         budgets: RetrievalIntentBudgets,
-    ) -> RetrievalDecision:
+    ) -> ContextPlan:
         route = _normalize_text(route_intent)
         scores = _prototype_scores(text)
         linked_docs = _has_linked_documents(context)
 
         if _matches_any(text, _EMOTIONAL_PATTERNS) or _matches_any(text, _SOCIAL_PATTERNS) or scores["emotional"] >= 0.30:
-            return RetrievalDecision(False, "skip", 0, "emotional_or_social_turn")
+            return ContextPlan(
+                retrieval_mode="no_retrieval",
+                should_retrieve=False,
+                budget_tokens=0,
+                reason="emotional_or_social_turn",
+                user_visible_receipt=True,
+                reason_for_user="Aurora · 本轮未调用课件",
+            )
 
         if _matches_any(text, _SIMPLE_TASK_PATTERNS) or route in self.SIMPLE_ROUTE_HINTS or scores["simple_task"] >= 0.32:
-            return RetrievalDecision(False, "skip", 0, "simple_task_turn")
+            return ContextPlan(
+                retrieval_mode="no_retrieval",
+                should_retrieve=False,
+                budget_tokens=0,
+                reason="simple_task_turn",
+                user_visible_receipt=True,
+                reason_for_user="Aurora · 本轮未调用课件",
+            )
 
         knowledge_signal = _matches_any(text, _KNOWLEDGE_PATTERNS) or scores["knowledge"] >= 0.24
         planning_signal = _matches_any(text, _PLANNING_PATTERNS) or scores["planning"] >= 0.24
@@ -260,22 +343,56 @@ class RetrievalIntentClassifier:
             planning_signal = True
 
         if planning_signal and not knowledge_signal:
-            reason = "planning_query_selective"
+            reason = "planning_query_graph_only"
             if linked_docs:
                 reason += "_linked_docs"
-            return RetrievalDecision(True, "selective", budgets.selective, reason)
+            return ContextPlan(
+                retrieval_mode="graph_only",
+                should_retrieve=True,
+                budget_tokens=budgets.selective,
+                reason=reason,
+                pollution_guard="moderate",
+                citation_required=False,
+                user_visible_receipt=True,
+                reason_for_user="Aurora · 已参考知识星图摘要",
+            )
 
         if knowledge_signal:
-            return RetrievalDecision(True, "aggressive", budgets.aggressive, "knowledge_query_aggressive")
+            return ContextPlan(
+                retrieval_mode="targeted_source_rag",
+                should_retrieve=True,
+                budget_tokens=budgets.aggressive,
+                reason="knowledge_query_targeted_rag",
+                pollution_guard="strict",
+                citation_required=True,
+                user_visible_receipt=True,
+                reason_for_user="Aurora · 已参考相关资料",
+            )
 
         if ambiguous_signal or linked_docs:
             budget = budgets.ambiguous if not linked_docs else budgets.selective
-            reason = "ambiguous_query_selective"
+            reason = "ambiguous_query_graph_only"
             if linked_docs:
                 reason += "_linked_docs"
-            return RetrievalDecision(True, "selective", budget, reason)
+            return ContextPlan(
+                retrieval_mode="graph_only",
+                should_retrieve=True,
+                budget_tokens=budget,
+                reason=reason,
+                pollution_guard="moderate",
+                citation_required=False,
+                user_visible_receipt=True,
+                reason_for_user="Aurora · 已参考知识星图摘要",
+            )
 
-        return RetrievalDecision(False, "skip", 0, "no_document_retrieval_signal")
+        return ContextPlan(
+            retrieval_mode="no_retrieval",
+            should_retrieve=False,
+            budget_tokens=0,
+            reason="no_document_retrieval_signal",
+            user_visible_receipt=True,
+            reason_for_user="Aurora · 本轮未调用课件",
+        )
 
 
 default_retrieval_intent_classifier = RetrievalIntentClassifier()
