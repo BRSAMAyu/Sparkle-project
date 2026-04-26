@@ -392,15 +392,16 @@ class _MicroTeachingData {
 
 _MicroTeachingData? _readMicroTeaching(Map<String, dynamic>? guideJson) {
   if (guideJson == null) return null;
-  final raw = guideJson['micro_teaching'] ??
-      guideJson['stuck_micro_teaching'] ??
+  final raw = guideJson['stuck_help'] ??
       guideJson['aurora_stuck_help'] ??
-      guideJson['stuck_help'] ??
+      guideJson['stuck_micro_teaching'] ??
+      guideJson['micro_teaching'] ??
       guideJson['diagnostic_help'];
   final source = raw is Map ? raw : guideJson;
 
   final diagnosisQuestion = _readString(
     source['diagnosis_question'] ??
+        source['mistake_diagnosis'] ??
         source['diagnostic_question'] ??
         source['diagnosis_prompt'] ??
         source['question'] ??

@@ -86,11 +86,13 @@ class TaskChatNotifier extends StateNotifier<TaskChatState> {
     if (rawItems is List) {
       for (final item in rawItems) {
         if (item is Map<String, dynamic>) {
-          items.add(DormantInjectionItem(
-            kind: item['kind'] as String? ?? '',
-            available: item['available'] as bool? ?? false,
-            payload: item['payload'] as Map<String, dynamic>?,
-          ),);
+          items.add(
+            DormantInjectionItem(
+              kind: item['kind'] as String? ?? '',
+              available: item['available'] as bool? ?? false,
+              payload: item['payload'] as Map<String, dynamic>?,
+            ),
+          );
         }
       }
     }
@@ -103,7 +105,10 @@ class TaskChatNotifier extends StateNotifier<TaskChatState> {
     );
   }
 
-  Future<void> sendMessage(String text) async {
+  Future<void> sendMessage(
+    String text, {
+    Map<String, dynamic>? extraContext,
+  }) async {
     if (text.trim().isEmpty) return;
 
     final userMsg = ChatMessageModel(
@@ -123,8 +128,12 @@ class TaskChatNotifier extends StateNotifier<TaskChatState> {
     );
 
     try {
-      final result =
-          await _repository.sendMessageToTask(taskId, text, _conversationId);
+      final result = await _repository.sendMessageToTask(
+        taskId,
+        text,
+        _conversationId,
+        extraContext,
+      );
 
       _conversationId = result.response.conversationId;
 

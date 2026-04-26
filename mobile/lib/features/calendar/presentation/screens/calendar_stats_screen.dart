@@ -1150,6 +1150,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     final statusColor = switch (task.status) {
       TaskStatus.completed => DS.success,
       TaskStatus.inProgress => DS.info,
+      TaskStatus.stuck => DS.warning,
       TaskStatus.pending => DS.warning,
       TaskStatus.abandoned => DS.textSecondary,
     };

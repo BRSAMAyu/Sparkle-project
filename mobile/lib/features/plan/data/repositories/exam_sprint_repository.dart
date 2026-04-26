@@ -85,12 +85,16 @@ class ExamSprintRepository {
 
   Future<LearningPortfolioResult> fetchLearningPortfolio({
     String? userId,
+    int page = 1,
+    int pageSize = 20,
   }) async {
     try {
       final response = await _apiClient.get<dynamic>(
         ApiEndpoints.examSprintPortfolio,
         queryParameters: {
           if (userId != null && userId.trim().isNotEmpty) 'user_id': userId,
+          'page': page,
+          'page_size': pageSize,
         },
       );
       final payload = ApiResponseParser.unwrapMap(

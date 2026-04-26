@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -172,15 +173,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 debugPrint('Error starting task: $error');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        context.l10n.taskExecutionStartFailed(
-                          error is DioException
-                              ? (error.message ?? error.toString())
-                              : error.toString(),
-                        ),
+                    SparkleSnackBar.error(
+                      context.l10n.taskExecutionStartFailed(
+                        error is DioException
+                            ? (error.message ?? error.toString())
+                            : error.toString(),
                       ),
-                      backgroundColor: DS.error,
                     ),
                   );
                 }
@@ -264,7 +262,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           setState(() {
             _completionResult = TaskCompletionResult(
               task: task.toJson(),
-              feedback: '本次自由专注已完成。',
+              feedback: context.l10n.taskExecutionFreeFocusCompleted,
             );
           });
           _refreshFocusStats();
@@ -423,14 +421,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       _pomodoroCycle = 1;
       _currentTimerDuration = 5 * 60; // Short break
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.pomodoroWorkFinished)),
+        SparkleSnackBar.info(context.l10n.pomodoroWorkFinished, duration: const Duration(seconds: 3)),
       );
     } else if (_pomodoroCycle == 1) {
       // Short break completed
       _pomodoroCycle = 0;
       _currentTimerDuration = 25 * 60; // Next work phase
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.pomodoroBreakFinished)),
+        SparkleSnackBar.info(context.l10n.pomodoroBreakFinished, duration: const Duration(seconds: 3)),
       );
     }
     // Extend for long breaks if desired
@@ -451,15 +449,36 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   Future<void> _showStuckHelp(TaskModel task) async {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    var sheetTask = task;
+    if (isServerTaskId(task.id)) {
+      try {
+        final result = await ref.read(taskListProvider.notifier).markTaskStuck(
+              task.id,
+              recentSteps:
+                  _guideStepNames(task.guideJson ?? const {}).take(5).toList(),
+              elapsedSeconds: _elapsedSeconds,
+              trigger: 'stuck_help_fab',
+            );
+        sheetTask = result.task;
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SparkleSnackBar.error(
+            context.l10n.taskExecutionAuroraDiagnosticUnavailable('$error'),
+          ),
+        );
+      }
+    }
+    if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => StuckHelpSheet(
-        task: task,
+        task: sheetTask,
         onChatPressed: () {
           Navigator.of(sheetContext).pop();
-          _openStuckChat(task);
+          _openStuckChat(sheetTask);
         },
       ),
     );
@@ -467,14 +486,32 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   void _openStuckChat(TaskModel task) {
     final prompt = _buildStuckChatPrompt(task);
-    final route = Uri(
-      path: '/chat',
-      queryParameters: {
-        'chat_mode': 'study_plan',
-        'prompt': prompt,
-      },
-    ).toString();
-    context.go(route);
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.82,
+          minChildSize: 0.48,
+          maxChildSize: 0.94,
+          builder: (context, scrollController) => GraphiteModalSurface(
+            title: context.l10n.taskExecutionChatAboutStuckPoint,
+            expandChild: true,
+            child: SingleChildScrollView(
+              controller: scrollController,
+              child: TaskChatPanel(
+                taskId: task.id,
+                isAvailable: isServerTaskId(task.id),
+                initialExpanded: true,
+                initialPrompt: prompt,
+                initialExtraContext: _buildStuckChatContext(task),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _sendAuroraTrigger(TaskModel task, String trigger) {
@@ -484,10 +521,13 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
     if (isServerTaskId(task.id)) {
       unawaited(
-        ref.read(taskChatProvider(task.id).notifier).sendMessage(message),
+        ref.read(taskChatProvider(task.id).notifier).sendMessage(
+              message,
+              extraContext: _buildTaskHelpChatContext(task, trigger),
+            ),
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已发送给 Aurora')),
+        SparkleSnackBar.success(context.l10n.taskExecutionSentToAurora),
       );
       return;
     }
@@ -499,7 +539,54 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         'prompt': message,
       },
     ).toString();
-    context.go(route);
+    unawaited(
+      context.push(
+        route,
+        extra: {
+          'initial_context': _buildTaskHelpChatContext(task, trigger),
+        },
+      ),
+    );
+  }
+
+  Map<String, dynamic> _buildStuckChatContext(TaskModel task) => {
+        'task_state': {
+          'stage': 'stuck',
+          'status': 'STUCK',
+          'task_id': task.id,
+          'current_task_id': task.id,
+          'task_title': task.title,
+          'stuck_topic': task.title,
+          'estimated_minutes': task.estimatedMinutes,
+          if (task.successCriteria?.trim().isNotEmpty ?? false)
+            'success_criteria': task.successCriteria,
+        },
+        'task_stage': 'stuck',
+        'stuck_event': {
+          'task_id': task.id,
+          'task_title': task.title,
+          'source': 'task_execution_overlay',
+        },
+      };
+
+  Map<String, dynamic> _buildTaskHelpChatContext(
+    TaskModel task,
+    String trigger,
+  ) {
+    final isStuck = task.status == TaskStatus.stuck ||
+        trigger.toLowerCase().contains('stuck') ||
+        trigger.contains('卡住');
+    if (isStuck) return _buildStuckChatContext(task);
+    return {
+      'task_state': {
+        'stage': 'task_help',
+        'task_id': task.id,
+        'current_task_id': task.id,
+        'task_title': task.title,
+        'trigger': trigger,
+        'estimated_minutes': task.estimatedMinutes,
+      },
+    };
   }
 
   String _buildStuckChatPrompt(TaskModel task) {
@@ -516,14 +603,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         .trim();
     final fallback = StuckHelpSheet.genericSuggestions.join('；');
     final parts = <String>[
-      '我在做这个任务时卡住了，想和你一起拆一下具体卡点。',
-      '任务：${task.title}',
-      if (task.estimatedMinutes > 0) '预估时间：${task.estimatedMinutes}分钟',
-      if (focusCue.isNotEmpty) '今日焦点：$focusCue',
-      if (steps.isNotEmpty) '任务步骤：$steps',
-      if (criteria.isNotEmpty) '完成标准：$criteria',
-      '卡住时建议：${ifStuck.isNotEmpty ? ifStuck : fallback}',
-      '请先问我一个最关键的澄清问题，然后把下一步缩小到5分钟内能开始。',
+      context.l10n.taskExecutionStuckPromptIntro,
+      context.l10n.taskExecutionStuckTaskLabel(task.title),
+      if (task.estimatedMinutes > 0) context.l10n.taskExecutionStuckEstimatedTime(task.estimatedMinutes),
+      if (focusCue.isNotEmpty) context.l10n.taskExecutionStuckFocusCue(focusCue),
+      if (steps.isNotEmpty) context.l10n.taskExecutionStuckSteps(steps),
+      if (criteria.isNotEmpty) context.l10n.taskExecutionStuckCriteria(criteria),
+      context.l10n.taskExecutionStuckSuggestion(ifStuck.isNotEmpty ? ifStuck : fallback),
+      context.l10n.taskExecutionStuckClarifyPrompt,
     ];
     return parts.join('\n');
   }
@@ -578,7 +665,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         child: SafeArea(
           top: false,
           child: Tooltip(
-            message: '卡住了？',
+            message: context.l10n.taskExecutionStuckTooltip,
             child: Material(
               color: DS.surfaceOverlay.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(999),
@@ -601,7 +688,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                       ),
                       const SizedBox(width: DS.spacing4),
                       Text(
-                        '卡住了?',
+                        context.l10n.taskExecutionStuckLabel,
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
                           fontWeight: DS.fontWeightBold,
@@ -1021,7 +1108,7 @@ class _TimerControls extends StatelessWidget {
                 ),
               ),
               CustomButton.secondary(
-                text: '重置',
+                text: context.l10n.taskExecutionResetTimer,
                 icon: Icons.restart_alt_rounded,
                 onPressed: onReset,
                 size: CustomButtonSize.small,
@@ -1077,7 +1164,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     if (!context.mounted) return;
 
     if (intent == null) {
-      final message = ref.read(taskListProvider).error ?? 'AI 执行发起失败';
+      final message = ref.read(taskListProvider).error ?? context.l10n.taskExecutionAiHandoffFailed;
       AppFeedback.error(
         context,
         message.replaceFirst('Exception: ', ''),
@@ -1086,11 +1173,11 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     }
 
     final feedbackMessage = switch (intent.status) {
-      ExecutionIntentStatus.succeeded => 'AI 已完成本次执行',
-      ExecutionIntentStatus.partial => 'AI 已完成部分内容，请继续查看',
-      ExecutionIntentStatus.failed => intent.errorMessage ?? 'AI 执行失败',
-      ExecutionIntentStatus.waitingApproval => 'AI 正在等待你的确认',
-      _ => '任务已交给 AI，当前状态：${intent.statusLabel}',
+      ExecutionIntentStatus.succeeded => context.l10n.taskExecutionAiCompleted,
+      ExecutionIntentStatus.partial => context.l10n.taskExecutionAiPartial,
+      ExecutionIntentStatus.failed => intent.errorMessage ?? context.l10n.taskExecutionAiFailed,
+      ExecutionIntentStatus.waitingApproval => context.l10n.taskExecutionAiWaitingApproval,
+      _ => context.l10n.taskExecutionAiHandedOff(intent.statusLabel),
     };
 
     if (intent.status == ExecutionIntentStatus.failed) {
@@ -1126,7 +1213,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     AppFeedback.info(
       context,
       _hasExecutionPermissionIssue(connection)
-          ? '当前执行权限不足，任务已加入等待队列。补齐权限后可统一重试。'
+          ? context.l10n.taskExecutionPermissionInsufficientQueued
           : ExecutionCopy.engineOfflineQueuedMessage,
     );
   }
@@ -1139,12 +1226,12 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     if (!context.mounted) return;
 
     if (record == null) {
-      final message = ref.read(taskListProvider).error ?? 'AI 结果确认失败';
+      final message = ref.read(taskListProvider).error ?? context.l10n.taskExecutionAiConfirmFailed;
       AppFeedback.error(context, message.replaceFirst('Exception: ', ''));
       return;
     }
 
-    AppFeedback.success(context, 'AI 结果已确认，任务状态已同步');
+    AppFeedback.success(context, context.l10n.taskExecutionAiResultConfirmed);
   }
 
   Future<void> _showRejectReasonSheet(
@@ -1161,11 +1248,11 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         .rejectTaskExecutionResult(task.id, reason: selectedReason);
     if (!context.mounted) return;
     if (record == null) {
-      final message = ref.read(taskListProvider).error ?? '取回任务失败';
+      final message = ref.read(taskListProvider).error ?? context.l10n.taskExecutionRejectFailed;
       AppFeedback.error(context, message.replaceFirst('Exception: ', ''));
       return;
     }
-    AppFeedback.info(context, '任务已交还给你继续处理');
+    AppFeedback.info(context, context.l10n.taskExecutionTaskReturned);
   }
 
   Color _executionStatusColor(ExecutionIntentModel? intent, bool isLoading) {
@@ -1194,21 +1281,22 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     }
   }
 
-  String _executionStatusTitle(ExecutionIntentModel? intent, bool isLoading) {
-    if (isLoading) return 'AI 正在接管这个任务';
-    return intent == null ? 'AI 执行尚未开始' : 'AI 状态：${intent.statusLabel}';
+  String _executionStatusTitle(BuildContext context, ExecutionIntentModel? intent, bool isLoading) {
+    if (isLoading) return context.l10n.taskExecutionAiTakingOver;
+    return intent == null ? context.l10n.taskExecutionAiNotStarted : context.l10n.taskExecutionAiStatusLabel(intent.statusLabel);
   }
 
   String _executionStatusSubtitle(
+    BuildContext context,
     ExecutionIntentModel? intent,
     ExecutionRecordModel? record,
     bool isLoading,
   ) {
     if (isLoading) {
-      return 'Sparkle 正在把任务发送给 OpenClaw。';
+      return context.l10n.taskExecutionSendingToOpenclaw;
     }
     if (intent == null) {
-      return '适合数字执行的任务可以在这里一键转交。';
+      return context.l10n.taskExecutionDigitalTaskHint;
     }
     if (intent.errorMessage != null && intent.errorMessage!.trim().isNotEmpty) {
       return intent.errorMessage!;
@@ -1220,15 +1308,15 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     if (record != null) {
       final validationText =
           record.validationPassed != null && record.validationTotal != null
-              ? '校验 ${record.validationPassed}/${record.validationTotal}'
+              ? context.l10n.taskExecutionValidationLabel(record.validationPassed!, record.validationTotal!)
               : record.trustLabel;
-      return '结果：$validationText'
-          '${record.approvalRequested != null ? ' · 审批请求 ${record.approvalRequested}' : ''}';
+      return '${context.l10n.taskExecutionResultLabel(validationText)}'
+          '${record.approvalRequested != null ? context.l10n.taskExecutionApprovalRequestLabel(record.approvalRequested!) : ''}';
     }
     if (intent.goal.trim().isNotEmpty) {
-      return '目标：${intent.goal} · ${intent.trustLabel}';
+      return context.l10n.taskExecutionGoalWithTrust(intent.goal, intent.trustLabel);
     }
-    return '结果信任：${intent.trustLabel}';
+    return context.l10n.taskExecutionResultTrust(intent.trustLabel);
   }
 
   String? _executionOutputPreview(ExecutionRecordModel? record) {
@@ -1246,42 +1334,42 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     return preview.isEmpty ? null : preview;
   }
 
-  String? _executionMetaPreview(ExecutionIntentModel? intent) {
+  String? _executionMetaPreview(BuildContext context, ExecutionIntentModel? intent) {
     if (intent == null) return null;
     final parts = <String>[
       if (intent.templateName != null && intent.templateName!.isNotEmpty)
-        '模板 ${intent.templateName}',
+        context.l10n.taskExecutionTemplateLabel(intent.templateName!),
       if (intent.strategyVariant != null && intent.strategyVariant!.isNotEmpty)
-        '策略 ${intent.strategyVariant}',
+        context.l10n.taskExecutionStrategyLabel(intent.strategyVariant!),
       if (intent.targetNodeLabel != null && intent.targetNodeLabel!.isNotEmpty)
-        '节点 ${intent.targetNodeLabel}',
+        context.l10n.taskExecutionNodeLabel(intent.targetNodeLabel!),
     ];
     if (parts.isEmpty) return null;
     return parts.join(' · ');
   }
 
-  String _handoffButtonText(ExecutionIntentModel? intent, bool isLoading) {
-    if (isLoading) return 'AI 接管中...';
+  String _handoffButtonText(BuildContext context, ExecutionIntentModel? intent, bool isLoading) {
+    if (isLoading) return context.l10n.taskExecutionAiTakingOverLoading;
     switch (intent?.status) {
       case ExecutionIntentStatus.failed:
       case ExecutionIntentStatus.timedOut:
       case ExecutionIntentStatus.canceled:
       case ExecutionIntentStatus.handedBack:
-        return '重新交给 AI';
+        return context.l10n.taskExecutionRehandoffToAi;
       case ExecutionIntentStatus.succeeded:
       case ExecutionIntentStatus.partial:
-        return '再次交给 AI';
+        return context.l10n.taskExecutionHandoffToAiAgain;
       case ExecutionIntentStatus.waitingApproval:
-        return '等待确认';
+        return context.l10n.taskExecutionWaitingConfirm;
       case ExecutionIntentStatus.draft:
       case ExecutionIntentStatus.ready:
       case ExecutionIntentStatus.queued:
       case ExecutionIntentStatus.dispatched:
       case ExecutionIntentStatus.running:
-        return 'AI 执行中';
+        return context.l10n.taskExecutionAiRunning;
       case ExecutionIntentStatus.unknown:
       case null:
-        return '交给 AI 执行';
+        return context.l10n.taskExecutionHandoffToAi;
     }
   }
 
@@ -1368,7 +1456,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     final statusColor =
         _executionStatusColor(executionIntent, isHandoffLoading);
     final outputPreview = _executionOutputPreview(executionRecord);
-    final metaPreview = _executionMetaPreview(executionIntent);
+    final metaPreview = _executionMetaPreview(context, executionIntent);
 
     return GraphiteCardSurface(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -1382,7 +1470,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '推荐执行模板',
+                context.l10n.taskExecutionRecommendedTemplates,
                 style: DS.bodySmall.copyWith(
                   color: DS.neutral700,
                   fontWeight: DS.fontWeightBold,
@@ -1417,15 +1505,15 @@ class _ExecutionAssistPanel extends ConsumerWidget {
               !nudgeDismissed) ...[
             OpenClawStatusCapsule(
               title: hasExecutionPermissionIssue
-                  ? 'OpenClaw 能连上，但当前没有执行权限'
+                  ? context.l10n.taskExecutionOpenclawConnectedNoPermission
                   : isClawConfigured
-                      ? 'OpenClaw 当前离线，可先加入等待队列'
-                      : 'OpenClaw 尚未连接',
+                      ? context.l10n.taskExecutionOpenclawOfflineQueued
+                      : context.l10n.taskExecutionOpenclawNotConnected,
               subtitle: hasExecutionPermissionIssue
-                  ? '当前令牌能访问网关，但执行会被权限拦住。你可以先把任务排队，等权限修好后统一重试。'
+                  ? context.l10n.taskExecutionOpenclawPermissionHint
                   : isClawConfigured
-                      ? '你可以先继续委派，等引擎恢复后再统一重试，不需要在这个任务页停住。'
-                      : '先完成一次连接，之后任务页和聊天页都会把它当成同一个执行入口来使用。',
+                      ? context.l10n.taskExecutionOpenclawOfflineHint
+                      : context.l10n.taskExecutionOpenclawNotConnectedHint,
               icon: isClawConfigured
                   ? Icons.cloud_queue_rounded
                   : Icons.link_off_rounded,
@@ -1442,7 +1530,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                     onPressed: () => context.push(
                       '${HomeRoutes.openClawHub}?section=connection',
                     ),
-                    child: Text(isClawConfigured ? '查看' : '连接'),
+                    child: Text(isClawConfigured ? context.l10n.taskExecutionViewAction : context.l10n.taskExecutionConnectAction),
                   ),
                   IconButton(
                     onPressed: () {
@@ -1456,7 +1544,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                     icon: const Icon(Icons.close_rounded, size: 18),
                     visualDensity: VisualDensity.compact,
                     color: DS.textSecondary,
-                    tooltip: '关闭提示',
+                    tooltip: context.l10n.taskExecutionDismissHint,
                   ),
                 ],
               ),
@@ -1466,17 +1554,17 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                       ? Icons.key_off_rounded
                       : Icons.sensors_rounded,
                   label: hasExecutionPermissionIssue
-                      ? '已连到网关但无执行权限'
+                      ? context.l10n.taskExecutionMetricConnectedNoPermission
                       : isClawConfigured
-                          ? '已配置但离线'
-                          : '尚未配置',
+                          ? context.l10n.taskExecutionMetricConfiguredOffline
+                          : context.l10n.taskExecutionMetricNotConfigured,
                   tone: OpenClawVisualTone.offline,
                   emphasized: true,
                 ),
                 if (queuedRequestCount > 0)
                   OpenClawMetricPill(
                     icon: Icons.schedule_rounded,
-                    label: '$queuedRequestCount 个任务已排队',
+                    label: context.l10n.taskExecutionMetricQueuedTasks(queuedRequestCount),
                     tone: OpenClawVisualTone.attention,
                     emphasized: true,
                   ),
@@ -1548,6 +1636,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                         children: [
                           Text(
                             _executionStatusTitle(
+                              context,
                               executionIntent,
                               isHandoffLoading,
                             ),
@@ -1558,6 +1647,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                           const SizedBox(height: DS.spacing4),
                           Text(
                             _executionStatusSubtitle(
+                              context,
                               executionIntent,
                               executionRecord,
                               isHandoffLoading,
@@ -1623,7 +1713,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                 text: canQueueHandoff
                     ? copy.queueAction
                     : isClawConfigured
-                        ? _handoffButtonText(executionIntent, isHandoffLoading)
+                        ? _handoffButtonText(context, executionIntent, isHandoffLoading)
                         : copy.connectEngineAction,
                 icon: canQueueHandoff
                     ? Icons.cloud_queue_rounded

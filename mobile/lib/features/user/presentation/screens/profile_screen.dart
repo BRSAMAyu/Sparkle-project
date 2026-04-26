@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -57,50 +62,47 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             _buildHeader(context, user, headerHeight: headerHeight),
             ContentConstraint(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-                child: Column(
-                  children: [
-                    const StatisticsCard(),
-                    const SizedBox(height: DS.spacing12),
-                    profileContextAsync.when(
-                      data: (profileContext) =>
-                          _buildTraitsSection(context, ref, profileContext),
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    if (profileContext != null)
-                      _buildMetacognitionSection(
-                        context,
-                        ref,
-                        profileContext,
-                        userState,
-                      ),
-                    if (profileContext != null)
-                      const SizedBox(height: DS.spacing12),
-                    if (profileContext != null &&
-                        AppFeatureFlags.enableStage35ProfileCards)
-                      _buildStage35Section(userState),
-                    if (profileContext != null &&
-                        AppFeatureFlags.enableStage35ProfileCards)
-                      const SizedBox(height: DS.spacing12),
-                    _buildPrestigeShowcase(
-                      context,
-                      achievementState,
-                      visualState,
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    _buildSettingsSection(
+              child: Column(
+                children: [
+                  const StatisticsCard(),
+                  const SizedBox(height: DS.spacing12),
+                  profileContextAsync.when(
+                    data: (profileContext) =>
+                        _buildTraitsSection(context, ref, profileContext),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  if (profileContext != null)
+                    _buildMetacognitionSection(
                       context,
                       ref,
-                      l10n,
-                      user,
                       profileContext,
+                      userState,
                     ),
-                    const SizedBox(height: 56),
-                  ],
-                ),
+                  if (profileContext != null)
+                    const SizedBox(height: DS.spacing12),
+                  if (profileContext != null &&
+                      AppFeatureFlags.enableStage35ProfileCards)
+                    _buildStage35Section(userState),
+                  if (profileContext != null &&
+                      AppFeatureFlags.enableStage35ProfileCards)
+                    const SizedBox(height: DS.spacing12),
+                  _buildPrestigeShowcase(
+                    context,
+                    achievementState,
+                    visualState,
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  _buildSettingsSection(
+                    context,
+                    ref,
+                    l10n,
+                    user,
+                    profileContext,
+                  ),
+                  const SizedBox(height: 56),
+                ],
               ),
             ),
           ],
@@ -170,7 +172,7 @@ class ProfileScreen extends ConsumerWidget {
               Icon(Icons.workspace_premium_rounded, color: prestigeColor),
               const SizedBox(width: DS.spacing8),
               Text(
-                '荣耀身份',
+                context.l10n.profilePrestigeIdentity,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: DS.fontWeightBold,
                           color: DS.textPrimary,
@@ -189,7 +191,7 @@ class ProfileScreen extends ConsumerWidget {
             runSpacing: DS.spacing8,
             children: [
               _buildIdentityChip(
-                label: equippedTitle?.titleDisplay ?? '未装备称号',
+                  label: equippedTitle?.titleDisplay ?? context.l10n.profileNoTitleEquipped,
                 color: prestigeColor,
               ),
               if (equippedBackground != null)
@@ -213,7 +215,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing16),
           Text(
-            '近期高光成就',
+            context.l10n.profileRecentHighlights,
             style: DS.labelLarge.copyWith(
               fontWeight: DS.fontWeightSemibold,
               color: DS.textPrimary,
@@ -222,7 +224,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: DS.spacing10),
           if (featured.isEmpty)
             Text(
-              '继续完成学习与冲刺，你的荣耀陈列柜会在这里逐步点亮。',
+              context.l10n.profileNoHighlightsHint,
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             )
           else
@@ -263,7 +265,7 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        _rarityLabel(item.achievement.rarity),
+                        _rarityLabel(item.achievement.rarity, context.l10n),
                         style: DS.labelSmall.copyWith(
                           color: _rarityColor(item.achievement.rarity),
                         ),
@@ -327,35 +329,35 @@ class ProfileScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(top: DS.spacing12),
             child: TraitsColdstartQuestionnaire(
-              questions: const [
+              questions: [
                 {
                   'id': 'q1',
-                  'title': '开始新目标时，你更像哪种方式？',
+                  'title': context.l10n.profileTraitQ1Title,
                   'options': [
-                    {'id': 'structured', 'label': '先搭结构再行动'},
-                    {'id': 'mixed', 'label': '先有框架，再边做边调'},
-                    {'id': 'explore', 'label': '先试试看，让方向自己浮现'},
-                    {'id': 'skip', 'label': '跳过'},
+                    {'id': 'structured', 'label': context.l10n.profileTraitQ1Structured},
+                    {'id': 'mixed', 'label': context.l10n.profileTraitQ1Mixed},
+                    {'id': 'explore', 'label': context.l10n.profileTraitQ1Explore},
+                    {'id': 'skip', 'label': context.l10n.profileTraitSkip},
                   ],
                 },
                 {
                   'id': 'q2',
-                  'title': '遇到难题时，你更容易从哪里补能量？',
+                  'title': context.l10n.profileTraitQ2Title,
                   'options': [
-                    {'id': 'solo', 'label': '先自己想清楚'},
-                    {'id': 'small_group', 'label': '找一两个人讨论'},
-                    {'id': 'group', 'label': '边聊边想最有感觉'},
-                    {'id': 'skip', 'label': '跳过'},
+                    {'id': 'solo', 'label': context.l10n.profileTraitQ2Solo},
+                    {'id': 'small_group', 'label': context.l10n.profileTraitQ2SmallGroup},
+                    {'id': 'group', 'label': context.l10n.profileTraitQ2Group},
+                    {'id': 'skip', 'label': context.l10n.profileTraitSkip},
                   ],
                 },
                 {
                   'id': 'q3',
-                  'title': '当计划被打乱时，你通常最先出现什么反应？',
+                  'title': context.l10n.profileTraitQ3Title,
                   'options': [
-                    {'id': 'replan', 'label': '马上重排，尽快回正'},
-                    {'id': 'pause', 'label': '会卡一下，但能慢慢拉回来'},
-                    {'id': 'swing', 'label': '情绪和节奏都会受影响'},
-                    {'id': 'skip', 'label': '跳过'},
+                    {'id': 'replan', 'label': context.l10n.profileTraitQ3Replan},
+                    {'id': 'pause', 'label': context.l10n.profileTraitQ3Pause},
+                    {'id': 'swing', 'label': context.l10n.profileTraitQ3Swing},
+                    {'id': 'skip', 'label': context.l10n.profileTraitSkip},
                   ],
                 },
               ],
@@ -445,17 +447,17 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  String _rarityLabel(dynamic rarity) {
+  String _rarityLabel(dynamic rarity, AppLocalizations l10n) {
     final key = rarity.toString().split('.').last;
     switch (key) {
       case 'legendary':
-        return '传奇';
+        return l10n.achievementRarityLegendary;
       case 'epic':
-        return '史诗';
+        return l10n.achievementRarityEpic;
       case 'rare':
-        return '稀有';
+        return l10n.achievementRarityRare;
       default:
-        return '普通';
+        return l10n.achievementRarityCommon;
     }
   }
 
@@ -640,8 +642,8 @@ class ProfileScreen extends ConsumerWidget {
                 _buildSettingsTile(
                   context,
                   icon: Icons.collections_bookmark_outlined,
-                  title: '学习档案',
-                  subtitle: '查看所有科目的冲刺历史、进行中与计划中记录',
+                  title: l10n.profileLearningPortfolio,
+                  subtitle: l10n.profileLearningPortfolioSubtitle,
                   accentColor: const Color(0xFF5F8C72),
                   onTap: () => context.push(PlanRoutes.learningPortfolio),
                 ),
@@ -657,8 +659,8 @@ class ProfileScreen extends ConsumerWidget {
                 _buildSettingsTile(
                   context,
                   icon: Icons.photo_library_outlined,
-                  title: '海报工坊',
-                  subtitle: '把成长、计划与灵感做成高质感分享海报',
+                  title: l10n.profilePosterStudio,
+                  subtitle: l10n.profilePosterStudioSubtitle,
                   accentColor: const Color(0xFF6E8EF7),
                   onTap: () => context.push(UserRoutes.posterStudio),
                 ),
@@ -708,7 +710,7 @@ class ProfileScreen extends ConsumerWidget {
                 _buildSettingsTile(
                   context,
                   icon: Icons.auto_awesome_motion_rounded,
-                  title: '我的方式',
+                  title: l10n.profileMyWay,
                   accentColor: const Color(0xFF6F8F86),
                   onTap: () => context.push(UserRoutes.skills),
                 ),
@@ -716,12 +718,12 @@ class ProfileScreen extends ConsumerWidget {
                 _buildToggleTile(
                   context,
                   icon: Icons.insights_outlined,
-                  title: '自我认识面板',
+                  title: l10n.profileMetacognitionPanel,
                   subtitle: ((profileContext?['metacognition_dashboard']
                               as Map<String, dynamic>?)?['hidden'] ==
                           true)
-                      ? '已隐藏，后台仍会继续计算'
-                      : '显示过去样本里的判断偏差摘要',
+                      ? l10n.profileMetacognitionHidden
+                      : l10n.profileMetacognitionVisible,
                   accentColor: const Color(0xFF4A7A58),
                   value: (profileContext?['metacognition_dashboard']
                           as Map<String, dynamic>?)?['hidden'] !=
@@ -761,6 +763,14 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => context.push(UserRoutes.memorySettings),
                   ),
                 ],
+                const Divider(height: 1, indent: 60),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.download_rounded,
+                  title: l10n.profileExportData,
+                  accentColor: const Color(0xFF5A7FA0),
+                  onTap: () => unawaited(_exportData(context, ref)),
+                ),
               ],
             ),
           ),
@@ -794,6 +804,30 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       );
+
+  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    AppFeedback.info(context, context.l10n.profileExportPreparing);
+    try {
+      final bytes = await ref.read(userRepositoryProvider).exportUserData();
+      if (bytes.isEmpty) throw Exception(context.l10n.profileExportEmptyFile);
+      final dir = await getTemporaryDirectory();
+      final now = DateTime.now();
+      final filename =
+          'sparkle_export_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.zip';
+      final file = File('${dir.path}/$filename');
+      await file.writeAsBytes(bytes, flush: true);
+      if (!context.mounted) return;
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'application/zip')],
+          subject: context.l10n.profileExportShareSubject,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppFeedback.error(context, context.l10n.profileExportFailed(e.toString()));
+    }
+  }
 
   void _showLogoutDialog(
     BuildContext context,
@@ -922,7 +956,7 @@ class ProfileScreen extends ConsumerWidget {
       subtitle: Padding(
         padding: const EdgeInsets.only(top: DS.spacing4),
         child: Text(
-          subtitle ?? _settingsSubtitle(title),
+          subtitle ?? _settingsSubtitle(title, context.l10n),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: DS.bodySmall.copyWith(color: DS.textSecondary),
@@ -985,37 +1019,33 @@ class ProfileScreen extends ConsumerWidget {
           style: DS.bodySmall.copyWith(color: DS.textSecondary),
         ),
       ),
-      activeColor: accentColor,
+      activeTrackColor: accentColor,
     );
   }
 
-  String _settingsSubtitle(String title) {
-    switch (title) {
-      case '成就':
-      case '成就系统':
-        return '查看已解锁的里程碑与荣誉进度';
-      case '视觉元素':
-        return '管理背景、粒子和视觉奖励';
-      case '我的画像':
-      case '我的人格画像':
-        return '查看系统理解到的学习特征与偏好';
-      case '个人资料':
-        return '编辑头像、昵称和基础资料';
-      case '偏好设置':
-      case '日程偏好':
-        return '管理感官反馈、学习模式与推送偏好';
-      case '我的方式':
-        return '管理私有 Skill、共享与匿名 fork';
-      case '账号安全':
-        return '查看安全信息、设备与隐私控制';
-      case '记忆管理':
-        return '调整长期记忆与上下文保留策略';
-      case '退出登录':
-        return '安全退出当前账号';
-      case '删除账号':
-        return '永久移除账号与相关数据';
-      default:
-        return '进入此页面继续调整详细设置';
+  String _settingsSubtitle(String title, AppLocalizations l10n) {
+    if (title == l10n.achievementTitle) {
+      return l10n.profileSubtitleAchievements;
+    } else if (title == l10n.visualElementsTitle) {
+      return l10n.profileSubtitleVisualElements;
+    } else if (title == l10n.myPersona) {
+      return l10n.profileSubtitlePersona;
+    } else if (title == l10n.profilePersonalInfo) {
+      return l10n.profileSubtitlePersonalInfo;
+    } else if (title == l10n.schedulePreferences) {
+      return l10n.profileSubtitlePreferences;
+    } else if (title == l10n.profileMyWay) {
+      return l10n.profileSubtitleMyWay;
+    } else if (title == l10n.accountSecurity) {
+      return l10n.profileSubtitleSecurity;
+    } else if (title == l10n.memoryControl) {
+      return l10n.profileSubtitleMemory;
+    } else if (title == l10n.logout) {
+      return l10n.profileSubtitleLogout;
+    } else if (title == l10n.profileDeleteAccount) {
+      return l10n.profileSubtitleDeleteAccount;
+    } else {
+      return l10n.profileSubtitleDefault;
     }
   }
 }

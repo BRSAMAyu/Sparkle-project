@@ -24,7 +24,7 @@ class AccountSecurityScreen extends StatelessWidget {
       ),
       child: ContentConstraint(
         child: ListView(
-          padding: const EdgeInsets.all(DS.spacing16),
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
           children: [
             SparkleStaggerItem(
               index: 0,

@@ -371,12 +371,19 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               itemCount: response.items.length,
               itemBuilder: (context, index) {
                 final error = response.items[index];
-                return ErrorCard(
-                  error: error,
-                  onTap: () => _navigateToDetail(context, error.id),
-                  onKnowledgeNodeTap: (nodeId, masteryDelta) =>
-                      _navigateToGalaxyNode(context, nodeId, masteryDelta),
-                  onDelete: () => _deleteError(error.id),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ErrorCard(
+                      error: error,
+                      onTap: () => _navigateToDetail(context, error.id),
+                      onKnowledgeNodeTap: (nodeId, masteryDelta) =>
+                          _navigateToGalaxyNode(context, nodeId, masteryDelta),
+                      onDelete: () => _deleteError(error.id),
+                    ),
+                    if (_shouldShowLinkingHint(error))
+                      _buildLinkingHintCard(error.latestAnalysis!.linkingHint!),
+                  ],
                 );
               },
             ),
@@ -384,6 +391,50 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => _buildErrorState(error.toString(), query),
+      );
+
+  bool _shouldShowLinkingHint(ErrorRecord error) {
+    final affectedNodeId = error.affectedNodeId?.trim();
+    return error.knowledgeLinks.isEmpty &&
+        (affectedNodeId == null || affectedNodeId.isEmpty) &&
+        error.latestAnalysis?.linkingHint != null;
+  }
+
+  Widget _buildLinkingHintCard(ErrorLinkingHint hint) => Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          return Card(
+            margin: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              0,
+              DS.spacing16,
+              DS.spacing8,
+            ),
+            color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.45),
+            child: Padding(
+              padding: const EdgeInsets.all(DS.spacing12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.account_tree_outlined,
+                    color: theme.colorScheme.onSecondaryContainer,
+                    size: 20,
+                  ),
+                  const SizedBox(width: DS.spacing10),
+                  Expanded(
+                    child: Text(
+                      hint.message,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       );
 
   Widget _buildEmptyState(bool isReviewTab) => Builder(

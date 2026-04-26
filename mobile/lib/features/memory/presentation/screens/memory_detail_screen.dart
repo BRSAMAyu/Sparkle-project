@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
@@ -310,13 +311,13 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
       children: [
         MemoryEvidenceBadge(status: _evidenceStatus),
         const SizedBox(height: DS.md),
-        _buildKeyValue('状态', goal?.status ?? '-'),
-        _buildKeyValue('目标日期', _formatDate(goal?.targetDate)),
-        _buildKeyValue('截止时间', _formatDate(goal?.expiresAt)),
-        _buildKeyValue('最后更新', _formatDate(goal?.updatedAt)),
+        _buildKeyValue(context.l10n.memoryStatus, goal?.status ?? '-'),
+        _buildKeyValue(context.l10n.memoryGoalDate, _formatDate(goal?.targetDate)),
+        _buildKeyValue(context.l10n.memoryDeadline, _formatDate(goal?.expiresAt)),
+        _buildKeyValue(context.l10n.memoryLastUpdated, _formatDate(goal?.updatedAt)),
         _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Corrections', _correctionCount.toString()),
-        _buildKeyValue('撤回时间', _formatDate(_retractedAt)),
+        _buildKeyValue(context.l10n.memoryRetractedAt, _formatDate(_retractedAt)),
         if (AppFeatureFlags.enableMemoryCorrection) ...[
           const SizedBox(height: DS.md),
           _buildCorrectionActions(context),
@@ -337,19 +338,19 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
       children: [
         MemoryEvidenceBadge(status: _evidenceStatus),
         const SizedBox(height: DS.md),
-        _buildKeyValue('来源', episodic?.sourceType ?? '-'),
+        _buildKeyValue(context.l10n.memorySource, episodic?.sourceType ?? '-'),
         if ((episodic?.declarationLabel ?? '').isNotEmpty)
-          _buildKeyValue('声明', episodic?.declarationLabel ?? '-'),
-        _buildKeyValue('发生时间', _formatDate(episodic?.occurredAt)),
+          _buildKeyValue(context.l10n.memoryDeclaration, episodic?.declarationLabel ?? '-'),
+        _buildKeyValue(context.l10n.memoryOccurredAt, _formatDate(episodic?.occurredAt)),
         _buildKeyValue(
-            '重要度', episodic?.importanceScore?.toStringAsFixed(2) ?? '-',),
-        _buildKeyValue('置信度', episodic?.confidence?.toStringAsFixed(2) ?? '-'),
-        _buildKeyValue('证据 Token', episodic?.evidenceToken ?? '-'),
-        _buildKeyValue('衰减策略', episodic?.decayPolicy ?? '-'),
+            context.l10n.memoryImportanceScore, episodic?.importanceScore?.toStringAsFixed(2) ?? '-',),
+        _buildKeyValue(context.l10n.memoryConfidence, episodic?.confidence?.toStringAsFixed(2) ?? '-'),
+        _buildKeyValue(context.l10n.memoryEvidenceToken, episodic?.evidenceToken ?? '-'),
+        _buildKeyValue(context.l10n.memoryDecayPolicy, episodic?.decayPolicy ?? '-'),
         _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Corrections', _correctionCount.toString()),
-        _buildKeyValue('最后更新', _formatDate(episodic?.updatedAt)),
-        _buildKeyValue('撤回时间', _formatDate(_retractedAt)),
+        _buildKeyValue(context.l10n.memoryLastUpdated, _formatDate(episodic?.updatedAt)),
+        _buildKeyValue(context.l10n.memoryRetractedAt, _formatDate(_retractedAt)),
         if (AppFeatureFlags.enableMemoryCorrection) ...[
           const SizedBox(height: DS.md),
           _buildCorrectionActions(context),
@@ -455,8 +456,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               ],
             ),
             const SizedBox(height: DS.sm),
-            Text('更新: ${_formatDate(item.updatedAt)}'),
-            Text('置信度: ${item.confidence?.toStringAsFixed(2) ?? '-'}'),
+            Text(context.l10n.memoryUpdateValue(_formatDate(item.updatedAt))),
+            Text(context.l10n.memoryConfidenceValue(item.confidence?.toStringAsFixed(2) ?? '-')),
             if (diff.isNotEmpty) ...[
               const SizedBox(height: DS.sm),
               Text('Diff', style: Theme.of(context).textTheme.bodySmall),
@@ -468,8 +469,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               children: [
                 Tooltip(
                   message: AppFeatureFlags.enableMemoryRetraction
-                      ? '撤回到此版本'
-                      : '需要开启 ENABLE_MEMORY_RETRACTION',
+                      ? context.l10n.memoryRevertToVersion
+                      : context.l10n.memoryNeedEnableRetraction,
                   child: SparkleButton(
                     label: 'Revert',
                     onPressed: () => _showRevertInfo(context),
@@ -499,7 +500,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
 
   String _diffPreference(dynamic current, dynamic previous) {
     if (previous == null) {
-      return '初始版本';
+      return context.l10n.memoryInitialVersion;
     }
     final currentMap = _normalizeMap(current);
     final previousMap = _normalizeMap(previous);
@@ -514,7 +515,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
       }
     }
     if (changes.isEmpty) {
-      return '无变化';
+      return context.l10n.memoryNoChanges;
     }
     return changes.join('\n');
   }
@@ -531,7 +532,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
 
   void _showRevertInfo(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Revert 功能尚未启用')),
+      SparkleSnackBar.info(context.l10n.memoryRevertNotEnabled),
     );
   }
 
@@ -599,7 +600,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: SparkleButton.ghost(
-                  label: '查看证据',
+                  label: context.l10n.memoryViewEvidence,
                   onPressed: () => _showEvidence(context),
                 ),
               ),
@@ -617,16 +618,16 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     }
     final allowed = <String>[];
     if (_memorySettings!.allowPreferences) {
-      allowed.add('偏好');
+      allowed.add(context.l10n.memoryTypePreference);
     }
     if (_memorySettings!.allowGoals) {
-      allowed.add('目标');
+      allowed.add(context.l10n.memoryTypeGoal);
     }
     if (_memorySettings!.allowEpisodic) {
-      allowed.add('经历');
+      allowed.add(context.l10n.memoryTypeEpisodic);
     }
-    final typesLabel = allowed.isEmpty ? '无' : allowed.join(' / ');
-    return '已允许捕获：$typesLabel\n捕获级别：${_memorySettings!.captureLevel}';
+    final typesLabel = allowed.isEmpty ? context.l10n.memoryTypeNone : allowed.join(' / ');
+    return context.l10n.memoryAllowedCaptureSummary(typesLabel, '${_memorySettings!.captureLevel}');
   }
 
   String? _buildSettingsHint() {
@@ -637,33 +638,33 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     }
     final settings = _memorySettings!;
     if (!settings.enabled) {
-      return '当前已关闭长期记忆，后续不会记录此类记忆。';
+      return context.l10n.memoryDisabledHint;
     }
     if (widget.args.type == MemoryDetailType.preference) {
       if (!settings.allowPreferences) {
-        return '当前设置已关闭偏好捕获，后续不会记录此类记忆。';
+        return context.l10n.memoryPreferenceDisabledHint;
       }
       final prefKey = widget.args.prefKey;
       if (prefKey != null && settings.blockedPrefKeys.contains(prefKey)) {
-        return '该偏好已被屏蔽，后续不会记录此类记忆。';
+        return context.l10n.memoryKeyBlockedHint;
       }
     }
     if (widget.args.type == MemoryDetailType.goal) {
       if (!settings.allowGoals) {
-        return '当前设置已关闭目标捕获，后续不会记录此类记忆。';
+        return context.l10n.memoryGoalDisabledHint;
       }
     }
     if (widget.args.type == MemoryDetailType.episodic) {
       if (!settings.allowEpisodic) {
-        return '当前设置已关闭经历捕获，后续不会记录此类记忆。';
+        return context.l10n.memoryEpisodicDisabledHint;
       }
       if (!_memorySettings!.allowInferredEpisodic &&
           (_episodic?.sourceLane == 'inferred_extraction')) {
-        return '当前已关闭 AI 自动记忆，后续不会继续写入此类推断。';
+        return context.l10n.memoryAiInferredDisabledHint;
       }
       final sourceType = _episodic?.sourceType;
       if (sourceType != null && settings.blockedSources.contains(sourceType)) {
-        return '该来源已被屏蔽，后续不会记录此类记忆。';
+        return context.l10n.memorySourceBlockedHint;
       }
     }
     return null;
@@ -675,7 +676,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         return 'Captured because your preference updated recently.';
       case MemoryDetailType.episodic:
         if ((_episodic?.sourceLane ?? '') == 'inferred_extraction') {
-          return '这条经历由 AI 从聊天中推断，并保留了证据 token、置信度与撤销路径。';
+          return context.l10n.memoryExplanationInferredEpisodic;
         }
         return 'Captured because this experience was marked important.';
       case MemoryDetailType.goal:
@@ -696,7 +697,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     if (!mounted) {
       return;
     }
-    AppFeedback.info(context, '已复制记忆内容');
+    AppFeedback.info(context, context.l10n.memoryCopied);
   }
 
   void _showExportDialog() {
@@ -708,13 +709,13 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('导出视图'),
+        title: Text(context.l10n.memoryExportView),
         content: SingleChildScrollView(
           child: SelectableText(payload.toString()),
         ),
         actions: [
           SparkleButton.ghost(
-            label: '关闭',
+            label: context.l10n.commonClose,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -725,7 +726,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
   Widget _buildCorrectionActions(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('纠错操作', style: Theme.of(context).textTheme.titleMedium),
+          Text(context.l10n.memoryCorrectionActions, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: DS.sm),
           Wrap(
             spacing: DS.sm,
@@ -753,7 +754,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         if (!mounted) {
           return;
         }
-        AppFeedback.info(context, '合并功能即将上线');
+        AppFeedback.info(context, context.l10n.memoryMergeComingSoon);
         return;
       }
       final service = ref.read(memoryApiServiceProvider);
@@ -786,12 +787,12 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         _confidence = result.confidence ?? _confidence;
         _retractedAt = result.retractedAt ?? _retractedAt;
       });
-      AppFeedback.success(context, '已提交纠错: $action');
+      AppFeedback.success(context, context.l10n.memoryCorrectionSubmittedWithAction(action));
     } catch (e) {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, '纠错失败: $e');
+      AppFeedback.error(context, context.l10n.memoryCorrectionFailedWithDetail('$e'));
     }
   }
 }

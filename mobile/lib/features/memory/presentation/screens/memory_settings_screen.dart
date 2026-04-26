@@ -94,12 +94,34 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     });
     try {
       final service = ref.read(memoryApiServiceProvider);
-      final results = await Future.wait<dynamic>([
-        service.getMemorySettings(),
-        service.getPushSettings(),
-      ]);
-      final settings = results[0] as MemorySettingsModel;
-      final pushSettings = results[1] as PushOptInSettingsModel;
+      MemorySettingsModel settings;
+      PushOptInSettingsModel pushSettings;
+      try {
+        settings = await service.getMemorySettings();
+      } catch (_) {
+        settings = MemorySettingsModel(
+          enabled: true,
+          allowPreferences: true,
+          allowGoals: true,
+          allowEpisodic: true,
+          allowInferredEpisodic: true,
+          captureLevel: 'medium',
+          blockedPrefKeys: [],
+          blockedSources: [],
+        );
+      }
+      try {
+        pushSettings = await service.getPushSettings();
+      } catch (_) {
+        pushSettings = PushOptInSettingsModel(
+          enabled: false,
+          allowCommitmentFollowUp: false,
+          allowEngagementRecovery: false,
+          quietHoursStart: '22:00',
+          quietHoursEnd: '08:00',
+          timezone: 'Asia/Shanghai',
+        );
+      }
       if (!mounted) {
         return;
       }

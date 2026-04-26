@@ -423,16 +423,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                 if (isSelfVisibleAgentDraft)
                   ListTile(
                     leading: const Icon(Icons.visibility_off_outlined),
-                    title: const Text('仅自己可见'),
-                    subtitle: const Text('这条 AI 草稿只保存在你的当前私聊视图里。'),
+                    title: Text(context.l10n.chatSelfVisibleOnly),
+                    subtitle: Text(context.l10n.chatSelfVisibleDraftDesc),
                     onTap: () => Navigator.pop(context),
                   ),
                 if (isSelfVisibleAgentDraft &&
                     widget.onPromoteSelfVisibleDraft != null)
                   ListTile(
                     leading: const Icon(Icons.visibility_outlined),
-                    title: const Text('改为双方都可见'),
-                    subtitle: const Text('把这条草稿放回输入框，由你确认后发送给对方。'),
+                    title: Text(context.l10n.chatPromoteToBothVisible),
+                    subtitle: Text(context.l10n.chatPromoteToBothDesc),
                     onTap: () {
                       Navigator.pop(context);
                       widget.onPromoteSelfVisibleDraft!(widget.message);
@@ -489,8 +489,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                 if (chatPureMode && _hasPureModeHiddenAccessoryContent)
                   ListTile(
                     leading: const Icon(Icons.layers_outlined),
-                    title: const Text('查看附加内容'),
-                    subtitle: const Text('在纯净模式下临时展开任务卡和快捷入口'),
+                    title: Text(context.l10n.chatViewAccessoryContent),
+                    subtitle: Text(context.l10n.chatViewAccessoryContentDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _showPureModeAccessorySheet(context);
@@ -588,9 +588,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                   w.data['intervention_id'] ??
                   w.data['request_id']) !=
               null;
-          return _AccessoryPreviewPage(
-            title: '行动建议',
-            subtitle: '继续完成这一步，或者先确认任务和计划。',
+          return           _AccessoryPreviewPage(
+            title: context.l10n.chatActionSuggestion,
+            subtitle: context.l10n.chatActionSuggestionDesc,
             child: ActionCard(
               action: w,
               onConfirm: actionable && widget.onActionConfirm != null
@@ -625,8 +625,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       ),
       if (predictionPreview != null && predictionPreview.isNotEmpty)
         _AccessoryPreviewPage(
-          title: '推演剧场',
-          subtitle: '现在最值得先看的是哪条路径，以及它为什么更适合你。',
+          title: context.l10n.chatTheaterTitle,
+          subtitle: context.l10n.chatTheaterDesc,
           child: _buildTheaterPreviewCard(
             context,
             preview: predictionPreview,
@@ -636,8 +636,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ),
       if (simulationPreview != null && simulationPreview.isNotEmpty)
         _AccessoryPreviewPage(
-          title: '学习仿真',
-          subtitle: '先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。',
+          title: context.l10n.chatSimulationTitle,
+          subtitle: context.l10n.chatSimulationDesc,
           child: _buildSimulationPreviewCard(
             context,
             preview: simulationPreview,
@@ -647,8 +647,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ),
       if (reportPreview != null && reportPreview.isNotEmpty)
         _AccessoryPreviewPage(
-          title: '学习报告',
-          subtitle: '先看最核心的诊断和下一步动作，再决定是否进入完整报告页。',
+          title: context.l10n.chatReportTitle,
+          subtitle: context.l10n.chatReportDesc,
           child: _buildReportPreviewCard(
             context,
             preview: reportPreview,
@@ -665,7 +665,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final dialogFuture = showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: '附加内容',
+      barrierLabel: context.l10n.chatAccessoryContent,
       barrierColor: DS.overlay30.withValues(alpha: 0.68),
       transitionDuration: const Duration(milliseconds: 260),
       pageBuilder: (dialogContext, _, __) => SafeArea(
@@ -695,7 +695,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                       children: [
                         Expanded(
                           child: Text(
-                            '继续探索',
+                            context.l10n.chatContinueExploring,
                             style: Theme.of(dialogContext)
                                 .textTheme
                                 .titleMedium
@@ -797,7 +797,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                         if (pageSpecs.length > 1)
                           Expanded(
                             child: Text(
-                              '左右滑动切换不同入口',
+                              context.l10n.chatSwipeToSwitch,
                               style: Theme.of(dialogContext)
                                   .textTheme
                                   .bodySmall
@@ -809,7 +809,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                         OutlinedButton.icon(
                           onPressed: () => Navigator.of(dialogContext).pop(),
                           icon: const Icon(Icons.close_rounded, size: 18),
-                          label: const Text('关闭'),
+                          label: Text(context.l10n.commonClose),
                         ),
                       ],
                     ),
@@ -1236,17 +1236,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                             sourceChatSessionId,
                                       )
                                     : _buildInsightShortcutPill(
-                                        title: '查看推演详情',
+                                        title: context.l10n.chatViewTheaterDetails,
                                         icon: Icons.auto_graph_rounded,
                                         onTap: () => context.push(
                                           _resolveInsightDeepLink(
                                             deepLink: theaterDeepLink,
                                             fallbackPath: TheaterRoutes.theater,
                                             fallbackQuery: {
-                                              'topic':
-                                                  predictionPreview['topic']
-                                                          ?.toString() ??
-                                                      '当前学习主题',
+                                                      'topic':
+                                                          predictionPreview['topic']
+                                                                  ?.toString() ??
+                                                              context.l10n.chatCurrentLearningTopic,
                                             },
                                             sourceChatSessionId:
                                                 sourceChatSessionId,
@@ -1273,7 +1273,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                             sourceChatSessionId,
                                       )
                                     : _buildInsightShortcutPill(
-                                        title: '查看模拟详情',
+                                        title: context.l10n.chatViewSimulationDetails,
                                         icon: Icons.groups_rounded,
                                         onTap: () => context.push(
                                           _resolveInsightDeepLink(
@@ -1284,7 +1284,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                               'topic':
                                                   simulationPreview['topic']
                                                           ?.toString() ??
-                                                      '当前学习主题',
+                                                      context.l10n.chatCurrentLearningTopic,
                                               'scenario_key': simulationPreview[
                                                           'scenario_key']
                                                       ?.toString() ??
@@ -1358,7 +1358,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                       )
                                     : _buildStaticAccessoryPill(
                                         icon: Icons.hub_rounded,
-                                        label: '协作过程',
+                                        label: context.l10n.chatCollaborationProcess,
                                       ),
                               ),
                             if (!chatPureMode)
@@ -1514,12 +1514,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       case 'plan_context_summary':
         return _buildStaticAccessoryPill(
           icon: Icons.summarize_outlined,
-          label: '计划上下文',
+          label: context.l10n.chatPlanContext,
         );
       case 'plan_state':
         return _buildStaticAccessoryPill(
           icon: Icons.flag_outlined,
-          label: '计划状态',
+          label: context.l10n.chatPlanStatus,
         );
       default:
         return const SizedBox.shrink();
@@ -1638,44 +1638,49 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
 
   String _bridgeCaption(String? sourceChatSessionId) =>
       (sourceChatSessionId?.isNotEmpty ?? false)
-          ? '承接刚才的对话'
-          : '先看重点，再决定要不要展开完整体验';
+          ? context.l10n.chatContinueFromConversation
+          : context.l10n.chatReviewFirstThenExpand;
 
   List<_InlinePromptAction> _theaterPromptActions(
     Map<String, dynamic> preview,
   ) {
-    final topic = preview['topic']?.toString() ?? '当前学习主题';
+    final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
     final paths = (preview['paths'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList();
     final actions = <_InlinePromptAction>[
       _InlinePromptAction(
-        label: '继续细化这条路径',
-        prompt: '继续围绕「$topic」细化第一周最该先做的步骤。',
+        label: context.l10n.chatPromptRefinePath,
+        prompt: context.l10n.chatPromptRefinePathMessage(topic),
         onTap: () => _continueInlinePrompt(
-          '继续围绕「$topic」细化第一周最该先做的步骤。',
+          context.l10n.chatPromptRefinePathMessage(topic),
         ),
       ),
     ];
     if (paths.length >= 2) {
       actions.add(
         _InlinePromptAction(
-          label: '比较两条路线',
-          prompt:
-              '比较一下「${paths[0]['title'] ?? '路线 A'}」和「${paths[1]['title'] ?? '路线 B'}」的取舍。',
+          label: context.l10n.chatPromptComparePaths,
+          prompt: context.l10n.chatPromptComparePathsMessage(
+            paths[0]['title']?.toString() ?? context.l10n.chatPromptDefaultPathA,
+            paths[1]['title']?.toString() ?? context.l10n.chatPromptDefaultPathB,
+          ),
           onTap: () => _continueInlinePrompt(
-            '比较一下「${paths[0]['title'] ?? '路线 A'}」和「${paths[1]['title'] ?? '路线 B'}」的取舍。',
+            context.l10n.chatPromptComparePathsMessage(
+              paths[0]['title']?.toString() ?? context.l10n.chatPromptDefaultPathA,
+              paths[1]['title']?.toString() ?? context.l10n.chatPromptDefaultPathB,
+            ),
           ),
         ),
       );
     } else {
       actions.add(
         _InlinePromptAction(
-          label: '先补什么前置',
-          prompt: '如果我现在就开始学「$topic」，最该先补的前置是什么？',
+          label: context.l10n.chatPromptPrerequisites,
+          prompt: context.l10n.chatPromptPrerequisitesMessage(topic),
           onTap: () => _continueInlinePrompt(
-            '如果我现在就开始学「$topic」，最该先补的前置是什么？',
+            context.l10n.chatPromptPrerequisitesMessage(topic),
           ),
         ),
       );
@@ -1684,10 +1689,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (recentHints.contains('考试')) {
       actions.add(
         _InlinePromptAction(
-          label: '考试重点是什么',
-          prompt: '围绕「$topic」，告诉我最容易成为考试重点的部分和原因。',
+          label: context.l10n.chatPromptExamFocus,
+          prompt: context.l10n.chatPromptExamFocusMessage(topic),
           onTap: () => _continueInlinePrompt(
-            '围绕「$topic」，告诉我最容易成为考试重点的部分和原因。',
+            context.l10n.chatPromptExamFocusMessage(topic),
           ),
         ),
       );
@@ -1695,10 +1700,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (recentHints.contains('计划')) {
       actions.add(
         _InlinePromptAction(
-          label: '给我排成计划',
-          prompt: '把「$topic」这条路径改写成 7 天可执行的小计划。',
+          label: context.l10n.chatPromptMakePlan,
+          prompt: context.l10n.chatPromptMakePlanMessage(topic),
           onTap: () => _continueInlinePrompt(
-            '把「$topic」这条路径改写成 7 天可执行的小计划。',
+            context.l10n.chatPromptMakePlanMessage(topic),
           ),
         ),
       );
@@ -1709,30 +1714,30 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   List<_InlinePromptAction> _simulationPromptActions(
     Map<String, dynamic> preview,
   ) {
-    final topic = preview['topic']?.toString() ?? '当前学习主题';
+    final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
     final rounds = (preview['round_preview'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList();
     final actions = <_InlinePromptAction>[
       _InlinePromptAction(
-        label: '继续模拟一轮',
-        prompt: '继续围绕「$topic」模拟一轮，我想继续跟进这个学习场景。',
+        label: context.l10n.chatPromptSimulateRound,
+        prompt: context.l10n.chatPromptSimulateRoundMessage(topic),
         onTap: () => _continueInlinePrompt(
-          '继续围绕「$topic」模拟一轮，我想继续跟进这个学习场景。',
+          context.l10n.chatPromptSimulateRoundMessage(topic),
         ),
       ),
     ];
     if (rounds.isNotEmpty) {
       final speaker = localizeSimulationText(
-        rounds.first['speaker']?.toString() ?? '其中一个角色',
+        rounds.first['speaker']?.toString() ?? context.l10n.chatOneOfTheRoles,
       );
       actions.add(
         _InlinePromptAction(
-          label: '让我来回答',
-          prompt: '让 $speaker 围绕「$topic」继续追问我一个关键问题，我来回答。',
+          label: context.l10n.chatPromptLetMeAnswer,
+          prompt: context.l10n.chatPromptLetMeAnswerMessage(speaker, topic),
           onTap: () => _continueInlinePrompt(
-            '让 $speaker 围绕「$topic」继续追问我一个关键问题，我来回答。',
+            context.l10n.chatPromptLetMeAnswerMessage(speaker, topic),
           ),
         ),
       );
@@ -1741,10 +1746,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (recentHints.contains('表达')) {
       actions.add(
         _InlinePromptAction(
-          label: '练习讲给别人听',
-          prompt: '围绕「$topic」安排一轮需要我讲给别人听的仿真。',
+          label: context.l10n.chatPromptPracticeExplain,
+          prompt: context.l10n.chatPromptPracticeExplainMessage(topic),
           onTap: () => _continueInlinePrompt(
-            '围绕「$topic」安排一轮需要我讲给别人听的仿真。',
+            context.l10n.chatPromptPracticeExplainMessage(topic),
           ),
         ),
       );
@@ -1752,10 +1757,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (recentHints.contains('错题')) {
       actions.add(
         _InlinePromptAction(
-          label: '换成错因诊断',
-          prompt: '把「$topic」切到错因诊断模式，帮我定位真正的卡点。',
+          label: context.l10n.chatPromptErrorDiagnosis,
+          prompt: context.l10n.chatPromptErrorDiagnosisMessage(topic),
           onTap: () => _continueInlinePrompt(
-            '把「$topic」切到错因诊断模式，帮我定位真正的卡点。',
+            context.l10n.chatPromptErrorDiagnosisMessage(topic),
           ),
         ),
       );
@@ -1774,30 +1779,30 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         .firstWhere((item) => item != null, orElse: () => null);
     final actions = <_InlinePromptAction>[
       _InlinePromptAction(
-        label: '排今天行动顺序',
-        prompt: '根据这份学习报告，帮我排一个今天就能开始的行动顺序。',
+        label: context.l10n.chatPromptOrderActions,
+        prompt: context.l10n.chatPromptOrderActionsMessage,
         onTap: () => _continueInlinePrompt(
-          '根据这份学习报告，帮我排一个今天就能开始的行动顺序。',
+          context.l10n.chatPromptOrderActionsMessage,
         ),
       ),
     ];
     if ((highlight ?? '').isNotEmpty) {
       actions.add(
         _InlinePromptAction(
-          label: '展开重点问题',
-          prompt: '展开讲讲为什么「$highlight」最值得先处理。',
+          label: context.l10n.chatPromptExpandKeyIssue,
+          prompt: context.l10n.chatPromptExpandKeyIssueMessage(highlight!),
           onTap: () => _continueInlinePrompt(
-            '展开讲讲为什么「$highlight」最值得先处理。',
+            context.l10n.chatPromptExpandKeyIssueMessage(highlight!),
           ),
         ),
       );
     } else if (report.mastery.isNotEmpty) {
       actions.add(
         _InlinePromptAction(
-          label: '先补哪一块',
-          prompt: '根据这份报告，先帮我解释为什么「${report.mastery.first.nodeName}」应该优先处理。',
+          label: context.l10n.chatPromptPrioritizeArea,
+          prompt: context.l10n.chatPromptPrioritizeAreaMessage(report.mastery.first.nodeName),
           onTap: () => _continueInlinePrompt(
-            '根据这份报告，先帮我解释为什么「${report.mastery.first.nodeName}」应该优先处理。',
+            context.l10n.chatPromptPrioritizeAreaMessage(report.mastery.first.nodeName),
           ),
         ),
       );
@@ -1806,10 +1811,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (recentHints.contains('计划')) {
       actions.add(
         _InlinePromptAction(
-          label: '转成 7 天计划',
-          prompt: '把这份学习报告改写成我接下来 7 天的执行顺序。',
+          label: context.l10n.chatPromptConvertToPlan,
+          prompt: context.l10n.chatPromptConvertToPlanMessage,
           onTap: () => _continueInlinePrompt(
-            '把这份学习报告改写成我接下来 7 天的执行顺序。',
+            context.l10n.chatPromptConvertToPlanMessage,
           ),
         ),
       );
@@ -1817,10 +1822,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (recentHints.contains('复盘')) {
       actions.add(
         _InlinePromptAction(
-          label: '帮我做复盘提纲',
-          prompt: '根据这份学习报告，给我一份今晚就能用的复盘提纲。',
+          label: context.l10n.chatPromptReviewOutline,
+          prompt: context.l10n.chatPromptReviewOutlineMessage,
           onTap: () => _continueInlinePrompt(
-            '根据这份学习报告，给我一份今晚就能用的复盘提纲。',
+            context.l10n.chatPromptReviewOutlineMessage,
           ),
         ),
       );
@@ -1834,7 +1839,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     required String? deepLink,
     required String? sourceChatSessionId,
   }) {
-    final topic = preview['topic']?.toString() ?? '当前学习主题';
+    final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
     final paths = (preview['paths'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
@@ -1848,21 +1853,21 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final promptActions = _theaterPromptActions(preview);
     return _InsightLinkCard(
       icon: Icons.auto_graph_rounded,
-      title: '推演剧场',
+      title: context.l10n.chatTheaterTitle,
       subtitle: topic,
       bullets: paths
           .take(3)
           .map(
             (item) =>
-                '${item['title'] ?? '路径'} · 掌握度 ${(item['estimated_mastery'] as num?)?.toStringAsFixed(0) ?? '--'}%',
+                '${item['title'] ?? context.l10n.chatPathLabel} · ${context.l10n.chatMasteryLabel} ${(item['estimated_mastery'] as num?)?.toStringAsFixed(0) ?? '--'}%',
           )
           .toList(),
       caption: _bridgeCaption(sourceChatSessionId),
       onTap: () => context.push(resolvedDeepLink),
       promptActions: promptActions,
-      primaryLabel: '打开完整体验',
+      primaryLabel: context.l10n.chatOpenFullExperience,
       onPrimaryTap: () => context.push(resolvedDeepLink),
-      secondaryLabel: '继续在对话里',
+      secondaryLabel: context.l10n.chatContinueInChat,
       onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
     );
   }
@@ -1873,7 +1878,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     required String? deepLink,
     required String? sourceChatSessionId,
   }) {
-    final topic = preview['topic']?.toString() ?? '当前学习主题';
+    final topic = preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
     final scenarioKey = preview['scenario_key']?.toString() ?? 'study_group';
     final rounds = (preview['round_preview'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
@@ -1892,21 +1897,21 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final scenarioLabel = localizeSimulationScenario(scenarioKey);
     return _InsightLinkCard(
       icon: Icons.groups_rounded,
-      title: '学习仿真',
+      title: context.l10n.chatSimulationTitle,
       subtitle: '$topic · $scenarioLabel',
       bullets: rounds
           .take(3)
           .map(
             (item) =>
-                '${localizeSimulationText(item['speaker']?.toString() ?? '参与者')}: ${localizeSimulationText(item['message']?.toString() ?? '')}',
+                '${localizeSimulationText(item['speaker']?.toString() ?? context.l10n.chatParticipantLabel)}: ${localizeSimulationText(item['message']?.toString() ?? '')}',
           )
           .toList(),
       caption: _bridgeCaption(sourceChatSessionId),
       onTap: () => context.push(resolvedDeepLink),
       promptActions: promptActions,
-      primaryLabel: '打开完整体验',
+      primaryLabel: context.l10n.chatOpenFullExperience,
       onPrimaryTap: () => context.push(resolvedDeepLink),
-      secondaryLabel: '继续在对话里',
+      secondaryLabel: context.l10n.chatContinueInChat,
       onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
     );
   }
@@ -1922,7 +1927,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         .map((item) => item.toString())
         .where((item) => item.isNotEmpty)
         .toList();
-    final summary = preview['summary']?.toString() ?? '查看最新学习报告';
+    final summary = preview['summary']?.toString() ?? context.l10n.chatViewLatestReport;
     final triggerSummary = report.triggerSummary;
     final promptActions = _reportPromptActions(preview);
     final resolvedDeepLink = _resolveInsightDeepLink(
@@ -1933,15 +1938,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     );
     return _InsightLinkCard(
       icon: Icons.article_outlined,
-      title: '查看学习报告',
+      title: context.l10n.chatViewLearningReport,
       subtitle: summary,
       bullets: highlights.isNotEmpty
-          ? highlights.map((item) => '重点关注: $item').toList()
+          ? highlights.map((item) => '${context.l10n.chatKeyFocusLabel}: $item').toList()
           : report.mastery
               .take(3)
               .map(
                 (item) =>
-                    '${item.nodeName} · 掌握度 ${item.masteryScore.toStringAsFixed(0)}%',
+                    '${item.nodeName} · ${context.l10n.chatMasteryLabel} ${item.masteryScore.toStringAsFixed(0)}%',
               )
               .toList(),
       caption: _bridgeCaption(sourceChatSessionId),
@@ -1970,7 +1975,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             ),
           )
           .toList(),
-      primaryLabel: '打开完整体验',
+      primaryLabel: context.l10n.chatOpenFullExperience,
       onPrimaryTap: () {
         if (report.reportId.isNotEmpty || report.markdown.isNotEmpty) {
           unawaited(context.push(resolvedDeepLink, extra: report));
@@ -1978,7 +1983,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         }
         unawaited(context.push(resolvedDeepLink));
       },
-      secondaryLabel: '继续在对话里',
+      secondaryLabel: context.l10n.chatContinueInChat,
       onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
     );
   }
@@ -1997,7 +2002,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       sourceChatSessionId: sourceChatSessionId,
     );
     return _buildInsightShortcutPill(
-      title: '查看学习报告',
+      title: context.l10n.chatViewLearningReport,
       icon: Icons.article_outlined,
       onTap: () {
         if (report.reportId.isNotEmpty || report.markdown.isNotEmpty) {
@@ -2486,17 +2491,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       final count = countRaw is num
           ? countRaw.toInt()
           : int.tryParse(countRaw?.toString() ?? '') ?? 1;
-      final actionLabel = planId != null ? '查看计划' : '去任务列表';
+      final actionLabel = planId != null ? context.l10n.chatViewPlan : context.l10n.chatGoToTaskList;
       final route = planId != null ? '/plans/$planId' : '/tasks';
       AppFeedback.undoable(
         context: context,
-        message: '已确认 $count 个任务，开始执行！',
+        message: context.l10n.chatTaskConfirmedMessage(count),
         actionLabel: actionLabel,
         onAction: () => context.push(route),
       );
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, '确认失败: $e');
+      AppFeedback.error(context, context.l10n.chatConfirmFailed(e.toString()));
       rethrow;
     }
   }
@@ -2576,7 +2581,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     String resourceType,
   ) async {
     if (sharedResourceId.trim().isEmpty) {
-      AppFeedback.error(context, '分享资源 ID 无效，无法采纳');
+      AppFeedback.error(context, context.l10n.chatShareResourceInvalidId);
       return;
     }
     try {
@@ -2584,7 +2589,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           .read(communityShareRepositoryProvider)
           .adoptResource(sharedResourceId: sharedResourceId);
       if (!context.mounted) return;
-      AppFeedback.success(context, '已采纳，跳转中...');
+      AppFeedback.success(context, context.l10n.chatShareResourceAdopted);
       final entityCard = result['entity_card'] is Map<String, dynamic>
           ? EntityCardPayload.fromRaw(
               {'entity_card': result['entity_card'] as Map<String, dynamic>},
@@ -2610,7 +2615,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       }
     } catch (e) {
       if (!context.mounted) return;
-      AppFeedback.error(context, '采纳失败: $e');
+      AppFeedback.error(context, context.l10n.chatShareResourceAdoptError(e.toString()));
     }
   }
 
@@ -2695,12 +2700,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     return switch (type) {
       MessageType.taskShare => () {
           final duration = safeGetInt(meta['estimated_minutes']) ?? 0;
-          return duration > 0 ? '已完成 · $duration分钟' : '已完成';
+          return duration > 0 ? context.l10n.chatTaskCompletedDoneMinutes(duration) : context.l10n.chatTaskCompletedDone;
         }(),
       MessageType.planShare => () {
           final progress = safeGetDouble(meta['progress']);
           return progress != null
-              ? '进度: ${(progress * 100).toStringAsFixed(0)}%'
+              ? context.l10n.chatPlanProgressLabel((progress * 100).toStringAsFixed(0))
               : null;
         }(),
       MessageType.capsuleShare => safeGetString(data['resource_summary']) ??
@@ -2769,14 +2774,14 @@ class _InsightLinkCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('先不发'),
+            child: Text(context.l10n.chatPromptPreviewCancel),
           ),
           FilledButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
               action.onTap?.call();
             },
-            child: const Text('直接发送'),
+            child: Text(context.l10n.chatPromptPreviewSend),
           ),
         ],
       ),
@@ -2901,7 +2906,7 @@ class _InsightLinkCard extends StatelessWidget {
               if (promptActions.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing8),
                 Text(
-                  '继续在对话里',
+                  context.l10n.chatContinueInChat,
                   style: TextStyle(
                     color: DS.textSecondary,
                     fontSize: 11.5,

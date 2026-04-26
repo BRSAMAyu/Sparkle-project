@@ -6635,10 +6635,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationPermissionGranted => 'Granted';
 
   @override
-  String get notificationPermissionDenied => 'Denied';
+  String get notificationPermissionDenied =>
+      'Notification permission denied, please enable in system settings';
 
   @override
-  String get notificationPermissionPartial => 'Partial';
+  String get notificationPermissionPartial =>
+      'Some notification features are restricted, recommend enabling full permissions';
 
   @override
   String get notificationPermissionRequest => 'Request Permission';
@@ -7346,14 +7348,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatModeSectionExpertAccess => 'Expert Access';
 
   @override
-  String chatModeTransitionToWorkflow(String mode) =>
-      'Switched to $mode — multi-expert collaboration active';
+  String chatModeTransitionToWorkflow(Object mode) {
+    return 'Switched to $mode — multi-expert collaboration active';
+  }
 
   @override
   String get chatModeTransitionToDirect => 'Returned to standard chat';
 
   @override
-  String chatModeTransitionSwitched(String mode) => 'Switched to $mode';
+  String chatModeTransitionSwitched(Object mode) {
+    return 'Switched to $mode';
+  }
 
   @override
   String get capabilityCeilingTitle => 'Capability Limit';
@@ -8306,6 +8311,228 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planDetailTitle => 'Plan Detail Title';
+
+  @override
+  String get planDetailAddExistingTask => 'Add Existing';
+
+  @override
+  String get planDetailAddNewTask => 'Add New Task';
+
+  @override
+  String get planDetailAddPhase => 'Add Phase';
+
+  @override
+  String get planDetailAiGuide => 'AI Execution Guide';
+
+  @override
+  String planDetailCompressionDesc(int taskCount, int totalMinutes) {
+    return 'Only $taskCount tasks / $totalMinutes min kept today. Focus on getting the main thread back on track.';
+  }
+
+  @override
+  String get planDetailCompressionTitle => 'Today\'s plan has been streamlined';
+
+  @override
+  String get planDetailCommonMistakes => '⚠️ Common Mistakes';
+
+  @override
+  String get planDetailDailyRhythm => 'Daily Rhythm';
+
+  @override
+  String planDetailDayGroupSubtitle(int count, int minutes) {
+    return '$count items · $minutes min';
+  }
+
+  @override
+  String get planDetailDefaultRecommendation =>
+      'No new content today. Just review high-frequency topics, revisit past mistakes, and do a 30-min mini simulation.';
+
+  @override
+  String get planDetailEdit => 'Edit Plan';
+
+  @override
+  String get planDetailFullPlan => 'Full Plan';
+
+  @override
+  String get planDetailHealthNeedAttention => 'Needs Attention';
+
+  @override
+  String get planDetailHealthNeedReplan => 'Needs Replanning';
+
+  @override
+  String get planDetailHealthReasonDefault => 'No specific risk identified';
+
+  @override
+  String get planDetailHealthReasonProgressLag =>
+      'Progress is behind schedule. Prioritize high-yield tasks.';
+
+  @override
+  String get planDetailHealthReasonTimeOverrun =>
+      'Recent tasks have taken longer than expected. Consider compressing the next steps.';
+
+  @override
+  String get planDetailHealthReasonTooEasy =>
+      'Recent feedback suggests it\'s too easy. Consider increasing the challenge level.';
+
+  @override
+  String get planDetailHealthReasonTooHard =>
+      'Recent feedback suggests it\'s too hard. Try breaking it down or covering a prerequisite.';
+
+  @override
+  String planDetailHealthScore(int score, String label) {
+    return 'Plan Health $score% · $label';
+  }
+
+  @override
+  String get planDetailHealthStable => 'Stable';
+
+  @override
+  String planDetailLearningPathLoadError(String error) {
+    return 'Learning path progress failed to load: $error';
+  }
+
+  @override
+  String get planDetailLoadError => 'Plan Load Failed';
+
+  @override
+  String get planDetailLoadError404 =>
+      'Plan just finished generating, details may still be syncing. Tap \"Retry\" to continue loading.';
+
+  @override
+  String get planDetailLoadErrorEmpty =>
+      'Plan details couldn\'t load. Please try again.';
+
+  @override
+  String planDetailLoadErrorGeneric(String error) {
+    return 'Plan details couldn\'t load: $error';
+  }
+
+  @override
+  String get planDetailLoadErrorTimeout =>
+      'Plan loading timed out. Please check your network and try again.';
+
+  @override
+  String planDetailMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get planDetailNoPhasesYet =>
+      'No phases yet. Create the first phase to break your long-term plan into actionable segments.';
+
+  @override
+  String planDetailPhasesLoadError(String error) {
+    return 'Phase loading failed: $error';
+  }
+
+  @override
+  String get planDetailPhasesTitle => 'Plan Phases';
+
+  @override
+  String get planDetailPlanScope => 'Plan Scope';
+
+  @override
+  String planDetailRecommendationDay1(String thingLabel) {
+    return 'Focus on $thingLabel today. You\'re already on the right track.';
+  }
+
+  @override
+  String planDetailRecommendationDayN(int day, String thingLabel) {
+    return 'Start with Day $day\'s $thingLabel to keep your rhythm steady.';
+  }
+
+  @override
+  String get planDetailSprintMode7Day => '7-Day Sprint Mode';
+
+  @override
+  String get planDetailSprintModeExam => 'Exam Sprint Mode';
+
+  @override
+  String get planDetailSprintModeLabel => 'Pre-Exam Sprint Mode';
+
+  @override
+  String get planDetailSprintNodesLoading =>
+      'Sprint nodes are still being organized.';
+
+  @override
+  String get planDetailSprintPackDesc =>
+      'Secure these high-yield nodes first today. Completed tasks will light up the dots.';
+
+  @override
+  String get planDetailSprintPackNodes => 'Sprint Pack Nodes';
+
+  @override
+  String get planDetailStatusAbandoned => 'Abandoned';
+
+  @override
+  String get planDetailStatusCompleted => 'Completed';
+
+  @override
+  String get planDetailStatusInProgress => 'In Progress';
+
+  @override
+  String get planDetailStatusPending => 'Pending';
+
+  @override
+  String get planDetailStatusStuck => 'Stuck';
+
+  @override
+  String get planDetailTaskBlueprint => 'Task Blueprint';
+
+  @override
+  String planDetailTaskCount(int completed, int total) {
+    return '$completed/$total tasks';
+  }
+
+  @override
+  String planDetailTaskDifficulty(String difficulty) {
+    return 'Difficulty $difficulty';
+  }
+
+  @override
+  String get planDetailTagErrorRepair => 'Error Repair';
+
+  @override
+  String get planDetailTagNoNewContent => 'No New Content';
+
+  @override
+  String get planDetailThingCount1 => 'this 1 task';
+
+  @override
+  String planDetailThingCountN(int count) {
+    return 'these $count tasks';
+  }
+
+  @override
+  String get planDetailTodayFocus => 'Today\'s Focus';
+
+  @override
+  String get planDetailWhyNowErrorFix =>
+      'Fix this error now to prevent later tasks from being held back by the same gap.';
+
+  @override
+  String get planDetailWhyNowLearning =>
+      'Handle this now to turn today\'s learning progress into a tangible output.';
+
+  @override
+  String get planDetailWhyNowOcr =>
+      'Process materials now to turn available info into an entry point for upcoming tasks.';
+
+  @override
+  String get planDetailWhyNowPlanning =>
+      'Organize the plan now to reduce hesitation in the next steps.';
+
+  @override
+  String get planDetailWhyNowReflection =>
+      'Review now to turn today\'s results into easier choices for tomorrow.';
+
+  @override
+  String get planDetailWhyNowSocial =>
+      'Complete this collaboration now to keep external feedback in sync with your learning pace.';
+
+  @override
+  String get planDetailWhyNowTraining =>
+      'Practice now to quickly confirm you can apply what you just learned.';
 
   @override
   String get planDueToday => 'Plan Due Today';
@@ -9340,4 +9567,1547 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get personaAdjustInferredPreferenceTitle =>
       'Adjust Inferred Preference';
+
+  @override
+  String get languageDialogDescription =>
+      'Choose your preferred reading and interaction language. The interface and system copy will switch together.';
+
+  @override
+  String get languageChineseDescription =>
+      'Better suited for Chinese reading and localized expressions.';
+
+  @override
+  String get languageEnglishDescription =>
+      'Suited for English interface and a more international content environment.';
+
+  @override
+  String get learningModeSubtitle => 'Adjust depth and curiosity preferences';
+
+  @override
+  String get learningPreferenceSaving => 'Saving...';
+
+  @override
+  String get learningPreferenceSaved => 'Learning mode preference saved';
+
+  @override
+  String learningPreferenceSaveFailed(String error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get learningPreferenceAutoSaveHint => 'Drag to auto-save to backend';
+
+  @override
+  String get bgmVolume => 'Music Volume';
+
+  @override
+  String get bgmScenePreference => 'Scene Preference';
+
+  @override
+  String bgmPreviewTooltip(String palette) {
+    return 'Preview $palette';
+  }
+
+  @override
+  String get bgmAdvancedControls => 'Advanced Controls';
+
+  @override
+  String get bgmAdvancedControlsSubtitle =>
+      'Control music intensity, rotation frequency, reading protection, focus priority, and style locking';
+
+  @override
+  String get chatPureMode => 'Pure Mode';
+
+  @override
+  String get chatPureModeSubtitle =>
+      'Keep only text messages in chat, hiding extra info cards and widgets below messages.';
+
+  @override
+  String get motionIntensity => 'Motion Intensity';
+
+  @override
+  String get aiUsagePanelUnavailable =>
+      'Quota panel is temporarily unavailable, but tier switching still works.';
+
+  @override
+  String get aiOpsPanelUnavailable =>
+      'Ops panel is temporarily unavailable, but AI tier and usage stats still work.';
+
+  @override
+  String get notificationManageSubtitle =>
+      'Manage system notifications, intervention alerts, quiet hours, and task reminders.';
+
+  @override
+  String get notificationLoadingPrefs => 'Loading notification preferences...';
+
+  @override
+  String get notificationSystem => 'System Notifications';
+
+  @override
+  String get notificationSystemSubtitle =>
+      'Control task reminders, achievements, system messages, and in-app notifications';
+
+  @override
+  String get notificationInterventions => 'Intervention Alerts';
+
+  @override
+  String get notificationInterventionsSubtitle =>
+      'Control coach/agent intervention and guidance reminders';
+
+  @override
+  String get notificationReminders => 'Reminders';
+
+  @override
+  String get notificationRemindersSubtitle =>
+      'Control task, plan progress, and comeback reminders';
+
+  @override
+  String get notificationSpacedRepetition => 'Review';
+
+  @override
+  String get notificationSpacedRepetitionSubtitle =>
+      'Control Galaxy spaced repetition reminders';
+
+  @override
+  String get notificationWeeklyReport => 'Weekly Report';
+
+  @override
+  String get notificationWeeklyReportSubtitle =>
+      'Control weekly growth report and learning summary notifications';
+
+  @override
+  String get notificationMilestone => 'Milestones';
+
+  @override
+  String get notificationMilestoneSubtitle =>
+      'Control achievement, stage completion, and progress milestone notifications';
+
+  @override
+  String get notificationLevel => 'Notification Level';
+
+  @override
+  String notificationLevelSwitched(String level) {
+    return 'Notification level switched to $level';
+  }
+
+  @override
+  String get notificationLevelMinimal => 'Minimal';
+
+  @override
+  String get notificationLevelStandard => 'Standard';
+
+  @override
+  String get notificationLevelVerbose => 'Verbose';
+
+  @override
+  String get notificationLevelMinimalDesc =>
+      'Only keep essential reminders to minimize disruption.';
+
+  @override
+  String get notificationLevelStandardDesc =>
+      'Balance information volume and notification frequency.';
+
+  @override
+  String get notificationLevelVerboseDesc =>
+      'Show more complete background info and reminder content.';
+
+  @override
+  String get notificationLevelMinimalPreview =>
+      'Only critical reminders, such as tasks due soon and system notifications that need immediate action.';
+
+  @override
+  String get notificationLevelStandardPreview =>
+      'Keep primary reminders and add brief context when needed, suitable for most scenarios.';
+
+  @override
+  String get notificationLevelVerbosePreview =>
+      'Includes more context, such as why you\'re being reminded, next-step suggestions, and supplementary notes.';
+
+  @override
+  String notificationLevelPreviewTitle(String level) {
+    return '$level Notifications';
+  }
+
+  @override
+  String get notificationQuietHours => 'Quiet Hours';
+
+  @override
+  String get notificationQuietHoursSubtitle =>
+      'When off, the system will push notifications at the normal pace';
+
+  @override
+  String get notificationQuietHoursStart => 'Start Time';
+
+  @override
+  String get notificationQuietHoursEnd => 'End Time';
+
+  @override
+  String get notificationQuietHoursHint =>
+      'Supports crossing midnight, e.g. 22:00 - 08:00; start and end times cannot be the same.';
+
+  @override
+  String get notificationQuietHoursSameTimeError =>
+      'Start and end times cannot be the same';
+
+  @override
+  String get notificationQuietHoursStartUpdated =>
+      'Quiet hours start time updated';
+
+  @override
+  String get notificationQuietHoursEndUpdated => 'Quiet hours end time updated';
+
+  @override
+  String notificationUpdateFailed(String error) {
+    return 'Failed to update notification settings: $error';
+  }
+
+  @override
+  String get aiExecutionEngine => 'AI Execution Engine';
+
+  @override
+  String get aiExecutionEngineSubtitle =>
+      'Connect your OpenClaw instance and monitor health status';
+
+  @override
+  String get capsuleGenerated => 'New curiosity capsule generated';
+
+  @override
+  String get capsuleGeneratedEmpty =>
+      'A new capsule has been generated. Tap below to view the full content.';
+
+  @override
+  String get capsuleViewNew => 'View New Capsule';
+
+  @override
+  String get capsulePreviewFailed => 'Preview failed, please check audio files';
+
+  @override
+  String get capsuleScenePreviewFailed =>
+      'Current scene preview failed, please check audio files';
+
+  @override
+  String aiReasoningModeSwitched(String mode) {
+    return 'AI reasoning mode switched to $mode';
+  }
+
+  @override
+  String get aiReasoningModeSwitchFailed =>
+      'AI reasoning mode switch failed, please try again later';
+
+  @override
+  String get aiReasoningFastDesc =>
+      'Prioritizes faster results, suitable for short Q&A, lightweight queries, and low-latency scenarios.';
+
+  @override
+  String get aiReasoningBalancedDesc =>
+      'Balances speed and reasoning depth, suitable for most daily use.';
+
+  @override
+  String get aiReasoningDeepDesc =>
+      'Invests more reasoning budget, suitable for complex problems, planning, and high-precision explanations.';
+
+  @override
+  String get taskReminderDisabled => 'Disabled';
+
+  @override
+  String get taskReminderEnabledNoTime =>
+      'Enabled, but no reminder times selected yet';
+
+  @override
+  String get taskReminderEnabledWithTimes => 'Enabled';
+
+  @override
+  String taskReminderDaysAgo(int days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String taskReminderHoursAgo(int hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String taskReminderMinutesAgo(int minutes) {
+    return '${minutes}min ago';
+  }
+
+  @override
+  String notificationPermissionDeniedTitle(String error) {
+    return 'Not authorized: $error';
+  }
+
+  @override
+  String get notificationRequestPermission => 'Request Permission';
+
+  @override
+  String get notificationOpenSettings => 'Open Settings';
+
+  @override
+  String get notificationPermissionDialogTitle => 'Notification Permission';
+
+  @override
+  String get notificationPermissionDialogContent =>
+      'Notification permission has been denied. Please enable it in system settings.';
+
+  @override
+  String get bgmPaletteAdaptive => 'Adaptive';
+
+  @override
+  String get bgmPaletteClassical => 'Classical';
+
+  @override
+  String get bgmPalettePiano => 'Piano';
+
+  @override
+  String get bgmPaletteAiry => 'Airy';
+
+  @override
+  String get bgmPaletteWarm => 'Warm';
+
+  @override
+  String get bgmPaletteAdaptiveDesc =>
+      'The system automatically selects the most suitable background music based on page function.';
+
+  @override
+  String get bgmPaletteClassicalDesc =>
+      'Curated classical piano and strings, prioritizing your local classical library for scene transitions.';
+
+  @override
+  String get bgmPalettePianoDesc =>
+      'Overall emphasis on light piano and quiet melodies, suitable for long-term companionship.';
+
+  @override
+  String get bgmPaletteAiryDesc =>
+      'Overall emphasis on ethereal, dreamy, and spatially rich atmospheres.';
+
+  @override
+  String get bgmPaletteWarmDesc =>
+      'Overall emphasis on warm, soft, and human-feeling upbeat tones.';
+
+  @override
+  String get bgmIntensityGentle => 'Gentle';
+
+  @override
+  String get bgmIntensityBalanced => 'Balanced';
+
+  @override
+  String get bgmIntensityLush => 'Lush';
+
+  @override
+  String get bgmIntensityGentleDesc =>
+      'Better for long-term companionship, prioritizing light density, low interference, and slow transitions.';
+
+  @override
+  String get bgmIntensityBalancedDesc =>
+      'Adds a bit more layer and presence while maintaining comfort.';
+
+  @override
+  String get bgmIntensityLushDesc =>
+      'Makes the same scene more atmospheric and enveloping, while still avoiding obvious abruptness.';
+
+  @override
+  String get bgmVarietySteady => 'Steady';
+
+  @override
+  String get bgmVarietyBalanced => 'Balanced';
+
+  @override
+  String get bgmVarietyDynamic => 'Dynamic';
+
+  @override
+  String get bgmVarietySteadyDesc =>
+      'Minimize track changes and repetition for a more continuous atmosphere.';
+
+  @override
+  String get bgmVarietyBalancedDesc =>
+      'Keep a middle ground between continuity and freshness.';
+
+  @override
+  String get bgmVarietyDynamicDesc =>
+      'Reduce repetition so similar pages can hear new variations more often.';
+
+  @override
+  String get bgmModeAdaptive => 'Follow Page';
+
+  @override
+  String get bgmModeContinuous => 'Player Mode';
+
+  @override
+  String get bgmModeFocusOnly => 'Focus Only';
+
+  @override
+  String get bgmModeSilent => 'Global Silent';
+
+  @override
+  String get bgmModeAdaptiveDesc =>
+      'Home, chat, tasks, achievements, and other pages will automatically switch to matching ambient music.';
+
+  @override
+  String get bgmModeContinuousDesc =>
+      'The current track keeps playing without being interrupted when you navigate to another page, great for using the App as a relaxing music player.';
+
+  @override
+  String get bgmModeFocusOnlyDesc =>
+      'Background music only plays when focus starts, during immersion, and when executing tasks; daily pages stay quiet.';
+
+  @override
+  String get bgmModeSilentDesc =>
+      'Keep sound effects and haptic feedback, but all background music won\'t autoplay.';
+
+  @override
+  String get motionIntensityUltra => 'Ultra';
+
+  @override
+  String get motionIntensityHigh => 'High';
+
+  @override
+  String get motionIntensityMedium => 'Medium';
+
+  @override
+  String get motionIntensityOff => 'Off';
+
+  @override
+  String get motionIntensityUltraDesc =>
+      'Keep full particles, glow, and complex animations, suitable for high-performance devices.';
+
+  @override
+  String get motionIntensityHighDesc =>
+      'Maintain most visual layers while allowing the system to auto-downgrade by frame rate.';
+
+  @override
+  String get motionIntensityMediumDesc =>
+      'Tone down particles and glow, prioritize stability and battery saving, while retaining basic depth.';
+
+  @override
+  String get motionIntensityOffDesc =>
+      'Try to disable strong animations and particle layers, suitable for static, low-stimulus, or low-performance scenarios.';
+
+  @override
+  String get bgmSectionSubtitleDefault =>
+      'Manage background music by page and player mode';
+
+  @override
+  String bgmSectionSubtitleWithCount(int count) {
+    return 'Currently $count tracks, freely switch between page strategy and player mode';
+  }
+
+  @override
+  String bgmLibraryUpdated(int count) {
+    return 'Library updated to $count tracks';
+  }
+
+  @override
+  String get bgmOpenLibrary => 'Open Library';
+
+  @override
+  String get bgmCurated => 'Curated';
+
+  @override
+  String get bgmImported => 'Local Import';
+
+  @override
+  String get bgmBundled => 'System Fallback';
+
+  @override
+  String get bgmModeLabel => 'Mode';
+
+  @override
+  String get bgmPlayerMode => 'Player Mode';
+
+  @override
+  String get bgmPageStrategyMode => 'Page Strategy';
+
+  @override
+  String get bgmLibraryHint =>
+      'In the new page, you can request tracks from the library, import your own music, and enable \'Player Mode\' for cross-page continuous BGM.';
+
+  @override
+  String get bgmNotPlaying => 'Not currently playing';
+
+  @override
+  String get bgmBundledTrack => 'Built-in scene track';
+
+  @override
+  String get bgmWaitingPlayback => 'Waiting for playback info';
+
+  @override
+  String get bgmDisabled => 'Background music disabled';
+
+  @override
+  String get bgmGlobalSilent => 'Currently in global silent mode';
+
+  @override
+  String get bgmContinuousPlaying => 'Player mode playing continuously';
+
+  @override
+  String get bgmNowPlaying => 'Now Playing';
+
+  @override
+  String get bgmPreviewCurrentScene => 'Preview Current Scene';
+
+  @override
+  String bgmTrackLabel(String name) {
+    return 'Track: $name';
+  }
+
+  @override
+  String bgmSourceLabel(String label) {
+    return 'Source: $label';
+  }
+
+  @override
+  String get bgmIntensityLabel => 'Intensity';
+
+  @override
+  String get bgmVarietyLabel => 'Variety';
+
+  @override
+  String get bgmReadingProtection => 'Reading Protection';
+
+  @override
+  String get bgmFocusPriority => 'Focus Priority';
+
+  @override
+  String get bgmStyleLocked => 'Style Locked';
+
+  @override
+  String get bgmReadingProtectionTitle => 'Reading Protection';
+
+  @override
+  String get bgmReadingProtectionSubtitle =>
+      'Chat, insights, and profile pages prioritize low-stimulus and light mixing';
+
+  @override
+  String get bgmFocusPriorityTitle => 'Focus Priority';
+
+  @override
+  String get bgmFocusPrioritySubtitle =>
+      'Focus and execution stages prioritize purer and more stable tracks';
+
+  @override
+  String get bgmLockStyleTitle => 'Lock Current Style';
+
+  @override
+  String get bgmLockStyleSubtitle =>
+      'Continue current vibe across regular pages, without overriding focus and celebration scenes';
+
+  @override
+  String get bgmAtmosphereIntensity => 'Atmosphere Intensity';
+
+  @override
+  String get bgmVarietyFrequency => 'Track Change Frequency';
+
+  @override
+  String get aiUsageTodayPreparing =>
+      'Today\'s quota stats are being prepared.';
+
+  @override
+  String get aiUsageTodayTitle => 'Today\'s AI Quota & Usage';
+
+  @override
+  String aiUsageRequests(int used, int limit) {
+    return '$used/$limit times';
+  }
+
+  @override
+  String aiUsageLatency(String firstToken, String totalMs) {
+    return 'Avg first token ${firstToken}ms · Avg total ${totalMs}ms';
+  }
+
+  @override
+  String get aiOpsModesAccumulating =>
+      'Mode-level ops metrics are still accumulating.';
+
+  @override
+  String get aiOpsTopChatModeStandard => 'Standard Chat';
+
+  @override
+  String get aiOpsTopChatModeStudyPlan => 'Study Planning';
+
+  @override
+  String get aiOpsTopChatModeDeepAnalysis => 'Deep Analysis';
+
+  @override
+  String get aiOpsTopChatModeErrorDiagnosis => 'Error Diagnosis';
+
+  @override
+  String get aiOpsTopChatModeExpertAuto => 'Expert Collaboration';
+
+  @override
+  String get aiOpsUserViewTitle => 'User Perspective';
+
+  @override
+  String get aiOpsUserViewDesc =>
+      'Focus on whether AI responds fast, stable, and can push suggestions into real execution, not just model-layer parameters.';
+
+  @override
+  String get aiOpsSuccessRate => 'Success Rate';
+
+  @override
+  String get aiOpsAvgFirstToken => 'Avg First Token';
+
+  @override
+  String get aiOpsAvgTotalDuration => 'Avg Total Duration';
+
+  @override
+  String get aiOpsExecutionConversion => 'Execution Conversion';
+
+  @override
+  String get aiOpsPredictedAcceptExec => 'Predicted Accept-to-Exec';
+
+  @override
+  String aiOpsTopModeSummary(String topMode) {
+    return 'The most recently used chain is \"$topMode\", indicating it\'s already the main workflow in daily experience.';
+  }
+
+  @override
+  String get aiOpsDevViewTitle => 'Dev Ops Perspective';
+
+  @override
+  String get aiOpsDevViewDesc =>
+      'Here we look at speed, cost, fallback, and prediction conversion to decide which mode chain to optimize next.';
+
+  @override
+  String get aiOpsMonitoringModes => 'Monitoring Modes';
+
+  @override
+  String get aiOpsTotalRequests => 'Total Requests';
+
+  @override
+  String get aiOpsFallback => 'Fallback';
+
+  @override
+  String get aiOpsTotalCost => 'Total Cost';
+
+  @override
+  String get aiOpsPromptHit => 'Prompt Hit';
+
+  @override
+  String get aiOpsInferenceHit => 'Inference Hit';
+
+  @override
+  String aiOpsPredictionSummary(
+      int days, String topAction, String promptUtil, String inferenceUtil) {
+    return 'In the past $days days, the prediction action worth watching most is \"$topAction\"; prompt/inference hit rates are $promptUtil%/$inferenceUtil%.';
+  }
+
+  @override
+  String get aiOpsOpenAnalysis => 'Open AI Ops Analysis';
+
+  @override
+  String get aiOpsOpenAdminPanel => 'Open Admin Ops Panel';
+
+  @override
+  String get memoryDeclaration => 'Declaration';
+
+  @override
+  String get memoryEvidenceToken => 'Evidence Token';
+
+  @override
+  String get memoryDecayPolicy => 'Decay Policy';
+
+  @override
+  String memoryUpdateValue(String date) {
+    return 'Updated: $date';
+  }
+
+  @override
+  String memoryConfidenceValue(String value) {
+    return 'Confidence: $value';
+  }
+
+  @override
+  String memoryAllowedCaptureSummary(String types, String level) {
+    return 'Allowed capture: $types\nCapture level: $level';
+  }
+
+  @override
+  String get memoryAiInferredDisabledHint =>
+      'AI auto-memory is currently disabled, such inferred memories will not be recorded.';
+
+  @override
+  String get memoryExplanationInferredEpisodic =>
+      'This experience was inferred by AI from chat, with evidence tokens, confidence, and retraction path preserved.';
+
+  @override
+  String memoryCorrectionSubmittedWithAction(String action) {
+    return 'Correction submitted: $action';
+  }
+
+  @override
+  String memoryCorrectionFailedWithDetail(String error) {
+    return 'Correction failed: $error';
+  }
+
+  @override
+  String tracksCount(int count) {
+    return '$count tracks';
+  }
+
+  @override
+  String get profilePrestigeIdentity => 'Prestige Identity';
+
+  @override
+  String get profileNoTitleEquipped => 'No title equipped';
+
+  @override
+  String get profileRecentHighlights => 'Recent Highlights';
+
+  @override
+  String get profileNoHighlightsHint =>
+      'Keep learning and sprinting to light up your Prestige Showcase.';
+
+  @override
+  String get profileTraitQ1Title =>
+      'When starting a new goal, which approach fits you better?';
+
+  @override
+  String get profileTraitQ1Structured => 'Build structure first, then act';
+
+  @override
+  String get profileTraitQ1Mixed =>
+      'Start with a framework, then adjust as you go';
+
+  @override
+  String get profileTraitQ1Explore => 'Try it out and let the direction emerge';
+
+  @override
+  String get profileTraitSkip => 'Skip';
+
+  @override
+  String get profileTraitQ2Title =>
+      'When facing tough problems, where do you recharge?';
+
+  @override
+  String get profileTraitQ2Solo => 'Think it through alone first';
+
+  @override
+  String get profileTraitQ2SmallGroup => 'Discuss with one or two people';
+
+  @override
+  String get profileTraitQ2Group => 'Think through discussion';
+
+  @override
+  String get profileTraitQ3Title =>
+      'When your plan gets disrupted, what\'s your first reaction?';
+
+  @override
+  String get profileTraitQ3Replan => 'Replan immediately and get back on track';
+
+  @override
+  String get profileTraitQ3Pause => 'Get stuck briefly, but slowly recover';
+
+  @override
+  String get profileTraitQ3Swing => 'Both mood and rhythm are affected';
+
+  @override
+  String get profileLearningPortfolio => 'Learning Portfolio';
+
+  @override
+  String get profileLearningPortfolioSubtitle =>
+      'View sprint history, in-progress and planned records across all subjects';
+
+  @override
+  String get profilePosterStudio => 'Poster Studio';
+
+  @override
+  String get profilePosterStudioSubtitle =>
+      'Turn growth, plans, and inspiration into shareable posters';
+
+  @override
+  String get profileMyWay => 'My Way';
+
+  @override
+  String get profileMetacognitionPanel => 'Metacognition Panel';
+
+  @override
+  String get profileMetacognitionHidden =>
+      'Hidden, but still calculating in the background';
+
+  @override
+  String get profileMetacognitionVisible =>
+      'Show judgment bias summary from past samples';
+
+  @override
+  String get profileExportData => 'Export My Data';
+
+  @override
+  String get profileExportPreparing => 'Preparing data, please wait...';
+
+  @override
+  String get profileExportEmptyFile => 'Empty file';
+
+  @override
+  String get profileExportShareSubject => 'Sparkle Data Export';
+
+  @override
+  String profileExportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String get profileSubtitleAchievements =>
+      'View unlocked milestones and honor progress';
+
+  @override
+  String get profileSubtitleVisualElements =>
+      'Manage backgrounds, particles, and visual rewards';
+
+  @override
+  String get profileSubtitlePersona =>
+      'View learning traits and preferences understood by the system';
+
+  @override
+  String get profileSubtitlePersonalInfo =>
+      'Edit avatar, nickname, and basic info';
+
+  @override
+  String get profileSubtitlePreferences =>
+      'Manage sensory feedback, learning mode, and push preferences';
+
+  @override
+  String get profileSubtitleMyWay =>
+      'Manage private skills, sharing, and anonymous forks';
+
+  @override
+  String get profileSubtitleSecurity =>
+      'View security info, devices, and privacy controls';
+
+  @override
+  String get profileSubtitleMemory =>
+      'Adjust long-term memory and context retention strategy';
+
+  @override
+  String get profileSubtitleLogout => 'Safely log out of your account';
+
+  @override
+  String get profileSubtitleDeleteAccount =>
+      'Permanently remove your account and associated data';
+
+  @override
+  String get profileSubtitleDefault =>
+      'Continue adjusting detailed settings on this page';
+
+  @override
+  String get chatSelfVisibleOnly => 'Self-visible only';
+
+  @override
+  String get chatSelfVisibleDraftDesc =>
+      'This AI draft is only saved in your current private chat view.';
+
+  @override
+  String get chatPromoteToBothVisible => 'Make visible to both';
+
+  @override
+  String get chatPromoteToBothDesc =>
+      'Put this draft back in the input box for you to confirm before sending.';
+
+  @override
+  String get chatViewAccessoryContent => 'View additional content';
+
+  @override
+  String get chatViewAccessoryContentDesc =>
+      'Temporarily expand task cards and quick actions in pure mode';
+
+  @override
+  String get chatActionSuggestion => 'Action suggestion';
+
+  @override
+  String get chatActionSuggestionDesc =>
+      'Continue this step, or confirm the task and plan first.';
+
+  @override
+  String get chatTheaterTitle => 'Prediction Theater';
+
+  @override
+  String get chatTheaterDesc =>
+      'See which path is worth exploring now and why it suits you better.';
+
+  @override
+  String get chatSimulationTitle => 'Learning Simulation';
+
+  @override
+  String get chatSimulationDesc =>
+      'See the key viewpoint clash first, then decide whether to enter the full simulation.';
+
+  @override
+  String get chatReportTitle => 'Learning Report';
+
+  @override
+  String get chatReportDesc =>
+      'See the core diagnosis and next steps first, then decide whether to enter the full report.';
+
+  @override
+  String get chatAccessoryContent => 'Additional content';
+
+  @override
+  String get chatContinueExploring => 'Continue exploring';
+
+  @override
+  String get chatSwipeToSwitch => 'Swipe left/right to switch entries';
+
+  @override
+  String get chatViewTheaterDetails => 'View prediction details';
+
+  @override
+  String get chatCurrentLearningTopic => 'Current learning topic';
+
+  @override
+  String get chatViewSimulationDetails => 'View simulation details';
+
+  @override
+  String get chatCollaborationProcess => 'Collaboration process';
+
+  @override
+  String get chatPlanContext => 'Plan context';
+
+  @override
+  String get chatPlanStatus => 'Plan status';
+
+  @override
+  String get chatContinueFromConversation => 'Continue from the conversation';
+
+  @override
+  String get chatReviewFirstThenExpand =>
+      'Review highlights first, then decide whether to expand';
+
+  @override
+  String get chatPathLabel => 'Path';
+
+  @override
+  String get chatMasteryLabel => 'Mastery';
+
+  @override
+  String get chatOpenFullExperience => 'Open full experience';
+
+  @override
+  String get chatContinueInChat => 'Continue in chat';
+
+  @override
+  String get chatViewLatestReport => 'View latest learning report';
+
+  @override
+  String get chatViewLearningReport => 'View learning report';
+
+  @override
+  String get chatKeyFocusLabel => 'Key focus';
+
+  @override
+  String get chatShareResourceInvalidId =>
+      'Invalid share resource ID, cannot adopt';
+
+  @override
+  String get chatShareResourceAdopted => 'Adopted, navigating...';
+
+  @override
+  String chatShareResourceAdoptError(Object error) {
+    return 'Adoption failed: $error';
+  }
+
+  @override
+  String chatTaskConfirmedMessage(Object count) {
+    return 'Confirmed $count tasks, starting execution!';
+  }
+
+  @override
+  String get chatViewPlan => 'View plan';
+
+  @override
+  String get chatGoToTaskList => 'Go to task list';
+
+  @override
+  String chatConfirmFailed(Object error) {
+    return 'Confirmation failed: $error';
+  }
+
+  @override
+  String chatTaskCompletedDoneMinutes(Object minutes) {
+    return 'Completed · ${minutes}min';
+  }
+
+  @override
+  String get chatTaskCompletedDone => 'Completed';
+
+  @override
+  String chatPlanProgressLabel(Object percent) {
+    return 'Progress: $percent%';
+  }
+
+  @override
+  String get chatPromptPreviewCancel => 'Not now';
+
+  @override
+  String get chatPromptPreviewSend => 'Send now';
+
+  @override
+  String get chatParticipantLabel => 'Participant';
+
+  @override
+  String get chatPromptRefinePath => 'Continue refining this path';
+
+  @override
+  String chatPromptRefinePathMessage(Object topic) {
+    return 'Continue refining the first week\'s priority steps around \"$topic\".';
+  }
+
+  @override
+  String get chatPromptComparePaths => 'Compare two paths';
+
+  @override
+  String chatPromptComparePathsMessage(Object pathA, Object pathB) {
+    return 'Compare the trade-offs between \"$pathA\" and \"$pathB\".';
+  }
+
+  @override
+  String get chatPromptDefaultPathA => 'Path A';
+
+  @override
+  String get chatPromptDefaultPathB => 'Path B';
+
+  @override
+  String get chatPromptPrerequisites => 'What prerequisites to cover first';
+
+  @override
+  String chatPromptPrerequisitesMessage(Object topic) {
+    return 'If I start learning \"$topic\" now, what prerequisites should I cover first?';
+  }
+
+  @override
+  String get chatPromptExamFocus => 'What are the exam key points';
+
+  @override
+  String chatPromptExamFocusMessage(Object topic) {
+    return 'Tell me the parts of \"$topic\" most likely to be exam key points and why.';
+  }
+
+  @override
+  String get chatPromptMakePlan => 'Make it a plan';
+
+  @override
+  String chatPromptMakePlanMessage(Object topic) {
+    return 'Rewrite the \"$topic\" path into a 7-day executable mini-plan.';
+  }
+
+  @override
+  String get chatPromptSimulateRound => 'Continue simulating another round';
+
+  @override
+  String chatPromptSimulateRoundMessage(Object topic) {
+    return 'Simulate another round around \"$topic\". I want to continue this learning scenario.';
+  }
+
+  @override
+  String get chatOneOfTheRoles => 'One of the roles';
+
+  @override
+  String get chatPromptLetMeAnswer => 'Let me answer';
+
+  @override
+  String chatPromptLetMeAnswerMessage(Object speaker, Object topic) {
+    return 'Have $speaker ask me a follow-up question around \"$topic\", and I\'ll answer.';
+  }
+
+  @override
+  String get chatPromptPracticeExplain => 'Practice explaining to others';
+
+  @override
+  String chatPromptPracticeExplainMessage(Object topic) {
+    return 'Arrange a simulation round around \"$topic\" where I explain to someone else.';
+  }
+
+  @override
+  String get chatPromptErrorDiagnosis => 'Switch to error diagnosis';
+
+  @override
+  String chatPromptErrorDiagnosisMessage(Object topic) {
+    return 'Switch \"$topic\" to error diagnosis mode and help me identify the real blocker.';
+  }
+
+  @override
+  String get chatPromptOrderActions => 'Order today\'s actions';
+
+  @override
+  String get chatPromptOrderActionsMessage =>
+      'Based on this learning report, help me create an action order I can start today.';
+
+  @override
+  String get chatPromptExpandKeyIssue => 'Expand on key issues';
+
+  @override
+  String chatPromptExpandKeyIssueMessage(Object highlight) {
+    return 'Explain in detail why \"$highlight\" deserves priority attention.';
+  }
+
+  @override
+  String get chatPromptPrioritizeArea => 'Which area to cover first';
+
+  @override
+  String chatPromptPrioritizeAreaMessage(Object area) {
+    return 'Based on this report, explain why \"$area\" should be processed first.';
+  }
+
+  @override
+  String get chatPromptConvertToPlan => 'Convert to 7-day plan';
+
+  @override
+  String get chatPromptConvertToPlanMessage =>
+      'Rewrite this learning report into my next 7-day execution sequence.';
+
+  @override
+  String get chatPromptReviewOutline => 'Help me make a review outline';
+
+  @override
+  String get chatPromptReviewOutlineMessage =>
+      'Based on this learning report, give me a review outline I can use tonight.';
+
+  @override
+  String dashboardBottleneckPrompt(String topic) {
+    return 'I want to understand $topic differently. Help me adjust my learning path based on this bottleneck.';
+  }
+
+  @override
+  String get dashboardSetFirstGoal => 'Set your first goal';
+
+  @override
+  String get dashboardSetFirstGoalSummary =>
+      'Tell me the one thing you want to move forward, and I will turn it into an actionable plan.';
+
+  @override
+  String get dashboardStartWithAI => 'Start with AI';
+
+  @override
+  String get dashboardOpenTaskList => 'Open tasks';
+
+  @override
+  String get dashboardDueToday => 'Due today';
+
+  @override
+  String dashboardOverdueDays(int days) {
+    return '$days days overdue';
+  }
+
+  @override
+  String dashboardDaysLeft(int days) {
+    return '$days days left';
+  }
+
+  @override
+  String get dashboardMainMove => '1 main move';
+
+  @override
+  String dashboardMoreQueued(int count) {
+    return '$count more queued';
+  }
+
+  @override
+  String dashboardProgress(int percent) {
+    return '$percent% progress';
+  }
+
+  @override
+  String get dashboardTodayBriefing => 'Today Briefing';
+
+  @override
+  String get dashboardBriefingSummary => 'One place for the important stuff';
+
+  @override
+  String get dashboardSparkleObservation => 'What Sparkle Noticed';
+
+  @override
+  String get dashboardStartWithThis => 'Start With This';
+
+  @override
+  String get dashboardGrowthSignal => 'Growth Signal';
+
+  @override
+  String dashboardMoreTasksQueued(int count) {
+    return '$count more tasks are still queued after this one.';
+  }
+
+  @override
+  String get dashboardStartFocus => 'Start Focus';
+
+  @override
+  String get dashboardStartHere => 'Start Here';
+
+  @override
+  String get dashboardOpenTasks => 'Open Tasks';
+
+  @override
+  String get dashboardTaskList => 'View Tasks';
+
+  @override
+  String get dashboardActivePlan => 'Active Plan';
+
+  @override
+  String dashboardPhaseLabel(String phase) {
+    return 'Phase: $phase';
+  }
+
+  @override
+  String get dashboardPhaseInProgress => 'in progress';
+
+  @override
+  String dashboardDaysToDeadline(int days) {
+    return '$days days to deadline';
+  }
+
+  @override
+  String get dashboardPrediction => 'prediction';
+
+  @override
+  String dashboardMessagesCount(int count) {
+    return '$count messages';
+  }
+
+  @override
+  String dashboardAlertsCount(int count) {
+    return '$count alerts';
+  }
+
+  @override
+  String dashboardInsightsCount(int count) {
+    return '$count insights';
+  }
+
+  @override
+  String get dashboardReviewPending => 'review pending';
+
+  @override
+  String get dashboardUpdatesInsights => 'Updates & Insights';
+
+  @override
+  String get taskExecutionFreeFocusCompleted => 'Free focus session completed.';
+
+  @override
+  String taskExecutionAuroraDiagnosticUnavailable(String error) {
+    return 'Aurora real-time diagnostics unavailable: $error';
+  }
+
+  @override
+  String get taskExecutionChatAboutStuckPoint =>
+      'Chat with Sparkle about this blocker';
+
+  @override
+  String get taskExecutionSentToAurora => 'Sent to Aurora';
+
+  @override
+  String get taskExecutionStuckPromptIntro =>
+      'I\'m stuck on this task and would like to break down the specific blockers with you.';
+
+  @override
+  String taskExecutionStuckTaskLabel(String title) {
+    return 'Task: $title';
+  }
+
+  @override
+  String taskExecutionStuckEstimatedTime(int minutes) {
+    return 'Estimated: $minutes min';
+  }
+
+  @override
+  String taskExecutionStuckFocusCue(String cue) {
+    return 'Focus cue: $cue';
+  }
+
+  @override
+  String taskExecutionStuckSteps(String steps) {
+    return 'Task steps: $steps';
+  }
+
+  @override
+  String taskExecutionStuckCriteria(String criteria) {
+    return 'Success criteria: $criteria';
+  }
+
+  @override
+  String taskExecutionStuckSuggestion(String suggestion) {
+    return 'Stuck suggestion: $suggestion';
+  }
+
+  @override
+  String get taskExecutionStuckClarifyPrompt =>
+      'Please ask me one key clarifying question, then narrow the next step to something I can start within 5 minutes.';
+
+  @override
+  String get taskExecutionStuckTooltip => 'Stuck?';
+
+  @override
+  String get taskExecutionStuckLabel => 'Stuck?';
+
+  @override
+  String get taskExecutionResetTimer => 'Reset';
+
+  @override
+  String get taskExecutionAiHandoffFailed => 'Failed to start AI execution';
+
+  @override
+  String get taskExecutionAiCompleted => 'AI completed this execution';
+
+  @override
+  String get taskExecutionAiPartial =>
+      'AI completed part of the task. Please review.';
+
+  @override
+  String get taskExecutionAiFailed => 'AI execution failed';
+
+  @override
+  String get taskExecutionAiWaitingApproval =>
+      'AI is waiting for your confirmation';
+
+  @override
+  String taskExecutionAiHandedOff(String status) {
+    return 'Task handed to AI. Status: $status';
+  }
+
+  @override
+  String get taskExecutionPermissionInsufficientQueued =>
+      'Insufficient execution permission. Task has been queued. Retry after permission is granted.';
+
+  @override
+  String get taskExecutionAiConfirmFailed => 'Failed to confirm AI result';
+
+  @override
+  String get taskExecutionAiResultConfirmed =>
+      'AI result confirmed. Task status synced.';
+
+  @override
+  String get taskExecutionRejectFailed => 'Failed to retrieve task';
+
+  @override
+  String get taskExecutionTaskReturned =>
+      'Task returned to you for further processing';
+
+  @override
+  String get taskExecutionAiTakingOver => 'AI is taking over this task';
+
+  @override
+  String get taskExecutionAiNotStarted => 'AI execution has not started';
+
+  @override
+  String taskExecutionAiStatusLabel(String status) {
+    return 'AI status: $status';
+  }
+
+  @override
+  String get taskExecutionSendingToOpenclaw =>
+      'Sparkle is sending the task to OpenClaw.';
+
+  @override
+  String get taskExecutionDigitalTaskHint =>
+      'Digitally executable tasks can be handed off with one tap.';
+
+  @override
+  String taskExecutionValidationLabel(int passed, int total) {
+    return 'Verified $passed/$total';
+  }
+
+  @override
+  String taskExecutionResultLabel(String text) {
+    return 'Result: $text';
+  }
+
+  @override
+  String taskExecutionApprovalRequestLabel(int count) {
+    return ' · Approval request $count';
+  }
+
+  @override
+  String taskExecutionGoalWithTrust(String goal, String trust) {
+    return 'Goal: $goal · $trust';
+  }
+
+  @override
+  String taskExecutionResultTrust(String trust) {
+    return 'Result trust: $trust';
+  }
+
+  @override
+  String taskExecutionTemplateLabel(String name) {
+    return 'Template: $name';
+  }
+
+  @override
+  String taskExecutionStrategyLabel(String variant) {
+    return 'Strategy: $variant';
+  }
+
+  @override
+  String taskExecutionNodeLabel(String label) {
+    return 'Node: $label';
+  }
+
+  @override
+  String get taskExecutionAiTakingOverLoading => 'AI taking over...';
+
+  @override
+  String get taskExecutionRehandoffToAi => 'Re-hand to AI';
+
+  @override
+  String get taskExecutionHandoffToAiAgain => 'Hand to AI again';
+
+  @override
+  String get taskExecutionWaitingConfirm => 'Waiting for confirmation';
+
+  @override
+  String get taskExecutionAiRunning => 'AI executing';
+
+  @override
+  String get taskExecutionHandoffToAi => 'Hand off to AI';
+
+  @override
+  String get taskExecutionRecommendedTemplates => 'Recommended templates';
+
+  @override
+  String get taskExecutionOpenclawConnectedNoPermission =>
+      'OpenClaw is connected but lacks execution permission';
+
+  @override
+  String get taskExecutionOpenclawOfflineQueued =>
+      'OpenClaw is offline. You can queue the task.';
+
+  @override
+  String get taskExecutionOpenclawNotConnected => 'OpenClaw is not connected';
+
+  @override
+  String get taskExecutionOpenclawPermissionHint =>
+      'Your token can reach the gateway, but execution is blocked by permissions. Queue the task and retry after fixing permissions.';
+
+  @override
+  String get taskExecutionOpenclawOfflineHint =>
+      'You can continue delegating. The engine will retry automatically when it comes back online.';
+
+  @override
+  String get taskExecutionOpenclawNotConnectedHint =>
+      'Complete the connection first. The task and chat pages will share the same execution entry.';
+
+  @override
+  String get taskExecutionViewAction => 'View';
+
+  @override
+  String get taskExecutionConnectAction => 'Connect';
+
+  @override
+  String get taskExecutionDismissHint => 'Dismiss';
+
+  @override
+  String get taskExecutionMetricConnectedNoPermission =>
+      'Connected to gateway, no execution permission';
+
+  @override
+  String get taskExecutionMetricConfiguredOffline => 'Configured but offline';
+
+  @override
+  String get taskExecutionMetricNotConfigured => 'Not configured';
+
+  @override
+  String taskExecutionMetricQueuedTasks(int count) {
+    return '$count tasks queued';
+  }
+
+  @override
+  String get taskExecutionSuggestionFixPermission => 'Fix permissions first';
+
+  @override
+  String get taskExecutionSuggestionQueueFirst => 'Queue first, retry later';
+
+  @override
+  String get taskExecutionSuggestionConnectFirst =>
+      'Connect first, then delegate';
+
+  @override
+  String get taskExecutionNudgeCurrentStatus => 'Current status';
+
+  @override
+  String get taskExecutionNudgeStatusPermissionIssue =>
+      'This device can reach the OpenClaw gateway, but the current authentication lacks execution permission.';
+
+  @override
+  String get taskExecutionNudgeStatusOffline =>
+      'Connection info is saved, but the engine is temporarily offline.';
+
+  @override
+  String get taskExecutionNudgeStatusNotConnected =>
+      'This device is not connected to OpenClaw.';
+
+  @override
+  String get taskExecutionNudgeWhyThisPrompt => 'Why am I seeing this?';
+
+  @override
+  String get taskExecutionNudgeWhyThisPromptValue =>
+      'You\'re in a task that supports AI delegation, but the execution entry isn\'t ready yet.';
+
+  @override
+  String get taskExecutionNudgeNextAction => 'Next step';
+
+  @override
+  String get taskExecutionNudgeNextActionPermissionIssue =>
+      'Open the OpenClaw Hub to switch to a token with execution permission, or switch to a paired WebSocket connection; then retry the queue.';
+
+  @override
+  String get taskExecutionNudgeNextActionOffline =>
+      'Keep queuing tasks, or go to the OpenClaw Hub to restore the connection and retry.';
+
+  @override
+  String get taskExecutionNudgeNextActionNotConnected =>
+      'Open the OpenClaw Hub to complete the connection, then come back here to delegate.';
+
+  @override
+  String get taskExecutionCompletedToday => 'Done for today!';
+
+  @override
+  String get taskExecutionCompletionCheckHint =>
+      'Check against the success criteria. If it meets them, accept the completion; if not, break it down further.';
+
+  @override
+  String get taskExecutionCompletionCriteria => 'Success criteria';
+
+  @override
+  String get taskExecutionNoCriteriaHint =>
+      'No criteria defined. Judge by the smallest deliverable step you can finish today.';
+
+  @override
+  String get taskExecutionCriteriaMatchQuestion => 'Does it meet the criteria?';
+
+  @override
+  String get taskExecutionCriteriaNotMet => 'Not yet';
+
+  @override
+  String get taskExecutionContinueOrRetryTomorrow =>
+      'Keep going, or mark it for tomorrow';
+
+  @override
+  String get taskExecutionCriteriaMetComplete => 'Meets criteria, complete';
+
+  @override
+  String get taskExecutionRejectReasonInaccurate => 'Inaccurate result';
+
+  @override
+  String get taskExecutionRejectReasonIncomplete => 'Incomplete result';
+
+  @override
+  String get taskExecutionRejectReasonSafety => 'Safety concern';
+
+  @override
+  String get taskExecutionRejectReasonSelfDo => 'I want to do it myself';
+
+  @override
+  String get taskExecutionRejectReasonTitle => 'Rejection reason';
+
+  @override
+  String get taskExecutionRejectDescription =>
+      'Tell Sparkle why this result isn\'t suitable for direct adoption. Future executions will be adjusted based on your feedback.';
+
+  @override
+  String get taskExecutionRejectAdditionalNote => 'Additional notes';
+
+  @override
+  String get taskExecutionRejectNoteHint =>
+      'E.g., missing source, too assertive, I want to keep my own wording';
+
+  @override
+  String get taskExecutionRejectConfirm => 'Confirm rejection';
+
+  @override
+  String get taskExecutionUserRetrievedTask => 'User retrieved task';
 }

@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
@@ -90,6 +91,7 @@ class GalaxyLabelCache {
           fontSize: fontSize,
           fontWeight: fontWeight,
           letterSpacing: 0.1,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       maxLines: 1,
@@ -750,6 +752,7 @@ class StarMapPainter extends CustomPainter {
             fontSize: lod == GalaxyLod.l0 ? (isDarkMode ? 16 : 15) : 13,
             fontWeight: DS.fontWeightBold,
             letterSpacing: 1.2,
+            fontFamilyFallback: sparkleFontFallback,
             shadows: [
               Shadow(
                 color: glow.withValues(alpha: labelAlpha * 0.58),
@@ -1621,15 +1624,16 @@ class StarMapPainter extends CustomPainter {
           canvas: canvas,
           center: nodeCenter,
           radius: radius + 1,
-          color: style.baseColor.withValues(alpha: 0.28 * nodeAlpha),
+          color: style.baseColor.withValues(alpha: 0.55 * nodeAlpha),
         );
         final questionPainter = TextPainter(
           text: TextSpan(
             text: '?',
             style: TextStyle(
-              color: style.baseColor.withValues(alpha: 0.42 * nodeAlpha),
+              color: style.baseColor.withValues(alpha: 0.68 * nodeAlpha),
               fontSize: math.max(10, radius * 1.05),
               fontWeight: DS.fontWeightBold,
+              fontFamilyFallback: sparkleFontFallback,
             ),
           ),
           textDirection: TextDirection.ltr,
@@ -2180,10 +2184,10 @@ class StarMapPainter extends CustomPainter {
     if (!node.isUnlocked) {
       return _PaintNodeStyle(
         baseColor: baseColor,
-        fillAlpha: 0,
+        fillAlpha: 0.22,
         masteryRingAlpha: 0,
         glowAlpha: 0,
-        coreAlpha: 0,
+        coreAlpha: 0.12,
       );
     }
 

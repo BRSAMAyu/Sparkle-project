@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -52,7 +53,7 @@ class _BlockingInterceptorDialogState
     if (content.isEmpty) {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.warning));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.blockingSelectReason)),
+        SparkleSnackBar.warning(context.l10n.blockingSelectReason),
       );
       return;
     }
@@ -81,10 +82,7 @@ class _BlockingInterceptorDialogState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.submitFailedWithError(e)),
-            backgroundColor: DS.error,
-          ),
+          SparkleSnackBar.error(context.l10n.submitFailedWithError(e)),
         );
         setState(() => _isSubmitting = false);
       }

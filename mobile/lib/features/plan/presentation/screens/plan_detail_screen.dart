@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -58,13 +60,11 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
               ..showSnackBar(
-                SnackBar(
-                  content: Text(context.l10n.planLoadFailed(message)),
-                  action: SnackBarAction(
-                    label: context.l10n.retry,
-                    onPressed: () =>
-                        ref.refresh(planDetailProvider(widget.planId)),
-                  ),
+                SparkleSnackBar.error(
+                  context.l10n.planLoadFailed(message),
+                  onRetry: () =>
+                      ref.refresh(planDetailProvider(widget.planId)),
+                  retryLabel: context.l10n.retry,
                 ),
               );
           },
@@ -89,7 +89,10 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+            onPressed: () => RouteResilience.popOrGo(
+              context,
+              fallbackRoute: '/home',
+            ),
           ),
           title: Text(l10n.planDetailTitle),
           actions: [
@@ -105,8 +108,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
               orElse: () => const SizedBox.shrink(),
             ),
             planAsync.maybeWhen(
-              data: (plan) => Tooltip(
-                message: '编辑计划',
+              data: (plan) =>               Tooltip(
+                message: l10n.planDetailEdit,
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.edit_outlined),
@@ -141,8 +144,8 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           loading: () => const _PlanDetailLoadingView(),
           error: (err, _) => CustomErrorWidget.page(
             context: context,
-            title: '计划加载失败',
-            message: _buildPlanLoadErrorMessage(err),
+            title: l10n.planDetailLoadError,
+            message: _buildPlanLoadErrorMessage(l10n, err),
             onRetry: () => ref.invalidate(planDetailProvider(widget.planId)),
           ),
         ),
@@ -150,15 +153,23 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
     );
   }
 
-  String _buildPlanLoadErrorMessage(Object error) {
+  String _buildPlanLoadErrorMessage(AppLocalizations l10n, Object error) {
     final raw = error.toString().trim();
     final normalized = raw.toLowerCase();
 
     if (normalized.contains('404') ||
         normalized.contains('not found') ||
         normalized.contains('plan ') && normalized.contains('not')) {
-      return '计划刚生成完成，详情可能还在同步。点“重试”继续加载就好。';
+      return l10n.planDetailLoadError404;
     }
+    if (normalized.contains('timeout')) {
+      return l10n.planDetailLoadErrorTimeout;
+    }
+    if (raw.isEmpty) {
+      return l10n.planDetailLoadErrorEmpty;
+    }
+    return l10n.planDetailLoadErrorGeneric(raw);
+  }
     if (normalized.contains('timeout')) {
       return '加载计划超时了，请检查网络后再试一次。';
     }
@@ -294,14 +305,21 @@ class _PlanOverviewTab extends ConsumerWidget {
     final mergedTasks = _mergedPlanTasks(plan);
 
     return ContentConstraint(
-      child: ListView(
-        padding: const EdgeInsets.all(DS.lg),
-        children: [
-          if (plan.source == 'learning_path') ...[
-            Consumer(
-              builder: (context, ref, child) {
-                final progressAsync = ref.watch(
-                  learningPathProgressProvider(plan.id),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(planDetailProvider(plan.id));
+          await ref
+              .read(planDetailProvider(plan.id).future)
+              .timeout(const Duration(seconds: 10), onTimeout: () => plan);
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(DS.lg),
+          children: [
+            if (plan.source == 'learning_path') ...[
+              Consumer(
+                builder: (context, ref, child) {
+                  final progressAsync = ref.watch(
+                    learningPathProgressProvider(plan.id),
                 );
                 return progressAsync.when(
                   data: (progress) => Padding(
@@ -315,7 +333,7 @@ class _PlanOverviewTab extends ConsumerWidget {
                   error: (err, _) => Padding(
                     padding: const EdgeInsets.only(bottom: DS.lg),
                     child: _InlinePlanSectionError(
-                      message: '学习路径进度加载失败：$err',
+                      message: l10n.planDetailLearningPathLoadError(err.toString()),
                       onRetry: () =>
                           ref.invalidate(learningPathProgressProvider(plan.id)),
                     ),
@@ -340,7 +358,10 @@ class _PlanOverviewTab extends ConsumerWidget {
                     _PlanMetaChip(
                       icon: Icons.task_alt_rounded,
                       label:
-                          '${plan.tasks?.where((task) => task.status == TaskStatus.completed).length ?? 0}/${plan.tasks?.length ?? 0} 任务',
+                          l10n.planDetailTaskCount(
+                            plan.tasks?.where((task) => task.status == TaskStatus.completed).length ?? 0,
+                            plan.tasks?.length ?? 0,
+                          ),
                     ),
                   ],
                 ),
@@ -375,6 +396,10 @@ class _PlanOverviewTab extends ConsumerWidget {
                     (plan.progress * 100).toStringAsFixed(0),
                   ),
                 ),
+                if (plan.healthScore != null) ...[
+                  const SizedBox(height: DS.md),
+                  _PlanHealthIndicator(plan: plan),
+                ],
                 if (targetDate != null) ...[
                   const SizedBox(height: DS.md),
                   Row(
@@ -414,31 +439,32 @@ class _PlanOverviewTab extends ConsumerWidget {
             const SizedBox(height: DS.lg),
             if (parsedDescription.schedule.isNotEmpty)
               _PlanRichSection(
-                title: '每日节奏',
+                title: l10n.planDetailDailyRhythm,
                 icon: Icons.schedule_rounded,
                 content: parsedDescription.schedule,
               ),
             if (parsedDescription.scope.isNotEmpty)
               _PlanRichSection(
-                title: '计划边界',
+                title: l10n.planDetailPlanScope,
                 icon: Icons.rule_folder_outlined,
                 content: parsedDescription.scope,
               ),
             if (parsedDescription.taskBlueprint.isNotEmpty)
               _PlanRichSection(
-                title: '任务编排',
+                title: l10n.planDetailTaskBlueprint,
                 icon: Icons.account_tree_outlined,
                 content: parsedDescription.taskBlueprint,
               ),
             if (parsedDescription.guide.isNotEmpty)
               _PlanRichSection(
-                title: 'AI执行指南',
+                title: l10n.planDetailAiGuide,
                 icon: Icons.auto_awesome_rounded,
                 content: parsedDescription.guide,
               ),
           ],
-          _buildArchiveActions(context, ref),
-        ],
+            _buildArchiveActions(context, ref),
+          ],
+        ),
       ),
     );
   }
@@ -614,7 +640,7 @@ class _PlanExecutionSection extends StatelessWidget {
           children: [
             Expanded(
               child: _SectionHeader(
-                title: isLast24hMode ? '考前冲刺任务' : '今日聚焦',
+                title: isLast24hMode ? context.l10n.planDetailSprintFocus : context.l10n.planDetailTodayFocus,
               ),
             ),
             if (!context.isMobile && !isLast24hMode)
@@ -667,7 +693,7 @@ class _ExamSprintContextSection extends StatelessWidget {
     final highlightDay = _highlightDay(plan, groups);
     final highlightedTasks = _highlightTasks(plan, groups, highlightDay);
     final packName = _sprintPackName(plan);
-    final sprintModeLabel = _sprintModeLabel(plan, tasks);
+    final sprintModeLabel = _sprintModeLabel(context.l10n, plan, tasks);
     final compressionSummary = _compressionSummary(
       plan: plan,
       tasks: highlightedTasks,
@@ -700,14 +726,14 @@ class _ExamSprintContextSection extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                'Sprint Pack 节点',
+                context.l10n.planDetailSprintPackNodes,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: DS.spacing6),
               Text(
-                '今天先把这些高收益节点接稳，任务完成后对应圆点会点亮。',
+                context.l10n.planDetailSprintPackDesc,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -716,7 +742,7 @@ class _ExamSprintContextSection extends StatelessWidget {
               const SizedBox(height: DS.spacing12),
               if (highlightedTasks.isEmpty)
                 Text(
-                  '冲刺节点还在整理中。',
+                  context.l10n.planDetailSprintNodesLoading,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -796,7 +822,7 @@ class _SprintPackNodeRow extends StatelessWidget {
           ),
           const SizedBox(width: DS.spacing12),
           Text(
-            '${task.estimatedMinutes} 分钟',
+            context.l10n.planDetailMinutes(task.estimatedMinutes),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                   fontWeight: DS.fontWeightSemibold,
@@ -814,63 +840,62 @@ class _AdaptiveCompressionBanner extends StatelessWidget {
   final _CompressionSummary summary;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: const ValueKey('plan-adaptive-compression-banner'),
-      width: double.infinity,
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.warning.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: DS.warning.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(DS.spacing8),
-            decoration: BoxDecoration(
-              color: DS.warning.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(12),
+  Widget build(BuildContext context) => Container(
+        key: const ValueKey('plan-adaptive-compression-banner'),
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: DS.warning.withValues(alpha: 0.28)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(DS.spacing8),
+              decoration: BoxDecoration(
+                color: DS.warning.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child:
+                  Icon(Icons.content_cut_rounded, color: DS.warning, size: 18),
             ),
-            child: Icon(Icons.content_cut_rounded, color: DS.warning, size: 18),
-          ),
-          const SizedBox(width: DS.spacing12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '已为你精简今日计划',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: DS.fontWeightBold,
-                      ),
-                ),
-                const SizedBox(height: DS.spacing6),
-                Text(
-                  '今天只保留 ${summary.taskCount} 个任务 / ${summary.totalMinutes} 分钟，先把主线接回来。',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: DS.textSecondary,
-                        height: 1.45,
-                      ),
-                ),
-                if (summary.reason != null) ...[
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.planDetailCompressionTitle,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                  ),
                   const SizedBox(height: DS.spacing6),
                   Text(
-                    summary.reason!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    context.l10n.planDetailCompressionDesc(summary.taskCount, summary.totalMinutes),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,
                         ),
                   ),
+                  if (summary.reason != null) ...[
+                    const SizedBox(height: DS.spacing6),
+                    Text(
+                      summary.reason!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.45,
+                          ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
 }
 
 class _PlanTaskActions extends StatelessWidget {
@@ -890,12 +915,12 @@ class _PlanTaskActions extends StatelessWidget {
           SparkleButton.ghost(
             onPressed: onAddNewTask,
             icon: const Icon(Icons.add_task_rounded),
-            label: '新增任务',
+            label: context.l10n.planDetailAddNewTask,
           ),
           SparkleButton.ghost(
             onPressed: onAddExistingTask,
             icon: const Icon(Icons.playlist_add_rounded),
-            label: '添加已有',
+            label: context.l10n.planDetailAddExistingTask,
           ),
         ],
       );
@@ -939,7 +964,7 @@ class _Last24hSprintBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '考前冲刺模式',
+                  context.l10n.planDetailSprintModeLabel,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: DS.textPrimary,
@@ -949,7 +974,7 @@ class _Last24hSprintBanner extends StatelessWidget {
                 Text(
                   recommendation != null && recommendation.isNotEmpty
                       ? recommendation
-                      : '今天不再学新内容，只做高频知识点速览、错题错因回看和 30 分钟短模拟。',
+                      : context.l10n.planDetailDefaultRecommendation,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -976,6 +1001,7 @@ class _TodayFocusPlan extends StatelessWidget {
     final highlightDay = _highlightDay(plan, groups);
     final highlightedTasks = _highlightTasks(plan, groups, highlightDay);
     final recommendation = _highlightRecommendation(
+      context.l10n,
       plan,
       highlightedTasks,
       highlightDay,
@@ -1052,6 +1078,7 @@ class _TodayTaskCard extends StatelessWidget {
     final isLast24hTask = _isLast24hTask(task);
     final isTargetedRepair = _isTargetedRepairTask(task);
     final accentColor = isTargetedRepair ? DS.warning : statusColor;
+    final l10n = context.l10n;
 
     return GraphiteCardSurface(
       key: ValueKey('plan-task-card-${task.id}'),
@@ -1110,7 +1137,7 @@ class _TodayTaskCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: DS.spacing12),
-          _WhyNowNote(text: _taskWhyNow(task)),
+          _WhyNowNote(text: _taskWhyNow(l10n, task)),
           _CommonMistakesToWatch(
             taskId: task.id,
             mistakes: _taskCommonMistakesToWatch(task),
@@ -1122,15 +1149,15 @@ class _TodayTaskCard extends StatelessWidget {
             children: [
               _TaskMetaPill(
                 icon: Icons.schedule_rounded,
-                label: '${task.estimatedMinutes} 分钟',
+                label: l10n.planDetailMinutes(task.estimatedMinutes),
               ),
               _TaskMetaPill(
                 icon: Icons.bolt_rounded,
-                label: '难度 ${task.difficulty}',
+                label: l10n.planDetailTaskDifficulty(task.difficulty.toString()),
               ),
               _TaskMetaPill(
                 icon: _taskStatusIcon(task.status),
-                label: _taskStatusLabel(task.status),
+                label: _taskStatusLabel(l10n, task.status),
                 color: statusColor,
               ),
               if (_taskProtocolKind(task) != null)
@@ -1143,13 +1170,13 @@ class _TodayTaskCard extends StatelessWidget {
               if (isLast24hTask)
                 _TaskMetaPill(
                   icon: Icons.block_rounded,
-                  label: '不学新内容',
+                  label: l10n.planDetailTagNoNewContent,
                   color: DS.warning,
                 ),
               if (isTargetedRepair)
                 _TaskMetaPill(
                   icon: Icons.warning_amber_rounded,
-                  label: '错题补强',
+                  label: l10n.planDetailTagErrorRepair,
                   color: DS.warning,
                 ),
             ],
@@ -1177,7 +1204,7 @@ class _ExpandableFullPlan extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: '完整计划'),
+        _SectionHeader(title: context.l10n.planDetailFullPlan),
         const SizedBox(height: DS.spacing12),
         ...futureGroups.map(
           (group) => Padding(
@@ -1222,7 +1249,7 @@ class _PlanDayExpansion extends StatelessWidget {
                 ),
           ),
           subtitle: Text(
-            '${group.tasks.length} 件 · ${group.totalMinutes} 分钟',
+            context.l10n.planDetailDayGroupSubtitle(group.tasks.length, group.totalMinutes),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -1290,7 +1317,7 @@ class _CompactPlanTaskTile extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(left: 26),
               child: Text(
-                _taskWhyNow(task),
+                _taskWhyNow(context.l10n, task),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                       height: 1.35,
@@ -1360,7 +1387,7 @@ class _CommonMistakesToWatch extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '⚠️ 常见误区',
+            context.l10n.planDetailCommonMistakes,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: DS.warning,
                   fontWeight: FontWeight.w800,
@@ -1587,7 +1614,7 @@ String? _sprintPackName(PlanModel plan) {
   return name.isEmpty ? null : name;
 }
 
-String _sprintModeLabel(PlanModel plan, List<TaskModel> tasks) {
+String _sprintModeLabel(AppLocalizations l10n, PlanModel plan, List<TaskModel> tasks) {
   final metadata = plan.sourceMetadata ?? const <String, dynamic>{};
   final intake = metadata['exam_sprint_intake'];
   if (intake is Map) {
@@ -1596,20 +1623,20 @@ String _sprintModeLabel(PlanModel plan, List<TaskModel> tasks) {
         ? int.tryParse('${goalModel['days_left'] ?? ''}')
         : null;
     if (daysLeft == 7) {
-      return '7 天冲刺模式';
+      return l10n.planDetailSprintMode7Day;
     }
     final strategyPreview = intake['strategy_preview'];
     final sprintMode = strategyPreview is Map
         ? '${strategyPreview['sprint_mode'] ?? ''}'.trim()
         : '';
     if (sprintMode.contains('seven_day')) {
-      return '7 天冲刺模式';
+      return l10n.planDetailSprintMode7Day;
     }
   }
   final totalDays = tasks
       .map(_taskDay)
       .fold<int>(0, (maxDay, day) => day > maxDay ? day : maxDay);
-  return totalDays >= 7 ? '7 天冲刺模式' : '考试冲刺模式';
+  return totalDays >= 7 ? l10n.planDetailSprintMode7Day : l10n.planDetailSprintModeExam;
 }
 
 String _sprintPackNodeLabel(TaskModel task) {
@@ -1714,16 +1741,19 @@ bool _isLast24hTask(TaskModel task) {
 
 bool _isTargetedRepairTask(TaskModel task) {
   final guide = task.guideJson ?? const <String, dynamic>{};
-  if ('${guide['task_kind'] ?? ''}'.trim() == 'targeted_repair') {
+  if (_isRepairTaskKind('${guide['task_kind'] ?? ''}'.trim())) {
     return true;
   }
   final dailySpec = guide['daily_spec'];
   if (dailySpec is Map<String, dynamic> &&
-      '${dailySpec['task_kind'] ?? ''}'.trim() == 'targeted_repair') {
+      _isRepairTaskKind('${dailySpec['task_kind'] ?? ''}'.trim())) {
     return true;
   }
-  return task.tags.any((tag) => tag == 'targeted_repair');
+  return task.tags.any(_isRepairTaskKind);
 }
+
+bool _isRepairTaskKind(String value) =>
+    value == 'targeted_repair' || value == 'specialized_repair';
 
 List<_PlanDayGroup> _buildPlanDayGroups(List<TaskModel> tasks) {
   final groups = <int, List<TaskModel>>{};
@@ -1783,51 +1813,54 @@ List<TaskModel> _highlightTasks(
 }
 
 String _highlightRecommendation(
+  AppLocalizations l10n,
   PlanModel plan,
   List<TaskModel> tasks,
   int day,
 ) {
   final serverText = plan.dayHighlights?.recommendation.trim();
   if (serverText != null && serverText.isNotEmpty) return serverText;
-  final thingLabel = tasks.length == 1 ? '这 1 件事' : '这 ${tasks.length} 件事';
+  final thingLabel = tasks.length == 1 ? l10n.planDetailThingCount1 : l10n.planDetailThingCountN(tasks.length);
   if (day == 1) {
-    return '今天先做好$thingLabel，你已经走在正确路上了。';
+    return l10n.planDetailRecommendationDay1(thingLabel);
   }
-  return '先看 Day $day 的$thingLabel，把节奏稳稳接上。';
+  return l10n.planDetailRecommendationDayN(day, thingLabel);
 }
 
-String _taskWhyNow(TaskModel task) {
+String _taskWhyNow(AppLocalizations l10n, TaskModel task) {
   final guide = task.guideJson;
   final whyNow = guide == null ? '' : '${guide['why_now'] ?? ''}'.trim();
   if (whyNow.isNotEmpty) return whyNow;
   switch (task.type) {
     case TaskType.learning:
-      return '现在先处理它，是为了把今天的学习推进变成一个看得见的输出。';
+      return l10n.planDetailWhyNowLearning;
     case TaskType.training:
-      return '现在做练习，能尽快确认刚学的内容是不是真的会用。';
+      return l10n.planDetailWhyNowTraining;
     case TaskType.errorFix:
-      return '现在修这个错因，能避免后面的任务被同一个漏洞反复拖住。';
+      return l10n.planDetailWhyNowErrorFix;
     case TaskType.reflection:
-      return '现在复盘，能把今天的结果转成明天更轻的选择。';
+      return l10n.planDetailWhyNowReflection;
     case TaskType.social:
-      return '现在完成协作动作，能让外部反馈及时接进你的学习节奏。';
+      return l10n.planDetailWhyNowSocial;
     case TaskType.planning:
-      return '现在整理计划，能让下一步执行少一点犹豫。';
+      return l10n.planDetailWhyNowPlanning;
     case TaskType.ocr:
-      return '现在处理资料，能先把可用信息变成后续任务的入口。';
+      return l10n.planDetailWhyNowOcr;
   }
 }
 
-String _taskStatusLabel(TaskStatus status) {
+String _taskStatusLabel(AppLocalizations l10n, TaskStatus status) {
   switch (status) {
     case TaskStatus.pending:
-      return '待开始';
+      return l10n.planDetailStatusPending;
     case TaskStatus.inProgress:
-      return '进行中';
+      return l10n.planDetailStatusInProgress;
+    case TaskStatus.stuck:
+      return l10n.planDetailStatusStuck;
     case TaskStatus.completed:
-      return '已完成';
+      return l10n.planDetailStatusCompleted;
     case TaskStatus.abandoned:
-      return '已放弃';
+      return l10n.planDetailStatusAbandoned;
   }
 }
 
@@ -1837,6 +1870,8 @@ IconData _taskStatusIcon(TaskStatus status) {
       return Icons.radio_button_unchecked_rounded;
     case TaskStatus.inProgress:
       return Icons.play_circle_outline_rounded;
+    case TaskStatus.stuck:
+      return Icons.help_outline_rounded;
     case TaskStatus.completed:
       return Icons.check_circle_rounded;
     case TaskStatus.abandoned:
@@ -1850,6 +1885,8 @@ Color _taskStatusColor(TaskStatus status) {
       return DS.brandPrimary;
     case TaskStatus.inProgress:
       return DS.info;
+    case TaskStatus.stuck:
+      return DS.warning;
     case TaskStatus.completed:
       return DS.success;
     case TaskStatus.abandoned:
@@ -1933,6 +1970,104 @@ class _PlanMetaChip extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _PlanHealthIndicator extends StatelessWidget {
+  const _PlanHealthIndicator({required this.plan});
+
+  final PlanModel plan;
+
+  static Color _planHealthColor(double score) {
+    if (score >= 0.75) return DS.success;
+    if (score >= 0.5) return DS.warning;
+    return DS.error;
+  }
+
+  static String _planHealthLabel(AppLocalizations l10n, String? status, double score) {
+    final normalized = status?.trim().toLowerCase();
+    if (normalized == 'critical') return l10n.planDetailHealthNeedReplan;
+    if (normalized == 'warning') return l10n.planDetailHealthNeedAttention;
+    if (normalized == 'healthy') return l10n.planDetailHealthStable;
+    if (score >= 0.75) return l10n.planDetailHealthStable;
+    if (score >= 0.5) return l10n.planDetailHealthNeedAttention;
+    return l10n.planDetailHealthNeedReplan;
+  }
+
+  static String _planHealthReason(AppLocalizations l10n, String reason) {
+    switch (reason) {
+      case 'time_overrun':
+        return l10n.planDetailHealthReasonTimeOverrun;
+      case 'difficulty_too_hard':
+        return l10n.planDetailHealthReasonTooHard;
+      case 'difficulty_too_easy':
+        return l10n.planDetailHealthReasonTooEasy;
+      case 'progress_lag':
+        return l10n.planDetailHealthReasonProgressLag;
+      default:
+        final normalized = reason.trim();
+        return normalized.isEmpty ? l10n.planDetailHealthReasonDefault : normalized;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final score = (plan.healthScore ?? 0).clamp(0, 1).toDouble();
+    final color = _planHealthColor(score);
+    final l10n = context.l10n;
+    final label = _planHealthLabel(l10n, plan.healthStatus, score);
+    final reason = plan.healthReasons.isNotEmpty
+        ? _planHealthReason(l10n, plan.healthReasons.first)
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.monitor_heart_outlined, size: 18, color: color),
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: Text(
+                  l10n.planDetailHealthScore((score * 100).round(), label),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing8),
+          LinearProgressIndicator(
+            value: score,
+            minHeight: 6,
+            color: color,
+            backgroundColor: color.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          if (reason != null) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              reason,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.35,
+                  ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _PlanRichSection extends StatelessWidget {
@@ -2305,10 +2440,10 @@ class _PlanPhaseSection extends ConsumerWidget {
         error: (err, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionHeader(title: '计划阶段'),
+            _SectionHeader(title: context.l10n.planDetailPhasesTitle),
             const SizedBox(height: DS.spacing12),
             _InlinePlanSectionError(
-              message: '阶段加载失败：$err',
+              message: context.l10n.planDetailPhasesLoadError(err.toString()),
               onRetry: () => ref.invalidate(planPhasesProvider(plan.id)),
             ),
           ],
@@ -2318,10 +2453,10 @@ class _PlanPhaseSection extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Expanded(child: _SectionHeader(title: '计划阶段')),
+                Expanded(child: _SectionHeader(title: context.l10n.planDetailPhasesTitle)),
                 SparkleButton.ghost(
                   onPressed: () => _showCreatePhaseDialog(context, ref, bundle),
-                  label: '新增阶段',
+                  label: context.l10n.planDetailAddPhase,
                   icon: const Icon(Icons.add_rounded),
                 ),
               ],
@@ -2339,7 +2474,7 @@ class _PlanPhaseSection extends ConsumerWidget {
               ),
             if (bundle.phases.isEmpty)
               Text(
-                '还没有真实阶段，先创建第一个 phase，把长期计划拆成可执行的小段。',
+                context.l10n.planDetailNoPhasesYet,
                 style: Theme.of(context).textTheme.bodyMedium,
               )
             else
@@ -2578,37 +2713,35 @@ class _InlinePlanSectionError extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(DS.spacing12),
-      decoration: BoxDecoration(
-        color: DS.semanticError.withValues(alpha: 0.08),
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: DS.semanticError.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline_rounded, color: DS.semanticError),
-          const SizedBox(width: DS.spacing10),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: DS.semanticError,
-                  ),
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.semanticError.withValues(alpha: 0.08),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.semanticError.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: DS.semanticError),
+            const SizedBox(width: DS.spacing10),
+            Expanded(
+              child: Text(
+                message,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.semanticError,
+                    ),
+              ),
             ),
-          ),
-          const SizedBox(width: DS.spacing10),
-          SparkleButton.ghost(
-            onPressed: onRetry,
-            label: '重试',
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
-    );
-  }
+            const SizedBox(width: DS.spacing10),
+            SparkleButton.ghost(
+              onPressed: onRetry,
+              label: context.l10n.retry,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ],
+        ),
+      );
 }
 
 class _PhaseCard extends StatelessWidget {

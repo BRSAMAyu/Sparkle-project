@@ -61,14 +61,15 @@ class RouteResilience {
       return;
     }
 
-    router.go(effectiveFallback);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final nextContext = currentContextLookup?.call() ?? context;
-      if (!nextContext.mounted) {
-        return;
-      }
-      unawaited(GoRouter.of(nextContext).push(route));
-    });
+    // Navigate directly; if the destination cannot be matched, GoRouter falls
+    // through to its own onException / errorBuilder. Back-recovery from the
+    // destination is handled by RouteResilienceScope wrapping individual
+    // screens, which falls back to a sensible parent route.
+    try {
+      router.go(route);
+    } on Object {
+      router.go(effectiveFallback);
+    }
   }
 
   static String fallbackRouteForExternalRoute(String route) {

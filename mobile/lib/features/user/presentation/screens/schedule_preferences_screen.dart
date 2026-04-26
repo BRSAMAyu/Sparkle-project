@@ -157,7 +157,7 @@ class _SchedulePreferencesScreenState
         ),
         child: ContentConstraint(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(DS.lg),
+            padding: const EdgeInsets.symmetric(vertical: DS.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
@@ -594,6 +595,15 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     await _cancelCompletionNotification();
     await _clearPersistedSession();
     await SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete);
+    unawaited(
+      ref.read(toolHistoryRepositoryProvider).recordBreathingCompleted(
+            pattern: _pattern.label,
+            durationMinutes: _selectedDurationMinutes,
+            roundsCompleted: _totalRounds,
+            surface: widget.surface.name,
+            completedFromBackground: completedFromBackground,
+          ),
+    );
 
     if (!mounted) {
       return;

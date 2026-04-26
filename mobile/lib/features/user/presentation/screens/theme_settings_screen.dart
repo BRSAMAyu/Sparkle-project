@@ -30,7 +30,6 @@ class ThemeSettingsScreen extends ConsumerWidget {
       child: ContentConstraint(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
-            horizontal: DS.lg,
             vertical: DS.md,
           ),
           child: Column(

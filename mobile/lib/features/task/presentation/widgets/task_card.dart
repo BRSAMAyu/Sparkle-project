@@ -562,6 +562,7 @@ TaskPillTone _statusTone(TaskStatus status) {
     case TaskStatus.pending:
       return TaskPillTone.brand;
     case TaskStatus.inProgress:
+    case TaskStatus.stuck:
       return TaskPillTone.brand;
     case TaskStatus.completed:
       return TaskPillTone.success;
@@ -595,6 +596,8 @@ String _statusLabel(TaskStatus status) {
       return '待开始';
     case TaskStatus.inProgress:
       return '进行中';
+    case TaskStatus.stuck:
+      return '卡住了';
     case TaskStatus.completed:
       return '已完成';
     case TaskStatus.abandoned:

@@ -462,6 +462,9 @@ class LearningPortfolioResult {
     required this.activeCount,
     required this.completedCount,
     required this.plannedCount,
+    this.hasMore = false,
+    this.currentPage = 1,
+    this.totalEntries = 0,
   });
 
   factory LearningPortfolioResult.fromJson(Map<String, dynamic> json) =>
@@ -479,6 +482,9 @@ class LearningPortfolioResult {
         activeCount: (json['active_count'] as num?)?.toInt() ?? 0,
         completedCount: (json['completed_count'] as num?)?.toInt() ?? 0,
         plannedCount: (json['planned_count'] as num?)?.toInt() ?? 0,
+        hasMore: json['has_more'] == true,
+        currentPage: (json['current_page'] as num?)?.toInt() ?? 1,
+        totalEntries: (json['total_entries'] as num?)?.toInt() ?? 0,
       );
 
   final List<LearningPortfolioEntry> entries;
@@ -486,6 +492,9 @@ class LearningPortfolioResult {
   final int activeCount;
   final int completedCount;
   final int plannedCount;
+  final bool hasMore;
+  final int currentPage;
+  final int totalEntries;
 
   List<LearningPortfolioEntry> get activeEntries => entries
       .where((LearningPortfolioEntry entry) => entry.isActive)
@@ -500,6 +509,20 @@ class LearningPortfolioResult {
       .toList(growable: false);
 
   bool get isEmpty => entries.isEmpty;
+
+  /// Merge a newer page result into this one, appending new entries.
+  LearningPortfolioResult merge(LearningPortfolioResult next) {
+    return LearningPortfolioResult(
+      entries: [...entries, ...next.entries],
+      totalMasteredNodes: next.totalMasteredNodes,
+      activeCount: next.activeCount,
+      completedCount: next.completedCount,
+      plannedCount: next.plannedCount,
+      hasMore: next.hasMore,
+      currentPage: next.currentPage,
+      totalEntries: next.totalEntries,
+    );
+  }
 }
 
 DateTime? _tryParseDateTime(String? raw) {

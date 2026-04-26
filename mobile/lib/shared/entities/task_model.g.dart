@@ -21,9 +21,7 @@ TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => TaskModel(
       updatedAt: DateTime.parse(json['updated_at'] as String),
       planId: json['plan_id'] as String?,
       guideContent: json['guide_content'] as String?,
-      guideJson: json['guide_json'] == null
-          ? null
-          : Map<String, dynamic>.from(json['guide_json'] as Map),
+      guideJson: json['guide_json'] as Map<String, dynamic>?,
       aiPrompt: json['ai_prompt'] as String?,
       sourcePlanningSessionId: json['source_planning_session_id'] as String?,
       phaseIndex: (json['phase_index'] as num?)?.toInt(),
@@ -89,6 +87,7 @@ const _$TaskTypeEnumMap = {
 const _$TaskStatusEnumMap = {
   TaskStatus.pending: 'PENDING',
   TaskStatus.inProgress: 'IN_PROGRESS',
+  TaskStatus.stuck: 'STUCK',
   TaskStatus.completed: 'COMPLETED',
   TaskStatus.abandoned: 'ABANDONED',
 };
@@ -106,9 +105,7 @@ TaskCreate _$TaskCreateFromJson(Map<String, dynamic> json) => TaskCreate(
           : DateTime.parse(json['due_date'] as String),
       knowledgeNodeId: json['knowledge_node_id'] as String?,
       guideContent: json['guide_content'] as String?,
-      guideJson: json['guide_json'] == null
-          ? null
-          : Map<String, dynamic>.from(json['guide_json'] as Map),
+      guideJson: json['guide_json'] as Map<String, dynamic>?,
       aiPrompt: json['ai_prompt'] as String?,
       sourcePlanningSessionId: json['source_planning_session_id'] as String?,
       phaseIndex: (json['phase_index'] as num?)?.toInt(),

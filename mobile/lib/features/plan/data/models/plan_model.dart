@@ -48,6 +48,9 @@ class PlanModel {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.healthScore,
+    this.healthStatus,
+    this.healthReasons = const [],
     this.description,
     this.targetDate,
     this.subject,
@@ -79,6 +82,12 @@ class PlanModel {
   @JsonKey(name: 'mastery_level')
   final double masteryLevel;
   final double progress;
+  @JsonKey(name: 'health_score')
+  final double? healthScore;
+  @JsonKey(name: 'health_status')
+  final String? healthStatus;
+  @JsonKey(name: 'health_reasons')
+  final List<String> healthReasons;
   @JsonKey(name: 'is_active')
   final bool isActive;
   @JsonKey(name: 'created_at')

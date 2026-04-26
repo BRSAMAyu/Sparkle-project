@@ -24,6 +24,8 @@ enum TaskStatus {
   pending,
   @JsonValue('IN_PROGRESS')
   inProgress,
+  @JsonValue('STUCK')
+  stuck,
   @JsonValue('COMPLETED')
   completed,
   @JsonValue('ABANDONED')

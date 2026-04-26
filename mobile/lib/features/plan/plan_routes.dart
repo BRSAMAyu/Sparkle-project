@@ -34,6 +34,10 @@ class PlanRoutes {
   static const String examSprintCompletion = '/exam-sprint/completion';
   static const String learningPortfolio = '/exam-sprint/portfolio';
 
+  static List<RouteBase> get shellRoutes => [
+        _planDetailRoute(),
+      ];
+
   static List<RouteBase> get routes => [
         GoRoute(
           path: learningPortfolio,
@@ -156,25 +160,8 @@ class PlanRoutes {
             );
           },
         ),
-        // Plan detail (full-screen, uses root navigator)
-        GoRoute(
-          path: planDetail,
-          name: 'planDetail',
-          parentNavigatorKey: navigatorKey,
-          pageBuilder: (context, state) {
-            // id is a required path parameter, so it won't be null
-            final planId = state.pathParameters['id']!;
-            return buildSparkleTransitionPage(
-              state: state,
-              child: SceneAudioScope(
-                policy: ExperienceProfiles.dashboardProductive.audioPolicy(
-                  trackOverride: BgmTrack.plan,
-                ),
-                child: PlanDetailScreen(planId: planId),
-              ),
-            );
-          },
-        ),
+        // Plan detail
+        _planDetailRoute(name: null),
         // Plan edit (modal-like, full-screen)
         GoRoute(
           path: planEdit,
@@ -271,4 +258,22 @@ class PlanRoutes {
           ),
         ),
       ];
+
+  static GoRoute _planDetailRoute({String? name = 'planDetail'}) => GoRoute(
+        path: planDetail,
+        name: name,
+        pageBuilder: (context, state) {
+          // id is a required path parameter, so it won't be null
+          final planId = state.pathParameters['id']!;
+          return buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.plan,
+              ),
+              child: PlanDetailScreen(planId: planId),
+            ),
+          );
+        },
+      );
 }

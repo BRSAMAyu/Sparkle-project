@@ -85,7 +85,9 @@ LLMNodeSpec _$LLMNodeSpecFromJson(Map<String, dynamic> json) => LLMNodeSpec(
       sector: $enumDecode(_$SectorEnumEnumMap, json['sector']),
       importance: (json['importance'] as num?)?.toInt() ?? 3,
       baseColor: json['base_color'] as String?,
-      masteryScore: (json['mastery_score'] as num?)?.toInt() ?? 0,
+      masteryScore: json['mastery_score'] == null
+          ? 0
+          : _masteryScoreFromJson(json['mastery_score']),
       isUnlocked: json['is_unlocked'] as bool? ?? true,
       positionHint: json['position_hint'] == null
           ? null

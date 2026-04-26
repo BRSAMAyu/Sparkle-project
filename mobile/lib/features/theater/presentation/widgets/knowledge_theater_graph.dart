@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
@@ -566,6 +567,7 @@ class _KnowledgeTheaterPainter extends CustomPainter {
             ),
             fontSize: isSelected ? 11.5 : 11,
             fontWeight: isSelected ? DS.fontWeightBold : DS.fontWeightSemibold,
+            fontFamilyFallback: sparkleFontFallback,
           ),
         ),
         maxLines: 1,

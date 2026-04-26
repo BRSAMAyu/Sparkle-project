@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
@@ -30,7 +31,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
       ref.invalidate(ws6TransparentProfileViewProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已记录「$targetId」的画像调整。')),
+          SparkleSnackBar.success('已记录「$targetId」的画像调整。'),
         );
       }
     }

@@ -176,8 +176,10 @@ class PositionHint {
       );
 
   /// 靠近某节点
-  static PositionHint nearTo(String nodeId,
-          {RelativeDistance dist = RelativeDistance.close,}) =>
+  static PositionHint nearTo(
+    String nodeId, {
+    RelativeDistance dist = RelativeDistance.close,
+  }) =>
       PositionHint(
         strategy: PositionStrategy.nearNode,
         referenceNodeId: nodeId,
@@ -249,7 +251,7 @@ class LLMNodeSpec {
   final String? baseColor;
 
   /// 掌握度 0-100
-  @JsonKey(name: 'mastery_score')
+  @JsonKey(name: 'mastery_score', fromJson: _masteryScoreFromJson)
   final int masteryScore;
 
   /// 是否已解锁
@@ -273,6 +275,15 @@ class LLMNodeSpec {
   @JsonKey(name: 'parent_id')
   final String? parentId;
   Map<String, dynamic> toJson() => _$LLMNodeSpecToJson(this);
+}
+
+int _masteryScoreFromJson(Object? value) {
+  if (value is! num) {
+    return 0;
+  }
+  final score = value.toDouble();
+  final normalized = score > 0 && score <= 1 ? score * 100 : score;
+  return normalized.round().clamp(0, 100);
 }
 
 /// 节点移动请求

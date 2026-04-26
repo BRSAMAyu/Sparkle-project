@@ -273,11 +273,11 @@ class VisualElementRepository {
   VisualElementListResponse _getDemoVisualElements() =>
       VisualElementListResponse(
         items: [
-          // Backgrounds
+          // Backgrounds — ink-blue base (墨兰底色系), deep understated premium
           VisualElementModel(
             id: 'bg_default_dark',
             name: '深邃夜空',
-            description: '默认深色渐变背景',
+            description: '默认墨蓝渐变背景，沉静而内敛',
             elementType: VisualElementType.background,
             rarity: VisualElementRarity.common,
             unlockSource: VisualElementUnlockSource.system,
@@ -286,7 +286,7 @@ class VisualElementRepository {
             category: 'space',
             config: {
               'gradient': {
-                'colors': ['#0a0a1a', '#1a1a2e', '#16213e'],
+                'colors': ['#0d1117', '#161b22', '#1c2533'],
               },
             },
             isUnlocked: true,
@@ -295,7 +295,7 @@ class VisualElementRepository {
           VisualElementModel(
             id: 'bg_aurora',
             name: '极光之夜',
-            description: '绿紫渐变极光背景',
+            description: '墨蓝底色上的幽绿极光，静谧而神秘',
             elementType: VisualElementType.background,
             rarity: VisualElementRarity.rare,
             unlockSource: VisualElementUnlockSource.achievement,
@@ -304,15 +304,15 @@ class VisualElementRepository {
             category: 'nature',
             config: {
               'gradient': {
-                'colors': ['#0f0c29', '#302b63', '#24243e'],
+                'colors': ['#0d1117', '#14202e', '#1a3040'],
               },
-              'aurora_colors': ['#00ff88', '#00ccff', '#ff00ff'],
+              'aurora_colors': ['#3fb68b', '#2dd4bf', '#22d3ee'],
             },
           ),
           VisualElementModel(
             id: 'bg_sunset',
             name: '暮色余晖',
-            description: '橙红暖色渐变背景',
+            description: '温暖的琥珀色调融入深蓝底色',
             elementType: VisualElementType.background,
             rarity: VisualElementRarity.rare,
             unlockSource: VisualElementUnlockSource.achievement,
@@ -321,7 +321,7 @@ class VisualElementRepository {
             category: 'nature',
             config: {
               'gradient': {
-                'colors': ['#ff7e5f', '#feb47b', '#ff6b6b'],
+                'colors': ['#1a1a2e', '#2a2040', '#3d2b50'],
               },
             },
             isUnlocked: true,
@@ -329,7 +329,7 @@ class VisualElementRepository {
           VisualElementModel(
             id: 'bg_nebula',
             name: '星云漫游',
-            description: '紫色星云渐变背景',
+            description: '深邃墨蓝中的幽紫星云流转',
             elementType: VisualElementType.background,
             rarity: VisualElementRarity.epic,
             unlockSource: VisualElementUnlockSource.achievement,
@@ -338,15 +338,15 @@ class VisualElementRepository {
             category: 'space',
             config: {
               'gradient': {
-                'colors': ['#200122', '#6f0000', '#200122'],
+                'colors': ['#0d1117', '#1a1832', '#16213e'],
               },
-              'nebula_colors': ['#8b5cf6', '#a855f7', '#d946ef'],
+              'nebula_colors': ['#6366f1', '#818cf8', '#a78bfa'],
             },
           ),
           VisualElementModel(
             id: 'bg_cyberpunk',
             name: '赛博朋克',
-            description: '霓虹紫蓝渐变背景',
+            description: '墨蓝基底上的霓虹线条，未来感十足',
             elementType: VisualElementType.background,
             rarity: VisualElementRarity.epic,
             unlockSource: VisualElementUnlockSource.shop,
@@ -355,15 +355,15 @@ class VisualElementRepository {
             category: 'cyberpunk',
             config: {
               'gradient': {
-                'colors': ['#0d0221', '#0f0728', '#1a0533'],
+                'colors': ['#0d1117', '#111827', '#1e293b'],
               },
-              'neon_colors': ['#ff00ff', '#00ffff', '#ffff00'],
+              'neon_colors': ['#06b6d4', '#8b5cf6', '#f59e0b'],
             },
           ),
           VisualElementModel(
             id: 'bg_event_starlight',
             name: '流星庆典',
-            description: '限时活动专属背景',
+            description: '限时活动专属，墨蓝夜空中的金色流星雨',
             elementType: VisualElementType.background,
             rarity: VisualElementRarity.legendary,
             unlockSource: VisualElementUnlockSource.event,
@@ -372,9 +372,9 @@ class VisualElementRepository {
             category: 'space',
             config: {
               'gradient': {
-                'colors': ['#0b1026', '#1f2a6b', '#f59e0b'],
+                'colors': ['#0d1117', '#162032', '#1a2a4a'],
               },
-              'aurora_colors': ['#ffcc00', '#ff6b6b', '#7dd3fc'],
+              'aurora_colors': ['#f59e0b', '#fbbf24', '#7dd3fc'],
             },
             unlockRequirement: {
               'event_end_at': '2026-04-15T00:00:00Z',
@@ -394,7 +394,7 @@ class VisualElementRepository {
             config: {
               'count': 50,
               'shape': 'star',
-              'colors': ['#ffffff', '#ffd700', '#87ceeb'],
+              'colors': ['#e2e8f0', '#fbbf24', '#94a3b8'],
             },
             isUnlocked: true,
             isEquipped: true,
@@ -412,7 +412,7 @@ class VisualElementRepository {
             config: {
               'count': 30,
               'shape': 'petal',
-              'colors': ['#ffb7c5', '#ffc0cb', '#ff69b4'],
+              'colors': ['#f9a8d4', '#f472b6', '#ec4899'],
             },
           ),
           VisualElementModel(
@@ -428,7 +428,7 @@ class VisualElementRepository {
             config: {
               'count': 20,
               'shape': 'circle',
-              'colors': ['#90ee90', '#adff2f', '#ffff00'],
+              'colors': ['#86efac', '#a3e635', '#fde047'],
             },
             isUnlocked: true,
           ),
@@ -445,7 +445,7 @@ class VisualElementRepository {
             config: {
               'count': 60,
               'shape': 'snowflake',
-              'colors': ['#ffffff', '#f0f8ff', '#e6e6fa'],
+              'colors': ['#e2e8f0', '#f1f5f9', '#cbd5e1'],
             },
           ),
           VisualElementModel(
@@ -461,7 +461,7 @@ class VisualElementRepository {
             config: {
               'count': 40,
               'shape': 'circle',
-              'colors': ['#ff6b6b', '#4ecdc4', '#45b7d1'],
+              'colors': ['#f87171', '#2dd4bf', '#38bdf8'],
             },
           ),
           // Effects
@@ -478,7 +478,7 @@ class VisualElementRepository {
             config: {
               'effect_type': 'pulse_glow',
               'intensity': 0.3,
-              'color': '#ffffff',
+              'color': '#e2e8f0',
             },
             isUnlocked: true,
             isEquipped: true,
@@ -496,7 +496,7 @@ class VisualElementRepository {
             config: {
               'effect_type': 'pulse_ring',
               'intensity': 0.6,
-              'color': '#4ecdc4',
+              'color': '#2dd4bf',
             },
           ),
           VisualElementModel(
@@ -512,7 +512,7 @@ class VisualElementRepository {
             config: {
               'effect_type': 'gravity_wave',
               'intensity': 0.8,
-              'color': '#8b5cf6',
+              'color': '#818cf8',
             },
           ),
         ],

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_connection_panel.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_execution_preferences_card.dart';
@@ -51,10 +52,10 @@ class _OpenClawSettingsScreenState
 
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? DS.semanticError : DS.semanticSuccess,
-      ),
+      isError
+          ? SparkleSnackBar.error(message)
+          : SparkleSnackBar.success(message),
+    );
     );
   }
 

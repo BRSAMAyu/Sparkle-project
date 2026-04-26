@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
@@ -237,19 +238,13 @@ class _MyFriendsTab extends ConsumerWidget {
         await ref.read(friendsProvider.notifier).deleteFriend(friendInfo.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('已删除 ${friendInfo.friend.displayName}'),
-              backgroundColor: DS.success,
-            ),
+            SparkleSnackBar.success('已删除 ${friendInfo.friend.displayName}'),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('删除失败: $e'),
-              backgroundColor: DS.error,
-            ),
+            SparkleSnackBar.error('删除失败: $e'),
           );
         }
       }
@@ -338,19 +333,13 @@ class _MyFriendsTab extends ConsumerWidget {
             .blockUser(friendInfo.friend.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('已拉黑 ${friendInfo.friend.displayName}'),
-              backgroundColor: DS.success,
-            ),
+            SparkleSnackBar.success('已拉黑 ${friendInfo.friend.displayName}'),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('拉黑失败: $e'),
-              backgroundColor: DS.error,
-            ),
+            SparkleSnackBar.error('拉黑失败: $e'),
           );
         }
       }

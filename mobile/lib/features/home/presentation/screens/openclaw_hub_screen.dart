@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_automation_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/openclaw_automation_panel.dart';
@@ -178,10 +179,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
 
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? DS.semanticError : DS.semanticSuccess,
-      ),
+      isError
+          ? SparkleSnackBar.error(message)
+          : SparkleSnackBar.success(message),
     );
   }
 

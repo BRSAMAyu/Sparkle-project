@@ -53,7 +53,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   late double _totalEstimatedHours;
   late TimeOfDay _reminderTime;
   DateTime? _targetDate;
-  var _scheduleLabel = '工作日推进，周末复盘';
+  var _scheduleLabel = '';
   var _currentStep = 0;
   var _isSubmitting = false;
   var _isGeneratingGuide = false;
@@ -88,7 +88,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
     _scopeController.text = parsed.scope;
     _taskBlueprintController.text = _stripDraftLines(parsed.taskBlueprint);
     _guideController.text = parsed.guide;
-    _scheduleLabel = _extractScheduleLabel(parsed.schedule);
+    _scheduleLabel = _extractScheduleLabel(parsed.schedule, '');
 
     final planTasks = initialPlan?.tasks ?? const <TaskModel>[];
     if (planTasks.isNotEmpty) {
@@ -120,6 +120,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_scheduleLabel.isEmpty) {
+      _scheduleLabel = context.l10n.planScheduleChipWeekday;
+    }
     if (_didInitType || _isEditMode) {
       return;
     }
@@ -208,7 +211,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
             energyCost: draft.type == PlanType.sprint ? 3 : 2,
             planId: persistedPlan.id,
             tags: <String>[
-              if (draft.type == PlanType.growth) '成长计划' else '冲刺计划',
+              if (draft.type == PlanType.growth) context.l10n.planTypeGrowth else context.l10n.planTypeSprint,
               if (draft.subject.trim().isNotEmpty) draft.subject.trim(),
             ],
             dueDate: taskDraft.dueDate,
@@ -224,7 +227,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       }
       AppFeedback.success(
         context,
-        _isEditMode ? '计划已更新' : context.l10n.planCreateSuccess,
+        _isEditMode ? l10n.planUpdated : context.l10n.planCreateSuccess,
       );
       context.go('/plans/${persistedPlan.id}');
     } catch (e) {
@@ -570,13 +573,13 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
     );
   }
 
-  static String _extractScheduleLabel(String rawSchedule) {
+  static String _extractScheduleLabel(String rawSchedule, String defaultLabel) {
     final line = rawSchedule.split('\n').map((item) => item.trim()).firstWhere(
           (item) => item.startsWith('- 节奏说明：'),
           orElse: () => '',
         );
     if (line.isEmpty) {
-      return '工作日推进，周末复盘';
+      return defaultLabel;
     }
     return line.replaceFirst('- 节奏说明：', '').trim();
   }

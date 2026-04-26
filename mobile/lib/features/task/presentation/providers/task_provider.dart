@@ -12,11 +12,13 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
         TaskNotificationScheduler,
         taskNotificationSchedulerProvider,
         taskReminderConfigProvider;
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
@@ -367,8 +369,37 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       final updatedTask = await _taskRepository.startTask(id);
       // Also update the task in the list locally to avoid a full refresh
       _updateTaskInState(updatedTask);
+      final activeTask = _ref.read(activeTaskProvider);
+      if (activeTask?.id == id) {
+        _ref.read(activeTaskProvider.notifier).state = updatedTask;
+      }
       state = state.copyWith(isLoading: false);
     });
+  }
+
+  Future<TaskStuckResult> markTaskStuck(
+    String id, {
+    String? stuckPoint,
+    List<String> recentSteps = const [],
+    int? currentStepIndex,
+    int? elapsedSeconds,
+    String? trigger,
+  }) async {
+    final result = await _taskRepository.markTaskStuck(
+      id,
+      stuckPoint: stuckPoint,
+      recentSteps: recentSteps,
+      currentStepIndex: currentStepIndex,
+      elapsedSeconds: elapsedSeconds,
+      trigger: trigger,
+    );
+    _updateTaskInState(result.task);
+    final activeTask = _ref.read(activeTaskProvider);
+    if (activeTask?.id == id) {
+      _ref.read(activeTaskProvider.notifier).state = result.task;
+    }
+    state = state.copyWith(isLoading: false, clearError: true);
+    return result;
   }
 
   /// 完成任务 - 乐观更新（v2.1 增强）
@@ -418,7 +449,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       if (updatedTask.planId != null) {
         _ref.invalidate(planDetailProvider(updatedTask.planId!));
       }
-      _ref.invalidate(weeklyGrowthNarrativeProvider);
+      _ref
+        ..invalidate(learningPortfolioProvider)
+        ..invalidate(achievementProvider)
+        ..invalidate(weeklyGrowthNarrativeProvider);
 
       final linkedPrediction = await _ref
           .read(predictionAttributionServiceProvider)
@@ -515,7 +549,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       if (updatedTask.planId != null) {
         _ref.invalidate(planDetailProvider(updatedTask.planId!));
       }
-      _ref.invalidate(weeklyGrowthNarrativeProvider);
+      _ref
+        ..invalidate(learningPortfolioProvider)
+        ..invalidate(achievementProvider)
+        ..invalidate(weeklyGrowthNarrativeProvider);
       final linkedPrediction = await _ref
           .read(predictionAttributionServiceProvider)
           .consumeForExecution(
@@ -572,6 +609,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       final updatedTask = await _taskRepository.abandonTask(id);
       _updateTaskInState(updatedTask);
       state = state.copyWith(isLoading: false);
+      _ref
+        ..invalidate(learningPortfolioProvider)
+        ..invalidate(achievementProvider)
+        ..invalidate(weeklyGrowthNarrativeProvider);
     });
   }
 
@@ -599,6 +640,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
     if (!mounted) return result;
     _applyQuickAction(result);
+    _ref
+      ..invalidate(learningPortfolioProvider)
+      ..invalidate(achievementProvider)
+      ..invalidate(weeklyGrowthNarrativeProvider);
     return result;
   }
 
@@ -609,6 +654,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     final result = await _taskRepository.markTaskTooHard(id, reason: reason);
     if (!mounted) return result;
     _applyQuickAction(result);
+    _ref
+      ..invalidate(learningPortfolioProvider)
+      ..invalidate(achievementProvider)
+      ..invalidate(weeklyGrowthNarrativeProvider);
     return result;
   }
 
@@ -635,6 +684,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
     if (!mounted) return result;
     _applyQuickAction(result);
+    _ref
+      ..invalidate(learningPortfolioProvider)
+      ..invalidate(achievementProvider)
+      ..invalidate(weeklyGrowthNarrativeProvider);
     return result;
   }
 

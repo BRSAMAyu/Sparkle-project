@@ -96,6 +96,10 @@ _$ErrorAnalysisImpl _$$ErrorAnalysisImplFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      linkingHint: json['linking_hint'] == null
+          ? null
+          : ErrorLinkingHint.fromJson(
+              json['linking_hint'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$$ErrorAnalysisImplToJson(_$ErrorAnalysisImpl instance) =>
@@ -108,6 +112,23 @@ Map<String, dynamic> _$$ErrorAnalysisImplToJson(_$ErrorAnalysisImpl instance) =>
       'analyzed_at': instance.analyzedAt?.toIso8601String(),
       'similar_traps': instance.similarTraps,
       'recommended_knowledge': instance.recommendedKnowledge,
+      'linking_hint': instance.linkingHint,
+    };
+
+_$ErrorLinkingHintImpl _$$ErrorLinkingHintImplFromJson(
+        Map<String, dynamic> json) =>
+    _$ErrorLinkingHintImpl(
+      code: json['code'] as String,
+      message: json['message'] as String,
+      action: json['action'] as String?,
+    );
+
+Map<String, dynamic> _$$ErrorLinkingHintImplToJson(
+        _$ErrorLinkingHintImpl instance) =>
+    <String, dynamic>{
+      'code': instance.code,
+      'message': instance.message,
+      'action': instance.action,
     };
 
 _$KnowledgeLinkImpl _$$KnowledgeLinkImplFromJson(Map<String, dynamic> json) =>

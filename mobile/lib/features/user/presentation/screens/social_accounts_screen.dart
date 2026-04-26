@@ -242,7 +242,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
           child: RefreshIndicator(
             onRefresh: _loadAccounts,
             child: ListView(
-              padding: const EdgeInsets.all(DS.spacing24),
+              padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
               children: [
                 SparkleStaggerItem(
                   index: 0,

@@ -140,6 +140,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                 ),
               ),
+              ...PlanRoutes.shellRoutes,
             ],
           ),
           // Branch 1: Galaxy
@@ -194,6 +195,28 @@ final routerProvider = Provider<GoRouter>((ref) {
                       'review_node': state.uri.queryParameters['review_node'],
                     if (state.uri.queryParameters['node_label'] != null)
                       'node_label': state.uri.queryParameters['node_label'],
+                    if (double.tryParse(
+                          state.uri.queryParameters['mastery'] ?? '',
+                        ) !=
+                        null)
+                      'mastery': double.parse(
+                        state.uri.queryParameters['mastery']!,
+                      ),
+                    if (int.tryParse(
+                          state.uri.queryParameters['study_count'] ?? '',
+                        ) !=
+                        null)
+                      'study_count': int.parse(
+                        state.uri.queryParameters['study_count']!,
+                      ),
+                    if (int.tryParse(
+                          state.uri.queryParameters['related_error_count'] ??
+                              '',
+                        ) !=
+                        null)
+                      'related_error_count': int.parse(
+                        state.uri.queryParameters['related_error_count']!,
+                      ),
                   };
                   return NoTransitionPage<void>(
                     key: state.pageKey,

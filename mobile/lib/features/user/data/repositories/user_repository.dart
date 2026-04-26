@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -1020,6 +1021,19 @@ class UserRepository {
         action: 'updateSchedulePreferences',
       );
       return UserModel.fromJson(payload);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Download all user data as a ZIP archive.
+  Future<List<int>> exportUserData() async {
+    try {
+      final response = await _apiClient.dio.get<List<int>>(
+        ApiEndpoints.meExport,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data ?? const [];
     } catch (e) {
       rethrow;
     }

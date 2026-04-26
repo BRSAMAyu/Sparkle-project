@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart' as custom;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
@@ -234,44 +235,18 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
     final hasPreferenceUpdates = response?.preferenceUpdates != null;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: DS.semanticSuccess),
-            const SizedBox(width: DS.spacing12),
-            Text(message),
-            if (hasPreferenceUpdates) ...[
-              const SizedBox(width: DS.spacing8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: DS.sm, vertical: 2),
-                decoration: BoxDecoration(
-                  color: DS.semanticSuccess.withValues(alpha: 0.2),
-                  borderRadius: DS.borderRadius4,
-                ),
-                child: Text(
-                  l10n.taskFeedbackPreferenceUpdated,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: DS.semanticSuccess,
-                    fontWeight: DS.fontWeightBold,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+      SparkleSnackBar.create(
+        message: message,
         backgroundColor: DS.neutral800,
-        behavior: SnackBarBehavior.floating,
+        foregroundColor: DS.neutral0,
+        icon: Icons.check_circle,
         duration: const Duration(seconds: 3),
-        action: response?.preferenceUpdates != null
-            ? SnackBarAction(
-                label: l10n.taskFeedbackView,
-                textColor: DS.semanticSuccess,
-                onPressed: () {
-                  _showPreferenceDetailDialog(response!.preferenceUpdates!);
-                },
-              )
+        showCloseIcon: true,
+        actionLabel: response?.preferenceUpdates != null
+            ? l10n.taskFeedbackView
+            : null,
+        onAction: response?.preferenceUpdates != null
+            ? () => _showPreferenceDetailDialog(response!.preferenceUpdates!)
             : null,
       ),
     );

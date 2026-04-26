@@ -183,6 +183,7 @@ class NotificationPreferenceSettings {
   const NotificationPreferenceSettings({
     this.enableSystem = true,
     this.enableInterventions = true,
+    this.disabledTypes = const <String>[],
     this.notificationLevel = 'standard',
     this.quietHoursEnabled = false,
     this.quietHoursStart = '22:00',
@@ -192,6 +193,7 @@ class NotificationPreferenceSettings {
 
   final bool enableSystem;
   final bool enableInterventions;
+  final List<String> disabledTypes;
   final String notificationLevel;
   final bool quietHoursEnabled;
   final String quietHoursStart;
@@ -201,6 +203,7 @@ class NotificationPreferenceSettings {
   NotificationPreferenceSettings copyWith({
     bool? enableSystem,
     bool? enableInterventions,
+    List<String>? disabledTypes,
     String? notificationLevel,
     bool? quietHoursEnabled,
     String? quietHoursStart,
@@ -210,6 +213,7 @@ class NotificationPreferenceSettings {
       NotificationPreferenceSettings(
         enableSystem: enableSystem ?? this.enableSystem,
         enableInterventions: enableInterventions ?? this.enableInterventions,
+        disabledTypes: disabledTypes ?? this.disabledTypes,
         notificationLevel: notificationLevel ?? this.notificationLevel,
         quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
         quietHoursStart: quietHoursStart ?? this.quietHoursStart,
@@ -221,6 +225,10 @@ class NotificationPreferenceSettings {
       NotificationPreferenceSettings(
         enableSystem: json['enable_system'] as bool? ?? true,
         enableInterventions: json['enable_interventions'] as bool? ?? true,
+        disabledTypes: (json['disabled_types'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList(growable: false),
         notificationLevel: normalizeNotificationLevelSetting(
           json['notification_level'],
         ),
@@ -233,6 +241,7 @@ class NotificationPreferenceSettings {
   Map<String, dynamic> toJson() => {
         'enable_system': enableSystem,
         'enable_interventions': enableInterventions,
+        'disabled_types': disabledTypes,
         'notification_level': notificationLevel,
         'quiet_hours_enabled': quietHoursEnabled,
         'quiet_hours_start': quietHoursStart,
@@ -376,6 +385,7 @@ class NotificationPreferenceSettingsNotifier
   Future<void> updatePreferences({
     bool? enableSystem,
     bool? enableInterventions,
+    List<String>? disabledTypes,
     String? notificationLevel,
     bool? quietHoursEnabled,
     String? quietHoursStart,
@@ -385,6 +395,7 @@ class NotificationPreferenceSettingsNotifier
     final nextState = previousState.copyWith(
       enableSystem: enableSystem,
       enableInterventions: enableInterventions,
+      disabledTypes: disabledTypes,
       notificationLevel: notificationLevel == null
           ? null
           : normalizeNotificationLevelSetting(notificationLevel),

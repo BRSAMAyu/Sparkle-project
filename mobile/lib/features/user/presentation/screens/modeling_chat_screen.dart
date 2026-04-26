@@ -10,12 +10,13 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
-import 'package:sparkle/features/user/user_routes.dart';
 
 class ModelingChatScreen extends ConsumerStatefulWidget {
   const ModelingChatScreen({
@@ -78,7 +79,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
 
   @override
   Widget build(BuildContext context) => RouteResilienceScope(
-        fallbackRoute: UserRoutes.personaOnboarding,
+        fallbackRoute: HomeRoutes.home,
         child: SparklePageScaffold(
           role: SparklePageRole.content,
           appBar: AppBar(
@@ -98,7 +99,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(DS.spacing16),
+                    padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final message = _messages[index];
@@ -544,7 +545,9 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     if (outputJson is String && outputJson.isNotEmpty) {
       try {
         capturedOutput = jsonDecode(outputJson) as Map<String, dynamic>?;
-      } catch (_) {}
+      } catch (error) {
+        debugPrint('Modeling output parse failed: $error');
+      }
     }
 
     setState(() {
@@ -724,20 +727,31 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
         if (event is ErrorEvent) {
           throw Exception(event.message);
         }
+        if (event is DoneEvent &&
+            resolvedPlanRoute != null &&
+            resolvedPlanRoute.isNotEmpty) {
+          break;
+        }
       }
 
       resolvedPlanRoute ??=
           await _resolveFallbackPlanRoute(preferredPlanId: resolvedPlanId);
       if (resolvedPlanRoute == null || resolvedPlanRoute.isEmpty) {
-        throw Exception('计划已经开始生成，但入口还没准备好，请重试一次。');
+        throw Exception('计划还在准备入口，请稍后重试一次。');
       }
 
       if (!mounted) return;
-      if (resolvedPlanId != null && resolvedPlanId.isNotEmpty) {
-        ref.read(activePlanProvider.notifier).selectPlan(resolvedPlanId);
-        ref.invalidate(planDetailProvider(resolvedPlanId));
+      try {
+        if (resolvedPlanId != null && resolvedPlanId.isNotEmpty) {
+          ref.read(activePlanProvider.notifier).selectPlan(resolvedPlanId);
+          ref.invalidate(planDetailProvider(resolvedPlanId));
+        }
+        ref
+          ..invalidate(planListProvider)
+          ..invalidate(learningPortfolioProvider);
+      } catch (error) {
+        debugPrint('Planning cache refresh failed: $error');
       }
-      ref.invalidate(planListProvider);
       context.go(resolvedPlanRoute);
     } catch (error) {
       if (!mounted) return;

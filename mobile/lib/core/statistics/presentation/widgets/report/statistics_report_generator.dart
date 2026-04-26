@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 
 /// Configuration for PNG report generation
 class ReportConfig {
@@ -150,6 +151,7 @@ class StatisticsReportGenerator {
           color: config.resolvedPrimaryColor,
           fontSize: 56 * config.pixelRatio,
           fontWeight: FontWeight.bold,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -167,6 +169,7 @@ class StatisticsReportGenerator {
         style: TextStyle(
           color: config.resolvedSecondaryColor,
           fontSize: 36 * config.pixelRatio,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -187,6 +190,7 @@ class StatisticsReportGenerator {
         style: TextStyle(
           color: config.resolvedPrimaryColor.withValues(alpha: 0.7),
           fontSize: 28 * config.pixelRatio,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       textDirection: TextDirection.ltr,

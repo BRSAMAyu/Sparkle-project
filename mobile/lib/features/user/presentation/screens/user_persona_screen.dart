@@ -136,7 +136,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         onRefresh: () => _refreshPersona(ref),
         child: ListView(
           controller: _scrollController,
-          padding: const EdgeInsets.all(DS.spacing16),
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
           children: [
             if (profileLoadError != null) ...[
               SparkleStaggerItem(

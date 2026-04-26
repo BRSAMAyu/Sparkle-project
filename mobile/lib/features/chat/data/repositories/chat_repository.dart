@@ -90,6 +90,7 @@ class ChatRepository {
     String taskId,
     String message,
     String? conversationId,
+    Map<String, dynamic>? extraContext,
   ) async {
     if (DemoDataService.isDemoMode) {
       return (
@@ -105,6 +106,7 @@ class ChatRepository {
       data: {
         'message': message,
         'conversation_id': conversationId,
+        if (extraContext != null) 'context': extraContext,
       },
     );
     final payload =

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 
 class BgmLibraryScreen extends StatefulWidget {
@@ -107,10 +108,8 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            imported.isEmpty ? '没有导入新曲目' : '已导入 ${imported.length} 首本地音乐',
-          ),
+        SparkleSnackBar.info(
+          imported.isEmpty ? '没有导入新曲目' : '已导入 ${imported.length} 首本地音乐',
         ),
       );
       await _loadData();
@@ -133,7 +132,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('正在播放 ${entry.title}，已切换到播放器模式')),
+      SparkleSnackBar.info('正在播放 ${entry.title}，已切换到播放器模式'),
     );
     await _loadData();
   }
@@ -144,7 +143,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已移除 ${entry.title}')),
+      SparkleSnackBar.success('已移除 ${entry.title}'),
     );
     await _loadData();
   }

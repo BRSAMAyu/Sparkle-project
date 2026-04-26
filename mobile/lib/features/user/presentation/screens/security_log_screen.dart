@@ -176,7 +176,7 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
           child: RefreshIndicator(
             onRefresh: _loadLogs,
             child: ListView(
-              padding: const EdgeInsets.all(DS.spacing24),
+              padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
               children: [
                 SparkleStaggerItem(
                   index: 0,

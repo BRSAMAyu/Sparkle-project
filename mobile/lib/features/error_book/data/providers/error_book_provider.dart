@@ -4,6 +4,7 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -333,10 +334,12 @@ class ErrorOperations extends _$ErrorOperations {
         questionImageUrl: questionImageUrl,
       );
 
-      // 刷新相关列表
+      // 刷新相关列表 + Galaxy（后端同步扣减掌握度）
       ref
         ..invalidate(errorListProvider)
         ..invalidate(errorStatsProvider);
+      ref.invalidate(galaxyProvider);
+      ref.read(galaxyRefreshTriggerProvider.notifier).state++;
 
       state = state.copyWith(isLoading: false);
       return result;
@@ -451,7 +454,7 @@ class ErrorOperations extends _$ErrorOperations {
         timeSpentSeconds: timeSpentSeconds,
       );
 
-      // 刷新详情、列表和统计
+      // 刷新详情、列表、统计 + Galaxy（复习更新掌握度）
       ref
         ..invalidate(errorDetailProvider(errorId))
         ..invalidate(errorListProvider)
@@ -461,7 +464,9 @@ class ErrorOperations extends _$ErrorOperations {
         ..invalidate(planDetailProvider)
         ..invalidate(taskListProvider)
         ..invalidate(systemUpdatesProvider)
-        ..invalidate(weeklyGrowthNarrativeProvider);
+        ..invalidate(weeklyGrowthNarrativeProvider)
+        ..invalidate(galaxyProvider);
+      ref.read(galaxyRefreshTriggerProvider.notifier).state++;
 
       state = state.copyWith(isLoading: false);
       return result;

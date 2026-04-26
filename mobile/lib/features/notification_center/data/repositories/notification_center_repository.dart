@@ -511,6 +511,7 @@ class NotificationCenterRepository {
       return {
         'enable_system': true,
         'enable_interventions': true,
+        'disabled_types': <String>[],
         'notification_level': 'standard',
         'quiet_hours_enabled': false,
         'quiet_hours_start': '22:00',
@@ -539,6 +540,7 @@ class NotificationCenterRepository {
       return {
         'enable_system': true,
         'enable_interventions': true,
+        'disabled_types': <String>[],
         'notification_level': 'standard',
         'quiet_hours_enabled': false,
         'quiet_hours_start': '22:00',

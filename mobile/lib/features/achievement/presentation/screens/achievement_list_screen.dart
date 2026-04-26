@@ -85,6 +85,8 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
   AchievementFilterOptions _filterOptions = const AchievementFilterOptions();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  GoRouter? _router;
+  String? _lastObservedRoutePath;
 
   late final AnimationController _headerController;
   late final Animation<double> _headerFade;
@@ -114,11 +116,49 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _attachRouteRefreshListener();
+  }
+
+  @override
   void dispose() {
+    _router?.routeInformationProvider.removeListener(
+      _handleRouteVisibilityChanged,
+    );
     _searchController.dispose();
     _headerController.dispose();
     super.dispose();
   }
+
+  void _attachRouteRefreshListener() {
+    final router = GoRouter.of(context);
+    if (identical(_router, router)) {
+      return;
+    }
+    _router?.routeInformationProvider.removeListener(
+      _handleRouteVisibilityChanged,
+    );
+    _router = router;
+    _lastObservedRoutePath = router.routeInformationProvider.value.uri.path;
+    router.routeInformationProvider.addListener(_handleRouteVisibilityChanged);
+  }
+
+  void _handleRouteVisibilityChanged() {
+    final path = _router?.routeInformationProvider.value.uri.path;
+    final previousPath = _lastObservedRoutePath;
+    _lastObservedRoutePath = path;
+    if (!mounted ||
+        path != AchievementRoutes.basePath ||
+        previousPath == AchievementRoutes.basePath) {
+      return;
+    }
+
+    unawaited(_refreshAchievements());
+  }
+
+  Future<void> _refreshAchievements() =>
+      ref.read(achievementProvider.notifier).loadInitialData();
 
   @override
   Widget build(BuildContext context) {
@@ -130,54 +170,58 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
       role: SparklePageRole.immersive,
       safeArea: false,
       child: ContentConstraint(
-        child: CustomScrollView(
-          slivers: [
-            // 顶部统计面板
-            SliverToBoxAdapter(
-              child: SlideTransition(
-                position: _headerSlide,
-                child: FadeTransition(
-                  opacity: _headerFade,
-                  child: _buildHeader(context, state, l10n),
+        child: RefreshIndicator(
+          onRefresh: _refreshAchievements,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              // 顶部统计面板
+              SliverToBoxAdapter(
+                child: SlideTransition(
+                  position: _headerSlide,
+                  child: FadeTransition(
+                    opacity: _headerFade,
+                    child: _buildHeader(context, state, l10n),
+                  ),
                 ),
               ),
-            ),
 
-            // 筛选栏
-            SliverToBoxAdapter(
-              child: _AnimatedSection(
-                index: 1,
-                child: _buildFilterBar(context, l10n),
-              ),
-            ),
-
-            // 分类标签
-            SliverToBoxAdapter(
-              child: _AnimatedSection(
-                index: 2,
-                child: _buildCategoryTabs(context, l10n),
-              ),
-            ),
-
-            // 限时活动区块
-            if (!state.isLoading && state.error == null)
-              _buildLimitedTimeSection(state.achievements, l10n),
-
-            // 内容区域
-            if (state.isLoading)
-              const SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 520,
-                  child: SparkleListSkeleton(count: 4),
+              // 筛选栏
+              SliverToBoxAdapter(
+                child: _AnimatedSection(
+                  index: 1,
+                  child: _buildFilterBar(context, l10n),
                 ),
-              )
-            else if (state.error != null)
-              SliverFillRemaining(
-                child: _buildErrorView(context, state.error!, l10n),
-              )
-            else
-              _buildAchievementContent(state),
-          ],
+              ),
+
+              // 分类标签
+              SliverToBoxAdapter(
+                child: _AnimatedSection(
+                  index: 2,
+                  child: _buildCategoryTabs(context, l10n),
+                ),
+              ),
+
+              // 限时活动区块
+              if (!state.isLoading && state.error == null)
+                _buildLimitedTimeSection(state.achievements, l10n),
+
+              // 内容区域
+              if (state.isLoading)
+                const SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 520,
+                    child: SparkleListSkeleton(count: 4),
+                  ),
+                )
+              else if (state.error != null)
+                SliverFillRemaining(
+                  child: _buildErrorView(context, state.error!, l10n),
+                )
+              else
+                _buildAchievementContent(state),
+            ],
+          ),
         ),
       ),
     );

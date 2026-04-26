@@ -295,7 +295,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               ),
             if (_pendingCommitments.isNotEmpty) const SizedBox(height: DS.md),
             if (entries.isEmpty)
-              _buildEmptyState()
+              _buildEmptyState(context)
             else
               ...entries.indexed.map(
                 (entry) => SparkleStaggerItem(
@@ -427,13 +427,22 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         ],
       );
 
-  Widget _buildEmptyState() => Padding(
+  void _clearFilters() {
+    setState(() {
+      _filterType = null;
+      _filterEvidence = null;
+      _dateRange = null;
+    });
+  }
+
+  Widget _buildEmptyState(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: DS.xl),
-        child: Center(
-          child: Text(
-            '暂无符合条件的记忆',
-            style: TextStyle(color: DS.textSecondary),
-          ),
+        child: EmptyState(
+          type: EmptyStateType.noResults,
+          title: '暂无符合条件的记忆',
+          description: '试试清空筛选条件，重新查看所有已整理的记忆。',
+          actionText: '清空筛选',
+          onAction: _clearFilters,
         ),
       );
 

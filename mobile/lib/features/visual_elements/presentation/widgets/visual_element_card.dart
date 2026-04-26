@@ -191,63 +191,66 @@ class _VisualElementCardState extends State<VisualElementCard>
                             const SizedBox(height: DS.spacing10)
                           else
                             const Spacer(),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.element.name,
-                                style: TextStyle(
-                                  fontSize: widget.isCompact
-                                      ? DS.fontSizeSm
-                                      : DS.fontSizeBase,
-                                  fontWeight: DS.fontWeightSemibold,
-                                  color: DS.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (widget.element.description != null &&
-                                  !widget.isCompact) ...[
-                                const SizedBox(height: DS.spacing4),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                                 Text(
-                                  widget.element.description!,
+                                  widget.element.name,
                                   style: TextStyle(
-                                    fontSize: DS.fontSizeXs,
-                                    color: DS.textSecondary,
+                                    fontSize: widget.isCompact
+                                        ? DS.fontSizeSm
+                                        : DS.fontSizeBase,
+                                    fontWeight: DS.fontWeightSemibold,
+                                    color: DS.textPrimary,
                                   ),
-                                  maxLines: 2,
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
-                              const SizedBox(height: DS.spacing6),
-                              Wrap(
-                                spacing: DS.spacing6,
-                                runSpacing: DS.spacing6,
-                                children: [
-                                  if (!widget.isCompact)
-                                    _buildMetaChip(
-                                      widget.element.unlockSourceLabel,
-                                      accent,
+                                if (widget.element.description != null &&
+                                    !widget.isCompact) ...[
+                                  const SizedBox(height: DS.spacing4),
+                                  Text(
+                                    widget.element.description!,
+                                    style: TextStyle(
+                                      fontSize: DS.fontSizeXs,
+                                      color: DS.textSecondary,
                                     ),
-                                  if (widget.element.setId != null &&
-                                      !widget.isCompact)
-                                    _buildMetaChip(
-                                      widget.element.setId!,
-                                      colors.border,
-                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ],
-                              ),
-                              if (widget.element.isBundle &&
-                                  widget.bundleTotalCount > 0 &&
-                                  !widget.isCompact) ...[
                                 const SizedBox(height: DS.spacing6),
-                                _buildBundleProgressChip(colors),
+                                Wrap(
+                                  spacing: DS.spacing6,
+                                  runSpacing: DS.spacing6,
+                                  children: [
+                                    if (!widget.isCompact)
+                                      _buildMetaChip(
+                                        widget.element.unlockSourceLabel,
+                                        accent,
+                                      ),
+                                    if (widget.element.setId != null &&
+                                        !widget.isCompact)
+                                      _buildMetaChip(
+                                        widget.element.setId!,
+                                        colors.border,
+                                      ),
+                                  ],
+                                ),
+                                if (widget.element.isBundle &&
+                                    widget.bundleTotalCount > 0 &&
+                                    !widget.isCompact) ...[
+                                  const SizedBox(height: DS.spacing6),
+                                  _buildBundleProgressChip(colors),
+                                ],
+                                if (widget.showStatus && !widget.isCompact) ...[
+                                  const SizedBox(height: DS.spacing8),
+                                  _buildStatusRow(l10n),
+                                ],
                               ],
-                              if (widget.showStatus && !widget.isCompact) ...[
-                                const SizedBox(height: DS.spacing8),
-                                _buildStatusRow(l10n),
-                              ],
-                            ],
+                            ),
                           ),
                         ],
                       ),
@@ -260,13 +263,15 @@ class _VisualElementCardState extends State<VisualElementCard>
             ),
             if (widget.element.isEquipped)
               Positioned.fill(
-                child: AnimatedBuilder(
-                  animation: _breathingAnimation,
-                  builder: (context, child) => CustomPaint(
-                    painter: _BreathingBorderPainter(
-                      animation: _breathingAnimation,
-                      color: colors.border,
-                      borderRadius: borderRadius,
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _breathingAnimation,
+                    builder: (context, child) => CustomPaint(
+                      painter: _BreathingBorderPainter(
+                        animation: _breathingAnimation,
+                        color: colors.border,
+                        borderRadius: borderRadius,
+                      ),
                     ),
                   ),
                 ),

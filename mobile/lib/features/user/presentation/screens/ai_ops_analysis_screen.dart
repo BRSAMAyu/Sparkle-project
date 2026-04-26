@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class AiOpsAnalysisScreen extends ConsumerStatefulWidget {
@@ -342,7 +343,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
     await Clipboard.setData(ClipboardData(text: pretty));
     if (!mounted) return;
     messenger.showSnackBar(
-      const SnackBar(content: Text('AI 运营导出已复制到剪贴板')),
+      SparkleSnackBar.success('AI 运营导出已复制到剪贴板'),
     );
   }
 

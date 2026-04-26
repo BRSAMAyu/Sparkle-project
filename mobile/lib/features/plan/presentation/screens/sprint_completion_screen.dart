@@ -12,6 +12,7 @@ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
@@ -177,6 +178,11 @@ class _SprintCompletionScreenState
     context.go(PlanRoutes.learningPortfolio);
   }
 
+  void _returnHome() {
+    _invalidateLinkedViews();
+    context.go(HomeRoutes.home);
+  }
+
   @override
   Widget build(BuildContext context) {
     final summary = _summary;
@@ -236,6 +242,7 @@ class _SprintCompletionScreenState
                       onShare: _share,
                       onPostExamReview: _openPostExamReview,
                       onViewPortfolio: _openLearningPortfolio,
+                      onReturnHome: _returnHome,
                     ),
                 ],
               ),
@@ -256,6 +263,7 @@ class _CompletionContent extends StatelessWidget {
     required this.onShare,
     required this.onPostExamReview,
     required this.onViewPortfolio,
+    required this.onReturnHome,
   });
 
   final String subjectLabel;
@@ -265,6 +273,7 @@ class _CompletionContent extends StatelessWidget {
   final VoidCallback onShare;
   final VoidCallback onPostExamReview;
   final VoidCallback onViewPortfolio;
+  final VoidCallback onReturnHome;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -308,6 +317,11 @@ class _CompletionContent extends StatelessWidget {
                           label: '记录考试结果',
                           icon: const Icon(Icons.fact_check_outlined),
                           onPressed: onPostExamReview,
+                        ),
+                        SparkleButton.secondary(
+                          label: '返回首页',
+                          icon: const Icon(Icons.home_outlined),
+                          onPressed: onReturnHome,
                         ),
                         TextButton.icon(
                           onPressed: onViewPortfolio,

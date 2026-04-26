@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:math_expressions/math_expressions.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 
-class CalculatorTool extends StatefulWidget {
+class CalculatorTool extends ConsumerStatefulWidget {
   const CalculatorTool({
     super.key,
     this.surface = ToolSurface.page,
@@ -14,10 +18,10 @@ class CalculatorTool extends StatefulWidget {
   final ToolSurface surface;
 
   @override
-  State<CalculatorTool> createState() => _CalculatorToolState();
+  ConsumerState<CalculatorTool> createState() => _CalculatorToolState();
 }
 
-class _CalculatorToolState extends State<CalculatorTool> {
+class _CalculatorToolState extends ConsumerState<CalculatorTool> {
   static const List<String> _keyRows = [
     'C DEL ( )',
     '7 8 9 /',
@@ -58,6 +62,8 @@ class _CalculatorToolState extends State<CalculatorTool> {
       return;
     }
 
+    String? complexity;
+    var evaluated = false;
     setState(() {
       try {
         final parser = GrammarParser();
@@ -75,10 +81,33 @@ class _CalculatorToolState extends State<CalculatorTool> {
         if (_history.length > 6) {
           _history.removeLast();
         }
+        complexity = _complexityFor(_expression);
+        evaluated = true;
       } catch (_) {
         _result = 'Error';
       }
     });
+
+    if (evaluated && complexity != null) {
+      unawaited(
+        ref.read(toolHistoryRepositoryProvider).recordCalculatorEvaluated(
+              complexity: complexity!,
+              surface: widget.surface.name,
+            ),
+      );
+    }
+  }
+
+  String _complexityFor(String expression) {
+    final operatorCount = RegExp(r'[+\-x*/÷]').allMatches(expression).length;
+    final hasGrouping = expression.contains('(') || expression.contains(')');
+    if (operatorCount <= 1 && !hasGrouping) {
+      return 'simple';
+    }
+    if (operatorCount <= 3 && expression.length <= 20) {
+      return 'medium';
+    }
+    return 'complex';
   }
 
   Future<void> _copyResult() async {

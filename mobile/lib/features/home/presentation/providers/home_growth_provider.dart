@@ -29,9 +29,7 @@ class HomeActivePlanStatus {
           json['health_score'] ??
               json['healthScore'] ??
               planMap['health_score'] ??
-              planMap['healthScore'] ??
-              planMap['mastery_level'] ??
-              planMap['progress'],
+              planMap['healthScore'],
         ),
       ),
       currentPhase: _asNullableString(

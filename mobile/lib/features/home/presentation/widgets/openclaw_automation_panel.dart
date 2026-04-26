@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_automation_service.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -386,10 +387,9 @@ class _OpenClawAutomationPanelState
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok ? '批量委派已提交' : (service.error ?? '批量委派失败')),
-        backgroundColor: ok ? DS.semanticSuccess : DS.semanticError,
-      ),
+      ok
+          ? SparkleSnackBar.success('批量委派已提交')
+          : SparkleSnackBar.error(service.error ?? '批量委派失败'),
     );
   }
 

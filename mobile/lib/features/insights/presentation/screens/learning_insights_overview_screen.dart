@@ -25,6 +25,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
   static const String panelSimulation = 'simulation';
   static const String panelTheater = 'theater';
   static const String panelReport = 'report';
+  static const String panelWeeklyNarrative = 'weeklyNarrative';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -100,7 +101,9 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                   onAction: () => context.push(TaskRoutes.taskCreate),
                 )
               else
-                const WeeklyGrowthNarrativeCard(),
+                WeeklyGrowthNarrativeCard(
+                  initialExpanded: initialPanel == panelWeeklyNarrative,
+                ),
               const SizedBox(height: DS.spacing16),
               _OverviewHero(activePanel: initialPanel),
               const SizedBox(height: DS.spacing16),

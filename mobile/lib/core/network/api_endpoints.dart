@@ -24,6 +24,7 @@ class ApiEndpoints {
   static const String unlinkSocial = '/users/me/unlink-social';
   static const String userSessions = '/users/me/sessions';
   static const String securityLog = '/users/me/security-log';
+  static const String meExport = '/users/me/export';
 
   // Files
   static const String filesPrepareUpload = '/files/upload/prepare';
@@ -54,6 +55,7 @@ class ApiEndpoints {
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
   static String snoozeTask(String id) => '/tasks/$id/snooze';
+  static String taskStuck(String id) => '/tasks/$id/stuck';
   static String taskTooHard(String id) => '/tasks/$id/too-hard';
   static String skipTask(String id) => '/tasks/$id/skip';
   static String taskGenerateGuide(String id) => '/tasks/$id/generate-guide';
@@ -152,8 +154,9 @@ class ApiEndpoints {
       '/client-telemetry/events/batch';
   static const String clientTelemetrySummary = '/client-telemetry/summary';
   static const String eventsIngest = '/events/ingest';
-  static const String healthCapacity = '/health/capacity';
-  static const String healthPrometheusAlerts = '/health/prometheus/alerts';
+  static const String toolHistoryClientEvents = '/tool-history/client-events';
+  static const String healthCapacity = '/health/user-capacity';
+  static const String healthPrometheusAlerts = '/health/user-alerts';
 
   // Notification Center
   static const String notificationCenterNotifications =
@@ -188,6 +191,7 @@ class ApiEndpoints {
   static const String auroraCalibrationCards = '/aurora/calibration-cards';
   static String auroraCalibrationCardRespond(String id) =>
       '/aurora/calibration-cards/$id/respond';
+  static const String auroraModelingStatus = '/aurora/modeling-status';
 
   // Galaxy
   static const String galaxyGraph = '/galaxy/graph';

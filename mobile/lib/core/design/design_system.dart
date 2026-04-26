@@ -872,10 +872,10 @@ class DS {
     final duration = switch (role) {
       SparkleFeedbackRole.loading => const Duration(milliseconds: 1400),
       SparkleFeedbackRole.undoable => const Duration(seconds: 4),
+      SparkleFeedbackRole.error => const Duration(seconds: 6),
+      SparkleFeedbackRole.warning => const Duration(seconds: 5),
       SparkleFeedbackRole.info ||
-      SparkleFeedbackRole.success ||
-      SparkleFeedbackRole.warning ||
-      SparkleFeedbackRole.error =>
+      SparkleFeedbackRole.success =>
         const Duration(seconds: 3),
     };
 

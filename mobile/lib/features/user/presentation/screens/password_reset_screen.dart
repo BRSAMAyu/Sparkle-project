@@ -100,7 +100,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(DS.spacing24),
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
           child: GraphiteCardSurface(
             surfaceRole: SparkleSurfaceRole.card,
             child: Form(

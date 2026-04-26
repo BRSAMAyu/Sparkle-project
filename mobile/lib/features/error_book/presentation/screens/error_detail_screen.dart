@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
@@ -931,23 +932,9 @@ class ErrorDetailScreen extends ConsumerWidget {
   ) async {
     unawaited(ref.read(errorOperationsProvider.notifier).reAnalyze(error.id));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(DS.neutral0),
-              ),
-            ),
-            const SizedBox(width: DS.spacing12),
-            Text(context.l10n.errorBookReanalyzing),
-          ],
-        ),
+      SparkleSnackBar.info(
+        context.l10n.errorBookReanalyzing,
         duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -985,21 +972,14 @@ class ErrorDetailScreen extends ConsumerWidget {
         if (context.mounted) {
           Navigator.of(context).pop(true); // 返回列表页
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.errorBookDeleteSuccess),
-              backgroundColor: DS.success,
-              behavior: SnackBarBehavior.floating,
-            ),
+            SparkleSnackBar.success(context.l10n.errorBookDeleteSuccess),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text(context.l10n.errorBookDeleteFailedMessage(e.toString())),
-              backgroundColor: DS.error,
-              behavior: SnackBarBehavior.floating,
+            SparkleSnackBar.error(
+              context.l10n.errorBookDeleteFailedMessage(e.toString()),
             ),
           );
         }

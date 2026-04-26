@@ -86,7 +86,9 @@ class PredictiveService {
   Map<String, dynamic> _getMockLearningForecast() {
     final demoTasks = _demoDataService.demoTasks;
     final afternoonTask = demoTasks.firstWhere(
-      (task) => task.status == TaskStatus.inProgress,
+      (task) =>
+          task.status == TaskStatus.inProgress ||
+          task.status == TaskStatus.stuck,
       orElse: () => demoTasks.first,
     );
     return {
@@ -153,7 +155,8 @@ class PredictiveService {
       },
       'weeklyTrend': [0.46, 0.49, 0.53, 0.6, 0.66, 0.71, 0.74],
       'upcomingDeadlines': tasks
-          .where((task) => task.dueDate != null && task.status != TaskStatus.completed)
+          .where((task) =>
+              task.dueDate != null && task.status != TaskStatus.completed)
           .take(3)
           .map(
             (task) => {
@@ -199,8 +202,10 @@ class PredictiveService {
         '当你开始分心时，先完成一个 15 分钟的低门槛任务',
         '把每周复盘和错题回看固定到周日晚间，形成跨领域闭环',
       ],
-      'behaviorPatterns': behaviorPatterns.map((item) => item.toJson()).toList(),
-      'curiosityCapsules': capsules.take(3).map((item) => item.toJson()).toList(),
+      'behaviorPatterns':
+          behaviorPatterns.map((item) => item.toJson()).toList(),
+      'curiosityCapsules':
+          capsules.take(3).map((item) => item.toJson()).toList(),
       'isMockData': true,
     };
   }

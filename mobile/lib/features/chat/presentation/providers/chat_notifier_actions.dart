@@ -612,6 +612,28 @@ extension ChatNotifierActions on ChatNotifier {
       lastActionMessage: event.message,
     );
 
+    final now = DateTime.now();
+    _ref.read(notificationCenterProvider.notifier).handleNewNotification(
+      notificationData: {
+        'id':
+            'achievement-progress-${event.achievementId}-${event.milestonePercent}-${now.microsecondsSinceEpoch}',
+        'title':
+            '${event.achievementName} 进度达到 ${event.milestonePercent}%',
+        'content': event.message,
+        'type': 'achievement_progress',
+        'priority': 'medium',
+        'is_read': false,
+        'created_at': now.toIso8601String(),
+        'data': {
+          'achievement_id': event.achievementId,
+          'achievement_name': event.achievementName,
+          'progress_percent': event.milestonePercent,
+          'source_event': 'achievement_milestone',
+        },
+      },
+      notificationType: 'system',
+    );
+
     // Phase 1B: Trigger close-to-unlock check
     unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
     unawaited(

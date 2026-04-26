@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 
 /// Export option button widget
 class ExportOptionButton extends StatelessWidget {
@@ -402,10 +403,7 @@ class _StatisticsExportBottomSheetState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('导出失败: $e'),
-            backgroundColor: DS.error,
-          ),
+          SparkleSnackBar.error('导出失败: $e'),
         );
       }
     } finally {

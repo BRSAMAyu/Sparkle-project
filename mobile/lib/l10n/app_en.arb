@@ -3013,6 +3013,131 @@
   "planContextTitle": "Plan Context Title",
   "planDaysRemaining": "{arg0}",
   "planDetailTitle": "Plan Detail Title",
+  "planDetailAddExistingTask": "Add Existing",
+  "planDetailAddNewTask": "Add New Task",
+  "planDetailAddPhase": "Add Phase",
+  "planDetailAiGuide": "AI Execution Guide",
+  "planDetailCompressionDesc": "Only {taskCount} tasks / {totalMinutes} min kept today. Focus on getting the main thread back on track.",
+  "@planDetailCompressionDesc": {
+    "placeholders": {
+      "taskCount": {"type": "int"},
+      "totalMinutes": {"type": "int"}
+    }
+  },
+  "planDetailCompressionTitle": "Today's plan has been streamlined",
+  "planDetailCommonMistakes": "⚠️ Common Mistakes",
+  "planDetailDailyRhythm": "Daily Rhythm",
+  "planDetailDayGroupSubtitle": "{count} items · {minutes} min",
+  "@planDetailDayGroupSubtitle": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "minutes": {"type": "int"}
+    }
+  },
+  "planDetailDefaultRecommendation": "No new content today. Just review high-frequency topics, revisit past mistakes, and do a 30-min mini simulation.",
+  "planDetailEdit": "Edit Plan",
+  "planDetailFullPlan": "Full Plan",
+  "planDetailHealthNeedAttention": "Needs Attention",
+  "planDetailHealthNeedReplan": "Needs Replanning",
+  "planDetailHealthReasonDefault": "No specific risk identified",
+  "planDetailHealthReasonProgressLag": "Progress is behind schedule. Prioritize high-yield tasks.",
+  "planDetailHealthReasonTimeOverrun": "Recent tasks have taken longer than expected. Consider compressing the next steps.",
+  "planDetailHealthReasonTooEasy": "Recent feedback suggests it's too easy. Consider increasing the challenge level.",
+  "planDetailHealthReasonTooHard": "Recent feedback suggests it's too hard. Try breaking it down or covering a prerequisite.",
+  "planDetailHealthScore": "Plan Health {score}% · {label}",
+  "@planDetailHealthScore": {
+    "placeholders": {
+      "score": {"type": "int"},
+      "label": {"type": "String"}
+    }
+  },
+  "planDetailHealthStable": "Stable",
+  "planDetailLearningPathLoadError": "Learning path progress failed to load: {error}",
+  "@planDetailLearningPathLoadError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "planDetailLoadError": "Plan Load Failed",
+  "planDetailLoadError404": "Plan just finished generating, details may still be syncing. Tap \"Retry\" to continue loading.",
+  "planDetailLoadErrorEmpty": "Plan details couldn't load. Please try again.",
+  "planDetailLoadErrorGeneric": "Plan details couldn't load: {error}",
+  "@planDetailLoadErrorGeneric": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "planDetailLoadErrorTimeout": "Plan loading timed out. Please check your network and try again.",
+  "planDetailMinutes": "{minutes} min",
+  "@planDetailMinutes": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "planDetailNoPhasesYet": "No phases yet. Create the first phase to break your long-term plan into actionable segments.",
+  "planDetailPhasesLoadError": "Phase loading failed: {error}",
+  "@planDetailPhasesLoadError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "planDetailPhasesTitle": "Plan Phases",
+  "planDetailPlanScope": "Plan Scope",
+  "planDetailRecommendationDay1": "Focus on {thingLabel} today. You're already on the right track.",
+  "@planDetailRecommendationDay1": {
+    "placeholders": {
+      "thingLabel": {"type": "String"}
+    }
+  },
+  "planDetailRecommendationDayN": "Start with Day {day}'s {thingLabel} to keep your rhythm steady.",
+  "@planDetailRecommendationDayN": {
+    "placeholders": {
+      "day": {"type": "int"},
+      "thingLabel": {"type": "String"}
+    }
+  },
+  "planDetailSprintMode7Day": "7-Day Sprint Mode",
+  "planDetailSprintModeExam": "Exam Sprint Mode",
+  "planDetailSprintModeLabel": "Pre-Exam Sprint Mode",
+  "planDetailSprintNodesLoading": "Sprint nodes are still being organized.",
+  "planDetailSprintPackDesc": "Secure these high-yield nodes first today. Completed tasks will light up the dots.",
+  "planDetailSprintPackNodes": "Sprint Pack Nodes",
+  "planDetailStatusAbandoned": "Abandoned",
+  "planDetailStatusCompleted": "Completed",
+  "planDetailStatusInProgress": "In Progress",
+  "planDetailStatusPending": "Pending",
+  "planDetailStatusStuck": "Stuck",
+  "planDetailTaskBlueprint": "Task Blueprint",
+  "planDetailTaskCount": "{completed}/{total} tasks",
+  "@planDetailTaskCount": {
+    "placeholders": {
+      "completed": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "planDetailTaskDifficulty": "Difficulty {difficulty}",
+  "@planDetailTaskDifficulty": {
+    "placeholders": {
+      "difficulty": {"type": "String"}
+    }
+  },
+  "planDetailTagErrorRepair": "Error Repair",
+  "planDetailTagNoNewContent": "No New Content",
+  "planDetailThingCount1": "this 1 task",
+  "planDetailThingCountN": "these {count} tasks",
+  "@planDetailThingCountN": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "planDetailTodayFocus": "Today's Focus",
+  "planDetailWhyNowErrorFix": "Fix this error now to prevent later tasks from being held back by the same gap.",
+  "planDetailWhyNowLearning": "Handle this now to turn today's learning progress into a tangible output.",
+  "planDetailWhyNowOcr": "Process materials now to turn available info into an entry point for upcoming tasks.",
+  "planDetailWhyNowPlanning": "Organize the plan now to reduce hesitation in the next steps.",
+  "planDetailWhyNowReflection": "Review now to turn today's results into easier choices for tomorrow.",
+  "planDetailWhyNowSocial": "Complete this collaboration now to keep external feedback in sync with your learning pace.",
+  "planDetailWhyNowTraining": "Practice now to quickly confirm you can apply what you just learned.",
   "planDueToday": "Plan Due Today",
   "planFactsFeedbackSummary": "{arg0} {arg1}",
   "planKeyFacts": "Plan Key Facts",
@@ -3324,5 +3449,957 @@
   "sessionManagementCurrentHint": "This is your current device",
   "personaAdjustInferredPreference": "Adjust inferred preference",
   "personaNewValue": "New value",
-  "personaAdjustInferredPreferenceTitle": "Adjust Inferred Preference"
+  "personaAdjustInferredPreferenceTitle": "Adjust Inferred Preference",
+  "languageDialogDescription": "Choose your preferred reading and interaction language. The interface and system copy will switch together.",
+  "languageChineseDescription": "Better suited for Chinese reading and localized expressions.",
+  "languageEnglishDescription": "Suited for English interface and a more international content environment.",
+  "learningModeSubtitle": "Adjust depth and curiosity preferences",
+  "learningPreferenceSaving": "Saving...",
+  "learningPreferenceSaved": "Learning mode preference saved",
+  "learningPreferenceSaveFailed": "Save failed: {error}",
+  "@learningPreferenceSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "learningPreferenceAutoSaveHint": "Drag to auto-save to backend",
+  "bgmVolume": "Music Volume",
+  "bgmScenePreference": "Scene Preference",
+  "bgmPreviewTooltip": "Preview {palette}",
+  "@bgmPreviewTooltip": {
+    "placeholders": {
+      "palette": {
+        "type": "String"
+      }
+    }
+  },
+  "bgmAdvancedControls": "Advanced Controls",
+  "bgmAdvancedControlsSubtitle": "Control music intensity, rotation frequency, reading protection, focus priority, and style locking",
+  "chatPureMode": "Pure Mode",
+  "chatPureModeSubtitle": "Keep only text messages in chat, hiding extra info cards and widgets below messages.",
+  "motionIntensity": "Motion Intensity",
+  "aiUsagePanelUnavailable": "Quota panel is temporarily unavailable, but tier switching still works.",
+  "aiOpsPanelUnavailable": "Ops panel is temporarily unavailable, but AI tier and usage stats still work.",
+  "notificationManageSubtitle": "Manage system notifications, intervention alerts, quiet hours, and task reminders.",
+  "notificationLoadingPrefs": "Loading notification preferences...",
+  "notificationSystem": "System Notifications",
+  "notificationSystemSubtitle": "Control task reminders, achievements, system messages, and in-app notifications",
+  "notificationInterventions": "Intervention Alerts",
+  "notificationInterventionsSubtitle": "Control coach/agent intervention and guidance reminders",
+  "notificationReminders": "Reminders",
+  "notificationRemindersSubtitle": "Control task, plan progress, and comeback reminders",
+  "notificationSpacedRepetition": "Review",
+  "notificationSpacedRepetitionSubtitle": "Control Galaxy spaced repetition reminders",
+  "notificationWeeklyReport": "Weekly Report",
+  "notificationWeeklyReportSubtitle": "Control weekly growth report and learning summary notifications",
+  "notificationMilestone": "Milestones",
+  "notificationMilestoneSubtitle": "Control achievement, stage completion, and progress milestone notifications",
+  "notificationLevel": "Notification Level",
+  "notificationLevelSwitched": "Notification level switched to {level}",
+  "@notificationLevelSwitched": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLevelMinimal": "Minimal",
+  "notificationLevelStandard": "Standard",
+  "notificationLevelVerbose": "Verbose",
+  "notificationLevelMinimalDesc": "Only keep essential reminders to minimize disruption.",
+  "notificationLevelStandardDesc": "Balance information volume and notification frequency.",
+  "notificationLevelVerboseDesc": "Show more complete background info and reminder content.",
+  "notificationLevelMinimalPreview": "Only critical reminders, such as tasks due soon and system notifications that need immediate action.",
+  "notificationLevelStandardPreview": "Keep primary reminders and add brief context when needed, suitable for most scenarios.",
+  "notificationLevelVerbosePreview": "Includes more context, such as why you're being reminded, next-step suggestions, and supplementary notes.",
+  "notificationLevelPreviewTitle": "{level} Notifications",
+  "@notificationLevelPreviewTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationQuietHours": "Quiet Hours",
+  "notificationQuietHoursSubtitle": "When off, the system will push notifications at the normal pace",
+  "notificationQuietHoursStart": "Start Time",
+  "notificationQuietHoursEnd": "End Time",
+  "notificationQuietHoursHint": "Supports crossing midnight, e.g. 22:00 - 08:00; start and end times cannot be the same.",
+  "notificationQuietHoursSameTimeError": "Start and end times cannot be the same",
+  "notificationQuietHoursStartUpdated": "Quiet hours start time updated",
+  "notificationQuietHoursEndUpdated": "Quiet hours end time updated",
+  "notificationUpdateFailed": "Failed to update notification settings: {error}",
+  "@notificationUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aiExecutionEngine": "AI Execution Engine",
+  "aiExecutionEngineSubtitle": "Connect your OpenClaw instance and monitor health status",
+  "capsuleGenerated": "New curiosity capsule generated",
+  "capsuleGeneratedEmpty": "A new capsule has been generated. Tap below to view the full content.",
+  "capsuleViewNew": "View New Capsule",
+  "capsulePreviewFailed": "Preview failed, please check audio files",
+  "capsuleScenePreviewFailed": "Current scene preview failed, please check audio files",
+  "aiReasoningModeSwitched": "AI reasoning mode switched to {mode}",
+  "@aiReasoningModeSwitched": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryDeclaration": "Declaration",
+  "memoryEvidenceToken": "Evidence Token",
+  "memoryDecayPolicy": "Decay Policy",
+  "memoryUpdateValue": "Updated: {date}",
+  "@memoryUpdateValue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryConfidenceValue": "Confidence: {value}",
+  "@memoryConfidenceValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryAllowedCaptureSummary": "Allowed capture: {types}\nCapture level: {level}",
+  "@memoryAllowedCaptureSummary": {
+    "placeholders": {
+      "types": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryAiInferredDisabledHint": "AI auto-memory is currently disabled, such inferred memories will not be recorded.",
+  "memoryExplanationInferredEpisodic": "This experience was inferred by AI from chat, with evidence tokens, confidence, and retraction path preserved.",
+  "memoryCorrectionSubmittedWithAction": "Correction submitted: {action}",
+  "@memoryCorrectionSubmittedWithAction": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryCorrectionFailedWithDetail": "Correction failed: {error}",
+  "@memoryCorrectionFailedWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aiReasoningModeSwitchFailed": "AI reasoning mode switch failed, please try again later",
+  "aiReasoningFastDesc": "Prioritizes faster results, suitable for short Q&A, lightweight queries, and low-latency scenarios.",
+  "aiReasoningBalancedDesc": "Balances speed and reasoning depth, suitable for most daily use.",
+  "aiReasoningDeepDesc": "Invests more reasoning budget, suitable for complex problems, planning, and high-precision explanations.",
+  "taskReminderDisabled": "Disabled",
+  "taskReminderEnabledNoTime": "Enabled, but no reminder times selected yet",
+  "taskReminderEnabledWithTimes": "Enabled",
+  "taskReminderDaysAgo": "{days}d ago",
+  "@taskReminderDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "taskReminderHoursAgo": "{hours}h ago",
+  "@taskReminderHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "taskReminderMinutesAgo": "{minutes}min ago",
+  "@taskReminderMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationPermissionStatus": "Notification Permission",
+  "notificationPermissionDenied": "Notification permission denied, please enable in system settings",
+  "notificationPermissionPartial": "Some notification features are restricted, recommend enabling full permissions",
+  "notificationPermissionDeniedTitle": "Not authorized: {error}",
+  "@notificationPermissionDeniedTitle": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationRequestPermission": "Request Permission",
+  "notificationOpenSettings": "Open Settings",
+  "notificationPermissionDialogTitle": "Notification Permission",
+  "notificationPermissionDialogContent": "Notification permission has been denied. Please enable it in system settings.",
+  "bgmPaletteAdaptive": "Adaptive",
+  "bgmPaletteClassical": "Classical",
+  "bgmPalettePiano": "Piano",
+  "bgmPaletteAiry": "Airy",
+  "bgmPaletteWarm": "Warm",
+  "bgmPaletteAdaptiveDesc": "The system automatically selects the most suitable background music based on page function.",
+  "bgmPaletteClassicalDesc": "Curated classical piano and strings, prioritizing your local classical library for scene transitions.",
+  "bgmPalettePianoDesc": "Overall emphasis on light piano and quiet melodies, suitable for long-term companionship.",
+  "bgmPaletteAiryDesc": "Overall emphasis on ethereal, dreamy, and spatially rich atmospheres.",
+  "bgmPaletteWarmDesc": "Overall emphasis on warm, soft, and human-feeling upbeat tones.",
+  "bgmIntensityGentle": "Gentle",
+  "bgmIntensityBalanced": "Balanced",
+  "bgmIntensityLush": "Lush",
+  "bgmIntensityGentleDesc": "Better for long-term companionship, prioritizing light density, low interference, and slow transitions.",
+  "bgmIntensityBalancedDesc": "Adds a bit more layer and presence while maintaining comfort.",
+  "bgmIntensityLushDesc": "Makes the same scene more atmospheric and enveloping, while still avoiding obvious abruptness.",
+  "bgmVarietySteady": "Steady",
+  "bgmVarietyBalanced": "Balanced",
+  "bgmVarietyDynamic": "Dynamic",
+  "bgmVarietySteadyDesc": "Minimize track changes and repetition for a more continuous atmosphere.",
+  "bgmVarietyBalancedDesc": "Keep a middle ground between continuity and freshness.",
+  "bgmVarietyDynamicDesc": "Reduce repetition so similar pages can hear new variations more often.",
+  "bgmModeAdaptive": "Follow Page",
+  "bgmModeContinuous": "Player Mode",
+  "bgmModeFocusOnly": "Focus Only",
+  "bgmModeSilent": "Global Silent",
+  "bgmModeAdaptiveDesc": "Home, chat, tasks, achievements, and other pages will automatically switch to matching ambient music.",
+  "bgmModeContinuousDesc": "The current track keeps playing without being interrupted when you navigate to another page, great for using the App as a relaxing music player.",
+  "bgmModeFocusOnlyDesc": "Background music only plays when focus starts, during immersion, and when executing tasks; daily pages stay quiet.",
+  "bgmModeSilentDesc": "Keep sound effects and haptic feedback, but all background music won't autoplay.",
+  "motionIntensityUltra": "Ultra",
+  "motionIntensityHigh": "High",
+  "motionIntensityMedium": "Medium",
+  "motionIntensityOff": "Off",
+  "motionIntensityUltraDesc": "Keep full particles, glow, and complex animations, suitable for high-performance devices.",
+  "motionIntensityHighDesc": "Maintain most visual layers while allowing the system to auto-downgrade by frame rate.",
+  "motionIntensityMediumDesc": "Tone down particles and glow, prioritize stability and battery saving, while retaining basic depth.",
+  "motionIntensityOffDesc": "Try to disable strong animations and particle layers, suitable for static, low-stimulus, or low-performance scenarios.",
+  "bgmSectionSubtitleDefault": "Manage background music by page and player mode",
+  "bgmSectionSubtitleWithCount": "Currently {count} tracks, freely switch between page strategy and player mode",
+  "@bgmSectionSubtitleWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bgmLibraryUpdated": "Library updated to {count} tracks",
+  "@bgmLibraryUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bgmOpenLibrary": "Open Library",
+  "bgmCurated": "Curated",
+  "bgmImported": "Local Import",
+  "bgmBundled": "System Fallback",
+  "bgmModeLabel": "Mode",
+  "bgmPlayerMode": "Player Mode",
+  "bgmPageStrategyMode": "Page Strategy",
+  "bgmLibraryHint": "In the new page, you can request tracks from the library, import your own music, and enable 'Player Mode' for cross-page continuous BGM.",
+  "bgmNotPlaying": "Not currently playing",
+  "bgmBundledTrack": "Built-in scene track",
+  "bgmWaitingPlayback": "Waiting for playback info",
+  "bgmDisabled": "Background music disabled",
+  "bgmGlobalSilent": "Currently in global silent mode",
+  "bgmContinuousPlaying": "Player mode playing continuously",
+  "bgmNowPlaying": "Now Playing",
+  "bgmPreviewCurrentScene": "Preview Current Scene",
+  "bgmTrackLabel": "Track: {name}",
+  "@bgmTrackLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bgmSourceLabel": "Source: {label}",
+  "@bgmSourceLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "bgmIntensityLabel": "Intensity",
+  "bgmVarietyLabel": "Variety",
+  "bgmReadingProtection": "Reading Protection",
+  "bgmFocusPriority": "Focus Priority",
+  "bgmStyleLocked": "Style Locked",
+  "bgmReadingProtectionTitle": "Reading Protection",
+  "bgmReadingProtectionSubtitle": "Chat, insights, and profile pages prioritize low-stimulus and light mixing",
+  "bgmFocusPriorityTitle": "Focus Priority",
+  "bgmFocusPrioritySubtitle": "Focus and execution stages prioritize purer and more stable tracks",
+  "bgmLockStyleTitle": "Lock Current Style",
+  "bgmLockStyleSubtitle": "Continue current vibe across regular pages, without overriding focus and celebration scenes",
+  "bgmAtmosphereIntensity": "Atmosphere Intensity",
+  "bgmVarietyFrequency": "Track Change Frequency",
+  "aiUsageTodayPreparing": "Today's quota stats are being prepared.",
+  "aiUsageTodayTitle": "Today's AI Quota & Usage",
+  "aiUsageRequests": "{used}/{limit} times",
+  "@aiUsageRequests": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "aiUsageLatency": "Avg first token {firstToken}ms · Avg total {totalMs}ms",
+  "@aiUsageLatency": {
+    "placeholders": {
+      "firstToken": {
+        "type": "String"
+      },
+      "totalMs": {
+        "type": "String"
+      }
+    }
+  },
+  "aiOpsModesAccumulating": "Mode-level ops metrics are still accumulating.",
+  "aiOpsTopChatModeStandard": "Standard Chat",
+  "aiOpsTopChatModeStudyPlan": "Study Planning",
+  "aiOpsTopChatModeDeepAnalysis": "Deep Analysis",
+  "aiOpsTopChatModeErrorDiagnosis": "Error Diagnosis",
+  "aiOpsTopChatModeExpertAuto": "Expert Collaboration",
+  "aiOpsUserViewTitle": "User Perspective",
+  "aiOpsUserViewDesc": "Focus on whether AI responds fast, stable, and can push suggestions into real execution, not just model-layer parameters.",
+  "aiOpsSuccessRate": "Success Rate",
+  "aiOpsAvgFirstToken": "Avg First Token",
+  "aiOpsAvgTotalDuration": "Avg Total Duration",
+  "aiOpsExecutionConversion": "Execution Conversion",
+  "aiOpsPredictedAcceptExec": "Predicted Accept-to-Exec",
+  "aiOpsTopModeSummary": "The most recently used chain is \"{topMode}\", indicating it's already the main workflow in daily experience.",
+  "@aiOpsTopModeSummary": {
+    "placeholders": {
+      "topMode": {
+        "type": "String"
+      }
+    }
+  },
+  "aiOpsDevViewTitle": "Dev Ops Perspective",
+  "aiOpsDevViewDesc": "Here we look at speed, cost, fallback, and prediction conversion to decide which mode chain to optimize next.",
+  "aiOpsMonitoringModes": "Monitoring Modes",
+  "aiOpsTotalRequests": "Total Requests",
+  "aiOpsFallback": "Fallback",
+  "aiOpsTotalCost": "Total Cost",
+  "aiOpsPromptHit": "Prompt Hit",
+  "aiOpsInferenceHit": "Inference Hit",
+  "aiOpsPredictionSummary": "In the past {days} days, the prediction action worth watching most is \"{topAction}\"; prompt/inference hit rates are {promptUtil}%/{inferenceUtil}%.",
+  "@aiOpsPredictionSummary": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "topAction": {
+        "type": "String"
+      },
+      "promptUtil": {
+        "type": "String"
+      },
+      "inferenceUtil": {
+        "type": "String"
+      }
+    }
+  },
+  "aiOpsOpenAnalysis": "Open AI Ops Analysis",
+  "aiOpsOpenAdminPanel": "Open Admin Ops Panel",
+  "tracksCount": "{count} tracks",
+  "@tracksCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatSelfVisibleOnly": "Self-visible only",
+  "chatSelfVisibleDraftDesc": "This AI draft is only saved in your current private chat view.",
+  "chatPromoteToBothVisible": "Make visible to both",
+  "chatPromoteToBothDesc": "Put this draft back in the input box for you to confirm before sending.",
+  "chatViewAccessoryContent": "View additional content",
+  "chatViewAccessoryContentDesc": "Temporarily expand task cards and quick actions in pure mode",
+  "chatActionSuggestion": "Action suggestion",
+  "chatActionSuggestionDesc": "Continue this step, or confirm the task and plan first.",
+  "chatTheaterTitle": "Prediction Theater",
+  "chatTheaterDesc": "See which path is worth exploring now and why it suits you better.",
+  "chatSimulationTitle": "Learning Simulation",
+  "chatSimulationDesc": "See the key viewpoint clash first, then decide whether to enter the full simulation.",
+  "chatReportTitle": "Learning Report",
+  "chatReportDesc": "See the core diagnosis and next steps first, then decide whether to enter the full report.",
+  "chatAccessoryContent": "Additional content",
+  "chatContinueExploring": "Continue exploring",
+  "chatSwipeToSwitch": "Swipe left/right to switch entries",
+  "chatViewTheaterDetails": "View prediction details",
+  "chatCurrentLearningTopic": "Current learning topic",
+  "chatViewSimulationDetails": "View simulation details",
+  "chatCollaborationProcess": "Collaboration process",
+  "chatPlanContext": "Plan context",
+  "chatPlanStatus": "Plan status",
+  "chatContinueFromConversation": "Continue from the conversation",
+  "chatReviewFirstThenExpand": "Review highlights first, then decide whether to expand",
+  "chatPathLabel": "Path",
+  "chatMasteryLabel": "Mastery",
+  "chatOpenFullExperience": "Open full experience",
+  "chatContinueInChat": "Continue in chat",
+  "chatViewLatestReport": "View latest learning report",
+  "chatViewLearningReport": "View learning report",
+  "chatKeyFocusLabel": "Key focus",
+  "chatShareResourceInvalidId": "Invalid share resource ID, cannot adopt",
+  "chatShareResourceAdopted": "Adopted, navigating...",
+  "chatShareResourceAdoptError": "Adoption failed: {error}",
+  "chatTaskConfirmedMessage": "Confirmed {count} tasks, starting execution!",
+  "chatViewPlan": "View plan",
+  "chatGoToTaskList": "Go to task list",
+  "chatConfirmFailed": "Confirmation failed: {error}",
+  "chatTaskCompletedDoneMinutes": "Completed · {minutes}min",
+  "chatTaskCompletedDone": "Completed",
+  "chatPlanProgressLabel": "Progress: {percent}%",
+  "chatPromptPreviewCancel": "Not now",
+  "chatPromptPreviewSend": "Send now",
+  "chatParticipantLabel": "Participant",
+  "chatPromptRefinePath": "Continue refining this path",
+  "chatPromptRefinePathMessage": "Continue refining the first week's priority steps around \"{topic}\".",
+  "chatPromptComparePaths": "Compare two paths",
+  "chatPromptComparePathsMessage": "Compare the trade-offs between \"{pathA}\" and \"{pathB}\".",
+  "chatPromptDefaultPathA": "Path A",
+  "chatPromptDefaultPathB": "Path B",
+  "chatPromptPrerequisites": "What prerequisites to cover first",
+  "chatPromptPrerequisitesMessage": "If I start learning \"{topic}\" now, what prerequisites should I cover first?",
+  "chatPromptExamFocus": "What are the exam key points",
+  "chatPromptExamFocusMessage": "Tell me the parts of \"{topic}\" most likely to be exam key points and why.",
+  "chatPromptMakePlan": "Make it a plan",
+  "chatPromptMakePlanMessage": "Rewrite the \"{topic}\" path into a 7-day executable mini-plan.",
+  "chatPromptSimulateRound": "Continue simulating another round",
+  "chatPromptSimulateRoundMessage": "Simulate another round around \"{topic}\". I want to continue this learning scenario.",
+  "chatOneOfTheRoles": "One of the roles",
+  "chatPromptLetMeAnswer": "Let me answer",
+  "chatPromptLetMeAnswerMessage": "Have {speaker} ask me a follow-up question around \"{topic}\", and I'll answer.",
+  "chatPromptPracticeExplain": "Practice explaining to others",
+  "chatPromptPracticeExplainMessage": "Arrange a simulation round around \"{topic}\" where I explain to someone else.",
+  "chatPromptErrorDiagnosis": "Switch to error diagnosis",
+  "chatPromptErrorDiagnosisMessage": "Switch \"{topic}\" to error diagnosis mode and help me identify the real blocker.",
+  "chatPromptOrderActions": "Order today's actions",
+  "chatPromptOrderActionsMessage": "Based on this learning report, help me create an action order I can start today.",
+  "chatPromptExpandKeyIssue": "Expand on key issues",
+  "chatPromptExpandKeyIssueMessage": "Explain in detail why \"{highlight}\" deserves priority attention.",
+  "chatPromptPrioritizeArea": "Which area to cover first",
+  "chatPromptPrioritizeAreaMessage": "Based on this report, explain why \"{area}\" should be processed first.",
+  "chatPromptConvertToPlan": "Convert to 7-day plan",
+  "chatPromptConvertToPlanMessage": "Rewrite this learning report into my next 7-day execution sequence.",
+  "chatPromptReviewOutline": "Help me make a review outline",
+  "chatPromptReviewOutlineMessage": "Based on this learning report, give me a review outline I can use tonight.",
+  "profilePrestigeIdentity": "Prestige Identity",
+  "profileNoTitleEquipped": "No title equipped",
+  "profileRecentHighlights": "Recent Highlights",
+  "profileNoHighlightsHint": "Keep learning and sprinting to light up your Prestige Showcase.",
+  "profileTraitQ1Title": "When starting a new goal, which approach fits you better?",
+  "profileTraitQ1Structured": "Build structure first, then act",
+  "profileTraitQ1Mixed": "Start with a framework, then adjust as you go",
+  "profileTraitQ1Explore": "Try it out and let the direction emerge",
+  "profileTraitSkip": "Skip",
+  "profileTraitQ2Title": "When facing tough problems, where do you recharge?",
+  "profileTraitQ2Solo": "Think it through alone first",
+  "profileTraitQ2SmallGroup": "Discuss with one or two people",
+  "profileTraitQ2Group": "Think through discussion",
+  "profileTraitQ3Title": "When your plan gets disrupted, what's your first reaction?",
+  "profileTraitQ3Replan": "Replan immediately and get back on track",
+  "profileTraitQ3Pause": "Get stuck briefly, but slowly recover",
+  "profileTraitQ3Swing": "Both mood and rhythm are affected",
+  "profileLearningPortfolio": "Learning Portfolio",
+  "profileLearningPortfolioSubtitle": "View sprint history, in-progress and planned records across all subjects",
+  "profilePosterStudio": "Poster Studio",
+  "profilePosterStudioSubtitle": "Turn growth, plans, and inspiration into shareable posters",
+  "profileMyWay": "My Way",
+  "profileMetacognitionPanel": "Metacognition Panel",
+  "profileMetacognitionHidden": "Hidden, but still calculating in the background",
+  "profileMetacognitionVisible": "Show judgment bias summary from past samples",
+  "profileExportData": "Export My Data",
+  "profileExportPreparing": "Preparing data, please wait...",
+  "profileExportEmptyFile": "Empty file",
+  "profileExportShareSubject": "Sparkle Data Export",
+  "profileExportFailed": "Export failed: {error}",
+  "@profileExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileSubtitleAchievements": "View unlocked milestones and honor progress",
+  "profileSubtitleVisualElements": "Manage backgrounds, particles, and visual rewards",
+  "profileSubtitlePersona": "View learning traits and preferences understood by the system",
+  "profileSubtitlePersonalInfo": "Edit avatar, nickname, and basic info",
+  "profileSubtitlePreferences": "Manage sensory feedback, learning mode, and push preferences",
+  "profileSubtitleMyWay": "Manage private skills, sharing, and anonymous forks",
+  "profileSubtitleSecurity": "View security info, devices, and privacy controls",
+  "profileSubtitleMemory": "Adjust long-term memory and context retention strategy",
+  "profileSubtitleLogout": "Safely log out of your account",
+  "profileSubtitleDeleteAccount": "Permanently remove your account and associated data",
+  "profileSubtitleDefault": "Continue adjusting detailed settings on this page",
+  "dashboardBottleneckPrompt": "I want to understand {topic} differently. Help me adjust my learning path based on this bottleneck.",
+  "@dashboardBottleneckPrompt": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardSetFirstGoal": "Set your first goal",
+  "dashboardSetFirstGoalSummary": "Tell me the one thing you want to move forward, and I will turn it into an actionable plan.",
+  "dashboardStartWithAI": "Start with AI",
+  "dashboardOpenTaskList": "Open tasks",
+  "dashboardDueToday": "Due today",
+  "dashboardOverdueDays": "{days} days overdue",
+  "@dashboardOverdueDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardDaysLeft": "{days} days left",
+  "@dashboardDaysLeft": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardMainMove": "1 main move",
+  "dashboardMoreQueued": "{count} more queued",
+  "@dashboardMoreQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardProgress": "{percent}% progress",
+  "@dashboardProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardTodayBriefing": "Today Briefing",
+  "dashboardBriefingSummary": "One place for the important stuff",
+  "dashboardSparkleObservation": "What Sparkle Noticed",
+  "dashboardStartWithThis": "Start With This",
+  "dashboardGrowthSignal": "Growth Signal",
+  "dashboardMoreTasksQueued": "{count} more tasks are still queued after this one.",
+  "@dashboardMoreTasksQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardStartFocus": "Start Focus",
+  "dashboardStartHere": "Start Here",
+  "dashboardOpenTasks": "Open Tasks",
+  "dashboardTaskList": "View Tasks",
+  "dashboardActivePlan": "Active Plan",
+  "dashboardPhaseLabel": "Phase: {phase}",
+  "@dashboardPhaseLabel": {
+    "placeholders": {
+      "phase": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardPhaseInProgress": "in progress",
+  "dashboardDaysToDeadline": "{days} days to deadline",
+  "@dashboardDaysToDeadline": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardPrediction": "prediction",
+  "dashboardMessagesCount": "{count} messages",
+  "@dashboardMessagesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardAlertsCount": "{count} alerts",
+  "@dashboardAlertsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardInsightsCount": "{count} insights",
+  "@dashboardInsightsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardReviewPending": "review pending",
+  "dashboardUpdatesInsights": "Updates & Insights",
+  "planEditTypeTitle": "Edit {type}",
+  "@planEditTypeTitle": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "planUpdated": "Plan updated",
+  "planGuideFillNameAndGoalFirst": "Fill in the plan name and goal first, then generate the AI guide",
+  "planGuideGeneratedHuman": "Human execution guide generated",
+  "planGuideGeneratedAi": "AI execution version generated",
+  "planGuideGenerationFailed": "Failed to generate plan guide: {error}",
+  "@planGuideGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "planSuggestedGrowthTask1": "Set up this week's main task list",
+  "planSuggestedGrowthTask2": "Complete a milestone review",
+  "planSuggestedSprintTask1": "Confirm sprint goals and acceptance criteria",
+  "planSuggestedSprintTask2": "Complete key sprint milestones",
+  "planSave": "Save plan",
+  "planStepBasics": "Plan setup",
+  "planStepSchedule": "Schedule",
+  "planStepTasks": "Tasks",
+  "planStepGuide": "Boundaries & guide",
+  "planStepReview": "Review",
+  "planAiVersionCopied": "AI version copied",
+  "planBasicsDescription": "Define this as a real plan card, not just a regular task.",
+  "planBasicsNameHint": "e.g., 6-week English speaking improvement / midterm sprint wrap-up",
+  "planBasicsNameRequired": "Please fill in the plan name first",
+  "planBasicsSubjectLabel": "Subject",
+  "planBasicsSubjectHint": "English, Flutter, GRE Math, paper reading...",
+  "planBasicsGoalLabelGrowth": "Long-term goal",
+  "planBasicsGoalLabelSprint": "Sprint goal",
+  "planBasicsGoalHintGrowth": "Describe the ability, habit, or outcome this growth plan aims to achieve.",
+  "planBasicsGoalHintSprint": "Describe the sprint outcome, acceptance criteria, and non-negotiable focus.",
+  "planBasicsGoalRequired": "Please describe the goal of this plan card",
+  "planBasicsPriorityLabel": "Plan priority",
+  "planPriorityNormalValue": "Normal",
+  "planPriorityCriticalValue": "Critical",
+  "planScheduleDescription": "Set your duration, daily effort, and reminder rhythm all at once.",
+  "planScheduleDailyMinutesLabel": "Daily available time",
+  "planScheduleMinutesUnit": "{minutes} min",
+  "@planScheduleMinutesUnit": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "planScheduleTotalHours": "Total estimated: {hours}h",
+  "@planScheduleTotalHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "planScheduleTargetDateUnset": "Not set",
+  "planScheduleReminderTime": "Daily reminder",
+  "planScheduleStageLabel": "Current plan stage",
+  "planScheduleStageSprint": "Sprint push",
+  "planScheduleStageDaily": "Daily execution",
+  "planScheduleStageReview": "Review & adjust",
+  "planScheduleStagePaused": "Paused",
+  "planScheduleChipWeekday": "Weekday push, weekend review",
+  "planScheduleChipMorning": "Morning start, evening wrap-up",
+  "planScheduleChipAfternoon": "Afternoon focus, light evening review",
+  "planScheduleRhythmLabel": "Rhythm notes",
+  "planScheduleRhythmHint": "e.g., Mon-Fri push, Sat review, Sun catch-up",
+  "planTasksDescription": "This step determines what actions the plan will carry. Existing tasks are for reference; new tasks will be linked to the plan.",
+  "planTasksBlueprintLabel": "Task blueprint",
+  "planTasksBlueprintHint": "e.g., build framework first, push daily progress, then review and fill gaps.",
+  "planTasksRefExisting": "Reference existing tasks",
+  "planTasksMinutesDifficulty": "{minutes} min · difficulty {difficulty}",
+  "@planTasksMinutesDifficulty": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "difficulty": {
+        "type": "int"
+      }
+    }
+  },
+  "planTasksCopyToPlan": "Copy to plan",
+  "planTasksNewTaskLabel": "New plan task",
+  "planTasksNewTaskHint": "e.g., Complete a chapter review",
+  "planTasksDurationLabel": "Duration",
+  "planTasksAddToPlan": "Add to plan",
+  "planTasksEmpty": "No plan tasks yet",
+  "planGuideScopeLabel": "Boundaries & notes",
+  "planGuideScopeHint": "e.g., this plan excludes ad-hoc tasks and focuses only on exam prep; push one main action per day.",
+  "planGuidePerspectiveLabel": "Guide perspective",
+  "planGuideForHuman": "For myself",
+  "planGuideForAi": "For AI",
+  "planGuideHumanInfo": "The human version is saved as the default execution guide on the plan card, helping you push forward directly.",
+  "planGuideAiInfo": "The AI version is generated only when needed for Sparkle's internal task assistant and is not persisted by default.",
+  "planGuideHumanTitle": "Human execution guide",
+  "planGuideAiTitle": "AI execution version",
+  "planGuideGenerating": "Generating",
+  "planGuideGenerateHuman": "Generate human version",
+  "planGuideGenerateAi": "Generate AI version",
+  "planGuideHumanHint": "After generation, you'll see the plan's main thread, daily rhythm, risk reminders, and today's starting action.",
+  "planGuideAiEmpty": "No AI version yet. Only generated when explicitly needed to avoid wasting tokens.",
+  "planGuideCopyAi": "Copy AI version",
+  "planReviewSummary": "{planType} · {minutes} min/day · {hours}h",
+  "@planReviewSummary": {
+    "placeholders": {
+      "planType": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      },
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "planReviewEditInfo": "Saving will update the plan description and create new tasks for added drafts.",
+  "planReviewCreateInfo": "Creating will generate a more complete plan card and create plan tasks.",
+  "planReviewFinalDescription": "Final plan description"
+}
+    }
+  },
+  "taskExecutionChatAboutStuckPoint": "Chat with Sparkle about this blocker",
+  "taskExecutionSentToAurora": "Sent to Aurora",
+  "taskExecutionStuckPromptIntro": "I'm stuck on this task and would like to break down the specific blockers with you.",
+  "taskExecutionStuckTaskLabel": "Task: {title}",
+  "@taskExecutionStuckTaskLabel": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionStuckEstimatedTime": "Estimated: {minutes} min",
+  "@taskExecutionStuckEstimatedTime": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "taskExecutionStuckFocusCue": "Focus cue: {cue}",
+  "@taskExecutionStuckFocusCue": {
+    "placeholders": {
+      "cue": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionStuckSteps": "Task steps: {steps}",
+  "@taskExecutionStuckSteps": {
+    "placeholders": {
+      "steps": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionStuckCriteria": "Success criteria: {criteria}",
+  "@taskExecutionStuckCriteria": {
+    "placeholders": {
+      "criteria": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionStuckSuggestion": "Stuck suggestion: {suggestion}",
+  "@taskExecutionStuckSuggestion": {
+    "placeholders": {
+      "suggestion": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionStuckClarifyPrompt": "Please ask me one key clarifying question, then narrow the next step to something I can start within 5 minutes.",
+  "taskExecutionStuckTooltip": "Stuck?",
+  "taskExecutionStuckLabel": "Stuck?",
+  "taskExecutionResetTimer": "Reset",
+  "taskExecutionAiHandoffFailed": "Failed to start AI execution",
+  "taskExecutionAiCompleted": "AI completed this execution",
+  "taskExecutionAiPartial": "AI completed part of the task. Please review.",
+  "taskExecutionAiFailed": "AI execution failed",
+  "taskExecutionAiWaitingApproval": "AI is waiting for your confirmation",
+  "taskExecutionAiHandedOff": "Task handed to AI. Status: {status}",
+  "@taskExecutionAiHandedOff": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionPermissionInsufficientQueued": "Insufficient execution permission. Task has been queued. Retry after permission is granted.",
+  "taskExecutionAiConfirmFailed": "Failed to confirm AI result",
+  "taskExecutionAiResultConfirmed": "AI result confirmed. Task status synced.",
+  "taskExecutionRejectFailed": "Failed to retrieve task",
+  "taskExecutionTaskReturned": "Task returned to you for further processing",
+  "taskExecutionAiTakingOver": "AI is taking over this task",
+  "taskExecutionAiNotStarted": "AI execution has not started",
+  "taskExecutionAiStatusLabel": "AI status: {status}",
+  "@taskExecutionAiStatusLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionSendingToOpenclaw": "Sparkle is sending the task to OpenClaw.",
+  "taskExecutionDigitalTaskHint": "Digitally executable tasks can be handed off with one tap.",
+  "taskExecutionValidationLabel": "Verified {passed}/{total}",
+  "@taskExecutionValidationLabel": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "taskExecutionResultLabel": "Result: {text}",
+  "@taskExecutionResultLabel": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionApprovalRequestLabel": " · Approval request {count}",
+  "@taskExecutionApprovalRequestLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "taskExecutionGoalWithTrust": "Goal: {goal} · {trust}",
+  "@taskExecutionGoalWithTrust": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      },
+      "trust": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionResultTrust": "Result trust: {trust}",
+  "@taskExecutionResultTrust": {
+    "placeholders": {
+      "trust": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionTemplateLabel": "Template: {name}",
+  "@taskExecutionTemplateLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionStrategyLabel": "Strategy: {variant}",
+  "@taskExecutionStrategyLabel": {
+    "placeholders": {
+      "variant": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionNodeLabel": "Node: {label}",
+  "@taskExecutionNodeLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "taskExecutionAiTakingOverLoading": "AI taking over...",
+  "taskExecutionRehandoffToAi": "Re-hand to AI",
+  "taskExecutionHandoffToAiAgain": "Hand to AI again",
+  "taskExecutionWaitingConfirm": "Waiting for confirmation",
+  "taskExecutionAiRunning": "AI executing",
+  "taskExecutionHandoffToAi": "Hand off to AI",
+  "taskExecutionRecommendedTemplates": "Recommended templates",
+  "taskExecutionOpenclawConnectedNoPermission": "OpenClaw is connected but lacks execution permission",
+  "taskExecutionOpenclawOfflineQueued": "OpenClaw is offline. You can queue the task.",
+  "taskExecutionOpenclawNotConnected": "OpenClaw is not connected",
+  "taskExecutionOpenclawPermissionHint": "Your token can reach the gateway, but execution is blocked by permissions. Queue the task and retry after fixing permissions.",
+  "taskExecutionOpenclawOfflineHint": "You can continue delegating. The engine will retry automatically when it comes back online.",
+  "taskExecutionOpenclawNotConnectedHint": "Complete the connection first. The task and chat pages will share the same execution entry.",
+  "taskExecutionViewAction": "View",
+  "taskExecutionConnectAction": "Connect",
+  "taskExecutionDismissHint": "Dismiss",
+  "taskExecutionMetricConnectedNoPermission": "Connected to gateway, no execution permission",
+  "taskExecutionMetricConfiguredOffline": "Configured but offline",
+  "taskExecutionMetricNotConfigured": "Not configured",
+  "taskExecutionMetricQueuedTasks": "{count} tasks queued",
+  "@taskExecutionMetricQueuedTasks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "taskExecutionSuggestionFixPermission": "Fix permissions first",
+  "taskExecutionSuggestionQueueFirst": "Queue first, retry later",
+  "taskExecutionSuggestionConnectFirst": "Connect first, then delegate",
+  "taskExecutionNudgeCurrentStatus": "Current status",
+  "taskExecutionNudgeStatusPermissionIssue": "This device can reach the OpenClaw gateway, but the current authentication lacks execution permission.",
+  "taskExecutionNudgeStatusOffline": "Connection info is saved, but the engine is temporarily offline.",
+  "taskExecutionNudgeStatusNotConnected": "This device is not connected to OpenClaw.",
+  "taskExecutionNudgeWhyThisPrompt": "Why am I seeing this?",
+  "taskExecutionNudgeWhyThisPromptValue": "You're in a task that supports AI delegation, but the execution entry isn't ready yet.",
+  "taskExecutionNudgeNextAction": "Next step",
+  "taskExecutionNudgeNextActionPermissionIssue": "Open the OpenClaw Hub to switch to a token with execution permission, or switch to a paired WebSocket connection; then retry the queue.",
+  "taskExecutionNudgeNextActionOffline": "Keep queuing tasks, or go to the OpenClaw Hub to restore the connection and retry.",
+  "taskExecutionNudgeNextActionNotConnected": "Open the OpenClaw Hub to complete the connection, then come back here to delegate.",
+  "taskExecutionCompletedToday": "Done for today!",
+  "taskExecutionCompletionCheckHint": "Check against the success criteria. If it meets them, accept the completion; if not, break it down further.",
+  "taskExecutionCompletionCriteria": "Success criteria",
+  "taskExecutionNoCriteriaHint": "No criteria defined. Judge by the smallest deliverable step you can finish today.",
+  "taskExecutionCriteriaMatchQuestion": "Does it meet the criteria?",
+  "taskExecutionCriteriaNotMet": "Not yet",
+  "taskExecutionContinueOrRetryTomorrow": "Keep going, or mark it for tomorrow",
+  "taskExecutionCriteriaMetComplete": "Meets criteria, complete",
+  "taskExecutionRejectReasonInaccurate": "Inaccurate result",
+  "taskExecutionRejectReasonIncomplete": "Incomplete result",
+  "taskExecutionRejectReasonSafety": "Safety concern",
+  "taskExecutionRejectReasonSelfDo": "I want to do it myself",
+  "taskExecutionRejectReasonTitle": "Rejection reason",
+  "taskExecutionRejectDescription": "Tell Sparkle why this result isn't suitable for direct adoption. Future executions will be adjusted based on your feedback.",
+  "taskExecutionRejectAdditionalNote": "Additional notes",
+  "taskExecutionRejectNoteHint": "E.g., missing source, too assertive, I want to keep my own wording",
+  "taskExecutionRejectConfirm": "Confirm rejection",
+  "taskExecutionUserRetrievedTask": "User retrieved task"
 }

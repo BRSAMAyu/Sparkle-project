@@ -233,6 +233,7 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
               overdue: isOverdue ? existing.overdue + 1 : existing.overdue,
             );
           case TaskStatus.inProgress:
+          case TaskStatus.stuck:
             newSummary = existing.copyWith(
               inProgress: existing.inProgress + 1,
               overdue: isOverdue ? existing.overdue + 1 : existing.overdue,
@@ -276,7 +277,8 @@ final taskCalendarProvider =
 /// Persists the user's selected date in the calendar view.
 final selectedCalendarDateProvider =
     StateNotifierProvider<SelectedCalendarDateNotifier, DateTime>(
-        (ref) => SelectedCalendarDateNotifier(),);
+  (ref) => SelectedCalendarDateNotifier(),
+);
 
 /// Notifier for the selected calendar date
 class SelectedCalendarDateNotifier extends PersistentNotifier<DateTime> {
@@ -393,6 +395,7 @@ void _sortCalendarTasks(List<TaskModel> tasks) {
     final statusOrder = {
       TaskStatus.pending: 0,
       TaskStatus.inProgress: 1,
+      TaskStatus.stuck: 1,
       TaskStatus.completed: 2,
     };
     final aStatusOrder = statusOrder[a.status] ?? 3;

@@ -17,6 +17,12 @@ PlanModel _$PlanModelFromJson(Map<String, dynamic> json) => PlanModel(
       isActive: json['is_active'] as bool,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      healthScore: (json['health_score'] as num?)?.toDouble(),
+      healthStatus: json['health_status'] as String?,
+      healthReasons: (json['health_reasons'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       description: json['description'] as String?,
       targetDate: json['target_date'] == null
           ? null
@@ -51,6 +57,9 @@ Map<String, dynamic> _$PlanModelToJson(PlanModel instance) => <String, dynamic>{
       'total_estimated_hours': instance.totalEstimatedHours,
       'mastery_level': instance.masteryLevel,
       'progress': instance.progress,
+      'health_score': instance.healthScore,
+      'health_status': instance.healthStatus,
+      'health_reasons': instance.healthReasons,
       'is_active': instance.isActive,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
@@ -61,22 +70,6 @@ Map<String, dynamic> _$PlanModelToJson(PlanModel instance) => <String, dynamic>{
       'plan_stage': _$PlanStageEnumMap[instance.planStage]!,
       'priority': _$PlanPriorityEnumMap[instance.priority]!,
       'is_primary': instance.isPrimary,
-    };
-
-PlanDayHighlights _$PlanDayHighlightsFromJson(Map<String, dynamic> json) =>
-    PlanDayHighlights(
-      day: (json['day'] as num).toInt(),
-      recommendation: json['recommendation'] as String,
-      tasks: (json['tasks'] as List<dynamic>)
-          .map((e) => TaskModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
-
-Map<String, dynamic> _$PlanDayHighlightsToJson(PlanDayHighlights instance) =>
-    <String, dynamic>{
-      'day': instance.day,
-      'recommendation': instance.recommendation,
-      'tasks': instance.tasks,
     };
 
 const _$PlanTypeEnumMap = {
@@ -97,6 +90,22 @@ const _$PlanPriorityEnumMap = {
   PlanPriority.normal: 'normal',
   PlanPriority.low: 'low',
 };
+
+PlanDayHighlights _$PlanDayHighlightsFromJson(Map<String, dynamic> json) =>
+    PlanDayHighlights(
+      day: (json['day'] as num).toInt(),
+      recommendation: json['recommendation'] as String,
+      tasks: (json['tasks'] as List<dynamic>)
+          .map((e) => TaskModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+
+Map<String, dynamic> _$PlanDayHighlightsToJson(PlanDayHighlights instance) =>
+    <String, dynamic>{
+      'day': instance.day,
+      'recommendation': instance.recommendation,
+      'tasks': instance.tasks,
+    };
 
 PlanCreate _$PlanCreateFromJson(Map<String, dynamic> json) => PlanCreate(
       name: json['name'] as String,

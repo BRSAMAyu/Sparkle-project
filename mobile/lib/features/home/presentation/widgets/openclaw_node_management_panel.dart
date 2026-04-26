@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
 import 'package:sparkle/core/services/openclaw_node_inventory_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -58,10 +59,9 @@ class _OpenClawNodeManagementPanelState
       ),
     );
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok ? '设备亲和性已保存' : (service.error ?? '保存设备亲和性失败')),
-        backgroundColor: ok ? DS.semanticSuccess : DS.semanticError,
-      ),
+      ok
+          ? SparkleSnackBar.success('设备亲和性已保存')
+          : SparkleSnackBar.error(service.error ?? '保存设备亲和性失败'),
     );
   }
 

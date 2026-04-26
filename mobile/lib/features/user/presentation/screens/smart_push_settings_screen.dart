@@ -162,7 +162,7 @@ class _SmartPushSettingsScreenState
       ),
       child: ContentConstraint(
         child: ListView(
-          padding: const EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.symmetric(vertical: DS.lg),
           children: [
             GraphiteCardSurface(
               child: Column(

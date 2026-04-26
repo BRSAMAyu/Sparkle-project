@@ -169,6 +169,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         child: SafeArea(
           bottom: false,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 导航栏
@@ -501,7 +502,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                             ),
                         ],
                       ),
-                      const Spacer(),
+                      if (!compact) const Spacer(),
                       Text(
                         element.name,
                         style: TextStyle(
@@ -1280,7 +1281,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _miniChip(lead.displaySlotLabel, accent),
-                      const Spacer(),
+                      if (!compact) const Spacer() else const SizedBox(height: DS.spacing8),
                       Text(
                         '${elements.length} 种风格',
                         style: TextStyle(
@@ -2051,16 +2052,18 @@ class _RecommendationCard extends StatelessWidget {
             ),
             if (!element.isUnlocked)
               Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: DS.surfacePrimary.withValues(alpha: 0.75),
-                    borderRadius: DS.borderRadius16,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.lock,
-                      size: DS.iconSizeMd,
-                      color: DS.textTertiary,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: DS.surfacePrimary.withValues(alpha: 0.75),
+                      borderRadius: DS.borderRadius16,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.lock,
+                        size: DS.iconSizeMd,
+                        color: DS.textTertiary,
+                      ),
                     ),
                   ),
                 ),

@@ -68,7 +68,7 @@ class _PersonaOnboardingScreenState
         child: ContentConstraint(
           child: GraphiteCardSurface(
             surfaceRole: SparkleSurfaceRole.card,
-            margin: const EdgeInsets.all(DS.spacing16),
+            margin: const EdgeInsets.symmetric(vertical: DS.spacing16),
             child: Stepper(
               currentStep: _currentStep,
               onStepContinue: _submitting

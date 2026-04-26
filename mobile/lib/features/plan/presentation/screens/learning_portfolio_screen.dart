@@ -2,24 +2,79 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 
-class LearningPortfolioScreen extends ConsumerWidget {
+class LearningPortfolioScreen extends ConsumerStatefulWidget {
   const LearningPortfolioScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LearningPortfolioScreen> createState() =>
+      _LearningPortfolioScreenState();
+}
+
+class _LearningPortfolioScreenState
+    extends ConsumerState<LearningPortfolioScreen> {
+  GoRouter? _router;
+  String? _lastObservedRoutePath;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _attachRouteRefreshListener();
+  }
+
+  @override
+  void dispose() {
+    _router?.routeInformationProvider.removeListener(
+      _handleRouteVisibilityChanged,
+    );
+    super.dispose();
+  }
+
+  void _attachRouteRefreshListener() {
+    final router = GoRouter.of(context);
+    if (identical(_router, router)) {
+      return;
+    }
+    _router?.routeInformationProvider.removeListener(
+      _handleRouteVisibilityChanged,
+    );
+    _router = router;
+    _lastObservedRoutePath = router.routeInformationProvider.value.uri.path;
+    router.routeInformationProvider.addListener(_handleRouteVisibilityChanged);
+  }
+
+  void _handleRouteVisibilityChanged() {
+    final path = _router?.routeInformationProvider.value.uri.path;
+    final previousPath = _lastObservedRoutePath;
+    _lastObservedRoutePath = path;
+    if (!mounted ||
+        path != PlanRoutes.learningPortfolio ||
+        previousPath == PlanRoutes.learningPortfolio) {
+      return;
+    }
+
+    ref.invalidate(learningPortfolioProvider);
+  }
+
+  Future<void> _refreshPortfolio() =>
+      ref.refresh(learningPortfolioProvider.future);
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen<AsyncValue<LearningPortfolioResult>>(
       learningPortfolioProvider,
       (previous, next) {
         next.whenOrNull(
           error: (error, _) {
-            final previousMessage =
-                previous?.hasError == true ? previous!.error.toString() : null;
+            final previousMessage = (previous?.hasError ?? false)
+                ? previous!.error.toString()
+                : null;
             final nextMessage = error.toString();
             if (previousMessage == nextMessage) {
               return;
@@ -27,12 +82,10 @@ class LearningPortfolioScreen extends ConsumerWidget {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
               ..showSnackBar(
-                SnackBar(
-                  content: Text('学习档案加载失败'),
-                  action: SnackBarAction(
-                    label: '重试',
-                    onPressed: () => ref.invalidate(learningPortfolioProvider),
-                  ),
+                SparkleSnackBar.error(
+                  '学习档案加载失败',
+                  onRetry: () => ref.invalidate(learningPortfolioProvider),
+                  retryLabel: '重试',
                 ),
               );
           },
@@ -58,51 +111,89 @@ class LearningPortfolioScreen extends ConsumerWidget {
           title: const Text('我的学习档案'),
         ),
         child: ContentConstraint(
-          child: portfolioAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (Object error, StackTrace stackTrace) =>
-                _PortfolioErrorState(
-              message: error.toString(),
-              onRetry: () => ref.invalidate(learningPortfolioProvider),
-            ),
-            data: (LearningPortfolioResult portfolio) {
-              if (portfolio.isEmpty) {
-                return _PortfolioEmptyState(
-                  onStartSprint: () => context.push(PlanRoutes.examSprintSetup),
-                );
-              }
+          child: RefreshIndicator(
+            onRefresh: _refreshPortfolio,
+            child: portfolioAsync.when(
+              loading: () => const _ScrollableStateFill(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (Object error, StackTrace stackTrace) =>
+                  _ScrollableStateFill(
+                child: _PortfolioErrorState(
+                  message: error.toString(),
+                  onRetry: () => ref.invalidate(learningPortfolioProvider),
+                ),
+              ),
+              data: (LearningPortfolioResult portfolio) {
+                if (portfolio.isEmpty) {
+                  return _ScrollableStateFill(
+                    child: _PortfolioEmptyState(
+                      onStartSprint: () =>
+                          context.push(PlanRoutes.examSprintSetup),
+                    ),
+                  );
+                }
 
-              return ListView(
-                padding: const EdgeInsets.all(DS.spacing16),
-                children: [
-                  _PortfolioSummaryCard(portfolio: portfolio),
-                  const SizedBox(height: DS.spacing16),
-                  _PortfolioGroupSection(
-                    title: '进行中',
-                    subtitle: '继续追踪每一门课当前冲刺的节奏与掌握进展。',
-                    entries: portfolio.activeEntries,
-                  ),
-                  const SizedBox(height: DS.spacing16),
-                  _PortfolioGroupSection(
-                    title: '已完成',
-                    subtitle: '回看已经跑完的冲刺，保留每次考试前后的成长轨迹。',
-                    entries: portfolio.completedEntries,
-                  ),
-                  const SizedBox(height: DS.spacing16),
-                  _PortfolioGroupSection(
-                    title: '计划中',
-                    subtitle: '已经排进学习档案，但还没正式开跑的冲刺。',
-                    entries: portfolio.plannedEntries,
-                  ),
-                  const SizedBox(height: DS.spacing32),
-                ],
-              );
-            },
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(DS.spacing16),
+                  children: [
+                    _PortfolioSummaryCard(portfolio: portfolio),
+                    const SizedBox(height: DS.spacing16),
+                    _PortfolioGroupSection(
+                      title: '进行中',
+                      subtitle: '继续追踪每一门课当前冲刺的节奏与掌握进展。',
+                      entries: portfolio.activeEntries,
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                    _PortfolioGroupSection(
+                      title: '已完成',
+                      subtitle: '回看已经跑完的冲刺，保留每次考试前后的成长轨迹。',
+                      entries: portfolio.completedEntries,
+                    ),
+                    if (portfolio.hasMore) ...[
+                      const SizedBox(height: DS.spacing16),
+                      _LoadMoreButton(
+                        onLoadMore: () => ref
+                            .read(learningPortfolioProvider.notifier)
+                            .loadMore(),
+                      ),
+                    ],
+                    const SizedBox(height: DS.spacing16),
+                    _PortfolioGroupSection(
+                      title: '计划中',
+                      subtitle: '已经排进学习档案，但还没正式开跑的冲刺。',
+                      entries: portfolio.plannedEntries,
+                    ),
+                    const SizedBox(height: DS.spacing32),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _ScrollableStateFill extends StatelessWidget {
+  const _ScrollableStateFill({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: constraints.maxHeight,
+              child: child,
+            ),
+          ],
+        ),
+      );
 }
 
 class _PortfolioSummaryCard extends StatelessWidget {
@@ -131,7 +222,7 @@ class _PortfolioSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '所有科目累计掌握节点',
+            '所有科目掌握度合计',
             style: DS.labelLarge.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing8),
@@ -277,7 +368,7 @@ class _PortfolioEntryCard extends StatelessWidget {
               border: Border.all(color: const Color(0xFFD8DED3)),
             ),
             child: Text(
-              '掌握 ${entry.masteredNodesCount} 节点',
+              '掌握度 ${entry.masteredNodesCount}%',
               style: DS.labelLarge.copyWith(
                 color: const Color(0xFF355543),
                 fontWeight: DS.fontWeightSemibold,
@@ -497,6 +588,23 @@ class _PortfolioErrorState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LoadMoreButton extends StatelessWidget {
+  const _LoadMoreButton({required this.onLoadMore});
+
+  final VoidCallback onLoadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SparkleButton(
+        onPressed: onLoadMore,
+        label: '加载更多',
+        icon: const Icon(Icons.expand_more),
       ),
     );
   }

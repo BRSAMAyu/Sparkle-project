@@ -684,6 +684,8 @@ class _TaskDetailView extends ConsumerWidget {
         return l10n.taskStatusPending;
       case TaskStatus.inProgress:
         return l10n.taskStatusInProgress;
+      case TaskStatus.stuck:
+        return '卡住了';
       case TaskStatus.completed:
         return l10n.taskStatusCompleted;
       case TaskStatus.abandoned:
@@ -696,6 +698,7 @@ class _TaskDetailView extends ConsumerWidget {
       case TaskStatus.pending:
         return DS.warning;
       case TaskStatus.inProgress:
+      case TaskStatus.stuck:
         return DS.info;
       case TaskStatus.completed:
         return DS.success;

@@ -166,6 +166,35 @@ class TaskQuickActionResult {
   final List<SubTaskModel> subtasks;
 }
 
+class TaskStuckResult {
+  const TaskStuckResult({
+    required this.task,
+    required this.diagnosis,
+    required this.message,
+  });
+
+  factory TaskStuckResult.fromResponse(Map<String, dynamic> response) {
+    final payload = ApiResponseParser.unwrapMap(response, action: 'taskStuck');
+    final taskPayload = (payload['task'] is Map<String, dynamic>)
+        ? payload['task'] as Map<String, dynamic>
+        : payload;
+    final diagnosisPayload = payload['diagnosis'] is Map<String, dynamic>
+        ? payload['diagnosis'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    return TaskStuckResult(
+      task: TaskModel.fromJson(taskPayload),
+      diagnosis: diagnosisPayload,
+      message: response['message']?.toString() ??
+          payload['message']?.toString() ??
+          '',
+    );
+  }
+
+  final TaskModel task;
+  final Map<String, dynamic> diagnosis;
+  final String message;
+}
+
 class TaskRepository {
   TaskRepository(this._apiClient);
   final ApiClient _apiClient;
@@ -1152,6 +1181,62 @@ class TaskRepository {
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'startTask');
+    }
+  }
+
+  Future<TaskStuckResult> markTaskStuck(
+    String id, {
+    String? stuckPoint,
+    List<String> recentSteps = const [],
+    int? currentStepIndex,
+    int? elapsedSeconds,
+    String? trigger,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex == -1) {
+        throw Exception('Task not found in demo data');
+      }
+      final existing = DemoDataService().demoTasks[existingIndex];
+      final diagnosis = <String, dynamic>{
+        'diagnosis_question': '你现在最像卡在哪一步？',
+        'diagnosis_options': ['概念没想清', '步骤顺序乱了', '题目条件不会用'],
+        'targeted_fix': '先只做一个 5 分钟内能完成的小动作。',
+        'check_question': '下一步你能先写下哪一句？',
+        'source': 'demo',
+      };
+      final updated = existing.copyWith(
+        status: TaskStatus.stuck,
+        guideJson: {
+          ...?existing.guideJson,
+          'stuck_help': diagnosis,
+        },
+        updatedAt: DateTime.now(),
+      );
+      DemoDataService().demoTasks[existingIndex] = updated;
+      return TaskStuckResult(
+        task: updated,
+        diagnosis: diagnosis,
+        message: 'Aurora 已根据当前任务状态给出诊断。',
+      );
+    }
+
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.taskStuck(id),
+        data: {
+          if (stuckPoint != null && stuckPoint.isNotEmpty)
+            'stuck_point': stuckPoint,
+          if (recentSteps.isNotEmpty) 'recent_steps': recentSteps,
+          if (currentStepIndex != null) 'current_step_index': currentStepIndex,
+          if (elapsedSeconds != null) 'elapsed_seconds': elapsedSeconds,
+          if (trigger != null && trigger.isNotEmpty) 'trigger': trigger,
+        },
+      );
+      return TaskStuckResult.fromResponse(response.data ?? <String, dynamic>{});
+    } on DioException catch (e) {
+      return _handleDioError(e, 'markTaskStuck');
     }
   }
 

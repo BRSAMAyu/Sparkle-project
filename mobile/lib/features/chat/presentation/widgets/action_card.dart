@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     show CustomButton, CustomButtonSize;
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/aurora_nudge_entry.dart';
 import 'package:sparkle/features/chat/presentation/widgets/bottleneck_card.dart';
@@ -1030,6 +1032,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                     style: TextStyle(
                                       fontSize: DS.fontSizeSm,
                                       color: DS.neutral900,
+                                      fontFamilyFallback: sparkleFontFallback,
                                     ),
                                     children: [
                                       TextSpan(
@@ -3158,9 +3161,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       if (usesStructuredFields &&
           _reflectionStuckController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_reflectionFieldLabel(fields, 'stuck_point')),
-          ),
+          SparkleSnackBar.warning(_reflectionFieldLabel(fields, 'stuck_point')),
         );
         return;
       }

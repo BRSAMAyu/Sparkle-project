@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -1213,10 +1214,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('生成学习报告失败：$e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+        SparkleSnackBar.error('生成学习报告失败：$e'),
       );
     } finally {
       if (mounted) {

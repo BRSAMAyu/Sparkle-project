@@ -247,13 +247,14 @@ class GraphiteModalSurface extends StatelessWidget {
                       ),
                     ),
                   if (title != null) ...[
-                    const SizedBox(height: 16),
+                    if (showHandle) const SizedBox(height: 16),
                     Text(
                       title!,
                       style: DS.titleLarge.copyWith(color: DS.textPrimary),
                     ),
-                  ],
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                  ] else if (showHandle)
+                    const SizedBox(height: 16),
                   if (expandChild) Expanded(child: child) else child,
                 ],
               ),

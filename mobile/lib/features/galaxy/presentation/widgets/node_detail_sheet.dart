@@ -129,6 +129,13 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
     final initialContext = <String, dynamic>{
       'review_node': widget.nodeId,
       'node_label': label,
+      'mastery': history.mastery,
+      'study_count': history.studyCount,
+      'related_error_count': history.relatedErrors.length,
+      'related_errors': history.relatedErrors
+          .take(3)
+          .map(_reviewErrorContext)
+          .toList(growable: false),
     };
     final callback = widget.onStartReview;
     if (callback != null) {
@@ -145,6 +152,9 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
         'chat_mode': 'study_plan',
         'review_node': widget.nodeId,
         'node_label': label,
+        'mastery': history.mastery.toString(),
+        'study_count': history.studyCount.toString(),
+        'related_error_count': history.relatedErrors.length.toString(),
       },
     );
     unawaited(
@@ -185,6 +195,19 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
       widget.nodeLabel.trim().isNotEmpty
           ? widget.nodeLabel.trim()
           : history.nodeLabel;
+
+  Map<String, dynamic> _reviewErrorContext(GalaxyNodeErrorItem error) {
+    return <String, dynamic>{
+      'id': error.id,
+      if (error.questionText != null && error.questionText!.trim().isNotEmpty)
+        'question_text': error.questionText!.trim(),
+      if (error.analysisSummary != null &&
+          error.analysisSummary!.trim().isNotEmpty)
+        'analysis_summary': error.analysisSummary!.trim(),
+      'mastery_level': error.masteryLevel,
+      'review_count': error.reviewCount,
+    };
+  }
 }
 
 class _HistoryContent extends StatelessWidget {
@@ -342,8 +365,14 @@ class _HistoryContent extends StatelessWidget {
               Expanded(
                 child: FilledButton.icon(
                   onPressed: () => onStartReview(history),
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('开始复习'),
+                  icon: Icon(
+                    history.mastery <= 0
+                        ? Icons.school_rounded
+                        : Icons.play_arrow_rounded,
+                  ),
+                  label: Text(
+                    history.mastery <= 0 ? '开始学习' : '开始复习',
+                  ),
                 ),
               ),
               const SizedBox(width: DS.spacing12),

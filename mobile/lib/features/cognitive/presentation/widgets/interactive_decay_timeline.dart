@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
@@ -80,8 +81,8 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
   void _onSimulateReview() {
     if (widget.selectedNodeIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.cognitiveSelectGalaxyNodes),
+        SparkleSnackBar.warning(
+          context.l10n.cognitiveSelectGalaxyNodes,
           duration: const Duration(seconds: 2),
         ),
       );

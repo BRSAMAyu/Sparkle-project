@@ -705,6 +705,8 @@ mixin _$ErrorAnalysis {
   List<String> get similarTraps => throw _privateConstructorUsedError;
   @JsonKey(name: 'recommended_knowledge')
   List<String> get recommendedKnowledge => throw _privateConstructorUsedError;
+  @JsonKey(name: 'linking_hint')
+  ErrorLinkingHint? get linkingHint => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -726,8 +728,10 @@ abstract class $ErrorAnalysisCopyWith<$Res> {
       @JsonKey(name: 'study_suggestion') String studySuggestion,
       @JsonKey(name: 'analyzed_at') DateTime? analyzedAt,
       @JsonKey(name: 'similar_traps') List<String> similarTraps,
-      @JsonKey(name: 'recommended_knowledge')
-      List<String> recommendedKnowledge});
+      @JsonKey(name: 'recommended_knowledge') List<String> recommendedKnowledge,
+      @JsonKey(name: 'linking_hint') ErrorLinkingHint? linkingHint});
+
+  $ErrorLinkingHintCopyWith<$Res>? get linkingHint;
 }
 
 /// @nodoc
@@ -751,6 +755,7 @@ class _$ErrorAnalysisCopyWithImpl<$Res, $Val extends ErrorAnalysis>
     Object? analyzedAt = freezed,
     Object? similarTraps = null,
     Object? recommendedKnowledge = null,
+    Object? linkingHint = freezed,
   }) {
     return _then(_value.copyWith(
       errorType: null == errorType
@@ -785,7 +790,23 @@ class _$ErrorAnalysisCopyWithImpl<$Res, $Val extends ErrorAnalysis>
           ? _value.recommendedKnowledge
           : recommendedKnowledge // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      linkingHint: freezed == linkingHint
+          ? _value.linkingHint
+          : linkingHint // ignore: cast_nullable_to_non_nullable
+              as ErrorLinkingHint?,
     ) as $Val);
+  }
+
+  @override
+  @pragma('vm:prefer-inline')
+  $ErrorLinkingHintCopyWith<$Res>? get linkingHint {
+    if (_value.linkingHint == null) {
+      return null;
+    }
+
+    return $ErrorLinkingHintCopyWith<$Res>(_value.linkingHint!, (value) {
+      return _then(_value.copyWith(linkingHint: value) as $Val);
+    });
   }
 }
 
@@ -805,8 +826,11 @@ abstract class _$$ErrorAnalysisImplCopyWith<$Res>
       @JsonKey(name: 'study_suggestion') String studySuggestion,
       @JsonKey(name: 'analyzed_at') DateTime? analyzedAt,
       @JsonKey(name: 'similar_traps') List<String> similarTraps,
-      @JsonKey(name: 'recommended_knowledge')
-      List<String> recommendedKnowledge});
+      @JsonKey(name: 'recommended_knowledge') List<String> recommendedKnowledge,
+      @JsonKey(name: 'linking_hint') ErrorLinkingHint? linkingHint});
+
+  @override
+  $ErrorLinkingHintCopyWith<$Res>? get linkingHint;
 }
 
 /// @nodoc
@@ -828,6 +852,7 @@ class __$$ErrorAnalysisImplCopyWithImpl<$Res>
     Object? analyzedAt = freezed,
     Object? similarTraps = null,
     Object? recommendedKnowledge = null,
+    Object? linkingHint = freezed,
   }) {
     return _then(_$ErrorAnalysisImpl(
       errorType: null == errorType
@@ -862,6 +887,10 @@ class __$$ErrorAnalysisImplCopyWithImpl<$Res>
           ? _value._recommendedKnowledge
           : recommendedKnowledge // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      linkingHint: freezed == linkingHint
+          ? _value.linkingHint
+          : linkingHint // ignore: cast_nullable_to_non_nullable
+              as ErrorLinkingHint?,
     ));
   }
 }
@@ -879,7 +908,8 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
       @JsonKey(name: 'similar_traps')
       final List<String> similarTraps = const [],
       @JsonKey(name: 'recommended_knowledge')
-      final List<String> recommendedKnowledge = const []})
+      final List<String> recommendedKnowledge = const [],
+      @JsonKey(name: 'linking_hint') this.linkingHint})
       : _similarTraps = similarTraps,
         _recommendedKnowledge = recommendedKnowledge;
 
@@ -924,8 +954,12 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
   }
 
   @override
+  @JsonKey(name: 'linking_hint')
+  final ErrorLinkingHint? linkingHint;
+
+  @override
   String toString() {
-    return 'ErrorAnalysis(errorType: $errorType, errorTypeLabel: $errorTypeLabel, rootCause: $rootCause, correctApproach: $correctApproach, studySuggestion: $studySuggestion, analyzedAt: $analyzedAt, similarTraps: $similarTraps, recommendedKnowledge: $recommendedKnowledge)';
+    return 'ErrorAnalysis(errorType: $errorType, errorTypeLabel: $errorTypeLabel, rootCause: $rootCause, correctApproach: $correctApproach, studySuggestion: $studySuggestion, analyzedAt: $analyzedAt, similarTraps: $similarTraps, recommendedKnowledge: $recommendedKnowledge, linkingHint: $linkingHint)';
   }
 
   @override
@@ -948,7 +982,9 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
             const DeepCollectionEquality()
                 .equals(other._similarTraps, _similarTraps) &&
             const DeepCollectionEquality()
-                .equals(other._recommendedKnowledge, _recommendedKnowledge));
+                .equals(other._recommendedKnowledge, _recommendedKnowledge) &&
+            (identical(other.linkingHint, linkingHint) ||
+                other.linkingHint == linkingHint));
   }
 
   @JsonKey(ignore: true)
@@ -962,7 +998,8 @@ class _$ErrorAnalysisImpl implements _ErrorAnalysis {
       studySuggestion,
       analyzedAt,
       const DeepCollectionEquality().hash(_similarTraps),
-      const DeepCollectionEquality().hash(_recommendedKnowledge));
+      const DeepCollectionEquality().hash(_recommendedKnowledge),
+      linkingHint);
 
   @JsonKey(ignore: true)
   @override
@@ -988,7 +1025,9 @@ abstract class _ErrorAnalysis implements ErrorAnalysis {
       @JsonKey(name: 'analyzed_at') final DateTime? analyzedAt,
       @JsonKey(name: 'similar_traps') final List<String> similarTraps,
       @JsonKey(name: 'recommended_knowledge')
-      final List<String> recommendedKnowledge}) = _$ErrorAnalysisImpl;
+      final List<String> recommendedKnowledge,
+      @JsonKey(name: 'linking_hint')
+      final ErrorLinkingHint? linkingHint}) = _$ErrorAnalysisImpl;
 
   factory _ErrorAnalysis.fromJson(Map<String, dynamic> json) =
       _$ErrorAnalysisImpl.fromJson;
@@ -1018,8 +1057,184 @@ abstract class _ErrorAnalysis implements ErrorAnalysis {
   @JsonKey(name: 'recommended_knowledge')
   List<String> get recommendedKnowledge;
   @override
+  @JsonKey(name: 'linking_hint')
+  ErrorLinkingHint? get linkingHint;
+  @override
   @JsonKey(ignore: true)
   _$$ErrorAnalysisImplCopyWith<_$ErrorAnalysisImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+ErrorLinkingHint _$ErrorLinkingHintFromJson(Map<String, dynamic> json) {
+  return _ErrorLinkingHint.fromJson(json);
+}
+
+/// @nodoc
+mixin _$ErrorLinkingHint {
+  String get code => throw _privateConstructorUsedError;
+  String get message => throw _privateConstructorUsedError;
+  String? get action => throw _privateConstructorUsedError;
+
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+  @JsonKey(ignore: true)
+  $ErrorLinkingHintCopyWith<ErrorLinkingHint> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $ErrorLinkingHintCopyWith<$Res> {
+  factory $ErrorLinkingHintCopyWith(
+          ErrorLinkingHint value, $Res Function(ErrorLinkingHint) then) =
+      _$ErrorLinkingHintCopyWithImpl<$Res, ErrorLinkingHint>;
+  @useResult
+  $Res call({String code, String message, String? action});
+}
+
+/// @nodoc
+class _$ErrorLinkingHintCopyWithImpl<$Res, $Val extends ErrorLinkingHint>
+    implements $ErrorLinkingHintCopyWith<$Res> {
+  _$ErrorLinkingHintCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? code = null,
+    Object? message = null,
+    Object? action = freezed,
+  }) {
+    return _then(_value.copyWith(
+      code: null == code
+          ? _value.code
+          : code // ignore: cast_nullable_to_non_nullable
+              as String,
+      message: null == message
+          ? _value.message
+          : message // ignore: cast_nullable_to_non_nullable
+              as String,
+      action: freezed == action
+          ? _value.action
+          : action // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$ErrorLinkingHintImplCopyWith<$Res>
+    implements $ErrorLinkingHintCopyWith<$Res> {
+  factory _$$ErrorLinkingHintImplCopyWith(_$ErrorLinkingHintImpl value,
+          $Res Function(_$ErrorLinkingHintImpl) then) =
+      __$$ErrorLinkingHintImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String code, String message, String? action});
+}
+
+/// @nodoc
+class __$$ErrorLinkingHintImplCopyWithImpl<$Res>
+    extends _$ErrorLinkingHintCopyWithImpl<$Res, _$ErrorLinkingHintImpl>
+    implements _$$ErrorLinkingHintImplCopyWith<$Res> {
+  __$$ErrorLinkingHintImplCopyWithImpl(_$ErrorLinkingHintImpl _value,
+      $Res Function(_$ErrorLinkingHintImpl) _then)
+      : super(_value, _then);
+
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? code = null,
+    Object? message = null,
+    Object? action = freezed,
+  }) {
+    return _then(_$ErrorLinkingHintImpl(
+      code: null == code
+          ? _value.code
+          : code // ignore: cast_nullable_to_non_nullable
+              as String,
+      message: null == message
+          ? _value.message
+          : message // ignore: cast_nullable_to_non_nullable
+              as String,
+      action: freezed == action
+          ? _value.action
+          : action // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$ErrorLinkingHintImpl implements _ErrorLinkingHint {
+  const _$ErrorLinkingHintImpl(
+      {required this.code, required this.message, this.action});
+
+  factory _$ErrorLinkingHintImpl.fromJson(Map<String, dynamic> json) =>
+      _$$ErrorLinkingHintImplFromJson(json);
+
+  @override
+  final String code;
+  @override
+  final String message;
+  @override
+  final String? action;
+
+  @override
+  String toString() {
+    return 'ErrorLinkingHint(code: $code, message: $message, action: $action)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ErrorLinkingHintImpl &&
+            (identical(other.code, code) || other.code == code) &&
+            (identical(other.message, message) || other.message == message) &&
+            (identical(other.action, action) || other.action == action));
+  }
+
+  @JsonKey(ignore: true)
+  @override
+  int get hashCode => Object.hash(runtimeType, code, message, action);
+
+  @JsonKey(ignore: true)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ErrorLinkingHintImplCopyWith<_$ErrorLinkingHintImpl> get copyWith =>
+      __$$ErrorLinkingHintImplCopyWithImpl<_$ErrorLinkingHintImpl>(
+          this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$ErrorLinkingHintImplToJson(
+      this,
+    );
+  }
+}
+
+abstract class _ErrorLinkingHint implements ErrorLinkingHint {
+  const factory _ErrorLinkingHint(
+      {required final String code,
+      required final String message,
+      final String? action}) = _$ErrorLinkingHintImpl;
+
+  factory _ErrorLinkingHint.fromJson(Map<String, dynamic> json) =
+      _$ErrorLinkingHintImpl.fromJson;
+
+  @override
+  String get code;
+  @override
+  String get message;
+  @override
+  String? get action;
+  @override
+  @JsonKey(ignore: true)
+  _$$ErrorLinkingHintImplCopyWith<_$ErrorLinkingHintImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
 

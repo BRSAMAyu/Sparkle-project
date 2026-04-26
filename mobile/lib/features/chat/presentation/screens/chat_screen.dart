@@ -37,6 +37,7 @@ import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_wid
 import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
+import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -116,11 +117,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _hydratedChatOpeningConversationId;
   String? _hydratedComebackSignature;
   String? _hydratedDailyStartupKey;
+  bool _dailyStartupRetryBannerVisible = false;
+  bool _dailyStartupRetryInFlight = false;
+  String? _reviewNodeLabel;
+  double? _reviewNodeMastery;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
+    _extractReviewNodeContext();
     ref
       ..listenManual(
         chatProvider.select((state) => state.messages),
@@ -245,6 +251,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
+  void _extractReviewNodeContext() {
+    final ctx = widget.initialExtraContext;
+    _reviewNodeLabel = null;
+    _reviewNodeMastery = null;
+    if (ctx == null) return;
+    final nodeLabel = ctx['node_label'] as String?;
+    if (nodeLabel == null || nodeLabel.isEmpty) return;
+    _reviewNodeLabel = nodeLabel;
+    final mastery = ctx['mastery'];
+    if (mastery is num) {
+      _reviewNodeMastery = _normalizeReviewNodeMastery(mastery);
+    }
+  }
+
+  double _normalizeReviewNodeMastery(num mastery) {
+    final value = mastery.toDouble();
+    final normalized = value > 1 ? value / 100 : value;
+    return normalized.clamp(0.0, 1.0);
+  }
+
   @override
   void didUpdateWidget(covariant ChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -252,6 +278,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         oldWidget.initialChatMode != widget.initialChatMode ||
         oldWidget.initialConversationId != widget.initialConversationId ||
         oldWidget.initialExtraContext != widget.initialExtraContext) {
+      _extractReviewNodeContext();
       unawaited(_hydrateInitialConversationAndPrompt());
     }
   }
@@ -275,7 +302,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (hydratedComeback) {
       return;
     }
-    final hydratedDailyStartup = await _hydrateDailyStartupIfNeeded();
+    final hydratedDailyStartup = await _hydrateDailyStartupIfNeeded(
+      showFailure: true,
+    );
     if (!hydratedDailyStartup) {
       await _hydrateChatOpeningIfNeeded();
     }
@@ -347,7 +376,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Future<bool> _hydrateDailyStartupIfNeeded() async {
+  Future<bool> _hydrateDailyStartupIfNeeded({bool showFailure = false}) async {
     if (!mounted) {
       return false;
     }
@@ -364,27 +393,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return false;
     }
 
-    ExamSprintDashboardData? sprint;
-    try {
-      sprint = await ref
-          .read(examSprintDashboardProvider.future)
-          .timeout(const Duration(seconds: 5));
-    } catch (_) {
-      return false;
-    }
-    if (!mounted || sprint == null || sprint.planId.trim().isEmpty) {
+    final startupRepository = ref.read(auroraDailyStartupRepositoryProvider);
+    final resolution = await _resolveDailyStartupPlan(
+      startupRepository: startupRepository,
+      showFailure: showFailure,
+    );
+    if (!mounted || resolution == null || resolution.planId.trim().isEmpty) {
       return false;
     }
 
-    final sprintPlanId = sprint.planId.trim();
-    final selectedPlanId = ref.read(activePlanProvider)?.trim();
-    if (selectedPlanId != null &&
-        selectedPlanId.isNotEmpty &&
-        selectedPlanId != sprintPlanId) {
-      return false;
-    }
-
-    if (selectedPlanId == null || selectedPlanId.isEmpty) {
+    final sprintPlanId = resolution.planId.trim();
+    if (resolution.shouldSelectPlan) {
       await ref.read(chatProvider.notifier).switchPlanSession(sprintPlanId);
       if (!mounted ||
           !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
@@ -404,10 +423,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return false;
     }
 
+    final cachedStartup = resolution.cachedStartup;
+    if (cachedStartup != null) {
+      ref.read(chatProvider.notifier).showDailyStartupMessage(
+            cachedStartup,
+            planId: sprintPlanId,
+            dateKey: todayKey,
+          );
+      _hydratedDailyStartupKey = storageKey;
+      return true;
+    }
+
     try {
-      final startup = await ref
-          .read(auroraDailyStartupRepositoryProvider)
-          .getDailyStartup(planId: sprintPlanId);
+      final startup =
+          await startupRepository.getDailyStartup(planId: sprintPlanId);
       if (!mounted ||
           startup.message.trim().isEmpty ||
           !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
@@ -420,9 +449,112 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           );
       await prefs.setBool(storageKey, true);
       _hydratedDailyStartupKey = storageKey;
+      _hideDailyStartupRetryBanner();
       return true;
     } catch (_) {
+      if (showFailure) {
+        _showDailyStartupRetryBanner();
+      }
       return false;
+    }
+  }
+
+  Future<_DailyStartupPlanResolution?> _resolveDailyStartupPlan({
+    required AuroraDailyStartupRepository startupRepository,
+    required bool showFailure,
+  }) async {
+    final selectedPlanId = ref.read(activePlanProvider)?.trim();
+    final dashboard = ref.read(examSprintDashboardProvider).valueOrNull;
+    final dashboardPlanId = dashboard?.planId.trim();
+    if (dashboardPlanId != null && dashboardPlanId.isNotEmpty) {
+      if (selectedPlanId != null &&
+          selectedPlanId.isNotEmpty &&
+          selectedPlanId != dashboardPlanId) {
+        return null;
+      }
+      return _DailyStartupPlanResolution(
+        planId: dashboardPlanId,
+        shouldSelectPlan: selectedPlanId == null || selectedPlanId.isEmpty,
+      );
+    }
+
+    if (selectedPlanId != null && selectedPlanId.isNotEmpty) {
+      return _DailyStartupPlanResolution(planId: selectedPlanId);
+    }
+
+    final cachedStartup = await startupRepository.getCachedDailyStartup();
+    if (cachedStartup != null) {
+      return _DailyStartupPlanResolution(
+        planId: cachedStartup.planId,
+        cachedStartup: cachedStartup.message.message,
+        shouldSelectPlan: true,
+      );
+    }
+
+    try {
+      final loadedDashboard =
+          await ref.read(examSprintDashboardProvider.future);
+      if (!mounted ||
+          loadedDashboard == null ||
+          loadedDashboard.planId.trim().isEmpty) {
+        return null;
+      }
+      return _DailyStartupPlanResolution(
+        planId: loadedDashboard.planId.trim(),
+        shouldSelectPlan: true,
+      );
+    } catch (_) {
+      if (showFailure) {
+        _showDailyStartupRetryBanner();
+      }
+      final fallbackStartup = await startupRepository.getCachedDailyStartup();
+      if (fallbackStartup == null) {
+        return null;
+      }
+      return _DailyStartupPlanResolution(
+        planId: fallbackStartup.planId,
+        cachedStartup: fallbackStartup.message.message,
+        shouldSelectPlan: true,
+      );
+    }
+  }
+
+  void _showDailyStartupRetryBanner() {
+    if (!mounted || _dailyStartupRetryBannerVisible) {
+      return;
+    }
+    setState(() {
+      _dailyStartupRetryBannerVisible = true;
+    });
+  }
+
+  void _hideDailyStartupRetryBanner() {
+    if (!mounted ||
+        (!_dailyStartupRetryBannerVisible && !_dailyStartupRetryInFlight)) {
+      return;
+    }
+    setState(() {
+      _dailyStartupRetryBannerVisible = false;
+      _dailyStartupRetryInFlight = false;
+    });
+  }
+
+  Future<void> _retryDailyStartupHydration() async {
+    if (_dailyStartupRetryInFlight) {
+      return;
+    }
+    setState(() {
+      _dailyStartupRetryInFlight = true;
+    });
+    final hydrated = await _hydrateDailyStartupIfNeeded(showFailure: true);
+    if (mounted && !hydrated) {
+      setState(() {
+        _dailyStartupRetryInFlight = false;
+        _dailyStartupRetryBannerVisible = true;
+      });
+    }
+    if (!hydrated && mounted) {
+      await _hydrateChatOpeningIfNeeded();
     }
   }
 
@@ -767,6 +899,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       sessionId: chatState.conversationId,
                       onViewSource: _showWorkingMemorySource,
                     ),
+                    const StatusAwarenessBar(),
+                    if (_reviewNodeLabel != null)
+                      _ReviewNodeBanner(
+                        nodeLabel: _reviewNodeLabel!,
+                        mastery: _reviewNodeMastery,
+                      ),
+                    if (_dailyStartupRetryBannerVisible)
+                      _DailyStartupRetryBanner(
+                        isRetrying: _dailyStartupRetryInFlight,
+                        onRetry: _retryDailyStartupHydration,
+                      ),
                     Expanded(
                       child: messages.isEmpty &&
                               chatState.streamingContent.isEmpty &&
@@ -2082,6 +2225,18 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
   }
 }
 
+class _DailyStartupPlanResolution {
+  const _DailyStartupPlanResolution({
+    required this.planId,
+    this.cachedStartup,
+    this.shouldSelectPlan = false,
+  });
+
+  final String planId;
+  final String? cachedStartup;
+  final bool shouldSelectPlan;
+}
+
 class _InlineChatHistoryError extends StatelessWidget {
   const _InlineChatHistoryError({
     required this.message,
@@ -2224,6 +2379,78 @@ class _ChatContextToggle extends StatelessWidget {
   }
 }
 
+class _DailyStartupRetryBanner extends StatelessWidget {
+  const _DailyStartupRetryBanner({
+    required this.isRetrying,
+    required this.onRetry,
+  });
+
+  final bool isRetrying;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing4,
+          DS.spacing16,
+          DS.spacing8,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing12,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.08),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.warning.withValues(alpha: 0.22)),
+        ),
+        child: Row(
+          children: [
+            SizedBox.square(
+              dimension: DS.iconSizeSm,
+              child: isRetrying
+                  ? CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(DS.warning),
+                    )
+                  : Icon(
+                      Icons.hourglass_top_rounded,
+                      size: DS.iconSizeSm,
+                      color: DS.warning,
+                    ),
+            ),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                '加载今日概览中…',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: DS.warning,
+                  fontSize: DS.fontSizeXs,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+              ),
+            ),
+            const SizedBox(width: DS.spacing4),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: '重试今日概览',
+              onPressed: isRetrying ? null : onRetry,
+              icon: Icon(
+                Icons.refresh_rounded,
+                size: DS.iconSizeSm,
+                color: isRetrying
+                    ? DS.textSecondary.withValues(alpha: 0.45)
+                    : DS.warning,
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
 class _QuickActionChipState extends State<_QuickActionChip> {
   bool _isPressed = false;
 
@@ -2322,6 +2549,56 @@ class _TypingIndicator extends StatefulWidget {
 
   @override
   State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _ReviewNodeBanner extends StatelessWidget {
+  const _ReviewNodeBanner({
+    required this.nodeLabel,
+    this.mastery,
+  });
+
+  final String nodeLabel;
+  final double? mastery;
+
+  @override
+  Widget build(BuildContext context) {
+    final masteryText = mastery != null
+        ? ' · 当前掌握 ${(mastery! * 100).round().clamp(0, 100)}%'
+        : '';
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: DS.spacing16,
+        vertical: DS.spacing4,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing12,
+        vertical: DS.spacing8,
+      ),
+      decoration: BoxDecoration(
+        color: DS.info.withValues(alpha: 0.08),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: DS.info.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.auto_stories_rounded, size: DS.iconSizeSm, color: DS.info),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: Text(
+              '正在复习: $nodeLabel$masteryText',
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: DS.info,
+                fontWeight: DS.fontWeightMedium,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// 流式输出气泡 - 显示正在流式输出的 AI 响应

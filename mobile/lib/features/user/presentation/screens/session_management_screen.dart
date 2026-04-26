@@ -134,7 +134,7 @@ class _SessionManagementScreenState
           child: RefreshIndicator(
             onRefresh: _loadSessions,
             child: ListView(
-              padding: const EdgeInsets.all(DS.spacing24),
+              padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
               children: [
                 SparkleStaggerItem(
                   index: 0,

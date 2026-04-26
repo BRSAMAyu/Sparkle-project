@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/widgets/intent_preview_dialog.dart';
@@ -177,9 +178,7 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
       if (mounted) {
         setState(() => _isAnalyzing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.intentAnalysisFailed(e.toString())),
-          ),
+          SparkleSnackBar.error(context.l10n.intentAnalysisFailed(e.toString())),
         );
       }
     }

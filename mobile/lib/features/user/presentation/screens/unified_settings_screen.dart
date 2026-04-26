@@ -24,7 +24,35 @@ import 'package:sparkle/features/user/presentation/widgets/learning_mode_control
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+
+const Map<String, Set<String>> _notificationTypeAliases = {
+  'reminder': {
+    'reminder',
+    'task_reminder',
+    'sprint_reminder',
+    'daily_sprint_reminder',
+    'comeback_nudge',
+    'fragmented_time',
+  },
+  'spaced_repetition': {
+    'spaced_repetition',
+    'spaced_repetition_reminder',
+  },
+  'weekly_report': {
+    'weekly_report',
+    'weekly_digest',
+    'weekly_growth_narrative',
+    'weekly_learning_report',
+  },
+  'milestone': {
+    'milestone',
+    'milestone_notification',
+    'achievement',
+    'achievement_progress',
+  },
+};
 
 class UnifiedSettingsScreen extends ConsumerStatefulWidget {
   const UnifiedSettingsScreen({super.key});
@@ -178,7 +206,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       await BgmService.previewPalette(palette);
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '试听失败，请检查音频文件');
+        AppFeedback.error(context, AppLocalizations.of(context)!.capsulePreviewFailed);
       }
     } finally {
       if (mounted) {
@@ -239,7 +267,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       await BgmService.previewSceneSample(track, palette: _bgmPalette);
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '当前场景试听失败，请检查音频文件');
+        AppFeedback.error(context, AppLocalizations.of(context)!.capsuleScenePreviewFailed);
       }
     } finally {
       if (mounted) {
@@ -288,7 +316,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     notifier.previewPreferences(depth: depth, curiosity: curiosity);
     if (mounted) {
       setState(() {
-        _learningPreferenceStatus = '保存中…';
+        _learningPreferenceStatus = AppLocalizations.of(context)!.learningPreferenceSaving;
         _learningPreferenceStatusIsError = false;
       });
     }
@@ -300,7 +328,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           return;
         }
         setState(() {
-          _learningPreferenceStatus = '学习模式偏好已保存';
+          _learningPreferenceStatus = AppLocalizations.of(context)!.learningPreferenceSaved;
           _learningPreferenceStatusIsError = false;
         });
       } catch (e) {
@@ -308,11 +336,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           return;
         }
         final message = e.toString().replaceFirst('Exception: ', '').trim();
+        final l10n = AppLocalizations.of(context)!;
         setState(() {
-          _learningPreferenceStatus = '保存失败：$message';
+          _learningPreferenceStatus = l10n.learningPreferenceSaveFailed(message);
           _learningPreferenceStatusIsError = true;
         });
-        AppFeedback.error(context, '学习模式偏好保存失败：$message');
+        AppFeedback.error(context, l10n.learningPreferenceSaveFailed(message));
       }
     });
   }
@@ -373,7 +402,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       child: ContentConstraint(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
-            horizontal: isCompact ? 14 : DS.spacing16,
             vertical: DS.spacing12,
           ),
           child: Column(
@@ -486,7 +514,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     _buildCollapsibleHeader(
                       icon: Icons.psychology,
                       title: l10n.learningMode,
-                      subtitle: '调整深度与好奇心偏好',
+                      subtitle: l10n.learningModeSubtitle,
                       expanded: _learningExpanded,
                       onToggle: () => setState(
                           () => _learningExpanded = !_learningExpanded),
@@ -516,7 +544,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           ),
                           const SizedBox(height: DS.spacing12),
                           _buildInlineStatusMessage(
-                            _learningPreferenceStatus ?? '拖动后会自动保存到后端',
+                            _learningPreferenceStatus ?? l10n.learningPreferenceAutoSaveHint,
                             isError: _learningPreferenceStatusIsError,
                           ),
                           const SizedBox(height: DS.spacing24),
@@ -620,7 +648,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             children: BgmMode.values
                                 .map(
                                   (mode) => ChoiceChip(
-                                    label: Text(_bgmModeLabel(mode)),
+                                    label: Text(_bgmModeLabel(l10n, mode)),
                                     selected: _bgmMode == mode,
                                     onSelected: _bgmReady
                                         ? (_) => unawaited(_setBgmMode(mode))
@@ -643,7 +671,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               ),
                             ),
                             child: Text(
-                              _bgmModeDescription(_bgmMode),
+                              _bgmModeDescription(l10n, _bgmMode),
                               style: DS.bodySmall.copyWith(
                                 color: DS.textSecondary,
                                 height: 1.4,
@@ -655,7 +683,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           const SizedBox(height: DS.spacing12),
                           const SizedBox(height: DS.spacing8),
                           Text(
-                            '音乐音量',
+                            l10n.bgmVolume,
                             style:
                                 DS.labelSmall.copyWith(color: DS.textSecondary),
                           ),
@@ -680,7 +708,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             ],
                           ),
                           Text(
-                            '场景偏好',
+                            l10n.bgmScenePreference,
                             style:
                                 DS.labelSmall.copyWith(color: DS.textSecondary),
                           ),
@@ -704,7 +732,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                       children: [
                                         ChoiceChip(
                                           label:
-                                              Text(_bgmPaletteLabel(palette)),
+                                              Text(_bgmPaletteLabel(l10n, palette)),
                                           selected: _bgmPalette == palette,
                                           onSelected: _bgmReady
                                               ? (_) => unawaited(
@@ -714,7 +742,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                         ),
                                         IconButton(
                                           tooltip:
-                                              '试听 ${_bgmPaletteLabel(palette)}',
+                                              l10n.bgmPreviewTooltip(_bgmPaletteLabel(l10n, palette)),
                                           iconSize: 18,
                                           visualDensity: VisualDensity.compact,
                                           onPressed: _bgmEnabled && _bgmReady
@@ -752,7 +780,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               ),
                             ),
                             child: Text(
-                              _bgmPaletteDescription(_bgmPalette),
+                              _bgmPaletteDescription(l10n, _bgmPalette),
                               style: DS.bodySmall.copyWith(
                                 color: DS.textSecondary,
                                 height: 1.4,
@@ -788,12 +816,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '高级控制',
+                                          l10n.bgmAdvancedControls,
                                           style: DS.bodyLarge,
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          '控制音乐浓度、轮换频率、阅读保护、专注优先与锁定当前风格',
+                                          l10n.bgmAdvancedControlsSubtitle,
                                           style: DS.bodySmall.copyWith(
                                             color: DS.textSecondary,
                                           ),
@@ -976,9 +1004,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           ),
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
-                            title: const Text('纯净模式'),
-                            subtitle: const Text(
-                              '聊天中只保留文字消息，隐藏附加信息卡片与消息下方组件。',
+                            title: Text(l10n.chatPureMode),
+                            subtitle: Text(
+                              l10n.chatPureModeSubtitle,
                             ),
                             value: chatPureMode,
                             onChanged: (value) => ref
@@ -990,7 +1018,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              '动效强度',
+                              l10n.motionIntensity,
                               style: DS.labelSmall.copyWith(
                                 color: DS.textSecondary,
                               ),
@@ -1003,7 +1031,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             children: MotionIntensityLevel.values
                                 .map(
                                   (level) => ChoiceChip(
-                                    label: Text(_motionIntensityLabel(level)),
+                                    label: Text(_motionIntensityLabel(l10n, level)),
                                     selected: motionIntensityLevel == level,
                                     onSelected: (_) => ref
                                         .read(motionIntensityLevelProvider
@@ -1025,7 +1053,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               ),
                             ),
                             child: Text(
-                              _motionIntensityDescription(motionIntensityLevel),
+                              _motionIntensityDescription(l10n, motionIntensityLevel),
                               style: DS.bodySmall.copyWith(
                                 color: DS.textSecondary,
                                 height: 1.4,
@@ -1044,8 +1072,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 color: DS.surfaceSecondary,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Text(
-                                '额度面板暂时不可用，但档位切换仍可正常生效。',
+                              child: Text(
+                                l10n.aiUsagePanelUnavailable,
                               ),
                             ),
                           ),
@@ -1073,8 +1101,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 color: DS.surfaceSecondary,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Text(
-                                '运营面板暂时不可用，但 AI 档位和使用统计仍可继续使用。',
+                              child: Text(
+                                l10n.aiOpsPanelUnavailable,
                               ),
                             ),
                           ),
@@ -1102,8 +1130,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       title: Text(l10n.notificationSettings),
                       subtitle: Text(
                         notificationPrefs.isLoaded
-                            ? '统一管理系统通知、干预通知、免打扰时段与任务提醒。'
-                            : '正在加载通知偏好...',
+                            ? l10n.notificationManageSubtitle
+                            : l10n.notificationLoadingPrefs,
                       ),
                     ),
                     if (!notificationPrefs.isLoaded)
@@ -1111,8 +1139,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     else ...[
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('系统通知'),
-                        subtitle: const Text('控制任务提醒、成就、系统消息等站内通知'),
+                        title: Text(l10n.notificationSystem),
+                        subtitle: Text(l10n.notificationSystemSubtitle),
                         value: notificationPrefs.enableSystem,
                         onChanged: (value) => unawaited(
                           _updateNotificationPreferences(
@@ -1124,8 +1152,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('干预通知'),
-                        subtitle: const Text('控制教练/代理的干预和引导提醒'),
+                        title: Text(l10n.notificationInterventions),
+                        subtitle: Text(l10n.notificationInterventionsSubtitle),
                         value: notificationPrefs.enableInterventions,
                         onChanged: (value) => unawaited(
                           _updateNotificationPreferences(
@@ -1135,13 +1163,82 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         ),
                         activeThumbColor: DS.primaryBase,
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.notificationReminders),
+                        subtitle: Text(l10n.notificationRemindersSubtitle),
+                        onChanged: (value) => unawaited(
+                          _updateNotificationTypePreference(
+                            context,
+                            type: 'reminder',
+                            enabled: value,
+                          ),
+                        ),
+                        value: _isNotificationTypeEnabled(
+                          notificationPrefs,
+                          'reminder',
+                        ),
+                        activeThumbColor: DS.primaryBase,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.notificationSpacedRepetition),
+                        subtitle: Text(l10n.notificationSpacedRepetitionSubtitle),
+                        onChanged: (value) => unawaited(
+                          _updateNotificationTypePreference(
+                            context,
+                            type: 'spaced_repetition',
+                            enabled: value,
+                          ),
+                        ),
+                        value: _isNotificationTypeEnabled(
+                          notificationPrefs,
+                          'spaced_repetition',
+                        ),
+                        activeThumbColor: DS.primaryBase,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.notificationWeeklyReport),
+                        subtitle: Text(l10n.notificationWeeklyReportSubtitle),
+                        onChanged: (value) => unawaited(
+                          _updateNotificationTypePreference(
+                            context,
+                            type: 'weekly_report',
+                            enabled: value,
+                          ),
+                        ),
+                        value: _isNotificationTypeEnabled(
+                          notificationPrefs,
+                          'weekly_report',
+                        ),
+                        activeThumbColor: DS.primaryBase,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.notificationMilestone),
+                        subtitle: Text(l10n.notificationMilestoneSubtitle),
+                        onChanged: (value) => unawaited(
+                          _updateNotificationTypePreference(
+                            context,
+                            type: 'milestone',
+                            enabled: value,
+                          ),
+                        ),
+                        value: _isNotificationTypeEnabled(
+                          notificationPrefs,
+                          'milestone',
+                        ),
+                        activeThumbColor: DS.primaryBase,
+                      ),
                       const Divider(height: DS.spacing24),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.tune_rounded),
-                        title: const Text('通知级别'),
+                        title: Text(l10n.notificationLevel),
                         subtitle: Text(
                           _notificationLevelDescription(
+                            l10n,
                             notificationLevel,
                           ),
                         ),
@@ -1152,19 +1249,19 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           DropdownMenuItem(
                             value: 'minimal',
                             child: Text(
-                              _notificationLevelLabel('minimal'),
+                              _notificationLevelLabel(l10n, 'minimal'),
                             ),
                           ),
                           DropdownMenuItem(
                             value: 'standard',
                             child: Text(
-                              _notificationLevelLabel('standard'),
+                              _notificationLevelLabel(l10n, 'standard'),
                             ),
                           ),
                           DropdownMenuItem(
                             value: 'verbose',
                             child: Text(
-                              _notificationLevelLabel('verbose'),
+                              _notificationLevelLabel(l10n, 'verbose'),
                             ),
                           ),
                         ],
@@ -1177,7 +1274,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               context,
                               notificationLevel: level,
                               successMessage:
-                                  '通知级别已切换为${_notificationLevelLabel(level)}',
+                                  l10n.notificationLevelSwitched(_notificationLevelLabel(l10n, level)),
                             ),
                           );
                         },
@@ -1186,19 +1283,20 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       _buildSelectionPreviewCard(
                         icon: Icons.notifications_active_outlined,
                         title:
-                            '${_notificationLevelLabel(notificationLevel)}通知',
+                            l10n.notificationLevelPreviewTitle(_notificationLevelLabel(l10n, notificationLevel)),
                         description: _notificationLevelPreview(
+                          l10n,
                           notificationLevel,
                         ),
                       ),
                       const Divider(height: DS.spacing24),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('免打扰时段'),
+                        title: Text(l10n.notificationQuietHours),
                         subtitle: Text(
                           notificationPrefs.quietHoursEnabled
                               ? '${notificationPrefs.quietHoursStart} - ${notificationPrefs.quietHoursEnd}'
-                              : '关闭后，系统会按正常节奏推送通知',
+                              : l10n.notificationQuietHoursSubtitle,
                         ),
                         value: notificationPrefs.quietHoursEnabled,
                         onChanged: (value) {
@@ -1219,7 +1317,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.nights_stay_outlined),
-                          title: const Text('开始时间'),
+                          title: Text(l10n.notificationQuietHoursStart),
                           subtitle: Text(notificationPrefs.quietHoursStart),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => unawaited(
@@ -1233,7 +1331,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.wb_sunny_outlined),
-                          title: const Text('结束时间'),
+                          title: Text(l10n.notificationQuietHoursEnd),
                           subtitle: Text(notificationPrefs.quietHoursEnd),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => unawaited(
@@ -1247,7 +1345,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: DS.spacing4),
                           child: _buildInlineStatusMessage(
-                            '支持跨午夜，例如 22:00 - 08:00；开始和结束时间不能相同。',
+                            l10n.notificationQuietHoursHint,
                           ),
                         ),
                       ],
@@ -1258,7 +1356,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       leading: const Icon(Icons.alarm_outlined),
                       title: Text(l10n.taskReminderSettingsTitle),
                       subtitle: Text(
-                        _taskReminderSummary(taskReminderConfig),
+                        _taskReminderSummary(l10n, taskReminderConfig),
                       ),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push(UserRoutes.taskReminders),
@@ -1410,8 +1508,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.hub_outlined),
-                  title: const Text('AI执行引擎'),
-                  subtitle: const Text('连接你的 OpenClaw 实例并监控健康状态'),
+                  title: Text(l10n.aiExecutionEngine),
+                  subtitle: Text(l10n.aiExecutionEngineSubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(UserRoutes.openClawSettings),
                 ),
@@ -1474,7 +1572,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       await ref.read(generationJobsProvider.notifier).fetchJobs();
 
       if (mounted) {
-        AppFeedback.success(context, '新的好奇心胶囊已生成');
+        AppFeedback.success(context, l10n.capsuleGenerated);
         await showSensoryModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
@@ -1492,7 +1590,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   const SizedBox(height: DS.spacing8),
                   Text(
                     capsule.content.trim().isEmpty
-                        ? '已生成新的胶囊，点击下方即可查看完整内容。'
+                        ? l10n.capsuleGeneratedEmpty
                         : capsule.content.trim(),
                     style:
                         Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
@@ -1504,7 +1602,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   const SizedBox(height: DS.spacing16),
                   SparkleButton(
                     expand: true,
-                    label: '查看新胶囊',
+                    label: l10n.capsuleViewNew,
                     icon: const Icon(Icons.auto_awesome),
                     onPressed: () {
                       Navigator.of(sheetContext).pop();
@@ -1548,15 +1646,23 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        child: GraphiteModalSurface(
-          title: l10n.language,
-          showHandle: false,
-          borderRadius: BorderRadius.circular(28),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: DS.borderSubtle),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '选择你更习惯的阅读与交互语言，界面与系统文案会一起切换。',
+                l10n.language,
+                style: DS.titleLarge.copyWith(color: DS.textPrimary),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                l10n.languageDialogDescription,
                 style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                       height: 1.45,
@@ -1566,7 +1672,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               _buildLanguageOption(
                 dialogContext,
                 title: l10n.languageChinese,
-                subtitle: '更适合中文阅读与本地化表达。',
+                subtitle: l10n.languageChineseDescription,
                 selected: currentLocale.languageCode == 'zh',
                 onTap: () {
                   ref
@@ -1579,7 +1685,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               _buildLanguageOption(
                 dialogContext,
                 title: l10n.languageEnglish,
-                subtitle: '适合英文界面与更国际化的内容环境。',
+                subtitle: l10n.languageEnglishDescription,
                 selected: currentLocale.languageCode == 'en',
                 onTap: () {
                   ref
@@ -1599,6 +1705,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     BuildContext context, {
     bool? enableSystem,
     bool? enableInterventions,
+    List<String>? disabledTypes,
     String? notificationLevel,
     bool? quietHoursEnabled,
     String? quietHoursStart,
@@ -1611,6 +1718,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           .updatePreferences(
             enableSystem: enableSystem,
             enableInterventions: enableInterventions,
+            disabledTypes: disabledTypes,
             notificationLevel: notificationLevel,
             quietHoursEnabled: quietHoursEnabled,
             quietHoursStart: quietHoursStart,
@@ -1628,9 +1736,37 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       }
       AppFeedback.error(
         context,
-        '通知设置更新失败：${e.toString().replaceFirst('Exception: ', '').trim()}',
+        AppLocalizations.of(context)!.notificationUpdateFailed(e.toString().replaceFirst('Exception: ', '').trim()),
       );
     }
+  }
+
+  bool _isNotificationTypeEnabled(
+    NotificationPreferenceSettings prefs,
+    String type,
+  ) {
+    final aliases = _notificationTypeAliases[type] ?? {type};
+    final disabled = prefs.disabledTypes.map((item) => item.toLowerCase());
+    return disabled.every((item) => !aliases.contains(item));
+  }
+
+  Future<void> _updateNotificationTypePreference(
+    BuildContext context, {
+    required String type,
+    required bool enabled,
+  }) async {
+    final prefs = ref.read(notificationPreferenceSettingsProvider);
+    final nextDisabled = prefs.disabledTypes.toSet();
+    final aliases = _notificationTypeAliases[type] ?? {type};
+    if (enabled) {
+      nextDisabled.removeWhere((item) => aliases.contains(item.toLowerCase()));
+    } else {
+      nextDisabled.add(type);
+    }
+    await _updateNotificationPreferences(
+      context,
+      disabledTypes: nextDisabled.toList()..sort(),
+    );
   }
 
   Future<void> _pickQuietHoursTime(
@@ -1652,14 +1788,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final nextStart = isStart ? formatted : prefs.quietHoursStart;
     final nextEnd = isStart ? prefs.quietHoursEnd : formatted;
     if (nextStart == nextEnd) {
-      AppFeedback.info(context, '开始和结束时间不能相同');
+      AppFeedback.info(context, AppLocalizations.of(context)!.notificationQuietHoursSameTimeError);
       return;
     }
     await _updateNotificationPreferences(
       context,
       quietHoursStart: isStart ? formatted : null,
       quietHoursEnd: isStart ? null : formatted,
-      successMessage: isStart ? '免打扰开始时间已更新' : '免打扰结束时间已更新',
+      successMessage: isStart ? AppLocalizations.of(context)!.notificationQuietHoursStartUpdated : AppLocalizations.of(context)!.notificationQuietHoursEndUpdated,
     );
   }
 
@@ -1676,11 +1812,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     if (currentMode == mode) {
       AppFeedback.success(
         context,
-        'AI 推理模式已切换为${_aiReasoningModeTitle(l10n, mode)}',
+        l10n.aiReasoningModeSwitched(_aiReasoningModeTitle(l10n, mode)),
       );
       return;
     }
-    AppFeedback.error(context, 'AI 推理模式切换失败，请稍后重试');
+    AppFeedback.error(context, l10n.aiReasoningModeSwitchFailed);
   }
 
   TimeOfDay _parseTimeOfDay(String value) {
@@ -1700,62 +1836,62 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     return '$hour:$minute';
   }
 
-  String _taskReminderSummary(TaskReminderConfig config) {
+  String _taskReminderSummary(AppLocalizations l10n, TaskReminderConfig config) {
     if (!config.enabled) {
-      return '已关闭';
+      return l10n.taskReminderDisabled;
     }
     if (config.reminders.isEmpty) {
-      return '已开启，但暂未选择提醒时间';
+      return l10n.taskReminderEnabledNoTime;
     }
-    final labels = config.reminders.map(_formatReminderMinutes).join(' / ');
-    return '已开启 · $labels';
+    final labels = config.reminders.map((m) => _formatReminderMinutes(l10n, m)).join(' / ');
+    return '${l10n.taskReminderEnabledWithTimes} · $labels';
   }
 
-  String _formatReminderMinutes(int minutes) {
+  String _formatReminderMinutes(AppLocalizations l10n, int minutes) {
     if (minutes >= 1440) {
       final days = minutes ~/ 1440;
-      return '$days天前';
+      return l10n.taskReminderDaysAgo(days);
     }
     if (minutes >= 60) {
       final hours = minutes ~/ 60;
-      return '$hours小时前';
+      return l10n.taskReminderHoursAgo(hours);
     }
-    return '$minutes分钟前';
+    return l10n.taskReminderMinutesAgo(minutes);
   }
 
-  String _notificationLevelLabel(String level) {
+  String _notificationLevelLabel(AppLocalizations l10n, String level) {
     switch (level) {
       case 'minimal':
-        return '简洁';
+        return l10n.notificationLevelMinimal;
       case 'verbose':
-        return '详细';
+        return l10n.notificationLevelVerbose;
       case 'standard':
       default:
-        return '标准';
-    }
-  }
-
-  String _notificationLevelDescription(String level) {
-    switch (level) {
-      case 'minimal':
-        return '只保留最必要的提醒，减少打扰。';
-      case 'verbose':
-        return '展示更完整的背景信息和提醒内容。';
-      case 'standard':
-      default:
-        return '在信息量和打扰频率之间保持平衡。';
+        return l10n.notificationLevelStandard;
     }
   }
 
-  String _notificationLevelPreview(String level) {
+  String _notificationLevelDescription(AppLocalizations l10n, String level) {
     switch (level) {
       case 'minimal':
-        return '只保留关键提醒，例如任务即将到期、需要立即处理的系统通知。';
+        return l10n.notificationLevelMinimalDesc;
       case 'verbose':
-        return '会附带更多上下文，例如为什么提醒你、下一步建议和补充说明。';
+        return l10n.notificationLevelVerboseDesc;
       case 'standard':
       default:
-        return '保留主要提醒，并在必要时补充简短背景说明，适合大多数场景。';
+        return l10n.notificationLevelStandardDesc;
+    }
+  }
+
+  String _notificationLevelPreview(AppLocalizations l10n, String level) {
+    switch (level) {
+      case 'minimal':
+        return l10n.notificationLevelMinimalPreview;
+      case 'verbose':
+        return l10n.notificationLevelVerbosePreview;
+      case 'standard':
+      default:
+        return l10n.notificationLevelStandardPreview;
     }
   }
 
@@ -1774,12 +1910,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   String _aiReasoningModeDescription(AppLocalizations l10n, String mode) {
     switch (mode) {
       case 'fast':
-        return '优先更快给出结果，适合短问答、轻量查询和低延迟场景。';
+        return l10n.aiReasoningFastDesc;
       case 'deep':
-        return '会投入更多推理预算，适合复杂问题、规划和高精度解释。';
+        return l10n.aiReasoningDeepDesc;
       case 'balanced':
       default:
-        return '在速度和推理深度之间保持平衡，适合大多数日常使用。';
+        return l10n.aiReasoningBalancedDesc;
     }
   }
 
@@ -2078,9 +2214,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   String _bgmSectionSubtitle() {
     final snapshot = _bgmLibrarySnapshot;
     if (snapshot == null) {
-      return '按页面与播放器模式管理背景音乐';
+      return context.l10n.bgmSectionSubtitleDefault;
     }
-    return '当前共 ${snapshot.totalCount} 首，可在页面策略和播放器模式之间自由切换';
+    return context.l10n.bgmSectionSubtitleWithCount(snapshot.totalCount);
   }
 
   Widget _buildBgmLibrarySummaryCard() {
@@ -2108,14 +2244,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               const SizedBox(width: DS.spacing8),
               Expanded(
                 child: Text(
-                  '曲库已更新为 ${snapshot.totalCount} 首',
+                  context.l10n.bgmLibraryUpdated(snapshot.totalCount),
                   style: DS.bodyLarge,
                 ),
               ),
               TextButton.icon(
                 onPressed: () => unawaited(_openBgmLibrary()),
                 icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                label: const Text('打开曲库'),
+                label: Text(context.l10n.bgmOpenLibrary),
               ),
             ],
           ),
@@ -2124,18 +2260,18 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              _buildInfoChip('精选', '${snapshot.curatedCount} 首'),
-              _buildInfoChip('本地导入', '${snapshot.importedCount} 首'),
-              _buildInfoChip('系统兜底', '${snapshot.bundledCount} 首'),
+              _buildInfoChip(context.l10n.bgmCurated, context.l10n.tracksCount(snapshot.curatedCount)),
+              _buildInfoChip(context.l10n.bgmImported, context.l10n.tracksCount(snapshot.importedCount)),
+              _buildInfoChip(context.l10n.bgmBundled, context.l10n.tracksCount(snapshot.bundledCount)),
               _buildInfoChip(
-                '模式',
-                _bgmMode == BgmMode.continuous ? '播放器模式' : '页面策略模式',
+                context.l10n.bgmModeLabel,
+                _bgmMode == BgmMode.continuous ? context.l10n.bgmPlayerMode : context.l10n.bgmPageStrategyMode,
               ),
             ],
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '新页面里可以点播曲库、导入自己的音乐，并启用“播放器模式”让 BGM 跨页面持续不中断。',
+            context.l10n.bgmLibraryHint,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.4,
@@ -2148,16 +2284,16 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   Widget _buildBgmNowPlayingCard() {
     final snapshot = _bgmPlaybackSnapshot;
-    final sceneName = snapshot?.scene?.name ?? '当前未播放';
-    final trackName = snapshot?.trackTitle ?? snapshot?.trackId ?? '内置场景曲目';
+    final sceneName = snapshot?.scene?.name ?? context.l10n.bgmNotPlaying;
+    final trackName = snapshot?.trackTitle ?? snapshot?.trackId ?? context.l10n.bgmBundledTrack;
     final sourceLabel = snapshot?.sourceLabel ?? 'Bundled fallback';
-    final reason = snapshot?.selectionReason ?? '等待播放信息';
+    final reason = snapshot?.selectionReason ?? context.l10n.bgmWaitingPlayback;
     final statusText = !_bgmEnabled
-        ? '背景音乐已关闭'
+        ? context.l10n.bgmDisabled
         : _bgmMode == BgmMode.silent
-            ? '当前处于全局静音'
+            ? context.l10n.bgmGlobalSilent
             : _bgmMode == BgmMode.continuous
-                ? '播放器模式持续播放中'
+                ? context.l10n.bgmContinuousPlaying
                 : sceneName;
 
     return Container(
@@ -2178,7 +2314,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             children: [
               const Icon(Icons.equalizer_rounded, size: 18),
               const SizedBox(width: DS.spacing8),
-              Text('当前播放', style: DS.bodyLarge),
+              Text(context.l10n.bgmNowPlaying, style: DS.bodyLarge),
               const Spacer(),
               if (_previewingSceneTrack == null)
                 TextButton.icon(
@@ -2186,7 +2322,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       ? () => unawaited(_previewCurrentScene())
                       : null,
                   icon: const Icon(Icons.headphones_rounded, size: 16),
-                  label: const Text('试听当前场景'),
+                  label: Text(context.l10n.bgmPreviewCurrentScene),
                 )
               else
                 const SizedBox(
@@ -2200,11 +2336,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           Text(statusText, style: DS.bodyLarge),
           const SizedBox(height: DS.spacing6),
           Text(
-            '曲目: $trackName',
+            context.l10n.bgmTrackLabel(trackName),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           Text(
-            '来源: $sourceLabel',
+            context.l10n.bgmSourceLabel(sourceLabel),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing8),
@@ -2222,13 +2358,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
                 children: [
-                  _buildInfoChip('强度', _bgmIntensityLabel(snapshot.intensity)),
-                  _buildInfoChip('轮换', _bgmVarietyLabel(snapshot.variety)),
+                  _buildInfoChip(context.l10n.bgmIntensityLabel, _bgmIntensityLabel(context.l10n, snapshot.intensity)),
+                  _buildInfoChip(context.l10n.bgmVarietyLabel, _bgmVarietyLabel(context.l10n, snapshot.variety)),
                   if (snapshot.readingProtectionApplied)
-                    _buildInfoChip('保护', '阅读保护'),
+                    _buildInfoChip(context.l10n.bgmReadingProtection, context.l10n.bgmReadingProtectionTitle),
                   if (snapshot.focusPriorityApplied)
-                    _buildInfoChip('优先', '专注优先'),
-                  if (snapshot.styleLocked) _buildInfoChip('状态', '锁定风格'),
+                    _buildInfoChip(context.l10n.bgmFocusPriority, context.l10n.bgmFocusPriorityTitle),
+                  if (snapshot.styleLocked) _buildInfoChip(context.l10n.bgmStyleLocked, context.l10n.bgmStyleLocked),
                 ],
               ),
             ),
@@ -2242,7 +2378,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '氛围强度',
+          context.l10n.bgmAtmosphereIntensity,
           style: DS.labelSmall.copyWith(color: DS.textSecondary),
         ),
         const SizedBox(height: DS.spacing8),
@@ -2252,7 +2388,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           children: BgmIntensity.values
               .map(
                 (intensity) => ChoiceChip(
-                  label: Text(_bgmIntensityLabel(intensity)),
+                  label: Text(_bgmIntensityLabel(context.l10n, intensity)),
                   selected: _bgmIntensity == intensity,
                   onSelected: _bgmReady
                       ? (_) => unawaited(_setBgmIntensity(intensity))
@@ -2263,12 +2399,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ),
         const SizedBox(height: DS.spacing8),
         Text(
-          _bgmIntensityDescription(_bgmIntensity),
+          _bgmIntensityDescription(context.l10n, _bgmIntensity),
           style: DS.bodySmall.copyWith(color: DS.textSecondary),
         ),
         const SizedBox(height: DS.spacing16),
         Text(
-          '曲目变化频率',
+          context.l10n.bgmVarietyFrequency,
           style: DS.labelSmall.copyWith(color: DS.textSecondary),
         ),
         const SizedBox(height: DS.spacing8),
@@ -2278,7 +2414,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           children: BgmVariety.values
               .map(
                 (variety) => ChoiceChip(
-                  label: Text(_bgmVarietyLabel(variety)),
+                  label: Text(_bgmVarietyLabel(context.l10n, variety)),
                   selected: _bgmVariety == variety,
                   onSelected: _bgmReady
                       ? (_) => unawaited(_setBgmVariety(variety))
@@ -2289,14 +2425,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ),
         const SizedBox(height: DS.spacing8),
         Text(
-          _bgmVarietyDescription(_bgmVariety),
+          _bgmVarietyDescription(context.l10n, _bgmVariety),
           style: DS.bodySmall.copyWith(color: DS.textSecondary),
         ),
         const SizedBox(height: DS.spacing16),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('阅读保护'),
-          subtitle: const Text('聊天、洞察、个人页优先保留低刺激与轻混音'),
+          title: Text(context.l10n.bgmReadingProtectionTitle),
+          subtitle: Text(context.l10n.bgmReadingProtectionSubtitle),
           value: _bgmReadingProtection,
           onChanged: _bgmReady
               ? (value) => unawaited(_setBgmReadingProtection(value))
@@ -2305,8 +2441,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('专注优先'),
-          subtitle: const Text('专注与执行阶段优先选择更纯净、更稳定的曲目'),
+          title: Text(context.l10n.bgmFocusPriorityTitle),
+          subtitle: Text(context.l10n.bgmFocusPrioritySubtitle),
           value: _bgmFocusPriority,
           onChanged: _bgmReady
               ? (value) => unawaited(_setBgmFocusPriority(value))
@@ -2315,8 +2451,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('锁定当前风格'),
-          subtitle: const Text('跨普通页面时尽量延续当前气质，不覆盖专注和庆祝场景'),
+          title: Text(context.l10n.bgmLockStyleTitle),
+          subtitle: Text(context.l10n.bgmLockStyleSubtitle),
           value: _bgmLockCurrentStyle,
           onChanged: _bgmReady
               ? (value) => unawaited(_setBgmLockCurrentStyle(value))
@@ -2344,74 +2480,74 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
   }
 
-  String _bgmPaletteLabel(BgmPalette palette) => switch (palette) {
-        BgmPalette.adaptive => '自适应',
-        BgmPalette.classical => '精选古典',
-        BgmPalette.piano => '钢琴优先',
-        BgmPalette.airy => '空灵氛围',
-        BgmPalette.warm => '温暖轻快',
+  String _bgmPaletteLabel(AppLocalizations l10n, BgmPalette palette) => switch (palette) {
+        BgmPalette.adaptive => l10n.bgmPaletteAdaptive,
+        BgmPalette.classical => l10n.bgmPaletteClassical,
+        BgmPalette.piano => l10n.bgmPalettePiano,
+        BgmPalette.airy => l10n.bgmPaletteAiry,
+        BgmPalette.warm => l10n.bgmPaletteWarm,
       };
 
-  String _bgmPaletteDescription(BgmPalette palette) => switch (palette) {
-        BgmPalette.adaptive => '系统会按页面功能自动挑选最合适的背景音乐。',
-        BgmPalette.classical => '精选古典钢琴与弦乐，会优先使用你本机准备的古典乐库做场景切换。',
-        BgmPalette.piano => '整体更偏轻钢琴与安静旋律，适合长时间陪伴。',
-        BgmPalette.airy => '整体更偏空灵、梦幻和空间感更强的氛围。',
-        BgmPalette.warm => '整体更偏温暖、柔和、有人味的轻快底色。',
+  String _bgmPaletteDescription(AppLocalizations l10n, BgmPalette palette) => switch (palette) {
+        BgmPalette.adaptive => l10n.bgmPaletteAdaptiveDesc,
+        BgmPalette.classical => l10n.bgmPaletteClassicalDesc,
+        BgmPalette.piano => l10n.bgmPalettePianoDesc,
+        BgmPalette.airy => l10n.bgmPaletteAiryDesc,
+        BgmPalette.warm => l10n.bgmPaletteWarmDesc,
       };
 
-  String _bgmIntensityLabel(BgmIntensity intensity) => switch (intensity) {
-        BgmIntensity.gentle => '柔和',
-        BgmIntensity.balanced => '平衡',
-        BgmIntensity.lush => '丰盈',
+  String _bgmIntensityLabel(AppLocalizations l10n, BgmIntensity intensity) => switch (intensity) {
+        BgmIntensity.gentle => l10n.bgmIntensityGentle,
+        BgmIntensity.balanced => l10n.bgmIntensityBalanced,
+        BgmIntensity.lush => l10n.bgmIntensityLush,
       };
 
-  String _bgmIntensityDescription(BgmIntensity intensity) =>
+  String _bgmIntensityDescription(AppLocalizations l10n, BgmIntensity intensity) =>
       switch (intensity) {
-        BgmIntensity.gentle => '更适合长时间陪伴，优先轻密度、低干扰和慢切换。',
-        BgmIntensity.balanced => '保留舒适度的同时增加一点层次和存在感。',
-        BgmIntensity.lush => '让同一场景更有氛围和包裹感，但仍避免明显突兀。',
+        BgmIntensity.gentle => l10n.bgmIntensityGentleDesc,
+        BgmIntensity.balanced => l10n.bgmIntensityBalancedDesc,
+        BgmIntensity.lush => l10n.bgmIntensityLushDesc,
       };
 
-  String _bgmVarietyLabel(BgmVariety variety) => switch (variety) {
-        BgmVariety.steady => '稳定',
-        BgmVariety.balanced => '均衡',
-        BgmVariety.dynamic => '灵动',
+  String _bgmVarietyLabel(AppLocalizations l10n, BgmVariety variety) => switch (variety) {
+        BgmVariety.steady => l10n.bgmVarietySteady,
+        BgmVariety.balanced => l10n.bgmVarietyBalanced,
+        BgmVariety.dynamic => l10n.bgmVarietyDynamic,
       };
 
-  String _bgmVarietyDescription(BgmVariety variety) => switch (variety) {
-        BgmVariety.steady => '尽量减少跳曲和重复变化，让氛围更连贯。',
-        BgmVariety.balanced => '在连贯和新鲜之间保持中间值。',
-        BgmVariety.dynamic => '降低重复率，让同类页面也能更常听到新变化。',
+  String _bgmVarietyDescription(AppLocalizations l10n, BgmVariety variety) => switch (variety) {
+        BgmVariety.steady => l10n.bgmVarietySteadyDesc,
+        BgmVariety.balanced => l10n.bgmVarietyBalancedDesc,
+        BgmVariety.dynamic => l10n.bgmVarietyDynamicDesc,
       };
 
-  String _motionIntensityLabel(MotionIntensityLevel level) => switch (level) {
-        MotionIntensityLevel.ultra => '超强',
-        MotionIntensityLevel.high => '高',
-        MotionIntensityLevel.medium => '中',
-        MotionIntensityLevel.off => '关闭',
+  String _motionIntensityLabel(AppLocalizations l10n, MotionIntensityLevel level) => switch (level) {
+        MotionIntensityLevel.ultra => l10n.motionIntensityUltra,
+        MotionIntensityLevel.high => l10n.motionIntensityHigh,
+        MotionIntensityLevel.medium => l10n.motionIntensityMedium,
+        MotionIntensityLevel.off => l10n.motionIntensityOff,
       };
 
-  String _motionIntensityDescription(MotionIntensityLevel level) =>
+  String _motionIntensityDescription(AppLocalizations l10n, MotionIntensityLevel level) =>
       switch (level) {
-        MotionIntensityLevel.ultra => '保留完整粒子、辉光与复杂动效，适合高性能设备。',
-        MotionIntensityLevel.high => '维持大部分视觉层，同时允许系统按帧率自动降级。',
-        MotionIntensityLevel.medium => '收敛粒子与辉光，优先稳定和省电，仍保留基础层次感。',
-        MotionIntensityLevel.off => '尽量关闭强动效与粒子层，适合偏静态、低刺激或低性能场景。',
+        MotionIntensityLevel.ultra => l10n.motionIntensityUltraDesc,
+        MotionIntensityLevel.high => l10n.motionIntensityHighDesc,
+        MotionIntensityLevel.medium => l10n.motionIntensityMediumDesc,
+        MotionIntensityLevel.off => l10n.motionIntensityOffDesc,
       };
 
-  String _bgmModeLabel(BgmMode mode) => switch (mode) {
-        BgmMode.adaptive => '跟随页面',
-        BgmMode.continuous => '播放器模式',
-        BgmMode.focusOnly => '仅专注开启',
-        BgmMode.silent => '全局静音',
+  String _bgmModeLabel(AppLocalizations l10n, BgmMode mode) => switch (mode) {
+        BgmMode.adaptive => l10n.bgmModeAdaptive,
+        BgmMode.continuous => l10n.bgmModeContinuous,
+        BgmMode.focusOnly => l10n.bgmModeFocusOnly,
+        BgmMode.silent => l10n.bgmModeSilent,
       };
 
-  String _bgmModeDescription(BgmMode mode) => switch (mode) {
-        BgmMode.adaptive => '首页、聊天、任务、成就等页面会自动切换到对应氛围音乐。',
-        BgmMode.continuous => '当前曲目会持续播放，不会因为你跳转到别的页面而被打断，适合把 App 当成舒缓音乐播放器。',
-        BgmMode.focusOnly => '只有专注开始、沉浸和执行任务时才会播放背景音乐，日常页面保持安静。',
-        BgmMode.silent => '保留音效和触感反馈，但所有背景音乐都不会自动播放。',
+  String _bgmModeDescription(AppLocalizations l10n, BgmMode mode) => switch (mode) {
+        BgmMode.adaptive => l10n.bgmModeAdaptiveDesc,
+        BgmMode.continuous => l10n.bgmModeContinuousDesc,
+        BgmMode.focusOnly => l10n.bgmModeFocusOnlyDesc,
+        BgmMode.silent => l10n.bgmModeSilentDesc,
       };
 
   Widget _buildNotificationPermissionCard(
@@ -2421,7 +2557,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final permissionStatus = ref.watch(notificationPermissionStatusProvider);
 
     return permissionStatus.when(
-      loading: () => const GraphiteCardSurface(
+      loading: () => GraphiteCardSurface(
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: SizedBox(
@@ -2429,7 +2565,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             height: 24,
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          title: Text('通知权限状态'),
+          title: Text(l10n.notificationPermissionStatus),
           subtitle: Text('...'),
         ),
       ),
@@ -2437,8 +2573,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.error_outline, color: DS.error),
-          title: const Text('通知权限状态'),
-          subtitle: Text('未授权: $error'),
+          title: Text(l10n.notificationPermissionStatus),
+          subtitle: Text(l10n.notificationPermissionDeniedTitle(error.toString())),
         ),
       ),
       data: (status) {
@@ -2455,11 +2591,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         if (!hasPermission) {
           statusColor = DS.error;
           statusIcon = Icons.notifications_off_outlined;
-          hintText = '通知权限被拒绝，请在系统设置中开启';
+          hintText = l10n.notificationPermissionDeniedHint;
         } else if (isPartial) {
           statusColor = DS.warning;
           statusIcon = Icons.notifications_active_outlined;
-          hintText = '部分通知功能受限，建议开启完整权限';
+          hintText = l10n.notificationPermissionPartialHint;
         } else {
           statusColor = DS.success;
           statusIcon = Icons.notifications_active;
@@ -2482,7 +2618,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   ),
                   child: Icon(statusIcon, color: statusColor),
                 ),
-                title: const Text('通知权限状态'),
+                title: Text(l10n.notificationPermissionStatus),
                 subtitle: hintText != null
                     ? Text(
                         hintText,
@@ -2502,7 +2638,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         child: Icon(Icons.check_circle, color: statusColor),
                       )
                     : SparkleButton.ghost(
-                        label: !hasPermission ? '请求权限' : '打开设置',
+                        label: !hasPermission ? l10n.notificationRequestPermission : l10n.notificationOpenSettings,
                         onPressed: () async {
                           if (!hasPermission) {
                             final granted = await ref
@@ -2591,12 +2727,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('通知权限状态'),
-        content: const Text('通知权限被拒绝，请在系统设置中开启'),
+        title: Text(context.l10n.notificationPermissionDialogTitle),
+        content: Text(context.l10n.notificationPermissionDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () {
@@ -2608,7 +2744,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     .requestPermission(),
               );
             },
-            child: const Text('打开设置'),
+            child: Text(context.l10n.notificationOpenSettings),
           ),
         ],
       ),
@@ -2628,7 +2764,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           color: DS.surfaceSecondary,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Text('今日额度统计准备中。'),
+        child: Text(context.l10n.aiUsageTodayPreparing),
       );
     }
 
@@ -2647,7 +2783,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '今日 AI 额度与消耗',
+            context.l10n.aiUsageTodayTitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: DS.fontWeightBold,
             ),
@@ -2683,12 +2819,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '$used/$limit 次 · $tokens tokens · \$${cost.toStringAsFixed(4)}',
+                          '${context.l10n.aiUsageRequests(used as int, limit as int)} · $tokens tokens · \$${cost.toStringAsFixed(4)}',
                           style: theme.textTheme.bodySmall,
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '平均首 token ${avgFirstTokenMs.toStringAsFixed(0)}ms · 平均总耗时 ${avgTotalMs.toStringAsFixed(0)}ms',
+                          context.l10n.aiUsageLatency(avgFirstTokenMs.toStringAsFixed(0), avgTotalMs.toStringAsFixed(0)),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.textTheme.bodySmall?.color?.withValues(
                               alpha: 0.72,
@@ -2723,7 +2859,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           color: DS.surfaceSecondary,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Text('模式级运营指标还在累积中。'),
+        child: Text(context.l10n.aiOpsModesAccumulating),
       );
     }
 
@@ -2771,7 +2907,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       );
     final topChatMode = topMode.isNotEmpty
         ? _labelForChatMode(topMode.first['chat_mode'])
-        : '标准对话';
+        : context.l10n.aiOpsTopChatModeStandard;
     final funnel = (predictionPayload?['funnel'] as Map<String, dynamic>?) ??
         const <String, dynamic>{};
     final acceptToExecution =
@@ -2792,14 +2928,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '用户视角',
+            context.l10n.aiOpsUserViewTitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: DS.fontWeightBold,
             ),
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '重点看 AI 是否回得快、够稳、能把建议真正推成执行，而不是只看模型层参数。',
+            context.l10n.aiOpsUserViewDesc,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.78),
             ),
@@ -2810,30 +2946,30 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             runSpacing: DS.spacing8,
             children: [
               _MetricChip(
-                label: '成功率',
+                label: context.l10n.aiOpsSuccessRate,
                 value: '${successRate.toStringAsFixed(1)}%',
               ),
               _MetricChip(
-                label: '平均首包',
+                label: context.l10n.aiOpsAvgFirstToken,
                 value: '${avgFirstToken.toStringAsFixed(0)}ms',
               ),
               _MetricChip(
-                label: '平均总耗时',
+                label: context.l10n.aiOpsAvgTotalDuration,
                 value: '${avgTotalDuration.toStringAsFixed(0)}ms',
               ),
               _MetricChip(
-                label: '执行转化',
+                label: context.l10n.aiOpsExecutionConversion,
                 value: '${executionRate.toStringAsFixed(1)}%',
               ),
               _MetricChip(
-                label: '预测接受后执行',
+                label: context.l10n.aiOpsPredictedAcceptExec,
                 value: '${acceptToExecution.toStringAsFixed(1)}%',
               ),
             ],
           ),
           const SizedBox(height: DS.spacing10),
           Text(
-            '最近最常用的是「$topChatMode」这条链，说明它已经是用户日常体验里的主力工作流。',
+            context.l10n.aiOpsTopModeSummary(topChatMode),
             style: theme.textTheme.bodySmall,
           ),
         ],
@@ -2869,25 +3005,33 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         totalRequests > 0 ? weightedFallback / totalRequests : 0.0;
     final promptKnown = items.fold<int>(
       0,
-      (sum, item) => sum + ((item['prompt_utilization_known_count'] as num?)?.toInt() ?? 0),
+      (sum, item) =>
+          sum +
+          ((item['prompt_utilization_known_count'] as num?)?.toInt() ?? 0),
     );
     final inferenceKnown = items.fold<int>(
       0,
-      (sum, item) => sum + ((item['inference_utilization_known_count'] as num?)?.toInt() ?? 0),
+      (sum, item) =>
+          sum +
+          ((item['inference_utilization_known_count'] as num?)?.toInt() ?? 0),
     );
     final promptUtilWeighted = items.fold<double>(
       0,
       (sum, item) =>
           sum +
           (((item['avg_prompt_utilization_percent'] as num?)?.toDouble() ?? 0) *
-              ((item['prompt_utilization_known_count'] as num?)?.toDouble() ?? 0)),
+              ((item['prompt_utilization_known_count'] as num?)?.toDouble() ??
+                  0)),
     );
     final inferenceUtilWeighted = items.fold<double>(
       0,
       (sum, item) =>
           sum +
-          (((item['avg_inference_utilization_percent'] as num?)?.toDouble() ?? 0) *
-              ((item['inference_utilization_known_count'] as num?)?.toDouble() ?? 0)),
+          (((item['avg_inference_utilization_percent'] as num?)?.toDouble() ??
+                  0) *
+              ((item['inference_utilization_known_count'] as num?)
+                      ?.toDouble() ??
+                  0)),
     );
     final avgPromptUtil =
         promptKnown > 0 ? promptUtilWeighted / promptKnown : 0.0;
@@ -2916,14 +3060,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '开发运营视角',
+            context.l10n.aiOpsDevViewTitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: DS.fontWeightBold,
             ),
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            '这里专门看速度、成本、fallback 和预测转化，用来决定下一轮要优化哪条模式链。',
+            context.l10n.aiOpsDevViewDesc,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.78),
             ),
@@ -2934,41 +3078,41 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             runSpacing: DS.spacing8,
             children: [
               _MetricChip(
-                label: '监控模式',
+                label: context.l10n.aiOpsMonitoringModes,
                 value: '${items.length}',
               ),
               _MetricChip(
-                label: '请求总量',
+                label: context.l10n.aiOpsTotalRequests,
                 value: '$totalRequests',
               ),
               _MetricChip(
-                label: 'fallback',
+                label: context.l10n.aiOpsFallback,
                 value: '${fallbackRate.toStringAsFixed(1)}%',
               ),
               _MetricChip(
-                label: '总成本',
+                label: context.l10n.aiOpsTotalCost,
                 value: '\$${totalCost.toStringAsFixed(4)}',
               ),
               _MetricChip(
-                label: 'prompt 命中',
+                label: context.l10n.aiOpsPromptHit,
                 value: '${avgPromptUtil.toStringAsFixed(1)}%',
               ),
               _MetricChip(
-                label: '推理命中',
+                label: context.l10n.aiOpsInferenceHit,
                 value: '${avgInferenceUtil.toStringAsFixed(1)}%',
               ),
             ],
           ),
           const SizedBox(height: DS.spacing10),
           Text(
-            '近 $windowDays 天里，当前最值得继续盯的预测动作是「$topAction」；同时 prompt / inference 命中率分别是 ${avgPromptUtil.toStringAsFixed(1)}% / ${avgInferenceUtil.toStringAsFixed(1)}%。',
+            context.l10n.aiOpsPredictionSummary(windowDays, topAction, avgPromptUtil.toStringAsFixed(1), avgInferenceUtil.toStringAsFixed(1)),
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: DS.spacing12),
           Align(
             alignment: Alignment.centerLeft,
             child: SparkleButton.ghost(
-              label: '打开 AI 运营分析页',
+              label: context.l10n.aiOpsOpenAnalysis,
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -2982,7 +3126,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           Align(
             alignment: Alignment.centerLeft,
             child: SparkleButton.ghost(
-              label: '打开管理员运营面板',
+              label: context.l10n.aiOpsOpenAdminPanel,
               onPressed: () => context.push(UserRoutes.adminOperations),
             ),
           ),
@@ -2994,15 +3138,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   String _labelForChatMode(Object? value) {
     switch (value?.toString()) {
       case 'standard':
-        return '标准对话';
+        return context.l10n.aiOpsTopChatModeStandard;
       case 'study_plan':
-        return '学习规划';
+        return context.l10n.aiOpsTopChatModeStudyPlan;
       case 'deep_analysis':
-        return '深度分析';
+        return context.l10n.aiOpsTopChatModeDeepAnalysis;
       case 'error_diagnosis':
-        return '诊断纠错';
+        return context.l10n.aiOpsTopChatModeErrorDiagnosis;
       case 'expert_auto':
-        return '专家协作';
+        return context.l10n.aiOpsTopChatModeExpertAuto;
       default:
         return value?.toString() ?? 'standard';
     }

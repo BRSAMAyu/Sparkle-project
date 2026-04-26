@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/translation/translation.dart';
 
@@ -258,7 +259,7 @@ Caching improves performance by reducing the number of expensive operations, suc
                 ),
                 onSaveToKnowledge: (selectedText, translation) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('已保存到生词卡')),
+                    SparkleSnackBar.success('已保存到生词卡'),
                   );
                 },
               ),

@@ -5,7 +5,12 @@ import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.da
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 
 class WeeklyGrowthNarrativeCard extends ConsumerStatefulWidget {
-  const WeeklyGrowthNarrativeCard({super.key});
+  const WeeklyGrowthNarrativeCard({
+    super.key,
+    this.initialExpanded = false,
+  });
+
+  final bool initialExpanded;
 
   @override
   ConsumerState<WeeklyGrowthNarrativeCard> createState() =>
@@ -14,7 +19,15 @@ class WeeklyGrowthNarrativeCard extends ConsumerStatefulWidget {
 
 class _WeeklyGrowthNarrativeCardState
     extends ConsumerState<WeeklyGrowthNarrativeCard> {
-  bool _expanded = false;
+  late bool _expanded = widget.initialExpanded;
+
+  @override
+  void didUpdateWidget(covariant WeeklyGrowthNarrativeCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.initialExpanded && widget.initialExpanded) {
+      _expanded = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

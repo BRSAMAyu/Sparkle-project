@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
@@ -48,13 +49,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            SnackBar(
-              content: Text(next),
-              action: SnackBarAction(
-                label: context.l10n.retry,
-                onPressed: () =>
-                    ref.read(taskListProvider.notifier).refreshTasks(),
-              ),
+            SparkleSnackBar.error(
+              next,
+              onRetry: () =>
+                  ref.read(taskListProvider.notifier).refreshTasks(),
+              retryLabel: context.l10n.retry,
             ),
           );
       },
@@ -434,7 +433,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   .where((task) => task.status == TaskStatus.pending)
                   .length,
               inProgressCount: tasks
-                  .where((task) => task.status == TaskStatus.inProgress)
+                  .where((task) =>
+                      task.status == TaskStatus.inProgress ||
+                      task.status == TaskStatus.stuck)
                   .length,
               completedCount: tasks
                   .where((task) => task.status == TaskStatus.completed)
@@ -474,7 +475,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       case TaskFilterOptions.pending:
         return tasks.where((t) => t.status == TaskStatus.pending).toList();
       case TaskFilterOptions.inProgress:
-        return tasks.where((t) => t.status == TaskStatus.inProgress).toList();
+        return tasks
+            .where((t) =>
+                t.status == TaskStatus.inProgress ||
+                t.status == TaskStatus.stuck)
+            .toList();
       case TaskFilterOptions.completed:
         return tasks.where((t) => t.status == TaskStatus.completed).toList();
       case TaskFilterOptions.all:

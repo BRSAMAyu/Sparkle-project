@@ -105,10 +105,24 @@ class ErrorAnalysis with _$ErrorAnalysis {
     @JsonKey(name: 'recommended_knowledge')
     @Default([])
     List<String> recommendedKnowledge,
+    @JsonKey(name: 'linking_hint') ErrorLinkingHint? linkingHint,
   }) = _ErrorAnalysis;
 
   factory ErrorAnalysis.fromJson(Map<String, dynamic> json) =>
       _$ErrorAnalysisFromJson(json);
+}
+
+/// 知识节点关联失败时的引导
+@freezed
+class ErrorLinkingHint with _$ErrorLinkingHint {
+  const factory ErrorLinkingHint({
+    required String code,
+    required String message,
+    String? action,
+  }) = _ErrorLinkingHint;
+
+  factory ErrorLinkingHint.fromJson(Map<String, dynamic> json) =>
+      _$ErrorLinkingHintFromJson(json);
 }
 
 /// 关联知识点

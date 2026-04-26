@@ -89,7 +89,13 @@ class ToolHostScreen extends StatelessWidget {
                       ),
                       child: SparkleIconButton(
                         variant: ButtonVariant.ghost,
-                        onPressed: () => context.pop(),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/home');
+                          }
+                        },
                         icon: const Icon(Icons.arrow_back_rounded),
                       ),
                     ),
@@ -106,7 +112,11 @@ class ToolHostScreen extends StatelessWidget {
                         ),
                         child: SparkleIconButton(
                           variant: ButtonVariant.ghost,
-                          onPressed: () => context.push('/tools/library'),
+                          onPressed: () {
+                            if (context.mounted) {
+                              context.push('/tools/library');
+                            }
+                          },
                           icon: const Icon(Icons.grid_view_rounded),
                         ),
                       ),
