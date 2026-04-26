@@ -61,6 +61,24 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
             "reasoning_template": "你上传的课件最近几轮没被用到，我来按课件内容回答。",
         },
     },
+    "knowledge_transfer": {
+        "transfer_failure": {
+            "primary_strategy": "repair_knowledge_bottleneck",
+            "secondary_strategy": "prevent_new_chapter",
+            "hard_constraints": {
+                "avoid_new_chapter": True,
+                "required_task_type": "worked_example_then_drill",
+                "max_task_duration_min": 30,
+            },
+            "soft_biases": {
+                "tone": "encouraging_diagnostic",
+                "difficulty": "low_medium",
+            },
+            "visibility": "receipt",
+            "requires_user_confirmation": False,
+            "reasoning_template": "这个知识点你连续出错了，我先帮你巩固，不急着推进新内容。",
+        },
+    },
 }
 
 _DIRECTIVE_TARGET_MODULE = "task_generator"

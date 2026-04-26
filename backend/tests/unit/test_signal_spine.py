@@ -431,3 +431,83 @@ def test_retrieval_intent_normal_without_override():
     )
     # Should follow normal classification (not spine override)
     assert decision.retrieval_mode != "no_retrieval" or decision.reason != "spine_material_directive"
+
+
+# ── M3: Mistake Signal Tests ─────────────────────────────────────────
+
+from app.signals.mistake_signal import MistakeSignalDetector
+
+
+@pytest.mark.asyncio
+async def test_mistake_no_signal_below_threshold():
+    redis = FakeRedis()
+    detector = MistakeSignalDetector(redis)
+    signals = await detector.on_error_created(
+        user_id="u1", error_id="e1",
+        linked_node_ids=["cn.tcp.congestion_control"],
+    )
+    assert len(signals) == 0  # Need 3 consecutive
+
+
+@pytest.mark.asyncio
+async def test_mistake_signal_after_three_errors():
+    redis = FakeRedis()
+    detector = MistakeSignalDetector(redis)
+
+    all_signals = []
+    for i in range(3):
+        signals = await detector.on_error_created(
+            user_id="u1", error_id=f"e{i+1}",
+            linked_node_ids=["cn.tcp.congestion_control"],
+            error_type="concept_confusion",
+        )
+        all_signals.extend(signals)
+
+    assert len(all_signals) == 1
+    sig = all_signals[0]
+    assert sig.state_key == "knowledge_transfer"
+    assert sig.claim == "transfer_failure"
+    assert sig.priority == "high"
+
+
+@pytest.mark.asyncio
+async def test_mistake_no_duplicate_signal():
+    redis = FakeRedis()
+    detector = MistakeSignalDetector(redis)
+
+    # 3 errors → first signal
+    for i in range(3):
+        await detector.on_error_created(
+            user_id="u1", error_id=f"e{i+1}",
+            linked_node_ids=["cn.tcp.congestion_control"],
+        )
+    # 4th error → should NOT generate duplicate signal
+    signals = await detector.on_error_created(
+        user_id="u1", error_id="e4",
+        linked_node_ids=["cn.tcp.congestion_control"],
+    )
+    assert len(signals) == 0
+
+
+@pytest.mark.asyncio
+async def test_mistake_policy_generates_avoid_new_chapter():
+    engine = PolicyEngine()
+    signal = ActionableSignal(
+        signal_id=_uid("sig"),
+        source_event_ids=["e1"],
+        source_system="error_book",
+        state_key="knowledge_transfer",
+        claim="transfer_failure",
+        confidence=0.8,
+        scope="current_sprint",
+        ttl_hours=72,
+        evidence_summary="TCP 拥塞控制连续 3 次出错",
+        possible_effects=["avoid_new_chapter"],
+        priority="high",
+    )
+    result = await engine.evaluate(signal)
+    assert result is not None
+    decision, directive = result
+    assert decision.primary_strategy == "repair_knowledge_bottleneck"
+    assert directive.hard_constraints["avoid_new_chapter"] is True
+    assert directive.hard_constraints["required_task_type"] == "worked_example_then_drill"

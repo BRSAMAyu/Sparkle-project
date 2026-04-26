@@ -12,7 +12,7 @@
 |-----------|------|--------|---------|
 | M1: 控制链路最小可运行 | ✅ 完成 | 5/5 steps | 2026-04-27 |
 | M2: 资料闭环最小可运行 | ✅ 完成 | 3/3 steps | 2026-04-27 |
-| M3: 错因驱动策略改变 | ⬜ 未开始 | 0/3 steps | - |
+| M3: 错因驱动策略改变 | ✅ 完成 | 3/3 steps | 2026-04-27 |
 
 ---
 
@@ -71,16 +71,16 @@
 
 | Step | 描述 | 状态 |
 |------|------|------|
-| 1 | MistakeSignal 检测 | ⬜ TODO |
-| 2 | KnowledgeStatePatch + PolicyDecision 联动 | ⬜ TODO |
-| 3 | TaskCard regeneration 硬约束 | ⬜ TODO |
+| 1 | MistakeSignal 检测 | ✅ DONE — `signals/mistake_signal.py` |
+| 2 | KnowledgeStatePatch + PolicyDecision 联动 | ✅ DONE — PolicyEngine `knowledge_transfer/transfer_failure` 规则 |
+| 3 | TaskCard regeneration 硬约束 | ✅ DONE — avoid_new_chapter + worked_example_then_drill |
 
 ### 验收标准 (E2)
 
-- [ ] 连续 3 次同题出错 → transfer_failure = true
-- [ ] avoid_new_chapter = true
-- [ ] required_task_type = worked_example_then_drill
-- [ ] 不能生成新章节任务
+- [x] 连续 3 次同题出错 → transfer_failure = true
+- [x] avoid_new_chapter = true
+- [x] required_task_type = worked_example_then_drill
+- [x] 不能生成新章节任务
 
 ---
 

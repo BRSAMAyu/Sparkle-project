@@ -371,6 +371,35 @@ class ErrorBookService:
             except Exception as e:
                 logger.error(f"Failed to publish ErrorCreated event: {e}")
 
+            # Signal-to-Action Spine: check for repeated mistakes on same node
+            try:
+                from app.signals.mistake_signal import MistakeSignalDetector
+                from app.signals.spine_orchestrator import SpineOrchestrator
+                from app.core.cache import cache_service
+                if cache_service.redis and linked_ids:
+                    mistake_detector = MistakeSignalDetector(cache_service.redis)
+                    spine = SpineOrchestrator(cache_service.redis)
+                    mistake_signals = await mistake_detector.on_error_created(
+                        user_id=str(user_id),
+                        error_id=str(error.id),
+                        linked_node_ids=[str(i) for i in linked_ids],
+                    )
+                    for sig in mistake_signals:
+                        await spine.trace_store.store_signal(sig)
+                        result = await spine.policy_engine.evaluate(sig)
+                        if result:
+                            decision, directive = result
+                            trace = await spine.trace_store.create_trace()
+                            trace.raw_event_ids.append(str(error.id))
+                            await spine.trace_store.append_signal(trace.trace_id, sig)
+                            await spine.trace_store.append_policy(trace.trace_id, decision)
+                            await spine.trace_store.append_directive(trace.trace_id, directive)
+                            await spine.trace_store.set_active_directive(str(user_id), directive)
+                            await spine.trace_store.link_to_user(str(user_id), trace.trace_id)
+                            logger.info("MistakeSpine: signal={} → directive={}", sig.signal_id, directive.directive_id)
+            except Exception as spine_exc:
+                logger.debug("MistakeSpine check skipped: {}", spine_exc)
+
         except Exception as e:
             logger.error(f"Async analysis failed for error {error_id}: {e}")
             await self.db.rollback()
