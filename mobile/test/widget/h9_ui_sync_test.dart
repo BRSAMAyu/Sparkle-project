@@ -774,6 +774,14 @@ class _FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
       NetworkResult.success(const <GalaxySearchResult>[]);
 
   @override
+  Future<NetworkResult<NodeChunksResponse>> getNodeSourceChunks(
+    String nodeId, {
+    int page = 1,
+    int pageSize = 100,
+  }) async =>
+      NetworkResult.failure(GalaxyError.unknown('Not implemented'));
+
+  @override
   void clearCache() {}
 
   @override
@@ -846,6 +854,8 @@ class _MutableExamSprintRepository extends ExamSprintRepository {
   @override
   Future<LearningPortfolioResult> fetchLearningPortfolio({
     String? userId,
+    int page = 1,
+    int pageSize = 20,
   }) async =>
       portfolio;
 }

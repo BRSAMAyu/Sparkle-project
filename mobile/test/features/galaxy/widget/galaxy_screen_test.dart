@@ -435,6 +435,14 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
       NetworkResult.success(const <GalaxySearchResult>[]);
 
   @override
+  Future<NetworkResult<NodeChunksResponse>> getNodeSourceChunks(
+    String nodeId, {
+    int page = 1,
+    int pageSize = 100,
+  }) async =>
+      NetworkResult.failure(GalaxyError.unknown('Not implemented'));
+
+  @override
   void clearCache() {}
 
   @override

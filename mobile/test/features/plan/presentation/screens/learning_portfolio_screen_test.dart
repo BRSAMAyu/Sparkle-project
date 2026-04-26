@@ -300,6 +300,8 @@ class _FakeExamSprintRepository extends ExamSprintRepository {
   @override
   Future<LearningPortfolioResult> fetchLearningPortfolio({
     String? userId,
+    int page = 1,
+    int pageSize = 20,
   }) async {
     return await _handler?.call() ?? _result!;
   }

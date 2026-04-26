@@ -62,6 +62,8 @@ class KnowledgeNodeCandidate:
     node_type: str
     keywords: list[str] = field(default_factory=list)
     importance_level: int = 2
+    exam_weight: float = 0.5
+    recommended_action: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -70,6 +72,8 @@ class KnowledgeNodeCandidate:
             "node_type": self.node_type,
             "keywords": list(self.keywords),
             "importance_level": self.importance_level,
+            "exam_weight": self.exam_weight,
+            "recommended_action": self.recommended_action,
         }
 
 
@@ -131,6 +135,8 @@ class OntologyGenerator:
             "5. relations must only connect returned nodes.\n"
             "6. Keep node count between 4 and 12.\n"
             "7. Use English type identifiers.\n"
+            "8. Each node must include exam_weight (0.0-1.0, how likely this appears on exams) "
+            "and recommended_action (one sentence: what the student should do next for this topic).\n"
             f"Subject hint: {subject or 'general learning'}\n"
             f"Preferred entity types: {', '.join(DEFAULT_ENTITY_TYPES)}\n"
             f"Preferred relation types: {', '.join(DEFAULT_RELATION_TYPES)}\n\n"
@@ -273,6 +279,8 @@ class OntologyGenerator:
                     node_type=node_type,
                     keywords=keywords[:8],
                     importance_level=max(1, min(int(item.get("importance_level") or 2), 5)),
+                    exam_weight=max(0.0, min(float(item.get("exam_weight") or 0.5), 1.0)),
+                    recommended_action=str(item.get("recommended_action") or "")[:200],
                 )
             )
             if len(repaired) >= 12:
