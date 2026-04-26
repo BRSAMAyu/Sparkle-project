@@ -23,6 +23,7 @@ from sqlalchemy.orm.attributes import set_committed_value
 
 from app.config import settings
 from app.core.event_bus import ErrorCreated, event_bus
+from app.core.i18n import I18n
 from app.core.llm_client import llm_client
 from app.models.achievement import UserStreakStats
 from app.models.error_book import ErrorRecord
@@ -396,15 +397,15 @@ class ErrorBookService:
             return
 
         analysis = error.latest_analysis or {}
-        error_type = str(analysis.get("error_type_label") or analysis.get("error_type") or "错题").strip()
+        error_type = str(analysis.get("error_type_label") or analysis.get("error_type") or I18n.t("error_book.error_type_label_fallback", locale="zh")).strip()
         primary_node = linked_nodes[0].name if linked_nodes else ""
-        focus_label = primary_node or str(error.chapter or error.subject_code or "当前知识点").strip()
+        focus_label = primary_node or str(error.chapter or error.subject_code or I18n.t("error_book.focus_label_fallback", locale="zh")).strip()
         occurred_label = (error.created_at or _utcnow()).strftime("%Y-%m-%d")
-        summary = f"{occurred_label} 在 {focus_label} 上出现了{error_type}"
+        summary = I18n.t("error_book.episodic_summary", locale="zh", date=occurred_label, focus=focus_label, error_type=error_type)
 
         root_cause = str(analysis.get("root_cause") or "").strip()
         if root_cause:
-            summary = f"{summary}：{root_cause[:120]}"
+            summary = I18n.t("error_book.episodic_summary_with_cause", locale="zh", summary=summary, cause=root_cause[:120])
 
         memory_service = MemoryService(self.db)
         await memory_service.create_episodic_memory(
@@ -630,30 +631,45 @@ class ErrorBookService:
                 for keyword in ["vocabulary", "spelling", "pronunciation", "词汇", "拼写"]
             ):
                 error_type = "memory_lapse"
-                error_type_label = "记忆提取失败"
+                error_type_label = I18n.t("error_book.type_memory_lapse", locale="zh")
             elif any(
                 keyword in combined_text
                 for keyword in ["reading", "inference", "main idea", "tone", "阅读理解", "推断"]
             ):
                 error_type = "reading_careless"
-                error_type_label = "审题/阅读偏差"
+                error_type_label = I18n.t("error_book.type_reading_careless", locale="zh")
             else:
                 error_type = "concept_confusion"
-                error_type_label = "语法规则混淆"
+                error_type_label = I18n.t("error_book.type_grammar_confusion", locale="zh")
         elif any(keyword in combined_text for keyword in ["指针", "pointer", "*p", "地址", "内存"]):
             error_type = "concept_confusion"
-            error_type_label = "概念混淆"
+            error_type_label = I18n.t("error_book.type_concept_confusion", locale="zh")
         elif any(keyword in combined_text for keyword in ["计算", "算错", "结果", "公式"]):
             error_type = "calculation_error"
-            error_type_label = "计算失误"
+            error_type_label = I18n.t("error_book.type_calculation_error", locale="zh")
         else:
             error_type = "knowledge_gap"
-            error_type_label = "知识缺口"
+            error_type_label = I18n.t("error_book.type_knowledge_gap", locale="zh")
 
-        root_cause = (
-            f"从题干与作答来看，当前错误更像是{error_type_label}。"
-            f"学生回答“{user_text or '未填写'}”与正确表达“{correct_text or '未提供'}”之间存在关键概念错位。"
+        root_cause = I18n.t(
+            "error_book.fallback_root_cause", locale="zh",
+            error_type=error_type_label,
+            user_ans=user_text or I18n.t("common.unknown", locale="zh"),
+            correct_ans=correct_text or I18n.t("common.unknown", locale="zh"),
         )
+        correct_approach = I18n.t(
+            "error_book.fallback_correct_approach", locale="zh",
+            correct_ans=correct_text or I18n.t("error_book.fallback_recommended_knowledge", locale="zh"),
+        )
+        similar_traps = [
+            I18n.t("error_book.fallback_trap_symbol", locale="zh"),
+            I18n.t("error_book.fallback_trap_concept", locale="zh"),
+        ]
+        recommended_knowledge = related_concepts or [
+            I18n.t("error_book.fallback_recommended_knowledge", locale="zh"),
+            I18n.t("error_book.fallback_recommended_discrimination", locale="zh"),
+        ]
+        study_suggestion = I18n.t("error_book.fallback_study_suggestion", locale="zh")
         correct_approach = (
             f"先用自己的话复述题目核心概念，再明确区分“{correct_text or '正确答案中的关键定义'}”"
             "与常见混淆点，最后用一个最小例子重新验证。"
@@ -895,7 +911,7 @@ class ErrorBookService:
     ) -> None:
         memory_service = MemoryService(self.db)
         current_mastery = float(error.mastery_level or 0.0)
-        summary = f"错题复习结果：{performance.value}，掌握度 {previous_mastery:.2f} → " f"{current_mastery:.2f}。"
+        summary = I18n.t("error_book.review_result", locale="zh", performance=performance.value, prev=previous_mastery, current=current_mastery)
         tags = [
             "practice_outcome",
             f"performance:{performance.value}",

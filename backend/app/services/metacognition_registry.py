@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+from app.core.i18n import I18n
 
 
 @dataclass(frozen=True)
@@ -109,56 +110,130 @@ PROCESS_SCAFFOLDING_TEMPLATES: tuple[LanguageTemplate, ...] = (
         kind="process_scaffolding",
         dim="time_estimation_bias",
         direction="more_support",
-        template="你之前预估用 {predicted_value} 小时完成，实际用了 {actual_value} 小时。你预估时主要考虑了哪些因素？",
+        template="metacognition.process_template_time_more_support",
     ),
     LanguageTemplate(
         template_id="mc_process_time_more_support_pattern",
         kind="process_scaffolding",
         dim="time_estimation_bias",
         direction="more_support",
-        template="这是最近第 {repeat_count} 次类似任务比预估更久。你注意到自己在估时上漏掉了哪类成本吗？",
+        template="metacognition.process_template_time_more_support_pattern",
     ),
     LanguageTemplate(
         template_id="mc_process_time_less_support_buffer",
         kind="process_scaffolding",
         dim="time_estimation_bias",
         direction="less_support",
-        template="你最近通常会比预估更早完成。你是在哪一步留了更稳的缓冲，还是把任务拆得更清楚了？",
+        template="metacognition.process_template_time_less_support",
     ),
     LanguageTemplate(
         template_id="mc_process_completion_more_support",
         kind="process_scaffolding",
         dim="completion_bias",
         direction="more_support",
-        template="你最近对完成比例的预估常常高于结果。你判断“已经能完成”时，最看重的依据是什么？",
+        template="metacognition.process_template_completion_more_support",
     ),
     LanguageTemplate(
         template_id="mc_process_completion_less_support",
         kind="process_scaffolding",
         dim="completion_bias",
         direction="less_support",
-        template="你最近的完成比例经常高于自己原先的预估。下次设目标时，哪些证据能帮助你更敢于按真实能力估计？",
+        template="metacognition.process_template_completion_less_support",
     ),
     LanguageTemplate(
         template_id="mc_process_mastery_more_support",
         kind="process_scaffolding",
         dim="mastery_bias",
         direction="more_support",
-        template="你最近对掌握度的预估偏高一些。你通常用什么信号判断“我已经掌握了”？",
+        template="metacognition.process_template_mastery_more_support",
     ),
     LanguageTemplate(
         template_id="mc_process_mastery_less_support",
         kind="process_scaffolding",
         dim="mastery_bias",
         direction="less_support",
-        template="你最近对掌握度常常估得偏保守。回头看时，哪些证据说明你其实已经比自己想得更稳了？",
+        template="metacognition.process_template_mastery_less_support",
     ),
     LanguageTemplate(
         template_id="mc_process_cross_dim_repeat",
         kind="process_scaffolding",
         dim="shared",
         direction="repeat_pattern",
-        template="这已经是本周第 {repeat_count} 次出现相似判断偏差。你觉得自己当时用了哪套固定判断模式？",
+        template="metacognition.process_template_cross_dim_repeat",
+    ),
+)
+
+
+DASHBOARD_LANGUAGE_TEMPLATES: tuple[LanguageTemplate, ...] = (
+    LanguageTemplate(
+        template_id="mc_dashboard_time_more_support",
+        kind="dashboard_body",
+        dim="time_estimation_bias",
+        direction="more_support",
+        template="metacognition.dashboard_template_time_more_support",
+    ),
+    LanguageTemplate(
+        template_id="mc_dashboard_time_less_support",
+        kind="dashboard_body",
+        dim="time_estimation_bias",
+        direction="less_support",
+        template="metacognition.dashboard_template_time_less_support",
+    ),
+    LanguageTemplate(
+        template_id="mc_dashboard_completion_more_support",
+        kind="dashboard_body",
+        dim="completion_bias",
+        direction="more_support",
+        template="metacognition.dashboard_template_completion_more_support",
+    ),
+    LanguageTemplate(
+        template_id="mc_dashboard_completion_less_support",
+        kind="dashboard_body",
+        dim="completion_bias",
+        direction="less_support",
+        template="metacognition.dashboard_template_completion_less_support",
+    ),
+    LanguageTemplate(
+        template_id="mc_dashboard_mastery_more_support",
+        kind="dashboard_body",
+        dim="mastery_bias",
+        direction="more_support",
+        template="metacognition.dashboard_template_mastery_more_support",
+    ),
+    LanguageTemplate(
+        template_id="mc_dashboard_mastery_less_support",
+        kind="dashboard_body",
+        dim="mastery_bias",
+        direction="less_support",
+        template="metacognition.dashboard_template_mastery_less_support",
+    ),
+    LanguageTemplate(
+        template_id="mc_dashboard_insufficient",
+        kind="dashboard_body",
+        dim="shared",
+        direction="insufficient",
+        template="metacognition.dashboard_insufficient",
+    ),
+    LanguageTemplate(
+        template_id="mc_dashboard_trend_improving",
+        kind="dashboard_trend",
+        dim="shared",
+        direction="improving",
+        template="metacognition.dashboard_trend_improving",
+    ),
+    LanguageTemplate(
+        template_id="mc_dashboard_trend_stable",
+        kind="dashboard_trend",
+        dim="shared",
+        direction="stable",
+        template="metacognition.dashboard_trend_stable",
+    ),
+    LanguageTemplate(
+        template_id="mc_dashboard_trend_worsening",
+        kind="dashboard_trend",
+        dim="shared",
+        direction="worsening",
+        template="metacognition.dashboard_trend_worsening",
     ),
 )
 
@@ -266,35 +341,22 @@ def list_templates(
     )
 
 
-def render_template(template_id: str, **values: Any) -> str:
+def render_template(template_id: str, locale: str = "zh", **values: Any) -> str:
     for registry in (PROCESS_SCAFFOLDING_TEMPLATES, DASHBOARD_LANGUAGE_TEMPLATES):
         for item in registry:
             if item.template_id == template_id:
-                return item.template.format_map(
-                    {key: value for key, value in values.items()}
-                )
+                return I18n.t(item.template, locale=locale, **values)
     raise ValueError(f"Unknown metacognition template: {template_id}")
 
 
-def render_guard_samples() -> tuple[str, ...]:
+def render_guard_samples(locale: str = "zh") -> tuple[str, ...]:
     samples = []
     for item in PROCESS_SCAFFOLDING_TEMPLATES:
         samples.append(
-            item.template.format_map(
-                {
-                    "predicted_value": "2.0",
-                    "actual_value": "4.0",
-                    "repeat_count": 3,
-                }
-            )
+            I18n.t(item.template, locale=locale, predicted_value="2.0", actual_value="4.0", repeat_count=3)
         )
     for item in DASHBOARD_LANGUAGE_TEMPLATES:
         samples.append(
-            item.template.format_map(
-                {
-                    "sample_size": 10,
-                    "display_value": "2.3",
-                }
-            )
+            I18n.t(item.template, locale=locale, sample_size=10, display_value="2.3")
         )
     return tuple(samples)

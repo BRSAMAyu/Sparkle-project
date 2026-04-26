@@ -10,6 +10,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import desc, func, select
 
+from app.core.i18n import I18n
 from app.core.metrics import (
     ERROR_REPLAN_BRIDGE_BLOCKED_BY_GATE_TOTAL,
     ERROR_REPLAN_BRIDGE_ERROR_TOTAL,
@@ -95,18 +96,16 @@ class ErrorReplanBridge:
     SPECIALIZED_REPAIR_SCHEDULE_OPTIONS = ("today", "tomorrow")
     RECURRING_CAUSE_INTERVENTIONS: dict[str, tuple[str, str]] = {
         "trigger_condition_confusion": (
-            "反复混淆状态转换的触发条件，可能不是单个状态名没记住，而是还没有把协议状态机理解成"
-            "“事件触发的设计约束”。",
-            "暂停继续刷同类题，安排 20 分钟从 TCP 的设计目标出发重建状态机：先说清每个状态存在的目的，"
-            "再给每条转换边标注触发报文、主动/被动方和为什么必须这样切换。",
+            "error_bridge.recurring_cause_confusion_hypothesis",
+            "error_bridge.recurring_cause_confusion_intervention",
         ),
         "state_transition_confusion": (
-            "反复在状态转换上出错，可能说明状态名、事件和时序还没有被绑定成一张完整的因果图。",
-            "先重画完整状态图，只保留一个协议流程，用“当前状态 + 收到/发送什么 + 下一个状态”的三列表重建。",
+            "error_bridge.recurring_cause_transition_hypothesis",
+            "error_bridge.recurring_cause_transition_intervention",
         ),
         "concept_boundary_confusion": (
-            "同一错因多次出现，可能是相邻概念边界没有稳定下来，而不是题量不足。",
-            "先做一张对比表，把容易混淆的概念按定义、触发条件、典型题眼分开，再做 1 道迁移检查题。",
+            "error_bridge.recurring_cause_boundary_hypothesis",
+            "error_bridge.recurring_cause_boundary_intervention",
         ),
     }
     NETWORK_PACK_SUBJECT = "计算机网络"
@@ -148,7 +147,7 @@ class ErrorReplanBridge:
     GENERIC_MISTAKE_FALLBACKS: tuple[dict[str, Any], ...] = (
         {
             "cluster_id": "generic.state_transition",
-            "label": "状态变化与流程切换",
+            "label": "error_bridge.generic_cluster_label_state_transition",
             "keywords": (
                 "状态变化",
                 "状态转换",
@@ -158,21 +157,21 @@ class ErrorReplanBridge:
                 "state transition",
                 "transition",
             ),
-            "repair_strategy": "重画完整状态/流程图，标出每一步的触发条件和切换依据。",
+            "repair_strategy": "error_bridge.generic_repair_state_transition",
             "task_template_id": "process_trace_card",
         },
         {
             "cluster_id": "generic.unit_conversion",
-            "label": "单位换算",
+            "label": "error_bridge.generic_cluster_label_unit_conversion",
             "keywords": ("单位换算", "bit", "byte", "kb", "mb", "gb", "ms", "秒", "字节", "比特"),
-            "repair_strategy": "先列单位换算关系，再做 2 道同型题，把每一步换算依据写出来。",
+            "repair_strategy": "error_bridge.generic_repair_unit_conversion",
             "task_template_id": "calculation_drill_card",
         },
         {
             "cluster_id": "generic.formula_application",
-            "label": "公式套用与变形",
+            "label": "error_bridge.generic_cluster_label_formula_application",
             "keywords": ("公式", "代入", "变形", "推导", "计算步骤"),
-            "repair_strategy": "先写出公式和适用条件，再做 2 道只验证公式选择与代入的同型题。",
+            "repair_strategy": "error_bridge.generic_repair_formula_application",
             "task_template_id": "calculation_drill_card",
         },
     )
@@ -187,6 +186,7 @@ class ErrorReplanBridge:
         user_id: UUID,
         error_id: UUID,
         linked_node_ids: list[UUID],
+        locale: str = "zh",
     ) -> dict[str, object]:
         mode = "shadow"
         try:
@@ -262,6 +262,7 @@ class ErrorReplanBridge:
                 user_id=user_id,
                 error=error,
                 fallback_node_ids=normalized_node_ids,
+                locale=locale,
             )
             if specialized_match is not None and specialized_match.streak_count >= self.ERROR_PRESSURE_TRIGGER_COUNT:
                 primary_plan_id = await self._select_primary_plan_id(user_id=user_id, plan_ids=eligible_plan_ids)
@@ -278,6 +279,7 @@ class ErrorReplanBridge:
                     plan_id=primary_plan_id,
                     match=specialized_match,
                     cohort_profile=await self._get_cohort_profile(user_id),
+                    locale=locale,
                 )
                 logger.info(
                     "ErrorReplanBridge: proposed specialized repair for user={} error={} cluster={} streak={} plan={}",
@@ -401,6 +403,7 @@ class ErrorReplanBridge:
                 low_mastery_nodes=low_mastery_nodes or normalized_node_ids,
                 recent_error_count=recent_error_count,
                 intervention_id=intervention_id,
+                locale=locale,
             )
 
             logger.info(
@@ -432,17 +435,17 @@ class ErrorReplanBridge:
         except BridgeEvaluationError as exc:
             ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="BridgeEvaluationError", mode=mode).inc()
             logger.warning("ErrorReplanBridge evaluation failed for user {}: {}", user_id, exc)
-            await self._notify_bridge_failure(user_id=user_id, category="BridgeEvaluationError", error=str(exc))
+            await self._notify_bridge_failure(user_id=user_id, category="BridgeEvaluationError", error=str(exc), locale=locale)
             return {"triggered": False, "reason": "bridge_evaluation_error", "plan_ids": []}
         except PlanHealthError as exc:
             ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="PlanHealthError", mode=mode).inc()
             logger.warning("ErrorReplanBridge plan-health evaluation failed for user {}: {}", user_id, exc)
-            await self._notify_bridge_failure(user_id=user_id, category="PlanHealthError", error=str(exc))
+            await self._notify_bridge_failure(user_id=user_id, category="PlanHealthError", error=str(exc), locale=locale)
             return {"triggered": False, "reason": "plan_health_error", "plan_ids": []}
         except Exception as exc:
             ERROR_REPLAN_BRIDGE_ERROR_TOTAL.labels(category="UnknownError", mode=mode).inc()
             logger.exception("ErrorReplanBridge unknown failure for user {}", user_id)
-            await self._notify_bridge_failure(user_id=user_id, category="UnknownError", error=str(exc))
+            await self._notify_bridge_failure(user_id=user_id, category="UnknownError", error=str(exc), locale=locale)
             return {"triggered": False, "reason": "unknown_error", "plan_ids": []}
 
     async def _build_specialized_repair_match(
@@ -451,6 +454,7 @@ class ErrorReplanBridge:
         user_id: UUID,
         error: ErrorRecord,
         fallback_node_ids: list[UUID],
+        locale: str = "zh",
     ) -> MistakeClusterMatch | None:
         recent_errors = await self._load_recent_user_errors(
             user_id=user_id,
@@ -463,7 +467,7 @@ class ErrorReplanBridge:
         node_name_map = await self._load_node_name_map_for_errors(recent_errors)
         latest_match = self._match_sprint_pack_cluster(error, node_name_map)
         if latest_match is None:
-            latest_match = self._match_generic_cluster(error, node_name_map, fallback_node_ids=fallback_node_ids)
+            latest_match = self._match_generic_cluster(error, node_name_map, fallback_node_ids=fallback_node_ids, locale=locale)
         if latest_match is None:
             return None
 
@@ -483,6 +487,7 @@ class ErrorReplanBridge:
                         for value in (recent_error.linked_knowledge_node_ids or [])
                         if self._coerce_uuid(value) is not None
                     ],
+                    locale=locale,
                 )
             if candidate is None or candidate.cluster_id != latest_match.cluster_id:
                 break
@@ -579,7 +584,7 @@ class ErrorReplanBridge:
             payload["latest_error_at"] = latest_error.created_at.isoformat()
 
         if payload["recurring"]:
-            hypothesis, intervention = self._recurring_cause_guidance(cause_category, node_id=str(node_id))
+            hypothesis, intervention = self._recurring_cause_guidance(cause_category, node_id=str(node_id), locale="zh")
             payload.update(
                 {
                     "root_cause_hypothesis": hypothesis,
@@ -651,15 +656,14 @@ class ErrorReplanBridge:
                 return re.sub(r"[^\w]+", "_", value).strip("_")
         return None
 
-    def _recurring_cause_guidance(self, cause_category: str, *, node_id: str) -> tuple[str, str]:
-        guidance = self.RECURRING_CAUSE_INTERVENTIONS.get(cause_category)
-        if guidance is not None:
-            return guidance
+    def _recurring_cause_guidance(self, cause_category: str, *, node_id: str, locale: str = "zh") -> tuple[str, str]:
+        guidance_keys = self.RECURRING_CAUSE_INTERVENTIONS.get(cause_category)
+        if guidance_keys is not None:
+            hypothesis_key, intervention_key = guidance_keys
+            return I18n.t(hypothesis_key, locale=locale), I18n.t(intervention_key, locale=locale)
         return (
-            f"最近 30 天内，{node_id} 上同一错因“{cause_category}”已经重复出现，"
-            "更像是底层理解结构没有补齐，而不是一次性的粗心。",
-            "先暂停继续刷同类题，花 15-20 分钟回到概念的设计目的、判定条件和反例边界，"
-            "最后只做 1 道同型题验证这个错因是否消失。",
+            I18n.t("error_bridge.recurring_cause_fallback_hypothesis", locale=locale, node_id=node_id, cause=cause_category),
+            I18n.t("error_bridge.recurring_cause_fallback_intervention", locale=locale),
         )
 
     @staticmethod
@@ -796,7 +800,7 @@ class ErrorReplanBridge:
             best_score = score
             best_match = MistakeClusterMatch(
                 cluster_id=str(cluster.get("mistake_id") or cluster.get("id") or "").strip(),
-                cluster_label=str(cluster.get("label") or "专项错因").strip(),
+                cluster_label=str(cluster.get("label") or I18n.t("error_bridge.fallback_cluster_label", locale="zh")).strip(),
                 related_nodes=related_nodes,
                 related_node_labels=related_labels,
                 source="sprint_pack",
@@ -817,6 +821,7 @@ class ErrorReplanBridge:
         node_name_map: dict[str, str],
         *,
         fallback_node_ids: list[UUID],
+        locale: str = "zh",
     ) -> MistakeClusterMatch | None:
         feature_bundle = self._extract_error_feature_bundle(error, node_name_map)
         feature_text = str(feature_bundle["raw_text"])
@@ -844,11 +849,11 @@ class ErrorReplanBridge:
         related_nodes = tuple(str(node_id) for node_id in fallback_node_ids) or related_node_labels
         return MistakeClusterMatch(
             cluster_id=str(best_rule["cluster_id"]),
-            cluster_label=str(best_rule["label"]),
+            cluster_label=I18n.t(str(best_rule["label"]), locale=locale),
             related_nodes=related_nodes,
             related_node_labels=related_node_labels,
             source="generic_keyword",
-            repair_strategy=str(best_rule["repair_strategy"]),
+            repair_strategy=I18n.t(str(best_rule["repair_strategy"]), locale=locale),
             task_template_id=str(best_rule["task_template_id"]),
             pack_id=None,
             streak_count=0,
@@ -1031,11 +1036,12 @@ class ErrorReplanBridge:
         plan_id: UUID | None,
         match: MistakeClusterMatch,
         cohort_profile: dict[str, str] | None,
+        locale: str = "zh",
     ) -> tuple[str | None, str | None]:
         from app.schemas.notification import NotificationCreate
         from app.services.notification_service import NotificationService
 
-        task_payload = self._build_specialized_repair_task_payload(match)
+        task_payload = self._build_specialized_repair_task_payload(match, locale=locale)
         diagnosis_payload = {
             "node_ids": list(match.db_node_ids),
             "node_name": match.cluster_label,
@@ -1071,11 +1077,13 @@ class ErrorReplanBridge:
             outcome_window_days=14,
         )
 
-        title = "专项修复已准备"
-        description = (
-            f"我注意到你连续 {match.streak_count} 次在「{match.cluster_label}」上出错了。"
-            f"先暂停推进新内容，我准备了一个 {task_payload['estimated_minutes']} 分钟的专项修复任务，"
-            "你可以选择插到今天或明天。"
+        title = I18n.t("error_bridge.title_specialized_repair_ready", locale=locale)
+        description = I18n.t(
+            "error_bridge.desc_specialized_repair_ready",
+            locale=locale,
+            streak_count=match.streak_count,
+            cluster_label=match.cluster_label,
+            minutes=task_payload['estimated_minutes'],
         )
         notification = await NotificationService.create(
             self.db,
@@ -1093,9 +1101,9 @@ class ErrorReplanBridge:
                     "repair_cluster_label": match.cluster_label,
                     "same_cluster_streak": match.streak_count,
                     "schedule_options": [
-                        {"label": "插到今天", "action": "accepted", "action_payload": {"schedule": "today"}},
-                        {"label": "插到明天", "action": "accepted", "action_payload": {"schedule": "tomorrow"}},
-                        {"label": "先不了", "action": "dismissed", "action_payload": {"reason": "user_declined"}},
+                        {"label": I18n.t("error_bridge.schedule_today", locale=locale), "action": "accepted", "action_payload": {"schedule": "today"}},
+                        {"label": I18n.t("error_bridge.schedule_tomorrow", locale=locale), "action": "accepted", "action_payload": {"schedule": "tomorrow"}},
+                        {"label": I18n.t("error_bridge.schedule_decline", locale=locale), "action": "dismissed", "action_payload": {"reason": "user_declined"}},
                     ],
                     "repair_task_preview": task_payload,
                 },
@@ -1106,13 +1114,13 @@ class ErrorReplanBridge:
         await self.db.commit()
         return str(record.id), str(notification.id)
 
-    def _build_specialized_repair_task_payload(self, match: MistakeClusterMatch) -> dict[str, Any]:
+    def _build_specialized_repair_task_payload(self, match: MistakeClusterMatch, locale: str = "zh") -> dict[str, Any]:
         template = self._load_repair_template(match)
         template_steps = [str(step).strip() for step in (template.get("steps") or []) if str(step).strip()]
         step_instructions = [
-            f"先回看最近 {match.streak_count} 次错误，只写出这类题反复卡住的同一个触发点。",
+            I18n.t("error_bridge.repair_step_review", locale=locale, count=match.streak_count),
             *template_steps[:3],
-            "最后做 1 道同型检查题，只验证这一个错因簇有没有补到位。",
+            I18n.t("error_bridge.repair_step_final_check", locale=locale),
         ]
         deduped_steps: list[str] = []
         for step in step_instructions:
@@ -1120,14 +1128,14 @@ class ErrorReplanBridge:
                 deduped_steps.append(step)
 
         structured_steps = [{"index": index, "instruction": step} for index, step in enumerate(deduped_steps, start=1)]
-        output_action = self._output_action_for_template(match.task_template_id, match.cluster_label)
-        success_criteria = str(template.get("done_criteria") or "").strip() or (
-            f"能说清「{match.cluster_label}」的判断依据，并完成 1 道同型检查题。"
+        output_action = self._output_action_for_template(match.task_template_id, match.cluster_label, locale=locale)
+        success_criteria = str(template.get("done_criteria") or "").strip() or I18n.t(
+            "error_bridge.repair_success_criteria", locale=locale, cluster_label=match.cluster_label,
         )
-        objective = f"只攻克「{match.cluster_label}」这一个点，不推进新内容。"
+        objective = I18n.t("error_bridge.repair_objective", locale=locale, cluster_label=match.cluster_label)
 
         return {
-            "title": f"[专项修复] {match.cluster_label}",
+            "title": I18n.t("error_bridge.repair_task_title", locale=locale, cluster_label=match.cluster_label),
             "objective": objective,
             "steps": structured_steps,
             "method_steps": deduped_steps,
@@ -1135,8 +1143,8 @@ class ErrorReplanBridge:
             "estimated_minutes": self.SPECIALIZED_REPAIR_DURATION_MINUTES,
             "output_action": output_action,
             "success_criteria": success_criteria,
-            "micro_contract": "先暂停推进新内容，只修这一个错因簇；没修清前，不切去第二个主题。",
-            "fail_safe_rule": "这张卡只允许处理当前错因簇，不外扩到整章重学。",
+            "micro_contract": I18n.t("error_bridge.repair_micro_contract", locale=locale),
+            "fail_safe_rule": I18n.t("error_bridge.repair_fail_safe_rule", locale=locale),
             "repair_strategy": match.repair_strategy,
             "repair_cluster_id": match.cluster_id,
             "repair_cluster_label": match.cluster_label,
@@ -1187,15 +1195,15 @@ class ErrorReplanBridge:
             return "comparison_table_card"
         return "concept_recall_card"
 
-    def _output_action_for_template(self, template_id: str, cluster_label: str) -> str:
+    def _output_action_for_template(self, template_id: str, cluster_label: str, locale: str = "zh") -> str:
         normalized = str(template_id or "").strip().lower()
         if normalized == "process_trace_card":
-            return f"重画一版「{cluster_label}」的状态/时序图，并完成 1 道同型检查题。"
+            return I18n.t("error_bridge.repair_output_process_trace", locale=locale, cluster_label=cluster_label)
         if normalized == "calculation_drill_card":
-            return f"完成 2 道只验证「{cluster_label}」的同型题，并写出每一步依据。"
+            return I18n.t("error_bridge.repair_output_calculation_drill", locale=locale, cluster_label=cluster_label)
         if normalized == "comparison_table_card":
-            return f"做 1 张「{cluster_label}」对比表，并用自己的话解释核心区别。"
-        return f"闭卷复述「{cluster_label}」的关键判断点，并完成 1 个最小检查。"
+            return I18n.t("error_bridge.repair_output_comparison_table", locale=locale, cluster_label=cluster_label)
+        return I18n.t("error_bridge.repair_output_concept_recall", locale=locale, cluster_label=cluster_label)
 
     async def materialize_specialized_repair_task_from_record(
         self,
@@ -1228,7 +1236,7 @@ class ErrorReplanBridge:
         due_date = self._repair_due_date_from_action_payload(action_payload)
         anchor_task = await self._find_anchor_task_for_plan(user_id=user_id, plan_id=plan_id)
         cluster_label = str(
-            diagnosis.get("cluster_label") or task_payload.get("repair_cluster_label") or "专项修复"
+            diagnosis.get("cluster_label") or task_payload.get("repair_cluster_label") or I18n.t("error_bridge.fallback_repair_title", locale="zh")
         ).strip()
         priority_boost = await self._next_repair_priority(user_id=user_id, plan_id=plan_id)
 
@@ -1253,7 +1261,7 @@ class ErrorReplanBridge:
                 ),
                 difficulty=1,
                 energy_cost=1,
-                guide_content=str(task_payload.get("objective") or f"专项修复：{cluster_label}"),
+                guide_content=str(task_payload.get("objective") or I18n.t("error_bridge.fallback_guide_content", locale="zh", cluster_label=cluster_label)),
                 priority=priority_boost,
                 due_date=due_date,
                 knowledge_node_id=next(
@@ -1264,6 +1272,7 @@ class ErrorReplanBridge:
                 ai_prompt=self._build_specialized_repair_ai_prompt(
                     cluster_label=cluster_label,
                     task_payload=task_payload,
+                    locale="zh",
                 ),
                 source_planning_session_id=getattr(anchor_task, "source_planning_session_id", None),
                 phase_index=getattr(anchor_task, "phase_index", None),
@@ -1361,20 +1370,20 @@ class ErrorReplanBridge:
                 return value
         return "today"
 
-    def _build_specialized_repair_ai_prompt(self, *, cluster_label: str, task_payload: dict[str, Any]) -> str:
+    def _build_specialized_repair_ai_prompt(self, *, cluster_label: str, task_payload: dict[str, Any], locale: str = "zh") -> str:
         step_lines = "\n".join(
             f"{index}. {step}" for index, step in enumerate(task_payload.get("method_steps") or [], start=1)
         )
         return (
-            f"【专项修复主题】{cluster_label}\n"
-            f"【任务目标】{task_payload.get('objective')}\n"
-            f"【输出动作】{task_payload.get('output_action')}\n"
-            f"【完成标准】{task_payload.get('success_criteria')}\n"
-            f"【建议步骤】\n{step_lines}\n\n"
-            "【请帮我】\n"
-            "1. 只围绕这个错因簇做讲解，不扩到整章。\n"
-            "2. 先给最短纠偏路径，再给 1 道同型检查题。\n"
-            "3. 如果我答错，继续只修这个点，不换题型。"
+            f"{I18n.t('error_bridge.repair_ai_prompt_header', locale=locale, cluster_label=cluster_label)}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_objective', locale=locale, objective=task_payload.get('objective', ''))}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_output', locale=locale, output=task_payload.get('output_action', ''))}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_success', locale=locale, criteria=task_payload.get('success_criteria', ''))}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_steps', locale=locale)}\n{step_lines}\n\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_help', locale=locale)}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_help_1', locale=locale)}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_help_2', locale=locale)}\n"
+            f"{I18n.t('error_bridge.repair_ai_prompt_help_3', locale=locale)}"
         )
 
     @staticmethod
@@ -1526,6 +1535,7 @@ class ErrorReplanBridge:
         low_mastery_nodes: list[UUID],
         recent_error_count: int,
         intervention_id: str | None = None,
+        locale: str = "zh",
     ) -> None:
         """Emit a system update so the user sees the plan was adjusted due to errors."""
         try:
@@ -1533,19 +1543,17 @@ class ErrorReplanBridge:
 
             node_name = await self._resolve_node_name(low_mastery_nodes)
 
-            description = (
-                f"我注意到你在「{node_name}」上遇到了{recent_error_count}次相似的问题，"
-                "已经调整了本周计划，把相关任务移到了更早的时间段。"
-                if node_name
-                else f"你最近在同一知识点上遇到了{recent_error_count}次问题，我已经微调了本周计划。"
-            )
+            if node_name:
+                description = I18n.t("error_bridge.plan_adjusted_desc_with_node", locale=locale, node_name=node_name, count=recent_error_count)
+            else:
+                description = I18n.t("error_bridge.plan_adjusted_desc_fallback", locale=locale, count=recent_error_count)
 
             await SystemUpdateService(self.redis).enqueue(
                 user_id,
                 build_system_update(
                     update_type="plan_adjusted_from_error",
                     category="evolution",
-                    title="计划已根据你的错题调整",
+                    title=I18n.t("error_bridge.plan_adjusted_title", locale=locale),
                     description=description,
                     priority="normal",
                     metadata={
@@ -1566,6 +1574,7 @@ class ErrorReplanBridge:
         user_id: UUID,
         category: str,
         error: str,
+        locale: str = "zh",
     ) -> None:
         try:
             from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -1575,8 +1584,8 @@ class ErrorReplanBridge:
                 build_system_update(
                     update_type="error_bridge_failure",
                     category="system",
-                    title="计划校准暂时未完成",
-                    description="系统识别到了新的错题压力信号，但这次自动校准没有完整执行，稍后会继续重试。",
+                    title=I18n.t("error_bridge.bridge_failure_title", locale=locale),
+                    description=I18n.t("error_bridge.bridge_failure_desc", locale=locale),
                     priority="medium",
                     metadata={
                         "trigger": "error_replan_bridge",

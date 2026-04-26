@@ -27,6 +27,7 @@ from fastapi import WebSocket
 from loguru import logger
 
 from app.config import settings
+from app.core.i18n import I18n
 from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
 from app.db.session import AsyncSessionLocal
 from app.schemas.notification import NotificationCreate
@@ -357,20 +358,20 @@ class ConnectionManager:
     def _build_offline_notification(message: dict) -> tuple[str | None, str | None, str]:
         message_type = str(message.get("type", "system"))
         if message_type == "chat_message":
-            sender_name = message.get("sender_name") or "新消息"
-            body = str(message.get("content") or message.get("message") or "你收到了一条新聊天消息")
-            return f"{sender_name} 发来新消息", body[:240], "chat"
+            sender_name = message.get("sender_name") or I18n.t("notification.ws_chat_message_sender", locale="zh")
+            body = str(message.get("content") or message.get("message") or I18n.t("notification.ws_chat_message_body", locale="zh"))
+            return I18n.t("notification.ws_chat_message_title", locale="zh", sender=sender_name), body[:240], "chat"
         if message_type == "group_message":
-            group_name = message.get("group_name") or "群组"
-            body = str(message.get("content") or message.get("message") or "你收到一条新的群组消息")
-            return f"{group_name} 有新动态", body[:240], "group"
+            group_name = message.get("group_name") or I18n.t("notification.ws_group_message_group", locale="zh")
+            body = str(message.get("content") or message.get("message") or I18n.t("notification.ws_group_message_body", locale="zh"))
+            return I18n.t("notification.ws_group_message_title", locale="zh", group=group_name), body[:240], "group"
         if message_type == "system":
-            title = str(message.get("title") or "Sparkle 系统提醒")
-            body = str(message.get("message") or message.get("content") or "你有一条新的系统通知")
+            title = str(message.get("title") or I18n.t("notification.ws_system_title", locale="zh"))
+            body = str(message.get("message") or message.get("content") or I18n.t("notification.ws_system_body", locale="zh"))
             return title[:120], body[:240], "system"
         if message_type in {"action_required", "intervention", "reflection"}:
-            title = str(message.get("title") or "Sparkle 需要你的反馈")
-            body = str(message.get("message") or message.get("content") or "有一条待处理的提醒")
+            title = str(message.get("title") or I18n.t("notification.ws_action_title", locale="zh"))
+            body = str(message.get("message") or message.get("content") or I18n.t("notification.ws_action_body", locale="zh"))
             return title[:120], body[:240], "system"
         return None, None, "system"
 
@@ -691,43 +692,43 @@ class ConnectionManager:
     def _get_push_title(self, msg_type: str, message: dict) -> str:
         """Get push notification title based on message type."""
         titles = {
-            "message": "新消息",
-            "mention": "有人提到了你",
-            "member_joined": "新成员加入",
-            "member_left": "成员离开",
-            "task_created": "新任务",
-            "member_checkin": "成员打卡",
-            "message_edit": "消息已编辑",
-            "message_revoke": "消息已撤回",
-            "reaction_update": "新表情反应",
+            "message": I18n.t("notification.ws_push_title_new_message", locale="zh"),
+            "mention": I18n.t("notification.ws_push_title_mention", locale="zh"),
+            "member_joined": I18n.t("notification.ws_push_title_member_joined", locale="zh"),
+            "member_left": I18n.t("notification.ws_push_title_member_left", locale="zh"),
+            "task_created": I18n.t("notification.ws_push_title_task_created", locale="zh"),
+            "member_checkin": I18n.t("notification.ws_push_title_member_checkin", locale="zh"),
+            "message_edit": I18n.t("notification.ws_push_title_message_edit", locale="zh"),
+            "message_revoke": I18n.t("notification.ws_push_title_message_revoke", locale="zh"),
+            "reaction_update": I18n.t("notification.ws_push_title_reaction", locale="zh"),
         }
-        return titles.get(msg_type, "星火通知")
+        return titles.get(msg_type, I18n.t("notification.ws_push_title_default", locale="zh"))
 
     def _get_push_body(self, msg_type: str, message: dict) -> str:
         """Get push notification body based on message type."""
         if msg_type == "message":
             sender = message.get("sender", {})
             content = message.get("content", "")
-            nickname = sender.get("nickname", sender.get("username", "有人"))
-            return f"{nickname}: {content[:50]}"
+            nickname = sender.get("nickname", sender.get("username", I18n.t("common.someone", locale="zh")))
+            return I18n.t("notification.ws_push_body_message", locale="zh", nickname=nickname, content=content[:50])
         elif msg_type == "mention":
             sender = message.get("sender", {})
-            nickname = sender.get("nickname", "有人")
-            return f"{nickname} 在群里提到了你"
+            nickname = sender.get("nickname", I18n.t("common.someone", locale="zh"))
+            return I18n.t("notification.ws_push_body_mention", locale="zh", nickname=nickname)
         elif msg_type == "member_joined":
             user = message.get("user", {})
-            nickname = user.get("nickname", "新成员")
-            return f"{nickname} 加入了群聊"
+            nickname = user.get("nickname", I18n.t("common.team_member", locale="zh"))
+            return I18n.t("notification.ws_push_body_member_joined", locale="zh", nickname=nickname)
         elif msg_type == "task_created":
             task = message.get("task", {})
-            title = task.get("title", "新任务")
-            return f"群里有新任务: {title[:30]}"
+            title = task.get("title", I18n.t("notification.ws_push_title_task_created", locale="zh"))
+            return I18n.t("notification.ws_push_body_task_created", locale="zh", title=title[:30])
         elif msg_type == "member_checkin":
             user = message.get("user", {})
-            nickname = user.get("nickname", "成员")
+            nickname = user.get("nickname", I18n.t("common.team_member", locale="zh"))
             duration = message.get("duration", 0)
-            return f"{nickname} 打卡了 {duration} 分钟"
-        return "您有一条新消息"
+            return I18n.t("notification.ws_push_body_member_checkin", locale="zh", nickname=nickname, duration=duration)
+        return I18n.t("notification.ws_push_message", locale="zh")
 
     @staticmethod
     def _build_deep_link(message: dict) -> str | None:

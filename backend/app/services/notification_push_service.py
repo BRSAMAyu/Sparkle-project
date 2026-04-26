@@ -15,6 +15,7 @@ from uuid import UUID, uuid4
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import I18n
 from app.core.websocket import get_ws_manager
 from app.models.notification import Notification
 from app.services.notification_service import NotificationService
@@ -182,8 +183,8 @@ class NotificationPushService:
         Returns:
             创建的 Notification 对象
         """
-        title = "任务即将到期"
-        content = f"任务「{task_title}」将在 {minutes_until_due} 分钟后到期"
+        title = I18n.t("notification.task_reminder_title", locale="zh")
+        content = I18n.t("notification.task_reminder_content", locale="zh", title=task_title, minutes=minutes_until_due)
 
         return await self.create_and_push(
             user_id=user_id,
@@ -219,10 +220,10 @@ class NotificationPushService:
         Returns:
             创建的 Notification 对象
         """
-        title = "🏆 成就解锁！"
-        content = f"恭喜解锁成就「{achievement_name}」！"
+        title = I18n.t("notification.achievement_title", locale="zh")
+        content = I18n.t("notification.achievement_content", locale="zh", name=achievement_name)
         if is_first:
-            content += " 你是首位解锁者！"
+            content += I18n.t("notification.achievement_first", locale="zh")
 
         return await self.create_and_push(
             user_id=user_id,

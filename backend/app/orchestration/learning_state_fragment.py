@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+from app.core.i18n import I18n
 
 
 MAX_PAIN_POINTS = 3
@@ -59,15 +60,15 @@ def _format_error_summary(error_summary: dict[str, Any]) -> str:
     total_errors = error_summary.get("total_errors")
     if total_errors is not None:
         try:
-            parts.append(f"累计错题 {int(total_errors)}")
+            parts.append(I18n.t("learning_state.error_summary", locale="zh", count=int(total_errors)))
         except Exception:
-            parts.append(f"累计错题 {total_errors}")
+            parts.append(I18n.t("learning_state.error_summary", locale="zh", count=total_errors))
     need_review = error_summary.get("need_review_count") or error_summary.get("due_for_review")
     if need_review is not None:
         try:
-            parts.append(f"待复习 {int(need_review)}")
+            parts.append(I18n.t("learning_state.error_summary_review", locale="zh", count=int(need_review)))
         except Exception:
-            parts.append(f"待复习 {need_review}")
+            parts.append(I18n.t("learning_state.error_summary_review", locale="zh", count=need_review))
     subject_distribution = error_summary.get("subject_distribution")
     if isinstance(subject_distribution, dict) and subject_distribution:
         ranked = sorted(
@@ -79,7 +80,7 @@ def _format_error_summary(error_summary: dict[str, Any]) -> str:
             key=lambda item: (-item[1], item[0]),
         )
         if ranked:
-            parts.append(f"高频科目 {ranked[0][0]}")
+            parts.append(I18n.t("learning_state.error_high_freq_subject", locale="zh", subject=ranked[0][0]))
     return "；".join(parts)
 
 
@@ -107,7 +108,7 @@ def _collect_recent_pain_points(user_context: dict[str, Any]) -> tuple[list[str]
         subject = _strip(item.get("subject"))
         error_type = _strip(item.get("error_type"))
         detail = " / ".join(part for part in (subject, error_type) if part)
-        pain_points.append(f"{preview or '最近有一道题反复卡住'}{f'（{detail}）' if detail else ''}")
+        pain_points.append(f"{preview or I18n.t('learning_state.pain_point_recent', locale='zh')}{f'（{detail}）' if detail else ''}")
         source_signals.append("recent_errors")
         if len(pain_points) >= MAX_PAIN_POINTS:
             break
@@ -134,14 +135,14 @@ def _collect_recent_wins(user_context: dict[str, Any]) -> tuple[list[str], list[
         old_mastery = item.get("old_mastery")
         new_mastery = item.get("new_mastery")
         if old_mastery is None or new_mastery is None:
-            wins.append(f"{node_name} 最近有明显进步")
+            wins.append(I18n.t("learning_state.win_progress", locale="zh", node=node_name))
         else:
             try:
                 wins.append(
-                    f"{node_name} 掌握度从 {float(old_mastery):.0f}% 提升到 {float(new_mastery):.0f}%"
+                    I18n.t("learning_state.win_mastery", locale="zh", node=node_name, old=float(old_mastery), new=float(new_mastery))
                 )
             except Exception:
-                wins.append(f"{node_name} 掌握度从 {old_mastery} 提升到 {new_mastery}")
+                wins.append(f"{node_name} {old_mastery} -> {new_mastery}")
         source_signals.append("recent_mastery_changes")
         if len(wins) >= MAX_WINS:
             break
@@ -208,7 +209,7 @@ def build_learning_state_fragment(*, user_context: dict[str, Any] | None) -> Lea
             truncated = True
         summary = compact_summary
     else:
-        summary = "当前没有足够稳定的错题或掌握度变化信号，按冷启动处理。"
+        summary = I18n.t("learning_state.cold_start", locale="zh")
 
     budget = {
         "max_pain_points": MAX_PAIN_POINTS,

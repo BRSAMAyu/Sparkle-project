@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import I18n
 from app.models.error_book import ErrorRecord
 from app.models.nightly_review import NightlyReview
 from app.models.user_state import UserStateSnapshot
@@ -139,15 +140,12 @@ class NightlyReviewService:
         )
         return list(result.scalars().all())
 
-    def _build_summary(self, errors: list[ErrorRecord], target_date: date) -> str:
+    def _build_summary(self, errors: list[ErrorRecord], target_date: date, locale: str = "zh") -> str:
         if not errors:
-            return f"{target_date.isoformat()} 没有新错题，保持节奏。"
+            return I18n.t("nightly_review.no_errors", locale=locale, date=target_date.isoformat())
 
         subjects = sorted({e.subject_code for e in errors})
-        return (
-            f"{target_date.isoformat()} 共记录 {len(errors)} 道错题，"
-            f"主要集中在 {', '.join(subjects)}。"
-        )
+        return I18n.t("nightly_review.with_errors", locale=locale, date=target_date.isoformat(), count=len(errors), subjects=", ".join(subjects))
 
     def _build_todos(self, errors: list[ErrorRecord]):
         if not errors:
@@ -160,7 +158,7 @@ class NightlyReviewService:
                     "payload": {
                         "error_id": str(error.id),
                         "subject_code": error.subject_code,
-                        "title": f"{error.subject_code} 错题复盘",
+                        "title": I18n.t("nightly_review.todo_title", locale="zh", subject=error.subject_code),
                     },
                 }
             )

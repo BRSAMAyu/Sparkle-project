@@ -5,117 +5,116 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
+from app.core.i18n import I18n
 
-AGENT_DISPLAY_CONFIG: dict[str, dict[str, str]] = {
+
+AGENT_DISPLAY_I18N_KEYS: dict[str, dict[str, str]] = {
     "orchestrator": {
-        "display_name": "协调器",
-        "icon": "layers",
-        "color": "#5F6CAF",
-        "description": "负责整合专家视角与最终结论",
+        "display_name": "agent_activity.orchestrator_name",
+        "description": "agent_activity.orchestrator_desc",
     },
     "synthesis": {
-        "display_name": "综合结论",
-        "icon": "layers",
-        "color": "#5F6CAF",
-        "description": "整合专家讨论并给出结论",
+        "display_name": "agent_activity.synthesis_name",
+        "description": "agent_activity.synthesis_desc",
     },
     "galaxy_guide": {
-        "display_name": "星图导航",
-        "icon": "constellation",
-        "color": "#6C5CE7",
-        "description": "知识图谱导航与关联",
+        "display_name": "agent_activity.galaxy_guide_name",
+        "description": "agent_activity.galaxy_guide_desc",
     },
     "exam_oracle": {
-        "display_name": "考试策略师",
-        "icon": "target",
-        "color": "#E17055",
-        "description": "考试规划与出题策略",
+        "display_name": "agent_activity.exam_oracle_name",
+        "description": "agent_activity.exam_oracle_desc",
     },
     "time_tutor": {
-        "display_name": "时间教练",
-        "icon": "clock",
-        "color": "#00B894",
-        "description": "时间管理与学习节奏",
+        "display_name": "agent_activity.time_tutor_name",
+        "description": "agent_activity.time_tutor_desc",
     },
     "deep_analyst": {
-        "display_name": "深度分析师",
-        "icon": "microscope",
-        "color": "#0984E3",
-        "description": "概念深入分析与拆解",
+        "display_name": "agent_activity.deep_analyst_name",
+        "description": "agent_activity.deep_analyst_desc",
     },
     "error_analyst": {
-        "display_name": "纠错专家",
-        "icon": "debug",
-        "color": "#D63031",
-        "description": "错误诊断与纠正",
+        "display_name": "agent_activity.error_analyst_name",
+        "description": "agent_activity.error_analyst_desc",
     },
     "study_buddy": {
-        "display_name": "学伴",
-        "icon": "handshake",
-        "color": "#FDCB6E",
-        "description": "日常学习陪伴与鼓励",
+        "display_name": "agent_activity.study_buddy_name",
+        "description": "agent_activity.study_buddy_desc",
     },
     "math_expert": {
-        "display_name": "数学专家",
-        "icon": "calculator",
-        "color": "#6C5CE7",
-        "description": "数学推理与解题",
+        "display_name": "agent_activity.math_expert_name",
+        "description": "agent_activity.math_expert_desc",
     },
     "math_agent": {
-        "display_name": "数学专家",
-        "icon": "calculator",
-        "color": "#6C5CE7",
-        "description": "数学推理与解题",
+        "display_name": "agent_activity.math_expert_name",
+        "description": "agent_activity.math_expert_desc",
     },
     "code_expert": {
-        "display_name": "编程专家",
-        "icon": "code",
-        "color": "#00CEC9",
-        "description": "代码分析与编写",
+        "display_name": "agent_activity.code_expert_name",
+        "description": "agent_activity.code_expert_desc",
     },
     "code_agent": {
-        "display_name": "编程专家",
-        "icon": "code",
-        "color": "#00CEC9",
-        "description": "代码分析与编写",
+        "display_name": "agent_activity.code_expert_name",
+        "description": "agent_activity.code_expert_desc",
     },
     "writing_expert": {
-        "display_name": "写作专家",
-        "icon": "pen",
-        "color": "#E84393",
-        "description": "文本写作与润色",
+        "display_name": "agent_activity.writing_expert_name",
+        "description": "agent_activity.writing_expert_desc",
     },
     "writing_agent": {
-        "display_name": "写作专家",
-        "icon": "pen",
-        "color": "#E84393",
-        "description": "文本写作与润色",
+        "display_name": "agent_activity.writing_expert_name",
+        "description": "agent_activity.writing_expert_desc",
     },
     "science_expert": {
-        "display_name": "理科专家",
-        "icon": "flask",
-        "color": "#00B894",
-        "description": "自然科学分析",
+        "display_name": "agent_activity.science_expert_name",
+        "description": "agent_activity.science_expert_desc",
     },
     "science_agent": {
-        "display_name": "理科专家",
-        "icon": "flask",
-        "color": "#00B894",
-        "description": "自然科学分析",
+        "display_name": "agent_activity.science_expert_name",
+        "description": "agent_activity.science_expert_desc",
     },
     "search_expert": {
-        "display_name": "搜索专家",
-        "icon": "search",
-        "color": "#636E72",
-        "description": "信息检索与整合",
+        "display_name": "agent_activity.search_expert_name",
+        "description": "agent_activity.search_expert_desc",
     },
     "search_agent": {
-        "display_name": "搜索专家",
-        "icon": "search",
-        "color": "#636E72",
-        "description": "信息检索与整合",
+        "display_name": "agent_activity.search_expert_name",
+        "description": "agent_activity.search_expert_desc",
     },
 }
+
+AGENT_DISPLAY_CONFIG: dict[str, dict[str, str]] = {}
+for _agent_id, _keys in AGENT_DISPLAY_I18N_KEYS.items():
+    AGENT_DISPLAY_CONFIG[_agent_id] = {
+        "display_name": I18n.t(_keys["display_name"], locale="zh"),
+        "icon": _get_default_icon(_agent_id),
+        "color": _get_default_color(_agent_id),
+        "description": I18n.t(_keys["description"], locale="zh"),
+    }
+
+
+def _get_default_icon(agent_id: str) -> str:
+    icons = {
+        "orchestrator": "layers", "synthesis": "layers", "galaxy_guide": "constellation",
+        "exam_oracle": "target", "time_tutor": "clock", "deep_analyst": "microscope",
+        "error_analyst": "debug", "study_buddy": "handshake", "math_expert": "calculator",
+        "math_agent": "calculator", "code_expert": "code", "code_agent": "code",
+        "writing_expert": "pen", "writing_agent": "pen", "science_expert": "flask",
+        "science_agent": "flask", "search_expert": "search", "search_agent": "search",
+    }
+    return icons.get(agent_id, "bot")
+
+
+def _get_default_color(agent_id: str) -> str:
+    colors = {
+        "orchestrator": "#5F6CAF", "synthesis": "#5F6CAF", "galaxy_guide": "#6C5CE7",
+        "exam_oracle": "#E17055", "time_tutor": "#00B894", "deep_analyst": "#0984E3",
+        "error_analyst": "#D63031", "study_buddy": "#FDCB6E", "math_expert": "#6C5CE7",
+        "math_agent": "#6C5CE7", "code_expert": "#00CEC9", "code_agent": "#00CEC9",
+        "writing_expert": "#E84393", "writing_agent": "#E84393", "science_expert": "#00B894",
+        "science_agent": "#00B894", "search_expert": "#636E72", "search_agent": "#636E72",
+    }
+    return colors.get(agent_id, "#636E72")
 
 
 @dataclass
