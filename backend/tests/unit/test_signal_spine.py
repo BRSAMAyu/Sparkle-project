@@ -1219,3 +1219,191 @@ async def test_self_model_serialization():
     d2 = outcome.to_dict()
     assert d2["outcome_id"] == "smo_test"
     assert d2["attribution"]["effect"] == "effective"
+
+
+# ── P1-1: AchievementReinforcementConsumer Tests ──────────────────
+
+from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
+
+
+@pytest.fixture
+def achievement_consumer():
+    return AchievementReinforcementConsumer()
+
+
+def test_achievement_high_momentum(achievement_consumer):
+    """7天解锁3个成就+2连击 → momentum >= 0.7 → high signal。"""
+    signal = achievement_consumer.process_achievement_event(
+        user_id="u1",
+        event_type="achievement.unlocked",
+        recent_unlocks=3,
+        active_streaks=2,
+        in_progress_count=4,
+    )
+    assert signal is not None
+    assert signal.claim == "momentum_high"
+    assert signal.state_key == "growth_momentum"
+    assert signal.priority == "low"
+
+
+def test_achievement_stalled_momentum(achievement_consumer):
+    """0解锁但有进行中 → stalled signal。"""
+    signal = achievement_consumer.process_achievement_event(
+        user_id="u1",
+        event_type="achievement.progress",
+        recent_unlocks=0,
+        active_streaks=0,
+        in_progress_count=3,
+    )
+    assert signal is not None
+    assert signal.claim == "momentum_stalled"
+    assert signal.priority == "medium"
+
+
+def test_achievement_moderate_no_signal(achievement_consumer):
+    """中等动量 → 不产生信号。"""
+    signal = achievement_consumer.process_achievement_event(
+        user_id="u1",
+        event_type="achievement.progress",
+        recent_unlocks=1,
+        active_streaks=1,
+        in_progress_count=2,
+    )
+    assert signal is None
+
+
+def test_achievement_zero_no_signal(achievement_consumer):
+    """零活跃零进度 → 不产生 stalled（in_progress=0）。"""
+    signal = achievement_consumer.process_achievement_event(
+        user_id="u1",
+        event_type="achievement.progress",
+        recent_unlocks=0,
+        active_streaks=0,
+        in_progress_count=0,
+    )
+    assert signal is None
+
+
+def test_achievement_momentum_score_calculation(achievement_consumer):
+    """动量分数计算验证。"""
+    m = achievement_consumer.compute_momentum(
+        user_id="u1", recent_unlocks=4, active_streaks=3, in_progress_count=5,
+    )
+    assert m.momentum_score == 1.0  # 全部满分
+    assert m.recent_unlocks == 4
+    assert m.active_streaks == 3
+
+
+def test_achievement_momentum_serialization(achievement_consumer):
+    """AchievementMomentum to_dict。"""
+    m = achievement_consumer.compute_momentum(
+        user_id="u1", recent_unlocks=1, active_streaks=0, in_progress_count=1,
+    )
+    d = m.to_dict()
+    assert d["user_id"] == "u1"
+    assert "momentum_score" in d
+
+
+# ── P1-4: RecallOpportunity Tests ─────────────────────────────────
+
+from app.signals.recall_opportunity import RecallOpportunityDetector
+
+
+@pytest.fixture
+def recall_detector():
+    return RecallOpportunityDetector()
+
+
+def test_recall_undigested_material(recall_detector):
+    """上传了资料但没诊断 → 触发召回。"""
+    trigger = recall_detector.check_undigested_material(
+        user_id="u1", uploaded_files_count=3, diagnosed_files_count=1,
+        hours_since_upload=2.0,
+    )
+    assert trigger is not None
+    assert trigger.trigger_type == "undigested_material"
+    assert trigger.context["undigested"] == 2
+
+
+def test_recall_no_trigger_all_diagnosed(recall_detector):
+    """所有资料都诊断了 → 不触发。"""
+    trigger = recall_detector.check_undigested_material(
+        user_id="u1", uploaded_files_count=2, diagnosed_files_count=2,
+        hours_since_upload=5.0,
+    )
+    assert trigger is None
+
+
+def test_recall_task_not_started(recall_detector):
+    """任务超过 1 小时未启动 → 触发召回。"""
+    trigger = recall_detector.check_task_not_started(
+        user_id="u1", task_id="t1", hours_since_assignment=2.0,
+        has_started=False,
+    )
+    assert trigger is not None
+    assert trigger.trigger_type == "task_not_started"
+
+
+def test_recall_task_started_no_trigger(recall_detector):
+    """任务已启动 → 不触发。"""
+    trigger = recall_detector.check_task_not_started(
+        user_id="u1", task_id="t1", hours_since_assignment=5.0,
+        has_started=True,
+    )
+    assert trigger is None
+
+
+def test_recall_task_too_recent(recall_detector):
+    """任务分配不到 1 小时 → 不触发。"""
+    trigger = recall_detector.check_task_not_started(
+        user_id="u1", task_id="t1", hours_since_assignment=0.5,
+        has_started=False,
+    )
+    assert trigger is None
+
+
+def test_recall_task_missed(recall_detector):
+    """任务错过 deadline → 高优先级召回。"""
+    trigger = recall_detector.check_task_missed(
+        user_id="u1", task_id="t1", deadline_hours=-3.0,
+        is_completed=False,
+    )
+    assert trigger is not None
+    assert trigger.urgency == "high"
+
+
+def test_recall_pre_exam_silence(recall_detector):
+    """考前 48h 沉默 → 触发召回。"""
+    trigger = recall_detector.check_pre_exam_silence(
+        user_id="u1", exam_deadline_days=1.5,
+        hours_since_last_activity=5.0,
+    )
+    assert trigger is not None
+    assert trigger.trigger_type == "pre_exam_silence"
+
+
+def test_recall_pre_exam_still_active(recall_detector):
+    """考前但用户还活跃 → 不触发。"""
+    trigger = recall_detector.check_pre_exam_silence(
+        user_id="u1", exam_deadline_days=1.0,
+        hours_since_last_activity=0.5,
+    )
+    assert trigger is None
+
+
+def test_recall_to_actionable_signal(recall_detector):
+    """RecallTrigger → ActionableSignal 转换。"""
+    trigger = recall_detector.check_pre_exam_silence(
+        user_id="u1", exam_deadline_days=0.5,
+        hours_since_last_activity=10.0,
+    )
+    signal = recall_detector.to_actionable_signal(trigger)
+    assert signal.state_key == "recall_needed"
+    assert signal.claim == "pre_exam_silence"
+    assert signal.confidence == 0.80
+
+
+def test_recall_cooldown(recall_detector):
+    """冷却期返回正确值。"""
+    assert recall_detector.get_cooldown_seconds("pre_exam_silence") == 1800
+    assert recall_detector.get_cooldown_seconds("task_not_started") == 7200
