@@ -1826,3 +1826,152 @@ async def test_spine_recall_no_trigger(spine):
         has_started=False,
     )
     assert trace is None
+
+
+# ── P2 Extended Integration Tests ─────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_spine_exam_rescue_pipeline(spine):
+    """on_first_message → exam rescue → trace with policy。"""
+    trace = await spine.on_first_message(
+        user_id="u1",
+        message="我7天后计网考试，零基础，想先别挂",
+    )
+    assert trace is not None
+    assert "first_message_exam_rescue" in trace.raw_event_ids
+
+
+@pytest.mark.asyncio
+async def test_spine_exam_no_rescue(spine):
+    """on_first_message → normal chat → None。"""
+    trace = await spine.on_first_message(
+        user_id="u1",
+        message="你好，我想学一下编程",
+    )
+    assert trace is None
+
+
+@pytest.mark.asyncio
+async def test_spine_stale_return(spine):
+    """on_user_return → stale → trace。"""
+    trace = await spine.on_user_return(
+        user_id="u1",
+        time_context={
+            "now": "2026-04-27T12:00:00Z",
+            "timezone": "Asia/Shanghai",
+            "goal_deadline": None,
+            "last_user_interaction_at": "2026-04-27T10:00:00Z",
+            "elapsed_since_last_interaction_min": 120,
+            "active_task_id": "t1",
+            "deadline_phase": "normal_sprint",
+        },
+    )
+    assert trace is not None
+
+
+@pytest.mark.asyncio
+async def test_spine_not_stale(spine):
+    """on_user_return → not stale → None。"""
+    trace = await spine.on_user_return(
+        user_id="u1",
+        time_context={
+            "now": "2026-04-27T12:00:00Z",
+            "timezone": "Asia/Shanghai",
+            "goal_deadline": None,
+            "last_user_interaction_at": "2026-04-27T11:30:00Z",
+            "elapsed_since_last_interaction_min": 30,
+            "active_task_id": "t1",
+            "deadline_phase": "normal_sprint",
+        },
+    )
+    assert trace is None
+
+
+@pytest.mark.asyncio
+async def test_spine_build_state_packet(spine):
+    """build_state_packet → ActionableStatePacket。"""
+    packet = await spine.build_state_packet(user_id="u1")
+    assert packet.user_id == "u1"
+    assert isinstance(packet.top_states, list)
+
+
+@pytest.mark.asyncio
+async def test_spine_community_cohort_pipeline(spine):
+    """on_community_cohort_data → pattern detected → trace。"""
+    trace = await spine.on_community_cohort_data(
+        user_id="u1",
+        knowledge_node_id="tcp",
+        subject="cn",
+        mistake_type="confusion",
+        cohort_size=10,
+        error_count=7,
+        common_misconception="test",
+    )
+    assert trace is not None
+    assert "community_cohort_mistake" in trace.raw_event_ids
+
+
+@pytest.mark.asyncio
+async def test_spine_community_no_pipeline(spine):
+    """on_community_cohort_data → too few peers → None。"""
+    trace = await spine.on_community_cohort_data(
+        user_id="u1",
+        knowledge_node_id="tcp",
+        subject="cn",
+        mistake_type="confusion",
+        cohort_size=3,
+        error_count=2,
+        common_misconception="test",
+    )
+    assert trace is None
+
+
+@pytest.mark.asyncio
+async def test_spine_community_resource_pipeline(spine):
+    """on_community_resource_data → resource recommended → trace。"""
+    trace = await spine.on_community_resource_data(
+        user_id="u1",
+        resource_id="r1",
+        resource_title="计网速通",
+        subject="cn",
+        peer_count=8,
+        relevance_score=0.8,
+    )
+    assert trace is not None
+
+
+def test_spine_aurora_wake_check(spine):
+    """check_aurora_wake → eligible。"""
+    result = spine.check_aurora_wake(
+        user_id="u1",
+        quota_remaining=2,
+        cooldown_status="available",
+        consecutive_negative_outcomes=3,
+    )
+    assert result.can_wake is True
+
+
+def test_spine_aurora_wake_denied(spine):
+    """check_aurora_wake → no reason → denied。"""
+    result = spine.check_aurora_wake(
+        user_id="u1",
+        quota_remaining=2,
+        cooldown_status="available",
+    )
+    assert result.can_wake is False
+
+
+@pytest.mark.asyncio
+async def test_spine_self_model_outcome(spine):
+    """record_strategy_outcome → outcome recorded。"""
+    claim = await spine.self_model.record_claim(
+        user_id="u1", claim="test strategy", confidence=0.6, scope="current_sprint",
+    )
+    outcome = await spine.record_strategy_outcome(
+        user_id="u1",
+        directive_id="dir_001",
+        claim_id=claim.claim_id,
+        expected_outcome="user completes task",
+        actual_outcome={"completed": True, "user_feedback": ""},
+    )
+    assert outcome.attribution["effect"] == "effective"

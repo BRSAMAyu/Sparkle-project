@@ -18,6 +18,13 @@ from app.signals.policy_engine import PolicyEngine
 from app.signals.task_timeout_detector import TaskTimeoutDetector
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.recall_opportunity import RecallOpportunityDetector
+from app.signals.exam_rescue_detector import ExamRescueDetector
+from app.signals.stale_state_guard import StaleStateGuard
+from app.signals.state_packet_builder import ActionableStatePacketBuilder
+from app.signals.self_model import SparkleSelfModelService
+from app.signals.community_signal import CommunitySignalDetector
+from app.signals.predicted_reply_options import SpineReplyOptionEngine
+from app.signals.aurora_wake import AuroraWakeJudge
 from app.signals.types import (
     ActionableSignal,
     CausalTrace,
@@ -49,6 +56,13 @@ class SpineOrchestrator:
         self.policy_engine = PolicyEngine()
         self.achievement_consumer = AchievementReinforcementConsumer()
         self.recall_detector = RecallOpportunityDetector()
+        self.exam_rescue = ExamRescueDetector()
+        self.stale_guard = StaleStateGuard()
+        self.state_packet_builder = ActionableStatePacketBuilder()
+        self.self_model = SparkleSelfModelService(redis_client)
+        self.community_detector = CommunitySignalDetector()
+        self.reply_engine = SpineReplyOptionEngine()
+        self.wake_judge = AuroraWakeJudge()
 
     async def on_task_completed(
         self,
@@ -364,3 +378,183 @@ class SpineOrchestrator:
             decision.policy_decision_id,
         )
         return trace
+
+    # ── P0-1 Integration: FirstMinuteSnapshot / ExamRescue ─────────────
+
+    async def on_first_message(
+        self,
+        *,
+        user_id: str,
+        message: str,
+    ) -> CausalTrace | None:
+        """首条消息 → ExamRescueDetector → PolicyEngine → trace。"""
+        snapshot = self.exam_rescue.analyze_first_message(message)
+        if snapshot is None:
+            return None
+
+        signal = self.exam_rescue.to_actionable_signal(snapshot, user_id=user_id)
+        if signal is None:
+            return None
+
+        return await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=["first_message_exam_rescue"],
+        )
+
+    # ── P0-2 Integration: StaleStateGuard ──────────────────────────────
+
+    async def on_user_return(
+        self,
+        *,
+        user_id: str,
+        time_context: dict,
+    ) -> CausalTrace | None:
+        """用户返回 → StaleStateGuard 检测 → trace。"""
+        from app.signals.stale_state_guard import TimeContext
+        tc = TimeContext(**time_context)
+        packet = self.stale_guard.check(tc)
+        if packet is None:
+            return None
+
+        trace = await self.trace_store.create_trace()
+        trace.raw_event_ids.append("user_return_stale")
+        await self.trace_store.link_to_user(user_id, trace.trace_id)
+        trace.outcome_to_measure = ["user_responded_to_stale_check"]
+        await self.trace_store._save_trace(trace)
+
+        logger.info("Spine stale: user={} elapsed={}min", user_id, tc.elapsed_since_last_interaction_min)
+        return trace
+
+    # ── P0-3 Integration: ActionableStatePacket ────────────────────────
+
+    async def build_state_packet(
+        self,
+        *,
+        user_id: str,
+        active_signals: list[ActionableSignal] | None = None,
+        goal_frame: dict | None = None,
+    ) -> ActionableStatePacket:
+        """构建当前用户的 ActionableStatePacket 供下游消费。"""
+        directive = await self.get_active_directive(user_id)
+        return self.state_packet_builder.build(
+            user_id=user_id,
+            active_signals=active_signals or [],
+            active_directive=directive,
+            goal_frame=goal_frame,
+        )
+
+    # ── P1-3 Integration: PredictedReplyOptions ────────────────────────
+
+    def generate_reply_options(self, signal: ActionableSignal):
+        """为确认问题生成预测回答选项。"""
+        return self.reply_engine.generate_options(signal)
+
+    def process_reply_selection(self, question, selected_option_id: str, freeform_text: str | None = None) -> dict:
+        """处理用户选择的回答选项，返回状态补丁。"""
+        return self.reply_engine.process_user_selection(question, selected_option_id, freeform_text)
+
+    # ── P1-5 Integration: SelfModel ─────────────────────────────────────
+
+    async def record_strategy_outcome(
+        self,
+        *,
+        user_id: str,
+        directive_id: str,
+        claim_id: str,
+        expected_outcome: str,
+        actual_outcome: dict,
+    ):
+        """记录策略执行结果到自我模型。"""
+        return await self.self_model.record_outcome(
+            user_id=user_id,
+            directive_id=directive_id,
+            claim_id=claim_id,
+            expected_outcome=expected_outcome,
+            actual_outcome=actual_outcome,
+        )
+
+    # ── P1-6 Integration: CommunitySignal ───────────────────────────────
+
+    async def on_community_cohort_data(
+        self,
+        *,
+        user_id: str,
+        knowledge_node_id: str,
+        subject: str,
+        mistake_type: str,
+        cohort_size: int,
+        error_count: int,
+        common_misconception: str,
+    ) -> CausalTrace | None:
+        """社群错因数据 → CommunitySignalDetector → PolicyEngine → trace。"""
+        pattern = self.community_detector.detect_cohort_mistake(
+            knowledge_node_id=knowledge_node_id,
+            subject=subject,
+            mistake_type=mistake_type,
+            cohort_size=cohort_size,
+            error_count=error_count,
+            common_misconception=common_misconception,
+        )
+        if pattern is None:
+            return None
+
+        signal = self.community_detector.to_actionable_signal(pattern)
+        return await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=["community_cohort_mistake"],
+        )
+
+    async def on_community_resource_data(
+        self,
+        *,
+        user_id: str,
+        resource_id: str,
+        resource_title: str,
+        subject: str,
+        peer_count: int,
+        relevance_score: float,
+    ) -> CausalTrace | None:
+        """社群资料推荐 → CommunitySignalDetector → PolicyEngine → trace。"""
+        rec = self.community_detector.detect_shared_resource(
+            resource_id=resource_id,
+            resource_title=resource_title,
+            subject=subject,
+            recommendation_reason="highly_rated_by_cohort",
+            peer_count=peer_count,
+            relevance_score=relevance_score,
+        )
+        if rec is None:
+            return None
+
+        signal = self.community_detector.to_actionable_signal(rec)
+        return await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=["community_shared_resource"],
+        )
+
+    # ── P1-2 Integration: AuroraWake ────────────────────────────────────
+
+    def check_aurora_wake(
+        self,
+        *,
+        user_id: str,
+        quota_remaining: int,
+        cooldown_status: str,
+        cooldown_minutes_left: int = 0,
+        consecutive_negative_outcomes: int = 0,
+        user_requested_deep_review: bool = False,
+        momentum_stalled: bool = False,
+    ):
+        """判断是否可以唤醒完整 Aurora Session。"""
+        return self.wake_judge.judge(
+            user_id=user_id,
+            quota_remaining=quota_remaining,
+            cooldown_status=cooldown_status,
+            cooldown_minutes_left=cooldown_minutes_left,
+            consecutive_negative_outcomes=consecutive_negative_outcomes,
+            user_requested_deep_review=user_requested_deep_review,
+            momentum_stalled=momentum_stalled,
+        )
