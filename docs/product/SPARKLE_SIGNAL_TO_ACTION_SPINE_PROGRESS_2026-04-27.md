@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-214/214 tests passing:
+222/222 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
@@ -192,6 +192,7 @@
 - Layer 6 UXDirective: 14 tests (11 standalone + 1 integration + 2 edge)
 - Opus review regression tests: 3 tests (trace IDs, material_underutilized, ModelWriteEntry.from_dict)
 - Layer 8 OutcomeRecorder: 10 tests (7 standalone + 2 integration + 1 serialization)
+- Decision Realization Metrics: 8 tests (6 standalone + 2 integration)
 
 ---
 
@@ -546,6 +547,39 @@
 
 ---
 
+## Decision Realization Score — 10 核心指标
+
+**目标**: 验证 AI 判断是否真正改变了系统行动，并改善了结果 (Final Spec Section 22)
+
+### 核心指标
+
+| 指标 | 含义 | 公式 |
+|------|------|------|
+| signal_to_state_rate | 高价值信号进入状态的比例 | signals_entered_state / signals_generated |
+| state_to_policy_rate | 状态触发策略裁决的比例 | policies_evaluated / signals_entered_state |
+| policy_to_directive_rate | 策略变成 directive 的比例 | directives_generated / policies_evaluated |
+| directive_application_rate | directive 被下游执行的比例 | directives_applied / directives_generated |
+| output_change_rate | 执行后输出真正改变的比例 | outputs_changed / directives_applied |
+| user_visible_receipt_rate | 用户感知到改变的比例 | receipts_shown / directives_applied |
+| outcome_feedback_rate | 改变后记录结果的比例 | outcomes_recorded / directives_applied |
+| intervention_effectiveness | 干预可能有效的比例 | effective_attributions / outcomes_recorded |
+| retraction_rate | 系统撤销错误判断的比例 | retractions / receipts_shown |
+| orphan_signal_count | 发出但无人消费的信号数量 | gauge (not ratio) |
+
+### 验收标准
+
+- [x] 10 个指标定义完整
+- [x] SpineMetricsCollector 支持 increment / get_counter / snapshot / reset
+- [x] Pipeline 自动采集：signal_generated / signal_entered_state / policy_evaluated / directive_generated / receipt_shown
+- [x] apply_directive_to_task_spec 采集 directive_applied / outputs_changed
+- [x] record_outcome 采集 outcomes_recorded / effective_attributions
+- [x] handle_user_receipt_action 采集 retractions / outcomes (confirm/dismiss)
+- [x] snapshot() 计算所有比例（零分母安全）
+- [x] orphan_signal 在 policy 不匹配时递增
+- [x] Opus review C1-C3 已修复
+
+---
+
 ## P3: Production Event Handler Wiring
 
 **目标**: SpineOrchestrator 方法接入生产代码的事件处理器
@@ -711,6 +745,7 @@
 | ModelWriteDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
 | UXDirective | ✅ 完成 | `signals/types.py`, `signals/policy_engine.py` |
 | OutcomeRecord | ✅ 完成 | `signals/types.py`, `signals/outcome_recorder.py` |
+| SpineMetricsCollector | ✅ 完成 | `signals/spine_metrics.py` |
 
 ### 架构原则检查清单
 

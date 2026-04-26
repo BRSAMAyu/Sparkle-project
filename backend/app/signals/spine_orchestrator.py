@@ -283,6 +283,7 @@ class SpineOrchestrator:
             # 用户纠正 → 清除 directive，记录到 self_model
             await self.trace_store.clear_active_directive(user_id)
             logger.info("User corrected receipt {} — directive cleared", receipt_id)
+            await self.metrics.record_retraction()
 
             # 记录纠正到 self_model
             try:
@@ -296,6 +297,10 @@ class SpineOrchestrator:
                 )
             except Exception as exc:
                 logger.warning("Failed to record user correction to self_model: {}", exc)
+        elif action == "confirm":
+            await self.metrics.record_outcome_recorded(effective=True)
+        elif action == "dismiss":
+            await self.metrics.record_outcome_recorded(effective=False)
 
         # 清除 receipt
         await self.redis.delete(f"spine:receipt:{user_id}:latest")
@@ -759,13 +764,15 @@ class SpineOrchestrator:
         actual_outcome: dict[str, Any],
     ):
         """记录干预结果并执行因果归因。"""
-        return await self.outcome_recorder.record_outcome(
+        record = await self.outcome_recorder.record_outcome(
             trace=trace,
             intervention=intervention,
             reason=reason,
             expected_outcome=expected_outcome,
             actual_outcome=actual_outcome,
         )
+        await self.metrics.record_outcome_recorded(effective=record.attribution == "effective")
+        return record
 
     async def get_outcome_for_trace(self, trace_id: str):
         """获取 CausalTrace 对应的 OutcomeRecord。"""

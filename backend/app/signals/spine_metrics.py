@@ -26,7 +26,7 @@ METRIC_DEFINITIONS = {
     "state_to_policy_rate": {
         "description": "状态变化有多少触发策略裁决",
         "numerator": "policies_evaluated",
-        "denominator": "states_active",
+        "denominator": "signals_entered_state",
     },
     "policy_to_directive_rate": {
         "description": "策略有多少变成 directive",
@@ -108,7 +108,7 @@ class SpineMetricsCollector:
         # Fetch all counter values
         counter_names = {
             "signals_generated", "signals_entered_state",
-            "states_active", "policies_evaluated",
+            "policies_evaluated",
             "directives_generated", "directives_applied",
             "outputs_changed", "receipts_shown",
             "outcomes_recorded", "effective_attributions",
@@ -146,7 +146,7 @@ class SpineMetricsCollector:
         """重置所有计数器（测试用）。"""
         counter_names = {
             "signals_generated", "signals_entered_state",
-            "states_active", "policies_evaluated",
+            "policies_evaluated",
             "directives_generated", "directives_applied",
             "outputs_changed", "receipts_shown",
             "outcomes_recorded", "effective_attributions",

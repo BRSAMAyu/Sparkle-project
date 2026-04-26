@@ -3294,3 +3294,135 @@ def spine_fixture():
     redis = FakeRedis()
     from app.signals.spine_orchestrator import SpineOrchestrator
     return SpineOrchestrator(redis_client=redis)
+
+
+# ── Decision Realization Score Metrics Tests ─────────────────────────
+
+@pytest.mark.asyncio
+async def test_metrics_increment_and_get():
+    """Metrics increment and get counter values."""
+    redis = FakeRedis()
+    metrics = SpineMetricsCollector(redis_client=redis)
+    await metrics.increment("signals_generated", 5)
+    val = await metrics.get_counter("signals_generated")
+    assert val == 5
+
+
+@pytest.mark.asyncio
+async def test_metrics_snapshot_rates():
+    """Metrics snapshot calculates rates correctly."""
+    redis = FakeRedis()
+    metrics = SpineMetricsCollector(redis_client=redis)
+    await metrics.increment("signals_generated", 10)
+    await metrics.increment("signals_entered_state", 8)
+    await metrics.increment("policies_evaluated", 8)
+    await metrics.increment("directives_generated", 6)
+    await metrics.increment("directives_applied", 5)
+    await metrics.increment("outputs_changed", 4)
+    await metrics.increment("receipts_shown", 5)
+    await metrics.increment("outcomes_recorded", 3)
+    await metrics.increment("effective_attributions", 2)
+
+    snap = await metrics.snapshot()
+    assert snap["signal_to_state_rate"]["value"] == 0.8  # 8/10
+    assert snap["policy_to_directive_rate"]["value"] == 0.75  # 6/8
+    assert snap["directive_application_rate"]["value"] == pytest.approx(5 / 6, abs=0.01)  # 5/6
+    assert snap["intervention_effectiveness"]["value"] == pytest.approx(2 / 3, abs=0.01)
+    assert snap["orphan_signal_count"]["value"] == 0
+
+
+@pytest.mark.asyncio
+async def test_metrics_snapshot_zero_division():
+    """Metrics with zero denominator returns 0.0 rate."""
+    redis = FakeRedis()
+    metrics = SpineMetricsCollector(redis_client=redis)
+    snap = await metrics.snapshot()
+    assert snap["signal_to_state_rate"]["value"] == 0.0
+    assert snap["orphan_signal_count"]["value"] == 0
+
+
+@pytest.mark.asyncio
+async def test_metrics_convenience_methods():
+    """Convenience methods increment correct counters."""
+    redis = FakeRedis()
+    metrics = SpineMetricsCollector(redis_client=redis)
+
+    await metrics.record_signal_generated()
+    await metrics.record_signal_entered_state()
+    await metrics.record_policy_evaluated(matched=True)
+    await metrics.record_directive_generated()
+    await metrics.record_directive_applied(changed_output=True)
+    await metrics.record_receipt_shown()
+    await metrics.record_outcome_recorded(effective=True)
+    await metrics.record_retraction()
+
+    assert await metrics.get_counter("signals_generated") == 1
+    assert await metrics.get_counter("signals_entered_state") == 1
+    assert await metrics.get_counter("policies_evaluated") == 1
+    assert await metrics.get_counter("orphan_signals") == 0
+    assert await metrics.get_counter("directives_generated") == 1
+    assert await metrics.get_counter("directives_applied") == 1
+    assert await metrics.get_counter("outputs_changed") == 1
+    assert await metrics.get_counter("receipts_shown") == 1
+    assert await metrics.get_counter("outcomes_recorded") == 1
+    assert await metrics.get_counter("effective_attributions") == 1
+    assert await metrics.get_counter("retractions") == 1
+
+
+@pytest.mark.asyncio
+async def test_metrics_orphan_signal_on_no_match():
+    """Unmatched policy creates orphan signal metric."""
+    redis = FakeRedis()
+    metrics = SpineMetricsCollector(redis_client=redis)
+    await metrics.record_policy_evaluated(matched=False)
+    assert await metrics.get_counter("orphan_signals") == 1
+
+
+@pytest.mark.asyncio
+async def test_metrics_reset():
+    """Reset clears all counters."""
+    redis = FakeRedis()
+    metrics = SpineMetricsCollector(redis_client=redis)
+    await metrics.increment("signals_generated", 10)
+    await metrics.reset()
+    assert await metrics.get_counter("signals_generated") == 0
+
+
+@pytest.mark.asyncio
+async def test_metrics_ten_definitions():
+    """All 10 metric definitions exist."""
+    assert len(METRIC_DEFINITIONS) == 10
+    expected = {
+        "signal_to_state_rate", "state_to_policy_rate",
+        "policy_to_directive_rate", "directive_application_rate",
+        "output_change_rate", "user_visible_receipt_rate",
+        "outcome_feedback_rate", "intervention_effectiveness",
+        "retraction_rate", "orphan_signal_count",
+    }
+    assert set(METRIC_DEFINITIONS.keys()) == expected
+
+
+@pytest.mark.asyncio
+async def test_spine_pipeline_records_metrics():
+    """Spine pipeline records metrics at key points."""
+    redis = FakeRedis()
+    from app.signals.spine_orchestrator import SpineOrchestrator
+    spine = SpineOrchestrator(redis_client=redis)
+
+    signal = ActionableSignal(
+        signal_id="sig_metric", source_event_ids=[], source_system="test",
+        state_key="task_granularity_fit", claim="recent_task_too_large",
+        confidence=0.8, scope="current_sprint", ttl_hours=72,
+        evidence_summary="test", possible_effects=[], priority="high",
+    )
+    await spine._run_signal_pipeline(user_id="u_metrics", signal=signal)
+
+    assert await spine.metrics.get_counter("signals_generated") == 1
+    assert await spine.metrics.get_counter("signals_entered_state") == 1
+    assert await spine.metrics.get_counter("policies_evaluated") == 1
+    assert await spine.metrics.get_counter("directives_generated") == 1
+    assert await spine.metrics.get_counter("receipts_shown") == 1  # visibility=receipt
+
+    snap = await spine.get_metrics_snapshot()
+    assert snap["signal_to_state_rate"]["value"] == 1.0
+    assert snap["policy_to_directive_rate"]["value"] == 1.0
