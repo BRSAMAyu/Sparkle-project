@@ -81,11 +81,16 @@ except ModuleNotFoundError:
 try:
     from app.aurora.runtime_v1.state import (
         ActivityProfile,
+        AuroraBandStatus,
         AuroraCognitiveSnapshot,
+        AuroraEnergyLevel,
+        AuroraEnergyState,
+        AuroraEnergyStore,
         AuroraIntent,
         AuroraRuntimeMetadata,
         AuroraRuntimeStore,
         AuroraState,
+        AuroraWakeEligibility,
         InformationalTension,
         LatentThread,
         ScheduledWake,
@@ -94,11 +99,16 @@ try:
 
     _export(
         "ActivityProfile",
+        "AuroraBandStatus",
         "AuroraCognitiveSnapshot",
+        "AuroraEnergyLevel",
+        "AuroraEnergyState",
+        "AuroraEnergyStore",
         "AuroraIntent",
         "AuroraRuntimeMetadata",
         "AuroraRuntimeStore",
         "AuroraState",
+        "AuroraWakeEligibility",
         "InformationalTension",
         "LatentThread",
         "ScheduledWake",
