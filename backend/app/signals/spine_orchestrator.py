@@ -18,6 +18,7 @@ from app.signals.policy_engine import PolicyEngine
 from app.signals.task_timeout_detector import TaskTimeoutDetector
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.recall_opportunity import RecallOpportunityDetector
+from app.signals.signal_ranker import SignalRanker
 from app.signals.exam_rescue_detector import ExamRescueDetector
 from app.signals.stale_state_guard import StaleStateGuard
 from app.signals.state_packet_builder import ActionableStatePacketBuilder
@@ -63,6 +64,7 @@ class SpineOrchestrator:
         self.community_detector = CommunitySignalDetector()
         self.reply_engine = SpineReplyOptionEngine()
         self.wake_judge = AuroraWakeJudge()
+        self.signal_ranker = SignalRanker()
 
     async def on_task_completed(
         self,
@@ -558,3 +560,9 @@ class SpineOrchestrator:
             user_requested_deep_review=user_requested_deep_review,
             momentum_stalled=momentum_stalled,
         )
+
+    # ── Layer 3: Signal Ranking ────────────────────────────────────────
+
+    def rank_signals(self, signals: list[ActionableSignal], *, max_signals: int = 5):
+        """排序信号并解决冲突。返回 RankingResult。"""
+        return self.signal_ranker.rank(signals, max_signals=max_signals)

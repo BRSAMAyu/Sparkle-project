@@ -2043,3 +2043,93 @@ async def test_spine_on_user_return_stale():
     )
     assert trace is not None
     assert "user_responded_to_stale_check" in trace.outcome_to_measure
+
+
+# ── Layer 3: SignalRanker Tests ────────────────────────────────────────
+
+from app.signals.signal_ranker import SignalRanker
+
+
+@pytest.fixture
+def ranker():
+    return SignalRanker()
+
+
+def _make_signal(state_key: str, claim: str, confidence: float, priority: str = "medium") -> ActionableSignal:
+    return ActionableSignal(
+        signal_id=_uid("sig"),
+        source_event_ids=[], source_system="test",
+        state_key=state_key, claim=claim,
+        confidence=confidence, scope="current_sprint", ttl_hours=1,
+        evidence_summary="test", possible_effects=[], priority=priority,
+    )
+
+
+def test_rank_empty_signals(ranker):
+    """空信号列表 → 空 result。"""
+    result = ranker.rank([])
+    assert result.ranked == []
+    assert result.suppressed == []
+
+
+def test_rank_single_signal(ranker):
+    """单个信号 → 直接 ranked。"""
+    s = _make_signal("task_granularity_fit", "too_large", 0.8, "high")
+    result = ranker.rank([s])
+    assert len(result.ranked) == 1
+    assert result.ranked[0].signal.state_key == "task_granularity_fit"
+
+
+def test_rank_orders_by_tier(ranker):
+    """exam_rescue (tier 2) 排在 growth_momentum (tier 7) 之前。"""
+    momentum = _make_signal("growth_momentum", "momentum_high", 0.9, "low")
+    exam = _make_signal("goal_mode", "exam_rescue_detected", 0.7, "high")
+    result = ranker.rank([momentum, exam])
+    assert result.ranked[0].signal.state_key == "goal_mode"
+    assert result.ranked[1].signal.state_key == "growth_momentum"
+
+
+def test_rank_max_signals(ranker):
+    """max_signals=3 时只保留前 3 个。"""
+    signals = [_make_signal(f"key_{i}", f"claim_{i}", 0.5) for i in range(6)]
+    result = ranker.rank(signals, max_signals=3)
+    assert len(result.ranked) == 3
+    assert len(result.suppressed) >= 3
+
+
+def test_rank_conflict_momentum_vs_task(ranker):
+    """growth_momentum + task_granularity_fit 冲突 → task_granularity_fit wins。"""
+    momentum = _make_signal("growth_momentum", "momentum_high", 0.8, "low")
+    task = _make_signal("task_granularity_fit", "too_large", 0.7, "high")
+    result = ranker.rank([momentum, task])
+    # task_granularity_fit has higher priority tier (4 vs 7)
+    ranked_keys = [r.signal.state_key for r in result.ranked]
+    assert "task_granularity_fit" in ranked_keys
+    assert len(result.conflicts_resolved) >= 1
+
+
+def test_rank_composite_score(ranker):
+    """high priority + high confidence → higher composite score。"""
+    high = _make_signal("task_granularity_fit", "test", 0.9, "high")
+    low = _make_signal("task_granularity_fit", "test", 0.3, "low")
+    result = ranker.rank([low, high])
+    assert result.ranked[0].signal.confidence == 0.9
+
+
+def test_rank_serialization(ranker):
+    """RankingResult to_dict。"""
+    s = _make_signal("knowledge_transfer", "transfer_failure", 0.8)
+    result = ranker.rank([s])
+    d = result.to_dict()
+    assert len(d["ranked"]) == 1
+    assert d["ranked"][0]["state_key"] == "knowledge_transfer"
+
+
+def test_spine_rank_signals(spine):
+    """SpineOrchestrator.rank_signals 委托到 SignalRanker。"""
+    signals = [
+        _make_signal("growth_momentum", "high", 0.9, "low"),
+        _make_signal("task_granularity_fit", "too_large", 0.7, "high"),
+    ]
+    result = spine.rank_signals(signals)
+    assert len(result.ranked) >= 1
