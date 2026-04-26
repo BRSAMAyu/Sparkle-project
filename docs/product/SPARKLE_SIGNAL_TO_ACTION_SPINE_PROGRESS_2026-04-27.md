@@ -166,7 +166,7 @@
 
 ## 当前测试覆盖
 
-222/222 tests passing:
+234/234 tests passing:
 - M1 控制链路: 12 tests
 - M2 资料闭环: 5 tests
 - M3 错因驱动: 4 tests
